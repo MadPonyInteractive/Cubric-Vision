@@ -50,14 +50,20 @@
 >    per-page fault-handler MECHANISM on torch 2.8, full stop. This eliminates the
 >    LAST memory variable (VRAM size) by brute force. **Do NOT spin a big card to
 >    fix this — proven not to work.**
-> 2. **Match local's stack on the Pod (torch 2.12 / cu130 / py3.13):** the fault-in
->    is the aimdo page-fault MECHANISM, which is stack-version-sensitive. A Pod image
->    on torch 2.12+cu130 may fault as fast as local (34s vs 108s). This is the
->    JUSTIFIED torch-bump test — by ELIMINATION (bus/disk/RAM/compute all cleared),
->    NOT the cuBLAS-GEMM angle the deep-research killed. COST: cu130 needs the r580
->    driver floor → narrows host coverage (the whole Option-A tradeoff). Measure the
->    gain FIRST on a throwaway torch-2.12 venv + a fault-in micro-benchmark before
->    committing an image rebuild.
+> 2. **Bump torch 2.8 → 2.12 on the Pod, KEEP cu126 (NO cu130, NO driver-floor cost):**
+>    the fault-in is the aimdo page-fault MECHANISM, which is torch-version-sensitive
+>    (proven: 96GB VRAM didn't help → not memory; the only stack diff vs local is
+>    torch 2.8 vs 2.12). **KEY FINDING 2026-06-27: `torch-2.12.1+cu126-cp311` EXISTS
+>    on the PyTorch index** (verified — also 2.9.1/2.10.0/2.11.0 +cu126). So we can
+>    take the torch-2.12 framework fix (allocator / UVM-fault path) **on the cu126
+>    wheel**, keeping the wide ~r560 driver floor. **The cu130 r580-floor tradeoff the
+>    deep-research agonized over is SIDESTEPPED** — local's speed comes from torch
+>    2.12's framework, NOT cu130 the toolkit (the cu130 cuBLAS gains were Blackwell-
+>    only / Ada-neutral anyway). This is the JUSTIFIED torch-bump test by ELIMINATION
+>    (bus/disk/RAM/VRAM/compute all cleared), NOT the cuBLAS-GEMM angle. **Measure the
+>    fault-in gain FIRST** on a throwaway torch-2.12+cu126 venv + a fault-in micro-
+>    benchmark on a CHEAP Pod (a 24GB card is plenty — VRAM size is irrelevant, proven
+>    above) BEFORE any image rebuild.
 > (Dropped: "more RAM" — equal RAM still wins. Dropped: "faster disk / pre-warm
 >  volume" — the host→VRAM copy is 25.7 GB/s, the volume read is not the bottleneck;
 >  the 108s is fault-handler overhead, not bytes moved.)
