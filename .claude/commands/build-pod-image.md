@@ -148,9 +148,12 @@ docker run --rm --entrypoint python ghcr.io/madponyinteractive/cubric-vision-pod
   -c "import torch;print('torch', torch.__version__, torch.version.cuda); import sageattention; print('sage OK')"
 docker push ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128
 ```
-cu124 — same, swap the base + profile (target tag `-cu124`):
+cu124 — same, swap the base + profile (target tag `-cu124`). NOTE (MPI-156): the
+cu124 profile is now cu126 INSIDE — base is `cuda12.6`, torch 2.8.0+cu126 (to enable
+aimdo at a lower driver floor; the cu124 wheel ceiling was 2.6). The TAG stays
+`-cu124` on purpose (rename to cu126 is a deferred Dockerfile TODO):
 ```
-  --build-arg BASE_IMAGE=pytorch/pytorch:2.6.0-cuda12.4-cudnn9-devel \
+  --build-arg BASE_IMAGE=pytorch/pytorch:2.6.0-cuda12.6-cudnn9-devel \
   --build-arg CUDA_PROFILE=cu124 \
   ... -t ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu124 -f Dockerfile .
 ```
