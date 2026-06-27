@@ -18,17 +18,29 @@
 > Pod's RAM is too small to fully cache it (live: 23GB used of 46GB RAM, VRAM pinned
 > 23.1/24) → fault pages partly stream from the **1.0 GB/s network volume**
 > (measured by `dd`, 42GB in 42s) instead of from RAM. 40GB / 1 GB/s ≈ 40s floor,
-> stacked with VRAM-ceiling evict-thrash → 108s. Local's faster NVMe page-cache +
-> RAM make its fault-in 3× quicker.
+> stacked with VRAM-ceiling evict-thrash → 108s.
 >
-> **FIX (no rebuild, no torch change, no aimdo-disable), ranked:**
-> 1. **Bigger-VRAM card (32GB 5090 / 48GB):** 40GB still doesn't fit 32GB but is
->    much closer → far less evict-thrash; on 48GB it fits resident → BOTH fault-ins
->    vanish. Best fix.
-> 2. **More-RAM Pod (64-128GB):** fully cache the 55GB model set in RAM → fault-in
->    becomes fast RAM→VRAM (PCIe) instead of 1 GB/s volume→VRAM. Cheap, high-leverage.
+> **LOCAL SPEC (verified, do not re-ask): 64GB DDR5 @ 4000 MT/s, ~20GB baseline →
+> ~43GB available; model on an NVMe SSD (C:, PCIe).** Pod free RAM (~46GB) is
+> ~EQUAL to local's ~43GB — so RAM SIZE is NOT the local advantage. The local
+> fault-in is 3× faster because of the **NVMe page-cache + local PCIe path**: local
+> reads the 40GB from a multi-GB/s NVMe (warm in page cache after gen 1), the Pod
+> reads from a 1.0 GB/s network volume that won't fully cache. Same RAM, faster
+> media + bus = the whole 3× fault-in gap.
+>
+> **FIX (no rebuild, no torch change, no aimdo-disable), ranked — note RAM size is
+> NOT the lever (local & Pod both ~43-46GB free); the slow 1 GB/s network volume is):**
+> 1. **Bigger-VRAM card (48GB):** 40GB fits resident → aimdo never faults per stage
+>    → BOTH fault-ins vanish. Sidesteps the slow volume entirely. Best fix.
+> 2. **Faster Pod disk / pre-warm the model off the network volume:** the 1.0 GB/s
+>    network volume is the read bottleneck. Copy the 40GB model to fast LOCAL
+>    container disk (NVMe, often multi-GB/s) at boot and point the workflow there, OR
+>    pre-read it into page cache before the first gen (`cat model > /dev/null`) so the
+>    fault-in is cache→VRAM not volume→VRAM. Test the container-disk read speed first
+>    (`dd` on `/` vs the volume mount).
 > 3. **Avoid the stage-2 RE-fault:** keep LTXAV resident across stage-1→stage-2
 >    (cache retention) so the 59s second fault never happens.
+> (Dropped: "more RAM" — local proves equal RAM still wins, so capacity isn't it.)
 >
 > SIX dead ends ruled out (do NOT re-try): cu130 cuBLAS GEMM (Blackwell-only); host
 > throttle (165 TFLOPS/P0); aimdo-disable (OOM, twice); fp8 (identical already);
