@@ -144,3 +144,42 @@ cu130's driver-floor cost. Options, in order of cheapness:
 Do NOT reopen: aimdo-disable (OOM, twice), fp8 (identical), or a blind cu130 bump
 (coverage cost). The next move is a per-step profile to localize the cost, THEN a
 torch-only bump test if step-time is the culprit.
+
+## KEY PIVOT 2026-06-27 — the Pod is NOT generically slow; it is LTX-SPECIFIC
+User datapoint: an **SDXL image gen = ~2s on a 5090 Pod vs ~12s on the local 4060Ti
+— the Pod WINS ~6×.** So the cloud GPU + torch stack is FINE for image diffusion;
+the slowness is specific to the LTX VIDEO path. This DEMOTES every "torch is broadly
+slower" theory — torch 2.8 is not globally slow (SDXL proves it), so if torch is
+involved it's via an LTX-specific kernel, not a blanket regression. New frame: find
+what in the LTX graph behaves differently on the Pod stack.
+
+### Triton / PatchTritonVAE = CHECKED + DISMISSED (do NOT chase — agents were right)
+Local app.log shows `KJNodes: PatchTritonVAE could not be imported ... No module
+named 'triton'` (triton is flaky/absent on Windows; present on the Linux Pod). This
+LOOKS like a local/Pod divergence, but the 4 SHIPPED LTX workflows
+(`comfy_workflows/LTX_{t2v,i2v}{,_stage2}.json`) were grepped: they use
+`VAELoaderKJ` + `VAEDecode` + `LTXVAudioVAEDecode/Encode` and contain **ZERO**
+`PatchTritonVAE`/triton references. The failing node is never in the graph → its
+import failure changes nothing → it CANNOT be the gap. Prior agents correctly said
+"ignore it." Recorded here so it is not re-chased.
+
+### Surviving LTX-specific suspects (ranked)
+1. **LTX sampler / DiT forward (per-step compute)** — most of the 2:09 is sampling;
+   an LTX-specific attention/forward kernel that's slower on torch 2.8 than 2.12
+   would be both LTX-specific AND stack-sensitive, consistent with SDXL-fast.
+2. **LTX VAE decode** (`VAELoaderKJ` / `LTXVAudioVAEDecode` — video VAE, tiling +
+   temporal, heavy) — could differ by stack.
+3. **The distilled 22B transformer run path.**
+4. ~~Triton/PatchTritonVAE~~ — DEAD (not in graph, above).
+5. ~~gemma CLIP~~ — unlikely (one-time text encode, ~constant cost; does not scale
+   with the per-step 2:09 gap).
+
+### Tests that DO probe this (an SDXL/image test does NOT — it's the control, already done)
+- **Per-node timing, one LTX gen each side (free, decisive):** ComfyUI logs per-node
+  execution time. Compare local vs Pod per-node for the LTX graph; the dominant node
+  (sampler vs VAE-decode) names the culprit. No rebuild.
+- **Wan video on the Pod (secondary):** Wan uses a different VAE/node set. Wan fast →
+  slowness is LTX-node-specific; Wan also slow → video-class-broad. Splits the tree.
+- **NOT useful:** re-running SDXL/image gens. SDXL never touches the LTX video path,
+  so it cannot confirm or deny any LTX theory — it is the (already-collected) control
+  showing the Pod stack is fine for images.
