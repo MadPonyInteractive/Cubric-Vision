@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-158", "type": "task.created", "at": "2026-06-28T17:40:00Z", "actor": "agent", "column": "todo", "summary": "GC follow-up for MPI-137: delete old cubric-builds/models/ltx-2.3 R2 copies (user-gated)."}

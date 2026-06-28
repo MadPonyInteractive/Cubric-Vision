@@ -1,3 +1,0 @@
-{"at":"2026-06-17T18:10:00Z","event":"task.created","by":"claude","note":"Gallery stale-thumbnail bug carded out of MPI-74 P6 session; rules/docs/memory-first brief."}
-{"at":"2026-06-18T00:00:00Z","event":"task.moved","by":"claude","note":"todo -> doing; picking up gallery stale-thumbnail repro/fix."}
-{"at":"2026-06-18T04:20:00Z","event":"task.moved","by":"claude","note":"doing -> done. Carded stale-thumb NOT reproduced (7 Stops + force hook, all clean; likely changed by MPI-74 P6). Fixed+verified 2 adjacent bugs: null-tempId swallowed cancelled (generationService) + stuck status-bar timer (statusBar). Stale-thumb documented-open in validation.md."}

@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-151","at":"2026-06-26T13:30:20.256Z","actor":"vscode","summary":"Created MPI-151."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-151","at":"2026-06-27T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-151 for investigation."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-151","at":"2026-06-27T00:10:00Z","actor":"claude","summary":"Fix coded: fullscreen targets _surface.getVideoElement() not control-bar root. maturity=validating, awaiting live test."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-151","at":"2026-06-27T00:40:00Z","actor":"claude","from":"doing","to":"done","summary":"Fullscreen targets video element. Verified live."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-151", "type": "task.deleted", "at": "2026-06-28T17:30:00Z", "actor": "agent", "summary": "Archived from done column to .agents/mpi-kanban/tasks/_archive/MPI-151/ (board cleanup)."}

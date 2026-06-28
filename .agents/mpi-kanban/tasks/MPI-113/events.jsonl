@@ -1,3 +1,0 @@
-{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-113","at":"2026-06-18T05:10:00.000Z","actor":"claude","summary":"Created MPI-113: history-mode prompt-box UX (inline Stop + prompt draft persistence)."}
-{"ts":"2026-06-18T07:00:00.000Z","type":"task.moved","id":"MPI-113","from":"todo","to":"doing","maturity":"in-progress"}
-{"ts":"2026-06-18T08:30:00.000Z","type":"task.moved","id":"MPI-113","from":"doing","to":"done","maturity":"complete","status":"accepted"}

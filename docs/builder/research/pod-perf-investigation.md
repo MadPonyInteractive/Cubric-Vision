@@ -1,21 +1,39 @@
-# Pod vs Local Perf — RESOLVED: WARM-RESIDENT is the answer (cold tax is one-time-per-session)
+# Pod vs Local Perf — the 40GB re-faults at EVERY stage (cold AND warm); the fix is to keep it resident through the stage transition
 
-> **★ FINAL RESOLUTION (live-proven 2026-06-28, RTX 5090 Pod) — READ THIS FIRST.**
-> The cloud LTX "slowness" is a ONE-TIME COLD-LOAD TAX, not a per-gen cost. Once the
-> 40GB LTXAV transformer is faulted in, it stays resident and every subsequent gen is
-> FAST — faster than local. Measured on a 5090 Pod (v0.10.3-cu124, ComfyUI 0.26, aimdo):
+> **★ CORRECTED RESOLUTION (live-proven 2026-06-28, RTX 5090 Pod — supersedes the
+> earlier "warm-resident = 36s" claim, which was a MISLABEL). READ THIS FIRST.**
 >
-> | gen | wall time | note |
+> The earlier banner said warm gens stay fast (36-45s) because the 40GB stays resident.
+> **That was wrong.** Re-tested live on a 5090 Pod (v0.10.3-cu124, ComfyUI 0.26, aimdo)
+> with airtight timing: aimdo **re-faults the 40GB LTXAV transformer at EVERY stage of
+> EVERY gen** — cold and warm alike. The `Requested to load LTXAV` + `Model LTXAV
+> prepared for dynamic VRAM loading. 40050MB Staged` lines print on stage-1 AND stage-2
+> of every single gen, even when the model was resident in VRAM seconds earlier
+> (status bar showed VRAM 25.5/32GB resident, yet stage-2 still re-staged). So there is
+> **no free warm gen** — there is a per-STAGE re-fault you pay each time.
+>
+> **What the old "45s warm" number actually was:** the **stage-2 / continue part ALONE**
+> of a multi-stage gen — measured `Prompt executed in 44.78s`, of which **~34s is the
+> first sampler step = the stage-2 re-fault of the 40GB**, and only ~10s is real sampler
+> work. It was never a full warm gen. Corrected measured numbers:
+>
+> | what | wall time | breakdown |
 > |---|---|---|
-> | **1st (cold)** | **~209s (3:30)** | one-time per session — the 40GB fault-in tax |
-> | **2nd (warm), 1280×704 High** | **36s** | model resident, beats local 4060Ti (~100s) |
-> | warm, very-low quality | 33s | quality slider barely moves warm wall-time |
-> | warm, 1K 1088×1920 | 45s | +9s for 2.3× pixels — fixed warm cost dominates |
+> | **1st gen, cold (i2v 5s/1K)** | **~5:45** | one-time-ish per session (also a per-stage fault) |
+> | **single-shot t2v 1s/1K, "warm"** | **~90s (1:28-1:31)** | stage-1 + ~40s transition re-fault + stage-2 |
+> | stage-2 / continue part ALONE | **44.78s** | ~34s = re-fault (first sampler step) + ~10s sampler+upscaler |
+> | full multi-stage card (preview+continue) | **1:15** | ~30s preview + ~46s continue |
 >
-> **The cap/per-page-fault cost is paid ONCE.** Cold ~3:30 is normal cloud-GPU cold-start
-> (it used to be ~5min; 0.26/aimdo is actually slightly better). After that, warm gens
-> are ~33-45s at 1s/1K — the SPEED WIN the user remembered from 0.25.1 was always there,
-> just hidden behind the cold load.
+> **The lever is the per-stage re-fault, NOT a one-time cold tax.** ~34-40s of every
+> stage-2 is reloading a model that was already in VRAM. Kill the stage-transition
+> re-fault → the continue part drops from ~45s to ~11s. (Node 58 is NOT the cause —
+> removing it made it WORSE, see below. The cause is aimdo evicting the model between
+> ComfyUI subgraphs.)
+>
+> **PRODUCT REFRAME (user's call, 2026-06-28):** the multi-stage split is a FEATURE,
+> not just a cost. Stage-1 preview (~30s) shows motion cheaply → user picks the best of
+> several previews → pays the ~46s continue ONLY on the keeper. Sell it as
+> iterate-cheap-commit-once. This makes the per-stage cost a deliberate gate, not waste.
 >
 > **THE COLD-LOAD ROOT CAUSE (still true, just no longer the headline):** RunPod
 > containers cap `RLIMIT_MEMLOCK` at **8MB** (hard, set at container launch, NOT raisable
@@ -39,22 +57,49 @@
 > degradation across seeds in this workflow (faces are the product's core). bf16 stays.
 > (mxfp8 = Blackwell-only native; emulated/slow on Ada — not a cross-card option.)
 >
-> **→ THE TWO REAL OPTIMIZATIONS (both keep bf16 quality + 0.26, neither is a blocker):**
-> 1. **WARM-ON-CONNECT** (biggest UX win): fire a tiny throwaway gen right after Pod
->    connect (background) so the 40GB is resident BEFORE the user's first real gen → the
->    user never sees the ~3:30 cold tax; their first gen is already ~36s.
-> 2. **Remove `MpiClearVram` node 58** from the stage-2 LTX workflow: even on a warm gen,
->    stage-2 re-faults the 40GB (visible pause stage-1→stage-2) because node 58 calls
->    `unload_all_models()` mid-pipeline (found by graph trace). Removing it should keep
->    the transformer resident across stages → shave the warm 36s further. NOTE: Wan's
->    workflow has 3 MpiClearVram nodes and is fine, so removal needs live verification it
->    doesn't break VRAM safety on a 24GB card — test before shipping.
+> **→ THE TWO REAL LEVERS (both keep bf16 quality + 0.26, neither a blocker):**
+>
+> 1. **FORCED WARM-UP / cold-prime on connect** (hides the one-time cold tax): after a
+>    Pod connects + ComfyUI is ready, fire a throwaway gen in the background and
+>    **interrupt it the moment the stage-1 sampler emits its first step** (we already get
+>    that signal via the `comfy:step` SSE). That faults the 40GB into VRAM (paying the
+>    cold tax invisibly) without wasting time finishing a full gen → the user's first
+>    real gen starts already-warm. Cleaner than running a whole throwaway gen.
+>    (User's framing: "let it reach the first sampler and stop, then it's warm.") This is
+>    MPI-157 OPT 1, refined. App-side, no rebuild.
+>
+> 2. **PIN THE 40GB RESIDENT THROUGH THE STAGE TRANSITION** (the bigger win, untested):
+>    stage-2 re-faults the 40GB even though stage-1 just had it resident — ~34s of every
+>    continue is that re-fault. On cards with VRAM headroom (5090=32GB, model≈25.5GB → it
+>    fits with room) we want aimdo to NOT evict between stage-1 and stage-2. This is an
+>    aimdo/ComfyUI residency hint, **gated to big cards only** (24GB cards genuinely can't
+>    hold it through both stages → keep the evict there). This is NOT the node-58 path
+>    (that's disproven below); it's preventing the eviction aimdo does on its own.
+>    Drop the continue from ~45s → ~11s where it fits. NEEDS LIVE TEST + a per-card VRAM
+>    floor.
+>
+> **~~3. Remove `MpiClearVram` node 58~~ — DISPROVEN LIVE 2026-06-28 (5090 Pod), do NOT
+> re-try.** The hypothesis was BACKWARDS. Bypassed node 58 (rewired stage-1-latent
+> consumers 104+126 from `["58",0]` → `["52",0]`, orphaning 58) and ran a warm t2v
+> 1s/1K single-shot gen: **119s vs ~90s with node 58 IN (2.6× the bad-step time, ~1.3×
+> the full gen — SLOWER either way)**. The first stage-2 sampler step took **69 s/it**
+> (vs ~34 s/it with node 58 IN). Root cause: aimdo re-stages the 40GB at stage-2
+> *regardless* of node 58 (`40050MB Staged, 0 patches` printed even when 58 was orphaned).
+> What node 58 (`unload_all_models()`) actually does is **cleanly evict stage-1's VRAM so
+> the stage-2 fault lands on a clean slate**; without it the stage-2 fault thrashes
+> against stage-1's still-resident pages → 69s/it. So node 58 is **load-bearing for
+> SPEED**, not the cause of the transition pause. Note this is in tension with lever 2
+> (pin-resident): node 58 helps because it gives a CLEAN re-fault; lever 2 would avoid the
+> re-fault entirely. They are different mechanisms — lever 2 must be tested with node 58
+> still in place. Wan's 3 MpiClearVram nodes serve the same protective role.
+> **Keep node 58. The LTX_t2v.json edit was reverted (clean against HEAD).**
 >
 > **DEAD ENDS (do NOT re-investigate — all proven this arc):** bigger VRAM card (96GB
 > still cold-faulted), torch bump (2.8→2.11 no change), disk/network-volume (read_bytes=0),
 > the two pinning flags above, fp8 (quality), downgrade (0.25.1 has aimdo too), raising
-> memlock (no RunPod API). The remaining levers are the two OPTIMIZATIONS above, not the
-> cold fault itself (which is acceptable as a one-time tax).
+> memlock (no RunPod API), AND removing MpiClearVram node 58 (2.6× SLOWER, it is
+> load-bearing for speed — see above). The ONLY remaining lever is warm-on-connect; the
+> cold fault itself is acceptable as a one-time tax.
 >
 > ---
 >

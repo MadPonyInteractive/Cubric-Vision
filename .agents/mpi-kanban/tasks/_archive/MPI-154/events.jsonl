@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-154","at":"2026-06-26T15:53:50.896Z","actor":"vscode","summary":"Created MPI-154."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-154","at":"2026-06-27T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-154 for investigation."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-154","at":"2026-06-27T00:10:00Z","actor":"claude","summary":"Fixed dead Ctrl+F5 hotkey (added control+f5 registry entry+bind), tooltip+panel labels. maturity=validating, awaiting live test."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-154","at":"2026-06-27T00:40:00Z","actor":"claude","from":"doing","to":"done","summary":"Release button works as designed (two-level); fixed dead Ctrl+F5 hotkey + click-event modifier read. RAM confusion was Docker builds."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-154", "type": "task.deleted", "at": "2026-06-28T17:30:00Z", "actor": "agent", "summary": "Archived from done column to .agents/mpi-kanban/tasks/_archive/MPI-154/ (board cleanup)."}

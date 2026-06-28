@@ -1,0 +1,110 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "462020db-1d41-46fc-8286-a06bca5e4903",
+  "generated_at": "2026-06-27T21:23:20Z",
+  "from_session": "MPI-156 perf deep-dive session (from handoff 81d853b3). The cloud-4090-slower-than-local-4060Ti LTX perf gap is now SOLVED + live-proven; the local-wedge fix was also live-verified this session. All committed, NOTHING pushed (user-gated).",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-156 perf SOLVED: the cloud-4090-vs-local-4060Ti LTX gap = aimdo per-page FAULT-IN overhead (108s+59s = ~67% of the gen), NOT compute/bandwidth/disk/RAM/PCIe. Stack-version-sensitive (torch 2.8+cu126 Pod vs 2.12+cu130 local). Two fixes left: (1) 48GB-VRAM card so the model is resident and never faults; (2) match local's torch-2.12/cu130 stack on the Pod (measure on a throwaway venv FIRST). ALSO: local-gen wedge fix (21b8fdf) = LIVE-VERIFIED this session.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Find out why the cloud 4090 is slower than the local 4060 Ti on LTX, after fixing the two MPI-156 remote-engine follow-ups (SSE idle-abort + local-gen wedge).",
+    "status": "complete",
+    "summary": "SOLVED. The LTX gap is aimdo's per-page model FAULT-IN overhead — proven NOT bandwidth (host->VRAM measured 25.7 GB/s pinned / PCIe Gen4 x16 -> 40GB would copy in ~1.6s, but the fault-in took 108s = 65x). It is stack-version-sensitive (CUDA UVM + torch allocator changed cu126->cu130 / torch 2.8->2.12), which is why local (torch 2.12/cu130) faults 3x faster. The SSE idle-abort + local-gen wedge follow-ups from the prior handoff are BOTH done + live-verified. Only two perf fixes remain (untested), both no-rebuild-able to measure first."
+  },
+  "plan": {
+    "file": "docs/builder/research/pod-perf-investigation.md",
+    "completed": [
+      "PERF ROOT CAUSE FOUND + PROVEN: the cloud-4090-vs-local-4060Ti LTX gap is aimdo's per-stage page-FAULT-IN of the 40GB LTXAV transformer, NOT compute. Live per-phase split on a cold Pod LTX gen (Prompt executed in 250.34s): stage-1 'Model Initialization' fault-in = 108.19s, stage-2 fault-in = 58.66s (= 167s, ~67% of the gen) vs local 34s + 28s. The SAMPLER steps are FASTER on the Pod (1.45 s/it vs local 4.6 s/it). Mechanism = per-page fault-handler / UVM bookkeeping (aimdo cuda-detour.c hooks), NOT bytes moved.",
+      "PERF: proved it is NOT bandwidth. Measured on a Pod 4090 web terminal: host->VRAM copy = pinned 25.7 GB/s, pageable 19.5 GB/s, PCIe Gen4 x16. 40GB at 25.7 GB/s = ~1.6s, but the fault-in took 108s (65x). So NOT memcpy, NOT PCIe, NOT the 1.0 GB/s network volume (dd-measured 42GB/42s, and the model is already 'Staged' to RAM before init prints).",
+      "PERF: SEVEN dead ends ruled out (recorded so none are re-chased): (1) cu130 cuBLAS GEMM compute (Blackwell-only, deep-research); (2) host throttle (4090 = 165 TFLOPS bf16, P0, full clocks, GPU STARVES at 1% util); (3) aimdo-disable / --disable-dynamic-vram (TESTED LIVE this session -> OOM-killed the Pod, same as MPI-146; aimdo is load-bearing; reverted + R2-re-pushed); (4) fp8 format (both engines load the IDENTICAL set: BF16 22B transformer ltx-2.3-22b-distilled-1.1_transformer_only_bf16 + fp8 gemma-3-12b encoder + bf16 VAEs); (5) torch-broad-compute (SDXL on the Pod is FAST = 2s vs local 12s, so the stack is not globally slow); (6) Triton/PatchTritonVAE (grepped the 4 shipped LTX workflow JSONs — ZERO references, not in the graph, prior agents were right to ignore the import warning); (7) transfer/disk/PCIe/RAM-size bandwidth (all proven equal-or-better on the Pod).",
+      "MPI-156 local-gen wedge fix (21b8fdf) = LIVE-VERIFIED this session: connect Pod -> remote gen -> disconnect+DELETE -> immediate LOCAL gen RAN ('Starting ComfyUI Engine' modal + GENERATING 2/3 on the local 16GB card). Pre-fix this wedged (zero [comfy] lines). Self-heal path works.",
+      "VERIFIED LOCAL SPEC (do not re-ask the user): 64GB DDR5 @ 4000 MT/s, ~20GB baseline -> ~43GB available; model on NVMe SSD (C:); Python 3.13.12 / torch 2.12.0 / CUDA 13.0. Pod free RAM (~43-46GB) is ~EQUAL to local's ~43GB, so RAM SIZE is NOT the lever.",
+      "Clean measurement table (all sampling-only, MPI-147 timer excludes load): local 4060Ti warm 1:31 / cold 2:18; Pod 4090 warm 2:09 / cold 2:49 (4:07-4:10 incl load).",
+      "Docs fully updated + committed (app RunPod): docs/builder/research/pod-perf-investigation.md = SOLVED conclusion + per-phase table + the two fixes + venv-first rule + all 7 dead ends; docs/gotchas.md = the aimdo-off-OOM gotcha + the fault-in-is-page-fault-not-bandwidth conclusion.",
+      "mpi-ci start.sh: the --disable-dynamic-vram big-card test was committed (9df2bf4) then REVERTED (27bb28d, net = VRAM_MODE='' aimdo default). R2 stable re-pushed + 3-way sha-verified SAFE (sha ad30c0ca...). Next Pod boots clean aimdo, no OOM risk."
+    ],
+    "pending": [
+      "PERF FIX #1 (surest, untested) — bigger-VRAM card. If the 40GB model fits VRAM (needs ~48GB for model + working set; 24/32GB still faults), aimdo's page-fault path never runs -> BOTH 100s+ inits vanish. Spin a 48GB-class Pod (e.g. A6000/L40/6000-Ada), run an LTX gen, confirm the 'Model Initialization' phases drop to ~seconds and the total approaches/beats local 1:31.",
+      "PERF FIX #2 (your-instinct-was-right, untested) — match local's stack on the Pod (torch 2.12 / cu130 / py3.13). The fault-in is the aimdo page-fault MECHANISM, which is stack-version-sensitive — this is the JUSTIFIED torch bump BY ELIMINATION (NOT the cuBLAS-GEMM angle the deep-research killed; the fault-hook path was NEVER tested). MEASURE THE GAIN FIRST on a throwaway torch-2.12 venv + a fault-in micro-benchmark on a Pod BEFORE any image rebuild. COST if it works: cu130 needs the r580 driver floor -> narrows host coverage (the Option-A tradeoff) — weigh that against the measured gain.",
+      "PERF FIX #3 (smaller win) — avoid the stage-2 RE-fault: keep LTXAV resident across stage-1->stage-2 so the 59s second fault never happens (cache retention; aimdo stays ON).",
+      "AFTER a fix is proven: close the perf doc (it's already written as SOLVED; just append the winning-fix result + final timings), update the ltx-tiers timing doc with cold/warm per-GPU numbers, MEMORY.md MPI-156 line.",
+      "PUSH (user-gated) when ready — see context.files_modified for the exact unpushed commits in BOTH repos (app RunPod + mpi-ci)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-156",
+    "title": "Pod fast model loading (torch 2.8 -> aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+    "column": "done",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-156/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-156/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/pod-perf-investigation.md = THE solved-state doc. Read it FIRST. It has the full per-phase table, the bandwidth-disproof, all 7 dead ends, the two fixes, the verified local spec, and the venv-measure-first rule.",
+      "docs/gotchas.md = the aimdo-off-OOM gotcha (never disable aimdo for perf) + the fault-in-is-page-fault-not-bandwidth conclusion, grep-findable.",
+      "The local-wedge fix (21b8fdf) live-verified note is in this handoff; gotchas.md still lists it as 'open follow-up' under the SSE entry — UPDATE that to FIXED when convenient (it's verified now)."
+    ],
+    "pending": [
+      "When a perf fix is proven: append the result to pod-perf-investigation.md (it is structured as SOLVED — just add the winning fix + timings), update ltx-tiers timings + MEMORY.md.",
+      "Mark the local-gen wedge FIXED in docs/gotchas.md (the SSE/wedge entry still says the wedge is an open follow-up; it was live-verified this session)."
+    ]
+  },
+  "next_action": {
+    "description": "Perf is SOLVED — do NOT re-investigate the cause. Read docs/builder/research/pod-perf-investigation.md first (it has everything). Then, to chase a FIX, pick one: (FIX #1, surest) spin a 48GB-VRAM Pod and confirm the 'Model Initialization' fault-in phases drop to ~seconds; OR (FIX #2, the justified torch bump) make a throwaway torch-2.12 venv on a Pod + run a fault-in micro-benchmark to MEASURE whether the stack bump speeds the fault-in BEFORE any image rebuild (cu130 costs the r580 driver floor). Do NOT re-try any of the 7 dead ends (cu130-GEMM, throttle, aimdo-off, fp8, torch-broad-compute, Triton, bandwidth). Pod ops + R2 pushes + git pushes are USER-GATED. RunPod branch only.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "PERF ROOT CAUSE = aimdo per-page FAULT-IN overhead, NOT bandwidth. Proven by direct measurement: host->VRAM 25.7 GB/s pinned / PCIe Gen4 x16 means 40GB copies in 1.6s, but the fault-in took 108s (65x slower than the bytes justify). The cost is the page-fault HANDLER / UVM bookkeeping, and it is stack-version-sensitive.",
+      "The user's repeated instinct that 'Python/torch/CUDA version could matter' was CORRECT — but the mechanism is the fault-hook path, NOT compute/GEMM (which the deep-research correctly ruled out). Do not dismiss the stack again; the fault-hook angle was never tested.",
+      "Disabling aimdo (--disable-dynamic-vram / --highvram) is a DEAD END — it OOM-kills the Pod (the full 3-stage 40GB set goes resident -> >RAM). Tested live this session AND at MPI-146. aimdo's fault-in is load-bearing. Reverted.",
+      "SDXL on the Pod is FAST (2s vs local 12s, Pod wins ~6x) — this is the KEY control that proves the Pod stack/hardware is fine; the slowness is LTX-specific (one 40GB model re-staged across multi-stage), NOT a broad torch regression.",
+      "Both engines run the IDENTICAL model set (BF16 22B transformer + fp8 gemma encoder + bf16 VAEs) — confirmed from the live workflow graph. fp8 is NOT a lever; there is no fp8 transformer to switch to.",
+      "RAM size, network-volume read speed (1.0 GB/s), PCIe, and raw transfer bandwidth are ALL proven equal-or-better on the Pod — none is the cause. Only VRAM-fit and the stack-version fault path remain."
+    ],
+    "constraints": [
+      "Pod ops + image builds + R2 runtime pushes + git pushes are ALL USER-GATED. A killed terminal orphans the Pod (stop/delete it in RunPod).",
+      "Shared tree: commit by explicit pathspec, never git add -A.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci). NOTHING is pushed yet (both repos have unpushed commits, user-gated).",
+      "RunPod branch ONLY (MPI-131) — no master merge / GitHub release / git tag. ~July 9 public-master target, no subscribers yet = no release pressure.",
+      "cu126-guts image has a DRIVER FLOOR (~r560 / CUDA >=12.6): a CUDA-12.4 host (r550) REFUSED the image at create this session ('Minimum CUDA version requirement not met'). Set the RunPod deploy CUDA filter to >=12.6 to avoid landing on a sub-floor host. cu130 (FIX #2) would raise the floor to r580 = even narrower.",
+      "Git-Bash curl on this box flakes (schannel) — publish-runtime.sh's curl verify step exits 43 even when the upload SUCCEEDED. Verify R2 with rclone S3 read (rclone cat), not the curl exit code. RCLONE path + rclone-r2.conf as in prior sessions.",
+      "start.sh VRAM_MODE / SAGE_DISABLED_ARCHS are R2-externalized: edit -> publish-runtime.sh stable -> restart-comfy = live, NO rebuild. CUBRIC_VRAM_MODE / CUBRIC_VRAM_BIGCARD_GIB / CUBRIC_SAGE_DISABLED_ARCHS Pod env override without even an R2 push."
+    ],
+    "files_modified": [
+      "(committed, app RunPod, this session) docs/builder/research/pod-perf-investigation.md + docs/gotchas.md across commits bb460b1, 8ff2bdc, a3141b8, 337097b, 81ed4e6, f38bc4b, 3692b52, 2a3332a, 8babda2 (the perf-investigation arc — SOLVED). PLUS the prior-handoff commits still unpushed: 21b8fdf (wedge+SSE), 7479c67, fcbeaaa, c5b9105, 64b306a, 3a09e4f, 1fb0527.",
+      "(committed, mpi-ci main, this session) cubric-vision-pod/start.sh: 9df2bf4 (aimdo-off test) + 27bb28d (REVERT, net = aimdo default). PLUS prior unpushed: 8a32037 (SSE heartbeat wrapper 0.2.20), 075933f (MPI-147 stdout progress).",
+      "R2 stable: start.sh re-published + sha-verified SAFE (ad30c0ca...), wrapper 0.2.20 unchanged (c57e12b4...)."
+    ],
+    "files_to_read_first": [
+      "docs/builder/research/pod-perf-investigation.md (THE solved-state doc — read this BEFORE anything; it has the per-phase table, the bandwidth-disproof, all 7 dead ends, the 2 fixes, the verified local spec, and the venv-measure-first rule — so you do NOT re-investigate)",
+      "docs/gotchas.md (the aimdo-off-OOM entry + the fault-in conclusion, near the 'Disabling aimdo' heading)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (~L132-170 VRAM_MODE block = back to aimdo default after the revert; CUBRIC_VRAM_MODE/CUBRIC_VRAM_BIGCARD_GIB env knobs documented inline)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": ["RunPod/remote engine", "ComfyUI engine", "Pod/mpi-ci", "LTX-2.3 authoring", "build/release"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline MPI-131; shared-tree commit-by-pathspec; mpi-ci separate repo via git -C; push user-gated)",
+    "docs/gotchas.md (RunPod/remote, aimdo/torch, cu126-guts driver-floor, aimdo-off-OOM, fault-in-not-bandwidth, schannel-curl, sage-arch MPI-145)",
+    "docs/builder/research/pod-perf-investigation.md (the SOLVED perf doc — 7 dead ends + 2 fixes + venv-first rule)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-27T21:23:20Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "Resume Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/462020db-1d41-46fc-8286-a06bca5e4903.json then use mpi-continue. THE PERF QUESTION IS SOLVED — do NOT re-investigate the cause, and do NOT make the user repeat the data. The cloud-4090-slower-than-local-4060Ti LTX gap is aimdo's per-page model FAULT-IN overhead, NOT compute/bandwidth/disk/RAM/PCIe: live-proven because the host->VRAM copy on a Pod 4090 measured 25.7 GB/s pinned over PCIe Gen4 x16 (so 40GB would copy in ~1.6s) yet the actual fault-in took 108s (65x slower), and the per-phase split of a cold Pod LTX gen was stage-1 fault-in 108.19s + stage-2 fault-in 58.66s = 167s of a 250s gen (~67%), while the SAMPLER steps are FASTER on the Pod (1.45 s/it vs local 4.6 s/it). The cost is aimdo's per-page fault-handler / UVM bookkeeping (cuda-detour.c hooks), which is STACK-VERSION-SENSITIVE — local (Python 3.13.12 / torch 2.12.0 / CUDA 13.0) faults ~3x faster than the Pod (torch 2.8 / cu126 / py3.11). The FULL writeup, the per-phase table, the bandwidth-disproof, the verified local spec, and ALL of the following SEVEN ruled-out dead ends are in docs/builder/research/pod-perf-investigation.md (read it FIRST): cu130 cuBLAS GEMM (Blackwell-only), host throttle (165 TFLOPS/P0), aimdo-disable/--disable-dynamic-vram (OOM-killed the Pod live, twice with MPI-146 — aimdo is load-bearing, reverted), fp8 (both engines run the IDENTICAL BF16 22B transformer + fp8 gemma set), torch-broad-compute (SDXL on the Pod is FAST, 2s vs local 12s), Triton/PatchTritonVAE (not in the shipped workflow), and transfer/disk/PCIe/RAM-size bandwidth (all equal-or-better on the Pod). There are only TWO remaining FIXES, both UNTESTED and both measurable without a rebuild first: (1) the surest — a bigger-VRAM card (~48GB) so the 40GB model is resident and aimdo's fault path never runs (24/32GB still faults); (2) the user's-instinct-was-right one — match local's stack on the Pod (torch 2.12/cu130), the JUSTIFIED bump BY ELIMINATION (NOT the cuBLAS angle), but MEASURE the fault-in gain on a throwaway torch-2.12 venv + micro-benchmark on a Pod BEFORE any image rebuild because cu130 costs the r580 driver floor (narrower host coverage). Also DONE this session: the local-gen wedge fix (21b8fdf) is now LIVE-VERIFIED (disconnect+DELETE a Pod, then a local gen RAN). Everything is committed, NOTHING is pushed (user-gated): app RunPod has the perf-doc arc (bb460b1..8babda2) plus prior commits 21b8fdf/7479c67/fcbeaaa/c5b9105/64b306a/3a09e4f/1fb0527, and mpi-ci main has start.sh 9df2bf4+27bb28d (net = aimdo default, R2 re-pushed SAFE) plus 8a32037/075933f. Pod ops + R2 + git pushes are USER-GATED; a killed terminal orphans the Pod; set the RunPod deploy CUDA filter to >=12.6 (a CUDA-12.4 host refused the image this session). RunPod branch ONLY (MPI-131), ~July 9 public target, no release pressure."
+}

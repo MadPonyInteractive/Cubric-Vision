@@ -28,7 +28,7 @@ import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
-import { MODELS, getModelsByType, getModelById, isModelUsable } from '../../../data/modelRegistry.js';
+import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
@@ -454,7 +454,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot continue.`, 'warning');
                 return;
             }
-            if (model.installed === false) {
+            if (!isOperationInstalled(model, item.operation)) {
                 const name = model.label || model.name || model.id;
                 StatusBar.notify(`Model "${name}" that created this preview is not installed — install it to continue.`, 'warning');
                 return;
@@ -641,7 +641,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot finish.`, 'warning');
                 return;
             }
-            if (model.installed === false) {
+            if (!isOperationInstalled(model, item.operation)) {
                 const name = model.label || model.name || model.id;
                 StatusBar.notify(`Model "${name}" that created this preview is not installed — install it to finish.`, 'warning');
                 return;
@@ -1220,15 +1220,23 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
 
             pb.on('cancel', () => {
-                const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
-                const target = active[0];
+                // Stop cancels EVERY running gallery gen, not just the first
+                // (MPI-157): the old `active[0]`-only logic missed a second
+                // in-flight gen (e.g. a remote gen while a local one is also
+                // running, or a multi-stage entry whose displayed stage wasn't
+                // active[0]) → the unstopped gen kept running on the Pod (zombie)
+                // and contended VRAM with the next gen. Pending queue is left
+                // intact by design — Stop halts running work, the queue resumes.
+                const running = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
                 // Route a CUE-managed job through cancelRunningCueJob so a job that
                 // never got a prompt_id (e.g. remote WS down — MPI-73 Bug 2) also
-                // frees the stuck dispatcher + clears the queue instead of leaving a
-                // dead "running" slot that no repeated Stop can clear. A direct
-                // (non-queue) gen has no queueJobId and cancels in place.
-                if (target?.queueJobId) cancelRunningCueJob(target.queueJobId);
-                else if (target) activeGenerations.cancel(target.id);
+                // frees the stuck dispatcher instead of leaving a dead "running"
+                // slot that no repeated Stop can clear. A direct (non-queue) gen
+                // has no queueJobId and cancels in place.
+                for (const entry of running) {
+                    if (entry.queueJobId) cancelRunningCueJob(entry.queueJobId);
+                    else activeGenerations.cancel(entry.id);
+                }
                 const currentGroups = _visibleProjectGroups();
                 grid.el.setGroups(currentGroups);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');

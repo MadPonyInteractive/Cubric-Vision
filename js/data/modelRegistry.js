@@ -244,3 +244,30 @@ export function isModelUsable(modelOrId) {
     };
     return deriveInstalledOps(model, isOn).fullyInstalled;
 }
+
+/**
+ * Whether a SPECIFIC operation of a model is installed (commonDeps + that op's
+ * deps complete). Use this — not `model.installed` — to gate per-operation
+ * actions (e.g. finishing a T2V preview when only T2V is installed and I2V is
+ * not). The server's `model.installed` is all-ops-present, so it wrongly blocks
+ * a partial install for an op it CAN actually run. (MPI-122 / MPI-157 follow-up)
+ *
+ * Flat models: no op groups → fall back to `isModelUsable`.
+ * Op-keyed models: true when `op` is in the derived installedOps set.
+ *
+ * @param {ModelDef|string} modelOrId
+ * @param {string} op
+ * @returns {boolean}
+ */
+export function isOperationInstalled(modelOrId, op) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model) return false;
+    if (!op || !hasOperationGroups(model)) return isModelUsable(model);
+    const depStatus = getModelDepStatus(model.id);
+    if (!depStatus) return model.installed === true; // no cache yet → trust server flag
+    const isOn = id => {
+        const s = depStatus.get(id);
+        return s === true || s?.installed === true;
+    };
+    return deriveInstalledOps(model, isOn).installedOps.includes(op);
+}

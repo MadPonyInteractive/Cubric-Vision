@@ -1,0 +1,110 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1bb4799f-fbe9-4393-b59d-eababe4f48df",
+  "generated_at": "2026-06-28T15:45:00Z",
+  "from_session": "MPI-156 perf side-quest RESOLVED + MPI-157 follow-up created. Discovered the cloud LTX gap is a one-time cold-load tax (warm gens fast). All fixes disproven; two optimizations carded. Docs/gotchas/MEMORY/cards updated + committed (7f68f7b, UNPUSHED). Next: live node-58 bypass test (Pod will be re-spun after user's break).",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-156 cloud-LTX perf RESOLVED: warm-resident is the answer. Cold 1st gen ~209s (one-time per session), WARM 2nd gen onward = 36s (1s 1280x704, BEATS local 4060Ti). Cause = RunPod 8MB RLIMIT_MEMLOCK cap (not raisable via API) throttling aimdo pinned staging + intrinsic per-page fault. EVERY fix disproven live (bigger VRAM, torch bump, disk, --disable-async-offload, --disable-pinned-memory, fp8=face-reject, downgrade=0.25.1-also-has-aimdo). Two optimizations carded as MPI-157: warm-on-connect + remove MpiClearVram node 58. Pod was deleted at end of session (user on a break).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Chase a FIX for the cloud-vs-local LTX speed gap (perf side-quest under MPI-156).",
+    "status": "complete",
+    "summary": "RESOLVED: the cloud slowness is a ONE-TIME COLD-LOAD TAX (~3:30 first gen), NOT per-gen. After the 40GB transformer faults in once it stays resident and every later gen is fast (36s, beats local). The cause (8MB memlock cap + per-page fault) has no flag/config fix, but the warm-resident behavior makes cloud fully viable. Two optimizations to make it feel instant are carded as MPI-157 (warm-on-connect + remove MpiClearVram node 58). Investigation closed; next session executes the optimizations."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "PROVED cloud LTX = one-time cold tax, not per-gen. Live on a 5090 Pod (v0.10.3-cu124, ComfyUI 0.26, aimdo): cold 1st gen ~209s; WARM 2nd gen = 36s (1s 1280x704), 45s (1s 1K 1088x1920), 1:53 (5s 1K t2v), 2:00 (5s 1K i2v). Warm beats local 4060Ti (~100s).",
+      "ROOT CAUSE airtight: RunPod container RLIMIT_MEMLOCK = 8MB (hard, /proc/1/limits, set at launch, NOT raisable: REST /pods has no dockerArgs/ulimit field; GraphQL dockerArgs is entrypoint-args not docker-flags; RunPod feature-req #338 open/unsupported). aimdo pins host RAM to stage the 40GB; the cap throttles pinning to ~1 GB/s AND the per-page fault mechanism is slow regardless. Local has 26GB pinnable (no cap) -> cold 28-32s. Same model+engine+aimdo, only memlock differs.",
+      "EVERY fix disproven LIVE: bigger VRAM (96GB still cold-faulted 119s, earlier session), torch 2.8->2.11 (no change), disk (read_bytes=0), --disable-async-offload (WORSE, sync stalls), --disable-pinned-memory (NO change on real gen -> proves the per-page fault, not pinning speed, is the cost), fp8 transformer (Kijai fp8_input_scaled_v3 ~25GB loads ~half-time but visible eyes/teeth degradation across seeds -> quality REJECT, bf16 stays), downgrade to 0.25.1 (its OWN boot log shows aimdo 0.4.10 + comfy-kitchen -> same cap on a Pod; the fast-0.25.1 memory was LOCAL/no-cap).",
+      "Upstream confirmation: ComfyUI issue #14345 = same LTX-2.3 speed regression since the aimdo bump in 0.24, multiple users (RTX 3060/5060Ti/AMD). aimdo introduced in 0.24 (AMD user log shows 0.24.0 + aimdo 0.4.9).",
+      "fp8 variant survey (Kijai/LTX2.3_comfy): fp8_input_scaled/v2/v3, fp8_scaled, mxfp8_block32 (~23-25GB). input_scaled = scales activations too (better quality than plain scaled). mxfp8 = Blackwell-native only, EMULATED/slow on Ada (4090 probe: Native ops float8_e4m3fn; emulated mxfp8/nvfp4). All rejected for face quality anyway.",
+      "Transition LoRA (workflow node 192 Input_Use_Transition) = OFF by default in both LTX_t2v.json + LTX_i2v.json. So the slow-mo i2v output was NOT the LoRA. transition LoRA = a possible more-movement toggle, untested (noted in MPI-157).",
+      "DOCS/CARDS UPDATED + COMMITTED (7f68f7b, RunPod branch, UNPUSHED): resolution banner at TOP of docs/builder/research/pod-perf-investigation.md; gotchas.md perf entry RESOLVED addendum; MEMORY.md MPI-156 line rewritten; MPI-156 events.jsonl resolution event; MPI-157 card CREATED (todo, board.json + task.json + events.jsonl); MPI-129 task.json fixed (was invalid JSON from a bad \\escape, kanban wouldn't render) + Wan-on-G:-drive migration note; MPI-135 connect-400 bug + slow-container-pull note.",
+      "remoteProxy.js test flag (CUBRIC_VRAM_MODE) FULLY REVERTED to clean (git confirms file unmodified). No test cruft left."
+    ],
+    "pending": [
+      "MPI-157 OPT 1 (priority, app-side, no rebuild) WARM-ON-CONNECT: after a Pod connects + ComfyUI ready, fire a tiny throwaway LTX gen in the background so the 40GB is resident BEFORE the user's first real gen -> they never see the ~3:30 cold tax. Wire into the connect/ready path (routes/remoteProxy.js + comfyController); reuse a minimal LTX workflow at lowest res; discard output.",
+      "MPI-157 OPT 2 REMOVE MpiClearVram node 58 from comfy_workflows/LTX_t2v_stage2.json (+ check i2v_stage2): node 58 calls unload_all_models() mid-pipeline (path: node 52 -> 58 -> nodes 104/126 'Stage 1 Video Latent' -> upscale -> stage-2 sampler) -> evicts the resident 40GB so stage-2 RE-FAULTS it (~30s transition even WARM). Node 65 (after VAEDecode) is harmless, leave it. TEST FIRST live: bypass node 58 in the Pod ComfyUI browser (Ctrl+B), run a warm t2v gen, measure stage1->stage2 gap + PEAK VRAM + confirm log does NOT re-stage 40050MB at stage-2. CAUTION: keeping 40GB resident through stage-2 may OOM a 24GB card (Wan has 3 MpiClearVram nodes + is fine -> 58 may be load-bearing on small cards). Only edit JSON if it helps AND peaks under ~22GB; else gate by card VRAM. JSON edit = rewire 104+126 to read [\"52\",0] + neuter 58.",
+      "While testing node-58 on a warm Pod, ALSO grab (cheap, same session): peak VRAM during stage-2 on a 24GB card specifically (decides universal vs big-card-only), one i2v warm gen for path coverage, and the transition-LoRA-on movement test.",
+      "PUSH (user-gated) when ready: RunPod branch has 7f68f7b + the earlier unpushed arc (21b8fdf, 64b306a, 3a09e4f, 7479c67, fcbeaaa, and the v0.10.4 pin/revert commits); mpi-ci main has 075933f, 8a32037 + the torch-2.11 commits. v0.10.4 torch-2.11 images sit unused on GHCR (could be deleted)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-157",
+    "title": "Cloud LTX warm-speed: warm-on-connect + remove MpiClearVram node 58 (stage-2 re-fault)",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-157/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-157/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "pod-perf-investigation.md top banner = full resolution (warm-resident, cold tax one-time, all fixes dead, two optimizations). READ THIS FIRST.",
+      "gotchas.md perf entry has a RESOLVED addendum superseding the old two-fix story.",
+      "MEMORY.md MPI-156 line rewritten with the resolution + MPI-157 pointer.",
+      "MPI-156 card events.jsonl logged the resolution; MPI-157 card created with full description.",
+      "All committed in 7f68f7b (RunPod branch, UNPUSHED)."
+    ],
+    "pending": [
+      "After the node-58 test lands a result, append it to MPI-157 + pod-perf-investigation.md.",
+      "On final close of MPI-157, consider whether v0.10.4 (torch 2.11) GHCR images should be deleted (unused)."
+    ]
+  },
+  "next_action": {
+    "description": "The cloud LTX perf side-quest is RESOLVED (warm-resident is the answer; cold ~3:30 is a one-time per-session tax; warm gens are 36s and beat local). Do NOT re-investigate the cause or re-run any disproven fix (read the TOP BANNER of docs/builder/research/pod-perf-investigation.md first). Execute MPI-157: spin a Pod (any in-stock app-supported card; 24GB ideal to test the VRAM-peak safety) and LIVE-TEST bypassing MpiClearVram node 58 in the Pod ComfyUI browser (Ctrl+B on the 'Mpi Clear Vram' node feeding 'Stage 1 Video Latent' = node 58, NOT the one after VAE Decode = node 65). Run a WARM t2v gen, measure the stage1->stage2 gap + PEAK VRAM + confirm the Pod log does NOT re-stage 40050MB at stage-2. If it shaves time AND peaks under ~22GB -> edit comfy_workflows/LTX_t2v_stage2.json (rewire nodes 104+126 to read [\"52\",0], neuter node 58). Also scope/build OPT 1 warm-on-connect (fire a throwaway gen post-connect to hide the cold tax). Pod ops + R2 + git pushes are USER-GATED. RunPod branch ONLY.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Cloud LTX slowness = one-time COLD-LOAD TAX, not per-gen. Warm gens (36s) beat local. This is the whole resolution: ship cloud as-is, just hide the cold tax (warm-on-connect).",
+      "RunPod 8MB memlock cap is the cold cause and is NOT raisable via their API (no REST field; GraphQL dockerArgs is entrypoint-args; feature-req #338 open). No flag fixes the cold fault (both pinning flags tested dead).",
+      "fp8 transformer REJECTED for quality (eyes/teeth across seeds) despite being faster + smaller. bf16 stays. Faces are the product's core.",
+      "Downgrade to 0.25.1 is POINTLESS for the cloud problem: 0.25.1 also ships aimdo 0.4.10 (verified from its boot log) -> same cap on a Pod. The fast-0.25.1 memory was LOCAL (no cap).",
+      "MpiClearVram node 58 (graph-traced) evicts the 40GB mid-pipeline -> stage-2 re-fault even on warm gens. Removing it is OPT 2 but may be load-bearing for 24GB OOM safety (Wan has 3 such nodes + is fine) -> live-test before shipping.",
+      "Warm-resident proven by the Wan re-run earlier (Wan 2nd gen = 6s) and then LTX (2nd gen 36s). The model staying resident is the key behavior."
+    ],
+    "constraints": [
+      "Pod ops + image builds + R2 runtime pushes + git pushes are ALL USER-GATED. The session's 5090 Pod was deleted; next session re-spins.",
+      "RunPod EU-RO-1 (the volume's DC, vol cubric-vision-EU-RO-1, 150GB) had SLOW container pulls this session (10-12min). All app pods land there (volume DC-locked). If pulls crawl, it's the DC, not the card. Pick a host that downloads.",
+      "App shows GPU cards it CANNOT connect to (RTX PRO 4500 etc -> RunPod 400 while console connects fine). Logged under MPI-135. Use a card the app actually creates (5090, 4090, A5000 worked).",
+      "Shared tree: commit by explicit pathspec, never git add -A/.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci). RunPod branch ONLY (MPI-131) — no master merge/GitHub release/git tag.",
+      "task.json description is a JSON string: NO raw backslashes (use forward slashes, e.g. G:/CubricModels) and NO inner double-quotes — both break the kanban parse (happened this session on MPI-129).",
+      "Wan model weights are LOCAL at G:/CubricModels/diffusion_models/Wan_22_*.safetensors — MPI-129 Wan migration = simple local->R2 rclone push (do NOT re-download from HF). Deferred."
+    ],
+    "files_modified": [
+      "(committed 7f68f7b) docs/builder/research/pod-perf-investigation.md (resolution banner at top), docs/gotchas.md (perf RESOLVED addendum), MEMORY.md (MPI-156 line — at C:/Users/Fabio/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/MEMORY.md, NOT committed-in-repo, it's the auto-memory), .agents/mpi-kanban/tasks/MPI-156/events.jsonl, .agents/mpi-kanban/tasks/MPI-157/{task.json,events.jsonl} (NEW card), .agents/mpi-kanban/board.json (MPI-157 in todo, next_id 158), .agents/mpi-kanban/tasks/MPI-129/{task.json,events.jsonl}, .agents/mpi-kanban/tasks/MPI-135/events.jsonl.",
+      "routes/remoteProxy.js — test flag was added then FULLY REVERTED (git shows it clean/unmodified). Do not look for a flag there."
+    ],
+    "files_to_read_first": [
+      "docs/builder/research/pod-perf-investigation.md (TOP BANNER = the full resolution + the two optimizations + all dead ends. READ BEFORE ANYTHING.)",
+      ".agents/mpi-kanban/tasks/MPI-157/task.json (the follow-up card with the node-58 wiring details + test plan)",
+      "comfy_workflows/LTX_t2v_stage2.json (node 58 MpiClearVram, passthrough from node 52, consumed by nodes 104+126; node 65 is the harmless one)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": ["RunPod/remote engine", "ComfyUI engine", "Pod/mpi-ci", "LTX-2.3 authoring"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline MPI-131; shared-tree commit-by-pathspec; mpi-ci separate repo via git -C; push user-gated)",
+    "docs/gotchas.md (RunPod/remote, aimdo/torch, the RESOLVED perf entry)",
+    "docs/builder/research/pod-perf-investigation.md (THE current perf doc — resolution at top)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-28T15:45:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "Resume Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/1bb4799f-fbe9-4393-b59d-eababe4f48df.json then use mpi-continue. THE CLOUD LTX PERF SIDE-QUEST IS RESOLVED — do NOT re-investigate the cause or re-run any disproven fix. Read the TOP BANNER of docs/builder/research/pod-perf-investigation.md FIRST. Resolution (live-proven on a 5090 Pod): the cloud LTX slowness is a ONE-TIME COLD-LOAD TAX, not per-gen. First gen (cold) ~209s (~3:30, acceptable, was ~5min); every gen after (WARM) = 36s for 1s 1280x704 (BEATS the local 4060Ti's ~100s), 45s for 1s 1K, 1:53 for 5s 1K t2v, 2:00 for 5s 1K i2v. The 40GB LTXAV transformer stays RESIDENT after the first fault -> later gens are fast. Cold cause = RunPod's 8MB RLIMIT_MEMLOCK cap (hard, set at container launch, NOT raisable via RunPod's REST or GraphQL API — feature-request #338 is open/unsupported) throttling aimdo's pinned-memory staging, PLUS the intrinsic per-page fault mechanism. Local has 26GB pinnable (no cap) -> cold 28-32s. ALL fixes are DISPROVEN LIVE (do NOT retry): bigger VRAM (96GB still cold-faulted 119s), torch 2.8->2.11 bump (no change), disk (read_bytes=0), --disable-async-offload (made it WORSE), --disable-pinned-memory (NO change on a real gen, proving the per-page fault not pinning is the cost), fp8 transformer (Kijai fp8_input_scaled_v3 ~25GB is faster+fits but has visible eyes/teeth degradation across seeds -> quality REJECT, bf16 stays), and downgrade to 0.25.1 (it ALSO ships aimdo 0.4.10, so same cap on a Pod — the fast-0.25.1 memory was local/no-cap). Upstream ComfyUI issue #14345 documents the same LTX-2.3 regression since aimdo landed in 0.24. The remaining work is TWO OPTIMIZATIONS, both keep bf16 quality + ComfyUI 0.26, tracked as card MPI-157: (1) WARM-ON-CONNECT (priority, app-side, no rebuild) — after a Pod connects and ComfyUI is ready, fire a tiny throwaway LTX gen in the background so the 40GB is resident before the user's first real gen, hiding the ~3:30 cold tax; wire into the connect/ready path in routes/remoteProxy.js + comfyController. (2) REMOVE MpiClearVram node 58 from comfy_workflows/LTX_t2v_stage2.json — it calls unload_all_models() mid-pipeline (node 52 -> 58 -> nodes 104/126 'Stage 1 Video Latent' -> upscale -> stage-2 sampler) so the 40GB RE-FAULTS at stage-2 even on a warm gen (~30s transition); node 65 after VAEDecode is harmless, leave it. TEST NODE 58 FIRST live: spin a Pod (any app-supported in-stock card; 24GB ideal to check OOM safety), bypass node 58 in the Pod ComfyUI browser (Ctrl+B on the 'Mpi Clear Vram' node feeding 'Stage 1 Video Latent'), run a WARM t2v gen, and measure the stage1->stage2 gap + PEAK VRAM + confirm the Pod log does NOT re-stage 40050MB at stage-2. CAUTION: keeping the 40GB resident through stage-2 may OOM a 24GB card (Wan has 3 MpiClearVram nodes and is fine, so node 58 may be load-bearing on small cards) — only edit the JSON if it both shaves time AND peaks under ~22GB, otherwise gate it by card VRAM. The JSON edit is: rewire nodes 104+126 to read [\"52\",0] directly and neuter node 58. Everything from this session is committed in 7f68f7b on the RunPod branch but NOT pushed (push is user-gated): pod-perf doc resolution banner, gotchas perf addendum, MEMORY.md MPI-156 rewrite, the new MPI-157 card, and MPI-129/MPI-135 card notes. routes/remoteProxy.js test flag was fully reverted (it is clean). Pod ops + R2 + git pushes are USER-GATED. RunPod EU-RO-1 (the volume's DC) had slow ~10-12min container pulls this session; if pulls crawl it's the DC not the card. The app also shows some GPU cards it cannot actually connect to (RunPod 400, e.g. RTX PRO 4500) — logged under MPI-135; use a card the app creates (5090/4090/A5000 worked). RunPod branch ONLY (MPI-131)."
+}
