@@ -210,6 +210,49 @@ variable — test it first.
 > perf upgrade — it isn't one. Keep v0.10.3 as the shipped tag unless another
 > reason to move.
 
+## DISK = DEFINITIVELY CLEARED — `read_bytes: 0` during the entire fault-in (2026-06-28)
+
+The last uncontrolled axis (model-source disk: Pod's 1 GB/s network volume vs
+local NVMe) was tested DIRECTLY by watching the ComfyUI process's I/O counters
+(`/proc/<main.py PID>/io`) during a live LTX gen's fault-in on the L4 Pod:
+
+| counter | meaning | observed during fault-in |
+|---|---|---|
+| `read_bytes` | bytes from the **physical block device** (disk / network volume) | **0 — flat, never moved** |
+| `rchar` | bytes via read() syscalls (served from **RAM page cache**) | climbing ~0.5–1 GB/s |
+
+**`read_bytes` stayed at 0 for the WHOLE init.** The fault-in reads ZERO bytes
+from disk — the model is already in the OS page cache (RAM), and every fault page
+is served from RAM, not the volume. **This conclusively clears disk / the network
+volume / volume-age/fragmentation** — the slow phase never touches storage. (Also
+explains why the earlier `dd` 1 GB/s sequential number was a red herring: the
+fault never reads the disk at all, sequentially or randomly.)
+
+**What `rchar` reveals is the real bottleneck:** the fault-in pulls pages
+RAM→process at only **~0.5–1 GB/s effective**, despite raw RAM/PCIe bandwidth
+being 25+ GB/s. That ~25× gap IS the per-page fault-handler cost — syscall +
+page-table walk + UVM bookkeeping per 4KB page, serialized. 40GB at ~0.5–1 GB/s ≈
+40–80s, matching the measured 55–127s fault phases. **The cost is pure
+fault-mechanism overhead moving cached bytes, NOT I/O.**
+
+### FINAL elimination — every external axis is now ruled out by direct measurement
+bandwidth (25.7 GB/s) · VRAM size (96GB = same) · RAM size (62GB matched = same) ·
+compute (sampler faster on Pod) · torch version (2.8→2.11 = no change) · **disk /
+network volume (`read_bytes`=0 — never read)**. The ONLY remaining difference
+between local (34s) and Pod (127s) is the **per-page fault-handler efficiency of
+the environment itself** (Linux/py3.11/cu126/driver vs Windows/py3.13/cu130/driver)
+— not movable by a torch pin, a bigger card, or a faster disk.
+
+### → The real lever is ARCHITECTURAL, not environmental: stop re-faulting (Fix #3)
+Since the fault cost is intrinsic per-page overhead and the 40GB LTXAV is
+(re)faulted at EACH stage boundary, the win is to **fault it ONCE and keep it
+resident across stage-1 → stage-2** so the second 55–60s fault never happens.
+That's an aimdo cache-retention tune (`--cache-ram` / reserve-vram / keep-model-
+loaded), aimdo stays ON (no OOM). Halving the fault count ≈ halves the ~167s
+fault tax. This is the only lever left that we control — environmental fault-path
+efficiency is not something the image can change. Pursue Fix #3; stop chasing
+stack/hardware levers (all six are now disproven live).
+
 ## The observation
 
 Same LTX-2.3 t2v workflow, byte-identical ComfyUI 0.26.0 + comfy-aimdo 0.4.10 +
