@@ -505,6 +505,10 @@ Changelog lives in TWO surfaces, both keyed by exact APP_VERSION string, both AC
 
 Patch loop self-contained in Cubric-Vision including R2 upload. Bucket: `cubric-builds`. Public host: `https://dl.cubric.studio/`. Tool: `rclone` (`C:\Users\Fabio\AppData\Local\Microsoft\WinGet\...\rclone.exe`). Config: `C:\Users\Fabio\.secrets\rclone-r2.conf`. Link model (new 2026-06-18): tier-neutral, minor-only path: `vision/v<major>.<minor>-<randomhex>/`. NO `pro/` segment. Patches reuse same link (swap files in place). New link minted only at promote (`mpi-merge-branches`). Update bundles are the ONLY way Pro users update (NOT the built-in GitHub updater — that's the public-release path). Approval gates required before uploading paid-member files.
 
+### rclone R2 upload — `--s3-no-check-bucket` is MANDATORY (MPI-129)
+
+`rclone copy ... cubric-r2:<bucket>/...` FAILS with `S3: CreateBucket 403 AccessDenied` (0 bytes) unless you pass `--s3-no-check-bucket`. rclone's multi-thread copy probes bucket existence by attempting CreateBucket; the scoped R2 token has no bucket-create perm (bucket already exists), so the probe 403s before any data moves. The flag skips the probe. Two more traps: (1) a bash `for`-loop wrapping the copies reports **exit 0 even when every file 403'd** — check the log body, not the exit code. (2) `RCLONE_CONFIG=~/.secrets/rclone-r2.conf` MUST be exported (no default `rclone.conf` on this box). VERIFY uploads with `rclone lsl` size-match — NOT `rclone hashsum`/curl (R2 doesn't serve sha256 via API; hashsum returns garbage). Model weights bucket = `cubric-models` (host `https://models.cubric.studio/vision/<set>/<comfy-subdir>/<file>`); `cubric-builds` is app-builds only.
+
 ### patreon patch train
 
 Patch releases (1.0.x) go to Patreon Pro via Cloudflare with NO git tag and NO GitHub publish. A `v*` tag would trigger `push: tags: v*` and leak publicly. Public GitHub release (which pushes a `v*` tag) is done later, bundling all patches since last public version.
