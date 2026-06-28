@@ -105,8 +105,8 @@ const UA =
 // endpoint → wrapper bump 0.2.14→0.2.15 + a Pod image rebuild to ship for REMOTE.
 // (LOCAL is fixed app-side already — it hits ComfyUI /history directly.)
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.10.3';
-const WRAPPER_VERSION = '0.2.18';
+const POD_IMAGE_VERSION = 'v0.10.4';
+const WRAPPER_VERSION = '0.2.20';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
