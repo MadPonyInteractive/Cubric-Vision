@@ -152,6 +152,64 @@ a cu128 base — but the FULL 2.12 trio still needs torchaudio 2.12 to publish, 
 drop torchaudio (check if the LTX pipeline actually imports it; the LTX audio VAE
 is ComfyUI's own, not torchaudio). Prove 2.11 first — it's already built.
 
+## FIX #2 RESULT — torch 2.11 did NOT fix the fault-in (live, L4, 2026-06-28)
+
+Deployed `v0.10.4-cu124` (torch **2.11.0**+cu126) on an L4 (24GB VRAM, 62GB RAM —
+RAM-matched to local's 64GB, VRAM-matched to the baseline class). Clean isolation:
+same ComfyUI 0.26.0 / aimdo 0.4.10, ONLY torch changed (2.8 → 2.11).
+
+**Question 1 — does aimdo load on 2.11? YES.** Boot log: `cuda-funchooks.c …
+aimdo_setup_hooks: hooks successfully installed` + `comfy-aimdo inited for GPU:
+NVIDIA L4` + `DynamicVRAM support detected and enabled`. No legacy fallback. The
+compiled-hook ABI concern was unfounded — aimdo 0.4.10 runs clean on torch 2.11.
+
+**Question 2 — did it speed the fault-in? NO.**
+
+| torch | GPU | stage-1 fault-in |
+|---|---|---|
+| 2.8 | 4090 24GB | 108 s |
+| 2.8 | RTX PRO 6000 96GB | 119 s |
+| **2.11** | **L4 24GB** | **126.17 s** |
+| 2.12 (local) | 4060 Ti 16GB | ~34 s |
+
+`Requested to load LTXAV` 09:36:29 → `Model Initialization complete! 126.17s/it`
+09:38:46 = **~127s** — SAME ballpark as torch 2.8 (108/119), if anything slightly
+worse (L4 is a weaker card, but fault-in isn't compute-bound, so that shouldn't
+matter). **The torch 2.8 → 2.11 jump moved the fault-in by ~0%.**
+
+**CONCLUSION: the torch framework version (2.8→2.11) is NOT the lever.** Three
+minors gained nothing. For 2.12 to then produce a 127s→34s (≈4×) cliff in ONE
+more minor is implausible — so the "just bump torch" theory is now WEAK, not
+proven. The Pod stack (2.11/cu126/py3.11) still faults ~3.7× slower than local
+(2.12/cu130/py3.13), but we've now ruled out the torch-version axis as the
+explanation.
+
+### What's left — the axis we NEVER controlled: model source disk
+Local faults from a **local NVMe SSD** (C:, PCIe). The Pod faults from a **1 GB/s
+network volume** (`/workspace`). Even though aimdo prints "Staged" (implying RAM),
+the per-page fault handler may still touch the backing store on first access —
+and on the Pod that backing store is the slow network volume, on local it's NVMe.
+This is the ONE big environmental difference never isolated:
+- bus/PCIe — cleared (25.7 GB/s)
+- VRAM size — cleared (96GB = same 119s)
+- RAM size — cleared (62GB L4 RAM-matched, still 127s)
+- torch version — cleared NOW (2.8→2.11 = no change)
+- compute — cleared (sampler faster on Pod)
+- **model-source disk (NVMe vs 1GB/s network volume) — NEVER tested.**
+
+NEXT TEST (free, no rebuild): on a Pod, copy the LTX model set from the network
+volume to **local container disk** (or `/dev/shm` tmpfs if it fits) and re-run —
+if the fault-in drops toward local's ~34s, the network volume was the cause and
+the fix is "stage models on fast local disk, not the network volume." Other
+remaining (smaller) suspects: cu130 toolkit specifically, py3.13, or a Linux-vs-
+Windows aimdo UVM path difference. But disk-source is the biggest uncontrolled
+variable — test it first.
+
+> torch 2.11 images (`v0.10.4`) are harmless to keep (aimdo works, no regression)
+> but offer NO perf win over `v0.10.3` (2.8). Don't bother shipping v0.10.4 as a
+> perf upgrade — it isn't one. Keep v0.10.3 as the shipped tag unless another
+> reason to move.
+
 ## The observation
 
 Same LTX-2.3 t2v workflow, byte-identical ComfyUI 0.26.0 + comfy-aimdo 0.4.10 +
