@@ -102,3 +102,16 @@ C2 ties to C1 (both about LTX stage progress/preview) → same session.
 3. **Cluster C** — LTX staging/progress. Independent; can run parallel to B with a dedicated agent.
 
 Hand off (`mpi-handoff`) at each → boundary.
+
+---
+
+## ★ CLOSED 2026-06-28 — umbrella retired
+
+Cluster A (MPI-139/145/146/149/152) = **DONE + closed**. Cluster C (MPI-128/147) = **DONE + closed**.
+Cluster B = only **MPI-140** (progress-bar lie, transport-agnostic) and **MPI-136** (stall watchdog,
+mooted by R2) remain — both stand alone, no umbrella needed. **MPI-129** (HF→R2, the keystone) is
+in `doing`, staged for a dedicated session with a current STATUS block.
+
+This umbrella was created when the board was overloaded; the board is now manageable, so the
+tracker is retired. The remaining cards (129/140/136 + 158/135/126) are addressed individually.
+Archived — recoverable if a coordination map is ever needed again.
