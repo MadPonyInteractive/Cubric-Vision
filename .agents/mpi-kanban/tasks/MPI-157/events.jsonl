@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-157", "type": "task.created", "at": "2026-06-28T15:30:00Z", "actor": "agent", "column": "todo", "summary": "Follow-up to MPI-156 perf resolution: warm-on-connect (hide ~3:30 cold tax) + remove MpiClearVram node 58 (stage-2 40GB re-fault). Node-58 needs live browser-bypass test + 24GB VRAM-peak check before JSON edit."}

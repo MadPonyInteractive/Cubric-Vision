@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-157",
+  "title": "Cloud LTX warm-speed: warm-on-connect + remove MpiClearVram node 58 (stage-2 re-fault)",
+  "description": "Follow-up to MPI-156 perf resolution (2026-06-28). The cloud LTX cold-load tax (~3:30 first gen) is a one-time per-session cost; warm gens are fast (36s 1s/704p, beats local). TWO optimizations to make cloud feel instant, both keep bf16 quality + ComfyUI 0.26, neither is a blocker. (1) WARM-ON-CONNECT (priority, biggest UX win, app-side only, no rebuild): right after a Pod connects + ComfyUI is ready, fire a tiny throwaway LTX gen in the background so the 40GB transformer is resident BEFORE the user kicks their first real gen -> they never see the ~3:30 cold fault, their first gen is already ~36s. Likely wire into the connect/ready path in routes/remoteProxy.js + comfyController; reuse an existing minimal LTX workflow at lowest res/1-frame; discard the output. (2) REMOVE MpiClearVram node 58 from comfy_workflows/LTX_t2v_stage2.json (and check i2v_stage2): node 58 calls comfy.model_management.unload_all_models() mid-pipeline (it sits on the stage-1->stage-2 latent path: node 52 -> 58 -> nodes 104/126 Stage 1 Video Latent -> upscale -> stage-2 sampler), evicting the resident 40GB so stage-2 re-faults it (~30s transition even on a WARM gen). Node 65 (after VAEDecode) is harmless end-cleanup, leave it. CAUTION: removing 58 keeps the 40GB resident through stage-2 -> on a 24GB card the stage-2 working set + resident 40GB may OOM (Wan has 3 MpiClearVram nodes and is fine, so 58 may be load-bearing on small cards). TEST FIRST: bypass node 58 live in the Pod ComfyUI browser (Ctrl+B), run a warm t2v gen, measure the stage1->stage2 gap + PEAK VRAM, and confirm the log does NOT re-stage 40050MB at stage-2. Only if it shaves time AND peaks under ~22GB (safe for 24GB) -> edit the JSON: rewire 104+126 to read [\"52\",0] directly + neuter node 58. If it only fits 32GB+ -> gate it by card VRAM. ALSO untested: transition LoRA (node 192, Input_Use_Transition, OFF by default) may give more movement -> separate quality toggle test. Full context: docs/builder/research/pod-perf-investigation.md (top banner). BRANCH RunPod, mpi-ci separate, builds/pushes user-gated.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-06-28T15:30:00Z",
+  "updated_at": "2026-06-28T15:30:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  },
+  "tags": [
+    "runpod",
+    "perf",
+    "ltx",
+    "comfy-workflow",
+    "optimization",
+    "follow-up"
+  ],
+  "priority": "high"
+}

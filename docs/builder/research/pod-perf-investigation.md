@@ -1,5 +1,63 @@
-# Pod vs Local Perf — SOLVED: the gap is 40GB MODEL FAULT-IN, not compute
+# Pod vs Local Perf — RESOLVED: WARM-RESIDENT is the answer (cold tax is one-time-per-session)
 
+> **★ FINAL RESOLUTION (live-proven 2026-06-28, RTX 5090 Pod) — READ THIS FIRST.**
+> The cloud LTX "slowness" is a ONE-TIME COLD-LOAD TAX, not a per-gen cost. Once the
+> 40GB LTXAV transformer is faulted in, it stays resident and every subsequent gen is
+> FAST — faster than local. Measured on a 5090 Pod (v0.10.3-cu124, ComfyUI 0.26, aimdo):
+>
+> | gen | wall time | note |
+> |---|---|---|
+> | **1st (cold)** | **~209s (3:30)** | one-time per session — the 40GB fault-in tax |
+> | **2nd (warm), 1280×704 High** | **36s** | model resident, beats local 4060Ti (~100s) |
+> | warm, very-low quality | 33s | quality slider barely moves warm wall-time |
+> | warm, 1K 1088×1920 | 45s | +9s for 2.3× pixels — fixed warm cost dominates |
+>
+> **The cap/per-page-fault cost is paid ONCE.** Cold ~3:30 is normal cloud-GPU cold-start
+> (it used to be ~5min; 0.26/aimdo is actually slightly better). After that, warm gens
+> are ~33-45s at 1s/1K — the SPEED WIN the user remembered from 0.25.1 was always there,
+> just hidden behind the cold load.
+>
+> **THE COLD-LOAD ROOT CAUSE (still true, just no longer the headline):** RunPod
+> containers cap `RLIMIT_MEMLOCK` at **8MB** (hard, set at container launch, NOT raisable
+> via RunPod's REST `/pods` API — no `dockerArgs`/ulimit field; GraphQL `dockerArgs` is
+> entrypoint-args not docker-flags; open RunPod feature req #338 = unsupported). aimdo
+> pins host memory to stage the 40GB; the 8MB cap throttles pinning to ~1 GB/s, AND the
+> per-page fault MECHANISM itself is slow regardless of pinning. Local has 26GB pinnable
+> (no cap) → cold ~28s. Proven by direct A/B: same model+engine+aimdo, local stage-1
+> fault 28s vs Pod 108s — ONLY the memlock differs. (Upstream ComfyUI issue #14345 = same
+> LTX-2.3 regression since the aimdo bump in 0.24, multiple users.)
+>
+> **FLAGS THAT DON'T FIX IT (both tested live, DEAD — do NOT re-try):**
+> `--disable-async-offload` (made it worse, sync stalls) and `--disable-pinned-memory`
+> (no change — proves the per-page fault mechanism, not pinning speed, is the cost).
+> No ComfyUI flag fixes the cold fault. Downgrading to 0.25.1 does NOT help either:
+> 0.25.1 ALSO ships aimdo 0.4.10 + comfy-kitchen (verified from its boot log) → same cap
+> behavior on a Pod. The fast-0.25.1 memory was LOCAL (no cap), not a version effect.
+>
+> **fp8 transformer = REJECTED for quality (2026-06-28):** Kijai fp8_input_scaled_v3
+> (~23-25GB) loads ~half the time AND fits 32GB cards, but produces visible eyes/teeth
+> degradation across seeds in this workflow (faces are the product's core). bf16 stays.
+> (mxfp8 = Blackwell-only native; emulated/slow on Ada — not a cross-card option.)
+>
+> **→ THE TWO REAL OPTIMIZATIONS (both keep bf16 quality + 0.26, neither is a blocker):**
+> 1. **WARM-ON-CONNECT** (biggest UX win): fire a tiny throwaway gen right after Pod
+>    connect (background) so the 40GB is resident BEFORE the user's first real gen → the
+>    user never sees the ~3:30 cold tax; their first gen is already ~36s.
+> 2. **Remove `MpiClearVram` node 58** from the stage-2 LTX workflow: even on a warm gen,
+>    stage-2 re-faults the 40GB (visible pause stage-1→stage-2) because node 58 calls
+>    `unload_all_models()` mid-pipeline (found by graph trace). Removing it should keep
+>    the transformer resident across stages → shave the warm 36s further. NOTE: Wan's
+>    workflow has 3 MpiClearVram nodes and is fine, so removal needs live verification it
+>    doesn't break VRAM safety on a 24GB card — test before shipping.
+>
+> **DEAD ENDS (do NOT re-investigate — all proven this arc):** bigger VRAM card (96GB
+> still cold-faulted), torch bump (2.8→2.11 no change), disk/network-volume (read_bytes=0),
+> the two pinning flags above, fp8 (quality), downgrade (0.25.1 has aimdo too), raising
+> memlock (no RunPod API). The remaining levers are the two OPTIMIZATIONS above, not the
+> cold fault itself (which is acceptable as a one-time tax).
+>
+> ---
+>
 > **ROOT CAUSE (live-proven 2026-06-27):** the cloud 4090 loses to the local
 > 4060Ti on LTX-2.3 ENTIRELY because of the per-stage **aimdo dynamic-VRAM
 > fault-in of the 40GB LTXAV transformer**, NOT compute. Live per-phase split on a
