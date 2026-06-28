@@ -119,6 +119,39 @@ elimination.**
 > touches the fault-in path — the 119s confirms the fault cost is torch-2.8-bound,
 > toolkit/arch-independent.
 
+## FIX #2 BUILD — v0.10.4 images (torch 2.8 → 2.11), built + pushed 2026-06-28
+
+Both Pod image profiles rebuilt with the torch bump to test the fault-in fix.
+**torch 2.12 was NOT usable: torchaudio 2.12 is not published on any cu12x
+channel (cu126/cu128 torchaudio both top out at 2.11.0).** So pinned the highest
+COMPLETE trio = **torch 2.11.0** (3 minors past the 2.8 aimdo floor — exercises
+the new allocator / UVM-fault path):
+
+| Tag | torch / cuda | sage | pushed |
+|---|---|---|---|
+| `v0.10.4-cu124` | **2.11.0+cu126** / 12.6 | OK (sm_86;sm_89) | ✅ publicly resolvable |
+| `v0.10.4-cu128` | **2.11.0+cu128** / 12.8 | OK (sm_120) | ✅ (Blackwell) |
+
+Both keep their existing driver floors (cu126 ~r560, cu128 ~r570) — NO cu130, NO
+r580 cost. `v0.10.3` retained for rollback. mpi-ci commits: `65e112b` (initial
+2.12.1 attempt) → `d1e8643` (cu124 → 2.11.0, torchaudio fix) → `69402e8` (cu128 →
+2.11.0). UNPUSHED to git (user-gated); Docker images ARE pushed to GHCR.
+
+**THE TEST (next Pod boot — answers two questions at once):**
+1. **Does aimdo 0.4.10's compiled hook layer LOAD under torch 2.11's ABI?** Boot
+   log must show `comfy-aimdo inited` + `DynamicVRAM support detected and enabled`.
+   If it shows `Falling back to legacy ModelPatcher` → aimdo broke on 2.11 →
+   revert to 2.8 (the bump is then blocked until a newer aimdo).
+2. **IF aimdo loads:** run an LTX gen, read the stage-1 fault-in (`Model
+   Initialization complete! Xs/it`). Baseline = **108s (torch 2.8)**. If 2.11
+   faults in **< ~60s** → Fix #2 PROVEN, the torch framework was the lever.
+   Compare to local's torch-2.12 ~34s — 2.11 may land between.
+
+**IF 2.11 doesn't fault as fast as local's 2.12:** the next step is torch 2.12 on
+a cu128 base — but the FULL 2.12 trio still needs torchaudio 2.12 to publish, OR
+drop torchaudio (check if the LTX pipeline actually imports it; the LTX audio VAE
+is ComfyUI's own, not torchaudio). Prove 2.11 first — it's already built.
+
 ## The observation
 
 Same LTX-2.3 t2v workflow, byte-identical ComfyUI 0.26.0 + comfy-aimdo 0.4.10 +
