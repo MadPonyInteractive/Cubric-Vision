@@ -247,11 +247,55 @@ the environment itself** (Linux/py3.11/cu126/driver vs Windows/py3.13/cu130/driv
 Since the fault cost is intrinsic per-page overhead and the 40GB LTXAV is
 (re)faulted at EACH stage boundary, the win is to **fault it ONCE and keep it
 resident across stage-1 → stage-2** so the second 55–60s fault never happens.
-That's an aimdo cache-retention tune (`--cache-ram` / reserve-vram / keep-model-
-loaded), aimdo stays ON (no OOM). Halving the fault count ≈ halves the ~167s
-fault tax. This is the only lever left that we control — environmental fault-path
-efficiency is not something the image can change. Pursue Fix #3; stop chasing
-stack/hardware levers (all six are now disproven live).
+aimdo stays ON. This is the only lever left that we control — environmental
+fault-path efficiency is not something the image can change.
+
+### Fix #3 — the FLAG SURFACE (probed live 2026-06-28, RTX PRO 4000, v0.10.3)
+`python /opt/ComfyUI/main.py --help` under aimdo exposes these dynamic-VRAM knobs:
+
+| flag | help text (verbatim) | use for Fix #3 |
+|---|---|---|
+| `--highvram` | "By default models will be unloaded to CPU memory after being used. This option **keeps them in GPU memory**." | THE direct "don't re-fault" knob — but ☠️ OOMs on 24GB (40GB model > VRAM). SAFE only where the model FITS (48GB+). |
+| `--reserve-vram N` | "try and keep this much VRAM completely free" | tune headroom; safe-ish on 24GB |
+| `--vram-headroom N` | (get full text) | unknown |
+| `--cache-ram [GB]` | "Use RAM pressure caching with the specified headroom" | RAM-side cache; the current default |
+| `--cache-none` | "Reduced RAM/VRAM usage at the expense of executing…" | OPPOSITE — don't use |
+| `--fast-disk` | "Prefer disk-backed dynamic loading and offload over instead of keeping models in vram when it can." | OPPOSITE (more offload) — don't use |
+| `--async-offload [N]` | N streams | offload tuning |
+
+**KEY REALISATION — the untested winning path:** the re-fault exists because
+aimdo's DEFAULT *unloads models to CPU after use*. `--highvram` stops that unload
+("keeps them in GPU memory") = NO re-fault. On 24GB it OOMs (40GB doesn't fit, the
+gotcha proved this twice). BUT on a **48GB+ card where the 40GB model FITS**,
+`--highvram` was **NEVER tested** — the 96GB PRO 6000 run used aimdo's DEFAULT
+(which page-faults even with room → 119s). The untried combination is **big card
+(model fits) + `--highvram` (force resident, skip the unload/re-fault)**. That is
+the single most promising un-run experiment.
+
+### NEXT-SESSION TEST PLAN (Fix #3)
+Test in this order, all start.sh `VRAM_MODE` / `CUBRIC_VRAM_MODE` edits (R2 push +
+restart-comfy OR Pod env override — NO rebuild):
+1. **24GB card + `--reserve-vram` / `--cache-ram <GB>` tuning** — can the 2nd-stage
+   re-fault be reduced without OOM? Cheapest, but modest ceiling (1st fault stays).
+2. **48GB+ card + `--highvram`** — THE shot. If the 40GB model fits VRAM AND we
+   force it resident, both faults should vanish (or collapse to one initial load).
+   This is the ONE combination never run. Watch RAM/VRAM for OOM; if it survives,
+   read the fault-in (should be ~seconds, not 119s). (Note: if it OOMs even at
+   48GB because the FULL 3-stage resident set > VRAM, this is dead too — but the
+   per-STAGE 40GB does fit 48GB, so worth the shot.)
+3. Get the FULL untruncated help for `--vram-headroom` + `--reserve-vram` defaults
+   first: `main.py --help 2>&1 | grep -A3 -iE "reserve-vram|vram-headroom|cache-ram|highvram"`.
+
+### OPEN ALTERNATIVE HYPOTHESIS (user instinct 2026-06-28) — workflow, not infra
+User increasingly suspects **the WORKFLOW itself behaves differently across cards**
+(not a pure infra/fault issue). Worth a clean test next session: run a DIFFERENT
+video model (**Wan** — being installed to the volume now) on the same Pod. If Wan
+faults/loads FAST where LTX is slow → the problem is **LTX-workflow-specific**
+(its multi-stage 40GB re-stage pattern), not the Pod/card/aimdo generally → the
+fix is in the LTX graph (fewer stages, smaller transformer, or node-level
+`prioritize()`), NOT the image. If Wan is ALSO slow → it's the broad
+multi-stage-on-cloud pattern. This SPLITS the tree and may redirect the whole
+investigation. Run it.
 
 ## The observation
 
