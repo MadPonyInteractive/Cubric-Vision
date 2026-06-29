@@ -106,6 +106,15 @@ const UA =
 // (LOCAL is fixed app-side already — it hits ComfyUI /history directly.)
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 const POD_IMAGE_VERSION = 'v0.10.3';
+// The CPU "download mode" image (slim wrapper + aria2c, no torch/ComfyUI) is
+// version-INDEPENDENT of the GPU perf work — MPI-156's 0.10.3 bumps (aimdo,
+// torch, vram flags) don't touch it. CI builds the -cpu profile separately and it
+// is NOT always pushed at the same tag as the GPU images: v0.10.3 shipped cu124
+// only, so `v0.10.3-cpu` 404'd → RunPod could not pull → the Pod EXITED on boot
+// and the app mis-blamed a "bad host / pick another GPU". Pin the CPU image to its
+// own last-built tag so a GPU-only version bump never breaks CPU connects again.
+// Bump this only when the -cpu image is actually rebuilt + pushed. (MPI-140)
+const POD_IMAGE_VERSION_CPU = 'v0.10.2';
 const WRAPPER_VERSION = '0.2.20';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
@@ -142,7 +151,7 @@ function podImageForCard(gpuTypeId) {
   // No-GPU "download mode" (MPI-88) → the SLIM wrapper-only image (no torch/ComfyUI).
   // The full GPU image won't run on a CPU Pod (its entrypoint inits CUDA), so the
   // -cpu tag is mandatory, not an optimization.
-  if (gpuTypeId === CPU_SENTINEL) return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-cpu`;
+  if (gpuTypeId === CPU_SENTINEL) return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION_CPU}-cpu`;
   const id = String(gpuTypeId || '').toLowerCase();
   const isBlackwell =
     id.includes('5090') ||
