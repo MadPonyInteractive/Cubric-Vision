@@ -221,6 +221,25 @@ class ResumableDownloader {
         this._downloader.on('end', async () => {
             _activeDownloaders.delete(this.depJob.id);
             try {
+                // sha256 re-reads the whole file (~20-60s for 6GB, ~1-2min for Wan's
+                // 14GB) with no byte progress — the bar would sit at a dead 100%. Flip
+                // each owning model card to the indeterminate "Verifying…" sweep first,
+                // reusing the same download:progress {indeterminate, phase} contract the
+                // remote path uses (downloadService.js reads phase==='verifying'). (MPI-140)
+                if (this.depJob.sha256Expected) {
+                    for (const modelJob of _modelJobs.values()) {
+                        if (!modelJob.deps.some(d => d.id === this.depJob.id)) continue;
+                        _broadcast('download:progress', {
+                            modelId: modelJob.modelId,
+                            depId: this.depJob.id,
+                            downloadedBytes: modelJob.downloadedBytes,
+                            totalBytes: modelJob.totalBytes,
+                            progress: modelJob.progress,
+                            indeterminate: true,
+                            phase: 'verifying',
+                        });
+                    }
+                }
                 await _verifySha256(this.localPath, this.depJob.sha256Expected);
                 await clearDownloadMarker(this.localPath);
                 this.depJob.status = 'complete';
