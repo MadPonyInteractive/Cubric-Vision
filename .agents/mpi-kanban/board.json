@@ -1,23 +1,23 @@
 {
-  "schema": "mpi-kanban/board/v1",
-  "next_id": 159,
-  "columns": {
-    "todo": [
-      "MPI-148",
-      "MPI-136",
-      "MPI-135",
-      "MPI-126",
-      "MPI-157"
-    ],
-    "doing": [
-      "MPI-134",
-      "MPI-4"
-    ],
-    "done": [
-      "MPI-129",
-      "MPI-158",
-      "MPI-140"
-    ]
-  },
-  "updated_at": "2026-06-29T02:10:00Z"
+    "schema": "mpi-kanban/board/v1",
+    "next_id": 159,
+    "columns": {
+        "todo": [
+            "MPI-148",
+            "MPI-135",
+            "MPI-126",
+            "MPI-157"
+        ],
+        "doing": [
+            "MPI-134",
+            "MPI-4"
+        ],
+        "done": [
+            "MPI-136",
+            "MPI-129",
+            "MPI-158",
+            "MPI-140"
+        ]
+    },
+    "updated_at": "2026-06-29T13:00:00Z"
 }

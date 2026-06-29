@@ -816,12 +816,54 @@ const _remoteDepIds = new Set();     // dep ids currently installing remotely
 let _remoteReconnectTimer = null;    // MPI-97 — pending SSE reconnect timer
 let _remoteReconnectAttempt = 0;     // MPI-97 — backoff counter (reset on a clean open)
 
+// MPI-136 — silent-SSE-stall watchdog. MPI-97 recovers a CLOSED stream, but a
+// stream that stays OPEN while the Pod's download loop is wedged on a zombie
+// socket stops emitting progress with no close event → a permanent ghost bar.
+// We stamp the last progress tick and, on a timer, treat a long tick-silence as
+// a stall: run the SAME reconcile+reconnect recovery as a close. The wrapper's
+// own chunk-deadline (v0.2.21) then surfaces a clean install-error; reconcile
+// settles any dep that actually finished during the silence.
+const _REMOTE_STALL_MS = 90_000;     // no tick this long on an open stream = stalled
+const _REMOTE_STALL_POLL_MS = 15_000;
+let _remoteLastTickAt = 0;           // monotonic-ish: Date.now() of last progress tick
+let _remoteStallTimer = null;        // setInterval handle
+
+function _markRemoteTick() { _remoteLastTickAt = Date.now(); }
+
+function _startRemoteStallWatchdog() {
+    if (_remoteStallTimer) return;
+    _markRemoteTick(); // grace period before the first tick
+    _remoteStallTimer = setInterval(() => {
+        if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
+        if (_remoteReconnectTimer) return; // a reconnect already in flight
+        if (Date.now() - _remoteLastTickAt < _REMOTE_STALL_MS) return;
+        logger.warn('download', `remote install silent for ${Math.round((Date.now() - _remoteLastTickAt) / 1000)}s with ${_remoteDepIds.size} dep(s) outstanding — treating as stalled`);
+        _markRemoteTick(); // don't re-fire every poll while recovery runs
+        // Reuse the close-recovery path: reconcile completions + abort/reconnect
+        // the (wedged) stream so a re-subscribe picks up the wrapper's error.
+        if (_remoteEventStream) {
+            _remoteEventStream.abort();
+            _remoteEventStream = null;
+        }
+        _onRemoteStreamClosed('silent-stall');
+    }, _REMOTE_STALL_POLL_MS);
+}
+
+function _stopRemoteStallWatchdog() {
+    if (_remoteStallTimer) {
+        clearInterval(_remoteStallTimer);
+        _remoteStallTimer = null;
+    }
+}
+
 function _ensureRemoteEventStream() {
     if (_remoteEventStream) return;
+    _startRemoteStallWatchdog();
     _remoteEventStream = remoteModels.openInstallEventStream(
         (evt) => {
-            // A live event means the stream is healthy — clear backoff.
+            // A live event means the stream is healthy — clear backoff + stamp tick.
             _remoteReconnectAttempt = 0;
+            _markRemoteTick();
             _onRemoteInstallEvent(evt);
         },
         (reason) => _onRemoteStreamClosed(reason),
@@ -836,7 +878,7 @@ function _ensureRemoteEventStream() {
 // let it stay closed.
 function _onRemoteStreamClosed(reason) {
     _remoteEventStream = null;
-    if (_remoteDepIds.size === 0) return;          // nothing in flight — clean close
+    if (_remoteDepIds.size === 0) { _stopRemoteStallWatchdog(); return; } // clean close
     if (!remoteModels.isRemoteActive()) return;    // Pod gone — nothing to recover to
     if (_remoteReconnectTimer) return;             // a reconnect is already scheduled
 
@@ -904,6 +946,7 @@ function _teardownRemoteEventStreamIfIdle() {
         _remoteReconnectTimer = null;
     }
     _remoteReconnectAttempt = 0;
+    _stopRemoteStallWatchdog(); // MPI-136 — no installs left, stop polling
     if (_remoteEventStream) {
         _remoteEventStream.abort();
         _remoteEventStream = null;

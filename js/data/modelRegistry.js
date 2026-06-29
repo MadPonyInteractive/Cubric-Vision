@@ -118,10 +118,12 @@ export async function syncModelInstalled() {
             }
         }
 
-        // Emit installed model IDs for reactive listeners
-        const installedModelIds = Object.entries(results)
-            .filter(([, result]) => result.installed)
-            .map(([id]) => id);
+        // Emit installed model IDs for reactive listeners. Use isModelUsable (≥1
+        // op installed) not the raw all-deps-present `result.installed`, so a
+        // deliberately partial install (e.g. Wan T2V-only) counts — matching the
+        // model-manager list + pickers, which already gate on isModelUsable. The
+        // dep-status cache was just populated above, so this resolves correctly.
+        const installedModelIds = Object.keys(results).filter(id => isModelUsable(id));
         Events.emit('models:checked', { installedModelIds });
 
         return true;
