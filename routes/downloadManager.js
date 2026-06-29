@@ -668,9 +668,14 @@ router.post('/comfy/models/download/start', async (req, res) => {
     // Only the deps still queued (not already complete-on-disk) need new space;
     // a 5% margin covers temp/.part overhead. A failed statfs is non-fatal — we
     // skip the gate rather than block a legitimate install.
+    // Use seedBytes (declared size, known NOW), NOT totalBytes — totalBytes is the
+    // real Content-Length which is still 0 at install-start (it only arrives mid-
+    // download). Summing totalBytes made neededBytes 0, the gate never fired, the
+    // download started anyway, and the first write to a full disk crashed the
+    // server with an unhandled ENOSPC. (MPI-140; was the MPI-99 gate's blind spot.)
     const neededBytes = modelJob.deps
         .filter(d => d.status === 'queued')
-        .reduce((sum, d) => sum + (d.totalBytes || 0), 0);
+        .reduce((sum, d) => sum + (d.totalBytes || d.seedBytes || 0), 0);
     if (neededBytes > 0) {
         const targetDir = customRoot || defaultModelsRoot;
         const freeBytes = await _freeDiskBytes(targetDir);

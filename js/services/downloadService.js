@@ -346,8 +346,21 @@ const downloadService = {
         this._eventSource.addEventListener('download:cancelled', (e) => {
             const data = JSON.parse(e.data);
             _speedSamples.delete(data.modelId); // MPI-94 L4 — drop the speed sample
-            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
+            // {all:true} (server-side cancelAllDownloads, e.g. the disk-full ENOSPC
+            // recovery) carries no modelId — clear every job so no bar stays frozen.
+            // Otherwise filter(modelId !== undefined) would keep all jobs. (MPI-140)
+            if (data.all) {
+                state.downloadJobs = [];
+            } else {
+                state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
+            }
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
+            // After a disk-full cancel, on-disk deps remain — re-sync so cards show
+            // "Partially Installed" rather than a stale "downloading" state.
+            if (data.all) {
+                reSyncInstalledModels().catch(err =>
+                    clientLogger.error('downloadService', 're-sync after cancel-all:', err));
+            }
             Events.emit('download:cancelled', data);
         });
 

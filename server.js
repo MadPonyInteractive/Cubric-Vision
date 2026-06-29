@@ -71,6 +71,23 @@ app.use(connectorRoutes);
 process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
 process.on('SIGINT', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
 
+// A single stray async rejection must NOT kill the whole server — it also hosts
+// the ComfyUI proxy, project, and generation routes. The trigger we hit: a
+// download write to a full disk (ENOSPC) inside node-downloader-helper's stream
+// rejected outside any catch, Node turned it into an uncaughtException, and the
+// forked server process exited code 1 — the download bar then hung at 0B with no
+// failure surfaced. Log loudly (this is NOT for hiding bugs) but stay alive; for
+// a download-disk-full specifically, tear down in-flight downloads so the UI gets
+// a clean failed state instead of a frozen bar. (MPI-140)
+process.on('unhandledRejection', (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error('system', `Unhandled promise rejection (server stays up): ${err.stack || err.message}`);
+    if (err.code === 'ENOSPC') {
+        logger.warn('system', 'Disk full during a write — cancelling active downloads so the UI can recover.');
+        try { cancelAllDownloads(); } catch (e) { logger.error('system', `cancelAllDownloads failed: ${e.message}`); }
+    }
+});
+
 // ── Startup ────────────────────────────────────────────────────────────────────
 
 app.listen(port, '127.0.0.1', () => {
