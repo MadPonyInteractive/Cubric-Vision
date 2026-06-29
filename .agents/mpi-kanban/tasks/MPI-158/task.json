@@ -3,11 +3,11 @@
   "id": "MPI-158",
   "title": "GC old R2 model copies in cubric-builds/models/ltx-2.3 (post MPI-137)",
   "description": "Follow-up to MPI-137 (R2 bucket reorg, shipped). The LTX-2.3 weights were copied to cubric-models/vision and all consumer URLs swapped (dependencies.js de59499 + install_models_ltx23.sh ee9bdae, verified HEAD-200). The OLD copies still sit in cubric-builds/models/ltx-2.3/ - step d of MPI-137 = delete them to reclaim R2 storage. USER-GATED: confirm the new host has served live for a while + the URL-swap commits are pushed BEFORE deleting (no rollback once GC'd). One rclone delete of cubric-builds/models/ltx-2.3/.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "open",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-06-28T17:40:00Z",
-  "updated_at": "2026-06-28T17:40:00Z",
+  "updated_at": "2026-06-29T08:00:00Z",
   "links": {
     "events": "events.jsonl",
     "handoffs": "handoffs/"

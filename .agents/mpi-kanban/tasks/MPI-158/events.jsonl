@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-158", "type": "task.created", "at": "2026-06-28T17:40:00Z", "actor": "agent", "column": "todo", "summary": "GC follow-up for MPI-137: delete old cubric-builds/models/ltx-2.3 R2 copies (user-gated)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-158","type":"task.moved","at":"2026-06-29T08:00:00Z","actor":"agent","from":"todo","to":"done","summary":"GC done: cubric-builds/models/ltx-2.3 deleted by user (whole models/ folder); cubric-models/vision/ltx-2.3 12 files intact, url-swap de59499 pushed."}
