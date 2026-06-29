@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "60c42614-7196-4b92-82ab-1e250a4e5517",
+  "generated_at": "2026-06-29T20:44:36Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "LTX-2.3 GGUF Q8 quant + cold-start investigation → wire GGUF into app → R2 re-host blocker",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Investigate lowering LTX-2.3 cold-start (~5min) + consecutive (~1:15) gen times on RunPod 5090, and find a quantized transformer to replace the 40GB Kijai bf16 at closest quality. Then wire the chosen GGUF Q8 into the app to test on a Pod.",
+    "status": "blocked",
+    "summary": "Research done (GGUF Q8 bypasses aimdo's cold-tax mechanism = the headline win). GGUF Q8 wired into app + workflows + tested LOCALLY (quality holds; faster low-res, +70% slower high-res — expected, local has no cold-tax). BLOCKED: HF-direct download of the Q8 GGUF stalls at the very end on a CPU Pod → must re-host the file to R2/cubric CDN, then flip the dep URL. Pod GPU A/B (bf16 vs GGUF incl cold-start) is the real decider — NOT yet run."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Multi-agent research (4 lanes + 6 subagents) → docs/builder/research/quant-and-coldstart-investigation.md",
+      "HEADLINE FINDING: GGUF structurally BYPASSES comfy-aimdo's VBAR fault path (GGUFModelPatcher extends base ModelPatcher, not ModelPatcherDynamic) → the ~5-min cold tax is an aimdo mechanism GGUF never enrolls in. Cold-tax root pinned to source: RunPod 8MB RLIMIT_MEMLOCK → cuMemHostRegister pin FAILS → aimdo re-stages 40GB from disk pageable every stage.",
+      "Downloaded + size+sha verified Unsloth Q8_0 (22.8GB) AND QuantStack Q8_0 (25.5GB) to G:/CubricModels/unet/. Unsloth sha256=813fd61eecf3df2ef5ac5a942d226ee7e44b6cec68ed803549aefaa410cd397e",
+      "Wired ComfyUI-GGUF (city96) as an app dep: node_lock.json commit 6ea2651 + dependencies.js DEPS (installRequirements:true, NO installOnEngine — model-specific) + ltx-23 dependencies[] + yamlHelper.js unet_gguf→unet/ mapping",
+      "FIXED + COMMITTED (38de0dc) the node-install-mid-boot race: server-authoritative processState.comfyNeedsRestart (downloadManager.js + comfy.js /status+/start + comfyController.js gate) + tests/comfy-needs-restart.test.cjs (9 assertions pass)",
+      "Regenerated the 4 LTX workflows from the GGUF template via generate_ltx.py (all use city96 UnetLoaderGGUF reading from unet/ folder; old bf16 template backed up as LTX_i2v_t2v_template.bf16-backup.json)",
+      "Swapped ltx23-transformer dep bf16→Q8 GGUF (filename unet/...gguf, HF Unsloth URL, sha 813fd61e, size 22.8GB; bf16 details kept in comment for the future split)",
+      "Local A/B: Q8 quality holds (no visible diff at 832x448). Speed: GGUF ~10s FASTER at 832x448, but +66s SLOWER at 704x1280 (94s bf16 vs 160s GGUF) — per-step dequant tax, resolution-scaled. Recorded in research doc § LIVE LOCAL RESULTS.",
+      "User chose city96 UnetLoaderGGUF (simpler, fails loud) over KJ GGUFLoaderKJ wrapper for the shipped workflow."
+    ],
+    "pending": [
+      "RE-HOST the Q8 GGUF to R2/cubric CDN (HF-direct download stalls at the end on Pod — confirmed live). See next_action for the upload-path UNKNOWN.",
+      "Flip ltx23-transformer dep URL from the HF resolve URL to the cubric CDN URL once re-hosted.",
+      "CPU-Pod re-test the download from the new R2 URL → confirm it completes.",
+      "GPU-Pod A/B: bf16 vs GGUF at 704x1280 t2v, TOTAL wall incl cold-start — THE decider. Confirm the '40050MB Staged' aimdo line is ABSENT under GGUF (proof it bypasses aimdo).",
+      "IF GGUF net-wins on Pod: build the bf16-local / GGUF-Pod split — add a 3rd boolean (e.g. Input_Use_GGUF) to the LTX template so generate_ltx.py fans 4→8 files (4 bf16 + 4 GGUF); app picks by isRemote(). Restore the bf16 dep as a 2nd dep + the bf16 template backup.",
+      "Decide Unsloth (22.8GB) vs QuantStack (25.5GB) Q8 — both on disk; only Unsloth is wired. Delete the unused one + the bf16 template backup once decided.",
+      "Commit the GGUF-wiring edits (still uncommitted) on a clean pathspec, separate from the already-committed boot-race fix."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-157",
+    "title": "Cloud LTX: warm-on-connect (hide the ~3:30 first-gen cold tax)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-157/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-157/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "upload-to-r2", "edit-dep-url", "test-on-pod"],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/quant-and-coldstart-investigation.md (full research + live local results)",
+      "docs/gotchas.md § 'local restart-needed flag must be SERVER-side' (boot-race) + the GGUF-bypasses-aimdo mechanism in the quant doc",
+      ".claude/rules/comfy_engine.md (installOnEngine decision rule: universal vs model-specific)",
+      "Memory: project_comfy_node_install_boot_race.md + MEMORY.md pointer"
+    ],
+    "pending": [
+      "When the Pod A/B confirms GGUF wins (or loses), update research doc § LIVE LOCAL RESULTS with the Pod numbers + drop the 'PENDING'/'NOT user-verified' caveats.",
+      "When the boot-race fix is user-verified live, drop the 'NOT user-verified' caveat in gotchas + the memory file.",
+      "Re-host note: per supply-chain rule, the GGUF dep URL must move off HF-direct to cubric CDN before ship (in progress = the current blocker)."
+    ]
+  },
+  "next_action": {
+    "description": "TWO Pod blockers, fix BOTH. ===== BLOCKER 1 (NEW, primary — diagnosed from a live 5090 Pod log screenshot): ComfyUI-GGUF node import FAILS on the Pod with `ModuleNotFoundError: No module named 'gguf'`. Root: (a) the Pod image node_lock.json (c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json) is a STALE COPY missing the ComfyUI-GGUF entry I added to the app's dev_configs/node_lock.json — the image never installed the node/gguf (bump-rebuild law: node_lock edit = rebuild BOTH images); AND (b) the REAL bug — routes/remoteModels.js remoteInstallDep (line ~284) only passes install_command to the wrapper when dep.installRequirementsCommand (a CUSTOM command) is set, and SILENTLY DROPS installRequirements:true (the standard requirements.txt flag). ComfyUI-GGUF uses installRequirements:true → the wrapper pushed the node folder to the volume but never ran `pip install -r requirements.txt` → no gguf. FIX: (b) make installRequirements:true also trigger a remote pip install of the node's requirements.txt (needs a wrapper endpoint/path that runs requirements.txt for a volume node, not just a custom command) — this is the general fix so any future model-specific node with a requirements.txt works remotely. Quick unblock for testing: add ComfyUI-GGUF to the Pod node_lock.json + rebuild the Pod image (bakes node+gguf in). ===== BLOCKER 2 (still real, AFTER blocker 1): the HF-direct GGUF weight download stalls at the very end on a Pod → re-host G:/CubricModels/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf (22.8GB, sha 813fd61eecf3df2ef5ac5a942d226ee7e44b6cec68ed803549aefaa410cd397e) to the cubric CDN/R2. UNKNOWN: comfy_workflows/scripts/upload-models/upload.py uploads to the HuggingFace repo 'Mad-Pony-Interactive/cubric-studio', NOT directly to R2 — confirm how the other LTX deps' models.cubric.studio/vision/ltx-2.3/... URLs map to storage so the GGUF lands at the right path (final URL ~ models.cubric.studio/vision/ltx-2.3/unet/...gguf), upload, flip the ltx23-transformer dep url in dependencies.js, re-test on a CPU Pod. ===== THEN the decider: GPU-Pod bf16-vs-GGUF A/B at 704x1280 incl cold-start.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "GGUF Q8_0 over fp8 (user rejected fp8 for eyes/teeth; Q8 = int8+per-block-scale, different strategy, holds quality — confirmed local A/B at 832x448).",
+      "GGUF's value is CLOUD-only: it bypasses aimdo's cold-tax (which doesn't exist locally). Local is slower at high res (per-step dequant). So the goal is bf16-local / GGUF-Pod — but ONLY if the Pod A/B proves GGUF beats bf16's cold-tax there.",
+      "Folder: GGUF lives in unet/ (city96 UnetLoaderGGUF reads via get_full_path('unet',...)). yaml maps unet_gguf category → unet/ folder (NOT unet_gguf/). yamlHelper.js emits it.",
+      "ComfyUI-GGUF (city96) is a HARD dep of KJNodes GGUFLoaderKJ — the KJ node is a thin wrapper that imports city96's gguf_sd_loader at runtime. NOT a standalone alternative.",
+      "ComfyUI-GGUF dep is model-specific (NO installOnEngine) — installs via getInstalledModelNodeDeps when LTX weights present, NOT the universal-workflow engine set. Trigger: press Update/Install on the LTX model.",
+      "node-downloader-helper FOLLOWS redirects (maxRedirects 10) so HF 302→signed-CDN works in code — but HF signed URLs EXPIRE, and the download stalled at the end on the Pod anyway → re-host to R2."
+    ],
+    "constraints": [
+      "Shared git tree — commit by explicit pathspec, never git add . / -A. Push is user-only.",
+      "Currently the 4 generated LTX workflows + the ltx23-transformer dep are GGUF for BOTH local AND Pod (the bf16/GGUF split is a future step). So local gens use GGUF too = slower at high res. Not a regression.",
+      "Two Q8 files on disk: Unsloth 22.8GB (wired) + QuantStack 25.5GB (spare). bf16 template backup also on disk. All to be cleaned once decided.",
+      "boot-race fix already COMMITTED as 38de0dc; everything else is uncommitted.",
+      "Caveman+ponytail output modes active this session (terse prose, lazy/minimal solutions) — cosmetic, not a constraint on the work."
+    ],
+    "files_modified": [
+      "dev_configs/node_lock.json",
+      "js/data/modelConstants/dependencies.js",
+      "js/data/modelConstants/models.js",
+      "routes/yamlHelper.js",
+      "comfy_workflows/LTX_t2v.json",
+      "comfy_workflows/LTX_t2v_stage2.json",
+      "comfy_workflows/LTX_i2v.json",
+      "comfy_workflows/LTX_i2v_stage2.json",
+      "comfy_workflows/scripts/workflow_generation/LTX_i2v_t2v_template.json",
+      "comfy_workflows/scripts/workflow_generation/LTX_i2v_t2v_template.bf16-backup.json",
+      "docs/builder/research/quant-and-coldstart-investigation.md",
+      "docs/builder/research/README.md",
+      "docs/gotchas.md",
+      ".claude/rules/comfy_engine.md",
+      "routes/downloadManager.js (COMMITTED 38de0dc)",
+      "routes/comfy.js (COMMITTED 38de0dc)",
+      "js/services/comfyController.js (COMMITTED 38de0dc)",
+      "tests/comfy-needs-restart.test.cjs (COMMITTED 38de0dc)"
+    ],
+    "files_to_read_first": [
+      "docs/builder/research/quant-and-coldstart-investigation.md",
+      "js/data/modelConstants/dependencies.js (ltx23-transformer entry + ComfyUI-GGUF dep)",
+      "comfy_workflows/scripts/upload-models/upload.py",
+      ".claude/rules/comfy_engine.md",
+      "docs/gotchas.md (§ local restart-needed flag SERVER-side)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["comfy_engine", "downloads", "runpod-remote-engine", "ltx-2.3 builder research"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/builder/README.md",
+    "docs/builder/research/README.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-29T20:44:36Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/60c42614-7196-4b92-82ab-1e250a4e5517.json and use mpi-continue to continue. We are mid-way through wiring LTX-2.3's GGUF Q8 transformer into Cubric Vision (branch RunPod) to A/B it against the 40GB bf16 on a RunPod Pod — the goal is killing the ~5-min cold-start (research proved GGUF structurally bypasses comfy-aimdo's cold-tax mechanism). Everything is wired and quality-verified LOCALLY, but the HF-direct download of the Q8 GGUF STALLS at the very end on a Pod, so the immediate blocker is to RE-HOST the file (G:/CubricModels/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf, sha 813fd61eecf3df2ef5ac5a942d226ee7e44b6cec68ed803549aefaa410cd397e) to the cubric CDN / R2. FIRST resolve the UNKNOWN: comfy_workflows/scripts/upload-models/upload.py uploads to a HuggingFace repo (Mad-Pony-Interactive/cubric-studio), NOT directly to R2 — so confirm how the other LTX deps' models.cubric.studio/vision/ltx-2.3/... URLs map to storage, find the exact upload target so the GGUF's final URL is models.cubric.studio/vision/ltx-2.3/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf, upload it, then flip the ltx23-transformer dep url in js/data/modelConstants/dependencies.js from the HF URL to the cubric CDN URL, then re-test the download on a CPU Pod. After that works, the real decider is a GPU-Pod bf16-vs-GGUF A/B at 704x1280 including cold-start. The boot-race fix is already committed (38de0dc); all GGUF-wiring edits are uncommitted (commit on a clean pathspec). Do NOT git add . — shared tree, explicit pathspec only."
+}

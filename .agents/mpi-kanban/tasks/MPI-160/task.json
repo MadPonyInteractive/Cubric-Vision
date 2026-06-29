@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-160",
+  "title": "Wait-for / detect higher-RAM Pod hosts for LTX (same-price RAM configs vary by availability; LTX warm perf needs ~90GB)",
+  "description": "PROBLEM (found 2026-06-30 during LTX GGUF Pod testing): LTX-2.3 warm-gen perf is RAM-GATED, but the picker can't help the user land a high-RAM host. The picker shows ONE RAM number per GPU, from `lowestPrice.minMemory` (routes/runpodRemote.js gpuTypes() ~line 116-137). The picker reads `lowestPrice(input:{gpuCount,dataCenterId,secureCloud}).minMemory`.\n\nUSER OBSERVATION (the accurate model, refined across the session): in ONE data center (EU-RO-1) the user has connected to RTX 5090 hosts with BOTH 60GB and ~90GB RAM, several times each. So RunPod genuinely has MULTIPLE RAM configs for the same GPU in the same DC. CRITICAL refinement (user): RunPod's price is FIXED PER CARD — the RTX 5090 is the same $/hr regardless of RAM config OR data center. So price does NOT vary by RAM, which means `lowestPrice` is NOT hiding a pricier high-RAM host behind a cheaper one (they're price-tied). The most likely behavior: with prices tied, `lowestPrice.minMemory` reflects whatever host config is AVAILABLE at query time — so it reads 60GB when only 60GB hosts are free and 90GB when a 90GB host is free. The number is a LIVE availability signal, not a fixed floor. (Earlier framings 'our UI hides a tier', 'different DC', 'fixed floor', and 'pricier host hidden' were all PARTIAL/WRONG — the truth: multiple same-price RAM configs exist; the API surfaces whichever is currently available.)\n\nWHY IT MATTERS: working set = ~14.5GB fp8 Gemma encoder + ~15GB Q8 GGUF transformer + VAEs + ComfyUI/torch/OS overhead ≈ 40-45GB. Both Gemma (fp8) and the transformer (Q8) are already at their QUALITY FLOOR (fp4 Gemma 'hurts', fp8 transformer rejected for eyes/teeth — see docs/builder/research/model-set.md + quant-and-coldstart-investigation.md), so the working set can't shrink. On a ~60GB host the RAM cache thrashes → weights re-fault from disk every gen → warm gens balloon to ~2:14+ (vs ~22-25s on a ~90GB host). ~90GB is the effective floor for good LTX warm perf.\n\nRESEARCH SPIKE FIRST (since price is flat, RAM is purely an availability signal — confirm how the API surfaces it): (1) Does `lowestPrice.minMemory` for the 5090 in EU-RO-1 actually CHANGE over time (read 60 sometimes, 90 sometimes) as hosts free up? Poll it to confirm it's a live availability value, not a constant. (2) Is there an offerings/availability query that lists ALL currently-available RAM configs at once (so we could show '60GB or 90GB available now')? (3) Does the deploy/create call let you request a minimum system RAM (so RunPod only assigns a ≥90GB host)? If (1) yes, lever B works by polling; if (3) yes, B is deterministic instead of poll-and-hope.\n\nLEVERS (by feasibility):\n- A. POST-CONNECT DETECT + WARN (always works, no API dependency): read the connected Pod's actual total RAM (wrapper /wrapper/stats — confirm it reports total system RAM, add if missing), and when under a configurable LTX floor (~90GB) show a soft warning ('this Pod has XGB RAM; LTX warm gens may be slow — reconnect to roll for a higher-RAM host'). Cheapest, ship first.\n- B. WAIT-FOR-HIGH-RAM (the real prize — feasible because price is flat, so no cost downside to waiting for the bigger host): reuse the EXISTING 'Auto-retry connection (wait for out-of-stock GPU)' pattern in Settings — add a 'require ≥N GB RAM' option that polls `lowestPrice.minMemory` (or the offerings query) and holds-and-retries connect until a ≥90GB 5090 is available, then deploys. Same $/hr either way, so the only cost is wait time. Reuses proven retry plumbing.\n- C. PICKER HINT: show 'recommended ≥90GB RAM for LTX' next to the RAM number; if the API exposes currently-available tiers, list them.\n\nFILES: routes/runpodRemote.js gpuTypes() (lowestPrice query ~line 116-137) + the create/availability queries; the wrapper stats path (mpi-ci/cubric-vision-pod/wrapper.py /wrapper/stats — total system RAM?); routes/remoteModels.js / comfyController (read the stat); the Settings remote-engine UI (RAM display, the auto-retry toggle area) + status bar.\n\nBRANCH: RunPod. DEFERRED — logged at user request during the LTX showcase session; do NOT address inline. Spike the API (offerings/minMemory constraint) before scoping B/C; A is shippable regardless.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-06-30T00:00:00Z",
+  "updated_at": "2026-06-30T00:30:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "runpod",
+    "gpu-picker",
+    "system-ram",
+    "ltx-perf",
+    "research-spike",
+    "deferred"
+  ],
+  "priority": "medium"
+}
