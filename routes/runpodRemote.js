@@ -158,6 +158,51 @@ const client = {
   async createPod(apiKey, spec) {
     return _rest(apiKey, 'POST', '/pods', spec);
   },
+  // MPI-159: GraphQL create fallback for GPUs the REST create enum rejects (the
+  // REST `gpuTypeIds` enum lags the GraphQL catalogue the picker lists from, so a
+  // pickable card like "NVIDIA RTX PRO 4500 Blackwell" 400s on REST POST /pods).
+  // GraphQL `podFindAndDeployOnDemand` takes `gpuTypeId` as a FREE STRING (no enum)
+  // — the same id the picker already has — and the console uses this same mutation.
+  // REST manages the resulting Pod (shared id namespace), so only CREATE moves to
+  // GraphQL; get/start/stop/delete stay REST. Adapts the GraphQL shape ({data}|{errors},
+  // always HTTP 200) to the same {ok,status,json:{id}} the REST createPod returns, so
+  // the caller (_createPodInternal) treats both paths identically.
+  //
+  // `spec` is the REST POST /pods spec; this translates it to the GraphQL input shape:
+  //   gpuTypeIds:[id]→gpuTypeId, dataCenterIds:[dc]→dataCenterId, env obj→[{key,value}],
+  //   ports:['8889/http']→'8889/http' (comma-string), + cloudType:SECURE.
+  async createPodGraphql(apiKey, spec) {
+    const input = {
+      cloudType: 'SECURE',
+      name: spec.name,
+      imageName: spec.imageName,
+      gpuCount: spec.gpuCount || 1,
+      containerDiskInGb: spec.containerDiskInGb,
+      ports: Array.isArray(spec.ports) ? spec.ports.join(',') : spec.ports,
+      env: Object.entries(spec.env || {}).map(([key, value]) => ({ key, value: String(value) })),
+    };
+    if (Array.isArray(spec.gpuTypeIds) && spec.gpuTypeIds.length) input.gpuTypeId = spec.gpuTypeIds[0];
+    if (Array.isArray(spec.dataCenterIds) && spec.dataCenterIds.length) input.dataCenterId = spec.dataCenterIds[0];
+    if (spec.networkVolumeId) input.networkVolumeId = spec.networkVolumeId;
+    if (spec.volumeMountPath) input.volumeMountPath = spec.volumeMountPath;
+    if (typeof spec.volumeInGb === 'number') input.volumeInGb = spec.volumeInGb;
+    const mutation = `mutation($input: PodFindAndDeployOnDemandInput!) {
+      podFindAndDeployOnDemand(input: $input) { id desiredStatus imageName machineId }
+    }`;
+    const d = await _graphql(apiKey, mutation, { input });
+    if (d && Array.isArray(d.errors) && d.errors.length) {
+      const message = d.errors.map((e) => (e && e.message) || String(e)).filter(Boolean).join('; ');
+      // HTTP-200 GraphQL error → present as a non-ok REST-shaped result so the caller's
+      // existing reject path reads it. 500 = generic server/stock; the message carries
+      // the real reason (out-of-stock vs unsupported) for _createRejectReason.
+      return { ok: false, status: 500, json: { error: message, errors: d.errors } };
+    }
+    const pod = d && d.data && d.data.podFindAndDeployOnDemand;
+    if (!pod || !pod.id) {
+      return { ok: false, status: 500, json: { error: 'GraphQL create returned no pod id' } };
+    }
+    return { ok: true, status: 200, json: { id: pod.id, desiredStatus: pod.desiredStatus } };
+  },
   async startPod(apiKey, id) {
     return _rest(apiKey, 'POST', `/pods/${id}/start`);
   },

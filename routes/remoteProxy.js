@@ -683,6 +683,27 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
     // tell the user to pick another card and flag it so the renderer can mark the card
     // unsupported (gpuUnsupported) rather than looping them on a doomed retry.
     const gpuEnumReject = created.status === 400 && /gpuTypeIds\/items\/enum/i.test(parsed || '');
+    // MPI-159: the card is genuinely absent from the REST create enum but the GraphQL
+    // catalogue (the picker's source) offers it — fall back to GraphQL create, which
+    // takes gpuTypeId as a free string and CAN deploy these cards (live-proven on
+    // RTX PRO 4500 Blackwell). REST manages the resulting Pod, so the post-create flow
+    // below is identical. Never for CPU download-mode (GraphQL create has no computeType).
+    if (gpuEnumReject && !noGpu) {
+      logger.info('runpod', `REST enum rejected ${gpuTypeId}; falling back to GraphQL create`);
+      const gql = await client.createPodGraphql(key, spec);
+      const gqlPodId = gql.json && gql.json.id;
+      if (gql.ok && gqlPodId) {
+        logger.info('runpod', `createPod GraphQL fallback -> podId=${gqlPodId}`);
+        return _afterPodCreated(key, gqlPodId, token, noGpu, { wait, timeoutMs });
+      }
+      // GraphQL ALSO failed. Surface its reason honestly: a true out-of-stock is
+      // retryable (let the shell retry loop see a stock-shaped message); only a real
+      // unsupported-card stays gpuUnsupported. RunPod GraphQL stock failures don't
+      // carry the REST enum marker, so they won't be misclassified as unsupported.
+      const gqlReason = _createRejectReason(gql.json) || 'GraphQL create failed';
+      logger.warn('runpod', `createPod GraphQL fallback failed: ${gqlReason}`);
+      return { ok: false, message: gqlReason, gpuUnsupported: false };
+    }
     const reason = gpuEnumReject
       ? `RunPod's deploy API doesn't support this GPU yet (its create list lags the catalogue). Pick a different card — this one can't be deployed even though it shows as available.`
       : (parsed
@@ -693,7 +714,15 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
     return { ok: false, message: reason, gpuUnsupported: gpuEnumReject };
   }
   logger.info('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=${podId}`);
+  return _afterPodCreated(key, podId, token, noGpu, { wait, timeoutMs });
+}
 
+// Shared post-create flow for BOTH the REST primary path and the MPI-159 GraphQL
+// fallback. Whichever API created the Pod, REST manages it from here (shared id
+// namespace) — token keyed to the podId, single-Pod sweep, then ready-wait (or a
+// fast {starting} kickoff when wait:false). Extracted so the GraphQL path reuses
+// it verbatim instead of duplicating the wiring.
+async function _afterPodCreated(key, podId, token, noGpu, { wait, timeoutMs }) {
   // Running (billing) from here. Token keyed to the new podId; _startedPodId set
   // BEFORE the ready-wait so a timeout still lets teardown stop/delete it.
   await setWrapperToken(token, podId);
