@@ -39,7 +39,7 @@ export const DEPS = {
         origin: 'Juggernaut_XL',
         filename: 'checkpoints/SDXL_Realistic.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/SDXL_Realistic.safetensors',
-        size: '6.94GB',
+        size: '6.62GB',
         vram: '8GB',
         sha256: '4bb646ca44e460bfc121fbcd8b7a65ae2b7a85f89c9e9ffe4d078db6e488d5ff'
     },
@@ -49,7 +49,7 @@ export const DEPS = {
         origin: 'lustify_7',
         filename: 'checkpoints/SDXL_NSFW.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/SDXL_NSFW.safetensors',
-        size: '6.78GB',
+        size: '6.46GB',
         vram: '8GB',
         sha256: '4073cbe470446d0f1806e82d560d14af5b813ec1091b26ad7a69f8162f4a7ac1'
     },
@@ -59,7 +59,7 @@ export const DEPS = {
         origin: 'animemix_v80',
         filename: 'checkpoints/ILL_Anime.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/ILL_Anime.safetensors',
-        size: '6.8GB',
+        size: '6.46GB',
         vram: '8GB',
         sha256: 'f548b5b4953c3ba71f9769c98005b95a41a7f8e0b666a509bb938cedf70347fd'
     },
@@ -69,7 +69,7 @@ export const DEPS = {
         origin: 'ramthrustsNSFWPINK_alchemyMix176',
         filename: 'checkpoints/ILL_Anime_Beauty.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/ILL_Anime_Beauty.safetensors',
-        size: '6.8GB',
+        size: '6.46GB',
         vram: '8GB',
         sha256: 'bbebe76d8fcc488b630d6dd74d111bb170b5d5c82a43fca0d99cd8e263766318'
     },
@@ -79,7 +79,7 @@ export const DEPS = {
         origin: 'animergemeij_v30VAE',
         filename: 'checkpoints/PONY_Mix.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/PONY_Mix.safetensors',
-        size: '6.8GB',
+        size: '6.62GB',
         vram: '8GB',
         sha256: '455ea6628d79546bb63147758522706f8a6592ade65f847da0aec8968bf29a4b'
     },
@@ -90,7 +90,7 @@ export const DEPS = {
         origin: 'smoothMixWan2214BI2V_t2vHighV30',
         filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_t2v_High.safetensors',
-        size: '15GB',
+        size: '13.55GB',
         vram: '12GB',
         sha256: '8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870'
     },
@@ -100,7 +100,7 @@ export const DEPS = {
         origin: 'smoothMixWan2214BI2V_t2vLowV30',
         filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_t2v_Low.safetensors',
-        size: '15GB',
+        size: '13.55GB',
         vram: '12GB',
         sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'
     },
@@ -110,7 +110,7 @@ export const DEPS = {
         origin: 'smoothMixWan2214BI2V_i2vV20High',
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_i2v_High.safetensors',
-        size: '15GB',
+        size: '13.32GB',
         vram: '12GB',
         sha256: '9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0'
     },
@@ -120,7 +120,7 @@ export const DEPS = {
         origin: 'smoothMixWan2214BI2V_i2vV20Low',
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_i2v_Low.safetensors',
-        size: '15GB',
+        size: '13.32GB',
         vram: '12GB',
         sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
     },
