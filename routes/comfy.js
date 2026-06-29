@@ -163,15 +163,19 @@ function setAxios(ax) { _axios = ax; }
  * Response: { running: boolean, ready?: boolean }
  */
 router.get('/comfy/status', async (req, res) => {
+    // Server-authoritative restart flag (set by a local custom-node install). Echoed
+    // on every status so the gen gate honors it even when the frontend `state` was
+    // reset by an app/browser reload after the install. Cleared on a fresh start.
+    const needsRestart = processState.comfyNeedsRestart === true;
     try {
-        if (!processState.activeComfyProcess) return res.json({ running: false });
+        if (!processState.activeComfyProcess) return res.json({ running: false, needsRestart });
         const ax = getAxios();
-        if (!ax) return res.json({ running: true, ready: false });
+        if (!ax) return res.json({ running: true, ready: false, needsRestart });
         const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
             .then(() => true).catch(() => false);
-        res.json({ running: true, ready });
+        res.json({ running: true, ready, needsRestart });
     } catch (e) {
-        res.json({ running: false });
+        res.json({ running: false, needsRestart });
     }
 });
 
@@ -289,7 +293,14 @@ router.post('/comfy/start', async (req, res) => {
         const isUserRestart = req.body && req.body.isUserRestart;
         if (isUserRestart) processState.comfyNeedsRestart = false;
 
+        // Already running → do NOT clear comfyNeedsRestart: a node may have been
+        // installed against THIS still-running process (its node scan already ran),
+        // so the restart is still pending. The gen gate will stop+start it.
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
+
+        // We are about to SPAWN a fresh process → its node scan will pick up any
+        // newly-installed custom node, satisfying the restart need. Clear the flag.
+        processState.comfyNeedsRestart = false;
 
         const pythonPath = getPythonBin(ENGINE_ROOT);
         const mainPath = getComfyPath(ENGINE_ROOT, 'main.py');

@@ -256,8 +256,17 @@ function createEngine({ engine, alwaysLocal }) {
             const statusRes = await fetch('/comfy/status');
             const status = await statusRes.json();
 
+            // The restart-needed signal can live in EITHER place: the frontend
+            // `state` flag (set live via the `comfy:needs-restart` SSE) OR the
+            // server-authoritative `status.needsRestart` (set by a local custom-node
+            // install). The server flag is the durable one — it survives an app /
+            // browser reload that wipes frontend `state`, and it covers the race where
+            // a node was installed while ComfyUI was still BOOTING (its scan already
+            // ran + cached an import failure). Honor either.
+            const needsRestart = state.comfyNeedsRestart || status.needsRestart === true;
+
             // ── Auto-restart if custom nodes were installed (even if ComfyUI is ready) ─
-            if (state.comfyNeedsRestart && status.running) {
+            if (needsRestart && status.running) {
                 clientLogger.info('comfy', 'Custom nodes installed — triggering auto-restart');
                 Events.emit('ui:info', {
                     message: 'Restarting ComfyUI — new custom nodes were installed.',
@@ -288,9 +297,10 @@ function createEngine({ engine, alwaysLocal }) {
                 throw new Error('ComfyUI auto-restart failed to become ready.');
             }
 
-            // If ComfyUI is not running and needs restart flag is set, just clear it
-            // (ComfyUI will start fresh, no need for restart message)
-            if (state.comfyNeedsRestart && !status.running) {
+            // If ComfyUI is not running and a restart was pending, just clear the
+            // frontend flag (the fresh start below scans nodes anew; the server flag
+            // is cleared by /comfy/start when it spawns the process).
+            if (needsRestart && !status.running) {
                 state.comfyNeedsRestart = false;
             }
 

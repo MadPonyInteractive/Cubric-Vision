@@ -29,7 +29,7 @@ const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { checkOnline } = require('./netCheck');
-const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot } = require('./shared');
+const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const {
     isCompleteOnDisk,
@@ -1413,6 +1413,20 @@ async function _runCustomNodeInstall(modelJob) {
 
     modelJob.status = 'complete';
     _broadcast('download:complete', { modelId: modelJob.modelId });
+    // A custom node was installed. The frontend gets `comfy:needs-restart` (→
+    // state.comfyNeedsRestart) and the gen gate restarts ComfyUI. But that flag is
+    // FRONTEND-ONLY and dies on an app restart — and if the node was installed while
+    // ComfyUI was still BOOTING (e.g. "start ComfyUI on launch" + Install pressed
+    // mid-boot), ComfyUI's one-shot node scan already ran and cached an IMPORT
+    // FAILURE, yet the frontend flag is lost on the next app restart → the node
+    // silently never loads. Mirror the flag SERVER-side so it is authoritative and
+    // survives a browser/app reload; the gen gate (and /comfy/status) consult it.
+    // LOCAL installs only — a remote (Pod) install owns its own restart path
+    // (state.remoteComfyNeedsRestart), so don't poison the local flag during a
+    // remote session.
+    if (!remoteModels.isRemoteActive()) {
+        processState.comfyNeedsRestart = true;
+    }
     _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });
 }
 
