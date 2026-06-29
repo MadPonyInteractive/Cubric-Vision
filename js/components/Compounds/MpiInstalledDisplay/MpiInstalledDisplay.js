@@ -109,6 +109,10 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             // the sweep.
             indeterminate: !!props.indeterminate,
             phase: props.phase || 'preparing',
+            // Remote (cloud Pod) downloads can't pause/resume — the wrapper's
+            // aria2c install has no pause API. Hide the Pause button when remote so
+            // the user isn't offered a no-op. (MPI-140)
+            isRemote: !!props.isRemote,
         };
 
         // Title
@@ -291,10 +295,13 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             }
 
             if (downloadState === 'downloading') {
-                const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
-                pauseBtn.on('click', () => emit('pause', {}));
-                actionsSlot.appendChild(pauseBtn.el);
-                _children.push(pauseBtn);
+                // Pause is local-only — remote (cloud) downloads have no pause API.
+                if (!_current.isRemote) {
+                    const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
+                    pauseBtn.on('click', () => emit('pause', {}));
+                    actionsSlot.appendChild(pauseBtn.el);
+                    _children.push(pauseBtn);
+                }
                 const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancelBtn.on('click', () => emit('cancel', {}));
                 actionsSlot.appendChild(cancelBtn.el);

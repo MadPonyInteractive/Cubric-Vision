@@ -60,6 +60,11 @@ export const MpiModelManager = ComponentFactory.create({
 
         const _unsubs = [];
 
+        // Tracks whether the app is connected to a cloud (RunPod) engine. Remote
+        // downloads have no pause/resume API, so cards hide the Pause button when
+        // this is true. Kept in sync via the remote:connection event. (MPI-140)
+        let _isRemote = false;
+
         // Per-modelId card instance tracking so download:progress events can update a
         // single card in-place instead of re-rendering the whole list.
         //   Map<modelId, { wrapper, display }>
@@ -440,6 +445,7 @@ export const MpiModelManager = ComponentFactory.create({
                 totalBytes,
                 indeterminate: job ? !!job.indeterminate : false,
                 phase: job ? (job.phase || 'preparing') : 'preparing',
+                isRemote: _isRemote,
             });
 
             // Toggle row lives INSIDE the card, between the badge and the action
@@ -554,6 +560,15 @@ export const MpiModelManager = ComponentFactory.create({
         // ── State subscriptions ──────────────────────────────────────────────
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 's_installedModelIds') renderList();
+        }));
+
+        // Remote (cloud) connection toggles the Pause button visibility on any
+        // active download card — force a rebuild so the buttons update live when the
+        // user connects/disconnects mid-download. (MPI-140)
+        _unsubs.push(Events.on('remote:connection', ({ connected = false } = {}) => {
+            if (!!connected === _isRemote) return;
+            _isRemote = !!connected;
+            renderList({ force: true });
         }));
 
         // ── Download event subscriptions ─────────────────────────────────────

@@ -708,6 +708,7 @@
  * @property {number} [totalBytes=0]        - Total bytes to download
  * @property {boolean} [canUninstall=false] - Show Uninstall button when true and installed
  * @property {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
+ * @property {boolean} [isRemote=false]    - App is cloud-connected; hides Pause (remote has no pause/resume API)
  *
  * Emits:
  * 'delete' {}     — Action button clicked (Install when idle; context-dependent)
