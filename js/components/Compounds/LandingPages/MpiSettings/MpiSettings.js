@@ -915,9 +915,11 @@ export const MpiSettings = ComponentFactory.create({
                 state.runpodConfig = { ..._runpodCfg(), wasConnected: true };
                 // A (re)connect restarts ComfyUI on Pod boot, so it re-scans
                 // custom_nodes and loads any per-model node installed this session
-                // — clear the pending-restart gate (comfyController._ensureRemoteReady
-                // blocks generation while it is set; see MPI-64 B1).
-                if (state.comfyNeedsRestart) state.comfyNeedsRestart = false;
+                // — clear the pending REMOTE-restart gate (comfyController
+                // ._ensureRemoteReady restarts the Pod's ComfyUI while it is set; see
+                // MPI-64 B1). Local flag is untouched — local engine is unaffected by
+                // a Pod (re)connect.
+                if (state.remoteComfyNeedsRestart) state.remoteComfyNeedsRestart = false;
                 _setEngineHint(root, data.recreated
                     ? 'Remote engine ready (your Pod was recreated on the same GPU).'
                     : 'Remote engine ready.');

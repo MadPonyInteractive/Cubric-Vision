@@ -134,6 +134,12 @@ function createEngine({ engine, alwaysLocal }) {
     /** @type {boolean} True only while the binary-preview WS is OPEN. Wrapper-health `ready` (ComfyUI up) is NOT the same as the preview WS being connected — accepting a generation before the WS is open hangs the job in STARTING with no prompt_id (MPI-73 Bug 1). */
     _wsReady: false,
 
+    /** @type {Map<string, ReturnType<typeof setInterval>>} REMOTE-only per-prompt /history poll backstop. The direct renderer→Pod terminal WS has no app-side keepalive, so RunPod's edge proxy reaps it idle during long sampling and the terminal `execution_success` is lost; the one-shot reconnect reconcile bails if it fires mid-stage and never re-arms. This interval re-runs `_reconcileFromHistory` every few seconds until the gen settles — a generation-lifetime backstop independent of WS health. */
+    _historyPollTimers: new Map(),
+
+    /** @type {number} Interval (ms) for the remote /history poll backstop. */
+    _HISTORY_POLL_MS: 5000,
+
     /** @returns {boolean} Whether the preview WS is currently open. */
     isWsReady() {
         return this._wsReady === true
@@ -381,7 +387,7 @@ function createEngine({ engine, alwaysLocal }) {
             // ComfyUI subprocess on the Pod (no Pod reboot, no local detour) and
             // auto-retry — mirroring the local path's stop/start. On an OLDER image
             // the endpoint is absent (404) → fall back to the manual-reconnect msg.
-            if (state.comfyNeedsRestart) {
+            if (state.remoteComfyNeedsRestart) {
                 Events.emit('ui:info', { message: 'Loading new nodes — restarting the remote engine…' });
                 let restarted = false;
                 try {
@@ -411,7 +417,7 @@ function createEngine({ engine, alwaysLocal }) {
                         if (s.ready && (s.comfyReady === undefined || s.comfyReady)) { ready = true; break; }
                     }
                     if (ready) {
-                        state.comfyNeedsRestart = false;
+                        state.remoteComfyNeedsRestart = false;
                         remoteComfyRestarted = true;
                         // fall through to the WS gate below — it re-opens the WS and
                         // proceeds with the gen on the freshly-restarted ComfyUI.
@@ -714,6 +720,7 @@ function createEngine({ engine, alwaysLocal }) {
      */
     _onWsDropped() {
         const rejectors = Array.from(this._promptRejectors.values());
+        for (const id of this._historyPollTimers.keys()) this._stopHistoryPoll(id);
         this._promptListeners.clear();
         this._promptRejectors.clear();
         this._promptResolvers.clear();
@@ -756,20 +763,21 @@ function createEngine({ engine, alwaysLocal }) {
      * @param {string} promptId
      * @private
      */
-    async _reconcileFromHistory(promptId) {
+    async _reconcileFromHistory(promptId, source = 'reconnect') {
         // Already settled by a live event between the onopen and this timeout.
         if (!this._promptResolvers.has(promptId)) return;
         let entry;
         try {
-            // Remote: ComfyUI's /history is NOT publicly exposed by the Pod — the
-            // wrapper proxies it at /wrapper/history/{id} (MPI-152 reconcile). Local:
-            // hit ComfyUI's /history directly. Using the bare /history remotely 404s
-            // (the wrapper has no such route) → reconcile silently failed → remote
-            // gens whose broadcast=False terminal was missed hung forever (MPI-156).
-            const isRemote = !this._alwaysLocal && remoteEngineClient.isRemote();
-            const histUrl = isRemote
-                ? `${this.httpBase()}/wrapper/history/${promptId}`
-                : `${this.httpBase()}/history/${promptId}`;
+            // Both modes hit `${httpBase()}/history/{id}`. Remote httpBase() is
+            // `/proxy`, so this resolves to the Express route GET /proxy/history/:id
+            // (routes/remoteProxy.js), which forwards SERVER-side to the Pod
+            // wrapper's /wrapper/history/{id}. The client must NOT prepend /wrapper
+            // itself — `/proxy/wrapper/history` is not a route and 404s, which
+            // silently broke EVERY remote reconcile (the !resp.ok early-return
+            // swallowed it) so a missed-terminal gen hung forever (MPI-152/156). The
+            // /wrapper segment belongs only to the server→Pod leg. Local httpBase()
+            // is the ComfyUI origin, so /history hits ComfyUI directly.
+            const histUrl = `${this.httpBase()}/history/${promptId}`;
             const resp = await fetch(histUrl);
             if (!resp.ok) return;
             const data = await resp.json();
@@ -785,6 +793,7 @@ function createEngine({ engine, alwaysLocal }) {
 
         if (status.status_str === 'error') {
             const reject = this._promptRejectors.get(promptId);
+            this._stopHistoryPoll(promptId);
             this._promptListeners.delete(promptId);
             this._promptRejectors.delete(promptId);
             this._promptResolvers.delete(promptId);
@@ -801,13 +810,44 @@ function createEngine({ engine, alwaysLocal }) {
             _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
         }
         const resolve = this._promptResolvers.get(promptId);
+        this._stopHistoryPoll(promptId);
         this._promptListeners.delete(promptId);
         this._promptRejectors.delete(promptId);
         this._promptResolvers.delete(promptId);
         if (this._activePromptId === promptId) this._activePromptId = null;
         this._isRunning = this._promptListeners.size > 0;
-        clientLogger.info('comfy', `Reconciled completed gen ${promptId} from /history (${outputs.length} outputs) — terminal WS event was missed on reconnect`);
+        clientLogger.info('comfy', `Reconciled completed gen ${promptId} from /history via ${source} (${outputs.length} outputs) — terminal WS event was missed`);
         resolve?.({ success: true, images: outputs });
+    },
+
+    /**
+     * REMOTE-only: start a generation-lifetime /history poll backstop for a prompt.
+     * The direct renderer→Pod terminal WS has no app-side keepalive, so RunPod's
+     * edge proxy reaps it idle during long sampling stretches and the terminal
+     * `execution_success` (broadcast=False, not replayed) is lost. The reconnect
+     * reconcile is one-shot and bails if it fires while the gen is still mid-stage,
+     * never re-arming — so a gen that finishes AFTER that single poll hangs forever
+     * even though the Pod is done. This interval re-runs `_reconcileFromHistory`
+     * until the resolver is consumed (by ANY path — live terminal, reconnect, or
+     * this poll). Idempotent: `_reconcileFromHistory` no-ops once settled.
+     * @param {string} promptId
+     * @private
+     */
+    _startHistoryPoll(promptId) {
+        if (this._alwaysLocal || !remoteEngineClient.isRemote()) return;
+        if (this._historyPollTimers.has(promptId)) return;
+        const timer = setInterval(() => {
+            // Settled by another path → stop polling.
+            if (!this._promptResolvers.has(promptId)) { this._stopHistoryPoll(promptId); return; }
+            this._reconcileFromHistory(promptId, 'poll');
+        }, this._HISTORY_POLL_MS);
+        this._historyPollTimers.set(promptId, timer);
+    },
+
+    /** Stop the remote /history poll backstop for a prompt (idempotent). @param {string} promptId @private */
+    _stopHistoryPoll(promptId) {
+        const timer = this._historyPollTimers.get(promptId);
+        if (timer) { clearInterval(timer); this._historyPollTimers.delete(promptId); }
     },
 
     /**
@@ -1088,6 +1128,7 @@ function createEngine({ engine, alwaysLocal }) {
                     const exc = d.exception_type ? `${d.exception_type}: ` : '';
                     const detail = d.exception_message || 'unknown error';
                     if (promptId) {
+                        this._stopHistoryPoll(promptId);
                         this._promptListeners.delete(promptId);
                         this._promptRejectors.delete(promptId);
                         this._promptResolvers.delete(promptId);
@@ -1116,6 +1157,7 @@ function createEngine({ engine, alwaysLocal }) {
                 if (isTerminalDone) {
                     if (_terminalSafetyTimer) { clearTimeout(_terminalSafetyTimer); _terminalSafetyTimer = null; }
                     if (promptId) {
+                        this._stopHistoryPoll(promptId);
                         this._promptListeners.delete(promptId);
                         this._promptRejectors.delete(promptId);
                         this._promptResolvers.delete(promptId);
@@ -1197,6 +1239,10 @@ function createEngine({ engine, alwaysLocal }) {
                     // replayed) can be settled from `/history` by `_reconcileFromHistory`
                     // (MPI-152).
                     this._promptResolvers.set(promptId, resolve);
+                    // REMOTE backstop: poll /history for the whole gen lifetime in
+                    // case the direct terminal WS is reaped and its terminal event
+                    // is lost (see _startHistoryPoll). Local relies on the WS only.
+                    this._startHistoryPoll(promptId);
                     if (onMessage) onMessage({ type: 'prompt_ack', prompt_id: promptId });
                     const pending = this._pendingPromptMessages.get(promptId) || [];
                     this._pendingPromptMessages.delete(promptId);
@@ -1204,6 +1250,7 @@ function createEngine({ engine, alwaysLocal }) {
                 }
             } catch (err) {
                 if (promptId) {
+                    this._stopHistoryPoll(promptId);
                     this._promptListeners.delete(promptId);
                     this._promptRejectors.delete(promptId);
                 }

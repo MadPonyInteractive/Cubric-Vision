@@ -56,7 +56,8 @@ const _state = {
     // ── Download Manager ───────────────────────────────────────────────────────
     downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery
     downloadQueueActive: false, // true when any download is in progress
-    comfyNeedsRestart: false,   // true after custom node install
+    comfyNeedsRestart: false,   // true after a LOCAL custom-node/model install — restarts the local ComfyUI
+    remoteComfyNeedsRestart: false, // true after a REMOTE (Pod) install — restarts the Pod's ComfyUI, NOT the local one (kept separate so a remote install never restarts a healthy local engine during a dual-engine session)
 
     // ── Gallery organization ───────────────────────────────────────────────────
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'audios'|'previews'|'favorites'

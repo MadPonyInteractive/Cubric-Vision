@@ -410,7 +410,14 @@ const downloadService = {
 
         this._eventSource.addEventListener('comfy:needs-restart', (e) => {
             const data = JSON.parse(e.data);
-            state.comfyNeedsRestart = true;
+            // Route by engine: a REMOTE (Pod) install (`remote: true`,
+            // downloadManager.js) needs the POD's ComfyUI rescanned, a LOCAL install
+            // needs the local one. They were sharing one global flag, so a remote
+            // install during a remote session wrongly stop+restarted a healthy LOCAL
+            // ComfyUI on the next local-pinned gen. Keep them separate — each
+            // engine's ready-path consumes its own flag.
+            if (data?.remote === true) state.remoteComfyNeedsRestart = true;
+            else state.comfyNeedsRestart = true;
             Events.emit('comfy:needs-restart', data);
         });
 
