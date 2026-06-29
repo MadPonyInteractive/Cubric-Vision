@@ -126,7 +126,13 @@ const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
 const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
 const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
-const LOCAL_DOWNLOAD_CONCURRENCY = 1;
+// 3 parallel deps. Was 1 (commit 47e924a) only because parallel HF/Xet streams
+// fought over throttled bandwidth and made each other worse. Now that all MPI
+// weights are on R2 (free egress, no wave-throttle, MPI-129), parallel pulls no
+// longer self-throttle, so multi-dep installs (Wan = 4 files + encoders) finish
+// faster. Kept modest — a single R2 stream already saturates a typical link, so
+// 3 overlaps small deps with large ones without thrashing. (MPI-140)
+const LOCAL_DOWNLOAD_CONCURRENCY = 3;
 const SLOW_RECONNECT_MIN_BEST_BPS = 5 * 1024 * 1024;
 const SLOW_RECONNECT_MIN_BPS = 512 * 1024;
 const SLOW_RECONNECT_RATIO = 0.15;
