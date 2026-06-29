@@ -949,21 +949,18 @@ function _onRemoteInstallEvent(evt) {
             });
         }
     } else if (evt.type === 'models:install-verifying') {
-        // MPI-95 (revised, post-live-test): the wrapper finished downloading this
-        // dep and is now hashing it (sha256 re-reads the whole file). The earlier
-        // fix flipped the bar to an indeterminate "Verifying…" sweep here, which
-        // read as LESS informative than the determinate bar parked at its last %.
-        // So: count the dep as fully downloaded in the aggregate (bytes==total) and
-        // re-broadcast a DETERMINATE tick — the bar holds at the real %, no sweep.
-        // The wrapper event stays emitted (useful seam) but the app no longer turns
-        // it into an indeterminate phase.
+        // The wrapper finished downloading this dep and is now hashing it (sha256
+        // re-reads the whole file — seconds on a CPU Pod, no byte progress). Flip the
+        // bar to the indeterminate "Verifying…" sweep so the otherwise-silent stall
+        // at 100% is explained — matching the LOCAL path (see download:verifying emit
+        // in ResumableDownloader.on('end')). Keeps remote + local consistent.
+        // (MPI-140; supersedes the MPI-95 park-at-100% determinate choice.)
         const total = Number(data.total) || depJob.totalBytes || 0;
         if (total) depJob.totalBytes = total;
         depJob.downloadedBytes = total || depJob.downloadedBytes;
         for (const modelJob of _modelJobs.values()) {
             const myDep = modelJob.deps.find(d => d.id === depId);
             if (!myDep) continue;
-            // MPI-95 — same best-known denominator as the progress branch.
             modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + _depDenominator(d), 0);
             modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
@@ -974,7 +971,8 @@ function _onRemoteInstallEvent(evt) {
                 totalBytes: modelJob.totalBytes,
                 speed: '',
                 progress: modelJob.progress,
-                indeterminate: false,
+                indeterminate: true,
+                phase: 'verifying',
             });
         }
     } else if (evt.type === 'models:install-complete') {
