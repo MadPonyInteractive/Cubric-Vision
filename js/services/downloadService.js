@@ -316,6 +316,20 @@ const downloadService = {
                     });
                 }
             }
+            // A failed install leaves any deps that DID land still on disk (e.g. the
+            // small upscaler + custom-node zips before the big weight hit the disk-full
+            // wall). The card derives its state from the job: a lingering 'failed' job
+            // pins downloadState off 'idle', so _computePartial never runs and the card
+            // shows "Not Installed" — hiding the on-disk deps. Drop the failed job so
+            // downloadState falls back to 'idle', then re-sync installed state from disk
+            // so the card recomputes "Partially Installed". Mirrors the complete path's
+            // re-sync. (MPI-140)
+            if (data.modelId && data.modelId !== '__universal_workflow__') {
+                state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== data.modelId);
+                if (!state.downloadJobs.length) state.downloadQueueActive = false;
+                reSyncInstalledModels().catch(err =>
+                    clientLogger.error('downloadService', 're-sync after failed install:', err));
+            }
             // MPI-97 — a DEP-LEVEL failure (no modelId, e.g. a single dep's
             // wrapper trigger) is NOT a user-facing model failure on its own: the
             // dep's owning model(s) raise their OWN model-level download:failed via

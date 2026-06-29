@@ -98,7 +98,7 @@ export const MpiToast = ComponentFactory.create({
         const label = labelByVariant[variant] || labelByVariant.info;
 
         return `<div class="mpi-toast mpi-toast--${variant}">
-            <img class="mpi-toast__mascot" src="assets/mascot/${mascot}.png" alt="" aria-hidden="true">
+            <img class="mpi-toast__mascot" src="assets/mascot/${mascot}.png" alt="" aria-hidden="true" onerror="this.style.display='none'">
             <div class="mpi-toast__content">
                 <div class="mpi-toast__meta">
                     <span class="mpi-toast__dot"></span>
