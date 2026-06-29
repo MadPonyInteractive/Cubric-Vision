@@ -699,6 +699,10 @@ async function _runRemoteBoot(runpod) {
       });
       resOk = res.ok;
       data = await res.json().catch(() => ({}));
+      // MPI-135: a card RunPod's REST create enum doesn't recognise can NEVER deploy —
+      // never retry it (auto-retry would loop forever on a doomed card). Break out and
+      // fall through to the error handling so the user is told to pick another.
+      if (data.gpuUnsupported) break;
       const refusedOutOfStock = !res.ok && _isStockRefusal(data.message || data.error || '');
       const sniped = data.unavailable || refusedOutOfStock;
       if (sniped && autoRetry) {

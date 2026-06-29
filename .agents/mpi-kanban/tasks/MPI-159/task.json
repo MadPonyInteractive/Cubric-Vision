@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-159",
+  "title": "Picker should grey/hide GPUs the RunPod REST create enum rejects (GraphQL↔REST desync)",
+  "description": "Spun out of MPI-135 (live-confirmed 2026-06-29). ROOT CAUSE of 'RTX PRO 4500 / RTX PRO 4000 never connect': the GPU picker lists cards from the GraphQL gpuTypes catalogue, but Pods create via REST POST /pods whose gpuTypeIds is a SEPARATE enum that lags GraphQL. A newer card (live: 'NVIDIA RTX PRO 4500 Blackwell') shows pickable + available:true + stock High, but createPod 400s with `At /pods/properties/gpuTypeIds/items/enum…`. \n\nALREADY SHIPPED in MPI-135 (the honest-failure half): the schema-400 array body is now parsed (problems[]), the false 'out of stock' message is gone, a gpuTypeIds-enum 400 is classified gpuUnsupported:true, the shell auto-retry loop breaks instead of looping forever, and Settings shows honest copy + doesn't hand off to the wait. So the card now FAILS FAST + HONESTLY.\n\nTHIS CARD = the PREVENTION half: grey out / hide unsupported cards in the picker BEFORE the user clicks Connect, so they never pick a doomed card. Needs the set of REST-createable gpuTypeIds, which the app does NOT currently fetch. Options: (1) fetch RunPod's OpenAPI spec and read the /pods gpuTypeIds enum (authoritative, but an extra fetch + parse + the enum location may move); (2) probe-and-cache — on a gpuUnsupported reject, remember that id (localStorage) and grey it in the picker thereafter (cheap, self-correcting, but the FIRST user of each new card still hits the 400 once); (3) maintain a hardcoded denylist (fragile, needs manual upkeep as RunPod adds cards). Recommend (2) — cheapest, no new dependency, degrades fine; the honest fail (MPI-135) already covers the first hit. \n\nVERIFY: pick RTX PRO 4500 in EU-RO-1 → after one failed Connect it greys in the picker with a tooltip 'not deployable via RunPod's API yet'. Low priority (the honest fail already stops the user looping); polish.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "open",
+  "created_at": "2026-06-29T15:00:00Z",
+  "updated_at": "2026-06-29T15:00:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

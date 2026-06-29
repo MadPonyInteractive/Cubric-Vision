@@ -772,6 +772,16 @@ export const MpiSettings = ComponentFactory.create({
                 // Create/resume refused outright (out of stock, API error) — no Pod.
                 if (!res.ok || (!data.starting && !data.ready)) {
                     const msg = data.message || data.error || 'Could not connect to a Pod.';
+                    // MPI-135: RunPod's REST create enum doesn't recognise this GPU
+                    // (its create list lags the catalogue the picker reads from) — the
+                    // card can never deploy, so never hand off to the auto-retry wait.
+                    if (data.gpuUnsupported) {
+                        _setEngineHint(root, `${msg}`, true);
+                        _setEngineStatusText(root, 'stopped');
+                        _engineBtnLabelSet('Connect');
+                        Events.emit('ui:warning', { message: 'This GPU can\'t be deployed — pick another card.' });
+                        return;
+                    }
                     const outOfStock = _isStockRefusal(msg);
                     // MPI-110: auto-retry on + an out-of-stock refusal with no Pod left
                     // behind → re-enter the background wait instead of asking the user

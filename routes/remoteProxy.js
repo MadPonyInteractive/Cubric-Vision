@@ -557,6 +557,20 @@ async function _isGpuAvailable(key, gpuTypeId, datacenter) {
 // HTML error page can't flood the log line or the failure dialog.
 function _createRejectReason(json) {
   if (!json || typeof json !== 'object') return '';
+  // MPI-135: a schema-validation 400 comes back as a TOP-LEVEL ARRAY
+  // [{ error, problems:[{ ... }] }] — the old code read json.error on the array
+  // (always undefined) so it fell through to the misleading "out of stock" copy.
+  // Unwrap the first element and surface its problems[] (the field that actually
+  // failed), so a malformed-request 400 stops masquerading as a stock refusal.
+  if (Array.isArray(json)) {
+    const first = json.find((e) => e && typeof e === 'object') || {};
+    const probs = Array.isArray(first.problems)
+      ? first.problems.map((p) => (p && (p.message || p.detail)) || (typeof p === 'string' ? p : JSON.stringify(p))).filter(Boolean).join('; ')
+      : '';
+    const head = first.error || first.message || '';
+    const reason = [head, probs].filter(Boolean).join(' — ').replace(/\s+/g, ' ').trim();
+    return reason.length > 300 ? `${reason.slice(0, 300)}…` : reason;
+  }
   // RunPod's v1 REST error shape isn't fully documented and varies by failure
   // class (a stock 500 answers {error}; some 400 validation rejects use {detail}
   // or {title}, or send an EMPTY body). Read every field we've seen, then fall
@@ -660,14 +674,23 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
     if (!parsed) {
       let body = '';
       try { body = JSON.stringify(created.json); } catch (_) { body = String(created.json); }
-      logger.warn('runpod', `createPod ${created.status}: no parseable reason; raw body=${(body || '{}').slice(0, 300)}`);
+      logger.warn('runpod', `createPod ${created.status}: no parseable reason; raw body=${(body || '{}').slice(0, 2000)}`);
     }
-    const reason = parsed
-      || (created.status === 400
-        ? `RunPod rejected the request (400) — that GPU may be unavailable in this data center, or out of stock. Try another card or data center.`
-        : `create returned ${created.status}`);
+    // MPI-135: a schema-400 naming gpuTypeIds/items/enum means RunPod's REST create
+    // endpoint does NOT recognise this GPU id — its createPod enum lags the GraphQL
+    // catalogue the picker lists from, so newer cards (e.g. "NVIDIA RTX PRO 4500
+    // Blackwell") show as pickable + in-stock yet can never deploy. This is NOT stock;
+    // tell the user to pick another card and flag it so the renderer can mark the card
+    // unsupported (gpuUnsupported) rather than looping them on a doomed retry.
+    const gpuEnumReject = created.status === 400 && /gpuTypeIds\/items\/enum/i.test(parsed || '');
+    const reason = gpuEnumReject
+      ? `RunPod's deploy API doesn't support this GPU yet (its create list lags the catalogue). Pick a different card — this one can't be deployed even though it shows as available.`
+      : (parsed
+        || (created.status === 400
+          ? `RunPod rejected the request (400) — that GPU may be unavailable in this data center, or out of stock. Try another card or data center.`
+          : `create returned ${created.status}`));
     logger.warn('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=none reason="${reason}"`);
-    return { ok: false, message: reason };
+    return { ok: false, message: reason, gpuUnsupported: gpuEnumReject };
   }
   logger.info('runpod', `createPod REST -> http ${created.status} ok=${created.ok} podId=${podId}`);
 
@@ -778,7 +801,9 @@ router.post('/remote/pod/create', async (req, res) => {
     });
     if (!out.ok) {
       logger.warn('runpod', `Pod create refused: ${out.message}`);
-      return res.status(502).json({ error: 'pod_create_failed', message: out.message });
+      // MPI-135: a GPU the REST create enum doesn't recognise — pass the flag so the
+      // renderer can mark the card unsupported instead of "still preparing".
+      return res.status(502).json({ error: 'pod_create_failed', message: out.message, gpuUnsupported: !!out.gpuUnsupported });
     }
     logger.info('runpod', `Pod create kicked off: ${out.podId}`);
     kicked = true;
