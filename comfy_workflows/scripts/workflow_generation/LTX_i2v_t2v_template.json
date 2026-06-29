@@ -557,7 +557,7 @@
   },
   "75": {
     "inputs": {
-      "int": 4
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1281,6 +1281,7 @@
       "filename_prefix": "LTX",
       "format": "auto",
       "codec": "auto",
+      "video-preview": "",
       "video": [
         "189",
         0
@@ -1366,7 +1367,7 @@
   "197": {
     "inputs": {
       "audio": "ltx_silence.wav",
-      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.9848402774227129"
+      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.1258802850423857"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -1871,7 +1872,7 @@
   },
   "296": {
     "inputs": {
-      "boolean": true,
+      "boolean": false,
       "true": [
         "33",
         0
