@@ -369,6 +369,13 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
         Events.emit('remote:connect-progress', { pct: 0 });
         return 'not-running';
       }
+      // MPI-135 (C): RunPod placed the Pod on a host that's under / scheduled for
+      // maintenance (draining) — it'll never come ready. Bail past the grace window
+      // so the user gets nudged to Cancel & retry now instead of waiting the watchdog.
+      if (s && s.maintenance && Date.now() - start >= notRunningGraceMs) {
+        Events.emit('remote:connect-progress', { pct: 0 });
+        return 'maintenance';
+      }
       // The user cancelled from Settings (or remote mode was otherwise turned off)
       // mid-boot-connect: _cancelConnect → /remote/pod/delete-active flips _mode
       // OFF, so the status route early-returns { running:false, ready:false,
@@ -442,6 +449,35 @@ async function _isGpuInStockBoot(gpuType, datacenter) {
     return !!dc && (dc.gpuAvailability || []).some(g => g.gpuTypeId === gpuType && g.available);
   } catch (_) {
     return false; // transient — caller retries next tick
+  }
+}
+
+// MPI-135 (A): for an any-region create that RunPod auto-placement keeps refusing
+// (it lands on full hosts), pick the DC with the best live stock for the card and
+// pin the next retry there instead of re-gambling on dc=null. Returns a DC id or
+// null (no DC reports the card available → stay any-region, keep retrying). An
+// ephemeral no-volume Pod CAN be pinned to a DC (remoteProxy create only requires a
+// DC when a volume is attached), so this needs no volume. The `available` flag is
+// optimistic (a 'Low' DC can still refuse), so this only RANKS retry targets — the
+// create attempt stays the ground truth, exactly as MPI-134 relies on.
+const _DC_STOCK_RANK = { High: 3, Medium: 2, Low: 1 };
+async function _bestStockDcForGpu(gpuType) {
+  if (!gpuType || gpuType === '__cpu__') return null;
+  try {
+    const res = await fetch('/runpod/gpu-availability');
+    if (!res.ok) return null;
+    const dcs = (await res.json())?.dataCenters || [];
+    let best = null;
+    let bestRank = 0;
+    for (const d of dcs) {
+      const g = (d.gpuAvailability || []).find(x => x.gpuTypeId === gpuType && x.available);
+      if (!g) continue;
+      const rank = _DC_STOCK_RANK[g.stockStatus] || 0;
+      if (rank > bestRank) { bestRank = rank; best = d.id; }
+    }
+    return best;
+  } catch (_) {
+    return null; // transient — caller stays any-region this tick
   }
 }
 
@@ -673,6 +709,17 @@ async function _runRemoteBoot(runpod) {
         // retry. remoteWaitGpu stays pinned, so the panel never flickers to
         // Creating/stopped. A user Cancel (_stopGpuWait) or GPU switch flips
         // _retryContinues() false and we bail to local.
+        // MPI-135 (A): when this is an any-region create (no DC, no volume), the
+        // refusal means RunPod auto-placement keeps landing on full hosts. Steer the
+        // next retry to the best-stock DC for the card if the snapshot names one;
+        // a null result leaves body.datacenter unset → stays any-region.
+        if (!warm && anyRegion && !body.volumeId) {
+          const steerDc = await _bestStockDcForGpu(runpod.gpuType);
+          if (steerDc && steerDc !== body.datacenter) {
+            body.datacenter = steerDc;
+            clientLogger.info('shell', `[RunPod] steering any-region retry to best-stock DC ${steerDc} for ${runpod.gpuType}`);
+          }
+        }
         clientLogger.info('shell', `[RunPod] ${runpod.gpuType} refused (low stock) — retrying in ${_BOOT_RETRY_INTERVAL_MS / 1000}s`);
         _enterWaitState(runpod.gpuType);
         for (let w = 0; w < _BOOT_RETRY_INTERVAL_MS; w += 500) {
@@ -746,6 +793,25 @@ async function _runRemoteBoot(runpod) {
       const dlg = MpiOkCancel.mount(document.createElement('div'), {
         title: 'Pod failed to start on host',
         text: 'The Pod was created but its RunPod host never started it (a bad or busy host — not a problem with your setup). Open Settings → RunPod, pick another GPU, and Connect.',
+        okLabel: 'Got it',
+        showCancel: false,
+      });
+      dlg.el.show();
+      return;
+    }
+    // MPI-135 (C): the host RunPod placed the Pod on is under maintenance (draining) —
+    // it won't come ready. Same teardown as a dead host: delete it (a stuck Pod still
+    // bills), clear the saved podId so the next Connect creates fresh elsewhere, and
+    // tell the user it's a bad host. With auto-retry on they can just Connect again to
+    // land a fresh one.
+    if (ready === 'maintenance') {
+      clientLogger.warn('shell', '[RunPod] auto-connect: host under maintenance — aborting');
+      fetch('/remote/pod/delete-active', { method: 'POST' }).catch(() => {});
+      const cfg = Storage.getRunpodConfig();
+      Storage.setRunpodConfig({ ...cfg, podId: null, wasConnected: false });
+      const dlg = MpiOkCancel.mount(document.createElement('div'), {
+        title: 'Host going down for maintenance',
+        text: 'RunPod placed your Pod on a host that is being taken down for maintenance, so it will not come ready. We deleted it — open Settings → RunPod and Connect again to land on a fresh host.',
         okLabel: 'Got it',
         showCancel: false,
       });

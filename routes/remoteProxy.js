@@ -404,6 +404,14 @@ let _lastPodStatus = null;
 let _lastPodStatusAt = 0;
 let _lastPodStatusId = null;
 const POD_STATUS_TTL_MS = 12000;
+// MPI-135 (C): getPod's machine object carries maintenanceStart/End/Note when the
+// host is scheduled for / under maintenance (RunPod REST). The old code read only
+// desiredStatus and threw the rest of p away, so a host placed on a draining machine
+// looked like a slow boot and the user waited the full 5-min watchdog. Captured from
+// the SAME getPod call (no extra request) and surfaced on /remote/comfy/status so the
+// renderer can offer "host looks bad — Cancel & retry" early. Stuck-PULL hosts (the
+// other bad-host case) are NOT detectable: the REST API exposes no image-pull progress.
+let _lastPodMaintenance = null; // { note, start, end } | null
 
 function _readPath(obj, path) {
   if (!obj || !path) return undefined;
@@ -466,6 +474,13 @@ async function _podRuntimeStatus(podId) {
     // REST shape varies; desiredStatus is the v1 field. Normalise to uppercase.
     const raw = p.desiredStatus || p.currentStatus || p.status || null;
     _lastPodStatus = raw ? String(raw).toUpperCase() : null;
+    // MPI-135 (C): grab maintenance off the machine object from this same call.
+    // A maintenanceStart (with no past maintenanceEnd) means the host is draining —
+    // bail early instead of waiting out the watchdog on a doomed host.
+    const m = p.machine || {};
+    _lastPodMaintenance = (m.maintenanceStart || m.maintenanceNote)
+      ? { note: m.maintenanceNote || '', start: m.maintenanceStart || '', end: m.maintenanceEnd || '' }
+      : null;
     _lastPodStatusId = podId;
     _lastPodStatusAt = Date.now();
   } catch (_) { /* best-effort — leave podStatus null, no regression */ }
@@ -489,9 +504,10 @@ router.get('/remote/comfy/status', async (req, res) => {
     clearTimeout(timer);
     if (!r.ok) {
       // Wrapper not answering — surface the RunPod Pod status so the renderer can
-      // tell a slow boot from a Pod that never started (MPI-96).
+      // tell a slow boot from a Pod that never started (MPI-96), plus any host
+      // maintenance flag so it can bail early on a draining host (MPI-135 C).
       const podStatus = await _podRuntimeStatus(_mode.podId);
-      return res.json({ running: false, ready: false, connecting: inFlight(), podStatus });
+      return res.json({ running: false, ready: false, connecting: inFlight(), podStatus, maintenance: _lastPodMaintenance });
     }
     const health = await r.json();
     // Pod is up — the background start finished; clear the spanning flag so the
@@ -500,9 +516,10 @@ router.get('/remote/comfy/status', async (req, res) => {
     res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, wrapperVersion: health.wrapper_version || null, connecting: inFlight(), noGpu: _mode.noGpu });
   } catch (_) {
     // expected during Pod cold start / stale-payload window — but also the window
-    // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96).
+    // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96)
+    // and any host maintenance flag (MPI-135 C).
     const podStatus = await _podRuntimeStatus(_mode.podId);
-    res.json({ running: false, ready: false, connecting: inFlight(), podStatus });
+    res.json({ running: false, ready: false, connecting: inFlight(), podStatus, maintenance: _lastPodMaintenance });
   }
 });
 

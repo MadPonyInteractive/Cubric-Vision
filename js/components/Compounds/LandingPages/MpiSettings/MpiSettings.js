@@ -624,7 +624,7 @@ export const MpiSettings = ComponentFactory.create({
         // L3), so it only prompts "taking too long, Cancel and try another GPU"; it
         // never auto-cancels (a healthy slow boot must complete). The loop also
         // checks `_connectAbort` each tick so the Cancel button can break it.
-        async function _pollEngineReady(onSlow, onWatchdog, onNotRunning, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, watchdogAfterMs = 300000, notRunningGraceMs = 30000 } = {}) {
+        async function _pollEngineReady(onSlow, onWatchdog, onNotRunning, onMaintenance, { timeoutMs = 1200000, intervalMs = 4000, slowAfterMs = 150000, watchdogAfterMs = 300000, notRunningGraceMs = 30000 } = {}) {
             const start = Date.now();
             let slowFired = false;
             let watchdogFired = false;
@@ -661,6 +661,13 @@ export const MpiSettings = ComponentFactory.create({
                     if (s && s.podStatus && _NOT_RUNNING.has(String(s.podStatus).toUpperCase())
                         && Date.now() - start >= notRunningGraceMs) {
                         try { onNotRunning && onNotRunning(s.podStatus); } catch (_) { /* best-effort */ }
+                        return false;
+                    }
+                    // MPI-135 (C): host under maintenance (draining) — it won't come
+                    // ready. Bail past the grace window so the user isn't stuck until
+                    // the 5-min watchdog on a doomed host.
+                    if (s && s.maintenance && Date.now() - start >= notRunningGraceMs) {
+                        try { onMaintenance && onMaintenance(s.maintenance); } catch (_) { /* best-effort */ }
                         return false;
                     }
                 } catch (_) { /* transient during cold pull / proxy 404 window */ }
@@ -796,6 +803,7 @@ export const MpiSettings = ComponentFactory.create({
                 _setEngineStatusText(root, warm ? 'resuming…' : 'connecting…');
                 let _slowShown = false;
                 let _notRunning = false; // MPI-96: RunPod host failed to start the Pod
+                let _maintenance = false; // MPI-135 (C): host under maintenance (draining)
                 const ready = await _pollEngineReady(() => {
                     if (_slowShown) return;
                     _slowShown = true;
@@ -813,6 +821,10 @@ export const MpiSettings = ComponentFactory.create({
                     // flag it so we surface a host-failure (not "still preparing").
                     _notRunning = true;
                     clientLogger.warn('settings', `[RunPod] Pod not running on host (status=${podStatus}) — aborting connect`);
+                }, (maint) => {
+                    // MPI-135 (C): RunPod placed the Pod on a host under maintenance.
+                    _maintenance = true;
+                    clientLogger.warn('settings', `[RunPod] host under maintenance — aborting connect (${(maint && maint.note) || 'no note'})`);
                 });
                 // MPI-86: user pressed Cancel mid-poll — _cancelConnect already tore
                 // down the Pod + reset the UI; bail without the "still preparing" path.
@@ -833,6 +845,20 @@ export const MpiSettings = ComponentFactory.create({
                     _setEngineStatusText(root, 'stopped');
                     _engineBtnLabelSet('Connect');
                     Events.emit('ui:warning', { message: 'Pod failed to start on host — pick another GPU and Connect.' });
+                    return;
+                }
+                // MPI-135 (C): the Pod landed on a host going down for maintenance —
+                // it'll never come ready. Same teardown as a dead host: reap it (a
+                // stuck Pod still bills container disk) and clear the saved ids so the
+                // next Connect creates fresh on another host.
+                if (_maintenance) {
+                    Events.emit('remote:connect-progress', { pct: 0 });
+                    fetch('/remote/pod/delete-active', { method: 'POST' }).catch(() => {});
+                    state.runpodConfig = { ..._runpodCfg(), podId: null, wasConnected: false };
+                    _setEngineHint(root, 'RunPod placed your Pod on a host going down for maintenance, so it will not come ready. We deleted it — Connect again to land on a fresh host.', true);
+                    _setEngineStatusText(root, 'stopped');
+                    _engineBtnLabelSet('Connect');
+                    Events.emit('ui:warning', { message: 'Host under maintenance — Connect again for a fresh one.' });
                     return;
                 }
                 if (!ready) {
