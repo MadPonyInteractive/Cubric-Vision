@@ -76,3 +76,29 @@ the SSE, and fail cleanly if genuinely stuck (never a frozen bar).
 - [ ] httpx path: stalled chunk hits the wall-clock deadline → error emitted.
 - [ ] App silent-stall watchdog fires when ticks cease on an open stream →
       reconcile + reconnect; dep settles or fails.
+
+## PICKUP NOTE (2026-06-29, after MPI-140 done) — RE-FRAME against R2 FIRST
+
+The original stall (2026-06-25) was caught installing LTX-2.3 **from Hugging
+Face**. The root cause named here (HF/Xet CDN zombie/half-open sockets that stop
+sending bytes without RST/FIN, defeating httpx read-timeout) is an **HF
+pathology**. As of MPI-129 (DONE), all MPI-owned weights are on **Cloudflare R2**,
+which does NOT exhibit the HF/Xet throttle-to-death + half-open behaviour. MPI-140
+(the sibling "progress lie" card) was largely RESOLVED simply by the R2 move —
+the lie was the same HF symptom.
+
+**So before building the two-sided watchdog: re-test whether the stall still
+reproduces on R2 at all.** Likely MPI-136 shrinks to a thin defensive belt rather
+than the full wrapper-resume + app-SSE-recovery system described above:
+- The remaining HF deps are UPSTREAM only (Comfy-Org/Kijai/Lightricks/Bingsu — not
+  ours), so a stall risk persists ONLY for those files until MPI-128 self-hosts
+  them to R2.
+- A cheap defensive minimum may suffice: aria2c `--lowest-speed-limit` (already
+  partly there) + an app-side silent-SSE-stall timeout that surfaces a clean
+  failure (Cancel→Install) instead of a frozen bar. The full wrapper httpx
+  read-deadline + resume-from-.part may be over-engineering for an R2-only world.
+- Verify on a CPU download Pod (cheap, no GPU bill) — the MPI-140 session proved
+  that path works (CPU image pinned to v0.10.2-cpu in remoteProxy.js).
+
+See MPI-140 validation.md for the full R2-root-cause framing + the 9 download
+fixes that shipped alongside.

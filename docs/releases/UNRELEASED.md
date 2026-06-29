@@ -107,6 +107,9 @@
 
 ## fixes
 
+- **Model installs are much faster.** Model downloads now come from a faster
+  network, so installing a model takes a fraction of the time it used to.
+
 - **Cards no longer keep playing after you scroll away.** Scrolling the gallery
   could leave a card's audio or video still playing off-screen, because moving the
   card out from under a still cursor doesn't register as "stopped hovering". Hover
