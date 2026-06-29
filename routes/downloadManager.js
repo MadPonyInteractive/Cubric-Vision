@@ -742,6 +742,15 @@ function _wireProgress(depJob, downloader) {
             myDep.downloadedBytes = downloadedBytes;
             myDep.totalBytes = totalBytes;
             modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+            // Denominator must track each dep's REAL Content-Length once known, not the
+            // declared `size:` estimate — else the bar finishes short (e.g. Wan declared
+            // 15GB but is 14.3GB → bar caps ~91% then jumps to done). Prefer real total;
+            // fall back to seedBytes only while real is still 0 (dep not yet emitting).
+            // NB: NOT _depDenominator's Math.max(real,seed) here — when the declared seed
+            // is larger than the real size, max() keeps the inflated seed and the bar
+            // still finishes short. The actual byte count is the truth once it arrives.
+            modelJob.totalBytes = modelJob.deps.reduce(
+                (sum, d) => sum + (d.totalBytes || d.seedBytes || 0), 0);
             modelJob.speed = _modelSpeedLabel(modelJob);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
