@@ -7,7 +7,12 @@
   "maturity": "in-progress",
   "status": "open",
   "created_at": "2026-06-25T17:00:00Z",
-  "updated_at": "2026-06-29T14:00:00Z",
+  "updated_at": "2026-06-29T16:30:00Z",
+  "attention": {
+    "state": "required",
+    "reason": "The REAL scarce-card bug (GraphQL↔REST enum desync) was found + the honest-fail fix SHIPPED + LIVE-VERIFIED this session (commits f9faa60, 0590aa5); the permanent fix is carded as MPI-159 (GraphQL create fallback, ready to build). The original (A) DC-steer + (C) maintenance-detect fixes (commit b48ac2b) are LOGIC-VERIFIED ONLY — need a live scarce card (A) + a maintenance host (C) to confirm. NEXT: either live-verify A/C opportunistically, or user closes the card (the headline goal — connect to these cards — is solved by MPI-159, not A/C).",
+    "updated_at": "2026-06-29T16:30:00Z"
+  },
   "links": {
     "events": "events.jsonl"
   }
