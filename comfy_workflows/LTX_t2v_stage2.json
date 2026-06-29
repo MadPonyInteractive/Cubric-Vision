@@ -84,7 +84,7 @@
   },
   "9": {
     "inputs": {
-      "string": "[VISUAL]: a man and a woman stand facing each other on a tree-lined park path, talking and smiling. The man wears a dark blue jacket, the woman a green scarf. Behind them a crowd of people walk and sit along the path on a bright autumn day. The woman talks to the man. They both look at the floor and turn their backs to each other. \n[SPEECH]: The woman says: \"Did you take the trash out?\" \n[SOUNDS]: Two clear conversational voices, a female and a male, outdoors in a busy city park. Layered ambient crowd chatter and footsteps on a gravel path, birds in the trees, rustling leaves in a light breeze, and distant city traffic.\n"
+      "string": "A cinematic medium shot of a confident woman walking toward the camera down a rainy neon-lit city street at night. Wet asphalt reflects bright pink and cyan signs. Cars move slowly in the background. Soft rain falls continuously and steam rises from street vents. The camera smoothly dollies backward at eye level, keeping the woman centered. Realistic walking motion, shallow depth of field, cinematic lighting, 35mm anamorphic lens, highly realistic."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -94,7 +94,7 @@
   "12": {
     "inputs": {
       "noise_seed": [
-        "100",
+        "77",
         0
       ]
     },
@@ -128,15 +128,15 @@
     "inputs": {
       "cfg": 1,
       "model": [
-        "258",
+        "360",
         0
       ],
       "positive": [
-        "101",
+        "46",
         0
       ],
       "negative": [
-        "101",
+        "46",
         1
       ]
     },
@@ -173,7 +173,7 @@
         0
       ],
       "audio_latent": [
-        "124",
+        "55",
         0
       ]
     },
@@ -241,11 +241,11 @@
   "46": {
     "inputs": {
       "positive": [
-        "297",
+        "212",
         0
       ],
       "negative": [
-        "297",
+        "212",
         1
       ],
       "latent": [
@@ -315,7 +315,7 @@
         0
       ],
       "false": [
-        "103",
+        "338",
         0
       ]
     },
@@ -396,8 +396,8 @@
         0
       ],
       "false": [
-        "102",
-        0
+        "68",
+        1
       ]
     },
     "class_type": "MpiIfElse",
@@ -424,7 +424,7 @@
         1
       ],
       "vae": [
-        "165",
+        "1",
         0
       ]
     },
@@ -443,23 +443,6 @@
     "class_type": "MpiClearVram",
     "_meta": {
       "title": "Mpi Clear Vram"
-    }
-  },
-  "66": {
-    "inputs": {
-      "fps": [
-        "166",
-        0
-      ],
-      "bit_depth": 8,
-      "images": [
-        "65",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
     }
   },
   "67": {
@@ -614,7 +597,7 @@
   },
   "88": {
     "inputs": {
-      "int": 384
+      "int": 1280
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -623,7 +606,7 @@
   },
   "89": {
     "inputs": {
-      "int": 384
+      "int": 704
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -674,90 +657,14 @@
       "title": "Resize Image v2"
     }
   },
-  "95": {
-    "inputs": {
-      "any": [
-        "87",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "IMG2"
-    }
-  },
-  "100": {
-    "inputs": {
-      "any": [
-        "77",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Seed"
-    }
-  },
-  "101": {
-    "inputs": {
-      "positive": [
-        "46",
-        0
-      ],
-      "negative": [
-        "46",
-        1
-      ]
-    },
-    "class_type": "MpiConditioningReroute",
-    "_meta": {
-      "title": "From Stage 1"
-    }
-  },
-  "102": {
-    "inputs": {
-      "any": [
-        "68",
-        1
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Audio Latent"
-    }
-  },
-  "103": {
-    "inputs": {
-      "any": [
-        "338",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Video Latent"
-    }
-  },
-  "104": {
-    "inputs": {
-      "any": [
-        "58",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Stage 1 Video Latent"
-    }
-  },
   "117": {
     "inputs": {
       "samples": [
-        "127",
-        0
+        "38",
+        1
       ],
       "audio_vae": [
-        "130",
+        "2",
         0
       ]
     },
@@ -769,7 +676,7 @@
   "123": {
     "inputs": {
       "samples": [
-        "126",
+        "58",
         0
       ],
       "upscale_model": [
@@ -777,25 +684,13 @@
         0
       ],
       "vae": [
-        "137",
+        "1",
         0
       ]
     },
     "class_type": "LTXVLatentUpsampler",
     "_meta": {
       "title": "LTXVLatentUpsampler"
-    }
-  },
-  "124": {
-    "inputs": {
-      "any": [
-        "55",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Stage 1 Audio Latent"
     }
   },
   "125": {
@@ -807,83 +702,11 @@
       "title": "Load Latent Upscale Model"
     }
   },
-  "126": {
-    "inputs": {
-      "any": [
-        "58",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Stage 1 Video Latent"
-    }
-  },
-  "127": {
-    "inputs": {
-      "any": [
-        "38",
-        1
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Stage 2 Audio Latent"
-    }
-  },
-  "128": {
-    "inputs": {
-      "any": [
-        "349",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Stage 2 Video Latent"
-    }
-  },
-  "130": {
-    "inputs": {
-      "any": [
-        "2",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Audio VAE"
-    }
-  },
-  "131": {
-    "inputs": {
-      "any": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Video VAE"
-    }
-  },
-  "132": {
-    "inputs": {
-      "any": [
-        "76",
-        2
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "FPS"
-    }
-  },
   "133": {
     "inputs": {
       "fps": [
-        "132",
-        0
+        "76",
+        2
       ],
       "bit_depth": 8,
       "images": [
@@ -914,18 +737,6 @@
     "class_type": "MpiIfElseInverted",
     "_meta": {
       "title": "if else inv"
-    }
-  },
-  "137": {
-    "inputs": {
-      "any": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Video VAE"
     }
   },
   "140": {
@@ -982,7 +793,7 @@
         0
       ],
       "length": [
-        "150",
+        "76",
         0
       ],
       "batch_size": 1
@@ -995,7 +806,7 @@
   "144": {
     "inputs": {
       "frames_number": [
-        "150",
+        "76",
         0
       ],
       "frame_rate": [
@@ -1004,7 +815,7 @@
       ],
       "batch_size": 1,
       "audio_vae": [
-        "167",
+        "2",
         0
       ]
     },
@@ -1034,7 +845,7 @@
       "strength": 1,
       "bypass": false,
       "vae": [
-        "149",
+        "1",
         0
       ],
       "image": [
@@ -1055,7 +866,7 @@
     "inputs": {
       "img_compression": 18,
       "image": [
-        "148",
+        "92",
         0
       ]
     },
@@ -1064,60 +875,12 @@
       "title": "LTXV Preprocess"
     }
   },
-  "148": {
-    "inputs": {
-      "any": [
-        "92",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "IMG1"
-    }
-  },
-  "149": {
-    "inputs": {
-      "any": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Video VAE"
-    }
-  },
-  "150": {
-    "inputs": {
-      "any": [
-        "76",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Frames"
-    }
-  },
-  "151": {
-    "inputs": {
-      "any": [
-        "76",
-        2
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "FPS"
-    }
-  },
   "152": {
     "inputs": {
       "round": true,
       "input": [
-        "151",
-        0
+        "76",
+        2
       ]
     },
     "class_type": "MpiConvert",
@@ -1125,35 +888,11 @@
       "title": "Mpi Convert"
     }
   },
-  "153": {
-    "inputs": {
-      "any": [
-        "88",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Width"
-    }
-  },
-  "154": {
-    "inputs": {
-      "any": [
-        "89",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Height"
-    }
-  },
   "155": {
     "inputs": {
       "math_expression": "floor(a/2)",
       "a": [
-        "153",
+        "88",
         0
       ]
     },
@@ -1166,7 +905,7 @@
     "inputs": {
       "math_expression": "floor(a/2)",
       "a": [
-        "154",
+        "89",
         0
       ]
     },
@@ -1193,52 +932,16 @@
       "title": "KSampler - STG2"
     }
   },
-  "165": {
-    "inputs": {
-      "any": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Video VAE"
-    }
-  },
-  "166": {
-    "inputs": {
-      "any": [
-        "76",
-        2
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "FPS"
-    }
-  },
-  "167": {
-    "inputs": {
-      "any": [
-        "2",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Audio VAE"
-    }
-  },
   "168": {
     "inputs": {
       "strength": 1,
       "bypass": false,
       "vae": [
-        "137",
+        "1",
         0
       ],
       "image": [
-        "171",
+        "147",
         0
       ],
       "latent": [
@@ -1251,23 +954,11 @@
       "title": "LTXVImgToVideoInplace - STG2"
     }
   },
-  "171": {
-    "inputs": {
-      "any": [
-        "147",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "IMG1 compressed 18"
-    }
-  },
   "176": {
     "inputs": {
       "img_compression": 18,
       "image": [
-        "95",
+        "87",
         0
       ]
     },
@@ -1295,8 +986,8 @@
   "188": {
     "inputs": {
       "fps": [
-        "132",
-        0
+        "76",
+        2
       ],
       "bit_depth": 8,
       "images": [
@@ -1367,7 +1058,7 @@
   "197": {
     "inputs": {
       "audio": "ltx_silence.wav",
-      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.1258802850423857"
+      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.7639027445141602"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -1505,11 +1196,11 @@
   "215": {
     "inputs": {
       "samples": [
-        "128",
+        "349",
         0
       ],
       "vae": [
-        "131",
+        "1",
         0
       ]
     },
@@ -1537,8 +1228,8 @@
   "221": {
     "inputs": {
       "fps": [
-        "166",
-        0
+        "76",
+        2
       ],
       "bit_depth": 8,
       "images": [
@@ -1558,8 +1249,8 @@
   "222": {
     "inputs": {
       "fps": [
-        "166",
-        0
+        "76",
+        2
       ],
       "bit_depth": 8,
       "images": [
@@ -1615,25 +1306,13 @@
         1
       ],
       "audio_vae": [
-        "232",
+        "2",
         0
       ]
     },
     "class_type": "LTXVAudioVAEDecode",
     "_meta": {
       "title": "LTXV Audio VAE Decode"
-    }
-  },
-  "232": {
-    "inputs": {
-      "any": [
-        "2",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Audio VAE"
     }
   },
   "236": {
@@ -1650,25 +1329,13 @@
       "title": "Soft Enhance Lora"
     }
   },
-  "258": {
-    "inputs": {
-      "any": [
-        "4",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Model"
-    }
-  },
   "264": {
     "inputs": {
       "lora_name": "None",
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "270",
+        "360",
         0
       ],
       "clip": [
@@ -1776,18 +1443,6 @@
       "title": "Input_Lora_6"
     }
   },
-  "270": {
-    "inputs": {
-      "any": [
-        "4",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Model"
-    }
-  },
   "274": {
     "inputs": {
       "identity_guidance_scale": 1.5,
@@ -1885,22 +1540,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Input_Use_Reference_Audio"
-    }
-  },
-  "297": {
-    "inputs": {
-      "positive": [
-        "212",
-        0
-      ],
-      "negative": [
-        "212",
-        1
-      ]
-    },
-    "class_type": "MpiConditioningReroute",
-    "_meta": {
-      "title": "Original Cond"
     }
   },
   "313": {
@@ -2006,15 +1645,15 @@
       "frame_idx": 0,
       "strength": 0.7,
       "positive": [
-        "325",
+        "212",
         0
       ],
       "negative": [
-        "325",
+        "212",
         1
       ],
       "vae": [
-        "149",
+        "1",
         0
       ],
       "latent": [
@@ -2044,7 +1683,7 @@
         1
       ],
       "vae": [
-        "149",
+        "1",
         0
       ],
       "latent": [
@@ -2066,15 +1705,15 @@
       "frame_idx": 0,
       "strength": 0.7,
       "positive": [
-        "101",
+        "46",
         0
       ],
       "negative": [
-        "101",
+        "46",
         1
       ],
       "vae": [
-        "137",
+        "1",
         0
       ],
       "latent": [
@@ -2104,7 +1743,7 @@
         1
       ],
       "vae": [
-        "137",
+        "1",
         0
       ],
       "latent": [
@@ -2121,27 +1760,11 @@
       "title": "FLF AddGuide Last (S2)"
     }
   },
-  "325": {
-    "inputs": {
-      "positive": [
-        "212",
-        0
-      ],
-      "negative": [
-        "212",
-        1
-      ]
-    },
-    "class_type": "MpiConditioningReroute",
-    "_meta": {
-      "title": "Original Cond"
-    }
-  },
   "326": {
     "inputs": {
       "cfg": 1,
       "model": [
-        "258",
+        "360",
         0
       ],
       "positive": [
@@ -2297,6 +1920,44 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "FLF"
+    }
+  },
+  "354": {
+    "inputs": {
+      "unet_name": "ltx-2.3-22b-distilled-1.1-Q8_0.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "359": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Use_GGUF"
+    }
+  },
+  "360": {
+    "inputs": {
+      "boolean": [
+        "359",
+        0
+      ],
+      "true": [
+        "354",
+        0
+      ],
+      "false": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
     }
   }
 }

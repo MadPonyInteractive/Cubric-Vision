@@ -39,6 +39,27 @@ export function canonicalModelId(id) {
 }
 
 /**
+ * Engine-filter a list of dep OBJECTS for the engine a download/status request
+ * targets. A dep may carry `engine: 'local' | 'remote'` to mean "only this
+ * engine needs this file" (e.g. LTX-2.3 ships a bf16 transformer for local and a
+ * Q8 GGUF transformer for the Pod). Untagged deps are shared → kept for both.
+ *
+ * Drop the OTHER engine's deps: local runs drop `engine:'remote'`, remote runs
+ * drop `engine:'local'`. This is applied ONLY at download + install-status
+ * boundaries — NOT inside resolveDeps/resolveFullUniverse (those stay
+ * engine-agnostic so shared-dep protection still sees the complete universe).
+ *
+ * @param {Array<{engine?: string}>} deps - dep objects (must carry `.engine` when tagged)
+ * @param {boolean} isRemote - true when the request targets a Pod/remote engine
+ * @returns {Array} deps with the wrong-engine entries removed (input order preserved)
+ */
+export function filterDepsByEngine(deps, isRemote) {
+    if (!Array.isArray(deps)) return [];
+    const drop = isRemote ? 'local' : 'remote';
+    return deps.filter(d => !d || d.engine == null || d.engine !== drop);
+}
+
+/**
  * The always-required dep ids for a model, regardless of shape.
  * Operations-keyed → `commonDeps`; flat → `dependencies`.
  * @param {object} model

@@ -16,6 +16,7 @@ const {
     deriveInstalledOps,
     expandRequiredOps,
     dependentsOfOp,
+    filterDepsByEngine,
 } = require('../js/data/modelConstants/resolveModelDeps.js');
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -218,6 +219,39 @@ function testRequiresOps() {
         'extend installed once i2v + own deps present');
 }
 
+// filterDepsByEngine: engine-split deps go to the right engine; untagged shared.
+function testEngineFilter() {
+    const deps = [
+        { id: 'shared-vae' },                      // untagged → both
+        { id: 'tx-bf16', engine: 'local' },
+        { id: 'tx-gguf', engine: 'remote' },
+    ];
+    const local = filterDepsByEngine(deps, false).map(d => d.id);
+    const remote = filterDepsByEngine(deps, true).map(d => d.id);
+    assert.deepStrictEqual(local, ['shared-vae', 'tx-bf16'], 'local keeps untagged + local');
+    assert.deepStrictEqual(remote, ['shared-vae', 'tx-gguf'], 'remote keeps untagged + remote');
+    // Order preserved; non-array → []; null entries survive (treated as shared).
+    assert.deepStrictEqual(filterDepsByEngine(null, false), []);
+    assert.deepStrictEqual(filterDepsByEngine([null, { engine: 'local' }], true), [null]);
+
+    // Real registry: LTX-2.3 ships exactly one local + one remote transformer,
+    // and each engine resolves to exactly one of them.
+    const { MODELS } = require('../js/data/modelConstants/models.js');
+    const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+    const ltx = MODELS.find(m => m.id && m.id.startsWith('ltx'));
+    if (ltx) {
+        const all = resolveFullUniverse(ltx).map(id => DEPS[id]).filter(Boolean);
+        const localTx = filterDepsByEngine(all, false).filter(d => d.engine === 'local');
+        const remoteTx = filterDepsByEngine(all, true).filter(d => d.engine === 'remote');
+        assert.ok(!filterDepsByEngine(all, false).some(d => d.engine === 'remote'),
+            'local install must not include any remote-engine dep');
+        assert.ok(!filterDepsByEngine(all, true).some(d => d.engine === 'local'),
+            'remote install must not include any local-engine dep');
+        assert.strictEqual(localTx.length, 1, 'LTX has exactly one local transformer');
+        assert.strictEqual(remoteTx.length, 1, 'LTX has exactly one remote transformer');
+    }
+}
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 const tests = {
@@ -230,6 +264,7 @@ const tests = {
     testDeriveInstalledOps,
     testRequiresOps,
     testRealRegistryIntegrity,
+    testEngineFilter,
 };
 
 let failed = 0;

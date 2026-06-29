@@ -21,6 +21,7 @@
 
 import { ComfyUIController, getEngine } from './comfyController.js';
 import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
+import { remoteEngineClient } from './remoteEngineClient.js';
 import { resolveDeps } from '../data/modelConstants/resolveModelDeps.js';
 import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel, commandIsMultiStage } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
@@ -457,6 +458,18 @@ function _toStage2Filename(file) {
 }
 
 /**
+ * GGUF sibling filename derivation (bf16-local / GGUF-Pod split). Convention:
+ * `<base>.json` → `<base>_gguf.json`. Applied AFTER `_toStage2Filename` so the
+ * suffix order is `..._stage2_gguf.json`, matching generate_ltx.py's output.
+ * Only models flagged `ggufWhenRemote` have `_gguf` siblings on disk; callers
+ * gate on that flag + on the run actually targeting a Pod.
+ */
+function _toGgufFilename(file) {
+    if (!file || typeof file !== 'string') return file;
+    return file.replace(/\.json$/i, '_gguf.json');
+}
+
+/**
  * Builds the title-keyed param map that comfyController.runWorkflow injects
  * into the workflow via title-based node matching.
  *
@@ -844,6 +857,14 @@ export function runCommand(payload) {
             workflowFile = _resolveWorkflowFile(payload.modelId, payload.operation);
             if (payload.isStage2 === true) {
                 workflowFile = _toStage2Filename(workflowFile);
+            }
+            // bf16-local / GGUF-Pod split: swap to the `_gguf` sibling when this
+            // model opts in AND the run targets a Pod (remote, not force-local).
+            // Universal workflows have no model → getModelById null → no swap.
+            const _model = getModelById(payload.modelId);
+            const _remoteRun = payload.forceLocal !== true && remoteEngineClient.isRemote();
+            if (_model?.ggufWhenRemote && _remoteRun) {
+                workflowFile = _toGgufFilename(workflowFile);
             }
         } catch (err) {
             exec.onError?.(err);

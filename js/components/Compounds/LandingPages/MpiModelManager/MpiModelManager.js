@@ -8,10 +8,11 @@ import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../da
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import {
     resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
-    expandRequiredOps, dependentsOfOp,
+    expandRequiredOps, dependentsOfOp, filterDepsByEngine,
 } from '../../../../data/modelConstants/resolveModelDeps.js';
 import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
+import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
 
@@ -211,8 +212,14 @@ export const MpiModelManager = ComponentFactory.create({
 
         // ── Install / Update / Uninstall actions ─────────────────────────────
         async function _install(model) {
-            const dependencies = _draftDepIds(model)
-                .map(id => DEPS[id]).filter(Boolean);
+            // Engine-filter: only download deps the target engine needs. A model
+            // with engine-split weights (LTX-2.3 bf16-local / GGUF-remote) would
+            // otherwise fetch BOTH transformers — 41GB of dead weight on whichever
+            // engine doesn't use it. Untagged (shared) deps install on both.
+            const dependencies = filterDepsByEngine(
+                _draftDepIds(model).map(id => DEPS[id]).filter(Boolean),
+                remoteEngineClient.isRemote(),
+            );
             if (!dependencies.length) return;
             await downloadService.start(model.id, dependencies);
             renderList();

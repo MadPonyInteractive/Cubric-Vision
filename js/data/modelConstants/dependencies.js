@@ -168,15 +168,42 @@ export const DEPS = {
     // from stable upstreams tonight (Kijai/Lightricks/valiantcat); self-hosting
     // them to MPI HF is a post-release follow-up card. sha256 = null until
     // mpic-compute-dep-hashes is run.
-    'ltx23-transformer': {
-        id: 'ltx23-transformer',
-        name: 'LTX-2.3 22B Distilled Transformer (bf16)',
+    // bf16-local / GGUF-Pod TRANSFORMER SPLIT (2026-06-29, live Pod A/B proven).
+    // The transformer is the ONLY dep that differs by engine; everything else
+    // (VAE, CLIP, LoRAs, nodes) is shared (no `engine` tag → installs everywhere).
+    //  - LOCAL gets bf16 (best per-step speed at high res; no aimdo cold tax locally).
+    //  - POD/REMOTE gets Q8_0 GGUF (sidesteps the ~5-min aimdo cold tax — the whole
+    //    point; loads via city96 `UnetLoaderGGUF` from the `unet/` folder, NOT
+    //    diffusion_models/). The `engine` tag drives the download filter: the local
+    //    downloader drops `engine:'remote'` deps, the Pod installer drops
+    //    `engine:'local'` deps. Both ids live in the model's `dependencies[]`; the
+    //    install-status check filters by engine too so a Pod isn't marked
+    //    "not installed" just because the bf16 file is absent (and vice-versa).
+    'ltx23-transformer-bf16': {
+        id: 'ltx23-transformer-bf16',
+        name: 'LTX-2.3 22B Distilled Transformer (bf16, local)',
+        engine: 'local',
         origin: 'Kijai/LTX2.3_comfy',
         filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/ltx-2.3/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         size: '41GB',
-        vram: '12GB',
+        vram: '24GB',
         sha256: 'cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249',
+    },
+    // Q8_0 GGUF (remote/Pod). Re-hosted to cubric R2 (bucket cubric-models →
+    // models.cubric.studio) 2026-06-30, off HF-direct (HF-direct stalled at the
+    // end of the download on a Pod). Source kept Unsloth (22.8GB). Verified
+    // size-match on R2 (22755540000 bytes). sha256 unchanged (same file).
+    'ltx23-transformer-gguf': {
+        id: 'ltx23-transformer-gguf',
+        name: 'LTX-2.3 22B Distilled Transformer (Q8_0 GGUF, Pod)',
+        engine: 'remote',
+        origin: 'unsloth/LTX-2.3-GGUF',
+        filename: 'unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
+        url: 'https://models.cubric.studio/vision/ltx-2.3/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
+        size: '22.8GB',
+        vram: '12GB',
+        sha256: '813fd61eecf3df2ef5ac5a942d226ee7e44b6cec68ed803549aefaa410cd397e',
     },
     'ltx23-video-vae': {
         id: 'ltx23-video-vae',
@@ -318,6 +345,23 @@ export const DEPS = {
         installRequirements: true,
         installOnEngine: true,
         size: '28MB',
+    },
+    // GGUF quantized-transformer loader. KJNodes' GGUFLoaderKJ is a thin wrapper
+    // that imports city96's loader at runtime (gguf_sd_loader) AND city96 registers
+    // the `unet_gguf` folder category → required for any GGUF transformer (LTX-2.3
+    // Q8_0 etc.). requirements.txt pins `gguf>=0.13.0` + sentencepiece/protobuf →
+    // installRequirements: true (without `gguf` the node import fails).
+    // NO installOnEngine: this is LTX-2.3-MODEL-specific (lives in the ltx-23
+    // dependencies[] array), NOT a universal-workflow dep — installs when the LTX
+    // model is installed, same as ComfyUI-PainterI2Vadvanced for Wan I2V.
+    'ComfyUI-GGUF': {
+        id: 'ComfyUI-GGUF',
+        name: 'ComfyUI GGUF',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-GGUF',
+        url: lockUrl('ComfyUI-GGUF'),
+        installRequirements: true,
+        size: '500KB',
     },
     'ComfyUI-UltimateSDUpscale': {
         id: 'ComfyUI-UltimateSDUpscale',

@@ -18,7 +18,8 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
-import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps } from './modelConstants/resolveModelDeps.js';
+import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps, filterDepsByEngine } from './modelConstants/resolveModelDeps.js';
+import { remoteEngineClient } from '../services/remoteEngineClient.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
@@ -84,12 +85,18 @@ export async function syncModelInstalled() {
         // Resolve the FULL dep universe (commonDeps + every selectable op) so the
         // server stats the complete set and partial state is computed against
         // everything — flat models resolve to their plain dependency list.
+        // Engine-filter so the status check only stats deps the CURRENT engine
+        // actually installs. Without this, a model with engine-split weights (e.g.
+        // LTX-2.3 bf16-local / GGUF-remote) shows a false "not installed" because
+        // the other engine's transformer file is legitimately absent. Shared
+        // (untagged) deps are kept for both. (bf16-local / GGUF-Pod split)
+        const isRemote = remoteEngineClient.isRemote();
         const modelPayload = MODELS.map(model => ({
             id: model.id,
-            deps: resolveFullUniverse(model).map(depId => {
-                const dep = DEPS[depId];
-                return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
-            }).filter(Boolean),
+            deps: filterDepsByEngine(
+                resolveFullUniverse(model).map(depId => DEPS[depId]).filter(Boolean),
+                isRemote,
+            ).map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
         const res = await fetch('/comfy/models/check', {

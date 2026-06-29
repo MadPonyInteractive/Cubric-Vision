@@ -217,6 +217,13 @@ export const MODELS = [
             t2v_ms: 'LTX_t2v.json',
             i2v_ms: 'LTX_i2v.json',
         },
+        // bf16-local / GGUF-Pod split: the `workflows` above name the bf16 files
+        // (local default). When a run targets a Pod (isRemote && !forceLocal) the
+        // executor swaps in the `_gguf` sibling (e.g. LTX_t2v.json → LTX_t2v_gguf.json,
+        // applied AFTER any _stage2 swap). GGUF wins ONLY on a Pod — it sidesteps the
+        // aimdo cold tax; locally it's slower per-step at high res. Any future model
+        // with `_gguf` sibling workflows opts in by setting this flag.
+        ggufWhenRemote: true,
         // FLAT model: one transformer serves both t2v and i2v, so there is no
         // separable install unit — both ops ship together (like an image model).
         // `dependencies` (not commonDeps/operations) ⇒ no per-op install toggle in
@@ -225,7 +232,8 @@ export const MODELS = [
         // First model with non-merged baked LoRAs (transition/soft/talkvid) shipped
         // as deps, NOT user slots — see [[project-ltx-transition-lora-enables-lipsync]].
         dependencies: [
-            'ltx23-transformer',
+            'ltx23-transformer-bf16',   // engine:'local'  — downloaded locally only
+            'ltx23-transformer-gguf',   // engine:'remote' — downloaded on Pod only
             'ltx23-video-vae',
             'ltx23-audio-vae',
             'ltx23-text-projection',
@@ -237,6 +245,7 @@ export const MODELS = [
             'ComfyUI-LTXVideo',
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
+            'ComfyUI-GGUF',
         ],
     },
 ];

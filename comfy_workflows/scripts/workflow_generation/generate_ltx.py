@@ -1,10 +1,23 @@
 """
 generate_ltx.py
-LTX-2.3 handler: from ONE i2v+t2v API export, produce FOUR app workflow files:
-  LTX_i2v.json         — stage-1, Input_Text_to_video=false, Input_Is_Continue=false
-  LTX_i2v_stage2.json  — derived: Input_Is_Continue flipped true
-  LTX_t2v.json         — stage-1, Input_Text_to_video=true,  Input_Is_Continue=false
-  LTX_t2v_stage2.json  — derived: Input_Is_Continue flipped true
+LTX-2.3 handler: from ONE i2v+t2v API export, produce EIGHT app workflow files —
+the FOUR mode/stage variants, each in a bf16 (local) and a GGUF (Pod) flavour:
+  LTX_i2v.json              — bf16, Input_Text_to_video=false, Input_Is_Continue=false
+  LTX_i2v_stage2.json       — bf16, derived: Input_Is_Continue flipped true
+  LTX_t2v.json              — bf16, Input_Text_to_video=true,  Input_Is_Continue=false
+  LTX_t2v_stage2.json       — bf16, derived: Input_Is_Continue flipped true
+  LTX_i2v_gguf.json         — GGUF (Input_Use_GGUF=true) sibling of LTX_i2v.json
+  LTX_i2v_stage2_gguf.json  — GGUF sibling of LTX_i2v_stage2.json
+  LTX_t2v_gguf.json         — GGUF sibling of LTX_t2v.json
+  LTX_t2v_stage2_gguf.json  — GGUF sibling of LTX_t2v_stage2.json
+
+The bf16/GGUF split exists because GGUF wins ONLY on a Pod (it sidesteps the
+~5-min aimdo cold tax), but is slower per-step at high res locally (per-layer
+dequant). So local = bf16, Pod = GGUF. The graph carries BOTH loaders; the
+`Input_Use_GGUF` MpiSimpleBoolean drives an MpiIfElse that selects the GGUF
+UnetLoaderGGUF (true) over the bf16 UNETLoader (false). The app picks the file
+by isRemote() (commandExecutor `_toGgufFilename`); we just stamp the boolean +
+append `_gguf` to the GGUF-flavour filenames so the two stay in lockstep.
 
 ALL node lookup is by `_meta.title` — never by node id (ids change on re-export).
 
@@ -35,6 +48,7 @@ from pathlib import Path
 
 T2V_GATE_TITLE = "Input_Text_to_video"   # MpiSimpleBoolean: false=i2v, true=t2v
 IS_CONTINUE_TITLE = "Input_Is_Continue"  # MpiBoolean: false=stage-1, true=stage-2
+USE_GGUF_TITLE = "Input_Use_GGUF"        # MpiSimpleBoolean: false=bf16 (local), true=GGUF (Pod)
 
 # Titles that MUST survive into every output (sanity gate). Each entry is a set
 # of acceptable alternatives (any one present passes).
@@ -45,6 +59,7 @@ REQUIRED_TITLES = [
     {"Input_Audio_Latent"},    # stage-2 loaded audio latent (LTX saves TWO latents)
     {IS_CONTINUE_TITLE},
     {T2V_GATE_TITLE},
+    {USE_GGUF_TITLE},
 ]
 
 
@@ -94,23 +109,29 @@ def _derive_stage2(stage1: dict) -> dict:
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. source = i2v+t2v API export. Writes 4 files."""
+    """Orchestrator entry. source = i2v+t2v API export. Writes 8 files:
+    the 4 mode/stage variants × {bf16 (unsuffixed), GGUF (`_gguf` suffix)}."""
     template = json.loads(source_path.read_text(encoding="utf-8"))
     _check_required(template, "Source template")
 
     written: list[Path] = []
-    for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
-        stage1 = _variant(template, t2v)
-        s1_out = out_dir / f"{name}.json"
-        s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
-        print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v})")
-        written.append(s1_out)
+    # bf16 = local (suffix ''), GGUF = Pod (suffix '_gguf'). The app appends the
+    # same '_gguf' before '.json' when isRemote(), so names MUST stay in lockstep.
+    for use_gguf, suffix in ((False, ""), (True, "_gguf")):
+        flavour = "GGUF" if use_gguf else "bf16"
+        for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
+            stage1 = _variant(template, t2v)
+            _set_boolean(stage1, USE_GGUF_TITLE, use_gguf)
+            s1_out = out_dir / f"{name}{suffix}.json"
+            s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
+            print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v}, {flavour})")
+            written.append(s1_out)
 
-        stage2 = _derive_stage2(stage1)
-        _check_required(stage2, f"{name}_stage2")
-        s2_out = out_dir / f"{name}_stage2.json"
-        s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
-        print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true)")
-        written.append(s2_out)
+            stage2 = _derive_stage2(stage1)
+            _check_required(stage2, f"{name}_stage2{suffix}")
+            s2_out = out_dir / f"{name}_stage2{suffix}.json"
+            s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
+            print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true, {flavour})")
+            written.append(s2_out)
 
     return written

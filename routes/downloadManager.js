@@ -599,9 +599,16 @@ router.post('/comfy/models/download/start', async (req, res) => {
         return _startRemoteDownload(modelId, dependencies, res);
     }
 
+    // LOCAL path: drop any `engine:'remote'` deps (e.g. the Pod-only GGUF
+    // transformer) so the local box never downloads weights it can't use. The
+    // frontend already filters, but a stale client / direct API call could send
+    // both — filter server-side too. Untagged (shared) deps pass through.
+    const { filterDepsByEngine } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const localDeps = filterDepsByEngine(dependencies, false);
+
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {
-        modelJob = _createModelJob(modelId, dependencies);
+        modelJob = _createModelJob(modelId, localDeps);
         _modelJobs.set(modelId, modelJob);
     }
 
@@ -610,10 +617,10 @@ router.post('/comfy/models/download/start', async (req, res) => {
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     // Pre-sum totalBytes from ALL deps (including already-installed ones)
-    const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
+    const allDepsSize = localDeps.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
     modelJob.totalBytes += allDepsSize;
 
-    for (const dep of dependencies) {
+    for (const dep of localDeps) {
         let localPath;
         let installedCheckPath;
         if (dep.type === 'custom_nodes') {
@@ -682,7 +689,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
         if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
             // Roll back the refCount bumps this call made so a later retry (after
             // the user frees space) is not blocked by orphaned references.
-            for (const dep of dependencies) {
+            for (const dep of localDeps) {
                 const depJob = _depJobs.get(dep.id);
                 if (depJob) depJob.refCount = Math.max(0, depJob.refCount - 1);
             }
@@ -1047,6 +1054,12 @@ function _onRemoteInstallEvent(evt) {
 }
 
 async function _startRemoteDownload(modelId, dependencies, res) {
+    // REMOTE path: drop any `engine:'local'` deps (e.g. the 41GB bf16 transformer
+    // that only the local engine uses) so the Pod volume never installs weights it
+    // can't use. Untagged (shared) deps pass through. (bf16-local / GGUF-Pod split)
+    const { filterDepsByEngine } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    dependencies = filterDepsByEngine(dependencies, true);
+
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {
         modelJob = _createModelJob(modelId, dependencies);

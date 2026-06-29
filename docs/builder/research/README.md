@@ -13,6 +13,7 @@ the card and don't get re-discovered.
 | [prompt-contract.md](prompt-contract.md) | The LTX prompt SHAPE (front-loaded anchor + ordered steps) + audio rule → Cubric-Prompt recipe. |
 | [audio-input.md](audio-input.md) | Input-audio gate + influence wiring; influence = denoise-preserve dial (not a mix); verdict = binary gate at fixed 1.0, slider not needed. |
 | [strategy.md](strategy.md) | LTX>WAN moat, NSFW capability gap, future NSFW-motion-LoRA epic, release framing. |
+| [quant-and-coldstart-investigation.md](quant-and-coldstart-investigation.md) | **Quant transformer + cold-start sweep (2026-06-29).** Headline: GGUF Q8_0 STRUCTURALLY bypasses aimdo's staging/re-fault tax (→ removes the cold tax, doesn't just shrink it). Corrects the aimdo mechanism (VMM API + memlock-fail-restage, NOT hardware UVM). Quant candidate ranking (Q8_0 prime; NVFP4 cu130-gated; nunchaku=dead). Read before any quant/cold-start work. **Research only — needs the §5 live Pod A/B.** |
 | [pod-perf-investigation.md](pod-perf-investigation.md) | **Why the cloud 4090 isn't faster than a local 4060 Ti.** CONCLUDED: torch 2.8+cu126→2.12+cu130 bump is a DEAD END (cu130 gains are Blackwell-only, costs the r580 driver floor). OPEN: two unmeasured suspects (aimdo overhead on a card that doesn't need offload; cloud-host P-State/clock throttle) + the exact test plan. Read before proposing any torch/cu130 bump. |
 
 ## Live task log (NOT here — still on the card)

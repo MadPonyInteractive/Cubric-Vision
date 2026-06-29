@@ -50,6 +50,13 @@
       "installRequirements": true,
       "installOnEngine": true
     },
+    "ComfyUI-GGUF": {
+      "source": "git-commit",
+      "repo": "city96/ComfyUI-GGUF",
+      "commit": "6ea2651e7df66d7585f6ffee804b20e92fb38b8a",
+      "filename": "ComfyUI-GGUF",
+      "installRequirements": true
+    },
     "ComfyUI-UltimateSDUpscale": {
       "source": "git-commit",
       "repo": "ssitu/ComfyUI_UltimateSDUpscale",
