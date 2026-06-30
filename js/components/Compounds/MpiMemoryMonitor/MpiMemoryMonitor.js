@@ -63,6 +63,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
                 value: 0,
                 variant: type,       // 'vram' or 'ram' — maps to .mpi-progress--vram / --ram
                 interactive: false,
+                info: '',            // opt out of status-bar hover tooltip
             });
 
             return { rowEl: row, barInstance, valueEl };
