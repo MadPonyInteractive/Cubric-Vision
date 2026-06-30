@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-161",
+  "title": "Self-heal custom-node pip deps: re-run requirements.txt even when the node folder is already present (local + Pod)",
+  "description": "BUG (recurring, hit 3x during LTX GGUF work 2026-06-29/30): a ComfyUI custom node whose FOLDER is on disk is reported 'installed' and its requirements.txt (pip deps like `gguf`) is NEVER re-run — so a node that landed folder-present but deps-missing (a prior install where pip failed/was interrupted/never ran) stays broken forever. Symptom: ComfyUI-GGUF folder present on the Pod volume but `import gguf` -> ModuleNotFoundError -> UnetLoaderGGUF absent -> every LTX gen fails until a manual `pip install gguf` + restart. NOT model-specific to GGUF — any model whose custom node has a requirements.txt is exposed, local AND Pod.\n\nROOT CAUSE: 'node installed' = folder exists + non-empty, at every boundary. No check that the pip deps actually imported. (a) Local downloadManager.js _runCustomNodeInstall: `if (fs.pathExists(targetDir)) continue;` skipped extraction AND requirements. (b) Pod app gate downloadManager.js _startRemoteDownload: a folder-present node is reported installed by /wrapper/models/status -> excluded from toInstall -> the wrapper is NEVER asked to install -> a wrapper-only fix would be useless. (c) Wrapper /wrapper/models/install: even if asked, `already_installed` short-circuit skipped _run_node_install + its requirements. Mapped by an Explore agent across both repos.\n\nFIX (shipped this session — decided 'always re-run requirements idempotently, only for the deps in the current install request', NOT a blanket sweep): pip -r --upgrade is a fast no-op when satisfied, installs when missing. (a) LOCAL routes/downloadManager.js: guard ONLY the extraction block with `if (!alreadyExtracted)`, let the requirements block run unconditionally. Covers all 3 local call sites (download/start, startUniversalWorkflowInstall, finishCustomNodeInstall — all funnel through _runCustomNodeInstall). (b) POD app routes/downloadManager.js _startRemoteDownload: for a custom_node already-installed per wrapper status, still push to toInstall tagged `requirementsOnly:true` (was dropped before). routes/remoteModels.js remoteInstallDep forwards it as body.requirements_only. (c) WRAPPER mpi-ci/cubric-vision-pod/wrapper.py: new branch in /wrapper/models/install — when is_node && requirements_only && folder-present, dispatch new _run_node_requirements_only (pip-only via _install_node_requirements, NO download/extract/rmtree) and broadcast the same install-complete/error SSE so the app settles + warm-cycles ComfyUI. Honors install_command too (e.g. Frame-Interpolation's `python install.py`).\n\nVERIFIED: node -c (JS) + py_compile (wrapper) parse; AST self-check confirms the wrapper runner is pip-only (no aiter_bytes/extractall/rmtree/httpx/zipfile/shutil) and the handler branch dispatches it without rmtree or a full install; local requirements block confirmed OUTSIDE the !alreadyExtracted guard. NOT yet live-tested end-to-end (needs a Pod with a deps-missing node).\n\nDEPLOY: app side (downloadManager.js + remoteModels.js) ships with the app. Wrapper side (wrapper.py) is mpi-ci — needs a runtime republish (publish-runtime.sh -> R2) + POST /wrapper/restart-comfy on a running Pod (or fresh Pod boot); NO image rebuild (wrapper.py is R2-fetched at boot per MPI-156). Bump CUBRIC_WRAPPER_VERSION.\n\nFOLLOW-UP / not done: the general 'node complete = deps import' status check is still folder-only; this fix makes the INSTALL path self-heal but the STATUS still reports folder-present as installed. Acceptable — the install request now always re-runs requirements, so pressing Install/Update fixes a broken node. A future hardening could add a proper import-probe or a post-requirements marker file (considered + deferred — option A 'always idempotent' chosen for simplicity).\n\nFILES: routes/downloadManager.js, routes/remoteModels.js (app, committed); c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (mpi-ci, needs republish). BRANCH: RunPod / mpi-ci.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-30T01:00:00Z",
+  "updated_at": "2026-06-30T01:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": ["runpod", "mpi-ci", "custom-nodes", "downloads", "self-heal", "wrapper", "gguf"],
+  "priority": "high"
+}
