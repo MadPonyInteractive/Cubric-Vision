@@ -76,6 +76,17 @@ The Pod's fat datacenter pipe is wasted because the bytes start on your local di
   > **CURRENTLY ON R2 (transient — GC when it gets a permanent home):**
   > `models/ltx-2.3/loras/LTX2.3_reasoning_Sulphur-2_I2V_V4.safetensors` (805MB).
   > Delete once VBVR is mirrored to our HF repo or merged into the shipped model.
+  >
+  > **⚠️ ORPHANED — uploaded for MPI-162 (CANCELLED 2026-06-30), GC-pending (`cubric-models` bucket, approval-gated):**
+  > These were staged to the PERMANENT CDN bucket `cubric-models` (host
+  > `https://models.cubric.studio/`) before MPI-162 was superseded by the
+  > Detailer-LoRA + LoRA-merge + low/balanced/high VRAM-tier restructure. They are
+  > NOT wired into any dep (`dependencies.js` was never edited) → safe to delete once
+  > the restructure decides the final encoder/LoRA delivery. Verify they're still
+  > unreferenced before deleting.
+  > - `vision/ltx-2.3/text_encoders/google_gemma-3-12b-it-Q4_K_M.gguf` (7300575264 B, 7.3GB) · sha256 `fc57f67efa46d711c346e587cbef7d049e95f3df8db2eb2271153343ef0acc7b`
+  > - `vision/ltx-2.3/loras/gemma-3-12b-it-abliterated_heretic_lora_rank64_bf16.safetensors` (628203616 B, 599MB) · sha256 `caa438a3deba7c7fe196dd1a1b8c566a40a042775dae1259df1429130e01bef2`
+  > GC: `$rclone --config $config delete "cubric-r2:cubric-models/vision/ltx-2.3/text_encoders/google_gemma-3-12b-it-Q4_K_M.gguf" --s3-no-check-bucket` (and the loras/ path).
 - **Path (keep OUT of the `vision/v…` release tree):**
   `cubric-builds/models/<model-id>/<type>/<file>` →
   `https://dl.cubric.studio/models/<model-id>/<type>/<file>`.
