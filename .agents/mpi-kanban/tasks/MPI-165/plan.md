@@ -97,7 +97,16 @@ two axes are proven independent + composable, not just LTX (flat) + Wan (op-keye
 
 ## Completed
 
-- [ ] Nothing yet (investigation done; captured in `research/investigation-summary.md`).
+- [x] **Phase A — DONE, live-verified both engines (commit 66efefe).** Resolve engine
+  ONCE after `refresh()` in `commandExecutor.js` `runCommand`; gate the gguf swap on the
+  resolved `engine` string. PLUS the real Pod-reject root cause surfaced mid-Phase-A: the
+  `_gguf` workflow files carried BOTH loaders (ComfyUI eager-validates the unselected bf16
+  loader → reject) + the template's baked test media. Fixed in the build script
+  `generate_ltx.py`: `_select_loader()` (one loader per flavour, repoint `Model_Connect`)
+  + `_stamp_placeholders()` (`ltx_placeholder.png` / `ltx_silence.wav`). All 8 `LTX_*.json`
+  regenerated. LIVE: local bf16 (RTX 4060 Ti 3m20s) + Pod GGUF (RTX PRO 4500 2m1s) both
+  completed, no reject. See `validation.md`.
+- Investigation done; captured in `research/investigation-summary.md`.
 
 ## Remaining Work
 
