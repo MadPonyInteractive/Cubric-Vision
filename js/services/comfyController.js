@@ -27,6 +27,20 @@ import { remoteEngineClient } from './remoteEngineClient.js';
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
+// Binary preview frames carry a header before the JPEG payload. Core ComfyUI uses
+// an 8-byte header ([event_type, image_type]); KJNodes' LTX2 preview override
+// (LTX latent previews, MPI-166) uses VideoHelperSuite's 28-byte VHS header. A
+// fixed slice(8) corrupts the VHS frames. Find the JPEG SOI marker (FF D8) and
+// slice from there so any header length works; fall back to 8 if not found.
+function _stripPreviewHeader(buf) {
+    const b = new Uint8Array(buf);
+    const max = Math.min(b.length - 1, 64); // SOI is within the header, scan a bounded prefix
+    for (let i = 0; i < max; i++) {
+        if (b[i] === 0xff && b[i + 1] === 0xd8) return buf.slice(i);
+    }
+    return buf.slice(8);
+}
+
 // MPI-73: the remote engine is mid-transition (connecting/disconnecting). During
 // this window the backend remote-mode flag may not match the user's intent yet —
 // `isRemote()` can still read false mid-connect — so a generation would silently
@@ -631,7 +645,7 @@ function createEngine({ engine, alwaysLocal }) {
         if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
-                    const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
+                    const blob = new Blob([_stripPreviewHeader(event.data)], { type: 'image/jpeg' });
                     const url = URL.createObjectURL(blob);
                     this._routeMessage({ type: 'preview', url });
                 } else {
@@ -660,7 +674,7 @@ function createEngine({ engine, alwaysLocal }) {
         this._ws.binaryType = "arraybuffer";
         this._ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
-                const blob = new Blob([event.data.slice(8)], { type: 'image/jpeg' });
+                const blob = new Blob([_stripPreviewHeader(event.data)], { type: 'image/jpeg' });
                 const url = URL.createObjectURL(blob);
                 this._routeMessage({ type: 'preview', url });
             } else {

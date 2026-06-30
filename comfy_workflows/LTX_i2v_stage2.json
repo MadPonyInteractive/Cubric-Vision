@@ -935,13 +935,13 @@
   "160": {
     "inputs": {
       "any": [
-        "4",
+        "366",
         0
       ]
     },
     "class_type": "MpiReroute",
     "_meta": {
-      "title": "Model_Connect"
+      "title": "Model"
     }
   },
   "168": {
@@ -1930,6 +1930,39 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "FLF"
+    }
+  },
+  "366": {
+    "inputs": {
+      "preview_rate": 8,
+      "model": [
+        "367",
+        0
+      ],
+      "latent_upscale_model": [
+        "125",
+        0
+      ],
+      "vae": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "LTX2SamplingPreviewOverride",
+    "_meta": {
+      "title": "LTX2 Sampling Preview Override"
+    }
+  },
+  "367": {
+    "inputs": {
+      "any": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "Model_Connect"
     }
   }
 }
