@@ -63,6 +63,38 @@ ltx-23: {
 - `nodes` = the `type:'custom_nodes'` deps within `depIds`
 - `engine === null` = UNION of both `engines.*.extraDeps` (shared-dep protection only)
 
+### The TWO axes are orthogonal and COMPOSE (the case the user flagged)
+
+The OPERATION axis (which deps depend on *what the user does* — t2v vs i2v) and the ENGINE
+axis (which deps/workflow depend on *where it runs* — local vs Pod) are independent. A model may
+have neither, one, or BOTH. Resolution unions them — operations contribute their deps, the engine
+block contributes `extraDeps`, and they never collide. No current model has both, but Phase B MUST
+make this a first-class, tested case (today's `engineDepsOf` ignores operations — a latent bug).
+
+Worked example — a hypothetical model that is BOTH op-keyed AND engine-split:
+
+```js
+{
+  commonDeps: ['vae', 'encoder'],
+  operations: {
+    t2v_ms: { deps: ['t2v-high', 't2v-low'] },
+    i2v_ms: { deps: ['i2v-high', 'i2v-low', 'ComfyUI-PainterI2Vadvanced'] },  // Painter is OP-only (i2v)
+  },
+  engines: {
+    local:  { extraDeps: [],                 workflowSuffix: '' },
+    remote: { extraDeps: ['some-pod-node'],  workflowSuffix: '_gguf' },        // pod-node is ENGINE-only
+  },
+}
+// resolve(model, ['i2v_ms'], 'remote') =
+//   commonDeps ∪ i2v_ms.deps (incl Painter) ∪ engines.remote.extraDeps (some-pod-node)
+//   → Painter comes from the OPERATION; some-pod-node comes from the ENGINE; both present, no collision.
+// resolve(model, ['t2v_ms'], 'remote') = commonDeps ∪ t2v.deps ∪ [some-pod-node]  (NO Painter — t2v)
+// resolve(model, ['i2v_ms'], 'local')  = commonDeps ∪ i2v.deps (incl Painter) ∪ []  (NO pod-node — local)
+```
+
+The Phase B synthetic fixture must assert exactly these four combinations (op × engine) so the
+two axes are proven independent + composable, not just LTX (flat) + Wan (op-keyed, engine inert).
+
 ## Completed
 
 - [ ] Nothing yet (investigation done; captured in `research/investigation-summary.md`).
