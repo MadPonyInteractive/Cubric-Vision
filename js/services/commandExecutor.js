@@ -405,7 +405,11 @@ async function _findModelNotLocal(modelId, operation = null) {
     const model = getModelById(modelId);
     if (!model) return null;
     const selectedOps = operation ? [operation] : null;
-    const deps = resolveDeps(model, selectedOps)
+    // ALWAYS resolve the LOCAL engine set: this is the force-local preflight, so
+    // an engine-split model (LTX bf16-local / GGUF-Pod) must check for the bf16
+    // weight on disk, NOT the Pod-only GGUF (which is legitimately absent locally
+    // and would wrongly block the local run). (MPI-163)
+    const deps = resolveDeps(model, selectedOps, null, 'local')
         .map(depId => {
             const dep = DEPS[depId];
             return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;

@@ -199,9 +199,17 @@ export const MpiModelManager = ComponentFactory.create({
         }
 
         // ── Resolve helpers around install/uninstall ─────────────────────────
-        // Deps to fetch for the drafted op set (commonDeps + drafted ops).
+        // The engine this manager view targets — every dep resolution (footprint,
+        // partial bar, install set) must scope to it so an engine-split model (LTX
+        // bf16-local / GGUF-Pod) never counts the OTHER engine's transformer. On a
+        // Pod that's the bug: the bf16 (41GB, absent) inflated the denominator to
+        // 85.8GB and the missing-dep made the card read PARTIALLY INSTALLED. (MPI-163)
+        const _engine = () => (remoteEngineClient.isRemote() ? 'remote' : 'local');
+
+        // Deps to fetch for the drafted op set (commonDeps + drafted ops), scoped to
+        // the current engine (adds localDeps OR remoteDeps, never both).
         function _draftDepIds(model) {
-            return resolveDeps(model, _draftFor(model));
+            return resolveDeps(model, _draftFor(model), null, _engine());
         }
 
         // Per-op uninstall dep set: the removed ops' deps MINUS any dep still used
@@ -217,14 +225,12 @@ export const MpiModelManager = ComponentFactory.create({
 
         // ── Install / Update / Uninstall actions ─────────────────────────────
         async function _install(model) {
-            // Resolve for the TARGET engine: a model with engine-split weights
+            // Engine-scoped via _draftDepIds: a model with engine-split weights
             // (LTX-2.3 bf16-local / GGUF-remote) installs only the current engine's
             // transformer + nodes, never both (41GB of dead weight otherwise). The
             // resolver adds localDeps/remoteDeps by engine; shared deps always in.
             // (MPI-163 — engine-aware resolution, replaces the old post-filter)
-            const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
-            const dependencies = resolveDeps(model, _draftFor(model), null, engine)
-                .map(id => DEPS[id]).filter(Boolean);
+            const dependencies = _draftDepIds(model).map(id => DEPS[id]).filter(Boolean);
             if (!dependencies.length) return;
             await downloadService.start(model.id, dependencies);
             renderList();
@@ -399,10 +405,11 @@ export const MpiModelManager = ComponentFactory.create({
             const isActiveDownload = ['downloading', 'paused', 'installing'].includes(downloadState);
 
             // Sizes: drafted footprint (what install fetches) for op-keyed models,
-            // else the full universe.
-            const sizeDepIds = selectableOps(model).length ? _draftDepIds(model) : resolveFullUniverse(model);
+            // else the engine-scoped universe — a Pod must show the GGUF footprint,
+            // not bf16+GGUF (the 85.8GB-vs-real bug). (MPI-163)
+            const sizeDepIds = selectableOps(model).length ? _draftDepIds(model) : resolveFullUniverse(model, null, _engine());
             const sizeBytes = _sizeOf(sizeDepIds);
-            const vram = _vramOf(resolveFullUniverse(model));
+            const vram = _vramOf(resolveFullUniverse(model, null, _engine()));
             const sizeText = sizeBytes > 0 ? formatBytes(sizeBytes) : '';
             const vramText = vram > 0 ? `${vram}GB VRAM` : '';
 
