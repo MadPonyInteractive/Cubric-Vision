@@ -7,7 +7,9 @@
  * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default Cubric Prompt enhancer-recipe key
  * @property {string}   [enhanceRecipe] - Explicit Cubric Prompt enhancer-recipe id, overriding `type` when they diverge (MPI-5)
  * @property {'image'|'video'} mediaType
- * @property {number}   [tier]       - Workflow node-title generation: 1 = legacy bare titles, 2 = Input_ / Output_ prefixed titles. Video models are tier 2.
+ * @property {number}   [tier]       - Workflow node-title generation: 1 = legacy bare titles, 2 = Input_ / Output_ prefixed titles. Video models are tier 2. (NOT the size tier — see sizeTier.)
+ * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
+ * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
  * @property {{multiStage?:boolean, audio?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot. Absent → both false.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
@@ -24,6 +26,7 @@
 export const MODELS = [
     {
         id: 'sdxl-realistic',
+        sizeTier: 'low',
         name: 'SDXL Realistic',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
@@ -47,6 +50,7 @@ export const MODELS = [
     },
     {
         id: 'sdxl-nsfw',
+        sizeTier: 'low',
         name: 'SDXL NSFW',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
@@ -70,6 +74,7 @@ export const MODELS = [
     },
     {
         id: 'ill-anime-beauty',
+        sizeTier: 'low',
         name: 'ILL Anime Beauty',
         dropdownMeta: 'ANIME',
         mediaType: 'image',
@@ -93,6 +98,7 @@ export const MODELS = [
     },
     {
         id: 'ill-anime',
+        sizeTier: 'low',
         name: 'ILL Anime',
         dropdownMeta: 'ANIME',
         mediaType: 'image',
@@ -116,6 +122,7 @@ export const MODELS = [
     },
     {
         id: 'pony-mix',
+        sizeTier: 'low',
         name: 'PONY Mix',
         dropdownMeta: 'STYLIZED',
         mediaType: 'image',
@@ -140,6 +147,8 @@ export const MODELS = [
     // ── Video Models ───────────────────────────────────────────────────
     {
         id: 'wan-22',
+        sizeTier: 'balanced',
+        modelFamily: 'Wan-2.2',
         name: 'Wan 2.2 Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
@@ -191,6 +200,8 @@ export const MODELS = [
     },
     {
         id: 'ltx-23',
+        sizeTier: 'balanced',
+        modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',

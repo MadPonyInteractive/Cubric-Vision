@@ -40,7 +40,6 @@ export const DEPS = {
         filename: 'checkpoints/SDXL_Realistic.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/SDXL_Realistic.safetensors',
         size: '6.62GB',
-        vram: '8GB',
         sha256: '4bb646ca44e460bfc121fbcd8b7a65ae2b7a85f89c9e9ffe4d078db6e488d5ff'
     },
     'sdxl-nsfw': {
@@ -50,7 +49,6 @@ export const DEPS = {
         filename: 'checkpoints/SDXL_NSFW.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/SDXL_NSFW.safetensors',
         size: '6.46GB',
-        vram: '8GB',
         sha256: '4073cbe470446d0f1806e82d560d14af5b813ec1091b26ad7a69f8162f4a7ac1'
     },
     'ill-anime': {
@@ -60,7 +58,6 @@ export const DEPS = {
         filename: 'checkpoints/ILL_Anime.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/ILL_Anime.safetensors',
         size: '6.46GB',
-        vram: '8GB',
         sha256: 'f548b5b4953c3ba71f9769c98005b95a41a7f8e0b666a509bb938cedf70347fd'
     },
     'ill-anime-beauty': {
@@ -70,7 +67,6 @@ export const DEPS = {
         filename: 'checkpoints/ILL_Anime_Beauty.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/ILL_Anime_Beauty.safetensors',
         size: '6.46GB',
-        vram: '8GB',
         sha256: 'bbebe76d8fcc488b630d6dd74d111bb170b5d5c82a43fca0d99cd8e263766318'
     },
     'pony-mix': {
@@ -80,7 +76,6 @@ export const DEPS = {
         filename: 'checkpoints/PONY_Mix.safetensors',
         url: 'https://models.cubric.studio/vision/sdxl/checkpoints/PONY_Mix.safetensors',
         size: '6.62GB',
-        vram: '8GB',
         sha256: '455ea6628d79546bb63147758522706f8a6592ade65f847da0aec8968bf29a4b'
     },
     // Video Models
@@ -91,7 +86,6 @@ export const DEPS = {
         filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_t2v_High.safetensors',
         size: '13.55GB',
-        vram: '12GB',
         sha256: '8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870'
     },
     'wan-22-t2v-low': {
@@ -101,7 +95,6 @@ export const DEPS = {
         filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_t2v_Low.safetensors',
         size: '13.55GB',
-        vram: '12GB',
         sha256: 'e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f'
     },
     'wan-22-i2v-high': {
@@ -111,7 +104,6 @@ export const DEPS = {
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_i2v_High.safetensors',
         size: '13.32GB',
-        vram: '12GB',
         sha256: '9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0'
     },
     'wan-22-i2v-low': {
@@ -121,7 +113,6 @@ export const DEPS = {
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/wan-2.2/diffusion_models/Wan_22_i2v_Low.safetensors',
         size: '13.32GB',
-        vram: '12GB',
         sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
     },
     // VAE
@@ -188,7 +179,6 @@ export const DEPS = {
         filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/ltx-2.3/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         size: '41GB',
-        vram: '24GB',
         sha256: 'cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249',
     },
     // Q8_0 GGUF (remote/Pod). Re-hosted to cubric R2 (bucket cubric-models →
@@ -202,7 +192,6 @@ export const DEPS = {
         filename: 'unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
         url: 'https://models.cubric.studio/vision/ltx-2.3/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
         size: '22.8GB',
-        vram: '12GB',
         sha256: '813fd61eecf3df2ef5ac5a942d226ee7e44b6cec68ed803549aefaa410cd397e',
     },
     'ltx23-video-vae': {

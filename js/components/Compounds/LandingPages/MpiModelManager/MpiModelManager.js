@@ -15,6 +15,8 @@ import { downloadService } from '../../../../services/downloadService.js';
 import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
+import { MpiPopup } from '../../../Primitives/MpiPopup/MpiPopup.js';
+import { tradeTable } from '../../../../data/modelConstants/footprint.js';
 
 /**
  * MpiModelManager — Model-manager content for the MpiSlideOver panel.
@@ -51,6 +53,7 @@ export const MpiModelManager = ComponentFactory.create({
                 <p class="mpi-model-manager__text">Select a model pack to install. Required files will be fetched automatically.</p>
                 <div class="mpi-model-manager__refresh-btn" id="refresh-btn-slot"></div>
             </div>
+            <div class="mpi-model-manager__filter" id="filter-slot"></div>
             <div class="mpi-model-manager__separator"></div>
             <div class="mpi-model-manager__slot" id="body-slot"></div>
         </div>`,
@@ -65,6 +68,33 @@ export const MpiModelManager = ComponentFactory.create({
         // downloads have no pause/resume API, so cards hide the Pause button when
         // this is true. Kept in sync via the remote:connection event. (MPI-140)
         let _isRemote = false;
+
+        // ── Size-tier UI (MPI-168) ───────────────────────────────────────────
+        // Full-word labels + the active filter set (multi-select L/B/H toggles;
+        // empty set = show all). The computed VRAM↔RAM hover table highlights the
+        // row nearest the ACTIVE GPU's VRAM:
+        //   - local  → this box's VRAM, fetched once from /system/stats (_userVramGb)
+        //   - remote → the connected Pod's VRAM, carried on the remote:connection
+        //     event (_remoteVramGb), same source the status-bar memory monitor uses.
+        // While remote is still 'connecting' (phase set), the Pod isn't live yet, so
+        // the highlight is suppressed until it resolves.
+        const TIER_WORD = { low: 'Low', balanced: 'Balanced', high: 'High' };
+        const TIER_ORDER = ['low', 'balanced', 'high'];
+        const _filterActive = new Set();      // subset of TIER_ORDER; empty = all
+        const _tierFilterBtns = new Map();    // Map<tier, MpiButton inst>
+        let _userVramGb = null;               // local box VRAM (GB); from /system/stats
+        let _remoteVramGb = null;             // connected Pod VRAM (GB); from remote:connection
+        let _remotePhase = null;              // 'connecting' etc. while not yet live; null = live
+
+        // The GPU VRAM the trade table should highlight against, or null to suppress
+        // the highlight (no hardware known, or a Pod that's still connecting).
+        const _activeVramGb = () => {
+            if (_isRemote) return _remotePhase ? null : _remoteVramGb; // live Pod only
+            return _userVramGb;
+        };
+        // Tier badge + hover popup instances per model, torn down on re-render.
+        //   Map<modelId, { badgeEl, popup, unsub }>
+        const _tierBadges = new Map();
 
         // Per-modelId card instance tracking so download:progress events can update a
         // single card in-place instead of re-rendering the whole list.
@@ -85,6 +115,95 @@ export const MpiModelManager = ComponentFactory.create({
             info: 'Refresh model state from disk',
         });
         _unsubs.push(on(refreshBtn.el, 'click', () => { awaitReSync(); }));
+
+        // ── Size-tier filter bar (MPI-168) ───────────────────────────────────
+        // 3 multi-select toggles (Low/Balanced/High). No ALL button — all-off
+        // shows everything. Toggling rebuilds the list (force — the filter change
+        // IS the sig change). The matching-hardware toggle is highlighted via a
+        // CSS modifier in renderList(), so build is pure here.
+        const filterSlot = qs('.mpi-model-manager__filter', el);
+        TIER_ORDER.forEach(tier => {
+            // Plain TEXT button (no icon — L/B/H words speak for themselves). Note:
+            // MpiButton's built-in toggle fires ONLY in icon mode, so a text button
+            // gets no 'toggle' event and no active flip. We own the toggle here via
+            // setActive + a click handler (setActive works in both modes). (MPI-168)
+            const inst = MpiButton.mount(ce('div'), {
+                text: TIER_WORD[tier], variant: 'secondary', size: 'sm',
+            });
+            inst.el.classList.add('mpi-model-manager__filter-btn');
+            inst.on('click', () => {
+                const next = !_filterActive.has(tier);
+                if (next) _filterActive.add(tier); else _filterActive.delete(tier);
+                inst.el.setActive(next);
+                renderList({ force: true });
+            });
+            _tierFilterBtns.set(tier, inst);
+            filterSlot.appendChild(inst.el);
+        });
+
+        // ── Computed VRAM↔RAM hover table (MPI-168) ──────────────────────────
+        // Reuses MpiPopup (portals to body, won't clip in the slide-over). Rows
+        // come from footprint.js tradeTable() — the real curve, never hardcoded.
+        // The row nearest the ACTIVE GPU (local box OR connected Pod) is flagged via
+        // _activeVramGb(); engine + VRAM both follow the active engine so a Pod sees
+        // the GGUF curve highlighted against the Pod's VRAM.
+        function _tradeTableHtml(model) {
+            const activeVram = _activeVramGb();
+            const { rows, totalWeights, vramFloor } = tradeTable(model, _engine(), activeVram);
+            const body = rows.map(r => `
+                <tr class="mpi-trade-table__row${r.isUserRow ? ' mpi-trade-table__row--user' : ''}">
+                    <td class="mpi-trade-table__cell">${r.vram}GB${r.isFloor ? ' <span class="mpi-trade-table__floor">min</span>' : ''}</td>
+                    <td class="mpi-trade-table__cell">${r.ram === 0 ? '—' : `~${r.ram}GB`}</td>
+                </tr>`).join('');
+            const gpuLabel = _isRemote ? 'Pod GPU' : 'Your GPU';
+            const userNote = (activeVram != null)
+                ? `<p class="mpi-trade-table__note">${gpuLabel}: ~${Math.round(activeVram)}GB VRAM.</p>` : '';
+            return `
+                <div class="mpi-trade-table">
+                    <div class="mpi-trade-table__title">${model.name} — memory need</div>
+                    <table class="mpi-trade-table__grid">
+                        <thead><tr><th class="mpi-trade-table__head">VRAM</th><th class="mpi-trade-table__head">+ System RAM</th></tr></thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                    ${userNote}
+                    <p class="mpi-trade-table__note mpi-trade-table__note--floor">
+                        ${Math.round(totalWeights)}GB of weights · min ${Math.round(vramFloor)}GB VRAM.
+                        Estimated model need; excludes OS usage (~10–20GB).
+                    </p>
+                </div>`;
+        }
+
+        // Builds + appends the tier badge to a card wrapper, wires a hover MpiPopup.
+        function _buildTierBadge(model, cardWrap) {
+            const tier = model.sizeTier || 'balanced';
+            const badgeEl = ce('span', {
+                className: `mpi-model-manager__tier-badge mpi-model-manager__tier-badge--${tier}`,
+                textContent: TIER_WORD[tier] || tier,
+            });
+            cardWrap.appendChild(badgeEl);
+
+            // Popup mounted lazily on first hover so the table isn't computed for
+            // every card up-front; one instance per badge, reused while open.
+            let popup = null;
+            const open = () => {
+                if (!popup) {
+                    popup = MpiPopup.mount(ce('div'), {
+                        variant: 'glass', position: 'top', triggerEl: badgeEl,
+                    });
+                    qs('.mpi-popup__content', popup.el).innerHTML = _tradeTableHtml(model);
+                }
+                popup.el.classList.add('is-active');
+            };
+            const close = () => { popup?.el.classList.remove('is-active'); };
+            const unsubEnter = on(badgeEl, 'mouseenter', open);
+            const unsubLeave = on(badgeEl, 'mouseleave', close);
+            const unsub = () => {
+                unsubEnter(); unsubLeave();
+                popup?.el?.destroy?.();
+                popup?.el?.remove?.();
+            };
+            _tierBadges.set(model.id, { badgeEl, unsub });
+        }
 
         // ── Confirm dialog (shared) — used for whole-model uninstall AND op removal ──
         let _pendingConfirm = null; // { run: async () => void }
@@ -130,15 +249,6 @@ export const MpiModelManager = ComponentFactory.create({
                 if (dep) total += _parseSizeToBytes(dep.size);
             }
             return total;
-        }
-
-        function _vramOf(depIds) {
-            let maxVram = 0;
-            for (const id of depIds) {
-                const v = parseInt(DEPS[id]?.vram) || 0;
-                if (v > maxVram) maxVram = v;
-            }
-            return maxVram;
         }
 
         // Operations the model bundles into its core (in supportedOps but NOT a
@@ -417,9 +527,10 @@ export const MpiModelManager = ComponentFactory.create({
             // not bf16+GGUF (the 85.8GB-vs-real bug). (MPI-163)
             const sizeDepIds = selectableOps(model).length ? _draftDepIds(model) : resolveFullUniverse(model, null, _engine());
             const sizeBytes = _sizeOf(sizeDepIds);
-            const vram = _vramOf(resolveFullUniverse(model, null, _engine()));
-            const sizeText = sizeBytes > 0 ? formatBytes(sizeBytes) : '';
-            const vramText = vram > 0 ? `${vram}GB VRAM` : '';
+            const sizeText = sizeBytes > 0 ? `Disk: ${formatBytes(sizeBytes)}` : '';
+            // Disk size moved from the header meta (which now collides with the tier
+            // badge top-right) into the info row. The old per-dep VRAM number is
+            // dropped — the tier badge + computed hover table own memory info now. (MPI-168)
 
             // Install state machine.
             const installedOps = _installedOpsOf(model);
@@ -453,13 +564,13 @@ export const MpiModelManager = ComponentFactory.create({
 
             const card = MpiInstalledDisplay.mount(cardWrap, {
                 title: model.name,
-                meta: sizeText,
+                meta: '', // disk size moved to the info row (header meta would collide with the tier badge)
                 text: model.description || '',
                 image: model.image || '',
                 video: model.video || '',
                 mediaRatio: model.mediaRatio || '',
                 icon: showInstalled ? 'info' : 'warning',
-                iconText: vramText,
+                iconText: sizeText,
                 installed: showInstalled,
                 canUninstall: showInstalled,
                 uninstallLabel,
@@ -474,6 +585,10 @@ export const MpiModelManager = ComponentFactory.create({
                 phase: job ? (job.phase || 'preparing') : 'preparing',
                 isRemote: _isRemote,
             });
+
+            // Size-tier badge (MPI-168) — sibling of the card in the wrapper, NOT
+            // an extension of the info-row span. Hover → computed trade table.
+            _buildTierBadge(model, cardWrap);
 
             // Toggle row lives INSIDE the card, between the badge and the action
             // button (card.el.opsSlot is a static slot the card never rebuilds).
@@ -515,6 +630,8 @@ export const MpiModelManager = ComponentFactory.create({
                 toggles.forEach(({ inst }) => inst?.el?.destroy?.());
             }
             _opToggles.clear();
+            for (const { unsub } of _tierBadges.values()) unsub?.();
+            _tierBadges.clear();
         }
 
         // ── Render signature (MPI-124) ─────────────────────────────────────
@@ -559,11 +676,17 @@ export const MpiModelManager = ComponentFactory.create({
             qsa('.mpi-model-manager__section-header', bodySlot).forEach(h => h.remove());
             qsa('.mpi-model-manager__empty', bodySlot).forEach(e => e.remove());
 
+            // Size-tier filter (MPI-168): keep models whose sizeTier is in the
+            // active set. Empty set → show all. Untagged models default 'balanced'.
+            const tierOf = m => m.sizeTier || 'balanced';
+            const passesFilter = m => _filterActive.size === 0 || _filterActive.has(tierOf(m));
+            const visible = MODELS.filter(passesFilter);
+
             // A model is "installed" for sectioning when its installed flag is set OR
             // at least one of its ops is installed (op-keyed partial installs).
             const isInstalled = m => m.installed === true || _installedOpsOf(m).length > 0;
-            const installed = MODELS.filter(isInstalled);
-            const uninstalled = MODELS.filter(m => !isInstalled(m));
+            const installed = visible.filter(isInstalled);
+            const uninstalled = visible.filter(m => !isInstalled(m));
 
             if (installed.length > 0) {
                 bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__section-header' },
@@ -589,12 +712,20 @@ export const MpiModelManager = ComponentFactory.create({
             if (key === 's_installedModelIds') renderList();
         }));
 
-        // Remote (cloud) connection toggles the Pause button visibility on any
-        // active download card — force a rebuild so the buttons update live when the
-        // user connects/disconnects mid-download. (MPI-140)
-        _unsubs.push(Events.on('remote:connection', ({ connected = false } = {}) => {
-            if (!!connected === _isRemote) return;
-            _isRemote = !!connected;
+        // Remote (cloud) connection drives two things here: the Pause-button
+        // visibility on active download cards (MPI-140) and the trade-table GPU
+        // highlight (MPI-168). The event carries the Pod's VRAM/RAM (GB) + phase —
+        // the same payload the status-bar memory monitor consumes. Re-render when ANY
+        // of connected / phase / vramGb moves (not just connected), so the highlight
+        // switches local↔Pod the moment a Pod goes live or drops.
+        _unsubs.push(Events.on('remote:connection', ({ connected = false, phase = null, vramGb = null } = {}) => {
+            const nextRemote = !!connected;
+            const nextPhase = phase || null;
+            const nextVram = Number.isFinite(Number(vramGb)) && Number(vramGb) > 0 ? Number(vramGb) : null;
+            if (nextRemote === _isRemote && nextPhase === _remotePhase && nextVram === _remoteVramGb) return;
+            _isRemote = nextRemote;
+            _remotePhase = nextPhase;
+            _remoteVramGb = nextVram;
             renderList({ force: true });
         }));
 
@@ -658,8 +789,25 @@ export const MpiModelManager = ComponentFactory.create({
 
         _unsubs.push(Events.on('download:failed', () => { awaitReSync(); }));
 
+        // ── Hardware read (MPI-168) ──────────────────────────────────────────
+        // One-shot /system/stats → cache VRAM/RAM (GB) for the trade-table user-row
+        // highlight. No state lift (one consumer). Re-render once it lands so any
+        // open card shows the highlight. vram.total/ram.total are BYTES.
+        let _hwFetched = false;
+        async function _fetchHardwareOnce() {
+            if (_hwFetched) return;
+            _hwFetched = true;
+            try {
+                const r = await fetch('/system/stats');
+                const data = await r.json();
+                const GB = 1024 ** 3;
+                if (data?.vram?.total > 0) _userVramGb = data.vram.total / GB;
+                renderList({ force: true }); // refresh table user-row highlight
+            } catch { /* highlight just stays off — table still computes */ }
+        }
+
         // ── Open hook — MpiSlideOver calls this each time the panel opens ──────
-        el.onOpen = () => { awaitReSync(); };
+        el.onOpen = () => { awaitReSync(); _fetchHardwareOnce(); };
 
         // ── Initial render ─────────────────────────────────────────────────
         renderList();
@@ -668,6 +816,8 @@ export const MpiModelManager = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             _destroyAllCards();
+            for (const inst of _tierFilterBtns.values()) inst?.el?.destroy?.();
+            _tierFilterBtns.clear();
             _confirmDialog?.el?.destroy?.();
         };
     },

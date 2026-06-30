@@ -458,12 +458,25 @@ export const MpiPromptBox = ComponentFactory.create({
             return supported[0];
         }
 
+        // L/B/H tier marker (MPI-168): only disambiguates when the SAME family has
+        // 2+ installed tiers in the list — a lone SDXL/Wan/LTX gets no letter (no
+        // clutter). The letter goes on `label` (flows to the closed trigger via
+        // textContent); `meta` only shows in the open list, the wrong slot.
         function _modelDropdownOptions() {
-            return modelList.map(m => ({
-                value: m.id,
-                label: m.name,
-                meta: m.dropdownMeta || '',
-            }));
+            const TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
+            const familyCounts = new Map();
+            modelList.forEach(m => {
+                if (m.modelFamily) familyCounts.set(m.modelFamily, (familyCounts.get(m.modelFamily) || 0) + 1);
+            });
+            return modelList.map(m => {
+                const ambiguous = m.modelFamily && familyCounts.get(m.modelFamily) > 1;
+                const letter = ambiguous ? TIER_LETTER[m.sizeTier] : '';
+                return {
+                    value: m.id,
+                    label: letter ? `${m.name} ${letter}` : m.name,
+                    meta: m.dropdownMeta || '',
+                };
+            });
         }
 
         el.setModel = (newModel) => {

@@ -57,6 +57,119 @@
 /* Operation toggles render INSIDE the card (MpiInstalledDisplay el.opsSlot);
    their layout lives in MpiInstalledDisplay.css. */
 
+/* ── Size-tier filter bar (MPI-168) ──────────────────────────── */
+.mpi-model-manager__filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+}
+
+/* Active (selected) filter — text MpiButton has no built-in toggled style, so
+   the manager owns it. Heat-accent border + tint marks the chosen tiers. */
+.mpi-model-manager__filter-btn.is-active {
+    border-color: var(--accent-heat);
+    color: var(--accent-heat);
+    background: color-mix(in oklch, var(--accent-heat) 14%, transparent);
+}
+
+/* ── Per-card size-tier badge (MPI-168) ──────────────────────── */
+/* Sibling of the card inside .mpi-model-manager__card (position relative on
+   the wrapper) — absolute top-right so it overlays the card chrome. */
+.mpi-model-manager__card {
+    position: relative;
+}
+
+.mpi-model-manager__tier-badge {
+    position: absolute;
+    top: var(--s-2);
+    right: var(--s-2);
+    z-index: 2;
+    padding: 2px var(--s-2);
+    border-radius: var(--r-2);
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: help;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink-2);
+}
+
+.mpi-model-manager__tier-badge--low {
+    border-color: var(--accent-ok);
+    color: var(--accent-ok);
+}
+
+.mpi-model-manager__tier-badge--balanced {
+    border-color: var(--accent-frost);
+    color: var(--accent-frost);
+}
+
+.mpi-model-manager__tier-badge--high {
+    border-color: var(--accent-heat);
+    color: var(--accent-heat);
+}
+
+/* ── Computed VRAM↔RAM trade table (inside an MpiPopup) ───────── */
+/* Tight width so the numbers read large relative to the box (the popup is
+   width:max-content; capping it keeps the small figures legible). */
+.mpi-trade-table {
+    max-width: 200px;
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+}
+
+.mpi-trade-table__title {
+    font-size: var(--t-md);
+    font-weight: 600;
+    color: var(--ink-1);
+    margin-bottom: var(--s-2);
+}
+
+.mpi-trade-table__grid {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.mpi-trade-table__head {
+    text-align: left;
+    font-size: var(--t-xs);
+    font-weight: 600;
+    color: var(--ink-3);
+    padding: 2px var(--s-2) 4px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.mpi-trade-table__cell {
+    padding: 4px var(--s-2) 4px 0;
+    color: var(--ink-2);
+    white-space: nowrap;
+}
+
+.mpi-trade-table__row--user .mpi-trade-table__cell {
+    color: var(--accent-frost);
+    font-weight: 600;
+}
+
+.mpi-trade-table__floor {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+    text-transform: uppercase;
+}
+
+.mpi-trade-table__note {
+    margin: var(--s-2) 0 0;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    line-height: 1.45;
+}
+
+.mpi-trade-table__note--floor {
+    color: var(--ink-4);
+}
+
 /* ── Empty state ─────────────────────────────────────────────── */
 .mpi-model-manager__empty {
     display: flex;

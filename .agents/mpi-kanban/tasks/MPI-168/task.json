@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-168",
+  "title": "Model tiers (L/B/H) + computed VRAM↔RAM trade table",
+  "description": "Stop chasing one-size-fits-all model weights; ship per-need tiers as SEPARATE model cards. Three fixed levels — Low / Balanced / High — each its own card (own weight + workflow; LTX already proves workflows diverge hard per tier: GGUF/offload nodes for low VRAM, BF16 40GB for high). Wan case forces separate-cards too: a 5B model does t2v+i2v in ONE weight while the current set is 4 weights across 2 ops, so tiers don't map 1:1 to ops — only separate cards express varying op coverage. DECIDED: tiers = content/grouping over the existing model registry, NOT a new cross-cutting tier system or per-card radio (a radio that swaps workflow+deps+nodes+VRAM is just a model in disguise). Pieces: (1) Registry — add `tier` (low/balanced/high), soft `family` string, per-family `overhead` constant + `vramFloor` to ModelDef (js/data/modelConstants/models.js). Shared deps already dedup by id across cards. enhanceRecipe stays per-card, shared across tiers unless a tier's LoRA changes the prompt contract. (2) Models page filter = 3 multi-select TOGGLE buttons (L/B/H), no ALL (all-three = everything); highlight the toggle matching the user's detected hardware (we already read VRAM+RAM via MpiMemoryMonitor). (3) Card badge = full word (Low/Balanced/High); HOVER → a COMPUTED VRAM↔RAM trade table (the requirement is a CURVE, not a point: less VRAM needs more RAM to offload the difference — proven: LTX BF16 40GB runs on 16GB VRAM only with 62GB RAM, but on an A100/32GB needs ~32GB RAM). Highlight the table row nearest the user's hardware. (4) Prompt-box selector = short L/B/H letter suffix so a user with two tiers installed can tell them apart mid-prompt. (5) Engine-aware: the fit badge/table is LOCAL-engine only — remote/RunPod users pick a Pod GPU at create time and don't care about local VRAM (tag by engine per the remote-state≠local-state rule). RISK / the ONE unknown = the footprint FORMULA. Approach (b) chosen: `footprint = fileSize + overhead(family, tier)`, render the curve from footprint + vramFloor. fileSize is already known at download (free); the ONLY thing to measure is the per-family overhead constant + whether it scales with resolution/clip length (video activations). Needs a bounded INVESTIGATION before the table ships — get the formula wrong and the table lies (worse than no table). Everything else is plumbing on existing systems (registry, MpiMemoryMonitor, model cards, prompt-box selector). Files (likely): js/data/modelConstants/models.js (+ ModelDef typedef), MpiModelManager (filter + badge + hover table), MpiMemoryMonitor (hardware read already exists), the prompt-box model selector. Builder-Pod research already logs VRAM numbers (docs/builder/research/ltx-2.3-tiers.md) — anchor the overhead investigation there.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "activeSessionTitle": "MPI-168 — large plan + parallel footprint-formula investigation, implementing now",
+  "created_at": "2026-06-30T19:00:00Z",
+  "updated_at": "2026-06-30T21:00:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl"
+  },
+  "tags": ["models", "tiers", "vram", "ram", "ux", "registry", "investigation"],
+  "priority": "medium"
+}
