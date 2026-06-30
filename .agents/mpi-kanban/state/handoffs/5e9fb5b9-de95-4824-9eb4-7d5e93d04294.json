@@ -1,0 +1,109 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "5e9fb5b9-de95-4824-9eb4-7d5e93d04294",
+  "generated_at": "2026-06-30T13:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-165 Phase A SHIPPED + live-verified both engines (loader-swap + media-stamp converter was the REAL Pod-reject fix) + Preview_Only tier-2 noise cleaned. Resume at Phase B (profile migration + one resolver — offline, parity-tested, NO Pod needed to start).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Fix the half-wired LTX bf16-local/GGUF-Pod engine split so a fresh GGUF-only Pod installs + generates correctly; then consolidate the engine-variant smear into ONE clean structure (engines: profile + one resolver + resolve-engine-once) rather than keep symptom-patching.",
+    "status": "in_progress",
+    "summary": "Phase A is DONE + LIVE-VERIFIED on both engines (local bf16 RTX 4060 Ti + Pod GGUF RTX PRO 4500, both gens completed, zero reject). The live Pod bug had TWO causes, both fixed: (1) stale engine signal at the workflow swap — now resolved ONCE after refresh in commandExecutor.js; (2) THE REAL ONE — the generated _gguf workflow files carried BOTH unet loaders + baked test media, and ComfyUI eager-validates every node at prompt time → the unselected bf16 loader rejected on a GGUF-only Pod. Fixed in the BUILD SCRIPT generate_ltx.py (one loader per file + placeholder media). Preview_Only tier-2 strip-check noise also cleaned. NEXT = Phase B: migrate deps+workflow to one engines:{local,remote} profile + one resolve(model,op,engine). Offline + parity-tested; no Pod until the swap-retarget smoke."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-165/plan.md",
+    "completed": [
+      "PHASE A — DONE + LIVE-VERIFIED both engines (commits 66efefe fix+converter+gotcha, cd2883b kanban). (a) commandExecutor.js runCommand: await remoteEngineClient.refresh() (skip when forceLocal) at the TOP of the async body, resolve `const engine = forceLocal ? 'local' : (isRemote() ? 'remote' : 'local')` ONCE, gate the ggufWhenRemote swap on `engine === 'remote'`. Diag removed. (b) THE REAL FIX — generate_ltx.py (comfy_workflows/scripts/workflow_generation/): _select_loader(wf, use_gguf) keeps ONE unet loader per flavour, deletes the other, repoints the dropped loader's Model_Connect (MpiReroute, node 160) MODEL-slot-0 consumer to the kept loader; _stamp_placeholders(wf) resets Input_Start_Frame/Input_End_Frame -> ltx_placeholder.png and Input_Audio_File -> ltx_silence.wav + drops stale audioUI. Both called per flavour in build(). All 8 LTX_*.json regenerated: each has EXACTLY ONE loader (bf16 files UNETLoader, gguf files UnetLoaderGGUF), correct placeholder media, zero test-file refs, zero dangling links. LIVE: local bf16 3m20s + Pod GGUF 2m1s both completed.",
+      "Preview_Only tier-2 noise FIXED (commit 5be8dae): comfyController.js strip-check recognised only the tier-1 node title 'preview_only'; LTX/WAN video workflows use tier-2 'Input_Preview_Only' (MPI-127) and _buildParams dual-emits BOTH param keys, so the check false-fired on EVERY stage-1 video gen (warn + strip the already-injected boolean). Now accepts EITHER title, warns+strips only when NEITHER exists (genuine: _stage2 sibling has no preview node), strips both keys. Logic-verified (gate self-check all tiers + stage-2). NOT live-confirmed — next gen's console should no longer print the warning.",
+      "Investigation map preserved at research/investigation-summary.md; engine-split WORKFLOW-axis gotcha added to docs/gotchas.md (after the deps-axis gotcha ~line 121)."
+    ],
+    "pending": [
+      "PHASE B (PRIMARY NEXT — offline, parity-tested, NO Pod to start): (1) Add engines:{local,remote} block to LTX in js/data/modelConstants/models.js — `local:{extraDeps:[...bf16...], workflowSuffix:''}`, `remote:{extraDeps:[...gguf..., ComfyUI-GGUF], workflowSuffix:'_gguf'}`; KEEP legacy localDeps/remoteDeps/ggufWhenRemote temporarily. (2) In resolveModelDeps.js, make engineDepsOf read model.engines?.[engine]?.extraDeps (fallback to legacy localDeps/remoteDeps during migration). Add resolveWorkflowFile(model, op, engine, {stage2}) returning workflows[op] + (_stage2?) + engines[engine].workflowSuffix (suffix order MUST yield ..._stage2_gguf.json). Add thin resolve(model, selectedOps, engine, {stage2, op}) -> {depIds, workflowFile, nodeIds}. Keep resolveDeps/resolveFullUniverse/deriveInstalledOps working (same engineDepsOf). (3) Point the workflow swap in commandExecutor.js at resolveWorkflowFile(...) instead of _toGgufFilename/ggufWhenRemote. TESTS (tests/resolve-model-deps.test.cjs, keep node/DOM-free, currently 10/10): parity (engines block == legacy both engines), workflow filenames (LTX_t2v.json / LTX_t2v_gguf.json / LTX_t2v_stage2_gguf.json), AND a synthetic op-keyed+engine-split fixture proving the two axes UNION (engineDepsOf currently IGNORES operations — a LATENT bug Phase B must fix + test). Verify mode = auto (parity tests); smoke the swap-retarget before Phase C.",
+      "PHASE C (after B proven): delete localDeps/remoteDeps/ggufWhenRemote/_toGgufFilename + legacy fallbacks; fix residual union risk _confirmWholeUninstall (MpiModelManager:241) + latent _opUninstallDepIds (:221-222) + MpiPromptBox:137; rewrite the STALE .claude/rules/comfy_engine.md (NEEDS USER PERMISSION — CLAUDE.md rule); update docs/gotchas.md engine-split entries + feedback_engine_split_sweep_all_consumers memory to the single-resolver invariant. Final live re-verify both engines.",
+      "FOLLOW-UPS (no new cards — user explicitly wants FEWER cards; fold into Phase B/C or note): (a) DEPS install-check reads engine signal while CONNECTING — isModelUsable (modelRegistry.js:259 reads isRemote() live) demanded the gguf set LOCALLY while the Pod was still downloading -> false 'ltx-23 not installed — cannot reuse full prompt' toast. This is the Phase B/C deps-axis smear; the connecting-state behaviour (local-truth vs remote-intent) is a PRODUCT call the user owns. GOOD REPRO the user wants kept: move the local gguf file OUT of its folder -> app should still report local bf16 usable. (b) MPI-164 (verify-bar at ~95%) stays its OWN existing card — untouched, separate."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-165",
+    "title": "Consolidate engine-variant into one per-model profile + resolve-engine-once (fixes bf16-workflow-on-Pod)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-165/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-165/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-165/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-165/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-165/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "Phase A validation written to .agents/mpi-kanban/tasks/MPI-165/validation.md (includes the corrected root cause + both-engine live results + the 3 follow-ups). Plan Completed + checklist updated. All committed (cd2883b).",
+      "docs/gotchas.md: added the engine-split WORKFLOW-axis gotcha (resolve-engine-once + one-loader-per-file + placeholder-media + eager-validation rule), committed in 66efefe.",
+      "Preview_Only tier-2 fix committed (5be8dae)."
+    ],
+    "pending": [
+      "Phase C: rewrite .claude/rules/comfy_engine.md (STALE — never mentions engine-split/the swap/the converter) — needs explicit user permission before editing the rule file.",
+      "Phase C: update docs/gotchas.md engine-split entries + feedback_engine_split_sweep_all_consumers memory to the single-resolver invariant once consolidated.",
+      "Phase B: when engineDepsOf is fixed to compose the operation axis, note the latent-bug fix in the gotcha (engineDepsOf used to ignore operations)."
+    ]
+  },
+  "next_action": {
+    "description": "Implement MPI-165 Phase B — migrate deps + workflow to ONE engines:{local,remote} profile block + ONE resolver. Read the plan (.agents/mpi-kanban/tasks/MPI-165/plan.md Phase B section) + validation.md FIRST. STEPS: (1) add engines:{local:{extraDeps,workflowSuffix:''}, remote:{extraDeps,workflowSuffix:'_gguf'}} to the LTX entry in js/data/modelConstants/models.js, KEEPING legacy localDeps/remoteDeps/ggufWhenRemote for now; (2) in js/data/modelConstants/resolveModelDeps.js make engineDepsOf read model.engines?.[engine]?.extraDeps (fallback to legacy), add resolveWorkflowFile(model,op,engine,{stage2}) (= workflows[op] + _stage2? + engines[engine].workflowSuffix — order must give ..._stage2_gguf.json) and a thin resolve(model,ops,engine,{stage2,op}) -> {depIds,workflowFile,nodeIds}; (3) retarget the workflow swap in js/services/commandExecutor.js to resolveWorkflowFile instead of _toGgufFilename/ggufWhenRemote. ADD TESTS to tests/resolve-model-deps.test.cjs (keep node/DOM-free): legacy-vs-engines parity for both engines, the 3 workflow filenames, AND a synthetic op-keyed+engine-split fixture proving the operation axis and engine axis UNION (engineDepsOf currently IGNORES operations — fix that latent bug here). Verify mode = auto (parity tests pass); smoke the swap-retarget. NO Pod needed to build/test Phase B; only the final live re-verify (Phase C) needs one (user spins it, never autonomous). Brief the user before writing code (mpi-continue gate). Shared git tree: commit by explicit pathspec, never git add .; push is user-only. DO NOT create new cards — the user explicitly wants fewer; fold follow-ups into B/C.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE REAL POD-REJECT BUG was NOT just the engine signal (Phase A's original hypothesis) — it was the GENERATED WORKFLOW FILE CONTENT: the _gguf files carried BOTH unet loaders (an MpiIfElse picks at runtime, but ComfyUI EAGER-VALIDATES every node's file inputs at PROMPT time regardless of lazy wiring → the unselected bf16 loader rejected on a GGUF-only Pod) + the template's baked test media. Lazy-eval defers EXECUTION, not VALIDATION. Proven live by the user (removed local gguf file → ComfyUI errored even though MpiIfElse never pulls it).",
+      "FIX LIVES IN THE BUILD SCRIPT, not runtime: the template now wires ONLY the bf16 loader and PARKS the GGUF one (user's deliberate save convention — makes the splice point unambiguous). generate_ltx.py _select_loader() emits one-loader-per-file; _stamp_placeholders() stamps engine-staged placeholder media. This is the right layer — a generated workflow must reference only weights/media that exist on the TARGET engine.",
+      "Same loader-swap pattern will extend to DualCLIPLoader when quantized Gemma is tested. If quantized Gemma passes, GGUF may become the SINGLE dep for both engines, retiring the whole bf16/GGUF split. _select_loader is title-driven + generic enough to reuse.",
+      "Mixed-tier is INTENTIONAL: image workflows use tier-1 bare titles (Preview_Only), video workflows (LTX/WAN) use tier-2 Input_* (Input_Preview_Only); _buildParams dual-emits Input_<key> for every bare key so injection serves both. The .claude/rules/comfy_injection.md ALREADY documents both tiers (lines 123, 126) — the rule was correct, only the comfyController strip-check code was stale.",
+      "Resolve-engine-ONCE is the core principle: resolve a concrete 'local'|'remote' string ONCE per gen AFTER refresh(), then thread it. NEVER let each consumer call isRemote() independently (a read milliseconds before vs after refresh disagrees — that smear caused every half-wire). Phase B makes this structural via the one resolver."
+    ],
+    "constraints": [
+      "Shared git tree — commit by explicit pathspec, never git add . / -A. Push is user-only. mpi-ci is a SEPARATE repo.",
+      "resolveModelDeps.js MUST stay browser/DOM-free (node-unit-testable via tests/resolve-model-deps.test.cjs; 10/10 pass).",
+      "Suffix order MUST yield ..._stage2_gguf.json (workflowSuffix applied AFTER _stage2), matching generate_ltx.py output. The _gguf workflow files already exist on disk (regenerated this session) and use the single correct loader.",
+      "engineDepsOf currently IGNORES the operation axis (Wan commonDeps + operations{}) — Phase B must make engineDepsOf compose BOTH axes (union) and TEST it with a synthetic op-keyed+engine-split fixture. The two axes are orthogonal: a model may have neither/one/both.",
+      ".claude/rules/comfy_engine.md is STALE (never mentions engine-split/the swap/the converter) — rewriting it (Phase C) needs explicit user permission per CLAUDE.md.",
+      "Pod create/delete is NEVER autonomous — the user spins/kills it. NO Pod is needed for Phase B (offline parity tests). Pod stopped this session to save money.",
+      "DO NOT create new kanban cards — the user explicitly wants FEWER cards, not more. Fold follow-ups into Phase B/C or note in validation.md.",
+      "Caveman + ponytail output modes active (terse prose, minimal solutions) — cosmetic."
+    ],
+    "files_modified": [
+      "COMMITTED 66efefe: comfy_workflows/LTX_{i2v,i2v_stage2,t2v,t2v_stage2}{,_gguf}.json (8 files) + comfy_workflows/scripts/workflow_generation/{LTX_i2v_t2v_template.json,generate_ltx.py} + js/services/commandExecutor.js + docs/gotchas.md",
+      "COMMITTED cd2883b: .agents/mpi-kanban/ (MPI-165 plan/checklist/validation/task.json/events + board.json)",
+      "COMMITTED 5be8dae: js/services/comfyController.js (Preview_Only tier-2 strip fix)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-165/plan.md (Phase B section — READ FIRST)",
+      ".agents/mpi-kanban/tasks/MPI-165/validation.md (Phase A results + corrected root cause + the 3 follow-ups)",
+      "js/data/modelConstants/models.js (LTX-23 entry: workflows ~216, ggufWhenRemote ~226, localDeps/remoteDeps/dependencies)",
+      "js/data/modelConstants/resolveModelDeps.js (engineDepsOf, resolveDeps, resolveFullUniverse, deriveInstalledOps — the resolver to extend)",
+      "tests/resolve-model-deps.test.cjs (10/10 — extend with parity + the synthetic op-keyed+engine-split fixture)",
+      "js/services/commandExecutor.js (runCommand ~844; the swap ~858-890 now resolves engine once + uses _toGgufFilename — retarget to resolveWorkflowFile in Phase B)",
+      "comfy_workflows/scripts/workflow_generation/generate_ltx.py (the converter — _select_loader + _stamp_placeholders; reference for the suffix/name contract)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["comfy_engine", "comfy_injection", "downloads", "runpod-remote-engine", "ltx-2.3"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/downloads.md",
+    "docs/gotchas.md (engine-split deps + WORKFLOW axis entries + LTX-2.3 workflow authoring section)"
+  ],
+  "recent_events": [
+    { "at": "2026-06-30T13:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/5e9fb5b9-de95-4824-9eb4-7d5e93d04294.json and use mpi-continue. We are on branch RunPod implementing MPI-165 (engine-variant consolidation). PHASE A is DONE + LIVE-VERIFIED on BOTH engines (local bf16 RTX 4060 Ti 3m20s + Pod GGUF RTX PRO 4500 2m1s, both gens completed, zero reject — commits 66efefe + cd2883b). IMPORTANT CORRECTION captured this session: the real Pod-reject bug was NOT only the engine signal — the GENERATED _gguf workflow files carried BOTH unet loaders + the template's baked test media, and ComfyUI EAGER-VALIDATES every node at prompt time (lazy MpiIfElse defers execution, not validation), so the unselected bf16 loader rejected on a GGUF-only Pod. The fix lives in the BUILD SCRIPT generate_ltx.py: _select_loader() keeps one loader per file (repoints Model_Connect), _stamp_placeholders() stamps ltx_placeholder.png / ltx_silence.wav. Also fixed the Preview_Only tier-2 strip-check noise (commit 5be8dae). NEXT = PHASE B (offline, parity-tested, NO Pod needed to start): migrate deps+workflow to ONE engines:{local,remote} profile block (extraDeps + workflowSuffix) + ONE resolve(model,op,engine) -> {deps,workflow,nodes}; add resolveWorkflowFile + make engineDepsOf read engines[engine].extraDeps (keep legacy localDeps/remoteDeps/ggufWhenRemote as temporary fallback, deleted in Phase C); retarget the commandExecutor workflow swap to resolveWorkflowFile. Add tests to tests/resolve-model-deps.test.cjs: legacy-vs-engines parity both engines, the 3 workflow filenames, AND a synthetic op-keyed+engine-split fixture proving the operation axis and engine axis UNION (engineDepsOf currently IGNORES operations — a latent bug Phase B must fix). resolveModelDeps.js must stay browser/DOM-free. Brief me before writing code. Shared git tree: explicit pathspec only, never git add .; push is user-only. DO NOT create new kanban cards — I want FEWER cards; fold the two open follow-ups (the connecting-state deps toast, repro = move local gguf file out of its folder; and MPI-164 which stays its own card) into Phase B/C or notes. Pod is stopped — only Phase C's final live re-verify needs one (I spin it)."
+}
