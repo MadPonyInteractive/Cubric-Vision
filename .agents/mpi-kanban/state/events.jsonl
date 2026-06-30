@@ -29,3 +29,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-163","at":"2026-06-30T08:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementing engine-aware resolver fix (MPI-163)."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-163","at":"2026-06-30T10:30:00Z","actor":"claude","from":"doing","to":"done","summary":"Engine-aware dep resolution live-verified on a GGUF-only Pod (installed + prompt box + gen). Accepted."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-164","at":"2026-06-30T10:30:00Z","actor":"claude","summary":"Remote install bar flips to Verifying at ~95% not 100% (regresses MPI-140)."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-165","at":"2026-06-30T11:00:00Z","actor":"claude","summary":"Engine-variant consolidation plan (Option A, phased). Fixes bf16-workflow-on-Pod via resolve-engine-once + engines: profile."}
