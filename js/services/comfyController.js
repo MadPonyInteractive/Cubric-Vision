@@ -1015,15 +1015,21 @@ function createEngine({ engine, alwaysLocal }) {
 
         // Defensive: Preview_Only param requested but workflow lacks the boolean
         // node. Op contract guarantees presence on multi-stage workflows; this
-        // catches malformed/desynced workflow files. Strip param so injection
-        // does not no-op silently and the run proceeds as full generation.
-        if (params.Preview_Only !== undefined) {
-            const hasNode = Object.values(workflow).some(
-                n => (n?._meta?.title || '').toLowerCase() === 'preview_only'
-            );
+        // catches the genuinely node-less case (e.g. the _stage2 sibling, which
+        // has no preview node). The node was re-authored to the tier-2 title
+        // `Input_Preview_Only` (MPI-127), and _buildParams dual-emits both keys,
+        // so accept EITHER title — else the check false-fires on every stage-1 gen
+        // and strips the (already-injected) preview boolean. Strip both keys so
+        // injection does not no-op silently and the run proceeds as full generation.
+        if (params.Preview_Only !== undefined || params.Input_Preview_Only !== undefined) {
+            const hasNode = Object.values(workflow).some(n => {
+                const t = (n?._meta?.title || '').toLowerCase();
+                return t === 'preview_only' || t === 'input_preview_only';
+            });
             if (!hasNode) {
                 clientLogger.warn('comfy', 'Preview_Only requested but workflow has no matching node — running full generation');
                 delete params.Preview_Only;
+                delete params.Input_Preview_Only;
             }
         }
 
