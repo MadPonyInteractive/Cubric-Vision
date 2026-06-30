@@ -28,7 +28,7 @@ Orchestrates a full generation request.
 - `runCommand(payload)`: Single argument — a `RunPayload` object `{ operation, modelId, positive, negative, seed?, injectionParams?, mediaItems?, maskDataUrl? }`. Resolves workflow file, builds title-keyed param map (including `injectionParams` for PromptBox controls), runs via comfyController, captures Output node.
 - `runAutoMask(imageData, modelId, params, onProgress?)`: Runs auto-mask workflow, captures both `Detected` and `Output` nodes.
 - `_depFilename(depId)`: Maps dep ID to filename.
-- `_resolveWorkflowFile(operation, modelId)`: Returns workflow JSON path.
+- Workflow file selection: `runCommand()` resolves universal workflows directly (`getUniversalWorkflow`), else derives the model-tied filename via `resolveWorkflowFile(model, op, engine, {stage2})` in `modelConstants/resolveModelDeps.js` — applies the `_stage2` then engine (`_gguf`) suffix in build-script order, engine resolved once per gen. (MPI-165)
 - `_buildParams(payload)`: Builds the title→value map for injection. Merges `payload.injectionParams` (from PromptBox controls) into the params object alongside standard fields (Positive, Negative, Seed, media slots).
 - Operation-specific injectors: if `COMMANDS[payload.operation].injector` is set, `runCommand()` applies `INJECTORS[name](workflow, payload.injectionParams || {})` after loading workflow JSON and before submitting it.
 - Execution handles expose `promptId`, `seed`, and `onPromptAck`. `generationService` stores `promptId` in `activeGenerations` and saves the resolved seed on generated items.

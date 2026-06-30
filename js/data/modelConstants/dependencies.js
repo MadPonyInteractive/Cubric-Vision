@@ -175,11 +175,12 @@ export const DEPS = {
     //  - POD/REMOTE gets Q8_0 GGUF (sidesteps the ~5-min aimdo cold tax — the whole
     //    point; loads via city96 `UnetLoaderGGUF` from the `unet/` folder, NOT
     //    diffusion_models/).
-    // Which engine gets which is declared STRUCTURALLY on the model (MPI-163):
-    // models.js lists bf16 in `localDeps`, the GGUF (+ the ComfyUI-GGUF node that
-    // loads it) in `remoteDeps`. The resolver adds the engine-correct list at
-    // resolution time, so download + status gate + prompt box all derive the right
-    // set automatically — no per-dep `engine` tag for any consumer to forget.
+    // Which engine gets which is declared STRUCTURALLY on the model (MPI-163,
+    // consolidated MPI-165): models.js lists bf16 in `engines.local.extraDeps`, the
+    // GGUF (+ the ComfyUI-GGUF node that loads it) in `engines.remote.extraDeps`. The
+    // resolver adds the engine-correct list at resolution time, so download + status
+    // gate + prompt box all derive the right set automatically — no per-dep `engine`
+    // tag for any consumer to forget.
     'ltx23-transformer-bf16': {
         id: 'ltx23-transformer-bf16',
         name: 'LTX-2.3 22B Distilled Transformer (bf16, local)',

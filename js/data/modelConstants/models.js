@@ -218,12 +218,11 @@ export const MODELS = [
             i2v_ms: 'LTX_i2v.json',
         },
         // bf16-local / GGUF-Pod split: the `workflows` above name the bf16 files
-        // (local default). When a run targets a Pod (isRemote && !forceLocal) the
-        // executor swaps in the `_gguf` sibling (e.g. LTX_t2v.json → LTX_t2v_gguf.json,
-        // applied AFTER any _stage2 swap). GGUF wins ONLY on a Pod — it sidesteps the
-        // aimdo cold tax; locally it's slower per-step at high res. Any future model
-        // with `_gguf` sibling workflows opts in by setting this flag.
-        ggufWhenRemote: true,
+        // (local default). The `engines:` block below carries each engine's
+        // workflowSuffix — remote runs resolve `LTX_t2v.json → LTX_t2v_gguf.json`
+        // (applied AFTER any _stage2 suffix → ..._stage2_gguf.json) via
+        // resolveWorkflowFile(). GGUF wins ONLY on a Pod — it sidesteps the aimdo
+        // cold tax; locally bf16 is faster per-step at high res. (MPI-165)
         // FLAT model: one transformer serves both t2v and i2v, so there is no
         // separable install unit — both ops ship together (like an image model).
         // `dependencies` (not commonDeps/operations) ⇒ no per-op install toggle in
@@ -232,10 +231,11 @@ export const MODELS = [
         // First model with non-merged baked LoRAs (transition/soft/talkvid) shipped
         // as deps, NOT user slots — see [[project-ltx-transition-lora-enables-lipsync]].
         //
-        // ENGINE SPLIT (MPI-163): shared deps in `dependencies`; engine-only weights
-        // in `localDeps` / `remoteDeps`. The resolver adds the engine-correct list at
-        // resolution time, so EVERY consumer (download, status gate, prompt box)
-        // derives the right set — no per-dep `engine` tag to forget to filter.
+        // ENGINE SPLIT (MPI-163, consolidated MPI-165): shared deps in `dependencies`;
+        // engine-only weights in the `engines:` block below. The resolver adds the
+        // engine-correct extraDeps at resolution time, so EVERY consumer (download,
+        // status gate, prompt box) derives the right set — no per-dep `engine` tag to
+        // forget to filter.
         dependencies: [
             'ltx23-video-vae',
             'ltx23-audio-vae',
@@ -249,11 +249,17 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
         ],
-        // Local engine only: the bf16 transformer (faster per-step at high res).
-        localDeps: ['ltx23-transformer-bf16'],
-        // Pod engine only: the Q8 GGUF transformer (sidesteps the aimdo cold tax)
-        // AND the ComfyUI-GGUF custom node that loads it. The node is Pod-only — it
-        // previously installed locally for nothing (it has no local use). (MPI-163)
-        remoteDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'],
+        // ENGINE axis (MPI-165) — ONE block. Each engine declares its extra deps +
+        // the workflow-filename suffix the build script (generate_ltx.py) emits.
+        // resolveModelDeps.js reads this for BOTH dep resolution (extraDeps) and
+        // workflow selection (workflowSuffix). local: bf16 transformer (faster
+        // per-step at high res), no suffix → the bf16 files verbatim. remote: the Q8
+        // GGUF transformer (sidesteps the aimdo cold tax) + the ComfyUI-GGUF node that
+        // loads it (Pod-only — no local use); '_gguf' suffix, applied AFTER any
+        // _stage2 → ..._stage2_gguf.json.
+        engines: {
+            local:  { extraDeps: ['ltx23-transformer-bf16'],                  workflowSuffix: '' },
+            remote: { extraDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'],  workflowSuffix: '_gguf' },
+        },
     },
 ];

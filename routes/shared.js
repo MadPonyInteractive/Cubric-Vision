@@ -554,8 +554,8 @@ async function getInstalledModelNodeDeps(customRootOverride) {
         // node only when the model's WEIGHTS for that node are present — a node whose
         // op the user never installed must not be restored. (MPI-122, was MPI-118)
         // Engine = 'local': this restores nodes for the LOCAL engine upgrade, so it
-        // must EXCLUDE Pod-only deps (e.g. the ComfyUI-GGUF node in remoteDeps) — a
-        // local engine never has the GGUF node to restore. (MPI-163)
+        // must EXCLUDE Pod-only deps (e.g. the ComfyUI-GGUF node in engines.remote) —
+        // a local engine never has the GGUF node to restore. (MPI-163)
         const depIds = resolveFullUniverse(model, null, 'local');
         if (depIds.length === 0) continue;
 

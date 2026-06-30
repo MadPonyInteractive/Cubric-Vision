@@ -27,7 +27,8 @@
 > `<name>.json` (stage-1) and `<name>_stage2.json` (stage-2). The stage-2 file
 > is authored in ComfyUI by toggling the stage-1 KSampler to Bypass mode and
 > using Save (API). On a stage-2 run (`payload.isStage2 === true`),
-> `commandExecutor._toStage2Filename` swaps the basename before fetch.
+> `resolveWorkflowFile(model, op, engine, {stage2})` swaps the basename (and
+> appends the engine `_gguf` suffix on a Pod) before fetch. (MPI-165)
 >
 > **LoadLatent injection (always-on for `_ms`):** Before every stage-1 run,
 > `commandExecutor` calls `POST /comfy/prepare-workflow-inputs` to copy the

@@ -15,6 +15,8 @@
 
 **Model registry source of truth:** `js/data/modelRegistry.js` — all generative models (checkpoints, LoRAs, custom nodes) are defined here. Add new models to `MODELS` or `DEPS` here only.
 
+**Engine split — ONE `engines:` block + ONE resolver, engine resolved ONCE per gen (MPI-165):** a model whose deps/workflow differ by where it runs (LTX-2.3: bf16 transformer local-only, Q8 GGUF transformer + `ComfyUI-GGUF` node Pod-only) declares the variance STRUCTURALLY in a single block: `engines: { local: { extraDeps: [...], workflowSuffix: '' }, remote: { extraDeps: [...], workflowSuffix: '_gguf' } }`. NEVER add a per-dep `engine` tag, a `localDeps`/`remoteDeps`/`ggufWhenRemote` field, or a `_toGgufFilename` helper — those are the DELETED smear that caused repeated half-wires. ALL resolution goes through `js/data/modelConstants/resolveModelDeps.js`: `resolveDeps(model, ops, depExists, engine)` adds `engines[engine].extraDeps`; `resolveWorkflowFile(model, op, engine, {stage2})` applies the suffix (order: `_stage2` THEN engine suffix → `..._stage2_gguf.json`, matching `generate_ltx.py`); `resolve(model, ops, engine, {stage2, op, isNode})` returns `{depIds, workflowFile, nodeIds}` in one call. The resolver is browser/DOM-free (node-tested: `tests/resolve-model-deps.test.cjs`). **Resolve-engine-ONCE:** every consumer must receive a concrete `'local'|'remote'` string resolved ONCE per generation AFTER `remoteEngineClient.refresh()` — never let two consumers call `isRemote()` independently (a read before vs after refresh disagrees; that race sent the bf16 workflow to a Pod). `commandExecutor.js runCommand` resolves it once and threads it. **Two orthogonal axes:** the OPERATION axis (`commonDeps` + `operations{}`, e.g. `ComfyUI-PainterI2Vadvanced` is i2v-only) and the ENGINE axis are independent and UNION inside `resolveDeps` — a model may have neither, one, or both. `engine === null` resolves the UNION of both engines' extraDeps (shared-dep PROTECTION only — never delete a weight the other engine needs); every real install/status/uninstall path passes a concrete engine.
+
 **Install status:** Never hardcode `installed: true` in the registry. `syncModelInstalled()` in modelRegistry hits `GET /comfy/models/check` and sets `installed` dynamically at runtime.
 
 **No direct Python/pip:** All engine management is via `routes/comfy.js` and `routes/shared.js`. Never spawn Python manually or hardcode binary paths.
@@ -82,6 +84,81 @@ When adding a new model to the application, it requires a dependency array. Chec
     }
 }
 ```
+
+### 2.5 Engine Split — one `engines:` block, one resolver (MPI-165)
+
+Some models need different weights AND a different workflow depending on the
+ENGINE the gen runs on. The canonical case is **LTX-2.3**: locally it uses the
+bf16 transformer (faster per-step at high res); on a RunPod Pod it uses the Q8
+GGUF transformer (sidesteps the aimdo cold tax) loaded by the Pod-only
+`ComfyUI-GGUF` node, and a different workflow file (`LTX_t2v_gguf.json`).
+
+This variance lives in **ONE block on the model**, resolved by **ONE resolver**,
+with the engine resolved **ONCE per generation**. This replaced an earlier smear
+(`localDeps`/`remoteDeps` + `ggufWhenRemote`/`_toGgufFilename` + per-consumer
+`isRemote()` reads) that caused repeated half-wire bugs — including a live gen
+where the bf16 workflow reached a Pod and ComfyUI rejected
+`unet_name ...bf16... not in []`.
+
+```js
+// models.js — the engine axis in ONE block
+{
+  id: 'ltx-23',
+  dependencies: [ /* shared by both engines */ ],
+  workflows: { t2v_ms: 'LTX_t2v.json', i2v_ms: 'LTX_i2v.json' },
+  engines: {
+    local:  { extraDeps: ['ltx23-transformer-bf16'],                  workflowSuffix: '' },
+    remote: { extraDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'],  workflowSuffix: '_gguf' },
+  },
+}
+```
+
+**The resolver (`js/data/modelConstants/resolveModelDeps.js`) is the only place
+that reads the split.** Three entry points, all browser/DOM-free
+(node-tested in `tests/resolve-model-deps.test.cjs`):
+
+- `resolveDeps(model, selectedOps, depExists, engine)` — common/op deps **+**
+  `engines[engine].extraDeps`, deduped. `engine: 'local'|'remote'` picks one set;
+  `null` returns the UNION of both (shared-dep PROTECTION only — so cross-model
+  garbage-collection never deletes a weight the other engine needs).
+- `resolveWorkflowFile(model, op, engine, {stage2})` — `workflows[op]` then
+  `_stage2` (if stage2) then `engines[engine].workflowSuffix`. Suffix order MUST
+  yield `..._stage2_gguf.json`, matching `generate_ltx.py`'s output.
+- `resolve(model, ops, engine, {stage2, op, isNode})` — one-call façade →
+  `{ depIds, workflowFile, nodeIds }`.
+
+**Resolve-engine-ONCE (the core rule):** resolve a concrete `'local'|'remote'`
+string ONCE per gen, AFTER `remoteEngineClient.refresh()`, then thread it.
+`commandExecutor.js runCommand` does this and passes it to `resolveWorkflowFile`.
+NEVER let two consumers call `isRemote()` independently — a read milliseconds
+before vs after `refresh()` disagrees, and that smear is what every half-wire
+came from. UI consumers that judge install state per engine
+(`isModelUsable`/`isOperationInstalled` in `modelRegistry.js`,
+`_installedOpsOf`/`_confirmWholeUninstall`/`_opUninstallDepIds` in
+`MpiModelManager.js`, `_ctxWithInstalledOps` in `MpiPromptBox.js`) each resolve
+the current engine and pass it to `deriveInstalledOps`/`resolveDeps` so a Pod
+never reads "not installed" because the local bf16 is absent (and vice-versa).
+
+**Two orthogonal axes that COMPOSE:** the OPERATION axis (`commonDeps` +
+`operations{}` — which deps depend on *what the user does*, e.g.
+`ComfyUI-PainterI2Vadvanced` is i2v-only) and the ENGINE axis (which deps/workflow
+depend on *where it runs*) are independent. A model may have neither, one, or
+both. `resolveDeps` unions them — op deps and engine extraDeps are both appended,
+never collide. The `engineDepsOf` helper is engine-only by design; the union
+happens in `resolveDeps`.
+
+**Authoring a new engine-split model:** add an `engines:` block (NOT `localDeps`/
+`remoteDeps`/`ggufWhenRemote`); list each engine's unique weights in its
+`extraDeps`; set `workflowSuffix` to the suffix your build script appends to that
+engine's workflow files (`''` for the default/local files). The Pod-only node
+(like `ComfyUI-GGUF`) goes in `engines.remote.extraDeps`, NOT `installOnEngine:
+true` (it has no local use). The generated workflow files must reference ONLY
+weights/media that exist on the TARGET engine — ComfyUI eager-validates every
+node's file inputs at PROMPT time (a lazy `MpiIfElse` defers EXECUTION, not
+VALIDATION), so a file carrying both engines' loaders rejects on the engine that
+lacks one. That one-loader-per-file split lives in the BUILD script
+(`comfy_workflows/scripts/workflow_generation/generate_ltx.py`), see
+`docs/gotchas.md` § engine-split.
 
 ### 2. ComfyUI Process State
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 

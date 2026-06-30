@@ -207,7 +207,7 @@ export const MpiModelManager = ComponentFactory.create({
         const _engine = () => (remoteEngineClient.isRemote() ? 'remote' : 'local');
 
         // Deps to fetch for the drafted op set (commonDeps + drafted ops), scoped to
-        // the current engine (adds localDeps OR remoteDeps, never both).
+        // the current engine (adds engines.local OR engines.remote extraDeps, never both).
         function _draftDepIds(model) {
             return resolveDeps(model, _draftFor(model), null, _engine());
         }
@@ -218,8 +218,11 @@ export const MpiModelManager = ComponentFactory.create({
         // shared-dep guard only protects across OTHER models, so we must not hand it
         // a dep a sibling op of THIS model still needs. (MPI-122)
         function _opUninstallDepIds(model, removedOps, keptOps) {
-            const removed = resolveDeps(model, removedOps);
-            const keep = new Set(resolveDeps(model, keptOps)); // includes commonDeps
+            // Engine-scoped both sides (MPI-165): an engine-split op-keyed model must
+            // subtract within the CURRENT engine's universe, never union both engines
+            // (which would target the other engine's weight for deletion).
+            const removed = resolveDeps(model, removedOps, null, _engine());
+            const keep = new Set(resolveDeps(model, keptOps, null, _engine())); // includes commonDeps
             return removed.filter(id => !keep.has(id));
         }
 
@@ -228,7 +231,7 @@ export const MpiModelManager = ComponentFactory.create({
             // Engine-scoped via _draftDepIds: a model with engine-split weights
             // (LTX-2.3 bf16-local / GGUF-remote) installs only the current engine's
             // transformer + nodes, never both (41GB of dead weight otherwise). The
-            // resolver adds localDeps/remoteDeps by engine; shared deps always in.
+            // resolver adds engines[engine].extraDeps; shared deps always in.
             // (MPI-163 — engine-aware resolution, replaces the old post-filter)
             const dependencies = _draftDepIds(model).map(id => DEPS[id]).filter(Boolean);
             if (!dependencies.length) return;
@@ -236,9 +239,14 @@ export const MpiModelManager = ComponentFactory.create({
             renderList();
         }
 
-        // Whole-model uninstall (no toggle change, or flat model).
+        // Whole-model uninstall (no toggle change, or flat model). Engine-scoped:
+        // resolve only the CURRENT engine's universe so an engine-split model (LTX
+        // bf16-local / GGUF-Pod) deletes the engine that's actually installed, not the
+        // other engine's transformer (which lives on the other machine and isn't on
+        // this disk anyway). The backend shared-dep guard still protects cross-MODEL
+        // files. (MPI-165)
         function _confirmWholeUninstall(model) {
-            const deps = resolveFullUniverse(model).map(id => DEPS[id]).filter(Boolean);
+            const deps = resolveFullUniverse(model, null, _engine()).map(id => DEPS[id]).filter(Boolean);
             _showConfirm(
                 `Uninstall ${model.name}?\n• Files shared with other installed models will be kept.`,
                 async (deleteFiles) => {

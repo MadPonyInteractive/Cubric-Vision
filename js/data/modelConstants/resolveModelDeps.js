@@ -39,16 +39,19 @@ export function canonicalModelId(id) {
 }
 
 /**
- * Engine-specific dep ids a model adds for one engine (MPI-163). A model declares
- * its engine-split weights STRUCTURALLY, not via a per-dep `engine` tag:
+ * Engine-specific dep ids a model adds for one engine. A model declares its
+ * engine-split weights STRUCTURALLY (not via a per-dep `engine` tag) in ONE
+ * `engines:` block (MPI-165), each engine carrying its own `extraDeps`:
  *
  *   dependencies: [...shared...]   // both engines (VAE, encoder, LoRAs, nodes)
- *   localDeps:    ['ltx23-transformer-bf16']         // local-only additions
- *   remoteDeps:   ['ltx23-transformer-gguf', 'ComfyUI-GGUF'] // Pod-only additions
+ *   engines: {
+ *     local:  { extraDeps: ['ltx23-transformer-bf16'],                 workflowSuffix: '' },
+ *     remote: { extraDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'], workflowSuffix: '_gguf' },
+ *   }
  *
  * `engine` selects which list to add:
- *   'local'  → localDeps
- *   'remote' → remoteDeps
+ *   'local'  → engines.local.extraDeps
+ *   'remote' → engines.remote.extraDeps
  *   null/undefined → BOTH (the all-engines union — shared-dep protection MUST see
  *                    the complete universe so a weight another engine needs is
  *                    never deleted).
@@ -57,17 +60,63 @@ export function canonicalModelId(id) {
  * set the DEFAULT at the resolution layer, so no consumer can half-wire it — the
  * bug MPI-163 fixes (the status gate forgot to engine-filter the per-dep tag).
  *
+ * A model with no `engines:` block has no engine-split weights — returns []
+ * for every engine (image / op-keyed models).
+ *
  * @param {object} model
  * @param {'local'|'remote'|null} [engine]
  * @returns {string[]}
  */
 function engineDepsOf(model, engine = null) {
     if (!model) return [];
-    const local = Array.isArray(model.localDeps) ? model.localDeps : [];
-    const remote = Array.isArray(model.remoteDeps) ? model.remoteDeps : [];
-    if (engine === 'local') return local;
-    if (engine === 'remote') return remote;
-    return [...local, ...remote]; // union for shared-dep protection
+    const eng = model.engines;
+    if (!eng || typeof eng !== 'object') return [];
+    const extra = e => (Array.isArray(eng[e]?.extraDeps) ? eng[e].extraDeps : []);
+    if (engine === 'local') return extra('local');
+    if (engine === 'remote') return extra('remote');
+    return [...extra('local'), ...extra('remote')]; // union for shared-dep protection
+}
+
+/**
+ * The workflow filename for a model + operation + engine, with the stage-2 and
+ * engine suffixes applied in the order the build script (generate_ltx.py) emits:
+ * `<base>` → `<base>_stage2` (when stage2) → `<base><engineSuffix>` (e.g. `_gguf`),
+ * yielding `..._stage2_gguf.json` for a remote stage-2 run. Returns null when the
+ * model declares no workflow for the op (the caller falls back to a universal one).
+ *
+ * Engine suffix comes from `model.engines[engine].workflowSuffix`. A model with no
+ * `engines:` block has no suffix on any engine (its workflow is used verbatim).
+ *
+ * Pure string derivation — no disk/registry access, so it stays node-testable.
+ *
+ * @param {object} model
+ * @param {string} op
+ * @param {'local'|'remote'|null} [engine]
+ * @param {{stage2?: boolean}} [opts]
+ * @returns {string|null}
+ */
+export function resolveWorkflowFile(model, op, engine = null, { stage2 = false } = {}) {
+    const base = model?.workflows?.[op];
+    if (typeof base !== 'string' || base.length === 0) return null;
+    let file = base;
+    if (stage2) file = file.replace(/\.json$/i, '_stage2.json');
+    const suffix = engineSuffixOf(model, engine);
+    if (suffix) file = file.replace(/\.json$/i, `${suffix}.json`);
+    return file;
+}
+
+/**
+ * The workflow-filename suffix for a model on one engine, from the `engines:` block.
+ * Empty string when none applies (local, or a model with no engine split).
+ * @param {object} model
+ * @param {'local'|'remote'|null} [engine]
+ * @returns {string}
+ */
+function engineSuffixOf(model, engine) {
+    const eng = model?.engines;
+    if (!eng || typeof eng !== 'object') return '';
+    const s = eng[engine]?.workflowSuffix;
+    return typeof s === 'string' ? s : '';
 }
 
 /**
@@ -200,10 +249,11 @@ export function dedupeStable(ids) {
  * Throws if any resolved dep id fails `depExists` — a registry authoring error
  * that must fail deterministically rather than silently dropping a required file.
  *
- * The `engine` param (MPI-163) selects the engine-split weights: 'local' adds
- * `localDeps`, 'remote' adds `remoteDeps`, null/undefined adds BOTH (the union —
- * what shared-dep protection needs). Every consumer passes its engine and gets the
- * engine-correct set at the resolution layer, so no consumer can half-wire it.
+ * The `engine` param selects the engine-split weights from the `engines:` block:
+ * 'local' adds `engines.local.extraDeps`, 'remote' adds `engines.remote.extraDeps`,
+ * null/undefined adds BOTH (the union — what shared-dep protection needs). Every
+ * consumer passes its engine and gets the engine-correct set at the resolution
+ * layer, so no consumer can half-wire it.
  *
  * @param {object} model
  * @param {string[]|null} [selectedOps] - null/undefined = all selectable ops.
@@ -282,12 +332,12 @@ export function resolveFullUniverse(model, depExists = null, engine = null) {
  * A selectable model is `fullyInstalled` when common deps + at least one operation
  * are complete. Omitted operations are NOT partial failures.
  *
- * `engine` (MPI-163): the engine-split weights (localDeps/remoteDeps) count toward
+ * `engine`: the engine-split weights (`engines[engine].extraDeps`) count toward
  * "common complete" for the CURRENT engine only. Without this the status gate
- * either ignored the transformer (now that it lives in localDeps/remoteDeps) or
- * demanded the WRONG engine's transformer — the bug: on a Pod the gate required
- * the bf16 weight that is legitimately absent, so the prompt box never showed.
- * Pass the engine the status came from (remote on a Pod, local otherwise).
+ * either ignored the transformer or demanded the WRONG engine's transformer — the
+ * bug (MPI-163): on a Pod the gate required the bf16 weight that is legitimately
+ * absent, so the prompt box never showed. Pass the engine the status came from
+ * (remote on a Pod, local otherwise).
  *
  * @param {object} model
  * @param {(depId:string)=>boolean} depStatus
@@ -321,4 +371,33 @@ export function deriveInstalledOps(model, depStatus, engine = null) {
         depComplete.has(op) && opRequires(model, op).every(req => depComplete.has(req)));
 
     return { installedOps, fullyInstalled: installedOps.length > 0 };
+}
+
+/**
+ * One-call resolution of everything a generation needs for a model + selection +
+ * engine (MPI-165): the dep id list, the workflow filename, and (optionally) the
+ * custom-node subset. Thin façade over `resolveDeps` + `resolveWorkflowFile` so a
+ * consumer threads ONE resolved engine string instead of re-deriving each axis.
+ *
+ * The OPERATION axis (selectedOps → opDeps) and the ENGINE axis (engine →
+ * extraDeps + workflowSuffix) compose by UNION inside `resolveDeps`: op deps and
+ * engine extraDeps are both appended, then deduped. A model may have neither, one,
+ * or both axes — they never collide.
+ *
+ * `nodeIds` is the `type:'custom_nodes'` subset of `depIds`, filtered by the
+ * supplied `isNode` predicate (kept browser/DOM-free — the caller passes
+ * `id => DEPS[id]?.type === 'custom_nodes'`). Null when no predicate is given.
+ *
+ * @param {object} model
+ * @param {string[]|null} selectedOps - null = all selectable ops.
+ * @param {'local'|'remote'|null} engine
+ * @param {{stage2?: boolean, op?: string, depExists?: (id:string)=>boolean, isNode?: (id:string)=>boolean}} [opts]
+ * @returns {{ depIds: string[], workflowFile: string|null, nodeIds: string[]|null }}
+ */
+export function resolve(model, selectedOps = null, engine = null, opts = {}) {
+    const { stage2 = false, op = null, depExists = null, isNode = null } = opts;
+    const depIds = resolveDeps(model, selectedOps, depExists, engine);
+    const workflowFile = op ? resolveWorkflowFile(model, op, engine, { stage2 }) : null;
+    const nodeIds = isNode ? depIds.filter(isNode) : null;
+    return { depIds, workflowFile, nodeIds };
 }

@@ -20,9 +20,9 @@
 'use strict';
 
 import { ComfyUIController, getEngine } from './comfyController.js';
-import { getWorkflowFile, getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
+import { getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
-import { resolveDeps } from '../data/modelConstants/resolveModelDeps.js';
+import { resolveDeps, resolveWorkflowFile } from '../data/modelConstants/resolveModelDeps.js';
 import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel, commandIsMultiStage } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
@@ -433,47 +433,6 @@ async function _findModelNotLocal(modelId, operation = null) {
 }
 
 /**
- * Resolves the workflow filename for a given operation + model.
- * Universal workflows (not model-tied) are checked first.
- * @param {string} modelId
- * @param {string} operation
- * @returns {string}  workflow filename (e.g. 'sdxl_t2i_nsfw.json')
- * @throws {Error} if no workflow file is registered
- */
-function _resolveWorkflowFile(modelId, operation) {
-    // Universal workflows take precedence — use helper to stay decoupled from shape
-    const universal = getUniversalWorkflow(operation);
-    if (universal) return universal;
-
-    const file = getWorkflowFile(modelId, operation);
-    if (!file) throw new Error(`No workflow registered for model "${modelId}", operation "${operation}"`);
-    return file;
-}
-
-/**
- * Stage-2 workflow filename derivation. Convention: `<base>.json` + `<base>_stage2.json`.
- * Stage-2 workflows have the stage-1 sampler bypassed (saved via ComfyUI's
- * Save (API) with that node's bypass toggled on) and the `Is_Continue` /
- * `Preview_Only` booleans pre-baked so no per-run injection is needed.
- */
-function _toStage2Filename(file) {
-    if (!file || typeof file !== 'string') return file;
-    return file.replace(/\.json$/i, '_stage2.json');
-}
-
-/**
- * GGUF sibling filename derivation (bf16-local / GGUF-Pod split). Convention:
- * `<base>.json` → `<base>_gguf.json`. Applied AFTER `_toStage2Filename` so the
- * suffix order is `..._stage2_gguf.json`, matching generate_ltx.py's output.
- * Only models flagged `ggufWhenRemote` have `_gguf` siblings on disk; callers
- * gate on that flag + on the run actually targeting a Pod.
- */
-function _toGgufFilename(file) {
-    if (!file || typeof file !== 'string') return file;
-    return file.replace(/\.json$/i, '_gguf.json');
-}
-
-/**
  * Builds the title-keyed param map that comfyController.runWorkflow injects
  * into the workflow via title-based node matching.
  *
@@ -875,16 +834,21 @@ export function runCommand(payload) {
 
         let workflowFile;
         try {
-            workflowFile = _resolveWorkflowFile(payload.modelId, payload.operation);
-            if (payload.isStage2 === true) {
-                workflowFile = _toStage2Filename(workflowFile);
-            }
-            // bf16-local / GGUF-Pod split: swap to the `_gguf` sibling when this
-            // model opts in AND the resolved engine is remote (a Pod run).
-            // Universal workflows have no model → getModelById null → no swap.
-            const _model = getModelById(payload.modelId);
-            if (_model?.ggufWhenRemote && engine === 'remote') {
-                workflowFile = _toGgufFilename(workflowFile);
+            // Universal workflows (not model-tied) win and have no engine/stage2
+            // variance — resolve them first, verbatim.
+            const universal = getUniversalWorkflow(payload.operation);
+            if (universal) {
+                workflowFile = universal;
+            } else {
+                // Model-tied: one resolver derives the filename with the _stage2 and
+                // engine (_gguf) suffixes in the build-script order (..._stage2_gguf.json).
+                // The resolver reads the model's `engines:` block for the suffix. (MPI-165)
+                const _model = getModelById(payload.modelId);
+                workflowFile = resolveWorkflowFile(
+                    _model, payload.operation, engine, { stage2: payload.isStage2 === true });
+                if (!workflowFile) {
+                    throw new Error(`No workflow registered for model "${payload.modelId}", operation "${payload.operation}"`);
+                }
             }
         } catch (err) {
             exec.onError?.(err);

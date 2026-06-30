@@ -89,7 +89,7 @@ export async function syncModelInstalled() {
         // engine actually installs. Without this, a model with engine-split weights
         // (e.g. LTX-2.3 bf16-local / GGUF-remote) shows a false "not installed"
         // because the other engine's transformer file is legitimately absent. The
-        // resolver adds localDeps/remoteDeps by engine; shared deps are always in.
+        // resolver adds engines[engine].extraDeps; shared deps are always in.
         // (MPI-163 — engine-aware resolution, replaces the old post-filter)
         const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
         const modelPayload = MODELS.map(model => ({
@@ -244,11 +244,13 @@ export function getModelDepStatus(modelId) {
 export function isModelUsable(modelOrId) {
     const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
     if (!model) return false;
-    // Flat models: the engine-split weights (localDeps/remoteDeps) make the bare
+    // Flat models: the engine-split weights (engines[].extraDeps) make the bare
     // server `installed` flag (all-deps-present, engine-agnostic) wrong on a Pod —
     // so flat models with engine deps ALSO go through deriveInstalledOps below.
-    // Plain flat models (no engine deps) keep the cheap `installed` path. (MPI-163)
-    const hasEngineDeps = (model.localDeps?.length || model.remoteDeps?.length);
+    // Plain flat models (no engine deps) keep the cheap `installed` path. (MPI-163,
+    // MPI-165: reads the engines: block, not the deleted localDeps/remoteDeps)
+    const hasEngineDeps = !!(model.engines?.local?.extraDeps?.length
+        || model.engines?.remote?.extraDeps?.length);
     if (!hasOperationGroups(model) && !hasEngineDeps) return model.installed !== false;
     const depStatus = getModelDepStatus(model.id);
     if (!depStatus) return model.installed === true; // no cache yet → trust server flag

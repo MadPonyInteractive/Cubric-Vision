@@ -140,6 +140,10 @@ export const MpiPromptBox = ComponentFactory.create({
                     const s = depStatus.get(depId);
                     return s === true || s?.installed === true;
                 },
+                // Engine-scoped (MPI-165): an engine-split model's installed-op set
+                // depends on the current engine's weights. (LTX is flat → early-return
+                // above; this guards a future op-keyed engine-split model.)
+                remoteEngineClient.isRemote() ? 'remote' : 'local',
             );
             return { ..._context, installedOps };
         }

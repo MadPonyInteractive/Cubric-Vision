@@ -16,6 +16,8 @@ const {
     deriveInstalledOps,
     expandRequiredOps,
     dependentsOfOp,
+    resolveWorkflowFile,
+    resolve,
 } = require('../js/data/modelConstants/resolveModelDeps.js');
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -56,14 +58,38 @@ const REQ = {
     },
 };
 
-// Flat model with engine-split weights (MPI-163): shared deps + localDeps/remoteDeps.
-// Mirrors LTX-2.3: bf16 transformer local-only, GGUF transformer + GGUF node Pod-only.
+// Flat model with engine-split weights via the consolidated `engines:` block
+// (MPI-163/MPI-165). Mirrors LTX-2.3: bf16 transformer local-only (no workflow
+// suffix), GGUF transformer + GGUF node Pod-only (_gguf suffix).
 const SPLIT = {
     id: 'ltx-like',
     supportedOps: ['t2v_ms', 'i2v_ms'],
     dependencies: ['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo'],
-    localDeps: ['tx-bf16'],
-    remoteDeps: ['tx-gguf', 'ComfyUI-GGUF'],
+    workflows: { t2v_ms: 'LTX_t2v.json', i2v_ms: 'LTX_i2v.json' },
+    engines: {
+        local:  { extraDeps: ['tx-bf16'],                  workflowSuffix: '' },
+        remote: { extraDeps: ['tx-gguf', 'ComfyUI-GGUF'],  workflowSuffix: '_gguf' },
+    },
+};
+// Alias kept so the workflow-filename test reads clearly.
+const SPLIT_ENGINES = SPLIT;
+
+// MPI-165: the case the user flagged — a model that is BOTH op-keyed AND
+// engine-split. The two axes are orthogonal and must UNION: Painter is OP-only
+// (i2v), pod-node is ENGINE-only (remote). Proves engineDepsOf composes with the
+// operation axis (the latent bug the plan calls out).
+const OP_X_ENGINE = {
+    id: 'both-axes',
+    supportedOps: ['t2v_ms', 'i2v_ms'],
+    commonDeps: ['vae', 'encoder'],
+    operations: {
+        t2v_ms: { deps: ['t2v-high', 't2v-low'] },
+        i2v_ms: { deps: ['i2v-high', 'i2v-low', 'ComfyUI-PainterI2Vadvanced'] }, // Painter = OP-only
+    },
+    engines: {
+        local:  { extraDeps: [],                workflowSuffix: '' },
+        remote: { extraDeps: ['some-pod-node'], workflowSuffix: '_gguf' },        // pod-node = ENGINE-only
+    },
 };
 
 // depStatus helper: a Set of installed dep ids → predicate.
@@ -284,6 +310,74 @@ function testEngineResolution() {
     }
 }
 
+// MPI-165: workflow filename derivation — engine suffix + stage2 in the
+// build-script order (..._stage2_gguf.json), driven by engines[engine].workflowSuffix.
+function testWorkflowFileResolution() {
+    assert.strictEqual(resolveWorkflowFile(SPLIT_ENGINES, 't2v_ms', 'local'), 'LTX_t2v.json');
+    assert.strictEqual(resolveWorkflowFile(SPLIT_ENGINES, 't2v_ms', 'remote'), 'LTX_t2v_gguf.json');
+    assert.strictEqual(resolveWorkflowFile(SPLIT_ENGINES, 't2v_ms', 'remote', { stage2: true }), 'LTX_t2v_stage2_gguf.json');
+    assert.strictEqual(resolveWorkflowFile(SPLIT_ENGINES, 't2v_ms', 'local', { stage2: true }), 'LTX_t2v_stage2.json');
+    // i2v sibling + unknown op + a model with no engines: block (no suffix anywhere).
+    assert.strictEqual(resolveWorkflowFile(SPLIT_ENGINES, 'i2v_ms', 'remote'), 'LTX_i2v_gguf.json');
+    assert.strictEqual(resolveWorkflowFile(SPLIT_ENGINES, 'nope', 'remote'), null);
+    const noSplit = { id: 'ns', workflows: { t2v_ms: 'IMG_t2i.json' } };
+    assert.strictEqual(resolveWorkflowFile(noSplit, 't2v_ms', 'remote'), 'IMG_t2i.json', 'no engines: block → no suffix');
+
+    // Real LTX-2.3 registry entry resolves the same way through the engines: block.
+    const { MODELS } = require('../js/data/modelConstants/models.js');
+    const ltx = MODELS.find(m => m.id && m.id.startsWith('ltx'));
+    if (ltx) {
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'local'), 'LTX_t2v.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'LTX_t2v_gguf.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'LTX_t2v_stage2_gguf.json');
+    }
+}
+
+// MPI-165 Phase B: the operation axis and engine axis are orthogonal and UNION.
+// Asserts the exact four (op × engine) combinations from the plan's worked example.
+function testOpAndEngineCompose() {
+    const COMMON = ['vae', 'encoder'];
+    const T2V = ['t2v-high', 't2v-low'];
+    const I2V = ['i2v-high', 'i2v-low', 'ComfyUI-PainterI2Vadvanced'];
+
+    // i2v + remote = common ∪ i2v (incl Painter) ∪ engine extraDep (pod-node).
+    assert.deepStrictEqual(
+        resolveDeps(OP_X_ENGINE, ['i2v_ms'], null, 'remote'),
+        [...COMMON, ...I2V, 'some-pod-node'],
+        'i2v×remote unions the OP-only Painter and the ENGINE-only pod-node');
+    // t2v + remote = NO Painter (t2v), pod-node present.
+    assert.deepStrictEqual(
+        resolveDeps(OP_X_ENGINE, ['t2v_ms'], null, 'remote'),
+        [...COMMON, ...T2V, 'some-pod-node'],
+        't2v×remote has the pod-node but not the i2v-only Painter');
+    // i2v + local = Painter present (op axis), NO pod-node (engine axis empty local).
+    assert.deepStrictEqual(
+        resolveDeps(OP_X_ENGINE, ['i2v_ms'], null, 'local'),
+        [...COMMON, ...I2V],
+        'i2v×local keeps Painter, drops the remote-only pod-node');
+    // t2v + local = neither Painter nor pod-node.
+    assert.deepStrictEqual(
+        resolveDeps(OP_X_ENGINE, ['t2v_ms'], null, 'local'),
+        [...COMMON, ...T2V],
+        't2v×local has neither axis extra');
+
+    // null engine = union of both engine sets (shared-dep protection), here just pod-node.
+    assert.ok(resolveDeps(OP_X_ENGINE, ['i2v_ms'], null, null).includes('some-pod-node'),
+        'null engine unions the pod-node for protection');
+
+    // The one-call resolve(): deps + workflow + node subset compose in one shot.
+    const isNode = id => id === 'ComfyUI-PainterI2Vadvanced' || id === 'some-pod-node';
+    const r = resolve(OP_X_ENGINE, ['i2v_ms'], 'remote', { op: 'i2v_ms', isNode });
+    assert.deepStrictEqual(r.depIds, [...COMMON, ...I2V, 'some-pod-node']);
+    assert.strictEqual(r.workflowFile, null, 'no workflows: block on this fixture → null filename');
+    assert.deepStrictEqual(r.nodeIds, ['ComfyUI-PainterI2Vadvanced', 'some-pod-node'],
+        'nodeIds is the custom-node subset across BOTH axes');
+    // resolve() on the engines: LTX yields a real workflow filename.
+    const r2 = resolve(SPLIT_ENGINES, null, 'remote', { op: 't2v_ms', stage2: true });
+    assert.strictEqual(r2.workflowFile, 'LTX_t2v_stage2_gguf.json');
+    assert.strictEqual(r2.nodeIds, null, 'no isNode predicate → nodeIds null');
+}
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 const tests = {
@@ -297,6 +391,8 @@ const tests = {
     testRequiresOps,
     testRealRegistryIntegrity,
     testEngineResolution,
+    testWorkflowFileResolution,
+    testOpAndEngineCompose,
 };
 
 let failed = 0;
