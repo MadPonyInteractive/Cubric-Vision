@@ -38,6 +38,29 @@ authoring-only on the Builder; the app strips it). CFG locked at 1 (distilled).
 The current LTX template's full `Input_*`/`Output_*` node inventory lives in the
 MPI-4 spec §1 (`ltx-integration-spec.md`) — read it before re-wiring.
 
+## Live latent previews (LTX / packed-latent video) — MPI-166
+
+LTXAV (and any patch-packed video latent) shows NO live preview by default: the
+in-loop sampler latent is packed transformer tokens, not a `[B,C,F,H,W]` grid, so
+core ComfyUI's previewer (matmul OR taesd) produces nothing. Don't chase a taeltx
+decoder — the working path is the KJNodes **`LTX2SamplingPreviewOverride`** node
+with its own built-in LTXAV rgb-factors (cheap matmul, no extra model, zero added
+per-step cost). When authoring an LTX-class video workflow:
+
+- Wire the override AFTER the `Model_Connect` reroute so it wraps whichever loader
+  the engine-split keeps: `UNETLoader → Model_Connect → LTX2SamplingPreviewOverride → rest`.
+  Leave `vae`/`latent_upscale_model` for optional preview upscaling; do NOT connect
+  a `taeltx` VAE (taeltx mode only triggers on a `TAEHV` vae and isn't needed).
+- The node is title-driven friendly — `generate_ltx.py` carries it into all 8
+  output files untouched.
+- The node sends previews with VideoHelperSuite's **28-byte** binary header, not
+  core's 8. The app already handles this (`comfyController._stripPreviewHeader`
+  scans for the JPEG SOI marker) — but if previews show in ComfyUI's UI yet NOT
+  in the app card, that header mismatch is the first suspect.
+
+Full detail (why each dead end is dead, the SOI fix): `docs/gotchas.md` §
+"LTX live latent previews".
+
 ## Strength defaults — don't blind-hunt
 
 LoRAs default to **0.5**, sweep 0.3–0.7 (the distilled-LoRA law). See
