@@ -1211,6 +1211,14 @@ export function runCommand(payload) {
                 return;
             }
 
+            // VHS video-preview window boundary (MPI-167): a new sampler stage starts
+            // a fresh frame window. Reset the card's preview clip so stages don't
+            // accumulate/concatenate into one ever-growing loop.
+            if (msg.type === 'VHS_latentpreview') {
+                exec.onPreviewReset?.();
+                return;
+            }
+
             if (msg.type === 'progress_state') {
                 aggregator.onProgressState(msg);
                 const nodeData = msg.data?.nodes || {};

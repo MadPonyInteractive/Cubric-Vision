@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-06-30T18:10:00Z","actor":"claude","id":"MPI-167","reason":"Frame-pacing queue+8fps timer in MpiGalleryGrid card; code written + self-checked, local-verify pending."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-06-30T19:00:00Z","actor":"claude","id":"MPI-167","from":"doing","to":"done","reason":"Shipped + user-verified. See task.json outcome + docs/gotchas.md."}

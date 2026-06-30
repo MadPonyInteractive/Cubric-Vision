@@ -1282,6 +1282,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
             for (const t of allTempIds) grid.el.updatePreview(t, url);
         }));
 
+        // New preview window (new sampler stage) → drop the card's current clip so
+        // stages don't accumulate into one growing loop. MPI-167.
+        _unsubs.push(Events.on('generation:preview-reset', ({ id }) => {
+            if (!_myGenIds.has(id)) return;
+            const first = _firstRunningEntry();
+            if (!first || first.id !== id) return;
+            const allTempIds = [first.tempId, ...(first.extraTempIds || [])].filter(Boolean);
+            for (const t of allTempIds) grid.el.resetPreviewClip(t);
+        }));
+
         // After a job ends, rebuild the grid: remove its placeholders if they
         // were mounted (only the first-running's are), and re-mount the new
         // first-running's placeholders if any remain in the queue.

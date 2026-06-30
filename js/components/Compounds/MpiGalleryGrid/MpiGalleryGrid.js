@@ -351,6 +351,50 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const preview    = qs('.mpi-group-card__preview', cardEl);
             const spinner    = qs('.mpi-group-card__spinner', cardEl);
             let previewImg   = null;
+            // Latent-preview frame pacing + loop. Most models send one evolving still
+            // per step, but video models (LTX via the KJNodes preview override) emit a
+            // SEQUENCE of frames (different frame POSITIONS) per step. LTX is distilled:
+            // after step 1 the latent barely changes, so every step's frames are at
+            // ~final preview quality — the value is the MOTION across positions, not
+            // refinement. The frames arrive as instant bursts (the node uses a
+            // synchronous Thread(...).run()), so painting on arrival flashes to the last
+            // frame and then freezes. We hold the most-recent frames as a rolling CLIP
+            // and cycle them at ~8fps, LOOPING until the gen ends — that replays the
+            // motion continuously instead of freezing. New frames append; over
+            // PREVIEW_CLIP_MAX the oldest is evicted + its blob URL revoked. Only
+            // evicted/teardown URLs are revoked (clip frames stay alive to repaint).
+            // ponytail: an array + cursor + interval, no <video> element.
+            const PREVIEW_FPS = 8;
+            const PREVIEW_CLIP_MAX = 48; // a latent video preview is short; loop the window
+            let _previewClip = [];   // rolling buffer of frame URLs
+            let _previewCursor = 0;  // play head into _previewClip
+            let _previewTimer = null;
+            function _revokePreviewUrl(url) {
+                if (url && url.startsWith('blob:')) { try { URL.revokeObjectURL(url); } catch { /* already revoked */ } }
+            }
+            function _stopPreviewPlayback() {
+                if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
+                for (const url of _previewClip) _revokePreviewUrl(url);
+                _previewClip = [];
+                _previewCursor = 0;
+            }
+            function _paintNextPreviewFrame() {
+                if (!_generating || !_previewClip.length) return;
+                if (_previewCursor >= _previewClip.length) _previewCursor = 0; // loop
+                _setPreviewImageSrc(_ensurePreviewImage(), _previewClip[_previewCursor++]);
+            }
+            function _enqueuePreviewFrame(url) {
+                if (!url) return;
+                _previewClip.push(url);
+                if (_previewClip.length > PREVIEW_CLIP_MAX) {
+                    _revokePreviewUrl(_previewClip.shift());
+                    if (_previewCursor > 0) _previewCursor--; // keep cursor aligned after eviction
+                }
+                if (!_previewTimer) {
+                    _paintNextPreviewFrame(); // first frame immediately, then pace
+                    _previewTimer = setInterval(_paintNextPreviewFrame, 1000 / PREVIEW_FPS);
+                }
+            }
             const nameEl     = qs('.mpi-group-card__name', cardEl);
             const subEl      = qs('.mpi-group-card__sub', cardEl);
             const topBadgeEl   = qs('.mpi-group-card__top-badge', cardEl);
@@ -492,6 +536,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
 
             function _clearPreviewImage() {
+                _stopPreviewPlayback();
                 previewImg?.remove();
                 previewImg = null;
             }
@@ -1079,8 +1124,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             cardEl.updatePreview = (previewUrl) => {
                 if (!_generating) return;
-                const img = _ensurePreviewImage();
-                _setPreviewImageSrc(img, previewUrl);
+                _enqueuePreviewFrame(previewUrl);
+            };
+
+            // A new sampler stage = a fresh preview window. Drop the current clip so
+            // stages don't concatenate into one growing loop; the timer keeps running
+            // and the next frames build the new window. MPI-167.
+            cardEl.resetPreviewClip = () => {
+                for (const url of _previewClip) _revokePreviewUrl(url);
+                _previewClip = [];
+                _previewCursor = 0;
             };
 
             cardEl.setDone = (newGroup) => {
@@ -1538,6 +1591,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         el.updatePreview = (tempId, previewUrl) => {
             _cardMap.get(tempId)?.card.el.updatePreview(previewUrl);
+        };
+
+        el.resetPreviewClip = (tempId) => {
+            _cardMap.get(tempId)?.card.el.resetPreviewClip();
         };
 
         el.removeCard = (groupId) => {

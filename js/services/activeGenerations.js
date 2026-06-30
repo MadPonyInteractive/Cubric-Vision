@@ -82,6 +82,13 @@ function setPreview(id, url) {
     Events.emit('generation:preview', { id, url });
 }
 
+/** Signal a new preview window (new sampler stage) — the card drops its current
+ *  looping clip so stages don't accumulate. MPI-167. */
+function resetPreview(id) {
+    if (!_registry.has(id)) return;
+    Events.emit('generation:preview-reset', { id });
+}
+
 /** Update entry status. */
 function setStatus(id, status) {
     const entry = _registry.get(id);
@@ -119,4 +126,4 @@ function cancelAll() {
     for (const id of _registry.keys()) cancel(id);
 }
 
-export const activeGenerations = { start, get, list, listFor, setPreview, setPromptId, setStatus, end, cancel, cancelAll };
+export const activeGenerations = { start, get, list, listFor, setPreview, resetPreview, setPromptId, setStatus, end, cancel, cancelAll };

@@ -607,7 +607,9 @@ function createEngine({ engine, alwaysLocal }) {
      *   auto-reconnects once after 1 second.
      */
     _routeMessage(msg) {
-        if (msg instanceof ArrayBuffer || (msg && msg.type === 'preview')) {
+        // `preview` (binary frame) and `VHS_latentpreview` (video preview window
+        // boundary, MPI-167) carry no prompt_id — route them to the active prompt.
+        if (msg instanceof ArrayBuffer || (msg && (msg.type === 'preview' || msg.type === 'VHS_latentpreview'))) {
             const listener = this._activePromptId ? this._promptListeners.get(this._activePromptId) : null;
             listener?.(msg);
             return;

@@ -576,6 +576,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         callbacks.onPreview?.(url);
     };
 
+    exec.onPreviewReset = () => {
+        activeGenerations.resetPreview(_regId);
+    };
+
 
     exec.onComplete = async (urls, outputInfo = {}) => {
         if (!urls.length) {

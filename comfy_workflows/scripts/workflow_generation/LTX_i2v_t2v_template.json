@@ -19,18 +19,6 @@
       "title": "VAELoader KJ"
     }
   },
-  "3": {
-    "inputs": {
-      "clip_name1": "gemma-3-12b-it-heretic-fp8-comfy.safetensors",
-      "clip_name2": "ltx-2.3_text_projection_bf16.safetensors",
-      "type": "ltxv",
-      "device": "default"
-    },
-    "class_type": "DualCLIPLoader",
-    "_meta": {
-      "title": "DualCLIPLoader"
-    }
-  },
   "4": {
     "inputs": {
       "unet_name": "ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",
@@ -562,7 +550,7 @@
   },
   "77": {
     "inputs": {
-      "int": 63
+      "int": 64
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1069,7 +1057,7 @@
   "197": {
     "inputs": {
       "audio": "p_15587601_88.mp3",
-      "audioUI": "/api/view?filename=p_15587601_88.mp3&type=input&subfolder=&rand=0.7571481692853372"
+      "audioUI": "/api/view?filename=p_15587601_88.mp3&type=input&subfolder=&rand=0.4109252823220618"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -1350,7 +1338,7 @@
         0
       ],
       "clip": [
-        "3",
+        "370",
         0
       ]
     },
@@ -1942,6 +1930,17 @@
       "title": "Unet Loader (GGUF)"
     }
   },
+  "365": {
+    "inputs": {
+      "clip_name1": "google_gemma-3-12b-it-Q4_K_M.gguf",
+      "clip_name2": "ltx-2.3_text_projection_bf16.safetensors",
+      "type": "ltxv"
+    },
+    "class_type": "DualCLIPLoaderGGUF",
+    "_meta": {
+      "title": "DualCLIPLoader (GGUF)"
+    }
+  },
   "366": {
     "inputs": {
       "preview_rate": 8,
@@ -1973,6 +1972,18 @@
     "class_type": "MpiReroute",
     "_meta": {
       "title": "Model_Connect"
+    }
+  },
+  "370": {
+    "inputs": {
+      "any": [
+        "365",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "CLip"
     }
   }
 }
