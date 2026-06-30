@@ -1,0 +1,86 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "837dd9aa-047c-45e4-a167-41e8de6203b9",
+  "generated_at": "2026-06-30T02:05:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "LTX-2.3 GGUF: ship the bf16/GGUF transformer split + R2 re-host + node-deps self-heal — then hit a half-wired-split blocker",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Wire LTX-2.3's Q8 GGUF transformer into the app, A/B it against bf16 on a Pod, ship the bf16-local/GGUF-Pod split, re-host the GGUF off HF-direct to R2.",
+    "status": "mostly shipped; one BLOCKING follow-up (MPI-163) found at the very end",
+    "summary": "SHIPPED + committed: the bf16-local/GGUF-Pod transformer split (workflows 4->8, app _gguf per-gen swap, dep split + engine filter, 10/10 tests), the Q8 GGUF re-hosted to R2 (verified), the custom-node pip-deps self-heal (install-time MPI-161 + boot-time start.sh scan), wrapper 0.2.22 republished to R2. BLOCKER found live on a fresh GGUF-only Pod volume: the split is HALF-WIRED — engine filtering works for DOWNLOAD but the STATUS GATE (isModelUsable/isOperationInstalled) still expects the bf16 dep, so on a Pod (bf16 legitimately absent) the model reads installed on the Models page but the PROMPT BOX is hidden + generation blocked. MPI-163 is the fix (engine-aware dep resolution). The next session's PRIMARY task is MPI-163. Also queued: MPI-162 (the real speed lever — shrink Gemma encoder via GGUF Q4/Q5)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Pod GPU A/B DECIDED: GGUF Q8 wins on Pod (cold ~4:29 once/boot, then 22-25s warm across model jumps; 15180MB Staged vs bf16 40050MB). Logged in docs/builder/research/quant-and-coldstart-investigation.md (LIVE POD RESULTS block).",
+      "RAM-FLOOR found: GGUF warm-win needs ~90GB system RAM; 60GB Pod thrashes (warm degrades to 2:14-8:13). Working set ~40-45GB (15GB Q8 transformer + 14.5GB fp8 Gemma + VAEs) at quality floor. -> MPI-160.",
+      "generate_ltx.py fans 4->8 (bf16 + _gguf via Input_Use_GGUF gate); 8 workflows regenerated + booleans verified.",
+      "App _gguf workflow swap: ggufWhenRemote flag + commandExecutor _toGgufFilename, per-gen (forceLocal-keyed, dual-engine safe). Self-check PASS.",
+      "Dep split: ltx23-transformer -> -bf16 (engine:'local') + -gguf (engine:'remote'); filterDepsByEngine at 4 boundaries (download/start, Pod install, syncModelInstalled payload, _install). 10/10 resolver tests pass.",
+      "Q8 GGUF (Unsloth 22.8GB) re-hosted HF->R2 (models.cubric.studio/vision/ltx-2.3/unet/...gguf), verified size-match + 200 OK; dep URL flipped HF->R2.",
+      "Custom-node pip-deps self-heal: MPI-161 install-time (downloadManager requirements outside !alreadyExtracted guard; remote requirements_only flag -> wrapper _run_node_requirements_only pip-only branch). COMMITTED 981068d + wrapper 0.2.22.",
+      "Boot-time fix (start.sh): scan volume custom_nodes + pip install requirements.txt every boot (per-container fix — pip deps don't ride the volume). COMMITTED mpi-ci 09c1e5d. NOT yet republished to R2.",
+      "wrapper 0.2.22 republished to R2 stable (verified manifest sha == committed); fresh Pod auto-fetches it (confirmed in boot log).",
+      "Unsloth locked over QuantStack (QuantStack not on box); bf16 template backup deleted.",
+      "Cards: MPI-160 (RAM-tier/wait-for-high-RAM), MPI-161 (self-heal, DONE), MPI-162 (Gemma shrink), MPI-163 (engine-aware deps, the blocker)."
+    ],
+    "pending": [
+      "MPI-163 (PRIMARY, BLOCKING): engine-aware dependency resolution — the half-wired-split fix (see next_action).",
+      "Republish start.sh to R2 (mpi-ci 09c1e5d committed but NOT published): bash cubric-vision-pod/publish-runtime.sh stable + restart-comfy/fresh-boot. The boot-scan node-deps fix is live ONLY after this.",
+      "MPI-162 (the real speed lever): A/B GGUF Gemma Q4_K_M(7.3GB)+Q5_K_M(8.44GB) + abliterated LoRA vs the 14.5GB fp8 heretic. Builder-Pod task. bartowski URLs in the card. LoRA = ship-it hedge, NOT a test gate.",
+      "Live-verify the node self-heal (MPI-161) once a Pod has a deps-missing node + an install request fires.",
+      "CPU-Pod download retest of the GGUF from the new R2 url (fresh-install path)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-163",
+    "title": "Engine-aware dependency resolution (localDeps/remoteDeps) — fix the half-wired engine split",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-163/",
+    "links": { "plan": null, "checklist": null, "validation": null, "handoffs": ".agents/mpi-kanban/tasks/MPI-163/handoffs/" }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement"],
+  "next_action": {
+    "description": "PRIMARY = MPI-163 (read the card in full — it has the agreed design + every file). THE BUG: the bf16-local/GGUF-Pod split (MPI-157) is HALF-WIRED. The per-dep `engine` tag + filterDepsByEngine correctly filter the DOWNLOAD path (bf16 NOT downloaded to a Pod) but NOT the STATUS GATE. isModelUsable/isOperationInstalled (js/data/modelRegistry.js ~246-282) resolve resolveFullUniverse(model) = ALL deps (incl ltx23-transformer-bf16), which is engine-AGNOSTIC by design. On a fresh GGUF-only Pod volume bf16 is legitimately absent -> the gate sees a missing dep -> model 'not fully usable' -> PROMPT BOX HIDDEN + gen blocked, EVEN THOUGH the Models page shows INSTALLED. It worked before ONLY because the old (pre-split) volume had BOTH transformers. So a correctly-split fresh install is BROKEN. THE FIX (user's design, agreed — the scalable-foundation version, replacing the scattered per-dep tag): model declares dependencies:[...shared...] + localDeps:[bf16] + remoteDeps:[gguf-transformer, ComfyUI-GGUF node]; shared listed once; DROP the per-DEPS `engine` field; add an `engine` param to resolveDeps/resolveFullUniverse so EVERY consumer (download, Pod install, STATUS GATE, badge, prompt box) derives the engine-correct set at the RESOLUTION layer — impossible to half-wire. Shared-dep PROTECTION keeps an all-engines union (a dep another model/engine needs must not be deleted). This also: moves the ComfyUI-GGUF node to remoteDeps (it currently installs LOCALLY for nothing — no engine tag), and replaces the GGUF-named ggufWhenRemote bool + _toGgufFilename with a generic workflows.local/workflows.remote map. VERIFY on a fresh GGUF-only Pod: LTX installed AND prompt box shows AND gen runs; local (bf16) same; shared-dep protection intact; resolver tests pass. INTERIM (if you need a working Pod before MPI-163): install BOTH transformers on the volume, or temporarily point the model at a single shared transformer dep. SECONDARY after MPI-163: republish start.sh to R2 (mpi-ci 09c1e5d) so the boot-scan node-deps fix goes live. THEN MPI-162 (Gemma shrink speed lever).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "GGUF wins on Pod (decided, live A/B). bf16 stays local (faster per-step at high res; 94s vs 160s at 704x1280). HARD engine rule, NOT a user choice.",
+      "The per-dep `engine` tag is the WRONG primitive (user) — forces every consumer to remember to filter; missing the status gate caused this bug. Replace with per-model localDeps/remoteDeps so the resolver makes the engine-correct set the default (MPI-163).",
+      "GGUF node deps are PER-CONTAINER (pip site-packages), NOT per-volume — so they desync on every fresh Pod. Fixed at boot via start.sh scan (per-container) + install-time self-heal (MPI-161). The image bake was REJECTED (model-specific node shouldn't be engine-resident).",
+      "Gemma (14.5GB) = half the working set + the real speed lever. The heretic specialization is a LoRA in the official workflow, not baked -> any stock GGUF Gemma + the abliterated LoRA works. fp4-hurts note is a contradicted one-liner (official ships fp4). MPI-162.",
+      "RunPod RAM is a live availability signal (same-price configs vary); wait-for-high-RAM via the existing auto-retry toggle (MPI-160).",
+      "aimdo is the mechanism but RunPod's 8MB RLIMIT_MEMLOCK is the root cause (pin fails -> disk re-stage pageable). GGUF dodges it (ModelPatcher, not ModelPatcherDynamic). Downgrade below 0.24 to kill aimdo = DEAD (aimdo also makes the 40GB model fit; disabling OOM-kills, proven twice). GGUF-only would simplify but local high-res pays ~70% — kept the split."
+    ],
+    "constraints": [
+      "Shared git tree — commit by explicit pathspec, never git add . / -A. Push is user-only.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci). start.sh + wrapper.py are R2-fetched at boot -> publish-runtime.sh, no image rebuild. NEVER autonomous Pod create/delete.",
+      "Caveman+ponytail output modes active (terse prose, minimal solutions) — cosmetic.",
+      "CURRENT STATE: a fresh GGUF-only Pod volume is BROKEN (no prompt box) until MPI-163. The shipped split is download-correct, gate-incorrect."
+    ],
+    "files_modified": [
+      "COMMITTED 443a25f (GGUF split): comfy_workflows/LTX_*.json (8) + LTX_i2v_t2v_template.json + generate_ltx.py + dev_configs/node_lock.json + routes/yamlHelper.js + routes/downloadManager.js + js/data/modelConstants/{dependencies,models}.js + js/data/modelConstants/resolveModelDeps.js + js/data/modelRegistry.js + js/services/commandExecutor.js + MpiModelManager.js + tests/resolve-model-deps.test.cjs + docs",
+      "COMMITTED 981068d (node self-heal): routes/downloadManager.js + routes/remoteModels.js",
+      "COMMITTED kanban: 4eb56be, 981a803, 98d14c6 (+ MPI-163 card uncommitted in this handoff)",
+      "mpi-ci COMMITTED 0544b30 (wrapper 0.2.22, PUBLISHED to R2) + 09c1e5d (start.sh boot-scan, NOT yet published)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-163/task.json (the fix design + every file)",
+      "js/data/modelRegistry.js (isModelUsable ~246, isOperationInstalled ~271, syncModelInstalled ~82 — the gate + the filter)",
+      "js/data/modelConstants/resolveModelDeps.js (resolveDeps/resolveFullUniverse/deriveInstalledOps/filterDepsByEngine)",
+      "js/data/modelConstants/models.js (ltx-23 entry: dependencies[] + ggufWhenRemote)",
+      ".agents/mpi-kanban/tasks/MPI-162/task.json (the Gemma speed lever, next after 163)"
+    ]
+  },
+  "project_knowledge": { "profile": null, "knowledge_index": null, "mode": null, "relevant_topics": ["comfy_engine", "downloads", "runpod-remote-engine", "ltx-2.3"] },
+  "rules_active": [".claude/rules/comfy_engine.md", ".claude/rules/downloads.md", "docs/builder/README.md"],
+  "recent_events": [ { "at": "2026-06-30T02:05:00Z", "event": "handoff_created" } ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/837dd9aa-047c-45e4-a167-41e8de6203b9.json and use mpi-continue. We shipped the LTX-2.3 bf16-local/GGUF-Pod transformer split (branch RunPod) + re-hosted the Q8 GGUF to R2 + a custom-node pip-deps self-heal (install-time + boot-time) + wrapper 0.2.22 (published). But at the very end we found the split is HALF-WIRED: the engine filter works for DOWNLOAD but NOT the STATUS GATE, so on a fresh GGUF-only Pod volume the model reads installed yet the PROMPT BOX is hidden + gen blocked (bf16 is legitimately absent on a Pod, but isModelUsable/isOperationInstalled still expect it via the engine-agnostic resolveFullUniverse). PRIMARY TASK = MPI-163: replace the scattered per-dep `engine` tag with per-model dependencies+localDeps+remoteDeps and an engine-param on the resolver, so every consumer (download, status gate, badge, prompt box) derives the engine-correct set at the resolution layer (impossible to half-wire). Also moves the ComfyUI-GGUF node to remoteDeps (it installs locally for nothing) and replaces the ggufWhenRemote bool with workflows.local/remote. Read the MPI-163 card for the full design + files. Then republish start.sh to R2 (mpi-ci 09c1e5d, for the boot-scan node-deps fix), then MPI-162 (shrink the 14.5GB Gemma encoder via GGUF Q4/Q5 — the real LTX speed lever). Shared git tree: explicit pathspec only, no git add ., push is user-only; mpi-ci is a separate repo via git -C."
+}
