@@ -169,20 +169,20 @@ export const DEPS = {
     // them to MPI HF is a post-release follow-up card. sha256 = null until
     // mpic-compute-dep-hashes is run.
     // bf16-local / GGUF-Pod TRANSFORMER SPLIT (2026-06-29, live Pod A/B proven).
-    // The transformer is the ONLY dep that differs by engine; everything else
-    // (VAE, CLIP, LoRAs, nodes) is shared (no `engine` tag → installs everywhere).
+    // The transformer is the ONLY weight that differs by engine; everything else
+    // (VAE, CLIP, LoRAs, nodes) is shared.
     //  - LOCAL gets bf16 (best per-step speed at high res; no aimdo cold tax locally).
     //  - POD/REMOTE gets Q8_0 GGUF (sidesteps the ~5-min aimdo cold tax — the whole
     //    point; loads via city96 `UnetLoaderGGUF` from the `unet/` folder, NOT
-    //    diffusion_models/). The `engine` tag drives the download filter: the local
-    //    downloader drops `engine:'remote'` deps, the Pod installer drops
-    //    `engine:'local'` deps. Both ids live in the model's `dependencies[]`; the
-    //    install-status check filters by engine too so a Pod isn't marked
-    //    "not installed" just because the bf16 file is absent (and vice-versa).
+    //    diffusion_models/).
+    // Which engine gets which is declared STRUCTURALLY on the model (MPI-163):
+    // models.js lists bf16 in `localDeps`, the GGUF (+ the ComfyUI-GGUF node that
+    // loads it) in `remoteDeps`. The resolver adds the engine-correct list at
+    // resolution time, so download + status gate + prompt box all derive the right
+    // set automatically — no per-dep `engine` tag for any consumer to forget.
     'ltx23-transformer-bf16': {
         id: 'ltx23-transformer-bf16',
         name: 'LTX-2.3 22B Distilled Transformer (bf16, local)',
-        engine: 'local',
         origin: 'Kijai/LTX2.3_comfy',
         filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/ltx-2.3/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
@@ -197,7 +197,6 @@ export const DEPS = {
     'ltx23-transformer-gguf': {
         id: 'ltx23-transformer-gguf',
         name: 'LTX-2.3 22B Distilled Transformer (Q8_0 GGUF, Pod)',
-        engine: 'remote',
         origin: 'unsloth/LTX-2.3-GGUF',
         filename: 'unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
         url: 'https://models.cubric.studio/vision/ltx-2.3/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',

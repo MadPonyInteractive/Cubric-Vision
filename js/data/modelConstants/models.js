@@ -231,9 +231,12 @@ export const MODELS = [
         // weights, split it into operations{} then and a toggle appears.
         // First model with non-merged baked LoRAs (transition/soft/talkvid) shipped
         // as deps, NOT user slots — see [[project-ltx-transition-lora-enables-lipsync]].
+        //
+        // ENGINE SPLIT (MPI-163): shared deps in `dependencies`; engine-only weights
+        // in `localDeps` / `remoteDeps`. The resolver adds the engine-correct list at
+        // resolution time, so EVERY consumer (download, status gate, prompt box)
+        // derives the right set — no per-dep `engine` tag to forget to filter.
         dependencies: [
-            'ltx23-transformer-bf16',   // engine:'local'  — downloaded locally only
-            'ltx23-transformer-gguf',   // engine:'remote' — downloaded on Pod only
             'ltx23-video-vae',
             'ltx23-audio-vae',
             'ltx23-text-projection',
@@ -245,7 +248,12 @@ export const MODELS = [
             'ComfyUI-LTXVideo',
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
-            'ComfyUI-GGUF',
         ],
+        // Local engine only: the bf16 transformer (faster per-step at high res).
+        localDeps: ['ltx23-transformer-bf16'],
+        // Pod engine only: the Q8 GGUF transformer (sidesteps the aimdo cold tax)
+        // AND the ComfyUI-GGUF custom node that loads it. The node is Pod-only — it
+        // previously installed locally for nothing (it has no local use). (MPI-163)
+        remoteDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'],
     },
 ];

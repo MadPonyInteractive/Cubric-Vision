@@ -52,6 +52,21 @@ async function _extractZipArchive(zipPath, extractDir) {
 
 const ENGINE_ROOT = getEngineRoot();
 
+// ── Engine-aware dep filter (server-side defense) ─────────────────────────────
+// The renderer resolves a model's deps for the target engine before POSTing, but
+// a stale client / direct API call could send the wrong set. Re-resolve the
+// model's engine-correct universe and keep only incoming deps whose id is in it.
+// Unknown model (universal/no entry) → pass dependencies through unchanged. (MPI-163)
+function _filterDepsForEngine(modelId, dependencies, engine) {
+    if (!Array.isArray(dependencies)) return [];
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const model = MODELS.find(m => m.id === modelId);
+    if (!model) return dependencies;
+    const allowed = new Set(resolveFullUniverse(model, null, engine));
+    return dependencies.filter(d => d && allowed.has(d.id));
+}
+
 // ── Shared-dep helper ─────────────────────────────────────────────────────────
 
 function _findOtherModelsUsingDep(depId, excludeModelId) {
@@ -599,12 +614,11 @@ router.post('/comfy/models/download/start', async (req, res) => {
         return _startRemoteDownload(modelId, dependencies, res);
     }
 
-    // LOCAL path: drop any `engine:'remote'` deps (e.g. the Pod-only GGUF
-    // transformer) so the local box never downloads weights it can't use. The
-    // frontend already filters, but a stale client / direct API call could send
-    // both — filter server-side too. Untagged (shared) deps pass through.
-    const { filterDepsByEngine } = _require('../js/data/modelConstants/resolveModelDeps.js');
-    const localDeps = filterDepsByEngine(dependencies, false);
+    // LOCAL path: keep only deps the LOCAL engine installs (drop the Pod-only GGUF
+    // transformer + node). The renderer already resolves per-engine, but a stale
+    // client / direct API call could send the remote set — defend server-side by
+    // intersecting against the model's local-engine universe. (MPI-163)
+    const localDeps = _filterDepsForEngine(modelId, dependencies, 'local');
 
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {
@@ -1054,11 +1068,11 @@ function _onRemoteInstallEvent(evt) {
 }
 
 async function _startRemoteDownload(modelId, dependencies, res) {
-    // REMOTE path: drop any `engine:'local'` deps (e.g. the 41GB bf16 transformer
-    // that only the local engine uses) so the Pod volume never installs weights it
-    // can't use. Untagged (shared) deps pass through. (bf16-local / GGUF-Pod split)
-    const { filterDepsByEngine } = _require('../js/data/modelConstants/resolveModelDeps.js');
-    dependencies = filterDepsByEngine(dependencies, true);
+    // REMOTE path: keep only deps the POD engine installs (drop the 41GB bf16
+    // transformer the local engine uses). Renderer already resolves per-engine;
+    // defend server-side by intersecting against the model's remote universe.
+    // (MPI-163 — engine-aware resolution, replaces the old per-dep-tag post-filter)
+    dependencies = _filterDepsForEngine(modelId, dependencies, 'remote');
 
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {

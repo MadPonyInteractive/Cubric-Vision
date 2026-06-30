@@ -39,24 +39,35 @@ export function canonicalModelId(id) {
 }
 
 /**
- * Engine-filter a list of dep OBJECTS for the engine a download/status request
- * targets. A dep may carry `engine: 'local' | 'remote'` to mean "only this
- * engine needs this file" (e.g. LTX-2.3 ships a bf16 transformer for local and a
- * Q8 GGUF transformer for the Pod). Untagged deps are shared → kept for both.
+ * Engine-specific dep ids a model adds for one engine (MPI-163). A model declares
+ * its engine-split weights STRUCTURALLY, not via a per-dep `engine` tag:
  *
- * Drop the OTHER engine's deps: local runs drop `engine:'remote'`, remote runs
- * drop `engine:'local'`. This is applied ONLY at download + install-status
- * boundaries — NOT inside resolveDeps/resolveFullUniverse (those stay
- * engine-agnostic so shared-dep protection still sees the complete universe).
+ *   dependencies: [...shared...]   // both engines (VAE, encoder, LoRAs, nodes)
+ *   localDeps:    ['ltx23-transformer-bf16']         // local-only additions
+ *   remoteDeps:   ['ltx23-transformer-gguf', 'ComfyUI-GGUF'] // Pod-only additions
  *
- * @param {Array<{engine?: string}>} deps - dep objects (must carry `.engine` when tagged)
- * @param {boolean} isRemote - true when the request targets a Pod/remote engine
- * @returns {Array} deps with the wrong-engine entries removed (input order preserved)
+ * `engine` selects which list to add:
+ *   'local'  → localDeps
+ *   'remote' → remoteDeps
+ *   null/undefined → BOTH (the all-engines union — shared-dep protection MUST see
+ *                    the complete universe so a weight another engine needs is
+ *                    never deleted).
+ *
+ * Carrying engine in the model structure (not on the dep) makes the engine-correct
+ * set the DEFAULT at the resolution layer, so no consumer can half-wire it — the
+ * bug MPI-163 fixes (the status gate forgot to engine-filter the per-dep tag).
+ *
+ * @param {object} model
+ * @param {'local'|'remote'|null} [engine]
+ * @returns {string[]}
  */
-export function filterDepsByEngine(deps, isRemote) {
-    if (!Array.isArray(deps)) return [];
-    const drop = isRemote ? 'local' : 'remote';
-    return deps.filter(d => !d || d.engine == null || d.engine !== drop);
+function engineDepsOf(model, engine = null) {
+    if (!model) return [];
+    const local = Array.isArray(model.localDeps) ? model.localDeps : [];
+    const remote = Array.isArray(model.remoteDeps) ? model.remoteDeps : [];
+    if (engine === 'local') return local;
+    if (engine === 'remote') return remote;
+    return [...local, ...remote]; // union for shared-dep protection
 }
 
 /**
@@ -189,17 +200,32 @@ export function dedupeStable(ids) {
  * Throws if any resolved dep id fails `depExists` — a registry authoring error
  * that must fail deterministically rather than silently dropping a required file.
  *
+ * The `engine` param (MPI-163) selects the engine-split weights: 'local' adds
+ * `localDeps`, 'remote' adds `remoteDeps`, null/undefined adds BOTH (the union —
+ * what shared-dep protection needs). Every consumer passes its engine and gets the
+ * engine-correct set at the resolution layer, so no consumer can half-wire it.
+ *
  * @param {object} model
  * @param {string[]|null} [selectedOps] - null/undefined = all selectable ops.
  * @param {(depId:string)=>boolean} [depExists] - optional validator (e.g. id => !!DEPS[id]).
+ * @param {'local'|'remote'|null} [engine] - null = union of both engine sets.
  * @returns {string[]} stable, deduplicated dep ids.
  */
-export function resolveDeps(model, selectedOps = null, depExists = null) {
+export function resolveDeps(model, selectedOps = null, depExists = null, engine = null) {
     if (!model) return [];
     const common = commonOf(model);
+    const engineDeps = engineDepsOf(model, engine);
 
     if (!hasOperationGroups(model)) {
-        return dedupeStable(common);
+        const flat = dedupeStable([...common, ...engineDeps]);
+        if (depExists) {
+            for (const id of flat) {
+                if (!depExists(id)) {
+                    throw new Error(`resolveDeps: model "${model.id}" references unknown dep "${id}"`);
+                }
+            }
+        }
+        return flat;
     }
 
     // Iterate in registry (selectableOps) order, not the caller's selection order,
@@ -216,6 +242,7 @@ export function resolveDeps(model, selectedOps = null, depExists = null) {
     for (const op of wanted) {
         ids.push(...opDeps(model, op));
     }
+    ids.push(...engineDeps);
 
     if (depExists) {
         for (const id of ids) {
@@ -228,15 +255,21 @@ export function resolveDeps(model, selectedOps = null, depExists = null) {
 }
 
 /**
- * The complete dependency universe for a model: common + every selectable op.
- * This is what whole-model uninstall and install-status checks must resolve so
- * no operation payload is orphaned regardless of what the user selected.
+ * The complete dependency universe for a model: common + every selectable op +
+ * the engine-split weights. This is what whole-model uninstall and install-status
+ * checks must resolve so no operation payload is orphaned regardless of selection.
+ *
+ * `engine` (MPI-163): 'local'/'remote' resolves the engine-correct universe (what
+ * the status gate / download / install must use); null = the all-engines UNION,
+ * which is what cross-model shared-dep PROTECTION needs (never delete a weight
+ * another engine still needs).
  * @param {object} model
  * @param {(depId:string)=>boolean} [depExists]
+ * @param {'local'|'remote'|null} [engine] - null = union of both engine sets.
  * @returns {string[]}
  */
-export function resolveFullUniverse(model, depExists = null) {
-    return resolveDeps(model, hasOperationGroups(model) ? selectableOps(model) : null, depExists);
+export function resolveFullUniverse(model, depExists = null, engine = null) {
+    return resolveDeps(model, hasOperationGroups(model) ? selectableOps(model) : null, depExists, engine);
 }
 
 /**
@@ -249,15 +282,26 @@ export function resolveFullUniverse(model, depExists = null) {
  * A selectable model is `fullyInstalled` when common deps + at least one operation
  * are complete. Omitted operations are NOT partial failures.
  *
+ * `engine` (MPI-163): the engine-split weights (localDeps/remoteDeps) count toward
+ * "common complete" for the CURRENT engine only. Without this the status gate
+ * either ignored the transformer (now that it lives in localDeps/remoteDeps) or
+ * demanded the WRONG engine's transformer — the bug: on a Pod the gate required
+ * the bf16 weight that is legitimately absent, so the prompt box never showed.
+ * Pass the engine the status came from (remote on a Pod, local otherwise).
+ *
  * @param {object} model
  * @param {(depId:string)=>boolean} depStatus
+ * @param {'local'|'remote'|null} [engine] - engine whose split weights to require.
  * @returns {{ installedOps: string[], fullyInstalled: boolean }}
  */
-export function deriveInstalledOps(model, depStatus) {
+export function deriveInstalledOps(model, depStatus, engine = null) {
     if (!model) return { installedOps: [], fullyInstalled: false };
     const allComplete = ids => ids.every(id => depStatus(id) === true);
 
-    const commonComplete = allComplete(commonOf(model));
+    // Engine-split weights for THIS engine are part of the always-required set:
+    // a flat LTX is only usable when its current-engine transformer is on disk.
+    const commonComplete = allComplete(commonOf(model))
+        && allComplete(engineDepsOf(model, engine));
 
     if (!hasOperationGroups(model)) {
         return {

@@ -8,7 +8,7 @@ import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../da
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import {
     resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
-    expandRequiredOps, dependentsOfOp, filterDepsByEngine,
+    expandRequiredOps, dependentsOfOp,
 } from '../../../../data/modelConstants/resolveModelDeps.js';
 import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
@@ -159,8 +159,13 @@ export const MpiModelManager = ComponentFactory.create({
         function _installedOpsOf(model) {
             const depStatus = getModelDepStatus(model.id);
             if (!depStatus) return [];
+            // Engine-correct: a model with engine-split weights (LTX bf16/GGUF) is
+            // installed when the CURRENT engine's transformer is on disk, not the
+            // other engine's. Pass the engine so a Pod doesn't read "not installed"
+            // because the local bf16 is absent (and vice-versa). (MPI-163)
+            const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
             const { installedOps } = deriveInstalledOps(
-                model, id => _depIsInstalled(depStatus.get(id)),
+                model, id => _depIsInstalled(depStatus.get(id)), engine,
             );
             return installedOps;
         }
@@ -212,14 +217,14 @@ export const MpiModelManager = ComponentFactory.create({
 
         // ── Install / Update / Uninstall actions ─────────────────────────────
         async function _install(model) {
-            // Engine-filter: only download deps the target engine needs. A model
-            // with engine-split weights (LTX-2.3 bf16-local / GGUF-remote) would
-            // otherwise fetch BOTH transformers — 41GB of dead weight on whichever
-            // engine doesn't use it. Untagged (shared) deps install on both.
-            const dependencies = filterDepsByEngine(
-                _draftDepIds(model).map(id => DEPS[id]).filter(Boolean),
-                remoteEngineClient.isRemote(),
-            );
+            // Resolve for the TARGET engine: a model with engine-split weights
+            // (LTX-2.3 bf16-local / GGUF-remote) installs only the current engine's
+            // transformer + nodes, never both (41GB of dead weight otherwise). The
+            // resolver adds localDeps/remoteDeps by engine; shared deps always in.
+            // (MPI-163 — engine-aware resolution, replaces the old post-filter)
+            const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+            const dependencies = resolveDeps(model, _draftFor(model), null, engine)
+                .map(id => DEPS[id]).filter(Boolean);
             if (!dependencies.length) return;
             await downloadService.start(model.id, dependencies);
             renderList();

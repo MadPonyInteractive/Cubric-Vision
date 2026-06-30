@@ -18,7 +18,7 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
-import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps, filterDepsByEngine } from './modelConstants/resolveModelDeps.js';
+import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps } from './modelConstants/resolveModelDeps.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
@@ -85,18 +85,18 @@ export async function syncModelInstalled() {
         // Resolve the FULL dep universe (commonDeps + every selectable op) so the
         // server stats the complete set and partial state is computed against
         // everything — flat models resolve to their plain dependency list.
-        // Engine-filter so the status check only stats deps the CURRENT engine
-        // actually installs. Without this, a model with engine-split weights (e.g.
-        // LTX-2.3 bf16-local / GGUF-remote) shows a false "not installed" because
-        // the other engine's transformer file is legitimately absent. Shared
-        // (untagged) deps are kept for both. (bf16-local / GGUF-Pod split)
-        const isRemote = remoteEngineClient.isRemote();
+        // Resolve for the CURRENT engine so the status check only stats deps the
+        // engine actually installs. Without this, a model with engine-split weights
+        // (e.g. LTX-2.3 bf16-local / GGUF-remote) shows a false "not installed"
+        // because the other engine's transformer file is legitimately absent. The
+        // resolver adds localDeps/remoteDeps by engine; shared deps are always in.
+        // (MPI-163 — engine-aware resolution, replaces the old post-filter)
+        const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
         const modelPayload = MODELS.map(model => ({
             id: model.id,
-            deps: filterDepsByEngine(
-                resolveFullUniverse(model).map(depId => DEPS[depId]).filter(Boolean),
-                isRemote,
-            ).map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
+            deps: resolveFullUniverse(model, null, engine)
+                .map(depId => DEPS[depId]).filter(Boolean)
+                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
         const res = await fetch('/comfy/models/check', {
@@ -244,14 +244,20 @@ export function getModelDepStatus(modelId) {
 export function isModelUsable(modelOrId) {
     const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
     if (!model) return false;
-    if (!hasOperationGroups(model)) return model.installed !== false;
+    // Flat models: the engine-split weights (localDeps/remoteDeps) make the bare
+    // server `installed` flag (all-deps-present, engine-agnostic) wrong on a Pod —
+    // so flat models with engine deps ALSO go through deriveInstalledOps below.
+    // Plain flat models (no engine deps) keep the cheap `installed` path. (MPI-163)
+    const hasEngineDeps = (model.localDeps?.length || model.remoteDeps?.length);
+    if (!hasOperationGroups(model) && !hasEngineDeps) return model.installed !== false;
     const depStatus = getModelDepStatus(model.id);
     if (!depStatus) return model.installed === true; // no cache yet → trust server flag
     const isOn = id => {
         const s = depStatus.get(id);
         return s === true || s?.installed === true;
     };
-    return deriveInstalledOps(model, isOn).fullyInstalled;
+    const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+    return deriveInstalledOps(model, isOn, engine).fullyInstalled;
 }
 
 /**
@@ -278,5 +284,6 @@ export function isOperationInstalled(modelOrId, op) {
         const s = depStatus.get(id);
         return s === true || s?.installed === true;
     };
-    return deriveInstalledOps(model, isOn).installedOps.includes(op);
+    const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+    return deriveInstalledOps(model, isOn, engine).installedOps.includes(op);
 }

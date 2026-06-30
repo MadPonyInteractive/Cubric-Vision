@@ -16,7 +16,6 @@ const {
     deriveInstalledOps,
     expandRequiredOps,
     dependentsOfOp,
-    filterDepsByEngine,
 } = require('../js/data/modelConstants/resolveModelDeps.js');
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -55,6 +54,16 @@ const REQ = {
         i2v_ms: { deps: ['i2v-w'] },
         extend: { deps: ['extend-w'], requiresOps: ['i2v_ms'] },
     },
+};
+
+// Flat model with engine-split weights (MPI-163): shared deps + localDeps/remoteDeps.
+// Mirrors LTX-2.3: bf16 transformer local-only, GGUF transformer + GGUF node Pod-only.
+const SPLIT = {
+    id: 'ltx-like',
+    supportedOps: ['t2v_ms', 'i2v_ms'],
+    dependencies: ['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo'],
+    localDeps: ['tx-bf16'],
+    remoteDeps: ['tx-gguf', 'ComfyUI-GGUF'],
 };
 
 // depStatus helper: a Set of installed dep ids → predicate.
@@ -219,36 +228,59 @@ function testRequiresOps() {
         'extend installed once i2v + own deps present');
 }
 
-// filterDepsByEngine: engine-split deps go to the right engine; untagged shared.
-function testEngineFilter() {
-    const deps = [
-        { id: 'shared-vae' },                      // untagged → both
-        { id: 'tx-bf16', engine: 'local' },
-        { id: 'tx-gguf', engine: 'remote' },
-    ];
-    const local = filterDepsByEngine(deps, false).map(d => d.id);
-    const remote = filterDepsByEngine(deps, true).map(d => d.id);
-    assert.deepStrictEqual(local, ['shared-vae', 'tx-bf16'], 'local keeps untagged + local');
-    assert.deepStrictEqual(remote, ['shared-vae', 'tx-gguf'], 'remote keeps untagged + remote');
-    // Order preserved; non-array → []; null entries survive (treated as shared).
-    assert.deepStrictEqual(filterDepsByEngine(null, false), []);
-    assert.deepStrictEqual(filterDepsByEngine([null, { engine: 'local' }], true), [null]);
+// Engine-aware resolution (MPI-163): localDeps/remoteDeps add to the engine-correct
+// set at resolution time; null engine = the union (shared-dep protection).
+function testEngineResolution() {
+    // Resolver adds the right engine's weights; shared deps always present.
+    assert.deepStrictEqual(
+        resolveDeps(SPLIT, null, null, 'local'),
+        ['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo', 'tx-bf16'],
+        'local = shared + localDeps, no remote weights');
+    assert.deepStrictEqual(
+        resolveDeps(SPLIT, null, null, 'remote'),
+        ['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo', 'tx-gguf', 'ComfyUI-GGUF'],
+        'remote = shared + remoteDeps (incl the Pod-only GGUF node), no bf16');
+    // null engine = union (what cross-model shared-dep protection sees).
+    assert.deepStrictEqual(
+        resolveFullUniverse(SPLIT).sort(),
+        ['ComfyUI-GGUF', 'ComfyUI-LTXVideo', 'shared-clip', 'shared-vae', 'tx-bf16', 'tx-gguf'].sort(),
+        'null engine unions both engine sets');
+    // A local install must never pull the remote weights and vice-versa.
+    assert.ok(!resolveDeps(SPLIT, null, null, 'local').includes('tx-gguf'),
+        'local install must not include the GGUF transformer');
+    assert.ok(!resolveDeps(SPLIT, null, null, 'local').includes('ComfyUI-GGUF'),
+        'local install must not include the Pod-only GGUF node');
+    assert.ok(!resolveDeps(SPLIT, null, null, 'remote').includes('tx-bf16'),
+        'remote install must not include the bf16 transformer');
 
-    // Real registry: LTX-2.3 ships exactly one local + one remote transformer,
-    // and each engine resolves to exactly one of them.
+    // deriveInstalledOps is engine-correct: a Pod with only the GGUF transformer
+    // reads INSTALLED (the bug — it used to demand the absent bf16); a local box
+    // with only bf16 reads installed; the WRONG engine's weight does NOT satisfy.
+    const podStatus = statusFrom(new Set(['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo', 'tx-gguf', 'ComfyUI-GGUF']));
+    const localStatus = statusFrom(new Set(['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo', 'tx-bf16']));
+    assert.strictEqual(deriveInstalledOps(SPLIT, podStatus, 'remote').fullyInstalled, true,
+        'Pod with GGUF transformer present is fully installed (the MPI-163 fix)');
+    assert.strictEqual(deriveInstalledOps(SPLIT, localStatus, 'local').fullyInstalled, true,
+        'local with bf16 present is fully installed');
+    assert.strictEqual(deriveInstalledOps(SPLIT, podStatus, 'local').fullyInstalled, false,
+        'GGUF-only volume is NOT a usable LOCAL install (bf16 absent)');
+    assert.strictEqual(deriveInstalledOps(SPLIT, localStatus, 'remote').fullyInstalled, false,
+        'bf16-only volume is NOT a usable REMOTE install (GGUF absent)');
+
+    // Real registry: LTX-2.3 ships exactly one local + one remote transformer.
     const { MODELS } = require('../js/data/modelConstants/models.js');
-    const { DEPS } = require('../js/data/modelConstants/dependencies.js');
     const ltx = MODELS.find(m => m.id && m.id.startsWith('ltx'));
     if (ltx) {
-        const all = resolveFullUniverse(ltx).map(id => DEPS[id]).filter(Boolean);
-        const localTx = filterDepsByEngine(all, false).filter(d => d.engine === 'local');
-        const remoteTx = filterDepsByEngine(all, true).filter(d => d.engine === 'remote');
-        assert.ok(!filterDepsByEngine(all, false).some(d => d.engine === 'remote'),
-            'local install must not include any remote-engine dep');
-        assert.ok(!filterDepsByEngine(all, true).some(d => d.engine === 'local'),
-            'remote install must not include any local-engine dep');
-        assert.strictEqual(localTx.length, 1, 'LTX has exactly one local transformer');
-        assert.strictEqual(remoteTx.length, 1, 'LTX has exactly one remote transformer');
+        const local = resolveFullUniverse(ltx, null, 'local');
+        const remote = resolveFullUniverse(ltx, null, 'remote');
+        assert.ok(local.includes('ltx23-transformer-bf16') && !local.includes('ltx23-transformer-gguf'),
+            'LTX local universe has bf16, not GGUF');
+        assert.ok(remote.includes('ltx23-transformer-gguf') && !remote.includes('ltx23-transformer-bf16'),
+            'LTX remote universe has GGUF, not bf16');
+        assert.ok(!local.includes('ComfyUI-GGUF'),
+            'LTX local universe must NOT include the Pod-only GGUF node');
+        assert.ok(remote.includes('ComfyUI-GGUF'),
+            'LTX remote universe DOES include the GGUF node (loads the GGUF weight)');
     }
 }
 
@@ -264,7 +296,7 @@ const tests = {
     testDeriveInstalledOps,
     testRequiresOps,
     testRealRegistryIntegrity,
-    testEngineFilter,
+    testEngineResolution,
 };
 
 let failed = 0;

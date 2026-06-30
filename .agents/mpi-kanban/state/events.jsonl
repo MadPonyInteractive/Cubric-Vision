@@ -26,3 +26,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T18:00:00Z","actor":"claude","from":"doing","to":"done","summary":"LTX progress bar shipped (3a09e4f)."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T18:05:00Z","actor":"claude","from":"done","to":"doing","summary":"Reopened — remote Pod path still TODO."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-147","at":"2026-06-27T19:45:00Z","actor":"claude","from":"doing","to":"done","summary":"Remote Pod stdout-parse shipped (wrapper 0.2.19) + live-verified on A4500 (LTX 1->2->3 per-step fill)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-163","at":"2026-06-30T08:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementing engine-aware resolver fix (MPI-163)."}
