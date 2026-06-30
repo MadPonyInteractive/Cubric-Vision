@@ -1135,7 +1135,21 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // trust `installed`: anything not present is installed via the wrapper
         // (per-model custom_nodes now install onto the volume — Design B+).
         const alreadyInstalled = !!(statusResults[dep.id] && statusResults[dep.id].installed);
-        if (alreadyInstalled) {
+        if (alreadyInstalled && dep.type === 'custom_nodes') {
+            // A custom_node folder present on the volume does NOT prove its pip
+            // requirements ran (a prior install may have landed the folder but
+            // failed/skipped requirements.txt — e.g. ComfyUI-GGUF present but the
+            // `gguf` pkg missing → node import fails on every gen). The wrapper's
+            // status check only sees the folder. So for a custom_node in THIS
+            // install request, still send it with `requirements_only` so the
+            // wrapper re-runs (idempotent) pip -r requirements.txt WITHOUT
+            // re-downloading or removing the folder. Self-heals the recurring
+            // "node present, dep missing" class. Weights (non-node) trust the flag.
+            depJob.status = 'queued';
+            depJob.downloadedBytes = 0;
+            depJob.error = null;
+            toInstall.push({ ...dep, requirementsOnly: true });
+        } else if (alreadyInstalled) {
             depJob.status = 'complete';
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
@@ -1302,85 +1316,93 @@ async function _runCustomNodeInstall(modelJob) {
         const extractDir = path.dirname(zipPath); // custom_nodes/
         const targetDir = path.join(extractDir, dep.filename); // dep.filename is the source of truth for target name
 
-        // If the extracted folder already exists (installed by engine install or a prior run),
-        // skip extraction entirely — no failure, just move on.
-        if (await fs.pathExists(targetDir)) {
-            logger.info('download', `Custom node already extracted: ${targetDir}, skipping`);
-            continue;
+        // If the extracted folder already exists (installed by engine install or a
+        // prior run), skip ONLY extraction — but still fall through to the
+        // requirements step below. A node folder can land without its pip deps (a
+        // prior install where requirements.txt failed/was interrupted, or the node
+        // was extracted by a different path that never ran pip); folder-present is
+        // NOT proof the deps are installed. pip with --upgrade is idempotent (a
+        // no-op when already satisfied), so re-running it is cheap + self-healing.
+        // This is the general cure for the recurring "node present, dep missing"
+        // class (e.g. ComfyUI-GGUF folder on disk but `gguf` pkg absent).
+        const alreadyExtracted = await fs.pathExists(targetDir);
+        if (alreadyExtracted) {
+            logger.info('download', `Custom node already extracted: ${targetDir}, skipping extraction but verifying requirements`);
         }
 
-        // Extract GitHub archive zip (extracts to custom_nodes/owner-repo-main/)
-        // Do this FIRST so we can scan for the extracted folder AFTER it's created
-        let extractionSucceeded = false;
-        try {
-            if (await fs.pathExists(zipPath)) {
-                logger.info('download', `Extracting zip: ${zipPath}`);
-                await _extractZipArchive(zipPath, extractDir);
-                await fs.remove(zipPath); // clean up zip after successful extraction
-                logger.info('download', `Zip extracted and removed: ${zipPath}`);
-                extractionSucceeded = true;
-            } else {
-                // Zip not found — download was never completed. Mark failure so repair
-                // flow (engine/repair-deps) re-triggers the full download.
-                logger.warn('download', `Zip not found at ${zipPath} — marking dep for repair re-download`);
+        if (!alreadyExtracted) {
+            // Extract GitHub archive zip (extracts to custom_nodes/owner-repo-main/)
+            // Do this FIRST so we can scan for the extracted folder AFTER it's created
+            try {
+                if (await fs.pathExists(zipPath)) {
+                    logger.info('download', `Extracting zip: ${zipPath}`);
+                    await _extractZipArchive(zipPath, extractDir);
+                    await fs.remove(zipPath); // clean up zip after successful extraction
+                    logger.info('download', `Zip extracted and removed: ${zipPath}`);
+                } else {
+                    // Zip not found — download was never completed. Mark failure so repair
+                    // flow (engine/repair-deps) re-triggers the full download.
+                    logger.warn('download', `Zip not found at ${zipPath} — marking dep for repair re-download`);
+                    anyFailure = true;
+                    continue;
+                }
+            } catch (err) {
+                logger.error('download', `zip extract FAILED for ${dep.id}: ${err.message} — removing corrupted zip so repair can re-download`);
+                await fs.remove(zipPath).catch(() => {}); // delete corrupted zip so repair re-downloads it
                 anyFailure = true;
                 continue;
             }
-        } catch (err) {
-            logger.error('download', `zip extract FAILED for ${dep.id}: ${err.message} — removing corrupted zip so repair can re-download`);
-            await fs.remove(zipPath).catch(() => {}); // delete corrupted zip so repair re-downloads it
-            anyFailure = true;
-            continue;
-        }
 
-        // Scan for the extracted folder — GitHub archives extract as '<RepoName>-<BranchName>/'
-        // The branch name casing varies (e.g. 'main' vs 'Main') and the repo name casing
-        // may differ from dep.filename. Match case-insensitively against dep.filename and
-        // dep.id, accepting any branch-name suffix after the last '-'.
-        let extractedMainDir = null;
-        try {
-            const entries = await fs.readdir(extractDir, { withFileTypes: true });
-            const targetLower = (dep.filename || '').toLowerCase();
-            const depIdLower = (dep.id || '').toLowerCase();
-            for (const entry of entries) {
-                if (!entry.isDirectory()) continue;
-                const entryLower = entry.name.toLowerCase();
-                // Strip the last '-<branch>' segment and compare the base against dep.filename/dep.id
-                const lastDash = entryLower.lastIndexOf('-');
-                if (lastDash === -1) continue;
-                const entryBase = entryLower.slice(0, lastDash);
-                if (entryBase === targetLower || entryBase === depIdLower) {
-                    extractedMainDir = path.join(extractDir, entry.name);
-                    logger.info('download', `Found extracted folder: ${extractedMainDir}`);
-                    break;
+            // Scan for the extracted folder — GitHub archives extract as '<RepoName>-<BranchName>/'
+            // The branch name casing varies (e.g. 'main' vs 'Main') and the repo name casing
+            // may differ from dep.filename. Match case-insensitively against dep.filename and
+            // dep.id, accepting any branch-name suffix after the last '-'.
+            let extractedMainDir = null;
+            try {
+                const entries = await fs.readdir(extractDir, { withFileTypes: true });
+                const targetLower = (dep.filename || '').toLowerCase();
+                const depIdLower = (dep.id || '').toLowerCase();
+                for (const entry of entries) {
+                    if (!entry.isDirectory()) continue;
+                    const entryLower = entry.name.toLowerCase();
+                    // Strip the last '-<branch>' segment and compare the base against dep.filename/dep.id
+                    const lastDash = entryLower.lastIndexOf('-');
+                    if (lastDash === -1) continue;
+                    const entryBase = entryLower.slice(0, lastDash);
+                    if (entryBase === targetLower || entryBase === depIdLower) {
+                        extractedMainDir = path.join(extractDir, entry.name);
+                        logger.info('download', `Found extracted folder: ${extractedMainDir}`);
+                        break;
+                    }
                 }
+            } catch (err) {
+                logger.error('download', `scan for extracted folder failed for ${dep.id}: ${err.message}`);
             }
-        } catch (err) {
-            logger.error('download', `scan for extracted folder failed for ${dep.id}: ${err.message}`);
-        }
 
-        if (!extractedMainDir) {
-            // Zip was removed (extraction succeeded per flow) but folder not found — corrupt extraction
-            logger.warn('download', `Could not find extracted folder for ${dep.id} in ${extractDir} — corrupt zip, will re-download on repair`);
-            anyFailure = true;
-            continue;
-        }
-
-        // Rename 'owner-repo-main' → 'owner-repo' (dep.filename)
-        try {
-            if (await fs.pathExists(targetDir)) {
-                // Target already exists — remove the incorrectly-named duplicate
-                await fs.remove(extractedMainDir);
-                logger.warn('download', `Target ${targetDir} already exists, removed duplicate: ${extractedMainDir}`);
-            } else {
-                await fs.move(extractedMainDir, targetDir);
-                logger.info('download', `Renamed ${extractedMainDir} → ${targetDir}`);
+            if (!extractedMainDir) {
+                // Zip was removed (extraction succeeded per flow) but folder not found — corrupt extraction
+                logger.warn('download', `Could not find extracted folder for ${dep.id} in ${extractDir} — corrupt zip, will re-download on repair`);
+                anyFailure = true;
+                continue;
             }
-        } catch (err) {
-            logger.error('download', `folder rename failed for ${dep.id}: ${err.message}`);
+
+            // Rename 'owner-repo-main' → 'owner-repo' (dep.filename)
+            try {
+                if (await fs.pathExists(targetDir)) {
+                    // Target already exists — remove the incorrectly-named duplicate
+                    await fs.remove(extractedMainDir);
+                    logger.warn('download', `Target ${targetDir} already exists, removed duplicate: ${extractedMainDir}`);
+                } else {
+                    await fs.move(extractedMainDir, targetDir);
+                    logger.info('download', `Renamed ${extractedMainDir} → ${targetDir}`);
+                }
+            } catch (err) {
+                logger.error('download', `folder rename failed for ${dep.id}: ${err.message}`);
+            }
         }
 
-        // Install requirements: custom command or pip
+        // Install requirements: custom command or pip. ALWAYS runs (even when the
+        // folder was already present) — idempotent, the self-heal for missing deps.
         if (dep.installRequirementsCommand) {
             try {
                 await runCustomCommand(dep.installRequirementsCommand, targetDir);

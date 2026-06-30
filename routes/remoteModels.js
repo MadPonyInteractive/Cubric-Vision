@@ -282,6 +282,11 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
       url: dep.url,
     };
     if (dep.installRequirementsCommand) body.install_command = dep.installRequirementsCommand;
+    // requirements_only: the node folder is already on the volume, just (re-)run
+    // its requirements.txt idempotently — do NOT re-download or remove the folder.
+    // Self-heals a node that landed without its pip deps. (set by downloadManager
+    // for an already-present custom_node in an install request)
+    if (dep.requirementsOnly) body.requirements_only = true;
   } else {
     const { type, filename } = splitDepFilename(dep.filename);
     body = {
