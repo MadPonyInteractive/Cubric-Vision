@@ -13,11 +13,17 @@ the FOUR mode/stage variants, each in a bf16 (local) and a GGUF (Pod) flavour:
 
 The bf16/GGUF split exists because GGUF wins ONLY on a Pod (it sidesteps the
 ~5-min aimdo cold tax), but is slower per-step at high res locally (per-layer
-dequant). So local = bf16, Pod = GGUF. The graph carries BOTH loaders; the
-`Input_Use_GGUF` MpiSimpleBoolean drives an MpiIfElse that selects the GGUF
-UnetLoaderGGUF (true) over the bf16 UNETLoader (false). The app picks the file
-by isRemote() (commandExecutor `_toGgufFilename`); we just stamp the boolean +
-append `_gguf` to the GGUF-flavour filenames so the two stay in lockstep.
+dequant). So local = bf16, Pod = GGUF. The template carries BOTH loaders, but
+only the bf16 `UNETLoader` is WIRED into the graph; the GGUF `UnetLoaderGGUF`
+sits parked (no consumers). We can't keep both wired and pick at runtime: a
+MpiIfElse selects lazily at EXECUTION, but ComfyUI VALIDATES every node's file
+inputs at PROMPT time regardless of wiring — so the unselected loader's absent
+weight rejects (`unet_name ...not in []`). The fix: per flavour, KEEP exactly one
+loader and DELETE the other, repointing the kept loader's MODEL output to the
+bf16 loader's single consumer (`Model_Connect`). Each output file then carries
+ONE loader → ComfyUI validates only the weight that is actually present. The app
+picks the file by isRemote() (commandExecutor `_toGgufFilename`); we append
+`_gguf` to the GGUF-flavour filenames so the two stay in lockstep.
 
 ALL node lookup is by `_meta.title` — never by node id (ids change on re-export).
 
@@ -48,7 +54,28 @@ from pathlib import Path
 
 T2V_GATE_TITLE = "Input_Text_to_video"   # MpiSimpleBoolean: false=i2v, true=t2v
 IS_CONTINUE_TITLE = "Input_Is_Continue"  # MpiBoolean: false=stage-1, true=stage-2
-USE_GGUF_TITLE = "Input_Use_GGUF"        # MpiSimpleBoolean: false=bf16 (local), true=GGUF (Pod)
+
+# Loader-swap titles (MPI-165). The template wires the bf16 loader and parks the
+# GGUF one; per flavour we keep one, delete the other, and repoint the kept
+# loader's MODEL output to whatever the bf16 loader fed. Both loaders output
+# MODEL at slot 0, so the repoint is type-safe.
+BF16_LOADER_TITLE = "Load Diffusion Model"  # UNETLoader (local)
+GGUF_LOADER_TITLE = "Unet Loader (GGUF)"    # UnetLoaderGGUF (Pod)
+
+# Media-input placeholders. The graph won't run without these LoadImage/LoadAudio
+# nodes holding SOME file, and ComfyUI validates them at prompt time even when the
+# output is gated off (t2v never uses the frames; an audio-less gen never uses the
+# wav). The app stages these exact filenames into the engine input/ on every submit
+# (routes/comfy.js WORKFLOW_INPUT_DEFAULTS) and injects real media over them at gen
+# time. But the EXPORTED template carries whatever test files were loaded in the
+# ComfyUI browser when you saved (e.g. a real mp3) — those don't exist on the engine
+# and reject. So stamp each media node back to its staged placeholder. Each entry:
+# title -> (filename_input_key, placeholder_filename).
+MEDIA_PLACEHOLDERS = {
+    "Input_Start_Frame": ("image", "ltx_placeholder.png"),
+    "Input_End_Frame":   ("image", "ltx_placeholder.png"),
+    "Input_Audio_File":  ("audio", "ltx_silence.wav"),
+}
 
 # Titles that MUST survive into every output (sanity gate). Each entry is a set
 # of acceptable alternatives (any one present passes).
@@ -59,7 +86,6 @@ REQUIRED_TITLES = [
     {"Input_Audio_Latent"},    # stage-2 loaded audio latent (LTX saves TWO latents)
     {IS_CONTINUE_TITLE},
     {T2V_GATE_TITLE},
-    {USE_GGUF_TITLE},
 ]
 
 
@@ -84,6 +110,81 @@ def _set_boolean(wf: dict, title: str, value: bool) -> None:
             f"{sorted(inputs)}); cannot stamp it."
         )
     inputs["boolean"] = value
+
+
+def _iter_input_refs(node: dict):
+    """Yield (input_name, [src_id, slot]) for every link-style input on a node."""
+    for name, val in node.get("inputs", {}).items():
+        if isinstance(val, list) and len(val) == 2 and isinstance(val[1], int):
+            yield name, val
+
+
+def _select_loader(wf: dict, *, use_gguf: bool) -> None:
+    """Keep one unet loader, delete the other, repoint the dropped loader's
+    consumers to the kept loader's MODEL output (slot 0). Mutates `wf` in place.
+
+    ComfyUI validates EVERY node's file inputs at prompt time, so a parked loader
+    whose weight is absent on the engine rejects the whole prompt even if nothing
+    consumes it. Carrying exactly one loader per file is the only thing that
+    sidesteps that. Both UNETLoader and UnetLoaderGGUF emit MODEL on slot 0.
+    """
+    keep_title = GGUF_LOADER_TITLE if use_gguf else BF16_LOADER_TITLE
+    drop_title = BF16_LOADER_TITLE if use_gguf else GGUF_LOADER_TITLE
+    keep_id = _find_node_id_by_title(wf, keep_title)
+    drop_id = _find_node_id_by_title(wf, drop_title)
+    if keep_id is None:
+        raise SystemExit(f"[FAIL] No loader titled {keep_title!r}; cannot build the "
+                         f"{'GGUF' if use_gguf else 'bf16'} flavour.")
+    if drop_id is None:
+        raise SystemExit(f"[FAIL] No loader titled {drop_title!r} to remove.")
+
+    # Repoint every consumer of the dropped loader (slot 0, MODEL) to the kept one.
+    rewired = 0
+    for node in wf.values():
+        if not isinstance(node, dict):
+            continue
+        for name, ref in _iter_input_refs(node):
+            if str(ref[0]) == drop_id:
+                if ref[1] != 0:
+                    raise SystemExit(f"[FAIL] Loader {drop_title!r} output slot {ref[1]} "
+                                     f"consumed — only MODEL slot 0 is expected.")
+                node["inputs"][name] = [keep_id, 0]
+                rewired += 1
+
+    del wf[drop_id]
+
+    # Sanity: exactly the kept loader remains, no dangling ref to the deleted node.
+    for nid, node in wf.items():
+        if not isinstance(node, dict):
+            continue
+        for _, ref in _iter_input_refs(node):
+            if str(ref[0]) == drop_id:
+                raise SystemExit(f"[FAIL] Dangling ref to deleted loader {drop_id} in {nid}.")
+    print(f"  [loader] kept {keep_title!r}, deleted {drop_title!r}, repointed {rewired} consumer(s)")
+
+
+def _stamp_placeholders(wf: dict) -> None:
+    """Reset each media-input node's filename to its staged placeholder, so the
+    generated workflow validates on any engine regardless of what test media was
+    loaded in the ComfyUI browser at export. Fails loud on a missing node (a
+    rename must not silently skip a stamp). Also drops a stale `audioUI` preview
+    ref, which otherwise points the ComfyUI UI at the absent test file."""
+    for title, (key, filename) in MEDIA_PLACEHOLDERS.items():
+        nid = _find_node_id_by_title(wf, title)
+        if nid is None:
+            raise SystemExit(
+                f"[FAIL] No media node titled {title!r}. Title it in the ComfyUI "
+                f"graph and re-export, or update MEDIA_PLACEHOLDERS."
+            )
+        inputs = wf[nid].setdefault("inputs", {})
+        if key not in inputs:
+            raise SystemExit(
+                f"[FAIL] Node titled {title!r} has no {key!r} input (got "
+                f"{sorted(inputs)}); cannot stamp the placeholder."
+            )
+        inputs[key] = filename
+        inputs.pop("audioUI", None)  # stale browser-preview ref to the test file
+    print(f"  [media] stamped {len(MEDIA_PLACEHOLDERS)} placeholder input(s)")
 
 
 def _check_required(wf: dict, label: str) -> None:
@@ -121,7 +222,8 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
         flavour = "GGUF" if use_gguf else "bf16"
         for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
             stage1 = _variant(template, t2v)
-            _set_boolean(stage1, USE_GGUF_TITLE, use_gguf)
+            _select_loader(stage1, use_gguf=use_gguf)
+            _stamp_placeholders(stage1)
             s1_out = out_dir / f"{name}{suffix}.json"
             s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
             print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v}, {flavour})")

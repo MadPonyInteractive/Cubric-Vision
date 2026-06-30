@@ -128,7 +128,7 @@
     "inputs": {
       "cfg": 1,
       "model": [
-        "360",
+        "160",
         0
       ],
       "positive": [
@@ -932,6 +932,18 @@
       "title": "KSampler - STG2"
     }
   },
+  "160": {
+    "inputs": {
+      "any": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "Model_Connect"
+    }
+  },
   "168": {
     "inputs": {
       "strength": 1,
@@ -972,7 +984,6 @@
       "filename_prefix": "LTX",
       "format": "auto",
       "codec": "auto",
-      "video-preview": "",
       "video": [
         "189",
         0
@@ -1057,8 +1068,7 @@
   },
   "197": {
     "inputs": {
-      "audio": "ltx_silence.wav",
-      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.7639027445141602"
+      "audio": "ltx_silence.wav"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -1335,7 +1345,7 @@
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "360",
+        "160",
         0
       ],
       "clip": [
@@ -1764,7 +1774,7 @@
     "inputs": {
       "cfg": 1,
       "model": [
-        "360",
+        "160",
         0
       ],
       "positive": [
@@ -1920,44 +1930,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "FLF"
-    }
-  },
-  "354": {
-    "inputs": {
-      "unet_name": "ltx-2.3-22b-distilled-1.1-Q8_0.gguf"
-    },
-    "class_type": "UnetLoaderGGUF",
-    "_meta": {
-      "title": "Unet Loader (GGUF)"
-    }
-  },
-  "359": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Use_GGUF"
-    }
-  },
-  "360": {
-    "inputs": {
-      "boolean": [
-        "359",
-        0
-      ],
-      "true": [
-        "354",
-        0
-      ],
-      "false": [
-        "4",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
     }
   }
 }

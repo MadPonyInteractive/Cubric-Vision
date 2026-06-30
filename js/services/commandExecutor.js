@@ -856,6 +856,23 @@ export function runCommand(payload) {
     };
 
     (async () => {
+        // MPI-165 Phase A: resolve the engine ONCE per gen, from a FRESH signal.
+        // `remoteEngineClient.isRemote()` reads `_active`, a mirror refreshed only by
+        // refresh() — which otherwise runs LATER inside ensureServerRunning() (the
+        // runWorkflow call far below). Reading it here without refreshing first means
+        // the workflow swap saw the PREVIOUS gen's state: on the first gen right after
+        // Pod connect, stale `false` → the bf16 workflow got locked in → sent to the Pod
+        // → ComfyUI rejected `unet_name ...bf16... not in []`. So refresh first (skipped
+        // for force-local — it always wants local), then resolve a concrete
+        // 'local'|'remote' string ONCE and thread it. No consumer below re-reads
+        // isRemote() for the swap. (comfyController.js:217 documents the same race for deps.)
+        if (payload.forceLocal !== true) {
+            try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
+        }
+        const engine = payload.forceLocal === true
+            ? 'local'
+            : (remoteEngineClient.isRemote() ? 'remote' : 'local');
+
         let workflowFile;
         try {
             workflowFile = _resolveWorkflowFile(payload.modelId, payload.operation);
@@ -863,11 +880,10 @@ export function runCommand(payload) {
                 workflowFile = _toStage2Filename(workflowFile);
             }
             // bf16-local / GGUF-Pod split: swap to the `_gguf` sibling when this
-            // model opts in AND the run targets a Pod (remote, not force-local).
+            // model opts in AND the resolved engine is remote (a Pod run).
             // Universal workflows have no model → getModelById null → no swap.
             const _model = getModelById(payload.modelId);
-            const _remoteRun = payload.forceLocal !== true && remoteEngineClient.isRemote();
-            if (_model?.ggufWhenRemote && _remoteRun) {
+            if (_model?.ggufWhenRemote && engine === 'remote') {
                 workflowFile = _toGgufFilename(workflowFile);
             }
         } catch (err) {
