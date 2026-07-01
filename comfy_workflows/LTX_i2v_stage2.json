@@ -19,18 +19,6 @@
       "title": "VAELoader KJ"
     }
   },
-  "3": {
-    "inputs": {
-      "clip_name1": "gemma-3-12b-it-heretic-fp8-comfy.safetensors",
-      "clip_name2": "ltx-2.3_text_projection_bf16.safetensors",
-      "type": "ltxv",
-      "device": "default"
-    },
-    "class_type": "DualCLIPLoader",
-    "_meta": {
-      "title": "DualCLIPLoader"
-    }
-  },
   "4": {
     "inputs": {
       "unet_name": "ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",
@@ -75,7 +63,7 @@
   },
   "8": {
     "inputs": {
-      "string": "blurry, low quality, still frame, frames, watermark, overlay, titles, has blurbox, has subtitles, unrealistic, plastic, fake, out-of-focus, low-detail, 3-arms, extra legs, walking backwards, slow motion, slowed time.\n"
+      "string": "letterbox, black bars, cinematic bars, pillarbox, border, vignette,\nblurry, low quality, still frame, frames, watermark, overlay, titles, has blurbox, has subtitles, unrealistic, plastic, fake, out-of-focus, low-detail, 3-arms, extra legs, walking backwards, slow motion, slowed time."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -84,7 +72,7 @@
   },
   "9": {
     "inputs": {
-      "string": "A cinematic medium shot of a confident woman walking toward the camera down a rainy neon-lit city street at night. Wet asphalt reflects bright pink and cyan signs. Cars move slowly in the background. Soft rain falls continuously and steam rises from street vents. The camera smoothly dollies backward at eye level, keeping the woman centered. Realistic walking motion, shallow depth of field, cinematic lighting, 35mm anamorphic lens, highly realistic."
+      "string": "A rainy futuristic megacity at night glows with magenta and cyan reflections across wet streets. A woman in a sleek black trench coat walks toward camera through drifting steam while autonomous cars pass behind her. The camera slowly dollies backward at eye level. Neon advertisements shimmer across her face as thunder rolls overhead. She stops, smiles slightly and quietly says, \"We're not living in the future anymore... we're building it.\" Soft rain, distant traffic, subtle synth soundtrack and realistic environmental audio."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -562,7 +550,7 @@
   },
   "77": {
     "inputs": {
-      "int": 63
+      "int": 984885684
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -597,7 +585,7 @@
   },
   "88": {
     "inputs": {
-      "int": 1280
+      "int": 2560
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -606,7 +594,7 @@
   },
   "89": {
     "inputs": {
-      "int": 704
+      "int": 1408
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -984,6 +972,7 @@
       "filename_prefix": "LTX",
       "format": "auto",
       "codec": "auto",
+      "video-preview": "",
       "video": [
         "189",
         0
@@ -1048,7 +1037,7 @@
         2
       ],
       "model": [
-        "236",
+        "426",
         0
       ]
     },
@@ -1325,32 +1314,18 @@
       "title": "LTXV Audio VAE Decode"
     }
   },
-  "236": {
-    "inputs": {
-      "lora_name": "LTX2.3\\LTX2.3_Soft_Enhance.safetensors",
-      "strength_model": 0.7,
-      "model": [
-        "269",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Soft Enhance Lora"
-    }
-  },
   "264": {
     "inputs": {
       "lora_name": "None",
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "160",
+        "387",
         0
       ],
       "clip": [
-        "3",
-        0
+        "387",
+        1
       ]
     },
     "class_type": "MpiLoraModelClip",
@@ -1487,7 +1462,7 @@
   "277": {
     "inputs": {
       "lora_name": "LTX2.3\\id-lora-talkvid\\ltx-2.3-id-lora-talkvid-3k.safetensors",
-      "strength_model": 1,
+      "strength_model": -2.42,
       "model": [
         "191",
         0
@@ -1963,6 +1938,113 @@
     "class_type": "MpiReroute",
     "_meta": {
       "title": "Model_Connect"
+    }
+  },
+  "370": {
+    "inputs": {
+      "any": [
+        "408",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "Clip_Connect"
+    }
+  },
+  "387": {
+    "inputs": {
+      "lora_name": "LTX2.3\\LTX23_softenhance_abliterated_detailer_merged.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "160",
+        0
+      ],
+      "clip": [
+        "370",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Merged Loras"
+    }
+  },
+  "408": {
+    "inputs": {
+      "clip_name1": "gemma_3_12B_it_fp4_mixed.safetensors",
+      "clip_name2": "ltx-2.3_text_projection_bf16.safetensors",
+      "type": "ltxv",
+      "device": "default"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "DualCLIPLoader"
+    }
+  },
+  "421": {
+    "inputs": {
+      "int": 69
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "422": {
+    "inputs": {
+      "string": "Two samurai stand facing each other in a bamboo forest at golden sunset. Leaves drift through the air and cloth moves gently in the wind. The camera slowly circles around both warriors before they draw their swords at the same time. Dramatic pose, realistic fabric motion, cinematic golden light, shallow depth of field, highly realistic historical action scene."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "423": {
+    "inputs": {
+      "string": "blurry, low quality, still frame, frames, watermark, overlay, titles, has blurbox, has subtitles, unrealistic, plastic, fake, out-of-focus, low-detail, 3-arms, extra legs, walking backwards, slow motion, slowed time.\n"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "426": {
+    "inputs": {
+      "nag_scale": 11,
+      "nag_alpha": 0.25,
+      "nag_tau": 2.5,
+      "inplace": true,
+      "model": [
+        "269",
+        0
+      ],
+      "nag_cond_video": [
+        "6",
+        0
+      ],
+      "nag_cond_audio": [
+        "427",
+        0
+      ]
+    },
+    "class_type": "LTX2_NAG",
+    "_meta": {
+      "title": "LTX2 NAG"
+    }
+  },
+  "427": {
+    "inputs": {
+      "text": "underwater, echo, muffled, faded, distorted, distortion, feedback, low-quality, garbled, warbling, crackle, hiss, static, clipping, background noise, robotic, tinny, hum, buzz\n",
+      "clip": [
+        "269",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative Prompt 2 (Audio) (NAG only)"
     }
   }
 }

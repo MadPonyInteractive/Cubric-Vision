@@ -221,14 +221,19 @@ export const DEPS = {
         size: '2.31GB',
         sha256: '911d59bb4cb7708179c9a0045ea0fe41212ecfb77aed3a02702b7c0a8274911f',
     },
+    // Gemma fp4_mixed CLIP — SHARED across every engine and tier (local + Pod, low
+    // + balanced). NOT engine-split: the Q4 GGUF Gemma was dropped (it OOM'd a
+    // 32GB/90GB Pod + threw key errors — the GGUF Gemma isn't ComfyUI-compatible),
+    // and fp4_mixed is the recommended path (minor quality trade). One clip loader
+    // in the template, one dep here. (MPI-168)
     'ltx23-gemma-clip': {
         id: 'ltx23-gemma-clip',
-        name: 'Gemma 3 12B Heretic fp8 (LTX CLIP)',
+        name: 'Gemma 3 12B fp4_mixed (LTX CLIP)',
         origin: 'Mad-Pony-Interactive/cubric-studio',
-        filename: 'text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors',
-        url: 'https://models.cubric.studio/vision/ltx-2.3/text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors',
-        size: '14.5GB',
-        sha256: '6a8b1a6f0ef61c2a1a02d19bc8b75234db85dee03d598223107c495032450745',
+        filename: 'text_encoders/gemma_3_12B_it_fp4_mixed.safetensors',
+        url: 'https://models.cubric.studio/vision/ltx-2.3/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors',
+        size: '9.45GB',
+        sha256: 'aaca463d11e6d8d2a4bdb0d6299214c15ef78a3f73e0ef8113d5a9d0219b3f6d',
     },
     'ltx23-spatial-upscaler': {
         id: 'ltx23-spatial-upscaler',
@@ -243,14 +248,17 @@ export const DEPS = {
     // model. First Cubric model whose LoRAs are NOT merged into the base.
     // filename uses forward slashes (path.join normalizes on disk); the workflow
     // bakes the same LTX2.3/ subfolder path. See [[project-lora-path-separator]].
-    'ltx23-lora-soft-enhance': {
-        id: 'ltx23-lora-soft-enhance',
-        name: 'LTX-2.3 Soft Enhance LoRA (baked)',
+    // Merged baked LoRA (MPI-168) — soft-enhance + abliterated + detailer merged
+    // into ONE file, replacing the old standalone Soft Enhance LoRA. Loaded by the
+    // 'Merged Loras' MpiLoraModelClip node in the template.
+    'ltx23-lora-merged': {
+        id: 'ltx23-lora-merged',
+        name: 'LTX-2.3 Soft+Abliterated+Detailer Merged LoRA (baked)',
         origin: 'Mad-Pony-Interactive/cubric-studio',
-        filename: 'loras/LTX2.3/LTX2.3_Soft_Enhance.safetensors',
-        url: 'https://models.cubric.studio/vision/ltx-2.3/loras/LTX2.3_Soft_Enhance.safetensors',
-        size: '344MB',
-        sha256: '47681fb3c11a90d95f826838400c69d5dfe210721ea277cc7872f7c98903d12a',
+        filename: 'loras/LTX2.3/LTX23_softenhance_abliterated_detailer_merged.safetensors',
+        url: 'https://models.cubric.studio/vision/ltx-2.3/loras/LTX23_softenhance_abliterated_detailer_merged.safetensors',
+        size: '3.87GB',
+        sha256: '3c5f9a7ffb75db2f32f26a9636c24695c8a8b926fa83d73a45f069ff65399444',
     },
     'ltx23-lora-transition': {
         id: 'ltx23-lora-transition',

@@ -247,13 +247,17 @@ export const MODELS = [
         // engine-correct extraDeps at resolution time, so EVERY consumer (download,
         // status gate, prompt box) derives the right set — no per-dep `engine` tag to
         // forget to filter.
+        // The Gemma CLIP (fp4_mixed) is SHARED across engines — NOT split — so it
+        // lives here, not in the engines block. Only the transformer is engine-split
+        // (bf16 local / Q8 GGUF Pod). The baked LoRA is the merged
+        // soft+abliterated+detailer file. (MPI-168)
         dependencies: [
             'ltx23-video-vae',
             'ltx23-audio-vae',
             'ltx23-text-projection',
             'ltx23-gemma-clip',
             'ltx23-spatial-upscaler',
-            'ltx23-lora-soft-enhance',
+            'ltx23-lora-merged',
             'ltx23-lora-transition',
             'ltx23-lora-talkvid',
             'ComfyUI-LTXVideo',

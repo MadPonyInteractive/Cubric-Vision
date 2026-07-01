@@ -17,10 +17,29 @@ NerdyRodent FINAL set, post-A/B:
 
 ## Gemma precision — quality ranking + VRAM-tier mapping (MPI-162/168)
 
+> **SUPERSEDED IN PRACTICE 2026-07-01 (MPI-168) — Q4 GGUF is OUT; Balanced ships `fp4_mixed`.**
+> The Q4 GGUF path below (`google_gemma-3-12b-it-Q4_K_M.gguf`) was shipped and
+> tested on a live RTX 5090 Pod (32 GB VRAM / 90 GB RAM) and FAILED: ComfyUI threw
+> `CLIPTextEncode … OutOfMemoryError` + repeated CLIP-load KEY ERRORS. Likely root
+> cause (hypothesis, strong): **that GGUF is the plain Google base Gemma
+> (`google_gemma-3-12b-it-…`), NOT the LTX-tuned Gemma ComfyUI-LTX expects.** The
+> fp8 (`…heretic…`) and fp4 (`…mixed`) are curated LTX variants; the base Google
+> GGUF is a different lineage → the key errors on load, and probably the OOM too
+> (wrong graph, not just size). A correctly-tuned Gemma GGUF might still work, but
+> the generic Google one does not — do NOT re-try `google_gemma-…Q4_K_M.gguf`.
+> SHIPPED: **`gemma_3_12B_it_fp4_mixed.safetensors` (9.45 GB) as a SINGLE SHARED
+> clip** across local + Pod (NOT engine-split; only the transformer splits
+> bf16/GGUF). Minor quality trade, accepted. The A/B ranking below stands for the
+> variants tested THEN, but the Q4-GGUF-as-balanced conclusion did not survive
+> real-Pod validation.
+
 **Quality ranking (user testing, DEFINITIVE — non-monotonic):** `Q4 GGUF ≈ fp8 > BF16 > fp4`.
 - fp8 = sweet spot; Q4 GGUF equals fp8 quality (MPI-162, live A/B, 4060 Ti).
 - Full BF16 is WORSE (over-influences / over-drives — LTX was tuned around fp8-class).
 - fp4 is worst ("fp4 hurts"). Do NOT assume higher precision = better for Gemma.
+- ⚠️ Caveat (MPI-168): the "Q4 GGUF ≈ fp8" A/B used whatever GGUF was loaded then;
+  the base-Google `Q4_K_M.gguf` shipped later would not LOAD in ComfyUI-LTX at all
+  (key errors) — quality parity is moot if it can't run. See the banner above.
 
 **Resident VRAM (disk size ≠ VRAM — critical for fit planning):**
 
@@ -36,15 +55,25 @@ at encode time (`Dequantizing token_embd.weight to prevent runtime OOM`), inflat
 ~11.8 GB. Q4 OOMs on a 16 GB card because 11.8 GB Gemma + diffusion + encode-time alloc
 exceed 16 GB. On ≥24 GB (5090), Q4 (~11.8 GB) is a BETTER fit than fp8 (~15 GB).
 
-**Tier mapping (MPI-168 `sizeTier`):**
-- **Low** = `fp4_mixed` (~8 GB, accepted quality trade for smallest VRAM fit).
-- **Balanced** = `Q4 GGUF` (~11.8 GB, fp8-quality at less VRAM — quality/efficiency star).
+**Tier mapping — INTENDED (pre-MPI-168 plan, kept for history):**
+- **Low** = `fp4_mixed` (~8 GB, smallest VRAM fit).
+- **Balanced** = `Q4 GGUF` (~11.8 GB) — ❌ **did not ship; Q4 GGUF failed on Pod (see banner).**
 - **High** = `fp8` (~15 GB, best adherence; needs ≥24 GB for comfortable fit).
 
+**Tier mapping — SHIPPED (MPI-168, 2026-07-01):**
+- **Balanced** (the only video tier shipped so far) = **`fp4_mixed` shared clip**.
+  Not engine-split — same clip local + Pod. Low/High tiers = future separate cards.
+- The clip is one `DualCLIPLoader` in the LTX template (fp4 `.safetensors` +
+  `ltx-2.3_text_projection_bf16.safetensors`, `type=ltxv`), NOT the city96
+  `DualCLIPLoaderGGUF`. Only the TRANSFORMER stays engine-split (bf16 / Q8 GGUF).
+- The baked enhance LoRA shipped **MERGED** (`LTX23_softenhance_abliterated_detailer_merged`,
+  3.87 GB) — supersedes the standalone "Soft, NO merge" row in the LoRA table below.
+
 Q4 GGUF loads via city96 `DualCLIPLoaderGGUF` (mixed graph: `.gguf` Gemma +
-`ltx-2.3_text_projection_bf16.safetensors`, `type=ltxv`). Drop the `.gguf` in the
-`text_encoders/` folder. NOT yet shipped (deferred to tier-restructure). Staged orphan
-weights in `cubric-models` R2 — see `docs/builder/04-add-models.md` GC ledger.
+`ltx-2.3_text_projection_bf16.safetensors`, `type=ltxv`) — but the base-Google
+`Q4_K_M.gguf` errors on load (see banner). Both the Q4 `.gguf` and the old
+`heretic` fp8 are now ORPHAN weights in `cubric-models` R2 (fp4 replaced them) —
+see `docs/builder/04-add-models.md` GC ledger.
 
 ## Capability LoRAs (all MODEL-ONLY — load via `MpiLoraModel`)
 

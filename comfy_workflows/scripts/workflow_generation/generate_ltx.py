@@ -13,17 +13,19 @@ the FOUR mode/stage variants, each in a bf16 (local) and a GGUF (Pod) flavour:
 
 The bf16/GGUF split exists because GGUF wins ONLY on a Pod (it sidesteps the
 ~5-min aimdo cold tax), but is slower per-step at high res locally (per-layer
-dequant). So local = bf16, Pod = GGUF. The template carries BOTH loaders, but
-only the bf16 `UNETLoader` is WIRED into the graph; the GGUF `UnetLoaderGGUF`
-sits parked (no consumers). We can't keep both wired and pick at runtime: a
-MpiIfElse selects lazily at EXECUTION, but ComfyUI VALIDATES every node's file
-inputs at PROMPT time regardless of wiring — so the unselected loader's absent
-weight rejects (`unet_name ...not in []`). The fix: per flavour, KEEP exactly one
-loader and DELETE the other, repointing the kept loader's MODEL output to the
-bf16 loader's single consumer (`Model_Connect`). Each output file then carries
-ONE loader → ComfyUI validates only the weight that is actually present. The app
-picks the file by isRemote() (commandExecutor `_toGgufFilename`); we append
-`_gguf` to the GGUF-flavour filenames so the two stay in lockstep.
+dequant). So local = bf16, Pod = GGUF. Only the UNET is split; the CLIP is a
+single shared Gemma fp4_mixed loader (see LOADER_PAIRS note). The template carries
+BOTH unet loaders, but only the bf16 `UNETLoader` is WIRED into the graph (via the
+`Model_Connect` MpiReroute); the GGUF `UnetLoaderGGUF` sits parked (no consumers).
+We can't keep both wired and pick at runtime: a MpiIfElse selects lazily at
+EXECUTION, but ComfyUI VALIDATES every node's file inputs at PROMPT time regardless
+of wiring — so the unselected loader's absent weight rejects (`unet_name ...not in
+[]`). The fix: per flavour, KEEP exactly one unet loader and DELETE the other,
+repointing the kept loader's MODEL output (slot 0) to the local loader's single
+`Model_Connect` consumer. Each output file then carries ONE unet loader → ComfyUI
+validates only the weight actually present. The app picks the file by isRemote()
+(commandExecutor `_toGgufFilename`); we append `_gguf` to the GGUF-flavour
+filenames so the two stay in lockstep.
 
 ALL node lookup is by `_meta.title` — never by node id (ids change on re-export).
 
@@ -57,10 +59,17 @@ IS_CONTINUE_TITLE = "Input_Is_Continue"  # MpiBoolean: false=stage-1, true=stage
 
 # Loader-swap titles (MPI-165). The template wires the bf16 loader and parks the
 # GGUF one; per flavour we keep one, delete the other, and repoint the kept
-# loader's MODEL output to whatever the bf16 loader fed. Both loaders output
-# MODEL at slot 0, so the repoint is type-safe.
-BF16_LOADER_TITLE = "Load Diffusion Model"  # UNETLoader (local)
-GGUF_LOADER_TITLE = "Unet Loader (GGUF)"    # UnetLoaderGGUF (Pod)
+# loader's slot-0 output to whatever the local loader fed (via its single
+# MpiReroute "Connect" consumer). ONLY the UNET is split — the CLIP is a single
+# shared Gemma fp4_mixed loader across every engine/tier (the Q4 GGUF clip was
+# dropped: it OOM'd a 32GB/90GB Pod and threw key errors — the GGUF Gemma isn't
+# ComfyUI-compatible; fp4_mixed is the recommended path). MPI-168.
+#
+# Each entry: (local_title, gguf_title, label). local kept for the bf16 flavour,
+# gguf kept for the Pod flavour. Both members output on slot 0 (MODEL).
+LOADER_PAIRS = [
+    ("Load Diffusion Model", "Unet Loader (GGUF)", "unet"),   # UNETLoader / UnetLoaderGGUF
+]
 
 # Media-input placeholders. The graph won't run without these LoadImage/LoadAudio
 # nodes holding SOME file, and ComfyUI validates them at prompt time even when the
@@ -119,26 +128,26 @@ def _iter_input_refs(node: dict):
             yield name, val
 
 
-def _select_loader(wf: dict, *, use_gguf: bool) -> None:
-    """Keep one unet loader, delete the other, repoint the dropped loader's
-    consumers to the kept loader's MODEL output (slot 0). Mutates `wf` in place.
+def _select_loader(wf: dict, local_title: str, gguf_title: str, label: str, *, use_gguf: bool) -> None:
+    """Keep one loader of a pair, delete the other, repoint the dropped loader's
+    consumers to the kept loader's slot-0 output. Mutates `wf` in place.
 
     ComfyUI validates EVERY node's file inputs at prompt time, so a parked loader
     whose weight is absent on the engine rejects the whole prompt even if nothing
     consumes it. Carrying exactly one loader per file is the only thing that
-    sidesteps that. Both UNETLoader and UnetLoaderGGUF emit MODEL on slot 0.
+    sidesteps that. Both members of a pair emit their type (MODEL / CLIP) on slot 0.
     """
-    keep_title = GGUF_LOADER_TITLE if use_gguf else BF16_LOADER_TITLE
-    drop_title = BF16_LOADER_TITLE if use_gguf else GGUF_LOADER_TITLE
+    keep_title = gguf_title if use_gguf else local_title
+    drop_title = local_title if use_gguf else gguf_title
     keep_id = _find_node_id_by_title(wf, keep_title)
     drop_id = _find_node_id_by_title(wf, drop_title)
     if keep_id is None:
-        raise SystemExit(f"[FAIL] No loader titled {keep_title!r}; cannot build the "
+        raise SystemExit(f"[FAIL] No {label} loader titled {keep_title!r}; cannot build the "
                          f"{'GGUF' if use_gguf else 'bf16'} flavour.")
     if drop_id is None:
-        raise SystemExit(f"[FAIL] No loader titled {drop_title!r} to remove.")
+        raise SystemExit(f"[FAIL] No {label} loader titled {drop_title!r} to remove.")
 
-    # Repoint every consumer of the dropped loader (slot 0, MODEL) to the kept one.
+    # Repoint every consumer of the dropped loader (slot 0) to the kept one.
     rewired = 0
     for node in wf.values():
         if not isinstance(node, dict):
@@ -146,21 +155,27 @@ def _select_loader(wf: dict, *, use_gguf: bool) -> None:
         for name, ref in _iter_input_refs(node):
             if str(ref[0]) == drop_id:
                 if ref[1] != 0:
-                    raise SystemExit(f"[FAIL] Loader {drop_title!r} output slot {ref[1]} "
-                                     f"consumed — only MODEL slot 0 is expected.")
+                    raise SystemExit(f"[FAIL] {label} loader {drop_title!r} output slot {ref[1]} "
+                                     f"consumed — only slot 0 is expected.")
                 node["inputs"][name] = [keep_id, 0]
                 rewired += 1
 
     del wf[drop_id]
 
-    # Sanity: exactly the kept loader remains, no dangling ref to the deleted node.
+    # Sanity: no dangling ref to the deleted node.
     for nid, node in wf.items():
         if not isinstance(node, dict):
             continue
         for _, ref in _iter_input_refs(node):
             if str(ref[0]) == drop_id:
-                raise SystemExit(f"[FAIL] Dangling ref to deleted loader {drop_id} in {nid}.")
-    print(f"  [loader] kept {keep_title!r}, deleted {drop_title!r}, repointed {rewired} consumer(s)")
+                raise SystemExit(f"[FAIL] Dangling ref to deleted {label} loader {drop_id} in {nid}.")
+    print(f"  [{label}] kept {keep_title!r}, deleted {drop_title!r}, repointed {rewired} consumer(s)")
+
+
+def _select_loaders(wf: dict, *, use_gguf: bool) -> None:
+    """Run the keep-one/delete-other swap for every loader pair (unet + clip)."""
+    for local_title, gguf_title, label in LOADER_PAIRS:
+        _select_loader(wf, local_title, gguf_title, label, use_gguf=use_gguf)
 
 
 def _stamp_placeholders(wf: dict) -> None:
@@ -222,7 +237,7 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
         flavour = "GGUF" if use_gguf else "bf16"
         for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
             stage1 = _variant(template, t2v)
-            _select_loader(stage1, use_gguf=use_gguf)
+            _select_loaders(stage1, use_gguf=use_gguf)
             _stamp_placeholders(stage1)
             s1_out = out_dir / f"{name}{suffix}.json"
             s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
