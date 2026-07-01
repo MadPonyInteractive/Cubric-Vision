@@ -186,6 +186,10 @@ const client = {
     if (spec.networkVolumeId) input.networkVolumeId = spec.networkVolumeId;
     if (spec.volumeMountPath) input.volumeMountPath = spec.volumeMountPath;
     if (typeof spec.volumeInGb === 'number') input.volumeInGb = spec.volumeInGb;
+    // MPI-160: system-RAM floor. Live-proven honored on this GraphQL mutation
+    // (200GB → SUPPLY_CONSTRAINT, 90/none → create). RunPod places only on a host
+    // with >= this much system RAM.
+    if (typeof spec.minMemoryInGb === 'number') input.minMemoryInGb = spec.minMemoryInGb;
     const mutation = `mutation($input: PodFindAndDeployOnDemandInput!) {
       podFindAndDeployOnDemand(input: $input) { id desiredStatus imageName machineId }
     }`;

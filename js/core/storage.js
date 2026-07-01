@@ -70,6 +70,12 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // here and die with the Pod. Default 100; clamped server-side. Ignored when a
   // network volume is attached (models live on the volume).
   containerDiskGb: 100,
+  // minRamGb: optional system-RAM FLOOR (GB) for the connected Pod's host (MPI-160).
+  // RunPod honors minMemoryInGb as a hard placement filter, so a user whose model
+  // needs a high-RAM host (LTX warm perf ~90GB) sets this and RunPod only lands a
+  // host with >= that much system RAM. 0 = no floor (default). Ignored for the CPU
+  // download Pod and Any-region.
+  minRamGb: 0,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
@@ -92,7 +98,16 @@ function normalizeRunpodConfig(value = {}) {
     autoRetry: value?.autoRetry === true,
     idleTimeoutS: normalizeIdleTimeoutS(value?.idleTimeoutS),
     containerDiskGb: normalizeContainerDiskGb(value?.containerDiskGb),
+    minRamGb: normalizeMinRamGb(value?.minRamGb),
   };
+}
+
+// System-RAM floor (GB): non-negative integer, clamped to a sane ceiling. A
+// missing/corrupt value heals to 0 (no floor).
+function normalizeMinRamGb(v) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(2000, n);
 }
 
 // Ephemeral container-disk size (GB) for no-volume Pods (MPI-78). Heal a

@@ -4,6 +4,7 @@ import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiProgressBar } from '../../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiFolderDrop } from '../../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiOkCancel } from '../../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModal } from '../../../Primitives/MpiModal/MpiModal.js';
@@ -168,6 +169,7 @@ export const MpiSettings = ComponentFactory.create({
                             <div id="mpiSettingsRunpodGpuSlot"></div>
                             <span class="mpi-settings__hint">Community Cloud is unsupported for Cubric's remote engine.</span>
                             <span class="mpi-settings__hint">Secure Cloud only. Stock is a live hint (High / Medium / Low / N/A) — availability drifts; the RunPod console is ground truth.</span>
+                            <div id="mpiSettingsRunpodMinRamSlot"></div>
                         </div>
                         <div class="mpi-settings__form-group">
                             <div class="mpi-settings__runpod-connect-row">
@@ -413,6 +415,10 @@ export const MpiSettings = ComponentFactory.create({
         let _runpodVolumes = null;      // network volumes from the user's account, or null
         let _engineConnectInst = null;  // Connect/Disconnect MpiButton instance
         let _engineStatusTimer = null;  // setInterval id for the status poll
+        let _diskBarInst = null;        // MPI-169: MpiProgressBar for volume disk usage
+        let _diskBarWrap = null;        // its wrapper el (hidden until a pod reports usage)
+        let _diskBarText = null;        // inline "45GB / 130GB" label beside the bar
+        let _diskPollTimer = null;      // setInterval id for the disk-usage poll
         let _engineBusy = false;        // true while a start/stop is in flight
         let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
         // MPI-110: the auto-retry wait LOOP lives in the shell (survives navigating
@@ -729,9 +735,13 @@ export const MpiSettings = ComponentFactory.create({
                 const datacenter = anyRegion ? null : (cfg.datacenter || null);
                 const volumeId = anyRegion ? null : (cfg.volumeId || null);
                 const containerDiskGb = anyRegion ? _diskGbFromCfg(cfg) : undefined;
+                // MPI-160: optional system-RAM floor (0/empty = no floor). Not for the
+                // CPU download Pod (RunPod ignores it there).
+                const minMemoryInGb = (cfg.gpuType && cfg.gpuType !== '__cpu__' && Number(cfg.minRamGb) > 0)
+                    ? Number(cfg.minRamGb) : undefined;
                 const body = warm
-                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb }
-                    : { gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb };
+                    ? { podId: cfg.podId, gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb, minMemoryInGb }
+                    : { gpuTypeId: cfg.gpuType, volumeId, datacenter, containerDiskGb, minMemoryInGb };
                 const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -772,6 +782,26 @@ export const MpiSettings = ComponentFactory.create({
                 // Create/resume refused outright (out of stock, API error) — no Pod.
                 if (!res.ok || (!data.starting && !data.ready)) {
                     const msg = data.message || data.error || 'Could not connect to a Pod.';
+                    // MPI-160: the requested system-RAM floor could not be met — no host
+                    // with >= N GB is free for this card in this DC right now. Blind retry
+                    // is only useful if the DC EVER has such a host, so respect the wait
+                    // toggle: auto-retry on → wait (a matching host may free up, flat
+                    // price = free to wait); off → tell the user plainly and stop.
+                    if (data.ramFloorMissed) {
+                        const floor = Number(_runpodCfg().minRamGb) || 0;
+                        const card = cfg.gpuType || 'this GPU';
+                        const dcName = (_runpodAvailability?.dataCenters || []).find(d => d.id === cfg.datacenter)?.name || cfg.datacenter || 'this data center';
+                        if (_runpodCfg().autoRetry === true) {
+                            _handoffToWait = true;
+                            Events.emit('ui:info', { message: `Waiting for a host with ≥${floor} GB RAM…` });
+                            return;
+                        }
+                        _setEngineHint(root, `No host with ≥${floor} GB system RAM for ${card} in ${dcName} right now. Lower the floor, pick another data center, or enable auto-retry to wait.`, true);
+                        _setEngineStatusText(root, 'stopped');
+                        _engineBtnLabelSet('Connect');
+                        Events.emit('ui:warning', { message: `No ≥${floor} GB host available — adjust the RAM floor or wait.` });
+                        return;
+                    }
                     // MPI-135: RunPod's REST create enum doesn't recognise this GPU
                     // (its create list lags the catalogue the picker reads from) — the
                     // card can never deploy, so never hand off to the auto-retry wait.
@@ -1337,6 +1367,12 @@ export const MpiSettings = ComponentFactory.create({
                 } else {
                     state.runpodConfig = { ...prev, gpuType: value };
                 }
+                // MPI-160: the min-RAM input shows for a real GPU but not the CPU download
+                // Pod — re-render the pickers when the pick crosses that boundary so the
+                // input appears/disappears. (Only on the boundary → no needless re-mount.)
+                const wasCpu = prev.gpuType === '__cpu__';
+                const nowCpu = value === '__cpu__';
+                if (wasCpu !== nowCpu) _renderRunpodPickers(root);
                 // Connect is gated on a picked GPU (Step 4.2) — refresh its state.
                 _refreshEngineConnect(root);
             });
@@ -1352,6 +1388,49 @@ export const MpiSettings = ComponentFactory.create({
                 } catch (_) { /* keep the last options on a failed refresh */ }
                 gpuInst.el.setOptions(_buildGpuOptions(dcId), _runpodCfg().gpuType || '');
             });
+
+            // MPI-160: optional minimum system-RAM floor. RunPod honors minMemoryInGb as
+            // a hard placement filter, so a user whose model needs a high-RAM host sets a
+            // floor and RunPod only lands a host with >= that much system RAM. Hidden for
+            // the CPU download Pod and Any-region (RunPod ignores the floor there). 0 = no
+            // floor. Shown whenever a real DC is selected and the pick isn't the CPU Pod —
+            // a floor is a pre-set that applies to whichever GPU is chosen.
+            const minRamSlot = qs('#mpiSettingsRunpodMinRamSlot', root);
+            if (minRamSlot) {
+                minRamSlot.innerHTML = '';
+                const pickedCpu = cfg.gpuType === '__cpu__';
+                if (!anyRegion && !pickedCpu) {
+                    // Inline row: "Min System RAM [ 90 ] GB"
+                    const row = ce('div', { className: 'mpi-settings__minram-row' });
+                    const label = ce('span', {
+                        className: 'mpi-settings__minram-label',
+                        textContent: 'Min System RAM',
+                    });
+                    const inputHost = ce('div', { className: 'mpi-settings__minram-input' });
+                    const unit = ce('span', { className: 'mpi-settings__minram-unit', textContent: 'GB' });
+                    row.appendChild(label);
+                    row.appendChild(inputHost);
+                    row.appendChild(unit);
+                    minRamSlot.appendChild(row);
+                    const ramHint = ce('span', {
+                        className: 'mpi-settings__hint',
+                        textContent: 'Optional. RunPod only places on a host with at least this much system RAM. Leave 0 for any. Heavy video models perform better with high RAM (ComfyUI offloads weights to system RAM). If no matching host is free, connect will say so.',
+                    });
+                    minRamSlot.appendChild(ramHint);
+                    const ramInst = MpiInput.mount(inputHost, {
+                        type: 'number',
+                        min: 0,
+                        max: 2000,
+                        step: 10,
+                        value: Number(cfg.minRamGb) > 0 ? Number(cfg.minRamGb) : 0,
+                        size: 'sm',
+                    });
+                    ramInst.on('change', ({ value }) => {
+                        const gb = Math.max(0, Math.min(2000, Math.round(Number(value) || 0)));
+                        state.runpodConfig = { ..._runpodCfg(), minRamGb: gb };
+                    });
+                }
+            }
         }
 
         // Build the GPU picker options for a data center from the current
@@ -1522,6 +1601,10 @@ export const MpiSettings = ComponentFactory.create({
                 state.runpodConfig = { ..._runpodCfg(), volumeId: vol ? vol.id : null };
             }
 
+            // Re-rendering the volume slot orphans any prior disk bar + poll — tear
+            // them down before rebuilding (MPI-169).
+            _stopVolumeDiskPoll();
+
             const volRow = ce('div', { className: 'mpi-settings__volume-row' });
             volumeSlot.appendChild(volRow);
 
@@ -1557,6 +1640,69 @@ export const MpiSettings = ComponentFactory.create({
                 createBtn.on('click', () => _promptCreateVolume(root));
                 volRow.appendChild(createBtn.el);
             }
+
+            // MPI-169: live disk-usage bar for the volume. RunPod exposes no used-bytes,
+            // so this is fed by the connected Pod's wrapper (du -sb /workspace) via
+            // /remote/pod/disk — works on a GPU pod OR a CPU download pod. Hidden until a
+            // pod reports usage (idle/unconnected DC → total-only badge above). Denominator
+            // = vol.size (GB). Only mount when we know the total.
+            if (vol && vol.size > 0) {
+                // Inline: [====progress====] 45GB / 130GB
+                _diskBarWrap = ce('div', { className: 'mpi-settings__volume-disk' });
+                _diskBarWrap.style.display = 'none';
+                const barHost = ce('div', { className: 'mpi-settings__volume-disk-bar' });
+                _diskBarText = ce('span', { className: 'mpi-settings__volume-disk-text' });
+                _diskBarWrap.appendChild(barHost);
+                _diskBarWrap.appendChild(_diskBarText);
+                volumeSlot.appendChild(_diskBarWrap);
+                _diskBarInst = MpiProgressBar.mount(barHost, {
+                    min: 0,
+                    max: vol.size,
+                    value: 0,
+                    step: 1,
+                    interactive: false,
+                    handle: false,
+                    variant: 'primary',
+                    info: '', // no tooltip — the inline text beside it carries the numbers
+                });
+                _startVolumeDiskPoll(vol.size);
+            }
+        }
+
+        // MPI-169: poll the connected Pod's volume disk usage. Shows the bar on first
+        // success, updates it quietly thereafter, hides it when no pod/old wrapper.
+        function _pollVolumeDisk(totalGb) {
+            fetch('/remote/pod/disk')
+                .then(r => r.json())
+                .then(data => {
+                    if (!_diskBarInst || !_diskBarWrap) return;
+                    if (data && data.success && Number.isFinite(data.used)) {
+                        const usedGb = Math.min(totalGb, Math.round((data.used / 1e9) * 10) / 10);
+                        _diskBarInst.el.setValueQuiet(usedGb);
+                        if (_diskBarText) _diskBarText.textContent = `${usedGb}GB / ${totalGb}GB`;
+                        // near-full → danger colour (recolour by swapping the variant class)
+                        const full = usedGb / totalGb >= 0.9;
+                        _diskBarInst.el.classList.toggle('mpi-progress--danger', full);
+                        _diskBarInst.el.classList.toggle('mpi-progress--primary', !full);
+                        _diskBarWrap.style.display = '';
+                    } else {
+                        _diskBarWrap.style.display = 'none';
+                    }
+                })
+                .catch(() => { if (_diskBarWrap) _diskBarWrap.style.display = 'none'; });
+        }
+
+        function _startVolumeDiskPoll(totalGb) {
+            _pollVolumeDisk(totalGb); // immediate first read
+            _diskPollTimer = setInterval(() => _pollVolumeDisk(totalGb), 10000);
+        }
+
+        function _stopVolumeDiskPoll() {
+            if (_diskPollTimer) { clearInterval(_diskPollTimer); _diskPollTimer = null; }
+            _diskBarInst?.destroy?.();
+            _diskBarInst = null;
+            _diskBarWrap = null;
+            _diskBarText = null;
         }
 
         // Prompt for size, then POST /runpod/volumes in the configured data center.
@@ -1869,6 +2015,7 @@ export const MpiSettings = ComponentFactory.create({
             _unsubs.forEach(fn => fn?.());
             _clearExtraFolderControls();
             if (_engineStatusTimer) { clearInterval(_engineStatusTimer); _engineStatusTimer = null; }
+            _stopVolumeDiskPoll(); // MPI-169
             // MPI-86: break any in-flight _pollEngineReady loop so it doesn't keep
             // fetching after the panel unmounts. The Pod is left booting on purpose
             // (backend _starting tracks it; the idle watchdog backstops) — destroy is

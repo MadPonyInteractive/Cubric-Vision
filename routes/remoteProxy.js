@@ -115,7 +115,11 @@ const POD_IMAGE_VERSION = 'v0.10.3';
 // own last-built tag so a GPU-only version bump never breaks CPU connects again.
 // Bump this only when the -cpu image is actually rebuilt + pushed. (MPI-140)
 const POD_IMAGE_VERSION_CPU = 'v0.10.2';
-const WRAPPER_VERSION = '0.2.20';
+// 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
+// Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
+// R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
+// older wrapper 404s /wrapper/disk → app route returns success:false → bar hidden.
+const WRAPPER_VERSION = '0.2.23';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -584,7 +588,7 @@ function _createRejectReason(json) {
   return reason.length > 300 ? `${reason.slice(0, 300)}…` : reason;
 }
 
-async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, containerDiskGb, timeoutMs = 300000, wait = true }) {
+async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, containerDiskGb, minMemoryInGb, timeoutMs = 300000, wait = true }) {
   const token = generateWrapperToken();
   const noGpu = gpuTypeId === CPU_SENTINEL;
   // No-volume "Any region" ephemeral Pod (MPI-78): no network volume → models
@@ -650,6 +654,14 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   // volume Pod always carries a datacenter; an ephemeral no-volume Pod omits it and
   // RunPod auto-places on any region with the GPU in stock ("Any region", MPI-78).
   if (datacenter) spec.dataCenterIds = [datacenter];
+  // MPI-160: optional system-RAM FLOOR. RunPod honors minMemoryInGb as a hard
+  // placement filter (live-proven: a 200GB ask fails SUPPLY_CONSTRAINT while 90/none
+  // create) — so a user who needs a high-RAM host for LTX (or any heavy model) picks
+  // a GPU and sets a floor; RunPod only lands a host with >= that much system RAM.
+  // Only meaningful for a GPU Pod (RunPod ignores it on CPU download mode).
+  if (!noGpu && Number.isFinite(minMemoryInGb) && minMemoryInGb > 0) {
+    spec.minMemoryInGb = minMemoryInGb;
+  }
 
   // Pre-create sweep (single-Pod invariant): kill any stray 'cubric-vision' Pod
   // BEFORE making a new one, so a Pod leaked by a prior failed Connect (created
@@ -657,6 +669,26 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   // coexist with the one we are about to create. keepPodId=null reaps everything
   // currently stray; the post-create sweep below then keeps only the fresh Pod.
   await _sweepOrphanPods(key, null);
+
+  // MPI-160: when a system-RAM floor is requested, create via GraphQL. minMemoryInGb
+  // is live-PROVEN honored on podFindAndDeployOnDemand; the REST POST /pods enum path
+  // was NOT proven to accept it (it may silently ignore the floor or schema-400). The
+  // GraphQL path returns the same {ok,status,json:{id}} shape, so the flow below is
+  // identical. Never for CPU download mode (GraphQL create has no computeType).
+  if (spec.minMemoryInGb && !noGpu) {
+    logger.info('runpod', `RAM floor ${spec.minMemoryInGb}GB requested → GraphQL create`);
+    const gql = await client.createPodGraphql(key, spec);
+    const gqlPodId = gql.json && gql.json.id;
+    if (gql.ok && gqlPodId) {
+      logger.info('runpod', `createPod (RAM-floor GraphQL) -> podId=${gqlPodId}`);
+      return _afterPodCreated(key, gqlPodId, token, noGpu, { wait, timeoutMs });
+    }
+    // Failed — surface the reason (a genuine "no host with >= N GB" is a stock-shaped
+    // SUPPLY_CONSTRAINT the shell retry loop can wait on; see _createRejectReason).
+    const reason = _createRejectReason(gql.json);
+    logger.warn('runpod', `RAM-floor GraphQL create failed: ${reason}`);
+    return { ok: false, message: reason || 'No host met the requested system-RAM floor', ramFloorMissed: true };
+  }
 
   const created = await client.createPod(key, spec);
   const podId = created.json && created.json.id;
@@ -805,7 +837,7 @@ async function _deleteTrackedPod(key) {
 
 // First Connect (and GPU-switch create). Creates a fresh Pod on the picked GPU.
 router.post('/remote/pod/create', async (req, res) => {
-  const { gpuTypeId, volumeId, datacenter, containerDiskGb } = req.body || {};
+  const { gpuTypeId, volumeId, datacenter, containerDiskGb, minMemoryInGb } = req.body || {};
   if (!gpuTypeId) return res.status(422).json({ error: 'gpu_type_required' });
   // A volume is locked to its DC, so a volume Pod must name one. An ephemeral
   // no-volume Pod (MPI-78) has no DC-lock → datacenter optional (RunPod auto-places).
@@ -826,13 +858,14 @@ router.post('/remote/pod/create', async (req, res) => {
     // wait:false — return as soon as the Pod is created; the renderer polls
     // /remote/comfy/status for ready (no 504 on a long first-image pull).
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter, containerDiskGb, wait: false,
+      gpuTypeId, volumeId, datacenter, containerDiskGb, minMemoryInGb, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `Pod create refused: ${out.message}`);
       // MPI-135: a GPU the REST create enum doesn't recognise — pass the flag so the
       // renderer can mark the card unsupported instead of "still preparing".
-      return res.status(502).json({ error: 'pod_create_failed', message: out.message, gpuUnsupported: !!out.gpuUnsupported });
+      // MPI-160: ramFloorMissed → the DC has no host meeting the RAM floor right now.
+      return res.status(502).json({ error: 'pod_create_failed', message: out.message, gpuUnsupported: !!out.gpuUnsupported, ramFloorMissed: !!out.ramFloorMissed });
     }
     logger.info('runpod', `Pod create kicked off: ${out.podId}`);
     kicked = true;
@@ -855,7 +888,7 @@ router.post('/remote/pod/create', async (req, res) => {
 //   3. start fails (host-pinned / any non-already-running error) → DELETE the stuck
 //      Pod + create fresh on the same GPU (new token). Returns { ready, podId, recreated }.
 router.post('/remote/pod/reconnect', async (req, res) => {
-  const { podId, gpuTypeId, volumeId, datacenter, containerDiskGb } = req.body || {};
+  const { podId, gpuTypeId, volumeId, datacenter, containerDiskGb, minMemoryInGb } = req.body || {};
   if (!podId) return res.status(422).json({ error: 'pod_id_required' });
   // datacenter is required only for a volume Pod (DC-locked). An ephemeral no-volume
   // Pod (MPI-78) resumes / recreates with no DC — RunPod auto-places (MPI-78).
@@ -910,11 +943,11 @@ router.post('/remote/pod/reconnect', async (req, res) => {
     // 3. Resume failed → delete the stuck Pod and create fresh (also poll-for-ready).
     await _deleteTrackedPod(key);
     const out = await _createPodInternal(key, {
-      gpuTypeId, volumeId, datacenter, containerDiskGb, wait: false,
+      gpuTypeId, volumeId, datacenter, containerDiskGb, minMemoryInGb, wait: false,
     });
     if (!out.ok) {
       logger.warn('runpod', `recreate after failed resume refused: ${out.message}`);
-      return res.status(502).json({ error: 'pod_create_failed', message: out.message });
+      return res.status(502).json({ error: 'pod_create_failed', message: out.message, ramFloorMissed: !!out.ramFloorMissed });
     }
     kicked = true;
     _starting = true;
@@ -1249,6 +1282,34 @@ router.get('/remote/pod/stats', async (req, res) => {
     logger.warn('runpod', `pod stats unavailable: ${err?.message || err}`);
     res.json({ success: false, source: 'remote', unavailable: true, reason: 'stats_failed' });
   }
+});
+
+// MPI-169: truthful USED bytes of the connected Pod's mounted volume. Unlike RAM/VRAM
+// there is NO RunPod REST fallback — the API exposes only the volume's configured size,
+// never live usage (proven dead), so the wrapper's `du` is the ONLY source. Returns
+// success:false when no pod / old wrapper (pre /wrapper/disk) so the UI hides the bar.
+// Works for a GPU pod OR a CPU download pod — both mount the volume at /workspace.
+router.get('/remote/pod/disk', async (req, res) => {
+  const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  if (!_mode.active || !podId) {
+    return res.json({ success: false, source: 'remote', unavailable: true, reason: 'remote_inactive' });
+  }
+  try {
+    const headers = await _authHeaders();
+    if (headers) {
+      const upstream = await fetch(`${proxyUrl(podId)}/wrapper/disk`, { headers });
+      if (upstream.ok) {
+        const wrapperDisk = await upstream.json();
+        if (wrapperDisk && wrapperDisk.success && Number.isFinite(wrapperDisk.used)) {
+          return res.json({ success: true, source: 'wrapper', used: wrapperDisk.used });
+        }
+      }
+      // 404 = old wrapper without /wrapper/disk; 503 = volume not mounted / du failed.
+    }
+  } catch (err) {
+    logger.warn('runpod', `wrapper /wrapper/disk unavailable: ${err?.message || err}`);
+  }
+  return res.json({ success: false, source: 'remote', unavailable: true, reason: 'disk_unavailable' });
 });
 
 // Reap stranded stopped 'cubric-vision' Pods (Step 4.3.3). Settings "clean up old
