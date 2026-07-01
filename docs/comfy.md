@@ -122,141 +122,43 @@ LTX-2.3 resolution tiers, the /64 size rule (multi-stage ×0.5 stage), and measu
 
 Loads available LoRA and upscale model filenames from `GET /comfy/list-files` into `state.availableLoras` and `state.upscaleModels`. Called lazily on ModelSettings open.
 
-### `/comfy/list-files?subDir=<path>`
+## Models path & additive folders
 
-Recursively walks the requested `subDir` under the resolved models root (custom root from `extra_model_paths.yaml` when set, else engine default). Returns relative paths from `subDir` for files with extensions `.safetensors | .ckpt | .pt | .bin | .pth`. Only scans the requested bucket — does NOT return siblings from other top-level folders (checkpoints, sams, ultralytics, etc).
-
-For `loras` and `upscale_models`, the route also scans user-configured additive
-folders from `extra_model_folders.json`. Those extras are bucket folders (for
-example, a folder directly containing LoRAs), not parent models roots. Results
-from the primary bucket win on same relative filename collisions, and the
-response shape stays `{ success: true, files: string[] }`.
-
-### `/comfy/extra-folders`
-
-`GET /comfy/extra-folders` returns the persisted additive folders:
-
-```json
-{ "success": true, "folders": { "loras": [], "upscale_models": [] } }
-```
-
-`POST /comfy/extra-folders` accepts the same shape without the wrapper,
-validates that every path exists, writes `extra_model_folders.json`, and
-rewrites `extra_model_paths.yaml`.
-
-Extras are re-merged whenever `/comfy/set-path` rewrites YAML. Clearing the
-primary models path removes `extra_model_paths.yaml` only when no extras are
-configured; with extras present, YAML is regenerated against the default
-models root so ComfyUI still sees the additive folders on restart.
-
-**Default models root.** `getDefaultModelsRoot()` (`routes/shared.js`) returns
-`CUBRIC_MODELS_ROOT` when set — the portable launchers export it as
-`<portable-root>/models`, OUTSIDE the engine folder — falling back to
-`<ENGINE_ROOT>/mpi_models` only in dev/no-env runs. `mpi_models` is legacy and
-must not be hardcoded; engine install/upgrade write the YAML and create the
-folder via `getDefaultModelsRoot()`. The YAML is additive: the active root is the
-`comfyui:` block and the default root is always emitted as a separate
-`comfyui_default:` block so repointing the folder adds a search location rather
-than replacing it.
-
-### LoRA and upscaler visibility
-
-LoRA dropdowns show every file returned from the active models root `loras/`
-folder. The app does not filter LoRAs by `model.type` because users control their
-own LoRA folder names and conventions.
-
-Upscale model dropdowns still use model-type filtering where appropriate, with
-root-level files treated as universal.
-
-`MpiModelSettings` accepts both legacy registry dependency IDs and raw filenames
-for `upscaleModel`. Registry defaults still resolve through `DEPS`; user-picked
-extra-folder upscalers persist as raw filenames and inject that filename into
-the `Upscale_Model` workflow node.
+The models-root resolution, `extra_model_paths.yaml`/`extra_model_folders.json`
+contract, `/comfy/list-files`, `/comfy/extra-folders`, and LoRA/upscaler
+visibility rules live in [models-path.md](models-path.md).
 
 ## Download Manager
 
-### Architecture Overview
+Resumable model downloads (frontend `downloadService.js` + backend
+`downloadManager.js` + SSE, `ResumableDownloader`, `.cubricdl` markers, the
+lifecycle event table, ComfyUI auto-restart) live in
+[download-manager.md](download-manager.md).
 
-The download manager is a **frontend + backend IPC system** with **resumable downloads**. Communication flows:
+## Engine Gotchas
 
-```
-js/services/downloadService.js  ←→  REST/POST  →  routes/downloadManager.js
-       ↑ SSE /comfy/downloads/stream  ←  SSE broadcast ←┘
-       ↓ Events.emit(...)
-   Components subscribe
-```
+**v0.26 completion sentinel (MPI-152):** v0.26 dropped `executing {node:null}` — completion is now `execution_success {prompt_id}` WS message. Both handlers (`comfyController.js` + `commandExecutor.js`) accept EITHER terminal (legacy + new) via idempotent `_finishGeneration()`. Terminal events are `broadcast=False` (not replayed on WS reconnect) — `_reconcileFromHistory` polls `/history/{prompt_id}` on reconnect. `model_type FLUX` in LTX boot log is NORMAL (LTX uses DiT/Flux arch class), not a bug.
 
-The backend uses `node-downloader-helper` under the hood. NDH writes directly to the final filename, so Cubric creates `<file>.cubricdl` sidecars while managed downloads are in progress. Installed-state checks require `exists && no sidecar`, which prevents a killed partial model from being treated as installed.
+**sage-attention arch gating (MPI-145):** `--use-sage-attention` crashes LTX-2.3 on Ada sm_89 (4090/4060Ti) with `CUDA error: unspecified launch failure` → engine dies → WS drops (shows misleading "engine disconnected" dialog, NOT OOM). Works on Blackwell sm_120. Gated in `start.sh` via `SAGE_DISABLED_ARCHS` (default `sm_89`). `CUBRIC_SAGE_DISABLED_ARCHS` Pod env overrides without a rebuild. Local engine never installs sage (MPI-50).
 
-### Frontend — `js/services/downloadService.js`
-Singleton that owns the frontend download queue.
+**Pod VRAM ~1GB under nominal (MPI-146):** `torch.cuda.get_device_properties(0).total_memory` reports ~1GB below nominal (24GB 4090 → 23GiB; 32GB 5090 → 31GiB). Use `>=28` as lowvram cutoff, not `>=32` — the 5090 at 31GiB wrongly classified as `<32` and OOM-hung. Mostly moot under aimdo (torch ≥ 2.8), kept because it bit us live before that fix.
 
-- `start(modelId, dependencies)`: Enqueue a model for download via backend SSE.
-- `pause(modelId)` / `resume(modelId)` / `cancel(modelId)`: Control an active download.
-- `uninstall(modelId, dependencies)`: Remove model files via backend.
+**Seed node required for cache-dedupe:** `commandExecutor.js` listens for `execution_cached` WS event. If ALL `outputNodeIds` are cached AND no node titled `"Seed"` (case-insensitive) exists, `cacheHit = true` → short-circuits, no `saveGeneration`, toast "No changes, skipping...". Any workflow consuming a seed MUST have a node titled exactly `"Seed"`. Replace mode bypasses dedupe.
 
-> **Operation-selectable models (MPI-122).** `dependencies` here is ALWAYS a
-> resolved, flat dep array. For operation-keyed models (e.g. Wan 2.2) the
-> renderer runs `resolveDeps(model, selectedOps)` at the call site — install uses
-> the user's op selection, whole-model uninstall and install-status checks use
-> `resolveFullUniverse(model)`. The download lifecycle (jobs, SSE, refcounts,
-> `.cubricdl` markers) is unchanged and never learns about operations; jobs stay
-> keyed by `modelId`. Backend shared-dep protection resolves every other model's
-> full universe so a common/op-specific dep another model needs is never deleted.
-- SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
-- Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
-- On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and repopulate `state.downloadJobs`.
+**PYTHONUTF8=1 on Windows (MPI-118):** Windows embedded Python 3.13 defaults to cp1252. A custom node with a non-Latin-1 char (e.g. `"$Δ \hat{t}$"`, U+0394) causes `SyntaxError` + traceback crash → whole ComfyUI exits. Fix: `PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8'` in ComfyUI spawn env (`routes/comfy.js`) + `set PYTHONUTF8=1` prepended to `run_nvidia_gpu.bat` in `engine.js`.
 
-### Backend — `routes/downloadManager.js`
-Non-blocking download router using `node-downloader-helper` with pause/resume support.
+**GPU build selection by arch, not CUDA:** `resolveDownloadConfig()` selects portable build via `selectNvidiaBuild(gpuName, cudaVersion)` using GPU ARCHITECTURE. `--query-gpu=name` never emits `CUDA Version:` header → CUDA always `unknown` under old logic → everyone fell to cu126 including Blackwell. Gate on arch (GPU model name): RTX/GTX-16xx+ → default `nvidia.7z`; GTX 10xx & older → `nvidia_cu126.7z`.
 
-**Endpoints:**
-- `POST /comfy/models/download/start` — enqueue a model's dependencies
-- `POST /comfy/models/download/pause` / `resume` / `cancel`
-- `GET /comfy/downloads/status` — full queue snapshot
-- `GET /comfy/downloads/active` — active model downloads plus engine-download flag for Electron quit warnings
-- `GET /comfy/downloads/stream` — SSE broadcast channel
-- `POST /comfy/models/uninstall` — uninstall a model
-- `POST /engine/pause` / `engine/resume` — pause/resume active engine downloads
+**Engine bootstrap retry contract (MPI-8):** `_clearStaleWindowsEngineArtifacts()` runs BEFORE download — removes partial archive, OS-renamed `(n)` dups, partial extract folder with no Python. Post-extract: assert `getPythonBin()` exists; else scrub + throw. Retry routes by `/engine/status`: `exists:false` → `/engine/download`; `exists:true` → `/engine/repair-deps`.
 
-**ResumableDownloader class** (`routes/downloadManager.js`):
-A wrapper around `node-downloader-helper` that adds SHA256 verification and SSE progress broadcasting.
-- `_downloader`: `DownloaderHelper` instance with `{ resume: true }`
-- `.download()`: starts fresh or, on a fresh app instance, resumes from a final-filename partial only when `<file>.cubricdl` exists
-- `.abort()`: pauses and retains instance for later resume
-- `.resume()`: in-session resume uses the same instance via `getResumeState()` + `resumeFromFile()`
-- On completion: verifies `sha256Expected` against downloaded file, clears `<file>.cubricdl`, then marks dep `complete`
-- On SHA256 mismatch: deletes the file, clears the marker, and marks dep `failed`
+**Engine upgrade must preserve models path (MPI-118):** `/engine/upgrade` MUST capture `getCustomRoot()` BEFORE `fs.remove(portableDir)`, then pass it to `_runEngineDownload()`. General law: any engine-wipe/reinstall op captures custom models root first and re-applies after.
 
-**Job storage:**
-- `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, refCount, sha256)
-- `_modelJobs Map<modelId, DownloadJob>` — model-level aggregate job (totalBytes, downloadedBytes, speed, progress, deps[])
-- `_activeDownloaders Map<depId, ResumableDownloader>` — actively downloading
-- `_pausedDownloaders Map<depId, ResumableDownloader>` — paused but kept for resume
-- `_sseClients Set<res>` — SSE subscribers
+**Dep URL/filename integrity — cross-check content:** `dependencies.js` deps have `filename`, `url`, and `sha256`. Wan 2.2 had `url`+`sha256` CROSSED against `filename` (internally consistent — sha matched the wrong url-target). `computeDepHashes.py` only fills `sha256: null`, does NOT recompute wrong ones. Rule: trust `filename`+`origin` as intent; cross-check `url` basename matches `filename` basename and `sha256` matches that file's HF ETag.
 
-**RefCount:** Each `depId` can be shared across multiple model jobs. `refCount` tracks how many model jobs reference it. A dep is only cancelled/aborted when `refCount` reaches 0.
+## Generation / Prompt Gotchas
 
-### State Keys
-In `js/state.js`:
-- `downloadJobs[]` — `DownloadJob[]` array, persisted for shutdown recovery
-- `downloadQueueActive` — `boolean`, true when any download is in progress
-- `comfyNeedsRestart` — `boolean`, true after custom node install; triggers auto-restart in `ensureServerRunning()`
+**Cue queue contract — Ratio_Label injection:** `generationService.getGenerationQueueSnapshot()` and `generation-queue:changed` own the user-visible queue state (not ComfyUI polling). Ratio injection includes `Ratio_Label` alongside `Width` and `Height` — Cue cards and sidecar metadata should display the selected label (e.g. `16:9`), not derive from output pixels.
 
-### Download Events (Lifecycle)
+**Prompt draft persistence (MPI-113):** Drafts survive navigation via session-only `state.promptDraft` + `state.promptMedia`. Tagged-slot scheme: one slot per workspace stamped with card id. Gallery slot: `id:null` (always matches). `MpiPromptBox.mount()` restores BEFORE block subscribes to `media-change`. Props: `workspaceKey` (`'gallery'`|`'history'`) + `workspaceId` (card id).
 
-| Event | Direction | When |
-| --- | --- | --- |
-| `download:started` | Backend→SSE→Frontend | Model job enqueued and downloading begins |
-| `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
-| `download:complete` | Backend→SSE→Frontend | All deps verified SHA256 and complete |
-| `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error |
-| `download:paused` | Backend→SSE→Frontend | User paused or pause/resume cycle |
-| `download:resumed` | Backend→SSE→Frontend | User resumed |
-| `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
-| `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |
-| `download:installing` | Backend→SSE→Frontend | Custom node `requirements.txt` pip install in progress |
-| `comfy:needs-restart` | Backend→SSE→Frontend | Custom node install done; ComfyUI needs auto-restart |
-
-### ComfyUI Auto-Restart
-When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js` stops ComfyUI, starts it again with `{ isUserRestart: true }`, and polls until ready before any generation proceeds.
+**PromptBox chip name nav survival (MPI-130):** `_saveMedia` must include `name` in its serialize map — dropping it reverts chip labels to raw filename after nav. 4-hop round-trip: `_tryAddMedia({..., name})` → `_saveMedia` map includes `name` → restore loop passes `m.name` to `injectMedia` → `injectMedia({url, mediaType, role, name})` forwards to `_tryAddMedia`. Any per-chip field that must survive nav goes in `_saveMedia` AND through `injectMedia → _tryAddMedia`.

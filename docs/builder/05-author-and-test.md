@@ -58,8 +58,8 @@ per-step cost). When authoring an LTX-class video workflow:
   scans for the JPEG SOI marker) — but if previews show in ComfyUI's UI yet NOT
   in the app card, that header mismatch is the first suspect.
 
-Full detail (why each dead end is dead, the SOI fix): `docs/gotchas.md` §
-"LTX live latent previews".
+Full detail (why each dead end is dead, the SOI fix, multi-frame looping):
+[research/ltx-workflow-authoring.md](research/ltx-workflow-authoring.md) § "Live latent previews".
 
 ## Strength defaults — don't blind-hunt
 
@@ -83,6 +83,17 @@ When a test concludes:
    [comfy_workflows/scripts/workflow_generation/README.md](../../comfy_workflows/scripts/workflow_generation/README.md)
    § "Progress stages". (UltimateSDUpscale / detailer self-declare; ESRGAN upscale
    pulses — no entry needed for those.)
+
+## SaveVideo split contract
+
+All video workflows output via the portable native pipeline `CreateVideo → SaveVideo`, NOT
+`VHS_VideoCombine` / `nvenc_h264`. NVENC fails on Blackwell Pod containers
+(`OpenEncodeSessionEx failed: unsupported device`). Capture-node titles: final =
+`Output_Video` (+ optional `Output_Audio`); two-pass `_ms` preview = `Preview` (no audio).
+The app captures by title workflow-agnostically via `_collectComfyOutputUrls` reading
+`videos[]`. Converted ops bumped `latestVersion` 1.0→1.1 in BOTH
+`js/core/operationRegistry.js` AND `operation_registry.json`. **Agents NEVER edit
+`comfy_workflows/*.json`** — they are the user's external ComfyUI template.
 
 ## Flattening a LoRA stack into ONE file
 

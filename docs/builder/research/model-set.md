@@ -15,6 +15,37 @@ NerdyRodent FINAL set, post-A/B:
   union, SDPose, abliterated heretic LoRA, 2× BFS head-swap.
 - Needs **16GB+ VRAM + ~32GB+ RAM** (full bf16 via offload).
 
+## Gemma precision — quality ranking + VRAM-tier mapping (MPI-162/168)
+
+**Quality ranking (user testing, DEFINITIVE — non-monotonic):** `Q4 GGUF ≈ fp8 > BF16 > fp4`.
+- fp8 = sweet spot; Q4 GGUF equals fp8 quality (MPI-162, live A/B, 4060 Ti).
+- Full BF16 is WORSE (over-influences / over-drives — LTX was tuned around fp8-class).
+- fp4 is worst ("fp4 hurts"). Do NOT assume higher precision = better for Gemma.
+
+**Resident VRAM (disk size ≠ VRAM — critical for fit planning):**
+
+| Gemma variant | disk | resident VRAM | note |
+|---|---|---|---|
+| `gemma_3_12B_it_fp4_mixed` | 9.45 GB | ~8 GB | no dequant |
+| `google_gemma-3-12b-it-Q4_K_M.gguf` | 6.8 GB | **~11.8 GB** | dequants `token_embd` to fp16 |
+| `gemma-3-12b-it-heretic-fp8-comfy` | 14 GB | **~15 GB** | aimdo dynamic-VRAM staged |
+| full bf16 | ~24 GB | ~24 GB | — |
+
+Q4 GGUF's tiny disk does NOT reach VRAM — GGUF dequantizes `token_embd.weight` to fp16
+at encode time (`Dequantizing token_embd.weight to prevent runtime OOM`), inflating to
+~11.8 GB. Q4 OOMs on a 16 GB card because 11.8 GB Gemma + diffusion + encode-time alloc
+exceed 16 GB. On ≥24 GB (5090), Q4 (~11.8 GB) is a BETTER fit than fp8 (~15 GB).
+
+**Tier mapping (MPI-168 `sizeTier`):**
+- **Low** = `fp4_mixed` (~8 GB, accepted quality trade for smallest VRAM fit).
+- **Balanced** = `Q4 GGUF` (~11.8 GB, fp8-quality at less VRAM — quality/efficiency star).
+- **High** = `fp8` (~15 GB, best adherence; needs ≥24 GB for comfortable fit).
+
+Q4 GGUF loads via city96 `DualCLIPLoaderGGUF` (mixed graph: `.gguf` Gemma +
+`ltx-2.3_text_projection_bf16.safetensors`, `type=ltxv`). Drop the `.gguf` in the
+`text_encoders/` folder. NOT yet shipped (deferred to tier-restructure). Staged orphan
+weights in `cubric-models` R2 — see `docs/builder/04-add-models.md` GC ledger.
+
 ## Capability LoRAs (all MODEL-ONLY — load via `MpiLoraModel`)
 
 See [lora-strength-law.md](lora-strength-law.md) for the strength conclusions.
@@ -30,7 +61,7 @@ Default 0.5, sweep 0.3–0.7.
 | VBVR **T2V** (V1) | reasoning/sequencing for t2v | `LTX2.3_Reasoning_V1` | 658MB | ❌ **DROPPED** — inconsistent across scenes |
 | Singularity OmniCine V1 | anatomy + fast-motion + lip-sync, kills subtitles | civitai `3001143` | 2.5GB | ❌ **DROPPED** — degrades audio (no doc fix), ethnicity bias, +size/time |
 | Enhancers **Soft** | autofocus/DoF + desaturated polish (Soft only, skip Crisp) | civitai `2849706` | 344MB | ✅ **KEEP — stage-1 LoRA loader, NO merge** @0.5-0.7 (1.0 hallucinates). Ships in a generic `Input_Lora_N` slot. |
-| Transition | i2v↔i2v / FL transition, on/off toggle | valiantcat HF | — | ✅ **WORKS on FL** (smooth A→B morph); STAGE-1 only; toggle; short atomic morph primitive; delivery deferred to effect-system. |
+| Transition | i2v↔i2v / FL transition, on/off toggle | valiantcat HF | — | ✅ **WORKS on FL** (smooth A→B morph); STAGE-1 only; toggle; short atomic morph primitive; delivery deferred to effect-system. **TWO roles:** (1) short A→B morph primitive — always spans the whole clip; (2) **I2V lipsync/motion ENABLER** — with it OFF, i2v audio gens FREEZE (no mouth motion regardless of audio influence). Baked ON for all audio ops (mandatory dep, re-hosted to HF `re-host/loras/ltx2.3-transition.safetensors`). Do NOT bake OFF for audio i2v. |
 
 - **VBVR is MODE-DEPENDENT** (not a version A/B): dev ships I2V=V4, T2V=V1. Load
   the one matching the op. Dev: VBVR is NOT a motion LoRA — "stacks with motion

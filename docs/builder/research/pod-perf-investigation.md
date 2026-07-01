@@ -460,7 +460,7 @@ starvation pointed at aimdo's dynamic fault-in stalling the SM (suspect A).
 ### A (aimdo overhead) = TESTED, FAILED — disabling aimdo OOM-KILLS the Pod.
 Hypothesis was: LTX fits 24GB, so aimdo's stage/evict is wasted overhead; disable
 it and the model stays resident → faster. **WRONG, and it was already documented
-(gotchas.md MPI-146).** `--disable-dynamic-vram` (R2-pushed via start.sh, gated
+(builder/02-image-and-rebuild.md, MPI-146).** `--disable-dynamic-vram` (R2-pushed via start.sh, gated
 VRAM_GIB≥22) made ComfyUI load LTX-2.3's **full 3-stage** weight set RESIDENT with
 the offload spec on CPU → it streamed **~57GB into a Pod with ~57GB RAM** → the
 status bar sat at `LOADING MODEL 0%` for 2:54+, RAM hit 98%, then the **container

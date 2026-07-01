@@ -63,3 +63,12 @@ Ask contributors to include these fields when reporting a validation result:
 
 For macOS reports, also ask for Gatekeeper behavior and whether the app was
 launched through Finder, Terminal, or both.
+
+## macOS Testing via Rentamac
+
+Rent a cloud Apple Silicon Mac at **https://rentamac.io**; drive remotely via DeskIn. Re-subscribe only when something specifically needs testing on real Apple hardware.
+
+**Gotchas:**
+
+- **Gatekeeper quarantine**: any downloaded build is quarantined. Reliable clear: `xattr -dr com.apple.quarantine "<folder>"` in Terminal, then double-click `start.command`. Include this step in mac release instructions — it is the only working first-launch path for un-notarized builds.
+- **GitHub API rate limit**: a rented Mac's datacenter IP shares GitHub's unauthenticated rate limit (60 req/hr per IP). The online updater may 403 even when code is correct. Diagnose with `curl -s https://api.github.com/rate_limit` before blaming the updater.

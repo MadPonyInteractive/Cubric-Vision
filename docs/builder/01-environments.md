@@ -46,6 +46,14 @@ with the mpi-ci image: build the image there, drive the workflow loop from here.
 - **No agent SSH.** Proxy SSH (`ssh <pod>-<id>@ssh.runpod.io`) works for the user
   interactively but refuses non-PTY automation exec. User drives the shell.
 
+## ComfyUI Windows portable ships cu130
+
+The ComfyUI Windows portable (`ComfyUI_windows_portable_nvidia.7z`) at v0.25.1 ships
+Python 3.13.12 + torch 2.12.0+cu130 (CUDA 13.0). RunPod host fleet is HETEROGENEOUS on
+drivers (535→12.2, 550→12.4, 570→12.8, 580→13.0). Decision: keep Pod images cu128 + cu124
+(cu128 covers ≥570, cu124 covers ≥550). Parity surface = ComfyUI core SHA + frontend +
+custom-node commits (MPI-117 lock), NOT torch/CUDA.
+
 ## Where research / decisions / docs live (single-source — point, don't copy)
 
 | Topic | Canonical file | Repo |

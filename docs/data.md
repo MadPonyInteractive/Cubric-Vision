@@ -66,3 +66,13 @@ Model settings are persisted to the project JSON. LoRA picks and upscale model s
 Most models use a flat six-slot `loras` array. Models that declare `model.loraStages`
 use a staged object instead; WAN stores `{ high: [...], low: [...] }`. LTX uses the
 standard flat LoRA shape.
+
+## Gotchas
+
+**Reuse prompt recall (`state.promptReuseOptions` / `state.promptReuseSource`):** Ask is a behavior flag; Gallery can reuse Original or Current. I2V prefers materialized snapshots in `Media/.preview-assets/<itemId>/startFrame.png` + `endFrame.png`. Gallery Reuse source `current` uses the card's active `selectedIndex` entry. MPI-127: `_mergeReuseMedia(frames, saved)` in `js/utils/promptReuse.js` — preview-asset frames are authoritative for IMAGES, saved media supplies every OTHER type (audio, non-frame video); if frames present, saved images dropped to avoid dup start-frame chip.
+
+**Sidecar `controlState` schema (MPI-115, SCHEMA_VERSION 3):** `.meta/<uuid>.json` sidecar has ONE source per field. Replayable PromptBox state = `generationSettings.controlState = { shared?, op?, model? }`, snapshotted at gen time. Buckets: `shared` = `project.shared[mediaType]` (ratioSelector/qualityTier, batch, duration, motionIntensity, previewStage); `op` = per-op (denoise/useGrid/upscaleFactor); `model` = `{loras, upscaleModel}`. Removed dups: top-level `ratioLabel`, `videoMeta`, `generationSettings.modelSettings`. Deliberate dups KEPT: `pixelDimensions` vs `injectionParams.Width/Height`; `mediaItems` vs `previewAssets.snapshots`. Migration: `SCHEMA_VERSION = 3`; `migrateV2toV3` chains.
+
+**`removeHistoryEntry` empty-group guard:** `removeHistoryEntry(group, index)` in `projectModel.js` silently returns original group when only one entry remains (`group.history.length <= 1`). Delete flows consuming every remaining entry must detect this BEFORE looping and switch to `removeGroup(id)` + `navigate(PAGE_GALLERY)`. Detect with `indices.length >= _group.history.length`. File DELETE fetches still fire for each item.
+
+**Video trim frame semantics:** Out-points are frame-inclusive. Frame stepping/display must use probed stream fps with `frameCount` bounds — NOT `frameCount / HTMLVideoElement.duration`. Chromium can report a few ms of duration tail after the final decoded frame, manufacturing a fake one-past-last frame that makes next/previous controls appear stuck at the end.

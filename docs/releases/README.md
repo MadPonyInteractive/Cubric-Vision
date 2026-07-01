@@ -78,6 +78,20 @@ Each release file contains:
 - **ComfyUI Engine**: Version info
 - **Platform Update Checklist**: Items to update on the landing page, docs site, GitHub releases, Patreon, and Discord
 
+## Build-time flags and stage derivation
+
+### `dev_mode` is derived from `BUILD_HASH`
+
+`APP_CONFIG.dev_mode = (BUILD_HASH === 'dev')` in `dev_configs/app_config.js`. Source/dev runs (`npm start`) keep `js/core/buildInfo.js` at `BUILD_HASH = 'dev'` → dev_mode on. `scripts/build-portable.mjs` stamps a real Git hash into the STAGED COPY of `buildInfo.js` (never the repo source) → staged dev_mode off. `main.js` re-derives by regex-reading `BUILD_HASH`. Never set dev_mode to a literal; never expect builds to edit source.
+
+### App stage derivation
+
+App release stage (`alpha` | `beta` | `release`) is derived purely from `APP_VERSION`: `0.x.x` → alpha; `X.0.0` → release; `X.Y.0` (Y>0) → beta; `X.Y.Z` (Z>0) → alpha. Frontend: `js/core/appStage.js` (`deriveStage()`, `APP_STAGE`, `APP_STAGE_LABEL`). Backend mirror: `routes/system.js` re-implements `deriveStage()` server-side (CommonJS can't import the ESM helper) — keep both copies in sync. Client-sent stage is advisory, never trusted. See `docs/versioning.md` § "APP_STAGE (derived)".
+
+### Repo distribution gating
+
+One repo (AGPL-3.0). Gating = distribution timing, not code: Patreon Pro → alpha zip ~1 month pre-public; Early Access → ~2 weeks pre-public; Public → GitHub Release + tag at launch. HuggingFace write token was scrubbed from all commits via `git filter-repo --replace-text`. Versioning policy: `major.minor.patch`; Major starts at 1; patches = bug-fix builds only.
+
 ---
 
 **See:** `/mpi-version-bump` skill, `docs/versioning.md`

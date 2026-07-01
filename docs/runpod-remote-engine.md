@@ -105,15 +105,12 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   volume has **zero GPU-arch binding** and is portable across every card the image can run.
   Users never reinitialize the volume to switch cards.
 - **Real compatibility axis:** `image-CUDA-floor ≤ host-driver-provided-CUDA`, NOT card arch.
-  The image's `NVIDIA_REQUIRE_CUDA` label (e.g. `cuda>=12.8`) is checked by the
-  `nvidia-container-cli` runtime hook against the **HOST machine's driver** before the
-  container starts. A host whose driver maxes below the floor refuses the container
-  (`unsatisfied condition: cuda>=12.8, please update your driver`). Decoupling torch does NOT
-  fix it — the rejection is the image label, not pip torch. Lever = a lower-floor image
-  (cu124, broad host compat, no Blackwell) vs cu128 (Blackwell). Earlier notes proposed a GPU-picker
-  auto-filter (**MPI-91**), but that card was later archived as superseded: `cu124` became the default
-  for non-Blackwell cards, which removed the broad refusal class, and the remaining Blackwell tail risk
-  is not pre-filterable from the RunPod picker data Cubric can currently read.
+  The image's `NVIDIA_REQUIRE_CUDA` label is checked by the `nvidia-container-cli` hook against
+  the **host driver** before the container starts; a host below the floor refuses it. Decoupling
+  torch does NOT fix it — the rejection is the image label, not pip torch. See §6 for per-card
+  image floors. (The old GPU-picker auto-filter idea, **MPI-91**, was archived: `cu124` as the
+  non-Blackwell default removed the broad refusal class, and the Blackwell tail isn't
+  pre-filterable from the picker data Cubric can read.)
 
 ## 6. Pod image + custom-node split (Design B+)
 
@@ -214,58 +211,41 @@ re-arms it opportunistically on the **next gen's** `connect()` (not a background
 The OOM-toast live-verify is on **MPI-93** (the test GPU was reclaimed before verify; the code
 is committed).
 
-## 10. Verification status (at MPI-64 close, 2026-06-15)
+## 10. Operational side-modes + troubleshooting
 
-| Area | Status |
-|---|---|
-| Pod create-on-Connect / warm-resume / delete-fallback | ✅ live-verified |
-| Stop-not-delete on quit (OFF) / delete-on-quit (ON) | ✅ live-verified |
-| Single-Pod invariant (stray reaped live) | ✅ live-verified |
-| Connect-disabled-through-boot (`_starting`) | ✅ live-verified |
-| Remote IMAGE generation + project save | ✅ live-verified |
-| Remote model install onto volume (Wan 2.2 78GB) | ✅ live-verified |
-| Remote VIDEO generation (I2V, SaveVideo, no NVENC) | ✅ live-verified (L4, 2026-06-15) — saves + plays + respects subject |
-| Remote model UNINSTALL (`/wrapper/models/delete`) | ✅ live-verified (v0.4.0) |
-| OOM detection (exit-137 container OOM) | ✅ live-verified (forced twice, RTX 2000 Ada) |
-| OOM container self-heal mechanism | ✅ confirmed via Telemetry (Uptime never resets; Memory 98%→2%) |
-| OOM transient-503 soft toast + status auto-repaint | ⚠️ code committed, live-verify deferred → **MPI-93** |
-| Remote VIDEO: T2V / upscale / interpolate / with-audio | ⚠️ untested remotely (separate weights/Pods; weights → **MPI-81**) |
-| Remote INPUT-ASSET transfer (video/audio/.latent) | ⚠️ code shipped, not live-verified → **MPI-89** |
-| Cancel / interrupt a remote gen mid-run | ⚠️ not exercised remotely → **MPI-93** |
-| Higher-res / longer T2V on a 64GB+ Pod | ⚠️ not run (minimal hit ~92-94% RAM on L4) → **MPI-93** |
-| Crash-watchdog backstop (simulated kill) | ⚠️ designed, not verified → **MPI-93** |
-| Manifest compatibility gate (Step 5) | ❌ not built → **MPI-90** |
-| Image CUDA floor vs host driver | ✅ axis understood; per-card image wiring live (cu124 default) |
-| Fresh-volume init + bundle versioning | ❌ not built → **MPI-94** |
+- **CPU "download mode" Pod (MPI-88)** — provision a CPU-only Pod to install models
+  onto the volume with no GPU billing, then switch to a GPU Pod to generate. Full
+  contract (sentinel `'__cpu__'`, slim image, connect-gate branches) →
+  [runpod-troubleshooting.md](runpod-troubleshooting.md) § "CPU download mode".
+- **Fixed-bug traps** (restart-poll flag, /history reconcile URL, remote-cancel
+  async, aria2c 80% snap, image-pin-needs-restart, etc.) →
+  [runpod-troubleshooting.md](runpod-troubleshooting.md) § "Fixed-bug traps".
+- **Verification snapshot** at MPI-64 close (2026-06-15) is archived in
+  troubleshooting; live checklist is owned by MPI-93.
 
-## 11. No-GPU "download mode" Pod (MPI-88)
+## 11. Arch quick-reference (compressed from gotchas.md MPI-170)
 
-Provision a CPU-only Pod purely to install models onto the volume with **no GPU billing**,
-then switch to a GPU Pod to generate (volume + models persist — Design A). Live-verified
-end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models present, no re-download).
+**Auto-retry GPU wait** (`js/shell.js` `_startGpuWait`/`_stopGpuWait`): opt-in "Auto-retry" picks an out-of-stock GPU and polls availability (15s) entirely in the shell — survives navigation. `state.remoteWaitGpu` (transient) mirrors the GPU being waited on. During wait: `phase:null`, `active:false`, NO Pod created. `autoRetry` must be in `normalizeRunpodConfig` whitelist or it strips on persist.
 
-- **Trigger:** the Settings GPU dropdown's first option, "No GPU — download only", sets
-  `runpodConfig.gpuType` to the sentinel `'__cpu__'`. It rides the existing gpuType field,
-  Connect guard, persistence, and GPU-switch delete-and-recreate logic untouched.
-- **Create spec** (`_createPodInternal`, `routes/remoteProxy.js`): sentinel → `computeType:'CPU'`
-  + `cpuFlavorIds:['cpu3c']` (no `gpuTypeIds`/`gpuCount`), `containerDiskInGb:20` (CPU Pods cap
-  at 20), env `CUBRIC_DOWNLOAD_MODE=1`, and the **slim `:v<ver>-cpu` image** — NOT a GPU image.
-  The full cu124/cu128 image will NOT run on a CPU Pod (its entrypoint inits CUDA → container
-  starts with 0 processes → app hangs "connecting"), so the slim image is mandatory.
-- **Slim image** (mpi-ci `cubric-vision-pod/Dockerfile.cpu` + `start-cpu.sh`): wrapper + aria2c
-  only, no torch/ComfyUI. `/wrapper/models/install` (aria2c) is pure HTTP+disk. The wrapper's
-  `/health` returns `ready:true, comfy_ready:false, download_mode:true` when `CUBRIC_DOWNLOAD_MODE`
-  is set (no ComfyUI to probe). See MPI-81 for the image's place in the rebuild batch.
-- **State:** `_mode.noGpu` plumbed through `/remote/mode` + `/remote/comfy/status`; the renderer
-  mirrors it via `remoteEngineClient.isDownloadOnly()`.
-- **Download mode has no ComfyUI / no preview WS**, so three "connected" gates branch on it:
-  the hero connection feed ORs `noGpu` into its `comfy_ready` gate (`js/shell.js`); both connect
-  paths (Settings + boot reconnect) skip the WS handshake. Without these the hero painted
-  `LOCAL · OFFLINE` and Connect hung at "Almost ready" even though the volume was live.
-- **Generation blocked:** `_ensureRemoteReady` throws `code:'pod_no_gpu'` + a `ui:info` toast; and
-  `js/shell/projectUI.js` blocks entering the gallery (project open) in download mode via
-  `isDownloadOnly()` → toast, no navigation.
-- **Watchdog** unchanged (the CPU Pod inherits the `RUNPOD_API_KEY` env self-stop backstop).
+**DC-steer + bad-host maintenance detect (MPI-135)** — logic-verified, NOT live-verified (needs scarce card + maintenance host). Any-region ephemeral retries now call `_bestStockDcForGpu` (ranks `dataCenters[].gpuAvailability`) and pin `body.datacenter` to the best-stock DC instead of re-sending `dc=null`. Maintenance hosts: `getPod` machine object carries `maintenanceStart`/`maintenanceEnd`/`maintenanceNote`; both readiness polls early-return `'maintenance'` past the 30s grace → delete doomed Pod + dialog "Connect again for a fresh host". NO signal for stuck-pull-at-0 (no REST pull-progress field).
+
+**GraphQL↔REST GPU-id fallback (MPI-159)** — LIVE-VALIDATED 2026-06-29. REST `POST /pods` has a separate enum from the GraphQL catalogue; newer cards (RTX PRO 4500/4000 Blackwell) are in the catalogue but not the enum → 400 `gpuTypeIds/items/enum`. Fix: `_createPodInternal` falls back to `client.createPodGraphql` (`podFindAndDeployOnDemand`) whose `gpuTypeId` is a free string. REST stays primary; GraphQL-created Pods are managed by REST (shared id namespace). `_createRejectReason` now unwraps the top-level array body and classifies `gpuUnsupported:true` → honest copy + retry-loop break.
+
+**Volume persists through Reset** — RunPod console "Reset" wipes container/ephemeral disk only; Uptime keeps climbing, volume usage stays full, models survive. Confirmed 2026-06-17. Clear volume via manual `rm` (wrapper/SSH) or destroy the network volume itself.
+
+**REST Pod shape — no `uptimeInSeconds`** — `GET /pods/{id}` has NO `runtime` object; `p.runtime?.uptimeInSeconds` is always null. Use `lastStartedAt` (UTC ISO) to compute uptime. Live fields: `costPerHr`/`adjustedCostPerHr`, `desiredStatus`, `machine` (dataCenterId, location, gpuAvailable, maintenanceStart/End/Note). NO image-pull progress field exists anywhere.
+
+**Watchdog is a crash backstop, NOT an idle timer** — the Pod-side watchdog (`wrapper.py Watchdog`) resets on ANY authenticated traffic; `MpiMemoryMonitor` polls `/wrapper/stats` every 2s so the deadline never expires while the app is alive. It fires only when the app dies. Never add "stop Pod after N min idle while connected" — architecturally impossible without stopping the stats poll. Fixed 10-min backstop (`CUBRIC_IDLE_TIMEOUT_S=600`, not user-configurable). MPI-103 live-verified: Pod stayed up 57 min idle-with-app.
+
+**Remote route branch audit** — in remote mode (`isRemoteActive()`), model files live on the Pod VOLUME, not local disk. Any `routes/` path that reads/writes/deletes local model files MUST have an `isRemoteActive()` branch. Grep `routes/` for `fs.`, `_trash`, `managedModelsRoot`, `getDefaultModelsRoot`, `resolveComfyPath` and confirm each short-circuits. Uninstall lacked this (found 2026-06-13) and trashed local files while leaving the Pod volume untouched.
+
+**Wrapper fetch 502 retry** — `wrapperFetch` retries transient 404/502/503/504 (Pod warming); original 8s budget caused failures on mid-resume; raised to ~30s (`retries=15, retryDelayMs=2000`). Genuine 4xx/501 (bad body, missing endpoint) not in the retry set. Remote-uninstall safe-abort surfaces as `ui:warning`, NEVER `ui:error` (which shows the GitHub-report dialog).
+
+**On-demand model auto-upload (MPI-82)** — live-verified 2026-06-17 (L4). A LoRA/upscale present locally but absent on the Pod is auto-uploaded at generate-time (`comfyController._uploadRemoteModels`) before `/prompt`. Wrapper endpoint: `POST /wrapper/models/upload` (image v0.4.9+). `forceLocal:true` skips upload. Presence check is a live `os.path.exists` on the volume every gen (no app cache).
+
+**Manifest compat gate (MPI-90)** — wrapper writes `/workspace/cubric/manifest.json` at first boot; app reads it in `_evaluatePodHealth()` before first remote gen. Blocks (409) only when `manifest_schema_version > MANIFEST_SCHEMA_MAX` (=1); 404 = fresh volume = OK. Gate currently dormant (all real Pods report schema 1). Tests: `tests/runpod-remote-hardening.test.cjs` + `wrapper/test_manifest_stamp.py`.
+
+**Pod wrapper owns + supervises ComfyUI (v0.4.2)** — `POST /wrapper/restart-comfy` restarts ONLY ComfyUI without a Pod reboot. RunPod console op truth table: "Restart Pod" = NO-OP (uptime unchanged, processes NOT restarted); "Reset Pod" = WIPES container; "Stop → Start" = ONLY console op that reloads ComfyUI. `start.sh` `exec`s the wrapper as main process; unexpected ComfyUI death → `os._exit(1)` (safety preserved); intentional restart sets `_restarting` so supervisor relaunches.
 
 ## Related docs / rules
 

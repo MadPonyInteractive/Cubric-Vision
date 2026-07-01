@@ -45,7 +45,9 @@
 
 > **Before searching for anything in the codebase,** check `docs/PROJECT.md` first — it is the orientation hub that points to all subsystem docs. Most answers about structure, architecture, and data shapes are already documented there.
 
-> **For non-obvious gotchas and hard-won lessons** (RunPod/remote engine, LTX-2.3 authoring, Pod/mpi-ci, ComfyUI engine, UI components, generation/prompt/sidecar, downloads, build/release, macOS ops, conventions), grep or read **`docs/gotchas.md`** — one entry per fact, grouped by domain. It holds the "why it broke last time" knowledge that isn't in the architectural rules. Verify a named file/function/flag still exists before relying on an entry.
+> **To find where a fact lives,** read **`docs/README.md`** — the knowledge map. It routes every domain (RunPod/remote engine, LTX-2.3 authoring, Pod/mpi-ci, ComfyUI engine, UI components, generation/prompt/sidecar, downloads, build/release, macOS ops) to its subsystem/research doc. Durable knowledge lives in those docs, NOT in gotchas.md (MPI-170 drained it). Subsystem homes hold the "why it broke last time" knowledge — e.g. RunPod fixed-bug traps → `docs/runpod-troubleshooting.md`, UI → `docs/ui-gotchas.md`, LTX → `docs/builder/research/`. Verify a named file/function/flag still exists before relying on an entry.
+
+> **`docs/gotchas.md` now holds ONLY** cross-cutting conventions (logger arity, kanban shape, commit hygiene, toast-vs-dialog) + temporary/unverified flags (RunPod-branch time-bomb, homeless guards). When you learn something durable, write it to its **subsystem** doc, not gotchas. The **≤200-line-per-doc rule** applies (exemptions in `docs/README.md`).
 
 ---
 

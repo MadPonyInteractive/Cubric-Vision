@@ -65,6 +65,31 @@ high res spends everything on spatial detail (clean audio, near-static subject).
 **Product framing:** draft at low (iterate the prompt, lots of motion), finish
 at high/very_high (crisp, locked-down, clean audio).
 
+## Stage-1 = motion, stage-2 = spatial upscaler
+
+Stage-1 decides motion; stage-2 is a low-denoise latent upscaler (hi-res-fix equivalent)
+that re-denoises for spatial detail only — it does NOT re-plan motion. Consequences:
+- **All LoRAs go stage-1 ONLY** (bypass stage-2). A stage-1 LoRA's effect is carried into
+  stage-2 through the latent; duplicating into stage-2 = redundant cost. Live A/B
+  (Soft LoRA stage-1+2 vs stage-1-only): difference marginal.
+- Garment morph at stage-2 is an upscale/detail re-interpretation artifact — fix via
+  prompt word or stage-2 denoise strength, NOT LoRA juggling.
+- Step counts: terminal shows N−1 denoise steps for N scheduled (first sigma = start
+  latent, not a bug).
+
+## ControlNet Union 2.3 — soft control only
+
+ControlNet Union 2.3 with LTX-2.3 = **SOFT control**. `strength_model` is a dead knob
+— tighten via AddGuide params instead. TIER is the big lever: low (448px) starves
+pose-lock; medium (640px) gives good dance adherence. See also workflow-deconstruction
+notes in [ltx-workflow-authoring.md](ltx-workflow-authoring.md).
+
+## NAG (negative prompts at CFG=1)
+
+The distilled model runs at CFG=1 → **negative prompts are ignored by default.** KJNodes
+`LTX2 NAG` node is required to make negatives fire. Full wiring + dependency-cycle trap:
+[research/black-bars-and-nag.md](black-bars-and-nag.md). NAG does NOT fix t2v black bars.
+
 ## Open items
 
 - Motion-boost LoRAs — investigate (a detailer LoRA showed no visible i2v

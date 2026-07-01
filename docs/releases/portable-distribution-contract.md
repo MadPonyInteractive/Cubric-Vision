@@ -142,6 +142,10 @@ Expected public asset names:
 Update bundles are simple changed-file bundles for the first portable updater.
 Do not implement binary deltas for MPI-8.
 
+### Delta update details (MPI-56)
+
+`scripts/build-portable.mjs --from-manifest <path>` emits a true delta bundle (only changed/added files). Diff is file-level SHA256 only — never binary delta (contract forbids it). A file is included iff its sha256 is absent or different vs baseline; paths gone from the new set go in `manifest.delete[]`. `delete[]` always excludes PRESERVE prefixes (engine/, models/, user-data/, Documents). `alwaysKeep` = update-manifest.json + connector-manifest.json + launchers. Omitting `--from-manifest` = FULL bundle (`fromVersion:null`, first-release safe).
+
 ## Portable Root Layout
 
 Build scripts should stage each full artifact with this root shape:
@@ -158,6 +162,14 @@ CubricVision-<platform>-<arch>-v<version>/
   update.<platform-extension>
   update-from-zip.<platform-extension>
 ```
+
+### Launcher split details
+
+Two launchers per desktop platform: Windows — `start.vbs` (default, hidden console) + `start-with-terminal.bat`; Linux — `start.sh` (detached via `setsid --fork nohup`) + `start-with-terminal.sh`; macOS — `start.command` only (`.app`-style true-hide deferred). Windows `.bat` always shows a console — VBS is the only true zero-flash path. App logs go to `logs/app.log` regardless of which launcher is used.
+
+### Updater — no host tools assumed
+
+The portable updater must assume NO host tools — `curl` is absent on minimal Linux. The only guaranteed runtime is the bundled Electron binary. All network work goes through `scripts/portable/fetch-release.cjs` (pure Node `https`, redirect-aware), run via `ELECTRON_RUN_AS_NODE=1 <bundled electron>`. Exec-bit self-heal has THREE layers: (1) `restoreExecBit` per-delta-file; (2) `restoreLauncherBits()` final manifest-independent sweep in `apply-update.cjs`; (3) `chmod +x` sweep in `update-from-zip.{sh,command}`. Bootstrap trap: a broken updater can't self-deliver its fix — permanent escape hatch = offline `update-from-zip.{sh,command}`.
 
 Platform extensions:
 

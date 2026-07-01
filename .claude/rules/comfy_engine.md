@@ -157,8 +157,8 @@ weights/media that exist on the TARGET engine — ComfyUI eager-validates every
 node's file inputs at PROMPT time (a lazy `MpiIfElse` defers EXECUTION, not
 VALIDATION), so a file carrying both engines' loaders rejects on the engine that
 lacks one. That one-loader-per-file split lives in the BUILD script
-(`comfy_workflows/scripts/workflow_generation/generate_ltx.py`), see
-`docs/gotchas.md` § engine-split.
+(`comfy_workflows/scripts/workflow_generation/generate_ltx.py`) — see § 2.5
+"Engine Split" above for the full contract.
 
 ### 2. ComfyUI Process State
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 
