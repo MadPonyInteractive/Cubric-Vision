@@ -35,6 +35,14 @@ Community Cloud is unsupported (unstable/limited for this use case).
 - Mode/status: `GET|POST /remote/mode`, `GET /remote/ws-token`, `GET /remote/comfy/status`.
 - Lifecycle: `POST /remote/pod/create`, `/reconnect`, `/stop-active`, `/delete-active`,
   `/teardown`, `/cleanup-orphans`; `GET /remote/pod/specs`.
+  - `create`/`reconnect` accept an optional **`minMemoryInGb`** system-RAM FLOOR (MPI-160).
+    RunPod honors it as a hard placement filter (live-proven: 200GB → SUPPLY_CONSTRAINT,
+    90/none → create), so a high-RAM-only host is deterministic. High-RAM creates route
+    through the **GraphQL** `podFindAndDeployOnDemand` path (proven; the REST enum path was
+    NOT proven to accept the field). A no-matching-host refusal returns `ramFloorMissed` so
+    the UI shows an honest "no ≥N GB host" message + respects the auto-retry/wait toggle.
+- Telemetry: `GET /remote/pod/stats` (RAM+VRAM, wrapper-first), `GET /remote/pod/disk`
+  (volume USED bytes via wrapper `du`, wrapper-first, NO REST fallback — see §5; MPI-169).
 - ComfyUI forwarding: `POST /proxy/prompt`, `/interrupt`, `/queue`, `/upload/image`;
   `GET /proxy/view`, `/queue`.
 - Companion routers: `routes/remoteEngine.js` (key resolver, wrapper-token gen/store/clear,
@@ -80,7 +88,8 @@ Community Cloud is unsupported (unstable/limited for this use case).
 
 Non-secret pref `deleteOnQuit` in `state.runpodConfig` (default OFF; normalizer in
 `js/core/storage.js`, localStorage-mirrored via the state Proxy). Full config:
-`{ enabled, podId, datacenter, gpuType, volumeId, wasConnected, deleteOnQuit }`. Pushed to
+`{ enabled, podId, datacenter, gpuType, volumeId, wasConnected, deleteOnQuit, autoRetry,
+containerDiskGb, minRamGb }` (minRamGb = optional system-RAM floor, MPI-160; 0 = none). Pushed to
 backend `_mode` via `POST /remote/mode` on boot (`shell.js _initRemoteBoot`) and on checkbox
 toggle (`MpiSettings.js`). `main.js` stays pref-agnostic — it calls `/remote/pod/teardown`
 and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is server-owned.
@@ -101,6 +110,14 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   Switching DC ⇒ delete + re-download.
 - **Delete a volume only after deleting its attached Pod** — RunPod refuses to delete an
   attached volume even when the Pod is EXITED. Settings deletes the tracked Pod first.
+- **No volume USED-bytes from RunPod (MPI-169).** REST `/networkvolumes` returns only
+  `{id,name,size,dataCenterId}` (size = the configured quota); GraphQL `NetworkVolume`
+  rejects `used`/`usedBytes`/`consumedBytes`/`currentPerGBUsage`. The ONLY truthful used
+  figure comes from inside a running Pod: wrapper `GET /wrapper/disk` runs `du -sb
+  /workspace` (0.2.23+). So the Settings volume disk bar is **connected-Pod-only** (works
+  on a GPU pod OR a CPU download pod — both mount `/workspace`); an idle/unconnected DC
+  shows the total-only badge. `statvfs` is the wrong tool (reads the multi-PB container
+  overlay, not the quota) — that was the reverted MPI-100 mistake; do NOT re-add it.
 - **Design A (locked):** PyTorch + ComfyUI live in the **Docker image**, NOT the volume → the
   volume has **zero GPU-arch binding** and is portable across every card the image can run.
   Users never reinitialize the volume to switch cards.

@@ -35,7 +35,11 @@
 
 ## whatIsNew
 
-- (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.)
+- (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.
+  Session additions to fold into that writeup: **Minimum system RAM** — optionally
+  require the Pod host to have at least N GB of system RAM (Settings → RunPod), useful
+  for heavy models that offload weights to RAM; and a **live volume disk-usage bar** in
+  Settings showing used / total GB while connected to a Pod.)
 
 - **New video model: LTX 2.3.** A fast video model that generates **with sound** —
   give it a reference clip to guide the voice, or feed in your own audio to drive
