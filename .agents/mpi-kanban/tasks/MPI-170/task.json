@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-170",
+  "title": "Docs reorg: drain gotchas.md (646→≤200) into subsystem/research homes + README index; enforce ≤200-line-per-doc rule",
+  "description": "GOAL (user, 2026-07-01): docs files should not exceed 200 lines; over that = split into new files. gotchas.md is 646 lines / 138 entries — agents have been dumping durable subsystem knowledge into it instead of its proper home. Drain it to ≤200 (target ~130-150): keep only genuinely cross-cutting conventions + temporary/unverified flags; route everything durable to its subsystem/research doc; add a docs/README.md index so agents don't scan every file.\n\nFULL PLAN: docs/DOCS-REORG-PLAN.md (written 2026-07-01, mapping done by 3 parallel analysis agents — every entry->target, deletes, new files, splits, execution order, guardrails). EXECUTE AGAINST THAT DOC — mapping is complete, no re-analysis needed.\n\nKEY FINDINGS: most gotchas are DUPLICATES of content already in research/subsystem docs (agents repeatedly found 'already fully covered in X — DELETE the gotcha') — ~90 lines are pure duplicate deletes. Root cause: CLAUDE.md + MEMORY.md route agents INTO gotchas as the one blessed 'learned stuff' bucket, but nothing routes OUT. This card adds the outbox (README index + the ≤200 discipline).\n\nSCOPE (~25 files): 6 NEW files (runpod-troubleshooting.md, ui-gotchas.md, download-manager.md, models-path.md, builder/research/black-bars-and-nag.md, builder/research/ltx-workflow-authoring.md) + docs/README.md index; 3 SPLITS (runpod-remote-engine.md 277, comfy.md 262, project-integrity.md 281 — all already >200); ~15 route-to-existing edits; ~90 lines of duplicate deletes; gotchas.md rewrite; CLAUDE.md router repoint (Documentation Lookup + Context Router sections point at gotchas for domains that moved).\n\nGUARDRAILS: (1) NEVER delete a gotcha before confirming its content is in the target (grep target first). (2) Research lab notebooks (pod-perf-investigation.md 616, audio-input.md 336) are EXEMPT from the 200-line rule — they're evidence logs, not reference; note the exemption in README. (3) Preserve UNVERIFIED / NOT-user-verified flags verbatim on move — they encode trust state. (4) Shared-branch tree: commit by explicit pathspec, never git add -A.\n\nEXECUTION ORDER (dependency-safe, see plan doc §Execution order): splits first (make room) -> new files -> route durable entries -> delete confirmed dups -> rewrite gotchas -> README index -> update CLAUDE.md router -> reconcile (every touched file ≤200 except exempt notebooks; grep for dangling pointers).\n\nBRANCH: RunPod. Docs-only, no code. Own dedicated session recommended (this was scoped at the tail of the black-bar-hunt session).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-01T00:00:00Z",
+  "updated_at": "2026-07-01T03:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "docs",
+    "gotchas",
+    "reorg",
+    "documentation-hygiene",
+    "200-line-rule",
+    "readme-index"
+  ],
+  "priority": "medium"
+}
