@@ -58,6 +58,17 @@
     where a separate second-stage LoRA varies the result) — on LTX the second
     stage matches the preview, so you continue it in place.
 
+- **See how much memory a model needs before you install it.** Each model on the
+  Models page now shows a size tier — **Low**, **Balanced**, or **High** — and you
+  can filter the list by tier. Hover a model's tier badge for a **memory table**
+  that spells out the real trade-off: a model doesn't need one fixed amount of VRAM,
+  it needs *some VRAM plus system RAM to cover the rest*, and the table shows how
+  much RAM you'd need at each VRAM level. Your own GPU's row is highlighted — your
+  local card when running on your machine, or the connected Pod's GPU when you're on
+  a RunPod remote engine. The prompt-box model dropdown also tags entries **L / B /
+  H** when you have two tiers of the same model family installed, so you can tell
+  them apart at a glance. (Estimated model need; excludes normal OS usage.)
+
 - **Hover to hear your clips.** Hovering a video card in the gallery now plays its
   audio; hovering an audio card plays it too (the stop button shows while it plays,
   and clicking still stops it). Only one card plays at a time, so sounds never
