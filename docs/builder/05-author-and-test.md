@@ -83,3 +83,12 @@ When a test concludes:
    [comfy_workflows/scripts/workflow_generation/README.md](../../comfy_workflows/scripts/workflow_generation/README.md)
    § "Progress stages". (UltimateSDUpscale / detailer self-declare; ESRGAN upscale
    pulses — no entry needed for those.)
+
+## Flattening a LoRA stack into ONE file
+
+To fold a live LoRA chain (e.g. SoftEnhance → Abliterated → Detailer) into a single
+reusable `.safetensors` — the "make it ours" pattern — do NOT use CheckpointSave or the
+native merge nodes (both are dead on LTX). Extract the combined delta with KJNodes
+`LoraExtractKJ`, then union the model+clip halves. Full LIVE-PROVEN recipe + the four
+dead ends: [research/lora-merge-ltx.md](research/lora-merge-ltx.md). Script:
+[comfy_workflows/scripts/merge-loras/](../../comfy_workflows/scripts/merge-loras/).
