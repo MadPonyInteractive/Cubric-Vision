@@ -40,6 +40,12 @@
   with a 4-step Turbo mode for quick drafts — ideal for iterating on a shot before
   committing to a heavier model. Image-to-video is its strong suit.
 
+- **Wan 2.2 Smooth video quality boost.** Reworked the two-stage sampling schedule
+  for **text-to-video** and **image-to-video**. Stage-1 (motion preview) now closely
+  matches the final result instead of regenerating it, and stage-2 resolves more real
+  detail — sharper output, more consistent character/composition between the preview
+  and the final. Image-to-video runs best at 720×1280.
+
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.
   Session additions to fold into that writeup: **Minimum system RAM** — optionally
   require the Pod host to have at least N GB of system RAM (Settings → RunPod), useful
