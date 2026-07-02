@@ -47,6 +47,18 @@ Fixed 2026-06-29. `comfy:needs-restart` SSE fires for both local and remote inst
 
 **NOT user-verified** (logic-tested only, 9 assertions pass). Two ways the restart was lost: (1) boot race — user presses Install while ComfyUI is still booting; ComfyUI's one-shot node scan runs BEFORE pip deps finish (proven: `IMPORT FAILED` at 19:35:50, pip success at 19:35:51) → import failure cached for the process life; (2) reload loss — frontend flag dies on any reload. Symptom: loader dropdown empty; `import gguf` works at a shell (looks like a path problem but is NOT). Fix: `downloadManager.js` now sets `processState.comfyNeedsRestart = true` server-side on LOCAL node install; `/comfy/status` echoes `needsRestart`; gen gate restarts when either flag is set; a booting ComfyUI restarts instead of finishing its poisoned scan. If dropdown still empty after Install: grep `app.log` for `IMPORT FAILED` near the install timestamp; full app restart is the manual cure.
 
+### stale engine mirror on a No-GPU Pod — install shipped without the GGUF (MPI-179)
+
+Fixed 2026-07-02, live-verified. `remoteEngineClient._active` was refreshed only by the ComfyUIController connect/generation flows; a No-GPU download Pod never runs those (no ComfyUI), so `isRemote()` read false all session and EVERY engine-scoped resolve (check universe, footprint, install set) used the LOCAL universe — LTX installed without its GGUF transformer yet read INSTALLED. Fixes: `remoteEngineClient` self-refreshes on every `remote:connection` edge; `MpiModelManager.awaitReSync()` refreshes the mirror before resolving; server-side `_withEngineExtraDeps()` (`downloadManager.js`) unions `engines[engine].extraDeps` back in after the MPI-163 intersect (subtract-only cannot heal a wrong-engine request). RULE: any new engine-scoped consumer must not read `isRemote()` before a refresh path has run.
+
+### remote "Verifying…" sweep — model-level, gated on weight bytes only (MPI-164)
+
+Fixed 2026-07-02. Two traps in `downloadManager.js` `_onRemoteInstallEvent`: (1) `_depDenominator` used `max(realTotal, registrySeed)` — an over-declared registry `size:` capped the bar at ~95-98%; real total must WIN once known (same rule as local `_wireProgress`). (2) A per-dep `models:install-verifying` mid-install flipped the WHOLE model bar to the indeterminate sweep; now the sweep waits until every dep is byte-complete and pins the bar to 100% first (MPI-140 contract). custom_nodes deps are excluded from that byte gate — a requirements-only node re-install sits at 0 bytes through its whole pip run and would hold the gate shut. Residual: an install where ONLY node pip runs never gets a verifying event → full determinate bar until INSTALLED.
+
+### CPU image baked a rotting wrapper — /health lied (MPI-181)
+
+Fixed 2026-07-02 (`v0.10.4-cpu`), live-verified (Settings volume bar on a fresh CPU Pod). Pre-v0.10.4, `Dockerfile.cpu` had NO R2 bootstrap — it baked wrapper.py at build, so every wrapper fix after the image build silently never reached CPU Pods, while the baked `CUBRIC_WRAPPER_VERSION` stamp made `/health` claim a version it didn't run (v0.10.2-cpu: 0.2.22 code labeled 0.2.23, no `/wrapper/disk` → no volume bar). Now the CPU image runs the same `bootstrap.sh` (start script env-selectable via `CUBRIC_START_SCRIPT=start-cpu.sh`) and `publish-runtime.sh` also publishes `start-cpu.sh`. RULE: wrapper edits reach BOTH pod flavors via `publish-runtime.sh` — an image rebuild is only for base/dep changes; trust `/health` `wrapper_version` only on bootstrap-era images (≥v0.10.2 GPU, ≥v0.10.4 CPU).
+
 ## CPU "download mode" Pod (MPI-88)
 
 Provision a CPU-only Pod purely to install models onto the volume with **no GPU billing**,

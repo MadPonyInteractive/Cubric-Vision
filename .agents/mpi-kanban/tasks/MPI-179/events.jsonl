@@ -1,0 +1,3 @@
+{"event": "task.created", "task": "MPI-179", "column": "doing", "at": "2026-07-02T12:13:20Z", "by": "agent"}
+{"event": "task.progress", "task": "MPI-179", "note": "Live round 2 (user): after restart, LTX install on CPU Pod completed fine; local check after disconnect shows 61GB universe. Engine-mirror fix behaving. Awaiting explicit confirm of GGUF on volume + GPU-Pod generation before closing.", "at": "2026-07-02T12:27:49Z", "by": "agent"}
+{"event": "task.attention", "task": "MPI-179", "state": "required", "reason": "GGUF install + correct universes live-proven; awaiting explicit user confirm (optionally a GPU-Pod gen) to close.", "at": "2026-07-02T12:56:06Z", "by": "agent"}
