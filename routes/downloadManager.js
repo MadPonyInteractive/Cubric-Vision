@@ -1039,9 +1039,15 @@ function _onRemoteInstallEvent(evt) {
             // While any dep still has bytes to fetch, keep the tick determinate.
             // When all deps ARE byte-complete, pin the bar to a FULL 100% under
             // the sweep (MPI-140 contract: download fills the bar, THEN verify).
+            // custom_nodes deps are WORK, not bytes — a requirements-only node
+            // re-install sits at 0 bytes through its whole pip run (minutes),
+            // which gated the sweep off for the entire final weight hash (live
+            // 2026-07-02: bar hung full+determinate, then snapped to INSTALLED).
+            // Their few MB are invisible next to multi-GB weights; exclude them.
             const allBytesDone = modelJob.deps.every(d =>
                 d.status === 'complete'
-                || (d.totalBytes > 0 && (d.downloadedBytes || 0) >= d.totalBytes));
+                || d.type === 'custom_nodes'
+                || (d.downloadedBytes || 0) >= _depDenominator(d));
             if (allBytesDone) {
                 modelJob.downloadedBytes = modelJob.totalBytes;
                 modelJob.progress = 1;
