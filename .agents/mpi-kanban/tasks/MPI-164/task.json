@@ -3,11 +3,11 @@
   "id": "MPI-164",
   "title": "Remote install bar must reach 100% BEFORE flipping to 'Verifying\u2026' \u2014 it switches at ~95%",
   "description": "BUG (found live 2026-06-30, A100 Pod, LTX GGUF install): the download progress bar flips to the indeterminate 'Verifying\u2026' sweep while still only ~95% filled, NOT at a full 100%. User read it (correctly, by the normal contract) as 'a file didn't download' \u2014 but the install actually completed fine. The bar-not-full-at-verify is a DISPLAY regression against the MPI-140 contract (download fills the bar to 100%, THEN the indeterminate verify sweep runs). 'Verifying' means downloading is DONE, so the bar MUST be full first.\n\nROOT (suspected, from reading routes/downloadManager.js ~1015-1041 `models:install-verifying`): the verifying tick re-broadcasts `progress: modelJob.downloadedBytes / modelJob.totalBytes` recomputed from per-dep bytes. At the moment ONE dep flips to verifying, its `downloadedBytes` is reset/not-yet-counted-full (or `_depDenominator` vs the summed bytes disagree), so the aggregate momentarily dips below 1.0 \u2192 bar renders ~95% under the indeterminate sweep. The LOCAL path (ResumableDownloader on('end') \u2192 download:verifying) parks at 100% before verify; the remote path should match.\n\nFIX (proposed): in the `models:install-verifying` branch, pin the broadcast `progress` to 1.0 (and downloadedBytes = totalBytes) for the model job whose ALL deps are downloaded \u2014 i.e. only the post-download verify sweep should ever set indeterminate, and it must show a FULL bar. Do NOT let a mid-flight per-dep verify of one dep drag the WHOLE-MODEL aggregate below 100% while other deps are still downloading; the model-level 'Verifying\u2026' state belongs only once every dep is byte-complete. Verify on a fresh Pod install (LTX, GGUF set): bar climbs to a visible 100%, THEN flips to 'Verifying\u2026', THEN 'INSTALLED'. Keep local + remote consistent.\n\nFILES: routes/downloadManager.js (`_onRemoteInstallEvent` / `models:install-verifying` ~1015; compare to the LOCAL `download:verifying` emit ~247-264 and ResumableDownloader on('end')); js/services/downloadService.js (download:progress handler ~187, phase/indeterminate). Possibly MpiInstalledDisplay bar render (does it floor progress under the indeterminate class?). BRANCH: RunPod. Relates: MPI-140 (the fill-then-verify contract this regressed), MPI-95 (the original park-at-100% choice MPI-140 superseded), MPI-163 (the install this surfaced during).",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "open",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-06-30T10:30:00Z",
-  "updated_at": "2026-07-02T12:56:06Z",
+  "updated_at": "2026-07-02T13:05:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -28,8 +28,8 @@
   ],
   "priority": "medium",
   "attention": {
-    "state": "required",
-    "reason": "Bar-100% + Preparing + no-early-Verifying proven live; end-of-install 'Verifying\u2026' sweep not yet visually confirmed on a multi-GB weight install.",
-    "at": "2026-07-02T12:56:06Z"
+    "state": "none",
+    "reason": "Verified by user \u2014 closed.",
+    "at": "2026-07-02T13:05:00Z"
   }
 }

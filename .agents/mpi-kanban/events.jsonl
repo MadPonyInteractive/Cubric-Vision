@@ -735,3 +735,5 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "validation.updated", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "Auto-verified: equivalence + declared-path tests pass, lint clean."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.updated", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "maturity=validating (awaiting commit at end-session)."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.moved", "at": "2026-07-02T11:38:22Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Auto-verified + user-approved at end-session; shipped with commit."}
+{"event": "task.moved", "task": "MPI-164", "from": "doing", "to": "done", "at": "2026-07-02T13:05:00Z", "by": "agent"}
+{"event": "task.moved", "task": "MPI-179", "from": "doing", "to": "done", "at": "2026-07-02T13:05:00Z", "by": "agent"}

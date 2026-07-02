@@ -3,11 +3,11 @@
   "id": "MPI-179",
   "title": "Stale engine mirror on No-GPU download Pod \u2014 LTX installed WITHOUT its GGUF transformer, read INSTALLED",
   "description": "BUG (found live 2026-07-02 during MPI-164 verify, No-GPU download Pod): remoteEngineClient._active is refreshed ONLY by ComfyUIController connect/generation flows. A No-GPU 'download mode' Pod (MPI-88) never runs those (no ComfyUI to connect), so the renderer mirror stayed false for the whole session while the backend was remote-active. Every engine-scoped consumer (modelRegistry syncModelInstalled check universe, MpiModelManager footprint/partial/install set) resolved the LOCAL universe: the LTX install request carried [shared deps + bf16]; the server intersect (MPI-163) dropped the bf16 but never ADDED the GGUF, so the install shipped only the 20.5GB shared set and read INSTALLED \u2014 no transformer on the volume. After reconnect the card showed 20.5GB/61.5GB PARTIALLY INSTALLED (numerator = installed shared deps from the VOLUME check, denominator = LOCAL universe incl. the absent 41GB bf16, GGUF excluded from both). Volume probe confirmed: shared deps installed=true, ltx23-transformer-gguf + ComfyUI-GGUF installed=false.\n\nFIX (committed): (1) remoteEngineClient self-heals \u2014 subscribes to remote:connection and refresh()es on every edge; (2) MpiModelManager awaitReSync() refreshes the mirror BEFORE reSyncInstalledModels, and the remote:connection handler chains awaitReSync() so the repaint happens after the mirror settles; (3) server-side heal in downloadManager: _withEngineExtraDeps() unions engines[engine].extraDeps back into the request after _filterDepsForEngine (both local + remote paths) \u2014 intersect alone cannot heal a wrong-engine request, it only subtracts.\n\nVERIFY (live, needs app restart to load new server code): connect No-GPU Pod, open Models, LTX card must show remote universe (~43.3GB denominator: 20.5 shared + 22.8 GGUF) and PARTIALLY INSTALLED; INSTALL must fetch the GGUF transformer + ComfyUI-GGUF node; after completion card reads INSTALLED and a GPU-Pod generation actually runs. FILES: js/services/remoteEngineClient.js, js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js, routes/downloadManager.js. Relates: MPI-163/165 (engine split), MPI-88 (download-mode Pod), MPI-164 (found during its verify).",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "open",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-02T12:13:20Z",
-  "updated_at": "2026-07-02T12:56:06Z",
+  "updated_at": "2026-07-02T13:05:00Z",
   "links": {
     "events": "events.jsonl"
   },
@@ -20,8 +20,8 @@
   ],
   "priority": "high",
   "attention": {
-    "state": "required",
-    "reason": "GGUF install + correct universes live-proven; awaiting explicit user confirm (optionally a GPU-Pod gen) to close.",
-    "at": "2026-07-02T12:56:06Z"
+    "state": "none",
+    "reason": "Verified by user — closed.",
+    "at": "2026-07-02T13:05:00Z"
   }
 }
