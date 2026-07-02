@@ -175,15 +175,20 @@ LISTENS: `ui:close-all-popups` — closes
          (module-level) `slide-over:open` `{ title, component }` — mounts a fresh instance into a fresh `<div>`, calls `el.open()`, registers `close` → singleton clear. Opening a second slide-over closes the first.
 API:     `el.open()` — append to `document.body`, force reflow, set `aria-expanded="true"` (slide-in)
          `el.close()` — set `aria-expanded="false"`, await transitionend, remove from DOM, emit `close`
-NOTE:    Owns chrome only (header with UPPERCASE title + close button, scrollable body, optional footer). Content is supplied via `props.component` — a ComponentFactory blueprint mounted into `.mpi-slide-over__body`. Calls `_contentInstance.el.onOpen?.()` after mount so content can re-init fields. Module-level `let _active = null;` enforces the singleton. Outside-click is registered on `document` with a `setTimeout(..., 0)` so the triggering click does not immediately close.
+NOTE:    Owns chrome only (header with UPPERCASE title + close button, scrollable body, optional footer). Content is supplied via `props.component` — a ComponentFactory blueprint mounted into `.mpi-slide-over__body`. Calls `_contentInstance.el.onOpen?.()` after mount so content can re-init fields. Module-level `let _active = null;` enforces the singleton. Outside-click is registered on `document` with a `setTimeout(..., 0)` so the triggering click does not immediately close. `_doClose` destroys the content instance (MPI-177 — content `el.destroy()` actually runs now; previously every open leaked its timers/subs) and removes the panel node on `transitionend` with a 400ms backstop (throttled windows can skip the transition).
 
 ### MpiSettings *(content-only — body of MpiSlideOver)*
+EMITS:   (chrome owned by MpiSlideOver; no `close` event. RunPod events moved to MpiRunpodSettings — MPI-177)
+LISTENS: `state.promptReuseOptions` / `state.promptReuseSource` via `Events.onState` — sync the Reuse Prompt controls.
+API:     `el.onOpen()` — re-runs `_initFields()` with current values from `Storage` / `state`, then forwards to `_runpodInst.el.onOpen()`. Called by `MpiSlideOver.setup()` once per open.
+NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })`. The legacy `el.show()/el.hide()` instance methods have been removed. The entire RunPod Remote Engine section is `MpiRunpodSettings` (mounted once into `#mpiSettingsRunpodMount` in setup). `el.destroy()` cleans reuse subs + extra-folder controls and destroys the RunPod child.
+
+### MpiRunpodSettings *(content section — mounted by MpiSettings; MPI-177 extraction)*
 EMITS:   `remote:wait-start`  `{ gpuType, datacenter }` — MPI-110: ask the shell to start an auto-retry wait for an out-of-stock GPU (Connect pressed with `autoRetry` on + GPU not in stock, or a mid-connect snipe). The WAIT LOOP lives in shell.js (`_initGpuWaitBridge`), NOT here, so it survives navigating away from Settings.
          `remote:wait-cancel` `{}` — MPI-110: Cancel pressed while waiting → stop the shell wait (no Pod was created, so no teardown).
-         (chrome owned by MpiSlideOver; no `close` event from this component)
 LISTENS: `state.remoteWaitGpu` via `Events.onState` — repaints the engine button (waiting…/Cancel) when a shell-owned wait starts/ends. Also drives `_applyEngineStatus`.
-API:     `el.onOpen()` — re-runs `_initFields()` with current values from `Storage` / `state`. Called by `MpiSlideOver.setup()` once per open.
-NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })`. The legacy `el.show()/el.hide()` instance methods have been removed. Auto-retry wait loop owner = shell.js (`_startGpuWait`/`_stopGpuWait`/`_initGpuWaitBridge`); on the GPU freeing it calls `_initRemoteBoot` for the full create→ready→WS flow. App-wide connecting state is surfaced by the connection feed reading the backend `connecting` flag — Settings does not own it.
+API:     `el.onOpen()` — re-runs `_initRunpodSection()`; forwarded by MpiSettings on every panel open.
+NOTE:    Verbatim extraction of MpiSettings' RunPod section — DOM ids (`mpiSettingsRunpod*`) and `mpi-settings__runpod-*` classes kept. Owns the 5s engine-status poll + volume disk poll; `el.destroy()` clears both and sets `_connectAbort` (breaks in-flight `_pollEngineReady`; the Pod keeps booting — destroy ≠ Cancel). Auto-retry wait loop owner = shell.js (`_startGpuWait`/`_stopGpuWait`/`_initGpuWaitBridge`); on the GPU freeing it calls `_initRemoteBoot` for the full create→ready→WS flow. App-wide connecting state is surfaced by the connection feed reading the backend `connecting` flag — this panel does not own it.
 
 ### MpiHotkeys *(content-only — body of MpiSlideOver)*
 EMITS:   (none)
