@@ -189,8 +189,12 @@ function _createDepJob(dep) {
 // MPI-95 — a dep's best-known total for the aggregate denominator: the wrapper's
 // real total once it has arrived, else the registry seed, so a not-yet-emitting
 // dep is never counted as 0 (which would let the bar reach 100% early).
+// MPI-164 — real total WINS over the seed (no Math.max): when the declared
+// registry size overestimates the real bytes, max() kept the inflated seed in
+// the denominator and the remote bar finished short (~95-98% on the LTX GGUF
+// set). Same rule the local path already uses in _wireProgress.
 function _depDenominator(d) {
-    return Math.max(d.totalBytes || 0, d.seedBytes || 0);
+    return d.totalBytes || d.seedBytes || 0;
 }
 
 function _createModelJob(modelId, deps) {
@@ -1028,6 +1032,20 @@ function _onRemoteInstallEvent(evt) {
             modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + _depDenominator(d), 0);
             modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            // MPI-164 — the model-level "Verifying…" sweep belongs ONLY once EVERY
+            // dep is byte-complete: a per-dep verify of one dep mid-install was
+            // flipping the whole-model bar to an indeterminate "Verifying…" while
+            // other deps were still downloading (user read it as a stall/failure).
+            // While any dep still has bytes to fetch, keep the tick determinate.
+            // When all deps ARE byte-complete, pin the bar to a FULL 100% under
+            // the sweep (MPI-140 contract: download fills the bar, THEN verify).
+            const allBytesDone = modelJob.deps.every(d =>
+                d.status === 'complete'
+                || (d.totalBytes > 0 && (d.downloadedBytes || 0) >= d.totalBytes));
+            if (allBytesDone) {
+                modelJob.downloadedBytes = modelJob.totalBytes;
+                modelJob.progress = 1;
+            }
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId,
@@ -1035,8 +1053,8 @@ function _onRemoteInstallEvent(evt) {
                 totalBytes: modelJob.totalBytes,
                 speed: '',
                 progress: modelJob.progress,
-                indeterminate: true,
-                phase: 'verifying',
+                indeterminate: allBytesDone,
+                phase: allBytesDone ? 'verifying' : undefined,
             });
         }
     } else if (evt.type === 'models:install-complete') {
