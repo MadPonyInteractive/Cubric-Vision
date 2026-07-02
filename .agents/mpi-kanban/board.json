@@ -3,14 +3,14 @@
   "next_id": 181,
   "columns": {
     "todo": [
-      "MPI-148",
-      "MPI-126"
+      "MPI-148"
     ],
     "doing": [
       "MPI-134",
       "MPI-4"
     ],
     "done": [
+      "MPI-126",
       "MPI-164",
       "MPI-179",
       "MPI-174",
@@ -42,5 +42,5 @@
       "MPI-181"
     ]
   },
-  "updated_at": "2026-07-02T13:05:00Z"
+  "updated_at": "2026-07-02T14:30:00Z"
 }

@@ -737,3 +737,5 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.moved", "at": "2026-07-02T11:38:22Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Auto-verified + user-approved at end-session; shipped with commit."}
 {"event": "task.moved", "task": "MPI-164", "from": "doing", "to": "done", "at": "2026-07-02T13:05:00Z", "by": "agent"}
 {"event": "task.moved", "task": "MPI-179", "from": "doing", "to": "done", "at": "2026-07-02T13:05:00Z", "by": "agent"}
+{"event": "task.moved", "task": "MPI-126", "from": "todo", "to": "doing", "at": "2026-07-02T13:20:00Z", "by": "agent"}
+{"event": "task.moved", "task": "MPI-126", "from": "doing", "to": "done", "at": "2026-07-02T14:30:00Z", "by": "agent"}
