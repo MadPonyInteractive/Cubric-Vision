@@ -48,19 +48,29 @@ export const SDXL_RATIOS = {
     ]
 };
 
+// Wan 2.2 14B (T2V/I2V-A14B). Grid = /16 (Wan2.1-VAE, 4x16x16). Wan's two-sampler
+// multi-stage is NOT LTX's ÷2/×2 — both samplers run at the SAME target res
+// (sampler-1 = motion + initial detail, sampler-2 = refine), so there is NO
+// half-clean /64 constraint; /16 is the whole rule. Frame rule: 4n+1 (81 @ 16fps
+// ≈ 5s). Official native band = 480p (832×480) + 720p (1280×720); 720p is the
+// documented CEILING — very_high (1920×1088) is ABOVE native (works, but
+// extrapolated → detail tier, expect artifacts). very_low raised from the old
+// 320×176 (unusably small). Wan 2.2 has NO native 2K/4K (that's Wan 2.5, a
+// different model). Square + mid ratios follow the community WanResolutionSelector
+// (624×624, 960×960). Future ref [4:3 = 1088×832 | 704×544].
 export const WAN_RATIOS = {
     very_low: [
-        { label: "1:1", w: 320, h: 320, icon: "rect_1_1" },
-        { label: "9:16", w: 176, h: 320, icon: "rect_9_16" },
-        { label: "16:9", w: 320, h: 176, icon: "rect_16_9" }
+        { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
+        { label: "9:16", w: 288, h: 512, icon: "rect_9_16" },
+        { label: "16:9", w: 512, h: 288, icon: "rect_16_9" }
     ],
     low: [
-        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
+        { label: "1:1", w: 512, h: 512, icon: "rect_1_1" },
         { label: "9:16", w: 368, h: 640, icon: "rect_9_16" },
         { label: "16:9", w: 640, h: 368, icon: "rect_16_9" }
     ],
     medium: [
-        { label: "1:1", w: 720, h: 720, icon: "rect_1_1" },
+        { label: "1:1", w: 624, h: 624, icon: "rect_1_1" },
         { label: "9:16", w: 480, h: 832, icon: "rect_9_16" },
         { label: "16:9", w: 832, h: 480, icon: "rect_16_9" }
     ],
@@ -74,39 +84,74 @@ export const WAN_RATIOS = {
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
         { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
     ]
-};// Future reference [4:3 = 1088x832 | 704x544]
+};
 
-// LTX 2.3 video. Sizes are multiples of 64 (NOT just 32): the multi-stage
-// pipeline downscales x0.5 then upscales x2, so a value must stay on the /32
-// latent grid AFTER halving -> /64 at the input. /32 sizes like 736 silently
-// collapse (736 -> 704). 9:16 is exact only where the short edge is /576
-// (medium 576x1024, the 1088x1920 case); other tiers drift ~2-4% and would
-// need a crop for pixel-exact 9:16. Tiers map motion, not just detail: motion
-// peaks at low (~448) and decays as resolution climbs, while audio coherence
-// improves with size. 2K/4K (MPI-133) are native broadcast tiers (official
-// 1440p/2160p snapped to the /64 pipeline grid) — detail-focused, low motion at
-// 2K and minimal motion at 4K (a known model limit; the quality radio's hover
-// info communicates the tradeoff). NOT an upscale pass.
+// Wan 2.2 TI2V-5B. SEPARATE table: the 5B is 720p-ONLY (no native 480p) and its
+// new Wan2.2-VAE (4x32x32) puts the sane grid at /32 (UI step=32; /16 is the hard
+// floor but /32 avoids odd latents after patchify). Official native = 1280×704
+// (NOT 1280×720 — 720 is off the /32 grid). Frame rule: 4n+1 (121 @ 24fps ≈ 5s).
+// Three tiers spread the single 720p band into draft/mid/final. No 2K/4K.
+// NOTE: not yet wired to a shipped model card — add a 'wan5b' model.type (or map
+// the 5B card here) when the 5B workflow lands. getModelRatios already routes it.
+export const WAN_5B_RATIOS = {
+    low: [
+        { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
+        { label: "9:16", w: 544, h: 960, icon: "rect_9_16" },
+        { label: "16:9", w: 960, h: 544, icon: "rect_16_9" }
+    ],
+    medium: [
+        { label: "1:1", w: 832, h: 832, icon: "rect_1_1" },
+        { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
+        { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" }
+    ],
+    high: [
+        { label: "1:1", w: 960, h: 960, icon: "rect_1_1" },
+        { label: "9:16", w: 704, h: 1280, icon: "rect_9_16" },
+        { label: "16:9", w: 1280, h: 704, icon: "rect_16_9" }
+    ]
+};
+
+// LTX 2.3 video. LTX itself requires only /32 (VAE is 32x spatial) — the same
+// rule the ImageResizeKJv2 nodes already enforce (divisible_by: 32). The
+// multi-stage pipeline halves the input (MpiMath floor(a/2)) for stage-1, then
+// x2-upscales for stage-2, so a size that is ALSO /64 halves cleanly onto the
+// /32 latent grid and stage-2 returns the exact input (pixel-exact). A /32-only
+// size (e.g. 960x544) still runs — LTX pads the stage-1 latent to the nearest
+// /32 (544 -> half 272 -> pads to 288), so output drifts a few % on that axis.
+// That drift is acceptable for the mid tiers (matches Lightricks' canonical
+// sizes) but 2K/4K are pinned /64 (half-clean) so the big-tile output is exact.
+// Tiers 16:9/9:16 are snapped to Lightricks-blessed resolutions: low 768x448 =
+// official training res; medium 960x544 = THE canonical (every official ComfyUI
+// JSON + training bucket); high 1216x704 = inference.py default; very_high
+// 1920x1088 = official 1080p. 2K/4K = official 1440p (2560x1440) and 4K-UHD
+// (3840x2160) snapped up to /64 (heights 1440->1472, 2160->2176 — Lightricks'
+// cloud API pads internally, our pipeline can't, so we snap). 1:1 = the short
+// edge of the tier's landscape/portrait pair. Tiers map motion, not just detail:
+// motion peaks low and decays as resolution climbs, while audio coherence
+// improves with size (in-distribution sizes give the best audio). 2K/4K are
+// detail-focused native tiers, NOT an upscale pass. (17:9 cinema — 2048x1088,
+// 4096x2176 — is a documented Lightricks option but not in our ratio set; see
+// docs/builder/research/ltx-2.3-tiers.md.)
 export const LTX_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
-        { label: "9:16", w: 192, h: 384, icon: "rect_9_16" },
-        { label: "16:9", w: 384, h: 192, icon: "rect_16_9" }
-    ],
-    low: [
-        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
         { label: "9:16", w: 352, h: 640, icon: "rect_9_16" },
         { label: "16:9", w: 640, h: 352, icon: "rect_16_9" }
     ],
+    low: [
+        { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
+        { label: "9:16", w: 448, h: 768, icon: "rect_9_16" },
+        { label: "16:9", w: 768, h: 448, icon: "rect_16_9" }
+    ],
     medium: [
-        { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
-        { label: "9:16", w: 448, h: 832, icon: "rect_9_16" },
-        { label: "16:9", w: 832, h: 448, icon: "rect_16_9" }
+        { label: "1:1", w: 544, h: 544, icon: "rect_1_1" },
+        { label: "9:16", w: 544, h: 960, icon: "rect_9_16" },
+        { label: "16:9", w: 960, h: 544, icon: "rect_16_9" }
     ],
     high: [
-        { label: "1:1", w: 832, h: 832, icon: "rect_1_1" },
-        { label: "9:16", w: 704, h: 1280, icon: "rect_9_16" },
-        { label: "16:9", w: 1280, h: 704, icon: "rect_16_9" }
+        { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
+        { label: "9:16", w: 704, h: 1216, icon: "rect_9_16" },
+        { label: "16:9", w: 1216, h: 704, icon: "rect_16_9" }
     ],
     very_high: [
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
@@ -115,8 +160,8 @@ export const LTX_RATIOS = {
     ],
     '2k': [
         { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
-        { label: "9:16", w: 1408, h: 2560, icon: "rect_9_16" },
-        { label: "16:9", w: 2560, h: 1408, icon: "rect_16_9" }
+        { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16" },
+        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" }
     ],
     '4k': [
         { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1" },
@@ -139,10 +184,11 @@ export const SOCIAL_RATIOS = [
 // Maps model.type → which UI mode MpiRatioSelector should use.
 // 'orientation' = portrait/landscape toggle. 'quality' = quality-tier radio.
 export const RATIO_MODES = {
-    flux: 'orientation',
-    sdxl: 'orientation',
-    wan:  'quality',
-    ltx:  'quality',
+    flux:  'orientation',
+    sdxl:  'orientation',
+    wan:   'quality',
+    wan5b: 'quality',
+    ltx:   'quality',
 };
 
 // ── Derived Icon Mapping ────────────────────────────────────────────────────
@@ -167,6 +213,7 @@ export const RATIO_ICONS = Object.keys(ICONS)
  *   'flux'   → FLUX_RATIOS[orientation]
  *   'sdxl'   → SDXL_RATIOS[orientation]
  *   'wan'    → WAN_RATIOS[qualityTier]
+ *   'wan5b'  → WAN_5B_RATIOS[qualityTier]  (720p-only, low/medium/high)
  *   'ltx'    → LTX_RATIOS[qualityTier]
  *   others   → falls back to SDXL_RATIOS[orientation]
  *
@@ -182,6 +229,7 @@ export function getModelRatios(modelType, orientation, qualityTier = 'medium') {
         case 'flux': return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
         case 'social': return SOCIAL_RATIOS;
         case 'wan': return WAN_RATIOS[qualityTier] ?? WAN_RATIOS.medium;
+        case 'wan5b': return WAN_5B_RATIOS[qualityTier] ?? WAN_5B_RATIOS.medium;
         case 'ltx': return LTX_RATIOS[qualityTier] ?? LTX_RATIOS.medium;
         case 'sdxl':
         default: return SDXL_RATIOS[orientation] ?? SDXL_RATIOS.portrait;

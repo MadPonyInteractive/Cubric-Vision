@@ -6,7 +6,8 @@ the card and don't get re-discovered.
 
 | File | Holds |
 |---|---|
-| [ltx-2.3-tiers.md](ltx-2.3-tiers.md) | Resolution tiers, timing, the /64 size rule, motion-vs-resolution dial. Drives `LTX_RATIOS`. |
+| [ltx-2.3-tiers.md](ltx-2.3-tiers.md) | Resolution tiers, timing, the /32 size rule (+/64 pixel-exact), motion-vs-resolution dial. Drives `LTX_RATIOS`. |
+| [wan-2.2-tiers.md](wan-2.2-tiers.md) | Wan 2.2 resolution tiers (14B + 5B), /16 grid, no native 2K/4K. Drives `WAN_RATIOS` + `WAN_5B_RATIOS`. |
 | [lora-strength-law.md](lora-strength-law.md) | Distilled-LoRA strength law (0.3–0.7, sweet spot 0.5); model-only; **+ CAPABILITY-LoRA VERDICTS (VBVR + Singularity DROPPED; ship base + prompt-contract)**. |
 | [tested-loras-versions.md](tested-loras-versions.md) | **Exact LoRA versions + base tested** → re-test baseline when a NEW version appears. Don't re-litigate from zero. |
 | [model-set.md](model-set.md) | The base weights + LoRAs (roles, sizes, status), merge-vs-switch delivery, mirroring TODO. |

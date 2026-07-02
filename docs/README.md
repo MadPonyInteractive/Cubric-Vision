@@ -65,6 +65,7 @@ NOT mechanically split these):
 |---|---|
 | Research index | [builder/research/README.md](builder/research/README.md) |
 | LTX-2.3 tiers / stage roles / ControlNet | [builder/research/ltx-2.3-tiers.md](builder/research/ltx-2.3-tiers.md) |
+| Wan 2.2 tiers (14B + 5B) / /16 grid | [builder/research/wan-2.2-tiers.md](builder/research/wan-2.2-tiers.md) |
 | LTX black-bars + NAG (CFG=1) | [builder/research/black-bars-and-nag.md](builder/research/black-bars-and-nag.md) |
 | LTX workflow authoring mechanics | [builder/research/ltx-workflow-authoring.md](builder/research/ltx-workflow-authoring.md) |
 | Model set / Gemma precision / VRAM tiers / LoRAs | [builder/research/model-set.md](builder/research/model-set.md) |
