@@ -146,7 +146,7 @@
   },
   "61": {
     "inputs": {
-      "lora_name": "Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors",
+      "lora_name": "wan-2.2-5b\\Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors",
       "strength_model": 0.8,
       "model": [
         "37",

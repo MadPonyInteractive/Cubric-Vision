@@ -1021,7 +1021,7 @@
   },
   "191": {
     "inputs": {
-      "lora_name": "LTX2.3\\ltx2.3-transition.safetensors",
+      "lora_name": "ltx-2.3\\ltx2.3-transition.safetensors",
       "strength_model": [
         "192",
         2
@@ -1451,7 +1451,7 @@
   },
   "277": {
     "inputs": {
-      "lora_name": "LTX2.3\\id-lora-talkvid\\ltx-2.3-id-lora-talkvid-3k.safetensors",
+      "lora_name": "ltx-2.3\\id-lora-talkvid\\ltx-2.3-id-lora-talkvid-3k.safetensors",
       "strength_model": -2.42,
       "model": [
         "191",
@@ -1953,7 +1953,7 @@
   },
   "387": {
     "inputs": {
-      "lora_name": "LTX2.3\\LTX23_softenhance_abliterated_detailer_merged.safetensors",
+      "lora_name": "ltx-2.3\\LTX23_softenhance_abliterated_detailer_merged.safetensors",
       "strength_model": 1,
       "strength_clip": 1,
       "model": [

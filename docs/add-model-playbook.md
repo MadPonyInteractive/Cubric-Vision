@@ -152,8 +152,8 @@ Weight dep shape (see `dependencies.js` for live examples):
     id: 'my-model-weight',
     name: 'Display Name',
     origin: 'HF-org/repo',                 // informational
-    filename: 'diffusion_models/file.safetensors',   // relative to models root
-    url: 'https://models.cubric.studio/vision/<model-id>/diffusion_models/file.safetensors',
+    filename: 'diffusion_models/file.safetensors',   // relative to models root == R2 tail
+    url: 'https://models.cubric.studio/vision/models/diffusion_models/file.safetensors',
     size: '9.31GB',                        // footprint.js reads this for the VRAM/RAM table
     sha256: null                           // fill via /mpic-compute-dep-hashes AFTER upload
 }
@@ -166,9 +166,12 @@ host what's genuinely new.
 ### R2 upload (cubric-models bucket)
 
 Access via `C:\Users\Fabio\.secrets\rclone-r2.conf`, remote `cubric-r2:`, bucket
-`cubric-models` → public host `https://models.cubric.studio/`. Path convention:
-`vision/<model-id>/<type>/<file>`. Full capability doc:
-`c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` (boot via
+`cubric-models` → public host `https://models.cubric.studio/`. Path convention
+(MPI-178 flat-mirror): R2 MIRRORS the local ComfyUI models dir — flat by type,
+NOT by model family: `vision/models/<comfy-type>/<file>`. Since a dep's
+`filename` IS the comfy-relative path, the invariant is
+`url == https://models.cubric.studio/vision/models/<filename>`. Full capability
+doc: `c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` (boot via
 `START-HERE.md`).
 
 **TRAP — scoped-token 403 on multi-thread upload.** A plain `rclone copyto`
@@ -180,16 +183,16 @@ Belt-and-suspenders for big files: also `--multi-thread-streams 0`.
 ```bash
 CONF="C:/Users/Fabio/.secrets/rclone-r2.conf"
 rclone --config "$CONF" copyto "LOCAL/file.safetensors" \
-  "cubric-r2:cubric-models/vision/<model-id>/<type>/file.safetensors" \
+  "cubric-r2:cubric-models/vision/models/<type>/file.safetensors" \
   --s3-no-check-bucket --multi-thread-streams 0 -P
 ```
 
 **TRAP — a wrapping shell `echo "DONE"` masks rclone's non-zero exit.** Do NOT
 trust "exit 0" from a compound command. ALWAYS verify the upload landed:
 ```bash
-rclone --config "$CONF" lsf -R "cubric-r2:cubric-models/vision/<model-id>/" --s3-no-check-bucket
+rclone --config "$CONF" lsf -R "cubric-r2:cubric-models/vision/models/<type>/" --s3-no-check-bucket
 # and a public HTTP HEAD (content-length must be non-empty + match the local size):
-curl -sIL "https://models.cubric.studio/vision/<model-id>/<type>/file.safetensors" | grep -i content-length
+curl -sIL "https://models.cubric.studio/vision/models/<type>/file.safetensors" | grep -i content-length
 ```
 
 R2 deletes need explicit user approval (capability rule).
