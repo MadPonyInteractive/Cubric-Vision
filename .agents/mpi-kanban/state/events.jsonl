@@ -39,3 +39,6 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T17:00:00Z","actor":"claude","id":"MPI-176","from":"doing","to":"done","reason":"Dedup extraction shipped; app boots + remoteHeaders verified."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T18:00:00Z","actor":"claude","id":"MPI-175","from":"todo","to":"doing","reason":"Split started (3-file state/lifecycle/forward)."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T18:30:00Z","actor":"claude","id":"MPI-175","from":"doing","to":"done","reason":"Split shipped: state/lifecycle/forward modules; app boots, 25 routes mounted, guards fire. Live remote cycle not tested (needs paid Pod)."}
+{"ts":"2026-07-02T20:30:00Z","event":"task.moved","id":"MPI-178","from":"todo","to":"done"}
+{"event": "task.moved", "task": "MPI-164", "from": "todo", "to": "doing", "at": "2026-07-02T11:34:54Z", "by": "agent"}
+{"event": "task.progress", "task": "MPI-164", "note": "Fix committed 63a9b58: _depDenominator real-total-wins + verifying sweep gated on all-deps-byte-complete (pins bar 100%). Logic-verified only; needs live fresh-Pod LTX GGUF install to confirm bar hits visible 100% then Verifying then INSTALLED.", "at": "2026-07-02T11:36:50Z", "by": "agent"}

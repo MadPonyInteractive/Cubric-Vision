@@ -728,3 +728,10 @@
 {"schema":"mpi-kanban/event/v1","type":"validation.updated","at":"2026-07-02T19:45:00Z","actor":"claude","id":"MPI-180","note":"Fix shipped; needs one live re-open check while connected."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T20:15:00Z","actor":"claude","id":"MPI-177","from":"doing","to":"done","reason":"Live-verified by user: connect/generate/disconnect + terminate and delete Pod paths; dropdown fix confirmed."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T20:15:00Z","actor":"claude","id":"MPI-180","from":"doing","to":"done","reason":"Live-verified by user: connect/generate/disconnect + terminate and delete Pod paths; dropdown fix confirmed."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.moved", "at": "2026-07-02T11:29:18Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Implementation started."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.updated", "at": "2026-07-02T11:29:18Z", "actor": "claude", "summary": "maturity=in-progress, status=active, session attached."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "checklist.updated", "at": "2026-07-02T11:29:18Z", "actor": "claude", "summary": "Derived compact checklist: Implementation."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "checklist.item_checked", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "Implementation complete."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "validation.updated", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "Auto-verified: equivalence + declared-path tests pass, lint clean."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.updated", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "maturity=validating (awaiting commit at end-session)."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.moved", "at": "2026-07-02T11:38:22Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Auto-verified + user-approved at end-session; shipped with commit."}
