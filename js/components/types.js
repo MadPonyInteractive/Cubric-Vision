@@ -517,6 +517,16 @@
  */
 
 /**
+ * @typedef {Object} MpiRunpodSettingsProps (Compound — js/components/Compounds/LandingPages/MpiRunpodSettings)
+ * No props required — reads state.runpodConfig + secretsClient internally (MPI-177 extraction).
+ *
+ * The RunPod Remote Engine section of the Settings panel. Mounted once by
+ * MpiSettings into #mpiSettingsRunpodMount; MpiSettings forwards el.onOpen()
+ * each panel open. el.destroy() clears the status/disk polls and aborts any
+ * in-flight connect poll (the Pod itself is left booting — destroy ≠ Cancel).
+ */
+
+/**
  * @typedef {Object} MpiHotkeysProps (Compound — js/components/Compounds/LandingPages/mpi-hotkeys)
  * No props required. Static content.
  *

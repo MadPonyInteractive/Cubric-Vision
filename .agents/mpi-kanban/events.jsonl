@@ -722,3 +722,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T17:00:00Z","actor":"claude","id":"MPI-176","from":"doing","to":"done","reason":"Dedup extraction shipped; app boots + remoteHeaders verified."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T18:00:00Z","actor":"claude","id":"MPI-175","from":"todo","to":"doing","reason":"Split started (3-file state/lifecycle/forward)."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T18:30:00Z","actor":"claude","id":"MPI-175","from":"doing","to":"done","reason":"Split shipped: state/lifecycle/forward modules; app boots, 25 routes mounted, guards fire. Live remote cycle not tested (needs paid Pod)."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","at":"2026-07-02T18:30:00Z","actor":"claude","id":"MPI-177","note":"Extraction shipped; automated desktop-test validation written. Awaiting live connect/disconnect smoke."}

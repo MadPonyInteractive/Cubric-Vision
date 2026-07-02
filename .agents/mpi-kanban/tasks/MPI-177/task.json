@@ -3,11 +3,11 @@
   "id": "MPI-177",
   "title": "Extract RunPod section of MpiSettings.js into MpiRunpodSettings compound",
   "description": "REFACTOR (from 2026-07-02 complexity audit; ~4h, low-medium risk, largest win). MpiSettings.js is 2,303 lines / churn 44 — the biggest component in the app. Lines ~400-2200 (~1,800 lines) are entirely the RunPod section: GPU/DC/volume pickers, connect/disconnect, status poll, disk usage bar, retry-wait reflection, network-volume lifecycle — with its own local state (_runpodAvailability, _runpodVolumes, _engineBusy, _connectAbort, 5 interval timers, 8 locals) and all RunPod Events wiring. Nothing in common with the App Behavior + External Folders head (~400 lines). EXTRACT: new Compound js/components/Compounds/LandingPages/MpiRunpodSettings/ via ComponentFactory; MpiSettings becomes a thin container mounting it; shared binding stays state.runpodConfig. Standard rules apply: BEM, preloadStyles.js registration, types.js props, el.destroy() cleaning all timers/unsubs. Verify: settings panel opens, connect/disconnect cycle, volume create/delete, timers cleaned on navigate away. BRANCH: RunPod. Do AFTER MPI-173 (shares _isStockRefusal extraction).",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "open",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
   "created_at": "2026-07-02T15:00:00Z",
-  "updated_at": "2026-07-02T15:00:00Z",
+  "updated_at": "2026-07-02T18:30:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -25,5 +25,6 @@
     "settings",
     "split"
   ],
-  "priority": "medium"
+  "priority": "medium",
+  "activeSessionTitle": "MPI-177 extraction session"
 }

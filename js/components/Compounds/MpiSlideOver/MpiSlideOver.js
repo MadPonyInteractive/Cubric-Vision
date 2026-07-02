@@ -69,12 +69,24 @@ export const MpiSlideOver = ComponentFactory.create({
             if (_closed) return;
             _closed = true;
             _unsubs.forEach(fn => fn());
+            // MPI-177: tear down the content component. Without this, content
+            // el.destroy() never ran — every Settings open leaked its 5s RunPod
+            // status-poll interval and Events subscriptions for the app lifetime.
+            _contentInstance?.destroy?.();
+            _contentInstance = null;
             el.setAttribute('aria-expanded', 'false');
+            let _removed = false;
             const onEnd = () => {
+                if (_removed) return;
+                _removed = true;
                 el.removeEventListener('transitionend', onEnd);
                 if (el.parentNode) el.parentNode.removeChild(el);
             };
             el.addEventListener('transitionend', onEnd);
+            // Throttled/background windows can skip the CSS transition entirely
+            // (no transitionend → panel node never leaves the DOM). Backstop just
+            // past --t-base (280ms) so close always completes.
+            setTimeout(onEnd, 400);
             emit('close', {});
         };
 
