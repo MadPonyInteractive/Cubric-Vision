@@ -100,7 +100,11 @@ const POD_IMAGE_VERSION = 'v0.10.3';
 // and the app mis-blamed a "bad host / pick another GPU". Pin the CPU image to its
 // own last-built tag so a GPU-only version bump never breaks CPU connects again.
 // Bump this only when the -cpu image is actually rebuilt + pushed. (MPI-140)
-const POD_IMAGE_VERSION_CPU = 'v0.10.2';
+// v0.10.4-cpu (MPI-181): R2 bootstrap parity — the CPU image now fetches
+// wrapper.py + start-cpu.sh fresh at boot like the GPU images, so wrapper fixes
+// (e.g. /wrapper/disk for the Settings volume bar) reach CPU Pods without a
+// rebuild. v0.10.2-cpu baked a stale 0.2.22 wrapper mislabeled 0.2.23.
+const POD_IMAGE_VERSION_CPU = 'v0.10.4';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
