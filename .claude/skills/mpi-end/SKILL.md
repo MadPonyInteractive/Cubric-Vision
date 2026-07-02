@@ -1,6 +1,7 @@
 ---
 name: mpi-end
 description: Cubric Vision session close-out. Runs the full MPI end-session workflow, then a release-awareness check (unreleased changelog + versioning drift). Use when the user says "end this session", "end session", "wrap up", "commit and close", "we're done", "$mpi-end", or "/mpi-end".
+model: sonnet
 ---
 
 # mpi-end Skill

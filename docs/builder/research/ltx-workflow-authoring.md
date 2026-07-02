@@ -84,6 +84,42 @@ frame).
 
 ---
 
+## Single-stage distilled = our stage-1 minus the ÷2 + upscaler — keep OUR scheduler, NOT ManualSigmas
+
+The official Lightricks single-stage distilled workflow
+(`example_workflows/2.3/LTX-2.3_T2V_I2V_Single_Stage_Distilled_Full.json`) is NOT a new
+recipe to port — structurally it's **our stage-1 with the input ÷2 downscale removed and no
+stage-2** (gens straight at target res, one `SamplerCustomAdvanced` pass, no
+`LTXVLatentUpsampler`). So the distilled single-stage is a **config of what we already have**,
+not a fresh author.
+
+**The one real delta is the sigmas, and it's already settled AGAINST theirs:** the official
+file uses `ManualSigmas`; we use `LTXVScheduler`. **A/B tested (user) — ManualSigmas produces
+worse results than our `LTXVScheduler` for distilled. Keep our scheduler; do NOT adopt the
+official ManualSigmas.** Nothing to import from their JSON for the distilled path.
+
+**Why single-stage is the big-card Pod lever:** it drops the stage-2 load entirely — the ÷2
+downscale, the x2 spatial upscaler (`LTXVLatentUpsampler` + `ltx-2.3-spatial-upscaler-x2-1.1`),
+the `MpiClearVram` re-fault seam, and the second sampling pass. On a card that holds the working
+set resident, that removes the biggest per-gen tax (stage-2 re-stages the model through the
+memlock-fail path — see [pod-perf-investigation.md](pod-perf-investigation.md)). Cost: gens at
+full res in one pass = bigger latent = more VRAM (the big card has it), and loses stage-2's
+hi-res-fix detail pass.
+
+**To build the distilled single-stage path:** stop dividing input res by 2
+(`ImageResizeKJv2`/`LTXVPreprocess` + `EmptyLTXVLatentVideo` → target res), skip the
+`LoadLatent` stage-2 handoff + `LTXVLatentUpsampler` + second `MpiClearVram`, single output,
+keep `LTXVScheduler`. Note the `/64` size rule in [ltx-2.3-tiers.md](ltx-2.3-tiers.md) assumes
+the ÷2 stage — revisit it for a single-stage path.
+
+**OPEN / NOT yet measured:** total wall-clock + VRAM peak + quality A/B (single-stage vs
+two-stage) on a big Pod, at a low tier AND a high tier — big-card + low/mid tier is where it
+should win outright; high tier is where two-stage's detail-fix may still hold. Also OPEN: the
+**full (non-distilled) `dev`** single-stage is a separate story (different sampler behaviour,
+may justify its own scheduler/sigma tune) and needs the full 22B dev model downloaded first.
+
+---
+
 ## ComfyUI groups are position-based, not nodes[]
 
 Workflow `groups` store `nodes: []` (empty) — group membership is computed at render time

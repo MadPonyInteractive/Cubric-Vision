@@ -1,6 +1,6 @@
 # Docs Reorg Plan — gotchas.md 646 → ≤200 (MPI-170)
 
-> **Status:** PLANNED, not executed. Mapping done by 3 parallel analysis agents 2026-07-01.
+> **Status:** EXECUTED — MPI-170, 2026-07-01. Archived; kept for the reorg rationale.
 > **Rule:** every doc ≤200 lines; if a target would exceed, split into topic files. Durable
 > knowledge lives in its subsystem/research doc, NOT gotchas. Gotchas keeps only genuinely
 > cross-cutting conventions + temporary/unverified flags. A `docs/README.md` index maps it all
