@@ -369,10 +369,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
             let _previewClip = [];   // rolling buffer of frame URLs
             let _previewCursor = 0;  // play head into _previewClip
             let _previewTimer = null;
+            // CLIP mode = loop a motion clip (LTX only). Gated by the VHS_latentpreview
+            // WS event, which ONLY the KJNodes LTX preview override emits. Wan/SDXL/5B
+            // send core single-frame step previews and never fire that event → they stay
+            // in STILL mode: each preview replaces the last (a refining still), NOT a
+            // growing loop. (Fix: the loop used to run for every model unconditionally.)
+            let _isClipMode = false;
             function _revokePreviewUrl(url) {
                 if (url && url.startsWith('blob:')) { try { URL.revokeObjectURL(url); } catch { /* already revoked */ } }
             }
             function _stopPreviewPlayback() {
+                _isClipMode = false;
                 if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
                 for (const url of _previewClip) _revokePreviewUrl(url);
                 _previewClip = [];
@@ -385,6 +392,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
             function _enqueuePreviewFrame(url) {
                 if (!url) return;
+                // STILL mode (non-LTX): replace the current preview with each new frame.
+                // The old frame is revoked so blobs don't leak.
+                if (!_isClipMode) {
+                    const prev = _previewClip[0];
+                    _previewClip = [url];
+                    if (prev && prev !== url) _revokePreviewUrl(prev);
+                    _setPreviewImageSrc(_ensurePreviewImage(), url);
+                    return;
+                }
                 _previewClip.push(url);
                 if (_previewClip.length > PREVIEW_CLIP_MAX) {
                     _revokePreviewUrl(_previewClip.shift());
@@ -1130,7 +1146,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // A new sampler stage = a fresh preview window. Drop the current clip so
             // stages don't concatenate into one growing loop; the timer keeps running
             // and the next frames build the new window. MPI-167.
+            // This fires ONLY on the VHS_latentpreview WS event (LTX preview override) →
+            // it's also the signal that this gen is a looping motion clip, so enter CLIP
+            // mode here. Non-LTX gens never call this → they stay in STILL mode.
             cardEl.resetPreviewClip = () => {
+                _isClipMode = true;
                 for (const url of _previewClip) _revokePreviewUrl(url);
                 _previewClip = [];
                 _previewCursor = 0;

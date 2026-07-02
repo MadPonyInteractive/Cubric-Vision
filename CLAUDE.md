@@ -83,6 +83,10 @@ If you are sending tasks to ComfyUI, compiling JSON workflows, or dealing with i
 If you are adding models to the registry, managing downloads, or dealing with the python server:
 **->** **MUST READ:** `.claude/rules/comfy_engine.md`
 
+### Add a New Model (end-to-end)
+If you are wiring a NEW model into the app (deps + R2 upload + models.js + workflow split + type sweep):
+**->** **MUST READ:** `docs/add-model-playbook.md` — the single procedure, with every known trap (workflow template→runtime split, loader-path normalization, the `--s3-no-check-bucket` R2 403, the `model.type` consumer sweep). Models are NOT version-bumped.
+
 ### App Versioning System
 If you need to understand how APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, or the operation registry work:
 **->** **MUST READ:** `.claude/rules/versioning.md`, then `docs/versioning.md`

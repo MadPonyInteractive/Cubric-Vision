@@ -115,7 +115,36 @@ export const DEPS = {
         size: '13.32GB',
         sha256: '51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f'
     },
+    // Wan 2.2 TI2V-5B (combined t2v+i2v single transformer — LTX-shape flat deps)
+    'wan22-5b-model': {
+        id: 'wan22-5b-model',
+        name: 'Wan 2.2 5B',
+        origin: 'Wan-AI/Wan2.2-TI2V-5B',
+        filename: 'diffusion_models/wan2.2_ti2v_5B_fp16.safetensors',
+        url: 'https://models.cubric.studio/vision/wan-2.2-5b/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors',
+        size: '9.31GB',
+        sha256: '456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e'
+    },
+    'wan22-5b-turbo-lora': {
+        id: 'wan22-5b-turbo-lora',
+        name: 'Wan 2.2 5B Turbo (4-step)',
+        origin: 'Kijai/WanVideo_comfy — LoRAs/Wan22-Turbo (quanhaol distill)',
+        // R2 path normalized: on-disk 'loras/wan 2.2/' (space) → clean 'loras/' on R2.
+        filename: 'loras/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors',
+        url: 'https://models.cubric.studio/vision/wan-2.2-5b/loras/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors',
+        size: '317MB',
+        sha256: '0ace5244e3d1256f884662c261b017249796cf5b95f05d5ed93cc02a478967b8'
+    },
     // VAE
+    'wan2.2_vae': {
+        id: 'wan2.2_vae',
+        name: 'wan2.2_vae',
+        origin: 'Wan-AI/Wan2.2-TI2V-5B',
+        filename: 'vae/wan2.2_vae.safetensors',
+        url: 'https://models.cubric.studio/vision/wan-2.2-5b/vae/wan2.2_vae.safetensors',
+        size: '1.31GB',
+        sha256: 'e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156'
+    },
     'wan_2.1_vae': {
         id: 'wan_2.1_vae',
         name: 'wan_2.1_vae',

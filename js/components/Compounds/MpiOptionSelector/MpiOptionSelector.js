@@ -126,6 +126,9 @@ function _templateNumber(props) {
 // Wan must NOT gain. Default to the 5-tier base for any unknown model type.
 const QUALITY_TIERS_BY_MODEL = {
     wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
+    // Wan 2.2 5B is 720p-only → just 3 tiers (no very_low/very_high). Must NOT fall
+    // through to the wan 5-tier default or the picker shows phantom tiers.
+    wan5b: ['low', 'medium', 'high'],
     ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
 };
 const tiersFor = (modelType) =>

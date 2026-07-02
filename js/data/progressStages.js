@@ -35,6 +35,9 @@ export const PROGRESS_STAGES = Object.freeze({
     // WAN — verified single=2 (one bar per sampler; no separate model-load bar).
     'Wan22_t2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     'Wan22_i2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
+    // WAN 2.2 5B — single-stage, ONE sampler pass = 1 bar (verified). Shows "1/1".
+    'Wan5B_t2v.json': Object.freeze({ single: 1 }),
+    'Wan5B_i2v.json': Object.freeze({ single: 1 }),
     // Text-to-image (SDXL family) — single-stage, verified 2 bars (load + sampler).
     // Upscalers/detailers NOT yet counted (UltimateSDUpscale has its own passes).
     't2i_ill_anime.json':        Object.freeze({ single: 2 }),

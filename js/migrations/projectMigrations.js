@@ -193,6 +193,7 @@ const MIGRATIONS = {
         // value is valid from the start — no phantom tier waiting to be clamped.
         const tiersFor = (t) => ({
             wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
+            wan5b: ['low', 'medium', 'high'],   // 720p-only, 3 tiers
             ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
         })[String(t || '').toLowerCase()] ?? ['very_low', 'low', 'medium', 'high', 'very_high'];
 

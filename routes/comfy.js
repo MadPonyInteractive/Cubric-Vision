@@ -51,8 +51,10 @@ const _comfyEventClients = new Set();
 //   ComfyUI_00001_.latent       — WAN _ms video latent (legacy default)
 //   ltx_video_latent_00001_     — LTX Input_Video_Latent (node 67)
 //   ltx_audio_latent_00001_     — LTX Input_Audio_Latent (node 69)
-//   ltx_placeholder.png         — LTX Input_Start_Frame/End_Frame fallback (t2v
-//                                 has no real frame; i2v injects over it)
+//   placeholder.png             — generic Input_Start_Frame/End_Frame fallback (t2v
+//                                 has no real frame; i2v injects over it). Shared by
+//                                 any workflow with LoadImage frame nodes (LTX, Wan 5B).
+//                                 (was ltx_placeholder.png — renamed generic.)
 //   ltx_silence.wav             — LTX Input_Audio_File fallback (a gen with no
 //                                 audio input never injects this node; without a
 //                                 staged default it dies on Invalid audio file)
@@ -60,7 +62,7 @@ const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
     'ComfyUI_00001_.latent',
     'ltx_video_latent_00001_.latent',
     'ltx_audio_latent_00001_.latent',
-    'ltx_placeholder.png',
+    'placeholder.png',
     'ltx_silence.wav',
 ]);
 

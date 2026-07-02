@@ -277,4 +277,50 @@ export const MODELS = [
             remote: { extraDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'],  workflowSuffix: '_gguf' },
         },
     },
+    {
+        id: 'wan22-5b',
+        sizeTier: 'low',
+        modelFamily: 'Wan-2.2',
+        name: 'Wan 2.2 5B',
+        dropdownMeta: 'VIDEO',
+        mediaType: 'video',
+        tier: 1,
+        // Wan 2.2 TI2V-5B: one small transformer serves BOTH t2v + i2v (combined,
+        // LTX-shape). SINGLE-STAGE (no ×2 upscaler stage) → multiStage:false, so no
+        // previewStage/Continue. audio:false (no audio). NO branchingContinue →
+        // Finish-only. motion NOT set: the 5B workflow has no Input_Motion_Intensity
+        // node, so the motionIntensity control stays hidden (unlike wan-22 14B).
+        capabilities: { multiStage: false, audio: false },
+        // No preview clip yet — do NOT reuse wan22_preview.mp4 (14B footage). Add a
+        // real 5B clip later, then set `video:`.
+        type: 'wan5b',
+        // Ships the quanhaol 4-step Turbo distill as a MODEL-ONLY LoRA (str 0.8,
+        // baked in the workflow). No high/low staging (5B is dense, not MoE) → no
+        // loraStages; user LoRA slots are flat model-strength only.
+        loraStrengths: ['model'],
+        // Reuse the wan enhance recipe (Cubric Prompt has no 'wan5b' recipe).
+        enhanceRecipe: 'wan',
+        // SINGLE-STAGE ops (t2v/i2v, NOT the multi-stage t2v_ms/i2v_ms) — matches
+        // capabilities.multiStage:false. First video model to use the non-_ms ops.
+        supportedOps: ['t2v', 'i2v'],
+        gen_speed: 'fast',
+        description: 'Wan 2.2 5B (TI2V) — fast, low-tier text-to-video and image-to-video in one compact model. Draft-speed via the 4-step Turbo distill.',
+        // Combined transformer: both ops ship together (LTX pattern). generate_wan5b.py
+        // bakes Input_Text_to_video from the template into the two runtime files.
+        workflows: {
+            t2v: 'Wan5B_t2v.json',
+            i2v: 'Wan5B_i2v.json',
+        },
+        // FLAT deps (like LTX) — no per-op install toggle. clip (umt5) is SHARED with
+        // the 14B card (already hosted); vae + model + turbo-lora are 5B-specific.
+        dependencies: [
+            'wan22-5b-model',
+            'wan22-5b-turbo-lora',
+            'wan2.2_vae',
+            'umt5_xxl_fp8_e4m3fn_scaled',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-VideoHelperSuite',
+            'comfyui-kjnodes',
+        ],
+    },
 ];

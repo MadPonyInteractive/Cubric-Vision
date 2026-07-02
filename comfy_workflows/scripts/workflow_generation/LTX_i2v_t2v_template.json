@@ -612,7 +612,7 @@
   },
   "91": {
     "inputs": {
-      "image": "ltx_placeholder.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {

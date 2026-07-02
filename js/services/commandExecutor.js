@@ -90,7 +90,11 @@ function _collectComfyLatents(nodeOutput, target, role = 'video') {
 }
 
 async function _prepareWorkflowInputs(payload) {
-    if (!commandIsMultiStage(payload.operation)) return;
+    // Video workflows carry LoadImage frame nodes (+ LoadLatent on _ms) whose baked
+    // placeholder filenames must exist in the engine input/ or the graph fails
+    // validation. Stage for ANY video op — multi-stage OR single-stage (5B t2v/i2v
+    // are single-stage but still have Input_Start_Frame → need placeholder.png).
+    if (COMMANDS[payload.operation]?.mediaType !== 'video') return;
     const res = await fetch('/comfy/prepare-workflow-inputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

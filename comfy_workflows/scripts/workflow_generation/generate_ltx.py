@@ -81,8 +81,8 @@ LOADER_PAIRS = [
 # and reject. So stamp each media node back to its staged placeholder. Each entry:
 # title -> (filename_input_key, placeholder_filename).
 MEDIA_PLACEHOLDERS = {
-    "Input_Start_Frame": ("image", "ltx_placeholder.png"),
-    "Input_End_Frame":   ("image", "ltx_placeholder.png"),
+    "Input_Start_Frame": ("image", "placeholder.png"),
+    "Input_End_Frame":   ("image", "placeholder.png"),
     "Input_Audio_File":  ("audio", "ltx_silence.wav"),
 }
 
