@@ -32,9 +32,7 @@ const { getWrapperToken, proxyUrl } = require('./remoteEngine');
 const { isNetworkDownError } = require('./netCheck');
 
 // RunPod proxy is behind Cloudflare — the default fetch UA gets 403 error 1010.
-const UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120 Safari/537.36';
+const { buildAuthHeaders } = require('./remoteHeaders');
 
 function isRemoteActive() {
   const m = getRemoteMode();
@@ -51,7 +49,7 @@ async function _authHeaders() {
   if (!podId) return null;
   const token = await getWrapperToken(podId);
   if (!token) return null;
-  return { Authorization: `Bearer ${token}`, 'User-Agent': UA };
+  return buildAuthHeaders(token);
 }
 
 /**

@@ -40,9 +40,7 @@ const { client } = require('./runpodRemote');
 const { checkOnline } = require('./netCheck');
 
 // RunPod proxy is behind Cloudflare — default UA gets 403 error 1010.
-const UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120 Safari/537.36';
+const { UA, buildAuthHeaders } = require('./remoteHeaders');
 
 // Pod image spec. PyTorch + ComfyUI live in the image (Design A); the volume
 // holds models only (arch-agnostic). MPI-70 split the single image into two
@@ -212,7 +210,7 @@ async function _authHeaders() {
   if (!_mode.podId) return null;
   const token = await getWrapperToken(_mode.podId);
   if (!token) return null;
-  return { Authorization: `Bearer ${token}`, 'User-Agent': UA };
+  return buildAuthHeaders(token);
 }
 
 /**

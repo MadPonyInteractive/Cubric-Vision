@@ -12,6 +12,7 @@ import { Events } from './events.js';
 import { Storage, Session } from './core/storage.js';
 import { clientLogger } from './services/clientLogger.js';
 import { qs } from './utils/dom.js';
+import { isStockRefusal } from './utils/runpodErrorClassify.js';
 
 // Components
 import { MpiMemoryMonitor } from './components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
@@ -412,22 +413,6 @@ async function _pollRemoteReady({ timeoutMs = 1200000, intervalMs = 4000, slowAf
 // would block local generation). The user can generate locally while it waits.
 const _BOOT_RETRY_INTERVAL_MS = 15000;
 
-// MPI-110: does a Pod create/reconnect refusal message mean "this GPU is out of
-// stock / no host could place it right now" (retryable) vs. a real API failure
-// (surface it)? RunPod returns several wordings for the same stock condition —
-// notably "This machine does not have the resources to deploy your pod" on a
-// scarce card (e.g. RTX 5090), which the older narrower pattern missed, so the
-// refusal dead-ended instead of re-entering the auto-retry wait. RunPod also returns
-// a GENERIC "Something went wrong. Please try again later or contact support." (HTTP
-// 500, no Pod) for a transient capacity failure on a scarce card — also retryable.
-// Real, persistent failures (Invalid API key / Volume not found / offline) have their
-// own distinct strings handled before this, so matching the generic transient here
-// does not swallow them. Shared by the boot create loop here and the Settings path.
-function _isStockRefusal(msg) {
-  return /not enough|unavailable|no .*available|out of stock|insufficient|does not have the resources|no longer any instances|try a different machine|no instances? available|something went wrong|try again later/i
-    .test(msg || '');
-}
-
 // Is `gpuType` available right now in the live RunPod snapshot? Mirrors the
 // Settings picker's availMap logic. `datacenter` may be '__any__' (any DC) or a
 // real DC id. CPU download Pods are effectively always available.
@@ -703,7 +688,7 @@ async function _runRemoteBoot(runpod) {
       // never retry it (auto-retry would loop forever on a doomed card). Break out and
       // fall through to the error handling so the user is told to pick another.
       if (data.gpuUnsupported) break;
-      const refusedOutOfStock = !res.ok && _isStockRefusal(data.message || data.error || '');
+      const refusedOutOfStock = !res.ok && isStockRefusal(data.message || data.error || '');
       const sniped = data.unavailable || refusedOutOfStock;
       if (sniped && autoRetry) {
         // MPI-134: the create refused and no Pod exists. This IS the wait — the

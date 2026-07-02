@@ -34,9 +34,7 @@ const GQL = 'https://api.runpod.io/graphql';
 
 // Cloudflare fronts the RunPod proxy AND the API; default fetch UA can be blocked
 // (HTTP 403 error 1010). Send a browser UA on all calls. (Verified MPI-64.)
-const UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120 Safari/537.36';
+const { UA } = require('./remoteHeaders');
 
 // --- low-level client (key passed in, never stored/logged) ------------------
 

@@ -20,6 +20,7 @@ import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
+import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputUrls.js';
 
 // Seconds to wait for the ComfyUI server to report ready before giving up.
 // Cold start on a slow / CPU-only machine loads torch + a checkpoint and can
@@ -59,32 +60,10 @@ let _localFallbackNoticeShown = false;
 // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (controller singleton)
 Events.on('remote:connection', ({ connected = false } = {}) => { if (connected) _localFallbackNoticeShown = false; });
 
-function _buildComfyViewUrl(httpBase, fileInfo) {
-    const params = new URLSearchParams();
-    for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
-        const value = fileInfo?.[key];
-        if (value !== undefined && value !== null) params.set(key, value);
-    }
-    return `${httpBase}/view?${params.toString()}`;
-}
-
+// Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176): this controller
+// resolves httpBase per-instance (remote or local pinned), so it binds httpBase.
 function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
-    if (nodeOutput?.images) {
-        for (const img of nodeOutput.images) target.push(_buildComfyViewUrl(httpBase, img));
-    }
-    if (nodeOutput?.gifs) {
-        for (const gif of nodeOutput.gifs) target.push(_buildComfyViewUrl(httpBase, gif));
-    }
-    // The vanilla ComfyUI `SaveVideo` node (replacing VHS_VideoCombine for
-    // portable, card-agnostic encoding — VHS's nvenc encode fails on the
-    // Blackwell Pod container, B3) emits its result under `videos` instead of
-    // `gifs`. Each entry is the same { filename, subfolder, type, format } file
-    // dict `_buildComfyViewUrl` already understands, so the /view URL is built
-    // identically. Handled here so the "Output" capture node works whether the
-    // workflow uses VHS_VideoCombine (gifs) or SaveVideo (videos).
-    if (nodeOutput?.videos) {
-        for (const vid of nodeOutput.videos) target.push(_buildComfyViewUrl(httpBase, vid));
-    }
+    collectComfyOutputUrls(f => buildComfyViewUrl(httpBase, f), nodeOutput, target);
 }
 
 /**

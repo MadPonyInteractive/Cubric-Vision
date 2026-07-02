@@ -85,9 +85,7 @@ function generateWrapperToken() {
 
 // --- readiness polling (stale-payload tolerant) -----------------------------
 
-const UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/120 Safari/537.36';
+const { UA } = require('./remoteHeaders');
 
 function proxyUrl(podId, port = 8889) {
   return `https://${podId}-${port}.proxy.runpod.net`;

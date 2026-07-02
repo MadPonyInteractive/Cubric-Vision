@@ -33,34 +33,19 @@ import { buildWeightMap, create as createAggregator } from './progressAggregator
 import { createStageProgress } from './phaseProgress.js';
 import { stagesFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
+import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputUrls.js';
 
+// Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176). MPI-74: a
+// force-local run's output lives on LOCAL ComfyUI — build the /view URL against
+// the local engine's base so save-generation downloads from the right engine
+// (otherwise a remote-mode save would 404 against the Pod and lose the gen).
+// getEngine(forceLocal) picks the local-pinned instance.
 function _buildComfyViewUrl(fileInfo, forceLocal = false) {
-    const params = new URLSearchParams();
-    for (const key of ['filename', 'type', 'subfolder', 'format', 'frame_rate', 'workflow', 'fullpath']) {
-        const value = fileInfo?.[key];
-        if (value !== undefined && value !== null) params.set(key, value);
-    }
-    // MPI-74: a force-local run's output lives on LOCAL ComfyUI — build the /view
-    // URL against the local engine's base so save-generation downloads from the
-    // right engine (otherwise a remote-mode save would 404 against the Pod and
-    // lose the gen). getEngine(forceLocal) picks the local-pinned instance.
-    return `${getEngine(forceLocal).httpBase()}/view?${params.toString()}`;
+    return buildComfyViewUrl(getEngine(forceLocal).httpBase(), fileInfo);
 }
 
 function _collectComfyOutputUrls(nodeOutput, target, forceLocal = false) {
-    if (nodeOutput?.images) {
-        nodeOutput.images.forEach(img => target.push(_buildComfyViewUrl(img, forceLocal)));
-    }
-    if (nodeOutput?.gifs) {
-        nodeOutput.gifs.forEach(gif => target.push(_buildComfyViewUrl(gif, forceLocal)));
-    }
-    // Vanilla ComfyUI `SaveVideo` (portable, card-agnostic encode — replaces
-    // VHS_VideoCombine whose nvenc encode fails on the Blackwell Pod, B3) emits
-    // under `videos`. Same file-dict shape as gifs, so the /view URL builds
-    // identically. Mirrors the controller copy in comfyController.js.
-    if (nodeOutput?.videos) {
-        nodeOutput.videos.forEach(vid => target.push(_buildComfyViewUrl(vid, forceLocal)));
-    }
+    collectComfyOutputUrls(f => _buildComfyViewUrl(f, forceLocal), nodeOutput, target);
 }
 
 // Native `SaveAudioMP3`/`SaveAudio` (the `Output_Audio` node in the split
