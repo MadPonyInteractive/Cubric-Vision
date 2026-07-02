@@ -35,6 +35,11 @@
 
 ## whatIsNew
 
+- **New model: Wan 2.2 5B.** A fast, low-tier video model that does both
+  **text-to-video** and **image-to-video** in one compact download (720p). It ships
+  with a 4-step Turbo mode for quick drafts — ideal for iterating on a shot before
+  committing to a heavier model. Image-to-video is its strong suit.
+
 - (RunPod Remote Engine — add the full feature notes here when MPI-64 ships.
   Session additions to fold into that writeup: **Minimum system RAM** — optionally
   require the Pod host to have at least N GB of system RAM (Settings → RunPod), useful
@@ -121,6 +126,10 @@
   default and warns, so the generation still runs.
 
 ## fixes
+
+- **Wan 2.2 Smooth — sharper draft tier.** The lowest quality tier's resolution was
+  raised (it was too small to be useful), so quick low-tier drafts now look much
+  better.
 
 - **Model installs are much faster.** Model downloads now come from a faster
   network, so installing a model takes a fraction of the time it used to.
