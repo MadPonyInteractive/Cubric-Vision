@@ -186,12 +186,18 @@ const MIGRATIONS = {
         const mediaTypeById = new Map(MODELS.map(m => [m.id, m.mediaType]));
         const typeById = new Map(MODELS.map(m => [m.id, m.type]));
 
-        // Tier lists per model family — kept in sync with MpiOptionSelector's
-        // QUALITY_TIERS_BY_MODEL. A shared tier copied to a model that lacks it
-        // (e.g. a phantom 2k on Wan, left over from when the tier was shared and
-        // LTX set it) clamps to the family's max ('very_high') so the stored
-        // value is valid from the start — no phantom tier waiting to be clamped.
-        const tiersFor = (t) => ({
+        // Tier lists per model family. New types declare ModelDef.qualityTiers
+        // (MPI-174) — read those first so this migration never drifts from the
+        // registry. The inline table is the frozen legacy fallback for the
+        // built-in families (matches BUILTIN_QUALITY_TIERS in js/utils/ratios.js,
+        // which this Node-side file must not import). A shared tier copied to a
+        // model that lacks it (e.g. a phantom 2k on Wan, left over from when the
+        // tier was shared and LTX set it) clamps to the family's max
+        // ('very_high') so the stored value is valid from the start.
+        const declaredTiersByType = new Map(
+            MODELS.filter(m => m.type && m.qualityTiers)
+                  .map(m => [String(m.type).toLowerCase(), m.qualityTiers]));
+        const tiersFor = (t) => declaredTiersByType.get(String(t || '').toLowerCase()) ?? ({
             wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
             wan5b: ['low', 'medium', 'high'],   // 720p-only, 3 tiers
             ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],

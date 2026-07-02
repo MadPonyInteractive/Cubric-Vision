@@ -5,7 +5,7 @@ import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qs, qsa, on } from '../../../utils/dom.js';
-import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
+import { getModelRatios, RATIO_MODES, qualityTiersFor } from '../../../utils/ratios.js';
 
 /**
  * Resolve current { value, w, h, orientation, qualityTier } from live props (ratio variant only).
@@ -122,17 +122,9 @@ function _templateNumber(props) {
 //
 // Used for models with RATIO_MODES[modelType] === 'quality' (e.g. wan, ltx).
 
-// Tier lists are per-model (MPI-133): LTX adds native 2K/4K broadcast tiers that
-// Wan must NOT gain. Default to the 5-tier base for any unknown model type.
-const QUALITY_TIERS_BY_MODEL = {
-    wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
-    // Wan 2.2 5B is 720p-only → just 3 tiers (no very_low/very_high). Must NOT fall
-    // through to the wan 5-tier default or the picker shows phantom tiers.
-    wan5b: ['low', 'medium', 'high'],
-    ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
-};
-const tiersFor = (modelType) =>
-    QUALITY_TIERS_BY_MODEL[String(modelType || '').toLowerCase()] ?? QUALITY_TIERS_BY_MODEL.wan;
+// Tier lists are per-model (MPI-133) and live in js/utils/ratios.js since
+// MPI-174 — built-in families there, new models declare ModelDef.qualityTiers.
+const tiersFor = qualityTiersFor;
 
 /**
  * Clamp a persisted quality tier to one valid for `modelType`. Tiers are now

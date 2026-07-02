@@ -270,23 +270,31 @@ Key fields, with the 5B choices:
 
 ## 6. New `model.type` → sweep the consumers (trap)
 
-Most UI is gated on `capabilities.*` or `loraStages` (type-agnostic, safe). But a
-few spots switch on `model.type` with a hardcoded list and will silently fall
-through for a new type. When introducing a new `type`, grep for it and fix:
+Most UI is gated on `capabilities.*` or `loraStages` (type-agnostic, safe).
 
-- `js/utils/ratios.js` — `RATIO_MODES` map + `getModelRatios()` switch (add the
-  type + its `*_RATIOS` table).
-- `js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js` —
-  `QUALITY_TIERS_BY_MODEL` (which quality tiers the picker shows). Falls through to
-  the wan 5-tier default otherwise → phantom tiers.
-- `js/migrations/projectMigrations.js` — the inline `tiersFor` map (same gap, for
-  stored-tier clamping).
+**Ratios + quality tiers are declared on the ModelDef (MPI-174).** A new `type`
+sets two optional fields in `js/data/modelConstants/models.js`:
+
+- `ratios` — the ratio table, keyed by quality tier (quality-mode) or
+  `portrait`/`landscape` (orientation-mode).
+- `qualityTiers` — ordered tier ids, e.g. `['low','medium','high']`. Presence ⇒
+  quality UI mode (tier radio); `ratios` without it ⇒ orientation mode.
+
+`js/utils/ratios.js` picks both up at load (`getModelRatios`, `RATIO_MODES`,
+`qualityTiersFor`), and the v3 migration reads `qualityTiers` from the registry —
+no edits in ratios.js, MpiOptionSelector, or projectMigrations for a new type.
+The built-in families (flux/sdxl/wan/wan5b/ltx) keep their hardcoded tables in
+ratios.js; do NOT redeclare those on their ModelDefs.
+
+Still hardcoded — grep for the new type and fix:
+
 - `js/components/Organisms/MpiPromptBox/MpiPromptBox.js` — `enhanceRecipe ?? type`
   is sent to Cubric Prompt; set `enhanceRecipe` on the model def to reuse a known
   recipe if Prompt has none for the new type.
 
-For MPI-172 (`wan5b`) all four were handled: ratios (MPI-171), the two `tiersFor`
-maps (`wan5b: ['low','medium','high']`), and `enhanceRecipe: 'wan'`.
+For MPI-172 (`wan5b`, pre-MPI-174) all four then-hardcoded spots were handled:
+ratios (MPI-171), the two `tiersFor` maps (`wan5b: ['low','medium','high']`), and
+`enhanceRecipe: 'wan'`.
 
 ---
 

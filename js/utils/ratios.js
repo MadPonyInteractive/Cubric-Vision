@@ -11,6 +11,7 @@
  */
 
 import { ICONS } from './icons.js';
+import { MODELS } from '../data/modelConstants/models.js';
 
 // ── Aspect Ratio Configuration ───────────────────────────────────────────
 
@@ -183,6 +184,7 @@ export const SOCIAL_RATIOS = [
 
 // Maps model.type → which UI mode MpiRatioSelector should use.
 // 'orientation' = portrait/landscape toggle. 'quality' = quality-tier radio.
+// Augmented below with types whose ModelDef declares ratios/qualityTiers (MPI-174).
 export const RATIO_MODES = {
     flux:  'orientation',
     sdxl:  'orientation',
@@ -190,6 +192,46 @@ export const RATIO_MODES = {
     wan5b: 'quality',
     ltx:   'quality',
 };
+
+// ── Model-declared behavior (MPI-174) ───────────────────────────────────────
+//
+// A NEW model.type can declare its `ratios` table + `qualityTiers` list on its
+// ModelDef in js/data/modelConstants/models.js instead of editing this file,
+// MpiOptionSelector, and projectMigrations. Built-in types above stay in the
+// hardcoded tables; declared fields only fill types unknown to them.
+
+// Quality-tier lists per built-in model family (MPI-133): LTX adds native 2K/4K
+// broadcast tiers that Wan must NOT gain. wan5b is 720p-only → just 3 tiers.
+const BUILTIN_QUALITY_TIERS = {
+    wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
+    wan5b: ['low', 'medium', 'high'],
+    ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
+};
+
+const DECLARED_RATIOS_BY_TYPE = {};
+const DECLARED_TIERS_BY_TYPE = {};
+for (const m of MODELS) {
+    const t = m.type?.toLowerCase();
+    if (!t) continue;
+    if (m.ratios && !DECLARED_RATIOS_BY_TYPE[t]) DECLARED_RATIOS_BY_TYPE[t] = m.ratios;
+    if (m.qualityTiers && !DECLARED_TIERS_BY_TYPE[t]) DECLARED_TIERS_BY_TYPE[t] = m.qualityTiers;
+    if (!(t in RATIO_MODES) && (m.ratios || m.qualityTiers)) {
+        RATIO_MODES[t] = m.qualityTiers ? 'quality' : 'orientation';
+    }
+}
+
+/**
+ * Ordered quality-tier ids for a model type. Declared ModelDef.qualityTiers
+ * wins, then the built-in family table, then the 5-tier wan base — same
+ * fallback the old per-consumer copies used, so unknown types keep behaving
+ * identically.
+ * @param {string} modelType
+ * @returns {string[]}
+ */
+export function qualityTiersFor(modelType) {
+    const t = String(modelType || '').toLowerCase();
+    return DECLARED_TIERS_BY_TYPE[t] ?? BUILTIN_QUALITY_TIERS[t] ?? BUILTIN_QUALITY_TIERS.wan;
+}
 
 // ── Derived Icon Mapping ────────────────────────────────────────────────────
 
@@ -225,7 +267,14 @@ export const RATIO_ICONS = Object.keys(ICONS)
  * @returns {Array}
  */
 export function getModelRatios(modelType, orientation, qualityTier = 'medium') {
-    switch (modelType?.toLowerCase()) {
+    const type = modelType?.toLowerCase();
+    const declared = DECLARED_RATIOS_BY_TYPE[type];
+    if (declared) {
+        const key = RATIO_MODES[type] === 'quality' ? qualityTier : orientation;
+        // Unknown key → first table entry (declared tables carry their own default order).
+        return declared[key] ?? declared[Object.keys(declared)[0]];
+    }
+    switch (type) {
         case 'flux': return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
         case 'social': return SOCIAL_RATIOS;
         case 'wan': return WAN_RATIOS[qualityTier] ?? WAN_RATIOS.medium;
