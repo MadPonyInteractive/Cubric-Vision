@@ -406,6 +406,12 @@ export const MpiModelManager = ComponentFactory.create({
         // ── Re-sync wrapper ────────────────────────────────────────────────
         async function awaitReSync() {
             refreshBtn.el.setAttribute('loading', 'true');
+            // MPI-179: sync the engine mirror BEFORE resolving dep universes.
+            // On a No-GPU download Pod nothing runs the ComfyUIController
+            // connect that normally refreshes it, so isRemote() read a stale
+            // false and every engine-scoped resolve here (check payload,
+            // footprint, partial bar, install set) used the LOCAL universe.
+            await remoteEngineClient.refresh();
             await reSyncInstalledModels();
             renderList();
             refreshBtn.el.removeAttribute('loading');
@@ -727,6 +733,10 @@ export const MpiModelManager = ComponentFactory.create({
             _remotePhase = nextPhase;
             _remoteVramGb = nextVram;
             renderList({ force: true });
+            // MPI-179: the remoteEngineClient mirror refreshes async on this same
+            // event; the render above may still have read the old engine. Re-sync
+            // the dep-status universe + repaint once the mirror has settled.
+            awaitReSync();
         }));
 
         // ── Download event subscriptions ─────────────────────────────────────

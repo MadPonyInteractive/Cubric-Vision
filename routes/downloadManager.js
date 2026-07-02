@@ -67,6 +67,24 @@ function _filterDepsForEngine(modelId, dependencies, engine) {
     return dependencies.filter(d => d && allowed.has(d.id));
 }
 
+// MPI-179 — intersecting alone cannot HEAL a wrong-engine request: a renderer
+// with a stale engine mirror resolves the OTHER engine's universe, so the set
+// it sends simply lacks this engine's required weights. The intersect then
+// silently installs a partial model (live 2026-07-02: a No-GPU download Pod
+// install of LTX dropped the bf16 but never added the GGUF transformer — the
+// model read INSTALLED with no transformer on the volume). engines[engine]
+// extraDeps are required for this engine regardless of drafted ops — union any
+// missing ones back in; install dedupe still skips deps already on disk/volume.
+function _withEngineExtraDeps(modelId, dependencies, engine) {
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const model = MODELS.find(m => m.id === modelId);
+    const extraIds = model?.engines?.[engine]?.extraDeps || [];
+    const have = new Set(dependencies.map(d => d.id));
+    const missing = extraIds.filter(id => !have.has(id)).map(id => DEPS[id]).filter(Boolean);
+    return missing.length ? dependencies.concat(missing) : dependencies;
+}
+
 // ── Shared-dep helper ─────────────────────────────────────────────────────────
 
 function _findOtherModelsUsingDep(depId, excludeModelId) {
@@ -621,8 +639,9 @@ router.post('/comfy/models/download/start', async (req, res) => {
     // LOCAL path: keep only deps the LOCAL engine installs (drop the Pod-only GGUF
     // transformer + node). The renderer already resolves per-engine, but a stale
     // client / direct API call could send the remote set — defend server-side by
-    // intersecting against the model's local-engine universe. (MPI-163)
-    const localDeps = _filterDepsForEngine(modelId, dependencies, 'local');
+    // intersecting against the model's local-engine universe. (MPI-163;
+    // MPI-179 — union the local extraDeps back in so a stale-engine request heals)
+    const localDeps = _withEngineExtraDeps(modelId, _filterDepsForEngine(modelId, dependencies, 'local'), 'local');
 
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {
@@ -1095,8 +1114,9 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     // REMOTE path: keep only deps the POD engine installs (drop the 41GB bf16
     // transformer the local engine uses). Renderer already resolves per-engine;
     // defend server-side by intersecting against the model's remote universe.
-    // (MPI-163 — engine-aware resolution, replaces the old per-dep-tag post-filter)
-    dependencies = _filterDepsForEngine(modelId, dependencies, 'remote');
+    // (MPI-163 — engine-aware resolution, replaces the old per-dep-tag post-filter;
+    //  MPI-179 — union the remote extraDeps back in so a stale-engine request heals)
+    dependencies = _withEngineExtraDeps(modelId, _filterDepsForEngine(modelId, dependencies, 'remote'), 'remote');
 
     let modelJob = _modelJobs.get(modelId);
     if (!modelJob) {

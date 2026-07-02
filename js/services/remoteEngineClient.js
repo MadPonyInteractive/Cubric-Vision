@@ -17,6 +17,7 @@
  */
 
 import { clientLogger } from './clientLogger.js';
+import { Events } from '../events.js';
 
 export const remoteEngineClient = {
 
@@ -102,3 +103,14 @@ export const remoteEngineClient = {
         return `${this._wsBase}/ws?clientId=${clientId}&token=${this._token}`;
     },
 };
+
+// MPI-179 — self-heal the mirror on every connection edge. refresh() was only
+// called from the ComfyUIController connect/generation flows, but a No-GPU
+// "download mode" Pod (MPI-88) never runs those — there is no ComfyUI to
+// connect to — so `_active` stayed a stale false for the whole session while
+// the backend was remote-active. Every engine-scoped consumer (modelRegistry
+// check universe, MpiModelManager footprint/partial/install set) then resolved
+// the LOCAL universe: live 2026-07-02 an LTX Pod install shipped WITHOUT its
+// GGUF transformer and read INSTALLED. Sync on the same event the UI trusts.
+// eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (module singleton)
+Events.on('remote:connection', () => { remoteEngineClient.refresh(); });
