@@ -217,7 +217,7 @@ These helpers compare `APP_VERSION` against each operation's `appVersionIntroduc
 - `js/core/operationRegistry.js` — operation registry
 - `js/managers/versioningManager.js` — version queries
 - `js/migrations/projectMigrations.js` — schema migration functions
-- `.claude/skills/mpi-version-bump.md` — the interactive version-bump skill (use this for releases)
+- `.claude/skills/mpi-version-bump/SKILL.md` — the interactive version-bump skill (use this for releases)
 - `docs/releases/` — archived release notes per version (user-facing markdown)
 - `js/data/releaseNotes.js` — runtime release-note source consumed by the startup changelog overlay
 - `js/components/Compounds/MpiChangelogDialog/` — the changelog overlay component

@@ -4,7 +4,7 @@
 | Scope | File |
 |---|---|
 | Primitives + Compounds | `.claude/rules/component-events-primitives.md` |
-| Organisms (viewers, tool options, video chain, concatProgress) | `.claude/rules/component-events-organisms.md` |
+| Organisms + video Compounds (viewers, tool options, video chain, concatProgress) | `.claude/rules/component-events-organisms.md` |
 | Blocks (MpiGalleryGrid, MpiPromptBox, MpiGalleryBlock, MpiGroupHistoryBlock) | `.claude/rules/component-events-blocks.md` |
 | Generation lifecycle (Active Generation Registry, commandExecutor, StatusBar) | `.claude/rules/component-events-lifecycle.md` |
 

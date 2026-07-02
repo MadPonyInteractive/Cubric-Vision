@@ -13,7 +13,7 @@
 
 **Engine install is platform-branched:** `_runEngineDownload()` in `routes/engine.js` dispatches on `resolveDownloadConfig().method`. Windows → `_provisionWindowsEngine()` (download `.7z` + extract; `7zip-bin`/`node-7z` are required **only** inside that branch, never at module load). Linux/macOS → `_provisionUvEngine()` (`uv venv --python 3.12` → `uv pip install comfy-cli` → `comfy --skip-prompt --workspace <COMFY_DIR> install <gpu-flag> --fast-deps`). uv comes from `resolveUvBin()` (`CUBRIC_UV_BIN` then PATH `uv`). Both branches produce the same layout `getPythonBin()`/`getComfyPath()` expect, so the spawn-based launch in `comfy.js` is platform-agnostic. Accelerators (Triton/SageAttention) are intentionally NOT installed — see kanban MPI-50.
 
-**Model registry source of truth:** `js/data/modelRegistry.js` — all generative models (checkpoints, LoRAs, custom nodes) are defined here. Add new models to `MODELS` or `DEPS` here only.
+**Model registry source of truth:** `js/data/modelRegistry.js` is the import surface for all generative models. Add new model entries to `MODELS` in `js/data/modelConstants/models.js` and dependency entries to `DEPS` in `js/data/modelConstants/dependencies.js`; `modelRegistry.js` re-exports them.
 
 **Engine split — ONE `engines:` block + ONE resolver, engine resolved ONCE per gen (MPI-165):** a model whose deps/workflow differ by where it runs (LTX-2.3: bf16 transformer local-only, Q8 GGUF transformer + `ComfyUI-GGUF` node Pod-only) declares the variance STRUCTURALLY in a single block: `engines: { local: { extraDeps: [...], workflowSuffix: '' }, remote: { extraDeps: [...], workflowSuffix: '_gguf' } }`. NEVER add a per-dep `engine` tag, a `localDeps`/`remoteDeps`/`ggufWhenRemote` field, or a `_toGgufFilename` helper — those are the DELETED smear that caused repeated half-wires. ALL resolution goes through `js/data/modelConstants/resolveModelDeps.js`: `resolveDeps(model, ops, depExists, engine)` adds `engines[engine].extraDeps`; `resolveWorkflowFile(model, op, engine, {stage2})` applies the suffix (order: `_stage2` THEN engine suffix → `..._stage2_gguf.json`, matching `generate_ltx.py`); `resolve(model, ops, engine, {stage2, op, isNode})` returns `{depIds, workflowFile, nodeIds}` in one call. The resolver is browser/DOM-free (node-tested: `tests/resolve-model-deps.test.cjs`). **Resolve-engine-ONCE:** every consumer must receive a concrete `'local'|'remote'` string resolved ONCE per generation AFTER `remoteEngineClient.refresh()` — never let two consumers call `isRemote()` independently (a read before vs after refresh disagrees; that race sent the bf16 workflow to a Pod). `commandExecutor.js runCommand` resolves it once and threads it. **Two orthogonal axes:** the OPERATION axis (`commonDeps` + `operations{}`, e.g. `ComfyUI-PainterI2Vadvanced` is i2v-only) and the ENGINE axis are independent and UNION inside `resolveDeps` — a model may have neither, one, or both. `engine === null` resolves the UNION of both engines' extraDeps (shared-dep PROTECTION only — never delete a weight the other engine needs); every real install/status/uninstall path passes a concrete engine.
 
@@ -21,7 +21,7 @@
 
 **No direct Python/pip:** All engine management is via `routes/comfy.js` and `routes/shared.js`. Never spawn Python manually or hardcode binary paths.
 
-**New model checklist:** (1) Add to `MODELS` in modelRegistry, (2) check `DEPS` in `modelConstants/dependencies.js` for dependency array, (3) provide `workflows` map with op→workflowFile entries, (4) **checkpoint filenames must match the actual on-disk path** — do not include subfolder prefixes (e.g. `SDXL/`, `ILL/`, `PONY/`) unless that subfolder actually exists in the models folder. The backend searches using the exact path in `dep.filename` against `customRoot` (or engine default); mismatches cause the model to show as "not installed" despite files being present.
+**New model checklist:** (1) Add to `MODELS` in `js/data/modelConstants/models.js`, (2) check `DEPS` in `modelConstants/dependencies.js` for dependency array, (3) provide `workflows` map with op→workflowFile entries, (4) **checkpoint filenames must match the actual on-disk path** — do not include subfolder prefixes (e.g. `SDXL/`, `ILL/`, `PONY/`) unless that subfolder actually exists in the models folder. The backend searches using the exact path in `dep.filename` against `customRoot` (or engine default); mismatches cause the model to show as "not installed" despite files being present.
 
 **`installOnEngine` is ONLY for UNIVERSAL-WORKFLOW deps — NOT for model-specific custom nodes.** When adding a NEW custom-node dep, decide by ROLE, not by copying the adjacent entry's shape:
 - **Universal (every workflow needs it, e.g. `comfyui-kjnodes`, `ComfyUI-VideoHelperSuite`, `ComfyUI-Impact-Pack`)** → `installOnEngine: true`. `getUniversalWorkflowDepIds()` (shared.js:481) filters on this flag and installs it WITH the engine, always, regardless of which models are present.
@@ -42,7 +42,7 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 
 ## 🔴 CRITICAL "NEVER FORGET" RULES
 1. **Path Centralization:** Never hardcode `'ComfyUI_windows_portable'`, `'python_embeded'`, or platform paths. Use `routes/platformEngine.js` helpers: `getPythonBin()`, `getComfyPath()`, `COMFY_DIR`.
-2. **Source of Truth:** `js/data/modelRegistry.js` is the single source of truth for ALL generative models. If you need to add a checkpoint, LoRA, or custom node, you add it to the `MODELS` or `DEPS` dictionary here.
+2. **Source of Truth:** `js/data/modelConstants/models.js` is where `MODELS` entries are added; `js/data/modelConstants/dependencies.js` holds `DEPS`. `js/data/modelRegistry.js` re-exports them and is the import surface for consumers.
 3. **Never Hardcode Install Status:** Never hardcode `installed: true` in the registry. Model presence is dynamically resolved at runtime by the backend `GET /comfy/models/check`.
 4. **No Direct Python Exec:** Do not attempt to spawn Python or run `pip` manually from arbitrary files. All engine management is strictly handled by `routes/comfy.js` and `routes/shared.js`.
 5. **GPU Detection + Platform Branch at Install Time:** Provisioning is resolved at runtime via `resolveDownloadConfig()` in `_runEngineDownload()`, which branches on `.method`: Windows extracts a prebuilt `.7z` (`_provisionWindowsEngine`, 7z required only there), Linux/macOS bootstrap via uv + comfy-cli (`_provisionUvEngine`). GPU detection happens once per install/upgrade; never hardcode specific builds in `system_dependencies.json`. Do NOT require `7zip-bin`/`node-7z` at module load — keep them inside the Windows branch.
@@ -71,9 +71,9 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 **Why:** Enables cross-platform builds and automatic GPU variant selection without configuration.
 
 ### 2. Model Registry
-When adding a new model to the application, it requires a dependency array. Check `DEPS` in `modelConstants/dependencies.js` first.
+When adding a new model to the application, add an entry to `MODELS` in `js/data/modelConstants/models.js`. Check `DEPS` in `modelConstants/dependencies.js` first for existing dependency entries.
 ```javascript
-// Adding a model to the registry (example)
+// Adding a model to models.js (example)
 {
     id: "flux_dev",
     name: "Flux Dev Base",

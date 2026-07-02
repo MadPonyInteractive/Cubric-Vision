@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-07-02T15:00:00Z","actor":"claude","id":"MPI-175","title":"Split routes/remoteProxy.js into pod-lifecycle + proxy-forward modules"}

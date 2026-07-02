@@ -75,17 +75,7 @@ I will read the following files to understand the current state:
 
 Before asking bump questions, classify the change:
 
-| Change type | Required updates | Bump |
-| --- | --- | --- |
-| Changelog-only or copy-only release | `appVersion.js`, `package.json`, `package-lock.json`, `releaseNotes.js`, archival markdown | Patch |
-| Command control/default text changes without output/API change | Runtime + archival release notes; docs if user-facing | Usually patch |
-| Operation parameter semantics changed, removed, or made incompatible | `operationRegistry.js` `latestVersion`, `operation_registry.json`, command/workflow injectors, release notes | Major if incompatible |
-| New or deprecated operation | `commandRegistry.js`, `operationRegistry.js`, `operation_registry.json`, model/universal mapping, release notes | Minor for new op |
-| Workflow filename or graph changed for compatible operation | `models.js` or `universal_workflows.js` if filenames changed, release notes, workflow validation | Patch unless payloads break |
-| New model or model workflow support | `models.js`, dependencies/provisioning docs as needed, release notes | Minor when user-facing |
-| ComfyUI engine/provisioning/dependency change | `dev_configs/system_dependencies.json`, provisioning routes/docs, release notes engine section | Minor for engine upgrade |
-| Project schema/data-shape change | `SCHEMA_VERSION`, `projectMigrations.js`, project creation defaults, breaking/important release notes | Major |
-| Portable build, launcher, updater, artifact naming, or manifest change | `scripts/build-portable.mjs`/portable templates/docs, platform release notes, dry-run/platform validation | Patch unless artifact compatibility breaks |
+Change Impact Matrix: read `docs/versioning.md` § Change Impact Matrix (authoritative) before classifying.
 
 Always run `npm run release:check` after edits and before builds, tags, pushes,
 pre-release generation tests, or publication.

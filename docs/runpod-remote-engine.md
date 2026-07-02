@@ -3,11 +3,7 @@
 > Promoted from `.agents/mpi-kanban/tasks/MPI-64/current-architecture.md` at the MPI-64
 > epic close (2026-06-15). This is the durable architecture reference. The task workspace
 > (`MPI-64/current-architecture.md`, `OPEN-ITEMS.md`) holds the session-by-session
-> narrative + open follow-ups; **this doc is the stable contract.** Open follow-up work
-> lives on cards **MPI-93** (remote live-verification checklist), **MPI-94** (UX polish +
-> fresh-volume init), **MPI-75** (image rebuild), **MPI-81** (weight bake), **MPI-90/91**
-> (manifest gate + GPU-picker filter), **MPI-89** (input-asset transfer), **MPI-74**
-> (per-model engine routing).
+> narrative + open follow-ups; **this doc is the stable contract.** Follow-up cards (MPI-74/75/81/89/90/91/93/94) are all done + archived.
 
 ## What it is
 
@@ -270,5 +266,5 @@ is committed).
 - `.claude/rules/comfy_injection.md` — workflow injection + the `Output_Video`/`Output_Audio`/
   `Preview` capture contract.
 - `.claude/rules/comfy_engine.md` — engine/backend, model registry, downloads.
-- `.agents/mpi-kanban/tasks/MPI-64/` — the source workspace (current-architecture.md narrative,
+- `.agents/mpi-kanban/tasks/_archived/MPI-64/` — the source workspace (current-architecture.md narrative,
   OPEN-ITEMS.md, research/).

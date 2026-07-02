@@ -4,8 +4,8 @@ mode: scalable-foundation
 mode_rationale: user-confirmed at setup; strong repo evidence (17 .claude/rules, 10 docs/, schema versioning, husky CI, kanban archives)
 mode_source: user
 setup_date: 2026-05-23
-last_refresh: 2026-06-18
-last_refresh_notes: knowledge-index re-synced — all 88 memory files wired into topics, 8 topics added (RunPod, Pod image/mpi-ci, Build/release, macOS, Release ops, Cross-project, Conventions, derived dev_mode); all doc "Read first" pointers verified present; promotion audit found durable architecture facts already live in docs (project-integrity/versioning/comfy) so memory stays as war-story companions, no promotion. Prior (2026-06-05): validated board/state, archived orphan MPI-1/MPI-5.
+last_refresh: 2026-07-02
+last_refresh_notes: Architecture Summary collapsed to pointer (duplicated docs/PROJECT.md); knowledge-index memory pointers pruned to consolidated ~/.claude memory set.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
@@ -17,15 +17,7 @@ Cubric Vision is a desktop Electron app that wraps ComfyUI as its generation eng
 
 ## Architecture Summary
 
-- Electron main: `main.js`, `server.js` (Express on 127.0.0.1:3000)
-- Frontend SPA: `js/` (components, pages, services, state, shell, router, events)
-- Backend routes: `routes/` (comfy, projects, downloadManager, engine, videoConcat, ...)
-- Node services: `services/` (ffmpeg binary/thumb/probe, videoConcat)
-- ComfyUI engine: `engine/ComfyUI_windows_portable/` (portable, shared via `.engine-config.json` across worktrees)
-- Workflows: `comfy_workflows/*.json` (read-only — author in graph editor)
-- Projects data: `<Documents>/Cubric Studio/Projects/` (self-contained, portable)
-
-Detail: see `docs/PROJECT.md`.
+Architecture: Electron shell + Express server + vanilla-JS SPA — full map in `docs/PROJECT.md`.
 
 ## Conventions
 

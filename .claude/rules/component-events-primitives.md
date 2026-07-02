@@ -157,13 +157,6 @@ API:     `el.setMode(mode)` — activate programmatically; re-activating current
 NOTE:    Radio behaviour: re-click active tool = no-op. `mask` is now a flat tool (no group/sub-modes). `disabled` tools render grayed, non-interactive, show `reason` as tooltip.
          Image Transform group contains `crop` and `resize`. Video Transform contains `crop` and `resizeVideo`. Both resize entries route to the same `MpiToolOptionsResize` compound via `TOOL_OPTIONS_REGISTRY`; the compound branches on `props.kind`.
 
-### MpiNumberSelector
-EMITS:   `change`       `{ value: string }` — user picked a new value
-         `popup_toggle` `{ active: boolean }` — popup opened/closed
-LISTENS: `ui:close-all-popups` — closes popup if open
-API:     `instance.el.getValue()` → current string · `instance.el.setValue(string)` → imperatively set + re-render
-NOTE:    Generic replacement for MpiBatchSelector. Props: `values: string[]`, `value`, `icon`, `popupTitle`, `info`. Portals popup to body manually (MpiPopup.template() used as raw HTML, no setup() runs). Used by PromptBoxControls `batch` entry.
-
 ### MpiOptionSelector
 EMITS:   `change` `{ value: string, def?: object }` — user picked a value (ratio/number/buttons variants)
          `change` `{ qualityTier: 'very_low'\|'low'\|'medium'\|'high'\|'very_high' }` — quality variant only
@@ -172,7 +165,7 @@ EMITS:   `change` `{ value: string, def?: object }` — user picked a value (rat
 LISTENS: `ui:close-all-popups` — closes popup if open (ratio/number/buttons)
 API:     `el.getValue()` · `el.setValue(v)` · `el.setTriggerIcon(icon)` · `el.setTriggerActive(bool)` · `el.setButtons(buttons)` · `el.getButtons()`
          Ratio variant only: `el.setQualityTier(tier)` — switches the rendered ratio set without going through any popup, picks a fallback label if current ratio is missing from the new set, then emits `change` with the resolved dims.
-NOTE:    Four variants — `ratio`: preset ratio picker (renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors inside the popup); `number`: value list (replaces MpiNumberSelector inline); `buttons`: generic button-list popup; `quality`: standalone inline radio row (no popup, no trigger button) used by the `qualityTier` PromptBoxControl for quality-mode models (wan, future ltx). All popup variants share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
+NOTE:    Four variants — `ratio`: preset ratio picker (renders `.ratio-row` + `.ratio-pick.r-X-Y` Stage selectors inside the popup); `number`: value list used for the PromptBoxControls `batch` entry (nodeTitle `'Batch_Size'`; replaces the retired MpiNumberSelector/MpiBatchSelector); `buttons`: generic button-list popup; `quality`: standalone inline radio row (no popup, no trigger button) used by the `qualityTier` PromptBoxControl for quality-mode models (wan, future ltx). All popup variants share: trigger button, portal popup, outside-click dismiss, viewport clamp, `ui:close-all-popups` self-close.
          Delegated `popupEl` click handlers call `e.stopPropagation()` first — sub-popup interactions never bubble to document-level listeners. Required because handlers rewrite `grid.innerHTML` / `trigger.innerHTML` synchronously; without it, `e.target` detaches mid-bubble and breaks parent popup `closest('.mpi-popup')` exclusion → parent closes incorrectly.
          Quality is no longer a header inside the ratio popup. The standalone `quality` variant emits `change` to its parent PromptBoxControl, which fans out via `Events.emit('ratio:quality-change', { modelId, qualityTier })`; the ratio control filters by `modelId`, then calls its own `el.setQualityTier(tier)` to re-render. Keeps a single source of truth under `modelSettings[modelId].ratioSelector.qualityTier`.
 
@@ -263,16 +256,6 @@ LISTENS: (none)
 EMITS:   `up`      `{}`
          `gallery` `{}`
 LISTENS: (none)
-
-### MpiBatchSelector
-EMITS:   `change`        `{ value: 1|2|3|4 }` — batch size pick
-         `popup_toggle`  `{ active: boolean }`
-LISTENS: `ui:close-all-popups` — closes popup if open
-API:     `instance.el.getValue()` → `1|2|3|4`
-NOTE:    Mounted via PromptBoxControls `batch` for ops with `components: ['batch']`.
-         Persists as `project.shared[mediaType].batch` via `settings:shared:update` with `mediaType: 'image' | 'video'`.
-         Injects workflow param `Batch_Size` (ComfyUI node title "Batch_Size", MpiInt.inputs.int).
-         N outputs → N cards in gallery; N placeholders shown from generation start.
 
 ### MpiStartingComfy
 EMITS:   (none)

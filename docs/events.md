@@ -27,6 +27,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `project:group-added` | Group added to current project `{ group }` |
 | `project:group-updated` | Group updated in current project `{ group }` |
 | `project:group-removed` | Group removed from current project `{ groupId }` |
+| `projects:listed` | Project grid loaded `{ projects }` — emitted by `projectUI.js loadProjectGrid()`, consumed by `heroStats.js` to repaint the session stat slot |
 | `comfy:starting` | ComfyUI engine is starting |
 | `comfy:ready` | ComfyUI engine is ready |
 | `comfy:error` | ComfyUI engine error |

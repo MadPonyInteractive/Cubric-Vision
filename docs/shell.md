@@ -106,7 +106,7 @@ Project-scoped UI elements — project name display, breadcrumb, up-arrow naviga
 
 ## memoryOps.js (`js/shell/memoryOps.js`)
 
-Project export/import (portability).
+Global VRAM and RAM release operations that communicate with ComfyUI. Exports `triggerMemoryRelease(isDeep, monitorEl)` (calls `/comfy/unload`) and `bindMemoryHotkeys(monitorEl)` (registers F5 / Ctrl+F5 via `Hotkeys`).
 
 ## projectService.js (`js/services/projectService.js`)
 

@@ -21,7 +21,7 @@ Three core data files. All are plain JS objects — no ORM, no database.
 
 Pure, framework-free resolver that collapses any model + op-selection into a stable, deduped flat dep-id list **before** it enters the download lifecycle — the downloader never learns about operations. Loads under both `import` (browser) and `require` (Node tests / backend `createRequire`). Key exports:
 
-- `resolveDeps(model, selectedOps?, depExists?)`: common + the selected ops' deps. `selectedOps == null` ⇒ all selectable ops (a fresh full install). Throws on an unknown dep id when `depExists` is supplied.
+- `resolveDeps(model, selectedOps?, depExists?, engine?)`: common + the selected ops' deps. `selectedOps == null` ⇒ all selectable ops (a fresh full install). `engine = null` ⇒ union of both engine sets (no filter). Throws on an unknown dep id when `depExists` is supplied.
 - `resolveFullUniverse(model)`: common + EVERY selectable op — used for install-status checks and whole-model uninstall so no op payload is orphaned.
 - `deriveInstalledOps(model, depStatusFn)`: `{ installedOps, fullyInstalled }` derived from per-dep disk/Pod status. An op is installed when common + its own deps are complete. Omitted ops are NOT partial failures.
 - `expandRequiredOps(model, ops)`: expand a selection to include every op it (transitively) requires via `requiresOps`, in stable registry order.

@@ -6,7 +6,7 @@
 
 Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type scale, and motion timings live in `styles/01_base.css` — that file is canonical. Key rules:
 
-- **Tokens only** — OKLCH variables from `styles/01_base.css` (`--surface-*`, `--ink-*`, `--line*`, `--accent-{heat,frost,ok,warn}`, `--t-*`, `--s-*`, `--r-*`, `--ease`, `--t-fast|base|slow`). No legacy `--neon-*`, `--bg*`, `--primary*`, `--surface-glass`, `--text*`, `--border*`, `--radius*`, `--font-main`/`--font-display`, `--transition`/`--bounce`.
+- **Tokens only** — Token families + banned legacy tokens: see `.claude/rules/dos_and_donts.md` § CSS & Styling.
 - **No neon, no glass, no `backdrop-filter`.** Solid surfaces, 1px lines, sharp corners.
 - **Sharp corners default** — `MpiButton` `shape: 'sharp'` (`--r-1: 0`); pass `shape: 'pill'` to opt-out.
 - **Gradient text only on wordmark** — no `background-clip: text` anywhere else.

@@ -14,8 +14,11 @@ agents kept dumping subsystem knowledge into it with nothing routing back out.
 **Exempt from the 200-line rule** (append-only evidence / coherent single-subject contracts — do
 NOT mechanically split these):
 - `builder/research/pod-perf-investigation.md`, `builder/research/audio-input.md` — research lab notebooks (evidence logs)
+- `builder/research/quant-and-coldstart-investigation.md` — evidence log (quantisation + cold-start investigation)
 - `releases/build-experience-log.md` — build evidence log
 - `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md` — coherent single-subject contracts, near/over the line by design
+- `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
+- `add-model-playbook.md` — end-to-end procedure with mandatory step ordering; splitting would break the procedure
 
 ## Map — where knowledge lives
 
@@ -52,6 +55,7 @@ NOT mechanically split these):
 ### Builder Pod / model onboarding
 | Topic | Doc |
 |---|---|
+| End-to-end model onboarding procedure (deps, R2, registry, workflow, type sweep) | [add-model-playbook.md](add-model-playbook.md) |
 | Builder operational loop | [builder/README.md](builder/README.md) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |
 | Pod image / mpi-ci / version-lock / rebuild | [builder/02-image-and-rebuild.md](builder/02-image-and-rebuild.md) |

@@ -8,13 +8,12 @@
 
 | Function | What it does |
 |---|---|
-| `qs(sel, ctx)` | Short for `querySelector` — returns first match |
-| `qsAll(sel, ctx)` | Returns all matches as array |
-| `on(el, evt, fn, opts?) | Short for `addEventListener` — returns unsubscribe fn |
-| `ready(fn)` | Calls fn when DOM is ready |
-| `createElement(html)` | Creates an element from an HTML string |
-| `attr(el, k, v?) | Gets or sets an attribute |
-| `remove(el)` | Removes element from DOM |
+| `qs(sel, root?)` | Short for `querySelector` — returns first match; scopes to `document` if root omitted |
+| `qsa(sel, root?)` | Short for `querySelectorAll` — returns Array (not NodeList); scopes to `document` if root omitted |
+| `gid(id)` | Short for `getElementById` |
+| `on(el, event, fn, opts?)` | Adds event listener — returns a cleanup (remove) function |
+| `off(el, event, fn, opts?)` | Removes event listener — returns a re-add function |
+| `ce(tag, props?, children?)` | Creates an element via `document.createElement`; assigns props and appends children |
 
 **Rule:** Never use raw `document.querySelector` or `addEventListener`. Always use the shorthands here.
 
@@ -32,11 +31,6 @@
 
 - `RATIOS` constant: named aspect ratio definitions (e.g. `RATIOS.square`, `RATIOS.landscape16x9`).
 - Used by workspaces and components to maintain consistent proportional layouts.
-
-## seed.js (`js/utils/seed.js`) — Random seed generation
-
-- `generateRandomSeed()`: Returns a random integer seed.
-- Used by ComfyUI generation payloads to randomize output.
 
 ## Other utilities
 

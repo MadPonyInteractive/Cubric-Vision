@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-174",
+  "title": "Move model.type behavior (ratios, qualityTiers) into ModelDef — shrink the add-model sweep",
+  "description": "REFACTOR (from 2026-07-02 complexity audit; ~3h, low risk, additive). Adding a model with a NEW model.type is a documented 10-file sweep (docs/add-model-playbook.md §6 calls it a trap; bit wan5b). Cause: behavior contracts stored OUTSIDE the model definition — js/utils/ratios.js getModelRatios() switch (~line 228) + RATIO_MODES, QUALITY_TIERS_BY_MODEL in js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js, tiersFor in js/migrations/projectMigrations.js. FIX: add optional `ratios` + `qualityTiers` fields to ModelDef in js/data/modelConstants/models.js; consumers check `model.ratios ?? getModelRatios(model.type)` (fallback keeps existing models unchanged). New models then declare behavior at registration — sweep drops from 10 files to 7. Update docs/add-model-playbook.md after. Mismatches currently fail SILENTLY (phantom tiers / wrong ratio table). BRANCH: RunPod.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-07-02T15:00:00Z",
+  "updated_at": "2026-07-02T15:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "refactor",
+    "models",
+    "add-model-playbook",
+    "data-layer"
+  ],
+  "priority": "medium"
+}
