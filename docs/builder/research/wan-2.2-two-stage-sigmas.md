@@ -62,9 +62,13 @@ routing (native/stylized look); **below** it runs both stages on the low expert
   they hold at **720** — more pixels resolve the iris. Eyes broke from the
   handoff DROP + more stage-2 steps re-touching the iris, NOT model weakness
   (baseline eyes were good). Fix = keep handoff high enough + ship i2v at 720.
+  Proper fix for any residual eye issue = a downstream face/eye-detailer pass,
+  not the base schedule (eyes are a known Wan-wide fight — specular iris
+  highlights especially).
 - **Realistic look = wrong weights, not sigmas.** The 0.5-handoff realistic
   output is off-distribution (specks). True realism wants a different Wan
-  checkpoint (a NEW model id, not a version bump of SmoothMix v2).
+  checkpoint — ship it as a NEW model/workflow (e.g. "Wan 2.2 Realistic"), a
+  new model id, NOT a version bump of SmoothMix v2.
 
 ## Which prompts expose the failure
 
