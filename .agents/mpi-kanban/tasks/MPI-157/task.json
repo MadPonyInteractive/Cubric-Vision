@@ -3,12 +3,13 @@
   "id": "MPI-157",
   "title": "Cloud LTX: warm-on-connect (hide the ~3:30 first-gen cold tax)",
   "description": "Re-scoped 2026-06-28: the node-58 removal half is DISPROVEN+dropped (see below); only warm-on-connect remains. WARM-ON-CONNECT (app-side, no rebuild): after a Pod connects + ComfyUI is ready, fire a tiny throwaway LTX gen in the background and INTERRUPT it the moment the stage-1 sampler emits its first step (we already get that via the comfy:step SSE). That faults the 40GB transformer into VRAM invisibly (paying the one-time cold tax in the background) so the user's FIRST real gen is already warm instead of ~3:30-5:00 cold. User framing: 'let it reach the first sampler and stop, then it's warm.' Likely wire into the connect/ready path in routes/remoteProxy.js + comfyController; reuse a minimal LTX workflow at lowest res/1-frame; discard output. NOTE: even after warm-up, each gen still re-faults per stage (~40s transition) - warm-up only removes the ONE-TIME cold start, does not make gens 36s (that 'warm-resident' claim was a mislabel - see pod-perf-investigation.md). DROPPED: ~~remove MpiClearVram node 58~~ = DISPROVEN LIVE 2026-06-28 (5090 Pod): bypassing it made a warm single-shot 119s vs ~90s WITH it; aimdo re-stages the 40GB regardless, the node's unload_all_models() is load-bearing for SPEED (clean stage-2 fault slate). Node 58 kept, edit reverted. Full context: docs/builder/research/pod-perf-investigation.md top banner. BRANCH RunPod, app-side only. ===== 2026-06-29 GGUF ANGLE (now the LEADING lever, in progress): research proved a GGUF Q8 transformer STRUCTURALLY BYPASSES comfy-aimdo's VBAR fault path entirely (GGUFModelPatcher extends base ModelPatcher, not ModelPatcherDynamic) → it sidesteps the whole cold-tax mechanism, not just hides it like warm-on-connect. GGUF Q8 wired into app+workflows, quality-verified locally (holds at 832x448; slower high-res = per-step dequant, expected since local has no cold-tax). BLOCKED on R2 re-host (HF-direct download stalls at end on Pod). Decider = GPU-Pod bf16-vs-GGUF A/B at 704x1280 incl cold-start, NOT yet run. Full detail + next steps in handoff 60c42614-7196-4b92-82ab-1e250a4e5517 + docs/builder/research/quant-and-coldstart-investigation.md. Warm-on-connect stays a valid complementary lever (orthogonal).",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "rejected",
+  "resolution": "wont-do",
+  "status_note": "CLOSED as won't-do by user 2026-07-02. Warm-on-connect (fire+interrupt a throwaway gen to pre-fault the transformer) is DROPPED — not going to attempt it. Node-58 removal half was already disproven-live earlier. The GGUF-transformer cold-tax angle that this card had drifted into is ALREADY SHIPPED under MPI-168 (Q8-GGUF transformer on the balanced-LTX Pod path, live-proven on RTX 5090) — so the actionable cold-tax lever landed elsewhere. Nothing left here to build. See MPI-168 event 2026-07-01.",
   "created_at": "2026-06-28T15:30:00Z",
-  "updated_at": "2026-06-30T00:40:00Z",
-  "activeSessionTitle": "LTX-2.3 GGUF Q8 cold-start angle (research + wire + R2 blocker)",
+  "updated_at": "2026-07-02T12:00:00Z",
   "links": {
     "events": "events.jsonl",
     "handoffs": "handoffs/"
