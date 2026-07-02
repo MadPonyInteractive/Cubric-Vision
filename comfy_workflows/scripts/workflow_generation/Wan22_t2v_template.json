@@ -94,7 +94,7 @@
   },
   "717": {
     "inputs": {
-      "int": 9554843544356
+      "int": 9554843544358
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -117,21 +117,6 @@
       "title": "CLIP Text Encode (Negative Prompt)"
     }
   },
-  "725": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 6,
-      "denoise": 1,
-      "model": [
-        "738",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
   "726": {
     "inputs": {
       "sampler_name": "euler"
@@ -152,19 +137,6 @@
     "class_type": "ModelSamplingSD3",
     "_meta": {
       "title": "ModelSamplingSD3"
-    }
-  },
-  "731": {
-    "inputs": {
-      "step": 3,
-      "sigmas": [
-        "725",
-        0
-      ]
-    },
-    "class_type": "SplitSigmas",
-    "_meta": {
-      "title": "SplitSigmas (2 to 4)"
     }
   },
   "732": {
@@ -208,8 +180,8 @@
         0
       ],
       "sigmas": [
-        "731",
-        1
+        "918",
+        0
       ],
       "latent_image": [
         "775",
@@ -299,7 +271,7 @@
         0
       ],
       "sigmas": [
-        "731",
+        "905",
         0
       ],
       "latent_image": [
@@ -314,7 +286,7 @@
   },
   "743": {
     "inputs": {
-      "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. low angle cowboy shot, ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
+      "string": "Full body shot of a woman running with her dog at a park. ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -530,7 +502,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_2"
+      "title": "Input_Lora_Low_1"
     }
   },
   "795": {
@@ -544,7 +516,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_3"
+      "title": "Input_Lora_Low_1"
     }
   },
   "796": {
@@ -558,7 +530,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_4"
+      "title": "Input_Lora_Low_1"
     }
   },
   "797": {
@@ -572,7 +544,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_5"
+      "title": "Input_Lora_Low_1"
     }
   },
   "798": {
@@ -586,7 +558,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_6"
+      "title": "Input_Lora_Low_1"
     }
   },
   "823": {
@@ -624,7 +596,7 @@
   },
   "827": {
     "inputs": {
-      "int": 320
+      "int": 480
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -633,7 +605,7 @@
   },
   "828": {
     "inputs": {
-      "int": 176
+      "int": 832
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -811,6 +783,24 @@
     "class_type": "CreateVideo",
     "_meta": {
       "title": "Create Video"
+    }
+  },
+  "905": {
+    "inputs": {
+      "sigmas": "1.0, 0.92, 0.84, 0.77, 0.70"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg1"
+    }
+  },
+  "918": {
+    "inputs": {
+      "sigmas": "0.70, 0.47, 0.24, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg2"
     }
   }
 }

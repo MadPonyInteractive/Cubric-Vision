@@ -53,7 +53,7 @@
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
-      "divisible_by": 2,
+      "divisible_by": 16,
       "device": "cpu",
       "image": [
         "841",
@@ -79,7 +79,7 @@
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
-      "divisible_by": 2,
+      "divisible_by": 16,
       "device": "cpu",
       "image": [
         "839",
@@ -146,7 +146,7 @@
   },
   "717": {
     "inputs": {
-      "int": 31
+      "int": 33
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -169,31 +169,7 @@
       "title": "CLIP Text Encode (Negative Prompt)"
     }
   },
-  "725": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 5,
-      "denoise": 1,
-      "model": [
-        "738",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
   "726": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "729": {
     "inputs": {
       "sampler_name": "euler"
     },
@@ -213,19 +189,6 @@
     "class_type": "ModelSamplingSD3",
     "_meta": {
       "title": "ModelSamplingSD3"
-    }
-  },
-  "731": {
-    "inputs": {
-      "step": 2,
-      "sigmas": [
-        "725",
-        0
-      ]
-    },
-    "class_type": "SplitSigmas",
-    "_meta": {
-      "title": "SplitSigmas (2 to 4)"
     }
   },
   "732": {
@@ -262,12 +225,12 @@
         0
       ],
       "sampler": [
-        "729",
+        "726",
         0
       ],
       "sigmas": [
-        "731",
-        1
+        "857",
+        0
       ],
       "latent_image": [
         "775",
@@ -375,7 +338,7 @@
   },
   "743": {
     "inputs": {
-      "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. "
+      "string": "a woman in a bikini and a backpack, recording herself with a hand-held camera and placing her sunglasses on her eyes while walking "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -432,7 +395,7 @@
   },
   "759": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -676,7 +639,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_2"
+      "title": "Input_Lora_Low_1"
     }
   },
   "795": {
@@ -690,7 +653,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_3"
+      "title": "Input_Lora_Low_1"
     }
   },
   "796": {
@@ -704,7 +667,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_4"
+      "title": "Input_Lora_Low_1"
     }
   },
   "797": {
@@ -718,7 +681,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_5"
+      "title": "Input_Lora_Low_1"
     }
   },
   "798": {
@@ -732,7 +695,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Input_Lora_Low_6"
+      "title": "Input_Lora_Low_1"
     }
   },
   "825": {
@@ -847,7 +810,7 @@
   },
   "836": {
     "inputs": {
-      "int": 368
+      "int": 480
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -856,7 +819,7 @@
   },
   "837": {
     "inputs": {
-      "int": 640
+      "int": 832
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -865,7 +828,7 @@
   },
   "839": {
     "inputs": {
-      "image": "Girl_with_cat_202603182027.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -874,7 +837,7 @@
   },
   "841": {
     "inputs": {
-      "image": "Detailed_00005_small.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1036,6 +999,24 @@
     "class_type": "SaveVideo",
     "_meta": {
       "title": "Output_Preview"
+    }
+  },
+  "857": {
+    "inputs": {
+      "sigmas": "0.85, 0.65, 0.45, 0.25, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg2"
+    }
+  },
+  "858": {
+    "inputs": {
+      "sigmas": "1.0, 0.93, 0.85"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg1"
     }
   }
 }

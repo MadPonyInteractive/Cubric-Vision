@@ -8,6 +8,7 @@ the card and don't get re-discovered.
 |---|---|
 | [ltx-2.3-tiers.md](ltx-2.3-tiers.md) | Resolution tiers, timing, the /32 size rule (+/64 pixel-exact), motion-vs-resolution dial. Drives `LTX_RATIOS`. |
 | [wan-2.2-tiers.md](wan-2.2-tiers.md) | Wan 2.2 resolution tiers (14B + 5B), /16 grid, no native 2K/4K. Drives `WAN_RATIOS` + `WAN_5B_RATIOS`. |
+| [wan-2.2-two-stage-sigmas.md](wan-2.2-two-stage-sigmas.md) | **Wan 2.2 two-stage manual-sigma schedule (MPI-126, live-proven 2026-07-02).** Shipped t2v 4+3@0.70 / i2v 2+4@0.85. Lever map (handoff = content dial; step count = preview legibility; cliff-split = consistency). Walls: sampler/shift can't fix specks, i2v eyes are 720p-bound, realistic look needs different weights. Read before re-tuning Wan sigmas. |
 | [lora-strength-law.md](lora-strength-law.md) | Distilled-LoRA strength law (0.3–0.7, sweet spot 0.5); model-only; **+ CAPABILITY-LoRA VERDICTS (VBVR + Singularity DROPPED; ship base + prompt-contract)**. |
 | [tested-loras-versions.md](tested-loras-versions.md) | **Exact LoRA versions + base tested** → re-test baseline when a NEW version appears. Don't re-litigate from zero. |
 | [model-set.md](model-set.md) | The base weights + LoRAs (roles, sizes, status), merge-vs-switch delivery, mirroring TODO. |
