@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-180",
+  "title": "GPU dropdown drops the SELECTED card when its stock flips unavailable",
+  "description": "BUG (found live 2026-07-02 during MPI-177 verify, EU-RO-1 + RTX 2000 Ada, while CONNECTED): _buildGpuOptions filters options to availMap.has(id) || (autoRetry && unavailSet.has(id)) — the currently-selected cfg.gpuType is NOT force-included, so when RunPod stock for the selected card flips available:false the dropdown re-renders showing the Select GPU... placeholder even though cfg.gpuType is saved and a Pod is RUNNING on that card. Selection looks lost (it is not); it reappears whenever a later availability snapshot has the card back in stock. PRE-EXISTING logic (verbatim through MPI-177 extraction, was identical in MpiSettings.js). FIX: force-append the selected gpuType to gpuOptions when missing, labeled Unavailable right now, in js/components/Compounds/LandingPages/MpiRunpodSettings/MpiRunpodSettings.js _buildGpuOptions. BRANCH: RunPod.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-07-02T19:30:00Z",
+  "updated_at": "2026-07-02T19:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "runpod",
+    "settings",
+    "dropdown",
+    "bug",
+    "ui"
+  ],
+  "priority": "medium"
+}

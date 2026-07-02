@@ -1203,6 +1203,19 @@ export const MpiRunpodSettings = ComponentFactory.create({
                     };
                 })
                 .sort((a, b) => b._rank - a._rank);
+            // MPI-180: always include the currently-selected card, even when its
+            // stock just flipped unavailable (and auto-retry is off). Without this
+            // the dropdown re-renders to the "Select GPU..." placeholder while a
+            // Pod may be RUNNING on that very card — the selection looks lost.
+            const selected = _runpodCfg().gpuType;
+            if (selected && selected !== '__cpu__' && !gpuOptions.some(o => o.value === selected)) {
+                const g = gpus.find(x => x.id === selected);
+                gpuOptions.push({
+                    value: selected,
+                    label: g?.displayName || selected,
+                    meta: 'Unavailable right now · selected card',
+                });
+            }
             return anyRegion ? gpuOptions : [cpuOption, ...gpuOptions];
         }
 
