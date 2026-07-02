@@ -17,7 +17,7 @@ Three bugs that caused the GPU-wait loop to misbehave (all shipped): (1) `_bootW
 
 ### image / wrapper pin needs app restart
 
-`POD_IMAGE_VERSION` / `WRAPPER_VERSION` in `routes/remoteProxy.js` are constants loaded at Express boot — editing on disk does NOT change what a live app sends. A Pod will boot the OLD image tag until the app is fully restarted. Verify via the log line `Pod image for <card>: ...:v<X>-cu124` and `/health` `wrapper_version`. Cost ~20 min during MPI-90 testing.
+`POD_IMAGE_VERSION` / `WRAPPER_VERSION` in `routes/remotePodLifecycle.js` (MPI-175 split; was remoteProxy.js) are constants loaded at Express boot — editing on disk does NOT change what a live app sends. A Pod will boot the OLD image tag until the app is fully restarted. Verify via the log line `Pod image for <card>: ...:v<X>-cu124` and `/health` `wrapper_version`. Cost ~20 min during MPI-90 testing.
 
 ### remote restart poll — wrong flag (MPI-107)
 
@@ -25,7 +25,7 @@ Fixed 2026-06-17. The per-model node-install restart poll in `comfyController.js
 
 ### remote /history reconcile URL — drop the /wrapper segment (MPI-152)
 
-Fixed 2026-06-29. `comfyController._reconcileFromHistory` hit `${httpBase()}/history/{id}`; remote `httpBase()` is `/proxy`, so the correct route is `GET /proxy/history/:id` — which `remoteProxy.js` forwards server-side to `/wrapper/history/{id}`. Client must NOT add `/wrapper` itself → `/proxy/wrapper/history` is a 404, swallowed silently → EVERY remote reconcile broken since MPI-152, so a gen whose terminal WS event was lost (edge proxy reaps the idle preview WS on long samples) hung forever. Fix: client URL is bare `/history/{id}` in both modes. Backstop: 5s `/history` poll (`_startHistoryPoll`, remote-only) catches the lost terminal independent of WS health.
+Fixed 2026-06-29. `comfyController._reconcileFromHistory` hit `${httpBase()}/history/{id}`; remote `httpBase()` is `/proxy`, so the correct route is `GET /proxy/history/:id` — which `remoteProxyForward.js` (MPI-175 split; was remoteProxy.js) forwards server-side to `/wrapper/history/{id}`. Client must NOT add `/wrapper` itself → `/proxy/wrapper/history` is a 404, swallowed silently → EVERY remote reconcile broken since MPI-152, so a gen whose terminal WS event was lost (edge proxy reaps the idle preview WS on long samples) hung forever. Fix: client URL is bare `/history/{id}` in both modes. Backstop: 5s `/history` poll (`_startHistoryPoll`, remote-only) catches the lost terminal independent of WS health.
 
 ### remote cancel is soft and async (MPI-123)
 
@@ -56,7 +56,7 @@ end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models p
 - **Trigger:** the Settings GPU dropdown's first option, "No GPU — download only", sets
   `runpodConfig.gpuType` to the sentinel `'__cpu__'`. It rides the existing gpuType field,
   Connect guard, persistence, and GPU-switch delete-and-recreate logic untouched.
-- **Create spec** (`_createPodInternal`, `routes/remoteProxy.js`): sentinel → `computeType:'CPU'`
+- **Create spec** (`_createPodInternal`, `routes/remotePodLifecycle.js`): sentinel → `computeType:'CPU'`
   + `cpuFlavorIds:['cpu3c']` (no `gpuTypeIds`/`gpuCount`), `containerDiskInGb:20` (CPU Pods cap
   at 20), env `CUBRIC_DOWNLOAD_MODE=1`, and the **slim `:v<ver>-cpu` image** — NOT a GPU image.
   The full cu124/cu128 image will NOT run on a CPU Pod (its entrypoint inits CUDA → container

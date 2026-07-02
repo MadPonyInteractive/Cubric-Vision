@@ -26,8 +26,15 @@ Community Cloud is unsupported (unstable/limited for this use case).
 - `routes/remoteProxy.js` MUST stay mounted **before** `routes/comfy.js` in `server.js` —
   the `/comfy/events/stream` SSE intercept falls through with `next()` when remote mode is
   inactive, so local mode stays byte-identical.
+- **File layout (MPI-175):** `routes/remoteProxy.js` is now a thin **barrel** — it mounts
+  two sub-routers and re-exports `getRemoteMode`/`setRemoteMode`. The code lives in three
+  modules: `remotePodState.js` (the `_mode` state + shared `_guard`/`_authHeaders`/health/
+  passthrough helpers), `remotePodLifecycle.js` (all `/remote/pod/*` + mode/status routes +
+  the spec builder `podImageForCard`/`_createPodInternal` + telemetry), and
+  `remoteProxyForward.js` (`/proxy/*` forwards + uploads + the SSE relay). Symbols moved but
+  behavior is unchanged.
 
-### App-side route surface (`routes/remoteProxy.js`)
+### App-side route surface (barrel `routes/remoteProxy.js` → lifecycle + forward modules)
 - Mode/status: `GET|POST /remote/mode`, `GET /remote/ws-token`, `GET /remote/comfy/status`.
 - Lifecycle: `POST /remote/pod/create`, `/reconnect`, `/stop-active`, `/delete-active`,
   `/teardown`, `/cleanup-orphans`; `GET /remote/pod/specs`.
@@ -127,7 +134,7 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 
 ## 6. Pod image + custom-node split (Design B+)
 
-- App selects the image tag **per card** in `routes/remoteProxy.js` via
+- App selects the image tag **per card** in `routes/remotePodLifecycle.js` via
   `podImageForCard(gpuTypeId)`: `POD_IMAGE_BASE =
   ghcr.io/madponyinteractive/cubric-vision-pod`, Blackwell (sm_120 substring match on the
   gpuTypeId: `5090`/`rtx pro 6000`/`b200`/`blackwell`) → `-cu128`, everything else (and

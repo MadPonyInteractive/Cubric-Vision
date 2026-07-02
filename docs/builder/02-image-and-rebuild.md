@@ -114,7 +114,7 @@ The broad GPU profile (4090/Ampere/Hopper) gets aimdo via base
 `pytorch:2.6.0-cuda12.6-cudnn9-devel` + `torch 2.8.0+cu126` (NOT cu124 — cu124 wheels
 can't reach torch 2.8). aimdo's enable gate is torch ≥ 2.8 ONLY (no cuda-version check in
 ComfyUI `main.py`), so the cu126 wheel passes. The profile KEY + image TAG stay `cu124`
-(renaming is a DEFERRED Dockerfile TODO — touches `routes/remoteProxy.js podImageForCard`
+(renaming is a DEFERRED Dockerfile TODO — touches `routes/remotePodLifecycle.js podImageForCard`
 suffix logic + rollback-tag matching + build matrix). So `…:v0.10.3-cu124` is a **cu126
 image wearing a cu124 label, on purpose**. Don't "fix" the name. LIVE-PROVEN on 4090
 (drv 580) + A4500 (drv 550): aimdo inits on both.
