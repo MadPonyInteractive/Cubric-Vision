@@ -91,7 +91,7 @@ const _mode = state.getMode(); // live singleton — setRemoteMode mutates in pl
 // endpoint → wrapper bump 0.2.14→0.2.15 + a Pod image rebuild to ship for REMOTE.
 // (LOCAL is fixed app-side already — it hits ComfyUI /history directly.)
 const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.10.3';
+const POD_IMAGE_VERSION = 'v0.11.0';
 // The CPU "download mode" image (slim wrapper + aria2c, no torch/ComfyUI) is
 // version-INDEPENDENT of the GPU perf work — MPI-156's 0.10.3 bumps (aimdo,
 // torch, vram flags) don't touch it. CI builds the -cpu profile separately and it
@@ -104,7 +104,7 @@ const POD_IMAGE_VERSION = 'v0.10.3';
 // wrapper.py + start-cpu.sh fresh at boot like the GPU images, so wrapper fixes
 // (e.g. /wrapper/disk for the Settings volume bar) reach CPU Pods without a
 // rebuild. v0.10.2-cpu baked a stale 0.2.22 wrapper mislabeled 0.2.23.
-const POD_IMAGE_VERSION_CPU = 'v0.10.4';
+const POD_IMAGE_VERSION_CPU = 'v0.11.0';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
