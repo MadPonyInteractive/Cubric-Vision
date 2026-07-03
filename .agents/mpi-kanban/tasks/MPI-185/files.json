@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    {
+      "path": "ComfyUI-GGUF/dequant.py:62",
+      "note": "Pod-side: dequantize_blocks_BF16 int16->int32->float32 upcast = the OOM alloc site (2x spike)"
+    },
+    {
+      "path": "docs/builder/research/quant-and-coldstart-investigation.md",
+      "note": "Q8_0 GGUF vs NVFP4 quant tradeoffs; relevant to picking a non-spiking transformer for 24GB"
+    },
+    {
+      "path": "docs/builder/research/pod-perf-investigation.md",
+      "note": "cloud-4090-slow perf datapoint goes here"
+    },
+    {
+      "path": "project_ltx_preview_cannot_use_taesd.md (memory)",
+      "note": "TAESD-on-LTX warning cross-ref"
+    }
+  ]
+}

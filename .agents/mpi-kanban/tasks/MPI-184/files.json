@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    {
+      "path": "routes/remoteModels.js",
+      "note": "line 556: bad-response = !res.ok||!res.body on /wrapper/events/stream reconnect"
+    },
+    {
+      "path": "routes/downloadManager.js",
+      "note": "lines 884/923: silent-stall watchdog + _onRemoteStreamClosed reconnect loop"
+    },
+    {
+      "path": "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "note": "line 1563: install spawns independent asyncio task, no serialization; 1665 SSE endpoint (multi-subscriber, fine)"
+    },
+    {
+      "path": "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "note": "lines 1414-1424: node-install before/after set-diff, no node_dir-exists fallback -> false archive-produced-no-folder"
+    }
+  ]
+}

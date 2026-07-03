@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "5f82466f-de7e-46d8-a3e5-cace5a8a9a3f",
+  "generated_at": "2026-07-03T22:06:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-148 ComfyUI v0.27 app+Pod bump - shipped; live-verify surfaced OOM + download bugs",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Bump ComfyUI core v0.26.0 -> v0.27.0 (app + Pod), build + publish the Pod images, then live-verify on a GPU Pod.",
+    "status": "in_progress",
+    "summary": "MPI-148 code + images SHIPPED and public (cpu/cu128/cu124 all v0.11.0, ComfyUI v0.27); cpu smoke + CPU-Pod live-boot verified. GPU live gen-verify FAILED with an LTX OOM that is a real separate issue (GGUF dequant spike, carded MPI-185). Wan 5B + PiD generated OK on the same Pod, so the v0.27 bump itself is sound. Three new bug cards opened during verify (MPI-183 Builder bump deferred, MPI-184 concurrent-install wrapper bugs, MPI-185 LTX OOM + perf + gallery blob 404s)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "node_lock.json (app + Pod copy) -> v0.27.0/bb131be9 + frontend 1.45.20 + templates 0.11.1",
+      "mpi-ci committed + pushed: bc649a7 (node_lock), 1911aef (weight-prebake HF->R2 fix + README v0.11.0)",
+      "app routes/remotePodLifecycle.js POD_IMAGE_VERSION(_CPU) -> v0.11.0 (commit 54a62ce, local RunPod branch)",
+      "guidance docs committed 71da6a9 (01-environments.md G:/CubricModels + runpod-troubleshooting 403 trap) + memory project_pod_weight_source_r2.md",
+      "built + PUBLIC: v0.11.0-cpu (CI), v0.11.0-cu128 (local), v0.11.0-cu124 (local); all pull-verified",
+      "cpu boot smoke PASS (/health 200, wrapper 0.2.23); CPU Pod live-booted on RunPod (v0.11.0-cpu, wrapper 0.2.23 verified)",
+      "fixed the weight-prebake HF-Xet 403 build break (4 urls -> R2), proven on cu124 rebuild (0x403)"
+    ],
+    "pending": [
+      "MPI-185: investigate/fix LTX-2.3 i2v OOM on 24GB cloud 4090 (GGUF BF16 dequant spike) - HIGH",
+      "MPI-148 close: re-run LTX i2v gen on a GPU Pod that FITS (or after MPI-185 fix), confirm clean gen on v0.27, then move MPI-148 done",
+      "MPI-184: serialize concurrent installs (app) + wrapper node-detect fallback",
+      "MPI-183: Builder image ComfyUI bump v0.25.1->v0.27.0 (deferred, user picks up)",
+      "app portable engine engine/ComfyUI_windows_portable -> v0.27 (gitignored, out-of-repo, USER)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-148",
+    "title": "Bump ComfyUI core v0.26.0 -> v0.27.0 (app + Pod)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-148/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-148/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-148/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-148/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "investigate",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-148 validation.md + checklist.md written (card = doing/validating)",
+      "MPI-183 created (Builder bump, deferred)",
+      "MPI-184 created (concurrent-install wrapper bugs: SSE stall + false 'no folder')",
+      "MPI-185 created (LTX OOM GGUF-dequant + TAESD-None + perf + gallery blob-404)",
+      "guidance docs + memory committed (71da6a9 + project_pod_weight_source_r2.md)"
+    ],
+    "pending": [
+      "Fold cloud-4090-slow perf datapoint into docs/builder/research/pod-perf-investigation.md (MPI-185 #3)",
+      "Decide MPI-148 -> done only after a clean LTX i2v gen on v0.27 (blocked by MPI-185 OOM); Wan+PiD already gen'd OK so partial verify exists",
+      "app-branch commits (54a62ce, 71da6a9) are LOCAL - not pushed (push is user-authorized)"
+    ]
+  },
+  "next_action": {
+    "description": "Pick up MPI-185 (LTX i2v OOM on 24GB cloud 4090). Root cause is pinned: the OOM is in ComfyUI-GGUF/dequant.py:62 dequantize_blocks_BF16 (int16->int32->float32 upcast spike) at sample time - the Q8 GGUF transformer already ~22GB partial-loaded under lowvram, and the dequant's +576MB tips past 24GB. Read MPI-185's description + files.json, then decide: (a) is it res/tier-specific (retry lower LTX tier, log the exact i2v_ms resolution), (b) v0.26-vs-v0.27 regression test, (c) use the BF16 (non-GGUF) transformer or a smaller quant on the 24GB/broad tier, or (d) --reserve-vram/--disable-dynamic-vram to leave dequant headroom. Once LTX i2v gens clean on v0.27, move MPI-148 to done.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-148 rescoped from 'Builder-only' to app+Pod bump; Builder split to MPI-183 (user deferred).",
+      "Card missed frontend pins - added comfyui-frontend-package 1.45.20 + workflow-templates 0.11.1.",
+      "node_lock core is Pod-build input + parity, NOT the app runtime engine (engine/ is gitignored, separate manual portable swap).",
+      "Pod image versioned v0.11.0 (minor bump for engine floor move); wrapper unchanged 0.2.23.",
+      "Weight-prebake moved HF->R2 (MPI-148 fix) because HF Xet CDN 403s broke the build; weights live at G:/CubricModels + R2.",
+      "OOM is a SEPARATE issue from the v0.27 bump - Wan 5B + PiD gen'd fine on the same Pod, so v0.27 itself is sound."
+    ],
+    "constraints": [
+      "Live Pod ops (create/deploy/stop) are USER-only; agent guides, user clicks.",
+      "Push is user-authorized; mpi-ci was pushed (authorized), app RunPod branch commits are local-only.",
+      "GGUF dequant BF16 = int16->int32->float32 = ~2x transient VRAM spike; the balanced LTX Pod path uses Q8 GGUF (MPI-168).",
+      "aimdo/dynamic-vram is active on the Pod ('loaded partially ... lowvram patches: 0').",
+      "Verify R2 URLs with a SINGLE curl -sI (looped curl -o lies HTTP 000 - schannel).",
+      "docker rmi of pre-existing tags is classifier-blocked; don't force-delete images the user didn't name."
+    ],
+    "files_modified": [
+      "dev_configs/node_lock.json",
+      "routes/remotePodLifecycle.js",
+      "docs/builder/01-environments.md",
+      "docs/runpod-troubleshooting.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-185/task.json",
+      ".agents/mpi-kanban/tasks/MPI-185/files.json",
+      ".agents/mpi-kanban/tasks/MPI-148/validation.md",
+      "docs/builder/research/quant-and-coldstart-investigation.md",
+      "docs/builder/research/pod-perf-investigation.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "RunPod/remote engine",
+      "LTX-2.3 authoring/research",
+      "ComfyUI engine",
+      "build/release"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    "docs/runpod-troubleshooting.md",
+    "docs/builder/research/quant-and-coldstart-investigation.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-03T22:06:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/5f82466f-de7e-46d8-a3e5-cace5a8a9a3f.json and use mpi-continue to resume. Context: MPI-148 (ComfyUI v0.26->v0.27 app+Pod bump) is SHIPPED - all three v0.11.0 Pod images (cpu/cu128/cu124) built + public, cpu smoke + CPU-Pod live-boot verified, mpi-ci pushed (bc649a7, 1911aef), app pins committed local (54a62ce). During GPU live gen-verify, Wan 5B + PiD generated fine on v0.27 but LTX-2.3 i2v OOM'd on a 24GB cloud 4090. That OOM is carded as MPI-185 (HIGH): root cause pinned to ComfyUI-GGUF/dequant.py:62 dequantize_blocks_BF16 - the Q8 GGUF transformer is ~22GB partial-loaded under lowvram and the int16->int32->float32 dequant spike (+576MB) tips past the 23.64GiB limit. Start by reading MPI-185's task.json + files.json, then investigate: is it LTX tier/resolution specific, a v0.26-vs-v0.27 regression, or does the 24GB/broad tier need the BF16 (non-GGUF) transformer or --reserve-vram headroom? Two more bugs were carded from this session: MPI-184 (concurrent installs starve the CPU-pod wrapper: SSE 'bad-response' stall + false 'archive produced no folder') and MPI-183 (Builder image v0.27 bump, deferred). Once LTX i2v gens clean on v0.27, move MPI-148 to done. Live Pod ops are user-only; app-branch commits stay local until the user authorizes a push."
+}
