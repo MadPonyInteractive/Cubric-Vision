@@ -86,7 +86,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const _openQueuePanel = () => {
             Events.emit('slide-over:open', _queuePanelPayload);
         };
-        _unsubs.push(Hotkeys.bind('gallery.queue.toggle', _toggleQueuePanel));
+        _unsubs.push(Hotkeys.bind('queue.toggle', _toggleQueuePanel));
         _unsubs.push(Events.on('generation-queue:open', _openQueuePanel));
 
         // ── Rehydrate any in-flight gallery generations ───────────────────────

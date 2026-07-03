@@ -161,6 +161,7 @@ export const MpiHotkeys = ComponentFactory.create({
                                 <li><span>&uarr;</span><span>Volume +10%</span></li>
                                 <li><span>&darr;</span><span>Volume -10%</span></li>
                                 <li><span>L</span><span>Toggle loop</span></li>
+                                <li><span>M</span><span>Toggle mute</span></li>
                                 <li><span>I</span><span>Set trim in to playhead</span></li>
                                 <li><span>O</span><span>Set trim out to playhead</span></li>
                                 <li><span>X</span><span>Reset trim range</span></li>

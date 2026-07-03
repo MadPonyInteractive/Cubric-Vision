@@ -1127,7 +1127,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             runBtn = MpiButton.mount(runHost, {
                 icon: 'play',
-                info: 'Tap to cue. Hold to toggle loop.',
+                info: 'Tap to cue. Hold to toggle loop. (Ctrl+Enter) | Access Queue (Q)',
                 size: 'sm', variant: 'primary',
                 label: _runLabel(),
                 extraClasses: 'mpi-prompt-box__cue-btn',
@@ -1188,7 +1188,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             stopBtn = MpiButton.mount(stopHost, {
                 icon: 'stop',
-                info: 'Stop current job',
+                info: 'Stop current job (Ctrl+Alt+Enter)',
                 size: 'sm', variant: 'secondary',
                 disabled: !isGenerating,
             });

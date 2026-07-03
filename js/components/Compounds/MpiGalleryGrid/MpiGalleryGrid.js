@@ -1531,8 +1531,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         const infoBtnSlot = qs('.mpi-gallery-grid__info-btn-slot', el);
         const _infoTip = (on) => on
-            ? 'Hide card info — mouse over shows it'
-            : 'Show card info always — mouse over hides it';
+            ? 'Hide card info — mouse over shows it (I)'
+            : 'Show card info always — mouse over hides it (I)';
         const infoBtn = MpiButton.mount(infoBtnSlot, {
             icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
             active: state.galleryShowInfo, info: _infoTip(state.galleryShowInfo),

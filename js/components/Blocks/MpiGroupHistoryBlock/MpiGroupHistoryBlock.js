@@ -21,6 +21,7 @@ import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpo
 import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
 import { MpiToolOptionsPrompt } from '../../Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
+import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
@@ -1356,6 +1357,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
 
             navigate(PAGE_GALLERY);
+        }));
+
+        // ── Cue queue slide-over (Q) — same panel/payload as the gallery ──────
+        const _queuePanelPayload = {
+            title: 'Cue',
+            component: MpiQueuePanel,
+            extraClasses: 'mpi-slide-over--queue',
+            panelId: 'generation-queue',
+        };
+        _unsubs.push(Hotkeys.bind('queue.toggle', () => {
+            Events.emit('slide-over:toggle', _queuePanelPayload);
+        }));
+        _unsubs.push(Events.on('generation-queue:open', () => {
+            Events.emit('slide-over:open', _queuePanelPayload);
         }));
 
         if (!isVideo) {
