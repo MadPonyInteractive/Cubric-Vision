@@ -1,12 +1,16 @@
 """
-scripts/computeDepHashes.py — Bootstrap SHA256 hashes for HuggingFace dependencies.
+scripts/computeDepHashes.py — Bootstrap SHA256 hashes for dependencies.
 
 Usage:
     python scripts/computeDepHashes.py          # compute and write hashes
     python scripts/computeDepHashes.py --dry-run # preview only
 
-Stream-based: files never written to disk. Safe for large files on
-space-constrained systems. Runs one file at a time to minimise memory/disk usage.
+HuggingFace deps: hashed from the remote (HEAD ETag fast-path, else stream download).
+R2 deps (models.cubric.studio): R2's ETag is multipart-MD5 and useless for sha256,
+so these are hashed from the LOCAL master copy under LOCAL_ROOT (default g:/cubricmodels,
+override with CUBRIC_MODELS_ROOT) using each dep's `filename` as the relative path.
+
+Stream-based: remote files never written to disk. Runs one file at a time.
 """
 
 import sys
@@ -23,10 +27,25 @@ DRY_RUN = '--dry-run' in sys.argv
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 DEPS_PATH = SCRIPT_DIR / 'js' / 'data' / 'modelConstants' / 'dependencies.js'
 
+# Local master copy of R2-hosted weights (R2 ETag is multipart-MD5, unusable for sha256).
+LOCAL_ROOT = Path(os.environ.get('CUBRIC_MODELS_ROOT', 'g:/cubricmodels'))
+
 class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None  # Do not follow redirects
 
+
+
+def hash_local_file(rel_path: str) -> str:
+    """SHA256 a local file under LOCAL_ROOT (for R2 deps whose ETag is unusable)."""
+    p = LOCAL_ROOT / rel_path
+    if not p.is_file():
+        raise FileNotFoundError(f'{p} not found — set CUBRIC_MODELS_ROOT or copy the file there')
+    h = hashlib.sha256()
+    with open(p, 'rb') as f:
+        while chunk := f.read(1024 * 1024):  # 1 MB chunks
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def compute_sha256(url: str) -> str:
@@ -92,12 +111,17 @@ def main() -> None:
         url_m = re.search(r"url:\s*'([^']+)'", entry_body)
         sha_m = re.search(r"sha256:\s*('[^']*'|null)", entry_body)
         size_m = re.search(r"size:\s*'([^']+)'", entry_body)
+        file_m = re.search(r"filename:\s*'([^']+)'", entry_body)
 
         if not url_m:
             continue
 
         url = url_m.group(1)
-        if 'huggingface.co' not in url:
+        if 'huggingface.co' in url:
+            source = 'hf'
+        elif 'models.cubric.studio' in url:
+            source = 'r2'
+        else:
             continue
 
         sha_value = sha_m.group(1) if sha_m else None
@@ -105,10 +129,11 @@ def main() -> None:
             continue  # already has a hash
 
         size = size_m.group(1) if size_m else 'unknown'
-        targets.append({'id': dep_id, 'url': url, 'size': size, 'entry_start': entry_match.start() + start, 'entry_end': entry_match.end() + start})
+        targets.append({'id': dep_id, 'url': url, 'size': size, 'source': source,
+                        'filename': file_m.group(1) if file_m else None})
 
     if not targets:
-        print('All HuggingFace deps already have SHA256 hashes.')
+        print('All deps already have SHA256 hashes.')
         return
 
     print(f'Found {len(targets)} deps missing SHA256.\n')
@@ -116,9 +141,15 @@ def main() -> None:
     # Compute all hashes first (one at a time)
     results = []
     for i, target in enumerate(targets, 1):
-        print(f'[{i}/{len(targets)}] {target["url"]} ({target["size"]})')
+        label = target['filename'] if target['source'] == 'r2' else target['url']
+        print(f'[{i}/{len(targets)}] [{target["source"]}] {label} ({target["size"]})')
         try:
-            h = compute_sha256(target['url'])
+            if target['source'] == 'r2':
+                if not target['filename']:
+                    raise ValueError('R2 dep has no filename field — cannot locate local file')
+                h = hash_local_file(target['filename'])
+            else:
+                h = compute_sha256(target['url'])
             print(f'  Success: {h[:16]}...')
             results.append({**target, 'hash': h, 'success': True})
         except Exception as exc:

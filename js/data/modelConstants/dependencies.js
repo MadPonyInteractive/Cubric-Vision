@@ -153,6 +153,94 @@ export const DEPS = {
         size: '254MB',
         sha256: '2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b'
     },
+    // ── NVIDIA PiD upscaler (MPI-182) ──────────────────────────────────────────
+    // One model, 4 VAE-locked checkpoints selected at runtime via Input_Type.
+    // Compat = VAE latent space, not model name. gemma_2_2b_it_elm is SHARED by
+    // all 4 paths (dedup automatic). Full research: docs/builder/research/pid-upscaler.md.
+    'pid-flux1': {
+        id: 'pid-flux1',
+        name: 'PiD Flux1 (1024→4096)',
+        origin: 'Comfy-Org/PixelDiT',
+        filename: 'diffusion_models/pid_flux1_1024_to_4096_4step_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/pid_flux1_1024_to_4096_4step_bf16.safetensors',
+        size: '2.72GB',
+        sha256: '17c282ed387edad7bfdd3189c5a17363d73e3d60b5e841dfded81c3b76e211ee'
+    },
+    'pid-sdxl': {
+        id: 'pid-sdxl',
+        name: 'PiD SDXL (1024→4096)',
+        origin: 'Comfy-Org/PixelDiT',
+        filename: 'diffusion_models/pid_sdxl_1024_to_4096_4step_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/pid_sdxl_1024_to_4096_4step_bf16.safetensors',
+        size: '2.72GB',
+        sha256: 'c8dd35d7d548a312f61f298d79c6f6a7731fc71031400533f91dbfb2c8a9cb02'
+    },
+    'pid-sd3': {
+        id: 'pid-sd3',
+        name: 'PiD SD3 (1024→4096)',
+        origin: 'Comfy-Org/PixelDiT',
+        filename: 'diffusion_models/pid_sd3_1024_to_4096_4step_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/pid_sd3_1024_to_4096_4step_bf16.safetensors',
+        size: '2.72GB',
+        sha256: 'f544e4b7cd414b0e3cae6c506f8b04560c2118fb9b9fcc39302b81c56377e271'
+    },
+    'pid-qwenimage': {
+        id: 'pid-qwenimage',
+        name: 'PiD Qwen-Image (1024→4096)',
+        origin: 'Comfy-Org/PixelDiT',
+        filename: 'diffusion_models/pid_qwenimage_1024_to_4096_4step_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/pid_qwenimage_1024_to_4096_4step_bf16.safetensors',
+        size: '2.72GB',
+        sha256: 'efa24eada8c414251410e786de96001b26d09701c3fe799a9f2eb0d7d3b8cf2d'
+    },
+    // VAEs are SHARED resources — named by the weight, NOT by PiD. ae.safetensors
+    // backs Flux/Chroma/Z-Image/+; qwen_image_vae backs Qwen-Image/Edit/+. Future
+    // models reference these ids directly → automatic dedup.
+    'vae-flux-ae': {
+        id: 'vae-flux-ae',
+        name: 'Flux VAE (ae)',
+        origin: 'Comfy-Org (flux ae)',
+        filename: 'vae/ae.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/ae.safetensors',
+        size: '335MB',
+        sha256: 'afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38'
+    },
+    'vae-sdxl': {
+        id: 'vae-sdxl',
+        name: 'SDXL VAE',
+        origin: 'stabilityai/sdxl-vae',
+        filename: 'vae/sdxl_vae.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/sdxl_vae.safetensors',
+        size: '335MB',
+        sha256: '63aeecb90ff7bc1c115395962d3e803571385b61938377bc7089b36e81e92e2e'
+    },
+    'vae-sd3': {
+        id: 'vae-sd3',
+        name: 'SD3 VAE',
+        origin: 'nvidia/PiD (sd3_vae)',
+        filename: 'vae/sd3_vae.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/sd3_vae.safetensors',
+        size: '168MB',
+        sha256: 'f9b67a279283625caee39d61eacb5324243848477b4eb535355eaaa8423d4e09'
+    },
+    'vae-qwen-image': {
+        id: 'vae-qwen-image',
+        name: 'Qwen-Image VAE',
+        origin: 'Comfy-Org/Qwen-Image_ComfyUI',
+        filename: 'vae/qwen_image_vae.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/qwen_image_vae.safetensors',
+        size: '254MB',
+        sha256: 'a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f'
+    },
+    'pid-gemma': {
+        id: 'pid-gemma',
+        name: 'PiD Gemma text encoder',
+        origin: 'Comfy-Org/PixelDiT',
+        filename: 'text_encoders/gemma_2_2b_it_elm_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/gemma_2_2b_it_elm_bf16.safetensors',
+        size: '5.23GB',
+        sha256: 'e7ae59c203c392db4aa4e27783e924ec3225eb563392260cf747e1130ffcdb88'
+    },
     // CLIP
     'umt5_xxl_fp8_e4m3fn_scaled': {
         id: 'umt5_xxl_fp8_e4m3fn_scaled',
