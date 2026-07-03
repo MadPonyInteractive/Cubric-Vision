@@ -520,9 +520,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // free for the user to queue more ops while generation runs.
                 return;
             }
-            viewer.el.isComparisonMode = false;
-            if (url?.startsWith('blob:')) viewer.el.setMaskHidden?.(true);
-            viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
+            if (!url) return;
+            // Some models emit ComfyUI preview frames that can't be TAESD-decoded
+            // (e.g. NVIDIA PiD — vae_approx=None), so the blob is a broken JPEG.
+            // Painting it into the viewer swaps the current image out BEFORE the
+            // <img> errors, leaving the canvas blank for the whole run. Probe-decode
+            // first; only swap once the frame actually loads, else keep the current
+            // image on screen until a valid preview (or the final result) arrives.
+            const probe = new Image();
+            probe.onload = () => {
+                viewer.el.isComparisonMode = false;
+                if (url.startsWith('blob:')) viewer.el.setMaskHidden?.(true);
+                viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
+            };
+            probe.src = url;
         }
 
         function _restoreCurrentEntryAfterCancel() {
