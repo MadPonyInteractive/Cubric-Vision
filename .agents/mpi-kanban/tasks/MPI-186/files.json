@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-186",
+  "expected": [
+    { "path": "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh", "why": "volume-install flow + sentinel + PYTHONPATH export + extra_paths baked-nodes stanza" },
+    { "path": "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile", "why": "remove baked ComfyUI deps layer (~5GB)" },
+    { "path": "c:/AI/Mpi/Cubric-Vision/routes/remotePodLifecycle.js", "why": "POD_IMAGE_VERSION bump" },
+    { "path": "c:/AI/Mpi/Cubric-Vision/docs/runpod-remote-engine.md", "why": "§6 image/volume split now includes ComfyUI deps on volume" },
+    { "path": "c:/AI/Mpi/Cubric-Vision/docs/builder/02-image-and-rebuild.md", "why": "baked-vs-volume table update" }
+  ]
+}

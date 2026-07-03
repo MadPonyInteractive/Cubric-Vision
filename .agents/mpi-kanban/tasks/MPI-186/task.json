@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-186",
+  "title": "Reduce RunPod Pod image size by moving ComfyUI (source + ~5GB deps) to the network volume",
+  "description": "The product Pod image (mpi-ci/cubric-vision-pod) bakes ComfyUI + its ~5GB uncompressed pip dep tree into a Docker layer. On a network volume that layer re-pulls on every cold host and can never be skipped. GOAL: move ComfyUI SOURCE + its arch-agnostic pip deps onto the /workspace volume, installed ONCE per volume via a boot-time script, gated on the ComfyUI-core version signal ($CUBRIC_COMFYUI_REF, already an image ENV written to the manifest). Skip when unchanged, re-install only on a core version bump. Torch/torchvision/torchaudio + sageattention STAY baked (arch-bound CUDA machine code - Design A locked, volume must stay arch-agnostic). SCOPE (user decision 2026-07-03): ComfyUI core + deps ONLY; the 7 universal node packs stay baked in /opt/ComfyUI/custom_nodes (declare that path in extra_model_paths.yaml so they still load once main.py moves to the volume). SPIKE-GATED: Phase 0 is a live-Pod spike proving the two torch-linked compiled deps (comfy-aimdo, comfy-kitchen) survive pip --target + PYTHONPATH relocation WITHOUT silently falling back - aimdo is load-bearing (MPI-156: its loss = 6-min loads / OOM). If the spike fails, the whole approach is abandoned and this card closes wontfix. All live Pod ops are USER-only. Investigation complete - see research/investigation.md. BRANCH: mpi-ci (Dockerfile/start.sh) + RunPod branch of Cubric-Vision if any app-side manifest consumption is added.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-07-03T22:30:00Z",
+  "updated_at": "2026-07-03T22:30:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "mpi-ci",
+    "pod-image",
+    "image-size",
+    "runpod",
+    "spike-gated"
+  ],
+  "priority": "medium"
+}
