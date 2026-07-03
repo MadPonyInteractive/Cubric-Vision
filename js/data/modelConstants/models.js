@@ -37,7 +37,7 @@ export const MODELS = [
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
-        description: 'SDXL workflows for realism using the famous Juggernaut XL model.',
+        description: 'This image generator uses the famous Juggernaut XL model as its base. It can create different styles but is best suited for realistic images.',
         workflows: {
             t2i: 't2i_sdxl_realistic.json',
             upscale: 'upscaler_sdxl_realistic.json',
@@ -61,7 +61,7 @@ export const MODELS = [
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
-        description: 'SDXL workflows for nsfw content using the famous Lustify model by Coyotte.',
+        description: 'This spicy image generator uses one of the best NSFW models available for SDXL, the famous Lustify model by Coyotte.',
         workflows: {
             t2i: 't2i_sdxl_nsfw.json',
             upscale: 'upscaler_sdxl_nsfw.json',
@@ -133,7 +133,7 @@ export const MODELS = [
         type: 'sdxl',
         supportedOps: ['t2i', 'upscale', 'detail'],
         gen_speed: 'fast',
-        description: 'PONY workflows for a mix of anime and realism using AnimerJei V3.',
+        description: 'This image generator uses the AnimerJei V3 PONY model. It is a stylized model that can create different animation styles.',
         workflows: {
             t2i: 't2i_pony_mix.json',
             upscale: 'upscaler_pony_mix.json',
@@ -165,7 +165,7 @@ export const MODELS = [
         showSettings: false,
         supportedOps: ['pid'],
         gen_speed: 'fast',
-        description: 'NVIDIA PiD generative 4x upscaler. Pick a model per look (Flux/SD3/Qwen/SDXL) and drive detail with the denoise slider.',
+        description: 'NVIDIA PiD generative 4x image upscaler. This upscaler offers you 4 different models. (Flux/SD3/Qwen/SDXL) Each providing you different results. Like with any other model, you should reuse the prompt that generated the initial image or describe the image for better results. ',
         workflows: {
             pid: 'NVIDIA_PID.json',
         },
@@ -207,7 +207,7 @@ export const MODELS = [
         ],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
-        description: 'Wan 2.2 text-to-video and image-to-video, for anime and realism using the SmoothMix models.',
+        description: 'This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation. It can generate videos from text or images. Completely uncensored and with a spicy tendency. It creates videos at 16 fps, so it is advisable to interpolate them later.',
         workflows: {
             t2v_ms: 'Wan22_t2v.json',
             i2v_ms: 'Wan22_i2v.json',
@@ -255,8 +255,8 @@ export const MODELS = [
         // no loraStages. Model-strength only.
         loraStrengths: ['model'],
         supportedOps: ['t2v_ms', 'i2v_ms'],
-        gen_speed: 'fast',
-        description: 'LTX 2.3 text-to-video and image-to-video with synchronized audio — reference-voice and direct-audio modes.',
+        gen_speed: 'medium',
+        description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes.',
         workflows: {
             t2v_ms: 'LTX_t2v.json',
             i2v_ms: 'LTX_i2v.json',
@@ -337,7 +337,7 @@ export const MODELS = [
         // capabilities.multiStage:false. First video model to use the non-_ms ops.
         supportedOps: ['t2v', 'i2v'],
         gen_speed: 'fast',
-        description: 'Wan 2.2 5B (TI2V) — fast, low-tier text-to-video and image-to-video in one compact model. Draft-speed via the 4-step Turbo distill.',
+        description: 'This fast low-tier video generator is a lightweight version of Wan 2.2.',
         // Combined transformer: both ops ship together (LTX pattern). generate_wan5b.py
         // bakes Input_Text_to_video from the template into the two runtime files.
         workflows: {
