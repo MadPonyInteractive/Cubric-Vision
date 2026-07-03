@@ -113,11 +113,11 @@ export class InputController {
             const c = this._getContainerCoords(e);
             const i = this._getImageCoords(e);
             const { view, mask, comparison, crop } = this.managers;
-            const imgW = this.canvas.width || 1;
+            const containerW = this.container.getBoundingClientRect().width || 1;
 
-            if (comparison.isOverSlider(i.x, imgW)) {
+            if (comparison.isOverSlider(c.x, containerW)) {
                 comparison.isDraggingSlider = true;
-                comparison.sliderPos = Math.max(0, Math.min(1, i.x / imgW));
+                comparison.sliderPos = Math.max(0, Math.min(1, c.x / containerW));
             } else if (crop.isCroppingMode && !this.isSpacePressed) {
                 const handle = crop.hitTest(i.x, i.y, view.scale);
                 if (handle) {
@@ -150,9 +150,8 @@ export class InputController {
             const { view, mask, comparison, crop } = this.managers;
 
             if (comparison.isDraggingSlider) {
-                const imgW = this.canvas.width || 1;
-                const i = this._getImageCoords(e);
-                comparison.updateSlider(i.x, imgW);
+                const containerW = this.container.getBoundingClientRect().width || 1;
+                comparison.updateSlider(c.x, containerW);
                 if (this.options.onSliderChange) this.options.onSliderChange(comparison.sliderPos);
             } else if (crop.isDragging) {
                 const i = this._getImageCoords(e);
@@ -254,8 +253,8 @@ export class InputController {
         } else if (mask.isMaskingMode) {
             target.style.cursor = 'none';
         } else if (x !== undefined) {
-            const imgX = (x - view.offsetX) / (view.scale || 1);
-            target.style.cursor = comparison.isOverSlider(imgX, this.canvas.width || 1)
+            const containerW = this.container.getBoundingClientRect().width || 1;
+            target.style.cursor = comparison.isOverSlider(x, containerW)
                 ? 'ew-resize' : 'default';
         } else {
             target.style.cursor = 'default';

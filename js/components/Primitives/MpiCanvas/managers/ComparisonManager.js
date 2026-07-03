@@ -72,18 +72,18 @@ export class ComparisonManager {
     }
 
     /**
-     * @param {number} imgX - Horizontal position in image-native px.
-     * @param {number} imgW - Image width in native px.
+     * @param {number} screenX - Horizontal cursor position in container (screen) px.
+     * @param {number} screenW - Container width in px.
      */
-    isOverSlider(imgX, imgW) {
+    isOverSlider(screenX, screenW) {
         if (!this.isComparisonMode) return false;
-        const barImgX = this.sliderPos * imgW;
-        return Math.abs(imgX - barImgX) < 20;
+        const barX = this.sliderPos * screenW;
+        return Math.abs(screenX - barX) < 20;
     }
 
-    updateSlider(imgX, imgW) {
+    updateSlider(screenX, screenW) {
         if (this.isDraggingSlider) {
-            this.sliderPos = Math.max(0, Math.min(1, imgX / imgW));
+            this.sliderPos = Math.max(0, Math.min(1, screenX / screenW));
             return true;
         }
         return false;
