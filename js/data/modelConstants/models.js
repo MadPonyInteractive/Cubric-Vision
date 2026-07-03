@@ -156,7 +156,7 @@ export const MODELS = [
         name: 'NVIDIA PiD Upscaler',
         dropdownMeta: 'UPSCALE',
         mediaType: 'image',
-        image: 'sdxl-real-01.webp',
+        image: 'nvidia-pid.webp',
         type: 'pid',
         // Reuse the sdxl prompt-enhance recipe — PiD has no 'pid' recipe in Cubric
         // Prompt, and the prompt is optional guidance for an image upscale (§6 sweep).

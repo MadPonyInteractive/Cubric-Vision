@@ -170,6 +170,15 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 src: `comfy_workflows/display/${props.image}`,
                 className: 'mpi-installed-display__image-img',
             });
+            // Match the box to the still's real aspect once it loads, so non-4:5 art
+            // (e.g. the square PiD preview) shows as-is instead of cover-cropping to
+            // the portrait default. Mirrors the video loadedmetadata trick above.
+            _mediaUnsubs.push(on(img, 'load', () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    imageSlot.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    if (img.naturalHeight > img.naturalWidth) imageSlot.style.maxWidth = '320px';
+                }
+            }));
             _mediaUnsubs.push(on(img, 'error', () => { imageSlot.style.display = 'none'; }));
             imageSlot.appendChild(img);
         } else {
