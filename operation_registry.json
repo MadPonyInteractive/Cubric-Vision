@@ -1,5 +1,5 @@
 {
-  "_comment": "Do not edit manually — maintained by /mpi-version-bump skill. Source of truth: js/core/operationRegistry.js",
+  "_comment": "Do not edit manually \u2014 maintained by /mpi-version-bump skill. Source of truth: js/core/operationRegistry.js",
   "t2i": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"
@@ -27,6 +27,10 @@
   "remove": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"
+  },
+  "pid": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.0.0"
   },
   "t2v": {
     "latestVersion": "1.1",

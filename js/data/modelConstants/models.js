@@ -146,6 +146,37 @@ export const MODELS = [
             'ComfyUI-UltimateSDUpscale',
         ],
     },
+    {
+        // NVIDIA PiD generative upscaler — one model, 4 VAE-locked paths picked at
+        // runtime via the pidVariant control (Input_Type switch). Prompt-box driven
+        // (needs an image + optional prompt). Only op = `pid`. Research + decisions:
+        // docs/builder/research/pid-upscaler.md.
+        id: 'nvidia-pid',
+        sizeTier: 'low',
+        name: 'NVIDIA PiD Upscaler',
+        dropdownMeta: 'UPSCALE',
+        mediaType: 'image',
+        image: 'sdxl-real-01.webp',
+        type: 'pid',
+        // Reuse the sdxl prompt-enhance recipe — PiD has no 'pid' recipe in Cubric
+        // Prompt, and the prompt is optional guidance for an image upscale (§6 sweep).
+        enhanceRecipe: 'sdxl',
+        // No model-settings gear: PiD takes no upscale model and no LoRAs.
+        showSettings: false,
+        supportedOps: ['pid'],
+        gen_speed: 'fast',
+        description: 'NVIDIA PiD generative 4x upscaler. Pick a model per look (Flux/SD3/Qwen/SDXL) and drive detail with the denoise slider.',
+        workflows: {
+            pid: 'NVIDIA_PID.json',
+        },
+        dependencies: [
+            'pid-flux1', 'pid-sdxl', 'pid-sd3', 'pid-qwenimage',
+            'vae-flux-ae', 'vae-sdxl', 'vae-sd3', 'vae-qwen-image',
+            'pid-gemma',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+        ],
+    },
     // ── Video Models ───────────────────────────────────────────────────
     {
         id: 'wan-22',

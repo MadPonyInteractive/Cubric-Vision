@@ -813,6 +813,130 @@ export const PROMPT_BOX_CONTROLS = {
         },
     },
 
+    /**
+     * pidVariant — NVIDIA PiD path/VAE selector (used by the `pid` op only).
+     * Injects a 1-indexed int into the "Input_Type" MpiAnySwitch node:
+     * 1=flux, 2=sd3, 3=qwen, 4=sdxl. Each path is a distinct look (see
+     * docs/builder/research/pid-upscaler.md): sdxl=sharp/punchy, flux=faithful
+     * color, sd3=sharp, qwen=natural all-rounder. Persists per-op.
+     */
+    pidVariant: {
+        nodeTitle: 'Input_Type',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.pidVariant,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'pidVariant', opts);
+            const savedNum = Number(saved.pidVariant ?? fallback);
+            const allowed = [1, 2, 3, 4];
+            const initial = allowed.includes(savedNum) ? savedNum : fallback;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Model';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: 'Flux', value: '1' },
+                    { label: 'SD3',  value: '2' },
+                    { label: 'Qwen', value: '3' },
+                    { label: 'SDXL', value: '4' },
+                ],
+                value: String(initial),
+                name: 'pidVariant',
+                size: 'sm',
+                columns: 4,
+                info: 'Upscaler model — Flux (faithful color), SD3 (sharp), Qwen (natural), SDXL (sharp/punchy)',
+            });
+
+            this._instance.on('select', ({ value }) => {
+                const v = Number(value);
+                if (!allowed.includes(v)) return;
+                this.value = v;
+                _emitUpdate(this, opts, 'pidVariant', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
+            return { Input_Type: v };
+        },
+    },
+
+    /**
+     * pidResolution — NVIDIA PiD output-size selector (used by the `pid` op only).
+     * Injects a 1-indexed int into the "Input_Resolution" MpiAnySwitch node:
+     * 1=1K, 2=2K, 3=4K. PiD always renders native 4x (4K); 1K/2K downscale that
+     * result (4K = passthrough, best quality). Persists per-op.
+     */
+    pidResolution: {
+        nodeTitle: 'Input_Resolution',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.pidResolution,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'pidResolution', opts);
+            const savedNum = Number(saved.pidResolution ?? fallback);
+            const allowed = [1, 2, 3];
+            const initial = allowed.includes(savedNum) ? savedNum : fallback;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Output';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: '1K', value: '1' },
+                    { label: '2K', value: '2' },
+                    { label: '4K', value: '3' },
+                ],
+                value: String(initial),
+                name: 'pidResolution',
+                size: 'sm',
+                columns: 3,
+                info: 'Output resolution — 4K is native PiD quality; 1K/2K downscale it',
+            });
+
+            this._instance.on('select', ({ value }) => {
+                const v = Number(value);
+                if (!allowed.includes(v)) return;
+                this.value = v;
+                _emitUpdate(this, opts, 'pidResolution', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
+            return { Input_Resolution: v };
+        },
+    },
+
 };
 
 /**

@@ -739,3 +739,11 @@
 {"event": "task.moved", "task": "MPI-179", "from": "doing", "to": "done", "at": "2026-07-02T13:05:00Z", "by": "agent"}
 {"event": "task.moved", "task": "MPI-126", "from": "todo", "to": "doing", "at": "2026-07-02T13:20:00Z", "by": "agent"}
 {"event": "task.moved", "task": "MPI-126", "from": "doing", "to": "done", "at": "2026-07-02T14:30:00Z", "by": "agent"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-148","type":"task.updated","at":"2026-07-02T00:00:00Z","actor":"vscode","summary":"MPI-148 retargeted v0.26.0 → v0.27.0 (model-wave floor); stays todo/deferred. Local dev ComfyUI updated to 0.27 today."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"task.created","at":"2026-07-03T01:40:51Z","actor":"MadPonyInteractive","summary":"Created NVIDIA PiD upscaler integration card."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"task.updated","at":"2026-07-03T01:40:51Z","actor":"MadPonyInteractive","summary":"Attached compact plan; maturity=planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"task.moved","at":"2026-07-03T03:20:38Z","actor":"MadPonyInteractive","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T03:20:38Z","actor":"MadPonyInteractive","summary":"Derived implementation checklist."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T03:44:37Z","actor":"MadPonyInteractive","summary":"Code wiring complete (injector, op, controls, deps, ModelDef); R2/hashes/progressStages/in-app pending."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T04:12:34Z","actor":"MadPonyInteractive","summary":"R2 upload 9/9 HEAD-verified byte-exact; hashes owned by separate session."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T04:29:08Z","actor":"MadPonyInteractive","summary":"Fixed no-output bug (Output title), op label, gear-hide; progressStages; playbook lessons. Awaiting in-app re-verify."}

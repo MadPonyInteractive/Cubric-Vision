@@ -45,6 +45,9 @@ export const PROGRESS_STAGES = Object.freeze({
     't2i_pony_mix.json':         Object.freeze({ single: 2 }),
     't2i_sdxl_nsfw.json':        Object.freeze({ single: 2 }),
     't2i_sdxl_realistic.json':   Object.freeze({ single: 2 }),
+    // NVIDIA PiD upscaler — one 4-step distilled sampler pass = a single tqdm bar
+    // (no separate model-load bar surfaces). Live-confirmed 2026-07-03.
+    'NVIDIA_PID.json':           Object.freeze({ single: 1 }),
 });
 
 /**

@@ -15,6 +15,24 @@ single-stage, low-tier video model.
 
 ---
 
+## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
+
+Before any app wiring, build and prove the ComfyUI graph in the standalone local
+ComfyUI — the fast iteration bench. Only once it produces good output there do you
+export the `_template.json` and start the app-wiring steps below.
+
+- **Local live-test workflows folder:** `G:\ComfyUi\ComfyUI\user\default\workflows\`
+  (e.g. `NVIDIA_PID_template.json`). This is the primary authoring bench.
+- **Local models dir:** `G:\CubricModels\` (checkpoints → `diffusion_models/`,
+  VAEs → `vae/`, text encoders → `text_encoders/`, etc.).
+- **Two-stage test flow:** prove it here FIRST; then test in the in-app ENGINE
+  ComfyUI (the one Cubric Vision drives). A workflow graduates to app wiring only
+  after it passes on the local folder. The engine run is the second gate, not the first.
+- When exporting the template, remember the media-input `input/` trap (§ "Media-input
+  nodes" below) — the exported JSON carries whatever test file was open.
+
+---
+
 ## 0. Decide the model's SHAPE first
 
 Two structural forks decide everything downstream:
@@ -314,9 +332,63 @@ ratios (MPI-171), the two `tiersFor` maps (`wan5b: ['low','medium','high']`), an
 
 ---
 
+## 8. Image upscaler / new-op model with a runtime in-workflow selector (PiD pattern, MPI-182)
+
+A prompt-box-driven model that adds a NEW op + a runtime switch inside ONE workflow
+(no per-op file split). PiD = the worked example: one workflow, a 4-path VAE selector +
+an output-size selector, both `MpiAnySwitch` picked at submit time. Lessons that cost real
+debugging:
+
+- **Image output CAPTURE node MUST be titled exactly `Output`** (case-insensitive) — NOT
+  `Output_Image` or any other `Output_*`. Set this title IN ComfyUI and re-export — do NOT
+  hand-edit the workflow JSON (workflows change only via authoring/scripts; a manual JSON edit
+  is silently lost on the next re-export → the bug returns). The IMAGE capture
+  (`commandExecutor.js` ~L970: `_captureTitle = 'output'`) matches bare `output`. Video is the
+  only split — `Output_Video` / `Output_Audio` are special-cased there; IMAGE stays bare
+  `Output`. `output_image` is recognized NOWHERE. A node titled `Output_Image` runs fine,
+  lands in ComfyUI `/history` with `images`, but the app reports **"Generation completed but
+  no output returned"** because capture never fires. EVERY shipped image workflow (t2i,
+  upscaler, detailer, image_upscale, img_auto_mask) titles its `PreviewImage` exactly `Output`.
+  (Use `PreviewImage`, not `SaveImage` — all Cubric image workflows use PreviewImage, type
+  `temp`; the app builds a `/view?...type=temp` URL fine.)
+- **Injecting an `MpiAnySwitch` needs `'select'` in the injector target list.** The switch's
+  selector input is `select` (int). `comfyController.js` `_inject` targets did NOT include it
+  until MPI-182 — injection matched the node by title but wrote nothing → the dropdown
+  silently no-op'd. If you author ANY MpiAnySwitch driven by a control, confirm `'select'` is
+  in that target array. **MpiAnySwitch is 1-INDEXED** (select starts at 1) — the control must
+  inject 1-based values or it picks the wrong branch.
+- **A runtime in-workflow selector = a `PROMPT_BOX_CONTROLS` entry + a `commandRegistry`
+  component.** Clone the `upscaleFactor` control (an `MpiRadioGroup` whose
+  `getInjectionParams()` returns `{ <Node_Title>: value }`). Add the control id to the op's
+  `components` array and a default to `promptControlDefaults.js`. The control's `nodeTitle`
+  must equal the switch node's `_meta.title`. Values already `Input_`-prefixed skip the
+  tier-2 alias (they inject as-is); a bare title (e.g. `Denoise`) gets an `Input_Denoise`
+  alias for free — so an app slider can drive a differently-named workflow field.
+- **Image gating is FREE** — an image-required op declares `requiresImages: 1` +
+  `mediaInputs:[{ key:'inputImage', title:'Input_Image', required:true }]` (clone `upscale`).
+  That inherits the block-Run-if-no-image toast (`generationService.js`) + auto-op-switch. No
+  new gating code. The workflow's `LoadImage` node MUST be titled `Input_Image` to receive it.
+- **Hide the model-settings gear** for a model that configures no upscale-model and no LoRAs:
+  set `showSettings: false` on the ModelDef (honored in `MpiPromptBox.js` beside
+  `props.showSettings`). Prevents an empty/irrelevant settings popup.
+- **A NEW op adds to `operation_registry.json` AND `js/core/operationRegistry.js`** (two
+  mirrors), `appVersionIntroduced` = current `APP_VERSION`. NOT `js/data/operationRegistry.js`
+  (doesn't exist). Adding a model/op is still NOT an app version bump.
+- **Shared VAE/encoder deps get RESOURCE-named ids, not model-scoped.** `vae-flux-ae`,
+  `vae-sdxl`, `vae-qwen-image` — because `ae.safetensors` will back Flux/Chroma/Z-Image/+ and
+  the Qwen VAE backs Qwen-Image/Edit/+. A model-scoped id (`pid-vae-flux`) forces the next
+  model to re-declare or reference a confusingly-named dep. Weights that ARE model-specific
+  (the PiD checkpoints, the pixeldit Gemma encoder) keep the model prefix (`pid-*`). Dedup by
+  id is automatic (`resolveModelDeps.js` `dedupeStable`) — list a shared id once.
+- **VAE FILE must be the ComfyUI-repackaged safetensors**, not a community convert or raw
+  NVIDIA `.pth`. Wrong-arch converts fail VAELoader with a `conv_in` shape mismatch; a `.pth`
+  fails because VAELoader wants a `vae.`-prefixed safetensors state_dict. (PiD's qwen VAE took
+  3 tries — see `docs/builder/research/pid-upscaler.md`.)
+
 ## Checklist (copy per model)
 
 - [ ] Decide shape: combined (`dependencies[]`) vs separate (`commonDeps`+`operations{}`); single vs multi-stage
+- [ ] Output capture node titled EXACTLY `Output` (§8) — not `Output_*`; strict-match capture
 - [ ] Author + save the workflow template in `comfy_workflows/`
 - [ ] Verify the op-boolean feeds only the MpiIfElse; normalize all loader file paths to bare filenames (§3)
 - [ ] Write/run the generator → runtime files in `comfy_workflows/`
@@ -326,5 +398,9 @@ ratios (MPI-171), the two `tiersFor` maps (`wan5b: ['low','medium','high']`), an
 - [ ] `/mpic-compute-dep-hashes` → fill all sha256
 - [ ] Add the `ModelDef` (`models.js`); set capabilities, workflows, dependencies, enhanceRecipe
 - [ ] New `type`? Sweep the four consumers (§6)
+- [ ] New OP? Add to BOTH `js/core/operationRegistry.js` + `operation_registry.json` (§8), `appVersionIntroduced` = current APP_VERSION
+- [ ] Runtime in-workflow selector? Add a `PROMPT_BOX_CONTROLS` entry + `commandRegistry` component + `promptControlDefaults` (§8); `nodeTitle` == switch title; MpiAnySwitch needs `select` in the injector + 1-indexed values
+- [ ] Model with no upscale-model/LoRA config? `showSettings: false` on the ModelDef (§8)
+- [ ] Shared VAE/encoder deps? RESOURCE-named ids (`vae-*`), not model-scoped (§8)
 - [ ] Verify: parse cross-ref, loader paths, upload HEAD, app launch
-- [ ] NO version bump; NO operationRegistry change (unless a NEW op type)
+- [ ] NO app version bump (adding a model/op ≠ version bump)

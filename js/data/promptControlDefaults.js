@@ -9,6 +9,12 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     useGrid: false,
     upscaleFactor: 2,
     denoise: 0.2,
+    // PiD upscaler (Input_Type MpiAnySwitch, 1-indexed): 1=flux, 2=sd3, 3=qwen, 4=sdxl.
+    // Default 1 (flux) matches the workflow's baked select.
+    pidVariant: 1,
+    // PiD output size (Input_Resolution MpiAnySwitch, 1-indexed): 1=1K, 2=2K, 3=4K.
+    // Default 3 (4K = native PiD, no downscale) matches the workflow's baked select.
+    pidResolution: 3,
     // LTX audio mode: 'reference' = voice-ID from a reference clip,
     // 'original' = use the input audio directly. Default reference (headline mode).
     audioMode: 'reference',

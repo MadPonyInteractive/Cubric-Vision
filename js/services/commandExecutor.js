@@ -971,10 +971,18 @@ export function runCommand(payload) {
             ? 'preview'
             : 'output';
         const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : 'output_preview';
+        // Tier-2 IMAGE capture alias: a fully tier-2 image workflow titles its
+        // capture node `Output_Image` (self-describing, like video's `Output_Video`)
+        // instead of the bare tier-1 `Output`. Accept it on the SAME image capture
+        // path so tier-2 image workflows (e.g. NVIDIA PiD, MPI-182) need no bare-title
+        // exception. Only aliases the non-preview image capture.
+        const _imageOutputTitle = _captureTitle === 'output' ? 'output_image' : null;
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id => {
                 const t = workflow[id]._meta?.title?.toLowerCase();
-                return t === _captureTitle || (_videoOutputTitle && t === _videoOutputTitle);
+                return t === _captureTitle
+                    || (_videoOutputTitle && t === _videoOutputTitle)
+                    || (_imageOutputTitle && t === _imageOutputTitle);
             })
         );
         const outputAudioNodeIds = new Set(

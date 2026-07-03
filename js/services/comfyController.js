@@ -1036,7 +1036,7 @@ function createEngine({ engine, alwaysLocal }) {
                 'value', 'text', 'int', 'float', 'boolean', 'string',
                 'ckpt_name', 'model_name', 'unet_name', 'image', 'mask', 'picks',
                 'lora_name', 'strength_model', 'strength_clip',
-                'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent'
+                'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent', 'select'
             ];
             for (const t of targets) {
                 if (t in node.inputs) {

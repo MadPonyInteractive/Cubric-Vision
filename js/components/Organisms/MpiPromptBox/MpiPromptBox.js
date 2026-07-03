@@ -862,7 +862,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 modelSlot.appendChild(_modelDropdown.el);
             }
 
-            if (props.showSettings !== false) {
+            // Gear opens model settings (upscale-model + LoRA pickers). A model can
+            // opt out with showSettings:false when it configures neither — e.g. the
+            // PiD upscaler, which takes no upscale model and no LoRAs.
+            if (props.showSettings !== false && model.showSettings !== false) {
                 const gearBtn = MpiButton.mount(document.createElement('div'), {
                     icon: 'settings', variant: 'ghost', size: 'sm', info: 'Model Settings',
                 });

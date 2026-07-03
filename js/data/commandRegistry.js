@@ -143,6 +143,22 @@ export const commands = {
         promptRequired: true,
         components: [],
     },
+    // NVIDIA PiD generative upscaler. One workflow, internal 4-path VAE selector
+    // (pidVariant → Input_Type) + output-size selector (pidResolution → Input_Resolution),
+    // both 1-indexed MpiAnySwitch. denoise slider maps to PiD's degrade_sigma (Input_Denoise);
+    // default 0.0 = faithful. Prompt optional (empty works).
+    pid: {
+        label: 'Upscale',
+        progressLabel: 'Upscaling',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        components: ['pidVariant', 'pidResolution', 'denoise'],
+        defaults: { denoise: 0.0 },
+    },
 
     // ── Video — Model Operations ──────────────────────────────────────────────
 
