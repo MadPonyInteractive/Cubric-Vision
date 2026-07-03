@@ -35,6 +35,13 @@
 
 ## whatIsNew
 
+- **New model: NVIDIA PiD Upscaler.** A generative 4× image upscaler that adds real
+  detail instead of just resizing. Pick the look with one control — **Flux** (faithful,
+  natural colour), **SD3** (sharp), **Qwen** (natural all-rounder), or **SDXL**
+  (crisp, punchy) — set the output size (1K / 2K / 4K), and use the denoise slider to
+  dial how much new detail it invents. Feed it any image (reuse a prompt to guide the
+  result) and it upscales any aspect ratio, not just squares. Image-only.
+
 - **New model: Wan 2.2 5B.** A fast, low-tier video model that does both
   **text-to-video** and **image-to-video** in one compact download (720p). It ships
   with a 4-step Turbo mode for quick drafts — ideal for iterating on a shot before
