@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-148",
-  "title": "Bump Builder image ComfyUI core to v0.26.0 (parity with the global v0.26 bump)",
-  "description": "FOLLOW-UP to MPI-139 (global ComfyUI v0.25.1→v0.26.0 bump). The Builder authoring image (mpi-ci/cubric-vision-builder/Dockerfile, ARG COMFYUI_REF=eca4757…=v0.25.1) must move to v0.26.0 (commit f6c162ddcfbd7eefb39c06fe5b8d4c46e8d09f40) so workflows authored on the Builder match the app/Pod core. DEFERRED by the user — may not use the Builder soon, so not in the v0.9.0 batch. When picked up: bump COMFYUI_REF in cubric-vision-builder/Dockerfile, rebuild the Builder image (cu130, LOCAL-only — overflows CI), re-run install_nodes.sh, confirm the node set + LTX workflow load on 0.26. Edit mpi-ci with `git -C c:/AI/Mpi/mpi-ci` (separate repo). Keep kornia 0.8.2 pin. BRANCH: RunPod / mpi-ci only.",
+  "title": "Bump Builder image ComfyUI core to v0.27.0 (parity with the model-wave bump)",
+  "description": "FOLLOW-UP to MPI-139 (global ComfyUI v0.25.1→v0.26.0 bump). RETARGETED 2026-07-02 from v0.26.0 → v0.27.0: the app is entering a regular model-integration cadence (Krea2, NVIDIA PiD, Boogu, Lens, Ernie, Ideogram) and v0.27.0 is the researched floor that clears the whole wave (Krea2 merge node + Ideogram bbox/JSON prompt both need 0.27; PiD/Lens=0.23, Boogu=0.26, Ernie=0.19). No breaking changes for our stack. The Builder authoring image (mpi-ci/cubric-vision-builder/Dockerfile, ARG COMFYUI_REF=eca4757…=v0.25.1) must move to v0.27.0 (commit bb131be9e83d2f773c90f1d6f1e4b248a498c8c5) so workflows authored on the Builder match the app/Pod core. Local dev ComfyUI (G:/ComfyUi) already updated to v0.27.0 on 2026-07-02 (Pod image still 0.26 — separate bump). STILL DEFERRED — may not use the Builder soon. When picked up: bump COMFYUI_REF in cubric-vision-builder/Dockerfile, rebuild the Builder image (cu130, LOCAL-only — overflows CI), re-run install_nodes.sh, confirm the node set + LTX workflow load on 0.27. Edit mpi-ci with `git -C c:/AI/Mpi/mpi-ci` (separate repo). Keep kornia 0.8.2 pin. BRANCH: RunPod / mpi-ci only.",
   "column": "todo",
   "maturity": "planned",
   "status": "open",
   "created_at": "2026-06-26T14:05:00Z",
-  "updated_at": "2026-06-26T14:05:00Z",
+  "updated_at": "2026-07-02T00:00:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -18,6 +18,6 @@
     "handoffs": "handoffs/",
     "research": "research/"
   },
-  "tags": ["runpod", "mpi-ci", "builder-image", "comfyui-bump", "deferred"],
+  "tags": ["runpod", "mpi-ci", "builder-image", "comfyui-bump", "deferred", "model-wave"],
   "priority": "low"
 }
