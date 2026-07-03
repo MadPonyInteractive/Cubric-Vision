@@ -5,3 +5,5 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T03:44:37Z","actor":"MadPonyInteractive","summary":"Code wiring complete (injector, op, controls, deps, ModelDef); R2/hashes/progressStages/in-app pending."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T04:12:34Z","actor":"MadPonyInteractive","summary":"R2 upload 9/9 HEAD-verified byte-exact; hashes owned by separate session."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"checklist.updated","at":"2026-07-03T04:29:08Z","actor":"MadPonyInteractive","summary":"Fixed no-output bug (Output title), op label, gear-hide; progressStages; playbook lessons. Awaiting in-app re-verify."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"validation.updated","at":"2026-07-03T04:49:19Z","actor":"MadPonyInteractive","summary":"Validated in-app: output captures, 4 paths, controls, gating."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-182","type":"task.moved","at":"2026-07-03T04:49:19Z","actor":"MadPonyInteractive","from":"doing","to":"done","summary":"PiD upscaler shipped + user-validated in-app; UI polish deferred."}
