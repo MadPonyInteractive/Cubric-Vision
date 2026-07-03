@@ -138,6 +138,12 @@
   result); a missing **upscale** model automatically falls back to the built-in
   default and warns, so the generation still runs.
 
+- **Video player & Cue quality-of-life.** Press **M** to mute/unmute the video
+  player. Every player button now shows its keyboard shortcut in the hover tip
+  (Play/Pause, frame step, mute, fullscreen). And the **Cue** queue is now
+  reachable from inside a clip's history view — press **Q** or hover the Cue
+  button — so you no longer have to go back to the gallery to check the queue.
+
 ## fixes
 
 - **Wan 2.2 Smooth — sharper draft tier.** The lowest quality tier's resolution was
