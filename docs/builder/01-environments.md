@@ -24,6 +24,12 @@ with the mpi-ci image: build the image there, drive the workflow loop from here.
 - ComfyUI: `G:/ComfyUi/ComfyUI/` (note the lowercase `i` in `ComfyUi`).
   - Workflows: `G:/ComfyUi/ComfyUI/user/default/workflows/`
     (e.g. `LTX_i2v_t2v_template.json`).
+- **Local model store: `G:/CubricModels/`** — the canonical local copy of every
+  shipped weight, flat by type (`upscale_models/`, `sams/`, `ultralytics/bbox/`,
+  `diffusion_models/`, `loras/`, `vae/`, …). This is the SAME layout the R2 bucket
+  mirrors (MPI-178). If a build/script needs a weight, it is here AND on R2
+  (`https://models.cubric.studio/vision/models/<type>/<file>`) — never re-derive a
+  HuggingFace source. NOT `G:/ComfyUi/…/models` (that rig has its own separate set).
 - LoRAs: `C:/AI/loras/` — **LTX LoRAs nested under `C:/AI/loras/LTX2.3/`**
   (rgthree "Auto Nest Subdirectories in Menus" gives folder submenus). LoRA-name
   strings therefore carry the `LTX2.3\` prefix.
