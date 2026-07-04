@@ -33,7 +33,7 @@ Read these first — they hold every gotcha this command operationalizes:
 In the commands below, substitute:
 - `<ver>` — image tag version (e.g. `0.4.9` → `:v0.4.9-<profile>`)
 - `<wver>` — wrapper version (`/health` string); bump ONLY if `wrapper/wrapper.py` changed
-- `<ref>` — ComfyUI git ref, a **SHA** (kept in lockstep with the Builder image for parity)
+- `<ref>` — ComfyUI git ref, the **TAG** (e.g. `v0.27.0`, kept in lockstep with the Builder image for parity). **MUST be a tag, NOT a commit SHA** — the Dockerfile clones via `git clone --branch ${COMFYUI_REF}`, which rejects a bare SHA (`exit 128`). This was the MPI-189 first-CI-build failure.
 
 > **`<ver>`/`<wver>` ARE BARE NUMBERS — NO `v` PREFIX (MPI-119 guard).** The
 > tag is `v<ver>`, so `<ver>` must be `0.4.9`, never `v0.4.9`. A `v`-prefixed
@@ -83,8 +83,8 @@ container is still up; `docker ps` + `docker stop` it first.
   `git -C c:/AI/Mpi/mpi-ci log -1 --stat -- cubric-vision-pod/wrapper/wrapper.py`
   `git -C c:/AI/Mpi/mpi-ci status --short cubric-vision-pod/wrapper/`
   unchanged since last build → keep the current wrapper version.
-- **`<ref>` (DERIVE FROM LOCK — MPI-117, do not hand-type):** read it from the node version-lock, do not prompt the user for a SHA:
-  `node -e "console.log(require('./dev_configs/node_lock.json').comfyui.core.tag)"` (currently `v0.19.3`).
+- **`<ref>` (DERIVE FROM LOCK — MPI-117, do not hand-type):** read the **TAG** from the node version-lock (the Dockerfile's `git clone --branch` needs a tag, NOT the SHA):
+  `node -e "console.log(require('./dev_configs/node_lock.json').comfyui.core.tag)"` (currently `v0.27.0`). Pass THIS tag as `comfyui_ref`, never the lock's `.commit` SHA.
   Custom-node + frontend pins also live in that lock — the Dockerfile resolves them itself from the copied `node_lock.json`, so there are no per-node build-args to pass. To bump core/frontend/a node, edit `dev_configs/node_lock.json` and rebuild; the build follows the lock. Confirm with the user only if the lock itself is being bumped. Must stay in lockstep with the Builder's `COMFYUI_REF`.
 
 ### 2. App-side version sync (BEFORE redeploy; needs an app restart to take effect)
@@ -124,34 +124,35 @@ Verify `start.sh` committed as LF:
 > with the committed files (publish after the commit so the baked fallback and the R2
 > copy match).
 
-### 4. Build cu130 (GPU, Docker Hub) + cpu (GHCR, CI) — MPI-189
+### 4. Build cu130 (GPU, LOCAL) + cpu (GHCR, CI) — MPI-189
 ONE GPU image now (`-cu130`) + cpu. Two independent legs; converge at the public gate
-(step 5). **Try the cu130 GPU build on CI first** (the workflow's disk-reclaim step may
-now fit it); if CI overflows, fall back to a LOCAL build. **cpu always builds on CI.**
+(step 5).
 
-**a. Dispatch CI (both legs — non-blocking):**
+> **cu130 = BUILD LOCAL (proven 2026-07-04, MPI-189 first build).** The CI cu130 leg was
+> tried once and FAILED — the `git clone --branch ${COMFYUI_REF}` step can't clone a bare
+> commit SHA (exit 128; `--branch` needs a branch/tag). Even with the tag it stresses the
+> runner. cpu, however, builds fine + fast on CI. So: **cpu → CI; cu130 → local `docker
+> build`.** (If you later WANT to retry cu130 on CI, pass a TAG for `comfyui_ref`, never a
+> SHA — see step 1 `<ref>`.)
+
+**a. Dispatch cpu on CI (non-blocking):**
 ```
 cd c:/AI/Mpi/mpi-ci && gh workflow run cubric-vision-pod-image.yml --ref main \
-  -f manifest_version=<ver> -f wrapper_version=<wver> -f comfyui_ref=<ref> \
-  -f push_latest=false
+  -f manifest_version=<ver> -f wrapper_version=<wver> -f comfyui_ref=<ref-TAG> \
+  -f push_latest=false -f only_profile=cpu
 ```
-(Blank `only_profile` = both cu130 + cpu rows. cu130 → Docker Hub, cpu → GHCR — the CI
-matrix carries per-row registry + login.) Watch: `gh run watch`. If the **cu130** leg
-dies with `No space left on device`, cancel it and build cu130 LOCALLY (4b); the cpu leg
-is unaffected. **CI needs the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` repo secrets** — if
-the cu130 leg fails at the "Log in to Docker Hub" step, those secrets aren't set (user
-adds them once in the mpi-ci repo → Settings → Secrets → Actions).
+(`only_profile=cpu` = cpu leg only → GHCR. `<ref-TAG>` = the lock's `comfyui.core.tag`,
+e.g. `v0.27.0` — NOT the commit SHA.) Watch: `gh run watch`.
 
-**b. LOCAL cu130 build (only if CI overflowed), backgrounded** (`run_in_background: true`):
+**b. Build cu130 LOCALLY, backgrounded** (`run_in_background: true`). Build needs NO
+login; only the PUSH does. `COMFYUI_REF` MUST be the TAG (`--branch` rejects a SHA):
 ```
 cd c:/AI/Mpi/mpi-ci/cubric-vision-pod
-# login to Docker Hub (user's own token, or the DOCKERHUB_TOKEN value):
-echo "$DOCKERHUB_TOKEN" | docker login docker.io -u madponyinteractive --password-stdin
 docker build \
   --build-arg BASE_IMAGE=nvidia/cuda:13.0.3-runtime-ubuntu24.04 \
   --build-arg CUDA_PROFILE=cu130 \
   --build-arg CUBRIC_MANIFEST_VERSION=<ver> \
-  --build-arg COMFYUI_REF=<ref> \
+  --build-arg COMFYUI_REF=<ref-TAG> \
   --build-arg WRAPPER_VERSION=<wver> \
   -t docker.io/madponyinteractive/cubric-vision-pod:v<ver>-cu130 -f Dockerfile .
 # verify the load-bearing cu130 build (the Dockerfile also asserts +cu130 at build):
@@ -159,6 +160,13 @@ docker run --rm --entrypoint python docker.io/madponyinteractive/cubric-vision-p
   -c "import torch;print('torch', torch.__version__, torch.version.cuda); assert '+cu130' in torch.__version__, 'NOT cu130!'"
 docker push docker.io/madponyinteractive/cubric-vision-pod:v<ver>-cu130
 ```
+> **Docker Hub login for the local PUSH:** the agent shell CANNOT `docker login` (no TTY;
+> `--password-stdin` needs the token, which lives only in the GitHub secret, not on the
+> box). Docker Desktop's `credsStore: desktop` may already hold Docker Hub creds if the
+> user signed in via the GUI — try the push directly; if it 401s, ask the user to run
+> `docker login docker.io -u madponyinteractive` (paste the access token) in THEIR terminal
+> once, then re-push. Do the build (no auth) while that's sorted — don't block on login.
+
 NO sage on cu130 (MPI-189 — SDPA fallback). Do NOT add an `import sageattention` check
 to the verify line; nothing is baked, so it would (correctly) fail. The `+cu130` assert
 IS the load-bearing check — a wrong-CUDA wheel is the ~10x-regression trap.
