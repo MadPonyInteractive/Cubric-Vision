@@ -3,11 +3,11 @@
   "next_id": 192,
   "columns": {
     "todo": [
-      "MPI-191",
       "MPI-183",
       "MPI-184"
     ],
     "doing": [
+      "MPI-191",
       "MPI-190",
       "MPI-134",
       "MPI-4"
@@ -52,5 +52,5 @@
       "MPI-181"
     ]
   },
-  "updated_at": "2026-07-04T21:45:00Z"
+  "updated_at": "2026-07-04T22:10:00Z"
 }
