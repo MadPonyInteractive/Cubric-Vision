@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-187",
+  "title": "TEST: LTX fault-in on RunPod official cu130 ComfyUI image - the last uncontrolled axis (CUDA13/py3.12)",
+  "description": "HYPOTHESIS TEST (spawned from a review of RunPod's new official ComfyUI containers, 2026-07-04). RunPod now ships prebuilt ComfyUI images: runpod/comfyui:cuda12.8 and runpod/comfyui:cuda13.0 (repo github.com/runpod-workers/comfyui-base). ComfyUI v0.26.2, torch 2.10.0, py3.12, Ubuntu 24.04, ships Manager+KJNodes+Civicomfy+ComfyUI-RunpodDirect. Also reviewed github.com/MadiatorLabs/ComfyUI-RunpodDirect (multi-connection direct-to-pod model DOWNLOAD UI).\n\n=== WHY THIS MATTERS ===\nNEITHER RunPod artifact fixes our actual perf bug: (a) RunpodDirect solves NETWORK-FETCH speed, but our bottleneck is RAM->VRAM aimdo page-fault-in of an ALREADY-CACHED model (read_bytes=0 during fault-in, definitively cleared - see pod-perf-investigation.md); (b) their base image is ComfyUI 0.26 + torch 2.10 = BEHIND our 0.27, same aimdo fault path, would be a downgrade as a base. Adopting either = no.\n\nBUT their cu130 image is a FREE test rig for the ONE axis pod-perf-investigation.md never isolated. The doc rules out (by direct measurement): bus/PCIe (25.7 GB/s), VRAM size (96GB = same 119s), RAM size (62GB matched = same), torch version (2.8->2.11 = 0% change), disk/network-volume (read_bytes=0), compute (sampler faster on Pod). The ONLY remaining diff between local (fault-in ~34s) and Pod (~108-127s) is the per-page fault-handler efficiency of the ENVIRONMENT: local = torch 2.12 / cu130 / py3.13 / Windows vs Pod = torch 2.8-2.11 / cu126 / py3.11 / Linux. We NEVER ran a Pod on cu130/py3.12 because building that image ourselves was work (r580 driver floor, wheel juggling). RunPod now hands it to us prebuilt.\n\n=== THE TEST (user-run, ~1 Pod spin, no rebuild) ===\n1. Deploy runpod/comfyui:cuda13.0 on a 32GB+ card (5090). MUST be 32GB - bf16 LTX transformer OOMs 24GB (proven). Console link the user already has filters gpu=RTX+5090.\n2. In JupyterLab terminal, run the download script (scratchpad: download-ltx-models-pod.sh) - aria2c -x16 parallel pull of the LTX BF16 set from R2 (models.cubric.studio, public HTTPS) into /workspace/runpod-slim/ComfyUI/models/. bf16 chosen for APPLES-TO-APPLES vs the historical 108-127s numbers (all measured on bf16). ~52GB total.\n3. Install the 3 LTX custom nodes we need beyond what the image ships (ComfyUI-LTXVideo w/ kornia==0.8.2 pin, ComfyUI-MpiNodes) - kjnodes already in the image. Script handles this.\n4. Load a shipped LTX bf16 workflow (comfy_workflows/LTX_t2v.json), run one gen, read the stage-1 fault-in line: 'Model Initialization complete! Xs/it' (or the wall between 'Requested to load LTXAV' and the first sampler step).\n\n=== DECISION ===\n- Fault-in < ~60s (toward local's 34s) -> the cu130/CUDA-13/py3.12 environment IS the lever. Justifies rebuilding OUR Pod image on a cu130 base despite the r580 floor cost. REOPENS the cu130 question that pod-perf 'CONCLUDED do not do' - but that conclusion was about cu130's cuBLAS GEMM COMPUTE gains (Blackwell-only); it EXPLICITLY never tested the cu130 FAULT-HOOK path. This test does.\n- Fault-in still ~110-127s -> environment axis CLEARED too. Confirms Fix #3 (never re-fault; keep the 40GB resident across stages via --highvram on a card where it fits) is the ONLY lever left. Closes the environmental branch of the investigation.\n\nEither outcome advances a stuck investigation for the price of one Pod spin. Fold the number into pod-perf-investigation.md's elimination table.\n\nNOTE also worth a 2nd datapoint if time: run the GGUF (Q8) transformer too (what actually ships remote) to get a real GGUF fault-in + confirm/deny the MPI-185 dequant OOM behaves differently on cu130. Secondary; bf16 A/B is the primary goal.\n\nBRANCH: RunPod. Cross-ref: docs/builder/research/pod-perf-investigation.md (the elimination log this feeds), MPI-185 (GGUF OOM), MPI-157 (warm-on-connect lever).",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "activeSessionTitle": "MPI-187 cu130 image LTX fault-in test",
+  "created_at": "2026-07-04T12:00:00Z",
+  "updated_at": "2026-07-04T13:15:00Z",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "runpod",
+    "ltx",
+    "perf",
+    "aimdo",
+    "cold-fault",
+    "cu130",
+    "investigation",
+    "test"
+  ],
+  "priority": "high"
+}

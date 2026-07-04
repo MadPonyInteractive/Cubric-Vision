@@ -1,5 +1,24 @@
 # Pod vs Local Perf — the 40GB re-faults at EVERY stage (cold AND warm); the fix is to keep it resident through the stage transition
 
+> ## ✅ RESOLVED 2026-07-04 (MPI-187) — cu130 IS THE FIX. ~10× fault-in collapse. READ THIS FIRST; EVERYTHING BELOW IS SUPERSEDED HISTORY.
+>
+> **The LTX Pod slowness was the CUDA TOOLKIT GENERATION, not aimdo, not VRAM, not disk, not the torch version.** Live-proven on RunPod's official `runpod/comfyui:cuda13.0` image (RTX 5090, torch **2.10.0+cu130**, CUDA **13.0**, driver **580.159**, py3.12), running the **SAME comfy-aimdo 0.4.10 + ComfyUI 0.26** we ship:
+>
+> | metric | old Pod (cu126/cu128, torch 2.8–2.11) | **cu130** |
+> |---|---|---|
+> | stage-1 fault-in (40GB LTXAV) | **108–127 s** | **~11 s** |
+> | full t2v | ~90–110 s | **49.5 s** |
+> | full i2v + continue (multi-stage) | ~4–5 min | **74 s** |
+> | per-stage re-fault | ~34–58 s | **~12–26 s** |
+>
+> **Why the whole investigation below missed it:** it declared victory by ELIMINATION over the axes it could measure (VRAM, RAM, disk, torch-minor) and wrote off cu130 on the WRONG axis — cu130's *cuBLAS GEMM compute* gains are Blackwell-only, so "cu130 = zero benefit, do not do." **It never tested the cu130 *fault-hook / UVM* path.** That path is the entire fix. Sharpened: it is NOT the torch version (torch 2.11+cu126 moved the fault-in 0%; torch **2.10**+cu130 — a LOWER minor — collapsed it 10×). It is the **+cu130 build / CUDA-13 toolkit / driver-580 UVM fault path**.
+>
+> **Consequences (all carded):** (1) **Rebuild the product Pod image on a single cu130 base** — collapse the cu124/cu128 two-profile split into ONE cu130 image (4090 Ada sm_89 + 5090 Blackwell sm_120 both run cu130; coverage loss is negligible — live-checked the RunPod deploy list). MPI-189. (2) `allowedCudaVersions:["13.0"]` driver-floor guard is a HARD PREREQ (a cu130 image crashes on <r580 hosts). MPI-188. (3) The GGUF-on-Pod transformer (MPI-168) existed ONLY to dodge the cold tax — with the tax now ~11s, **revert the Pod to bf16** (better quality, kills the MPI-185 dequant OOM). MPI-190. (4) warm-on-connect (old MPI-157) is now moot — the cold tax it hid is ~11s.
+>
+> **Everything from the next line down is the pre-cu130 investigation.** It is CORRECT history (the eliminations were real) but its conclusion ("cu130 off the table", "torch is the only lever", "Fix #3 pin-resident is the only hope") is WRONG — kept for the reasoning trail, not for action. Do NOT re-run the dead-ends it lists; do NOT trust its "do not cu130" verdict.
+>
+> ---
+
 > **★ GGUF-ERA DATAPOINT (2026-07-03, 24GB 4090 Pod, v0.11.0-cu124 / ComfyUI v0.27, MPI-185 / MPI-148 verify).**
 > This is the FIRST perf datapoint on the shipped **Q8_0 GGUF** LTX path (MPI-168) — everything below is the OLD 40GB bf16 era. Timeline (app.log): 21:16:08 Pod create → 21:26:55 first history (~11min boot + ~40GB LTX weight load from network volume) → 21:39:03 OOM. So the "LTX ~8 min click→about-to-generate" the user saw was mostly **boot + weight-load**, not gen. Comparators same session: **Wan 5B ~2 min gen**; user **LOCAL Wan ~20s + ~1min warm**. Cloud 4090 still far slower than local — consistent with the standing "cloud 4090 not faster than local 4060Ti" finding; open suspects unchanged (aimdo overhead + host P-State throttle). NOTE the LTX gen itself never completed here (OOM'd in GGUF dequant — see MPI-185), so this is a boot/load datapoint, not a warm-gen number for the GGUF path. A clean GGUF warm-gen number still needs a 32GB 5090 (cu128) run.
 >
