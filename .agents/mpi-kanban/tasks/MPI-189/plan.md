@@ -80,15 +80,60 @@ node lock + workflows target 0.27). Only the torch/CUDA base moves; ComfyUI/aimd
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **All code edits (2026-07-04).** Dockerfile, app plumbing, CI, docs — verified on disk.
+  1. **Dockerfile** (`mpi-ci/cubric-vision-pod/Dockerfile`): single cu130 on
+     `nvidia/cuda:13.0.3-runtime-ubuntu24.04`; python3.12 apt-installed; torch **2.10.0+cu130**
+     trio (uninstall-first + `assert '+cu130'` build guard); cu124/cu128 branches + the stale
+     MPI-156 cu126 reasoning + sage source-build block all DELETED; sage-deferred note in place.
+     `docker buildx --check` = "no warnings"; base metadata resolved (tag is real).
+  2. **App** (`routes/remotePodLifecycle.js`): `podImageForCard` → one `-cu130` tag (Blackwell
+     branch gone); `POD_IMAGE_VERSION v0.11.0→v0.12.0`; `POD_IMAGE_BASE`→Docker Hub + new
+     `POD_IMAGE_BASE_CPU` (GHCR); `podCudaFloor`→flat `['13.0']`. `node --check` OK.
+  3. **CI** (`.github/workflows/cubric-vision-pod-image.yml`): matrix cu124+cu128→cu130; per-row
+     `registry`/`image`; two gated logins (Docker Hub for cu130, GHCR for cpu); tags use
+     `matrix.image`. YAML valid.
+  4. **Docs**: `docs/builder/02-image-and-rebuild.md` (build proc + collapse + **sage-deferred
+     rationale** per user) + `cubric-vision-pod/README.md` (CUDA table, CI, Build-cu130-locally,
+     shipped-tag, registry). pod-perf-investigation.md banner already forward-correct (no edit).
+  - start.sh needs NO edit: its sage probe (try/except import) already falls back to SDPA when
+    sage is absent (verified L104-129) — no crash with no sage baked.
 
-## Remaining Work
+## Remaining Work (USER-run live ops)
 
-- Everything above (single implementation flow, fresh session).
+- **Docker Hub setup (USER):** create the free public repo `madponyinteractive/cubric-vision-pod`
+  + add repo secrets `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`. (Agent can't — interactive signup.)
+- **Commit + push** both repos (mpi-ci first — CI builds from the pushed ref).
+- **Build + push** the cu130 image (CI dispatch, or local Flow B if the runner overflows).
+  Make the Docker Hub repo public.
+- **Live-verify (USER):** deploy the single cu130 tag on a 4090 (sm_89) AND a 5090 (sm_120);
+  confirm aimdo active + LTX fault-in ~11s (not ~120s) + MPI-188 driver-floor holds + SDPA runs
+  clean (no sage). First deploy = the GHCR-vs-Docker-Hub cold-start pull measurement (MPI-186).
+- Then **MPI-190** (bf16 revert) unblocks.
 
 ## Plan Drift
 
-- None yet.
+- **Base image flip (2026-07-04):** plan locked `runpod/pytorch cu130 -runtime` — that
+  tag DOES NOT EXIST (checked Docker Hub; runpod/pytorch only publishes cu1290). Replaced
+  with **`nvidia/cuda:13.0.3-runtime-ubuntu24.04`** (both -devel + -runtime confirmed real;
+  `docker buildx --check` resolved the metadata). Better for the shrink: the nvidia -runtime
+  base bakes NO torch to discard (one of MPI-186's two shrink levers is now free by
+  construction). Cost: the base has no python → apt-install python3.12 + set PEP-668
+  `PIP_BREAK_SYSTEM_PACKAGES`. torch wheel bundles cuDNN so no apt cudnn needed.
+- **Sage DROPPED this build (2026-07-04, user-approved):** plan said "compile sage multi-arch
+  in a -devel stage." Research (12+ agents) found the sage SOURCE build is unreliable on cu130
+  in GPU-less Docker — SageAttention **#157** makes setup.py ignore `TORCH_CUDA_ARCH_LIST` and
+  silently ship Triton-only; #219/#291/#330 open cu130/Blackwell build bugs. MPI-187 hit ~11s
+  with NO sage, so it's a bonus, not the win. **User chose: ship cu130 with NO sage now, SDPA
+  fallback, revisit later** (a pinned prebuilt Linux cu130 wheel exists: snw35, as re-entry).
+  Consequence: **NO multi-stage** — with no sage compile there's no -devel stage to build in,
+  so the image is single-stage on the -runtime base (simpler; shrink still structural). Sage
+  rationale documented in docs/builder/02-image-and-rebuild.md per user request.
+- **Registry split:** the Docker Hub move applies to the GPU image ONLY; the -cpu image stays
+  on GHCR (`POD_IMAGE_BASE` split into `POD_IMAGE_BASE` (Docker Hub, GPU) + `POD_IMAGE_BASE_CPU`
+  (GHCR)). CI matrix carries per-row `registry` + `image`; two gated login steps.
+- **Docker Hub account:** cannot be created headless (interactive signup). CI written against
+  secrets `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`; USER does the 2-min signup + adds the 2 repo
+  secrets before the first cu130 CI build (or builds locally with a personal token).
 
 ## Verification
 

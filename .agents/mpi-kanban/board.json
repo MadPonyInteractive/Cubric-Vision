@@ -3,12 +3,12 @@
   "next_id": 191,
   "columns": {
     "todo": [
-      "MPI-189",
       "MPI-190",
       "MPI-183",
       "MPI-184"
     ],
     "doing": [
+      "MPI-189",
       "MPI-134",
       "MPI-4"
     ],
