@@ -585,7 +585,7 @@
   },
   "88": {
     "inputs": {
-      "int": 1088
+      "int": 512
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -594,7 +594,7 @@
   },
   "89": {
     "inputs": {
-      "int": 1920
+      "int": 960
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -603,7 +603,7 @@
   },
   "90": {
     "inputs": {
-      "image": "Young_woman_in_mall_b116252dfe.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1058,7 +1058,7 @@
   "197": {
     "inputs": {
       "audio": "ltx_silence.wav",
-      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.770292156924646"
+      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.22974266823892353"
     },
     "class_type": "LoadAudio",
     "_meta": {
@@ -1906,15 +1906,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "FLF"
-    }
-  },
-  "354": {
-    "inputs": {
-      "unet_name": "ltx-2.3-22b-distilled-1.1-Q8_0.gguf"
-    },
-    "class_type": "UnetLoaderGGUF",
-    "_meta": {
-      "title": "Unet Loader (GGUF)"
     }
   },
   "366": {
