@@ -109,11 +109,11 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // MPI-189: single cu130 image. v0.12.0 collapsed the cu124/cu128 two-profile
 // split onto ONE nvidia/cuda:13.0.3 cu130 base (torch 2.10.0+cu130, the MPI-187
 // ~11s-fault-in stack). One tag, no -cu124/-cu128 suffix (see podImageForCard).
-// v0.13.0 = MPI-191: torch 2.10.0+cu130 -> 2.12.0+cu130 to match the local
-// engine's stack and test whether it shrinks the LTX stage-1->stage-2 re-fault
-// gap (local 2.12 = <30s; Pod 2.10 = 60-93s on the SAME arch). Rollback to
-// v0.12.0 if 2.12 breaks aimdo or doesn't help. Bump on every GPU image rebuild.
-const POD_IMAGE_VERSION = 'v0.13.0';
+// MPI-191 built v0.13.0 (torch 2.10->2.12+cu130) to test the LTX inter-stage
+// gap — it FAILED LIVE (stage-gap stayed ~86s, no gain; torch minor is not the
+// lever). Reverted to v0.12.0 (the proven 2.10 cold stack). v0.13.0-cu130 still
+// exists on Docker Hub but is NOT the pin. See pod-perf-investigation.md.
+const POD_IMAGE_VERSION = 'v0.12.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';

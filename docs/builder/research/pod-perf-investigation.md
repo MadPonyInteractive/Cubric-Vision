@@ -21,6 +21,8 @@
 
 > ## MPI-191 — the inter-stage re-fault is an INTER-PROMPT eviction (root-caused 2026-07-04, three research angles converge). READ before touching the fix.
 >
+> **☠️ LEVER (a) — torch 2.10→2.12+cu130 — FAILED LIVE (2026-07-04, 4090 24GB Pod, v0.13.0-cu130, t2v 1s Medium/2K 16:9).** aimdo loaded clean on 2.12 (`comfy-aimdo inited` + `DynamicVRAM enabled`, no legacy fallback — ABI fine), full gen completed. But the stage-gap did NOT move: cold fault got-prompt→stage-1 first step ~3:36, a ~22s mid-stage-1 fault stall (3:36→3:58), stage-1 done 4:11, **stage-2 started 5:37 → inter-stage gap ~86s** — dead in the old torch-2.10 60-93s band. **The torch minor is NOT the inter-stage lever** (the +cu130 build was held constant; only 2.10→2.12 changed → 0% gain). So the card's "local 2.12 = <30s" advantage is NOT the torch minor — it's the driver (595 vs 580) or another local-env factor, OR that <30s local number didn't measure the same inter-PROMPT boundary. **Do NOT re-try a torch bump for this gap.** App pin reverted v0.13.0→v0.12.0 (2.12 gains nothing; keep the MPI-187/189-proven 2.10 cold stack). **→ Fix #2 Path B (single-prompt merge) is now the only road** — it's the sole lever that structurally kills the inter-prompt eviction on 24GB.
+>
 > **The 60-93s stage-1→stage-2 gap is NOT a mysterious aimdo behavior — it is structural: one LTX gen is TWO separate ComfyUI `/prompt` POSTs, and aimdo evicts the 40GB LTXAV in the gap between them.** Confirmed by workflow-structure trace + local flag-surface audit + upstream research, all independently landing on the same mechanism.
 >
 > **The mechanism (proven):**
