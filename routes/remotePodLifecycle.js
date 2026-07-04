@@ -156,6 +156,25 @@ function podImageForCard(gpuTypeId) {
   return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-${suffix}`;
 }
 
+// MPI-188: hard driver-floor placement filter. RunPod's `allowedCudaVersions`
+// lands the Pod ONLY on a host whose driver supports one of the listed CUDA
+// versions — without it, placement is driver-roulette and a host with a driver
+// too old for the image's CUDA/torch build crashes ComfyUI on boot
+// ("RuntimeError: The NVIDIA driver on your system is too old", seen live on a
+// cu13.0 image landing a 12.8-max host during MPI-187). The floor is a property
+// of the IMAGE, so it's derived from the same card→suffix logic as
+// podImageForCard (NOT user input): cu124→12.4, cu128→12.8. When MPI-189
+// collapses to a single cu130 image, this becomes ['13.0']. RunPod treats the
+// listed version as a minimum, so listing '12.8' still lands newer drivers.
+// N/A for CPU download mode (no CUDA on a CPU Pod).
+function podCudaFloor(gpuTypeId) {
+  if (gpuTypeId === CPU_SENTINEL) return null;
+  const image = podImageForCard(gpuTypeId);
+  if (image.endsWith('-cu130')) return ['13.0'];
+  if (image.endsWith('-cu128')) return ['12.8'];
+  return ['12.4']; // cu124 default
+}
+
 // --- lifecycle-private state --------------------------------------------------
 
 // The Pod this server session actually STARTED (set on successful /remote/pod/start,
@@ -460,6 +479,14 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   // Only meaningful for a GPU Pod (RunPod ignores it on CPU download mode).
   if (!noGpu && Number.isFinite(minMemoryInGb) && minMemoryInGb > 0) {
     spec.minMemoryInGb = minMemoryInGb;
+  }
+  // MPI-188: driver-floor guard — pin placement to hosts whose driver supports
+  // the image's CUDA build (see podCudaFloor). Derived from gpuTypeId, not user
+  // input; GPU Pods only (podCudaFloor returns null for CPU download mode).
+  const cudaFloor = podCudaFloor(gpuTypeId);
+  if (cudaFloor) {
+    spec.allowedCudaVersions = cudaFloor;
+    logger.info('runpod', `CUDA driver floor for ${gpuTypeId}: ${cudaFloor.join(',')}`);
   }
 
   // Pre-create sweep (single-Pod invariant): kill any stray 'cubric-vision' Pod

@@ -188,6 +188,12 @@ const client = {
     // (200GB → SUPPLY_CONSTRAINT, 90/none → create). RunPod places only on a host
     // with >= this much system RAM.
     if (typeof spec.minMemoryInGb === 'number') input.minMemoryInGb = spec.minMemoryInGb;
+    // MPI-188: driver-floor placement filter. RunPod lands the Pod only on a host
+    // whose driver supports one of these CUDA versions — guards the "driver too
+    // old" ComfyUI boot crash. Threaded the same way as minMemoryInGb above.
+    if (Array.isArray(spec.allowedCudaVersions) && spec.allowedCudaVersions.length) {
+      input.allowedCudaVersions = spec.allowedCudaVersions;
+    }
     const mutation = `mutation($input: PodFindAndDeployOnDemandInput!) {
       podFindAndDeployOnDemand(input: $input) { id desiredStatus imageName machineId }
     }`;

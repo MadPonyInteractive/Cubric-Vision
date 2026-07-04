@@ -44,6 +44,19 @@ Community Cloud is unsupported (unstable/limited for this use case).
     through the **GraphQL** `podFindAndDeployOnDemand` path (proven; the REST enum path was
     NOT proven to accept the field). A no-matching-host refusal returns `ramFloorMissed` so
     the UI shows an honest "no ≥N GB host" message + respects the auto-retry/wait toggle.
+  - Every GPU create carries **`allowedCudaVersions`** — a hard driver-floor placement
+    filter (MPI-188). RunPod lands the Pod ONLY on a host whose driver supports one of the
+    listed CUDA versions; without it, placement is driver-roulette and a host with a driver
+    too old for the image's CUDA/torch build crashes ComfyUI on boot ("RuntimeError: The
+    NVIDIA driver on your system is too old"). The floor is a property of the IMAGE, so it's
+    derived from the card→image suffix (`podCudaFloor` in `remotePodLifecycle.js`, NOT user
+    input): cu124→`['12.4']`, cu128→`['12.8']`, cu130→`['13.0']`. N/A for CPU download mode.
+    Threaded into both create paths (REST forwards the whole spec; GraphQL mirrors the
+    `minMemoryInGb` thread). **Live-proven both APIs accept it (2026-07-04):** GraphQL applies
+    it as a placement filter (impossible value → SUPPLY_CONSTRAINT, same shape as the RAM-floor
+    proof); **REST validates it against a strict ENUM** — valid values are `13.0, 12.9, 12.8,
+    12.7, 12.6, 12.5, 12.4, 12.3, 12.2, 12.1, 12.0, 11.8` (an off-enum value → schema-400). All
+    three floor values are in the enum; any future floor MUST be an enum member.
 - Telemetry: `GET /remote/pod/stats` (RAM+VRAM, wrapper-first), `GET /remote/pod/disk`
   (volume USED bytes via wrapper `du`, wrapper-first, NO REST fallback — see §5; MPI-169).
 - ComfyUI forwarding: `POST /proxy/prompt`, `/interrupt`, `/queue`, `/upload/image`;
