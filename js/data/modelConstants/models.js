@@ -261,12 +261,15 @@ export const MODELS = [
             t2v_ms: 'LTX_t2v.json',
             i2v_ms: 'LTX_i2v.json',
         },
-        // bf16-local / GGUF-Pod split: the `workflows` above name the bf16 files
-        // (local default). The `engines:` block below carries each engine's
-        // workflowSuffix — remote runs resolve `LTX_t2v.json → LTX_t2v_gguf.json`
-        // (applied AFTER any _stage2 suffix → ..._stage2_gguf.json) via
-        // resolveWorkflowFile(). GGUF wins ONLY on a Pod — it sidesteps the aimdo
-        // cold tax; locally bf16 is faster per-step at high res. (MPI-165)
+        // MPI-190: engine split REVERTED. cu130 (MPI-187/189) collapsed the aimdo
+        // cold-fault tax that was the GGUF transformer's only justification, so both
+        // engines now run the SAME bf16 transformer + the SAME workflow files — no
+        // `engines:` block, no `_gguf` suffix. The bf16 also removes the ComfyUI-GGUF
+        // dequant upcast spike that OOM'd LTX i2v on the 24GB 4090 (MPI-185). The
+        // _gguf workflow files + the GGUF/ComfyUI-GGUF deps stay on disk until a live
+        // cu130 run on the 4090 (24GB) confirms bf16 i2v runs CLEAN (no OOM) — that's
+        // the decisive test, since the 4090 is exactly where GGUF OOMs today. Then
+        // they get deleted (MPI-190 follow-up).
         // FLAT model: one transformer serves both t2v and i2v, so there is no
         // separable install unit — both ops ship together (like an image model).
         // `dependencies` (not commonDeps/operations) ⇒ no per-op install toggle in
@@ -275,16 +278,12 @@ export const MODELS = [
         // First model with non-merged baked LoRAs (transition/soft/talkvid) shipped
         // as deps, NOT user slots — see [[project-ltx-transition-lora-enables-lipsync]].
         //
-        // ENGINE SPLIT (MPI-163, consolidated MPI-165): shared deps in `dependencies`;
-        // engine-only weights in the `engines:` block below. The resolver adds the
-        // engine-correct extraDeps at resolution time, so EVERY consumer (download,
-        // status gate, prompt box) derives the right set — no per-dep `engine` tag to
-        // forget to filter.
-        // The Gemma CLIP (fp4_mixed) is SHARED across engines — NOT split — so it
-        // lives here, not in the engines block. Only the transformer is engine-split
-        // (bf16 local / Q8 GGUF Pod). The baked LoRA is the merged
+        // NO engine split (MPI-190): the bf16 transformer runs on BOTH engines now, so
+        // it sits in `dependencies` with the rest — no `engines:` block. The Gemma CLIP
+        // (fp4_mixed) is likewise shared. The baked LoRA is the merged
         // soft+abliterated+detailer file. (MPI-168)
         dependencies: [
+            'ltx23-transformer-bf16',
             'ltx23-video-vae',
             'ltx23-audio-vae',
             'ltx23-text-projection',
@@ -297,18 +296,6 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
         ],
-        // ENGINE axis (MPI-165) — ONE block. Each engine declares its extra deps +
-        // the workflow-filename suffix the build script (generate_ltx.py) emits.
-        // resolveModelDeps.js reads this for BOTH dep resolution (extraDeps) and
-        // workflow selection (workflowSuffix). local: bf16 transformer (faster
-        // per-step at high res), no suffix → the bf16 files verbatim. remote: the Q8
-        // GGUF transformer (sidesteps the aimdo cold tax) + the ComfyUI-GGUF node that
-        // loads it (Pod-only — no local use); '_gguf' suffix, applied AFTER any
-        // _stage2 → ..._stage2_gguf.json.
-        engines: {
-            local:  { extraDeps: ['ltx23-transformer-bf16'],                  workflowSuffix: '' },
-            remote: { extraDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'],  workflowSuffix: '_gguf' },
-        },
     },
     {
         id: 'wan22-5b',

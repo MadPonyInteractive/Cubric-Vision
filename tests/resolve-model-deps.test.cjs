@@ -293,7 +293,8 @@ function testEngineResolution() {
     assert.strictEqual(deriveInstalledOps(SPLIT, localStatus, 'remote').fullyInstalled, false,
         'bf16-only volume is NOT a usable REMOTE install (GGUF absent)');
 
-    // Real registry: LTX-2.3 ships exactly one local + one remote transformer.
+    // Real registry (MPI-190): the LTX-2.3 engine split was REVERTED — bf16 runs
+    // on BOTH engines, no GGUF weight or node. Both universes are identical.
     const { MODELS } = require('../js/data/modelConstants/models.js');
     const ltx = MODELS.find(m => m.id && m.id.startsWith('ltx'));
     if (ltx) {
@@ -301,12 +302,10 @@ function testEngineResolution() {
         const remote = resolveFullUniverse(ltx, null, 'remote');
         assert.ok(local.includes('ltx23-transformer-bf16') && !local.includes('ltx23-transformer-gguf'),
             'LTX local universe has bf16, not GGUF');
-        assert.ok(remote.includes('ltx23-transformer-gguf') && !remote.includes('ltx23-transformer-bf16'),
-            'LTX remote universe has GGUF, not bf16');
-        assert.ok(!local.includes('ComfyUI-GGUF'),
-            'LTX local universe must NOT include the Pod-only GGUF node');
-        assert.ok(remote.includes('ComfyUI-GGUF'),
-            'LTX remote universe DOES include the GGUF node (loads the GGUF weight)');
+        assert.ok(remote.includes('ltx23-transformer-bf16') && !remote.includes('ltx23-transformer-gguf'),
+            'LTX remote universe has bf16 too (split reverted), not GGUF');
+        assert.ok(!local.includes('ComfyUI-GGUF') && !remote.includes('ComfyUI-GGUF'),
+            'neither engine includes the retired Pod-only GGUF node');
     }
 }
 
@@ -323,13 +322,14 @@ function testWorkflowFileResolution() {
     const noSplit = { id: 'ns', workflows: { t2v_ms: 'IMG_t2i.json' } };
     assert.strictEqual(resolveWorkflowFile(noSplit, 't2v_ms', 'remote'), 'IMG_t2i.json', 'no engines: block → no suffix');
 
-    // Real LTX-2.3 registry entry resolves the same way through the engines: block.
+    // Real LTX-2.3 registry entry (MPI-190): no engines: block → same bf16 file
+    // on both engines, no _gguf suffix.
     const { MODELS } = require('../js/data/modelConstants/models.js');
     const ltx = MODELS.find(m => m.id && m.id.startsWith('ltx'));
     if (ltx) {
         assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'local'), 'LTX_t2v.json');
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'LTX_t2v_gguf.json');
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'LTX_t2v_stage2_gguf.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'LTX_t2v.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'LTX_t2v_stage2.json');
     }
 }
 

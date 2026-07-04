@@ -1,31 +1,18 @@
 """
 generate_ltx.py
-LTX-2.3 handler: from ONE i2v+t2v API export, produce EIGHT app workflow files —
-the FOUR mode/stage variants, each in a bf16 (local) and a GGUF (Pod) flavour:
-  LTX_i2v.json              — bf16, Input_Text_to_video=false, Input_Is_Continue=false
-  LTX_i2v_stage2.json       — bf16, derived: Input_Is_Continue flipped true
-  LTX_t2v.json              — bf16, Input_Text_to_video=true,  Input_Is_Continue=false
-  LTX_t2v_stage2.json       — bf16, derived: Input_Is_Continue flipped true
-  LTX_i2v_gguf.json         — GGUF (Input_Use_GGUF=true) sibling of LTX_i2v.json
-  LTX_i2v_stage2_gguf.json  — GGUF sibling of LTX_i2v_stage2.json
-  LTX_t2v_gguf.json         — GGUF sibling of LTX_t2v.json
-  LTX_t2v_stage2_gguf.json  — GGUF sibling of LTX_t2v_stage2.json
+LTX-2.3 handler: from ONE i2v+t2v API export, produce FOUR app workflow files —
+the four mode/stage variants, all bf16 (both engines run the same transformer):
+  LTX_i2v.json         — Input_Text_to_video=false, Input_Is_Continue=false
+  LTX_i2v_stage2.json  — derived: Input_Is_Continue flipped true
+  LTX_t2v.json         — Input_Text_to_video=true,  Input_Is_Continue=false
+  LTX_t2v_stage2.json  — derived: Input_Is_Continue flipped true
 
-The bf16/GGUF split exists because GGUF wins ONLY on a Pod (it sidesteps the
-~5-min aimdo cold tax), but is slower per-step at high res locally (per-layer
-dequant). So local = bf16, Pod = GGUF. Only the UNET is split; the CLIP is a
-single shared Gemma fp4_mixed loader (see LOADER_PAIRS note). The template carries
-BOTH unet loaders, but only the bf16 `UNETLoader` is WIRED into the graph (via the
-`Model_Connect` MpiReroute); the GGUF `UnetLoaderGGUF` sits parked (no consumers).
-We can't keep both wired and pick at runtime: a MpiIfElse selects lazily at
-EXECUTION, but ComfyUI VALIDATES every node's file inputs at PROMPT time regardless
-of wiring — so the unselected loader's absent weight rejects (`unet_name ...not in
-[]`). The fix: per flavour, KEEP exactly one unet loader and DELETE the other,
-repointing the kept loader's MODEL output (slot 0) to the local loader's single
-`Model_Connect` consumer. Each output file then carries ONE unet loader → ComfyUI
-validates only the weight actually present. The app picks the file by isRemote()
-(commandExecutor `_toGgufFilename`); we append `_gguf` to the GGUF-flavour
-filenames so the two stay in lockstep.
+MPI-190: the bf16/GGUF engine split was REVERTED. cu130 (MPI-187/189) collapsed
+the aimdo cold-fault tax that was the GGUF transformer's only justification, so
+both engines now run the same bf16 UNETLoader + the same files — no `_gguf`
+siblings, no loader-swap. The template carries a single wired bf16 `UNETLoader`
+(the parked `UnetLoaderGGUF` was removed from the graph), so nothing to keep or
+delete. The CLIP is a single shared Gemma fp4_mixed loader across every engine/tier.
 
 ALL node lookup is by `_meta.title` — never by node id (ids change on re-export).
 
@@ -56,20 +43,6 @@ from pathlib import Path
 
 T2V_GATE_TITLE = "Input_Text_to_video"   # MpiSimpleBoolean: false=i2v, true=t2v
 IS_CONTINUE_TITLE = "Input_Is_Continue"  # MpiBoolean: false=stage-1, true=stage-2
-
-# Loader-swap titles (MPI-165). The template wires the bf16 loader and parks the
-# GGUF one; per flavour we keep one, delete the other, and repoint the kept
-# loader's slot-0 output to whatever the local loader fed (via its single
-# MpiReroute "Connect" consumer). ONLY the UNET is split — the CLIP is a single
-# shared Gemma fp4_mixed loader across every engine/tier (the Q4 GGUF clip was
-# dropped: it OOM'd a 32GB/90GB Pod and threw key errors — the GGUF Gemma isn't
-# ComfyUI-compatible; fp4_mixed is the recommended path). MPI-168.
-#
-# Each entry: (local_title, gguf_title, label). local kept for the bf16 flavour,
-# gguf kept for the Pod flavour. Both members output on slot 0 (MODEL).
-LOADER_PAIRS = [
-    ("Load Diffusion Model", "Unet Loader (GGUF)", "unet"),   # UNETLoader / UnetLoaderGGUF
-]
 
 # Media-input placeholders. The graph won't run without these LoadImage/LoadAudio
 # nodes holding SOME file, and ComfyUI validates them at prompt time even when the
@@ -121,63 +94,6 @@ def _set_boolean(wf: dict, title: str, value: bool) -> None:
     inputs["boolean"] = value
 
 
-def _iter_input_refs(node: dict):
-    """Yield (input_name, [src_id, slot]) for every link-style input on a node."""
-    for name, val in node.get("inputs", {}).items():
-        if isinstance(val, list) and len(val) == 2 and isinstance(val[1], int):
-            yield name, val
-
-
-def _select_loader(wf: dict, local_title: str, gguf_title: str, label: str, *, use_gguf: bool) -> None:
-    """Keep one loader of a pair, delete the other, repoint the dropped loader's
-    consumers to the kept loader's slot-0 output. Mutates `wf` in place.
-
-    ComfyUI validates EVERY node's file inputs at prompt time, so a parked loader
-    whose weight is absent on the engine rejects the whole prompt even if nothing
-    consumes it. Carrying exactly one loader per file is the only thing that
-    sidesteps that. Both members of a pair emit their type (MODEL / CLIP) on slot 0.
-    """
-    keep_title = gguf_title if use_gguf else local_title
-    drop_title = local_title if use_gguf else gguf_title
-    keep_id = _find_node_id_by_title(wf, keep_title)
-    drop_id = _find_node_id_by_title(wf, drop_title)
-    if keep_id is None:
-        raise SystemExit(f"[FAIL] No {label} loader titled {keep_title!r}; cannot build the "
-                         f"{'GGUF' if use_gguf else 'bf16'} flavour.")
-    if drop_id is None:
-        raise SystemExit(f"[FAIL] No {label} loader titled {drop_title!r} to remove.")
-
-    # Repoint every consumer of the dropped loader (slot 0) to the kept one.
-    rewired = 0
-    for node in wf.values():
-        if not isinstance(node, dict):
-            continue
-        for name, ref in _iter_input_refs(node):
-            if str(ref[0]) == drop_id:
-                if ref[1] != 0:
-                    raise SystemExit(f"[FAIL] {label} loader {drop_title!r} output slot {ref[1]} "
-                                     f"consumed — only slot 0 is expected.")
-                node["inputs"][name] = [keep_id, 0]
-                rewired += 1
-
-    del wf[drop_id]
-
-    # Sanity: no dangling ref to the deleted node.
-    for nid, node in wf.items():
-        if not isinstance(node, dict):
-            continue
-        for _, ref in _iter_input_refs(node):
-            if str(ref[0]) == drop_id:
-                raise SystemExit(f"[FAIL] Dangling ref to deleted {label} loader {drop_id} in {nid}.")
-    print(f"  [{label}] kept {keep_title!r}, deleted {drop_title!r}, repointed {rewired} consumer(s)")
-
-
-def _select_loaders(wf: dict, *, use_gguf: bool) -> None:
-    """Run the keep-one/delete-other swap for every loader pair (unet + clip)."""
-    for local_title, gguf_title, label in LOADER_PAIRS:
-        _select_loader(wf, local_title, gguf_title, label, use_gguf=use_gguf)
-
-
 def _stamp_placeholders(wf: dict) -> None:
     """Reset each media-input node's filename to its staged placeholder, so the
     generated workflow validates on any engine regardless of what test media was
@@ -225,30 +141,26 @@ def _derive_stage2(stage1: dict) -> dict:
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. source = i2v+t2v API export. Writes 8 files:
-    the 4 mode/stage variants × {bf16 (unsuffixed), GGUF (`_gguf` suffix)}."""
+    """Orchestrator entry. source = i2v+t2v API export. Writes 4 bf16 files:
+    the 4 mode/stage variants (i2v/t2v × stage-1/stage-2). MPI-190: no GGUF
+    flavour — both engines run the same bf16 transformer."""
     template = json.loads(source_path.read_text(encoding="utf-8"))
     _check_required(template, "Source template")
 
     written: list[Path] = []
-    # bf16 = local (suffix ''), GGUF = Pod (suffix '_gguf'). The app appends the
-    # same '_gguf' before '.json' when isRemote(), so names MUST stay in lockstep.
-    for use_gguf, suffix in ((False, ""), (True, "_gguf")):
-        flavour = "GGUF" if use_gguf else "bf16"
-        for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
-            stage1 = _variant(template, t2v)
-            _select_loaders(stage1, use_gguf=use_gguf)
-            _stamp_placeholders(stage1)
-            s1_out = out_dir / f"{name}{suffix}.json"
-            s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
-            print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v}, {flavour})")
-            written.append(s1_out)
+    for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
+        stage1 = _variant(template, t2v)
+        _stamp_placeholders(stage1)
+        s1_out = out_dir / f"{name}.json"
+        s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
+        print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v})")
+        written.append(s1_out)
 
-            stage2 = _derive_stage2(stage1)
-            _check_required(stage2, f"{name}_stage2{suffix}")
-            s2_out = out_dir / f"{name}_stage2{suffix}.json"
-            s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
-            print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true, {flavour})")
-            written.append(s2_out)
+        stage2 = _derive_stage2(stage1)
+        _check_required(stage2, f"{name}_stage2")
+        s2_out = out_dir / f"{name}_stage2.json"
+        s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
+        print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true)")
+        written.append(s2_out)
 
     return written
