@@ -112,18 +112,20 @@ export const WAN_5B_RATIOS = {
     ]
 };
 
-// LTX 2.3 video. LTX itself requires only /32 (VAE is 32x spatial) — the same
-// rule the ImageResizeKJv2 nodes already enforce (divisible_by: 32). The
-// multi-stage pipeline halves the input (MpiMath floor(a/2)) for stage-1, then
-// x2-upscales for stage-2, so a size that is ALSO /64 halves cleanly onto the
-// /32 latent grid and stage-2 returns the exact input (pixel-exact). A /32-only
-// size (e.g. 960x544) still runs — LTX pads the stage-1 latent to the nearest
-// /32 (544 -> half 272 -> pads to 288), so output drifts a few % on that axis.
-// That drift is acceptable for the mid tiers (matches Lightricks' canonical
-// sizes) but 2K/4K are pinned /64 (half-clean) so the big-tile output is exact.
-// Tiers 16:9/9:16 are snapped to Lightricks-blessed resolutions: low 768x448 =
-// official training res; medium 960x544 = THE canonical (every official ComfyUI
-// JSON + training bucket); high 1216x704 = inference.py default; very_high
+// LTX 2.3 video. The 2-stage pipeline makes the EFFECTIVE grid /64, NOT /32.
+// LTX's VAE is 32x spatial, but stage-1 halves the input (MpiMath floor(a/2))
+// and stage-2 x2-upscales, so the half must itself land on the /32 latent grid:
+// a /32-but-not-/64 size does NOT "pad up and drift a few %" — the pipeline
+// FLOORS it. Live-proven (2026-07-04): 960x544 in → 960x512 out (544 -> half
+// 272 -> rounds DOWN to 256 -> x2 = 512), silently mismatching the picked size
+// and confusing the user. So EVERY value here is /64-clean. Only two tiers ever
+// broke this: very_low 352 (floored to 320) and medium 544 (floored to 512) —
+// both now snapped down to /64. 2K/4K were already pinned /64 for the same
+// half-clean reason. Tiers 16:9/9:16 track Lightricks-blessed resolutions where
+// those are already /64: low 768x448 = official training res; medium 960x512
+// (was Lightricks' 960x544, but 544 is /32-only so unreachable in our local
+// 2-stage — Lightricks' cloud pads internally, we can't); high 1216x704 =
+// inference.py default; very_high
 // 1920x1088 = official 1080p. 2K/4K = official 1440p (2560x1440) and 4K-UHD
 // (3840x2160) snapped up to /64 (heights 1440->1472, 2160->2176 — Lightricks'
 // cloud API pads internally, our pipeline can't, so we snap). 1:1 = the short
@@ -136,8 +138,8 @@ export const WAN_5B_RATIOS = {
 export const LTX_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
-        { label: "9:16", w: 352, h: 640, icon: "rect_9_16" },
-        { label: "16:9", w: 640, h: 352, icon: "rect_16_9" }
+        { label: "9:16", w: 320, h: 640, icon: "rect_9_16" },
+        { label: "16:9", w: 640, h: 320, icon: "rect_16_9" }
     ],
     low: [
         { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
@@ -145,9 +147,9 @@ export const LTX_RATIOS = {
         { label: "16:9", w: 768, h: 448, icon: "rect_16_9" }
     ],
     medium: [
-        { label: "1:1", w: 544, h: 544, icon: "rect_1_1" },
-        { label: "9:16", w: 544, h: 960, icon: "rect_9_16" },
-        { label: "16:9", w: 960, h: 544, icon: "rect_16_9" }
+        { label: "1:1", w: 512, h: 512, icon: "rect_1_1" },
+        { label: "9:16", w: 512, h: 960, icon: "rect_9_16" },
+        { label: "16:9", w: 960, h: 512, icon: "rect_16_9" }
     ],
     high: [
         { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },

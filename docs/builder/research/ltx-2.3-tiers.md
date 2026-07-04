@@ -8,27 +8,34 @@ Empirical tuning data for the LTX-2.3 video workflow. Drives `LTX_RATIOS` in
 **1-second video** on an **RTX 4060 Ti (16 GB)**, using the NerdyRodent
 multi-stage authoring workflow. Times scale with clip length and GPU.
 
-## The size rule — /32 is the law; /64 buys pixel-exact stages
+## The size rule — /64 is the law for the 2-stage pipeline
 
-**LTX-2.3 requires only /32** (the VAE is 32× spatial). This is the same rule the
-template's `ImageResizeKJv2` nodes (#87, #92) already enforce: `divisible_by: 32`.
-The earlier "must be /64 or it silently collapses" note here was **wrong** — it
-described a `FloatConstant 0.5 → ImageScaleBy` downscale that is **not in the
-template**. The real stage-1 downscale is `MpiMath floor(a/2)` (nodes #155, #156)
-feeding `EmptyLTXVLatentVideo` (#143). `floor()` does not snap.
+**LTX-2.3's VAE requires only /32** (32× spatial), and the template's
+`ImageResizeKJv2` nodes (#87, #92) enforce `divisible_by: 32`. BUT the 2-stage
+pipeline makes the *effective* grid **/64**: stage-1 is `MpiMath floor(a/2)`
+(nodes #155, #156) feeding `EmptyLTXVLatentVideo` (#143), so the half must land on
+the /32 latent grid — i.e. the input must be /64. A /32-but-not-/64 size does not
+collapse (the old "silently collapses via `FloatConstant 0.5 → ImageScaleBy`" note
+was wrong — that node isn't in the template), but it *does* silently shrink: the
+half rounds DOWN to /32 and stage-2 ×2 returns a smaller size than picked.
 
-What actually happens on a /32-but-not-/64 size:
+What actually happens on a /32-but-not-/64 size (LIVE-PROVEN 2026-07-04, corrects
+the earlier guess in this section):
 - Input W,H → image path resized to /32 (fine); latent path = `floor(W/2), floor(H/2)`.
-- If the halved value is off the /32 grid (e.g. 544 → 272, not /32), LTX **pads the
-  stage-1 latent up to the nearest /32** (272 → 288). Stage-2 ×2 then returns ~576,
-  not 544 → **a few-% drift on that axis, not a collapse.** LTX never errors; it
-  pads with −1 and crops.
+- If the halved value is off the /32 grid (e.g. 544 → 272, not /32), the stage-1
+  latent rounds **DOWN** to the nearest /32 (272 → 256), NOT up. Stage-2 ×2 then
+  returns **512**, not 544. So 960×544 in → **960×512 out** — silently smaller than
+  the picked size. (The earlier note here predicted a pad-UP to 288 → ~576; that
+  was wrong — it floors.)
 
-So the rule is:
-- **/32 = valid** — runs, small output drift on non-/64 sizes. Good enough for the
-  mid tiers, and it lets us use Lightricks' canonical sizes verbatim (960×544 etc.).
-- **/64 = pixel-exact** — halves cleanly → stage-2 returns the exact input. The
-  2K/4K tiers are pinned /64 so large-tile output is exact.
+So the real rule is: **the 2-stage pipeline grid is effectively /64, NOT /32.**
+- **/64 = the only honest size** — halves cleanly onto the /32 latent grid →
+  stage-2 returns the exact input. Every shipped `LTX_RATIOS` value is /64.
+- **/32-but-not-/64 = silent shrink** — floors to the nearest /64, mismatching the
+  UI label. Two tiers used to break this (very_low 352→320, medium 544→512); both
+  are now pinned /64. 2K/4K were already /64 for the same reason.
+- Lightricks' canonical 960×544 is /32-only, so it is **unreachable in our local
+  2-stage** — their cloud pads internally, we can't. We ship 960×512 instead.
 
 (If the multi-stage `floor(/2)` stage is ever dropped — the single-stage distilled
 path — the constraint is /32 with no halving. See
@@ -53,9 +60,9 @@ shipped [`LTX_RATIOS`](../../../js/utils/ratios.js).
 
 | Tier | 16:9 | 9:16 | 1:1 | basis | motion / audio (from earlier tuning) |
 |---|---|---|---|---|---|
-| very_low | 640×352 | 352×640 | 384×384 | motion-draft (off-menu, deliberate) | max motion, audio hallucinates |
+| very_low | 640×320 | 320×640 | 384×384 | motion-draft (off-menu, deliberate); /64-snapped from 352 | max motion, audio hallucinates |
 | low | 768×448 | 448×768 | 448×448 | official training res (detailed/short) | strong motion, audio loose |
-| medium | 960×544 | 544×960 | 544×544 | **THE canonical** (every official ComfyUI JSON + training bucket) | balanced |
+| medium | 960×512 | 512×960 | 512×512 | canonical is Lightricks 960×544 but 544 is /32-only → /64-snapped to 512 for local 2-stage | balanced |
 | high | 1216×704 | 704×1216 | 704×704 | `inference.py` default (30 fps); 9:16 = IC-LoRA "best portrait" | good audio, less motion |
 | very_high | 1920×1088 | 1088×1920 | 1088×1088 | official 1080p production out | best audio, near-static |
 | 2K | 2560×1472 | 1472×2560 | 1472×1472 | Lightricks 1440p (2560×1440) snapped to /64 | detail tier |

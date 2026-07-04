@@ -5,7 +5,8 @@
 
 ## LTX stage-1 quality already beats WAN (the moat)
 
-At stage-1 ONLY (352×640, pre-upscale), output quality is already impressive —
+At stage-1 ONLY (~352×640 as tested 2026-06-23; very_low is now 320×640 after the
+/64 snap, doesn't change the finding), pre-upscale output quality is already impressive —
 "Wan cannot do this." Confirms the core thesis: **LTX-2.3 quality >> WAN.** This is
 the moat behind the high-quality-open-video strategy. Strength-independent,
 live-observed 2026-06-23 — bankable.
