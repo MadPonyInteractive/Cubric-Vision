@@ -67,16 +67,30 @@ NEW custom node is introduced (param edits = patch bump, no rebuild). `models.js
 adds. Advisory: `.claude/hooks/bump-rebuild-reminder.py` (Stop event) path-watches this
 table's triggers and warns once at session end.
 
-## Product Pod build procedure (mpi-ci)
+## Product Pod build procedure (mpi-ci) — SINGLE cu130 image (MPI-189)
 
-Pod image lives in `c:\AI\Mpi\mpi-ci`. Steps: (1) edit `mpi-ci/cubric-vision-pod/` files;
-(2) COMMIT + PUSH mpi-ci main FIRST (workflow builds from pushed ref, not local tree —
-#1 gotcha); (3) trigger: `gh workflow run cubric-vision-pod-image.yml --ref main -f
-manifest_version=X -f wrapper_version=Y ...`; (4) cu128 is LOCAL-BUILD-ONLY (CI runner
-runs out of disk); (5) after build, make GHCR package PUBLIC; (6) anon-pull-verify all 3
-tags before telling user to connect. `wsl --shutdown` after local Docker build. NEVER pass
-`only_profile=cpu` in dispatch — it SKIPS the cu124 leg while still reporting success
-(`IMAGE_NOT_FOUND` on RunPod). Always dispatch with `only_profile` BLANK.
+Pod image lives in `c:\AI\Mpi\mpi-ci`. As of MPI-189 there is ONE GPU image (`-cu130`)
+plus the slim `-cpu` image — the old cu124/cu128 two-profile split is GONE (torch
+2.10+cu130 carries Ada sm_89 + Blackwell sm_120 in one wheel). Base =
+`nvidia/cuda:13.0.3-runtime-ubuntu24.04`. **Two registries:** the `-cu130` GPU image pushes
+to **Docker Hub** (`docker.io/madponyinteractive/cubric-vision-pod`, MPI-186 cold-start
+test); the `-cpu` image stays on **GHCR**.
+
+Steps: (1) edit `mpi-ci/cubric-vision-pod/` files; (2) COMMIT + PUSH mpi-ci main FIRST
+(workflow builds from pushed ref, not local tree — #1 gotcha); (3) trigger: `gh workflow
+run cubric-vision-pod-image.yml --ref main -f manifest_version=X -f wrapper_version=Y ...`;
+(4) the cu130 torch stack is large — WATCH for the CI-runner disk overflow (`No space left
+on device`) the old cu128 build hit; if it overflows, build LOCALLY (see "Build cu130
+locally" in `cubric-vision-pod/README.md`); (5) after build, make the **Docker Hub repo
+public** (cu130) and the **GHCR package public** (cpu) — RunPod requires public pull;
+(6) anon-pull-verify both tags before telling user to connect. `wsl --shutdown` after a
+local Docker build. NEVER pass `only_profile=cpu` in dispatch — it SKIPS the cu130 leg
+while still reporting success (`IMAGE_NOT_FOUND` on RunPod). Always dispatch with
+`only_profile` BLANK.
+
+Docker Hub creds are repo secrets `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (a free public
+repo; set once). The first cu130 Pod deploy is the real cold-start pull measurement
+(GHCR-vs-Docker-Hub) MPI-186 folded into this rebuild.
 
 ## start.sh + wrapper.py are R2-fetched at boot — no rebuild for shell/wrapper edits (MPI-156)
 
@@ -108,24 +122,40 @@ supervisor tears down → Pod boot-loops (confirmed live). Surviving flags: `--g
 under aimdo. Pass NO vram flag; let aimdo manage (`start.sh VRAM_MODE=""`). NEVER
 reintroduce `--normalvram` on a torch ≥ 2.8 image.
 
-## Broad profile tagged `cu124` is actually cu126 inside (MPI-156, PROVEN)
+## Two-profile split COLLAPSED to one cu130 image (MPI-189, supersedes MPI-156/MPI-70)
 
-The broad GPU profile (4090/Ampere/Hopper) gets aimdo via base
-`pytorch:2.6.0-cuda12.6-cudnn9-devel` + `torch 2.8.0+cu126` (NOT cu124 — cu124 wheels
-can't reach torch 2.8). aimdo's enable gate is torch ≥ 2.8 ONLY (no cuda-version check in
-ComfyUI `main.py`), so the cu126 wheel passes. The profile KEY + image TAG stay `cu124`
-(renaming is a DEFERRED Dockerfile TODO — touches `routes/remotePodLifecycle.js podImageForCard`
-suffix logic + rollback-tag matching + build matrix). So `…:v0.10.3-cu124` is a **cu126
-image wearing a cu124 label, on purpose**. Don't "fix" the name. LIVE-PROVEN on 4090
-(drv 580) + A4500 (drv 550): aimdo inits on both.
+The old cu124/cu128 split (and the "cu124-is-really-cu126" label trick, and the
+cu126-r550-driver-floor carve-out) are GONE. MPI-187 live-proved the `+cu130` CUDA-13 torch
+build is the ~10x LTX fault-in fix (108-127s → ~11s), and torch 2.10+cu130 carries BOTH
+Ada sm_89 (4090) and Blackwell sm_120 (5090/PRO 6000/B200) in one wheel — so ONE image
+serves every card. Driver floor is now uniform r580, enforced app-side by
+`allowedCudaVersions:["13.0"]` (MPI-188). `podImageForCard` returns a single `-cu130` tag
+(no per-card suffix → the enum-desync/wrong-profile bug class of MPI-135/MPI-70 is gone).
+aimdo 0.4.10 is unchanged (the proven Pod ran the same aimdo; its gate is torch ≥ 2.8, no
+cuda check → 2.10 passes). The vram-flag rules above (drop `--normalvram`, let aimdo manage)
+still apply.
 
-## Driver floor: cu126 image connects on r550 hosts that cu128 would refuse (MPI-156, PROVEN)
+## SageAttention DEFERRED on cu130 — SDPA fallback, revisit later (MPI-189)
 
-The cu126 image's `NVIDIA_REQUIRE_CUDA=cuda>=12.6` is what RunPod's nvidia-container hook
-checks at Pod-create. PROVEN live: an A4500 host on driver 550.127.05 / host CUDA 12.4
-connected, inited aimdo, and completed a gen on `v0.10.3-cu124` (cu126 guts). A cu128
-image (`cuda>=12.8`, floor ~r570) would have refused that host. NOT universal — hosts below
-the carve-outs still refuse; the ONLY way to answer "will datacenter X work" is to try.
+The product Pod ships **NO sageattention** on cu130. ComfyUI uses PyTorch SDPA (built-in,
+graceful — no flag, no error). This is a deliberate defer, not a failure:
+
+- **The cu130 win does not need sage.** MPI-187 hit the ~11s fault-in with NO sage — the
+  perf story is the cu130 CUDA-13 build, not the attention backend. Sage is only a ~2-3x
+  *sampler* speedup ON TOP, independent of the fault-in fix.
+- **The sage source build is unreliable on cu130 in GPU-less Docker.** SageAttention issue
+  **#157** makes `setup.py` ignore `TORCH_CUDA_ARCH_LIST` and silently ship a Triton-only
+  package (i.e. you *think* you baked multi-arch kernels but you didn't). Issues #219/#291/
+  #330 are open cu130/Blackwell build bugs. Chasing a clean `8.6;8.9;12.0` source build
+  would stall the cu130 ship for a bonus we don't currently need.
+- **The decision: MOVE ON.** Ship the proven cu130 win now; the goal was to speed things up,
+  and sage is not on that critical path. We revisit sage LATER, once a known-good cu130
+  build is proven on a live Pod — a pinned prebuilt Linux cu130 wheel already exists
+  (`snw35/sageattention-wheel`, `2.2.0+cu13-cp312`, torch 2.10, SHA-pinnable) as the likely
+  re-entry point; a source build would first need issue #157 solved (arch-list honored in a
+  GPU-less build) + a build-time arch assertion. Until then: **do NOT re-add a sage build to
+  the product Dockerfile.** (The *Builder* image still source-builds sage — that's a
+  cooperative, GPU-adjacent build, a different context from the product image's CI path.)
 
 ## Git-Bash curl on Windows — looped `curl -o` flakes (schannel)
 

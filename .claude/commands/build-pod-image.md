@@ -3,13 +3,24 @@ Build + publish a RunPod image (product Pod or Builder). Use when the user says 
 You (the agent) ARE the executor — run the commands below directly. Drive the version/parity decisions, run the builds (local + CI in parallel), and walk the manual gates.
 
 > **Two images, two flows.** Ask the user which unless they said:
-> - **Product Pod** (`mpi-ci/cubric-vision-pod/`) — ComfyUI + Cubric wrapper. **cpu via CI; cu124 + cu128 LOCAL ONLY** (cu124 used to build on CI, but as of v0.10.0 the baked sage compile artifacts overflow the GitHub runner disk — see HARD RULES).
-> - **Builder** (`mpi-ci/cubric-vision-builder/`) — standalone authoring box. cu128, **LOCAL ONLY, no CI**.
+> - **Product Pod** (`mpi-ci/cubric-vision-pod/`) — ComfyUI + Cubric wrapper. As of MPI-189
+>   this is **ONE cu130 GPU image** (`-cu130`, → **Docker Hub**) + the slim **cpu** image
+>   (→ GHCR, via CI). The old cu124/cu128 two-profile split is GONE.
+> - **Builder** (`mpi-ci/cubric-vision-builder/`) — standalone authoring box. cu130, **LOCAL ONLY, no CI**.
 
 > **HARD RULES (do not break):**
 > - **Live Pod ops are USER-only.** This command BUILDS images. Never autonomously create/delete/deploy a Pod. Image builds are fine once the user authorizes the run.
 > - **NEVER read/grep any `.secrets/` or `runpod.env`.** Tokens go in Pod env, never in files.
-> - **Neither GPU profile is CI-buildable — `cu128` AND `cu124` build LOCAL ONLY** (overflow the GitHub runner disk, `No space left on device`). cu128 never was; **cu124 stopped being CI-safe at v0.10.0** when the baked sage source-build (MPI-145) added CUDA-compile artifacts on top of the already-~32GB image → CI dies mid `Build and push` with no log (runner killed). Both = local `docker build` on the D: Docker host. Only **cpu** (tiny, ~900MB) builds on CI. The cu128 matrix row is commented out in the workflow; cu124 can still be dispatched but WILL fail — don't.
+> - **TWO REGISTRIES (MPI-189/186):** the `-cu130` GPU image pushes to **Docker Hub**
+>   (`docker.io/madponyinteractive/cubric-vision-pod`); the `-cpu` image stays on **GHCR**.
+>   Docker Hub creds = GitHub repo secrets `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (for CI)
+>   or the user's own token (for a local push). Make the **Docker Hub repo public** (cu130)
+>   and the **GHCR package public** (cpu) after first push — RunPod requires public pull.
+> - **cu130 CI-buildability = TRY CI FIRST, fall back to local.** The cu130 torch stack is
+>   large; the old cu128 build overflowed the runner (`No space left on device`). CI now has a
+>   "Free up runner disk" step reclaiming ~25-30GB — dispatch cu130 on CI and watch it. If it
+>   overflows, build it LOCALLY (step 4b) — do NOT lower coverage to fit CI. **cpu** (tiny)
+>   always builds on CI. (Historical: cu124/cu128 were LOCAL-ONLY; that split is gone.)
 > - All image/CI edits live in `c:\AI\Mpi\mpi-ci` (private repo). Use `git -C c:/AI/Mpi/mpi-ci ...` — never run git from Cubric-Vision against it.
 
 ## Reference
@@ -48,9 +59,9 @@ shipped tag or the in-flight one.
 
 ```
 docker system df                       # see reclaimable before
-SHIPPED=v0.8.1   # <- the tag the app currently points at (routes/remoteProxy.js); keep it
+SHIPPED=v0.11.0  # <- the tag the app currently points at (routes/remotePodLifecycle.js POD_IMAGE_VERSION); keep it
 BUILDING=v<ver>  # <- the one you're about to build; keep it
-R=ghcr.io/madponyinteractive/cubric-vision-pod
+R=docker.io/madponyinteractive/cubric-vision-pod   # GPU image is on Docker Hub now (MPI-189)
 B=ghcr.io/madponyinteractive/cubric-vision-builder
 # Remove every Pod tag that is NOT $SHIPPED and NOT $BUILDING:
 docker images "$R" --format '{{.Repository}}:{{.Tag}}' \
@@ -77,8 +88,9 @@ container is still up; `docker ps` + `docker stop` it first.
   Custom-node + frontend pins also live in that lock — the Dockerfile resolves them itself from the copied `node_lock.json`, so there are no per-node build-args to pass. To bump core/frontend/a node, edit `dev_configs/node_lock.json` and rebuild; the build follows the lock. Confirm with the user only if the lock itself is being bumped. Must stay in lockstep with the Builder's `COMFYUI_REF`.
 
 ### 2. App-side version sync (BEFORE redeploy; needs an app restart to take effect)
-`routes/remoteProxy.js` bakes `POD_IMAGE_VERSION` + `WRAPPER_VERSION` into the running Express child at boot — editing them needs an APP RESTART or the live app keeps sending the old tag. Update both to `<ver>`/`<wver>`, commit by explicit pathspec:
-`git commit --only routes/remoteProxy.js -m "..."` (never `git add .` — shared tree).
+`routes/remotePodLifecycle.js` bakes `POD_IMAGE_VERSION` + `WRAPPER_VERSION` into the running Express child at boot — editing them needs an APP RESTART or the live app keeps sending the old tag. Update to `<ver>`/`<wver>`, commit by explicit pathspec:
+`git commit --only routes/remotePodLifecycle.js -m "..."` (never `git add .` — shared tree).
+Note: `POD_IMAGE_VERSION` is the GPU (cu130) tag; `POD_IMAGE_VERSION_CPU` is the separate cpu tag (bump only when the cpu image is rebuilt). `POD_IMAGE_BASE`=Docker Hub, `POD_IMAGE_BASE_CPU`=GHCR.
 
 ### 3. Commit + push mpi-ci FIRST (CI gotcha)
 `gh workflow run` builds the **pushed** ref, not the local tree. Stage only your files.
@@ -112,70 +124,60 @@ Verify `start.sh` committed as LF:
 > with the committed files (publish after the commit so the baked fallback and the R2
 > copy match).
 
-### 4. Build cpu (CI) + cu124 AND cu128 (both LOCAL) IN PARALLEL
-Independent legs — start all three, converge only at the public gate (step 5).
-**cpu builds on CI; BOTH GPU profiles build local** (cu124 overflows CI since the
-v0.10.0 sage bake — see HARD RULES). cpu dispatch returns instantly; start the two
-GPU local builds backgrounded so they run while cpu CI runs.
+### 4. Build cu130 (GPU, Docker Hub) + cpu (GHCR, CI) — MPI-189
+ONE GPU image now (`-cu130`) + cpu. Two independent legs; converge at the public gate
+(step 5). **Try the cu130 GPU build on CI first** (the workflow's disk-reclaim step may
+now fit it); if CI overflows, fall back to a LOCAL build. **cpu always builds on CI.**
 
-⚠ **Local disk:** each GPU image is ~32-45GB and they share little. Building cu124
-AND cu128 back-to-back can add ~80GB to the WSL `ext4.vhdx` and it does NOT shrink
-on its own. Before a build, `docker system df`; if reclaimable is high, prune old
-tags first (keep the current shipped + the one you're building). The vhdx FILE only
-shrinks after `wsl --shutdown` + a compact (Optimize-VHD / diskpart) — a USER step.
-
-**a. Dispatch cpu CI (non-blocking):**
+**a. Dispatch CI (both legs — non-blocking):**
 ```
 cd c:/AI/Mpi/mpi-ci && gh workflow run cubric-vision-pod-image.yml --ref main \
   -f manifest_version=<ver> -f wrapper_version=<wver> -f comfyui_ref=<ref> \
-  -f push_latest=false -f only_profile=cpu
+  -f push_latest=false
 ```
-(Do NOT dispatch cu124 on CI — it WILL die mid-build on disk. cpu only.)
+(Blank `only_profile` = both cu130 + cpu rows. cu130 → Docker Hub, cpu → GHCR — the CI
+matrix carries per-row registry + login.) Watch: `gh run watch`. If the **cu130** leg
+dies with `No space left on device`, cancel it and build cu130 LOCALLY (4b); the cpu leg
+is unaffected. **CI needs the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` repo secrets** — if
+the cu130 leg fails at the "Log in to Docker Hub" step, those secrets aren't set (user
+adds them once in the mpi-ci repo → Settings → Secrets → Actions).
 
-**b. Build cu128 AND cu124 locally, backgrounded** (Bash `run_in_background: true`).
-Login once, then one build per profile. cu128:
+**b. LOCAL cu130 build (only if CI overflowed), backgrounded** (`run_in_background: true`):
 ```
 cd c:/AI/Mpi/mpi-ci/cubric-vision-pod
-gh auth token | docker login ghcr.io -u "$(gh api user -q .login)" --password-stdin
+# login to Docker Hub (user's own token, or the DOCKERHUB_TOKEN value):
+echo "$DOCKERHUB_TOKEN" | docker login docker.io -u madponyinteractive --password-stdin
 docker build \
-  --build-arg BASE_IMAGE=runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04 \
-  --build-arg CUDA_PROFILE=cu128 \
+  --build-arg BASE_IMAGE=nvidia/cuda:13.0.3-runtime-ubuntu24.04 \
+  --build-arg CUDA_PROFILE=cu130 \
   --build-arg CUBRIC_MANIFEST_VERSION=<ver> \
   --build-arg COMFYUI_REF=<ref> \
   --build-arg WRAPPER_VERSION=<wver> \
-  -t ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128 -f Dockerfile .
-docker run --rm --entrypoint python ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128 \
-  -c "import torch;print('torch', torch.__version__, torch.version.cuda); import sageattention; print('sage OK')"
-docker push ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128
+  -t docker.io/madponyinteractive/cubric-vision-pod:v<ver>-cu130 -f Dockerfile .
+# verify the load-bearing cu130 build (the Dockerfile also asserts +cu130 at build):
+docker run --rm --entrypoint python docker.io/madponyinteractive/cubric-vision-pod:v<ver>-cu130 \
+  -c "import torch;print('torch', torch.__version__, torch.version.cuda); assert '+cu130' in torch.__version__, 'NOT cu130!'"
+docker push docker.io/madponyinteractive/cubric-vision-pod:v<ver>-cu130
 ```
-cu124 — same, swap the base + profile (target tag `-cu124`). NOTE (MPI-156): the
-cu124 profile is now cu126 INSIDE — base is `cuda12.6`, torch 2.8.0+cu126 (to enable
-aimdo at a lower driver floor; the cu124 wheel ceiling was 2.6). The TAG stays
-`-cu124` on purpose (rename to cu126 is a deferred Dockerfile TODO):
-```
-  --build-arg BASE_IMAGE=pytorch/pytorch:2.6.0-cuda12.6-cudnn9-devel \
-  --build-arg CUDA_PROFILE=cu124 \
-  ... -t ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu124 -f Dockerfile .
-```
-(Add `import sageattention; print('sage OK')` to the verify line — it confirms the
-baked per-arch sage actually compiled for this profile.)
+NO sage on cu130 (MPI-189 — SDPA fallback). Do NOT add an `import sageattention` check
+to the verify line; nothing is baked, so it would (correctly) fail. The `+cu130` assert
+IS the load-bearing check — a wrong-CUDA wheel is the ~10x-regression trap.
 
-**c. Converge:** watch cpu CI (`cd c:/AI/Mpi/mpi-ci && gh run watch`) and the two
-backgrounded GPU builds. Do NOT proceed until ALL THREE pushes succeed. Any fails →
-fix + re-run only that leg; the others are unaffected.
+**c. Converge:** watch the CI run (`cd c:/AI/Mpi/mpi-ci && gh run watch`) and, if used, the
+backgrounded local cu130 build. Do NOT proceed until BOTH pushes succeed (cu130 → Docker
+Hub, cpu → GHCR). Any fail → fix + re-run only that leg.
 
 ### 5. Post-push verification (you CAN do 5a/5b once public — MPI-119)
 
-**5a. Public pull-verify (after the package is public).** Confirm each pushed tag
+**5a. Public pull-verify (after the images are public).** Confirm each pushed tag
 is publicly pullable BEFORE calling the build done — catches "push said OK but the
-manifest isn't really there / package still private":
+manifest isn't really there / repo still private":
 ```
-docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu124 >/dev/null && echo "cu124 OK"
-docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cpu  >/dev/null && echo "cpu OK"
-docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu128 >/dev/null && echo "cu128 OK"
+docker manifest inspect docker.io/madponyinteractive/cubric-vision-pod:v<ver>-cu130 >/dev/null && echo "cu130 OK"
+docker manifest inspect ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cpu     >/dev/null && echo "cpu OK"
 ```
 Any `manifest unknown` / `denied` → not done. Fix (re-push or fix visibility) and
-re-check. (cu124 + cu128 build local — pull-verify them right after each local push.)
+re-check. (cu130 → Docker Hub, cpu → GHCR — two different registries.)
 
 **5b. Boot smoke test (cpu).** The `import torch` build-verify proves CUDA links;
 this proves the **wrapper actually serves**. The wrapper binds **`0.0.0.0:8889`**
@@ -196,7 +198,8 @@ cheapest boot, representative wrapper. GPU-only behavior still needs the user's 
 Pod verify below.
 
 ### Manual gates (you CANNOT do these — tell the user)
-- **Make the GHCR package PUBLIC** (first push of a new package only): GitHub → Packages → `cubric-vision-pod` → settings → visibility. RunPod can only pull public. Later pushes stay public. (Do 5a only AFTER this.)
+- **Make the Docker Hub repo PUBLIC** (cu130, first push only): hub.docker.com → Repositories → `cubric-vision-pod` → Settings → make public. AND **make the GHCR package PUBLIC** (cpu, first push only): GitHub → Packages → `cubric-vision-pod` → settings → visibility. RunPod can only pull public. Later pushes stay public. (Do 5a only AFTER both.)
+- **Docker Hub CI secrets** (one-time): if the CI cu130 leg fails at "Log in to Docker Hub", the user must add repo secrets `DOCKERHUB_USERNAME` (=`madponyinteractive`) + `DOCKERHUB_TOKEN` (a Docker Hub Read&Write access token) in the mpi-ci repo → Settings → Secrets and variables → Actions.
 - **`wsl --shutdown` + vhdx compact** to reclaim disk FILE space after pruning (Step 0
   frees space inside the vhdx; the file itself only shrinks here). Close VS Code first
   (it holds a WSL handle), then PowerShell (admin): `wsl --shutdown`, then
@@ -207,29 +210,29 @@ Pod verify below.
 
 ### Build card "done" definition (MPI-119)
 **Push success ≠ done.** A build card moves to `done` only when ALL hold:
-1. All tags pushed (cpu via CI + local cu124 + local cu128).
-2. Package public (manual gate).
-3. **5a pull-verify passes** for every pushed tag.
+1. Both tags pushed (cu130 → Docker Hub + cpu → GHCR).
+2. Both public (manual gate — Docker Hub repo + GHCR package).
+3. **5a pull-verify passes** for both pushed tags.
 4. **5b boot smoke passes** (cpu `/health` 200 with the right `wrapper_version`).
-5. User's live Pod verify confirms the image line + `wrapper_version`.
+5. User's live Pod verify confirms the image line + `wrapper_version` (ideally on a 4090 AND a 5090 — one cu130 tag now serves both).
 
 Until 1–5, the card stays `doing`. Then remove the "Pending for the NEXT rebuild"
 block in the pod README.
 
 ---
 
-## Flow B — Builder image (cu128, LOCAL ONLY — no CI, no dispatch)
+## Flow B — Builder image (cu130, LOCAL ONLY — no CI, no dispatch)
 
 1. **`<ver>`:** new tag, e.g. `0.1.3`. Ask the user.
-2. **Parity SHA:** the Builder Dockerfile pins `COMFYUI_REF` — must equal the product cu128 image's. Bump both together if changing.
-3. **Build (local):**
+2. **Parity SHA:** the Builder Dockerfile pins `COMFYUI_REF` — must equal the product cu130 image's. Bump both together if changing. (Both are cu130 now — MPI-189; the old "Builder cu130 vs product cu128" divergence is gone.)
+3. **Build (local):** Builder stays on GHCR (only the product GPU image moved to Docker Hub).
 ```
 cd c:/AI/Mpi/mpi-ci/cubric-vision-builder
 gh auth token | docker login ghcr.io -u "$(gh api user -q .login)" --password-stdin
-docker build -t ghcr.io/madponyinteractive/cubric-vision-builder:v<ver>-cu128 -f Dockerfile .
-docker run --rm --entrypoint python ghcr.io/madponyinteractive/cubric-vision-builder:v<ver>-cu128 \
+docker build -t ghcr.io/madponyinteractive/cubric-vision-builder:v<ver>-cu130 -f Dockerfile .
+docker run --rm --entrypoint python ghcr.io/madponyinteractive/cubric-vision-builder:v<ver>-cu130 \
   -c "import torch;print('torch', torch.__version__, torch.version.cuda)"
-docker push ghcr.io/madponyinteractive/cubric-vision-builder:v<ver>-cu128
+docker push ghcr.io/madponyinteractive/cubric-vision-builder:v<ver>-cu130
 ```
 4. **Manual gates (tell the user):**
    - Make the GHCR `cubric-vision-builder` package PUBLIC (first push only).

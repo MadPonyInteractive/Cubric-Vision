@@ -31,14 +31,24 @@ const { getRemoteMode, setRemoteMode, _authHeaders } = state;
 const _mode = state.getMode(); // live singleton — setRemoteMode mutates in place
 
 // Pod image spec. PyTorch + ComfyUI live in the image (Design A); the volume
-// holds models only (arch-agnostic). MPI-70 split the single image into two
-// CUDA-floor profiles so the picked card determines the image (Step 5.1):
+// holds models only (arch-agnostic).
+// v0.12.0 (MPI-189): SINGLE cu130 image — COLLAPSES the MPI-70 two-profile split
+// (-cu124 broad + -cu128 Blackwell) back into ONE tag (`-cu130`). torch 2.10.0+cu130
+// on a nvidia/cuda:13.0.3-runtime base carries BOTH Ada sm_89 (4090) and Blackwell
+// sm_120 (5090/PRO 6000/B200) in one wheel, so one image runs every card. This is
+// the MPI-187 ~11s-fault-in stack (the +cu130 CUDA-13 build is the ~10x lever).
+// Driver floor r580 enforced by allowedCudaVersions=['13.0'] (MPI-188). Registry
+// moved GHCR -> Docker Hub for the GPU image (cold-start pull test, MPI-186).
+// sageattention is DEFERRED on cu130 (SDPA fallback — the cu130 win holds without
+// it; see docs/builder/02-image-and-rebuild.md). The -cpu image is unchanged (GHCR).
+//
+// --- historical (pre-collapse two-profile split, MPI-70) --------------------
 //   -cu128 = Blackwell (sm_120: 5090 / RTX PRO 6000 / B200), torch 2.7.1+cu128,
 //            host-driver floor cuda>=12.8.
 //   -cu124 = everything else (Ampere/Ada/Hopper), torch 2.6.0+cu124, host-driver
 //            floor cuda>=12.4 — lowers the floor, killing the 4090-on-old-driver
 //            nvidia-container-cli refusal (see current-architecture.md §5).
-// Both bake ffmpeg + git; sageattention is BAKED per-arch at image build (MPI-145,
+// Both bake ffmpeg + git; sageattention was BAKED per-arch at image build (MPI-145,
 // v0.10.0 — no first-boot compile; SDPA fallback if it didn't build). The image TAG version (0.4.8) is
 // a rebuild of wrapper 0.2.10 across all three profiles (cpu/cu124/cu128). 0.4.8
 // adds the first-boot manifest provenance stamp (MPI-90) the app compat gate reads.
@@ -90,8 +100,20 @@ const _mode = state.getMode(); // live singleton — setRemoteMode mutates in pl
 // (comfyController._reconcileFromHistory) and settles from it. Needs this wrapper
 // endpoint → wrapper bump 0.2.14→0.2.15 + a Pod image rebuild to ship for REMOTE.
 // (LOCAL is fixed app-side already — it hits ComfyUI /history directly.)
-const POD_IMAGE_BASE = 'ghcr.io/madponyinteractive/cubric-vision-pod';
-const POD_IMAGE_VERSION = 'v0.11.0';
+// MPI-189/186: the GPU image moved GHCR -> Docker Hub (GHCR has documented
+// pull-stalls on RunPod hosts; Docker Hub is a test to measure the cold-start
+// pull for real on the first cu130 deploy). The -cpu image is NOT part of this
+// move — it stays on GHCR at its own tag (see POD_IMAGE_BASE_CPU below), because
+// it wasn't rebuilt and its cold-start isn't the bottleneck.
+const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
+// MPI-189: single cu130 image. v0.12.0 = the collapse of the cu124/cu128 two-
+// profile split onto ONE nvidia/cuda:13.0.3 cu130 base (torch 2.10.0+cu130, the
+// MPI-187 ~11s-fault-in stack). One tag, no -cu124/-cu128 suffix (see
+// podImageForCard). Bump on every GPU image rebuild.
+const POD_IMAGE_VERSION = 'v0.12.0';
+// The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
+// the GPU image whose cold-start pull is being measured).
+const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // The CPU "download mode" image (slim wrapper + aria2c, no torch/ComfyUI) is
 // version-INDEPENDENT of the GPU perf work — MPI-156's 0.10.3 bumps (aimdo,
 // torch, vram flags) don't touch it. CI builds the -cpu profile separately and it
@@ -136,24 +158,17 @@ function _clampEphemeralDisk(gb) {
 // are the create spec and the generation gate.
 const CPU_SENTINEL = '__cpu__';
 
-// Blackwell (sm_120) cards need the cu128 image; everything else runs cu124.
-// gpuTypeId is RunPod's card id/displayName (e.g. "NVIDIA GeForce RTX 5090",
-// "NVIDIA RTX PRO 6000 Blackwell", "NVIDIA B200"). Match on the model tokens —
-// RunPod ids carry the full marketing name, so a substring test is reliable and
-// degrades safely (unknown card → cu124, the broad-compat default).
+// MPI-189: SINGLE cu130 image for ALL GPU cards. The old cu124/cu128 per-arch
+// branching is GONE — torch 2.10+cu130 carries both Ada sm_89 (4090) and Blackwell
+// sm_120 (5090/PRO 6000/B200) in one wheel, so one tag runs every card we deploy
+// on. This also kills the enum-desync / wrong-profile bug class (MPI-135/MPI-70):
+// there is no per-card suffix left to get wrong.
 function podImageForCard(gpuTypeId) {
-  // No-GPU "download mode" (MPI-88) → the SLIM wrapper-only image (no torch/ComfyUI).
-  // The full GPU image won't run on a CPU Pod (its entrypoint inits CUDA), so the
-  // -cpu tag is mandatory, not an optimization.
-  if (gpuTypeId === CPU_SENTINEL) return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION_CPU}-cpu`;
-  const id = String(gpuTypeId || '').toLowerCase();
-  const isBlackwell =
-    id.includes('5090') ||
-    id.includes('rtx pro 6000') ||
-    id.includes('b200') ||
-    id.includes('blackwell');
-  const suffix = isBlackwell ? 'cu128' : 'cu124';
-  return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-${suffix}`;
+  // No-GPU "download mode" (MPI-88) → the SLIM wrapper-only image (no torch/ComfyUI),
+  // still on GHCR (not part of the Docker Hub move). The full GPU image won't run on
+  // a CPU Pod (its entrypoint inits CUDA), so the -cpu tag is mandatory.
+  if (gpuTypeId === CPU_SENTINEL) return `${POD_IMAGE_BASE_CPU}:${POD_IMAGE_VERSION_CPU}-cpu`;
+  return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-cu130`;
 }
 
 // MPI-188: hard driver-floor placement filter. RunPod's `allowedCudaVersions`
@@ -162,17 +177,13 @@ function podImageForCard(gpuTypeId) {
 // too old for the image's CUDA/torch build crashes ComfyUI on boot
 // ("RuntimeError: The NVIDIA driver on your system is too old", seen live on a
 // cu13.0 image landing a 12.8-max host during MPI-187). The floor is a property
-// of the IMAGE, so it's derived from the same card→suffix logic as
-// podImageForCard (NOT user input): cu124→12.4, cu128→12.8. When MPI-189
-// collapses to a single cu130 image, this becomes ['13.0']. RunPod treats the
-// listed version as a minimum, so listing '12.8' still lands newer drivers.
+// of the IMAGE. MPI-189 collapsed to a SINGLE cu130 image, so the floor is a flat
+// ['13.0'] for every GPU card (the r580-driver floor cu130 needs). RunPod treats
+// the listed version as a minimum, so newer drivers still land.
 // N/A for CPU download mode (no CUDA on a CPU Pod).
 function podCudaFloor(gpuTypeId) {
   if (gpuTypeId === CPU_SENTINEL) return null;
-  const image = podImageForCard(gpuTypeId);
-  if (image.endsWith('-cu130')) return ['13.0'];
-  if (image.endsWith('-cu128')) return ['12.8'];
-  return ['12.4']; // cu124 default
+  return ['13.0'];
 }
 
 // --- lifecycle-private state --------------------------------------------------
