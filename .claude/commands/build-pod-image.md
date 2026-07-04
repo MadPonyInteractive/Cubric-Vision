@@ -16,11 +16,14 @@ You (the agent) ARE the executor — run the commands below directly. Drive the 
 >   Docker Hub creds = GitHub repo secrets `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (for CI)
 >   or the user's own token (for a local push). Make the **Docker Hub repo public** (cu130)
 >   and the **GHCR package public** (cpu) after first push — RunPod requires public pull.
-> - **cu130 CI-buildability = TRY CI FIRST, fall back to local.** The cu130 torch stack is
->   large; the old cu128 build overflowed the runner (`No space left on device`). CI now has a
->   "Free up runner disk" step reclaiming ~25-30GB — dispatch cu130 on CI and watch it. If it
->   overflows, build it LOCALLY (step 4b) — do NOT lower coverage to fit CI. **cpu** (tiny)
->   always builds on CI. (Historical: cu124/cu128 were LOCAL-ONLY; that split is gone.)
+> - **cu130 CI-buildability = TRY CI FIRST, fall back to local ONLY on a real disk overflow.**
+>   The cu130 torch stack is large; the old cu128 build overflowed the runner (`No space left
+>   on device`). CI has a "Free up runner disk" step reclaiming ~25-30GB — dispatch cu130 on CI
+>   and watch it. Fall back to LOCAL **only** for a genuine `No space left on device`, NOT for a
+>   fixable input error. (MPI-189: the first cu130 CI leg failed on a bad `comfyui_ref` = a
+>   commit SHA, which `git clone --branch` rejects — fix = pass the TAG + re-dispatch CI, not
+>   go local.) **cpu** (tiny) always builds on CI. (Historical: cu124/cu128 were LOCAL-ONLY;
+>   that split is gone.)
 > - All image/CI edits live in `c:\AI\Mpi\mpi-ci` (private repo). Use `git -C c:/AI/Mpi/mpi-ci ...` — never run git from Cubric-Vision against it.
 
 ## Reference
@@ -124,28 +127,34 @@ Verify `start.sh` committed as LF:
 > with the committed files (publish after the commit so the baked fallback and the R2
 > copy match).
 
-### 4. Build cu130 (GPU, LOCAL) + cpu (GHCR, CI) — MPI-189
+### 4. Build cu130 (GPU, Docker Hub) + cpu (GHCR) — CI FIRST, MPI-189
 ONE GPU image now (`-cu130`) + cpu. Two independent legs; converge at the public gate
-(step 5).
+(step 5). **Try BOTH on CI first.** Only build cu130 locally if CI fails for a REAL
+reason — the runner running out of disk on the large cu130 image (`No space left on
+device`). Do NOT drop to local for a fixable input error.
 
-> **cu130 = BUILD LOCAL (proven 2026-07-04, MPI-189 first build).** The CI cu130 leg was
-> tried once and FAILED — the `git clone --branch ${COMFYUI_REF}` step can't clone a bare
-> commit SHA (exit 128; `--branch` needs a branch/tag). Even with the tag it stresses the
-> runner. cpu, however, builds fine + fast on CI. So: **cpu → CI; cu130 → local `docker
-> build`.** (If you later WANT to retry cu130 on CI, pass a TAG for `comfyui_ref`, never a
-> SHA — see step 1 `<ref>`.)
+> **MPI-189 first-build lesson (2026-07-04):** the cu130 CI leg failed ONCE, but the cause
+> was a **bad input, not a CI limit** — `comfyui_ref` was passed as a commit SHA, and the
+> Dockerfile's `git clone --branch ${COMFYUI_REF}` rejects a bare SHA (`exit 128`). The fix
+> is to pass the TAG (step 1 `<ref>`), then **retry on CI** — NOT to give up on CI. CI can
+> build cu130 (the "Free up runner disk" step reclaims ~25-30GB; the cpu leg proved the
+> Docker Hub push path works). Reserve local build for a genuine disk overflow.
 
-**a. Dispatch cpu on CI (non-blocking):**
+**a. Dispatch CI (both legs — non-blocking):**
 ```
 cd c:/AI/Mpi/mpi-ci && gh workflow run cubric-vision-pod-image.yml --ref main \
   -f manifest_version=<ver> -f wrapper_version=<wver> -f comfyui_ref=<ref-TAG> \
-  -f push_latest=false -f only_profile=cpu
+  -f push_latest=false
 ```
-(`only_profile=cpu` = cpu leg only → GHCR. `<ref-TAG>` = the lock's `comfyui.core.tag`,
-e.g. `v0.27.0` — NOT the commit SHA.) Watch: `gh run watch`.
+(Blank `only_profile` = both cu130 + cpu rows. cu130 → Docker Hub, cpu → GHCR. `<ref-TAG>`
+= the lock's `comfyui.core.tag`, e.g. `v0.27.0` — **NEVER the commit SHA**, or the clone
+`exit 128`s.) Watch: `gh run watch`. On failure, READ the actual error before falling
+back: a clone/input error → fix the input + re-dispatch CI; ONLY `No space left on device`
+→ build cu130 locally (4b).
 
-**b. Build cu130 LOCALLY, backgrounded** (`run_in_background: true`). Build needs NO
-login; only the PUSH does. `COMFYUI_REF` MUST be the TAG (`--branch` rejects a SHA):
+**b. Build cu130 LOCALLY (only on a real CI disk overflow), backgrounded**
+(`run_in_background: true`). Build needs NO login; only the PUSH does. `COMFYUI_REF` MUST
+be the TAG (`--branch` rejects a SHA):
 ```
 cd c:/AI/Mpi/mpi-ci/cubric-vision-pod
 docker build \
