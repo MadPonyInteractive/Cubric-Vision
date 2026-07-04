@@ -19,3 +19,15 @@
 - Redeploy a fresh Pod on v0.11.0; confirm app.log image line + /health wrapper_version; run gen smoke LTX-2.3 + Wan 5B + PiD on v0.27, kornia 0.8.2 pin intact.
 - Swap app local portable engine engine/ComfyUI_windows_portable -> v0.27 (gitignored, out-of-repo).
 - Builder image bump split to MPI-183 (deferred).
+
+## CLOSE CONDITION (2026-07-03) — the ONLY thing blocking done
+- Wan 5B + PiD already gen'd clean on v0.27 (cu124 24GB 4090) → partial gen-verify exists.
+- LTX-2.3 i2v OOM'd on that 24GB card = MPI-185 (GGUF BF16 dequant spike, headroom-starved). Root cause pinned as **24GB-inherent, NOT a v0.27 regression** (GGUF path untouched by the core bump).
+- **DECIDER (user running now):** LTX-2.3 i2v on a **32GB 5090 Pod** (Blackwell → v0.11.0-**cu128** image — first gen-verify of that image too). Clean gen → move MPI-148 to done; MPI-185 stays open as 24GB-tier hardening.
+- If LTX also OOMs on 32GB → MPI-148 stays validating; escalate MPI-185.
+
+## CLOSED — LTX i2v clean on 32GB 5090 (2026-07-03, user live)
+- **LTX-2.3 i2v gen'd clean on v0.27** (32GB RTX 5090, 85GB RAM, v0.11.0-**cu128** image). 5s video @ 1920×1080: preview 3:50 (cold Pod boot + weight-load), finalize/continue 57s. No OOM. First gen-verify of the cu128 image too.
+- v0.27 gen-verify now COMPLETE across the shipped set: Wan 5B ✓, PiD ✓ (cu124 24GB), LTX-2.3 i2v ✓ (cu128 32GB).
+- Confirms the 24GB LTX OOM = headroom-inherent (MPI-185), NOT a v0.27 regression. MPI-148 → done.
+- Perf (3:50 cold preview @ 1080p) is a cold-boot cost, not a v0.27 issue; datapoint in pod-perf-investigation.md.

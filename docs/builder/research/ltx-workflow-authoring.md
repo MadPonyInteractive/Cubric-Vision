@@ -120,6 +120,98 @@ may justify its own scheduler/sigma tune) and needs the full 22B dev model downl
 
 ---
 
+## SINGLE-STAGE vs TWO-STAGE — the deconfounded A/B (local bf16, 2026-07-03/04, MPI-186)
+
+Ran the comparison properly. **t2v is useless for this A/B** — any change (sigmas, base res,
+sampler) reshuffles the whole composition (new scene = effectively a new seed), so every t2v
+run looked "different" and settled nothing. **i2v with a locked start frame is the only clean
+test** (composition anchored; only the changed variable moves). All conclusions below are from
+the i2v A/B on the same start frame (mall / phone / red-sleeve portrait).
+
+### VERDICT: single-stage wins QUALITY; two-stage wins MOTION. It's a tradeoff, not an upgrade.
+
+**Single-stage (native res, no ÷2, no stage-2):**
+- ✅ **Better faces — crisp teeth.** Two-stage teeth **morph like lips** (the exact artifact in
+  every YouTube LTX two-stage video). Single-stage teeth stay solid. For a face-first product
+  this is the headline.
+- ✅ Sharper hair, freckles, garment detail. Two-stage blurs all three.
+- ❌ **MORE hallucination.** Single-stage invented nail polish that wasn't in the start frame and
+  flipped the phone (back→front). Two-stage stayed more faithful to the input here. (Plausible
+  mechanism: native-res single pass has more freedom/detail budget to invent; the ÷2 base +
+  low-denoise refine constrains two-stage closer to the source.)
+- ❌ **Less motion / stiffer.** t2v: single-stage = lift-phone-and-talk; two-stage = show-phone-
+  turn-walk-away. i2v: both natural, two-stage slightly more dynamic (smaller gap under i2v).
+- ❌ **High VRAM.** Native-res single pass at 1080p spilled ~21GB into shared/system RAM on a
+  16GB 4060 Ti (Dedicated 14.6/16, Shared 21.6/31.9). Only completes with a big RAM cushion.
+  This is the reason two-stage exists.
+
+**Two-stage (÷2 stage-1 → x2 upscale → refine):**
+- Motion is BETTER because **low-res stage-1 = more dynamic motion** (see ltx-2.3-tiers.md:
+  "motion peaks at low ~448, decays as res climbs"). The ÷2 base is a **motion feature**, not
+  just a VRAM trick.
+- Fits 24GB, scales to LONG clips (users report 30s on a 5090 — only possible multi-stage;
+  native-res 30s single-pass is infeasible even on 32GB). **This alone keeps two-stage in the
+  product.**
+- Softer faces + the teeth-morph + occasional hallucination are its real costs.
+
+### THE REAL QUALITY BUG WAS OUR STAGE-2 SIGMAS (0.65) — now corrected to 0.85
+
+Our shipped stage-2 = `ManualSigmas "0.65, 0.45, 0.25, 0.0"`. Official reference (that ÷2 note
+above) = `"0.85, 0.7250, 0.4219, 0.0"`. **Live i2v A/B (same seed, same two-stage, only sigmas
+toggled): official 0.85 beats our 0.65** — sharper face, better detail recovery. Our 0.65 was
+UNDER-denoising the refine → the upscale pass had too little noise budget to rebuild detail.
+**This overturns the earlier "0.65 didn't change quality" tuning conclusion — it did; 0.85 is
+better.** ⚠️ Do NOT confuse with the stage-1 ManualSigmas-vs-LTXVScheduler A/B above (that was
+stage-1, still stands: keep LTXVScheduler for stage-1). This is a **stage-2** sigma fix.
+(SamplerCustomAdvanced vs our LTXVNormalizingSampler for single-stage = tested, no clear win —
+sampler is not the lever.)
+
+### ÷2 base res is BOTH a feature (motion) AND a cost (composition/detail)
+
+At high tiers the ÷2 stage-1 is too small to carry composition faithfully (t2v: floating detached
+van door; phone flip) — it plans a lower-fidelity scene that the upscale then faithfully enlarges.
+i2v anchors this (start frame holds composition) so the damage is milder under i2v than t2v.
+The `×0.66`-instead-of-`÷2` some workflows use is a hardcoded guess at "halving is too aggressive
+at high res." **OPEN LEVER: replace `MpiMath floor(a/2)` (nodes 155/156) with an equation that
+picks the stage-1 base from the user's target res + ratio** — a base big enough to hold
+composition but small enough to keep motion + fit 24GB. Between ÷2 (breaks composition, best
+motion) and ÷1 (= single-stage, best detail, worst VRAM/motion). Not yet designed/measured.
+
+### DECISION (user, 2026-07-04): TWO-STAGE IS THE WINNER. Settled — do not reopen.
+
+Two-stage has more pros (faithful i2v, dynamic motion, fits 24GB, scales to 30s clips) and its
+weaknesses (soft faces, teeth-morph) are fixable by the user bumping to 2K/4K OR — the real
+unlock — a proper **video upscaler** (we don't have one yet; the current stage-2 "upscale" is a
+low-denoise refine that morphs teeth, which is WHY faces suffer). **3-stage = REJECTED** (see
+below). **Single-stage = REJECTED for product** (best faces but hallucinates more on i2v, stiffer
+motion, high VRAM/OOM risk). The ONE clear ship-it win from this whole arc = the **stage-2 sigma
+fix 0.65 → 0.85** (strictly better detail, no downside, fits everywhere).
+
+**3-stage evaluated + rejected (aistudynow.com article, 2026-07-04):** base stage-1 = **320×244**
+(vs our ÷2), then 2x→4x upscale subgraphs. Wins motion/audio/VRAM/long-clips; SILENT on face
+fidelity because low-res destroys it — a 320×244 base reconstructs the user's uploaded face from a
+thumbnail = max hallucination, worst i2v fidelity. Also stacks TWO inter-stage re-fault seams (2×
+the Pod reload tax). Its claimed "fixes" are all motion/background/audio (axes low-res helps),
+never faces. Wrong trade for a face-first product. (Ref numbers: 5090 HD 222s / ~55GB overhead;
+3060 12GB did 20s@~30min.)
+
+**The real unlock (parked):** a proper VIDEO upscaler would let single-stage gen (best faces, most
+faithful) at low-ish res + upscale cleanly, decoupling detail from the base gen — dissolves the
+whole detail-vs-fidelity dilemma. We don't have one. Until then, two-stage + 2K/4K bump is the path.
+
+### (superseded) earlier crossroads note
+
+Was leaning **single-stage for RunPod/Pod** — it removes the inter-stage `MpiClearVram` re-fault seam
+(the biggest Pod per-gen tax; see pod-perf-investigation.md) AND wins faces. Open risk to settle
+LIVE before committing: **does bf16 single-stage OOM or just-slow on a 24GB Pod?** bf16 has no
+GGUF dequant spike (that was the MPI-185 OOM, GGUF-specific), so single-stage bf16 should degrade
+to slow RAM-offload, not crash — but the native-res sampling latent on 24GB is UNTESTED. The
+biggest standing pain remains the RunPod cold-load times, not the workflow. fp8 stays REJECTED
+(eyes/teeth — the very artifact single-stage fixes; don't trade a solved infra problem for a
+permanent face-quality one).
+
+---
+
 ## ComfyUI groups are position-based, not nodes[]
 
 Workflow `groups` store `nodes: []` (empty) — group membership is computed at render time

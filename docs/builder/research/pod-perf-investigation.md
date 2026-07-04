@@ -1,5 +1,8 @@
 # Pod vs Local Perf — the 40GB re-faults at EVERY stage (cold AND warm); the fix is to keep it resident through the stage transition
 
+> **★ GGUF-ERA DATAPOINT (2026-07-03, 24GB 4090 Pod, v0.11.0-cu124 / ComfyUI v0.27, MPI-185 / MPI-148 verify).**
+> This is the FIRST perf datapoint on the shipped **Q8_0 GGUF** LTX path (MPI-168) — everything below is the OLD 40GB bf16 era. Timeline (app.log): 21:16:08 Pod create → 21:26:55 first history (~11min boot + ~40GB LTX weight load from network volume) → 21:39:03 OOM. So the "LTX ~8 min click→about-to-generate" the user saw was mostly **boot + weight-load**, not gen. Comparators same session: **Wan 5B ~2 min gen**; user **LOCAL Wan ~20s + ~1min warm**. Cloud 4090 still far slower than local — consistent with the standing "cloud 4090 not faster than local 4060Ti" finding; open suspects unchanged (aimdo overhead + host P-State throttle). NOTE the LTX gen itself never completed here (OOM'd in GGUF dequant — see MPI-185), so this is a boot/load datapoint, not a warm-gen number for the GGUF path. A clean GGUF warm-gen number still needs a 32GB 5090 (cu128) run.
+>
 > **★ CORRECTED RESOLUTION (live-proven 2026-06-28, RTX 5090 Pod — supersedes the
 > earlier "warm-resident = 36s" claim, which was a MISLABEL). READ THIS FIRST.**
 >
@@ -353,14 +356,58 @@ resident across stage-1 → stage-2** so the second 55–60s fault never happens
 aimdo stays ON. This is the only lever left that we control — environmental
 fault-path efficiency is not something the image can change.
 
+### ☠️ `--vram-headroom` DISPROVEN on the Pod GGUF path (2026-07-04, 24GB 4090 Pod) — does NOT fix the MPI-185 OOM. DO NOT RE-TRY.
+
+**The local "proof" was on bf16 and did not transfer.** `--vram-headroom=1` was baked into
+start.sh (≤24GB gate), published to R2 stable, and live-run on a real 24GB 4090 Pod against the
+actual Q8 GGUF path. Boot log confirmed it applied (`[cubric] VRAM: 24GB-tier default
+--vram-headroom=1 … detected 23GiB`; `start_sha256` matched the published manifest; ComfyUI parsed
+the flag and booted clean). **It OOM'd anyway, with numbers identical to the no-flag run:**
+```
+LTXVNormalizingSampler failed: torch.OutOfMemoryError
+Currently allocated : 22.58 GiB   (no-flag run was 22.53)
+Requested           : 576.00 MiB
+Device limit        : 23.64 GiB
+Free (CUDA)         : 4.81 MiB
+```
+The flag was **inert** — aimdo still filled VRAM to the same ~22.6 GiB ceiling; the +576MB
+`dequantize_blocks_BF16` spike still had no room. VRAM plateaued at 23.6/24 and RAM climbed
+(offload was happening) right up to the OOM — so aimdo WAS offloading, just not leaving the
+dequant its headroom.
+
+**WHY it doesn't transfer (the mechanism gap):** `--vram-headroom` reserves headroom against
+**aimdo's own managed staging/inference working set**. Local proved exactly that — on **bf16**,
+headroom 4 capped the aimdo-managed inference peak 14→11GB. But the GGUF OOM is a **raw `torch`
+allocation inside a custom node** (`ComfyUI-GGUF/dequant.py:62`, `int16→int32→float32` upcast)
+that fires DURING the forward pass, AFTER aimdo has already staged the transformer to the
+watermark. aimdo's "keep N GB free" fences its own pool, not a third-party node's transient
+upcast on top of it. So headroom is structurally the wrong knob for THIS OOM — bf16 (no dequant)
+was never the failing path, and capping it proved nothing about the GGUF one. **The handoff's
+own caveat ("local proved the flag MECHANISM only … local CANNOT reproduce the GGUF dequant
+spike") turned out to be the decisive fact.**
+
+**STILL LIVE on 24GB → escalate to the real levers (plan.md ranked fixes 2-4):** the OOM is
+GGUF-dequant-specific and at stage-1 sample time (`LTXVNormalizingSampler` = `Stage1_Bypass`),
+so the fix must attack the dequant working set, not aimdo headroom. Order of shots:
+1. **Lower res/tier on 24GB** — fewer latent tokens = smaller working set when the dequant fires.
+   May just document "24GB caps at tier X" (cheap, quality-preserving within the cap).
+2. **Smaller quant on the 24GB tier** — Q6_K (17.8GB) / UD-Q5_K_M (18.2GB) leave real headroom so
+   the +576MB fits. Cost: per-tier workflow/dep split (engine rule is single GGUF today) + a
+   face-quality A/B (Q8 was near-lossless; Q6/Q5 unproven on LTX faces).
+3. **bf16 (non-GGUF) transformer on 24GB** — no dequant at all, but re-enters the 40GB aimdo
+   cold-fault tax (the reason GGUF was chosen). Regressive; last resort.
+Do NOT chase more aimdo flags for this — `--vram-headroom`/`--reserve-vram` reserve against the
+wrong allocator. `--vram-headroom` is baked in start.sh right now (≤24GB) doing nothing useful;
+**revert it or repoint it to whichever real fix wins** (next session, needs another R2 push).
+
 ### Fix #3 — the FLAG SURFACE (probed live 2026-06-28, RTX PRO 4000, v0.10.3)
 `python /opt/ComfyUI/main.py --help` under aimdo exposes these dynamic-VRAM knobs:
 
 | flag | help text (verbatim) | use for Fix #3 |
 |---|---|---|
 | `--highvram` | "By default models will be unloaded to CPU memory after being used. This option **keeps them in GPU memory**." | THE direct "don't re-fault" knob — but ☠️ OOMs on 24GB (40GB model > VRAM). SAFE only where the model FITS (48GB+). |
-| `--reserve-vram N` | "try and keep this much VRAM completely free" | tune headroom; safe-ish on 24GB |
-| `--vram-headroom N` | (get full text) | unknown |
+| `--reserve-vram N` | "Set the amount of vram in **GB** you want to reserve for use by your **OS/other software**." | OS carve-out; blunter |
+| `--vram-headroom N` | "Set the amount of vram in **GB** for **DynamicVRAM to maintain as extra headroom above default**. ComfyUI will try and keep this much VRAM completely free." | ☠️ **DISPROVEN for the GGUF-dequant OOM** (Pod-tested 2026-07-04, OOM'd unchanged — reserves aimdo's pool, not the custom-node dequant alloc). See disproof section above. |
 | `--cache-ram [GB]` | "Use RAM pressure caching with the specified headroom" | RAM-side cache; the current default |
 | `--cache-none` | "Reduced RAM/VRAM usage at the expense of executing…" | OPPOSITE — don't use |
 | `--fast-disk` | "Prefer disk-backed dynamic loading and offload over instead of keeping models in vram when it can." | OPPOSITE (more offload) — don't use |

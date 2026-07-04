@@ -62,7 +62,7 @@
   },
   "9": {
     "inputs": {
-      "string": "A rainy futuristic megacity at night glows with magenta and cyan reflections across wet streets. A woman in a sleek black trench coat walks toward camera through drifting steam while autonomous cars pass behind her. The camera slowly dollies backward at eye level. Neon advertisements shimmer across her face as thunder rolls overhead. She stops, smiles slightly and quietly says, \"We're not living in the future anymore... we're building it.\" Soft rain, distant traffic, subtle synth soundtrack and realistic environmental audio."
+      "string": "A young woman in a shopping mall raises her phone to show the screen to the camera and speaks, staying in place. She looks directly at the camera the whole time, smiling. Only her arm and head move. She says: \"Check this out!\" People walk on the escalator behind her, soft indoor lighting.\n"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -95,7 +95,7 @@
   },
   "28": {
     "inputs": {
-      "sigmas": "0.65, 0.45, 0.25, 0.0"
+      "sigmas": "0.85, 0.7250, 0.4219, 0.0"
     },
     "class_type": "ManualSigmas",
     "_meta": {
@@ -540,7 +540,7 @@
   },
   "77": {
     "inputs": {
-      "int": 984885684
+      "int": 984885685
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -575,7 +575,7 @@
   },
   "88": {
     "inputs": {
-      "int": 2560
+      "int": 1088
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -584,7 +584,7 @@
   },
   "89": {
     "inputs": {
-      "int": 1408
+      "int": 1920
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -719,7 +719,7 @@
   },
   "140": {
     "inputs": {
-      "sigmas": "1., 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
+      "sigmas": "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
     },
     "class_type": "ManualSigmas",
     "_meta": {
@@ -745,7 +745,7 @@
   },
   "142": {
     "inputs": {
-      "boolean": false,
+      "boolean": true,
       "true": [
         "140",
         0
@@ -1452,7 +1452,7 @@
   "277": {
     "inputs": {
       "lora_name": "ltx-2.3\\id-lora-talkvid\\ltx-2.3-id-lora-talkvid-3k.safetensors",
-      "strength_model": -2.42,
+      "strength_model": 1,
       "model": [
         "191",
         0
@@ -1982,33 +1982,6 @@
       "title": "DualCLIPLoader"
     }
   },
-  "421": {
-    "inputs": {
-      "int": 69
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Seed"
-    }
-  },
-  "422": {
-    "inputs": {
-      "string": "Two samurai stand facing each other in a bamboo forest at golden sunset. Leaves drift through the air and cloth moves gently in the wind. The camera slowly circles around both warriors before they draw their swords at the same time. Dramatic pose, realistic fabric motion, cinematic golden light, shallow depth of field, highly realistic historical action scene."
-    },
-    "class_type": "MpiText",
-    "_meta": {
-      "title": "Input_Positive"
-    }
-  },
-  "423": {
-    "inputs": {
-      "string": "blurry, low quality, still frame, frames, watermark, overlay, titles, has blurbox, has subtitles, unrealistic, plastic, fake, out-of-focus, low-detail, 3-arms, extra legs, walking backwards, slow motion, slowed time.\n"
-    },
-    "class_type": "MpiText",
-    "_meta": {
-      "title": "Input_Negative"
-    }
-  },
   "426": {
     "inputs": {
       "nag_scale": 11,
@@ -2044,6 +2017,43 @@
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "Negative Prompt 2 (Audio) (NAG only)"
+    }
+  },
+  "440": {
+    "inputs": {
+      "sigmas": "0.65, 0.45, 0.25, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas"
+    }
+  },
+  "442": {
+    "inputs": {
+      "noise": [
+        "12",
+        0
+      ],
+      "guider": [
+        "328",
+        0
+      ],
+      "sampler": [
+        "157",
+        0
+      ],
+      "sigmas": [
+        "142",
+        0
+      ],
+      "latent_image": [
+        "145",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
     }
   }
 }

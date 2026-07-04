@@ -1,0 +1,133 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b55ec6c5-4e3c-403f-a74a-fe702d4bc640",
+  "generated_at": "2026-07-04T02:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "LTX RunPod OOM investigation + two-stage decision - vram-headroom fix mechanism proven local, Pod confirm pending",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Solve the LTX i2v OOM on a 24GB cloud 4090 Pod (MPI-185) so a user never gets an OOM on a 1-second video, and settle the LTX workflow architecture (single vs multi-stage).",
+    "status": "in_progress",
+    "summary": "TWO big outcomes this session. (1) LTX WORKFLOW SETTLED: two-stage is the winner (single-stage, 3-stage, fp8 all evaluated + REJECTED - do not reopen). The one clear ship-it quality win found = stage-2 sigmas 0.65->0.85 (official values beat ours in a clean i2v A/B). (2) 24GB OOM FIX FOUND: root cause = GGUF dequantize_blocks_BF16 +576MB spike on a headroom-starved 24GB card; fix = `--vram-headroom 1` (aimdo-native GB flag). Mechanism LIVE-PROVEN locally (headroom 4 dropped inference peak 14GB->stable 11GB, obeyed, gen clean). NOT yet Pod-verified against the actual GGUF dequant. MPI-148 (v0.27 bump) was CLOSED this session (LTX i2v clean on 32GB 5090/cu128)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-148 CLOSED: LTX i2v clean on 32GB 5090 (cu128 image, first gen-verify of it); gen 2 warm single-shot 1:31; OOM confirmed 24GB-inherent not v0.27 regression",
+      "LTX architecture A/B (local bf16, i2v locked-frame = only clean test; t2v reshuffles composition = useless for A/B): single-stage = best faces/teeth/detail BUT more hallucination + stiffer motion + high VRAM (OOM risk 24GB); two-stage = faithful i2v + dynamic motion (low-res stage-1 = motion feature) + fits 24GB + scales to 30s clips",
+      "DECISION: two-stage WINS, settled. 3-stage rejected (320x244 base destroys i2v faces, 2x re-fault seams). single-stage rejected for product. fp8 rejected (eyes/teeth - the artifact single-stage fixes).",
+      "stage-2 sigma fix identified: our 0.65,0.45,0.25,0.0 -> official 0.85,0.7250,0.4219,0.0 (clean i2v A/B, official sharper). Overturns old 'sigmas didnt change quality' note.",
+      "workflow diffs mapped (ours vs official reference): our stage-1 = floor(target/2) HALF res (nodes 155/156) vs reference fixed base; both use LTXVLatentUpsampler x2 + ltx-2.3-spatial-upscaler-x2-1.1, all-latent no pixel round-trip; our stage-2 sampler SamplerCustomAdvanced euler_cfg_pp; tiled decode ALREADY present (LTXV Spatio Temporal Tiled VAE Decode)",
+      "--vram-headroom mechanism PROVEN local: help confirms both --reserve-vram + --vram-headroom take GB; --vram-headroom = aimdo-native keep-N-free; headroom 4 -> peak 14->11GB stable through inference, freed VRAM went to system RAM (RAM hit 95% at headroom 4)",
+      "findings logged: pod-perf-investigation.md (vram-headroom proof + flag table), ltx-workflow-authoring.md (two-stage decision + sigma fix + 3-stage rejection), MPI-185 checklist"
+    ],
+    "pending": [
+      "POD TEST (the ONE remaining confirm): --vram-headroom=1 on a 24GB 4090 Pod, run LTX i2v, confirm it clears the GGUF dequant OOM AND does not spike container RAM too high",
+      "DEPLOY: how to get the flag onto the Pod - env var at deploy vs bake into start.sh + R2 (see key_decisions)",
+      "SHIP: apply stage-2 sigma fix 0.65->0.85 to the shipped LTX workflows (user does live workflow edits per feedback_live_workflow_small_tweaks)",
+      "OPEN LEVER (parked, not urgent): replace floor(a/2) stage-1 base (nodes 155/156) with an equation picking base from target res + ratio - between div2 (best motion, breaks composition at high tier) and div1 (=single-stage, best detail, high VRAM)",
+      "sub-issues (split off if they diverge): MPI-185 #2 TAESD-None preview on Pod (start.sh:229 --preview-method taesd forced; LTX packed latent cant use taesd); #4 gallery blob-404 revoke race in renderer"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-185",
+    "title": "LTX-2.3 i2v OOM on cloud 4090 (24GB) - GGUF BF16 dequant spike (v0.27)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-185/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-185/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-185/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-185/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-185/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "investigate",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "pod-perf-investigation.md: --vram-headroom live-proof section + GB units in flag table + `=` form deploy note",
+      "ltx-workflow-authoring.md: SINGLE vs TWO-STAGE deconfounded A/B section, TWO-STAGE DECISION (settled), 3-stage rejected, stage-2 sigma fix 0.65->0.85, video-upscaler-is-the-real-unlock note",
+      "MPI-185 checklist updated: 32GB decisive test done, vram-headroom mechanism proven, ready Pod test + RAM-tradeoff caveat",
+      "MPI-148 closed to done (validation.md close-condition satisfied + events appended both logs)"
+    ],
+    "pending": [
+      "After Pod-confirm: bake --vram-headroom 1 as <=24GB default in mpi-ci start.sh + push R2 (start.sh IS R2-fetched, no rebuild)",
+      "Apply the stage-2 sigma fix to comfy_workflows/LTX_*_stage2*.json (user live edits) + update ltx-workflow-authoring.md if the ship value differs",
+      "Session-close: commit touched docs + kanban via mpi-end (app RunPod-branch commits stay local until user authorizes push)"
+    ]
+  },
+  "next_action": {
+    "description": "Pick up MPI-185. The 24GB OOM fix is FOUND and mechanism-proven local: `--vram-headroom 1` (aimdo keeps 1GB free -> the GGUF dequant's +576MB spike fits). The ONE remaining step is the live Pod confirm: on a 24GB 4090 Pod set env CUBRIC_VRAM_MODE=\"--vram-headroom=1\" (the `=` form is MANDATORY - wrapper.py:234 appends CUBRIC_VRAM_MODE as ONE argv token with no split, and wrapper.py is baked into the image so the space form cant be hot-fixed), boot, run LTX i2v. Watch BOTH: (a) does it clear the dequant OOM, (b) does container RAM spike too high (24GB Pods have ~40-57GB RAM, less than local 64GB; headroom moves VRAM->RAM). DEPLOY DECISION FIRST: if the user can set env vars in the RunPod console at deploy time, use that to TEST (reversible); if they cannot run comfyui/set env from the Pod terminal, BAKE --vram-headroom into start.sh + push to R2 instead (start.sh line 159 reads CUBRIC_VRAM_MODE; the bake makes it unconditional). If Pod-clean -> bake as <=24GB default + R2 push. Also queued: apply the stage-2 sigma fix 0.65->0.85 to the shipped LTX workflows (user live-edits).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "TWO-STAGE is the LTX architecture (user, settled 2026-07-04) - do NOT reopen single-stage/3-stage/fp8. Two-stage: faithful i2v + dynamic motion (low-res stage-1 IS a motion feature) + fits 24GB + 30s clips. Its soft-face/teeth-morph cost is fixable by 2K/4K bump OR a future video upscaler (the real unlock, dont have one).",
+      "The 24GB OOM is GGUF-dequant-specific (sample time), NOT VAE decode - so tiled VAE decode wouldnt fix THIS OOM (user chose flag-first, targets the actual site). Tiled decode already in our graph anyway; its value is long-clip decode, quality-neutral, only slower.",
+      "--vram-headroom over --reserve-vram: --vram-headroom is aimdo-native (keep N GB free above watermark); --reserve-vram is an OS carve-out. Both GB. Use headroom 1 (not the 4 tested locally) - dequant needs only 0.6GB; over-reserving = more RAM offload = slower.",
+      "DEPLOY: env-var-at-deploy (CUBRIC_VRAM_MODE in RunPod console) is the reversible TEST path; bake-into-start.sh+R2 is the SHIP path (and the only path if the user cant set Pod env/terminal). start.sh IS R2-fetched so baking needs NO image rebuild; wrapper.py is BAKED so its single-token bug cant be hot-fixed - hence the `=` form.",
+      "WRAPPER SINGLE-TOKEN BUG: wrapper.py:234 does cmd.append(self.vram_mode) (no .split()), so multi-token flags like `--vram-headroom 1` arrive as one broken argv. Use `--vram-headroom=1` (single token). A proper fix (cmd += vram_mode.split()) needs an image REBUILD - dont bother unless baking anyway.",
+      "i2v-locked-frame is the ONLY clean workflow A/B - t2v reshuffles the whole composition on any param change (=new seed). Wasted 4 t2v comparisons before switching to i2v. Any future LTX A/B: use i2v, locked start frame, toggle one variable."
+    ],
+    "constraints": [
+      "All live Pod ops (create/deploy/set-env/gen) are USER-only; agent guides, user clicks.",
+      "Live workflow edits: agent does STRUCTURAL edits, USER sets knob values in the ComfyUI UI; live save = truth (feedback_live_workflow_small_tweaks).",
+      "Pod LTX is hard-GGUF (Q8) - dependencies.js:305 + models.js:310, engine rule, not VRAM-gated. Local is bf16. So local CANNOT reproduce the GGUF dequant spike - local proved the flag MECHANISM only.",
+      "app RunPod-branch commits (54a62ce, 71da6a9) are LOCAL - push is user-authorized.",
+      "The engine placeholder inputs (placeholder.png, ltx_silence.wav, ltx_audio_latent_00001_.latent, ltx_video_latent_00001_.latent) get GC'd when the app closes; source is comfy_workflows/input/ - copy to engine/ComfyUI_windows_portable/ComfyUI/input/ to run engine ComfyUI standalone.",
+      "Local ComfyUI was killed at session end (port 8188 clear) so the app can launch its own."
+    ],
+    "files_modified": [
+      "docs/builder/research/ltx-workflow-authoring.md",
+      "docs/builder/research/pod-perf-investigation.md",
+      ".agents/mpi-kanban/tasks/MPI-185/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-185/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-148/validation.md",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-148/task.json",
+      ".agents/mpi-kanban/tasks/MPI-185/task.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-185/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-185/checklist.md",
+      "docs/builder/research/ltx-workflow-authoring.md",
+      "docs/builder/research/pod-perf-investigation.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "RunPod/remote engine",
+      "LTX-2.3 authoring/research",
+      "ComfyUI engine",
+      "build/release"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    "docs/builder/research/ltx-workflow-authoring.md",
+    "docs/builder/research/pod-perf-investigation.md",
+    "docs/runpod-troubleshooting.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-04T02:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/b55ec6c5-4e3c-403f-a74a-fe702d4bc640.json and use mpi-continue to continue from where we left off. Context: this session (1) CLOSED MPI-148 (ComfyUI v0.27 bump - LTX i2v gen'd clean on a 32GB 5090/cu128, confirming the earlier 24GB OOM is 24GB-inherent not a v0.27 regression); (2) SETTLED the LTX workflow architecture - TWO-STAGE is the winner, do NOT reopen single-stage/3-stage/fp8 (all evaluated + rejected; two-stage wins on i2v faithfulness + dynamic motion + fits 24GB + 30s clips); (3) found the 24GB OOM fix - the OOM is the GGUF dequantize_blocks_BF16 +576MB spike on a headroom-starved 24GB card, fixed by `--vram-headroom 1` (aimdo keeps 1GB free), mechanism LIVE-PROVEN locally (headroom 4 dropped inference peak 14GB->stable 11GB, obeyed, gen clean, freed VRAM went to system RAM). The active card is MPI-185 (in doing). The ONE remaining step is the live Pod confirm: on a 24GB 4090 Pod set env CUBRIC_VRAM_MODE=\"--vram-headroom=1\" (the `=` form is MANDATORY because wrapper.py appends the env as one un-split argv token and is baked into the image), run LTX i2v, and confirm it clears the dequant OOM WITHOUT spiking container RAM too high (24GB Pods have ~40-57GB RAM, less than local's 64GB; the flag trades VRAM for RAM). DEPLOY DECISION: if the user can set env vars in the RunPod console at deploy time, use that to test (reversible); if not, bake `--vram-headroom 1` into mpi-ci start.sh (line 159 reads CUBRIC_VRAM_MODE) and push to R2 - start.sh is R2-fetched so NO image rebuild is needed. Also queued: apply the stage-2 sigma fix 0.65->0.85 (official values, proven sharper in a clean i2v A/B) to the shipped comfy_workflows/LTX_*_stage2*.json - the user does live workflow knob edits, agent does structural edits. All live Pod ops are USER-only."
+}
