@@ -1,33 +1,24 @@
-# MPI-186 — Checklist
+# MPI-186 — Checklist (research-settled: registry + shrink)
 
-## Phase 0 — SPIKE (gate; USER-run on live GPU Pod)
-- [ ] Clone ComfyUI v0.27.0 to a throwaway volume dir
-- [ ] `pip --target` deps to volume, torch trio EXCLUDED
-- [ ] Import probe: `import comfy_aimdo; import comfy_kitchen` from PYTHONPATH-only — no error
-- [ ] Boot ComfyUI from volume + image torch; boot log shows `aimdo inited` (NOT legacy fallback)
-- [ ] `torch.__version__` from PYTHONPATH is the image's `+cu126`/`+cu128` build (not shadowed)
-- [ ] One real gen (LTX/video) completes clean, no OOM
-- [ ] Result recorded in validation.md → PASS proceeds / FAIL closes wontfix
+## Research (DONE 2026-07-04 — from docs, no Pods spent)
+- [x] Cold-start mechanism researched (research/runpod-coldstart-docs.md) — per-host cache; ours cold-pulls GHCR
+- [x] Dead levers confirmed: template registration, "Official" chasing, FlashBoot (Serverless-only)
+- [x] Real levers confirmed: image size, Docker Hub>GHCR, Secure Cloud, host reuse
+- [x] Serverless fit assessed (research/serverless-fit.md) — NOT a fit (breaks live preview + warm session)
 
-## Phase 1 — start.sh volume-install flow
-- [ ] Sentinel compare vs `$CUBRIC_COMFYUI_REF`
-- [ ] Ephemeral guard (`CUBRIC_EPHEMERAL=1` → keep baked)
-- [ ] Atomic install (`.tmp` → mv, sentinel written LAST, clean prior `.tmp`)
-- [ ] torch trio excluded from `--target`
-- [ ] Fallback to baked on clone/pip failure (no crash-loop)
-- [ ] Export CUBRIC_COMFY_MAIN + PYTHONPATH to volume paths
-- [ ] Ship via `publish-runtime.sh stable` (no rebuild) + live-verify fresh + warm boot
+## Phase 1 — magnitude measurements (only these need live numbers)
+- [ ] 1a. Push one-off copy to Docker Hub; cold-pull GHCR vs Docker Hub on a fresh RunPod host → seconds (USER-run Pod)
+- [ ] 1b. `docker history` current image → per-layer size table (agent/CI, no Pod)
 
-## Phase 2 — extra_model_paths.yaml baked-nodes stanza
-- [ ] Add `/opt/ComfyUI/custom_nodes` absolute stanza
-- [ ] Live: all 7 baked packs load; LTX gen + video gen both succeed
+## Phase 2 — shrink cut-list (read-only survey; edits land in MPI-189)
+- [ ] Multi-stage feasibility: sage in -devel stage, ship -runtime base; measure size delta
+- [ ] Confirm pip cache off everywhere; .pyc/__pycache__ strippable
+- [ ] Ranked/sized cut-list + "do not touch" (torch, sage) in research/decision.md
 
-## Phase 3 — Dockerfile
-- [ ] Remove baked `pip install -r requirements.txt` (the 5GB); keep torch/sage/nodes/weights
-- [ ] Decide baked-ComfyUI fallback (recommend keep small clone, drop deps layer only)
-- [ ] Rebuild via build-pod-image skill; measure new size vs current
-- [ ] Anon-pull-verify tags; fresh-volume + warm-volume live gen
-
-## Phase 4 — bumps + docs
-- [ ] Bump POD_IMAGE_VERSION (routes/remotePodLifecycle.js) + app restart
-- [ ] Update docs/runpod-remote-engine.md §6 + docs/builder/02-image-and-rebuild.md
+## Phase 3 — WRITE THE DECISION (deliverable → feeds MPI-189)
+- [ ] decision.md: cold-start cause (settled) + registry choice + 1a seconds
+- [ ] decision.md: placement (Secure Cloud; Stop-not-Delete) note
+- [ ] decision.md: ranked shrink cut-list (apply-in-189 / skip)
+- [ ] decision.md: serverless explicitly OUT (link serverless-fit.md)
+- [ ] Update MPI-189 card body with the decision summary
+- [ ] validation.md records decision + evidence → card done
