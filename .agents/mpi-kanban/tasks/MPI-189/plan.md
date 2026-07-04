@@ -13,7 +13,14 @@ both on ONE new image. Implementation runs in a FRESH session; this is the plan 
 - comfy-aimdo **0.4.10** (UNCHANGED — MPI-187 proved the fast Pod ran the SAME aimdo; the lever
   is the `+cu130` CUDA-13 build, NOT torch version or aimdo). comfy-kitchen unchanged.
 - **NOTE the lever is the cu130 BUILD, not the torch minor** — torch 2.10+cu130 = ~11s;
-  torch 2.11+cu126 = 126s. Do NOT "upgrade" torch past 2.10 thinking newer = faster.
+  torch 2.11+cu126 = 126s. Do NOT "upgrade" torch past 2.10 thinking newer = faster. The real
+  trap is pinning a `+cu126`/`+cu128` wheel by accident — the `--index-url .../whl/cu130` is the
+  load-bearing line.
+- **VERSION DOUBLE-SOURCED (do not re-litigate):** (a) live `pip list` probe on the ~11s Pod,
+  recorded in MPI-187 events; (b) RunPod's build file `docker-bake.hcl` in
+  github.com/runpod-workers/comfyui-base (`TORCH_VERSION_5090 = "2.10.0+cu130"`). Both agree:
+  torch **2.10.0**, NOT 2.11/2.12. cuda12.8 and cuda13.0 ship the SAME torch 2.10.0 — only the
+  CUDA suffix differs, confirming the toolkit build (not the torch number) is the variable.
 
 **Decisions locked (user, this session):**
 - Base = RunPod's **runpod/pytorch cu130 `-runtime`** variant (familiar base; cu128 already uses
