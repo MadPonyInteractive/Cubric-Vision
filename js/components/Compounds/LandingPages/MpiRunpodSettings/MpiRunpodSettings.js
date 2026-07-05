@@ -13,6 +13,7 @@ import { secretsClient } from '../../../../core/secretsClient.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
 import { ce, qs } from '../../../../utils/dom.js';
 import { isStockRefusal } from '../../../../utils/runpodErrorClassify.js';
+import { APP_CONFIG } from '../../../../../dev_configs/app_config.js';
 
 /**
  * MpiRunpodSettings — the RunPod Remote Engine section of the Settings panel.
@@ -86,6 +87,9 @@ export const MpiRunpodSettings = ComponentFactory.create({
                             <span class="mpi-settings__hint" id="mpiSettingsRunpodConnectHint"></span>
                             <a class="mpi-settings__runpod-console-link" id="mpiSettingsRunpodConsoleLink" href="https://console.runpod.io/pods" target="_blank" rel="noopener noreferrer">Open in RunPod console</a>
                             <span class="mpi-settings__hint">Check Pod state, telemetry, logs, and spend on RunPod. Opens the active Pod when connected, otherwise your Pods list.</span>
+                            ${APP_CONFIG.dev_mode ? `
+                            <a class="mpi-settings__runpod-console-link" id="mpiSettingsRunpodComfyLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Open ComfyUI (dev)</a>
+                            <span class="mpi-settings__hint" id="mpiSettingsRunpodComfyHint" hidden>Dev-only: opens the Pod's raw ComfyUI web UI (no auth). Available once the engine is ready.</span>` : ''}
                         </div>
                         <div class="mpi-settings__form-group">
                             <div id="mpiSettingsRunpodDeleteOnQuitSlot"></div>
@@ -223,6 +227,22 @@ export const MpiRunpodSettings = ComponentFactory.create({
                 : 'https://console.runpod.io/pods';
         }
 
+        // MPI-203 (dev_mode only): point the "Open ComfyUI" link at the live Pod's
+        // raw ComfyUI web UI (RunPod proxy on 8188, exposed dev-side by
+        // remotePodLifecycle.js). Shown only when the engine is READY — the port
+        // isn't reachable before the Pod boots. Hidden otherwise. Element only
+        // exists in dev builds (template gate), so bail early on release.
+        function _setComfyLink(root, ready) {
+            const a = qs('#mpiSettingsRunpodComfyLink', root);
+            const hint = qs('#mpiSettingsRunpodComfyHint', root);
+            if (!a) return; // release build — link not rendered
+            const podId = _runpodCfg().podId;
+            const show = !!(ready && podId);
+            if (show) a.href = `https://${podId}-8188.proxy.runpod.net`;
+            a.hidden = !show;
+            if (hint) hint.hidden = !show;
+        }
+
         // Reflect the latest known status on the button + label. `status` is the
         // /remote/comfy/status shape ({ running, ready }) or null when we have
         // not polled yet. Connect requires a picked GPU; once a Pod is running it
@@ -231,6 +251,7 @@ export const MpiRunpodSettings = ComponentFactory.create({
             if (!_engineConnectInst) return;
             const cfg = _runpodCfg();
             _setConsoleLinkHref(root);
+            _setComfyLink(root, !!(status && status.ready)); // MPI-203 dev-only door
             if (!cfg.enabled) {
                 _setEngineStatusText(root, 'disabled');
                 _engineBtnLabelSet('Connect');

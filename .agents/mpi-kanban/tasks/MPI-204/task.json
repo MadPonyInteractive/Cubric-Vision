@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-204",
+  "title": "Dev-only door: expose Pod ComfyUI on 8188 with an in-app \"Open ComfyUI\" link",
+  "description": "Replaced the temporary .expose-comfy marker/CUBRIC_EXPOSE_COMFY debug hack (MPI-192) with a permanent, developer-gated feature so a dev can open the Pod's raw ComfyUI web UI in a browser for experiments. Backend (routes/remotePodLifecycle.js): added server-side _devMode (reads BUILD_HASH from js/core/buildInfo.js, mirroring main.js loadAppConfig — 'dev' for source runs, real commit hash for releases); the 8188 port push + CUBRIC_COMFY_LISTEN=0.0.0.0 now fires only when _devMode, so a shipped release NEVER opens the unauthenticated port. Frontend (MpiRunpodSettings.js): dev-only 'Open ComfyUI (dev)' link in RunPod Settings, template-gated on APP_CONFIG.dev_mode, shown only when the engine is READY and a podId exists, href = https://<podId>-8188.proxy.runpod.net. Security resolution for the always-on ask: the port is unauthenticated, so instead of always-on it rides the existing dev_mode gate (same flag that reveals the component gallery). LIVE-PROVEN 2026-07-06: link rendered in Settings when ready, click opened raw ComfyUI (pod 4xxligyiohwabz) in the browser.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-06T01:00:00Z",
+  "updated_at": "2026-07-06T01:10:00Z",
+  "links": {
+    "validation": "validation.md",
+    "events": "events.jsonl"
+  },
+  "activeSessionTitle": "MPI-204 dev-only ComfyUI door",
+  "tags": [
+    "runpod",
+    "remote-engine",
+    "dev-mode",
+    "comfyui"
+  ],
+  "priority": "medium"
+}

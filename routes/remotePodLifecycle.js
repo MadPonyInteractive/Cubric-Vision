@@ -30,6 +30,19 @@ const state = require('./remotePodState');
 const { getRemoteMode, setRemoteMode, _authHeaders } = state;
 const _mode = state.getMode(); // live singleton — setRemoteMode mutates in place
 
+// dev_mode, server-side. Mirrors main.js loadAppConfig() / dev_configs/app_config.js:
+// BUILD_HASH === 'dev' for source/dev runs, a real commit hash for release builds.
+// Used to gate the raw-ComfyUI-on-8188 door (MPI-203) so it's a developer-only tool
+// and never opens an unauthenticated port on a shipped release. Read once at load.
+const _devMode = (() => {
+  try {
+    const src = require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'js', 'core', 'buildInfo.js'), 'utf8');
+    const m = src.match(/BUILD_HASH\s*=\s*['"]([^'"]+)['"]/);
+    return (m ? m[1] : 'dev') === 'dev';
+  } catch { return false; } // default off — never expose on a build we can't read
+})();
+
 // Pod image spec. PyTorch + ComfyUI live in the image (Design A); the volume
 // holds models only (arch-agnostic).
 // v0.12.0 (MPI-189): SINGLE cu130 image — COLLAPSES the MPI-70 two-profile split
@@ -467,19 +480,16 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   } else {
     spec.gpuTypeIds = [gpuTypeId];
     spec.gpuCount = 1;
-    // MPI-192: opt-in DEBUG exposure of the internal ComfyUI (no auth!) so a
-    // workflow can be queued directly in its web UI — isolates wrapper-vs-image
-    // behavior (the MPI-191 A/B). Never on by default. Two triggers: env
-    // CUBRIC_EXPOSE_COMFY=1, or a `.expose-comfy` marker file in the app root
-    // (env doesn't survive how Electron gets launched from a fresh terminal —
-    // the file works regardless of launcher; delete it to turn the door off).
+    // MPI-203: DEV-ONLY door — expose the internal ComfyUI on 8188 so a developer
+    // can open its raw web UI in a browser (RunPod proxy:
+    // https://<podId>-8188.proxy.runpod.net, surfaced as an "Open ComfyUI" link in
+    // Settings once ready). Gated on _devMode (BUILD_HASH === 'dev') so a shipped
+    // release NEVER opens this unauthenticated port. There is NO AUTH on 8188.
     // Requires runtime start.sh >= 2026-07-05 (CUBRIC_COMFY_LISTEN default-only).
-    const exposeComfy = process.env.CUBRIC_EXPOSE_COMFY === '1'
-      || require('fs').existsSync(require('path').join(__dirname, '..', '.expose-comfy'));
-    if (exposeComfy) {
+    if (_devMode) {
       spec.ports.push('8188/http');
       spec.env.CUBRIC_COMFY_LISTEN = '0.0.0.0';
-      logger.warn('runpod', 'DEBUG: exposing raw ComfyUI on 8188 (CUBRIC_EXPOSE_COMFY=1) — no auth on that port');
+      logger.info('runpod', 'dev_mode: exposing raw ComfyUI on 8188 (no auth) for browser access');
     }
     // Ephemeral "Any region" Pod (MPI-78): tell the image to root model/cache/node
     // data on the CONTAINER disk (start.sh: CUBRIC_EPHEMERAL=1 → /cubric-data) instead

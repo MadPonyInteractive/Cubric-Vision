@@ -69,7 +69,7 @@ Fixed 2026-07-02 (`v0.10.4-cpu`), live-verified (Settings volume bar on a fresh 
 
 ### RunPod "Edit Pod" RECREATES the container — /root is wiped (MPI-197 side-find)
 
-Learned 2026-07-05 (live, twice). Editing a running Pod in the RunPod console (adding an exposed port, changing env) does NOT restart in place — it RECREATES the container: everything outside the network volume dies, including `/root` (re-downloaded models, side-launched processes, shell state). "Restart survives" claims apply only to in-place restarts (`/wrapper/restart-comfy`, container reboot). Need a new port/env on a debug pod → set it at CREATE time (e.g. `.expose-comfy` marker / `CUBRIC_EXPOSE_COMFY=1` before Connect, MPI-192), or expect to re-download to container disk.
+Learned 2026-07-05 (live, twice). Editing a running Pod in the RunPod console (adding an exposed port, changing env) does NOT restart in place — it RECREATES the container: everything outside the network volume dies, including `/root` (re-downloaded models, side-launched processes, shell state). "Restart survives" claims apply only to in-place restarts (`/wrapper/restart-comfy`, container reboot). Need a new port/env on a debug pod → set it at CREATE time, or expect to re-download to container disk. Since MPI-204 the 8188 ComfyUI door auto-exposes at create in dev builds (`dev_mode` / `BUILD_HASH === 'dev'`) — no `.expose-comfy` marker needed; an "Open ComfyUI (dev)" link appears in RunPod Settings once the engine is ready.
 
 ## CPU "download mode" Pod (MPI-88)
 
