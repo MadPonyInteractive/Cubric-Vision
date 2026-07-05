@@ -27,7 +27,53 @@ function _isOutOfSpaceError(error) {
 const downloadService = {
     _eventSource: null,
 
-    async start(modelId, dependencies) {
+    // MPI-184 — serial install queue. The app used to POST every install
+    // immediately, so clicking Install on 3 models fired 3 concurrent
+    // /download/start requests. On a small CPU download-Pod that spawns N
+    // independent aria2c installs (48+ sockets) which starves the wrapper: it
+    // stops answering the SSE stream (UI freezes, 'bad-response' → 'silent-stall')
+    // and a concurrent write into CUSTOM_NODES_DIR zeroes the node-detect set-diff
+    // (false 'archive produced no folder' dialog). Serializing the install
+    // lifecycle app-side means the wrapper only ever runs ONE install at a time —
+    // no cross-install starvation, no set-diff race — with no wrapper rebuild.
+    // Only install (start) is queued; pause/resume/cancel/uninstall stay direct.
+    _installChain: Promise.resolve(),
+
+    start(modelId, dependencies) {
+        // Chain each install behind the previous one and only release the next
+        // when THIS one reaches a terminal SSE event (complete/failed/cancelled).
+        // Awaiting the terminal event — not just the POST, which returns as soon
+        // as the job is enqueued — is what actually serializes the downloads.
+        const run = () => this._doStart(modelId, dependencies)
+            .then(() => this._awaitTerminal(modelId));
+        // Never let one install's rejection break the chain for the next.
+        this._installChain = this._installChain.then(run, run);
+        return this._installChain;
+    },
+
+    // Resolve when the given model reaches a terminal download state, or after a
+    // safety timeout so a dropped SSE event can never wedge the queue forever.
+    _awaitTerminal(modelId) {
+        return new Promise((resolve) => {
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                offComplete(); offFailed(); offCancelled();
+                clearTimeout(timer);
+                resolve();
+            };
+            const match = (d) => !d || d.modelId === modelId;
+            const offComplete = Events.on('download:complete', (d) => match(d) && finish());
+            const offFailed = Events.on('download:failed', (d) => match(d) && finish());
+            const offCancelled = Events.on('download:cancelled', (d) => match(d) && finish());
+            // 30 min ceiling — longer than any single model install; a lost
+            // terminal event releases the queue instead of stalling it.
+            const timer = setTimeout(finish, 30 * 60 * 1000);
+        });
+    },
+
+    async _doStart(modelId, dependencies) {
         // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
         // (download:started, download:progress) that fire before the SSE open event.
         this._ensureSSE();
