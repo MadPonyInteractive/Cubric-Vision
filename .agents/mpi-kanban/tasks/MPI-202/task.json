@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-202",
+  "title": "Model card shows INSTALLED while a top-up download is still running.",
+  "description": "When a model is already partially on the volume (e.g. LTX 60.5/61.5GB) and load/reconcile finds ~1GB missing, the app fires a top-up download job — but the card badge/button reads INSTALLED (green) while the progress bar is actively running (seen live: LTX '61.4GB / 61.5GB — 63 KB/s' under an INSTALLED button). Root cause: MpiInstalledDisplay.js:250 `const isComplete = downloadState === 'complete' || installed;`. The stale `installed` flag wins over an active job, so the INSTALLED badge (line 256) and installed-state button (line 341) render even though `showProgress` is also true and a download is in flight. Cosmetic/state-priority bug: an ACTIVE download job should beat the `installed` flag in the badge/button precedence. Pre-existing — NOT caused by the aria2 fix (MPI-196) or the sequential-install fix (MPI-184); surfaced during MPI-196 live-verify. Fix: gate `isComplete` (and the badge/button branches) so an in-flight `downloading`/`partial`/`installing` state suppresses the INSTALLED presentation regardless of the `installed` flag.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-05T18:20:00.000Z",
+  "updated_at": "2026-07-05T18:20:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

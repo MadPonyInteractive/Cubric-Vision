@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-202","at":"2026-07-05T18:20:00Z","actor":"vscode","summary":"Created MPI-202 — INSTALLED shown while top-up download runs (MpiInstalledDisplay.js:250 installed-flag precedence). Surfaced during MPI-196 live-verify."}
