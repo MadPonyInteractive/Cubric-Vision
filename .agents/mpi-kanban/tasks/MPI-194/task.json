@@ -3,12 +3,12 @@
   "id": "MPI-194",
   "title": "Volume-pod hot-store: stage >=15GB weight files to the container disk (the MPI-191 fix)",
   "description": "THE MPI-191 fix. Live-proven 2026-07-05 (same-pod A/B): the LTX stage-1->stage-2 gap on volume Pods = re-reading the 40GB transformer from the network volume (dd 750MB/s) every re-fault; cp to container disk collapsed the warm gap 36s->9s, warm full 81s->47s, cold 280s->128s. Design settled with the user: SIZE-THRESHOLD not model-name (any weight file >=~15GB stages to disk on first use — Q8 22GB paid the same tax, small models never did); STICKY (one copy per pod lifetime, no re-copy between gens, evict only on real space pressure, LRU); volume stays the durable library (survives pod deletion, avoids 10MB/s internet re-downloads). Needs container-disk bump 50->~80GB for volume pods (remotePodLifecycle.js:138; $0.007->$0.011/hr). Implementation home: wrapper (has install/manifest/progress-SSE machinery) + start.sh/extra-paths ordering + app preflight via resolveDeps. Read plan.md + the SOLVED banner in docs/builder/research/pod-perf-investigation.md BEFORE implementing — do NOT re-run acquitted axes (wrapper/nodes/flags/torch/ComfyUI-version).",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-05T05:35:00Z",
-  "updated_at": "2026-07-05T05:35:00Z",
-  "links": { "plan": "plan.md", "events": "events.jsonl" },
+  "updated_at": "2026-07-05T07:10:00Z",
+  "links": { "plan": "plan.md", "events": "events.jsonl", "selfcheck": "hotstore_selfcheck.py" },
   "tags": ["runpod", "perf", "ltx", "hot-store", "mpi-191-fix"],
   "priority": "high"
 }

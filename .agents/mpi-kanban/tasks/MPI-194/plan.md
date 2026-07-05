@@ -70,3 +70,39 @@ publish offline first).
 ## Out of scope
 - MPI-193 (dup node-pack quarantine) — separate card, plan ready.
 - Baking weights into the image (11GB image contract, MPI-189) or dropping the volume.
+
+---
+
+## DESIGN DECISIONS — settled with user 2026-07-05 (resolves the 4 open questions above)
+
+1. **Threshold = 15GB PER SINGLE FILE.** Constant, one place, documented. Corrected sizes:
+   LTX text-encoder is **9GB** (not 11) → OUT. **Wan = ~14GB per model** → OUT (under 15).
+   Today the threshold selects ONLY the LTX 40GB transformer. It is deliberately a real
+   size gate, not LTX-hardcoded, so the next big model auto-qualifies.
+2. **Lazy at FIRST GEN, not boot-eager.** User's reason (decisive): boot-eager can't know
+   the NEXT model the user will run. Stage on gen preflight (resolveDeps lists file+bytes).
+   First gen with a ≥15GB file shows a one-time visible staging toast (~55s for 40GB);
+   every later gen is fast. No boot-time model hint needed.
+3. **STICKY + LRU EVICT IS REQUIRED (not optional).** One copy per pod lifetime; a second
+   big model ALSO stages IF the disk has room; if NOT, EVICT least-recently-used staged
+   file(s) to make room, then stage. Eviction must actually work — it is not a stub. At the
+   50GB disk (below) LTX 40GB leaves ~10GB, so two ≥15GB models cannot coexist → switching
+   between two big models evicts each time. Acceptable today (LTX-only); the logic must be
+   correct for when a 2nd model lands.
+4. **Container disk STAYS 50GB.** No bump now — LTX 40GB fits alone; the 9GB TE and 14GB Wan
+   stay on the volume. NO remotePodLifecycle.js change this card.
+   **BUT: document the 15GB threshold + the disk-bump rule durably** (docs/runpod-* or the
+   perf doc): "hot-store stages single files ≥15GB to the container disk; disk is 50GB and
+   fits ONE ≥15GB model (LTX). When a model arrives whose ≥15GB hot-set does not fit in 50GB
+   free (e.g. a 60–70GB weight, or a 2nd big model that must coexist), bump CONTAINER_DISK_GB
+   in remotePodLifecycle.js create payload." So a future big model triggers the bump knowingly.
+
+### Consequences for implementation
+- No create-payload/disk change → the whole fix is wrapper.py + start.sh + app preflight,
+  shipped via publish-runtime.sh (NO image rebuild), SAME as MPI-193.
+- Hot-store state (what's staged + last-used for LRU) lives on the CONTAINER DISK (pod-lifetime,
+  not the volume manifest) — lost on pod delete = safe (disk is a cache).
+- Threshold constant needs to exist BOTH app-side (preflight decides which files to request)
+  and wrapper-side (defensive) — keep them in sync or have the app drive it (app passes the
+  file list; wrapper just stages what it's told + enforces its own floor). Prefer app-drives:
+  app already has per-file bytes from resolveDeps.
