@@ -29,6 +29,7 @@ import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
 import { getModelSettings, getToolSettings } from '../data/projectModel.js';
 import { DEPS } from '../data/modelConstants/dependencies.js';
+import { sizeToGb } from '../data/modelConstants/footprint.js';
 import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
 import { createStageProgress } from './phaseProgress.js';
 import { stagesFor } from '../data/progressStages.js';
@@ -418,6 +419,63 @@ async function _findModelNotLocal(modelId, operation = null) {
     } catch (e) {
         clientLogger.warn('commandExecutor', `local model check failed for ${modelId}: ${e.message}`);
         return null;
+    }
+}
+
+// MPI-194: single-file size at/above which a remote weight is staged from the slow
+// network volume onto the Pod's fast container disk before generating. 15GB (binary,
+// to match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3). Selects only
+// the LTX 41GB transformer today; the 9.45GB TE and <=13.55GB Wan files stay on the
+// volume. See docs/add-model-playbook.md (>=15GB PING-USER gate) + docs/runpod-*.
+const HOT_STORE_MIN_GB = 15;
+
+/**
+ * Remote-engine gen preflight (MPI-194): stage any weight file >= HOT_STORE_MIN_GB
+ * from the Pod's network volume onto its container disk so aimdo's per-stage
+ * re-faults read local NVMe (~9s gap) not the 750MB/s volume (~36s gap). Sticky +
+ * LRU on the Pod side; this call is idempotent (already-staged files return instantly).
+ * Awaited before dispatch so the one-time ~55s first-stage shows a real progress
+ * toast. Best-effort: on any failure the gen still runs from the volume — never blocks.
+ */
+async function _ensureRemoteHotStore(modelId, operation) {
+    const model = getModelById(modelId);
+    if (!model) return;
+    const selectedOps = operation ? [operation] : null;
+    const files = resolveDeps(model, selectedOps, null, 'remote')
+        .map(id => DEPS[id])
+        .filter(dep => dep && dep.filename && sizeToGb(dep.size) >= HOT_STORE_MIN_GB)
+        .map(dep => {
+            // dep.type is often undefined; the real comfy subdir is the first path
+            // segment of filename (e.g. "diffusion_models/ltx-...safetensors").
+            const slash = dep.filename.indexOf('/');
+            if (slash < 0) return null;
+            return {
+                type: dep.type || dep.filename.slice(0, slash),
+                filename: dep.filename.slice(slash + 1),
+                size_bytes: Math.round(sizeToGb(dep.size) * (1024 ** 3)),
+                sha256: dep.sha256 || '',
+            };
+        })
+        .filter(Boolean);
+    if (!files.length) return;
+
+    Events.emit('ui:info', { message: 'Preparing the cloud engine for a faster generation…' });
+    try {
+        const res = await fetch('/remote/hot-store/ensure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files }),
+        });
+        if (!res.ok) {
+            clientLogger.warn('commandExecutor', `hot-store ensure HTTP ${res.status} — generating from volume`);
+            return;
+        }
+        const data = await res.json().catch(() => null);
+        const staged = (data?.results || []).filter(r => r.staged).length;
+        clientLogger.info('commandExecutor', `hot-store: ${staged}/${files.length} file(s) on Pod disk`);
+    } catch (e) {
+        // Non-fatal — the volume copy still works, just slower.
+        clientLogger.warn('commandExecutor', `hot-store ensure failed (${e.message}) — generating from volume`);
     }
 }
 
@@ -889,6 +947,14 @@ export function runCommand(payload) {
                 exec.onError?.(new Error('model_not_local'));
                 return;
             }
+        }
+
+        // MPI-194: remote gen — stage big (>=15GB) weights from the Pod's slow
+        // network volume onto its fast container disk before dispatch (idempotent,
+        // best-effort). Not for a force-local run (no Pod). Awaited so the one-time
+        // ~55s first-stage shows a progress toast rather than a silent stall.
+        if (engine === 'remote' && workingPayload.forceLocal !== true) {
+            await _ensureRemoteHotStore(workingPayload.modelId, workingPayload.operation);
         }
 
         // Load the workflow JSON so we can identify "Output" node ids before

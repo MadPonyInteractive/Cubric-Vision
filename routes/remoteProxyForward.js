@@ -249,6 +249,29 @@ router.post('/remote/upload/model', async (req, res) => {
   }
 });
 
+// MPI-194: forward the renderer's hot-store request to the Pod wrapper, which
+// stages big (>=15GB) weights from the slow network volume onto its fast container
+// disk before generation. Best-effort — the renderer treats any non-2xx as "not
+// staged, generate from the volume", so a failure here never blocks a gen. The
+// wrapper blocks until every file is staged (~55s for the 40GB LTX transformer on
+// first use), so this proxy must not impose a short timeout.
+router.post('/remote/hot-store/ensure', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const upstream = await fetch(`${proxyUrl(_mode.podId)}/wrapper/hot-store/ensure`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body || {}),
+    });
+    const data = await upstream.json().catch(() => ({}));
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    logger.warn('runpod', `hot-store ensure forward failed: ${err.message}`);
+    res.status(502).json({ error: 'hot_store_failed', message: err.message });
+  }
+});
+
 // --- model-init SSE relay (remote-mode intercept; falls through when local) ----
 
 router.get('/comfy/events/stream', async (req, res, next) => {

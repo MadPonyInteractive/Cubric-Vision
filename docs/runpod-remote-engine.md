@@ -134,6 +134,25 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   on a GPU pod OR a CPU download pod — both mount `/workspace`); an idle/unconnected DC
   shows the total-only badge. `statvfs` is the wrong tool (reads the multi-PB container
   overlay, not the quota) — that was the reverted MPI-100 mistake; do NOT re-add it.
+- **Hot-store: big weights are staged volume→container-disk on first use (MPI-194).** The
+  network volume reads at ~750 MB/s; aimdo re-faults a big transformer at every gen-stage,
+  re-reading it from that slow volume = the LTX stage-gap tax (36s warm gap). Fix: on a
+  **remote gen preflight** (`_ensureRemoteHotStore` in `commandExecutor.js`), any single dep
+  file **≥ 15 GB** is copied onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe),
+  which ComfyUI scans BEFORE the volume extra-paths so the fast copy wins with no yaml change.
+  Wrapper endpoint `POST /wrapper/hot-store/ensure` does the copy+sha-verify+SSE progress;
+  it's **sticky** (one copy per pod lifetime) and **LRU-evicts** disk copies only when a NEW
+  stage needs room. The volume stays the durable library (evicting a disk copy is always safe).
+  First stage of the 41 GB LTX transformer adds a one-time ~55s visible "staging" toast to the
+  first remote gen after a fresh pod; every later gen is fast. Only **volume** pods pay the
+  original tax — ephemeral pods (MPI-78) already root models on the disk.
+  **⚠️ Disk budget:** volume-pod container disk is **50 GB** (`CONTAINER_DISK_GB`,
+  `remotePodLifecycle.js`) — fits exactly ONE ≥15GB model (LTX's 41 GB transformer). Today's
+  ≥15GB set = LTX only (Gemma TE 9.45 GB, every Wan file ≤13.55 GB stay on the volume). **When a
+  model arrives whose ≥15GB hot-set does not fit in 50 GB free** (a 60–70 GB weight, or a 2nd big
+  model that must coexist), **bump `CONTAINER_DISK_GB`** — the add-model playbook has the
+  PING-USER gate for this. Threshold constant: `HOT_STORE_MIN_GB` (app) / `HOT_STORE_MIN_BYTES`
+  (wrapper), 15 GB.
 - **Design A (locked):** PyTorch + ComfyUI live in the **Docker image**, NOT the volume → the
   volume has **zero GPU-arch binding** and is portable across every card the image can run.
   Users never reinitialize the volume to switch cards.
