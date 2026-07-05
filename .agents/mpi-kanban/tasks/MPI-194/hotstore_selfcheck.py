@@ -101,6 +101,16 @@ async def main():
     check(not r["staged"] and r["reason"] == "insufficient disk",
           "huge (60GB > 50GB disk) refused -> serve from volume")
 
+    # 7. dryRun toast gate (MPI-194 warm-toast fix): a freshly-staged file reports
+    #    staged (warm -> no toast); a never-staged file reports not (cold -> toast).
+    #    (The huge-refusal step above evicted everything, so stage fresh here.)
+    await ensure("big_B.safetensors", 30 * GB)
+    check(w._hot_is_staged("diffusion_models", "big_B.safetensors"),
+          "staged file reports staged (warm -> no toast)")
+    _mk(volume, "diffusion_models", "big_C.safetensors", 20 * GB)
+    check(not w._hot_is_staged("diffusion_models", "big_C.safetensors"),
+          "never-staged file reports NOT staged (cold -> toast)")
+
     print("\n" + ("ALL PASS" if ok else "FAILURES ABOVE"))
     sys.exit(0 if ok else 1)
 

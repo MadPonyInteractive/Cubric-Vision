@@ -459,13 +459,24 @@ async function _ensureRemoteHotStore(modelId, operation) {
         .filter(Boolean);
     if (!files.length) return;
 
-    Events.emit('ui:info', { message: 'Preparing the cloud engine for a faster generation…' });
+    const post = (body) => fetch('/remote/hot-store/ensure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
     try {
-        const res = await fetch('/remote/hot-store/ensure', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files }),
-        });
+        // Cheap dryRun first: toast ONLY when a real ~55s copy is pending (cold
+        // stage). A warm gen (everything already on disk) shows nothing — the fix
+        // for the "Preparing…" toast firing on every remote gen (MPI-194).
+        const dry = await post({ files, dryRun: true });
+        if (dry.ok) {
+            const info = await dry.json().catch(() => null);
+            if ((info?.pending || 0) > 0) {
+                Events.emit('ui:info', { message: 'Preparing the cloud engine for a faster generation…' });
+            }
+        }
+        // Real ensure (blocks ~55s only on a cold stage; instant when cached).
+        const res = await post({ files });
         if (!res.ok) {
             clientLogger.warn('commandExecutor', `hot-store ensure HTTP ${res.status} — generating from volume`);
             return;
