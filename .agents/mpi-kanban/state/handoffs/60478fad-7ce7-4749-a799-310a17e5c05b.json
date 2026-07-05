@@ -1,0 +1,113 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "60478fad-7ce7-4749-a799-310a17e5c05b",
+  "generated_at": "2026-07-05T18:45:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-197 long-video stage-gap — full pod-side elimination via stock-template + bare-launch + exact-payload replays",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Find why the LTX stage-1->stage-2 gap scales with video length on remote (app-driven) pods: warm 5s video = 45s gap, 10s video = 111s gap, while short gens are fine (MPI-194 hot-store shipped).",
+    "status": "in_progress",
+    "summary": "Eleven pod-side axes tested in one day, ALL ACQUITTED. The exact app payload replayed through the wrapper on our image runs warm 10s/704x1216 in ~120s TOTAL (vs the app's reported 111s GAP alone). Remaining suspect: the app-driven flow itself — preview/event relay backpressure between wrapper and app, or app-side event lag inflating the perceived gap."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Stock RunPod template (runpod/comfyui:cuda13.0, 5090): warm gaps 12s@5s / 22s@10s vs ours 45/111 — proves not aimdo-inherent-on-32GB",
+      "Flipped stock to our exact pins one axis at a time: ComfyUI v0.27.0@bb131be9 (21s), + --preview-method taesd (19s), + all 7 node packs at node_lock pins (19s) — all acquitted",
+      "Manual pod from OUR image (madponyinteractive/cubric-vision-pod:v0.12.0-cu130, 125GB RAM): bare stock-style launch on 8189 = 19s gap — image + host + RAM-size acquitted",
+      "Generated API workflow file (comfy_workflows/LTX_t2v.json) vs authoring template: both 17s — workflow file acquitted",
+      "Volume-backed --input/--output dirs: 17s — acquitted",
+      "Small models (VAEs/upscaler/text-projection) on network volume at 512x960: 17s — acquitted",
+      "EXACT app payload captured from local ComfyUI /history (app gen, cancelled), 3 lora backslashes healed, replayed: bare warm 82.6s vs through-wrapper warm 87.8s — wrapper spawn+HTTP acquitted",
+      "Full res 704x1216 10s warm through wrapper: 121.6s total (models on disk), 118.3s (small models on volume) — resolution and volume-x-res acquitted warm (cold volume run 205.7s = known cold tax)",
+      "MPI-197 card updated with all four rounds; MPI-198 filed (backslash loader paths break LoRA workflows on Linux/macOS LOCAL engine — comfyController.js:1081 heal gated on isRemote())"
+    ],
+    "pending": [
+      "Decisive next test: real app-driven gen on an app-created pod WITH the .expose-comfy debug door; compare app-UI stage gap vs the pod's own /history execution duration (status.messages timestamps)",
+      "If UI gap >> /history duration -> event/preview pipeline convicted -> instrument wrapper WS relay + app SSE consumer for backpressure",
+      "If /history itself shows the churn -> diff app-created pod config vs today's manual pod (92GB vs 125GB host, 50GB volume, hot-store layout, --listen 127.0.0.1)",
+      "Fix candidates once convicted: preview relay decoupling / bounded queue drop-oldest; or hot-store threshold lowering (HOT_STORE_MIN_BYTES 15GB) if churn is real on app pods"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-197",
+    "title": "Long-video stage-gap scales with frames (aimdo VRAM<->RAM offload on 32GB) — separate from the MPI-191 volume tax",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-197/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-197/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "instrument", "test-on-pod"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-197 task.json description carries the full four-round acquittal matrix with numbers",
+      "MPI-198 card filed for the Linux/macOS local-engine backslash loader bug (release-blocker tag)"
+    ],
+    "pending": [
+      "start.sh line 245 hardcodes 'export CUBRIC_COMFY_ENABLED=1' — pod-env override impossible; change to ${CUBRIC_COMFY_ENABLED:-1} in mpi-ci (uncarded)",
+      "RunPod 'Edit Pod' RECREATES the container and wipes /root — document in docs/runpod-troubleshooting.md or docs/builder/",
+      "Wrapper hot-store threshold HOT_STORE_MIN_BYTES=15GB means only the 40GB transformer is disk-staged; gemma/VAEs/upscaler/loras serve from volume on real pods — acquitted warm today but relevant if app-pod churn is confirmed real",
+      "MPI-197 findings should eventually land in docs/builder/research/pod-perf-investigation.md (do NOT write there without user flow; card holds everything)"
+    ]
+  },
+  "next_action": {
+    "description": "Terminate leftover test pods if still running (user was reminded). Then: create a real pod THROUGH THE APP, open the MPI-192 debug door (.expose-comfy marker on the volume, gitignored — see docs/runpod docs), run a real app-driven 10s 704x1216 LTX gen, note the app-UI stage-1->stage-2 gap, then fetch that pod's ComfyUI /history entry (GET /wrapper/history/{prompt_id} with Bearer CUBRIC_TOKEN, or direct 8188 /history via the door) and compare execution_start->execution_success duration vs the UI-perceived gap. Disagreement = event/preview pipeline convicted; agreement = diff that pod's config vs today's manual pod.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "One-axis-per-flip discipline on live pods instead of multi-variable guesses — this is what produced clean acquittals",
+      "Captured the EXACT app payload from the LOCAL engine's ComfyUI /history (injection code is engine-shared) instead of enumerating injection params by eye",
+      "Replays submitted via wrapper's own /wrapper/prompt endpoint (Bearer token) to include the wrapper HTTP path in the test",
+      "Kept MpiClearVram and all workflow structure identical in replays — only seed (node 77) and width/height (nodes 88/89) were varied"
+    ],
+    "constraints": [
+      "ComfyUI full-graph cache: re-running an identical payload returns in 0.2s — ALWAYS bump seed (prompt node '77' inputs.int) between replays",
+      "Wrapper comfy binds 127.0.0.1 on production pods — reach it via /wrapper/* endpoints with 'Authorization: Bearer <CUBRIC_TOKEN>', or open the .expose-comfy door",
+      "Killing the wrapper's ComfyUI kills the container (supervisor os._exit safety contract) — use POST /wrapper/restart-comfy instead",
+      "RunPod web terminal + direct-TCP SSH need agent/sshd our product image lacks; basic ssh.runpod.io gateway works when the account SSH key existed BEFORE pod creation",
+      "RunPod proxy only routes ports in the exposed-HTTP list; Edit Pod to add a port RECREATES the container (wipes /root, models need re-download)",
+      "Local gens produce Windows backslash lora_name values — heal to forward slashes before POSTing to any Linux ComfyUI (scratchpad/heal_replay.py does this)",
+      "Stock-pod tests ran at 512x960 to save money; original 111s app measurements were at 704x1216 — always match res when comparing",
+      "Test-pod replay tooling lives in the OLD session scratchpad (C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/1efd9eb0-d9a9-4e90-8b54-b0963df2ad12/scratchpad/): app_payload.json, replay_body*.json, heal_replay.py — copy them out if needed, scratchpads are session-scoped"
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-197/task.json",
+      ".agents/mpi-kanban/tasks/MPI-197/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-198/ (new card)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-197/task.json",
+      "docs/builder/research/pod-perf-investigation.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (spawn cmd ~line 246, hot-store ~line 101, /wrapper/prompt ~line 807)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (env clobber line 245, .expose-comfy door ~line 248)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["runpod-remote-engine", "pod-perf-investigation", "builder"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    "docs/runpod-troubleshooting.md",
+    "docs/builder/research/README.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-05T18:45:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/60478fad-7ce7-4749-a799-310a17e5c05b.json and use mpi-continue to resume MPI-197 (long-video stage-gap). All eleven pod-side axes were acquitted on 2026-07-05 via one-axis-per-flip tests and exact-payload replays (matrix + numbers in the task card). The next action: create a pod through the app with the .expose-comfy debug door, run a real app-driven 10s 704x1216 LTX gen, and compare the app-UI stage-1->stage-2 gap against the pod ComfyUI /history execution duration — disagreement convicts the preview/event pipeline, agreement means diffing the app-pod config vs the manual test pod. Always bump the seed between replays (full-graph cache returns 0.2s otherwise)."
+}

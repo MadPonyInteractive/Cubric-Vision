@@ -10,3 +10,6 @@
 Remaining before closing the card: decide whether the door stays a permanent debug feature
 (then delete nothing) or gets removed after MPI-193/194 verify (then delete the `.expose-comfy`
 marker in the repo root — it currently exposes auth-less ComfyUI on EVERY pod the app creates).
+# MPI-192 Validation
+
+2026-07-05 — .expose-comfy marker + CUBRIC_EXPOSE_COMFY=1 path exercised on two app-created pods (ephemeral + volume): 8188 exposed via RunPod proxy, direct /history + /internal/logs/raw + workflow replays all worked; app log confirms opt-in WARN line at create. Marker DELETED at session close — door defaults off; env/marker remain available for future debug pods.

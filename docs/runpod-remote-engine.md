@@ -220,8 +220,20 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 ## 8. Video output: SaveVideo split (NVENC-free, portable)
 
 Every video workflow ends in the portable native pipeline `CreateVideo → SaveVideo`, NOT
-`VHS_VideoCombine`/`nvenc_h264` (NVIDIA hardware encode is fragile per-card and FAILS on
-Blackwell containers: `OpenEncodeSessionEx failed: unsupported device`). Contract:
+`VHS_VideoCombine`/`nvenc_h264`. **DO NOT revert to `VHS_VideoCombine`** — it was tried and
+abandoned for TWO independent reasons, either of which alone rules it out:
+1. **NVENC per-card fragility:** NVIDIA hardware encode FAILS on Blackwell containers
+   (`OpenEncodeSessionEx failed: unsupported device` / `h264_nvenc … No capable devices found`).
+2. **Cross-platform playback:** `VHS_VideoCombine`'s output would not play reliably across
+   target systems — notably **macOS** (encoder/container profile mismatch). `SaveVideo`'s
+   native H.264/MP4 output plays everywhere. THIS is the primary reason, and it does NOT go
+   away by swapping the nvenc format to a CPU codec — so a "just use `VHS_VideoCombine` with
+   `video/h264-mp4`" revert reintroduces the macOS playback bug. Leave SaveVideo in place.
+
+("Save Video takes the whole video length to encode while Video Combine is instant" is a known
+accepted trade-off — the slower deterministic encode buys portable playback. Not a bug.)
+
+Contract:
 
 - **Final-output node:** title `Output_Video` (+ optional `Output_Audio`, gated by
   `MpiHasAudio` → `MpiIfElseInverted` where the op has a video input).

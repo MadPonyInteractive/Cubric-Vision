@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-201", "type": "task.created", "at": "2026-07-06T00:30:00Z", "actor": "fable", "summary": "Created: mpi-ci start.sh: make CUBRIC_COMFY_ENABLED overridable (${VAR:-1}, line ~245 hardcodes export=1)"}

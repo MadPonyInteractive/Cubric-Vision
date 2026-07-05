@@ -63,6 +63,10 @@ Fixed 2026-07-02. Two traps in `downloadManager.js` `_onRemoteInstallEvent`: (1)
 
 Fixed 2026-07-02 (`v0.10.4-cpu`), live-verified (Settings volume bar on a fresh CPU Pod). Pre-v0.10.4, `Dockerfile.cpu` had NO R2 bootstrap — it baked wrapper.py at build, so every wrapper fix after the image build silently never reached CPU Pods, while the baked `CUBRIC_WRAPPER_VERSION` stamp made `/health` claim a version it didn't run (v0.10.2-cpu: 0.2.22 code labeled 0.2.23, no `/wrapper/disk` → no volume bar). Now the CPU image runs the same `bootstrap.sh` (start script env-selectable via `CUBRIC_START_SCRIPT=start-cpu.sh`) and `publish-runtime.sh` also publishes `start-cpu.sh`. RULE: wrapper edits reach BOTH pod flavors via `publish-runtime.sh` — an image rebuild is only for base/dep changes; trust `/health` `wrapper_version` only on bootstrap-era images (≥v0.10.2 GPU, ≥v0.10.4 CPU).
 
+### RunPod "Edit Pod" RECREATES the container — /root is wiped (MPI-197 side-find)
+
+Learned 2026-07-05 (live, twice). Editing a running Pod in the RunPod console (adding an exposed port, changing env) does NOT restart in place — it RECREATES the container: everything outside the network volume dies, including `/root` (re-downloaded models, side-launched processes, shell state). "Restart survives" claims apply only to in-place restarts (`/wrapper/restart-comfy`, container reboot). Need a new port/env on a debug pod → set it at CREATE time (e.g. `.expose-comfy` marker / `CUBRIC_EXPOSE_COMFY=1` before Connect, MPI-192), or expect to re-download to container disk.
+
 ## CPU "download mode" Pod (MPI-88)
 
 Provision a CPU-only Pod purely to install models onto the volume with **no GPU billing**,

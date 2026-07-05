@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-196",
+  "title": "Move custom notes to R2.",
+  "description": "Custom notes are delaying the installation process in RunPod by a lot. The big model downloads extremely quickly, and then the user needs to wait a long time for the custom notes that only download at 5 MB/s. Let's see what custom nodes we can actually move to R2 and do that.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-05T03:31:03.355Z",
+  "updated_at": "2026-07-05T03:31:03.355Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

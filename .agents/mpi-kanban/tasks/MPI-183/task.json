@@ -5,9 +5,9 @@
   "description": "DEFERRED - pick up only when the Builder is next used (user decides). Follow-up to MPI-148 (app+Pod bumped to v0.27.0). The Builder authoring image is still on the OLD core COMFYUI_REF=eca4757 (tag v0.25.1) - two minors behind. Bump mpi-ci/cubric-vision-builder/Dockerfile COMFYUI_REF eca4757d653654deb5744edf16a862f352800fdc -> bb131be9e83d2f773c90f1d6f1e4b248a498c8c5 (v0.27.0, VERIFIED) so workflows authored on the Builder match app/Pod core. Then: rebuild the Builder image (cu130, LOCAL-only - overflows CI; use the build-pod-image skill Flow B), re-run install_nodes.sh on a fresh Pod, confirm node set + LTX-2.3 workflow load on 0.27. Keep kornia 0.8.2 pin. After rebuild bump the RunPod template (id 2brluktxb4) image tag + update 'Current shipped tag' in the builder README. Edit mpi-ci with git -C c:/AI/Mpi/mpi-ci (separate repo). BRANCH: mpi-ci only.",
   "column": "todo",
   "maturity": "planned",
-  "status": "open",
+  "status": "pending",
   "created_at": "2026-07-03T16:44:26Z",
-  "updated_at": "2026-07-03T16:44:26Z",
+  "updated_at": "2026-07-05T10:56:25.834Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

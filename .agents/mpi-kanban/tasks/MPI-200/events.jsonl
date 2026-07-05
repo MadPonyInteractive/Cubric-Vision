@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-200", "type": "task.created", "at": "2026-07-06T00:30:00Z", "actor": "fable", "summary": "Created: LTX transformer quality tiers: bf16 (high) + fp8_scaled/mxfp8 (balanced) workflow split"}

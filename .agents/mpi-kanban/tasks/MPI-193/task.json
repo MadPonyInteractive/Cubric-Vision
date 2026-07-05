@@ -3,12 +3,23 @@
   "id": "MPI-193",
   "title": "Dedupe Pod custom nodes: quarantine volume copies of image-baked packs at boot",
   "description": "Live-found via the MPI-192 debug door (2026-07-05): ComfyUI on a volume Pod loads FOUR packs TWICE — VHS, KJNodes, MpiNodes, LTXVideo exist baked in /opt/ComfyUI/custom_nodes AND as stale copies in /workspace/comfyui/custom_nodes (volume). Volume copies import LAST and OVERRIDE the image-pinned versions (version drift + ComfyUI's own 'Duplicate VHS install detected' error dialog). The volume custom_nodes scan is LOAD-BEARING (per-model packs + ComfyUI-GGUF live there — do NOT remove the scan). Fix = start.sh boot-time dedupe: quarantine any volume pack whose canonical twin is baked, using ComfyUI's `.disabled` dir-suffix convention. Ships via publish-runtime.sh (NO image rebuild). Full plan in plan.md — read it before implementing.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "closed",
   "created_at": "2026-07-05T05:00:00Z",
-  "updated_at": "2026-07-05T06:20:00Z",
-  "links": { "plan": "plan.md", "events": "events.jsonl", "selfcheck": "dedupe_selfcheck.sh" },
-  "tags": ["runpod", "custom-nodes", "start.sh", "pod-runtime", "mpi-191-fallout"],
+  "updated_at": "2026-07-06T00:30:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "selfcheck": "dedupe_selfcheck.sh",
+    "validation": "validation.md"
+  },
+  "tags": [
+    "runpod",
+    "custom-nodes",
+    "start.sh",
+    "pod-runtime",
+    "mpi-191-fallout"
+  ],
   "priority": "medium"
 }
