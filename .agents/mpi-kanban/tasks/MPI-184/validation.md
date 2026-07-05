@@ -63,14 +63,23 @@ Logic-proven this session: serial harness maxActive=1; immediate-queued + queued
 skip PASS; verify-overlap harness (B download starts after A:verify, before A:complete,
 maxDownloading=1) PASS. All three files `node --check` clean.
 
-## LIVE VERIFY (blocking → done)
-Needs a real CPU download-Pod — cannot verify from dev box.
-1. Connect a CPU pod. Click Install on LTX 40GB + Wan 5B 17GB + PiD 17GB in quick
-   succession. EXPECT: they run sequentially (2nd/3rd wait for the prior to finish);
-   SSE stays alive, bars keep moving; app.log shows NO 'SSE closed (bad-response)' x5
-   → 'silent-stall' loop.
-2. Install a model with a custom-node dep on the pod (with the REBUILT image for B(2)):
-   EXPECT no false "archive produced no folder" dialog.
+## LIVE VERIFY — DONE (user-confirmed 2026-07-05)
+Tested on a real CPU download-Pod + RunPod, app restarted:
+1. ✅ Multi-model install serialized — only ONE download at a time; 2nd/3rd wait;
+   SSE stayed alive, bars kept moving; no bad-response → silent-stall loop.
+2. ✅ QUEUED feedback — queued models show a QUEUED badge + Cancel (not a dead
+   INSTALL button). Single lone install goes STRAIGHT to downloading (no QUEUED
+   flash — the _inFlight fix). Card shows one set of animated dots, Cancel pinned right.
+3. ✅ Verify-overlap — next model's download starts while the prior verifies
+   (two "Verifying…" seen concurrently; confirmed safe — independent sha256 threads,
+   no shared state, only ONE download stream, no wrapper starvation).
+4. ✅ Cancel a queued model — drops it, reverts to Install, and the queue CONTINUES
+   with the next model.
 
-Note: Fix B(2) only takes effect after the pod image is rebuilt + republished
-(`build-pod-image` skill). Fix A is app-only, live the moment the branch build ships.
+Fix A (app serial install queue + queued UX + verify-overlap) FULLY user-verified.
+Fix B(2) (wrapper zip-namelist node-detect) committed in wrapper 0.2.29 — deploys on
+the NEXT pod image rebuild (`build-pod-image` skill); it's a race-proofing improvement,
+not user-facing, and the whole race it fixes can no longer be app-triggered now that A
+serializes installs. B(1)/C skipped (moot once A serializes).
+
+Commits: 6e17996, 789035f, 87f7849, 9fb9b21 (Cubric-Vision RunPod) + 8149575 (mpi-ci).
