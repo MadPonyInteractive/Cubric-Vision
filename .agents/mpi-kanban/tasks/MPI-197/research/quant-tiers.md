@@ -27,7 +27,7 @@ fp8/mxfp8 ~24-25GB + gemma fp4_mixed 9.5GB + VAEs + long-video latents may STILL
 Kotonia measured (LTX-2 PYTHON lib, not ComfyUI): fp8_cast cold-start 23.9GiB but GENERATION peak 58-59GiB at 720p+ — the python pipeline holds both stages resident. ComfyUI+aimdo behaves differently (3090 24GB runs fp8 distilled fine), but treat "fits" claims as unproven until our own pod probe.
 
 ## Test plan (before carding implementation)
-1. weight_dtype fp8_e4m3fn cast probe on 5090 pod (free, mechanism proof).
+1. weight_dtype fp8_e4m3fn cast probe on 5090 pod (free, mechanism proof). Use `fp8_e4m3fn_fast` — plain `fp8_e4m3fn` stores fp8 but matmuls bf16; `_fast` engages Ada+/Blackwell fp8 matmul HW (community 4090: ~1.8x speedup, ~14-15GB peak).
 2. Download Kijai distilled-1.1 fp8_scaled → quality A/B vs bf16 locked seed (faces/text/motion prompts) + boundary timing.
 3. mxfp8 vs fp8_scaled on 5090 (speed) — resolves the native-path conflict; check KJNodes LTX2_NAG artifact bug (issue #576, closed — verify our pin 7f43f2c has fix; we use LTX2_NAG node #426).
 4. Weights to R2 per add-model playbook (NOT HF at build time); models are not version-bumped.
