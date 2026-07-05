@@ -247,6 +247,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
             const isDownloading = ['downloading', 'paused', 'partial'].includes(downloadState);
             const isInstalling = downloadState === 'installing';
+            const isQueued = downloadState === 'queued'; // MPI-184: serialized, POST not fired yet
             const isComplete = downloadState === 'complete' || installed;
             const isCancelled = downloadState === 'cancelled';
             const showProgress = isDownloading || hasPartialProgress;
@@ -255,6 +256,10 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             _clearSlot(badgeSlot);
             if (isComplete) {
                 const badge = MpiBadge.mount(ce('div'), { label: 'INSTALLED', variant: 'success' });
+                badgeSlot.appendChild(badge.el);
+                _children.push(badge);
+            } else if (isQueued) {
+                const badge = MpiBadge.mount(ce('div'), { label: 'QUEUED', variant: 'secondary' });
                 badgeSlot.appendChild(badge.el);
                 _children.push(badge);
             } else if (hasPartialProgress && !installed) {
@@ -320,6 +325,16 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 resumeBtn.on('click', () => emit('resume', {}));
                 actionsSlot.appendChild(resumeBtn.el);
                 _children.push(resumeBtn);
+                const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                cancelBtn.on('click', () => emit('cancel', {}));
+                actionsSlot.appendChild(cancelBtn.el);
+                _children.push(cancelBtn);
+            } else if (isQueued) {
+                // MPI-184: waiting its turn in the serial install queue — no bar to
+                // pause, just a Cancel that drops it from the queue before its POST.
+                const label = ce('div', { className: 'mpi-installed-display__installing-label' });
+                label.textContent = 'Queued…';
+                actionsSlot.appendChild(label);
                 const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancelBtn.on('click', () => emit('cancel', {}));
                 actionsSlot.appendChild(cancelBtn.el);

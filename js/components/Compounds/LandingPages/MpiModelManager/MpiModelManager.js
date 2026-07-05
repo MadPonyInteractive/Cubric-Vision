@@ -526,7 +526,9 @@ export const MpiModelManager = ComponentFactory.create({
 
             const job = state.downloadJobs.find(j => j.modelId === model.id);
             const downloadState = job ? job.status : 'idle';
-            const isActiveDownload = ['downloading', 'paused', 'installing'].includes(downloadState);
+            // 'queued' (MPI-184 serial install queue) counts as active: the card shows
+            // the QUEUED badge + Cancel and freezes op toggles, same as a live download.
+            const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
 
             // Sizes: drafted footprint (what install fetches) for op-keyed models,
             // else the engine-scoped universe — a Pod must show the GGUF footprint,

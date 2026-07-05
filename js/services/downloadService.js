@@ -33,56 +33,86 @@ const downloadService = {
     // independent aria2c installs (48+ sockets) which starves the wrapper: it
     // stops answering the SSE stream (UI freezes, 'bad-response' → 'silent-stall')
     // and a concurrent write into CUSTOM_NODES_DIR zeroes the node-detect set-diff
-    // (false 'archive produced no folder' dialog). Serializing the install
-    // lifecycle app-side means the wrapper only ever runs ONE install at a time —
-    // no cross-install starvation, no set-diff race — with no wrapper rebuild.
+    // (false 'archive produced no folder' dialog). Serializing the install POSTs
+    // app-side means the wrapper only ever runs ONE install at a time — no
+    // cross-install starvation, no set-diff race — with no wrapper rebuild.
     // Only install (start) is queued; pause/resume/cancel/uninstall stay direct.
     _installChain: Promise.resolve(),
 
     start(modelId, dependencies) {
-        // Chain each install behind the previous one and only release the next
-        // when THIS one reaches a terminal SSE event (complete/failed/cancelled).
-        // Awaiting the terminal event — not just the POST, which returns as soon
-        // as the job is enqueued — is what actually serializes the downloads.
-        const run = () => this._doStart(modelId, dependencies)
-            .then(() => this._awaitTerminal(modelId));
+        // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
+        // (download:started, download:progress) that fire before the SSE open event.
+        this._ensureSSE();
+
+        // Create the job + emit download:started IMMEDIATELY (not behind the chain)
+        // so clicking Install on a 2nd/3rd model shows a "Queued" card right away
+        // instead of a dead button. The job starts in 'queued'; _firePost flips it to
+        // 'downloading' when its turn comes. Only the network POST is serialized.
+        // Cancelling a still-queued job (no POST fired yet) drops its job so its turn
+        // is skipped.
+        const job = _createJob(modelId, dependencies);
+        job.status = 'queued';
+        state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
+        state.downloadQueueActive = true;
+        Events.emit('download:started', { modelId, job });
+
+        // Chain the POST behind the previous install and release the next as soon as
+        // THIS one finishes DOWNLOADING (all bytes on disk, now verifying/extracting).
+        // Awaiting the POST alone wouldn't serialize (it returns the moment the job is
+        // enqueued backend-side); waiting for the full terminal event would idle the
+        // download pipe through each verify+extract. Releasing at the download-done
+        // point overlaps the next model's download with the current's verify/extract —
+        // still only ONE aria2 download stream at a time, so no CPU-pod starvation.
+        const run = () => this._firePost(modelId, dependencies)
+            // _firePost returns false when the job was cancelled while queued (POST
+            // skipped) — don't wait on a model the backend never learned about, or the
+            // chain wedges until the safety timeout.
+            .then((fired) => fired ? this._awaitDownloadDone(modelId) : undefined);
         // Never let one install's rejection break the chain for the next.
         this._installChain = this._installChain.then(run, run);
         return this._installChain;
     },
 
-    // Resolve when the given model reaches a terminal download state, or after a
-    // safety timeout so a dropped SSE event can never wedge the queue forever.
-    _awaitTerminal(modelId) {
+    // Resolve when the given model's BYTES are all on disk — it enters verify/extract
+    // (download:installing, or a remote 'verifying'-phase progress tick) — or reaches a
+    // terminal state (fast installs skip a distinct verify phase). A safety timeout
+    // guarantees a dropped signal can never wedge the queue.
+    _awaitDownloadDone(modelId) {
         return new Promise((resolve) => {
             let done = false;
             const finish = () => {
                 if (done) return;
                 done = true;
-                offComplete(); offFailed(); offCancelled();
+                offInstalling(); offProgress(); offComplete(); offFailed(); offCancelled();
                 clearTimeout(timer);
                 resolve();
             };
             const match = (d) => !d || d.modelId === modelId;
+            // Download-done signals — network idle, verify/extract now runs:
+            const offInstalling = Events.on('download:installing', (d) => match(d) && finish());
+            const offProgress = Events.on('download:progress', (d) =>
+                match(d) && d && d.phase === 'verifying' && finish());
+            // Terminal signals — fast install with no separate verify phase, or end:
             const offComplete = Events.on('download:complete', (d) => match(d) && finish());
             const offFailed = Events.on('download:failed', (d) => match(d) && finish());
             const offCancelled = Events.on('download:cancelled', (d) => match(d) && finish());
-            // 30 min ceiling — longer than any single model install; a lost
-            // terminal event releases the queue instead of stalling it.
+            // 30 min ceiling — longer than any single model download; a lost signal
+            // releases the queue instead of stalling it.
             const timer = setTimeout(finish, 30 * 60 * 1000);
         });
     },
 
-    async _doStart(modelId, dependencies) {
-        // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
-        // (download:started, download:progress) that fire before the SSE open event.
-        this._ensureSSE();
+    async _firePost(modelId, dependencies) {
+        // The job was already created + broadcast in start(). If the user cancelled
+        // it while it sat in the queue, its job is gone — skip the POST so we don't
+        // resurrect a cancelled install (and let the chain move on immediately).
+        const job = state.downloadJobs.find(j => j.modelId === modelId);
+        if (!job) return false;
 
-        const job = _createJob(modelId, dependencies);
-        state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
-        state.downloadQueueActive = true;
-
-        Events.emit('download:started', { modelId, job });
+        // This job's turn — leave 'queued', become 'downloading' so the card swaps
+        // the Queued badge for the live progress bar + Pause/Cancel.
+        job.status = 'downloading';
+        state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? job : j);
 
         const res = await fetch('/comfy/models/download/start', {
             method: 'POST',
@@ -103,8 +133,9 @@ const downloadService = {
             } else {
                 Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
             }
-            return;
+            return false; // already emitted download:failed — no terminal wait needed
         }
+        return true; // POST accepted — serialize the next install behind this one
     },
 
     async pause(modelId) {
@@ -132,12 +163,19 @@ const downloadService = {
     },
 
     async cancel(modelId) {
+        // MPI-184: a still-queued job (serial install queue, POST not fired) is unknown
+        // to the backend, so its /cancel is a no-op and no download:cancelled SSE comes
+        // back — the card would never revert from QUEUED to Install. Emit the event
+        // locally in that case so the UI updates. (The listener is idempotent; a live
+        // download still gets its cancel via the backend SSE round-trip below.)
+        const queuedJob = state.downloadJobs.find(j => j.modelId === modelId && j.status === 'queued');
         await fetch('/comfy/models/download/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId }),
         });
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
+        if (queuedJob) Events.emit('download:cancelled', { modelId });
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
 
