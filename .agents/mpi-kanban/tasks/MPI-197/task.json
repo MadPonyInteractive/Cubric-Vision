@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-197",
+  "title": "Long-video stage-gap scales with frames (aimdo VRAM<->RAM offload on 32GB) — separate from the MPI-191 volume tax",
+  "description": "Live-found 2026-07-05 (5090 32GB, MPI-194 hot-store SHIPPED + 42GB transformer confirmed on container disk, warm gens): the LTX stage-1->stage-2 gap SCALES WITH VIDEO LENGTH and the hot-store does NOT fix the long-video case. Warm gaps measured: short ~9s, 5s video 45s, 10s video 111s. Smoking gun on the 10s gen: VRAM usage DROPPED to 17/32GB while RAM ROSE to 66/92GB (short videos ran ~29-31GB VRAM, low RAM). => aimdo OFFLOADS the working set VRAM->RAM because the 10s latent set + 42GB transformer won't co-fit in 32GB VRAM; the stage boundary then pays a heavy VRAM<->RAM shuffle + transformer re-fault that GROWS with frame count (a fixed 42GB disk re-read would cap ~45s flat regardless of length — 111s at 10s proves an additional frame-scaling cost). NOTE stage-2 also includes 'getting ready for inference' setup. DISTINCT root cause from MPI-191 (network-volume read bandwidth, correctly fixed by MPI-194 disk staging — do NOT reopen that). User also running a 30s video to probe for OOM (2026-07-05). NEXT (user-directed): (1) reproduce LOCALLY on a 32GB+ card — does the frame-scaling gap appear off-pod? isolates aimdo-inherent vs pod-specific; (2) reproduce on the OFFICIAL RunPod comfyui template (stock stack, our LTX_t2v.json, 5s+10s) — does stock aimdo do the same? (3) pull the pod log at the 10s (and 30s) stage-1->2 boundary to classify the gap: model reload vs VAE-decode vs offload churn vs OOM. Levers to weigh AFTER diagnosis: keep-transformer-resident, bigger-VRAM host floor (minMemoryInGb / larger card), --reserve-vram tuning, tiled/chunked VAE decode, or accept long videos are offload-bound on 32GB. Read docs/builder/research/pod-perf-investigation.md tier model (page-cache->disk->volume) before testing.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-05T08:12:00Z",
+  "updated_at": "2026-07-05T08:12:00Z",
+  "links": { "plan": "plan.md", "events": "events.jsonl" },
+  "tags": ["runpod", "perf", "ltx", "aimdo", "vram", "long-video", "mpi-191-followup"],
+  "priority": "medium"
+}

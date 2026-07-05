@@ -1,21 +1,23 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 196,
+  "next_id": 198,
   "columns": {
     "todo": [
+      "MPI-197",
       "MPI-183",
       "MPI-184",
-      "MPI-195"
+      "MPI-195",
+      "MPI-196"
     ],
     "doing": [
-      "MPI-194",
       "MPI-193",
       "MPI-192",
-      "MPI-191",
       "MPI-134",
       "MPI-4"
     ],
     "done": [
+      "MPI-194",
+      "MPI-191",
       "MPI-190",
       "MPI-189",
       "MPI-186",
@@ -56,5 +58,5 @@
       "MPI-181"
     ]
   },
-  "updated_at": "2026-07-05T12:00:00Z"
+  "updated_at": "2026-07-05T09:15:00Z"
 }
