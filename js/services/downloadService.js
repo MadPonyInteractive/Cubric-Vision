@@ -38,20 +38,27 @@ const downloadService = {
     // cross-install starvation, no set-diff race — with no wrapper rebuild.
     // Only install (start) is queued; pause/resume/cancel/uninstall stay direct.
     _installChain: Promise.resolve(),
+    // How many installs are ahead in the chain (running + waiting). When 0, a new
+    // install runs immediately, so it must NOT flash 'queued' — it goes straight to
+    // 'downloading'. Only a 2nd+ concurrent install actually waits and shows QUEUED.
+    _inFlight: 0,
 
     start(modelId, dependencies) {
         // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
         // (download:started, download:progress) that fire before the SSE open event.
         this._ensureSSE();
 
-        // Create the job + emit download:started IMMEDIATELY (not behind the chain)
-        // so clicking Install on a 2nd/3rd model shows a "Queued" card right away
-        // instead of a dead button. The job starts in 'queued'; _firePost flips it to
-        // 'downloading' when its turn comes. Only the network POST is serialized.
-        // Cancelling a still-queued job (no POST fired yet) drops its job so its turn
-        // is skipped.
+        // Create the job + emit download:started IMMEDIATELY (not behind the chain) so
+        // clicking Install on a 2nd/3rd model shows a card right away instead of a dead
+        // button. Only start 'queued' when something is actually ahead in the chain;
+        // an install that will run immediately goes straight to 'downloading' so a lone
+        // install never flashes QUEUED. _firePost flips a queued job to 'downloading'
+        // when its turn comes. Only the network POST is serialized. Cancelling a
+        // still-queued job (no POST fired yet) drops its job so its turn is skipped.
+        const willQueue = this._inFlight > 0;
+        this._inFlight += 1;
         const job = _createJob(modelId, dependencies);
-        job.status = 'queued';
+        job.status = willQueue ? 'queued' : 'downloading';
         state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
         state.downloadQueueActive = true;
         Events.emit('download:started', { modelId, job });
@@ -68,8 +75,10 @@ const downloadService = {
             // skipped) — don't wait on a model the backend never learned about, or the
             // chain wedges until the safety timeout.
             .then((fired) => fired ? this._awaitDownloadDone(modelId) : undefined);
-        // Never let one install's rejection break the chain for the next.
-        this._installChain = this._installChain.then(run, run);
+        const settle = () => { this._inFlight -= 1; };
+        // Never let one install's rejection break the chain for the next; always
+        // decrement in-flight so the count returns to 0 when the chain drains.
+        this._installChain = this._installChain.then(run, run).then(settle, settle);
         return this._installChain;
     },
 
