@@ -60,6 +60,25 @@ let _localFallbackNoticeShown = false;
 // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (controller singleton)
 Events.on('remote:connection', ({ connected = false } = {}) => { if (connected) _localFallbackNoticeShown = false; });
 
+// MPI-198: local ComfyUI's loader enum uses the ENGINE-OS separator (Windows '\',
+// Linux/macOS '/'). Baked workflow values ship Windows backslashes, so on a
+// Linux/macOS LOCAL engine (portable builds) they must be healed to '/' too — not
+// only on remote. Cache the server's process.platform once (renderer has no
+// reliable process.platform). '' until fetched; the heal gate treats unknown as
+// win32 (no-op) so a slow/failed fetch never breaks Windows-local.
+let _serverPlatform = '';
+fetch('/system/platform-config')
+    .then(r => (r.ok ? r.json() : null))
+    .then(cfg => { if (cfg && cfg.platform) _serverPlatform = cfg.platform; })
+    .catch(() => { /* stays '' → treated as win32, backslashes untouched */ });
+
+// Heal is needed when the target engine's loader enum uses '/': remote (always
+// Linux Pod) OR local on a non-Windows host.
+function _needsPathHeal(alwaysLocal) {
+    if (!alwaysLocal && remoteEngineClient.isRemote()) return true;
+    return _serverPlatform !== '' && _serverPlatform !== 'win32';
+}
+
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176): this controller
 // resolves httpBase per-instance (remote or local pinned), so it binds httpBase.
 function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
@@ -1069,16 +1088,16 @@ function createEngine({ engine, alwaysLocal }) {
             }
         }
 
-        // 3b. Remote engine: heal path-bearing loader values to the Pod's '/'
-        // separator. BAKED workflow values (lora_name 'LTX2.3\\x', upscale_model,
-        // etc.) ship hardcoded in the workflow JSON with Windows backslashes and
-        // NEVER pass through the dropdown heal (/comfy/list-files → toEngineSep) —
-        // they're injected straight into /prompt. The Linux Pod enumerates with
-        // '/', so 'LTX2.3\\x' fails ComfyUI value_not_in_list even after the Pod
-        // keeps the LTX2.3/ subfolder (MPI-141 fix #1). Local-pinned/local engine
-        // is skipped: Windows ComfyUI lists with '\\', so backslashes already
-        // match — flipping them would BREAK local. (MPI-141)
-        if (!this._alwaysLocal && remoteEngineClient.isRemote()) {
+        // 3b. Heal path-bearing loader values to the '/' separator. BAKED workflow
+        // values (lora_name 'LTX2.3\\x', upscale_model, etc.) ship hardcoded in the
+        // workflow JSON with Windows backslashes and NEVER pass through the dropdown
+        // heal (/comfy/list-files → toEngineSep) — they're injected straight into
+        // /prompt. Any engine whose loader enum uses '/' (remote Linux Pod, OR a
+        // LOCAL engine on Linux/macOS portable builds) fails ComfyUI
+        // value_not_in_list on a backslash value. Windows-local is skipped: its
+        // ComfyUI lists with '\\', so backslashes already match — flipping them
+        // would BREAK local. (MPI-141 remote; MPI-198 local Linux/macOS)
+        if (_needsPathHeal(this._alwaysLocal)) {
             const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
             for (const node of Object.values(workflow)) {
                 if (!node || !node.inputs) continue;

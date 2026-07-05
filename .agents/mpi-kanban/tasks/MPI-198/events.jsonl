@@ -1,0 +1,4 @@
+{"ts": "2026-07-05T12:10:00Z", "event": "task.created", "task": "MPI-198", "column": "todo", "by": "agent", "note": "Found during MPI-197 stock-pod repro; backslash lora_name visible in stock ComfyUI UI"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-198","at":"2026-07-05T12:33:55.729Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-198 from To do to To do."}
+{"ts":"2026-07-05T14:45:00Z","type":"task.moved","id":"MPI-198","from":"todo","to":"doing","by":"agent"}
+{"ts":"2026-07-05T14:55:00Z","type":"task.updated","id":"MPI-198","maturity":"validating","note":"code complete, awaiting Linux/macOS portable live-verify","by":"agent"}
