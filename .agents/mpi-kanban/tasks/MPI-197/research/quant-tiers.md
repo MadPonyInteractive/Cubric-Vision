@@ -32,5 +32,9 @@ Kotonia measured (LTX-2 PYTHON lib, not ComfyUI): fp8_cast cold-start 23.9GiB bu
 3. mxfp8 vs fp8_scaled on 5090 (speed) — resolves the native-path conflict; check KJNodes LTX2_NAG artifact bug (issue #576, closed — verify our pin 7f43f2c has fix; we use LTX2_NAG node #426).
 4. Weights to R2 per add-model playbook (NOT HF at build time); models are not version-bumped.
 
+## Late addenda (post-synthesis straggler, verify during MPI-200)
+- 24GB Ada sizing (community-measured): DEV fp8 OOMs a 24GB card (peak ~23.5GB, crashed at 112MB free — ComfyUI issue #12047); DISTILLED fp8 works at 18-22GB with sequential offload + gemma fp4. We are distilled — fine, but keep gemma fp4 + expect offload on 24GB.
+- CONFLICT (one agent claims): "MXFP8 needs the ComfyUI-Kitchen fork, not core." Contradicts the verified core PR #12907 (merged 2026-03-14, `weight_dtype: mxfp8`, release-noted). Core support is the better-evidenced claim; resolve with the first live mxfp8 load on our v0.27 pod.
+
 ## Key sources
 Kijai repo: huggingface.co/Kijai/LTX2.3_comfy (diffusion_models/) · ComfyUI mxfp8 core support: Comfy-Org/ComfyUI #12907 · NVFP4 quality: zenn.dev rtx5090-nvfp4-quantization-reality · fp8 official bug: Lightricks/LTX-2 issues #193 #205 · quality consensus: HF Lightricks/LTX-2.3 discussions #1 #16 · comfy-quants docs: github.com/Comfy-Org/comfy-quants (ltx2.md)
