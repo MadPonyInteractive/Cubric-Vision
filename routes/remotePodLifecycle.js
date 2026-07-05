@@ -134,7 +134,7 @@ const POD_IMAGE_VERSION_CPU = 'v0.11.0';
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
 // older wrapper 404s /wrapper/disk → app route returns success:false → bar hidden.
-const WRAPPER_VERSION = '0.2.23';
+const WRAPPER_VERSION = '0.2.24';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
@@ -467,6 +467,20 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   } else {
     spec.gpuTypeIds = [gpuTypeId];
     spec.gpuCount = 1;
+    // MPI-192: opt-in DEBUG exposure of the internal ComfyUI (no auth!) so a
+    // workflow can be queued directly in its web UI — isolates wrapper-vs-image
+    // behavior (the MPI-191 A/B). Never on by default. Two triggers: env
+    // CUBRIC_EXPOSE_COMFY=1, or a `.expose-comfy` marker file in the app root
+    // (env doesn't survive how Electron gets launched from a fresh terminal —
+    // the file works regardless of launcher; delete it to turn the door off).
+    // Requires runtime start.sh >= 2026-07-05 (CUBRIC_COMFY_LISTEN default-only).
+    const exposeComfy = process.env.CUBRIC_EXPOSE_COMFY === '1'
+      || require('fs').existsSync(require('path').join(__dirname, '..', '.expose-comfy'));
+    if (exposeComfy) {
+      spec.ports.push('8188/http');
+      spec.env.CUBRIC_COMFY_LISTEN = '0.0.0.0';
+      logger.warn('runpod', 'DEBUG: exposing raw ComfyUI on 8188 (CUBRIC_EXPOSE_COMFY=1) — no auth on that port');
+    }
     // Ephemeral "Any region" Pod (MPI-78): tell the image to root model/cache/node
     // data on the CONTAINER disk (start.sh: CUBRIC_EPHEMERAL=1 → /cubric-data) instead
     // of /workspace. RunPod auto-mounts a small (~20GB) default volume at /workspace on
@@ -968,6 +982,13 @@ router.get('/remote/pod/specs', async (req, res) => {
 // live usage we return `success:false` so the UI shows an explicit
 // remote-unavailable state ("Pod N/A") rather than silently showing LOCAL usage.
 router.get('/remote/pod/stats', async (req, res) => {
+  // MPI-191 A/B probe: CUBRIC_NO_POD_STATS=1 stops the app from ever hitting the
+  // wrapper's /wrapper/stats (whose blocking nvidia-smi runs in the wrapper's
+  // event loop every poll during gen — suspect #1 for the 2.5x gen tax). If the
+  // stage-gap collapses with this set, that suspect is confirmed alone.
+  if (process.env.CUBRIC_NO_POD_STATS === '1') {
+    return res.json({ success: false, source: 'remote', unavailable: true, reason: 'stats_poll_disabled' });
+  }
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
   if (!_mode.active || !podId) {
     return res.json({ success: false, source: 'remote', unavailable: true, reason: 'remote_inactive' });
