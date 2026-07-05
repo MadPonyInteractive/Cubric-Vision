@@ -74,18 +74,14 @@ function _buildBlock(blockKey, normalizedBase, normalizedExtras) {
         if (firstSegment) folderKeys.add(firstSegment);
     }
 
-    // Static extras registered by custom nodes at runtime (Impact Pack, city96 GGUF).
-    // Not derivable from dep filenames — must be listed explicitly. `unet_gguf` is the
-    // category city96/ComfyUI-GGUF registers for GGUF transformers (LTX-2.3 Q8_0 etc.);
-    // it points at the SAME `unet/` folder (the GGUF loader reads from `unet`, the
-    // `unet_gguf` key only populates the node's dropdown), so it must map to `unet/`,
-    // NOT `unet_gguf/`.
+    // Static extras registered by custom nodes at runtime (Impact Pack). Not derivable
+    // from dep filenames — must be listed explicitly. (MPI-190: dropped `unet_gguf`,
+    // the city96/ComfyUI-GGUF category — no GGUF weight resolves to it anymore.)
     const staticExtras = {
         onnx: 'onnx/',
         ultralytics: 'ultralytics/',
         ultralytics_bbox: 'ultralytics/bbox/',
         ultralytics_segm: 'ultralytics/segm/',
-        unet_gguf: 'unet/',
     };
 
     // Core ComfyUI folder types not covered by current deps but needed for completeness.

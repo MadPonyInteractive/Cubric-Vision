@@ -45,9 +45,12 @@ export function canonicalModelId(id) {
  *
  *   dependencies: [...shared...]   // both engines (VAE, encoder, LoRAs, nodes)
  *   engines: {
- *     local:  { extraDeps: ['ltx23-transformer-bf16'],                 workflowSuffix: '' },
- *     remote: { extraDeps: ['ltx23-transformer-gguf', 'ComfyUI-GGUF'], workflowSuffix: '_gguf' },
+ *     local:  { extraDeps: ['some-local-only-weight'],  workflowSuffix: '' },
+ *     remote: { extraDeps: ['some-remote-only-weight'], workflowSuffix: '_remote' },
  *   }
+ *
+ * (No model uses this today — LTX-2.3's bf16/GGUF split was reverted in MPI-190.
+ * The mechanism stays for a future engine-split model.)
  *
  * `engine` selects which list to add:
  *   'local'  → engines.local.extraDeps
@@ -80,8 +83,8 @@ function engineDepsOf(model, engine = null) {
 /**
  * The workflow filename for a model + operation + engine, with the stage-2 and
  * engine suffixes applied in the order the build script (generate_ltx.py) emits:
- * `<base>` → `<base>_stage2` (when stage2) → `<base><engineSuffix>` (e.g. `_gguf`),
- * yielding `..._stage2_gguf.json` for a remote stage-2 run. Returns null when the
+ * `<base>` → `<base>_stage2` (when stage2) → `<base><engineSuffix>` (e.g. `_remote`),
+ * yielding `..._stage2_remote.json` for a remote stage-2 run. Returns null when the
  * model declares no workflow for the op (the caller falls back to a universal one).
  *
  * Engine suffix comes from `model.engines[engine].workflowSuffix`. A model with no

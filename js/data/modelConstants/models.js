@@ -261,15 +261,13 @@ export const MODELS = [
             t2v_ms: 'LTX_t2v.json',
             i2v_ms: 'LTX_i2v.json',
         },
-        // MPI-190: engine split REVERTED. cu130 (MPI-187/189) collapsed the aimdo
-        // cold-fault tax that was the GGUF transformer's only justification, so both
-        // engines now run the SAME bf16 transformer + the SAME workflow files — no
-        // `engines:` block, no `_gguf` suffix. The bf16 also removes the ComfyUI-GGUF
-        // dequant upcast spike that OOM'd LTX i2v on the 24GB 4090 (MPI-185). The
-        // _gguf workflow files + the GGUF/ComfyUI-GGUF deps stay on disk until a live
-        // cu130 run on the 4090 (24GB) confirms bf16 i2v runs CLEAN (no OOM) — that's
-        // the decisive test, since the 4090 is exactly where GGUF OOMs today. Then
-        // they get deleted (MPI-190 follow-up).
+        // MPI-190: engine split REVERTED, GGUF fully removed. cu130 (MPI-187/189)
+        // collapsed the aimdo cold-fault tax that was the GGUF transformer's only
+        // justification, so both engines now run the SAME bf16 transformer + the SAME
+        // workflow files — no `engines:` block, no `_gguf` suffix. The bf16 also removes
+        // the ComfyUI-GGUF dequant upcast spike that OOM'd LTX i2v on the 24GB 4090
+        // (MPI-185). bf16 i2v proven CLEAN on the 4090; the Q8 weights + GGUF deps are
+        // deleted (R2 + registry).
         // FLAT model: one transformer serves both t2v and i2v, so there is no
         // separable install unit — both ops ship together (like an image model).
         // `dependencies` (not commonDeps/operations) ⇒ no per-op install toggle in

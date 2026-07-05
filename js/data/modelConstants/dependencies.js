@@ -276,40 +276,19 @@ export const DEPS = {
     // from stable upstreams tonight (Kijai/Lightricks/valiantcat); self-hosting
     // them to MPI HF is a post-release follow-up card. sha256 = null until
     // mpic-compute-dep-hashes is run.
-    // bf16-local / GGUF-Pod TRANSFORMER SPLIT (2026-06-29, live Pod A/B proven).
-    // The transformer is the ONLY weight that differs by engine; everything else
-    // (VAE, CLIP, LoRAs, nodes) is shared.
-    //  - LOCAL gets bf16 (best per-step speed at high res; no aimdo cold tax locally).
-    //  - POD/REMOTE gets Q8_0 GGUF (sidesteps the ~5-min aimdo cold tax — the whole
-    //    point; loads via city96 `UnetLoaderGGUF` from the `unet/` folder, NOT
-    //    diffusion_models/).
-    // Which engine gets which is declared STRUCTURALLY on the model (MPI-163,
-    // consolidated MPI-165): models.js lists bf16 in `engines.local.extraDeps`, the
-    // GGUF (+ the ComfyUI-GGUF node that loads it) in `engines.remote.extraDeps`. The
-    // resolver adds the engine-correct list at resolution time, so download + status
-    // gate + prompt box all derive the right set automatically — no per-dep `engine`
-    // tag for any consumer to forget.
+    // LTX-2.3 transformer — bf16, SHARED across both engines (MPI-190: engine split
+    // reverted, GGUF removed). cu130 collapsed the aimdo cold-fault tax that the Q8_0
+    // GGUF transformer existed to dodge, and bf16 also removes the ComfyUI-GGUF dequant
+    // upcast spike that OOM'd LTX i2v on the 24GB 4090. Loads via UNETLoader from
+    // diffusion_models/. One transformer, one dep, both engines.
     'ltx23-transformer-bf16': {
         id: 'ltx23-transformer-bf16',
-        name: 'LTX-2.3 22B Distilled Transformer (bf16, local)',
+        name: 'LTX-2.3 22B Distilled Transformer (bf16)',
         origin: 'Kijai/LTX2.3_comfy',
         filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors',
         size: '41GB',
         sha256: 'cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249',
-    },
-    // Q8_0 GGUF (remote/Pod). Re-hosted to cubric R2 (bucket cubric-models →
-    // models.cubric.studio) 2026-06-30, off HF-direct (HF-direct stalled at the
-    // end of the download on a Pod). Source kept Unsloth (22.8GB). Verified
-    // size-match on R2 (22755540000 bytes). sha256 unchanged (same file).
-    'ltx23-transformer-gguf': {
-        id: 'ltx23-transformer-gguf',
-        name: 'LTX-2.3 22B Distilled Transformer (Q8_0 GGUF, Pod)',
-        origin: 'unsloth/LTX-2.3-GGUF',
-        filename: 'unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
-        url: 'https://models.cubric.studio/vision/models/unet/ltx-2.3-22b-distilled-1.1-Q8_0.gguf',
-        size: '22.8GB',
-        sha256: '813fd61eecf3df2ef5ac5a942d226ee7e44b6cec68ed803549aefaa410cd397e',
     },
     'ltx23-video-vae': {
         id: 'ltx23-video-vae',
@@ -460,23 +439,12 @@ export const DEPS = {
         installOnEngine: true,
         size: '28MB',
     },
-    // GGUF quantized-transformer loader. KJNodes' GGUFLoaderKJ is a thin wrapper
-    // that imports city96's loader at runtime (gguf_sd_loader) AND city96 registers
-    // the `unet_gguf` folder category → required for any GGUF transformer (LTX-2.3
-    // Q8_0 etc.). requirements.txt pins `gguf>=0.13.0` + sentencepiece/protobuf →
-    // installRequirements: true (without `gguf` the node import fails).
-    // NO installOnEngine: this is LTX-2.3-MODEL-specific (lives in the ltx-23
-    // dependencies[] array), NOT a universal-workflow dep — installs when the LTX
-    // model is installed, same as ComfyUI-PainterI2Vadvanced for Wan I2V.
-    'ComfyUI-GGUF': {
-        id: 'ComfyUI-GGUF',
-        name: 'ComfyUI GGUF',
-        type: 'custom_nodes',
-        filename: 'ComfyUI-GGUF',
-        url: lockUrl('ComfyUI-GGUF'),
-        installRequirements: true,
-        size: '500KB',
-    },
+    // MPI-190: ComfyUI-GGUF removed. It existed only to load the Q8_0 GGUF LTX
+    // transformer, which is deleted (bf16 now runs on both engines). It is NOT in any
+    // model's dependencies[], so the app never installs it. The node still ships in the
+    // Pod image (node_lock.json) because KJNodes' GGUFLoaderKJ hard-imports city96's
+    // gguf_sd_loader at load — dropping it from the Pod needs a KJNodes-load check
+    // first, so that cleanup is a separate Pod-rebuild task.
     'ComfyUI-UltimateSDUpscale': {
         id: 'ComfyUI-UltimateSDUpscale',
         name: 'ComfyUI Ultimate SD Upscale',
