@@ -181,6 +181,24 @@ Weight dep shape (see `dependencies.js` for live examples):
 (same clip as the 14B, already on HF/R2) — just list the existing dep id. Only
 host what's genuinely new.
 
+> **🛑 PING THE USER — any single weight file ≥ 15 GB (Pod hot-store + disk budget, MPI-194).**
+> RunPod **volume** pods keep weights on a 750 MB/s network volume; re-reading a huge file
+> every gen-stage was the LTX slowdown. The fix (MPI-194) STAGES any single file **≥ 15 GB**
+> from the volume onto the pod's container disk on first use (sticky, LRU-evicted). The
+> container disk is **50 GB** and today fits exactly ONE ≥15GB model (LTX's 41GB transformer).
+> So when you add a model whose dep list has a file **≥ 15 GB**, STOP and tell the user BEFORE
+> shipping — two things need a call:
+> 1. **Disk budget.** If the new ≥15GB hot-set does NOT fit in the free container-disk space
+>    (e.g. a 60–70GB weight, or a 2nd big model that must coexist with LTX), `CONTAINER_DISK_GB`
+>    in `routes/remotePodLifecycle.js` (create payload) must be bumped. ~$0.004/hr per +30GB.
+> 2. **Confirm it's genuinely ≥15GB per FILE**, not per set. Reference (2026-07-05): LTX
+>    transformer 41GB → hot-stored; LTX Gemma TE 9.45GB, every Wan file ≤13.55GB → NOT (under 15,
+>    stay on the volume). Threshold constant = `15 * 1e9` bytes (SI or binary — same result, no
+>    borderline file exists today).
+>
+> Files **under 15 GB need no action** — they stay on the volume, no disk/cost impact. This gate
+> is ONLY about the ≥15GB ones.
+
 ### R2 upload (cubric-models bucket)
 
 Access via `C:\Users\Fabio\.secrets\rclone-r2.conf`, remote `cubric-r2:`, bucket
