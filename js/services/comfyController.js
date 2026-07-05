@@ -828,7 +828,33 @@ function createEngine({ engine, alwaysLocal }) {
             return;
         }
 
-        // success → rebuild outputs from every node's history output dict
+        // success → REPLAY the missed events through the prompt's own
+        // internalListener (registered at /prompt ack) instead of resolving the
+        // promise directly. Synthetic `executed` per history node re-feeds the
+        // caller's onMessage (commandExecutor filters output/latent/audio nodes
+        // and dedups replayed ids), and the synthetic `execution_success`
+        // terminal runs the FULL normal teardown: listener/resolver/rejector
+        // cleanup, poll stop, promise resolve, and — critically —
+        // commandExecutor's `_finishGeneration()` → exec.onComplete → gallery
+        // card + status bar + queue lane. The old body resolved the runWorkflow
+        // promise directly, but its value has NO consumer (commandExecutor
+        // awaits it purely for the error path), so a missed-terminal gen
+        // completed on the engine yet stayed wedged in the app forever: queue
+        // card RUNNING, status bar counting, output stranded in /history
+        // (MPI-203 — 2/2 live remote gens on pod 81kol4nhlutsx0).
+        const listener = this._promptListeners.get(promptId);
+        const nodeCount = Object.keys(entry.outputs || {}).length;
+        clientLogger.info('comfy', `Reconciled completed gen ${promptId} from /history via ${source} (${nodeCount} output nodes) — terminal WS event was missed`);
+        if (listener) {
+            for (const [nodeId, nodeOutput] of Object.entries(entry.outputs || {})) {
+                listener({ type: 'executed', data: { node: nodeId, output: nodeOutput, prompt_id: promptId } });
+            }
+            listener({ type: 'execution_success', data: { prompt_id: promptId } });
+            return;
+        }
+        // Defensive fallback — resolver alive but listener gone (should not
+        // happen; both are set/cleared together). Settle the promise directly
+        // rather than hang.
         const outputs = [];
         for (const nodeOutput of Object.values(entry.outputs || {})) {
             _collectComfyOutputUrls(this.httpBase(), nodeOutput, outputs);
@@ -840,7 +866,6 @@ function createEngine({ engine, alwaysLocal }) {
         this._promptResolvers.delete(promptId);
         if (this._activePromptId === promptId) this._activePromptId = null;
         this._isRunning = this._promptListeners.size > 0;
-        clientLogger.info('comfy', `Reconciled completed gen ${promptId} from /history via ${source} (${outputs.length} outputs) — terminal WS event was missed`);
         resolve?.({ success: true, images: outputs });
     },
 

@@ -1,1 +1,6 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-195","at":"2026-07-05T02:20:17.524Z","actor":"vscode","summary":"Created MPI-195."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-195","at":"2026-07-05T15:10:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-195 stop-gen silent-loss bug."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-195","at":"2026-07-05T15:20:00Z","actor":"claude","summary":"Attached plan: keep finished card on Stop (late generation:complete must rebuild grid)."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-195","at":"2026-07-05T15:25:00Z","actor":"claude","summary":"Derived checklist + linked validation/files for implementation."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-195","at":"2026-07-05T19:55:00Z","actor":"claude","summary":"User live-verified stop behavior (mid-stage-2 + early, LOCAL): stops honored, no card on empty output, no regression. Bridge path (late complete -> card) logic-verified only; decode-window stop test offered. Card -> validating."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-195","at":"2026-07-05T22:30:00Z","actor":"claude","from":"doing","to":"done","summary":"MPI-195 done — stop-keeps-card bridge user-verified (local mid-stage + early stop)."}

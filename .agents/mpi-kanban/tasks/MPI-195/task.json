@@ -3,13 +3,12 @@
   "id": "MPI-195",
   "title": "Stopping a generation ain't stopping shit.",
   "description": "When stopping a generation, it carries on until it finishes and then outputs absolutely nothing in the gallery. I've seen this happen different times, but the last time I saw it happen was:\n1. I started a generation.\n2. I pressed stop.\n3. I tried to connect to a pod.\n4. I came back, and it was still trying to generate. There was no way of pressing the stop button again, because the stop was already requested. The generation finished, always sending out the latents, and then no card was created. The latent preview disappeared, and no card was on the gallery.",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "pending",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-05T02:20:17.524Z",
-  "updated_at": "2026-07-05T02:20:17.524Z",
+  "updated_at": "2026-07-05T22:30:00Z",
   "links": {
-    "brief": "brief.md",
     "plan": "plan.md",
     "checklist": "checklist.md",
     "validation": "validation.md",
@@ -17,5 +16,6 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  }
+  },
+  "activeSessionTitle": "MPI-195 keep-card-on-stop"
 }

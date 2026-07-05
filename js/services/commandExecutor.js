@@ -863,6 +863,11 @@ export function runCommand(payload) {
         promptId:        null,
         seed:            null,
         cacheHit:        false,
+        // Set by generationService right after runCommand() returns. Stamped onto
+        // every StatusBar lifecycle event so a late terminal from a STOPPED gen
+        // can't reset the bar while a promoted successor is already running
+        // (MPI-203 status-bar stomp).
+        genId:           null,
         onPreview:       null,
         onProgress:      null,
         onSamplingStart: null,
@@ -1108,6 +1113,12 @@ export function runCommand(payload) {
         // Message handler — forwards previews + collects Output-titled results
         const outputUrls = [];
         const latentOutputs = [];
+        // Node ids whose `executed` payload was already collected. Guards against
+        // double-collection when the history reconcile replays missed events after
+        // SOME `executed` arrived live before the WS died (MPI-203) — each node
+        // executes once per prompt in our static graphs, so a repeat id is always
+        // a replay, never new data.
+        const _executedSeenNodes = new Set();
         // First "Output_Audio" file URL, when a video workflow saved audio
         // alongside the video (B3 split output). null when the source had no
         // audio (the workflow's MpiHasAudio gate skips the audio save). Muxed
@@ -1134,7 +1145,7 @@ export function runCommand(payload) {
             _modelInitializing = false;
             _samplingStartFired = true;
             if (!_suppressLifecycleEvents) {
-                Events.emit('tool:sampling-start', { tool: 'groupHistory', operation: workingPayload.operation });
+                Events.emit('tool:sampling-start', { tool: 'groupHistory', id: exec.genId, operation: workingPayload.operation });
             }
             exec.onSamplingStart?.();
         };
@@ -1146,7 +1157,7 @@ export function runCommand(payload) {
             // tool:sampling-start (see statusBar) so card/toast durations still
             // exclude cold model-load time — only the visual fill moves early.
             if (!_suppressLifecycleEvents) {
-                Events.emit('tool:progress', { tool: 'groupHistory', value });
+                Events.emit('tool:progress', { tool: 'groupHistory', id: exec.genId, value });
             }
             exec.onProgress?.(value);
         };
@@ -1175,11 +1186,11 @@ export function runCommand(payload) {
             // shows up as its own tqdm bar (stage 1) via step-progress below.
             comfyEventSource.addEventListener('comfy:model-initializing', () => {
                 _modelInitializing = true;
-                if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
             });
             comfyEventSource.addEventListener('comfy:model-init-complete', () => {
                 _modelInitializing = false;
-                if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
             });
             // tqdm step progress parsed from ComfyUI stdout (MPI-147). The WS
             // progress_state is useless for LTX (slow phases report binary 0/1), so
@@ -1231,6 +1242,7 @@ export function runCommand(payload) {
         function _emitStageAndProgress() {
             Events.emit('tool:stage', {
                 tool: 'groupHistory',
+                id: exec.genId,
                 stage: stageProgress.stage(),
                 total: stageProgress.total(),
             });
@@ -1341,7 +1353,7 @@ export function runCommand(payload) {
                 if (nodeId !== null) {
                     const nodeKind = weightMap.nodes[nodeId]?.kind;
                     if (!_samplingStartFired && !_suppressLifecycleEvents && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
-                        Events.emit('tool:loading-model', { tool: 'groupHistory' });
+                        Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
                     } else if (!_modelInitializing && !_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
                         emitSamplingStart();
                     }
@@ -1351,7 +1363,7 @@ export function runCommand(payload) {
                     if (!_suppressLifecycleEvents) {
                         const indeterminate = nodeKind === 'imageUpscale';
                         if (indeterminate) emitSamplingStart();
-                        Events.emit('tool:indeterminate', { tool: 'groupHistory', active: indeterminate });
+                        Events.emit('tool:indeterminate', { tool: 'groupHistory', id: exec.genId, active: indeterminate });
                     }
                     aggregator.onExecuting(msg);
                     // Coarse node-transition advances the bar even for nodes that
@@ -1380,6 +1392,8 @@ export function runCommand(payload) {
             if (msg.type === 'executed') {
                 const nodeId = msg.data?.node;
                 const nodeOutput = msg.data?.output;
+                if (_executedSeenNodes.has(nodeId)) return; // reconcile replay of a live-collected node (MPI-203)
+                _executedSeenNodes.add(nodeId);
                 if (saveLatentNodeIds.has(nodeId)) {
                     _collectComfyLatents(nodeOutput, latentOutputs, _latentRoleFromTitle(workflow[nodeId]?._meta?.title));
                 }

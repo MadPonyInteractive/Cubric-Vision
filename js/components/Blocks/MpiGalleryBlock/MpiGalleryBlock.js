@@ -91,6 +91,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         // ── Rehydrate any in-flight gallery generations ───────────────────────
         const _myGenIds = new Set();
+        // Ids Stopped by the user but whose gen may still finish with real output
+        // (ComfyUI /interrupt is advisory; an LTX inter-stage Stop runs to
+        // completion). The Stop path removes the id from _myGenIds synchronously,
+        // so the late generation:complete would otherwise fail the ownership guard
+        // and the finished card would never render (MPI-195). Bridge it here —
+        // scoped to OUR own stopped ids only, so a concurrent local/remote lane
+        // (MPI-74 P6) is never affected.
+        const _stoppedPendingComplete = new Set();
         const _runningGallery = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
         // Only the first-running entry gets a visible placeholder. Queued
         // siblings are tracked in activeGenerations but stay invisible until
@@ -1304,17 +1312,29 @@ export const MpiGalleryBlock = ComponentFactory.create({
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+            // Accept our own ids AND ids we Stopped that finished anyway (bridge).
+            if (!_myGenIds.has(id) && !_stoppedPendingComplete.has(id)) return;
+            _stoppedPendingComplete.delete(id);
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+            const _bridged = _stoppedPendingComplete.delete(id);
+            if (!_myGenIds.has(id) && !_bridged) return;
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+            if (!_myGenIds.has(id)) {
+                // Second cancelled for an already-forgotten id = the interrupted
+                // gen returned EMPTY (no late complete is coming). Drop the bridge
+                // entry so it can't leak (MPI-195).
+                _stoppedPendingComplete.delete(id);
+                return;
+            }
+            // The gen may still finish with real output after this Stop — remember
+            // the id so the late generation:complete is re-admitted (MPI-195).
+            _stoppedPendingComplete.add(id);
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 

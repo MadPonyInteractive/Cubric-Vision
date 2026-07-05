@@ -50,6 +50,10 @@ let _remoteConnected = false; // MPI-64 4.4: drives the IDLE · Local/Remote sco
 let _remotePhase = null;      // MPI-73: 'connecting' | 'disconnecting' | null — transient connect feedback
 let _timerInterval = null;
 let _completionToken = 0;
+// Id of the gen the bar is currently tracking. A terminal (cancelled/idle)
+// carrying a DIFFERENT id is a late settle from a Stopped gen and is ignored so
+// it can't reset the bar while a promoted successor is running (MPI-203).
+let _activeGenId = null;
 const _listenUnsubs = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -114,6 +118,17 @@ function _idleScopeLabel() {
     // death); show it distinctly from a user Disconnect (plain 'Local').
     if (_remotePhase === 'disconnected') return 'Disconnected';
     return _remoteConnected ? 'Remote' : 'Local';
+}
+
+// Last-active gen wins the single status bar. Any DRIVING event (running,
+// accepted, loading, sampling, progress, stage, indeterminate) latches the bar
+// to its own gen; a terminal only clears the bar if it still owns it. With two
+// concurrent lanes (local + remote, MPI-74 P6) this means whichever gen most
+// recently emitted a driving event owns the bar, and when the owner ends, the
+// other lane's next event re-latches it — no lane runs progress-blind (MPI-203).
+// A null id (untagged legacy emit) is a no-op on the latch, not a reset.
+function _latch(id) {
+    if (id !== null && id !== undefined) _activeGenId = id;
 }
 
 function _setIdle() {
@@ -423,39 +438,62 @@ export const StatusBar = {
         if (_listenUnsubs.length > 0) return;
         // tool:running — job dispatched. Spinner + label only; NO timer yet (ComfyUI
         // may still be booting — MPI-147: don't count cold-start in the clock).
-        _listenUnsubs.push(Events.on('tool:running', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.prepare('Starting');
+        _listenUnsubs.push(Events.on('tool:running', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.prepare('Starting');
         }));
         // tool:accepted — ComfyUI accepted the prompt (prompt_ack). NOW start the
         // clock so it matches the card's generationMs + toast (all anchored here).
-        _listenUnsubs.push(Events.on('tool:accepted', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.startClock();
+        _listenUnsubs.push(Events.on('tool:accepted', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.startClock();
         }));
         // tool:loading-model — VRAM load phase. Update label only (timer already running).
-        _listenUnsubs.push(Events.on('tool:loading-model', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model');
+        _listenUnsubs.push(Events.on('tool:loading-model', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.updateLabel('Loading model');
         }));
         // tool:sampling-start — KSampler firing. Switch the label to the op name;
         // timer is already running from tool:running.
-        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool, operation }) => {
-            if (tool === 'groupHistory') StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
+        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool, id = null, operation }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
         }));
-        _listenUnsubs.push(Events.on('tool:progress', ({ tool, value }) => {
-            if (tool === 'groupHistory') StatusBar.progress.update(value);
+        _listenUnsubs.push(Events.on('tool:progress', ({ tool, id = null, value }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.update(value);
         }));
         // tool:stage — multi-stage workflow phase counter (MPI-147). Shows "· N/M".
-        _listenUnsubs.push(Events.on('tool:stage', ({ tool, stage, total }) => {
-            if (tool === 'groupHistory') StatusBar.progress.setStage(stage, total);
+        _listenUnsubs.push(Events.on('tool:stage', ({ tool, id = null, stage, total }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.setStage(stage, total);
         }));
         // tool:indeterminate — no-progress-signal node (ESRGAN upscale). Pulse.
-        _listenUnsubs.push(Events.on('tool:indeterminate', ({ tool, active }) => {
-            if (tool === 'groupHistory') StatusBar.progress.setIndeterminate(active === true);
+        _listenUnsubs.push(Events.on('tool:indeterminate', ({ tool, id = null, active }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.setIndeterminate(active === true);
         }));
-        _listenUnsubs.push(Events.on('tool:cancelled', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.cancel();
+        _listenUnsubs.push(Events.on('tool:cancelled', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            // Ignore a late terminal from a gen we are no longer tracking (a
+            // Stopped predecessor settling after a successor took over). A null id
+            // is an untagged explicit cancel (queue-mode block emit) — honor it.
+            if (id !== null && _activeGenId !== null && id !== _activeGenId) return;
+            _activeGenId = null;
+            StatusBar.progress.cancel();
         }));
-        _listenUnsubs.push(Events.on('tool:idle', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.complete('Generation finished');
+        _listenUnsubs.push(Events.on('tool:idle', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            if (id !== null && _activeGenId !== null && id !== _activeGenId) return;
+            _activeGenId = null;
+            StatusBar.progress.complete('Generation finished');
         }));
         _listenUnsubs.push(Events.onState('generationQueueCount', (count) => {
             _queueDepth = Math.max(0, Number(count) || 0);

@@ -249,7 +249,17 @@ function _dispatchNextCue() {
         L.lastJobForLoop = next;
         _updateQueueDepth();
 
-        const finishCueDispatch = () => _finishActiveCueDispatch(lane);
+        // Free the lane ONLY if this job still owns it. A Stopped job's exec can
+        // settle late (interrupt produced a terminal event) AFTER the Stop already
+        // freed the lane and promoted the next queued job — an unguarded call here
+        // then stomps the SUCCESSOR's active slot: queue panel goes 0 JOBS, status
+        // bar idles, and the still-running successor becomes unstoppable (no queue
+        // entry = no STOP button). Live-hit 2026-07-05: promoted job dispatched
+        // 19:59:22.125, stopped job's empty settle landed .351 — 226ms later.
+        const finishCueDispatch = () => {
+            if (_lanes[lane].active !== next) return; // superseded — successor owns the lane
+            _finishActiveCueDispatch(lane);
+        };
 
         const wrappedCallbacks = {
             ...next.callbacks,
@@ -515,8 +525,6 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
 
-    Events.emit('tool:running', { tool: 'groupHistory', type: operation });
-
     const exec = runCommand({
         operation,
         modelId: model.id,
@@ -553,6 +561,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         isLoop:            opts.isLoop === true,
     });
 
+    // Stamp the gen id onto exec so commandExecutor's StatusBar lifecycle emits
+    // carry it, and emit tool:running now (moved below _regId so it too is
+    // identity-tagged). The status bar tracks the active gen by this id and
+    // ignores a terminal (cancelled/idle) from any OTHER gen — a Stopped gen's
+    // late settle can no longer reset the bar out from under a promoted
+    // successor (MPI-203 status-bar stomp).
+    exec.genId = _regId;
+    Events.emit('tool:running', { tool: 'groupHistory', id: _regId, type: operation });
+
     // Stable tempId snapshot. The empty-output / cacheHit branches below emit a
     // late `generation:cancelled` AFTER the registry entry may already be gone
     // (a user Stop ends it first, then the interrupted gen returns empty). Reading
@@ -567,7 +584,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         activeGenerations.setPromptId(_regId, promptId);
         // Server accepted the prompt → NOW start the clock (past cold-start boot).
         samplingStartTime ??= Date.now();
-        Events.emit('tool:accepted', { tool: 'groupHistory' });
+        Events.emit('tool:accepted', { tool: 'groupHistory', id: _regId });
     };
 
     exec.onPreview = (url) => {
@@ -584,7 +601,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     exec.onComplete = async (urls, outputInfo = {}) => {
         if (!urls.length) {
             clientLogger.warn('generationService', 'Generation completed but no output returned.');
-            Events.emit('tool:cancelled', { tool: 'groupHistory' });
+            Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
             activeGenerations.end(_regId, { revokePreview: true });
             Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
             _emitPromptBoxGenerationEndIfIdle();
@@ -606,9 +623,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 duration: 3000,
             });
             _toast.on('close', () => _toastWrap.remove());
-            Events.emit('tool:cancelled', { tool: 'groupHistory' });
+            Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
             Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
-            Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
+            Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });
             _emitPromptBoxGenerationEndIfIdle();
             callbacks.onCancel?.();
             return;
@@ -964,7 +981,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 clientLogger.warn('generationService', 'replaceItemId set but no matching group/item found', { _replaceItemId });
                 if (newItem) await _deleteSavedItems([newItem]);
                 activeGenerations.end(_regId, { revokePreview: false });
-                Events.emit('tool:cancelled', { tool: 'groupHistory' });
+                Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
                 Events.emit('generation:cancelled', { id: _regId });
                 callbacks.onCancel?.();
                 _emitPromptBoxGenerationEndIfIdle();
@@ -982,7 +999,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 });
                 await _deleteSavedItems(builtItems);
                 activeGenerations.end(_regId, { revokePreview: false });
-                Events.emit('tool:cancelled', { tool: 'groupHistory' });
+                Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
                 Events.emit('generation:cancelled', { id: _regId });
                 callbacks.onCancel?.();
                 _emitPromptBoxGenerationEndIfIdle();
@@ -1005,9 +1022,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             callbacks.onComplete?.({ item: lastItem, group: updatedGroup });
         } else {
             // Gallery mode — one group (card) per item.
+            // Fall back to the stable opts snapshot when the registry entry is
+            // already gone — a user Stop that landed between LTX stages ends the
+            // entry first, then the interrupted gen finishes with real output and
+            // reaches this branch. Reading tempId from the dead entry yields null,
+            // so the gallery block's placeholder teardown targets nothing (MPI-195,
+            // sibling of the empty-output fix in b0d1e0d).
             const _galleryEntry = activeGenerations.get(_regId);
-            const _galleryTempId = _galleryEntry?.tempId ?? null;
-            const _galleryExtraTempIds = _galleryEntry?.extraTempIds ?? [];
+            const _galleryTempId = _galleryEntry?.tempId ?? _stableTempId;
+            const _galleryExtraTempIds = _galleryEntry?.extraTempIds ?? _stableExtraTempIds;
             const groups = builtItems.map((it) => {
                 const name = truncateCardName(it.displayName || it.operation || firstDisplayName);
                 const g = createItemGroup(model.mediaType, { name, width, height });
@@ -1023,12 +1046,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             callbacks.onComplete?.({ item: firstItem, group: firstGroup });
         }
 
-        Events.emit('tool:idle', { tool: 'groupHistory', type: operation });
+        Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });
         _emitPromptBoxGenerationEndIfIdle();
     };
 
     exec.onError = (err) => {
-        Events.emit('tool:cancelled', { tool: 'groupHistory' });
+        Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
         activeGenerations.end(_regId, { revokePreview: true });
         Events.emit('generation:error', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
         _emitPromptBoxGenerationEndIfIdle();

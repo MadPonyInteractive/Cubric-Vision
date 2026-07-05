@@ -462,6 +462,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Active-generation registry / spinner ──────────────────────────────
 
         const _myGenIds = new Set();
+        // Ids Stopped by the user whose gen may still finish with real output —
+        // ComfyUI /interrupt is advisory, so an LTX inter-stage Stop runs to
+        // completion. Stop removes the id from _myGenIds synchronously, so the
+        // late generation:complete would otherwise be dropped and the finished
+        // item never repaints the viewer (MPI-195). Bridge our own stopped ids
+        // only; a concurrent local/remote lane (MPI-74 P6) is never affected.
+        const _stoppedPendingComplete = new Set();
         let _mascotLingerTimer = null;
 
         const _mascotShow = (src) => {
@@ -593,8 +600,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         }
 
         _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
-            if (!_myGenIds.has(id)) return;
+            // Accept our own ids AND ids we Stopped that finished anyway (bridge).
+            if (!_myGenIds.has(id) && !_stoppedPendingComplete.has(id)) return;
             _myGenIds.delete(id);
+            _stoppedPendingComplete.delete(id);
             viewer.el.setGenerating?.(false);
             // Tool-only transforms (resize) skip the mascot — model ops only.
             if (item?.operation !== 'resize' && item?.operation !== 'resizeVideo') {
@@ -643,6 +652,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         }));
 
         _unsubs.push(Events.on('generation:error',     ({ id }) => {
+            _stoppedPendingComplete.delete(id);
             if (_myGenIds.delete(id)) {
                 viewer.el.setGenerating?.(false);
                 _mascotHide(0);
@@ -652,9 +662,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         }));
         _unsubs.push(Events.on('generation:cancelled', ({ id }) => {
             if (_myGenIds.delete(id)) {
+                // The gen may still finish with real output after this Stop —
+                // remember the id so the late generation:complete repaints the
+                // viewer (MPI-195).
+                _stoppedPendingComplete.add(id);
                 viewer.el.setGenerating?.(false);
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
+            } else {
+                // Second cancelled for an already-forgotten id = interrupted gen
+                // returned EMPTY; no late complete is coming — drop the bridge.
+                _stoppedPendingComplete.delete(id);
             }
             _syncPbGenerating();
         }));
