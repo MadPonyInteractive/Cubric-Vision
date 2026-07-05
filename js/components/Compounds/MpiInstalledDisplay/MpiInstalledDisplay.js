@@ -332,9 +332,14 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             } else if (isQueued) {
                 // MPI-184: waiting its turn in the serial install queue — no bar to
                 // pause, just a Cancel that drops it from the queue before its POST.
+                // 'Queued' with no trailing '…' — the ::after supplies the animated
+                // dots (a literal … here made six dots). A spacer pins Cancel right so
+                // the growing/shrinking dots don't shove it around.
                 const label = ce('div', { className: 'mpi-installed-display__installing-label' });
-                label.textContent = 'Queued…';
+                label.textContent = 'Queued';
                 actionsSlot.appendChild(label);
+                const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
+                actionsSlot.appendChild(spacer);
                 const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancelBtn.on('click', () => emit('cancel', {}));
                 actionsSlot.appendChild(cancelBtn.el);
