@@ -144,6 +144,11 @@
   reachable from inside a clip's history view — press **Q** or hover the Cue
   button — so you no longer have to go back to the gallery to check the queue.
 
+- **Model download queue.** Installing several models at once now queues them for
+  speed and stability — they download one at a time, each waiting model shows a
+  cancellable **Queued** state, and the queue advances on its own (the next download
+  starts as soon as the current finishes downloading).
+
 ## fixes
 
 - **Wan 2.2 Smooth — sharper draft tier.** The lowest quality tier's resolution was
