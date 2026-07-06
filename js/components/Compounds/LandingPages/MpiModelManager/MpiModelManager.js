@@ -863,8 +863,14 @@ export const MpiModelManager = ComponentFactory.create({
             const visible = MODELS.filter(passesFilter);
 
             // A model is "installed" for sectioning when its installed flag is set OR
-            // at least one of its ops is installed (op-keyed partial installs).
-            const isInstalled = m => m.installed === true || _installedOpsOf(m).length > 0;
+            // at least one op is installed (op-keyed partial installs) OR an arch
+            // weight is on disk. The arch clause matches the card's `anyInstalled`
+            // (MPI-209): on a CPU pod (no live GPU → null arch) _installedOpsOf unions
+            // both variant weights and reads empty, so an arch-variant model that IS
+            // installed for one GPU would wrongly sink to the uninstalled section.
+            const isInstalled = m => m.installed === true
+                || _installedOpsOf(m).length > 0
+                || _installedArchOf(m).length > 0;
             const installed = visible.filter(isInstalled);
             const uninstalled = visible.filter(m => !isInstalled(m));
 

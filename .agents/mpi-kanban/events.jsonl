@@ -904,3 +904,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-208","type":"task.moved","at":"2026-07-06T20:05:00Z","actor":"claude","summary":"todo -> doing: picking up Foundation batch (B1-A/B/C) via mpi-execute-parallel."}
 {"at":"2026-07-06T14:15:00Z","event":"task.moved","id":"MPI-200","from":"doing","to":"done","maturity":"complete","actor":"claude"}
 {"at":"2026-07-06T14:15:00Z","event":"task.moved","id":"MPI-206","from":"doing","to":"done","maturity":"complete","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.moved","at":"2026-07-06T21:10:00Z","actor":"claude","summary":"doing -> done; maturity complete. Live-verified on CPU download-pod + 5090 saved: CPU-pod default picks Blackwell (headline fix), single-arch install, size dedupe, section-sort fix, swap proven via /comfy/models/check (mxfp8 true->false, fp8 false->true). Step-4 guard logic-proven (needs Ada Pod). User-approved final completion."}
