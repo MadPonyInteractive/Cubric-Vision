@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-210",
+  "title": "One-time 18+ adult-content awareness overlay at startup",
+  "description": "Show a one-time awareness overlay at app startup: Cubric's models are uncensored and can generate explicit sexual content or extreme violence, so the app is intended for adults (18+) only and is not suitable for minors. Two buttons: Continue (records acknowledgement, dismiss forever) and Quit the app (closes the window). Shown once ever, persisted across restarts.\n\nIMPLEMENTATION (reused existing systems, NO new component):\n1. Storage source-of-truth only — new key MATURITY_ACKNOWLEDGED ('mpi_maturity_acknowledged') in js/core/storageKeys.js + getMaturityAcknowledged/setMaturityAcknowledged in js/core/storage.js (same get/set wrappers as LAST_SEEN_CHANGELOG_VERSION). No raw localStorage.\n2. Reused MpiOkCancel (existing two-button confirmation dialog) with custom labels — no new component per user instruction.\n3. Added an OPTIONAL, reusable icon/iconTone prop + top icon slot to MpiOkCancel (matches its existing optional-slot pattern; other callers unaffected as prop is optional) + a new 'warning' triangle icon in js/utils/icons.js. Overlay shows a large heat-colored warning triangle above the title.\n4. quitApp() exported from js/shell/windowControls.js (reuses its browser-safe ipcRenderer; sends 'window-close').\n5. _maybeShowMaturityWarning() in js/shell.js.\n\nKEY BUG FIXED DURING VERIFY: the overlay first didn't show because it was mounted at initShell step 0.05, but _bootApp()'s handleNavigation(PAGE_LANDING) calls Overlays.reset() which wiped it. The other startup modals (changelog, engine-install) fire AFTER boot navigation, which is why they showed. Fix: moved the call into _bootApp AFTER all boot navigation (right after _maybeShowChangelog(), step 3.6), pushed LAST so it sits on TOP of the overlay stack (18+ gate first).\n\nVERIFIED END-TO-END by user 2026-07-06: (1) start -> popup shows -> Quit -> app quit. (2) start -> popup shows -> Continue. (3) restart -> popup no longer shows. Exactly as expected.\n\nOUT OF SCOPE / behavior: Escape/backdrop dismiss does NOT set the flag (fail-safe -> re-shows next boot), matching the changelog dialog's convention.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-06T21:30:00Z",
+  "updated_at": "2026-07-06T21:30:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

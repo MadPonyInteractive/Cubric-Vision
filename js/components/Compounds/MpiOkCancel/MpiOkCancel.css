@@ -9,6 +9,21 @@
     border-radius: var(--r-1);
 }
 
+/* Optional large icon above the title */
+.mpi-ok-cancel__icon {
+    display: flex;
+    justify-content: center;
+    color: var(--ink-3);
+}
+
+.mpi-ok-cancel__icon--warning {
+    color: var(--accent-heat);
+}
+
+.mpi-ok-cancel__icon--danger {
+    color: var(--accent-heat);
+}
+
 /* Content Container — Title, Text, and Optional Input */
 .mpi-ok-cancel__content {
     display: flex;

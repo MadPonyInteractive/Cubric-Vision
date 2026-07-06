@@ -4,6 +4,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { qs } from '../../../utils/dom.js';
+import { renderIcon } from '../../../utils/icons.js';
 
 /**
  * MpiOkCancel — Self-contained Confirmation Dialog (Compound)
@@ -28,6 +29,8 @@ import { qs } from '../../../utils/dom.js';
  * @param {string} [okLabel='OK']          - Label for the confirm button
  * @param {string} [cancelLabel='Cancel']  - Label for the cancel button
  * @param {{label?: string, checked?: boolean}|null} [checkbox=null]  - Optional checkbox below input slot
+ * @param {string|null} [icon=null]        - Optional icon name (from icons.js) shown large above the title
+ * @param {string} [iconTone='']           - Icon tone modifier for the slot: '' | 'warning' | 'danger'
  *
  * Emits:
  * 'ok'     { inputValue?: string, checkboxChecked?: boolean } — Confirm button clicked
@@ -40,6 +43,7 @@ export const MpiOkCancel = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-ok-cancel" role="dialog" aria-modal="true">
+            <div class="mpi-ok-cancel__icon"     id="icon-slot"></div>
             <div class="mpi-ok-cancel__content">
                 <div class="mpi-ok-cancel__title"    id="title-slot"></div>
                 <div class="mpi-ok-cancel__text"     id="text-slot"></div>
@@ -58,6 +62,15 @@ export const MpiOkCancel = ComponentFactory.create({
         modal.el.appendChild(el);
         el.show = () => modal.el.show();
         el.hide = () => modal.el.hide();
+
+        // ── Optional large icon above the title ──────────────────────────────
+        const iconSlot = qs('#icon-slot', el);
+        if (props.icon) {
+            iconSlot.innerHTML = renderIcon(props.icon, 'xl');
+            if (props.iconTone) iconSlot.classList.add(`mpi-ok-cancel__icon--${props.iconTone}`);
+        } else {
+            iconSlot.style.display = 'none';
+        }
 
         // ── Content: Title ───────────────────────────────────────────────────
         const titleSlot = qs('#title-slot', el);

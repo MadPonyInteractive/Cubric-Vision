@@ -30,7 +30,7 @@ import { getReleaseNotes, hasReleaseContent } from './data/releaseNotes.js';
 
 // Shell Sub-modules
 import { preloadComponentStyles } from './shell/preloadStyles.js';
-import { bindWindowControls } from './shell/windowControls.js';
+import { bindWindowControls, quitApp } from './shell/windowControls.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { initHeroStats } from './shell/heroStats.js';
 import { start as startProjectStats } from './services/projectStatsService.js';
@@ -79,6 +79,31 @@ function _emitRemoteConnection(payload = {}) {
   // PromptBox mounted mid-connect) receives the phase on the next tick.
   if (payload.connected === true) _setRemotePhase(null);
   Events.emit('remote:connection', { ...payload, phase: _remotePhase });
+}
+
+/**
+ * One-time adult-content awareness overlay. Cubric's models are uncensored, so
+ * this warns the app is 18+ and lets the user continue or quit. Shown once ever
+ * (persisted in Storage); Continue records the acknowledgement, Quit closes the app.
+ */
+function _maybeShowMaturityWarning() {
+  if (Storage.getMaturityAcknowledged()) return;
+
+  const dlg = MpiOkCancel.mount(document.createElement('div'), {
+    icon: 'warning',
+    iconTone: 'warning',
+    title: 'Adult content — 18+ only',
+    text: 'Cubric Studio runs uncensored AI models. They have no built-in filters '
+        + 'and can generate explicit sexual content and extreme violence. This app '
+        + 'is intended for adults only — you must be 18 or older to use it, and it '
+        + 'is not suitable for minors. By continuing you confirm you are over 18 '
+        + 'and accept responsibility for the content you create.',
+    okLabel: 'Continue',
+    cancelLabel: 'Quit the app',
+  });
+  dlg.on('ok', () => Storage.setMaturityAcknowledged(true));
+  dlg.on('cancel', () => quitApp());
+  dlg.el.show();
 }
 
 // ── Global dialog singletons ──────────────────────────────────────────────────
@@ -249,6 +274,12 @@ async function _bootApp() {
   // and dev-state restore, but BEFORE optional Comfy auto-start so it never
   // competes with mandatory engine provisioning. Not an updater (MPI-46).
   _maybeShowChangelog();
+
+  // 3.6. Adult-content / 18+ awareness — show once ever, after all boot
+  // navigation has settled (navigation calls Overlays.reset(), which would wipe
+  // an overlay shown earlier). Pushed LAST so it sits on TOP of the overlay
+  // stack — the 18+ gate is the first thing the user sees / must dismiss.
+  _maybeShowMaturityWarning();
 
   // Wire startup modal to comfy engine events (MPI-74 P6: engine-tagged + non-
   // blocking when the OTHER engine is mid-gen). comfyController emits these with

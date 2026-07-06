@@ -47,6 +47,9 @@ export const STORAGE_KEYS = {
 
   // Changelog overlay (last APP_VERSION the user dismissed the changelog for)
   LAST_SEEN_CHANGELOG_VERSION: 'mpi_last_seen_changelog_version',
+
+  // Adult-content / 18+ awareness overlay — true once the user has acknowledged it
+  MATURITY_ACKNOWLEDGED: 'mpi_maturity_acknowledged',
 };
 
 // --- sessionStorage keys ---

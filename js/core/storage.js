@@ -200,6 +200,9 @@ export const Storage = {
 
   getLastSeenChangelogVersion: () => get(STORAGE_KEYS.LAST_SEEN_CHANGELOG_VERSION, null),
   setLastSeenChangelogVersion: (v) => set(STORAGE_KEYS.LAST_SEEN_CHANGELOG_VERSION, v),
+
+  getMaturityAcknowledged: () => get(STORAGE_KEYS.MATURITY_ACKNOWLEDGED, false),
+  setMaturityAcknowledged: (v) => set(STORAGE_KEYS.MATURITY_ACKNOWLEDGED, !!v),
 };
 
 export const Session = {
