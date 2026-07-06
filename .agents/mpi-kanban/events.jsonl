@@ -896,3 +896,5 @@
 {"at":"2026-07-06T12:35:00Z","event":"task.created","id":"MPI-207","column":"todo","maturity":"planned","actor":"claude"}
 {"at":"2026-07-06T13:05:00Z","event":"task.moved","id":"MPI-207","from":"todo","to":"doing","maturity":"in-progress","actor":"claude"}
 {"at":"2026-07-06T13:40:00Z","event":"task.updated","id":"MPI-207","maturity":"validating","note":"code complete + node-tested (14/14), live A/B deferred","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-208","type":"task.created","at":"2026-07-06T18:25:00Z","actor":"claude","summary":"Card created for generation queue/cue/stop/dual-engine refactor; investigation in progress (4 agents)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-208","type":"task.updated","at":"2026-07-06T18:55:00Z","actor":"claude","summary":"Investigation complete (4 agents, research/ x4). Large adaptive plan attached: generationStore state machine, cancellation tokens, SSE engine tagging/merge, derived UI, reconcile-on-truth. Foundation parallel batch + phases 2-5."}
