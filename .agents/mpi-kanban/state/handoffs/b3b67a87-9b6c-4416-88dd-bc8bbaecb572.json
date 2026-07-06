@@ -56,7 +56,7 @@
       "memory file feedback_agent_can_upload_r2.md written"
     ],
     "pending": [
-      "mpi-end will commit all touched files (nothing committed yet this session)",
+      "CHANGELOG (deferred until live-proven): add to docs/releases/UNRELEASED.md whatIsNew after the A/B confirms the tier: (1) new 'LTX 2.3 Balanced' faster tier that fits smaller VRAM; (2) fix the L/B/H sentence (~line 86) — the tier letter now shows on GALLERY CARDS + the prompt-box BUTTON too, not just the dropdown. Deferred so the changelog doesn't describe an unproven feature.",
       "After live-proof: consider a docs/builder LTX research note on the tier variant map; drop the stale 'both engines run same bf16' comments in models.js/generate_ltx.py"
     ]
   },
