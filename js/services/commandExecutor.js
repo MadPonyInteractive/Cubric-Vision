@@ -36,6 +36,7 @@ import { createStageProgress } from './phaseProgress.js';
 import { stagesFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
 import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputUrls.js';
+import { generationStore, PHASES } from './generationStore.js';
 
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176). MPI-74: a
 // force-local run's output lives on LOCAL ComfyUI — build the /view URL against
@@ -953,7 +954,21 @@ export function runCommand(payload) {
         onPromptAck:     null,
         onComplete:      null,
         onError:         null,
-        cancel() { getEngine(workingPayload.forceLocal === true).interrupt(); },
+        // Store job id for this generation. Assigned once the store registers the
+        // job (after engine+arch resolve). cancel() delegates to the store so a
+        // Stop aborts the in-flight pipeline (token) AND fires the frozen engine
+        // interrupt — never a bare interrupt() that leaves the pipeline running
+        // toward an orphan /prompt POST (MPI-208 disease 3).
+        jobId:           null,
+        cancel() {
+            // Pre-register cancel (Stop before the job exists): nothing to abort
+            // yet — the async head checks the store signal at each await boundary,
+            // but there is no signal before register(). Fall back to a direct
+            // engine interrupt so a Stop during the earliest preflight still stops
+            // any server work; the store takes over the moment jobId is set.
+            if (exec.jobId) { generationStore.cancel(exec.jobId); return; }
+            getEngine(payload.forceLocal === true).interrupt();
+        },
     };
 
     (async () => {
@@ -979,6 +994,41 @@ export function runCommand(payload) {
         const arch = await remoteEngineClient.arch(engine);
         const variantTokens = { arch };
 
+        // MPI-208 Phase 2: register this generation as a store job the moment engine
+        // (and arch) are frozen. The store owns the abort token + the frozen engine
+        // interrupt from here on. The interrupt callback captures the FROZEN engine
+        // (payload.forceLocal, resolved once above) — never re-resolved at cancel
+        // time — and closes the SSE. `_closeSSE` is reassigned when the SSE opens
+        // (far below); until then it is a no-op, which is correct (nothing to close).
+        const jobId = crypto.randomUUID();
+        let _closeSSE = () => {};
+        generationStore.register({
+            jobId,
+            engine,
+            scope: payload.scope || (payload.historyMode ? 'groupHistory' : 'gallery'),
+            interruptCb: () => {
+                try { _closeSSE(); } catch (_) { /* SSE already closed */ }
+                try { getEngine(payload.forceLocal === true).interrupt(); } catch (_) { /* engine gone */ }
+            },
+        });
+        exec.jobId = jobId;
+        // Abort-boundary bail: called after each await. When the job's token is
+        // aborted (a Stop landed mid-pipeline) we stop cleanly — clean up any temp
+        // inputs, ensure the store job reaches a terminal, and return WITHOUT ever
+        // POSTing /prompt (no orphan generation, no ghost history — MPI-208 disease
+        // 3). The store.cancel() from exec.cancel() already fired the interrupt +
+        // set the token; this just makes the pipeline honor it at the next boundary.
+        const _abortedBail = async (tempPaths = []) => {
+            if (!generationStore.getSignal(jobId)?.aborted) return false;
+            await _cleanupTrimmedVideoInputs(tempPaths);
+            // No-op if the store already moved the job to cancelled (the usual case,
+            // since store.cancel() ran first); belt-and-suspenders for a token that
+            // was aborted without going through store.cancel().
+            generationStore.advance(jobId, PHASES.CANCELLED);
+            exec.onError?.(new Error('cancelled_before_dispatch'));
+            return true;
+        };
+
         // MPI-209 generate-time guard: an arch-variant model (LTX balanced) needs the
         // weight matching the LIVE GPU's arch. If that weight is not on disk, block
         // BEFORE dispatch and offer to install it — never let ComfyUI fail with a
@@ -998,6 +1048,7 @@ export function runCommand(payload) {
             clientLogger.error('commandExecutor', 'arch-weight guard failed', err);
             // Fail open: a guard bug must not block a gen whose weight is actually present.
         }
+        if (await _abortedBail()) return;
 
         let workflowFile;
         try {
@@ -1035,6 +1086,7 @@ export function runCommand(payload) {
             exec.onError?.(err);
             return;
         }
+        if (await _abortedBail(tempTrimInputPaths)) return;
 
         const params = _buildParams(workingPayload);
         exec.seed = params.Seed ?? null;
@@ -1078,6 +1130,7 @@ export function runCommand(payload) {
         if (engine === 'remote' && workingPayload.forceLocal !== true) {
             await _ensureRemoteHotStore(workingPayload.modelId, workingPayload.operation);
         }
+        if (await _abortedBail(tempTrimInputPaths)) return;
 
         // Load the workflow JSON so we can identify "Output" node ids before
         // execution — needed for filtering executed messages by title.
@@ -1142,6 +1195,7 @@ export function runCommand(payload) {
             exec.onError?.(err);
             return;
         }
+        if (await _abortedBail(tempTrimInputPaths)) return;
 
         // Build a set of node ids whose _meta.title === "output" (case-insensitive)
         // — or "preview" when this is a preview-only run on a multi-stage workflow.
@@ -1231,7 +1285,38 @@ export function runCommand(payload) {
         // into the video server-side at save time.
         let audioOutputUrl = null;
         let _samplingStartFired = false;
-        let _modelInitializing = hasTerminalPhaseSampler;
+        // MPI-208 Phase 2: model-load state is now the store job's phase, not a
+        // private closure. `_modelInitializing` is DERIVED — the job sits in
+        // PHASES.LOADING while a model loads and leaves it the moment real sampling
+        // begins. A model-tied sampler workflow starts in the loading phase (the
+        // old `hasTerminalPhaseSampler` seed); everything else starts unloaded.
+        // A store terminal (Stop) makes _modelInitializing read false so no stale
+        // "LOADING MODEL" survives a cancel.
+        const _isLoading = () => generationStore.byId(jobId)?.phase === PHASES.LOADING;
+        const _enterLoading = () => {
+            // Advance only from a non-terminal, pre-sampling phase — the store's
+            // transition table no-ops an illegal move (e.g. loading→loading, or once
+            // sampling/terminal is reached), so this is safe to call repeatedly.
+            // NOTE: the phase table forbids ACCEPTED before LOADING, so this must run
+            // only AFTER prompt_ack advanced the job to ACCEPTED (see onMessage).
+            generationStore.advance(jobId, PHASES.LOADING);
+        };
+        // A model-tied sampler workflow spends its first phase loading the model.
+        // Seeded on prompt_ack (once accepted), NOT at register — accepted must
+        // precede loading in the phase table. `hasTerminalPhaseSampler` is the same
+        // signal the old `_modelInitializing` closure used.
+        // SSE frames on the merged remote-mode stream carry BOTH engines' events
+        // (B1-B): local stdout tagged engine:'local', Pod relay tagged 'remote'.
+        // This job reacts ONLY to frames matching its FROZEN engine — a force-local
+        // gen ignores the Pod's install/relay noise, and a remote gen ignores local
+        // stdout. Frames with no engine tag are treated as matching (backward-compat
+        // with any untagged emitter). Kills MPI-208 disease 2 at the consumer.
+        const _frameEngineMatches = (e) => {
+            try {
+                const d = JSON.parse(e.data);
+                return !d.engine || d.engine === engine;
+            } catch (_) { return true; }
+        };
         // Once stdout tqdm progress arrives it is authoritative for the fill — the
         // WS aggregator is suppressed so the two don't fight (MPI-147).
         let _stdoutDriving = false;
@@ -1247,13 +1332,26 @@ export function runCommand(payload) {
         const _suppressLifecycleEvents = workingPayload.suppressLifecycleEvents === true;
         const emitSamplingStart = () => {
             if (_samplingStartFired) return;
-            if (_modelInitializing) return;
-            _modelInitializing = false;
+            // Preserve the old `_modelInitializing` gate: a bare emit (e.g. from a
+            // latent `preview` msg) does NOT fire while the job is still loading —
+            // callers that KNOW sampling began call `_beginSampling()` which clears
+            // loading first.
+            if (_isLoading()) return;
             _samplingStartFired = true;
+            // Advance the store past loading. No-op if already sampling/terminal.
+            generationStore.advance(jobId, PHASES.SAMPLING);
             if (!_suppressLifecycleEvents) {
                 Events.emit('tool:sampling-start', { tool: 'groupHistory', id: exec.genId, operation: workingPayload.operation });
             }
             exec.onSamplingStart?.();
+        };
+        // "Sampling has definitely begun" — clears the loading phase then emits.
+        // Replaces the old `_modelInitializing = false; emitSamplingStart();` pair
+        // at every call site that knows real work started (multi-step bar, tile
+        // pass, imageUpscale, a running work node).
+        const _beginSampling = () => {
+            generationStore.advance(jobId, PHASES.SAMPLING);
+            emitSamplingStart();
         };
         const emitProgress = (value) => {
             // Bar emission is decoupled from sampling-start (MPI-147). The bar
@@ -1281,21 +1379,28 @@ export function runCommand(payload) {
             comfyEventSource.close();
             comfyEventSource = null;
         };
-        exec.cancel = () => {
-            closeComfyEventSource();
-            getEngine(workingPayload.forceLocal === true).interrupt();
-        };
+        // Wire the store's frozen interruptCb to this run's SSE closer (registered
+        // above with a no-op placeholder). store.cancel(jobId) → interruptCb →
+        // _closeSSE() + engine interrupt. From here, exec.cancel() (which delegates
+        // to store.cancel) tears down BOTH the SSE and the engine work.
+        _closeSSE = closeComfyEventSource;
         if (hasStepEmittingNode && typeof EventSource !== 'undefined') {
             comfyEventSource = new EventSource('/comfy/events/stream');
             // Model-load markers (synthesized from WS on remote, parsed from stdout
             // locally) only drive the "Loading model" label — NOT the bar. The load
             // shows up as its own tqdm bar (stage 1) via step-progress below.
-            comfyEventSource.addEventListener('comfy:model-initializing', () => {
-                _modelInitializing = true;
+            // Engine-filtered (B1-B merged stream): ignore the OTHER engine's frames.
+            comfyEventSource.addEventListener('comfy:model-initializing', (e) => {
+                if (!_frameEngineMatches(e)) return;
+                _enterLoading();
                 if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
             });
-            comfyEventSource.addEventListener('comfy:model-init-complete', () => {
-                _modelInitializing = false;
+            comfyEventSource.addEventListener('comfy:model-init-complete', (e) => {
+                if (!_frameEngineMatches(e)) return;
+                // Model finished loading, but sampling may not have emitted its first
+                // step yet — leave the store in loading until real work fires
+                // (_beginSampling). Only the label update is emitted here, matching
+                // the old behavior (it re-emitted tool:loading-model to clear it).
                 if (!_samplingStartFired && !_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
             });
             // tqdm step progress parsed from ComfyUI stdout (MPI-147). The WS
@@ -1307,6 +1412,7 @@ export function runCommand(payload) {
             // the fallback. Stage 1 (model-load 0/1) does NOT count as sampling, so
             // the timer/badge only start once a multi-step bar (max>1) appears.
             comfyEventSource.addEventListener('comfy:step-progress', (e) => {
+                if (!_frameEngineMatches(e)) return;
                 let value = 0, max = 0;
                 try {
                     const d = JSON.parse(e.data);
@@ -1317,12 +1423,13 @@ export function runCommand(payload) {
                 stageProgress.step(value, max);
                 // Sampling proper begins at the first multi-step bar (the load bar is
                 // max 1). Keeps the timer excluding cold model-load (user's rule).
-                if (max > 1) { _modelInitializing = false; emitSamplingStart(); }
+                if (max > 1) _beginSampling();
                 _emitStageAndProgress();
             });
             // UltimateSDUpscale outer tile bar (MPI-147). Sets the stage = tile #;
             // the interleaved inner step bars (above) only move the fill.
             comfyEventSource.addEventListener('comfy:tile-progress', (e) => {
+                if (!_frameEngineMatches(e)) return;
                 let tile = 0, tiles = 0;
                 try {
                     const d = JSON.parse(e.data);
@@ -1330,8 +1437,7 @@ export function runCommand(payload) {
                 } catch (_err) { return; }
                 if (!(tiles > 0)) return;
                 _stdoutDriving = true;
-                _modelInitializing = false;
-                emitSamplingStart();
+                _beginSampling();
                 stageProgress.tile(tile, tiles);
                 _emitStageAndProgress();
             });
@@ -1339,6 +1445,7 @@ export function runCommand(payload) {
             // total up front ("Detail 2/3"); each per-segment 0/8 step bar then ticks
             // the stage via the normal per-bar logic.
             comfyEventSource.addEventListener('comfy:segment-total', (e) => {
+                if (!_frameEngineMatches(e)) return;
                 try {
                     const d = JSON.parse(e.data);
                     if (d.total > 0) { stageProgress.setTotal(Number(d.total)); _emitStageAndProgress(); }
@@ -1362,6 +1469,13 @@ export function runCommand(payload) {
         const _finishGeneration = () => {
             if (_generationFinished) return;
             _generationFinished = true;
+            // Settle the store job to done. R09 late-settle: a job that got a Stop
+            // (cancelling overlay) but whose real output still arrived advances to
+            // done here — the output SAVES. If the store already reached the
+            // `cancelled` terminal (Stop fully landed before any output), settle()
+            // no-ops and onComplete still runs against whatever outputs exist (the
+            // empty-output branch in generationService then treats it as cancelled).
+            generationStore.settle(jobId, PHASES.DONE);
             aggregator.onExecutionSuccess();
             // On completion the last stage's bar fills to 100% (the trailing vae
             // decode emits no tqdm). statusBar.complete() also flashes 100%, so this
@@ -1374,6 +1488,14 @@ export function runCommand(payload) {
         const onMessage = (msg) => {
             if (msg.type === 'prompt_ack') {
                 exec.promptId = msg.prompt_id;
+                // Server queued THIS prompt — the job is accepted. Records the
+                // promptId on the store record so engine-filtered reconcile (Phase 5)
+                // and cross-engine event matching can key on it later.
+                generationStore.advance(jobId, PHASES.ACCEPTED, { promptId: msg.prompt_id });
+                // A sampler workflow now enters model-load. (accepted → loading is
+                // legal; this was the old `_modelInitializing = hasTerminalPhaseSampler`
+                // seed, deferred to after acceptance to satisfy the phase table.)
+                if (hasTerminalPhaseSampler) _enterLoading();
                 exec.onPromptAck?.(msg.prompt_id);
                 return;
             }
@@ -1423,12 +1545,9 @@ export function runCommand(payload) {
                 });
                 if (!_samplingStartFired) {
                     // Only flip badge when a work node is actually running
-                    if (workRunning) {
-                        _modelInitializing = false;
-                        emitSamplingStart();
-                    }
+                    if (workRunning) _beginSampling();
                 }
-                // Emit regardless of _modelInitializing — the bar reflects node
+                // Emit regardless of loading phase — the bar reflects node
                 // progress and may legitimately climb before the sampler fires.
                 // The timer stays gated on sampling-start (MPI-147).
                 if (!_stdoutDriving) emitProgress(aggregator.percent());
@@ -1444,10 +1563,7 @@ export function runCommand(payload) {
                     (isDelayedWorkNode(nodeId) && progressFraction(msg.data) >= ULTIMATE_START_PROGRESS)
                 );
                 if (!_samplingStartFired) {
-                    if (workRunning) {
-                        _modelInitializing = false;
-                        emitSamplingStart();
-                    }
+                    if (workRunning) _beginSampling();
                 }
                 if (!_stdoutDriving) emitProgress(aggregator.percent());
                 return;
@@ -1458,9 +1574,11 @@ export function runCommand(payload) {
 
                 if (nodeId !== null) {
                     const nodeKind = weightMap.nodes[nodeId]?.kind;
-                    if (!_samplingStartFired && !_suppressLifecycleEvents && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
-                        Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
-                    } else if (!_modelInitializing && !_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
+                    if (!_samplingStartFired && LOADER_CLASS_TYPES.has(nodeClassMap[nodeId])) {
+                        // A loader node is executing → the job is loading its model.
+                        _enterLoading();
+                        if (!_suppressLifecycleEvents) Events.emit('tool:loading-model', { tool: 'groupHistory', id: exec.genId });
+                    } else if (!_isLoading() && !_samplingStartFired && IMMEDIATE_WORK_KINDS.has(nodeKind) && !TERMINAL_PHASE_WORK_KINDS.has(nodeKind)) {
                         emitSamplingStart();
                     }
                     // imageUpscale (ESRGAN) is a single-shot op with NO progress
@@ -1512,6 +1630,15 @@ export function runCommand(payload) {
             }
         };
 
+        // FINAL abort gate before dispatch (MPI-208 disease 3). A Stop that landed
+        // during any preflight above aborted the job's token; do NOT POST /prompt for
+        // an already-cancelled job — that is the orphan generation the store exists to
+        // prevent. runWorkflow (which submits the prompt) is never reached on abort.
+        if (await _abortedBail(tempTrimInputPaths)) return;
+        // advance to `submitting` — the last non-terminal phase before the server
+        // ACKs. (queued/accepted → submitting is legal; a no-op if already past it.)
+        generationStore.advance(jobId, PHASES.SUBMITTING);
+
         try {
             // MPI-74 P6: per-generation force-local override selects the engine at
             // the call site. getEngine(true) is the LOCAL-pinned instance (own
@@ -1525,6 +1652,11 @@ export function runCommand(payload) {
             });
         } catch (err) {
             closeComfyEventSource();
+            // Settle the store job to error (no-op if a Stop already reached the
+            // `cancelled` terminal — an interrupt during runWorkflow throws here, but
+            // store.cancel() already terminated the job). Non-terminal jobs become
+            // `error` so no live job is stranded for the reconciler.
+            generationStore.settle(jobId, PHASES.ERROR, { error: err?.message || String(err) });
             // A recoverable remote restart (A3): the proxy 503'd because the remote
             // ComfyUI process is re-initialising after an OOM container self-restart
             // (the Pod stays alive — see comfyController `engine_restarting`). This

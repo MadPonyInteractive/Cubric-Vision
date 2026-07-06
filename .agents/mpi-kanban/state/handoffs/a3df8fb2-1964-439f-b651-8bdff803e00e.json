@@ -1,0 +1,129 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a3df8fb2-1964-439f-b651-8bdff803e00e",
+  "generated_at": "2026-07-06T21:02:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-208 Foundation batch (B1-A/B/C + R31) implementation + live verify",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-208 — generation queue refactor (cue/loop/stop/dual-engine state machine). Replace patch-over-patch cue/stop/status with a single owned generationStore state machine.",
+    "status": "in_progress",
+    "summary": "Foundation batch (B1-A generationStore + tests, B1-B SSE engine tagging/merge, B1-C engineOverride + R31 selector) is COMPLETE and live-verified in the Electron app, but UNCOMMITTED. Foundation is disjoint scaffolding — the store is NOT yet wired into the live generation path. Next: Phase 2 wires commandExecutor onto the store with cancellation tokens + engine-filtered SSE."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+    "completed": [
+      "Investigation (4 agents) + requirements contract R01-R31 / INV-1..7 (research/)",
+      "B1-A generationStore.js + 13 Node tests (all green; flattened to tests/generation-store.test.cjs per repo convention)",
+      "B1-B SSE engine tagging + merged stream (routes/comfy.js + routes/remoteProxyForward.js) — live-proven engine=local frames + engine=remote merged relay",
+      "B1-C engineOverride first-class state + effectiveEngine() helper — live-proven toggle flips override",
+      "R31 selector-swaps-local (cross-fence: modelRegistry.js 4 gates -> effectiveEngine(); shell.js re-sync on engineOverride change; done AFTER MPI-209 committed) — live-proven local(10 models) vs remote(2) via /comfy/models/check-local"
+    ],
+    "pending": [
+      "Phase 2: commandExecutor on store + cancellation tokens + filtered SSE (NEXT)",
+      "Phase 3: generationService rewritten on store",
+      "Phase 4: UI derived from store (statusBar, PromptBox, QueuePanel, blocks)",
+      "Phase 5: reconcile-on-truth + regression sweep + docs (docs need explicit user permission per CLAUDE.md)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-208",
+    "title": "Generation queue refactor — cue/loop/stop/dual-engine state machine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-208/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-208/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement Phase 2",
+    "verify",
+    "commit Foundation by explicit pathspec if user authorizes"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md updated: Foundation STATUS banner + B1-A/B/C checkboxes marked [x] with integrator notes",
+      "validation.updated event appended to both event logs (task + global)",
+      "task.json updated_at bumped (column stays doing — Phases 2-5 remain)",
+      ".claude/rules/component-state.md documents the new engineOverride state key (done in B1-C)"
+    ],
+    "pending": [
+      "Commit Foundation files (user-authorized / mpi-end territory — NOT yet committed). Commit by explicit pathspec, shared-tree hygiene, never git add -A.",
+      "Two follow-ups to card separately (NOT MPI-208 scope): (1) remote gen fails at comfyController.js:470 WS-ready gate ~15s timeout — pre-existing, reproducible; (2) periodic syncModelInstalled poll every ~6.5s while remote-connected — pre-existing, possibly wasteful.",
+      "Phase 5: fold research/requirements-archaeology.md invariants into docs/ (likely new docs/generation-queue.md) + rule-file updates require explicit user permission."
+    ]
+  },
+  "next_action": {
+    "description": "Implement Phase 2: rework js/services/commandExecutor.js generation path (runCommand :866+). Register the job in generationStore at entry; resolve engine+arch ONCE and FREEZE on the job record (move existing :886-901 logic in); add abort-token checks at each await boundary (ensureServerRunning, hot-store ensure, remote upload, prompt POST) — aborted = transition 'cancelled', NO prompt POST, no orphan listener; replace the _modelInitializing closure with job phase:'loading' driven ONLY by SSE frames where frame.engine === job.engine (and promptId when present); emitSamplingStart gate reads job phase; cache-hit path (R25) transitions via store; exec.cancel() delegates to store.cancel(jobId). PRESERVE _needsPathHeal (MPI-141/198), hot-store best-effort (R24), _reconcileFromHistory replay (MPI-203) — reconcile now ALSO settles the store job. Verify: unit — token abort before ACK => no /prompt POST (mock fetch, assert). Live — local gen Stop during 'LOADING MODEL' => logs/app.log shows interrupt, NO later prompt POST for that job, store job terminal 'cancelled', next cue runs clean.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Foundation ran via mpi-execute-parallel (3 disjoint workers) — plan-sanctioned for the B1 batch ONLY. Phases 2-5 are sequential by dependency; do NOT parallelize them.",
+      "generationStore uses a factory createGenerationStore({emit, logger}) for Node testability PLUS a real singleton wired to Events.emit + clientLogger. generation-store:changed is NOT yet in MpiEventMap (fence forbade editing js/events.js) — Phase 2/4 integrator should add it.",
+      "Store transition table: cancelling is an OVERLAY boolean, NOT a phase. cancel() = hard stop (abort token + frozen-interrupt callback + immediate phase->CANCELLED terminal). settle()=advance() is the late-settle path: a job kept in a non-terminal phase with cancelling=true can still advance to done (R09 output-saves) — the executor chooses which in Phase 2.",
+      "R31 fix rides existing wiring: shell.js re-runs syncModelInstalled() on engineOverride change -> repopulates dep-status cache -> emits models:checked -> sets s_installedModelIds -> MpiGalleryBlock's existing s_installedModelIds watcher rebuilds installedAllModels + setModelList. No MpiGalleryBlock edit was needed.",
+      "R31 endpoint routing: syncModelInstalled hits /comfy/models/check-local (the MPI-74 force-local endpoint) when remoteEngineClient.isRemote() && effectiveEngine()==='local'; else /comfy/models/check (which forks to Pod when remote-active).",
+      "B1-A test flattened from tests/generation-store/ subdir to flat tests/generation-store.test.cjs — repo convention (every sibling is flat *.test.cjs) AND node --test <dir>/ breaks under Node v24 (treats trailing dir as a module to load => MODULE_NOT_FOUND). Run tests directly: node --test tests/generation-store.test.cjs."
+    ],
+    "constraints": [
+      "scalable-foundation project mode — full guardrails, no prototype shortcuts.",
+      "Shared git tree — commit by explicit pathspec (git commit --only <paths>), NEVER git add -A / git add . . Push stays user-authorized. Foundation is NOT committed yet.",
+      "MUST NOT change: ComfyUI injection contract, workflow compile, hot-store, LoRA upload, model install/download pipeline, project.json writes. Interface points only.",
+      "MPI-165 engine-split contract: engine resolved ONCE per gen AFTER remoteEngineClient.refresh(); never let two consumers call isRemote() independently. Phase 2 must FREEZE engine+arch on the job record.",
+      "Preserve (do NOT silently drop): MPI-141/198 path heal (_needsPathHeal), MPI-156 keepalive+transition self-heal, MPI-157 stop-all, MPI-179 mirror refresh, MPI-194 hot-store, MPI-203 history replay, MPI-206 model re-sync.",
+      "Rule-file + docs updates (events/state/component-*/comfy_engine, docs/generation-queue.md) are staged for Phase 5 and REQUIRE explicit user permission (CLAUDE.md cardinal rule 3).",
+      "MPI-209 (arch install toggles) is COMMITTED (f8f65da, 3c755fc, e2c532b) — registry is now stable, no live-edit collision. It left the 4 modelRegistry engine gates on isRemote(); R31 flipped them to effectiveEngine()."
+    ],
+    "files_modified": [
+      "js/services/generationStore.js (NEW — 507 lines, B1-A)",
+      "tests/generation-store.test.cjs (NEW — 13 tests, B1-A)",
+      "routes/comfy.js (B1-B — _broadcastComfyEvent tags engine:'local'; addComfyEventClient/removeComfyEventClient exported)",
+      "routes/remoteProxyForward.js (B1-B — merge instead of replace; local tagged local, Pod tagged remote, install-* passthrough, 20s keepalive)",
+      "js/state.js (B1-C — engineOverride: null)",
+      "js/services/remoteEngineClient.js (B1-C — effectiveEngine() helper)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (B1-C — toggle writes engineOverride + keeps _runLocal mirror; state:changed rebuild)",
+      "js/data/modelRegistry.js (R31 — 4 engine gates -> effectiveEngine(); syncModelInstalled routes to /check-local)",
+      "js/shell.js (R31 — onState('engineOverride') re-runs syncModelInstalled)",
+      ".claude/rules/component-state.md (B1-C — engineOverride doc row)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-208/research/requirements-archaeology.md",
+      "js/services/generationStore.js",
+      "js/services/commandExecutor.js",
+      ".claude/rules/comfy_engine.md",
+      ".claude/rules/state.md",
+      ".claude/rules/events.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["generation-queue", "engine-split", "dual-engine", "comfy-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/components.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-06T21:02:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-208 (generation queue refactor) in Cubric Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/a3df8fb2-1964-439f-b651-8bdff803e00e.json and use mpi-continue to pick up. Foundation batch (B1-A generationStore.js + tests, B1-B SSE engine tagging/merge, B1-C engineOverride + R31 model-selector swap) is COMPLETE and live-verified in the Electron app but UNCOMMITTED — the store is scaffolding, NOT yet wired into the live generation path. Your next action is Phase 2: rework js/services/commandExecutor.js runCommand (:866+) to register each generation as a job in generationStore, freeze engine+arch on the job record, add abort-token checks at every await boundary (aborted => transition cancelled, NO /prompt POST), replace the _modelInitializing closure with job phase:'loading' driven only by SSE frames where frame.engine===job.engine, and make exec.cancel() delegate to store.cancel(jobId). Preserve _needsPathHeal (MPI-141/198), hot-store best-effort (R24), and _reconcileFromHistory replay (MPI-203). Verify with a unit test (token abort before ACK => no /prompt POST, mock fetch) and a live test (local gen Stop during LOADING MODEL => interrupt logged, no later prompt POST, store job terminal cancelled, next cue clean). Constraints: scalable-foundation mode, shared git tree (commit by explicit pathspec only, Foundation not committed yet), do NOT parallelize Phases 2-5, and do NOT change the ComfyUI injection/workflow/hot-store/install contracts. Two pre-existing follow-ups to card separately (NOT MPI-208): remote gen failing at comfyController.js:470 WS-ready gate, and a ~6.5s periodic syncModelInstalled poll while remote-connected."
+}
