@@ -95,7 +95,9 @@ export async function syncModelInstalled() {
         // because the other engine's transformer file is legitimately absent. The
         // resolver adds engines[engine].extraDeps; shared deps are always in.
         // (MPI-163 — engine-aware resolution, replaces the old post-filter)
-        const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+        // R31 (MPI-208): resolve against the EFFECTIVE engine so a "Run locally"
+        // override checks LOCAL install-state while the app is remote-connected.
+        const engine = remoteEngineClient.effectiveEngine();
         const modelPayload = MODELS.map(model => ({
             id: model.id,
             deps: resolveFullUniverse(model, null, engine)
@@ -103,7 +105,12 @@ export async function syncModelInstalled() {
                 .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
-        const res = await fetch('/comfy/models/check', {
+        // R31: when remote-connected but the override forces LOCAL, hit the
+        // force-local endpoint (MPI-74) so we stat the local disk, not the Pod.
+        const checkPath = (remoteEngineClient.isRemote() && engine === 'local')
+            ? '/comfy/models/check-local'
+            : '/comfy/models/check';
+        const res = await fetch(checkPath, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ models: modelPayload }),
@@ -284,7 +291,7 @@ export function isModelUsable(modelOrId) {
         const s = depStatus.get(id);
         return s === true || s?.installed === true;
     };
-    const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+    const engine = remoteEngineClient.effectiveEngine(); // R31 (MPI-208): follow the "Run locally" override
     return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).fullyInstalled;
 }
 
@@ -312,7 +319,7 @@ export function isOperationInstalled(modelOrId, op) {
         const s = depStatus.get(id);
         return s === true || s?.installed === true;
     };
-    const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+    const engine = remoteEngineClient.effectiveEngine(); // R31 (MPI-208): follow the "Run locally" override
     return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).installedOps.includes(op);
 }
 
@@ -341,7 +348,7 @@ export function installedForOtherArch(modelOrId) {
     if (!model) return null;
     const depStatus = getModelDepStatus(model.id);
     if (!depStatus) return null; // no cache yet
-    const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+    const engine = remoteEngineClient.effectiveEngine(); // R31 (MPI-208): follow the "Run locally" override
     const curArch = remoteEngineClient.archSync(engine);
     const isOn = id => {
         const s = depStatus.get(id);

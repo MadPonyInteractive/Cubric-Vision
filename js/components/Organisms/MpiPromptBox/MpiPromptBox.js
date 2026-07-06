@@ -134,6 +134,10 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!model?.operations) return _context;
             const depStatus = getModelDepStatus(model.id);
             if (!depStatus) return _context;
+            // R31 (MPI-208): use effectiveEngine() so the "Run locally" override
+            // is honoured — when the toggle is ON, installedOps are derived from
+            // the LOCAL engine's weights, not the remote Pod's.
+            const engine = remoteEngineClient.effectiveEngine();
             const { installedOps } = deriveInstalledOps(
                 model,
                 depId => {
@@ -143,9 +147,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 // Engine-scoped (MPI-165): an engine-split model's installed-op set
                 // depends on the current engine's weights. (LTX is flat → early-return
                 // above; this guards a future op-keyed engine-split model.)
-                remoteEngineClient.isRemote() ? 'remote' : 'local',
+                engine,
                 // MPI-200: arch token for a future op-keyed model with a variants: block.
-                { arch: remoteEngineClient.archSync(remoteEngineClient.isRemote() ? 'remote' : 'local') },
+                { arch: remoteEngineClient.archSync(engine) },
             );
             return { ..._context, installedOps };
         }
@@ -1259,6 +1263,14 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             if (key === 'remoteEnginePhase') {
                 _applyRemotePhase(); // MPI-73: enable/disable Cue on transition
+                return;
+            }
+            // R31 (MPI-208): rebuild op dropdown + badge when the engine override
+            // changes so the selector shows the correct installed-op set for the
+            // effective engine ('local' override → local weights; null → remote).
+            if (key === 'engineOverride') {
+                _refreshOpDropdown();
+                _renderBadge();
             }
         }));
 
@@ -1297,11 +1309,17 @@ export const MpiPromptBox = ComponentFactory.create({
             info: 'Run this generation on your local engine instead of the cloud Pod.',
             extraClasses: 'mpi-prompt-box__engine-toggle',
         });
-        engineToggleBtn.on('toggle', ({ active }) => { _runLocal = !!active; });
+        engineToggleBtn.on('toggle', ({ active }) => {
+            _runLocal = !!active; // MPI-74: keep existing mirror (payload unchanged this phase)
+            // R31 (MPI-208): promote to first-class state so selector derivation
+            // and installed-op gating react via effectiveEngine().
+            state.engineOverride = active ? 'local' : null;
+        });
         const _showEngineToggle = (connected) => {
             engineToggleSlot?.classList.toggle('hide', !connected);
             if (!connected) {
                 _runLocal = false; // reset on disconnect
+                state.engineOverride = null; // R31: clear override on disconnect
                 engineToggleBtn.el.setActive(false);
             }
         };

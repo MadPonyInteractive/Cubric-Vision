@@ -1246,6 +1246,19 @@ async function _initDataRegistries() {
     }
   });
 
+  // R31 (MPI-208): the "Run locally" toggle flips state.engineOverride while the
+  // app stays remote-connected. Install-state is engine-scoped, so re-sync against
+  // the new EFFECTIVE engine — syncModelInstalled() now routes to /check-local when
+  // override forces local (modelRegistry.js), then emits models:checked → the model
+  // pickers rebuild their list (MpiGalleryBlock's s_installedModelIds watcher).
+  Events.onState('engineOverride', async () => {
+    try {
+      await syncModelInstalled();
+    } catch (err) {
+      clientLogger.error('shell', 'model registry sync on engineOverride change failed:', err);
+    }
+  });
+
   // Also do an initial check in case engine was already ready before this listener was registered
   // (e.g., fresh start with no engine install needed)
   try {

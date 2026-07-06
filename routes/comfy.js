@@ -67,11 +67,17 @@ const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
 ]);
 
 function _broadcastComfyEvent(event, data) {
-    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    const payload = `event: ${event}\ndata: ${JSON.stringify({ ...data, engine: 'local' })}\n\n`;
     for (const client of _comfyEventClients) {
         try { client.write(payload); } catch (_) { /* client closed */ }
     }
 }
+
+/** Register / unregister an SSE response with the local broadcast set.
+ *  Used by the remote-mode relay (remoteProxyForward.js) so that merged-stream
+ *  clients still receive local-engine frames tagged engine:'local'. */
+function addComfyEventClient(res) { _comfyEventClients.add(res); }
+function removeComfyEventClient(res) { _comfyEventClients.delete(res); }
 
 function _classifyComfyOutput(defaultLevel, text) {
     if (defaultLevel === 'info') return 'info';
@@ -819,3 +825,5 @@ router.get('/comfy/list-files', async (req, res) => {
 
 module.exports = router;
 module.exports.setAxios = setAxios;
+module.exports.addComfyEventClient = addComfyEventClient;
+module.exports.removeComfyEventClient = removeComfyEventClient;

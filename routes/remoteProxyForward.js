@@ -274,6 +274,12 @@ router.post('/remote/hot-store/ensure', async (req, res) => {
 
 // --- model-init SSE relay (remote-mode intercept; falls through when local) ----
 
+// MPI-208 B1-B: MERGE mode — local stdout events (tagged engine:'local' by
+// _broadcastComfyEvent) flow to this client via the _comfyEventClients Set
+// while Pod wrapper frames arrive tagged engine:'remote'. Replaces the old
+// replace-relay that piped the raw upstream stream and poisoned local gens
+// with unfiltered Pod install activity. models:install-* frames pass through
+// unchanged (downloadManager path must be unaffected).
 router.get('/comfy/events/stream', async (req, res, next) => {
   if (!_mode.active) return next();
   const headers = await _authHeaders();
@@ -293,7 +299,12 @@ router.get('/comfy/events/stream', async (req, res, next) => {
       Connection: 'keep-alive',
     });
     res.flushHeaders();
-    const nodeStream = Readable.fromWeb(upstream.body);
+
+    // Register with the local broadcast set so _broadcastComfyEvent (comfy.js)
+    // delivers engine:'local'-tagged frames to this merged-stream client.
+    const { addComfyEventClient, removeComfyEventClient } = require('./comfy');
+    addComfyEventClient(res);
+
     // MPI-156: keepalive. The upstream wrapper SSE goes quiet during long
     // sampling/load stretches; with no traffic the proxy/socket reaps this
     // relay at a ~128s idle cadence ("remote SSE stream aborted: terminated")
@@ -304,28 +315,87 @@ router.get('/comfy/events/stream', async (req, res, next) => {
       if (!res.writableEnded) res.write(':ping\n\n');
     }, 20000);
     const stopKeepalive = () => clearInterval(keepalive);
+
+    const cleanup = () => {
+      stopKeepalive();
+      removeComfyEventClient(res);
+    };
+
+    // Parse incoming SSE text from the Pod wrapper.
+    // Each SSE message block is delimited by a blank line. We accumulate lines
+    // until the block is complete, then route it:
+    //   • models:install-* events → pass through UNCHANGED (downloadManager).
+    //   • all other events        → parse data JSON, inject engine:'remote'.
+    //   • comment lines (:...)    → forward as-is (keepalive pass-through).
+    const nodeStream = Readable.fromWeb(upstream.body);
+    let buf = '';
+    nodeStream.setEncoding('utf8');
+    nodeStream.on('data', (chunk) => {
+      buf += chunk;
+      let boundary;
+      // SSE message blocks are separated by '\n\n' (or '\r\n\r\n').
+      while ((boundary = buf.indexOf('\n\n')) !== -1) {
+        const block = buf.slice(0, boundary);
+        buf = buf.slice(boundary + 2);
+        if (!block.trim()) continue; // skip empty blocks
+        if (res.writableEnded) continue;
+
+        // Parse the block into its event name and raw data string.
+        let eventName = '';
+        let dataStr = '';
+        for (const line of block.split('\n')) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataStr = line.slice(5).trim();
+          } else if (line.startsWith(':')) {
+            // SSE comment (keepalive ping from wrapper) — forward unchanged.
+            try { res.write(line + '\n\n'); } catch (_) { /* client closed */ }
+          }
+        }
+
+        if (!eventName) continue; // no event name — skip malformed block
+
+        // models:install-* frames: pass through UNCHANGED (downloadManager path).
+        if (eventName.startsWith('models:install-')) {
+          try { res.write(`event: ${eventName}\ndata: ${dataStr}\n\n`); } catch (_) { /* client closed */ }
+          continue;
+        }
+
+        // All other Pod frames: inject engine:'remote'.
+        let data = {};
+        try { data = JSON.parse(dataStr); } catch (_) { /* non-JSON data — leave as empty object */ }
+        try {
+          res.write(`event: ${eventName}\ndata: ${JSON.stringify({ ...data, engine: 'remote' })}\n\n`);
+        } catch (_) { /* client closed */ }
+      }
+    });
+
     // Same crash guard as _streamthrough: the SSE relay is the live event
     // channel during a generation, so its upstream socket drops whenever the
     // Pod OOMs/restarts mid-gen. An unhandled 'error' here would crash the
     // backend (exit 1) and freeze the generation. Swallow + end the SSE.
     nodeStream.on('error', (err) => {
       logger.warn('runpod', `remote SSE stream aborted: ${err?.message || err}`);
-      stopKeepalive();
+      cleanup();
       ctrl.abort();
       if (!res.writableEnded) res.end();
     });
+    nodeStream.on('end', () => {
+      cleanup();
+      if (!res.writableEnded) res.end();
+    });
     res.on('error', () => {
-      stopKeepalive();
+      cleanup();
       ctrl.abort();
       nodeStream.destroy();
     });
-    nodeStream.pipe(res);
     // res 'close' fires on every terminal path (clean pipe-end, client abort,
-    // error) — the catch-all that guarantees the interval is cleared even when
-    // upstream ends cleanly without an 'error' event.
-    res.on('close', stopKeepalive);
+    // error) — the catch-all that guarantees the interval is cleared and the
+    // client is removed from the local broadcast set.
+    res.on('close', cleanup);
     req.on('close', () => {
-      stopKeepalive();
+      cleanup();
       ctrl.abort();
       nodeStream.destroy();
     });
