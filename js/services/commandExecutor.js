@@ -1008,7 +1008,18 @@ export function runCommand(payload) {
             scope: payload.scope || (payload.historyMode ? 'groupHistory' : 'gallery'),
             interruptCb: () => {
                 try { _closeSSE(); } catch (_) { /* SSE already closed */ }
-                try { getEngine(payload.forceLocal === true).interrupt(); } catch (_) { /* engine gone */ }
+                const _eng = getEngine(payload.forceLocal === true);
+                // interrupt() only aborts the CURRENTLY-RUNNING prompt. A job that was
+                // accepted but is still WAITING in ComfyUI's FIFO (queued behind another
+                // gen on the same lane) is untouched by interrupt — so it would run later
+                // when the queue advances, even though the user cancelled it (MPI-208:
+                // a cancelled image gen completed when the next gen started). Also delete
+                // THIS job's prompt from the engine queue by its promptId so a queued-
+                // but-not-running prompt is truly killed. Both best-effort.
+                try { _eng.interrupt(); } catch (_) { /* engine gone */ }
+                if (exec.promptId) {
+                    try { _eng.deleteQueueItem(exec.promptId); } catch (_) { /* engine gone / already ran */ }
+                }
             },
         });
         exec.jobId = jobId;
@@ -1488,14 +1499,24 @@ export function runCommand(payload) {
         const onMessage = (msg) => {
             if (msg.type === 'prompt_ack') {
                 exec.promptId = msg.prompt_id;
-                // Server queued THIS prompt — the job is accepted. Records the
-                // promptId on the store record so engine-filtered reconcile (Phase 5)
-                // and cross-engine event matching can key on it later.
-                generationStore.advance(jobId, PHASES.ACCEPTED, { promptId: msg.prompt_id });
-                // A sampler workflow now enters model-load. (accepted → loading is
-                // legal; this was the old `_modelInitializing = hasTerminalPhaseSampler`
-                // seed, deferred to after acceptance to satisfy the phase table.)
-                if (hasTerminalPhaseSampler) _enterLoading();
+                // Stamp the promptId on the store record (for engine-filtered reconcile
+                // + cross-engine event matching) WITHOUT forcing a phase move — on a
+                // fast dispatch a work signal can advance the job past `accepted` before
+                // this ack lands, and a backward advance(accepted) would warn.
+                generationStore.setPromptId(jobId, msg.prompt_id);
+                // Move to `accepted` ONLY if the job is still pre-accepted (the ack won
+                // the race). Once loading/sampling has begun the ack is just the promptId
+                // stamp above — no phase change.
+                const _phase = generationStore.byId(jobId)?.phase;
+                if (_phase === PHASES.QUEUED || _phase === PHASES.PREFLIGHT || _phase === PHASES.SUBMITTING) {
+                    generationStore.advance(jobId, PHASES.ACCEPTED);
+                }
+                // A sampler workflow now enters model-load — but ONLY if real work
+                // hasn't already started (fast path: a work signal beat this ack). Once
+                // sampling fired, seeding `loading` would wrongly flip the label back
+                // (sampling→loading is legal for STAGED reloads, so it wouldn't warn but
+                // would still mislabel here). Gate on _samplingStartFired.
+                if (hasTerminalPhaseSampler && !_samplingStartFired) _enterLoading();
                 exec.onPromptAck?.(msg.prompt_id);
                 return;
             }

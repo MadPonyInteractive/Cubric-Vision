@@ -159,6 +159,19 @@
 
 ## fixes
 
+- **Stopping a generation is now reliable.** A stopped generation that was still
+  waiting in the engine's queue (behind another running job) used to keep going and
+  finish anyway — so a job you cancelled could reappear as a completed result when
+  the next one started. Stop now fully removes a queued generation, so cancelled
+  work stays cancelled. The status bar also clears correctly after a Stop instead of
+  sometimes hanging on the last label.
+
+- **Stopping and re-queuing generations is steadier under load.** The generation
+  queue was rebuilt on a single source of truth, so cueing several jobs, stopping
+  the running one, cancelling or clearing pending ones, and looping all behave
+  consistently — the next job promotes cleanly and pending work is left untouched
+  when you only stop the running job.
+
 - **The Cue queue panel no longer covers the prompt bar.** With a job running,
   the slide-out queue panel extended all the way down and painted over the
   prompt box's controls (model, Cue, stop, clear), so you couldn't click them

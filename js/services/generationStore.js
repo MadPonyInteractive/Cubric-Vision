@@ -47,10 +47,21 @@ const TERMINAL_PHASES = new Set([PHASES.DONE, PHASES.CANCELLED, PHASES.ERROR]);
 const LEGAL_TRANSITIONS = new Map([
     [PHASES.QUEUED,     new Set([PHASES.PREFLIGHT,  PHASES.SUBMITTING, PHASES.ACCEPTED, PHASES.CANCELLED, PHASES.ERROR])],
     [PHASES.PREFLIGHT,  new Set([PHASES.SUBMITTING, PHASES.ACCEPTED,   PHASES.CANCELLED, PHASES.ERROR])],
-    [PHASES.SUBMITTING, new Set([PHASES.ACCEPTED,   PHASES.CANCELLED,  PHASES.ERROR])],
+    // submitting → any post-submit progress phase. The prompt_ack (→accepted) only
+    // records the promptId; it does NOT gate work signals. On a fast dispatch the
+    // first loader/preview/step event can beat the ack message to the client, so a
+    // job in `submitting` may legitimately jump straight to loading/sampling. Without
+    // these edges every fast gen logged an illegal submitting→sampling warn (MPI-208
+    // Phase 3 — surfaced when queued image gens promoted after a Stop).
+    [PHASES.SUBMITTING, new Set([PHASES.ACCEPTED,   PHASES.LOADING,    PHASES.SAMPLING, PHASES.FINALIZING, PHASES.DONE, PHASES.CANCELLED,  PHASES.ERROR])],
     [PHASES.ACCEPTED,   new Set([PHASES.LOADING,    PHASES.SAMPLING,   PHASES.FINALIZING, PHASES.DONE, PHASES.CANCELLED, PHASES.ERROR])],
     [PHASES.LOADING,    new Set([PHASES.SAMPLING,   PHASES.FINALIZING, PHASES.DONE, PHASES.CANCELLED, PHASES.ERROR])],
-    [PHASES.SAMPLING,   new Set([PHASES.FINALIZING, PHASES.DONE,       PHASES.CANCELLED, PHASES.ERROR])],
+    // sampling → loading is a LEGAL forward move for staged workflows: a multi-stage
+    // gen (LTX two-stage, or sampler → upscale-model reload) re-enters model-load
+    // between sampler passes. The label flips back to "LOADING MODEL" and forward
+    // again — not a regression. Without this, every staged gen logged an illegal
+    // sampling→loading warn per stage boundary (MPI-208 Phase 3 console spam).
+    [PHASES.SAMPLING,   new Set([PHASES.LOADING,    PHASES.FINALIZING, PHASES.DONE,       PHASES.CANCELLED, PHASES.ERROR])],
     [PHASES.FINALIZING, new Set([PHASES.DONE,       PHASES.CANCELLED,  PHASES.ERROR])],
     [PHASES.DONE,       new Set()],
     [PHASES.CANCELLED,  new Set()],
@@ -148,8 +159,16 @@ export function createGenerationStore({ emit, logger } = {}) {
 
         const legal = LEGAL_TRANSITIONS.get(fromPhase);
         if (!legal || !legal.has(toPhase)) {
-            _logger.warn('generationStore',
-                `illegal transition ${fromPhase}→${toPhase} for job ${jobId} — no-op`);
+            // A move OUT of a terminal phase is the EXPECTED late-settle race, not a
+            // bug: a Stopped job (cancelled) whose real output still arrives calls
+            // settle(done) — R09 says the terminal is final, so this no-ops by design
+            // (see T03). Same for a doubled done/error terminal. Don't warn on those —
+            // they were flooding the console on every Stop. A genuinely illegal move
+            // from a NON-terminal phase still warns (real state-machine violation).
+            if (!TERMINAL_PHASES.has(fromPhase)) {
+                _logger.warn('generationStore',
+                    `illegal transition ${fromPhase}→${toPhase} for job ${jobId} — no-op`);
+            }
             return false;
         }
 
@@ -311,6 +330,25 @@ export function createGenerationStore({ emit, logger } = {}) {
             _broadcast();
         }
         return true;
+    }
+
+    /**
+     * Stamp the ComfyUI promptId on a job WITHOUT moving its phase. The prompt_ack
+     * message records the promptId (for reconcile + cross-engine event matching) but
+     * must not force a phase transition: on a fast dispatch a work signal can advance
+     * the job past `accepted` BEFORE the ack lands, so an `advance(accepted)` would be
+     * an illegal backward move and warn. Decoupling the stamp from the transition
+     * fixes that. No-op on an unknown or terminal job (the promptId is moot once done).
+     *
+     * @param {string} jobId
+     * @param {string} promptId
+     */
+    function setPromptId(jobId, promptId) {
+        const job = _jobs.get(jobId);
+        if (!job || TERMINAL_PHASES.has(job.phase)) return;
+        if (job.promptId === promptId) return;
+        job.promptId = promptId;
+        _broadcast();
     }
 
     /**
@@ -483,6 +521,7 @@ export function createGenerationStore({ emit, logger } = {}) {
         // Core
         register,
         advance,
+        setPromptId,
         cancel,
         settle,
         clearPending,

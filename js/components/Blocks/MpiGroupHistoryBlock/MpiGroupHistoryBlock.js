@@ -864,7 +864,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
                 if (noRunning && (mode !== 'queue' || queueIdle)) {
-                    if (mode !== 'queue') state.generationQueueCount = 0;
+                    // MPI-208 Phase 3: generationQueueCount is derived from the store
+                    // + cue queue (one subscription in generationService). Do NOT hand-set
+                    // it here — refreshQueueDepth() below re-derives the true depth, and a
+                    // direct `= 0` would fight the store subscription (INV-2).
                     Events.emit('promptbox:generation-end');
                 }
                 refreshQueueDepth();

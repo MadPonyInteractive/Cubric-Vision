@@ -94,7 +94,7 @@ function completeTo(store, jobId, terminal = PHASES.DONE) {
  * State unchanged after illegal attempt; warn is logged.
  */
 function testLegalAndIllegalTransitions() {
-    const { store, events, logs } = makeStore();
+    const { store, events } = makeStore();
     const jobId = registerJob(store, { engine: 'remote' });
 
     // Legal forward walk: queued → preflight → submitting → accepted → loading → sampling → finalizing → done
@@ -106,13 +106,13 @@ function testLegalAndIllegalTransitions() {
     assert.ok(store.advance(jobId, PHASES.FINALIZING),  'sampling→finalizing');
     assert.ok(store.advance(jobId, PHASES.DONE),        'finalizing→done');
 
-    // Illegal: back-transition from terminal
-    const logCountBefore = logs.length;
+    // Illegal: back-transition from terminal. Rejected + no broadcast, and SILENT —
+    // a move out of a terminal is the expected late-settle race, not a bug (the warn
+    // for that was flooding the console; see T19 for the non-terminal warn path).
     const eventsBefore   = events.length;
     const res = store.advance(jobId, PHASES.QUEUED);
     assert.strictEqual(res, false,          'done→queued rejected');
     assert.strictEqual(store.byId(jobId).phase, PHASES.DONE, 'state unchanged');
-    assert.ok(logs.length > logCountBefore, 'warn logged for illegal transition');
     assert.strictEqual(events.length, eventsBefore, 'no broadcast on no-op');
 
     // Illegal: terminal→terminal (different)
@@ -469,6 +469,206 @@ function testCancelBeforeAckBlocksDispatch() {
     assert.strictEqual(store.byId(jobId).phase, PHASES.CANCELLED, 'phase stays cancelled');
 }
 
+// ── Phase 3 (generationService-on-store) integration contracts ──────────────────
+//
+// generationService can't run under Node (browser ESM: imports state.js/DOM). These
+// tests model the exact store wiring the Phase-3 dispatcher relies on — a lane-drain
+// callback that promotes the next intent or loop-re-fires — proving the archaeology
+// bugs (04/05/06/07/09/13) stay fixed at the contract the service is built on.
+// Pattern mirrors T14: exercise the store the way the service does, assert the
+// invariant it depends on.
+
+/**
+ * T15 — Stop-running promotes next, pending intact (R05, bug 06).
+ *
+ * The service registers ONE store job per dispatched intent and re-arms the lane
+ * drain callback on each dispatch. When the running job is Stopped (store.cancel),
+ * the lane drains and the callback fires exactly once → the service promotes its
+ * next pending INTENT (which becomes the next store job). Models: Stop does not
+ * clear pending; the successor lane is clean; no double-drain.
+ */
+function testStopPromotesNextPendingIntact() {
+    const { store } = makeStore();
+    const drains = [];
+    // The service arms this on each dispatch; it consumes on drain, so re-arm inside.
+    const arm = () => store.setLoopCallback('remote', (lane) => { drains.push(lane); });
+
+    // Dispatch job A (the running one). Pending intents B, C live in the SERVICE's
+    // _cueQueue, NOT the store — the store only ever holds the one dispatched job.
+    const jobA = registerJob(store, { engine: 'remote' });
+    arm();
+    store.advance(jobA, PHASES.ACCEPTED);
+    store.advance(jobA, PHASES.SAMPLING);
+
+    // Stop the running job → lane drains → callback fires ONCE.
+    store.cancel(jobA);
+    assert.strictEqual(drains.length, 1, 'drain callback fired exactly once on Stop');
+    assert.strictEqual(store.getSnapshot().running.length, 0, 'store lane clear after Stop');
+
+    // Service now promotes its next pending intent → a fresh store job (B). Re-arm.
+    const jobB = registerJob(store, { engine: 'remote' });
+    arm();
+    assert.ok(store.getSnapshot().running.map(j => j.jobId).includes(jobB), 'successor B active');
+    assert.strictEqual(store.byId(jobA).phase, PHASES.CANCELLED, 'A stays cancelled');
+
+    // A late settle on the Stopped A must NOT re-drain the lane (bug 06 — successor
+    // unstoppable). Terminal→done is illegal → no-op → callback not re-fired.
+    const late = store.settle(jobA, PHASES.DONE);
+    assert.strictEqual(late, false, 'late settle on cancelled A rejected');
+    assert.strictEqual(drains.length, 1, 'no second drain from late settle (B untouched)');
+    assert.ok(store.getSnapshot().running.map(j => j.jobId).includes(jobB), 'B still the only running job');
+}
+
+/**
+ * T16 — Loop re-fire fires once per drain, re-armed each dispatch (R04, bug 13).
+ *
+ * Models the service loop: each dispatch arms the lane callback; on drain the
+ * service enqueues one fresh iteration (→ new store job) and re-arms. Proves the
+ * re-fire happens exactly once per completion and never storms.
+ */
+function testLoopReFireChainOncePerDrain() {
+    const { store } = makeStore();
+    let iterations = 0;
+    const MAX = 3;
+
+    // The service's loop: on drain, if "loop armed", dispatch one more + re-arm.
+    const onDrain = () => {
+        if (iterations >= MAX) return;      // models tap-to-disarm after MAX
+        iterations++;
+        const next = registerJob(store, { engine: 'remote' });
+        store.setLoopCallback('remote', onDrain); // re-arm for the NEXT drain
+        // Immediately complete it to drive the chain (a real gen would run first).
+        store.advance(next, PHASES.ACCEPTED);
+        store.advance(next, PHASES.DONE);
+    };
+
+    // Seed: dispatch the first job, arm, complete it → chain runs.
+    const first = registerJob(store, { engine: 'remote' });
+    store.setLoopCallback('remote', onDrain);
+    store.advance(first, PHASES.ACCEPTED);
+    store.advance(first, PHASES.DONE);
+
+    // First drain fires onDrain (iter 1) → completes → drain (iter 2) → … until MAX.
+    assert.strictEqual(iterations, MAX, 'loop re-fired exactly MAX times, no storm');
+    assert.strictEqual(store.getSnapshot().running.length, 0, 'lane idle after loop disarms');
+}
+
+/**
+ * T17 — Two-lane Stop isolation via the drain callback (R08, bug 09 sibling).
+ *
+ * Each lane arms its OWN drain callback. Stopping the remote lane fires only the
+ * remote callback; the local lane's callback and job are untouched.
+ */
+function testTwoLaneDrainIsolation() {
+    const { store } = makeStore();
+    const remoteDrains = [];
+    const localDrains  = [];
+    store.setLoopCallback('remote', (l) => remoteDrains.push(l));
+    store.setLoopCallback('local',  (l) => localDrains.push(l));
+
+    const r = registerJob(store, { engine: 'remote' });
+    const l = registerJob(store, { engine: 'local' });
+    store.advance(r, PHASES.ACCEPTED); store.advance(r, PHASES.SAMPLING);
+    store.advance(l, PHASES.ACCEPTED); store.advance(l, PHASES.SAMPLING);
+
+    // Stop remote only.
+    store.cancel(r);
+    assert.strictEqual(remoteDrains.length, 1, 'remote drain fired');
+    assert.strictEqual(localDrains.length, 0, 'local drain NOT fired (isolated)');
+    assert.strictEqual(store.byId(l).phase, PHASES.SAMPLING, 'local job untouched');
+    assert.ok(store.getSnapshot().running.map(j => j.jobId).includes(l), 'local still running');
+}
+
+/**
+ * T18 — Stop before register: service belt-and-suspenders drain (bug 04/MPI-73 Bug 2).
+ *
+ * If Stop lands before commandExecutor assigns exec.jobId (store never registered),
+ * store.cancel never runs and the lane callback never fires. The service must free
+ * the stranded lane locally. Here we prove the store side: cancelling a job that was
+ * registered but never advanced past QUEUED still drains + fires the callback once
+ * (the healthy path); the "never registered" path is the service's local _onLaneDrain,
+ * which is idempotent (guarded on its own intent flag).
+ */
+function testStopBeforeAckDrainsCleanly() {
+    const { store } = makeStore();
+    const drains = [];
+    store.setLoopCallback('remote', (l) => drains.push(l));
+
+    const job = registerJob(store, { engine: 'remote' }); // QUEUED, no ACK yet
+    store.cancel(job);
+
+    assert.strictEqual(store.byId(job).phase, PHASES.CANCELLED, 'early Stop → cancelled');
+    assert.strictEqual(drains.length, 1, 'lane drained + callback fired once even pre-ACK');
+    assert.strictEqual(store.getSnapshot().running.length, 0, 'no stranded lane');
+}
+
+/**
+ * T19 — Staged workflow: sampling→loading is LEGAL (multi-stage re-load between
+ * sampler passes), and a late-settle OUT of a terminal is a SILENT no-op (no warn).
+ * Regression guard for the MPI-208 Phase-3 console spam.
+ */
+function testStagedReloadAndSilentLateSettle() {
+    const { store, logs } = makeStore();
+
+    // Staged re-load: sampling → loading is now a legal forward move.
+    const jobId = registerJob(store, { engine: 'remote' });
+    store.advance(jobId, PHASES.ACCEPTED);
+    store.advance(jobId, PHASES.SAMPLING);
+    const warnsBefore = logs.filter(l => l.level === 'warn').length;
+    assert.strictEqual(store.advance(jobId, PHASES.LOADING), true, 'sampling→loading legal');
+    assert.strictEqual(store.byId(jobId).phase, PHASES.LOADING, 'phase moved back to loading');
+    assert.strictEqual(logs.filter(l => l.level === 'warn').length, warnsBefore,
+        'no warn on legal staged re-load');
+
+    // Late-settle out of a terminal is silent (R09): cancel then settle(done) → no-op, no warn.
+    const jobB = registerJob(store, { engine: 'local' });
+    store.advance(jobB, PHASES.ACCEPTED);
+    store.cancel(jobB);
+    const warnsBeforeSettle = logs.filter(l => l.level === 'warn').length;
+    assert.strictEqual(store.settle(jobB, PHASES.DONE), false, 'cancelled→done rejected');
+    assert.strictEqual(logs.filter(l => l.level === 'warn').length, warnsBeforeSettle,
+        'terminal late-settle logs NO warn (expected race, not a bug)');
+
+    // A genuinely illegal move from a NON-terminal phase STILL warns (safety net intact).
+    const jobC = registerJob(store, { engine: 'remote' });
+    store.advance(jobC, PHASES.ACCEPTED);
+    store.advance(jobC, PHASES.SAMPLING);
+    const warnsBeforeBad = logs.filter(l => l.level === 'warn').length;
+    assert.strictEqual(store.advance(jobC, PHASES.QUEUED), false, 'sampling→queued illegal');
+    assert.ok(logs.filter(l => l.level === 'warn').length > warnsBeforeBad,
+        'real illegal transition still warns');
+}
+
+/**
+ * T20 — Fast dispatch: a work signal beats the prompt_ack. submitting→sampling is
+ * legal, and setPromptId stamps the id afterward WITHOUT a backward phase move or a
+ * warn. Regression guard for the MPI-208 Phase-3 submitting→sampling console spam.
+ */
+function testFastDispatchAckAfterWork() {
+    const { store, logs } = makeStore();
+
+    // A job whose first work signal arrives BEFORE the prompt_ack.
+    const fast = registerJob(store, { engine: 'local' });
+    store.advance(fast, PHASES.SUBMITTING);
+    const warnsBefore = logs.filter(l => l.level === 'warn').length;
+
+    // Work signal (a step bar) fires while still in submitting → jumps to sampling.
+    assert.strictEqual(store.advance(fast, PHASES.SAMPLING), true, 'submitting→sampling legal');
+    assert.strictEqual(store.byId(fast).phase, PHASES.SAMPLING, 'in sampling');
+
+    // The late prompt_ack now stamps the promptId with NO phase move and NO warn.
+    store.setPromptId(fast, 'prompt-xyz');
+    assert.strictEqual(store.byId(fast).promptId, 'prompt-xyz', 'promptId stamped late');
+    assert.strictEqual(store.byId(fast).phase, PHASES.SAMPLING, 'phase NOT moved backward by ack');
+    assert.strictEqual(logs.filter(l => l.level === 'warn').length, warnsBefore,
+        'no warn on fast-dispatch ack-after-work');
+
+    // setPromptId on a terminal job is a silent no-op (promptId moot once done).
+    store.cancel(fast);
+    store.setPromptId(fast, 'ignored');
+    assert.notStrictEqual(store.byId(fast).promptId, 'ignored', 'terminal setPromptId ignored');
+}
+
 /**
  * T13 — PHASES constant exported with correct uppercase keys mapping to lowercase values.
  */
@@ -497,6 +697,12 @@ const TESTS = {
     testBroadcastOnMutation,
     testInterruptCbOnCancel,
     testCancelBeforeAckBlocksDispatch,
+    testStopPromotesNextPendingIntact,
+    testLoopReFireChainOncePerDrain,
+    testTwoLaneDrainIsolation,
+    testStopBeforeAckDrainsCleanly,
+    testStagedReloadAndSilentLateSettle,
+    testFastDispatchAckAfterWork,
     testPhasesConstant,
 };
 

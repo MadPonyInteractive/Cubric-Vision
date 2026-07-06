@@ -10,6 +10,7 @@ import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
 import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, getSharedSettings, getOpSettings, replaceHistoryItemById } from '../data/projectModel.js';
 import { Events } from '../events.js';
+import { generationStore } from './generationStore.js';
 import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
@@ -39,16 +40,39 @@ import { ce } from '../utils/dom.js';
 /** @type {Array<{ queueJobId: string, config: Object, callbacks: Object, opts: Object, display: Object, source: string, isLoop: boolean }>} */
 const _cueQueue = [];
 
-/** Lane state: each lane holds its in-flight job + most-recent job (for loop re-fire). */
+// MPI-208 Phase 3 (Option A): the generationStore is the LANE-ACCOUNTING +
+// running-truth authority. `_cueQueue` above stays the PENDING-INTENT holder
+// (config/callbacks/display/getNextGeneration — data the store has no record of
+// until a job dispatches). Each lane keeps only:
+//   • active   — the cue INTENT currently dispatched on this lane (display +
+//                callbacks the store doesn't hold). Its store execution is the
+//                job registered by commandExecutor at dispatch; the exec handle
+//                that reaches it lives in the activeGenerations registry entry
+//                (keyed by queueJobId), so Stop routes registry → exec → store.
+//   • lastJobForLoop — the last dispatched intent, kept for loop re-fire.
+// `inFlight` is DERIVED from the store (`_laneBusy`), never a private mirror —
+// the store owns whether a lane's execution is live (INV-6). Lane-drain +
+// loop re-fire fire from `store.setLoopCallback(lane, cb)` (INV-5), not a
+// hand-rolled dispatch guard.
 const _lanes = {
-    remote: { active: null, inFlight: false, lastJobForLoop: null },
-    local:  { active: null, inFlight: false, lastJobForLoop: null },
+    remote: { active: null, lastJobForLoop: null },
+    local:  { active: null, lastJobForLoop: null },
 };
 
 /** @returns {'local'|'remote'} The lane a job (or its opts) dispatches on. */
 function _laneOf(jobOrOpts) {
     const opts = jobOrOpts?.opts || jobOrOpts || {};
     return opts.forceLocal === true ? 'local' : 'remote';
+}
+
+/** @returns {boolean} true when the store has a live (non-terminal) job on this lane. */
+function _laneBusy(lane) {
+    return generationStore.getSnapshot().running.some(j => j.lane === lane);
+}
+
+/** @returns {number} live store jobs across both lanes (0–2). */
+function _runningCount() {
+    return generationStore.getSnapshot().running.length;
 }
 
 const PROMPT_EXCERPT_MAX = 140;
@@ -166,10 +190,11 @@ function _emitQueueChanged() {
     Events.emit('generation-queue:changed', getGenerationQueueSnapshot());
 }
 
-function _runningCount() {
-    return (_lanes.remote.inFlight ? 1 : 0) + (_lanes.local.inFlight ? 1 : 0);
-}
-
+// Cue-queue depth = pending intents + live store jobs. The store is the single
+// source of running truth (Phase 3), so the running half comes from it, not a
+// private lane mirror. Written here AND re-derived on every store change (the
+// subscription below) so the count stays honest even when a job settles or is
+// cancelled through a path that doesn't route back through this module.
 function _updateQueueDepth() {
     const depth = _cueQueue.length + _runningCount();
     if (state.generationQueueCount !== depth) {
@@ -178,45 +203,58 @@ function _updateQueueDepth() {
     _emitQueueChanged();
 }
 
+// MPI-208 Phase 3: `state.generationQueueCount` is written ONLY from store truth
+// + `_cueQueue`. Every store transition (register/advance/cancel/settle) re-derives
+// the depth, so a terminal reached inside commandExecutor (Stop, error, done)
+// updates the Cue xN label and QueuePanel without generationService having to be
+// on that code path. Replaces the direct `state.generationQueueCount = 0` writes
+// scattered in the blocks (INV-2: derived, not hand-set).
+// eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener (service module singleton)
+Events.on('generation-store:changed', () => { _updateQueueDepth(); });
+
 /**
- * Frees ONE lane's in-flight dispatch slot and schedules that lane's next job.
- * The normal exit for an active job (its wrapped onComplete/onError/onCancel
- * call this with its lane). Also callable directly to settle a job whose exec
- * promise will NEVER resolve — e.g. a remote job Stopped before it ever got a
- * prompt_id, where the interrupt POST is a no-op and ComfyUI never sends a
- * terminal event (MPI-73 Bug 2). `skipNext` suppresses auto-promoting that
- * lane's next queued job, used when the engine is not accepting work so the next
- * job would just hang too. The OTHER lane is untouched — Stopping the cloud lane
+ * A lane just DRAINED (its store execution reached a terminal — done, error, or a
+ * Stop-triggered cancelled). This is the single completion point for a lane in the
+ * Option-A model: the store fires it via `setLoopCallback(lane, …)` exactly once
+ * per drain (INV-5), so a late settle from an already-terminal job can't re-enter
+ * it (the store no-ops the illegal transition — its lane ownership IS the identity
+ * guard that the old `_lanes[lane].active !== next` check hand-rolled).
+ *
+ * Clears the lane's active intent, then either loop-re-fires (once) or promotes the
+ * lane's next pending intent. The OTHER lane is untouched — draining the cloud lane
  * never disturbs a concurrent local gen, and vice versa (MPI-74 P6).
+ *
+ * `skipNext` suppresses promotion/re-fire — used on an explicit Stop where the
+ * engine isn't accepting work, so the next job would just hang too.
  * @param {'local'|'remote'} lane
  * @param {{ skipNext?: boolean }} [opts]
  */
-function _finishActiveCueDispatch(lane, { skipNext = false } = {}) {
+function _onLaneDrain(lane, { skipNext = false } = {}) {
     const L = _lanes[lane];
-    if (!L || (!L.inFlight && !L.active)) return;
-    L.inFlight = false;
+    if (!L || !L.active) return; // nothing was dispatched on this lane
+    const drained = L.active;
     L.active = null;
     _updateQueueDepth();
     if (skipNext) {
         _emitPromptBoxGenerationEndIfIdle();
         return;
     }
-    // Loop re-fire belongs HERE (a lane just drained), NOT inside the dispatch
-    // pass. If this lane has no real pending job and loop is armed, enqueue ONE
-    // fresh iteration from this lane's last job (live PromptBox payload). Doing it
-    // here — once per completion — avoids the storm where re-fire lived inside
-    // _dispatchNextCue and every pass re-fired both lanes against the GLOBAL
-    // loopArmed flag, re-arming the rerun forever (the UI-freeze bug).
+    // Loop re-fire belongs HERE (a lane just drained), NOT in the dispatch pass. If
+    // this lane has no real pending job and loop is armed, enqueue ONE fresh
+    // iteration from this lane's last job (live PromptBox payload). Once per drain —
+    // the store guarantees this callback fires exactly once, so the re-fire storm
+    // (re-fire in the dispatch pass re-arming forever) cannot recur.
     const hasPending = _cueQueue.some(job => _laneOf(job) === lane);
-    if (!hasPending && state.loopArmed && L.lastJobForLoop) {
-        const fresh = L.lastJobForLoop.callbacks?.getNextGeneration?.();
+    const loopSeed = L.lastJobForLoop || drained;
+    if (!hasPending && state.loopArmed && loopSeed) {
+        const fresh = loopSeed.callbacks?.getNextGeneration?.();
         if (fresh && fresh.config) {
-            // Keep the lane consistent: a re-fire of THIS lane's loop must stay on
-            // THIS lane regardless of what getNextGeneration reports, or a stale
-            // forceLocal would route it to the other lane and this lane would
-            // re-fire again next completion → ping-pong. Pin the lane explicitly.
-            enqueueGeneration(fresh.config, L.lastJobForLoop.callbacks, {
-                ...(fresh.opts || L.lastJobForLoop.opts),
+            // Pin the lane: a re-fire of THIS lane's loop must stay on THIS lane
+            // regardless of what getNextGeneration reports, or a stale forceLocal
+            // would route it to the other lane and this lane would re-fire again
+            // next drain → ping-pong.
+            enqueueGeneration(fresh.config, loopSeed.callbacks, {
+                ...(fresh.opts || loopSeed.opts),
                 forceLocal: lane === 'local',
                 source: 'loop',
                 isLoop: true,
@@ -228,61 +266,48 @@ function _finishActiveCueDispatch(lane, { skipNext = false } = {}) {
 }
 
 /**
- * Fills every IDLE lane with the next PENDING job for that lane. Pure promotion —
- * NO loop re-fire here (that lives in `_finishActiveCueDispatch`, fired once per
- * completion). Because this pass never enqueues, it never recurses: each call
- * consumes at most one job per lane and returns. Called after an enqueue and
- * after a lane frees. Each lane drains independently, so a busy remote lane never
- * blocks a free local lane from starting its next job.
+ * Fills every IDLE lane with the next PENDING intent for that lane. Pure promotion —
+ * NO loop re-fire here (that lives in `_onLaneDrain`, fired once per drain by the
+ * store). A lane is idle when it has no dispatched intent (`_lanes[lane].active`)
+ * AND the store reports no live job on it (`_laneBusy`). The intent flag covers the
+ * async gap between `startGeneration` returning and commandExecutor's async head
+ * registering the store job; the store flag covers everything after. Because this
+ * pass never enqueues, it never recurses: at most one intent per lane per call.
  */
 function _dispatchNextCue() {
     for (const lane of ['remote', 'local']) {
-        const L = _lanes[lane];
-        if (L.inFlight) continue;
+        if (_lanes[lane].active || _laneBusy(lane)) continue;
 
         const idx = _cueQueue.findIndex(job => _laneOf(job) === lane);
-        if (idx === -1) continue; // nothing pending for this lane (loop re-fire handled on finish)
+        if (idx === -1) continue; // nothing pending for this lane (loop re-fire handled on drain)
 
         const next = _cueQueue.splice(idx, 1)[0];
-        L.inFlight = true;
-        L.active = next;
-        L.lastJobForLoop = next;
+        _lanes[lane].active = next;
+        _lanes[lane].lastJobForLoop = next;
         _updateQueueDepth();
 
-        // Free the lane ONLY if this job still owns it. A Stopped job's exec can
-        // settle late (interrupt produced a terminal event) AFTER the Stop already
-        // freed the lane and promoted the next queued job — an unguarded call here
-        // then stomps the SUCCESSOR's active slot: queue panel goes 0 JOBS, status
-        // bar idles, and the still-running successor becomes unstoppable (no queue
-        // entry = no STOP button). Live-hit 2026-07-05: promoted job dispatched
-        // 19:59:22.125, stopped job's empty settle landed .351 — 226ms later.
-        const finishCueDispatch = () => {
-            if (_lanes[lane].active !== next) return; // superseded — successor owns the lane
-            _finishActiveCueDispatch(lane);
-        };
+        // Register the store lane-drain hook for THIS dispatch. The store fires it
+        // once when the lane's execution terminates (completion or Stop). The intent's
+        // own onComplete/onError/onCancel still fire (block UI rollback) but no longer
+        // drive lane accounting — that is entirely store-driven now.
+        generationStore.setLoopCallback(lane, () => _onLaneDrain(lane));
 
-        const wrappedCallbacks = {
-            ...next.callbacks,
-            onComplete: (data) => {
-                try { next.callbacks.onComplete?.(data); }
-                finally { finishCueDispatch(); }
-            },
-            onError: () => {
-                try { next.callbacks.onError?.(); }
-                finally { finishCueDispatch(); }
-            },
-            onCancel: () => {
-                try { next.callbacks.onCancel?.(); }
-                finally { finishCueDispatch(); }
-            },
-        };
-        startGeneration(next.config, wrappedCallbacks, {
+        // startGeneration registers the run in activeGenerations (keyed by
+        // queueJobId) and, inside commandExecutor, a store job whose lane the store
+        // now owns. A null return = startGeneration bailed before dispatch (the
+        // missing-media guard); the lane never went busy, so drain it now to free
+        // the slot + promote the next intent. A dispatched job's Stop routes through
+        // activeGenerations.cancel → exec.cancel → store.cancel; that drains the
+        // store lane and fires this lane's setLoopCallback → _onLaneDrain. No exec
+        // bridge is kept here — the registry entry owns the exec handle.
+        const handle = startGeneration(next.config, next.callbacks, {
             ...next.opts,
             queueJobId: next.queueJobId,
             queueDisplay: next.display,
             queueSource: next.source,
             isLoop: next.isLoop,
         });
+        if (!handle) _onLaneDrain(lane, { skipNext: false });
     }
 
     _updateQueueDepth();
@@ -348,38 +373,38 @@ export function cancelRunningCueJob(queueJobId) {
     const entry = activeGenerations.list().find(e => e.queueJobId === queueJobId && e.status === 'running');
     if (!entry) return false;
 
-    // Interrupt the engine + end the activeGenerations entry. interrupt() targets
-    // the right engine (the exec's cancel() resolves getEngine(forceLocal)).
-    activeGenerations.cancel(entry.id);
-
-    // ALWAYS free this job's lane on an explicit Stop — do NOT gate on
-    // `entry.promptId` (the old `neverStarted` test). A remote job that received a
-    // prompt_id and THEN lost its engine channel (Pod mid-failover, WS/SSE drop)
-    // never gets a terminal WS event, so its exec promise never settles and the
-    // wrapped onComplete/onCancel that frees the lane never fires → the lane stays
-    // inFlight forever and repeated Stop does nothing (the stuck-card bug). The
-    // user pressed Stop; we settle the lane locally rather than wait for an engine
-    // event that may never arrive.
-    //
-    // `_finishActiveCueDispatch` is idempotent (guards on !inFlight && !active), so
-    // if the exec promise DOES still settle later (healthy gen, interrupt produced
-    // a terminal event), its wrapped callback is a harmless no-op — no double-free,
-    // no double-promote.
+    // Which lane holds this intent? Resolved from the dispatched intent, not the
+    // registry (the intent carries the lane; MPI-74 P6 keeps the OTHER lane clear).
     const lane = _lanes.remote.active?.queueJobId === queueJobId ? 'remote'
         : _lanes.local.active?.queueJobId === queueJobId ? 'local'
         : null;
-    if (lane) {
-        // Free the lane + dispatch its next work (skipNext:false). User choice:
-        // Stop = "skip THIS job, keep going":
-        //   • Loop armed  → the lane re-fires a fresh loop iteration (lastJobForLoop
-        //     is intentionally KEPT, so Stop behaves like "regenerate this one" and
-        //     the loop continues; the toggle stays ON and matches reality).
-        //   • Loop off    → the lane promotes the next REAL pending job, or goes idle
-        //     if none.
-        // The other lane is untouched — Stopping one lane never disturbs a
-        // concurrent gen on the other (MPI-74 P6).
-        _finishActiveCueDispatch(lane, { skipNext: false });
-    }
+
+    // Interrupt via the registry entry — entry.exec.cancel() delegates to
+    // store.cancel(jobId) (Phase 2), which aborts the token, fires the FROZEN
+    // engine interrupt, transitions the store job to `cancelled`, and DRAINS the
+    // store lane. That drain fires this lane's `setLoopCallback` → `_onLaneDrain`,
+    // which promotes the next pending intent or loop-re-fires. So a healthy Stop
+    // needs no explicit lane bookkeeping here — the store owns it.
+    const _genId = entry.id;
+    activeGenerations.cancel(entry.id);
+
+    // Clear the status bar at the SOURCE (R18 / statusBar-strand fix). The bar
+    // latches by gen id and only a terminal carrying that SAME id clears it. The
+    // Gallery Stop path used to emit a scope-only `tool:cancelled` (null id = latch
+    // no-op) so the bar stranded forever. Emit the id-matched terminal here — every
+    // Stop, every scope — so whichever surface the bar is latched to releases.
+    Events.emit('tool:cancelled', { tool: 'groupHistory', id: _genId });
+
+    // Belt-and-suspenders for the MPI-73 Bug 2 stuck-lane case: a job Stopped so
+    // early that commandExecutor never assigned exec.jobId (store never registered)
+    // — exec.cancel() then fell back to a bare interrupt() and the store never
+    // drained, so `_onLaneDrain` never fired. `_onLaneDrain` guards on
+    // `_lanes[lane].active`, so if the store DID drain (the usual case, active
+    // already cleared) this is a harmless no-op; otherwise it frees the stranded
+    // lane locally. Stop = "skip THIS job, keep going": loop armed re-fires a fresh
+    // iteration (lastJobForLoop KEPT — Stop behaves like "regenerate this one");
+    // loop off promotes the next pending intent or idles.
+    if (lane) _onLaneDrain(lane, { skipNext: false });
     _emitQueueChanged();
     return true;
 }
@@ -420,9 +445,15 @@ export function getGenerationQueueSnapshot() {
     };
 }
 
+// R27 idleness contract: fire promptbox:generation-end ONLY when there are no
+// running registry entries, no live store jobs (either lane), no pending intents,
+// and loop is disarmed. Lane liveness now comes from the store (Phase 3), plus the
+// dispatched-but-not-yet-registered intents (`_lanes[lane].active`) that cover the
+// async register gap — otherwise a just-dispatched job would read as idle for a tick.
 function _emitPromptBoxGenerationEndIfIdle() {
     if (activeGenerations.list().some(entry => entry.status === 'running')) return;
-    if (_lanes.remote.inFlight || _lanes.local.inFlight || _cueQueue.length > 0) return;
+    if (_lanes.remote.active || _lanes.local.active) return;
+    if (_runningCount() > 0 || _cueQueue.length > 0) return;
     if (state.loopArmed) return;
     Events.emit('promptbox:generation-end');
 }
@@ -600,7 +631,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
     exec.onComplete = async (urls, outputInfo = {}) => {
         if (!urls.length) {
-            clientLogger.warn('generationService', 'Generation completed but no output returned.');
+            // Empty output after an explicit Stop is EXPECTED, not a fault: the
+            // interrupt produced a terminal with nothing saved. Only warn when the
+            // job was NOT cancelling — a genuinely empty completion is the real
+            // (rare) anomaly worth surfacing. Gating on the store phase stops this
+            // from flooding the console on every Stopped cue (MPI-208 Phase 3).
+            const _wasCancelling = generationStore.byId(exec.jobId)?.cancelling === true;
+            if (!_wasCancelling) {
+                clientLogger.warn('generationService', 'Generation completed but no output returned.');
+            }
             Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
             activeGenerations.end(_regId, { revokePreview: true });
             Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
