@@ -138,7 +138,7 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   network volume reads at ~750 MB/s; aimdo re-faults a big transformer at every gen-stage,
   re-reading it from that slow volume = the LTX stage-gap tax (36s warm gap). Fix: on a
   **remote gen preflight** (`_ensureRemoteHotStore` in `commandExecutor.js`), any single dep
-  file **≥ 26 GB** is copied onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe),
+  file **≥ 15 GB** is copied onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe),
   which ComfyUI scans BEFORE the volume extra-paths so the fast copy wins with no yaml change.
   Wrapper endpoint `POST /wrapper/hot-store/ensure` does the copy+sha-verify+SSE progress;
   it's **sticky** (one copy per pod lifetime) and **LRU-evicts** disk copies only when a NEW
@@ -146,21 +146,13 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   First stage of the 41 GB LTX transformer adds a one-time ~55s visible "staging" toast to the
   first remote gen after a fresh pod; every later gen is fast. Only **volume** pods pay the
   original tax — ephemeral pods (MPI-78) already root models on the disk.
-  **MPI-200: gate raised 15 → 26 GB.** A live 5090 test showed the mxfp8 balanced transformer
-  (24.1 GB) generated FASTER served straight from the volume (20s stage-1→2 boundary) than
-  hot-staged (30s) — the 24 GB copy is a net move-tax the fast volume read doesn't need, and it
-  delays every fresh gen. So both LTX balanced Q-tiers (fp8 25.2 GB, mxfp8 24.1 GB) now serve
-  from the volume; only the bf16 41 GB high-tier transformer still stages.
   **⚠️ Disk budget:** volume-pod container disk is **50 GB** (`CONTAINER_DISK_GB`,
-  `remotePodLifecycle.js`) — fits exactly ONE ≥26GB model (LTX's 41 GB bf16 transformer). Today's
-  ≥26GB set = LTX bf16 only (fp8 25.2 GB, mxfp8 24.1 GB, Gemma TE 9.45 GB, every Wan file ≤13.55 GB
-  stay on the volume). **When a model arrives whose ≥26GB hot-set does not fit in 50 GB free** (a
-  60–70 GB weight, or a 2nd big model that must coexist), **bump `CONTAINER_DISK_GB`** — the
-  add-model playbook has the PING-USER gate for this. The REAL threshold is `HOT_STORE_MIN_GB`
-  in the app (`commandExecutor.js`, **26 GB**) — the app has per-file sizes and decides what to
-  stage. The wrapper's `HOT_STORE_MIN_BYTES` (default 15 GB, env `CUBRIC_HOT_STORE_MIN_BYTES`) is
-  only a defensive floor so it never stages a small file even if asked; the app never sends it
-  sub-26GB files, so that floor is inert. Change the gate in the APP, not the wrapper.
+  `remotePodLifecycle.js`) — fits exactly ONE ≥15GB model (LTX's 41 GB transformer). Today's
+  ≥15GB set = LTX only (Gemma TE 9.45 GB, every Wan file ≤13.55 GB stay on the volume). **When a
+  model arrives whose ≥15GB hot-set does not fit in 50 GB free** (a 60–70 GB weight, or a 2nd big
+  model that must coexist), **bump `CONTAINER_DISK_GB`** — the add-model playbook has the
+  PING-USER gate for this. Threshold constant: `HOT_STORE_MIN_GB` (app) / `HOT_STORE_MIN_BYTES`
+  (wrapper), 15 GB.
 - **Design A (locked):** PyTorch + ComfyUI live in the **Docker image**, NOT the volume → the
   volume has **zero GPU-arch binding** and is portable across every card the image can run.
   Users never reinitialize the volume to switch cards.

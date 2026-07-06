@@ -425,16 +425,11 @@ async function _findModelNotLocal(modelId, operation = null) {
 }
 
 // MPI-194: single-file size at/above which a remote weight is staged from the slow
-// network volume onto the Pod's fast container disk before generating. Binary GB, to
-// match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3.
-// MPI-200: raised 15 -> 26. Live 5090 test showed the mxfp8 balanced transformer
-// (24.1GB) generated FASTER served straight from the volume (20s stage-1->2 boundary)
-// than hot-staged (30s) — the 24GB volume->disk copy is a net move-tax the fast volume
-// read doesn't need, and it delays every fresh gen. 26 keeps the LTX bf16 41GB
-// transformer staged (MPI-194: unstaged bf16 WAS the slowdown) while letting BOTH
-// balanced Q-tiers (fp8 25.2GB / mxfp8 24.1GB) serve from the volume. The 9.45GB TE +
-// <=13.55GB Wan files were already below the gate. See docs/add-model-playbook.md.
-const HOT_STORE_MIN_GB = 26;
+// network volume onto the Pod's fast container disk before generating. 15GB (binary,
+// to match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3). Selects only
+// the LTX 41GB transformer today; the 9.45GB TE and <=13.55GB Wan files stay on the
+// volume. See docs/add-model-playbook.md (>=15GB PING-USER gate) + docs/runpod-*.
+const HOT_STORE_MIN_GB = 15;
 
 /**
  * Remote-engine gen preflight (MPI-194): stage any weight file >= HOT_STORE_MIN_GB
