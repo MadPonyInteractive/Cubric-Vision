@@ -1159,7 +1159,15 @@ async function _initDataRegistries() {
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('remote:connection', async ({ connected, phase = null } = {}) => {
     if (phase) return; // mid-transition, not a resolved state
-    if (connected && !_wasRemoteConnected) {
+    if (connected) {
+      // MPI-200: re-sync on EVERY resolved connect, not just the first. A new
+      // Pod is a new machine with a potentially different GPU arch (4090 modern
+      // → 5090 blackwell), and arch-variant models (LTX balanced: mxfp8 vs
+      // fp8_scaled) require the arch-specific weight. Re-checking only on the
+      // first connect left the previous Pod's arch cache in place after a
+      // same-session Pod swap, so the panel showed a tier "installed" whose
+      // weight isn't on the new volume. A resolved connected:true IS a real
+      // (re)connection edge, so re-checking each time is correct, not redundant.
       _wasRemoteConnected = true;
       try {
         await syncModelInstalled();
