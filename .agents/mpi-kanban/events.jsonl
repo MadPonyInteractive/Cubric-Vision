@@ -898,3 +898,9 @@
 {"at":"2026-07-06T13:40:00Z","event":"task.updated","id":"MPI-207","maturity":"validating","note":"code complete + node-tested (14/14), live A/B deferred","actor":"claude"}
 {"schema":"mpi-kanban/event/v1","id":"MPI-208","type":"task.created","at":"2026-07-06T18:25:00Z","actor":"claude","summary":"Card created for generation queue/cue/stop/dual-engine refactor; investigation in progress (4 agents)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-208","type":"task.updated","at":"2026-07-06T18:55:00Z","actor":"claude","summary":"Investigation complete (4 agents, research/ x4). Large adaptive plan attached: generationStore state machine, cancellation tokens, SSE engine tagging/merge, derived UI, reconcile-on-truth. Foundation parallel batch + phases 2-5."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.created","at":"2026-07-06T19:45:00Z","actor":"claude","summary":"Arch weights as install toggles (like ops) — supersedes MPI-207 UI."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-207","type":"task.moved","at":"2026-07-06T19:47:00Z","actor":"claude","from":"doing","to":"done","summary":"Done — install path + detection LIVE-PROVEN 5090/mxfp8; panel UI superseded by MPI-209, primitives reused."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.updated","at":"2026-07-06T19:52:00Z","actor":"claude","summary":"Compact plan attached (5-step near-autonomous). maturity idea → planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-208","type":"task.moved","at":"2026-07-06T20:05:00Z","actor":"claude","summary":"todo -> doing: picking up Foundation batch (B1-A/B/C) via mpi-execute-parallel."}
+{"at":"2026-07-06T14:15:00Z","event":"task.moved","id":"MPI-200","from":"doing","to":"done","maturity":"complete","actor":"claude"}
+{"at":"2026-07-06T14:15:00Z","event":"task.moved","id":"MPI-206","from":"doing","to":"done","maturity":"complete","actor":"claude"}
