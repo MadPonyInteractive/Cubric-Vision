@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-211",
+  "title": "Blob-404 on Stop — revoked preview URL still fetched by DOM img",
+  "description": "On Stop of a running generation, activeGenerations.end({revokePreview:true}) revokes the preview blob URL (URL.revokeObjectURL) while a DOM <img> still references it — the gallery 'Generating...' placeholder tile and/or the CUE panel running-row thumbnail (latestPreviewUrl). The browser then refetches the revoked blob and logs `GET blob:http://127.0.0.1:3000/<uuid> net::ERR_FILE_NOT_FOUND`. Cosmetic only (one failed image request, no functional impact). PRE-EXISTING — the revoke path in js/services/activeGenerations.js:103-108 is untouched by the MPI-208 queue refactor; surfaced during MPI-208 Phase-3 Stop testing (2026-07-07). Fix = revoke-AFTER-derender ordering: clear the <img> src / rebuild the placeholder+queue-panel views BEFORE revoking, or revoke on a microtask after the store broadcast so no live DOM node still points at the blob. Touch points: js/services/activeGenerations.js (end/cancel), js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js (setGenerating placeholder), js/services/generationService.js:178 (_queueSnapshotItem previewUrl), MpiQueuePanel running-row thumbnail. NOT in MPI-208 scope."
+,
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-07T00:00:00.000Z",
+  "updated_at": "2026-07-07T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
