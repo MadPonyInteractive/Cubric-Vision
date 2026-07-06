@@ -159,6 +159,12 @@
 
 ## fixes
 
+- **The Cue queue panel no longer covers the prompt bar.** With a job running,
+  the slide-out queue panel extended all the way down and painted over the
+  prompt box's controls (model, Cue, stop, clear), so you couldn't click them
+  while the panel was open. The panel now stops at the top of the prompt bar,
+  keeping those controls reachable.
+
 - **Wan 2.2 Smooth — sharper draft tier.** The lowest quality tier's resolution was
   raised (it was too small to be useful), so quick low-tier drafts now look much
   better.
