@@ -181,23 +181,28 @@ Weight dep shape (see `dependencies.js` for live examples):
 (same clip as the 14B, already on HF/R2) — just list the existing dep id. Only
 host what's genuinely new.
 
-> **🛑 PING THE USER — any single weight file ≥ 15 GB (Pod hot-store + disk budget, MPI-194).**
+> **🛑 PING THE USER — any single weight file ≥ 26 GB (Pod hot-store + disk budget, MPI-194 / MPI-200).**
 > RunPod **volume** pods keep weights on a 750 MB/s network volume; re-reading a huge file
-> every gen-stage was the LTX slowdown. The fix (MPI-194) STAGES any single file **≥ 15 GB**
-> from the volume onto the pod's container disk on first use (sticky, LRU-evicted). The
-> container disk is **50 GB** and today fits exactly ONE ≥15GB model (LTX's 41GB transformer).
-> So when you add a model whose dep list has a file **≥ 15 GB**, STOP and tell the user BEFORE
+> every gen-stage was the LTX bf16 slowdown. The fix (MPI-194) STAGES a big single file from the
+> volume onto the pod's container disk on first use (sticky, LRU-evicted). The container disk is
+> **50 GB** and today fits exactly ONE staged model (LTX's 41GB transformer).
+> **MPI-200 raised the staging gate 15 → 26 GB** (`HOT_STORE_MIN_GB` in `commandExecutor.js`):
+> a live 5090 test showed the mxfp8 balanced transformer (24.1GB) generated FASTER served
+> straight from the volume (20s stage-1→2 boundary) than hot-staged (30s) — the 24GB copy is a
+> net move-tax the fast volume read doesn't need, and it delays every fresh gen. So the two LTX
+> balanced Q-tiers (fp8 25.2GB, mxfp8 24.1GB) now serve from the volume; only ≥26GB weights stage.
+> When you add a model whose dep list has a file **≥ 26 GB**, STOP and tell the user BEFORE
 > shipping — two things need a call:
-> 1. **Disk budget.** If the new ≥15GB hot-set does NOT fit in the free container-disk space
+> 1. **Disk budget.** If the new ≥26GB hot-set does NOT fit in the free container-disk space
 >    (e.g. a 60–70GB weight, or a 2nd big model that must coexist with LTX), `CONTAINER_DISK_GB`
 >    in `routes/remotePodLifecycle.js` (create payload) must be bumped. ~$0.004/hr per +30GB.
-> 2. **Confirm it's genuinely ≥15GB per FILE**, not per set. Reference (2026-07-05): LTX
->    transformer 41GB → hot-stored; LTX Gemma TE 9.45GB, every Wan file ≤13.55GB → NOT (under 15,
->    stay on the volume). Threshold constant = `15 * 1e9` bytes (SI or binary — same result, no
->    borderline file exists today).
+> 2. **Confirm it's genuinely ≥26GB per FILE**, not per set. Reference (2026-07-06): LTX bf16
+>    transformer 41GB → hot-stored; LTX fp8 25.2GB / mxfp8 24.1GB / Gemma TE 9.45GB / every Wan
+>    file ≤13.55GB → NOT (under 26, stay on the volume). Threshold constant = `HOT_STORE_MIN_GB`
+>    (binary GB).
 >
-> Files **under 15 GB need no action** — they stay on the volume, no disk/cost impact. This gate
-> is ONLY about the ≥15GB ones.
+> Files **under 26 GB need no action** — they stay on the volume, no disk/cost impact. This gate
+> is ONLY about the ≥26GB ones.
 
 ### R2 upload (cubric-models bucket)
 
