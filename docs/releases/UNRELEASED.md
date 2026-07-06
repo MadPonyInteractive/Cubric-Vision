@@ -27,6 +27,14 @@
   - Image models (SDXL, etc.) are unchanged — their operations all ship together,
     so they have no toggles and install/uninstall exactly as before.
 
+- **Pick which GPU to install for.** Some models (LTX 2.3 Balanced) have a separate
+  weight for RTX 50-series (Blackwell) vs RTX 40-series and older. The Models page
+  shows a toggle per GPU type — your GPU is pre-selected, and on a cloud download-pod
+  it uses the GPU you picked in RunPod settings, so you don't fetch the wrong 24GB
+  weight. Toggle both on to keep both; toggle one off to remove just that weight. If a
+  generation needs a weight you haven't downloaded, the app offers to install it there
+  and then.
+
 - Removed the Settings → External Connections "ComfyUI API URL" field. It was
   non-functional dead config: the app never read it, and generation always used
   the built-in engine address. The 1.0.0 tutorial mentions this field — call
