@@ -1,6 +1,29 @@
 # MPI-207 — validation
 
-## Status: CODE COMPLETE + node-tested. Live A/B deferred (needs a real GPU-arch change).
+## Status: DONE (superseded UI). Install path + detection primitives LIVE-PROVEN 2026-07-06 on RTX 5090 (blackwell/mxfp8).
+
+### 2026-07-06 live result + supersede
+- **Install leg PROVEN on 5090:** "Install for your GPU" fired the arch-scoped 1-dep
+  install; mxfp8 (24GB) downloaded clean, model appeared in the prompt box. First
+  attempt stalled — root cause was a CONCURRENT stray generation saturating the Pod
+  volume I/O (MPI-136 silent-stall belt), NOT this card. Clean retry (quiet Pod) →
+  no stall, completed. R2 object verified (HTTP 200, 24.05GB).
+- **Separate bug (NOT MPI-207, → MPI-200 follow-up):** generating with the balanced
+  tier then errored on an "improperly created workflow" (the mxfp8 LTX workflow
+  file). That is a workflow-authoring issue in the MPI-200 balanced-tier workflows,
+  not the arch-install UX. File under MPI-200.
+- **SUPERSEDED by MPI-209** ("Arch weights as install toggles (like ops)"). The
+  brainstorm concluded the arch axis should be a per-arch TOGGLE ROW (like Wan ops),
+  not an auto-picked single weight + "Install for your GPU" button + "Remove old
+  weight" affordance. MPI-207's PANEL UI is replaced by MPI-209; its PRIMITIVES
+  (detectOtherArchInstall, arch-aware isInstalled, arch-scoped install path — all
+  proven above) are REUSED by MPI-209. No revert: MPI-209 swaps button code for
+  toggle code. This card is marked complete because its shipped code works and its
+  reusable core carries forward.
+
+---
+
+## (Original, pre-supersede) Status: CODE COMPLETE + node-tested.
 
 ## What shipped
 
