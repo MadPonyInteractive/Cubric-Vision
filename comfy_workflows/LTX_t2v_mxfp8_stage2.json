@@ -22,7 +22,7 @@
   "4": {
     "inputs": {
       "unet_name": "ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors",
-      "weight_dtype": "mxfp8"
+      "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
     "_meta": {

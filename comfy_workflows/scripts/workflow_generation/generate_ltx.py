@@ -56,7 +56,11 @@ VARIANTS = {
     # suffix: (unet_name, weight_dtype)
     "":       ("ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",         "default"),
     "_fp8":   ("ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",   "default"),
-    "_mxfp8": ("ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors", "mxfp8"),
+    # weight_dtype stays "default": UNETLoader has NO 'mxfp8' option (only
+    # default/fp8_e4m3fn/fp8_e4m3fn_fast/fp8_e5m2). The mxfp8 quantization is
+    # baked in the safetensors metadata — the loader reads it under "default".
+    # Selecting a dtype that isn't in the node's list = value_not_in_list reject.
+    "_mxfp8": ("ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors", "default"),
 }
 
 # Media-input placeholders. The graph won't run without these LoadImage/LoadAudio
