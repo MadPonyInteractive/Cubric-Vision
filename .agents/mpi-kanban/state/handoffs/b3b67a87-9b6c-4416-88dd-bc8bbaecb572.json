@@ -26,13 +26,13 @@
       "All 4 video templates swapped to MpiSaveVideo node (LTX + Wan i2v/t2v + Wan5B); orchestrate.py --all rebuilt; no CreateVideo left; app captures by title->videos key transparently",
       "tierLetterFor() helper -> gallery cards + prompt-box button show H/B/L tier letter",
       "comfy_engine.md §2.5b documents the variant axis (user-approved)",
-      "R2 upload: bf16 + fp8_scaled DONE (verified via lsf, fp8 == 25226571988 bytes exact)"
+      "R2 upload COMPLETE + verified 2026-07-06: bf16 + fp8_scaled (25226571988) + mxfp8_block32 (24052755552) all on cubric-models/vision/models/diffusion_models/, HTTP 200, sizes exact-match dependencies.js"
     ],
     "pending": [
-      "Verify mxfp8_block32 finished its overnight R2 upload (rclone lsf, size == 24052755552, + HTTP HEAD the public URL)",
       "LIVE A/B on pods (user has 5090 + 4090): 5090 mxfp8 clean-load on v0.27+cu130 + no LTX2_NAG artifact (#576); 4090 fp8_scaled; eviction-floor collapse vs bf16 48s@10s/116s@20s (measure via pod /history + per-phase log NOT UI); quality vs bf16 locked seed",
       "On live-proof -> move card MPI-200 to done"
-    ]
+    ],
+    "_r2_status": "DONE — the 'verify upload' step is complete; next session goes straight to the live A/B."
   },
   "task_card": {
     "id": "MPI-200",
