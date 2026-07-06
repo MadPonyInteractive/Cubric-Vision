@@ -160,6 +160,77 @@ lacks one. That one-loader-per-file split lives in the BUILD script
 (`comfy_workflows/scripts/workflow_generation/generate_ltx.py`) — see § 2.5
 "Engine Split" above for the full contract.
 
+### 2.5b Runtime Variant Axis — the generic `variants:` block (MPI-200)
+
+The ENGINE axis (§2.5) is the special case of a broader pattern: a model whose
+deps/workflow vary by a RUNTIME signal. The FIRST additional case is **GPU
+architecture** — LTX-2.3 balanced ships a `mxfp8_block32` transformer on Blackwell
+(native tensor path) and `fp8_scaled` on Ada/Ampere/Turing, both ~24-25GB (fit
+32GB, kill the bf16 eviction floor MPI-197 traced). Rather than bolt on a bespoke
+arch axis, this is a **generic, card-declared variant axis** so future runtime
+axes (an arch-dependent node, a per-card LoRA, anything keyed on a runtime token)
+need NO new resolver code — declare the axis on the card and the resolver composes
+it. Built ADDITIVE: the `engines:` axis is untouched; the resolver merges engine
+deps + variant deps + suffixes.
+
+```js
+// models.js — any card declares named variant axes. Same shape as engines:.
+{
+  id: 'ltx-23-balanced',
+  dependencies: [ /* shared, MINUS the arch-specific transformer */ ],
+  workflows: { t2v_ms: 'LTX_t2v.json', i2v_ms: 'LTX_i2v.json' },  // base names
+  variants: {
+    arch: {                                  // axis key === the runtime token name
+      options: {
+        blackwell: { extraDeps: ['ltx23-transformer-mxfp8'], workflowSuffix: '_mxfp8' },
+        modern:    { extraDeps: ['ltx23-transformer-fp8'],   workflowSuffix: '_fp8'   },
+      },
+    },
+  },
+}
+```
+
+**Resolver (`resolveModelDeps.js`) — the only place that reads the block.** Every
+entry point takes a trailing `variantTokens` map (e.g. `{ arch: 'blackwell' }`),
+defaulting to `{}` (so every pre-existing engine-only caller is byte-unchanged):
+- `resolveDeps(model, ops, depExists, engine, variantTokens)` — adds the chosen
+  option's `extraDeps`. A PROVIDED token picks one option; a MISSING token unions
+  ALL options' deps (shared-dep PROTECTION — never GC a weight another arch needs).
+- `resolveWorkflowFile(model, op, engine, { stage2, variantTokens })` — suffix
+  order is **base → variant suffix(es) → `_stage2` → engine suffix**
+  (`LTX_t2v_mxfp8_stage2_remote.json`), matching `generate_ltx.py`'s output. A
+  missing token adds NO suffix (union is for dep protection, not file selection).
+- `deriveInstalledOps(model, depStatus, engine, variantTokens)` — the status gate
+  requires the CONCRETE arch's weight (pass the real token, not the union), so a
+  balanced card reads "installed" only when THIS machine's transformer is on disk.
+- `resolveFullUniverse` / `resolve` thread it identically.
+
+**Arch token source + resolve-ONCE.** The classifier is the browser-safe ESM
+`js/data/modelConstants/gpuArch.js` — the SINGLE source, imported by BOTH the
+server (`platformEngine.js` via `createRequire`, classifies the local nvidia-smi
+name → `/system/gpu-info` `gpu.arch`) and the client. The renderer resolves the
+token via `remoteEngineClient.arch(engine)` (async: `remote` = the pod's `gpuType`
+id classified sync, `local` = one cached `/system/gpu-info` fetch), with
+`archSync()` for sync render-path gates and `warmLocalArch()` fired in
+`syncModelInstalled`. Resolve the token ONCE per gen, AFTER engine (arch is the
+TARGET machine's GPU), then thread it — same discipline as resolve-engine-once.
+`commandExecutor.runCommand` does this. Tokens: `blackwell` (RTX 50xx / B-series),
+`modern` (RTX 20-40xx / Ada·Ampere·Turing datacenter), `legacy`, `null`.
+
+**Backend stays union.** `downloadManager` / shared-dep guards resolve the FULL
+universe with NO token — correct: the client already picked the arch-correct dep,
+the backend filter is permissive (membership check), and cross-model protection
+must see every arch weight. There is deliberately NO server-side variant heal (the
+engine heal exists for the stale-mirror race; arch has none — it's resolved once
+from stable state). Don't add one.
+
+**Authoring:** put arch-invariant deps in `dependencies`; put each variant's unique
+weight/node/LoRA in `variants.<axis>.options.<token>.extraDeps`; set
+`workflowSuffix` to what the build script appends for that token (`''` = base
+files). The build script emits one file PER (mode/stage × every variant token) —
+only the arch-specific loader node differs. Contract test: `testVariantAxis` in
+`tests/resolve-model-deps.test.cjs`.
+
 ### 2. ComfyUI Process State
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 
 - Do not add random CLI arguments to the spawn command without checking if they break compatibility with portable installs.

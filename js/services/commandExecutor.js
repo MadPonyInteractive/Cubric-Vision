@@ -399,7 +399,9 @@ async function _findModelNotLocal(modelId, operation = null) {
     // an engine-split model (LTX bf16-local / GGUF-Pod) must check for the bf16
     // weight on disk, NOT the Pod-only GGUF (which is legitimately absent locally
     // and would wrongly block the local run). (MPI-163)
-    const deps = resolveDeps(model, selectedOps, null, 'local')
+    // MPI-200: local arch selects the balanced tier's local transformer variant.
+    const arch = await remoteEngineClient.arch('local');
+    const deps = resolveDeps(model, selectedOps, null, 'local', { arch })
         .map(depId => {
             const dep = DEPS[depId];
             return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
@@ -441,7 +443,10 @@ async function _ensureRemoteHotStore(modelId, operation) {
     const model = getModelById(modelId);
     if (!model) return;
     const selectedOps = operation ? [operation] : null;
-    const files = resolveDeps(model, selectedOps, null, 'remote')
+    // MPI-200: remote path → the pod's arch selects the one balanced transformer to
+    // stage (else the >=15GB filter would miss it / stage the wrong variant).
+    const arch = await remoteEngineClient.arch('remote');
+    const files = resolveDeps(model, selectedOps, null, 'remote', { arch })
         .map(id => DEPS[id])
         .filter(dep => dep && dep.filename && sizeToGb(dep.size) >= HOT_STORE_MIN_GB)
         .map(dep => {
@@ -894,6 +899,11 @@ export function runCommand(payload) {
         const engine = payload.forceLocal === true
             ? 'local'
             : (remoteEngineClient.isRemote() ? 'remote' : 'local');
+        // MPI-200: resolve the arch token ONCE per gen, AFTER engine (arch is the
+        // target machine's GPU), then thread it — same resolve-once discipline as
+        // engine. Drives the balanced tier's arch-gated weight + workflow file.
+        const arch = await remoteEngineClient.arch(engine);
+        const variantTokens = { arch };
 
         let workflowFile;
         try {
@@ -903,12 +913,14 @@ export function runCommand(payload) {
             if (universal) {
                 workflowFile = universal;
             } else {
-                // Model-tied: one resolver derives the filename with the _stage2 and
-                // engine (_gguf) suffixes in the build-script order (..._stage2_gguf.json).
-                // The resolver reads the model's `engines:` block for the suffix. (MPI-165)
+                // Model-tied: one resolver derives the filename with the variant
+                // (_mxfp8/_fp8), _stage2 and engine suffixes in the build-script order
+                // (base → variant → _stage2 → engine). The resolver reads the model's
+                // `variants:` block for the arch suffix (MPI-200) and `engines:` for
+                // the engine suffix (MPI-165).
                 const _model = getModelById(payload.modelId);
                 workflowFile = resolveWorkflowFile(
-                    _model, payload.operation, engine, { stage2: payload.isStage2 === true });
+                    _model, payload.operation, engine, { stage2: payload.isStage2 === true, variantTokens });
                 if (!workflowFile) {
                     throw new Error(`No workflow registered for model "${payload.modelId}", operation "${payload.operation}"`);
                 }

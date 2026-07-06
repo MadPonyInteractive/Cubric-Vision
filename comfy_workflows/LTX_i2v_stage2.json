@@ -502,21 +502,6 @@
       "title": "Input_Is_Continue"
     }
   },
-  "72": {
-    "inputs": {
-      "filename_prefix": "preview",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "223",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Preview"
-    }
-  },
   "73": {
     "inputs": {
       "boolean": false
@@ -550,7 +535,7 @@
   },
   "77": {
     "inputs": {
-      "int": 984885685
+      "int": 984885688
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -585,7 +570,7 @@
   },
   "88": {
     "inputs": {
-      "int": 1088
+      "int": 512
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -594,7 +579,7 @@
   },
   "89": {
     "inputs": {
-      "int": 1920
+      "int": 960
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -688,43 +673,6 @@
     "class_type": "LatentUpscaleModelLoader",
     "_meta": {
       "title": "Load Latent Upscale Model"
-    }
-  },
-  "133": {
-    "inputs": {
-      "fps": [
-        "76",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "215",
-        0
-      ],
-      "audio": [
-        "136",
-        1
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "136": {
-    "inputs": {
-      "boolean": [
-        "190",
-        0
-      ],
-      "input": [
-        "117",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "if else inv"
     }
   },
   "140": {
@@ -967,59 +915,6 @@
       "title": "LTXVPreprocess (End)"
     }
   },
-  "186": {
-    "inputs": {
-      "filename_prefix": "LTX",
-      "format": "auto",
-      "codec": "auto",
-      "video-preview": "",
-      "video": [
-        "189",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Video"
-    }
-  },
-  "188": {
-    "inputs": {
-      "fps": [
-        "76",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "215",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "189": {
-    "inputs": {
-      "boolean": [
-        "190",
-        0
-      ],
-      "true": [
-        "133",
-        0
-      ],
-      "false": [
-        "188",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
   "190": {
     "inputs": {
       "boolean": true
@@ -1222,64 +1117,6 @@
     "class_type": "MpiIfElseInverted",
     "_meta": {
       "title": "if else inv"
-    }
-  },
-  "221": {
-    "inputs": {
-      "fps": [
-        "76",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "65",
-        0
-      ],
-      "audio": [
-        "231",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "222": {
-    "inputs": {
-      "fps": [
-        "76",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "65",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "223": {
-    "inputs": {
-      "boolean": [
-        "190",
-        0
-      ],
-      "true": [
-        "221",
-        0
-      ],
-      "false": [
-        "222",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
     }
   },
   "224": {
@@ -2029,32 +1866,54 @@
       "title": "ManualSigmas"
     }
   },
-  "442": {
+  "457": {
     "inputs": {
-      "noise": [
-        "12",
+      "fps": [
+        "76",
+        2
+      ],
+      "filename_prefix": "MpiVideo",
+      "use_audio": [
+        "190",
         0
       ],
-      "guider": [
-        "328",
+      "images": [
+        "215",
         0
       ],
-      "sampler": [
-        "157",
-        0
-      ],
-      "sigmas": [
-        "142",
-        0
-      ],
-      "latent_image": [
-        "145",
+      "audio": [
+        "117",
         0
       ]
     },
-    "class_type": "SamplerCustomAdvanced",
+    "class_type": "MpiSaveVideo",
     "_meta": {
-      "title": "SamplerCustomAdvanced"
+      "title": "Output_Video"
+    }
+  },
+  "470": {
+    "inputs": {
+      "fps": [
+        "76",
+        2
+      ],
+      "filename_prefix": "MpiVideo",
+      "use_audio": [
+        "190",
+        0
+      ],
+      "images": [
+        "65",
+        0
+      ],
+      "audio": [
+        "231",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
     }
   }
 }

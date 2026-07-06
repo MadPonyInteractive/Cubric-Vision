@@ -92,6 +92,24 @@ const OP_X_ENGINE = {
     },
 };
 
+// MPI-200: generic runtime-variant axis. LTX-2.3 balanced tier — the transformer
+// weight AND the workflow file vary by GPU arch (Blackwell → mxfp8, Ada/older →
+// fp8_scaled). Declared as a `variants:` block; same structural shape as engines.
+const VARIANT = {
+    id: 'ltx-balanced-like',
+    supportedOps: ['t2v_ms', 'i2v_ms'],
+    dependencies: ['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo'],
+    workflows: { t2v_ms: 'LTX_t2v.json', i2v_ms: 'LTX_i2v.json' },
+    variants: {
+        arch: {
+            options: {
+                blackwell: { extraDeps: ['tx-mxfp8'], workflowSuffix: '_mxfp8' },
+                modern:    { extraDeps: ['tx-fp8'],   workflowSuffix: '_fp8'   },
+            },
+        },
+    },
+};
+
 // depStatus helper: a Set of installed dep ids → predicate.
 const statusFrom = (installed) => (id) => installed.has(id);
 
@@ -378,6 +396,61 @@ function testOpAndEngineCompose() {
     assert.strictEqual(r2.nodeIds, null, 'no isNode predicate → nodeIds null');
 }
 
+// MPI-200: the generic runtime-variant axis. A concrete token selects one option's
+// deps + suffix; a missing token unions all options' deps (shared-dep protection)
+// and adds NO suffix; a model with no variants: block is unaffected.
+function testVariantAxis() {
+    // Concrete token → that arch's single weight, that arch's suffix.
+    assert.deepStrictEqual(
+        resolveDeps(VARIANT, null, null, null, { arch: 'blackwell' }).filter(id => id.startsWith('tx-')),
+        ['tx-mxfp8'], 'blackwell token → mxfp8 weight only');
+    assert.deepStrictEqual(
+        resolveDeps(VARIANT, null, null, null, { arch: 'modern' }).filter(id => id.startsWith('tx-')),
+        ['tx-fp8'], 'modern token → fp8 weight only');
+
+    // Missing token → UNION of every option's deps (shared-dep protection), no suffix.
+    const union = resolveDeps(VARIANT, null, null, null, {}).filter(id => id.startsWith('tx-'));
+    assert.deepStrictEqual(union.sort(), ['tx-fp8', 'tx-mxfp8'], 'no token → union of all arch weights');
+    // resolveFullUniverse with no token = the protection universe (both weights).
+    assert.ok(resolveFullUniverse(VARIANT).includes('tx-mxfp8'));
+    assert.ok(resolveFullUniverse(VARIANT).includes('tx-fp8'));
+
+    // Workflow filename: base → variant suffix → _stage2 (build-script order).
+    assert.strictEqual(
+        resolveWorkflowFile(VARIANT, 't2v_ms', null, { variantTokens: { arch: 'blackwell' } }),
+        'LTX_t2v_mxfp8.json', 'variant suffix on stage-1');
+    assert.strictEqual(
+        resolveWorkflowFile(VARIANT, 't2v_ms', null, { stage2: true, variantTokens: { arch: 'modern' } }),
+        'LTX_t2v_fp8_stage2.json', 'variant suffix BEFORE _stage2 — matches generate_ltx.py');
+    // No token → no suffix (verbatim base).
+    assert.strictEqual(
+        resolveWorkflowFile(VARIANT, 't2v_ms', null, {}), 'LTX_t2v.json', 'no token → no variant suffix');
+
+    // Status gate: balanced card only "installed" when THIS arch's weight is on disk.
+    const withMx = statusFrom(new Set(['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo', 'tx-mxfp8']));
+    assert.strictEqual(
+        deriveInstalledOps(VARIANT, withMx, null, { arch: 'blackwell' }).fullyInstalled,
+        true, 'blackwell installed when mxfp8 present');
+    assert.strictEqual(
+        deriveInstalledOps(VARIANT, withMx, null, { arch: 'modern' }).fullyInstalled,
+        false, 'modern NOT installed — fp8 weight absent even though mxfp8 is on disk');
+
+    // A model with no variants: block is entirely unaffected (no deps, no suffix).
+    assert.deepStrictEqual(resolveDeps(FLAT, null, null, null, { arch: 'blackwell' }), resolveDeps(FLAT, null, null, null, {}),
+        'no variants: block → variantTokens is a no-op on deps');
+    assert.strictEqual(resolveWorkflowFile(SPLIT, 't2v_ms', 'local', { variantTokens: { arch: 'blackwell' } }),
+        'LTX_t2v.json', 'no variants: block → variantTokens is a no-op on workflow file');
+
+    // Compose with the ENGINE axis: variant suffix then _stage2 then engine suffix.
+    const BOTH = { ...VARIANT, engines: { local: { extraDeps: ['loc'], workflowSuffix: '' }, remote: { extraDeps: ['rem'], workflowSuffix: '_remote' } } };
+    assert.strictEqual(
+        resolveWorkflowFile(BOTH, 't2v_ms', 'remote', { stage2: true, variantTokens: { arch: 'blackwell' } }),
+        'LTX_t2v_mxfp8_stage2_remote.json', 'arch + stage2 + engine compose in order');
+    const bothDeps = resolveDeps(BOTH, null, null, 'remote', { arch: 'modern' });
+    assert.ok(bothDeps.includes('tx-fp8') && bothDeps.includes('rem') && !bothDeps.includes('loc'),
+        'engine + variant deps union, engine-correct');
+}
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 const tests = {
@@ -393,6 +466,7 @@ const tests = {
     testEngineResolution,
     testWorkflowFileResolution,
     testOpAndEngineCompose,
+    testVariantAxis,
 };
 
 let failed = 0;

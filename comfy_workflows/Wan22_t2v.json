@@ -721,70 +721,6 @@
       "title": "Input_Video_Latent"
     }
   },
-  "901": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "902",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Video"
-    }
-  },
-  "902": {
-    "inputs": {
-      "fps": [
-        "635",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "774",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "903": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "904",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Preview"
-    }
-  },
-  "904": {
-    "inputs": {
-      "fps": [
-        "635",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "776",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
   "905": {
     "inputs": {
       "sigmas": "1.0, 0.92, 0.84, 0.77, 0.70"
@@ -801,6 +737,36 @@
     "class_type": "ManualSigmas",
     "_meta": {
       "title": "ManualSigmas stg2"
+    }
+  },
+  "932": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "933": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "776",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
     }
   }
 }

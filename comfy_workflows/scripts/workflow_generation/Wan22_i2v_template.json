@@ -866,7 +866,7 @@
   },
   "839": {
     "inputs": {
-      "image": "Detailed_00019_.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -875,7 +875,7 @@
   },
   "841": {
     "inputs": {
-      "image": "Detailed_00019_.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -975,73 +975,9 @@
       "title": "Mpi Boolean Compare"
     }
   },
-  "852": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "853",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Video"
-    }
-  },
-  "853": {
-    "inputs": {
-      "fps": [
-        "635",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "774",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "854": {
-    "inputs": {
-      "fps": [
-        "635",
-        2
-      ],
-      "bit_depth": 8,
-      "images": [
-        "776",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "855": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "854",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Preview"
-    }
-  },
   "857": {
     "inputs": {
-      "sigmas": "0.85, 0.65, 0.45, 0.25, 0.0"
+      "sigmas": " 0.85, 0.65, 0.45, 0.25, 0.0"
     },
     "class_type": "ManualSigmas",
     "_meta": {
@@ -1055,6 +991,36 @@
     "class_type": "ManualSigmas",
     "_meta": {
       "title": "ManualSigmas stg1"
+    }
+  },
+  "872": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "873": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "776",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
     }
   }
 }

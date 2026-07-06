@@ -21,8 +21,8 @@
   },
   "4": {
     "inputs": {
-      "unet_name": "ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",
-      "weight_dtype": "default"
+      "unet_name": "ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors",
+      "weight_dtype": "mxfp8"
     },
     "class_type": "UNETLoader",
     "_meta": {
@@ -495,7 +495,7 @@
   },
   "71": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiBoolean",
     "_meta": {
@@ -1375,7 +1375,7 @@
   },
   "314": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {

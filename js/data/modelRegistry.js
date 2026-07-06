@@ -80,6 +80,10 @@ export async function initPaths() {
  * @returns {Promise<boolean>} true if the sync succeeded
  */
 export async function syncModelInstalled() {
+    // MPI-200: warm the local-arch cache so the sync gates (isModelUsable /
+    // isOperationInstalled) have a concrete arch token when they run. Fire-and-forget
+    // — one gpu-info fetch, cached for the session.
+    remoteEngineClient.warmLocalArch();
     try {
         // Build payload for model-tied workflows
         // Resolve the FULL dep universe (commonDeps + every selectable op) so the
@@ -174,6 +178,24 @@ export function getModelById(id) {
 }
 
 /**
+ * The size-tier letter (H/B/L) for a model, or '' when the model has no tier
+ * family (MPI-200). Shared by the model dropdown, prompt-box button, and gallery
+ * cards so all three read the same tier convention. A model shows its letter only
+ * when it belongs to a `modelFamily` (i.e. tier siblings exist) — a lone model
+ * with no family gets no letter (no clutter). Unlike the live dropdown (which
+ * gates on 2+ INSTALLED tiers), this is install-independent: a gallery asset made
+ * by a specific tier should always show which tier made it.
+ * @param {ModelDef|string|null} modelOrId
+ * @returns {'H'|'B'|'L'|''}
+ */
+const _TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
+export function tierLetterFor(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model || !model.modelFamily) return '';
+    return _TIER_LETTER[model.sizeTier] || '';
+}
+
+/**
  * Returns the workflow filename for a model+operation pair.
  * Returns null if the operation is not yet implemented for this model.
  * @param {string} modelId
@@ -251,7 +273,11 @@ export function isModelUsable(modelOrId) {
     // MPI-165: reads the engines: block, not the deleted localDeps/remoteDeps)
     const hasEngineDeps = !!(model.engines?.local?.extraDeps?.length
         || model.engines?.remote?.extraDeps?.length);
-    if (!hasOperationGroups(model) && !hasEngineDeps) return model.installed !== false;
+    // MPI-200: a flat balanced model has arch-VARIANT deps (not engine deps) that
+    // are equally invisible to the engine-agnostic server `installed` flag — route
+    // it through deriveInstalledOps too so the CURRENT arch's weight is required.
+    const hasVariantDeps = !!model.variants && Object.keys(model.variants).length > 0;
+    if (!hasOperationGroups(model) && !hasEngineDeps && !hasVariantDeps) return model.installed !== false;
     const depStatus = getModelDepStatus(model.id);
     if (!depStatus) return model.installed === true; // no cache yet → trust server flag
     const isOn = id => {
@@ -259,7 +285,7 @@ export function isModelUsable(modelOrId) {
         return s === true || s?.installed === true;
     };
     const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
-    return deriveInstalledOps(model, isOn, engine).fullyInstalled;
+    return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).fullyInstalled;
 }
 
 /**
@@ -287,5 +313,5 @@ export function isOperationInstalled(modelOrId, op) {
         return s === true || s?.installed === true;
     };
     const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
-    return deriveInstalledOps(model, isOn, engine).installedOps.includes(op);
+    return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).installedOps.includes(op);
 }

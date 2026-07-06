@@ -8,7 +8,7 @@ import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel } from '../../../data/commandRegistry.js';
-import { getModelDepStatus } from '../../../data/modelRegistry.js';
+import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
@@ -144,6 +144,8 @@ export const MpiPromptBox = ComponentFactory.create({
                 // depends on the current engine's weights. (LTX is flat → early-return
                 // above; this guards a future op-keyed engine-split model.)
                 remoteEngineClient.isRemote() ? 'remote' : 'local',
+                // MPI-200: arch token for a future op-keyed model with a variants: block.
+                { arch: remoteEngineClient.archSync(remoteEngineClient.isRemote() ? 'remote' : 'local') },
             );
             return { ..._context, installedOps };
         }
@@ -791,7 +793,10 @@ export const MpiPromptBox = ComponentFactory.create({
         badgeBtn.el.appendChild(badgeHost);
 
         function _renderBadge() {
-            const modelName  = model?.name ?? '—';
+            // MPI-200: append the size-tier letter (H/B/L) so the button matches the
+            // dropdown + gallery cards (e.g. "LTX 2.3 B"). Empty for models with no tier family.
+            const _tier = tierLetterFor(model);
+            const modelName  = model ? `${model.name}${_tier ? ` ${_tier}` : ''}` : '—';
             const opLabel    = commands[activeOperation]?.label ?? activeOperation;
             const batchCtrl  = _activeControls.get('batch');
             const batchCount = batchCtrl ? parseInt(batchCtrl.getValue(), 10) : 1;

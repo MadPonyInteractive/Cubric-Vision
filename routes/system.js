@@ -123,6 +123,7 @@ router.get('/system/gpu-info', async (req, res) => {
             gpu: {
                 name: downloadConfig.gpu?.name || null,
                 vendor: downloadConfig.gpu?.vendor || null,
+                arch: downloadConfig.gpu?.arch || null,  // MPI-200: runtime-variant token
             },
             vramTotal: vram.total * 1024 * 1024,
             ramTotal: os.totalmem(),

@@ -115,35 +115,6 @@
       "title": "Wan22ImageToVideoLatent"
     }
   },
-  "57": {
-    "inputs": {
-      "fps": 16,
-      "bit_depth": 8,
-      "images": [
-        "8",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "58": {
-    "inputs": {
-      "filename_prefix": "video/ComfyUI",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "57",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Video"
-    }
-  },
   "61": {
     "inputs": {
       "lora_name": "wan-2.2-5b\\Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors",
@@ -404,6 +375,21 @@
     "class_type": "StringConcatenate",
     "_meta": {
       "title": "Extra_Negative"
+    }
+  },
+  "114": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
     }
   }
 }

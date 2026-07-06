@@ -6,7 +6,7 @@ import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { ce, qs, qsa, on } from '/js/utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
-import { getModelById } from '../../../data/modelRegistry.js';
+import { getModelById, tierLetterFor } from '../../../data/modelRegistry.js';
 import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
 import { state } from '../../../state.js';
 import { Storage } from '../../../core/storage.js';
@@ -895,9 +895,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // Top-left badge: original source/model on row 1, current selected operation on row 2.
                 const originalModel = getModelById(original?.modelId);
                 const command = getCommand(selected?.operation);
-                const modelLabel = original?.uploaded
-                    ? 'IMPORTED'
-                    : (originalModel?.name || original?.modelId || '');
+                // MPI-200: append the size-tier letter (H/B/L) so a card shows WHICH
+                // tier made the asset (e.g. "LTX 2.3 B"). Empty for models with no
+                // tier family. Uses the original model's id (the tier that generated it).
+                const tierLetter = tierLetterFor(originalModel);
+                const modelName = originalModel
+                    ? `${originalModel.name}${tierLetter ? ` ${tierLetter}` : ''}`
+                    : (original?.modelId || '');
+                const modelLabel = original?.uploaded ? 'IMPORTED' : modelName;
                 const operationLabel = selected?.uploaded
                     ? ''
                     : (command?.label || selected?.operation || '');

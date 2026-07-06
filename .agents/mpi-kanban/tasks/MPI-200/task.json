@@ -3,12 +3,13 @@
   "id": "MPI-200",
   "title": "LTX transformer quality tiers: bf16 (high) + fp8_scaled/mxfp8 (balanced) workflow split",
   "description": "Follow-up to MPI-197 (root cause closed: 48s@10s stage boundary = bf16 40GB never fits 32GB -> aimdo eviction; smaller transformer that FITS kills the eviction class). USER DECISION 2026-07-05: balanced tier = Kijai distilled-1.1 `mxfp8_block32` (Blackwell 5090 — ComfyUI PR #12907's own benchmark on THIS model: 9.68 vs 16.14 s/it, ~40% faster than bf16; needs weight_dtype=mxfp8, our v0.27+cu130 stack has it) + `fp8_scaled` (Ada 4090 / universal weight-only fallback); HIGH tier = current bf16 (quality ceiling). NVFP4 REJECTED (artifacts, i2v broken, dev-only). LOW tier DEFERRED (would need Q4/GGUF — do NOT re-open GGUF without user). CAUTION: do NOT grab `fp8_input_scaled_v3` — it is v1.0 distilled weights, not 1.1. FULL RESEARCH (files, sizes, arch gates, loader paths, quality data, test plan): .agents/mpi-kanban/tasks/MPI-197/research/quant-tiers.md. Scope: new workflow file(s) for balanced tier, current workflow becomes high tier; per-VRAM-tier model selection in dep resolver (engine-split contract in .claude/rules/comfy_engine.md); weights to R2 (add-model playbook — NOT HF at build time); free first probe = existing bf16 + weight_dtype=fp8_e4m3fn on a 5090 pod (mechanism proof, no download). Verify flags: KJNodes LTX2_NAG mxfp8 artifact bug (kijai/ComfyUI-KJNodes #576 closed — confirm our pin has fix; we use LTX2_NAG node); quality A/B vs bf16 locked seed (faces/text/motion). Models are NOT version-bumped — new weights = new model entries.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "open",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
   "created_at": "2026-07-06T00:30:00Z",
-  "updated_at": "2026-07-06T00:30:00Z",
+  "updated_at": "2026-07-06T00:50:00Z",
   "links": {
+    "plan": "plan.md",
     "events": "events.jsonl"
   },
   "tags": [

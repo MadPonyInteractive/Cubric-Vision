@@ -290,6 +290,29 @@ export const DEPS = {
         size: '41GB',
         sha256: 'cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249',
     },
+    // MPI-200 balanced tier — arch-gated transformers. fp8_scaled = Ada/Ampere/
+    // Turing (weight-only fp8, dequant to bf16 matmul, loads anywhere); mxfp8_block32
+    // = Blackwell native tensor path (weight_dtype=mxfp8, our v0.27+cu130 stack).
+    // Kijai comfy-format ONLY — the official Lightricks fp8 repo is broken. Selected
+    // per machine by the `variants.arch` resolver axis; only ONE installs per GPU.
+    'ltx23-transformer-fp8': {
+        id: 'ltx23-transformer-fp8',
+        name: 'LTX-2.3 22B Distilled Transformer (fp8_scaled)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
+        size: '25.2GB',
+        sha256: '0a1d7aac2b338e8ec7e832149f1dcf11c9323272482b1cca0673d229702370f0',
+    },
+    'ltx23-transformer-mxfp8': {
+        id: 'ltx23-transformer-mxfp8',
+        name: 'LTX-2.3 22B Distilled Transformer (mxfp8_block32)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
+        size: '24.1GB',
+        sha256: 'b7a945ff24d65ad22c6977787c2e594e74df226e35f1f9dedb64be8fdbd6ffd8',
+    },
     'ltx23-video-vae': {
         id: 'ltx23-video-vae',
         name: 'LTX-2.3 Video VAE (bf16)',

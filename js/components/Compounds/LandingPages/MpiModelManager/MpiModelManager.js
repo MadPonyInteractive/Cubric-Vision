@@ -149,7 +149,7 @@ export const MpiModelManager = ComponentFactory.create({
         // the GGUF curve highlighted against the Pod's VRAM.
         function _tradeTableHtml(model) {
             const activeVram = _activeVramGb();
-            const { rows, totalWeights, vramFloor } = tradeTable(model, _engine(), activeVram);
+            const { rows, totalWeights, vramFloor } = tradeTable(model, _engine(), activeVram, _arch());
             const body = rows.map(r => `
                 <tr class="mpi-trade-table__row${r.isUserRow ? ' mpi-trade-table__row--user' : ''}">
                     <td class="mpi-trade-table__cell">${r.vram}GB${r.isFloor ? ' <span class="mpi-trade-table__floor">min</span>' : ''}</td>
@@ -276,6 +276,7 @@ export const MpiModelManager = ComponentFactory.create({
             const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
             const { installedOps } = deriveInstalledOps(
                 model, id => _depIsInstalled(depStatus.get(id)), engine,
+                { arch: remoteEngineClient.archSync(engine) },  // MPI-200: current-arch weight required
             );
             return installedOps;
         }
@@ -315,11 +316,15 @@ export const MpiModelManager = ComponentFactory.create({
         // Pod that's the bug: the bf16 (41GB, absent) inflated the denominator to
         // 85.8GB and the missing-dep made the card read PARTIALLY INSTALLED. (MPI-163)
         const _engine = () => (remoteEngineClient.isRemote() ? 'remote' : 'local');
+        // MPI-200: arch token for the current engine's machine — selects the balanced
+        // tier's one arch-correct weight (install/uninstall/size all use the concrete
+        // arch so we fetch/delete exactly the transformer this GPU runs, never both).
+        const _arch = () => ({ arch: remoteEngineClient.archSync(_engine()) });
 
         // Deps to fetch for the drafted op set (commonDeps + drafted ops), scoped to
         // the current engine (adds engines.local OR engines.remote extraDeps, never both).
         function _draftDepIds(model) {
-            return resolveDeps(model, _draftFor(model), null, _engine());
+            return resolveDeps(model, _draftFor(model), null, _engine(), _arch());
         }
 
         // Per-op uninstall dep set: the removed ops' deps MINUS any dep still used
@@ -331,8 +336,8 @@ export const MpiModelManager = ComponentFactory.create({
             // Engine-scoped both sides (MPI-165): an engine-split op-keyed model must
             // subtract within the CURRENT engine's universe, never union both engines
             // (which would target the other engine's weight for deletion).
-            const removed = resolveDeps(model, removedOps, null, _engine());
-            const keep = new Set(resolveDeps(model, keptOps, null, _engine())); // includes commonDeps
+            const removed = resolveDeps(model, removedOps, null, _engine(), _arch());
+            const keep = new Set(resolveDeps(model, keptOps, null, _engine(), _arch())); // includes commonDeps
             return removed.filter(id => !keep.has(id));
         }
 
@@ -356,7 +361,7 @@ export const MpiModelManager = ComponentFactory.create({
         // this disk anyway). The backend shared-dep guard still protects cross-MODEL
         // files. (MPI-165)
         function _confirmWholeUninstall(model) {
-            const deps = resolveFullUniverse(model, null, _engine()).map(id => DEPS[id]).filter(Boolean);
+            const deps = resolveFullUniverse(model, null, _engine(), _arch()).map(id => DEPS[id]).filter(Boolean);
             _showConfirm(
                 `Uninstall ${model.name}?\n• Files shared with other installed models will be kept.`,
                 async (deleteFiles) => {
@@ -533,7 +538,7 @@ export const MpiModelManager = ComponentFactory.create({
             // Sizes: drafted footprint (what install fetches) for op-keyed models,
             // else the engine-scoped universe — a Pod must show the GGUF footprint,
             // not bf16+GGUF (the 85.8GB-vs-real bug). (MPI-163)
-            const sizeDepIds = selectableOps(model).length ? _draftDepIds(model) : resolveFullUniverse(model, null, _engine());
+            const sizeDepIds = selectableOps(model).length ? _draftDepIds(model) : resolveFullUniverse(model, null, _engine(), _arch());
             const sizeBytes = _sizeOf(sizeDepIds);
             const sizeText = sizeBytes > 0 ? `Disk: ${formatBytes(sizeBytes)}` : '';
             // Disk size moved from the header meta (which now collides with the tier

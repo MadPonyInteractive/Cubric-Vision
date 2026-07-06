@@ -18,11 +18,16 @@
 
 import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
+import { state } from '../state.js';
+import { gpuArch } from '../data/modelConstants/gpuArch.js';
 
 export const remoteEngineClient = {
 
     /** @type {boolean} Mirror of the backend remote-mode flag. */
     _active: false,
+
+    /** @type {'blackwell'|'modern'|'legacy'|null} Cached LOCAL GPU arch token (one gpu-info fetch/session). */
+    _localArch: undefined,
 
     /** @type {boolean} True when the active Pod is a no-GPU "download mode" Pod (MPI-88). */
     _noGpu: false,
@@ -71,6 +76,58 @@ export const remoteEngineClient = {
     /** @returns {boolean} True when the backend reports remote mode active. */
     isRemote() {
         return this._active;
+    },
+
+    /**
+     * The GPU architecture token for the given engine, ready to pass as the
+     * resolver's `variantTokens.arch` (MPI-200). Engine-aware because a balanced
+     * model must resolve the weight/workflow for the machine that ACTUALLY runs
+     * the gen:
+     *   - remote → the RunPod pod's `gpuType` id string (a full GPU name),
+     *     classified client-side (sync, no network).
+     *   - local  → the local GPU, from a one-time `/system/gpu-info` fetch
+     *     (server-computed `gpu.arch`), cached for the session.
+     * Returns null when the arch is unknown (no NVIDIA GPU / no pod selected) —
+     * the resolver then unions all variant weights (protection) and a balanced
+     * card simply won't resolve a concrete workflow, which is correct.
+     *
+     * @param {'local'|'remote'} engine  Resolve ONCE per gen, AFTER refresh(), then thread.
+     * @returns {Promise<'blackwell'|'modern'|'legacy'|null>}
+     */
+    async arch(engine) {
+        if (engine === 'remote') {
+            return gpuArch(state.runpodConfig?.gpuType || null);
+        }
+        if (this._localArch === undefined) {
+            try {
+                const res = await fetch('/system/gpu-info');
+                const data = await res.json();
+                this._localArch = data?.gpu?.arch || null;
+            } catch (_) {
+                this._localArch = null;
+            }
+        }
+        return this._localArch;
+    },
+
+    /**
+     * Synchronous arch token for the given engine — for SYNC render-path gates
+     * (isModelUsable / isOperationInstalled) that can't await. Remote is always
+     * sync (reads the pod gpuType); local returns the cached value from a prior
+     * `arch('local')` warm, or null if not warmed yet (a null token unions the
+     * variant deps → the gate stays conservative until the warm lands). Call
+     * `warmLocalArch()` once at boot so the local cache is populated.
+     * @param {'local'|'remote'} engine
+     * @returns {'blackwell'|'modern'|'legacy'|null}
+     */
+    archSync(engine) {
+        if (engine === 'remote') return gpuArch(state.runpodConfig?.gpuType || null);
+        return this._localArch === undefined ? null : this._localArch;
+    },
+
+    /** Populate the local-arch cache once (fire-and-forget at app boot). */
+    warmLocalArch() {
+        return this.arch('local').catch(() => {});
     },
 
     /**

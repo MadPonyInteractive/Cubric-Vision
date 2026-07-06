@@ -48,9 +48,9 @@ function isWeightDep(dep) {
  * @param {'local'|'remote'|null} [engine]
  * @returns {number} total weight size in GB
  */
-export function totalWeightsGb(model, engine = null) {
+export function totalWeightsGb(model, engine = null, variantTokens = {}) {
     if (!model) return 0;
-    const ids = resolveDeps(model, null, null, engine);
+    const ids = resolveDeps(model, null, null, engine, variantTokens);
     let gb = 0;
     for (const id of ids) {
         const dep = DEPS[id];
@@ -82,8 +82,8 @@ export function ramNeededGb(totalWeights, vramGb) {
  * @returns {{rows: Array<{vram:number, ram:number, isFloor:boolean, isUserRow:boolean}>,
  *           totalWeights:number, footprint:number, vramFloor:number}}
  */
-export function tradeTable(model, engine = null, userVramGb = null) {
-    const totalWeights = totalWeightsGb(model, engine);
+export function tradeTable(model, engine = null, userVramGb = null, variantTokens = {}) {
+    const totalWeights = totalWeightsGb(model, engine, variantTokens);
     const footprint = totalWeights + OVERHEAD;
     const floor = vramFloorGb(model ? totalWeights : 0);
     const startVram = Math.ceil(floor / 8) * 8;       // first row on the 8GB grid ≥ floor

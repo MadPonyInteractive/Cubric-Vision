@@ -44,6 +44,21 @@ from pathlib import Path
 T2V_GATE_TITLE = "Input_Text_to_video"   # MpiSimpleBoolean: false=i2v, true=t2v
 IS_CONTINUE_TITLE = "Input_Is_Continue"  # MpiBoolean: false=stage-1, true=stage-2
 
+# MPI-200: quality tiers. ONE template, three transformer variants — only the
+# UNETLoader ("Load Diffusion Model") node changes (unet_name + weight_dtype);
+# CLIP (shared gemma fp4), VAEs, samplers and gates are identical across all
+# three. bf16 = the high-tier quality ceiling (unsuffixed filenames = the
+# existing files, zero churn). fp8_scaled + mxfp8_block32 = the balanced tier;
+# the app arch-selects between them (Blackwell → mxfp8, Ada/older → fp8_scaled).
+# Kijai comfy-format weights ONLY — the official Lightricks fp8 repo is broken.
+UNET_LOADER_TITLE = "Load Diffusion Model"  # the single UNETLoader in the graph
+VARIANTS = {
+    # suffix: (unet_name, weight_dtype)
+    "":       ("ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",         "default"),
+    "_fp8":   ("ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",   "default"),
+    "_mxfp8": ("ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors", "mxfp8"),
+}
+
 # Media-input placeholders. The graph won't run without these LoadImage/LoadAudio
 # nodes holding SOME file, and ComfyUI validates them at prompt time even when the
 # output is gated off (t2v never uses the frames; an audio-less gen never uses the
@@ -94,6 +109,27 @@ def _set_boolean(wf: dict, title: str, value: bool) -> None:
     inputs["boolean"] = value
 
 
+def _stamp_transformer(wf: dict, unet_name: str, weight_dtype: str) -> None:
+    """MPI-200: stamp the single UNETLoader with a tier variant's transformer file
+    and weight_dtype. Fails loud on a missing node or input (a rename must not
+    silently ship the wrong/unchanged loader)."""
+    nid = _find_node_id_by_title(wf, UNET_LOADER_TITLE)
+    if nid is None:
+        raise SystemExit(
+            f"[FAIL] No node titled {UNET_LOADER_TITLE!r}. Title the UNETLoader "
+            f"{UNET_LOADER_TITLE!r} in the ComfyUI graph and re-export."
+        )
+    inputs = wf[nid].setdefault("inputs", {})
+    for key in ("unet_name", "weight_dtype"):
+        if key not in inputs:
+            raise SystemExit(
+                f"[FAIL] Node titled {UNET_LOADER_TITLE!r} has no {key!r} input "
+                f"(got {sorted(inputs)}); cannot stamp the transformer variant."
+            )
+    inputs["unet_name"] = unet_name
+    inputs["weight_dtype"] = weight_dtype
+
+
 def _stamp_placeholders(wf: dict) -> None:
     """Reset each media-input node's filename to its staged placeholder, so the
     generated workflow validates on any engine regardless of what test media was
@@ -141,26 +177,29 @@ def _derive_stage2(stage1: dict) -> dict:
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. source = i2v+t2v API export. Writes 4 bf16 files:
-    the 4 mode/stage variants (i2v/t2v × stage-1/stage-2). MPI-190: no GGUF
-    flavour — both engines run the same bf16 transformer."""
+    """Orchestrator entry. source = i2v+t2v API export. Writes 12 files:
+    4 mode/stage variants (i2v/t2v × stage-1/stage-2) × 3 tier variants
+    (bf16/fp8/mxfp8). MPI-200: only the UNETLoader changes per tier variant;
+    bf16 keeps the unsuffixed filenames (the high-tier card's existing files)."""
     template = json.loads(source_path.read_text(encoding="utf-8"))
     _check_required(template, "Source template")
 
     written: list[Path] = []
-    for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
-        stage1 = _variant(template, t2v)
-        _stamp_placeholders(stage1)
-        s1_out = out_dir / f"{name}.json"
-        s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
-        print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v})")
-        written.append(s1_out)
+    for vsuffix, (unet_name, weight_dtype) in VARIANTS.items():
+        for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
+            stage1 = _variant(template, t2v)
+            _stamp_placeholders(stage1)
+            _stamp_transformer(stage1, unet_name, weight_dtype)
+            s1_out = out_dir / f"{name}{vsuffix}.json"
+            s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
+            print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v}, unet={unet_name})")
+            written.append(s1_out)
 
-        stage2 = _derive_stage2(stage1)
-        _check_required(stage2, f"{name}_stage2")
-        s2_out = out_dir / f"{name}_stage2.json"
-        s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
-        print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true)")
-        written.append(s2_out)
+            stage2 = _derive_stage2(stage1)
+            _check_required(stage2, f"{name}{vsuffix}_stage2")
+            s2_out = out_dir / f"{name}{vsuffix}_stage2.json"
+            s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
+            print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true)")
+            written.append(s2_out)
 
     return written

@@ -80,6 +80,84 @@ function engineDepsOf(model, engine = null) {
     return [...extra('local'), ...extra('remote')]; // union for shared-dep protection
 }
 
+// ── Generic runtime-variant axes (MPI-200) ────────────────────────────────────
+// A model whose deps/workflow vary by a RUNTIME token OTHER than the engine (the
+// first case: GPU architecture — Blackwell wants the mxfp8 transformer, Ada/older
+// wants fp8_scaled) declares that variance in a `variants:` block. This is the
+// SAME structural shape as the `engines:` axis (MPI-165) — one block, one resolver,
+// token resolved ONCE per gen and threaded — generalized so future axes (an
+// arch-dependent node, a per-card LoRA, anything keyed on a runtime signal) need
+// NO new resolver code: declare the axis on the card and the resolver composes it.
+//
+//   variants: {
+//     arch: {                                 // axis key = the token name
+//       options: {
+//         blackwell: { extraDeps: ['ltx23-transformer-mxfp8'], workflowSuffix: '_mxfp8' },
+//         modern:    { extraDeps: ['ltx23-transformer-fp8'],   workflowSuffix: '_fp8'   },
+//       },
+//     },
+//   }
+//
+// Callers pass a `variantTokens` map, e.g. `{ arch: 'blackwell' }`. Rules mirror
+// the engine axis exactly:
+//   - a provided token selects that option's extraDeps + suffix;
+//   - a MISSING/null token = the union of every option's extraDeps (shared-dep
+//     PROTECTION — never delete a weight another variant needs) and NO suffix;
+//   - an unknown token value falls through to union/no-suffix (defensive; the
+//     app resolves a concrete token per gen, so this only guards bad input).
+// A model with no `variants:` block is entirely unaffected — [] deps, '' suffix.
+
+function variantAxesOf(model) {
+    const v = model?.variants;
+    return v && typeof v === 'object' ? v : null;
+}
+
+/**
+ * Extra dep ids from every declared variant axis for a given token map.
+ * A provided token picks one option; a missing token unions all options
+ * (shared-dep protection). Deterministic: axes and options in declaration order.
+ * @param {object} model
+ * @param {Record<string,string|null>} [variantTokens]
+ * @returns {string[]}
+ */
+function variantDepsOf(model, variantTokens = {}) {
+    const axes = variantAxesOf(model);
+    if (!axes) return [];
+    const ids = [];
+    for (const [axisKey, axis] of Object.entries(axes)) {
+        const options = axis?.options;
+        if (!options || typeof options !== 'object') continue;
+        const token = variantTokens ? variantTokens[axisKey] : null;
+        const chosen = (token != null && options[token]) ? [token] : Object.keys(options);
+        for (const optKey of chosen) {
+            const extra = options[optKey]?.extraDeps;
+            if (Array.isArray(extra)) ids.push(...extra);
+        }
+    }
+    return ids;
+}
+
+/**
+ * Concatenated workflow-filename suffix from every declared variant axis, in
+ * declaration order. Only a resolved (present) token contributes a suffix; a
+ * missing/unknown token contributes nothing (the union case never suffixes — it
+ * is for dep-universe protection, not for picking a concrete workflow file).
+ * @param {object} model
+ * @param {Record<string,string|null>} [variantTokens]
+ * @returns {string}
+ */
+function variantSuffixOf(model, variantTokens = {}) {
+    const axes = variantAxesOf(model);
+    if (!axes) return '';
+    let suffix = '';
+    for (const [axisKey, axis] of Object.entries(axes)) {
+        const token = variantTokens ? variantTokens[axisKey] : null;
+        const opt = token != null ? axis?.options?.[token] : null;
+        if (opt && typeof opt.workflowSuffix === 'string') suffix += opt.workflowSuffix;
+    }
+    return suffix;
+}
+
 /**
  * The workflow filename for a model + operation + engine, with the stage-2 and
  * engine suffixes applied in the order the build script (generate_ltx.py) emits:
@@ -98,10 +176,14 @@ function engineDepsOf(model, engine = null) {
  * @param {{stage2?: boolean}} [opts]
  * @returns {string|null}
  */
-export function resolveWorkflowFile(model, op, engine = null, { stage2 = false } = {}) {
+export function resolveWorkflowFile(model, op, engine = null, { stage2 = false, variantTokens = {} } = {}) {
     const base = model?.workflows?.[op];
     if (typeof base !== 'string' || base.length === 0) return null;
     let file = base;
+    // Order MUST match generate_ltx.py's output: base → variant suffix(es) →
+    // _stage2 → engine suffix, e.g. LTX_t2v + _mxfp8 + _stage2 (+ _remote).
+    const vSuffix = variantSuffixOf(model, variantTokens);
+    if (vSuffix) file = file.replace(/\.json$/i, `${vSuffix}.json`);
     if (stage2) file = file.replace(/\.json$/i, '_stage2.json');
     const suffix = engineSuffixOf(model, engine);
     if (suffix) file = file.replace(/\.json$/i, `${suffix}.json`);
@@ -264,13 +346,14 @@ export function dedupeStable(ids) {
  * @param {'local'|'remote'|null} [engine] - null = union of both engine sets.
  * @returns {string[]} stable, deduplicated dep ids.
  */
-export function resolveDeps(model, selectedOps = null, depExists = null, engine = null) {
+export function resolveDeps(model, selectedOps = null, depExists = null, engine = null, variantTokens = {}) {
     if (!model) return [];
     const common = commonOf(model);
     const engineDeps = engineDepsOf(model, engine);
+    const variantDeps = variantDepsOf(model, variantTokens);
 
     if (!hasOperationGroups(model)) {
-        const flat = dedupeStable([...common, ...engineDeps]);
+        const flat = dedupeStable([...common, ...engineDeps, ...variantDeps]);
         if (depExists) {
             for (const id of flat) {
                 if (!depExists(id)) {
@@ -296,6 +379,7 @@ export function resolveDeps(model, selectedOps = null, depExists = null, engine 
         ids.push(...opDeps(model, op));
     }
     ids.push(...engineDeps);
+    ids.push(...variantDeps);
 
     if (depExists) {
         for (const id of ids) {
@@ -321,8 +405,8 @@ export function resolveDeps(model, selectedOps = null, depExists = null, engine 
  * @param {'local'|'remote'|null} [engine] - null = union of both engine sets.
  * @returns {string[]}
  */
-export function resolveFullUniverse(model, depExists = null, engine = null) {
-    return resolveDeps(model, hasOperationGroups(model) ? selectableOps(model) : null, depExists, engine);
+export function resolveFullUniverse(model, depExists = null, engine = null, variantTokens = {}) {
+    return resolveDeps(model, hasOperationGroups(model) ? selectableOps(model) : null, depExists, engine, variantTokens);
 }
 
 /**
@@ -347,14 +431,18 @@ export function resolveFullUniverse(model, depExists = null, engine = null) {
  * @param {'local'|'remote'|null} [engine] - engine whose split weights to require.
  * @returns {{ installedOps: string[], fullyInstalled: boolean }}
  */
-export function deriveInstalledOps(model, depStatus, engine = null) {
+export function deriveInstalledOps(model, depStatus, engine = null, variantTokens = {}) {
     if (!model) return { installedOps: [], fullyInstalled: false };
     const allComplete = ids => ids.every(id => depStatus(id) === true);
 
-    // Engine-split weights for THIS engine are part of the always-required set:
-    // a flat LTX is only usable when its current-engine transformer is on disk.
+    // Engine-split weights for THIS engine AND the current runtime-variant weights
+    // (e.g. THIS GPU's arch transformer) are part of the always-required set: a flat
+    // balanced LTX is only usable when its current-engine, current-arch transformer
+    // is on disk. Pass the CONCRETE token (not the union) so the gate requires the
+    // one weight this machine actually runs — mirrors the engine gate (MPI-163).
     const commonComplete = allComplete(commonOf(model))
-        && allComplete(engineDepsOf(model, engine));
+        && allComplete(engineDepsOf(model, engine))
+        && allComplete(variantDepsOf(model, variantTokens));
 
     if (!hasOperationGroups(model)) {
         return {
@@ -398,9 +486,9 @@ export function deriveInstalledOps(model, depStatus, engine = null) {
  * @returns {{ depIds: string[], workflowFile: string|null, nodeIds: string[]|null }}
  */
 export function resolve(model, selectedOps = null, engine = null, opts = {}) {
-    const { stage2 = false, op = null, depExists = null, isNode = null } = opts;
-    const depIds = resolveDeps(model, selectedOps, depExists, engine);
-    const workflowFile = op ? resolveWorkflowFile(model, op, engine, { stage2 }) : null;
+    const { stage2 = false, op = null, depExists = null, isNode = null, variantTokens = {} } = opts;
+    const depIds = resolveDeps(model, selectedOps, depExists, engine, variantTokens);
+    const workflowFile = op ? resolveWorkflowFile(model, op, engine, { stage2, variantTokens }) : null;
     const nodeIds = isNode ? depIds.filter(isNode) : null;
     return { depIds, workflowFile, nodeIds };
 }

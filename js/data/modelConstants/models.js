@@ -233,7 +233,11 @@ export const MODELS = [
     },
     {
         id: 'ltx-23',
-        sizeTier: 'balanced',
+        // MPI-200: this is now the HIGH (quality-ceiling) tier — the bf16 transformer.
+        // The balanced tier ships as the separate `ltx-23-balanced` card below (same
+        // modelFamily), per the sizeTier contract "one tier per card". The L/B/H badge
+        // + dropdown letter surface only when 2+ tiers of LTX-2.3 are installed.
+        sizeTier: 'high',
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
@@ -294,6 +298,58 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
         ],
+    },
+    {
+        // MPI-200: LTX-2.3 BALANCED tier. Same base as `ltx-23` HIGH, but the 42GB
+        // bf16 transformer is replaced by a ~24-25GB arch-gated transformer that
+        // FITS 32GB — which kills the aimdo stage-2 eviction thrash MPI-197 traced
+        // (bf16-never-fits → 48s@10s / 116s@20s stage boundary). Same modelFamily so
+        // the two cluster under one L/B/H badge.
+        id: 'ltx-23-balanced',
+        sizeTier: 'balanced',
+        modelFamily: 'LTX-2.3',
+        name: 'LTX 2.3',
+        dropdownMeta: 'VIDEO',
+        mediaType: 'video',
+        tier: 2,
+        capabilities: { multiStage: true, audio: true },
+        type: 'ltx',
+        loraStrengths: ['model'],
+        supportedOps: ['t2v_ms', 'i2v_ms'],
+        gen_speed: 'fast',
+        description: 'Faster LTX 2.3 tier — a smaller quantized transformer that fits 32GB VRAM without the stage-2 stall. Blackwell (RTX 50-series) runs the native mxfp8 path; other modern GPUs use fp8. Minor quality trade vs the High tier.',
+        // Base filenames — the resolver appends the arch suffix from the `variants`
+        // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding LTX_t2v_mxfp8.json
+        // etc. (all emitted by generate_ltx.py).
+        workflows: {
+            t2v_ms: 'LTX_t2v.json',
+            i2v_ms: 'LTX_i2v.json',
+        },
+        // Shared deps = the High card's set MINUS the bf16 transformer. The
+        // arch-specific transformer comes from the `variants.arch` block: only the
+        // ONE weight matching this machine's GPU installs (mxfp8 on Blackwell,
+        // fp8_scaled on Ada/Ampere/Turing). See resolveModelDeps.js § variant axis.
+        dependencies: [
+            'ltx23-video-vae',
+            'ltx23-audio-vae',
+            'ltx23-text-projection',
+            'ltx23-gemma-clip',
+            'ltx23-spatial-upscaler',
+            'ltx23-lora-merged',
+            'ltx23-lora-transition',
+            'ltx23-lora-talkvid',
+            'ComfyUI-LTXVideo',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+        ],
+        variants: {
+            arch: {
+                options: {
+                    blackwell: { extraDeps: ['ltx23-transformer-mxfp8'], workflowSuffix: '_mxfp8' },
+                    modern:    { extraDeps: ['ltx23-transformer-fp8'],   workflowSuffix: '_fp8'   },
+                },
+            },
+        },
     },
     {
         id: 'wan22-5b',
