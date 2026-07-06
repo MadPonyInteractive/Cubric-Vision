@@ -127,6 +127,26 @@ export function variantAxisTokens(model, axisKey) {
 }
 
 /**
+ * The declared `arch`-axis options for a model, each with its display metadata:
+ * `{ token, label, size }` in declaration order. `label` is the GPU-family name
+ * (e.g. "RTX 50 Series (Blackwell)") and `size` a display hint — both read from
+ * the card, so a UI enumerating arch toggles never hardcodes arch names (MPI-209:
+ * hundreds of models coming, a future card may add a 3rd tier). Empty array for a
+ * model with no `arch` axis. `label` falls back to the token when absent.
+ * @param {object} model
+ * @returns {Array<{ token: string, label: string, size: string|null }>}
+ */
+export function archVariantOptions(model) {
+    const opts = variantAxesOf(model)?.arch?.options;
+    if (!opts || typeof opts !== 'object') return [];
+    return Object.entries(opts).map(([token, o]) => ({
+        token,
+        label: typeof o?.label === 'string' ? o.label : token,
+        size: typeof o?.size === 'string' ? o.size : null,
+    }));
+}
+
+/**
  * Pure core of the MPI-207 "installed for a DIFFERENT arch" detector: given the
  * current arch token and a dep-presence predicate, returns the other arch whose
  * `arch`-axis weight is fully on disk while THIS arch's weight is not — or null

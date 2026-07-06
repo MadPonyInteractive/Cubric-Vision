@@ -176,6 +176,10 @@ export const Storage = {
   getModelOpDraft:     () => get(STORAGE_KEYS.MODEL_OP_DRAFT, {}),
   setModelOpDraft:     (v) => set(STORAGE_KEYS.MODEL_OP_DRAFT, v),
 
+  // Per-model GPU-arch toggle draft (MPI-209). { [modelId]: string[] } of arch tokens.
+  getModelArchDraft:   () => get(STORAGE_KEYS.MODEL_ARCH_DRAFT, {}),
+  setModelArchDraft:   (v) => set(STORAGE_KEYS.MODEL_ARCH_DRAFT, v),
+
   getLastSelectedMediaType: () => get(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, 'image'),
   setLastSelectedMediaType: (v) => set(STORAGE_KEYS.LAST_SELECTED_MEDIATYPE, v),
 

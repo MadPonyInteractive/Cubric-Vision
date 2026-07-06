@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.created","at":"2026-07-06T19:45:00Z","actor":"claude","summary":"Brainstorm-approved: unify arch weights into install toggles; supersedes MPI-207 UI; fixes CPU-pod silent fp8 default."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.updated","at":"2026-07-06T19:52:00Z","actor":"claude","summary":"Compact plan attached (5-step near-autonomous). maturity idea → planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.moved","at":"2026-07-06T20:05:00Z","actor":"claude","summary":"todo -> doing; picking up implementation (5-step arch-toggle plan)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-209","type":"task.updated","at":"2026-07-06T20:40:00Z","actor":"claude","summary":"Steps 1-5 code-complete + auto-verified (14/14 tests, eslint clean, ESM union smoke). maturity in-progress -> validating; awaits live user-UX (arch toggles, CPU-pod default, generate guard)."}

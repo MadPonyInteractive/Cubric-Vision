@@ -20,9 +20,10 @@
 'use strict';
 
 import { ComfyUIController, getEngine } from './comfyController.js';
-import { getUniversalWorkflow, getModelById } from '../data/modelRegistry.js';
+import { getUniversalWorkflow, getModelById, getModelDepStatus } from '../data/modelRegistry.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
-import { resolveDeps, resolveWorkflowFile } from '../data/modelConstants/resolveModelDeps.js';
+import { resolveDeps, resolveWorkflowFile, variantDepsOf, archVariantOptions } from '../data/modelConstants/resolveModelDeps.js';
+import { downloadService } from './downloadService.js';
 import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel, commandIsMultiStage } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
@@ -814,6 +815,79 @@ export function runAutoMask(payload) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
+ * MPI-209 generate-time arch-weight guard. For an arch-variant model, checks that
+ * the weight matching `arch` (the live GPU's architecture) is on disk. When it is
+ * missing, prompts the user to install it now (a blocking confirm), installs it, and
+ * resolves true to continue the gen — or resolves false to abort cleanly (no cryptic
+ * ComfyUI `unet_name not in []`). Returns true immediately for non-arch models, an
+ * unknown arch, or when the weight is already present.
+ *
+ * @param {object|null} model
+ * @param {string|null} arch  Live GPU arch token (null → cannot resolve → allow through).
+ * @returns {Promise<boolean>} true = proceed with generation; false = abort.
+ */
+async function _ensureArchWeightOnDisk(model, arch) {
+    if (!model || !arch) return true;
+    const opts = archVariantOptions(model);
+    if (opts.length === 0) return true; // not an arch-variant model
+    const wantDeps = variantDepsOf(model, { arch });
+    if (wantDeps.length === 0) return true; // arch not a declared option → nothing to require
+
+    const depStatus = getModelDepStatus(model.id);
+    // No cache yet → can't prove it's missing; let the normal not-installed gate handle it.
+    if (!depStatus) return true;
+    const onDisk = id => { const s = depStatus.get(id); return s === true || s?.installed === true; };
+    if (wantDeps.every(onDisk)) return true; // this GPU's weight is present → proceed
+
+    const opt = opts.find(o => o.token === arch);
+    const label = opt?.label || arch;
+    const sizeNote = opt?.size ? ` (~${opt.size})` : '';
+    const deps = wantDeps.map(id => DEPS[id]).filter(Boolean);
+    if (!deps.length) return true; // authoring gap — don't hard-block
+
+    // Blocking confirm via MpiOkCancel (mounted here — commandExecutor is client-side).
+    // MpiOkCancel emits 'cancel' only on the Cancel button; Escape/backdrop just
+    // hide() with no event — so resolve(false) from a wrapped hide() too, else the
+    // gen Promise would hang on dismiss. Default outcome is cancel (fail-safe).
+    const { MpiOkCancel } = await import('../components/Compounds/MpiOkCancel/MpiOkCancel.js');
+    const confirmed = await new Promise((resolve) => {
+        let settled = false;
+        const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+        const dlg = MpiOkCancel.mount(document.createElement('div'), {
+            title: 'Install the weight for this GPU',
+            text: `${model.name} needs the ${label} weight${sizeNote} for this GPU before it can generate. Install it now?`,
+            okLabel: 'Install & Generate',
+            cancelLabel: 'Cancel',
+        });
+        const _hide = dlg.el.hide;
+        dlg.el.hide = () => { _hide(); finish(false); }; // Escape/backdrop → cancel
+        dlg.on('ok', () => finish(true));
+        dlg.on('cancel', () => finish(false));
+        dlg.el.show();
+    });
+    if (!confirmed) return false;
+
+    // Install the arch weight, then wait for the download to complete before proceeding.
+    const done = new Promise((resolve) => {
+        let off = () => {}, offFail = () => {};
+        const cleanup = () => { off(); offFail(); };
+        off = Events.on('download:complete', ({ modelId }) => {
+            if (modelId === model.id) { cleanup(); resolve(true); }
+        });
+        offFail = Events.on('download:failed', ({ modelId }) => {
+            if (modelId === model.id) { cleanup(); resolve(false); }
+        });
+    });
+    await downloadService.start(model.id, deps);
+    const ok = await done;
+    if (!ok) {
+        Events.emit('ui:warning', { title: 'Install failed', message: `Could not install the ${label} weight — generation aborted.` });
+        return false;
+    }
+    return true;
+}
+
+/**
  * Formats a workflow error into a user-friendly title and message.
  * Detects model-not-found errors and returns specific copy.
  * @param {string} errMessage
@@ -904,6 +978,26 @@ export function runCommand(payload) {
         // engine. Drives the balanced tier's arch-gated weight + workflow file.
         const arch = await remoteEngineClient.arch(engine);
         const variantTokens = { arch };
+
+        // MPI-209 generate-time guard: an arch-variant model (LTX balanced) needs the
+        // weight matching the LIVE GPU's arch. If that weight is not on disk, block
+        // BEFORE dispatch and offer to install it — never let ComfyUI fail with a
+        // cryptic `unet_name ...not in []`. The install picker resolves arch as a
+        // deliberate toggle, but the RUNNING machine can differ (a CPU-pod default,
+        // a Pod swap, a reused gen), so this is the hard net. Skipped when the arch is
+        // unknown (null → the model can't concretely resolve anyway).
+        try {
+            const _archModel = getModelById(payload.modelId);
+            const proceed = await _ensureArchWeightOnDisk(_archModel, arch);
+            if (!proceed) {
+                await _cleanupTrimmedVideoInputs([]);
+                exec.onError?.(new Error('arch_weight_missing'));
+                return;
+            }
+        } catch (err) {
+            clientLogger.error('commandExecutor', 'arch-weight guard failed', err);
+            // Fail open: a guard bug must not block a gen whose weight is actually present.
+        }
 
         let workflowFile;
         try {

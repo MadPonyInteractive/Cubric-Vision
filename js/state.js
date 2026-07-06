@@ -49,6 +49,12 @@ const _state = {
                                // page. Survives restart. Written by MpiModelManager via
                                // top-level replace; mirrored to localStorage below.
 
+    s_modelArchDraftByModel: Storage.getModelArchDraft(),
+                               // MPI-209: { [modelId]: string[] } — the user's
+                               // per-model GPU-arch toggle draft (which arch weight(s)
+                               // to install). Separate axis from the op draft. Survives
+                               // restart; mirrored to localStorage below.
+
     // ── Installed model list (populated after syncModelInstalled) ──────────────
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
                                // Updated by the 'models:checked' event from modelRegistry.
@@ -80,6 +86,11 @@ const _state = {
                                      // last payload via getNextGeneration callback. Session-only.
     generationQueueCount: 0,         // Local Cue queue depth (active dispatch + pending jobs).
                                      // Maintained synchronously by generationService.
+    engineOverride: null,            // null | 'local' — per-generation engine override (R31).
+                                     // Written by MpiPromptBox cloud toggle (ON → 'local', OFF → null).
+                                     // Reset to null on disconnect. Drives model selector derivation
+                                     // via remoteEngineClient.effectiveEngine() instead of isRemote().
+                                     // Session-only; never persisted.
 
     // ── Prompt draft (session-only, not persisted) ─────────────────────────────
     promptDraft: { gallery: { id: null, positive: '', negative: '' }, history: { id: null, positive: '', negative: '' } },
@@ -193,6 +204,7 @@ Events.on('state:changed', ({ key, value }) => {
     if (key === 's_selectedModelIdByType') Storage.setSelectedModels(value);
     else if (key === 's_lastSelectedMediaType') Storage.setLastSelectedMediaType(value);
     else if (key === 's_modelOpDraftByModel') Storage.setModelOpDraft(value);
+    else if (key === 's_modelArchDraftByModel') Storage.setModelArchDraft(value);
     else if (key === 'pixelMode') {
         const mode = (value === 'smooth' || value === 'pixel') ? value : 'auto';
         Storage.setPixelMode(mode);

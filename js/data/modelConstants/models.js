@@ -344,9 +344,12 @@ export const MODELS = [
         ],
         variants: {
             arch: {
+                // `label`/`size` are for the model-manager arch toggle row (MPI-209):
+                // labels are GPU-family names (not the dtype token) so the panel never
+                // hardcodes arch strings; `size` is a display hint for the toggle/guard.
                 options: {
-                    blackwell: { extraDeps: ['ltx23-transformer-mxfp8'], workflowSuffix: '_mxfp8' },
-                    modern:    { extraDeps: ['ltx23-transformer-fp8'],   workflowSuffix: '_fp8'   },
+                    blackwell: { label: 'RTX 50 Series (Blackwell)', size: '24.1GB', extraDeps: ['ltx23-transformer-mxfp8'], workflowSuffix: '_mxfp8' },
+                    modern:    { label: 'RTX 40 & Older',            size: '25.2GB', extraDeps: ['ltx23-transformer-fp8'],   workflowSuffix: '_fp8'   },
                 },
             },
         },

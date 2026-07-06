@@ -79,6 +79,21 @@ export const remoteEngineClient = {
     },
 
     /**
+     * The effective engine for the current generation, honouring any per-gen
+     * override the user has set via the cloud toggle (R31, MPI-208).
+     *
+     * Derivation rule: `state.engineOverride ?? (isRemote() ? 'remote' : 'local')`.
+     * All selector derivation and installed-op gating MUST call this instead of
+     * reading `isRemote()` directly, so that toggling "Run locally" while the app
+     * is remote-connected correctly shows LOCAL models + local-gated ops.
+     *
+     * @returns {'local'|'remote'}
+     */
+    effectiveEngine() {
+        return state.engineOverride ?? (this._active ? 'remote' : 'local');
+    },
+
+    /**
      * The GPU architecture token for the given engine, ready to pass as the
      * resolver's `variantTokens.arch` (MPI-200). Engine-aware because a balanced
      * model must resolve the weight/workflow for the machine that ACTUALLY runs
@@ -128,6 +143,26 @@ export const remoteEngineClient = {
     /** Populate the local-arch cache once (fire-and-forget at app boot). */
     warmLocalArch() {
         return this.arch('local').catch(() => {});
+    },
+
+    /**
+     * The DEFAULT arch toggle-set to pre-select for an arch-variant model (MPI-209),
+     * as a `string[]` of arch tokens. Priority:
+     *   1. the live engine's GPU arch (`archSync(engine)`) — the machine that will run;
+     *   2. else the saved RunPod `gpuType` arch — a CPU download-pod has no live GPU,
+     *      so fall back to the GPU the user configured for remote gen;
+     *   3. else `[]` — nothing to pre-select, user picks.
+     * Returns `[]` for a model with no arch axis or an unknown token.
+     * @param {string[]} archTokens  The model's declared arch option tokens.
+     * @param {'local'|'remote'} engine
+     * @returns {string[]}
+     */
+    defaultArchTokens(archTokens, engine) {
+        if (!Array.isArray(archTokens) || archTokens.length === 0) return [];
+        const valid = t => (t && archTokens.includes(t) ? [t] : []);
+        const live = valid(this.archSync(engine));
+        if (live.length) return live;
+        return valid(gpuArch(state.runpodConfig?.gpuType || null));
     },
 
     /**

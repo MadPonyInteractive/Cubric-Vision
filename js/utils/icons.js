@@ -42,6 +42,7 @@ export const ICONS = {
     'bolt': '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
     'sparkle': '<path d="M12 3l2.09 6.26L20 12l-5.91 2.74L12 21l-2.09-6.26L4 12l5.91-2.74z"/>',
     'layers': '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5zM2 12l10 5 10-5-10-5-10 5z"/>',
+    'gpu': '<rect x="2" y="6" width="20" height="12" rx="2"/><rect x="6" y="10" width="5" height="4" rx="1"/><circle cx="16" cy="12" r="2"/><path d="M6 6V4M18 6V4M6 20v-2M18 20v-2"/>',
     'seed': '<path d="M9 3c0 4.5 6 4.5 6 9s-6 4.5-6 9"/><path d="M15 3c0 4.5-6 4.5-6 9s6 4.5 6 9"/><path d="M10 6h4"/><path d="M10 18h4"/><path d="M11 12h2"/>',
 
     // ── App Sections ──────────────────────────────────────────────────────────

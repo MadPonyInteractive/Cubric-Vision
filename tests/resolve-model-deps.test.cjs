@@ -19,6 +19,7 @@ const {
     resolveWorkflowFile,
     resolve,
     variantAxisTokens,
+    archVariantOptions,
     detectOtherArchInstall,
 } = require('../js/data/modelConstants/resolveModelDeps.js');
 
@@ -487,6 +488,17 @@ function testOtherArchDetect() {
     // A non-variant model is never an other-arch case.
     assert.strictEqual(detectOtherArchInstall(FLAT, 'modern', on([])), null,
         'no arch axis → null');
+
+    // Panel arch-toggle metadata (MPI-209): both tokens with labels; label falls
+    // back to the token when the card omits it (the VARIANT fixture has none).
+    assert.deepStrictEqual(
+        archVariantOptions(VARIANT),
+        [
+            { token: 'blackwell', label: 'blackwell', size: null },
+            { token: 'modern', label: 'modern', size: null },
+        ],
+        'arch options carry token+label(fallback)+size');
+    assert.deepStrictEqual(archVariantOptions(FLAT), [], 'no arch axis → no options');
 }
 
 // ── Runner ──────────────────────────────────────────────────────────────────
