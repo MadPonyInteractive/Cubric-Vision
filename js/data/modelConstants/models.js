@@ -317,7 +317,7 @@ export const MODELS = [
         loraStrengths: ['model'],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
-        description: 'Faster LTX 2.3 tier — a smaller quantized transformer that fits 32GB VRAM without the stage-2 stall. Blackwell (RTX 50-series) runs the native mxfp8 path; other modern GPUs use fp8. Minor quality trade vs the High tier.',
+        description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes. A faster tier that trades a little quality for speed and lighter VRAM use.',
         // Base filenames — the resolver appends the arch suffix from the `variants`
         // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding LTX_t2v_mxfp8.json
         // etc. (all emitted by generate_ltx.py).

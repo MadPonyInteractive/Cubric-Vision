@@ -58,7 +58,13 @@ export const PROGRESS_STAGES = Object.freeze({
  */
 export function stagesFor(workflowFile, mode = 'single') {
     if (!workflowFile) return 0;
-    const base = workflowFile.replace(/_stage2\.json$/i, '.json');
+    // Strip _stage2, then any arch-variant suffix (MPI-200: _fp8/_mxfp8/…). A
+    // variant swaps only the loader node, not the sampler graph, so the bar
+    // count is identical to the base file — normalize back to it instead of
+    // duplicating a row per variant.
+    const base = workflowFile
+        .replace(/_stage2\.json$/i, '.json')
+        .replace(/_(?:fp8|mxfp8)\.json$/i, '.json');
     const entry = PROGRESS_STAGES[base];
     return entry ? (entry[mode] || 0) : 0;
 }
