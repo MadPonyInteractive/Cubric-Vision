@@ -154,6 +154,19 @@ export async function initShell() {
 
   const memMonitor = MpiMemoryMonitor.mount(monitorMount);
 
+  // Mirror the (dynamic) prompt-bar height into --promptbar-h so the queue
+  // slide-over can dock above it instead of covering its controls.
+  // App-lifetime observer; no teardown needed.
+  {
+    const promptMount = qs('#prompt-box-mount');
+    if (promptMount) {
+      const _sync = () => document.documentElement.style
+        .setProperty('--promptbar-h', `${Math.round(promptMount.offsetHeight)}px`);
+      new ResizeObserver(_sync).observe(promptMount);
+      _sync();
+    }
+  }
+
   // 4. Bind Interactions
   initProjectUI();
   initHeroStats();
