@@ -18,7 +18,7 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
-import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps } from './modelConstants/resolveModelDeps.js';
+import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps, detectOtherArchInstall } from './modelConstants/resolveModelDeps.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
@@ -314,4 +314,38 @@ export function isOperationInstalled(modelOrId, op) {
     };
     const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
     return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).installedOps.includes(op);
+}
+
+/**
+ * Detects the MPI-207 "installed for a DIFFERENT GPU arch" state: the current
+ * machine's arch-variant weight is NOT on disk, but exactly one OTHER arch's
+ * variant weight IS. This is what lets the Models panel show "Install for your
+ * GPU" (you have this model, just not the weight this GPU runs) instead of a
+ * bare "never installed", and surface the now-unused other-arch weight for
+ * opt-in removal.
+ *
+ * Returns null when it does not apply: the model has no `arch` variant axis, the
+ * current arch's weight IS present, no other-arch weight is present, the
+ * current arch is unknown (null token → nothing to compare against), or the
+ * dep-status cache has not been populated yet.
+ *
+ * Pure read over the existing `_modelDepStatusCache` + `variantDepsOf` — no
+ * server call. Only the `arch` axis is considered (weights coexist on disk;
+ * node axes are single-version-pinned and out of scope — see the card).
+ *
+ * @param {ModelDef|string} modelOrId
+ * @returns {{ otherArch: string, unusedDepIds: string[] }|null}
+ */
+export function installedForOtherArch(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model) return null;
+    const depStatus = getModelDepStatus(model.id);
+    if (!depStatus) return null; // no cache yet
+    const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+    const curArch = remoteEngineClient.archSync(engine);
+    const isOn = id => {
+        const s = depStatus.get(id);
+        return s === true || s?.installed === true;
+    };
+    return detectOtherArchInstall(model, curArch, isOn);
 }

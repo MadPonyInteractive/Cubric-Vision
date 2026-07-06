@@ -113,6 +113,47 @@ function variantAxesOf(model) {
 }
 
 /**
+ * The option tokens declared for a given variant axis (e.g. axis 'arch' →
+ * ['blackwell','modern']), in declaration order. Empty array when the model has
+ * no such axis. Lets a UI enumerate the OTHER arch variants of a model to detect
+ * "installed for a different arch than this GPU" (MPI-207).
+ * @param {object} model
+ * @param {string} axisKey
+ * @returns {string[]}
+ */
+export function variantAxisTokens(model, axisKey) {
+    const opts = variantAxesOf(model)?.[axisKey]?.options;
+    return opts && typeof opts === 'object' ? Object.keys(opts) : [];
+}
+
+/**
+ * Pure core of the MPI-207 "installed for a DIFFERENT arch" detector: given the
+ * current arch token and a dep-presence predicate, returns the other arch whose
+ * `arch`-axis weight is fully on disk while THIS arch's weight is not — or null
+ * when it doesn't apply (no arch axis, current-arch weight present, no other-arch
+ * weight present, or unknown current arch). DOM/registry-free so it stays
+ * node-testable; the registry wrapper feeds it the live cache + arch. Only the
+ * `arch` axis is considered — weights coexist on disk (node axes are out of scope).
+ * @param {object} model
+ * @param {string|null} curArch  Current machine's arch token (null → returns null).
+ * @param {(depId:string)=>boolean} isOn  Dep-presence predicate.
+ * @returns {{ otherArch: string, unusedDepIds: string[] }|null}
+ */
+export function detectOtherArchInstall(model, curArch, isOn) {
+    if (!curArch) return null;
+    const tokens = variantAxisTokens(model, 'arch');
+    if (tokens.length < 2) return null;
+    const curDeps = variantDepsOf(model, { arch: curArch });
+    if (curDeps.length && curDeps.every(isOn)) return null; // this GPU's weight present
+    for (const token of tokens) {
+        if (token === curArch) continue;
+        const deps = variantDepsOf(model, { arch: token });
+        if (deps.length && deps.every(isOn)) return { otherArch: token, unusedDepIds: deps };
+    }
+    return null;
+}
+
+/**
  * Extra dep ids from every declared variant axis for a given token map.
  * A provided token picks one option; a missing token unions all options
  * (shared-dep protection). Deterministic: axes and options in declaration order.
@@ -120,7 +161,7 @@ function variantAxesOf(model) {
  * @param {Record<string,string|null>} [variantTokens]
  * @returns {string[]}
  */
-function variantDepsOf(model, variantTokens = {}) {
+export function variantDepsOf(model, variantTokens = {}) {
     const axes = variantAxesOf(model);
     if (!axes) return [];
     const ids = [];

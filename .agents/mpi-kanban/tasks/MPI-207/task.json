@@ -3,11 +3,11 @@
   "id": "MPI-207",
   "title": "GPU-changed UX: toast + panel 'Install for your GPU' for arch-variant models missing the current-arch weight",
   "description": "Follow-up to MPI-206 (which fixes the stale-cache re-check on Pod connect). This card adds the USER-FACING behavior when an arch-variant model (MPI-200: LTX balanced = mxfp8 on Blackwell / fp8_scaled on Ada) is installed for a DIFFERENT arch than the current machine — so its weight for THIS GPU is missing.\n\nCovers two real scenarios:\n1. Remote Pod swap (4090 → 5090 same session) — MPI-206 re-checks; this card tells the user what to do about it.\n2. LOCAL GPU upgrade — user replaces a 4060 with a 5090 in their desktop. The local engine now needs a different arch weight than what's on disk. No connect event fires for a local swap, so detection must also run at boot / on local-arch resolve (warmLocalArch), not only on remote connect.\n\nBEHAVIOR (agreed with user):\n\n1. TOAST on detected arch change (ui:info, NOT an error dialog — see [[feedback_error_dialog_vs_toast]]). Fire ONCE per arch-change (store last-seen arch; compare; de-dupe per session/model). Copy ~ 'GPU Changed — you may need to reinstall some models for this GPU.'\n\n2. PANEL card state: an arch-variant model installed-for-another-arch shows a distinct 'Install for your GPU' action (not a false 'Installed', not a bare 'never installed'). MPI-206's arch-aware isInstalled already drops it to the uninstalled section; add the distinct label so it reads as 'you have this, just not for this GPU'.\n\n3. INSTALL action downloads ONLY the missing arch weight (e.g. ltx23-transformer-mxfp8, ~24GB) — everything already on disk (VAEs, LoRAs, the other-arch weight) is kept, downloader dedupes. No re-download of present files.\n\n4. KEEP-BOTH is the DEFAULT — install the missing weight, keep the old one. NO mid-install 'keep or delete?' prompt (users can't answer it in the moment; keeping both is safe, only costs disk). Instead: the Models panel card surfaces the now-unused OTHER-arch weight with an opt-in 'remove (NNGB)' affordance, so the user reclaims disk later with full context, not under install pressure. (Agent recommendation, user-approved direction.)\n\nNODES vs WEIGHTS (clarification): node version conflicts (v1.5 vs v1.8) are a separate, already-handled concern — node_lock pins ONE version repo-wide, only one can be installed at a time. This card is about WEIGHTS ONLY, which coexist fine on disk (different filenames); the only cost is space. Do not entangle node-swap logic here.\n\nDEPENDS ON: MPI-206 (arch-aware re-check + isInstalled) shipped first.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-06T12:35:00Z",
-  "updated_at": "2026-07-06T12:35:00Z",
+  "updated_at": "2026-07-06T13:40:00Z",
   "links": {
     "events": "events.jsonl"
   },

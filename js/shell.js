@@ -6,7 +6,7 @@
 import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
-import { syncModelInstalled } from './data/modelRegistry.js';
+import { syncModelInstalled, MODELS, installedForOtherArch } from './data/modelRegistry.js';
 import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
 import { Storage, Session } from './core/storage.js';
@@ -1132,6 +1132,30 @@ function _maybeShowChangelog() {
   _changelogDialog.el.show();
 }
 
+// MPI-207: fire a ONE-SHOT "GPU Changed" info toast when the current engine's GPU
+// arch has changed since last seen AND at least one arch-variant model is now
+// installed-for-the-other-arch (its weight for THIS GPU is missing). Covers both a
+// remote Pod swap (4090 → 5090) and a LOCAL GPU upgrade — the caller runs it after
+// every syncModelInstalled (connect / disconnect / boot), which is when the arch and
+// dep-status cache are both fresh. De-duped per engine via localStorage so the toast
+// fires once per real arch change, not on every re-sync. Must run AFTER the sync so
+// the dep-status cache installedForOtherArch reads is populated.
+async function _maybeNotifyArchChange() {
+  const { remoteEngineClient } = await import('./services/remoteEngineClient.js');
+  const engine = remoteEngineClient.isRemote() ? 'remote' : 'local';
+  const arch = await remoteEngineClient.arch(engine);
+  if (!arch) return; // unknown arch → nothing to compare
+  const key = `mpi.lastSeenArch.${engine}`;
+  const prev = localStorage.getItem(key);
+  localStorage.setItem(key, arch); // always record the current arch
+  if (!prev || prev === arch) return; // first run or no change → no toast
+  const affected = MODELS.some(m => installedForOtherArch(m));
+  if (!affected) return; // arch changed but no model needs a different weight
+  Events.emit('ui:info', {
+    message: 'GPU Changed — you may need to reinstall some models for this GPU.',
+  });
+}
+
 async function _initDataRegistries() {
   // Subscribe to models:checked event to update state
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
@@ -1145,6 +1169,7 @@ async function _initDataRegistries() {
   Events.on('engine:ready', async () => {
     try {
       await syncModelInstalled();
+      await _maybeNotifyArchChange(); // MPI-207: local GPU upgrade shows on boot
     } catch (err) {
       clientLogger.error('shell', 'model registry sync failed:', err);
     }
@@ -1171,6 +1196,7 @@ async function _initDataRegistries() {
       _wasRemoteConnected = true;
       try {
         await syncModelInstalled();
+        await _maybeNotifyArchChange(); // MPI-207: Pod swap to a new arch
       } catch (err) {
         clientLogger.error('shell', 'model registry sync on remote connect failed:', err);
       }
@@ -1182,6 +1208,7 @@ async function _initDataRegistries() {
       _wasRemoteConnected = false;
       try {
         await syncModelInstalled();
+        await _maybeNotifyArchChange(); // MPI-207: back to local arch may differ from Pod
       } catch (err) {
         clientLogger.error('shell', 'model registry sync on remote disconnect failed:', err);
       }

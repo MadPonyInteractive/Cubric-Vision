@@ -4,7 +4,7 @@ import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
-import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
+import { MODELS, reSyncInstalledModels, getModelDepStatus, installedForOtherArch } from '../../../../data/modelRegistry.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import {
     resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
@@ -105,6 +105,9 @@ export const MpiModelManager = ComponentFactory.create({
         // Op-toggle MpiButton instances per model, torn down on re-render/destroy.
         //   Map<modelId, Array<{ key, inst }>>  (key 'base' for the base toggle)
         const _opToggles = new Map();
+        // MPI-207: "Remove old weight" MpiButton per model (other-arch reclaim),
+        // torn down with the cards.  Map<modelId, MpiButton inst>
+        const _archRemoveBtns = new Map();
 
         // ── Base-toggle pseudo-key ───────────────────────────────────────────
         const BASE = 'base';
@@ -370,6 +373,24 @@ export const MpiModelManager = ComponentFactory.create({
             );
         }
 
+        // MPI-207: remove the now-unused OTHER-arch weight (opt-in disk reclaim).
+        // Deletes only that arch's variant deps — the shared VAE/LoRA/base deps and
+        // this GPU's weight (if installed) are untouched, and the backend shared-dep
+        // guard still protects files used by other models. Keeping-both stays the
+        // default; this is the deliberate, out-of-install-pressure cleanup path.
+        function _confirmRemoveOtherArch(model, otherArch) {
+            const deps = otherArch.unusedDepIds.map(id => DEPS[id]).filter(Boolean);
+            if (!deps.length) return;
+            _showConfirm(
+                `Remove the ${otherArch.otherArch} weight for ${model.name}?\n`
+                + '• This is the weight for a different GPU — not the one this machine runs.\n'
+                + '• Files shared with other installed models will be kept.',
+                async () => {
+                    await downloadService.uninstall(model.id, deps, true);
+                },
+            );
+        }
+
         // Update: apply the draft against the installed set. Adds install; removals
         // require confirm. Mixed → confirm (for the removal) then add.
         async function _applyUpdate(model) {
@@ -575,6 +596,13 @@ export const MpiModelManager = ComponentFactory.create({
             const showInstalled = anyInstalled;
             const uninstallLabel = draftDiffersFromInstalled ? 'Update' : 'Uninstall';
 
+            // MPI-207: this model is installed for a DIFFERENT GPU arch — the weight
+            // for THIS GPU is missing but the other-arch weight is on disk. Reads
+            // "you have this, just not for this GPU": label the Install action so, and
+            // (below) offer opt-in removal of the now-unused other-arch weight.
+            const otherArch = !showInstalled ? installedForOtherArch(model) : null;
+            const installLabel = otherArch ? 'Install for your GPU' : 'Install';
+
             const card = MpiInstalledDisplay.mount(cardWrap, {
                 title: model.name,
                 meta: '', // disk size moved to the info row (header meta would collide with the tier badge)
@@ -587,7 +615,7 @@ export const MpiModelManager = ComponentFactory.create({
                 installed: showInstalled,
                 canUninstall: showInstalled,
                 uninstallLabel,
-                deleteLabel: 'Install',
+                deleteLabel: installLabel,
                 downloadState: displayState,
                 progress,
                 hasPartialProgress: showPartialBar,
@@ -610,6 +638,23 @@ export const MpiModelManager = ComponentFactory.create({
             if (toggleRow && card.el.opsSlot) {
                 card.el.opsSlot.appendChild(toggleRow);
                 card.el.opsSlot.style.display = '';
+            }
+
+            // MPI-207: opt-in reclaim of the now-unused other-arch weight. Shown
+            // whenever an other-arch weight is on disk (user-approved: even before
+            // installing this GPU's weight — the model still has its base deps, and
+            // removing the lone transformer just drops it back to uninstalled). Not
+            // shown mid-download.
+            if (otherArch && !isActiveDownload && card.el.opsSlot) {
+                const bytes = _sizeOf(otherArch.unusedDepIds);
+                const removeBtn = MpiButton.mount(ce('div'), {
+                    text: `Remove old weight${bytes > 0 ? ` (${formatBytes(bytes)})` : ''}`,
+                    variant: 'ghost', size: 'sm',
+                });
+                removeBtn.on('click', () => _confirmRemoveOtherArch(model, otherArch));
+                card.el.opsSlot.appendChild(removeBtn.el);
+                card.el.opsSlot.style.display = '';
+                _archRemoveBtns.set(model.id, removeBtn);
             }
 
             if (isActiveDownload) {
@@ -643,6 +688,8 @@ export const MpiModelManager = ComponentFactory.create({
                 toggles.forEach(({ inst }) => inst?.el?.destroy?.());
             }
             _opToggles.clear();
+            for (const btn of _archRemoveBtns.values()) btn?.el?.destroy?.();
+            _archRemoveBtns.clear();
             for (const { unsub } of _tierBadges.values()) unsub?.();
             _tierBadges.clear();
         }

@@ -18,6 +18,8 @@ const {
     dependentsOfOp,
     resolveWorkflowFile,
     resolve,
+    variantAxisTokens,
+    detectOtherArchInstall,
 } = require('../js/data/modelConstants/resolveModelDeps.js');
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -451,6 +453,42 @@ function testVariantAxis() {
         'engine + variant deps union, engine-correct');
 }
 
+function testOtherArchDetect() {
+    // Axis-token enumeration for the panel's "other arch" walk.
+    assert.deepStrictEqual(variantAxisTokens(VARIANT, 'arch').sort(), ['blackwell', 'modern']);
+    assert.deepStrictEqual(variantAxisTokens(FLAT, 'arch'), [], 'no variants block → no axis tokens');
+
+    const base = ['shared-vae', 'shared-clip', 'ComfyUI-LTXVideo'];
+    const on = set => statusFrom(new Set(set));
+
+    // On a modern GPU with only the blackwell weight on disk → "installed for other
+    // arch", offering the mxfp8 weight for reclaim.
+    assert.deepStrictEqual(
+        detectOtherArchInstall(VARIANT, 'modern', on([...base, 'tx-mxfp8'])),
+        { otherArch: 'blackwell', unusedDepIds: ['tx-mxfp8'] },
+        'modern GPU + blackwell weight on disk → other-arch install');
+
+    // This GPU's weight IS present → not an other-arch case (even if the other is too).
+    assert.strictEqual(
+        detectOtherArchInstall(VARIANT, 'modern', on([...base, 'tx-fp8'])), null,
+        'current-arch weight present → null');
+    assert.strictEqual(
+        detectOtherArchInstall(VARIANT, 'modern', on([...base, 'tx-fp8', 'tx-mxfp8'])), null,
+        'both weights present → current arch wins → null');
+
+    // No arch weight at all → genuinely uninstalled, not other-arch.
+    assert.strictEqual(detectOtherArchInstall(VARIANT, 'modern', on(base)), null,
+        'no arch weight on disk → null (bare uninstalled)');
+
+    // Unknown current arch (null token) → cannot compare → null.
+    assert.strictEqual(detectOtherArchInstall(VARIANT, null, on([...base, 'tx-mxfp8'])), null,
+        'unknown current arch → null');
+
+    // A non-variant model is never an other-arch case.
+    assert.strictEqual(detectOtherArchInstall(FLAT, 'modern', on([])), null,
+        'no arch axis → null');
+}
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 const tests = {
@@ -467,6 +505,7 @@ const tests = {
     testWorkflowFileResolution,
     testOpAndEngineCompose,
     testVariantAxis,
+    testOtherArchDetect,
 };
 
 let failed = 0;
