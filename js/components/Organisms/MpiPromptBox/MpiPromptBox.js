@@ -122,7 +122,6 @@ export const MpiPromptBox = ComponentFactory.create({
         let activeOperation   = props.operation || 't2i';
         let isGenerating      = props.generating || false;
         let _remoteTransitioning = false; // MPI-73: remote engine connecting/disconnecting — block Cue
-        let _runLocal         = false; // MPI-74: force this generation onto local ComfyUI while remote-connected. Sticky within a remote session, reset on disconnect. UI-only until MPI-82 spine reads it.
         let _context          = props.context || {};
 
         // The physically-installed op set for a model, derived from the last
@@ -1088,7 +1087,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 injectionParams,
                 previewOnly,
                 historyMode,
-                forceLocal: _runLocal, // MPI-74: per-gen local override (inert until spine lands)
+                // MPI-208 B1-C: per-gen local override derived from the single source of
+                // truth (state.engineOverride), not a component-private mirror.
+                forceLocal: state.engineOverride === 'local',
             };
         };
 
@@ -1304,21 +1305,20 @@ export const MpiPromptBox = ComponentFactory.create({
             icon: 'cloud',
             iconActive: 'laptop',
             toggleable: true,
-            active: _runLocal,
+            active: state.engineOverride === 'local',
             size: 'sm',
             info: 'Run this generation on your local engine instead of the cloud Pod.',
             extraClasses: 'mpi-prompt-box__engine-toggle',
         });
         engineToggleBtn.on('toggle', ({ active }) => {
-            _runLocal = !!active; // MPI-74: keep existing mirror (payload unchanged this phase)
-            // R31 (MPI-208): promote to first-class state so selector derivation
-            // and installed-op gating react via effectiveEngine().
+            // R31 (MPI-208): the toggle writes the single source of truth. getRunPayload,
+            // selector derivation and installed-op gating all read state.engineOverride
+            // (via effectiveEngine()) — no component-private mirror.
             state.engineOverride = active ? 'local' : null;
         });
         const _showEngineToggle = (connected) => {
             engineToggleSlot?.classList.toggle('hide', !connected);
             if (!connected) {
-                _runLocal = false; // reset on disconnect
                 state.engineOverride = null; // R31: clear override on disconnect
                 engineToggleBtn.el.setActive(false);
             }

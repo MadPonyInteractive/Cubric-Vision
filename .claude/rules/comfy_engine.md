@@ -160,6 +160,29 @@ lacks one. That one-loader-per-file split lives in the BUILD script
 (`comfy_workflows/scripts/workflow_generation/generate_ltx.py`) — see § 2.5
 "Engine Split" above for the full contract.
 
+### 2.5a SSE engine-tagging law + the generation store (MPI-208)
+
+The engine split extends to the **event transport**. Every generation SSE frame
+carries an `engine: 'local'|'remote'` tag in its payload (`routes/comfy.js`
+`_broadcastComfyEvent`). In remote mode `routes/remoteProxyForward.js` **MERGES**
+the two sources onto `/comfy/events/stream` (local stdout tagged `local`, Pod
+wrapper relay tagged `remote`) instead of REPLACING the stream with an unfiltered
+Pod relay. Each in-flight gen reacts ONLY to frames matching its FROZEN engine —
+`commandExecutor._frameEngineMatches(e)` drops foreign frames (a force-local gen
+ignores Pod install/relay noise; a remote gen ignores local stdout). Untagged
+frames match (backward-compat). This kills the cross-engine contamination where
+Pod activity poisoned a local gen's model-load phase.
+
+`js/services/generationStore.js` is the **single source of truth** for generation
+lifecycle: one job record per gen with a phase state machine + per-lane accounting
+(max 1 active on each of `local`/`remote` + FIFO pending) + an abort token. Stop =
+`store.cancel(jobId)` → aborts the token + fires the FROZEN engine interrupt
+(`interrupt()` + `deleteQueueItem(promptId)`, never re-resolved at cancel time) +
+releases the lane. All generation UI (statusBar, Cue count, QueuePanel) DERIVES
+from `generation-store:changed` — the store emits the legacy `tool:*`/`generation:*`
+events from its transitions so consumers migrate incrementally. Full contract:
+`research/requirements-archaeology.md` in the MPI-208 task workspace.
+
 ### 2.5b Runtime Variant Axis — the generic `variants:` block (MPI-200)
 
 The ENGINE axis (§2.5) is the special case of a broader pattern: a model whose

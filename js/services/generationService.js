@@ -11,6 +11,7 @@ import { saveGeneration, addGroup, updateGroup } from './projectService.js';
 import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, getSharedSettings, getOpSettings, replaceHistoryItemById } from '../data/projectModel.js';
 import { Events } from '../events.js';
 import { generationStore } from './generationStore.js';
+import { remoteEngineClient } from './remoteEngineClient.js';
 import { state } from '../state.js';
 import { clientLogger } from './clientLogger.js';
 import { truncateCardName } from '../utils/displayHelpers.js';
@@ -59,10 +60,27 @@ const _lanes = {
     local:  { active: null, lastJobForLoop: null },
 };
 
-/** @returns {'local'|'remote'} The lane a job (or its opts) dispatches on. */
+/**
+ * The lane a job (or its opts) dispatches on. MUST mirror the store's engine→lane
+ * rule in commandExecutor (`engine = forceLocal ? 'local' : isRemote() ? 'remote' :
+ * 'local'`), because generationStore keys the lane off that resolved `engine`. If
+ * this derived the lane from `forceLocal` alone, a NO-POD local gen (forceLocal
+ * false, isRemote false) would park its INTENT on the 'remote' lane while its STORE
+ * job runs on 'local' — so the store's 'local' drain fires `_loopCallbacks.local`
+ * (never set) and `_lanes.remote.active` never clears → a completed gen shows a
+ * phantom "1 RUNNING" that never drains (MPI-213). Keying both on the same resolved
+ * engine keeps the intent lane and the store lane in agreement.
+ *
+ * NOTE: `isRemote()` reads the mirror refreshed by remoteEngineClient.refresh(),
+ * which the store's own resolution awaits fresh at dispatch. This sync read can lag
+ * by one gen on the exact stale-Pod edge (MPI-179), but for the common no-Pod case
+ * it is reliably false — which is the case this fixes.
+ * @returns {'local'|'remote'}
+ */
 function _laneOf(jobOrOpts) {
     const opts = jobOrOpts?.opts || jobOrOpts || {};
-    return opts.forceLocal === true ? 'local' : 'remote';
+    if (opts.forceLocal === true) return 'local';
+    return remoteEngineClient.isRemote() ? 'remote' : 'local';
 }
 
 /** @returns {boolean} true when the store has a live (non-terminal) job on this lane. */

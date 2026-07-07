@@ -845,6 +845,13 @@ function createEngine({ engine, alwaysLocal }) {
         const listener = this._promptListeners.get(promptId);
         const nodeCount = Object.keys(entry.outputs || {}).length;
         clientLogger.info('comfy', `Reconciled completed gen ${promptId} from /history via ${source} (${nodeCount} output nodes) — terminal WS event was missed`);
+        // MPI-208 Phase 5 (archaeology Part-4 gap): the terminal WS event was missed,
+        // so the user watched the bar hang and never saw this gen finish. The replay
+        // below recovers the output silently — surface a soft toast so the recovery
+        // isn't invisible ("why did my gen suddenly appear?"). Info, not success —
+        // it's a recovered anomaly, not a normal completion (whose own toast fires
+        // from the status bar on the synthetic terminal below).
+        Events.emit('ui:info', { message: 'Generation recovered — the result was retrieved after a connection blip.' });
         if (listener) {
             for (const [nodeId, nodeOutput] of Object.entries(entry.outputs || {})) {
                 listener({ type: 'executed', data: { node: nodeId, output: nodeOutput, prompt_id: promptId } });

@@ -261,6 +261,7 @@ export function createGenerationStore({ emit, logger } = {}) {
      *
      * @param {object} opts
      * @param {string}   opts.jobId       - Stable UUID for this job (caller-generated).
+     * @param {string}  [opts.genId]      - generationService _regId, so the derived status bar can correlate this job to its id-tagged tool:* events (MPI-208 Phase 4).
      * @param {'local'|'remote'} opts.engine
      * @param {string}  [opts.scope]      - 'gallery' | 'groupHistory' | etc.
      * @param {object}  [opts.display]    - Frozen display snapshot (queue panel use).
@@ -268,7 +269,7 @@ export function createGenerationStore({ emit, logger } = {}) {
      * @param {function} [opts.interruptCb] - Engine interrupt callback, FROZEN at registration.
      * @returns {object} snapshot
      */
-    function register({ jobId, engine, scope = '', display = null, loopSeed = null, interruptCb = null } = {}) {
+    function register({ jobId, genId = null, engine, scope = '', display = null, loopSeed = null, interruptCb = null } = {}) {
         if (!jobId)     throw new Error('generationStore.register: jobId required');
         if (!engine)    throw new Error('generationStore.register: engine required');
         if (_jobs.has(jobId)) {
@@ -281,7 +282,7 @@ export function createGenerationStore({ emit, logger } = {}) {
 
         const job = {
             jobId,
-            genId:       null,
+            genId,
             engine,
             scope,
             phase:       PHASES.QUEUED,

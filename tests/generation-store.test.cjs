@@ -386,6 +386,12 @@ function testSnapshotApi() {
     // Snapshots are frozen
     const snap = store.byId(j1);
     assert.throws(() => { snap.phase = 'hacked'; }, TypeError, 'snapshot is frozen');
+
+    // MPI-208 Phase 4: register carries genId onto the record so the derived status
+    // bar can correlate a store job to its id-tagged tool:* events. Absent → null.
+    store.register({ jobId: 'gid-job', genId: 'reg-123', engine: 'remote' });
+    assert.strictEqual(store.byId('gid-job').genId, 'reg-123', 'genId threads onto the record');
+    assert.strictEqual(store.byId(j1).genId, null, 'genId defaults to null when unset');
 }
 
 /**

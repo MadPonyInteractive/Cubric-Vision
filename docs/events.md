@@ -52,6 +52,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `slide-over:toggle` | Toggle a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |
 | `generation-queue:open` | Open the Cue queue panel |
 | `generation-queue:changed` | Cue queue snapshot changed `{ running, pending, items, depth, pendingCount, runningCount, loopArmed }` |
+| `generation-store:changed` | **generationStore snapshot after any job transition** `{ jobs, running, pending, depth }` (MPI-208). The single source of truth all generation UI derives from — statusBar (bar ownership + self-heal to idle), the Cue count, and QueuePanel react to this. Each job carries `{ jobId, genId, engine, scope, phase, promptId, lane, … }`; `genId` === the `id` on that gen's `tool:*` events, so the derived statusBar correlates a store job to its live progress events. |
 | `generation:started` | Generation registered in activeGenerations `{ id, scope, groupId, tempId, placeholderGroup, queueJobId?, queueDisplay? }` |
 | `generation:preview` | New latent preview blob URL available `{ id, url }`; gallery cards keep the generating spinner visible until the preview image has loaded |
 | `generation:complete` | Generation finished, item persisted `{ id, item, group, tempId? }` |

@@ -37,8 +37,7 @@ const _registry = new Map();
  * @param {{ scope, groupId, tempId, operation, modelId, placeholderGroup, exec }} opts
  * @returns {{ id: string }}
  */
-function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null, sourceGroupId = null, queueJobId = null, queueDisplay = null, queueSource = null, isLoop = false }) {
-    const id = crypto.randomUUID();
+function start({ id = crypto.randomUUID(), scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null, sourceGroupId = null, queueJobId = null, queueDisplay = null, queueSource = null, isLoop = false }) {
     const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null, replaceItemId, sourceGroupId, queueJobId, queueDisplay, queueSource, isLoop };
     _registry.set(id, entry);
     Events.emit('generation:started', { id, scope, groupId, tempId, operation, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId, sourceGroupId, queueJobId, queueDisplay, queueSource, isLoop });

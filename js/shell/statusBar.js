@@ -27,6 +27,7 @@ import { Events } from '../events.js';
 import { gid, qs } from '../utils/dom.js';
 import { state } from '../state.js';
 import { getCommandProgressLabel } from '../data/commandRegistry.js';
+import { generationStore } from '../services/generationStore.js';
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 let _job       = null;  // #shell-info-job
@@ -129,6 +130,73 @@ function _idleScopeLabel() {
 // A null id (untagged legacy emit) is a no-op on the latch, not a reset.
 function _latch(id) {
     if (id !== null && id !== undefined) _activeGenId = id;
+}
+
+// ── Store-derived latch reconcile (MPI-208 Phase 4) ─────────────────────────────
+// The bar's ownership + idleness are DERIVED from the generation store, not left to
+// the race between id-tagged tool:* terminals. The tool:* events still feed the
+// visual detail (label, %, stage); the store answers two questions the event race
+// got wrong:
+//   (a) SURVIVOR RE-LATCH — when the bar's owner leaves `running` but another lane
+//       still has a live job, re-latch to that survivor so a concurrent gen never
+//       leaves the bar empty (the user-observed "empty bar while a gen runs" bug).
+//   (b) SELF-HEAL TO IDLE — when the store has NO running job, the bar goes idle even
+//       if a terminal tool:* event was dropped/mismatched (stuck-bar class of bugs).
+// A store job carries `genId` (= generationService _regId = the id on every tool:*
+// event), so the store snapshot correlates directly to `_activeGenId`.
+
+// Pick the running job that should drive the bar: keep the current owner if it is
+// still running; otherwise the most-recently-active survivor.
+function _pickDisplayJob(running) {
+    if (!running.length) return null;
+    if (_activeGenId !== null) {
+        const owner = running.find(j => j.genId === _activeGenId);
+        if (owner) return owner;
+    }
+    // Most-recent driving = latest phase timestamp across the job's transitions.
+    let best = null, bestT = -1;
+    for (const j of running) {
+        const ts = j.timestamps ? Math.max(...Object.values(j.timestamps)) : 0;
+        if (ts >= bestT) { bestT = ts; best = j; }
+    }
+    return best;
+}
+
+// Reconcile the bar against store truth on every `generation-store:changed`.
+function _reconcileFromStore(snapshot) {
+    const running = snapshot?.running ?? generationStore.getSnapshot().running;
+    // No live job anywhere → self-heal to idle, but ONLY if the bar still thinks it
+    // owns a gen (`_activeGenId` set). A normal done/cancelled already routed through
+    // tool:idle/tool:cancelled, which nulls `_activeGenId` and runs the completion
+    // flash — self-heal must NOT stomp that animation. A still-set `_activeGenId` with
+    // an empty store means the owner's terminal event never arrived (dropped/mismatched
+    // WS terminal) → the stuck-bar case the self-heal exists for.
+    if (!running.length) {
+        if (_state === 'active' && _activeGenId !== null) {
+            _activeGenId = null;
+            StatusBar.progress.cancel(); // silent, no toast — a missed terminal, not a real completion
+        }
+        return;
+    }
+    const job = _pickDisplayJob(running);
+    if (!job) return;
+    // Survivor re-latch: the bar's owner is gone but another lane is live. Re-latch to
+    // it and clear the prior job's stage suffix (fixes the stale "N/M" bleed — a
+    // 4-stage upscale suffix must not survive onto a 2-stage successor). The tool:*
+    // events from the survivor's own gen will repaint label/%/stage.
+    //
+    // The `job.genId !== null` guard is LOAD-BEARING, do not drop it: tool-panel
+    // previews (MpiToolOptionsResize) call runCommand directly with
+    // suppressLifecycleEvents and NO genId, so their store jobs carry genId:null and
+    // emit no tool:* events. Excluding null-genId jobs keeps a silent preview from
+    // flashing "Starting" in the bar — only real generationService gens (which carry
+    // _regId as genId) ever drive it.
+    if (job.genId !== null && job.genId !== _activeGenId) {
+        _activeGenId = job.genId;
+        _stageText = '';
+        if (_state !== 'active') StatusBar.progress.prepare('Starting');
+        _renderJobLabel();
+    }
 }
 
 function _setIdle() {
@@ -509,6 +577,13 @@ export const StatusBar = {
             _remoteConnected = !!connected;
             _remotePhase = phase || null;
             if (_state === 'idle') _setIdle();
+        }));
+        // MPI-208 Phase 4: the store is the authority for bar ownership + idleness.
+        // Survivor re-latch (a live lane re-occupies a freed bar) + self-heal (no live
+        // job → idle) both come from here, correcting whatever the tool:* terminal race
+        // got wrong. The tool:* listeners above still paint the visual detail.
+        _listenUnsubs.push(Events.on('generation-store:changed', (snapshot) => {
+            _reconcileFromStore(snapshot);
         }));
     },
 };

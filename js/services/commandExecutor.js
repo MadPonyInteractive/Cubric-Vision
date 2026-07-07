@@ -1004,6 +1004,7 @@ export function runCommand(payload) {
         let _closeSSE = () => {};
         generationStore.register({
             jobId,
+            genId: payload.genId ?? null,
             engine,
             scope: payload.scope || (payload.historyMode ? 'groupHistory' : 'gallery'),
             interruptCb: () => {
