@@ -1099,7 +1099,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         { key: 'combine',    icon: 'merge',     label: 'Combine',    disabled: combineDisabled },
                         { key: 'add-to-project', icon: 'folder', label: 'Add to project' },
                         { key: 'rename',     icon: 'edit',      label: 'Rename',     disabled: targetIds.length !== 1 },
-                        { key: 'card-notes', icon: 'edit',      label: 'Card notes', disabled: targetIds.length !== 1 },
+                        { key: 'card-notes', icon: 'text',      label: 'Card notes', disabled: targetIds.length !== 1 },
                         { key: 'download',   icon: 'download',  label: 'Download' },
                         { key: 'delete',     icon: 'trash',     label: 'Delete',     danger: true },
                     ],

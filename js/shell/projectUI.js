@@ -436,8 +436,8 @@ function _buildProjectRow(project) {
       x: e.clientX,
       y: e.clientY,
       items: [
-        { key: 'notes',  icon: 'edit',   label: 'Project notes' },
-        { key: 'rename', icon: 'text',   label: 'Rename project' },
+        { key: 'notes',  icon: 'text',   label: 'Project notes' },
+        { key: 'rename', icon: 'edit',   label: 'Rename project' },
         { key: 'open',   icon: 'folder', label: 'Open project folder' },
         { key: 'delete', icon: 'trash',  label: 'Delete project', danger: true },
       ],
