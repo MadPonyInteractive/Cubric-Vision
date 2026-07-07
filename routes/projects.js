@@ -1739,6 +1739,107 @@ router.post('/project/save-generation', async (req, res) => {
 });
 
 /**
+ * POST /project-media/:projectId/add-from-cards
+ *
+ * Copies gallery cards from another project into this project. For each card we
+ * copy its currently-selected media file (and companion thumb) into this
+ * project's Media/ + .meta/, write a fresh UUID-keyed sidecar cloned from the
+ * source sidecar (so all metadata survives), then append a single-item group to
+ * project.json via the atomic writer. Source project is left untouched (copy,
+ * not move).
+ *
+ * Body:
+ *   folderPath  {string}  — absolute target project folder path
+ *   cards       {Array<{ type, name, item }>}  where item is the selected
+ *               MediaItem (needs at least filePath; thumbPath optional).
+ *
+ * Returns { success, added: number }.
+ */
+router.post('/project-media/:projectId/add-from-cards', async (req, res) => {
+    try {
+        const { folderPath, cards } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        if (!Array.isArray(cards) || !cards.length) {
+            return res.status(400).json({ success: false, error: 'cards required' });
+        }
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir  = path.join(mediaDir, '.meta');
+        await fs.ensureDir(metaDir);
+
+        const newGroups = [];
+        for (const card of cards) {
+            const item = card?.item;
+            const srcMedia = pathFromProjectFileUrl(item?.filePath);
+            if (!srcMedia || !(await fs.pathExists(srcMedia))) continue;
+
+            const id = uuidv4();
+            const ext = path.extname(srcMedia);
+            // Unique on-disk name; keep readable stem, avoid collisions.
+            const stem = path.basename(srcMedia, ext).replace(/_\d+$/, '') || 'copied';
+            const destName = `${stem}_${id.slice(0, 8)}${ext}`;
+            const destMedia = path.join(mediaDir, destName);
+            await fs.copy(srcMedia, destMedia);
+
+            // Clone the source sidecar when present so metadata survives; else
+            // synthesize a minimal one from the item fields the client sent.
+            const srcMetaCandidate = pathFromProjectFileUrl(item?.filePath)
+                ? path.join(path.dirname(srcMedia), '.meta', `${item.id}.json`)
+                : null;
+            let meta = {};
+            if (srcMetaCandidate && await fs.pathExists(srcMetaCandidate)) {
+                try { meta = await fs.readJson(srcMetaCandidate); } catch (_) { meta = {}; }
+            }
+            meta.id = id;
+            meta.filePath = `/project-file?path=${encodeURIComponent(destMedia)}`;
+            meta.createdAt = new Date().toISOString();
+            if (!meta.type) meta.type = card.type || 'image';
+            if (!meta.displayName) meta.displayName = card.name || stem;
+
+            // Copy companion thumb if the source had one.
+            const srcThumb = pathFromProjectFileUrl(item?.thumbPath) || pathFromProjectFileUrl(meta.thumbPath);
+            if (srcThumb && await fs.pathExists(srcThumb)) {
+                const destThumb = path.join(metaDir, `${id}.thumb.jpg`);
+                await fs.copy(srcThumb, destThumb);
+                meta.thumbPath = `/project-file?path=${encodeURIComponent(destThumb)}`;
+            } else {
+                delete meta.thumbPath;
+            }
+
+            await fs.writeJson(path.join(metaDir, `${id}.json`), meta, { spaces: 2 });
+
+            newGroups.push({
+                id:            uuidv4(),
+                type:          card.type || meta.type || 'image',
+                name:          card.name || meta.displayName,
+                createdAt:      new Date().toISOString(),
+                selectedIndex: 0,
+                open:          false,
+                favourite:     false,
+                customName:    null,
+                history:       [id],
+            });
+        }
+
+        if (!newGroups.length) {
+            return res.status(404).json({ success: false, error: 'no copyable media found' });
+        }
+
+        const jsonPath = path.join(folderPath, 'project.json');
+        await updateProjectJson(jsonPath, project => ({
+            ...project,
+            itemGroups: [...newGroups, ...(project.itemGroups || [])],
+            updatedAt: new Date().toISOString(),
+        }));
+
+        res.json({ success: true, added: newGroups.length });
+    } catch (err) {
+        logger.error('project', 'add-from-cards error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
  * POST /project/crop-media
  *
  * Crops an existing project image to a new file using Sharp.

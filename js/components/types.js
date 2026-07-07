@@ -694,6 +694,28 @@
  */
 
 /**
+ * @typedef {Object} MpiAddToProjectProps (Compound — js/components/Compounds/MpiAddToProject)
+ * @property {Array<{id:string,name:string}>} [projects=[]] - Selectable target projects for the dropdown.
+ * @property {Function} [onConfirm] - async (projectId: string) => void. Copies the selected cards.
+ *                                    While it runs the OK button is disabled and the modal stays open;
+ *                                    on rejection the modal stays open for retry.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *
+ * Usage:
+ *   const d = MpiAddToProject.mount(document.createElement('div'), {
+ *       projects, onConfirm: async (projectId) => { await copy(projectId); },
+ *   });
+ *   d.el.show();
+ *
+ * Emits:
+ * 'confirm' { projectId: string } — Confirm succeeded (after onConfirm resolves).
+ * 'cancel'  {}                    — Cancel BUTTON clicked only (NOT emitted on Escape or hide()).
+ */
+
+/**
  * @typedef {Object} MpiInstalledDisplayProps (Compound — js/components/Compounds/MpiInstalledDisplay)
  * @property {string} [title='']          - Title text on the top-left
  * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")

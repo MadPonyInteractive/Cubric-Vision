@@ -19,6 +19,7 @@ import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSetti
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
 import { MpiNotesEditor } from '../../Compounds/MpiNotesEditor/MpiNotesEditor.js';
+import { MpiAddToProject } from '../../Compounds/MpiAddToProject/MpiAddToProject.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -37,7 +38,7 @@ import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings } from '../../../services/projectService.js';
+import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings, listProjects } from '../../../services/projectService.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
 import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages } from '../../../utils/promptReuse.js';
 import {
@@ -303,6 +304,54 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const _short = String(err.message || 'unknown').split('\n')[0].slice(0, 160);
                 Events.emit('ui:error', { title: 'Combine failed', message: _short });
             }
+        });
+
+        // ── Add to project ───────────────────────────────────────────────────────
+        // Copies the selected cards' shown version into another existing project
+        // (copy, not move — cards stay here too). Opens a dropdown overlay
+        // populated from the project list, excluding the current project.
+        grid.on('add-to-project', async ({ groups: g }) => {
+            if (!Array.isArray(g) || !g.length) return;
+            let projects;
+            try {
+                projects = await listProjects();
+            } catch (err) {
+                clientLogger.warn('MpiGalleryBlock', 'add-to-project list failed', err);
+                Events.emit('ui:error', { title: 'Add to project', message: 'Could not load projects.' });
+                return;
+            }
+            const others = projects.filter(p => p.id !== state.currentProject?.id);
+            if (!others.length) {
+                Events.emit('ui:warning', { title: 'Add to project', message: 'No other projects to add to.' });
+                return;
+            }
+            const byId = new Map(others.map(p => [p.id, p]));
+
+            const cards = g.map(group => {
+                const item = getSelectedItem(group);
+                return item ? { type: group.type, name: group.name, item } : null;
+            }).filter(Boolean);
+            if (!cards.length) return;
+
+            const dialog = MpiAddToProject.mount(document.createElement('div'), {
+                projects: others,
+                onConfirm: async (projectId) => {
+                    const target = byId.get(projectId);
+                    if (!target) throw new Error('project not found');
+                    const resp = await fetch(`/project-media/${target.id}/add-from-cards`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folderPath: target.folderPath, cards }),
+                    });
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok || !data.success) throw new Error(data.error || 'add-from-cards failed');
+                    Events.emit('ui:success', {
+                        title: 'Added to project',
+                        message: `${data.added} card${data.added === 1 ? '' : 's'} added to "${target.name}".`,
+                    });
+                },
+            });
+            dialog.el.show();
         });
 
         // ── Persist helper ──────────────────────────────────────────────────────
