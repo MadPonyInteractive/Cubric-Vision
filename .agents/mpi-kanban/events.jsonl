@@ -927,3 +927,5 @@
 {"ts":"2026-07-07T15:17:48Z","type":"task.moved","id":"MPI-216","from":"todo","to":"doing","by":"agent"}
 {"ts":"2026-07-07T15:23:12Z","type":"task.progress","id":"MPI-216","by":"agent"}
 {"ts":"2026-07-07T15:35:09Z","type":"task.progress","id":"MPI-216","by":"agent"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"task.updated","at":"2026-07-07T15:10:00Z","actor":"claude","summary":"Compact plan attached; maturity idea->planned. Detail panel = drawer inside overlay DOM (overlays stack above slide-over, confirmed by user)."}
+{"ts":"2026-07-07T15:42:30Z","type":"task.moved","id":"MPI-216","from":"doing","to":"done","by":"agent"}
