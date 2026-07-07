@@ -256,6 +256,39 @@ function _showDeleteConfirm(projectName, onConfirm) {
 }
 
 /**
+ * Prompts for a new display name and persists it to project.json (name field
+ * only — the folder on disk is never renamed). Refreshes the grid on success.
+ * @param {Object} project
+ */
+function _renameProject(project) {
+  const dialog = MpiOkCancel.mount(document.createElement('div'), {
+    title: 'Rename Project',
+    text: 'Enter a new name for this project.',
+    inputPlaceholder: 'Project name',
+    inputValue: project.name || '',
+    okLabel: 'Rename',
+  });
+  dialog.on('ok', async ({ inputValue }) => {
+    const name = (inputValue || '').trim();
+    if (!name || name === project.name) return;
+    try {
+      const res = await fetch('/update-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: project.folderPath, updates: { name } }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'rename failed');
+      loadProjectGrid();
+    } catch (err) {
+      clientLogger.warn('projectUI', 'rename project failed', err);
+      window.MpiAlert('Could not rename project: ' + err.message);
+    }
+  });
+  dialog.el.show();
+}
+
+/**
  * Opens the project notes (project.md) in the in-app notes editor overlay.
  * Reads current notes from the server, then persists on Save.
  * @param {Object} project
@@ -405,12 +438,14 @@ function _buildProjectRow(project) {
       y: e.clientY,
       items: [
         { key: 'notes',  icon: 'edit',   label: 'Project notes' },
+        { key: 'rename', icon: 'text',   label: 'Rename project' },
         { key: 'open',   icon: 'folder', label: 'Open project folder' },
         { key: 'delete', icon: 'trash',  label: 'Delete project', danger: true },
       ],
       onSelect: (key) => {
-        if (key === 'notes') return void _showProjectNotes(project);
-        if (key === 'open')  return void _openProjectFolder(project);
+        if (key === 'notes')  return void _showProjectNotes(project);
+        if (key === 'rename') return void _renameProject(project);
+        if (key === 'open')   return void _openProjectFolder(project);
         if (key !== 'delete') return;
         _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
           try {
