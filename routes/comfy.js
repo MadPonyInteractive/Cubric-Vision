@@ -580,6 +580,17 @@ router.post('/comfy/models/check', async (req, res) => {
             const out = await remoteModels.remoteModelsCheck(models);
             return res.json(out);
         } catch (err) {
+            // MPI-211: during the Pod-ready-polling window the wrapper HTTP
+            // endpoint isn't up yet (404 / connection refused). That's a
+            // transient boot state, not a failure — answer 200 with an empty
+            // not-ready result so the renderer doesn't log a hard 502. Every
+            // subsequent check reconciles clean once the Pod is ready.
+            const booting = /wrapper status 404\b/.test(err.message)
+                || /ECONNREFUSED|ENOTFOUND|socket hang up|fetch failed/i.test(err.message);
+            if (booting) {
+                logger.info('comfy', `remote models/check deferred — Pod wrapper still booting (${err.message})`);
+                return res.json({ success: true, results: {}, pending: true });
+            }
             logger.error('comfy', `remote models/check failed: ${err.message}`);
             return res.status(502).json({ success: false, error: err.message });
         }

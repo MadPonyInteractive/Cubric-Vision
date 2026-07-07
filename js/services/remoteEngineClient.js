@@ -64,6 +64,8 @@ export const remoteEngineClient = {
             const res = await fetch('/remote/ws-token');
             if (!res.ok) throw new Error(`ws-token returned ${res.status}`);
             const data = await res.json();
+            // MPI-211: server answers 200 {inactive:true} when remote is stopped
+            // (an expected steady state, not a failure) → null channel, no warn.
             this._wsBase = data.wsBase || null;
             this._token = data.token || null;
         } catch (_) {

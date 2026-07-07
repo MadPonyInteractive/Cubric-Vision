@@ -23,7 +23,11 @@ const _mode = state.getMode(); // live singleton
 
 router.get('/remote/ws-token', async (req, res) => {
   try {
-    if (!_mode.active) return res.status(409).json({ error: 'remote_inactive' });
+    // MPI-211: remote inactive is not an error for this route — the renderer
+    // polls it on every mode refresh, including on the local/offline landing.
+    // Answer 200 with a null token (no channel to open) instead of a 409 so the
+    // browser doesn't log a red network row for an expected steady state.
+    if (!_mode.active) return res.json({ wsBase: null, token: null, inactive: true });
     const token = await getWrapperToken(_mode.podId);
     if (!token) return res.status(503).json({ error: 'wrapper_token_missing' });
     res.json({

@@ -103,7 +103,12 @@ function end(id, { revokePreview = true } = {}) {
     const entry = _registry.get(id);
     if (!entry) return;
     if (revokePreview && entry.latestPreviewUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(entry.latestPreviewUrl);
+        // MPI-211: defer the revoke past this task so the store broadcast can
+        // derender the placeholder tile + queue-panel thumbnail (both still hold
+        // this blob as an <img> src synchronously). Revoking now makes the
+        // browser refetch the dead blob → ERR_FILE_NOT_FOUND console noise.
+        const url = entry.latestPreviewUrl;
+        setTimeout(() => URL.revokeObjectURL(url), 0);
     }
     _registry.delete(id);
 }
