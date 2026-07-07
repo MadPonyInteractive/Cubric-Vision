@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-220","type":"task.created","at":"2026-07-07T23:45:00Z","actor":"claude","column":"todo","summary":"Delete RunPod branch (local+remote), rename 1.2 -> 1.1. Run AFTER 1.2 agents finish + commit. Push = user-authorized. No version bump. Bumped next_id 220->221."}
