@@ -851,7 +851,15 @@ function createEngine({ engine, alwaysLocal }) {
         // isn't invisible ("why did my gen suddenly appear?"). Info, not success —
         // it's a recovered anomaly, not a normal completion (whose own toast fires
         // from the status bar on the synthetic terminal below).
-        Events.emit('ui:info', { message: 'Generation recovered — the result was retrieved after a connection blip.' });
+        //
+        // ONLY toast on a genuine reconnect. On some Pods (e.g. Wan 5B, or dev-mode
+        // raw-8188 exposure) the direct terminal WS is structurally unreachable, so
+        // the lifetime `poll` backstop recovers EVERY gen — toasting there fires the
+        // "blip" alarm on every single generation (false alarm, it's steady state).
+        // The reconnect/one-shot path is the only one that maps to an actual blip.
+        if (source !== 'poll') {
+            Events.emit('ui:info', { message: 'Generation recovered — the result was retrieved after a connection blip.' });
+        }
         if (listener) {
             for (const [nodeId, nodeOutput] of Object.entries(entry.outputs || {})) {
                 listener({ type: 'executed', data: { node: nodeId, output: nodeOutput, prompt_id: promptId } });
