@@ -21,6 +21,15 @@ work that belongs here:
   `ComfyUI-BFSNodes`, dropped from MPI-127 ship set). Most reuse the existing
   handler once authored.
 
+## Reference — external workflow library (2026-07-07)
+
+- **Official Lightricks ComfyUI-LTXVideo** (node repo + example workflows):
+  https://github.com/Lightricks/ComfyUI-LTXVideo
+- **RuneXX LTX-2.3 workflow collection** (many workflows to mine/port):
+  https://huggingface.co/RuneXX/LTX-2.3-Workflows/tree/main
+- **NEXT to test — V2V Foley (add sound to any video):**
+  https://huggingface.co/RuneXX/LTX-2.3-Workflows/blob/main/Video-2-Video/LTX-2.3_-_V2V_Foley_Add_Sound_To_Any_Video.json
+
 ## Session note (2026-06-21) — PARKED mid-deconstruction
 
 Started deconstructing the NerdyRodent monolith into per-op app workflows. Two
