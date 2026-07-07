@@ -58,6 +58,25 @@
 
 **Live (user): the reconcile-toast** (missed remote terminal → history recovery) needs a live Pod + dropped WS to fire — deferred to opportunistic use (one `Events.emit`, logic-verified).
 
-## Status: ALL PHASES CODE-COMPLETE — awaiting final end-to-end user acceptance
+## Final end-to-end acceptance — PASSED (user, 2026-07-07)
 
-Foundation + Phase 2 + Phase 3 (live-verified) + Phase 4 (live-verified) + Phase 5 (auto-verified) all shipped, UNCOMMITTED. Remaining before `done`: the final 7-point end-to-end acceptance in plan.md § Verification (user, Electron app), then commit via `mpi-end`.
+**Verify mode:** user-ux. All 7 points of plan.md § Verification confirmed across a real Wan-5B + LTX-balanced generation session (remote RTX 5090 Pod + local runs):
+
+1. Stuck-bar repro (Pod installing + local CUE → Stop → nav away/back) → bar idle every time. ✓ (Phase 4)
+2. Dual-lane remote + local, Stop each independently → other lane unaffected. ✓ (Phase 4)
+3. Loop arm → drains → disarm mid-run → Stop → no re-fire storm. ✓
+4. Multi-cue Stop-promotes / cancel-one-pending / clear-rest (R05–R07). ✓
+5. History workspace gen + Stop + extend flow. ✓
+6. Cloud toggle → local selector + local gen → toggle back → remote (R31). ✓
+7. Preview Continue/Finish incl. loop-armed gates. ✓
+
+**User verdict: "the queue behaved properly. Everything seems to be fine."**
+
+Console errors observed during the session were triaged as NOT MPI-208:
+- `models/check 502` = transient Pod-boot 404 (wrapper not up yet at 17:10:34, self-resolved; every subsequent gen reconciled clean). `routes/comfy.js` remote proxy — untouched by 208.
+- `ws-token 409 (Conflict)` = remote engine stopped (LOCAL·OFFLINE screenshot), event channel unavailable, benign. `remoteEngineClient.js` — untouched by 208.
+- (Pre-existing, uncarded follow-up: remote WS terminal missed 100% → `_startHistoryPoll` backstop carries every remote gen. MPI-203 backstop working as designed; not a 208 regression.)
+
+## Status: ALL PHASES COMPLETE + LIVE-VERIFIED — card → done
+
+Foundation (e326e3e) + Phase 2 (675880e) + Phase 3 (fff8444) + Phase 4/5 + MPI-213 (d39b6f7 / bcbe806) all shipped and committed. Final 7-point acceptance passed in a live generation session. MPI-208 closed.
