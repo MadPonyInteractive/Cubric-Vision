@@ -40,7 +40,7 @@ Props: none
 - `MpiAddToProject`   props: `{ projects: [{id,name}], onConfirm(projectId) }`   slot: `document.createElement('div')` — mounted on demand on `grid 'add-to-project'` event; dropdown picks a target project, `onConfirm` POSTs `/project-media/:id/add-from-cards` to copy the selected cards
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
 
-> **Note:** `MpiModelManager` is NOT mounted here — it is a slide-over content component opened via `slide-over:open`. `MpiGalleryBlock` emits `Events.emit('models:open')` which shell re-emits as `slide-over:open { title: 'Models', component: MpiModelManager }`. PromptBox mounts only when `s_installedModelIds.length > 0`; post-install mount is keyed off `state:changed (s_installedModelIds)`, not a `models:closed` event.
+> **Note:** `MpiModelManager` is NOT mounted here — it is the **Model Library** overlay (MPI-215). It self-hosts an `MpiOverlay(mountTarget:'body')` and shell mounts it once as a lazy singleton, calling `el.open()` on `models:open` (`shell.js`). `MpiGalleryBlock` emits `Events.emit('models:open')`. PromptBox mounts only when `s_installedModelIds.length > 0`; post-install mount is keyed off `state:changed (s_installedModelIds)`, not a `models:closed` event.
 > **Selection:** No `MpiSelectionBar`. Ctrl/Cmd-click toggles card into selection; shift-click range-selects; right-click opens `MpiContextMenu`. `MpiCheckbox` is also removed from cards.
 
 ---
@@ -70,7 +70,7 @@ const TOOL_OPTIONS_REGISTRY = {
 - `MpiHistoryList`   props: `{ history, selectedIndex, isVideo }` — ctrl/shift/right-click selection   slot: `#right-bottom-slot`
 - `MpiMediaDropOverlay`   props: `{ onDrop({ files: [{ file, mediaType }, ...] }) }` callback   slot: `document.createElement('div')` appended to `el` — loops files: uploads each, calls `_pb.el.injectMedia()` per file (no history card created). Suppressed while video prompt mode is active so start/end-frame slot drops keep local targeting.
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
-- *(no model manager here — MpiModelManager is a slide-over content component, not mounted by MpiGroupHistoryBlock)*
+- *(no model manager here — MpiModelManager is the shell-hosted Model Library overlay, not mounted by MpiGroupHistoryBlock)*
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
@@ -142,7 +142,7 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 - `MpiErrorDialog`     props: none   slot: `document.createElement('div')` — shown on `ui:error` event
 - `MpiChangelogDialog` props: none   slot: `document.createElement('div')` — "What's New" overlay. Shown once per `APP_VERSION` by `_maybeShowChangelog()` in `_bootApp`, AFTER engine/deps gates + dev-state restore, BEFORE optional Comfy auto-start. Skipped when `Storage.getLastSeenChangelogVersion() === APP_VERSION` or `getReleaseNotes(APP_VERSION)` has no content. Content set via `el.open({ version, stage, notes })`; internally mounts `MpiButton` (Done) + `MpiIcon` (per-section). Reads notes from `js/data/releaseNotes.js`. NOT an updater.
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
-- *(MpiModelsModal removed — model manager is now `MpiModelManager`, a slide-over content component opened via `models:open` → `slide-over:open { title: 'Models', component: MpiModelManager }`. No shell-level singleton for models.)*
+- `MpiModelManager` (the **Model Library** overlay)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `models:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + an in-overlay right-drawer detail panel. Shell calls `el.open()` each time (MPI-215). Reserved slide-over stays for Settings/Hotkeys/Queue only.
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
 - `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.

@@ -1,182 +1,602 @@
 /* ═══════════════════════════════════════════════════════════════
-   MpiModelManager — model-manager content for the MpiSlideOver panel.
+   MpiModelManager — Model Library
+
+   Full-page contact-sheet overlay (dark ground) + right-drawer detail
+   panel. Self-hosts an MpiOverlay(body). Lean uniform tiles; click a
+   tile → the detail drawer carries the op/arch/VRAM/install controls.
+
+   Design frozen: model-library-B.html (MPI-215). Dark surfaces are local
+   --lib-* tokens (darker than the slide-over ground); everything else via
+   Stage tokens from styles/01_base.css.
 ═══════════════════════════════════════════════════════════════ */
 
-.mpi-model-manager {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+/* ── Full-bleed override of the shared MpiOverlay chrome ───────────
+   MpiOverlay is built for centered card content (settings/compare): it pads
+   its root and caps .mpi-overlay__container at 600px. The Library wants the
+   whole viewport, so when the overlay hosts a .mpi-model-library we strip the
+   padding/cap and let the Library fill it. Scoped via :has() so no other
+   overlay is affected — MpiOverlay.css (shared) stays untouched. */
+.mpi-overlay--body:has(.mpi-model-library) {
+    padding: 0;
+    align-items: stretch;
+}
+.mpi-overlay--body:has(.mpi-model-library) .mpi-overlay__container {
+    max-width: none;
     width: 100%;
+    height: 100%;
+    gap: 0;
+}
+/* Overlay's own X sits above the grid + scrim (z-30) but BELOW the detail drawer
+   (z-40) — so when the drawer is open its own X owns the top-right corner and the
+   two close buttons never overlap/steal each other's clicks. */
+.mpi-overlay--body:has(.mpi-model-library) .mpi-overlay__close {
+    z-index: 35;
 }
 
-/* ── Toolbar: descriptive text + refresh button ───────────────── */
-.mpi-model-manager__toolbar {
+.mpi-model-library {
+    /* Local dark surfaces — the Library ground sits darker than the app so the
+       preview thumbs pop (mockup darkness-tuner final values). */
+    --lib-bg: oklch(0.26 0.020 350);
+    --lib-card: oklch(0.33 0.022 350);
+    --lib-card-hover: oklch(0.37 0.023 350);
+    --lib-panel: oklch(0.23 0.020 350);
+    --lib-canvas: oklch(0.28 0.020 350);
+
+    position: relative;
+    height: 100%;
+    background: var(--lib-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    color: var(--ink-1);
+}
+
+/* ── Head: title, count, filters ─────────────────────────────── */
+.mpi-model-library__head {
+    padding: var(--s-5) var(--s-6) var(--s-4);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+}
+
+.mpi-model-library__title {
+    font-size: var(--t-xl, 32px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0 0 var(--s-2);
+}
+
+.mpi-model-library__sub {
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    margin: 0 0 var(--s-4);
+}
+
+.mpi-model-library__count {
+    color: var(--accent-heat);
+}
+
+.mpi-model-library__filters {
+    display: flex;
+    align-items: center;
+    gap: var(--s-5);
+    flex-wrap: wrap;
+}
+
+.mpi-model-library__filter-group {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+}
+
+.mpi-model-library__filter-label {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+/* Filter tag — text-only toggle. Selected = ink-1 + heat dot. */
+.mpi-model-library__tag {
+    font-size: var(--t-xs);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    cursor: pointer;
+    background: none;
+    border: 0;
+    font-family: inherit;
+    padding: 4px 0;
+    transition: color var(--t-base) var(--ease);
+}
+
+.mpi-model-library__tag:hover { color: var(--ink-1); }
+.mpi-model-library__tag[aria-selected="true"] { color: var(--ink-1); }
+.mpi-model-library__tag[aria-selected="true"]::after {
+    content: " ●";
+    color: var(--accent-heat);
+}
+
+.mpi-model-library__filter-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--line);
+}
+
+.mpi-model-library__search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    border-bottom: 1px solid var(--ink-4);
+    padding: 6px 0;
+    min-width: 200px;
+}
+
+.mpi-model-library__search input {
+    background: none;
+    border: 0;
+    outline: none;
+    color: var(--ink-1);
+    font-family: inherit;
+    font-size: var(--t-sm);
+    width: 100%;
+}
+.mpi-model-library__search input::placeholder { color: var(--ink-4); }
+.mpi-model-library__search .mpi-icon { color: var(--ink-4); width: 14px; height: 14px; }
+
+.mpi-model-library__refresh { flex: none; }
+
+/* ── Body: scrollable contact sheet ──────────────────────────── */
+.mpi-model-library__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-5) var(--s-6) var(--s-6);
+}
+
+.mpi-model-library__body::-webkit-scrollbar { width: 10px; }
+.mpi-model-library__body::-webkit-scrollbar-thumb { background: var(--line); }
+.mpi-model-library__body::-webkit-scrollbar-track { background: transparent; }
+
+/* Section header (Installed / Available) */
+.mpi-model-library__section {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin: var(--s-6) 0 var(--s-3);
+}
+.mpi-model-library__section:first-child { margin-top: 0; }
+.mpi-model-library__section::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: color-mix(in oklch, var(--line) 50%, transparent);
+}
+.mpi-model-library__section-n { color: var(--ink-3); }
+
+/* Media sub-block header (Image / Video, one aspect each) */
+.mpi-model-library__media-head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin: var(--s-4) 0 var(--s-3);
+}
+.mpi-model-library__media-head--video { color: var(--accent-frost); }
+.mpi-model-library__media-head .mpi-icon { width: 12px; height: 12px; }
+.mpi-model-library__media-head-n { color: var(--ink-3); }
+
+/* ── Contact sheet grid ──────────────────────────────────────── */
+.mpi-model-library__sheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--s-4);
+    align-items: start;
+}
+
+/* ── Lean tile ───────────────────────────────────────────────── */
+.mpi-tile {
+    background: var(--lib-card);
+    border: 1px solid color-mix(in oklch, var(--line) 50%, transparent);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color var(--t-base) var(--ease), background var(--t-base) var(--ease);
+    text-align: left;
+    font-family: inherit;
+    color: inherit;
+    padding: 0;
+}
+.mpi-tile:hover { border-color: var(--line); background: var(--lib-card-hover); }
+
+.mpi-tile__thumb {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    background: var(--lib-canvas);
+}
+.mpi-tile--image .mpi-tile__thumb { aspect-ratio: 4 / 5; }
+.mpi-tile--video .mpi-tile__thumb { aspect-ratio: 16 / 9; }
+
+.mpi-tile__thumb-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--t-slow) var(--ease), filter var(--t-slow) var(--ease);
+    filter: saturate(0.92) brightness(0.92);
+}
+.mpi-tile:hover .mpi-tile__thumb-media { transform: scale(1.04); filter: saturate(1) brightness(1); }
+
+/* Fallback gradient when no preview asset (mirrors the mockup placeholder) */
+.mpi-tile__thumb--placeholder::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(150deg, oklch(0.44 0.08 350), oklch(0.30 0.05 300));
+}
+.mpi-tile--video .mpi-tile__thumb--placeholder::after {
+    background: linear-gradient(150deg, oklch(0.42 0.06 235), oklch(0.28 0.05 270));
+}
+
+/* Recently-installed heat dot — absolute, zero layout impact */
+.mpi-tile__new {
+    position: absolute;
+    z-index: 2;
+    top: var(--s-2);
+    left: var(--s-2);
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent-heat);
+    box-shadow: 0 0 0 3px oklch(0.26 0.02 350 / 0.5);
+}
+
+.mpi-tile__body {
+    padding: var(--s-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    flex: 1;
+}
+
+.mpi-tile__top {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-}
-
-.mpi-model-manager__text {
-    font-size: var(--t-md);
-    color: var(--ink-1);
-    line-height: 1.65;
-    margin: 0;
-}
-
-.mpi-model-manager__refresh-btn {
-    flex-shrink: 0;
-}
-
-/* ── Separator ───────────────────────────────────────────────── */
-.mpi-model-manager__separator {
-    height: 1px;
-    background: var(--line);
-    margin: 0;
-    width: 100%;
-    flex-shrink: 0;
-}
-
-/* ── Section header ──────────────────────────────────────────── */
-.mpi-model-manager__section-header {
-    font-size: var(--t-sm);
-    font-weight: 600;
-    color: var(--ink-2);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-/* ── Card list ───────────────────────────────────────────────── */
-.mpi-model-manager__slot {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-/* Operation toggles render INSIDE the card (MpiInstalledDisplay el.opsSlot);
-   their layout lives in MpiInstalledDisplay.css. */
-
-/* ── Size-tier filter bar (MPI-168) ──────────────────────────── */
-.mpi-model-manager__filter {
-    display: flex;
-    flex-wrap: wrap;
     gap: var(--s-2);
+}
+
+/* Clamp to 2 lines with ellipsis so a long name (e.g. "NVIDIA PiD Upscaler",
+   or a future "… V2") never grows the tile and breaks row alignment. */
+.mpi-tile__name {
+    font-size: var(--t-md);
+    line-height: 1.15;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: calc(var(--t-md) * 1.15 * 2);
+}
+.mpi-tile__meta {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 3px;
+}
+
+/* Media badge */
+.mpi-tile__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    flex: none;
+}
+.mpi-tile__badge .mpi-icon { width: 12px; height: 12px; }
+.mpi-tile__badge--video { color: var(--accent-frost); }
+
+/* Inline install-state row — FIXED height (chip OR progress bar, no shift) */
+.mpi-tile__state {
+    margin-top: auto;
+    height: 22px;
+    display: flex;
     align-items: center;
 }
 
-/* Active (selected) filter — text MpiButton has no built-in toggled style, so
-   the manager owns it. Heat-accent border + tint marks the chosen tiers. */
-.mpi-model-manager__filter-btn.is-active {
-    border-color: var(--accent-heat);
-    color: var(--accent-heat);
-    background: color-mix(in oklch, var(--accent-heat) 14%, transparent);
+.mpi-tile__chip {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
+.mpi-tile__chip--installed { color: var(--accent-ok); }
+.mpi-tile__chip--installed::before { content: "✓"; }
+.mpi-tile__chip--available { color: var(--ink-3); }
+.mpi-tile__chip--available::before { content: "↓"; }
+.mpi-tile__chip--partial { color: var(--accent-frost); }
+.mpi-tile__chip--partial::before { content: "◑"; }
 
-/* ── Per-card size-tier badge (MPI-168) ──────────────────────── */
-/* Sibling of the card inside .mpi-model-manager__card (position relative on
-   the wrapper) — absolute top-right so it overlays the card chrome. */
-.mpi-model-manager__card {
+.mpi-tile__prog {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+.mpi-tile__prog-bar {
+    flex: 1;
+    height: 2px;
+    background: var(--line);
     position: relative;
 }
-
-.mpi-model-manager__tier-badge {
+.mpi-tile__prog-bar > span {
     position: absolute;
-    top: var(--s-2);
-    right: var(--s-2);
-    z-index: 2;
-    padding: 2px var(--s-2);
-    border-radius: var(--r-2);
+    inset: 0 auto 0 0;
+    background: var(--accent-heat);
+    transition: width var(--t-fast) linear;
+}
+.mpi-tile__prog-pct {
     font-size: var(--t-2xs);
-    font-weight: 600;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Empty state */
+.mpi-model-library__empty {
+    padding: var(--s-6) 0;
+    color: var(--ink-4);
+    font-size: var(--t-sm);
+    text-align: center;
+}
+
+/* ══ DETAIL DRAWER — right, absolute child of the overlay ══════════ */
+.mpi-model-library__scrim {
+    position: absolute;
+    inset: 0;
+    background: oklch(0.14 0.02 350 / 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-base) var(--ease);
+    z-index: 30;
+}
+.mpi-model-library__scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.mpi-detail {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    max-width: 92vw;
+    background: var(--lib-panel);
+    border-left: 1px solid var(--line);
+    z-index: 40;
+    transform: translateX(100%);
+    transition: transform var(--t-base) var(--ease);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -24px 0 60px -30px oklch(0.14 0.02 350 / 0.7);
+}
+.mpi-detail.is-open { transform: translateX(0); }
+
+.mpi-detail__head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--s-4) var(--s-5);
+    border-bottom: 1px solid var(--line);
+}
+.mpi-detail__head-title {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    cursor: help;
+    color: var(--ink-4);
+    margin: 0;
+}
+.mpi-detail__close {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
     border: 1px solid var(--line);
-    background: var(--surface-2);
+    background: none;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: color var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+}
+.mpi-detail__close:hover { color: var(--ink-1); border-color: var(--ink-2); }
+.mpi-detail__close .mpi-icon { width: 13px; height: 13px; }
+
+.mpi-detail__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+}
+.mpi-detail__body::-webkit-scrollbar { width: 8px; }
+.mpi-detail__body::-webkit-scrollbar-thumb { background: var(--line); }
+
+.mpi-detail__thumb {
+    width: 100%;
+    background: var(--lib-canvas);
+    position: relative;
+    overflow: hidden;
+    /* flex:none so the aspect-ratio drives height from width — in the flex-column
+       body a stretched child with an absolutely-positioned media collapses to 0
+       height otherwise. Cap tall portraits (object-fit:contain never crops). */
+    flex: none;
+    max-height: 46vh;
+}
+/* Pre-load placeholder aspect only; JS sets the true aspect from the real asset
+   dimensions on load so the preview is NEVER cropped (user-requested). */
+.mpi-detail__thumb--image { aspect-ratio: 4 / 5; }
+.mpi-detail__thumb--video { aspect-ratio: 16 / 9; }
+/* Clickable video preview → native fullscreen. Cursor + a subtle expand hint. */
+.mpi-detail__thumb--play { cursor: zoom-in; }
+.mpi-detail__thumb--play::after {
+    content: "⤢ fullscreen";
+    position: absolute;
+    z-index: 2;
+    right: var(--s-2);
+    bottom: var(--s-2);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.1em;
+    color: var(--ink-1);
+    background: oklch(0.14 0.02 350 / 0.6);
+    padding: 3px 7px;
+    opacity: 0;
+    transition: opacity var(--t-base) var(--ease);
+    pointer-events: none;
+}
+.mpi-detail__thumb--play:hover::after { opacity: 1; }
+
+.mpi-detail__thumb-media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+.mpi-detail__thumb--placeholder::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(150deg, oklch(0.44 0.08 350), oklch(0.30 0.05 300));
+}
+.mpi-detail__thumb--video.mpi-detail__thumb--placeholder::after {
+    background: linear-gradient(150deg, oklch(0.42 0.06 235), oklch(0.28 0.05 270));
+}
+
+.mpi-detail__titlerow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--s-3);
+}
+.mpi-detail__name {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+.mpi-detail__cat {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+.mpi-detail__pill {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid var(--accent-frost);
+    color: var(--accent-frost);
+    border-radius: 999px;
+    white-space: nowrap;
+    flex: none;
+}
+.mpi-detail__pill--image { border-color: var(--ink-3); color: var(--ink-3); }
+
+.mpi-detail__desc {
+    font-size: var(--t-sm);
+    line-height: 1.5;
     color: var(--ink-2);
 }
 
-.mpi-model-manager__tier-badge--low {
-    border-color: var(--accent-ok);
-    color: var(--accent-ok);
+.mpi-detail__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-detail__field-label {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
 }
 
-.mpi-model-manager__tier-badge--balanced {
-    border-color: var(--accent-frost);
-    color: var(--accent-frost);
+/* Toggle rows (ops + arch) live here — MpiButton instances append into
+   these hosts, so their own toggled styling applies. The host is just flex. */
+.mpi-detail__toggle-row {
+    display: flex;
+    gap: var(--s-2);
+    flex-wrap: wrap;
 }
 
-.mpi-model-manager__tier-badge--high {
-    border-color: var(--accent-heat);
-    color: var(--accent-heat);
-}
-
-/* ── Computed VRAM↔RAM trade table (inside an MpiPopup) ───────── */
-/* Tight width so the numbers read large relative to the box (the popup is
-   width:max-content; capping it keeps the small figures legible). */
-.mpi-trade-table {
-    max-width: 200px;
+.mpi-detail__disk-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     font-size: var(--t-sm);
     color: var(--ink-2);
 }
+.mpi-detail__disk-val { font-variant-numeric: tabular-nums; }
 
-.mpi-trade-table__title {
-    font-size: var(--t-md);
-    font-weight: 600;
-    color: var(--ink-1);
-    margin-bottom: var(--s-2);
-}
-
-.mpi-trade-table__grid {
+/* VRAM → RAM table (inline, video/tiered models) */
+.mpi-detail__vram {
     width: 100%;
     border-collapse: collapse;
-}
-
-.mpi-trade-table__head {
-    text-align: left;
-    font-size: var(--t-xs);
-    font-weight: 600;
-    color: var(--ink-3);
-    padding: 2px var(--s-2) 4px 0;
-    border-bottom: 1px solid var(--line);
-}
-
-.mpi-trade-table__cell {
-    padding: 4px var(--s-2) 4px 0;
-    color: var(--ink-2);
-    white-space: nowrap;
-}
-
-.mpi-trade-table__row--user .mpi-trade-table__cell {
-    color: var(--accent-frost);
-    font-weight: 600;
-}
-
-.mpi-trade-table__floor {
     font-size: var(--t-2xs);
+}
+.mpi-detail__vram th {
+    text-align: left;
+    color: var(--ink-4);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    font-weight: 400;
+}
+.mpi-detail__vram td {
+    padding: 6px 8px;
+    color: var(--ink-2);
+    border-bottom: 1px solid color-mix(in oklch, var(--line) 50%, transparent);
+    font-variant-numeric: tabular-nums;
+}
+.mpi-detail__vram tr.is-user td { color: var(--accent-frost); }
+.mpi-detail__vram-floor {
     color: var(--ink-4);
     text-transform: uppercase;
+    font-size: 9px;
 }
-
-.mpi-trade-table__note {
-    margin: var(--s-2) 0 0;
-    font-size: var(--t-xs);
-    color: var(--ink-3);
-    line-height: 1.45;
-}
-
-.mpi-trade-table__note--floor {
+.mpi-detail__vram-note {
+    font-size: var(--t-2xs);
     color: var(--ink-4);
+    line-height: 1.45;
+    margin: var(--s-2) 0 0;
 }
 
-/* ── Empty state ─────────────────────────────────────────────── */
-.mpi-model-manager__empty {
+/* Footer actions — host for Install / Update / Uninstall MpiButtons */
+.mpi-detail__actions {
+    flex: none;
+    padding: var(--s-4) var(--s-5);
+    border-top: 1px solid var(--line);
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
-    color: var(--ink-3);
-    font-size: var(--t-md);
-    text-align: center;
+    gap: var(--s-2);
 }
+.mpi-detail__actions:empty { display: none; }
+/* Let the primary action button stretch */
+.mpi-detail__actions > * { flex: 1; }
+.mpi-detail__actions > *:only-child { flex: 1; }

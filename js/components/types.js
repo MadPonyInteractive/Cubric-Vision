@@ -610,15 +610,22 @@
 /**
  * @typedef {Object} MpiModelManagerProps (Compound — js/components/Compounds/LandingPages/MpiModelManager)
  *
- * Takes no props. Model-manager content for the MpiSlideOver panel — renders
- * installed + available models as MpiInstalledDisplay cards and owns refresh,
- * install, pause/resume/cancel, uninstall confirmation, and download:* subs.
+ * Takes no props. The Model Library (MPI-215): self-hosts a full-page
+ * MpiOverlay(body) styled as a dark contact sheet — lean preview tiles split
+ * into Installed/Available × Image/Video sub-grids, with Media/Size/search
+ * filters and a right-drawer detail panel (an absolute child of the overlay)
+ * carrying description, Operations toggles, GPU-weight arch toggles, VRAM→RAM
+ * trade table, disk footprint, and Install/Update/Uninstall. Owns all model
+ * logic: refresh, install, pause/resume/cancel, uninstall confirmation, and
+ * download:* subs.
  *
- * Opened via: Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager }).
+ * Opened via: Events.emit('models:open') → shell mounts it once and calls el.open().
  *
  * Instance methods (on instance.el):
- *   onOpen()  — called by MpiSlideOver each time the panel opens; re-syncs installed state.
- *   destroy() — tears down all subscriptions, card instances, and the uninstall dialog.
+ *   open()    — shows the overlay + re-syncs installed state (alias: onOpen).
+ *   close()   — hides the overlay.
+ *   destroy() — tears down subscriptions, tiles, detail toggles, the uninstall
+ *               dialog, and the hosted overlay.
  */
 
 /**

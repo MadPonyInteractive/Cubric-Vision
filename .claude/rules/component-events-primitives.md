@@ -224,22 +224,27 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
 LISTENS: (none — reads `state.currentProject`, `state.upscaleModels`, `state.availableLoras`)
          `ui:error` emitted on save failure via `Events.emit`
 
-### MpiModelManager (Compound — js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js)
-EMITS:   (none — does NOT emit `models:closed`; slide-over host emits its own close signal)
-LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders card list when install state changes
-         `download:progress` `{ modelId, progress, speed, downloadedBytes, totalBytes }` — patches single card in place
-         `download:started` `{ modelId }` — sets card to 'downloading' state
-         `download:paused` `{ modelId }` — sets card to 'paused' state
-         `download:resumed` `{ modelId }` — sets card to 'downloading' state
-         `download:installing` `{ modelId }` — sets card to 'installing' state
-         `download:cancelled` `{ modelId }` — sets card to 'cancelled' state
-         `download:complete` `{ modelId }` — calls awaitReSync() to fetch new install state
-         `download:failed` `{ modelId }` — calls `awaitReSync()` to re-render list (no `ui:error` emitted)
-API:     `el.onOpen()` — called by MpiSlideOver on every open; re-syncs installed state
-         `el.destroy()` — cleans up all subscriptions
-PATTERN: Cards stored in Map by modelId for in-place updates; state polling replaced with event-driven updates
-         Opened via `models:open` → shell re-emits `slide-over:open { title: 'Models', component: MpiModelManager }`
-         Also accessible from the project-page `Models` nav action (first in list before Settings · Hotkeys · About)
+### MpiModelManager — the Model Library overlay (Compound — js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js)
+EMITS:   (none — the hosted MpiOverlay owns its own `close` + `ui:close-all-popups` handling)
+LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders the tile grid when install state changes
+         `remote:connection` `{ connected, phase, vramGb }` — engine switch → re-render + re-sync (drives VRAM table + Pause visibility)
+         `download:progress` `{ modelId }` — patches that tile's inline state row in place (+ rebuilds the open detail if it's that model)
+         `download:started` `{}` — full grid re-render (started tile shows progress bar; detail footer → Pause/Cancel)
+         `download:paused` / `download:resumed` / `download:installing` `{ modelId }` — patch that tile in place
+         `download:cancelled` / `download:complete` `{}` — `awaitReSync()` (re-render; install state moved sections)
+         `download:uninstalled` `{ modelId, ... }` — emits a `ui:success`/`ui:info` toast summarizing kept/removed
+         `download:failed` `{}` — `awaitReSync()`
+         `ui:close-all-popups` — closes the detail drawer
+API:     `el.open()` — shows the hosted overlay + re-syncs installed state + one-shot hardware fetch (alias: `el.onOpen`)
+         `el.close()` — hides the overlay
+         `el.destroy()` — tears down subscriptions, tiles, detail toggles, the uninstall dialog, and the hosted overlay
+PATTERN: MPI-215 — self-hosts `MpiOverlay(mountTarget:'body')` styled as a dark contact sheet. Lean tiles
+         (Map by modelId, patched in place) split into Installed/Available × Image(4:5)/Video(16:9) sub-grids;
+         Media/Size/search filters compose. Clicking a tile opens a right-drawer detail panel (absolute child of
+         the overlay — stacks above it, reuses MpiSlideOver's CSS chrome, NOT its singleton) carrying description,
+         op toggles (MPI-122), arch toggles (MPI-200/209), inline VRAM→RAM table (MPI-168), disk, and
+         Install/Update/Uninstall. Detail video autoplays; click → native `requestFullscreen()` (Escape exits FS only).
+         Opened via `models:open` (shell mounts once + `el.open()`); also the project-page `Models` nav action + dev gallery.
 
 ### MpiNewProject
 EMITS:   `create` `{ name: string, location: string|null }`

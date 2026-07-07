@@ -339,10 +339,15 @@ async function _bootApp() {
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('ui:error',       ({ title, message }) => showError(title, message));
 
-  // Model manager opens in the right slide-over (user-initiated or zero-install gate).
+  // Model Library opens as a full-page overlay (MPI-215). MpiModelManager
+  // self-hosts its own MpiOverlay(body); we mount it once (lazy singleton) and
+  // call el.open() each time. The slide-over stays reserved for settings/hotkeys/
+  // queue. eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  let _modelLibrary = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('models:open', () => {
-    Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager });
+    if (!_modelLibrary) _modelLibrary = MpiModelManager.mount(document.createElement('div'));
+    _modelLibrary.el.open();
   });
 
   // ComfyUI Auto-start (optional). Local boot only here — when auto-connecting to a

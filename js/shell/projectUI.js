@@ -23,7 +23,6 @@ import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOv
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
 import { MpiHotkeys } from '../components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
-import { MpiModelManager } from '../components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
 
 // DOM refs
@@ -74,7 +73,7 @@ export function initProjectUI() {
   const navSlot = gid('landingActions');
   if (navSlot) {
     const defs = [
-      { label: 'Models',   handler: () => Events.emit('slide-over:open', { title: 'Models',   component: MpiModelManager }) },
+      { label: 'Models',   handler: () => Events.emit('models:open') },
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
       { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },

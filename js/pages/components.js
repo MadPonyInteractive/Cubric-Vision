@@ -40,7 +40,6 @@ import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMe
 import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
-import { MpiModelManager } from '../components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiEngineInstall } from '../components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiErrorDialog } from '../components/Compounds/MpiErrorDialog/MpiErrorDialog.js';
@@ -905,7 +904,7 @@ function mountAll() {
         });
     });
 
-    // ── MpiModelManager (Compound — slide-over content) ────────────────────
+    // ── MpiModelManager (Compound — the Model Library overlay, MPI-215) ─────
     mount('preview-models-modal-default', () => {
         const slotEl = slot('preview-models-modal-default');
 
@@ -915,10 +914,10 @@ function mountAll() {
             icon: 'download',
             label: 'Open Models',
             variant: 'primary',
-            info: 'Opens the Models slide-over hosting MpiModelManager'
+            info: 'Opens the full-page Model Library overlay (MpiModelManager)'
         });
 
-        btn.on('click', () => Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager }));
+        btn.on('click', () => Events.emit('models:open'));
     });
 
     // ── MpiErrorDialog (Compound) ────────────────────────────────────────────────

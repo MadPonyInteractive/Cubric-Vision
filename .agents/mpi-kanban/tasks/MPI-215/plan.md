@@ -33,15 +33,60 @@ mockup — build to match it.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] Build the Model Library overlay end to end (routing, library shell +
+  restyle, split-block grid, lean tiles, right-drawer detail panel). Verified in
+  the running app via a fresh browser page against :3000: overlay opens full-page
+  (not slide-over), split Image/Video sub-grids with correct 4:5 / 16:9 ratios,
+  Media/Size/search filters compose, video tiles preview, a tile shows a live
+  partial-progress bar, clicking a tile opens the right-drawer detail with
+  per-model controls (LTX arch toggles + VRAM table present; image models omit
+  them), detail closes cleanly, zero console errors. **Awaiting user UX sign-off.**
 
 ## Remaining Work
 
-- Build the Model Library overlay end to end (single coherent flow above).
+- User UX verification of the running overlay (verify mode: user-ux), then
+  close-out (docs/rules offers + UNRELEASED changelog per Preservation Notes).
 
 ## Plan Drift
 
-- None yet.
+- 2026-07-07: **Routing implemented as self-hosting, not shell-owned.** Plan step 1
+  said shell.js opens `MpiModelManager` inside a `MpiOverlay`. Instead
+  `MpiModelManager` now SELF-HOSTS its own `MpiOverlay(mountTarget:'body')` +
+  detail drawer (mirrors the existing `MpiModelSettings` / `MpiCompareOverlay`
+  pattern). shell.js `models:open` just mounts the manager once (lazy singleton)
+  and calls `el.open()`. Same end behavior (overlay not slide-over); keeps all
+  model + overlay lifecycle in one component. Also updated the two other callers
+  that opened models via `slide-over:open` — `js/shell/projectUI.js` (landing
+  "Models" link) and `js/pages/components.js` (dev gallery) — to emit
+  `models:open`, and dropped their now-unused `MpiModelManager` imports.
+- 2026-07-07: **Detail-panel controls** — the old `MpiInstalledDisplay` card was
+  fully replaced by lean tiles + the drawer; `MpiInstalledDisplay` / `MpiPopup`
+  imports removed from the manager. The op/arch/VRAM/install LOGIC is preserved
+  verbatim; only the render layer changed. The VRAM trade table moved from a
+  hover popup to an inline block in the drawer.
+- 2026-07-07: **z-index fix** — the overlay's own X (top-right) overlapped the
+  detail drawer's X. Scoped the overlay X to `z-index:35` (above grid/scrim z-30,
+  below drawer z-40) via a `:has(.mpi-model-library)` override so the drawer's own
+  X owns the corner when open. MpiOverlay.css (shared) left untouched.
+- 2026-07-07: **Full-bleed override** — `MpiOverlay` pads its root + caps
+  `.mpi-overlay__container` at 600px (built for centered settings cards). Added a
+  scoped `:has(.mpi-model-library)` override in MpiModelManager.css to strip the
+  padding/cap so the Library fills the viewport. Shared primitive untouched.
+- 2026-07-07 (post-UX round 1, user feedback): four refinements —
+  (a) **Name clamp**: tile name is 2-line `-webkit-line-clamp` + `min-height` so a
+  long name ("NVIDIA PiD Upscaler", future "… V2") never grows the tile / breaks
+  row alignment. (b) **Drawer preview true-aspect**: image + video previews size to
+  the asset's REAL dimensions (no square-crop / no letterbox) — media is
+  `object-fit:contain`, JS sets `thumb.style.aspectRatio` from natural dims on load,
+  `max-height:46vh` caps tall portraits, `flex:none` so aspect-ratio drives height in
+  the flex-column body. Tiles keep uniform cover-crop (user chose uniform over
+  ragged). (c) **Drawer video autoplays** (muted/loop) so quality is judgeable
+  without hovering. (d) **Drawer video click → native `requestFullscreen()`**
+  (unmute + native controls in FS; Escape exits FS only, leaves the drawer open;
+  `document` `fullscreenchange` restores muted/no-controls). Grid-tile videos stay
+  HOVER-play (NOT autoplay) — user flagged that autoplaying many previews will not
+  scale to hundreds of models (the gallery already lags on hover-play). All verified
+  live in the browser (fullscreen enter/exit state asserted, 0 console errors).
 
 ## Verification
 

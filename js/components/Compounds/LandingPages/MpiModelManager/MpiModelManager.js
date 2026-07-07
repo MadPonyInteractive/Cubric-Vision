@@ -1,5 +1,5 @@
 import { ComponentFactory } from '../../../factory.js';
-import { MpiInstalledDisplay } from '../../MpiInstalledDisplay/MpiInstalledDisplay.js';
+import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { Events } from '../../../../events.js';
@@ -14,55 +14,95 @@ import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
+import { renderIcon } from '/js/utils/icons.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
-import { MpiPopup } from '../../../Primitives/MpiPopup/MpiPopup.js';
 import { tradeTable } from '../../../../data/modelConstants/footprint.js';
 
 /**
- * MpiModelManager — Model-manager content for the MpiSlideOver panel.
+ * MpiModelManager — the Model Library (MPI-215).
  *
- * Renders installed + available models as MpiInstalledDisplay cards and owns all
- * model-list logic: refresh, install, pause/resume/cancel, uninstall, partial-
- * progress, and download:* event subscriptions.
+ * Self-hosts a full-page MpiOverlay (body mode) styled as a dark contact-sheet:
+ * a grid of LEAN tiles (preview thumb + name + inline install state), split into
+ * Installed / Available sections, each with an Image sub-grid (4:5) then a Video
+ * sub-grid (16:9) so rows align. Media (Image/Video) + Size (L/B/H) + live search
+ * filters compose. Clicking a tile opens a right-drawer DETAIL panel (an absolute
+ * child of the overlay, so it stacks above it) carrying the full per-model
+ * controls: description, Operations toggles, GPU-weight arch toggles, VRAM→RAM
+ * trade table, disk footprint, and Install / Update / Uninstall.
  *
- * MPI-122 — operation-selectable models (e.g. Wan 2.2) render a toggle row above
- * the card. The user picks which operations to install; the button reads
- * Install / Update / Uninstall depending on installed vs drafted state:
- *   - 0 ops installed                → Install (installs the drafted ops)
- *   - ≥1 installed, draft == installed → Uninstall (whole model)
- *   - ≥1 installed, draft != installed → Update (install added ops + uninstall
- *     removed ops; a confirm dialog gates any removal)
- * The draft persists across sessions in state.s_modelOpDraftByModel. A "base"
- * toggle (commonDeps) is shown only when the model has bundled ops that run on
- * commonDeps alone (image models with upscale/detail); turning it off cascades
- * every op off. Video models (no bundled ops) show only their op toggles.
+ * This component still owns ALL model-list logic — refresh, install,
+ * pause/resume/cancel, uninstall, op toggles (MPI-122), arch toggles
+ * (MPI-200/209), engine-split correctness (MPI-163), size-tier trade table
+ * (MPI-168), partial-progress, and download:* subscriptions. MPI-215 rewrote only
+ * the RENDER layer (lean tiles + detail drawer replacing the old
+ * MpiInstalledDisplay cards); the logic below is preserved.
  *
- * Flat models with no separable operations (all image models today) keep the
- * original Install/Uninstall card behaviour with no toggle row.
- *
- * No overlay chrome — drops into the MpiSlideOver body. MpiSlideOver calls
- * el.onOpen() each time the panel opens so installed state is re-synced.
+ * Lifecycle: el.open() shows the overlay + re-syncs installed state; the overlay
+ * X / Escape / ui:close-all-popups hides it. el.destroy() tears everything down.
  */
 export const MpiModelManager = ComponentFactory.create({
     name: 'MpiModelManager',
     css: ['js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css'],
 
     template: () => `
-        <div class="mpi-model-manager">
-            <div class="mpi-model-manager__toolbar">
-                <p class="mpi-model-manager__text">Select a model pack to install. Required files will be fetched automatically.</p>
-                <div class="mpi-model-manager__refresh-btn" id="refresh-btn-slot"></div>
+        <div class="mpi-model-library">
+            <div class="mpi-model-library__head">
+                <h1 class="mpi-model-library__title">Model Library</h1>
+                <p class="mpi-model-library__sub" id="lib-sub"></p>
+                <div class="mpi-model-library__filters">
+                    <div class="mpi-model-library__filter-group">
+                        <span class="mpi-model-library__filter-label">Media</span>
+                        <div id="media-filter-slot" style="display:flex;gap:var(--s-3);"></div>
+                    </div>
+                    <span class="mpi-model-library__filter-sep"></span>
+                    <div class="mpi-model-library__filter-group">
+                        <span class="mpi-model-library__filter-label">Size</span>
+                        <div id="size-filter-slot" style="display:flex;gap:var(--s-3);"></div>
+                    </div>
+                    <label class="mpi-model-library__search">
+                        ${renderIcon('search', 'sm')}
+                        <input type="text" id="lib-search" placeholder="Search models…" autocomplete="off">
+                    </label>
+                    <div class="mpi-model-library__refresh" id="refresh-btn-slot"></div>
+                </div>
             </div>
-            <div class="mpi-model-manager__filter" id="filter-slot"></div>
-            <div class="mpi-model-manager__separator"></div>
-            <div class="mpi-model-manager__slot" id="body-slot"></div>
+            <div class="mpi-model-library__body" id="body-slot"></div>
+
+            <div class="mpi-model-library__scrim" id="detail-scrim"></div>
+            <aside class="mpi-detail" id="detail-panel">
+                <div class="mpi-detail__head">
+                    <h2 class="mpi-detail__head-title">Model</h2>
+                    <button class="mpi-detail__close" id="detail-close" type="button" aria-label="Close">${renderIcon('close', 'md')}</button>
+                </div>
+                <div class="mpi-detail__body" id="detail-body"></div>
+                <div class="mpi-detail__actions" id="detail-actions"></div>
+            </aside>
         </div>`,
 
     setup: (el) => {
         const bodySlot = qs('#body-slot', el);
-        const refreshSlot = qs('.mpi-model-manager__refresh-btn', el);
+        const refreshSlot = qs('#refresh-btn-slot', el);
+        const subEl = qs('#lib-sub', el);
+        const searchInput = qs('#lib-search', el);
 
         const _unsubs = [];
+
+        // ── Self-hosted overlay (body mode covers status bar too) ─────────────
+        // MpiModelManager is now the Library surface; it mounts itself inside an
+        // MpiOverlay(body). shell.js just mounts this component + calls el.open().
+        const overlay = MpiOverlay.mount(document.createElement('div'), {
+            closable: true, mountTarget: 'body',
+        });
+        overlay.el.appendToContainer(el);
+        // Overlay X / Escape / ui:close-all-popups → the whole Library goes away.
+        // Close the detail drawer too so a reopen starts clean.
+        overlay.on('close', () => { _closeDetail(); });
+
+        // ── Media filter (Image / Video) — reads model.mediaType directly ─────
+        const _mediaActive = new Set();   // 'image' | 'video'; empty = all
+
+        // ── Live search query (name / dropdownMeta) ───────────────────────────
+        let _searchQuery = '';
 
         // Tracks whether the app is connected to a cloud (RunPod) engine. Remote
         // downloads have no pause/resume API, so cards hide the Pause button when
@@ -81,7 +121,6 @@ export const MpiModelManager = ComponentFactory.create({
         const TIER_WORD = { low: 'Low', balanced: 'Balanced', high: 'High' };
         const TIER_ORDER = ['low', 'balanced', 'high'];
         const _filterActive = new Set();      // subset of TIER_ORDER; empty = all
-        const _tierFilterBtns = new Map();    // Map<tier, MpiButton inst>
         let _userVramGb = null;               // local box VRAM (GB); from /system/stats
         let _remoteVramGb = null;             // connected Pod VRAM (GB); from remote:connection
         let _remotePhase = null;              // 'connecting' etc. while not yet live; null = live
@@ -92,22 +131,20 @@ export const MpiModelManager = ComponentFactory.create({
             if (_isRemote) return _remotePhase ? null : _remoteVramGb; // live Pod only
             return _userVramGb;
         };
-        // Tier badge + hover popup instances per model, torn down on re-render.
-        //   Map<modelId, { badgeEl, popup, unsub }>
-        const _tierBadges = new Map();
-
-        // Per-modelId card instance tracking so download:progress events can update a
-        // single card in-place instead of re-rendering the whole list.
-        //   Map<modelId, { wrapper, display }>
-        const _cardInstances = new Map();
-        //   Map<modelId, { pause, resume, cancel }>
-        const _cardHandlers = new Map();
-        // Op-toggle MpiButton instances per model, torn down on re-render/destroy.
-        //   Map<modelId, Array<{ key, inst }>>  (key 'base' for the base toggle)
-        const _opToggles = new Map();
-        // MPI-209: arch-toggle MpiButton instances per model (GPU-arch weight
-        // picker), torn down with the cards.  Map<modelId, Array<{ token, inst }>>
-        const _archToggles = new Map();
+        // Per-modelId TILE tracking so download:progress events can patch a single
+        // tile's inline state row in-place instead of re-rendering the whole grid.
+        //   Map<modelId, { tile, stateEl }>
+        const _tileInstances = new Map();
+        // Op-toggle MpiButton instances (in the OPEN detail panel only), torn down
+        // when the panel closes/reopens.  Array<{ key, inst }>  (key 'base' = base)
+        let _detailOpToggles = [];
+        // MPI-209: arch-toggle MpiButton instances (open detail panel only).
+        //   Array<{ token, inst }>
+        let _detailArchToggles = [];
+        // Action MpiButton instances in the open detail panel footer.
+        let _detailActionBtns = [];
+        // The model whose detail panel is currently open (null = closed).
+        let _activeDetail = null;
 
         // ── Base-toggle pseudo-key ───────────────────────────────────────────
         const BASE = 'base';
@@ -119,94 +156,76 @@ export const MpiModelManager = ComponentFactory.create({
         });
         _unsubs.push(on(refreshBtn.el, 'click', () => { awaitReSync(); }));
 
-        // ── Size-tier filter bar (MPI-168) ───────────────────────────────────
-        // 3 multi-select toggles (Low/Balanced/High). No ALL button — all-off
-        // shows everything. Toggling rebuilds the list (force — the filter change
-        // IS the sig change). The matching-hardware toggle is highlighted via a
-        // CSS modifier in renderList(), so build is pure here.
-        const filterSlot = qs('.mpi-model-manager__filter', el);
-        TIER_ORDER.forEach(tier => {
-            // Plain TEXT button (no icon — L/B/H words speak for themselves). Note:
-            // MpiButton's built-in toggle fires ONLY in icon mode, so a text button
-            // gets no 'toggle' event and no active flip. We own the toggle here via
-            // setActive + a click handler (setActive works in both modes). (MPI-168)
-            const inst = MpiButton.mount(ce('div'), {
-                text: TIER_WORD[tier], variant: 'secondary', size: 'sm',
+        // ── Filter tags (Media + Size) ───────────────────────────────────────
+        // Lightweight text toggles with aria-selected + a heat dot (matches the
+        // mockup). Multi-select per group; empty group = show all. Media reads
+        // model.mediaType (MPI-215); Size is the MPI-168 tier filter. A tag click
+        // flips membership in its Set and force-rebuilds the grid (the filter change
+        // IS the sig change).
+        const _mkTag = (label, isActive, onToggle) => {
+            const btn = ce('button', {
+                className: 'mpi-model-library__tag',
+                type: 'button',
+                textContent: label,
             });
-            inst.el.classList.add('mpi-model-manager__filter-btn');
-            inst.on('click', () => {
-                const next = !_filterActive.has(tier);
-                if (next) _filterActive.add(tier); else _filterActive.delete(tier);
-                inst.el.setActive(next);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            _unsubs.push(on(btn, 'click', () => {
+                const next = btn.getAttribute('aria-selected') !== 'true';
+                btn.setAttribute('aria-selected', next ? 'true' : 'false');
+                onToggle(next);
                 renderList({ force: true });
-            });
-            _tierFilterBtns.set(tier, inst);
-            filterSlot.appendChild(inst.el);
+            }));
+            return btn;
+        };
+
+        const mediaFilterSlot = qs('#media-filter-slot', el);
+        [['image', 'Image'], ['video', 'Video']].forEach(([value, label]) => {
+            mediaFilterSlot.appendChild(_mkTag(label, false, on => {
+                if (on) _mediaActive.add(value); else _mediaActive.delete(value);
+            }));
         });
 
-        // ── Computed VRAM↔RAM hover table (MPI-168) ──────────────────────────
-        // Reuses MpiPopup (portals to body, won't clip in the slide-over). Rows
-        // come from footprint.js tradeTable() — the real curve, never hardcoded.
+        const sizeFilterSlot = qs('#size-filter-slot', el);
+        TIER_ORDER.forEach(tier => {
+            sizeFilterSlot.appendChild(_mkTag(TIER_WORD[tier], false, on => {
+                if (on) _filterActive.add(tier); else _filterActive.delete(tier);
+            }));
+        });
+
+        // Live search — filters on name / dropdownMeta, case-insensitive.
+        _unsubs.push(on(searchInput, 'input', () => {
+            _searchQuery = (searchInput.value || '').trim().toLowerCase();
+            renderList({ force: true });
+        }));
+
+        // ── Computed VRAM↔RAM trade table (MPI-168) — inline in the detail panel ──
+        // Rows come from footprint.js tradeTable() — the real curve, never hardcoded.
         // The row nearest the ACTIVE GPU (local box OR connected Pod) is flagged via
         // _activeVramGb(); engine + VRAM both follow the active engine so a Pod sees
-        // the GGUF curve highlighted against the Pod's VRAM.
+        // its own curve highlighted against the Pod's VRAM. Rendered inline in the
+        // detail drawer (there's room now — no hover popup). Video/tiered models only.
         function _tradeTableHtml(model) {
             const activeVram = _activeVramGb();
-            // Trade table is a footprint estimate for THIS machine's GPU → live arch.
             const { rows, totalWeights, vramFloor } = tradeTable(model, _engine(), activeVram, { arch: remoteEngineClient.archSync(_engine()) });
             const body = rows.map(r => `
-                <tr class="mpi-trade-table__row${r.isUserRow ? ' mpi-trade-table__row--user' : ''}">
-                    <td class="mpi-trade-table__cell">${r.vram}GB${r.isFloor ? ' <span class="mpi-trade-table__floor">min</span>' : ''}</td>
-                    <td class="mpi-trade-table__cell">${r.ram === 0 ? '—' : `~${r.ram}GB`}</td>
+                <tr class="${r.isUserRow ? 'is-user' : ''}">
+                    <td>${r.vram}GB${r.isFloor ? ' <span class="mpi-detail__vram-floor">min</span>' : ''}</td>
+                    <td>${r.ram === 0 ? '—' : `~${r.ram}GB`}</td>
                 </tr>`).join('');
             const gpuLabel = _isRemote ? 'Pod GPU' : 'Your GPU';
-            const userNote = (activeVram != null)
-                ? `<p class="mpi-trade-table__note">${gpuLabel}: ~${Math.round(activeVram)}GB VRAM.</p>` : '';
+            const gpuNote = (activeVram != null) ? `${gpuLabel} ~${Math.round(activeVram)}GB` : '';
             return `
-                <div class="mpi-trade-table">
-                    <div class="mpi-trade-table__title">${model.name} — memory need</div>
-                    <table class="mpi-trade-table__grid">
-                        <thead><tr><th class="mpi-trade-table__head">VRAM</th><th class="mpi-trade-table__head">+ System RAM</th></tr></thead>
+                <div class="mpi-detail__field">
+                    <span class="mpi-detail__field-label">Memory need${gpuNote ? ` · ${gpuNote}` : ''}</span>
+                    <table class="mpi-detail__vram">
+                        <thead><tr><th>VRAM</th><th>+ System RAM</th></tr></thead>
                         <tbody>${body}</tbody>
                     </table>
-                    ${userNote}
-                    <p class="mpi-trade-table__note mpi-trade-table__note--floor">
+                    <p class="mpi-detail__vram-note">
                         ${Math.round(totalWeights)}GB of weights · min ${Math.round(vramFloor)}GB VRAM.
                         Estimated model need; excludes OS usage (~10–20GB).
                     </p>
                 </div>`;
-        }
-
-        // Builds + appends the tier badge to a card wrapper, wires a hover MpiPopup.
-        function _buildTierBadge(model, cardWrap) {
-            const tier = model.sizeTier || 'balanced';
-            const badgeEl = ce('span', {
-                className: `mpi-model-manager__tier-badge mpi-model-manager__tier-badge--${tier}`,
-                textContent: TIER_WORD[tier] || tier,
-            });
-            cardWrap.appendChild(badgeEl);
-
-            // Popup mounted lazily on first hover so the table isn't computed for
-            // every card up-front; one instance per badge, reused while open.
-            let popup = null;
-            const open = () => {
-                if (!popup) {
-                    popup = MpiPopup.mount(ce('div'), {
-                        variant: 'glass', position: 'top', triggerEl: badgeEl,
-                    });
-                    qs('.mpi-popup__content', popup.el).innerHTML = _tradeTableHtml(model);
-                }
-                popup.el.classList.add('is-active');
-            };
-            const close = () => { popup?.el.classList.remove('is-active'); };
-            const unsubEnter = on(badgeEl, 'mouseenter', open);
-            const unsubLeave = on(badgeEl, 'mouseleave', close);
-            const unsub = () => {
-                unsubEnter(); unsubLeave();
-                popup?.el?.destroy?.();
-                popup?.el?.remove?.();
-            };
-            _tierBadges.set(model.id, { badgeEl, unsub });
         }
 
         // ── Confirm dialog (shared) — used for whole-model uninstall AND op removal ──
@@ -567,54 +586,166 @@ export const MpiModelManager = ComponentFactory.create({
             return { hasPartialProgress: false };
         }
 
-        // ── Toggle row ───────────────────────────────────────────────────────
-        // Renders the base toggle (iff bundled ops) + one toggle per selectable op.
-        // Toggling mutates the draft with cascade rules then re-renders the list so
-        // size/partial/button all reflect the new draft. `frozen` disables the row
-        // during an active download.
-        function _buildToggleRow(model, { frozen }) {
+        // ── Derived install/download state for a model (tile + detail share it) ──
+        // The exact state machine the old card used, extracted so both the lean tile
+        // and the detail panel read one source of truth. Nothing here mutates DOM.
+        function _modelState(model) {
+            const job = state.downloadJobs.find(j => j.modelId === model.id);
+            const downloadState = job ? job.status : 'idle';
+            // 'queued' (MPI-184 serial install queue) counts as active.
+            const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
+
+            // Sizes: drafted footprint (op-keyed) else the engine-scoped universe — a
+            // Pod must show the current-engine footprint, not bf16+GGUF (MPI-163).
+            const sizeDepIds = selectableOps(model).length
+                ? _draftDepIds(model)
+                : _unionArch(model, arch => resolveFullUniverse(model, null, _engine(), { arch }));
+            const sizeBytes = _sizeOf(sizeDepIds);
+
+            const installedOps = _installedOpsOf(model);
+            const hasOps = selectableOps(model).length > 0;
+            const draft = _draftFor(model);
+            const opDraftDiffers = hasOps && (
+                installedOps.length !== draft.length
+                || installedOps.some(op => !draft.includes(op))
+            );
+            // MPI-209: arch draft ≠ arch-on-disk also counts as "changed" (Update
+            // installs/uninstalls the toggled weight). Only once ≥1 arch is on disk.
+            const installedArch = _installedArchOf(model);
+            const archDraft = _archDraftFor(model);
+            const archDraftDiffers = _hasArch(model) && installedArch.length > 0 && (
+                installedArch.length !== archDraft.length
+                || installedArch.some(t => !archDraft.includes(t))
+            );
+            const draftDiffersFromInstalled = opDraftDiffers || archDraftDiffers;
+            // MPI-216: arch-weight-on-disk only counts as installed when common deps
+            // are ALSO present (see _buildCard history).
+            const anyInstalled = model.installed === true || installedOps.length > 0
+                || (installedArch.length > 0 && _commonDepsOnDisk(model));
+
+            // Partial progress (idle only).
+            let partial = { hasPartialProgress: false };
+            if (downloadState === 'idle') partial = _computePartial(model);
+
+            return {
+                job, downloadState, isActiveDownload, sizeBytes,
+                installedOps, installedArch, draftDiffersFromInstalled, anyInstalled, partial,
+            };
+        }
+
+        // ── Lean tile ─────────────────────────────────────────────────────────
+        // Preview thumb (image still / hover-play video) + name + category·tier +
+        // media badge + a FIXED-HEIGHT inline state row (chip OR live progress bar).
+        // A recently-installed heat dot rides absolute on the thumb. Click → detail.
+        function _tileState(st) {
+            if (st.isActiveDownload || (st.job && st.downloadState === 'downloading')) {
+                const pct = Math.round((st.job?.progress || 0) * 100);
+                return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
+            }
+            if (st.partial.hasPartialProgress) {
+                const pct = Math.round((st.partial.progress || 0) * 100);
+                return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
+            }
+            if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
+            return `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
+        }
+
+        function _mediaBadgeHtml(model) {
+            return model.mediaType === 'video'
+                ? `<span class="mpi-tile__badge mpi-tile__badge--video">${renderIcon('video', 'sm')}Video</span>`
+                : `<span class="mpi-tile__badge">${renderIcon('image', 'sm')}Image</span>`;
+        }
+
+        function _buildTile(model) {
+            const st = _modelState(model);
+            const isVideo = model.mediaType === 'video';
+            const tile = ce('button', {
+                className: `mpi-tile mpi-tile--${isVideo ? 'video' : 'image'}`,
+                type: 'button',
+            });
+
+            // Thumb — image still or hover-play muted video; placeholder gradient
+            // when no preview asset is declared.
+            const thumb = ce('div', { className: 'mpi-tile__thumb' });
+            if (isVideo && model.video) {
+                const vid = ce('video', {
+                    src: `comfy_workflows/display/${model.video}`,
+                    className: 'mpi-tile__thumb-media',
+                });
+                vid.muted = true; vid.loop = true; vid.playsInline = true; vid.preload = 'metadata';
+                _unsubs.push(on(vid, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); vid.remove(); }));
+                _unsubs.push(on(tile, 'mouseenter', () => { vid.play().catch(() => {}); }));
+                _unsubs.push(on(tile, 'mouseleave', () => { vid.pause(); try { vid.currentTime = 0; } catch (_) { /* noop */ } }));
+                thumb.appendChild(vid);
+            } else if (!isVideo && model.image) {
+                const img = ce('img', {
+                    src: `comfy_workflows/display/${model.image}`,
+                    className: 'mpi-tile__thumb-media',
+                    loading: 'lazy',
+                });
+                _unsubs.push(on(img, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); img.remove(); }));
+                thumb.appendChild(img);
+            } else {
+                thumb.classList.add('mpi-tile__thumb--placeholder');
+            }
+            // Recently-installed heat dot (MPI-215) — the model's `justInstalled`
+            // transient flag rides absolute on the thumb so it never shifts the tile.
+            if (model.justInstalled) thumb.appendChild(ce('div', { className: 'mpi-tile__new' }));
+            tile.appendChild(thumb);
+
+            const tier = model.sizeTier || 'balanced';
+            const stateEl = ce('div', { className: 'mpi-tile__state' });
+            stateEl.innerHTML = _tileState(st);
+            const body = ce('div', { className: 'mpi-tile__body' });
+            const top = ce('div', { className: 'mpi-tile__top' });
+            const nameCol = ce('div');
+            nameCol.appendChild(ce('div', { className: 'mpi-tile__name', textContent: model.name }));
+            nameCol.appendChild(ce('div', {
+                className: 'mpi-tile__meta',
+                textContent: `${model.dropdownMeta || ''}${model.dropdownMeta ? ' · ' : ''}${TIER_WORD[tier] || tier}`,
+            }));
+            top.appendChild(nameCol);
+            const badge = ce('div');
+            badge.innerHTML = _mediaBadgeHtml(model);
+            top.appendChild(badge.firstElementChild);
+            body.appendChild(top);
+            body.appendChild(stateEl);
+            tile.appendChild(body);
+
+            _unsubs.push(on(tile, 'click', () => openDetail(model)));
+            _tileInstances.set(model.id, { tile, stateEl });
+            return tile;
+        }
+
+        // ── Detail-panel toggle rows (ops + arch) ─────────────────────────────
+        // Same logic as the old in-card rows; they build into the passed host and
+        // register their instances in the detail toggle arrays so the panel can tear
+        // them down on close. Toggling mutates the draft + re-renders (which repaints
+        // the tile state) then re-renders the OPEN panel so size/actions stay live.
+        function _buildToggleRow(model, host, { frozen }) {
             const ops = selectableOps(model);
-            if (ops.length === 0) return null; // flat model → no toggles
+            if (ops.length === 0) return;
 
             const draft = new Set(_draftFor(model));
             const showBase = _hasBaseToggle(model);
-
-            // The row IS the toggle grid — no header label (the toggle text is
-            // self-explanatory and the user has no concept of "operations" yet).
-            // Flex-wrap so future models stack toggles (max ~3 per row via CSS).
-            const row = ce('div', { className: 'mpi-model-manager__ops-row' });
-            const btnRow = row;
-
-            const toggles = [];
-
-            // Commit the current draft set and re-render. force — the draft mutation
-            // IS the change; rebuild unconditionally so size/partial/button update.
-            const commit = () => { _setDraft(model, [...draft]); renderList({ force: true }); };
+            const commit = () => { _setDraft(model, [...draft]); _refreshAfterDraft(model); };
 
             if (showBase) {
                 const baseInst = MpiButton.mount(ce('div'), {
-                    // icon-button mode reads `label`, not `text`.
                     label: 'Base model', icon: 'layers', variant: 'secondary', size: 'sm',
                     toggleable: true, active: draft.size > 0, disabled: frozen,
                 });
                 baseInst.on('toggle', ({ active }) => {
-                    if (active) {
-                        // Base on alone = commonDeps only (bundled ops become usable).
-                        // No op auto-selected; user adds ops explicitly.
-                    } else {
-                        // Base off → cascade every op off (nothing can exist without common).
-                        draft.clear();
-                    }
+                    if (!active) draft.clear(); // base off → cascade every op off
                     commit();
                 });
-                toggles.push({ key: BASE, inst: baseInst });
-                btnRow.appendChild(baseInst.el);
+                _detailOpToggles.push({ key: BASE, inst: baseInst });
+                host.appendChild(baseInst.el);
             }
 
             ops.forEach(op => {
                 const cmd = getCommand(op) || {};
                 const inst = MpiButton.mount(ce('div'), {
-                    // icon-button mode reads `label`, not `text`.
                     label: cmd.label || op,
                     icon: cmd.icon || undefined,
                     variant: 'secondary', size: 'sm',
@@ -623,217 +754,203 @@ export const MpiModelManager = ComponentFactory.create({
                 inst.on('toggle', ({ active }) => {
                     if (active) {
                         draft.add(op);
-                        // Pull in required ops (e.g. extend needs i2v).
                         for (const req of expandRequiredOps(model, [op])) draft.add(req);
                     } else {
                         draft.delete(op);
-                        // Cascade off anything that required this op.
                         for (const dep of dependentsOfOp(model, op)) draft.delete(dep);
-                        // No-base models: blocking the last op is NOT required — the
-                        // user uninstalls everything via the Uninstall button. But a
-                        // zero-draft on a fresh (nothing installed) no-base model would
-                        // disable Install; allow it — button just disables.
                     }
                     commit();
                 });
-                toggles.push({ key: op, inst });
-                btnRow.appendChild(inst.el);
+                _detailOpToggles.push({ key: op, inst });
+                host.appendChild(inst.el);
             });
-
-            _opToggles.set(model.id, toggles);
-            return row;
         }
 
-        // ── Arch toggle row (MPI-209) ────────────────────────────────────────
-        // One toggle per declared GPU-arch weight (Blackwell / Ada+older). Labels
-        // come from the card (archVariantOptions), so this stays generic for future
-        // models/tiers. Toggling mutates the arch draft + re-renders so size/button
-        // reflect the new selection. Keeping both weights = both toggles on. Turning
-        // an installed arch OFF then hitting Update uninstalls just that weight — the
-        // toggle owns both install AND the MPI-207 "remove old weight" affordance.
-        function _buildArchRow(model, { frozen }) {
+        // MPI-209: one toggle per declared GPU-arch weight; labels from the card.
+        function _buildArchRow(model, host, { frozen }) {
             const opts = archVariantOptions(model);
-            if (opts.length === 0) return null;
+            if (opts.length === 0) return;
 
             const draft = new Set(_archDraftFor(model));
-            const row = ce('div', { className: 'mpi-model-manager__ops-row' });
-            const toggles = [];
-
             opts.forEach(({ token, label, size }) => {
                 const inst = MpiButton.mount(ce('div'), {
                     label: size ? `${label} · ${size}` : label,
-                    icon: 'gpu',
-                    variant: 'secondary', size: 'sm',
+                    icon: 'gpu', variant: 'secondary', size: 'sm',
                     toggleable: true, active: draft.has(token), disabled: frozen,
                 });
                 inst.on('toggle', ({ active }) => {
                     if (active) draft.add(token); else draft.delete(token);
                     _setArchDraft(model, [...draft]);
-                    renderList({ force: true });
+                    _refreshAfterDraft(model);
                 });
-                toggles.push({ token, inst });
-                row.appendChild(inst.el);
+                _detailArchToggles.push({ token, inst });
+                host.appendChild(inst.el);
             });
-
-            _archToggles.set(model.id, toggles);
-            return row;
         }
 
-        // ── Card builder (unified install/uninstall path) ────────────────────
-        function _buildCard(model) {
-            const cardWrap = ce('div', { className: 'mpi-model-manager__card' });
+        // A draft toggle changed: repaint the grid (tile state / sectioning) AND
+        // rebuild the open detail panel so Disk size + Install/Update label follow.
+        function _refreshAfterDraft(model) {
+            renderList({ force: true });
+            if (_activeDetail && _activeDetail.id === model.id) openDetail(model);
+        }
 
-            const job = state.downloadJobs.find(j => j.modelId === model.id);
-            const downloadState = job ? job.status : 'idle';
-            // 'queued' (MPI-184 serial install queue) counts as active: the card shows
-            // the QUEUED badge + Cancel and freezes op toggles, same as a live download.
-            const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
+        // ── Detail drawer ─────────────────────────────────────────────────────
+        const scrim = qs('#detail-scrim', el);
+        const detailPanel = qs('#detail-panel', el);
+        const detailBody = qs('#detail-body', el);
+        const detailActions = qs('#detail-actions', el);
 
-            // Sizes: drafted footprint (what install fetches) for op-keyed models,
-            // else the engine-scoped universe — a Pod must show the GGUF footprint,
-            // not bf16+GGUF (the 85.8GB-vs-real bug). (MPI-163)
-            const sizeDepIds = selectableOps(model).length
-                ? _draftDepIds(model)
-                : _unionArch(model, arch => resolveFullUniverse(model, null, _engine(), { arch }));
-            const sizeBytes = _sizeOf(sizeDepIds);
-            const sizeText = sizeBytes > 0 ? `Disk: ${formatBytes(sizeBytes)}` : '';
-            // Disk size moved from the header meta (which now collides with the tier
-            // badge top-right) into the info row. The old per-dep VRAM number is
-            // dropped — the tier badge + computed hover table own memory info now. (MPI-168)
+        function _destroyDetailToggles() {
+            _detailOpToggles.forEach(({ inst }) => inst?.el?.destroy?.());
+            _detailOpToggles = [];
+            _detailArchToggles.forEach(({ inst }) => inst?.el?.destroy?.());
+            _detailArchToggles = [];
+            _detailActionBtns.forEach(inst => inst?.el?.destroy?.());
+            _detailActionBtns = [];
+        }
 
-            // Install state machine.
-            const installedOps = _installedOpsOf(model);
-            const hasOps = selectableOps(model).length > 0;
-            const draft = _draftFor(model);
-            const opDraftDiffers = hasOps && (
-                installedOps.length !== draft.length
-                || installedOps.some(op => !draft.includes(op))
-            );
-            // MPI-209: an arch model is also "changed" when the arch draft ≠ the arch
-            // weights on disk (toggled a new arch on → Update installs it; toggled an
-            // installed arch off → Update uninstalls just that weight). Only counts
-            // once ≥1 arch is on disk — a fresh (nothing installed) model just Installs.
-            const installedArch = _installedArchOf(model);
-            const archDraft = _archDraftFor(model);
-            const archDraftDiffers = _hasArch(model) && installedArch.length > 0 && (
-                installedArch.length !== archDraft.length
-                || installedArch.some(t => !archDraft.includes(t))
-            );
-            const draftDiffersFromInstalled = opDraftDiffers || archDraftDiffers;
-            // MPI-216: an arch weight on disk only counts as "installed" when the
-            // model's common deps (Gemma/VAE/LoRAs) are ALSO present — otherwise a tier
-            // whose shared deps were deleted (by uninstalling the sibling tier) would
-            // still read INSTALLED and hide the loss. installedOps already encodes this
-            // on a known-arch machine; the arch clause needs the explicit common gate
-            // for the CPU-pod null-arch path (MPI-209) where installedOps reads empty.
-            const anyInstalled = model.installed === true || installedOps.length > 0
-                || (installedArch.length > 0 && _commonDepsOnDisk(model));
+        function openDetail(model) {
+            _destroyDetailToggles();
+            _activeDetail = model;
+            const st = _modelState(model);
+            const isVideo = model.mediaType === 'video';
+            const tier = model.sizeTier || 'balanced';
 
-            // Partial progress (idle only).
-            let partial = { hasPartialProgress: false };
-            if (downloadState === 'idle') partial = _computePartial(model);
+            // Static markup (thumb, title, description) via innerHTML; toggle rows +
+            // VRAM table + action buttons are mounted as real components below.
+            detailBody.innerHTML = `
+                <div class="mpi-detail__thumb mpi-detail__thumb--${isVideo ? 'video' : 'image'} mpi-detail__thumb--placeholder" id="detail-thumb"></div>
+                <div class="mpi-detail__titlerow">
+                    <div>
+                        <div class="mpi-detail__name">${model.name}</div>
+                        <div class="mpi-detail__cat">${model.dropdownMeta || ''}${model.dropdownMeta ? ' · ' : ''}${TIER_WORD[tier] || tier} tier</div>
+                    </div>
+                    <span class="mpi-detail__pill mpi-detail__pill--${isVideo ? 'video' : 'image'}">${isVideo ? 'Video' : 'Image'}</span>
+                </div>
+                ${model.description ? `<p class="mpi-detail__desc">${model.description}</p>` : ''}
+                <div class="mpi-detail__field" id="detail-ops" style="display:none;">
+                    <span class="mpi-detail__field-label">Operations</span>
+                    <div class="mpi-detail__toggle-row" id="detail-ops-row"></div>
+                </div>
+                <div class="mpi-detail__field" id="detail-arch" style="display:none;">
+                    <span class="mpi-detail__field-label">GPU weight</span>
+                    <div class="mpi-detail__toggle-row" id="detail-arch-row"></div>
+                </div>
+                <div id="detail-vram"></div>
+                <div class="mpi-detail__field">
+                    <div class="mpi-detail__disk-row">
+                        <span class="mpi-detail__field-label" style="margin:0">Disk</span>
+                        <span class="mpi-detail__disk-val">${st.sizeBytes > 0 ? formatBytes(st.sizeBytes) : '—'}</span>
+                    </div>
+                </div>`;
 
-            const progress = job ? job.progress : (partial.progress || 0);
-            const speed = job ? job.speed : '';
-            const downloadedBytes = job ? job.downloadedBytes : (partial.downloadedBytes || 0);
-            const totalBytes = job ? job.totalBytes : (partial.totalBytes || 0);
-            // IMPORTANT: never coerce the card to the 'partial' DOWNLOAD state — that
-            // makes MpiInstalledDisplay render Resume/Cancel buttons, but a partial
-            // op-selectable model has no paused job to resume/cancel (the dead-button
-            // bug). The partial PROGRESS BAR is driven separately by hasPartialProgress;
-            // the action button stays Install/Update/Uninstall. (MPI-122)
-            const displayState = downloadState;
-            const showPartialBar = partial.hasPartialProgress && !isActiveDownload;
-
-            // Button label: Install (nothing installed) / Update (changes) / Uninstall.
-            // MPI-209: the arch toggle row (below) now owns arch selection, so there's
-            // no "Install for your GPU" special label — the user's toggle choice IS the
-            // arch to install, and the generate-time guard is the net if the live GPU's
-            // weight is missing at gen time. (Supersedes MPI-207's install-label branch.)
-            const showInstalled = anyInstalled;
-            const uninstallLabel = draftDiffersFromInstalled ? 'Update' : 'Uninstall';
-            const installLabel = 'Install';
-
-            const card = MpiInstalledDisplay.mount(cardWrap, {
-                title: model.name,
-                meta: '', // disk size moved to the info row (header meta would collide with the tier badge)
-                text: model.description || '',
-                image: model.image || '',
-                video: model.video || '',
-                mediaRatio: model.mediaRatio || '',
-                icon: showInstalled ? 'info' : 'warning',
-                iconText: sizeText,
-                installed: showInstalled,
-                canUninstall: showInstalled,
-                uninstallLabel,
-                deleteLabel: installLabel,
-                downloadState: displayState,
-                progress,
-                hasPartialProgress: showPartialBar,
-                speed,
-                downloadedBytes,
-                totalBytes,
-                indeterminate: job ? !!job.indeterminate : false,
-                phase: job ? (job.phase || 'preparing') : 'preparing',
-                isRemote: _isRemote,
-            });
-
-            // Size-tier badge (MPI-168) — sibling of the card in the wrapper, NOT
-            // an extension of the info-row span. Hover → computed trade table.
-            _buildTierBadge(model, cardWrap);
-
-            // Toggle rows live INSIDE the card, between the badge and the action
-            // button (card.el.opsSlot is a static slot the card never rebuilds).
-            // Op-keyed models get the op row; arch-variant models get the arch row
-            // (MPI-209). A model may have both. Frozen during an active download.
-            const toggleRow = _buildToggleRow(model, { frozen: isActiveDownload });
-            if (toggleRow && card.el.opsSlot) {
-                card.el.opsSlot.appendChild(toggleRow);
-                card.el.opsSlot.style.display = '';
-            }
-            const archRow = _buildArchRow(model, { frozen: isActiveDownload });
-            if (archRow && card.el.opsSlot) {
-                card.el.opsSlot.appendChild(archRow);
-                card.el.opsSlot.style.display = '';
+            // Real preview in the drawer thumb. Unlike the lean tiles (uniform
+            // cover-crop, hover-play), the drawer is the "judge this model" view:
+            // the video AUTOPLAYS (muted/loop) so the user sees real motion + quality
+            // without hovering, and both image + video size to their TRUE aspect (no
+            // crop) — the box adopts the asset's real dimensions once it loads.
+            const thumb = qs('#detail-thumb', detailBody);
+            if (isVideo && model.video) {
+                const vid = ce('video', { src: `comfy_workflows/display/${model.video}`, className: 'mpi-detail__thumb-media' });
+                vid.muted = true; vid.loop = true; vid.playsInline = true; vid.autoplay = true; vid.preload = 'auto';
+                _unsubs.push(on(vid, 'error', () => { vid.remove(); thumb.classList.add('mpi-detail__thumb--placeholder'); }));
+                _unsubs.push(on(vid, 'loadedmetadata', () => {
+                    if (vid.videoWidth && vid.videoHeight) thumb.style.aspectRatio = `${vid.videoWidth} / ${vid.videoHeight}`;
+                    vid.play().catch(() => {});
+                }));
+                // Click → native fullscreen playback so the user can judge quality at
+                // full size. Native API (one line) over a bespoke lightbox; Escape
+                // exits. In fullscreen show native controls + unmute; restore on exit.
+                thumb.classList.add('mpi-detail__thumb--play');
+                _unsubs.push(on(thumb, 'click', () => {
+                    if (vid.requestFullscreen) {
+                        vid.controls = true; vid.muted = false;
+                        vid.requestFullscreen().catch(() => { vid.controls = false; vid.muted = true; });
+                    }
+                }));
+                // fullscreenchange is a document-level event; restore muted/no-controls
+                // on exit. Registered per-open; _destroyDetailToggles + close won't leak
+                // it (collected in _unsubs, torn down on el.destroy).
+                _unsubs.push(on(document, 'fullscreenchange', () => {
+                    if (!document.fullscreenElement) { vid.controls = false; vid.muted = true; }
+                }));
+                thumb.classList.remove('mpi-detail__thumb--placeholder');
+                thumb.appendChild(vid);
+            } else if (!isVideo && model.image) {
+                const img = ce('img', { src: `comfy_workflows/display/${model.image}`, className: 'mpi-detail__thumb-media' });
+                _unsubs.push(on(img, 'load', () => {
+                    if (img.naturalWidth && img.naturalHeight) thumb.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                }));
+                _unsubs.push(on(img, 'error', () => { img.remove(); thumb.classList.add('mpi-detail__thumb--placeholder'); }));
+                thumb.classList.remove('mpi-detail__thumb--placeholder');
+                thumb.appendChild(img);
             }
 
-            if (isActiveDownload) {
-                const pauseCb = () => downloadService.pause(model.id);
-                const resumeCb = () => downloadService.resume(model.id);
-                const cancelCb = () => downloadService.cancel(model.id);
-                card.on('pause', pauseCb);
-                card.on('resume', resumeCb);
-                card.on('cancel', cancelCb);
-                _cardHandlers.set(model.id, { pause: pauseCb, resume: resumeCb, cancel: cancelCb });
-            } else if (showInstalled) {
-                // Installed → button is Update (apply draft) or Uninstall (whole model).
-                card.on('uninstall', () => {
-                    if (draftDiffersFromInstalled) _applyUpdate(model);
+            // Operation toggles (MPI-122).
+            if (selectableOps(model).length) {
+                qs('#detail-ops', detailBody).style.display = '';
+                _buildToggleRow(model, qs('#detail-ops-row', detailBody), { frozen: st.isActiveDownload });
+            }
+            // GPU-weight arch toggles (MPI-200/209) — arch-variant models only.
+            if (_hasArch(model)) {
+                qs('#detail-arch', detailBody).style.display = '';
+                _buildArchRow(model, qs('#detail-arch-row', detailBody), { frozen: st.isActiveDownload });
+            }
+            // VRAM→RAM trade table (MPI-168) — video/tiered models only.
+            if (model.mediaType === 'video') {
+                qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
+            }
+
+            // Footer actions — the exact install/update/uninstall wiring from _buildCard.
+            detailActions.innerHTML = '';
+            if (st.isActiveDownload) {
+                if (st.downloadState === 'downloading' && !_isRemote) {
+                    const pause = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
+                    pause.on('click', () => downloadService.pause(model.id));
+                    detailActions.appendChild(pause.el); _detailActionBtns.push(pause);
+                } else if (st.downloadState === 'paused') {
+                    const resume = MpiButton.mount(ce('div'), { text: 'Resume', variant: 'primary', size: 'md' });
+                    resume.on('click', () => downloadService.resume(model.id));
+                    detailActions.appendChild(resume.el); _detailActionBtns.push(resume);
+                }
+                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                cancel.on('click', () => downloadService.cancel(model.id));
+                detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
+            } else if (st.anyInstalled) {
+                const label = st.draftDiffersFromInstalled ? 'Update' : 'Uninstall';
+                const primary = MpiButton.mount(ce('div'), { text: label, variant: 'secondary', size: 'md' });
+                primary.on('click', () => {
+                    if (st.draftDiffersFromInstalled) _applyUpdate(model);
                     else _confirmWholeUninstall(model);
                 });
+                detailActions.appendChild(primary.el); _detailActionBtns.push(primary);
             } else {
-                // Not installed → Install the drafted ops.
-                card.on('delete', () => { _install(model); });
+                const install = MpiButton.mount(ce('div'), { text: 'Install', variant: 'primary', size: 'md' });
+                install.on('click', () => { _install(model); });
+                detailActions.appendChild(install.el); _detailActionBtns.push(install);
             }
 
-            _cardInstances.set(model.id, { wrapper: cardWrap, display: card });
-            return cardWrap;
+            scrim.classList.add('is-open');
+            detailPanel.classList.add('is-open');
         }
 
-        // ── Teardown ─────────────────────────────────────────────────────────
+        function _closeDetail() {
+            scrim.classList.remove('is-open');
+            detailPanel.classList.remove('is-open');
+            _activeDetail = null;
+            _destroyDetailToggles();
+        }
+        _unsubs.push(on(scrim, 'click', _closeDetail));
+        _unsubs.push(on(qs('#detail-close', el), 'click', _closeDetail));
+        // Escape closes the drawer first (leaving the overlay open); the overlay's
+        // own Escape handling still closes the whole Library when the drawer is shut.
+        _unsubs.push(on(detailPanel, 'keydown', () => {})); // no-op host for focus
+        _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
+
+        // ── Teardown of grid tiles ─────────────────────────────────────────────
         function _destroyAllCards() {
-            for (const { display } of _cardInstances.values()) display?.el?.destroy?.();
-            _cardInstances.clear();
-            for (const toggles of _opToggles.values()) {
-                toggles.forEach(({ inst }) => inst?.el?.destroy?.());
-            }
-            _opToggles.clear();
-            for (const toggles of _archToggles.values()) {
-                toggles.forEach(({ inst }) => inst?.el?.destroy?.());
-            }
-            _archToggles.clear();
-            for (const { unsub } of _tierBadges.values()) unsub?.();
-            _tierBadges.clear();
+            _tileInstances.clear();
         }
 
         // ── Render signature (MPI-124) ─────────────────────────────────────
@@ -866,61 +983,93 @@ export const MpiModelManager = ComponentFactory.create({
                 // Update/Uninstall label, and toggle-active states all repaint.
                 const archDraft = _hasArch(model) ? [..._archDraftFor(model)].sort().join(',') : '';
                 const archInst = _hasArch(model) ? [..._installedArchOf(model)].sort().join(',') : '';
-                return `${model.id}|${isInst ? 1 : 0}|${[...installedOps].sort().join(',')}|${[...draft].sort().join(',')}|${archDraft}|${archInst}|${jobSig}|${partSig}`;
-            }).join('||');
+                // justInstalled drives the heat dot; include so it appears/clears.
+                const neu = model.justInstalled ? 'n' : '';
+                return `${model.id}|${isInst ? 1 : 0}|${[...installedOps].sort().join(',')}|${[...draft].sort().join(',')}|${archDraft}|${archInst}|${jobSig}|${partSig}|${neu}`;
+            }).join('||')
+                // MPI-215: filter/search state is part of the visible output — a filter
+                // change with no per-model change must still force a rebuild.
+                + `##media:${[..._mediaActive].sort().join(',')}##size:${[..._filterActive].sort().join(',')}##q:${_searchQuery}`;
         }
 
-        // ── Render card list ───────────────────────────────────────────────
-        // force=true bypasses the signature guard — used by the toggle commit()
-        // path, where the draft change IS the sig change but we still want an
-        // unconditional rebuild even if a future field makes the sigs collide.
+        // ── Section sub-block (one media type, one aspect ratio) ──────────────
+        // Renders a media sub-header (icon + count) then a contact-sheet grid of
+        // lean tiles — all one aspect ratio so rows align (no ragged holes).
+        function _mediaBlock(list, media) {
+            const items = list.filter(m => m.mediaType === media);
+            if (!items.length) return;
+            const head = ce('div', {
+                className: `mpi-model-library__media-head${media === 'video' ? ' mpi-model-library__media-head--video' : ''}`,
+            });
+            head.innerHTML = `${renderIcon(media, 'sm')}<span>${media === 'video' ? 'Video' : 'Image'}</span><span class="mpi-model-library__media-head-n">${items.length}</span>`;
+            bodySlot.appendChild(head);
+            const sheet = ce('div', { className: 'mpi-model-library__sheet' });
+            items.forEach(model => sheet.appendChild(_buildTile(model)));
+            bodySlot.appendChild(sheet);
+        }
+
+        // A full section (Installed / Available): header + Image sub-grid + Video
+        // sub-grid. The media filter narrows which sub-grids appear.
+        function _section(label, list) {
+            if (!list.length) return;
+            const header = ce('div', { className: 'mpi-model-library__section' });
+            header.innerHTML = `<span>${label}</span><span class="mpi-model-library__section-n">${list.length}</span>`;
+            bodySlot.appendChild(header);
+            if (_mediaActive.size === 0 || _mediaActive.has('image')) _mediaBlock(list, 'image');
+            if (_mediaActive.size === 0 || _mediaActive.has('video')) _mediaBlock(list, 'video');
+        }
+
+        // ── Render the contact sheet ────────────────────────────────────────
+        // force=true bypasses the signature guard — used by the draft-toggle path,
+        // where the change IS the sig change but we still want an unconditional rebuild.
         function renderList({ force = false } = {}) {
             const sig = _listSignature();
             if (!force && sig === _lastSig) return; // no visible change → skip the flash
             _lastSig = sig;
             _destroyAllCards();
-            qsa('.mpi-model-manager__card', bodySlot).forEach(c => c.remove());
-            qsa('.mpi-model-manager__section-header', bodySlot).forEach(h => h.remove());
-            qsa('.mpi-model-manager__empty', bodySlot).forEach(e => e.remove());
+            bodySlot.innerHTML = '';
 
-            // Size-tier filter (MPI-168): keep models whose sizeTier is in the
-            // active set. Empty set → show all. Untagged models default 'balanced'.
+            // Filters compose: Size (MPI-168, sizeTier), Media (MPI-215, mediaType),
+            // and live search over name / dropdownMeta. Empty group = show all.
             const tierOf = m => m.sizeTier || 'balanced';
-            const passesFilter = m => _filterActive.size === 0 || _filterActive.has(tierOf(m));
-            const visible = MODELS.filter(passesFilter);
+            const passesSize = m => _filterActive.size === 0 || _filterActive.has(tierOf(m));
+            const passesMedia = m => _mediaActive.size === 0 || _mediaActive.has(m.mediaType);
+            const passesSearch = m => _searchQuery === ''
+                || (m.name || '').toLowerCase().includes(_searchQuery)
+                || (m.dropdownMeta || '').toLowerCase().includes(_searchQuery);
+            const visible = MODELS.filter(m => passesSize(m) && passesMedia(m) && passesSearch(m));
 
             // A model is "installed" for sectioning when its installed flag is set OR
-            // at least one op is installed (op-keyed partial installs) OR an arch
-            // weight AND the common deps are on disk. The arch clause matches the card's
-            // `anyInstalled` (MPI-209): on a CPU pod (no live GPU → null arch)
-            // _installedOpsOf unions both variant weights and reads empty, so an
-            // arch-variant model that IS installed for one GPU would wrongly sink to the
-            // uninstalled section. MPI-216: the common-deps gate keeps a tier whose
-            // shared deps were deleted (sibling-tier uninstall) out of the installed
-            // section — arch-weight-alone is not "installed".
+            // at least one op is installed OR an arch weight AND its common deps are on
+            // disk (MPI-209/216 — see _modelState for the full rationale).
             const isInstalled = m => m.installed === true
                 || _installedOpsOf(m).length > 0
                 || (_installedArchOf(m).length > 0 && _commonDepsOnDisk(m));
             const installed = visible.filter(isInstalled);
-            const uninstalled = visible.filter(m => !isInstalled(m));
+            const available = visible.filter(m => !isInstalled(m));
 
-            if (installed.length > 0) {
-                bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__section-header' },
-                    [document.createTextNode('Installed Models')]));
-                installed.forEach(model => bodySlot.appendChild(_buildCard(model)));
-            }
+            // Live count line in the head.
+            const totalInstalled = MODELS.filter(isInstalled).length;
+            subEl.innerHTML = `<span class="mpi-model-library__count">${totalInstalled} installed</span> · ${MODELS.length - totalInstalled} available — install a pack and its files fetch automatically.`;
 
-            if (uninstalled.length === 0 && installed.length > 0) {
-                bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__empty' },
-                    [ce('span', { textContent: 'No models available to install' })]));
+            if (!visible.length) {
+                bodySlot.appendChild(ce('div', {
+                    className: 'mpi-model-library__empty',
+                    textContent: 'No models match — clear filters or search.',
+                }));
                 return;
             }
-            if (uninstalled.length === 0 && installed.length === 0) {
-                bodySlot.appendChild(ce('div', { className: 'mpi-model-manager__empty' },
-                    [ce('span', { textContent: 'No models available' })]));
-                return;
+
+            _section('Installed', installed);
+            _section('Available', available);
+
+            // Keep an open detail panel coherent after a full rebuild (install state
+            // moved, engine switched, re-sync landed). Guard: openDetail must not be
+            // reached from a draft-toggle path here (that path owns its own refresh).
+            if (_activeDetail) {
+                const fresh = MODELS.find(m => m.id === _activeDetail.id);
+                if (fresh) openDetail(fresh);
             }
-            uninstalled.forEach(model => bodySlot.appendChild(_buildCard(model)));
         }
 
         // ── State subscriptions ──────────────────────────────────────────────
@@ -950,48 +1099,29 @@ export const MpiModelManager = ComponentFactory.create({
         }));
 
         // ── Download event subscriptions ─────────────────────────────────────
-        _unsubs.push(Events.on('download:progress', ({ modelId, progress, speed, downloadedBytes, totalBytes, indeterminate, phase }) => {
-            const card = _cardInstances.get(modelId);
-            if (!card) return;
-            card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase });
-        }));
+        // Patch just the tile's inline state row in-place (no full rebuild) so a
+        // live download's progress bar ticks without flashing the whole grid. The
+        // state is recomputed from the live download job. If the model's detail
+        // panel is open, rebuild it too so its footer/progress stay in sync.
+        function _patchTile(modelId) {
+            const tileRef = _tileInstances.get(modelId);
+            const model = MODELS.find(m => m.id === modelId);
+            if (tileRef && model) tileRef.stateEl.innerHTML = _tileState(_modelState(model));
+            if (_activeDetail && _activeDetail.id === modelId && model) openDetail(model);
+        }
 
-        // download:started rebuilds the whole list so the card shows the toggle row
-        // (frozen) + downloading state with fresh pause/cancel handlers.
+        _unsubs.push(Events.on('download:progress', ({ modelId }) => { _patchTile(modelId); }));
+
+        // download:started rebuilds the whole grid so the started model's tile shows
+        // the progress bar + its detail footer flips to Pause/Cancel.
         _unsubs.push(Events.on('download:started', () => { renderList(); }));
 
-        _unsubs.push(Events.on('download:paused', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
-            const card = _cardInstances.get(modelId);
-            if (card) {
-                card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes });
-                card.display.el.setDownloadState('paused');
-            }
-        }));
+        _unsubs.push(Events.on('download:paused', ({ modelId }) => { _patchTile(modelId); }));
+        _unsubs.push(Events.on('download:resumed', ({ modelId }) => { _patchTile(modelId); }));
+        _unsubs.push(Events.on('download:installing', ({ modelId }) => { _patchTile(modelId); }));
 
-        _unsubs.push(Events.on('download:resumed', ({ modelId, progress, speed, downloadedBytes, totalBytes }) => {
-            const card = _cardInstances.get(modelId);
-            if (card) {
-                card.display.el.setProgress({ progress, speed, downloadedBytes, totalBytes });
-                card.display.el.setDownloadState('downloading');
-            }
-        }));
-
-        _unsubs.push(Events.on('download:installing', ({ modelId }) => {
-            const card = _cardInstances.get(modelId);
-            if (card) card.display.el.setDownloadState('installing');
-        }));
-
-        _unsubs.push(Events.on('download:cancelled', ({ modelId }) => {
-            const card = _cardInstances.get(modelId);
-            if (card) card.display.el.setDownloadState('cancelled');
-            awaitReSync();
-        }));
-
-        _unsubs.push(Events.on('download:complete', async ({ modelId }) => {
-            const card = _cardInstances.get(modelId);
-            if (card) card.display.el.setDownloadState('complete');
-            awaitReSync();
-        }));
+        _unsubs.push(Events.on('download:cancelled', () => { awaitReSync(); }));
+        _unsubs.push(Events.on('download:complete', async () => { awaitReSync(); }));
 
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
             const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
@@ -1026,8 +1156,17 @@ export const MpiModelManager = ComponentFactory.create({
             } catch { /* highlight just stays off — table still computes */ }
         }
 
-        // ── Open hook — MpiSlideOver calls this each time the panel opens ──────
-        el.onOpen = () => { awaitReSync(); _fetchHardwareOnce(); };
+        // ── Open / close the Library overlay ──────────────────────────────────
+        // shell.js mounts this component once and calls el.open() on models:open.
+        // Showing the overlay re-syncs installed state + hardware (like the old
+        // MpiSlideOver onOpen hook did). el.onOpen kept as an alias for parity.
+        el.open = () => {
+            overlay.el.show();
+            awaitReSync();
+            _fetchHardwareOnce();
+        };
+        el.close = () => { overlay.el.hide(); };
+        el.onOpen = el.open;
 
         // ── Initial render ─────────────────────────────────────────────────
         renderList();
@@ -1036,9 +1175,9 @@ export const MpiModelManager = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             _destroyAllCards();
-            for (const inst of _tierFilterBtns.values()) inst?.el?.destroy?.();
-            _tierFilterBtns.clear();
+            _destroyDetailToggles();
             _confirmDialog?.el?.destroy?.();
+            overlay?.el?.destroy?.();
         };
     },
 });

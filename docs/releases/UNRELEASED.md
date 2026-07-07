@@ -11,8 +11,8 @@
 - **Models can now install individual operations.** Some models can do more than
   one thing (e.g. Wan 2.2 does both **text-to-video** and **image-to-video**), and
   each capability has its own large weights. Instead of forcing you to download
-  everything, the Models page now shows a toggle per operation inside the model
-  card — pick only the ones you want. **Wan 2.2 Smooth** is a single model again
+  everything, the model's detail panel shows a toggle per operation — pick only the
+  ones you want. **Wan 2.2 Smooth** is a single model again
   (no more separate T2V/I2V packs): install just Text-to-Video, just Image-to-Video,
   or both. The shared parts (VAE, text encoder) download once and are reused. The
   download size on the card updates live as you toggle operations.
@@ -28,8 +28,8 @@
     so they have no toggles and install/uninstall exactly as before.
 
 - **Pick which GPU to install for.** Some models (LTX 2.3 Balanced) have a separate
-  weight for RTX 50-series (Blackwell) vs RTX 40-series and older. The Models page
-  shows a toggle per GPU type — your GPU is pre-selected, and on a cloud download-pod
+  weight for RTX 50-series (Blackwell) vs RTX 40-series and older. The model's detail
+  panel shows a toggle per GPU type — your GPU is pre-selected, and on a cloud download-pod
   it uses the GPU you picked in RunPod settings, so you don't fetch the wrong 24GB
   weight. Toggle both on to keep both; toggle one off to remove just that weight. If a
   generation needs a weight you haven't downloaded, the app offers to install it there
@@ -42,6 +42,17 @@
   a separately running ComfyUI instance is not supported.
 
 ## whatIsNew
+
+- **The Models page is now a full-page Model Library.** Opening **Models** brings up
+  a full-screen library instead of the narrow side panel — a contact-sheet grid of
+  model previews, split into **Installed** and **Available** and, within each, into
+  **Image** and **Video** rows. Filter by **Media** (Image/Video), **Size**
+  (Low/Balanced/High), or type in the **search** box; they all combine. Each tile
+  shows the model's preview (video previews play on hover), its category and tier,
+  and its install state at a glance. Click any model to open a **detail panel** on
+  the right with its description, the operation and GPU-weight toggles, the memory
+  (VRAM) table, disk size, and Install / Update / Uninstall — and for video models,
+  the preview autoplays and you can click it to watch **fullscreen** (Escape to exit).
 
 - **Rename a project.** Right-click any project on the landing page → **Rename
   project** to give it a new display name. Only the name shown in the app
