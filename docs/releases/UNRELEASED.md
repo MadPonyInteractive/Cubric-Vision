@@ -43,6 +43,10 @@
 
 ## whatIsNew
 
+- **Rename a project.** Right-click any project on the landing page → **Rename
+  project** to give it a new display name. Only the name shown in the app
+  changes — the folder on disk stays put, so nothing moves and no links break.
+
 - **New model: NVIDIA PiD Upscaler.** A generative 4× image upscaler that adds real
   detail instead of just resizing. Pick the look with one control — **Flux** (faithful,
   natural colour), **SD3** (sharp), **Qwen** (natural all-rounder), or **SDXL**
@@ -117,6 +121,12 @@
   shows on the card, in the history breadcrumb, and on the prompt-box chip when you
   drag the card in — and it sticks across navigation and project reloads. Works for
   image, video, and audio cards.
+
+- **Copy cards into another project.** Select one or more gallery cards, right-click,
+  and choose **Add to project** — pick an existing project from the dropdown, press
+  OK, and the selected results are copied there (they stay in the current project
+  too). Handy for pulling your best shots into a curated collection without losing
+  them where they are.
 
 - **Smarter OS notifications.** Desktop notifications now fire whenever the app is
   not focused — not just when it's minimized — so a generation that finishes while
