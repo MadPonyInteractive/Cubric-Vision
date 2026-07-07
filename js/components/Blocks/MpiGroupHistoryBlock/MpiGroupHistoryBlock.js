@@ -38,7 +38,7 @@ import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
-import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../../utils/promptReuse.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages } from '../../../utils/promptReuse.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
@@ -900,6 +900,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const dialog = MpiReusePromptDialog.mount(document.createElement('div'), {
                     includes: options,
                     showSource: false,
+                    // Single-source dialog (no Original/Current toggle) → the
+                    // dialog defaults source to 'original'; gate Use Images on
+                    // whether THIS payload has a reusable input image (MPI-212).
+                    imageAvailability: { original: payloadHasReusableImages(payload) },
                 });
                 dialog.on('apply', async ({ includes }) => {
                     await _applyPromptReuse(payload, _reuseIncludes(includes));
@@ -962,7 +966,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
-            if (use.images) {
+            // Skip images reuse when the source has no reusable input image (e.g.
+            // a t2i output) — injecting for it only warns + leaves an image-required
+            // target op empty (MPI-212). Matches the gallery block + dialog grey-out.
+            if (use.images && payloadHasReusableImages(payload)) {
                 _pb.el.clearMedia?.();
                 const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
                 if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {

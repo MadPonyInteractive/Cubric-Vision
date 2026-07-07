@@ -60,6 +60,17 @@ export const MpiReusePromptDialog = ComponentFactory.create({
         const sourceSlot = qs('#reuse-source-slot', el);
         const actionsSlot = qs('#reuse-actions-slot', el);
 
+        // Per-source flag: does the reuse source actually carry an input image to
+        // reuse? A card generated WITHOUT one (e.g. a t2i output) has none, so
+        // "Use Images" is meaningless — greying it out (vs silently no-op-ing)
+        // tells the user why and stops it injecting an empty slot (MPI-212).
+        const imageAvailability = props.imageAvailability || {};
+        const _sourceHasImages = () => imageAvailability[source] !== false;
+
+        // Keep the Use Images checkbox so the source radio can re-toggle its
+        // disabled state live.
+        let imagesCheckbox = null;
+
         PARTS.forEach(({ key, label }) => {
             const wrap = document.createElement('div');
             const checkbox = MpiCheckbox.mount(wrap, {
@@ -76,7 +87,23 @@ export const MpiReusePromptDialog = ComponentFactory.create({
                 };
             });
             partsSlot.appendChild(checkbox.el);
+            if (key === 'images') imagesCheckbox = checkbox;
         });
+
+        // Disable + uncheck Use Images when the active source has no reusable image.
+        // `includes.images` (the applied value) is forced false so Apply doesn't try
+        // to inject nothing. The user's STORED default is left untouched — this is a
+        // per-source availability gate, not a preference change.
+        const _syncImagesAvailability = () => {
+            if (!imagesCheckbox) return;
+            const has = _sourceHasImages();
+            imagesCheckbox.el.setDisabled?.(!has);
+            if (!has) {
+                includes.images = false;
+                imagesCheckbox.el.setChecked?.(false);
+            }
+        };
+        _syncImagesAvailability();
 
         if (props.showSource === false) {
             sourceSection.style.display = 'none';
@@ -93,6 +120,9 @@ export const MpiReusePromptDialog = ComponentFactory.create({
             sourceRadio.on('select', ({ value }) => {
                 source = value === 'current' ? 'current' : 'original';
                 state.promptReuseSource = source;
+                // Availability is per-source (Original may have an input image,
+                // Current may not, or vice-versa) — re-gate on switch.
+                _syncImagesAvailability();
             });
         }
 

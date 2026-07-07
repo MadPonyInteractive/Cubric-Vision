@@ -186,6 +186,20 @@ export async function resolvePromptReuseMediaItems(payload = {}, project = {}) {
     return merged;
 }
 
+// True when a reuse payload actually carries an input image to reuse. A card
+// generated WITHOUT an input image (e.g. a t2i output) resolves to no image
+// media here, so "Use Images" is meaningless for it — offering it injects an
+// empty slot, which both warns ("No saved frame images…") and leaves an
+// image-required target op unrunnable (MPI-212). Callers use this to grey out /
+// skip the images reuse for such sources. Sync: reads the payload's already-built
+// mediaItems (buildPromptReusePayload); the async resolver can additionally find
+// materialized frames on disk, but only for ops that accept image input — which a
+// no-input-image source's op does not, so the sync check matches.
+export function payloadHasReusableImages(payload = {}) {
+    const items = Array.isArray(payload?.mediaItems) ? payload.mediaItems : [];
+    return items.some(m => m && (m.url || m.filePath) && (m.mediaType === 'image' || m.type === 'image'));
+}
+
 export function itemHasReusablePrompt(item = {}) {
     if (!item || item.uploaded === true) return false;
     const source = _settingsSource(item);

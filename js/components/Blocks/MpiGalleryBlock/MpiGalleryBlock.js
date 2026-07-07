@@ -39,7 +39,7 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings } from '../../../services/projectService.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
-import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../../utils/promptReuse.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages } from '../../../utils/promptReuse.js';
 import {
     createImageItem,
     createVideoItem,
@@ -1004,6 +1004,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     includes: options,
                     source: state.promptReuseSource,
                     showSource: true,
+                    // Per-source image availability so the dialog can grey out
+                    // "Use Images" for a source with no reusable input image (MPI-212).
+                    imageAvailability: {
+                        original: payloadHasReusableImages(bundle.original),
+                        current: payloadHasReusableImages(bundle.current),
+                    },
                 });
                 dialog.on('apply', async ({ includes, source }) => {
                     const payload = _resolveReusePayload(bundle, source);
@@ -1065,7 +1071,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
-            if (use.images) {
+            // Only reuse images when the SOURCE actually has an input image to
+            // reuse. A card generated without one (e.g. a t2i output) carries no
+            // reusable image, so injecting for it does nothing but warn + leave an
+            // image-required target op empty (MPI-212). Skip the whole branch —
+            // the dialog also greys "Use Images" for such sources, but the
+            // ask-disabled path lands here directly with a stored images:true.
+            if (use.images && payloadHasReusableImages(payload)) {
                 _pb.el.clearMedia?.();
                 const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
                 if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {

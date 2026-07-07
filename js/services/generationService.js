@@ -77,6 +77,29 @@ function _runningCount() {
 
 const PROMPT_EXCERPT_MAX = 140;
 
+// Returns the first REQUIRED media slot an op declares that has no matching asset
+// in `mediaItems`, or null when every required slot is filled. Shared by the
+// enqueue guard (block a no-media job before it ever reaches the queue) and the
+// dispatch-time guard in startGeneration (the net for loop re-fire / stage-2
+// paths that don't go through enqueueGeneration). An op with only a media-input
+// operation (e.g. the PiD upscaler — its ONLY op needs an image) would otherwise
+// queue a false job that wedges the lane at dispatch (MPI-212).
+function _findMissingMediaSlot(operation, mediaItems = []) {
+    return getCommandMediaInputs(operation).find(slot => {
+        if (slot.required === false) return false;
+        const hasRoleMatch = mediaItems.some(m => m.url && m.role === slot.key && m.mediaType === slot.mediaType);
+        const hasTypeMatch = mediaItems.some(m => m.url && m.mediaType === slot.mediaType);
+        return !hasRoleMatch && !hasTypeMatch;
+    }) || null;
+}
+
+// Toast copy for a missing required media slot. Same wording used at enqueue and
+// dispatch so the message reads identically wherever the block lands.
+function _warnMissingMediaSlot(slot) {
+    const noun = slot.mediaType === 'video' ? 'video' : slot.mediaType === 'audio' ? 'audio file' : 'image';
+    Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.` });
+}
+
 function _promptExcerpt(text = '') {
     return String(text || '').replace(/\s+/g, ' ').trim().slice(0, PROMPT_EXCERPT_MAX);
 }
@@ -319,6 +342,23 @@ function _dispatchNextCue() {
  * Returns nothing — callers track via `activeGenerations` events.
  */
 export function enqueueGeneration(config, callbacks = {}, opts = {}) {
+    // Reject a job whose op needs an input asset it doesn't have BEFORE it ever
+    // enters the queue. A false no-image job (e.g. pressing Q on the PiD upscaler,
+    // whose only op requires an image) would otherwise queue, then fail its
+    // required-slot guard only at dispatch — stranding the lane and disabling
+    // Stop/Clear while it sat pending (MPI-212). Toast + no-op instead.
+    const missingSlot = _findMissingMediaSlot(config.operation, config.mediaItems || []);
+    if (missingSlot) {
+        _warnMissingMediaSlot(missingSlot);
+        try { callbacks.onCancel?.(); } catch {}
+        // The Cue button flips the prompt bar to "generating" (Stop/Clear enabled)
+        // the instant it's pressed, before the run reaches here. A rejected enqueue
+        // queues nothing, so nudge the idle check to flip it back — otherwise
+        // Stop/Clear sit enabled over an empty queue (MPI-212).
+        _emitPromptBoxGenerationEndIfIdle();
+        return null;
+    }
+
     const queueJobId = opts.queueJobId || crypto.randomUUID();
     const source = opts.source || (state.loopArmed ? 'loop' : 'manual');
     const isLoop = opts.isLoop === true || source === 'loop';
@@ -533,15 +573,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     // files happen to exist so the run "works", but a remote Pod has a clean
     // volume and ComfyUI rejects the whole prompt (prompt_outputs_failed_validation
     // → bug-reporter dialog). Empty + user-actionable → warning toast, not a bug.
-    const missingSlot = getCommandMediaInputs(operation).find(slot => {
-        if (slot.required === false) return false;
-        const hasRoleMatch = mediaItems.some(m => m.url && m.role === slot.key && m.mediaType === slot.mediaType);
-        const hasTypeMatch = mediaItems.some(m => m.url && m.mediaType === slot.mediaType);
-        return !hasRoleMatch && !hasTypeMatch;
-    });
+    const missingSlot = _findMissingMediaSlot(operation, mediaItems);
     if (missingSlot) {
-        const noun = missingSlot.mediaType === 'video' ? 'video' : missingSlot.mediaType === 'audio' ? 'audio file' : 'image';
-        Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this workflow needs one.` });
+        _warnMissingMediaSlot(missingSlot);
         callbacks.onError?.(new Error(`Missing required ${missingSlot.mediaType} for ${operation}`));
         return null;
     }
@@ -556,7 +590,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
 
+    // Generate the gen id UP FRONT so it flows into BOTH the store job record
+    // (payload.genId → store.register, MPI-208 Phase 4) and the activeGenerations
+    // entry below. The store job carries this same genId, letting the derived
+    // status bar correlate a store snapshot's driving job to the id-tagged tool:*
+    // events (all emitted with id === _regId).
+    const _regId = crypto.randomUUID();
+
     const exec = runCommand({
+        genId: _regId,
         operation,
         modelId: model.id,
         positive,
@@ -574,7 +616,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         forceLocal: opts.forceLocal === true, // MPI-74: per-gen local override → runCommand reads payload.forceLocal
     });
 
-    const { id: _regId } = activeGenerations.start({
+    activeGenerations.start({
+        id:                _regId,
         scope:             opts.scope ?? (opts.existingGroup ? 'groupHistory' : 'gallery'),
         groupId:           opts.groupId ?? opts.existingGroup?.id ?? null,
         tempId:            opts.tempId ?? null,
