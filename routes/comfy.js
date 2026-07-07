@@ -545,6 +545,34 @@ router.get('/comfy/model-folders', async (req, res) => {
     }
 });
 
+/**
+ * MPI-219 helper: wait for ComfyUI to answer /history (ready), then POST the
+ * MpiNodes runtime path-reload so a freshly-added extra folder registers without
+ * a restart. Bounded retries cover the boot window (socket refuses / booting).
+ * Fire-and-forget: callers must not await this — it's a background reconcile.
+ */
+async function reloadExtraPathsWhenReady(yamlPath, { attempts = 20, delayMs = 1000 } = {}) {
+    const ax = getAxios();
+    if (!ax) return;
+    for (let i = 0; i < attempts; i++) {
+        if (!processState.activeComfyProcess) return; // engine went away — nothing to reload
+        const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
+            .then(() => true).catch(() => false);
+        if (ready) {
+            try {
+                await ax.post(`http://127.0.0.1:${COMFYUI_PORT}/mpi/reload-extra-paths`,
+                    { yaml_path: yamlPath }, { timeout: 10000 });
+                logger.info('comfy', 'extra-folders: engine reloaded extra model paths (no restart)');
+            } catch (reloadErr) {
+                logger.warn('comfy', `extra-folders: runtime path reload failed (${reloadErr.message}) — restart engine to pick up new folders`);
+            }
+            return;
+        }
+        await new Promise(r => setTimeout(r, delayMs));
+    }
+    logger.warn('comfy', 'extra-folders: engine did not become ready — new folders will apply on next restart');
+}
+
 router.post('/comfy/extra-folders', async (req, res) => {
     try {
         const folders = await setExtraModelFolders(req.body || {});
@@ -552,7 +580,22 @@ router.post('/comfy/extra-folders', async (req, res) => {
         // Always (re)write the YAML so removed extra folders are dropped from it
         // (garbage collection) while the default root block is preserved. Never
         // delete the file — that would orphan models under the default root.
-        await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
+        const yamlPath = await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
+
+        // MPI-219: ComfyUI reads extra_model_paths.yaml only at boot, so a folder
+        // added mid-session is invisible to /prompt validation → 400 "Value not in
+        // list: lora_name". Ask the running engine to re-read the yaml at runtime
+        // (MpiNodes POST /mpi/reload-extra-paths) so the new path registers without
+        // a restart. Fire-and-forget with a boot-race guard: a user can add a folder
+        // while ComfyUI is still booting (socket not listening → ECONNREFUSED, or
+        // boot already passed its own load_extra_path_config before the yaml was
+        // rewritten). Wait for the engine to answer /history, THEN reload the now-
+        // current yaml. Don't block the HTTP response on it — the yaml is already
+        // written and correct for next boot regardless.
+        if (processState.activeComfyProcess) {
+            reloadExtraPathsWhenReady(yamlPath);
+        }
+
         res.json({ success: true, folders });
     } catch (err) {
         logger.error('comfy', 'extra-folders set failed', err);

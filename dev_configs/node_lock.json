@@ -21,7 +21,7 @@
     "ComfyUI-MpiNodes": {
       "source": "git-commit",
       "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
-      "commit": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
+      "commit": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
       "filename": "ComfyUI-MpiNodes",
       "installRequirements": false,
       "installOnEngine": true
@@ -74,6 +74,13 @@
       "filename": "ComfyUI-Impact-Subpack",
       "installRequirements": true,
       "installOnEngine": true
+    },
+    "RES4LYF": {
+      "source": "git-commit",
+      "repo": "ClownsharkBatwing/RES4LYF",
+      "commit": "419de2d7c78f415dde9aa352a7231820ebfc17a4",
+      "filename": "RES4LYF",
+      "installRequirements": true
     }
   }
 }

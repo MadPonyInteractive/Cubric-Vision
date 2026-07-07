@@ -950,3 +950,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-219","type":"task.created","at":"2026-07-07T22:35:00Z","actor":"claude","column":"todo","summary":"extra-folders never reloads ComfyUI paths -> gen 400. Runtime reload fix (not restart). Bumped next_id 219->220."}
 {"ts": "2026-07-07T23:30:00Z", "type": "task.moved", "id": "MPI-219", "from": "todo", "to": "doing", "by": "agent", "note": "root cause corrected: injector regex, not reload"}
 {"schema":"mpi-kanban/event/v1","id":"MPI-220","type":"task.created","at":"2026-07-07T23:45:00Z","actor":"claude","column":"todo","summary":"Delete RunPod branch (local+remote), rename 1.2 -> 1.1. Run AFTER 1.2 agents finish + commit. Push = user-authorized. No version bump. Bumped next_id 220->221."}
+{"ts": "2026-07-08T00:08:00Z", "type": "task.moved", "id": "MPI-219", "from": "doing", "to": "done", "by": "agent", "note": "all 3 bugs live-verified; MpiNodes v1.1.4 shipped"}

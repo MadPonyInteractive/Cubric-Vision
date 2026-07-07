@@ -1112,8 +1112,13 @@ function createEngine({ engine, alwaysLocal }) {
                 return title.toLowerCase() === key.toLowerCase();
             });
             for (const id of nodeIds) {
-                // Special handling for LoRA objects (Lora_1 through Lora_6)
-                if (/^Lora_(?:[A-Za-z]+_)?\d+$/i.test(key) && typeof val === 'object' && val !== null &&
+                // Special handling for LoRA objects (Lora_1..6, or the tier-2 alias
+                // Input_Lora_1..6 emitted by the MPI-127 alias pass). Without the
+                // optional Input_ prefix, flat-lora models whose workflow nodes are
+                // titled Input_Lora_N (Chroma, LTX) fall to _inject, which writes the
+                // whole {lora_name,…} object into node.inputs.lora_name → ComfyUI
+                // "Value not in list: lora_name: {dict}" 400. (MPI-219)
+                if (/^(?:Input_)?Lora_(?:[A-Za-z]+_)?\d+$/i.test(key) && typeof val === 'object' && val !== null &&
                     'lora_name' in val && 'strength_model' in val && 'strength_clip' in val) {
                     const node = workflow[id];
                     if (node && node.inputs) {
