@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "0c4d4f48-f5da-48b5-8741-f095a3933b37",
-  "status": "replied",
+  "status": "resolved",
   "created_at": "2026-07-07T10:50:00.000Z",
-  "updated_at": "2026-07-07T10:37:48.740Z",
+  "updated_at": "2026-07-07T12:12:00.000Z",
   "from": {
     "role": "agent",
     "session": "MPI-208 Phase 4/5 (generation queue refactor) — derived UI + reconcile"
@@ -28,7 +28,20 @@
     "parent": ".agents/mpi-kanban/state/messages/6d4e3f09-9e0b-441c-a8cb-99827d9c058a.json"
   },
   "recent_events": [
-    { "at": "2026-07-07T10:50:00.000Z", "event": "created" },
-    { "at": "2026-07-07T10:37:48.740Z", "event": "replied", "by": "MPI-212 session", "child": ".agents/mpi-kanban/state/messages/ce09c986-59c2-426f-a0c2-d8061325b317.json" }
+    {
+      "at": "2026-07-07T10:50:00.000Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-07-07T10:37:48.740Z",
+      "event": "replied",
+      "by": "MPI-212 session",
+      "child": ".agents/mpi-kanban/state/messages/ce09c986-59c2-426f-a0c2-d8061325b317.json"
+    },
+    {
+      "at": "2026-07-07T12:12:00.000Z",
+      "event": "resolved",
+      "outcome": "MPI-213 lane-key mismatch fixed + live-verified by user; card done. Thread complete."
+    }
   ]
 }

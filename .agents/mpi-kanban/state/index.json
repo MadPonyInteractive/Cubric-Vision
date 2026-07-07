@@ -1,35 +1,13 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-07-07T11:00:00.000Z",
+  "updated_at": "2026-07-07T14:15:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
   "active_tasks": [],
   "active_file_claims": [],
   "pending_file_states": [],
-  "open_messages": [
-    {
-      "id": "6d4e3f09-9e0b-441c-a8cb-99827d9c058a",
-      "path": ".agents/mpi-kanban/state/messages/6d4e3f09-9e0b-441c-a8cb-99827d9c058a.json",
-      "to": "MPI-208",
-      "subject": "New queue bug: completed PiD upscale job does not drain from Cue (+ MPI-212 enqueue-guard heads-up)",
-      "status": "replied"
-    },
-    {
-      "id": "0c4d4f48-f5da-48b5-8741-f095a3933b37",
-      "path": ".agents/mpi-kanban/state/messages/0c4d4f48-f5da-48b5-8741-f095a3933b37.json",
-      "to": "MPI-212",
-      "subject": "Re: PiD stuck-drain — settle(DONE) no-op confirmed; need store phase-trace",
-      "status": "replied"
-    },
-    {
-      "id": "ce09c986-59c2-426f-a0c2-d8061325b317",
-      "path": ".agents/mpi-kanban/state/messages/ce09c986-59c2-426f-a0c2-d8061325b317.json",
-      "to": "MPI-213",
-      "subject": "Re: PiD stuck-drain — candidate #1 (my enqueue guard) ruled out from code; #2/#3 are the suspects; + DevTools trace snippet",
-      "status": "acknowledged"
-    }
-  ],
+  "open_messages": [],
   "active_handoffs": [
     {
       "id": "c57162cd-17cd-40da-86c6-ee53b9a7183e",
@@ -101,8 +79,15 @@
       "id": "ff1372cb-ab0b-47c4-aaeb-77608dbb1491",
       "path": ".agents/mpi-kanban/state/handoffs/ff1372cb-ab0b-47c4-aaeb-77608dbb1491.json",
       "task": "MPI-208",
-      "status": "open",
+      "status": "superseded",
       "created_at": "2026-07-07T00:10:00Z"
+    },
+    {
+      "id": "8ee9fbb1-ab1f-42c9-b152-a14b62e2e951",
+      "path": ".agents/mpi-kanban/state/handoffs/8ee9fbb1-ab1f-42c9-b152-a14b62e2e951.json",
+      "task": "MPI-208",
+      "status": "open",
+      "created_at": "2026-07-07T12:15:00Z"
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "ce09c986-59c2-426f-a0c2-d8061325b317",
-  "status": "acknowledged",
+  "status": "resolved",
   "created_at": "2026-07-07T10:37:48.740Z",
-  "updated_at": "2026-07-07T11:00:00.000Z",
+  "updated_at": "2026-07-07T12:12:00.000Z",
   "from": {
     "role": "agent",
     "session": "commandExecutor/reuse-prompt + enqueue-guard work (MPI-212)"
@@ -37,6 +37,16 @@
       "event": "acknowledged",
       "by": "MPI-208/MPI-213 owner",
       "note": "Candidate #1 ruled out accepted. Tracing the reuse->dispatch mid-flight cancel path (read-only agent) to find who cancels the active PiD job between register() and completion. Will report the trigger + fix on MPI-213."
+    },
+    {
+      "at": "2026-07-07T11:50:05.000Z",
+      "event": "replied",
+      "child": ".agents/mpi-kanban/state/messages/7a1e2b9c-3d4f-4a8b-9c1d-2e3f4a5b6c7d.json"
+    },
+    {
+      "at": "2026-07-07T12:12:00.000Z",
+      "event": "resolved",
+      "outcome": "MPI-213 lane-key mismatch fixed + live-verified by user; card done. Thread complete."
     }
   ]
 }

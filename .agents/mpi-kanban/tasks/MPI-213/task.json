@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-213",
+  "title": "No-Pod local gen strands Cue as phantom '1 RUNNING' — intent-lane vs store-lane key mismatch (surfaced via PiD)",
+  "description": "Regression surfaced during MPI-212 live-test (LOCAL, RTX 4060 Ti, op 'pid', scope gallery, NO Pod connected). A gen finishes successfully (output SAVED, 156->157) but the Cue panel stays '1 RUNNING / 0 QUEUED' and bottom-bar Stop/Clear disable (isGenerating desync).\n\nTRUE ROOT CAUSE (found via a read-only trace agent + code, NOT the initial hypothesis): a LANE-KEY MISMATCH between generationService and generationStore. `generationService._laneOf` keyed the intent lane on `opts.forceLocal === true ? 'local' : 'remote'` — so a no-Pod local gen (forceLocal=false) parked its INTENT on the 'remote' lane and wired `setLoopCallback('remote')`. But commandExecutor resolves `engine = forceLocal ? 'local' : isRemote() ? 'remote' : 'local'` and generationStore keys the job's lane off that resolved `engine` — so with NO Pod the STORE job runs on the 'local' lane. On completion the store drains its 'local' lane and fires `_loopCallbacks.local` (never set — the hook was on 'remote'), so `_onLaneDrain` never fires and `_lanes.remote.active` (the intent) never clears -> phantom '1 RUNNING'. This is BROADER than PiD: any no-Pod local gen with forceLocal=false hits it; the user just happened to test locally via PiD (the first image-only op).\n\nThe original 'settle(DONE) no-op on a pre-cancelled job' hypothesis was DISPROVEN: the trace agent confirmed NO code path calls store.cancel on the active job without a user Stop. The job was never cancelled — the two lanes simply disagreed on the key.\n\nFIX (shipped, logic-verified): `_laneOf` now mirrors the store's engine->lane rule — `forceLocal===true -> 'local'; else remoteEngineClient.isRemote() ? 'remote' : 'local'`. Intent lane and store lane now agree for every (forceLocal x isRemote) case. New guard test tests/lane-agreement.test.cjs asserts the two rules map identically across the matrix (fails if either drifts). Files: js/services/generationService.js (import remoteEngineClient + _laneOf), tests/lane-agreement.test.cjs (new).\n\nRESIDUAL (secondary, NOT fixed here — narrow): the trace agent also found an async-gap race — a prior local job terminating in the ~1-microtask window between _dispatchNextCue's setLoopCallback and commandExecutor's async register() can consume _loopCallbacks.local early. Deterministic no-Pod case is fixed; this timing edge needs a prior in-flight local job + exact timing. Also the async-refresh edge (first gen right after Pod connect) can still lag isRemote() by one gen (MPI-179). Both are hardening follow-ups; deferred. Deeper long-term fix would derive the Cue panel + isGenerating from the store snapshot instead of _lanes.active.\n\nFiled from MPI-208 inbox msg 6d4e3f09; thread 0c4d4f48/ce09c986.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-07T10:52:00Z",
+  "updated_at": "2026-07-07T12:10:00Z",
+  "links": {
+    "plan": null,
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}
