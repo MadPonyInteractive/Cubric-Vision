@@ -169,16 +169,6 @@
 
 ## fixes
 
-- **Uninstalling one model no longer deletes files another model still needs.**
-  Uninstalling a model on your own machine could delete shared files (text
-  encoders, VAEs, LoRAs) that a different installed model also uses — for example,
-  removing one LTX 2.3 tier stripped the shared parts the other tier needed,
-  quietly leaving it broken. Local uninstall now checks what's actually on disk for
-  every other model and keeps anything still in use, matching how the cloud engine
-  already behaved. A model card also no longer shows a green **Installed** when only
-  part of it is on disk — if shared files are missing it correctly reads not
-  installed, so re-running Install pulls them back.
-
 - **Stopping a generation is now reliable.** A stopped generation that was still
   waiting in the engine's queue (behind another running job) used to keep going and
   finish anyway — so a job you cancelled could reappear as a completed result when

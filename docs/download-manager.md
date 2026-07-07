@@ -33,6 +33,39 @@ Singleton that owns the frontend download queue.
 > keyed by `modelId`. Backend shared-dep protection resolves every other model's
 > full universe so a common/op-specific dep another model needs is never deleted.
 
+### Shared-dep uninstall guard — resolve installed-state from DISK, not `MODELS[].installed` (MPI-216)
+
+`MODELS[].installed` is a **renderer-only** flag, set at runtime by
+`syncModelInstalled()`. It is **NEVER defined in the backend (Node) process** —
+every `m.installed` reads `undefined` there. So any backend guard filtering on
+`m.installed === true` matches nothing and protects nothing.
+
+Both engines resolve "is another model still using this dep" from the actual
+store, never the dead flag:
+
+- **Remote** (`_remoteSharedDepIds`, MPI-122): asks the Pod volume via
+  `remoteModelsCheck`. Aborts the uninstall if the volume can't be verified.
+- **Local** (`_localSharedDepsMap`, MPI-216): stats local disk via
+  `comfy.js`'s exported `localModelsCheck` (same custom-root + default-root +
+  recursive-search + completeness logic as `/comfy/models/check`). Computed once
+  before the delete loop; fail-safe **aborts** (`500 shared-dep-check-failed`) if
+  the check throws. A dep is protected iff another model still has that specific
+  dep **complete on disk** (per-dep, so a partially-installed sibling still
+  protects the shared files it has).
+
+The old local `_findOtherModelsUsingDep` filtered on `m.installed` → always `[]`
+→ uninstalling one LTX-2.3 tier deleted the Gemma/VAE/LoRAs the other tier
+shares. **Trap:** the remote path was fixed (MPI-122) and the local twin was
+forgotten. This repo repeatedly fixes one engine path and not its twin (also
+MPI-164, the `allBytesDone` "Verifying…" gate — fixed remote, ported to local
+only at MPI-216). **On any shared-dep / install / engine-split change, check
+BOTH the local and remote paths.**
+
+The renderer must also not read an arch weight alone as "installed": a flat
+arch-variant model (LTX-2.3 balanced) is installed only when its common deps are
+ALSO on disk (`MpiModelManager._commonDepsOnDisk`), else a card whose shared deps
+were deleted would show a green INSTALLED and hide the loss.
+
 - SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
 - Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
 - On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and repopulate `state.downloadJobs`.
