@@ -251,9 +251,7 @@ export const MODELS = [
         // branch is meaningless. audio:true surfaces the audio media slot + the
         // Reference|Original mode UI.
         capabilities: { multiStage: true, audio: true },
-        // No preview clip yet — must NOT reuse wan22_preview.mp4 (that's WAN
-        // footage; showing it on the LTX card misrepresents the model). Leave the
-        // media slot empty until a real LTX-2.3 clip exists, then add `video:`.
+        video: 'ltx23_high_preview.mp4',
         type: 'ltx',
         // LTX has 6 flat user LoRA slots (Input_Lora_1..6), no high/low staging →
         // no loraStages. Model-strength only.
@@ -313,6 +311,7 @@ export const MODELS = [
         mediaType: 'video',
         tier: 2,
         capabilities: { multiStage: true, audio: true },
+        video: 'ltx23_balanced_preview.mp4',
         type: 'ltx',
         loraStrengths: ['model'],
         supportedOps: ['t2v_ms', 'i2v_ms'],
@@ -368,8 +367,7 @@ export const MODELS = [
         // Finish-only. motion NOT set: the 5B workflow has no Input_Motion_Intensity
         // node, so the motionIntensity control stays hidden (unlike wan-22 14B).
         capabilities: { multiStage: false, audio: false },
-        // No preview clip yet — do NOT reuse wan22_preview.mp4 (14B footage). Add a
-        // real 5B clip later, then set `video:`.
+        video: 'wan22_5b_preview.mp4',
         type: 'wan5b',
         // Ships the quanhaol 4-step Turbo distill as a MODEL-ONLY LoRA (str 0.8,
         // baked in the workflow). No high/low staging (5B is dense, not MoE) → no
