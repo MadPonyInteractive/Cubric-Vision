@@ -5,9 +5,9 @@
   "description": "Videos with artifacts found being outputted from Wan2.2 balanced tier. This happened on an RTX 5090. We need to test locally as well. Primary suspect is the save video node.",
   "column": "todo",
   "maturity": "idea",
-  "status": "pending",
+  "status": "deleted",
   "created_at": "2026-07-06T11:24:46.026Z",
-  "updated_at": "2026-07-06T11:24:46.026Z",
+  "updated_at": "2026-07-07T17:49:41.400Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

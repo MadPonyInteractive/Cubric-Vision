@@ -1,6 +1,6 @@
 # MPI-134 — validation checklist
 
-- [ ] Check if an ephemeral Pod on an RTX 3090 (lower-variability card) can connect.
+- [x] Check if an ephemeral Pod on an RTX 3090 (lower-variability card) can connect.
 
 ## Context for whoever picks this up
 
