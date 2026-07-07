@@ -285,7 +285,7 @@ class _CanvasCore {
         });
         // Write into manual layer; recomposite refreshes display.
         this.mask.manualCtx.globalCompositeOperation = 'source-over';
-        this.mask.manualCtx.drawImage(img, 0, 0);
+        this.mask.manualCtx.drawImage(img, 0, 0, this.mask.manualCanvas.width, this.mask.manualCanvas.height);
         this.mask._recomposite();
         this.draw();
     }

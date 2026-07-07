@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-214",
+  "title": "4K mask painting laggy - cap mask working resolution at 1536px long edge",
+  "description": "4K mask painting was unusably laggy. MaskManager sized its three off-screen layers (manual/subtract/composite) to full image resolution (init(img.width, img.height) at MpiCanvas.js:343). paint() calls _recomposite() on EVERY brush dab (mousedown + each mousemove, unthrottled), which clears + drawImage's the whole layer 3x. On a 4K image that's ~8.3M px composited per pointer event, ~120x/sec -> lag.\n\nFIX (user steer: 'masks don't need high precision'): cap the mask working resolution at MASK_MAX_EDGE=1536 (long edge). init() computes _scale = min(1, 1536/max(w,h)) and sizes all three canvases to the downscaled dims. paint() maps incoming image-px coords + brush radius by _scale into mask-px. Everything downstream already used the canvas's own w/h (overlay drawImage with explicit W,H; getURL composite reads maskCanvas w/h; layer restores drawImage to canvas w/h), so display + export upscale back automatically. ComfyUI resizes the mask to latent anyway, and its own mask-grow/blur eats the softened edges -> no visible quality loss.\n\nAlso fixed a latent clip footgun: MpiCanvas.compositeMaskDataURL drawImage(img,0,0) had no w/h, so on the now-smaller canvas a full-res mask PNG would clip; added explicit canvas w/h (that path is currently redundant - auto-mask bypasses it - but the bug was real).\n\nEffect: 4K = ~6.4x fewer px per recomposite/dab. Small images (<1536px long edge) unchanged (_scale=1). LIVE-VERIFIED by user in 4K ('super fast now'). 8K not tested (no 8K assets) - if it ever lags, add rAF-coalesce of draw()+_recomposite and/or dirty-rect recomposite (deferred, not needed at 4K).\n\nFiles: js/components/Primitives/MpiCanvas/managers/MaskManager.js, js/components/Primitives/MpiCanvas/MpiCanvas.js. No changelog entry (user directive). No test (DOM-canvas, headless-untestable; logic hand-verified + live-proven).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-07T14:00:05Z",
+  "updated_at": "2026-07-07T14:00:05Z",
+  "links": {
+    "plan": null,
+    "events": "events.jsonl",
+    "research": null
+  }
+}
