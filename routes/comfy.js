@@ -827,3 +827,8 @@ module.exports = router;
 module.exports.setAxios = setAxios;
 module.exports.addComfyEventClient = addComfyEventClient;
 module.exports.removeComfyEventClient = removeComfyEventClient;
+// Exposed for the local shared-dep guard in downloadManager (MPI-216): the local
+// uninstall must protect deps still complete on disk for ANOTHER model, the same
+// way the remote path checks the Pod volume. Reuses the exact custom-root +
+// default-root + recursive-search + completeness logic used by /comfy/models/check.
+module.exports.localModelsCheck = _localModelsCheck;

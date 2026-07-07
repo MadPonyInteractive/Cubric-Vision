@@ -368,6 +368,26 @@ export const MpiModelManager = ComponentFactory.create({
             });
         }
 
+        // Are the model's NON-arch common deps all on disk? (MPI-216) An arch weight
+        // being present is NOT enough to call an arch-variant model "installed": a
+        // user who uninstalled the sibling tier and lost the shared Gemma/VAE/LoRAs
+        // must see PARTIALLY INSTALLED, not a green INSTALLED that hides the loss.
+        // Common deps = the drafted universe MINUS every arch variant. Gate the
+        // "arch weight present" installed-signal on this so the arch clause (which
+        // exists only for the CPU-pod null-arch section-sort, MPI-209) can't alone
+        // flip a model with missing common deps to installed.
+        function _commonDepsOnDisk(model) {
+            if (!_hasArch(model)) return true; // non-arch models: arch clause never fires
+            const depStatus = getModelDepStatus(model.id);
+            if (!depStatus) return false;
+            const archIds = new Set();
+            for (const t of _archTokensOf(model)) {
+                for (const id of variantDepsOf(model, { arch: t })) archIds.add(id);
+            }
+            const common = _draftDepIds(model).filter(id => !archIds.has(id));
+            return common.length > 0 && common.every(id => _depIsInstalled(depStatus.get(id)));
+        }
+
         // Resolve a dep list for a model UNIONed across its selected arch tokens.
         // `resolveFn(archToken)` runs the resolver once per token ({ arch: token });
         // a non-arch model runs it once with a null token (the resolver ignores the
@@ -700,7 +720,14 @@ export const MpiModelManager = ComponentFactory.create({
                 || installedArch.some(t => !archDraft.includes(t))
             );
             const draftDiffersFromInstalled = opDraftDiffers || archDraftDiffers;
-            const anyInstalled = model.installed === true || installedOps.length > 0 || installedArch.length > 0;
+            // MPI-216: an arch weight on disk only counts as "installed" when the
+            // model's common deps (Gemma/VAE/LoRAs) are ALSO present — otherwise a tier
+            // whose shared deps were deleted (by uninstalling the sibling tier) would
+            // still read INSTALLED and hide the loss. installedOps already encodes this
+            // on a known-arch machine; the arch clause needs the explicit common gate
+            // for the CPU-pod null-arch path (MPI-209) where installedOps reads empty.
+            const anyInstalled = model.installed === true || installedOps.length > 0
+                || (installedArch.length > 0 && _commonDepsOnDisk(model));
 
             // Partial progress (idle only).
             let partial = { hasPartialProgress: false };
@@ -864,13 +891,16 @@ export const MpiModelManager = ComponentFactory.create({
 
             // A model is "installed" for sectioning when its installed flag is set OR
             // at least one op is installed (op-keyed partial installs) OR an arch
-            // weight is on disk. The arch clause matches the card's `anyInstalled`
-            // (MPI-209): on a CPU pod (no live GPU → null arch) _installedOpsOf unions
-            // both variant weights and reads empty, so an arch-variant model that IS
-            // installed for one GPU would wrongly sink to the uninstalled section.
+            // weight AND the common deps are on disk. The arch clause matches the card's
+            // `anyInstalled` (MPI-209): on a CPU pod (no live GPU → null arch)
+            // _installedOpsOf unions both variant weights and reads empty, so an
+            // arch-variant model that IS installed for one GPU would wrongly sink to the
+            // uninstalled section. MPI-216: the common-deps gate keeps a tier whose
+            // shared deps were deleted (sibling-tier uninstall) out of the installed
+            // section — arch-weight-alone is not "installed".
             const isInstalled = m => m.installed === true
                 || _installedOpsOf(m).length > 0
-                || _installedArchOf(m).length > 0;
+                || (_installedArchOf(m).length > 0 && _commonDepsOnDisk(m));
             const installed = visible.filter(isInstalled);
             const uninstalled = visible.filter(m => !isInstalled(m));
 

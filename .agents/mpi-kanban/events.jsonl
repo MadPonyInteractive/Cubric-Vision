@@ -922,3 +922,7 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-213", "type": "task.moved", "at": "2026-07-07T12:10:00.000Z", "actor": "claude", "summary": "doing/validating -> done/complete (status accepted). Fix LIVE-VERIFIED by user: no-Pod local gen now drains the Cue clean on completion (was phantom '1 RUNNING'). Lane-key mismatch fixed in _laneOf + lane-agreement.test.cjs guard.", "from": "doing/validating", "to": "done/complete"}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-214", "type": "task.created", "at": "2026-07-07T14:00:05Z", "actor": "claude", "summary": "4K mask paint lag fix (mask layers sized to full image res, _recomposite full-frame per brush dab, unthrottled).", "from": null, "to": "done/complete"}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-214", "type": "task.moved", "at": "2026-07-07T14:00:05Z", "actor": "claude", "summary": "todo->done (complete, accepted). Cap mask working res at MASK_MAX_EDGE=1536, scale paint coords by _scale. ~6.4x fewer px/dab at 4K. LIVE-VERIFIED by user.", "from": "todo/planned", "to": "done/complete"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"task.created","at":"2026-07-07T14:30:00Z","actor":"claude","summary":"Captured from brainstorm: Model Library full-page overlay with grid + image/video filters."}
+{"ts":"2026-07-07T15:17:48Z","type":"task.created","id":"MPI-216","column":"doing","by":"agent"}
+{"ts":"2026-07-07T15:17:48Z","type":"task.moved","id":"MPI-216","from":"todo","to":"doing","by":"agent"}
+{"ts":"2026-07-07T15:23:12Z","type":"task.progress","id":"MPI-216","by":"agent"}

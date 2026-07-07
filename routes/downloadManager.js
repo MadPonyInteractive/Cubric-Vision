@@ -87,15 +87,49 @@ function _withEngineExtraDeps(modelId, dependencies, engine) {
 
 // ── Shared-dep helper ─────────────────────────────────────────────────────────
 
-function _findOtherModelsUsingDep(depId, excludeModelId) {
+// Local variant of the shared-dep guard (MPI-216). The old `_findOtherModelsUsingDep`
+// filtered on `m.installed === true` — a RENDERER-ONLY flag (set by syncModelInstalled)
+// that is NEVER defined in the backend (Node) process, so the guard ALWAYS returned []
+// and a local uninstall deleted SHARED deps. That is the exact bug MPI-122 fixed for the
+// REMOTE path (`_remoteSharedDepIds`, which checks the Pod volume) but the local path was
+// never given the fix: uninstalling LTX-2.3 high trashed the Gemma + VAEs + LoRAs that the
+// balanced tier shares. Here we stat the LOCAL disk (same custom-root + default-root +
+// recursive-search + completeness logic as /comfy/models/check) to learn which OTHER model's
+// deps are actually complete on disk, and protect those. Returns depId → [modelName, …].
+async function _localSharedDepsMap(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
     const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
-    // Resolve each model's FULL dep universe (commonDeps + every op) so an
-    // op-specific or common dep of another installed model is protected — the
-    // flat `.dependencies` field no longer exists on operation-keyed models. (MPI-122)
-    return MODELS
-        .filter(m => m.id !== excludeModelId && m.installed === true && resolveFullUniverse(m).includes(depId))
-        .map(m => ({ modelId: m.id, modelName: m.name }));
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const comfyRoutes = _require('./comfy.js');
+    const others = MODELS
+        .filter(m => m.id !== excludeModelId)
+        .map(m => ({ model: m, depIds: resolveFullUniverse(m) }))
+        .filter(o => o.depIds.length > 0);
+    const checkModels = others.map(({ model, depIds }) => ({
+        id: model.id,
+        deps: depIds.map(depId => {
+            const d = DEPS[depId] || {};
+            return { id: depId, type: d.type, filename: d.filename };
+        }),
+    }));
+    const map = new Map(); // depId → Set<modelName>
+    const results = await comfyRoutes.localModelsCheck(checkModels);
+    for (const { model, depIds } of others) {
+        const entry = results[model.id];
+        // A dep is protected iff another model still has that specific dep complete
+        // on disk — a per-dep check (not whole-model `installed`) so a PARTIALLY
+        // installed sibling still protects the shared files it DOES have. This is
+        // stricter than the remote whole-model gate on purpose: it must not delete a
+        // file another model is physically using, even mid-install.
+        if (!entry || !Array.isArray(entry.deps)) continue;
+        const onDisk = new Set(entry.deps.filter(d => d.installed === true).map(d => d.id));
+        for (const depId of depIds) {
+            if (!onDisk.has(depId)) continue;
+            if (!map.has(depId)) map.set(depId, new Set());
+            map.get(depId).add(model.name);
+        }
+    }
+    return map;
 }
 
 // Remote variant of the shared-dep guard. `_findOtherModelsUsingDep` trusts the
@@ -1729,6 +1763,25 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
     const _universalDepIds = new Set(getUniversalWorkflowDepIds());
 
+    // Shared-dep guard (MPI-216): resolve — from the ACTUAL local disk, not the dead
+    // backend `MODELS[].installed` flag — which deps are still complete on disk for
+    // another model, and protect them. Computed ONCE (a single _localModelsCheck over
+    // every other model's universe) then queried per dep. If the check throws we ABORT
+    // rather than risk deleting a shared dep we could not verify — same fail-safe stance
+    // as the remote path (uninstalling one LTX tier must not trash the Gemma/VAE/LoRAs
+    // the other tier shares).
+    let sharedKeep;
+    try {
+        sharedKeep = await _localSharedDepsMap(modelId);
+    } catch (err) {
+        logger.error('download', `local shared-dep check failed for ${modelId}: ${err.message}`);
+        return res.status(500).json({
+            success: false,
+            error: 'shared-dep-check-failed',
+            message: 'Could not verify which files other models still need — uninstall aborted to avoid deleting shared files. Try again.',
+        });
+    }
+
     for (const dep of dependencies) {
         let localPath;
         if (dep.type === 'custom_nodes') {
@@ -1747,9 +1800,8 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             continue;
         }
 
-        const sharedWith = _findOtherModelsUsingDep(dep.id, modelId);
-        if (sharedWith.length > 0) {
-            keptShared.push({ depId: dep.id, depName: dep.name || dep.id, sharedWith: sharedWith.map(m => m.modelName) });
+        if (sharedKeep.has(dep.id)) {
+            keptShared.push({ depId: dep.id, depName: dep.name || dep.id, sharedWith: [...sharedKeep.get(dep.id)] });
             continue;
         }
 
