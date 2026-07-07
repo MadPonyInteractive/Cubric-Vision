@@ -81,7 +81,7 @@
     "inputs": {
       "shift": 8,
       "model": [
-        "61",
+        "125",
         0
       ]
     },
@@ -390,6 +390,120 @@
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
+    }
+  },
+  "121": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 0,
+      "model": [
+        "124",
+        0
+      ],
+      "clip": [
+        "124",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "122": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 0,
+      "model": [
+        "126",
+        0
+      ],
+      "clip": [
+        "126",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "123": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "121",
+        0
+      ],
+      "clip": [
+        "121",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "124": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "122",
+        0
+      ],
+      "clip": [
+        "122",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "125": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "123",
+        0
+      ],
+      "clip": [
+        "123",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "126": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 0,
+      "model": [
+        "61",
+        0
+      ],
+      "clip": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_1"
     }
   }
 }
