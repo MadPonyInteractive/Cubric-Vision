@@ -37,6 +37,7 @@ Props: none
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare-requested'` event from MpiGalleryGrid
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
+- `MpiAddToProject`   props: `{ projects: [{id,name}], onConfirm(projectId) }`   slot: `document.createElement('div')` — mounted on demand on `grid 'add-to-project'` event; dropdown picks a target project, `onConfirm` POSTs `/project-media/:id/add-from-cards` to copy the selected cards
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
 
 > **Note:** `MpiModelManager` is NOT mounted here — it is a slide-over content component opened via `slide-over:open`. `MpiGalleryBlock` emits `Events.emit('models:open')` which shell re-emits as `slide-over:open { title: 'Models', component: MpiModelManager }`. PromptBox mounts only when `s_installedModelIds.length > 0`; post-install mount is keyed off `state:changed (s_installedModelIds)`, not a `models:closed` event.

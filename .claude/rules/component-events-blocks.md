@@ -20,6 +20,7 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `select`          `{ group: ItemGroup, selected: boolean }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
          `combine`         `{ groups: ItemGroup[] }` — Combine chosen from context menu (≥2 selected, all `type === 'video'`; click-order via Set insertion)
+         `add-to-project`  `{ groups: ItemGroup[] }` — "Add to project" from context menu (any selection ≥1). Block copies each group's selected item into a chosen OTHER project.
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
          `preview:continue`     `{ group: ItemGroup, item: MediaItem }` — Continue button on preview-stage card. Block runs `validatePreviewAssets(item.id)` first. Fast path: enqueue stage-2 with `isStage2: true` and NO `replaceItemId` (final lands as a NEW gallery card; preview stays). Cold fallback: enqueue stage-1 rerun (`previewOnly: true`, `replaceItemId: item.id`) to rebuild the latent in place; then on `gallery:item-updated` auto-enqueue the stage-2 branch. Blocked: toast + no-op. Gated by `commandAllowsBranchingContinue(item.operation)` — button is hidden when the op disallows branching.
@@ -68,6 +69,7 @@ REMOUNT: On fresh mount, `_renderRunCluster` reconciles `isGenerating` against B
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
+GRID HANDLER: `grid 'add-to-project'` — `listProjects()` (excludes `state.currentProject.id`; toast if none), builds `cards[]` from each group's `getSelectedItem`, mounts `MpiAddToProject` (dropdown) on demand; on confirm POSTs `/project-media/:targetId/add-from-cards` `{ folderPath, cards }` and emits `ui:success`. Copy, not move — source untouched.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `state:changed` (`s_installedModelIds`) — mounts/unmounts PromptBox based on installed model count; emits `models:open` if no image models (zero-model gate)
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)

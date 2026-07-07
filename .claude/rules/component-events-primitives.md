@@ -246,6 +246,12 @@ EMITS:   `create` `{ name: string, location: string|null }`
          `cancel` `{}`
 LISTENS: (none — internal MpiModal handles `ui:close-all-popups`)
 
+### MpiAddToProject
+EMITS:   `confirm` `{ projectId: string }` — after `onConfirm` prop resolves
+         `cancel`  `{}` — Cancel button only (NOT on Escape/hide)
+LISTENS: (none — internal MpiModal handles `ui:close-all-popups`)
+NOTE:    Compound overlay: MpiModal + MpiDropdown (project picker) + OK/Cancel MpiButtons. `onConfirm(projectId)` prop does the async copy; OK disabled while it runs, modal stays open on reject. Mounted on demand by MpiGalleryBlock's `add-to-project` handler.
+
 ### MpiOkCancel
 EMITS:   `ok`     `{ inputValue?: string }`
          `cancel` `{}`
