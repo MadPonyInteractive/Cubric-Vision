@@ -303,17 +303,30 @@ class ResumableDownloader {
                 // each owning model card to the indeterminate "Verifying…" sweep first,
                 // reusing the same download:progress {indeterminate, phase} contract the
                 // remote path uses (downloadService.js reads phase==='verifying'). (MPI-140)
+                //
+                // MPI-216: gate the model-level sweep behind allBytesDone, mirroring the
+                // remote path (MPI-164). A per-dep verify mid-install (this dep finished,
+                // hashing it, while OTHER deps still download) must NOT flip the whole-model
+                // bar to an indeterminate "Verifying…" at <100% — the user reads it as a
+                // stall. This dep just ended (byte-complete), so mark it complete for the
+                // check; custom_nodes are work-not-bytes (excluded, same as remote).
                 if (this.depJob.sha256Expected) {
+                    this.depJob.downloadedBytes = this.depJob.totalBytes || this.depJob.downloadedBytes;
                     for (const modelJob of _modelJobs.values()) {
                         if (!modelJob.deps.some(d => d.id === this.depJob.id)) continue;
+                        const allBytesDone = modelJob.deps.every(d =>
+                            d.id === this.depJob.id
+                            || d.status === 'complete'
+                            || d.type === 'custom_nodes'
+                            || (d.downloadedBytes || 0) >= _depDenominator(d));
                         _broadcast('download:progress', {
                             modelId: modelJob.modelId,
                             depId: this.depJob.id,
-                            downloadedBytes: modelJob.downloadedBytes,
+                            downloadedBytes: allBytesDone ? modelJob.totalBytes : modelJob.downloadedBytes,
                             totalBytes: modelJob.totalBytes,
-                            progress: modelJob.progress,
-                            indeterminate: true,
-                            phase: 'verifying',
+                            progress: allBytesDone ? 1 : modelJob.progress,
+                            indeterminate: allBytesDone,
+                            phase: allBytesDone ? 'verifying' : undefined,
                         });
                     }
                 }
