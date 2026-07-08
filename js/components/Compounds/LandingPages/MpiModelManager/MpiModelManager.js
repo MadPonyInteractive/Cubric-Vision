@@ -874,7 +874,9 @@ export const MpiModelManager = ComponentFactory.create({
                 _unsubs.push(on(thumb, 'click', () => {
                     if (vid.requestFullscreen) {
                         vid.controls = true; vid.muted = false;
-                        vid.requestFullscreen().catch(() => { vid.controls = false; vid.muted = true; });
+                        vid.requestFullscreen()
+                            .then(() => vid.play().catch(() => {}))   // always playing in fullscreen; the click's native toggle can leave it paused
+                            .catch(() => { vid.controls = false; vid.muted = true; });
                     }
                 }));
                 // fullscreenchange is a document-level event; restore muted/no-controls
