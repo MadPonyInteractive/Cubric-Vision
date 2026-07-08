@@ -238,6 +238,23 @@ rclone --config "$CONF" lsf -R "cubric-r2:cubric-models/vision/models/<type>/" -
 curl -sIL "https://models.cubric.studio/vision/models/<type>/file.safetensors" | grep -i content-length
 ```
 
+**TRAP — every KILLED upload leaves an orphaned multipart session in R2.** Each
+time you stop + restart an rclone upload (e.g. to re-apply `--bwlimit`), the
+aborted run leaves an incomplete multipart upload behind. These are NOT the final
+object (a completed upload is fine + reachable) but they consume bucket space and
+show as "Ongoing Multipart Upload" rows in the Cloudflare dash — easy to mistake
+for a failed upload. **After any kill-and-restart, clean them up** (R2 delete-class
+op → needs user approval first). `rclone cleanup` has a default 24h age filter, so
+a same-day orphan needs `-o max-age=0`:
+```bash
+# list pending (verify what you're about to abort):
+rclone --config "$CONF" backend list-multipart-uploads cubric-r2:cubric-models
+# abort ALL incomplete uploads regardless of age (final objects are untouched):
+rclone --config "$CONF" backend cleanup cubric-r2:cubric-models -o max-age=0
+```
+Better: let an upload run to completion the first time (cap bandwidth UP FRONT so
+you never need to kill + restart).
+
 R2 deletes need explicit user approval (capability rule).
 
 ### Fill hashes
