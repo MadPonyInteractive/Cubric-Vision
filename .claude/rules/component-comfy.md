@@ -117,7 +117,7 @@ MpiPromptBox 'run' event
 - `_buildParams()` merges model settings for LoRAs and upscale models. Checkpoints are app/workflow-owned and are not user-selectable in Model Settings.
 - Flat-LoRA models inject `Lora_1` ... `Lora_6` from `modelSettings[modelId].loras`.
 - Models with `model.loraStages` inject staged keys from `stage.injectionPrefix`, e.g. WAN emits `Lora_High_1` ... `Lora_High_6` and `Lora_Low_1` ... `Lora_Low_6`.
-- LoRA dropdowns show every file returned by the active models root `loras/` folder. They are not filtered by `model.type`; users own their LoRA folder naming.
+- LoRA pickers (`MpiTreePicker`, MPI-233) show every file returned by the active models root `loras/` folder as a searchable folder tree. They are not filtered by `model.type`; users own their LoRA folder naming.
 
 ---
 

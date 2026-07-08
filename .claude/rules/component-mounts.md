@@ -206,11 +206,11 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 - `MpiOverlay`   props: `{ closable: true }`   slot: `document.createElement('div')`
 - `MpiDropdown` (upscale)   props: `{ options: upscaleOptions from state.upscaleModels, value, placeholder }`   slot: `.mpi-model-settings__upscale-slot`; remounted on each `open()` call
-- `MpiDropdown` (lora slot ×6)   props: `{ options: loraOptions from state.availableLoras, value, placeholder }`   slot: per-slot `dropHost` div; remounted on each `open()` call
+- `MpiTreePicker` (lora slot ×6)   props: `{ options: loraOptions from state.availableLoras, value, placeholder, searchPlaceholder:'Search LoRAs…', stripExtension:true, extraClasses: missing ? 'mpi-tree-picker--missing' : '' }`   slot: per-slot `dropHost` div; remounted on each `open()` call. Searchable folder tree (MPI-233) — replaced the flat `MpiDropdown` at BOTH flat (`_mountLoraSlots`) and staged (`_mountStagedLoraSlots`) sites. Value stays the full path string (heal/inject untouched).
 - `MpiInput` (model strength ×6)   props: `{ type:'number', size:'sm', value, min:-2, max:2, step:0.05, decimals:2 }`   slot: per-slot `strengthsEl`
 - `MpiInput` (clip strength ×6)   props: same pattern as model strength
 - `MpiFolderDrop` (one per configured folder)   props: `{ folderPath, bucket, primary, onImport }`   slot: `[data-drop="loras"]` / `[data-drop="upscale_models"]`; sourced from `GET /comfy/model-folders`; remounted per `open()` via render-token-guarded async `_renderDropZones` (guard prevents duplicate zones when the live-rerender fires mid-fetch). Also mounted in `MpiSettings` External Connections.
-  - Missing-model UX: a selected LoRA/upscale absent from `state.availableLoras`/`upscaleModels` shows `mpi-dropdown--missing` (red) + a synthetic `(missing)` option. A relocated file self-heals by UNIQUE basename (path updated, persisted); ambiguous same-name across folders stays red. LoRA missing → blocking `ui:warning` at generate; upscale missing → fall back to SIAX + warn. The picker live-rerenders on `state:changed` for those keys while open.
+  - Missing-model UX: a selected LoRA/upscale absent from `state.availableLoras`/`upscaleModels` shows red (LoRA: `mpi-tree-picker--missing`; upscale: `mpi-dropdown--missing`) + a synthetic `(missing)` option. A relocated file self-heals by UNIQUE basename (path updated, persisted); ambiguous same-name across folders stays red. LoRA missing → blocking `ui:warning` at generate; upscale missing → fall back to SIAX + warn. The picker live-rerenders on `state:changed` for those keys while open.
 
 ---
 

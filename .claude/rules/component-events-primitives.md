@@ -34,6 +34,11 @@ NOTE:    Primitive HSV visual picker with saturation/value square, hue slider, R
 EMITS:   `change` `{ value: string, label: string }`
 LISTENS: (none — uses document click + MutationObserver for cleanup)
 
+### MpiTreePicker
+EMITS:   `change` `{ value: string, label: string }`
+LISTENS: `ui:close-all-popups` — closes the portalled box (also document click + MutationObserver for portal-node cleanup)
+NOTE:    Searchable folder-tree picker (MPI-233) for path-shaped option values; drop-in for MpiDropdown (same `change` contract). Value = full path string. First consumer: LoRA slots in MpiModelSettings.
+
 ### MpiInput
 EMITS:   `input`  `{ value: string|number, originalEvent: Event }`
          `change` `{ value: string|number, originalEvent: Event }`

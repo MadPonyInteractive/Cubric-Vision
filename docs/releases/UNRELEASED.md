@@ -43,6 +43,13 @@
 
 ## whatIsNew
 
+- **Searchable LoRA picker.** The LoRA slots in Model Settings now open a
+  searchable, collapsible folder tree instead of a flat list — type to filter
+  by name, expand folders to browse, and long or deeply-nested LoRA names are
+  no longer clipped. Your saved LoRA is highlighted and its folders auto-expand
+  when you reopen a project. File extensions are hidden for readability (the
+  full path is still saved).
+
 - **The Models page is now a full-page Model Library.** Opening **Models** brings up
   a full-screen library instead of the narrow side panel — a contact-sheet grid of
   model previews, split into **Installed** and **Available** and, within each, into
