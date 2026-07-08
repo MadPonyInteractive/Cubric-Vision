@@ -122,6 +122,24 @@ function _promptExcerpt(text = '') {
     return String(text || '').replace(/\s+/g, ' ').trim().slice(0, PROMPT_EXCERPT_MAX);
 }
 
+// Keep only the media items whose type the operation actually declares as an
+// input slot. The PromptBox may still hold a start-frame chip left over from a
+// prior i2v when the user fires a t2i (which declares NO image input) — without
+// this filter that stale chip is snapshotted into the t2i sidecar's
+// generationSettings.mediaItems, which then (a) lights up "Use Images" on a
+// text-to-image card's Reuse dialog and (b) injects the wrong image on reuse,
+// and (c) propagates the orphan-prone frame reference into downstream i2v
+// preview-assets — the reference that 404s once a card in that lineage is
+// deleted (MPI-225). Ops with no declared media input → empty snapshot.
+function _opScopedMediaItems(operation, mediaItems = []) {
+    const slots = getCommandMediaInputs(operation);
+    if (!slots.length) return [];
+    return (Array.isArray(mediaItems) ? mediaItems : []).filter(item => {
+        const type = item?.mediaType ?? item?.type ?? null;
+        return slots.some(slot => slot.mediaType === type);
+    });
+}
+
 function _cloneMediaItems(mediaItems = []) {
     return (Array.isArray(mediaItems) ? mediaItems : [])
         .filter(item => item && (item.url || item.filePath))
@@ -734,7 +752,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         const width  = injectionParams.Width  || injectionParams.width  || 0;
         const height = injectionParams.Height || injectionParams.height || 0;
         const elapsedMs = samplingStartTime ? Date.now() - samplingStartTime : null;
-        const generationMediaItems = _cloneMediaItems(mediaItems);
+        const generationMediaItems = _cloneMediaItems(_opScopedMediaItems(operation, mediaItems));
         const generationSettings = {
             operation,
             modelId: model.id,

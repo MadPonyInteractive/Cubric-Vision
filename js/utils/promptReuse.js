@@ -148,8 +148,17 @@ export function buildPromptReusePayload(item = {}) {
         injectionParams.Seed = item.seed;
     }
 
-    const previewMediaItems = _opAcceptsImageInput(item, source) ? _mediaItemsFromPreviewAssets(item) : [];
-    const savedMediaItems = _mediaItemsFrom(source);
+    const acceptsImage = _opAcceptsImageInput(item, source);
+    const previewMediaItems = acceptsImage ? _mediaItemsFromPreviewAssets(item) : [];
+    // Drop saved IMAGE media when the op declares no image input. Heals sidecars
+    // corrupted before MPI-225's generationService fix, where a leftover
+    // start-frame chip was snapshotted into a t2i's generationSettings.mediaItems
+    // — that phantom image otherwise lights up "Use Images" on the Reuse dialog
+    // and injects the wrong image. Non-image saved media (audio, non-frame video)
+    // is never op-gated here — it flows through untouched.
+    const savedMediaItems = _mediaItemsFrom(source).filter(
+        m => acceptsImage || (m.mediaType ?? m.type) !== 'image'
+    );
 
     return {
         positive: item.prompt ?? source.prompt ?? '',

@@ -1047,6 +1047,22 @@ function createEngine({ engine, alwaysLocal }) {
                     }
                 } catch (e) {
                     clientLogger.error('comfy', `Asset upload failed for ${paramKey}`, e);
+                    // A deleted input source (e.g. the user deleted the preview card
+                    // whose start-frame this gen sources from — the upload is lazy at
+                    // dispatch, so the /project-file source is already gone) 404s here.
+                    // Re-throw a friendly, actionable message instead of the raw
+                    // "Failed to prepare blob" crash; commandExecutor's catch surfaces
+                    // it as the ui:error dialog and settles the job cleanly. Shared
+                    // path → covers both local and remote engines (one _uploadImage).
+                    if (
+                        typeof val === 'string' &&
+                        val.includes('project-file') &&
+                        /HTTP 404/.test(e.message || '')
+                    ) {
+                        throw new Error(
+                            'The input image for this generation was deleted. Re-add it and try again.'
+                        );
+                    }
                     throw e;
                 }
             }
