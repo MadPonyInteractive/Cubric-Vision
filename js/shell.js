@@ -1038,6 +1038,17 @@ function _initRemoteConnectionFeed() {
       // painted "LOCAL · OFFLINE" while Settings showed "ready" (the feed and the
       // panel disagreed) even though the volume models were live.
       connected = !!(s && s.ready && (s.noGpu || s.comfyReady === undefined || s.comfyReady));
+      // Wrapper is up (`ready`) but ComfyUI isn't serving yet (`comfyReady:false`) —
+      // the window where a per-model custom_node is installing on the volume and
+      // ComfyUI is reloading. The backend's `_starting`/`connecting` flag already
+      // cleared on wrapper-ready, so without this the tick sees connected:false +
+      // connecting:false and paints plain local · offline for the whole ~1min
+      // comfy-reload — no "connecting" stage, then a sudden snap to remote. Treat
+      // it as still connecting so the hero shows the transition. (noGpu Pods have no
+      // ComfyUI, so this never applies to them.)
+      if (!connected && !connecting && s && s.ready && !s.noGpu && s.comfyReady === false) {
+        connecting = true;
+      }
     } catch (_) {
       connected = false;
     }
