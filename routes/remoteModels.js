@@ -310,7 +310,12 @@ async function remoteModelsCheck(models) {
     const entry = results[mid] || { installed: true, deps: [] };
     const deps = Array.isArray(entry.deps) ? entry.deps : [];
     for (const d of deps) {
-      if (d && volumeNodeDrifted.has(d.id)) d.installed = false;
+      // A drifted volume node's folder IS present (wrong commit), so the wrapper
+      // reports it complete. Force installed:false to route it to reinstall AND tag
+      // it `drifted` so the installer sends force:true — else the wrapper short-
+      // circuits `already_installed` on folder-exists (wrapper.py) and the node
+      // never re-fetches at the pinned commit → an endless install loop (MPI-222).
+      if (d && volumeNodeDrifted.has(d.id)) { d.installed = false; d.drifted = true; }
     }
     for (const id of residentIds) {
       deps.push({ id, installed: true, partialBytes: 0 });

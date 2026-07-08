@@ -106,7 +106,10 @@ async function _resolveLocalModelPath(type, filename) {
 //
 // The highest manifest_schema_version this app build understands. Bump in lockstep
 // with the wrapper when the manifest shape changes incompatibly.
-const MANIFEST_SCHEMA_MAX = 1;
+// v2 (MPI-222): adds an optional `nodes[]` [{ filename, commit }] for per-node
+// commit-drift detection. Additive — a v1 app ignores it, a v2 app reads it
+// defensively (absent → no drift), so accepting v2 is safe.
+const MANIFEST_SCHEMA_MAX = 2;
 
 // Cache the verdict per podId so the manifest is fetched once per connection, not on
 // every prompt. Cleared when the active Pod changes.

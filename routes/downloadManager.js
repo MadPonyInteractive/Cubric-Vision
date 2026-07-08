@@ -29,7 +29,7 @@ const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { checkOnline } = require('./netCheck');
-const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState } = require('./shared');
+const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState, writeNodeCommitMarker } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const {
     isCompleteOnDisk,
@@ -707,7 +707,12 @@ router.post('/comfy/models/download/start', async (req, res) => {
     for (const dep of localDeps) {
         let localPath;
         let installedCheckPath;
-        if (dep.type === 'custom_nodes') {
+        if (dep.targetPath) {
+            // MPI-222: in-node weight — engine-anchored regardless of customRoot.
+            const { localPath: lp } = await resolveComfyPath(dep, customRoot, {});
+            localPath = lp;
+            installedCheckPath = lp;
+        } else if (dep.type === 'custom_nodes') {
             // GitHub archives download as .zip; after extraction the zip is deleted.
             // Use the extracted folder path to check if already installed.
             const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
@@ -1268,7 +1273,12 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             depJob.status = 'queued';
             depJob.downloadedBytes = 0;
             depJob.error = null;
-            toInstall.push(dep);
+            // MPI-222: a DRIFTED volume node's folder is still present (wrong commit),
+            // so the wrapper would answer `already_installed` and never re-fetch. Carry
+            // the drift flag → remoteInstallDep sends force:true → wrapper rmtree's the
+            // stale folder + re-clones at the pinned commit + re-stamps the marker.
+            const freshStatus = statusResults[dep.id];
+            toInstall.push(freshStatus && freshStatus.drifted ? { ...dep, forceReinstall: true } : dep);
         }
     }
 
@@ -1354,7 +1364,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // approximate and the wrapper rejects an exact-correct file on a
         // done != expected_size mismatch. The wrapper uses content-length for
         // the progress total and the dep sha256 (when present) for integrity.
-        remoteModels.remoteInstallDep(dep)
+        remoteModels.remoteInstallDep(dep, { force: dep.forceReinstall === true })
             .then((out) => {
                 // already_installed: the SSE will not fire — settle here.
                 if (out && out.status === 'already_installed') {
@@ -1584,6 +1594,16 @@ async function _runCustomNodeInstall(modelJob) {
                 logger.error('download', `pip pin install FAILED for ${dep.id}: ${err.message}`);
                 throw err;
             }
+        }
+
+        // Stamp the pinned-commit marker LAST, so it only lands on a fully-installed
+        // node (extract + reqs + pins all succeeded). A missing/mismatched marker =
+        // drift → targeted reinstall on next boot (MPI-222). No-op for unpinned nodes.
+        try {
+            const stamped = await writeNodeCommitMarker(targetDir, dep.id);
+            if (stamped) logger.info('download', `node commit marker stamped for ${dep.id}`);
+        } catch (err) {
+            logger.warn('download', `node commit marker write failed for ${dep.id}: ${err.message}`);
         }
     }
 
@@ -1839,7 +1859,11 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
     for (const dep of dependencies) {
         let localPath;
-        if (dep.type === 'custom_nodes') {
+        if (dep.targetPath) {
+            // MPI-222: in-node weight — engine-anchored regardless of customRoot.
+            const { localPath: lp } = await resolveComfyPath(dep, customRoot, {});
+            localPath = lp;
+        } else if (dep.type === 'custom_nodes') {
             const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
             localPath = path.join(defaultCustomNodesRoot, zipName);
         } else if (customRoot) {
@@ -1849,7 +1873,7 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             localPath = path.join(defaultModelsRoot, dep.filename);
         }
 
-        // Rule 1: always preserve universal workflow deps (installOnEngine)
+        // Rule 1: always preserve universal workflow deps (every custom_node + engineAsset weights)
         if (_universalDepIds.has(dep.id)) {
             keptUniversal.push({ depId: dep.id, depName: dep.name || dep.id });
             continue;
@@ -1981,7 +2005,13 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
 
         let localPath;
         let installedCheckPath; // path to check for "already installed" (folder for custom_nodes, file otherwise)
-        if (dep.type === 'custom_nodes') {
+        if (dep.targetPath) {
+            // MPI-222: an in-node weight (e.g. RIFE) resolves engine-anchored via the
+            // resolver's targetPath branch — always, regardless of customRoot.
+            const { localPath: lp } = await resolveComfyPath(dep, customRoot, {});
+            localPath = lp;
+            installedCheckPath = lp;
+        } else if (dep.type === 'custom_nodes') {
             const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
             localPath = path.join(defaultCustomNodesRoot, zipName);
             // After successful extraction the zip is deleted and only the folder remains.

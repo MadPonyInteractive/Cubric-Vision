@@ -30,6 +30,11 @@ import { clientLogger } from '../services/clientLogger.js';
 // Map of modelId → Map of depId → installed: boolean
 const _modelDepStatusCache = new Map();
 
+// Baked Pod-image nodes whose stale-image warning has already fired this session,
+// so the connect-edge sync (which runs on every connect/disconnect) doesn't spam
+// the same "rebuild needed" toast. Keyed by node folder name. (MPI-222)
+const _warnedBakedDrift = new Set();
+
 // ── Path Config ───────────────────────────────────────────────────────────────
 // Initialized asynchronously via initPaths() — defaults to Windows portable until server reports.
 
@@ -117,7 +122,19 @@ export async function syncModelInstalled() {
         });
 
         if (!res.ok) return false;
-        const { results } = await res.json();
+        const { results, bakedDrift } = await res.json();
+
+        // MPI-222: a baked Pod-image node at the wrong commit can't be volume-healed
+        // — the image needs a rebuild. Warn once per node per session (toast, not the
+        // error dialog). Volume-node drift is handled silently by the reinstall path.
+        if (Array.isArray(bakedDrift)) {
+            for (const n of bakedDrift) {
+                const key = n && n.filename;
+                if (!key || _warnedBakedDrift.has(key)) continue;
+                _warnedBakedDrift.add(key);
+                Events.emit('ui:warning', { message: `Pod image is stale — rebuild needed (${key})` });
+            }
+        }
 
         for (const model of MODELS) {
             if (Object.prototype.hasOwnProperty.call(results, model.id)) {

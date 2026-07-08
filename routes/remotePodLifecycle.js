@@ -147,7 +147,12 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // wrapper.py + start-cpu.sh fresh at boot like the GPU images, so wrapper fixes
 // (e.g. /wrapper/disk for the Settings volume bar) reach CPU Pods without a
 // rebuild. v0.10.2-cpu baked a stale 0.2.22 wrapper mislabeled 0.2.23.
-const POD_IMAGE_VERSION_CPU = 'v0.11.0';
+// v0.14.0-cpu (MPI-222): rebuilt alongside the GPU image in CI run 28939295236
+// (bake-split + .mpi_node_commit + start-cpu.sh from the same Phase-5 tree; verified
+// present + pullable on GHCR). The GPU pin bumped to v0.14.0 but this CPU pin was
+// missed — CPU pods kept pulling the old v0.11.0 image (new wrapper via R2 stable,
+// but the image-baked start-cpu.sh + bake logic were stale). Bumped to match.
+const POD_IMAGE_VERSION_CPU = 'v0.14.0';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an

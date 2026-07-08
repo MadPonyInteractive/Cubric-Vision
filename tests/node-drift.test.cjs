@@ -111,6 +111,22 @@ test('no-wipe invariant: engine version stamp is untouched by a node repair', ()
     assert.notEqual('.mpi_engine_version', MARKER);
 });
 
+// ── Dev-mode MpiNodes symlink escape hatch (MPI-222) ─────────────────────────────
+// ComfyUI-MpiNodes is the ONE node symlinked into custom_nodes for live editing on a
+// source run. It is always at/ahead of the pinned commit, so a drift "repair" is a
+// false positive that would fs.remove the symlink. checkUniversalWorkflowDepsStatus
+// skips its drift check when _devMode && depId === 'ComfyUI-MpiNodes'. Pure mirror of
+// that guard — a release build (dev off) still drift-checks it normally.
+function driftSkipped(devMode, depId) {
+    return devMode && depId === 'ComfyUI-MpiNodes';
+}
+
+test('dev-mode: MpiNodes drift check is skipped (symlink not clobbered)', () => {
+    assert.equal(driftSkipped(true, 'ComfyUI-MpiNodes'), true, 'dev + MpiNodes → skip');
+    assert.equal(driftSkipped(true, 'ComfyUI-VideoHelperSuite'), false, 'dev + other node → still checks');
+    assert.equal(driftSkipped(false, 'ComfyUI-MpiNodes'), false, 'release + MpiNodes → still checks');
+});
+
 // ── Remote drift decision (pure mirror of remoteModelsCheck, MPI-222 Phase 4) ────
 // installedCommits = folder→commit from the Pod manifest nodes[] (schema v2).
 // Returns { volumeInstalled, bakedWarn } for one node given its class + pinned commit.
@@ -140,6 +156,39 @@ test('remote: baked node at wrong commit → warn only, never not-installed', ()
     const r = remoteDrift({ baked: true, folder: 'RES4LYF', pinned: 'aaa', installedCommits: { 'RES4LYF': 'bbb' } });
     assert.equal(r.bakedWarn, true);
     assert.equal(r.volumeInstalled, true, 'baked node is never volume-healed');
+});
+
+// Regression guard for the remote drift-HEAL bug (found live 2026-07-08): a drifted
+// volume node's folder is PRESENT (wrong commit) so the wrapper reports it complete
+// and answers `already_installed` on a plain install (wrapper.py: `complete and not
+// force`) → it never re-fetches at the pinned commit → endless install loop. The fix:
+// remoteModelsCheck tags the drifted dep `drifted:true`, downloadManager carries it as
+// `forceReinstall`, and remoteInstallDep sends `force:true` so the wrapper rmtree's +
+// re-clones. This models that flag chain end-to-end.
+function installPlanForDep(statusDep) {
+    // Mirror of downloadManager's else-branch (installed:false → toInstall).
+    if (statusDep.installed) return null; // not installed via this branch
+    return { forceReinstall: statusDep.drifted === true };
+}
+function installBodyForce(plan) {
+    // Mirror of remoteInstallDep({force}) → body.force.
+    return plan.forceReinstall === true;
+}
+
+test('remote: a drifted volume node installs with force (no already_installed loop)', () => {
+    // drifted dep as remoteModelsCheck now tags it
+    const driftedDep = { id: 'ComfyUI-MpiNodes', installed: false, drifted: true };
+    const plan = installPlanForDep(driftedDep);
+    assert.equal(plan.forceReinstall, true, 'drifted node must carry forceReinstall');
+    assert.equal(installBodyForce(plan), true, 'install body must send force:true');
+});
+
+test('remote: a genuinely-missing volume node installs WITHOUT force', () => {
+    // installed:false but NOT drifted (folder absent) → normal install, no force
+    const missingDep = { id: 'ComfyUI-VideoHelperSuite', installed: false };
+    const plan = installPlanForDep(missingDep);
+    assert.equal(plan.forceReinstall, false, 'a fresh install must not force');
+    assert.equal(installBodyForce(plan), false);
 });
 
 test('remote: unknown commit (old wrapper, no nodes[]) → no drift either class', () => {
@@ -215,6 +264,33 @@ test('normal weights are unaffected by the targetPath branch', () => {
 test('targetPath weight is image-resident on remote (wrapper never installs it)', () => {
     assert.equal(isImageResident(DEPS['rife47']), true, 'RIFE baked in the node image');
     assert.equal(isImageResident(DEPS['4x-NMKD-Siax']), false, 'normal weight is NOT in-node-resident');
+});
+
+// Regression guard for the download call-site bug (found live 2026-07-08): the
+// installer resolvers in downloadManager.js used to call resolveComfyPath with a
+// STRIPPED {type,filename} object, dropping dep.targetPath → RIFE resolved to the
+// mpi_models root (G:\CubricModels\rife47.pth) instead of the in-node ckpts dir.
+// The fix routes any dep.targetPath through resolveComfyPath with the FULL dep,
+// BEFORE the custom_nodes/customRoot/default branching. This models that branch
+// order and asserts a targetPath dep is forwarded whole.
+function downloadCallSiteResolvesInNode(dep, { customRoot }) {
+    // Mirror of the shipped branch order in downloadManager.js startUniversalWorkflowInstall.
+    if (dep.targetPath) return resolveRel(dep);                 // FIRST — full dep
+    if (dep.type === 'custom_nodes') return '<custom_nodes>/' + (dep.filename || '');
+    if (customRoot) return resolveRel({ type: dep.type, filename: dep.filename }); // stripped
+    return '<models>/' + (dep.filename || '');
+}
+
+test('download call-site forwards targetPath (regression: RIFE → mpi_models)', () => {
+    const rife = DEPS['rife47'];
+    // With AND without a customRoot the in-node targetPath must win — the live bug
+    // only fired when a customRoot (G:\CubricModels) was set.
+    for (const customRoot of ['G:/CubricModels', null]) {
+        const rel = downloadCallSiteResolvesInNode(rife, { customRoot });
+        assert.ok(rel.startsWith('<comfy>/custom_nodes/comfyui-frame-interpolation/ckpts/rife/'),
+            `customRoot=${customRoot}: ${rel}`);
+        assert.ok(!rel.includes('models>'), `must NOT fall to the models root (customRoot=${customRoot})`);
+    }
 });
 
 test('invariant: every targetPath weight has a bare filename + sha256', () => {

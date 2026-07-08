@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, getInstalledModelNodeDeps } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -361,16 +361,10 @@ async function _runEngineDownload(chosenModelsRoot) {
         const targetDir = ENGINE_ROOT;
 
         // ── Pre-calculate combined size (engine + UW deps) ──────────────────────
+        // Every custom_node is now universal (MPI-222: no model-specific node class),
+        // so the UW set already covers all nodes an engine reinstall must restore.
         const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-        // Engine wipe drops model-SPECIFIC custom nodes (e.g. PainterI2Vadvanced,
-        // required by the Wan I2V model) — the UW set only covers installOnEngine
-        // deps. Add the node deps of any INSTALLED model so they're reinstalled too,
-        // else the model shows "partially installed" after upgrade. (MPI-118)
-        const installedModelNodeDeps = await getInstalledModelNodeDeps(chosenModelsRoot);
-        const missingDepIds = [...new Set([...missingDeps, ...installedModelNodeDeps])];
-        if (installedModelNodeDeps.length > 0) {
-            logger.info('engine', `Including ${installedModelNodeDeps.length} installed-model node dep(s) in reinstall: ${installedModelNodeDeps.join(', ')}`);
-        }
+        const missingDepIds = missingDeps;
         if (missingDeps.length > 0) {
             logger.info('engine', `Calculating size for ${missingDeps.length} UW deps...`);
             const uwDepsTotalBytes = await getUniversalWorkflowDepsTotalSize(missingDeps);
@@ -562,13 +556,31 @@ router.post('/engine/repair-deps', async (req, res) => {
     res.json({ success: true, status: 'repair-started' });
 
     try {
-        const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-        if (!missingDeps.length) {
+        const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
+        const repairSet = [...new Set([...missingDeps, ...driftedDeps])];
+        if (!repairSet.length) {
             broadcastEngineEvent('engine:uw-installing', { status: 'All dependencies already present' });
             broadcastEngineEvent('engine:complete', { success: true });
             return;
         }
-        await startUniversalWorkflowInstall(missingDeps, true);
+
+        // Pre-wipe drifted node folders: startUniversalWorkflowInstall skips folders
+        // that already exist (isCompleteOnDisk), so a drifted node (folder PRESENT, wrong
+        // commit) would be marked complete and never reinstalled. Removing the folder first
+        // forces a clean re-extract at the pinned commit. Missing deps have no folder to wipe.
+        if (driftedDeps.length) {
+            const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+            const customRoot = await getCustomRoot();
+            for (const depId of driftedDeps) {
+                const dep = DEPS[depId];
+                if (!dep) continue;
+                const { localPath } = await resolveComfyPath(dep, customRoot, {});
+                await fs.remove(localPath);
+                logger.info('engine', `pre-wiped drifted node folder: ${depId} (${localPath})`);
+            }
+        }
+
+        await startUniversalWorkflowInstall(repairSet, true);
         broadcastEngineEvent('engine:complete', { success: true });
     } catch (err) {
         logger.error('engine', `UW deps repair failed: ${err.message}`);
