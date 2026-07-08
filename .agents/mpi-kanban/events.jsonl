@@ -1011,3 +1011,13 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-236","type":"validation.updated","at":"2026-07-09T00:00:02Z","actor":"claude","summary":"User verified live: no repeated grid redraws; footer stays Cancel; ends Uninstall."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-236","type":"task.moved","at":"2026-07-09T00:00:03Z","actor":"claude","from":"doing","to":"done","summary":"User approved completion."}
 {"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-235","at":"2026-07-08T23:04:22.552Z","actor":"vscode","summary":"Deleted MPI-235."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.created","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Created: Pod disk-usage bar in Model Library (volume + ephemeral pods)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Attached compact plan; maturity=planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.moved","at":"2026-07-08T23:07:57Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"checklist.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Derived compact checklist: Implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"checklist.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Implementation complete; auto-verify passed (6/6 guard test, ESLint clean)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"validation.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"maturity=validating: awaiting user-ux bar check + R2 runtime republish for ephemeral leg."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-228","type":"validation.updated","at":"2026-07-08T23:25:28.689Z","actor":"claude","summary":"Could not reproduce. Back-to-back multi-stage previews (WAN then LTX, Preview Initial Stage on) each painted their own preview video; no wrong-item paint. Likely fixed incidentally by MPI-234/226/227."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-228","type":"task.moved","at":"2026-07-08T23:25:28.689Z","actor":"claude","from":"todo","to":"done","summary":"Closed as could-not-reproduce (no code change). See validation.md."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-238","type":"task.created","at":"2026-07-09T12:00:00Z","actor":"claude","summary":"No connecting stage + local card lingers ~1min while ComfyUI reloads custom nodes on connect."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-238","type":"task.moved","at":"2026-07-09T12:00:02Z","actor":"claude","from":"doing","to":"done","summary":"Fixed in 7312249: feed tick now treats wrapper-ready/comfyReady=false as connecting. NOT live-validated."}
