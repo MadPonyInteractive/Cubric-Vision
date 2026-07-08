@@ -126,7 +126,12 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // gap — it FAILED LIVE (stage-gap stayed ~86s, no gain; torch minor is not the
 // lever). Reverted to v0.12.0 (the proven 2.10 cold stack). v0.13.0-cu130 still
 // exists on Docker Hub but is NOT the pin. See pod-perf-investigation.md.
-const POD_IMAGE_VERSION = 'v0.12.0';
+// MPI-222: v0.14.0 = the node-drift image (bake=installRequirements split →
+// MpiNodes/Painter/VHS/UltimateSDUpscale now VOLUME nodes; baked nodes stamp
+// .mpi_node_commit; wrapper 0.2.33 + manifest schema v2 with nodes[]). Skipped
+// v0.13.0 to avoid overwriting the MPI-191 experiment tag. Built on the same
+// proven 2.10+cu130 cold stack (torch unchanged). See MPI-222 changelog.
+const POD_IMAGE_VERSION = 'v0.14.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
@@ -147,7 +152,11 @@ const POD_IMAGE_VERSION_CPU = 'v0.11.0';
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
 // older wrapper 404s /wrapper/disk → app route returns success:false → bar hidden.
-const WRAPPER_VERSION = '0.2.24';
+// 0.2.33 (MPI-222): manifest schema v2 (nodes[] {filename,commit,installed_at});
+// wrapper writes .mpi_node_commit + records commit on volume node install and reads
+// baked markers at startup, so the app can detect node-commit drift. Ships in the
+// v0.14.0 image (baked into it, not R2-float, since the schema/nodes[] is new).
+const WRAPPER_VERSION = '0.2.33';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
