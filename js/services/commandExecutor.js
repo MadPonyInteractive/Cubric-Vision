@@ -1721,6 +1721,19 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // MPI-229: a LoRA selected for a remote gen isn't on the Pod →
+            // ComfyUI value_not_in_list. User-actionable (install it or switch to
+            // the local engine), so a warning toast, not the bug-reporter dialog.
+            if (err?.code === 'lora_missing_remote') {
+                const name = err.loraName || 'A selected LoRA';
+                clientLogger.warn('comfy', `Remote LoRA missing on Pod: ${name}`);
+                Events.emit('ui:warning', {
+                    title: 'LoRA not on the remote engine',
+                    message: `"${name}" isn't installed on the remote Pod. Install it there, or switch to the local engine to use it.`,
+                });
+                exec.onError?.(err);
+                return;
+            }
             clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });

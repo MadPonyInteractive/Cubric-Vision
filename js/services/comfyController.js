@@ -1073,8 +1073,11 @@ function createEngine({ engine, alwaysLocal }) {
         // upload above. The model dropdowns list LOCAL folders (the user keeps
         // weights local, not in the cloud — MPI-82), but a remote generation
         // resolves them from the Pod's MODELS_DIR by basename. So before /prompt we
-        // upload the file once; the Pod then finds it by name (no param rewrite —
-        // unlike media, the filename already IS the value ComfyUI loads).
+        // upload the file once, then rewrite the param value to its basename to match
+        // the flat Pod loader enum (MPI-229 — a subfoldered local value like
+        // 'CHROMA/Rossifi.safetensors' would fail value_not_in_list against the flat
+        // Pod list). The rewrite happens inside _uploadRemoteModels on this same
+        // `params` object, before the injection loop below reads it.
         //
         // GATE: remote engine + remote-connected. A local-pinned engine (MPI-74)
         // takes the LOCAL ComfyUI path — the model is already on local disk and
@@ -1158,14 +1161,21 @@ function createEngine({ engine, alwaysLocal }) {
         // value_not_in_list on a backslash value. Windows-local is skipped: its
         // ComfyUI lists with '\\', so backslashes already match — flipping them
         // would BREAK local. (MPI-141 remote; MPI-198 local Linux/macOS)
-        if (_needsPathHeal(this._alwaysLocal)) {
-            const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
-            for (const node of Object.values(workflow)) {
-                if (!node || !node.inputs) continue;
-                for (const k of PATH_INPUTS) {
-                    if (typeof node.inputs[k] === 'string' && node.inputs[k].includes('\\')) {
-                        node.inputs[k] = node.inputs[k].replace(/\\/g, '/');
-                    }
+        const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
+        const _healToSlash = _needsPathHeal(this._alwaysLocal);
+        // Windows-local: the inverse. A user LoRA name persisted during a Pod
+        // (Linux) session carries '/', but this engine's ComfyUI lists with '\\'
+        // → value_not_in_list on reuse. Flip '/'→'\\' so the separator matches the
+        // target engine regardless of which engine saved the value. (MPI-229)
+        for (const node of Object.values(workflow)) {
+            if (!node || !node.inputs) continue;
+            for (const k of PATH_INPUTS) {
+                const v = node.inputs[k];
+                if (typeof v !== 'string') continue;
+                if (_healToSlash) {
+                    if (v.includes('\\')) node.inputs[k] = v.replace(/\\/g, '/');
+                } else if (v.includes('/')) {
+                    node.inputs[k] = v.replace(/\//g, '\\');
                 }
             }
         }
@@ -1314,6 +1324,15 @@ function createEngine({ engine, alwaysLocal }) {
                     // user-actionable ("update the app / reinitialize") → a warning
                     // toast, not the bug-reporter dialog.
                     if (req.status === 409 && errCode === 'manifest_schema_incompatible') err.code = 'pod_incompatible';
+                    // MPI-229: a LoRA genuinely absent on the Pod → ComfyUI
+                    // value_not_in_list on lora_name. After the basename-rewrite
+                    // above the only remaining cause is a not-uploaded LoRA — a
+                    // user-actionable warning toast, not the bug-reporter dialog.
+                    const loraMiss = /value not in list:\s*lora_name:\s*'([^']+)'/i.exec(comfyBody || errMsg);
+                    if (loraMiss) {
+                        err.code = 'lora_missing_remote';
+                        err.loraName = loraMiss[1].split(/[\\/]/).pop();
+                    }
                     throw err;
                 }
 
@@ -1426,9 +1445,15 @@ function createEngine({ engine, alwaysLocal }) {
      * distinct model we ask the Pod (presence check) and upload only when absent —
      * a multi-GB weight must NOT re-transfer every generation.
      *
-     * No param rewrite: ComfyUI's loader resolves the bare filename already sitting
-     * in `params`, so the upload is a pure side effect (unlike media, which needs
-     * the absolute Pod path injected back).
+     * PARAM REWRITE (MPI-229): the upload lands the file FLAT on the Pod volume
+     * (`remoteUploadModel` → `MODELS_DIR/<type>/<basename>`), and the presence check
+     * is basename-only, so every remote-referenced model ends up flat there and
+     * ComfyUI lists it flat. But `params` still carries the LOCAL value, which may be
+     * subfoldered (`CHROMA/Rossifi-Ds5-E309.safetensors` from the user's local loras
+     * subfolder). Injecting that subfoldered value into a flat Pod enum fails
+     * ComfyUI `value_not_in_list`. So after ensuring presence we rewrite the model
+     * value in `params` to its basename, matching the flat Pod layout. Local runs
+     * never call this (they resolve the real subfoldered path off local disk).
      *
      * GATING: the upload hits the NEW wrapper endpoint /wrapper/models/upload that
      * ships in a Pod-image rebuild (MPI-81). Against an older image it 404s and the
@@ -1456,6 +1481,16 @@ function createEngine({ engine, alwaysLocal }) {
         }
         if (params.Upscale_Model) add('upscale_models', params.Upscale_Model);
         if (!wanted.length) return;
+
+        // MPI-229: the Pod stores every uploaded model FLAT (basename), so rewrite the
+        // param values to their basename to match the flat Pod loader enum. Doing this
+        // up front (independent of the presence/upload result below) heals a value that
+        // was already flat-present on the Pod from a prior run too.
+        const _base = (n) => String(n).split(/[\\/]/).pop();
+        for (const value of Object.values(params || {})) {
+            if (value && typeof value === 'object' && value.lora_name) value.lora_name = _base(value.lora_name);
+        }
+        if (params.Upscale_Model) params.Upscale_Model = _base(params.Upscale_Model);
 
         for (const { type, name } of wanted) {
             const base = String(name).split(/[\\/]/).pop();
