@@ -124,26 +124,6 @@
     min-width: 0;
 }
 
-/* MPI-169: live volume disk-usage bar (fed by the connected Pod's du). Inline:
-   [====progress====] 45GB / 130GB */
-.mpi-settings__volume-disk {
-    margin-top: var(--s-2);
-    display: flex;
-    align-items: center;
-    gap: var(--s-2);
-}
-.mpi-settings__volume-disk-bar {
-    flex: 1;
-    min-width: 0;
-}
-.mpi-settings__volume-disk-text {
-    flex-shrink: 0;
-    font-size: var(--t-xs);
-    color: var(--ink-3);
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-}
-
 /* MPI-160: optional system-RAM floor input, inline: Min System RAM [ 90 ] GB */
 .mpi-settings__minram-row {
     margin-top: var(--s-2);

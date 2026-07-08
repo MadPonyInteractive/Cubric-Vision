@@ -183,7 +183,10 @@ and die near 100%. Either half unknown (old wrapper, `du` fail, volume
 unresolved) → skip the gate, never false-block. `downloadService.js`'s
 `_firePost` 400-handler must route this through `_isOutOfSpaceError()` to a
 warning TOAST, not the GitHub-report dialog — the same matcher the reactive
-`download:failed` SSE path already used.
+`download:failed` SSE path already used. **MPI-237:** the same telemetry backs
+the UI disk bar via `GET /remote/pod/disk`, which returns `{used,total,ephemeral}`
+— total resolved by the pure `resolveDiskTotalBytes(pod, volumeList)` (volume
+size, or ephemeral `containerDiskInGb`).
 
 **Why the reactive-only catch used to miss it live:** MPI-136 (stall/speed-limit
 abort + httpx chunk-deadline) can make a genuinely-full volume manifest as a

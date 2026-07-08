@@ -1230,10 +1230,67 @@ async function remoteVolumeFreeBytes() {
   }
 }
 
+// MPI-237: PURE decision for the disk-bar denominator (unit-tested). A volume Pod's
+// total is the configured network-volume size; an ephemeral "Any region" Pod
+// (MPI-78) has no networkVolumeId, so its total is the container-disk size the user
+// picked (pod.containerDiskInGb). Returns { totalBytes, ephemeral } or null when the
+// total is unknown (caller then hides the bar — never a lie). `pod` is the RunPod
+// REST pod object; `volumeList` is the account's network-volume array.
+function resolveDiskTotalBytes(pod, volumeList) {
+  pod = pod || {};
+  const volumeId = pod.networkVolumeId || null;
+  // Ephemeral: no network volume → denominator is the container disk.
+  if (!volumeId) {
+    const diskGb = Number(pod.containerDiskInGb);
+    if (!diskGb || diskGb <= 0) return null;
+    return { totalBytes: diskGb * 1e9, ephemeral: true };
+  }
+  // Volume-backed: match the pod's volume in the account list for its size.
+  const list = Array.isArray(volumeList) ? volumeList : null;
+  if (!list || !list.length) return null;
+  const vol = list.find(v => v && v.id === volumeId) || (list.length === 1 ? list[0] : null);
+  const sizeGb = vol && Number(vol.size);
+  if (!sizeGb || sizeGb <= 0) return null;
+  return { totalBytes: sizeGb * 1e9, ephemeral: false }; // RunPod sizes are base-10 GB
+}
+
+// Async wrapper: fetch the live pod + volume list, then apply the pure decision.
+async function _remoteDiskTotalBytes() {
+  try {
+    const key = await getRunPodApiKey();
+    const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+    if (!key || !podId) return null;
+    const podRes = await client.getPod(key, podId);
+    const pod = podRes?.json || {};
+    // Only pay for the volume list when the pod actually has a volume.
+    let list = null;
+    if (pod.networkVolumeId) {
+      const volRes = await client.listVolumes(key);
+      list = Array.isArray(volRes?.json)
+        ? volRes.json
+        : (volRes?.json?.networkVolumes || volRes?.json?.volumes || null);
+    }
+    return resolveDiskTotalBytes(pod, list);
+  } catch (err) {
+    logger.warn('runpod', `remote disk total resolve failed: ${err?.message || err}`);
+    return null;
+  }
+}
+
 router.get('/remote/pod/disk', async (req, res) => {
   const used = await _remoteVolumeUsedBytes();
   if (Number.isFinite(used)) {
-    return res.json({ success: true, source: 'wrapper', used });
+    // Resolve the total too so the bar has a denominator on both surfaces. A
+    // null total just means the bar renders used-only text and the caller hides
+    // the fill — never blocks on missing telemetry.
+    const total = await _remoteDiskTotalBytes();
+    return res.json({
+      success: true,
+      source: 'wrapper',
+      used,
+      total: total ? total.totalBytes : null,
+      ephemeral: total ? total.ephemeral : null,
+    });
   }
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
   const reason = (!_mode.active || !podId) ? 'remote_inactive' : 'disk_unavailable';
@@ -1254,4 +1311,4 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   }
 });
 
-module.exports = { router, remoteVolumeFreeBytes };
+module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes };

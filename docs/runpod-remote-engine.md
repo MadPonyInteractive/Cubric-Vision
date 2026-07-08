@@ -129,11 +129,18 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 - **No volume USED-bytes from RunPod (MPI-169).** REST `/networkvolumes` returns only
   `{id,name,size,dataCenterId}` (size = the configured quota); GraphQL `NetworkVolume`
   rejects `used`/`usedBytes`/`consumedBytes`/`currentPerGBUsage`. The ONLY truthful used
-  figure comes from inside a running Pod: wrapper `GET /wrapper/disk` runs `du -sb
-  /workspace` (0.2.23+). So the Settings volume disk bar is **connected-Pod-only** (works
+  figure comes from inside a running Pod: wrapper `GET /wrapper/disk` runs `du -sb`
+  on `$CUBRIC_VOLUME_MOUNT` (0.2.23+). So the disk bar is **connected-Pod-only** (works
   on a GPU pod OR a CPU download pod — both mount `/workspace`); an idle/unconnected DC
   shows the total-only badge. `statvfs` is the wrong tool (reads the multi-PB container
   overlay, not the quota) — that was the reverted MPI-100 mistake; do NOT re-add it.
+  **MPI-237:** the bar now also renders in the **Model Library** (shared helper
+  `js/services/podDiskBar.js`) and works for **ephemeral** "Any region" Pods —
+  `start.sh` exports `CUBRIC_VOLUME_MOUNT=$CUBRIC_ROOT` so `du` measures `/cubric-data`
+  (the real ephemeral root, not the unused ~20GB default `/workspace` mount).
+  `/remote/pod/disk` resolves the denominator server-side via the pure
+  `resolveDiskTotalBytes(pod, volumeList)` (volume size, or ephemeral
+  `containerDiskInGb`) and returns `{used,total,ephemeral}`; a null total hides the bar.
 - **Hot-store: big weights are staged volume→container-disk on first use (MPI-194).** The
   network volume reads at ~750 MB/s; aimdo re-faults a big transformer at every gen-stage,
   re-reading it from that slow volume = the LTX stage-gap tax (36s warm gap). Fix: on a

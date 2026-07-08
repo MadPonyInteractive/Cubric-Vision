@@ -13,6 +13,7 @@ import {
 import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
+import { mountPodDiskBar } from '../../../../services/podDiskBar.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
@@ -49,6 +50,7 @@ export const MpiModelManager = ComponentFactory.create({
             <div class="mpi-model-library__head">
                 <h1 class="mpi-model-library__title">Model Library</h1>
                 <p class="mpi-model-library__sub" id="lib-sub"></p>
+                <div class="mpi-model-library__disk" id="lib-disk-slot"></div>
                 <div class="mpi-model-library__filters">
                     <div class="mpi-model-library__filter-group">
                         <span class="mpi-model-library__filter-label">Media</span>
@@ -86,6 +88,12 @@ export const MpiModelManager = ComponentFactory.create({
         const searchInput = qs('#lib-search', el);
 
         const _unsubs = [];
+
+        // MPI-237: connected-Pod disk-usage bar, under the "N installed" sub-line and
+        // over the filters — so the user can manage disk while browsing/installing.
+        // The shared helper polls /remote/pod/disk and hides itself until a Pod
+        // reports usage (volume OR ephemeral). Torn down in el.destroy().
+        const _podDiskBar = mountPodDiskBar(qs('#lib-disk-slot', el));
 
         // ── Self-hosted overlay (body mode covers status bar too) ─────────────
         // MpiModelManager is now the Library surface; it mounts itself inside an
@@ -598,6 +606,14 @@ export const MpiModelManager = ComponentFactory.create({
             const downloadState = job ? job.status : 'idle';
             // 'queued' (MPI-184 serial install queue) counts as active.
             const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
+            // A 'complete' job still sits in state.downloadJobs until the async
+            // reSyncInstalledModels() (fired on download:complete) flips model.installed.
+            // In that window the footer would compute NOT active + NOT installed → the
+            // Install button reappeared (worst on a fast ephemeral-pod install where
+            // started→complete collapses before re-sync lands). Treat that lingering
+            // terminal job as "settling" so the footer shows a disabled Finishing… until
+            // re-sync moves the model to Installed. (MPI-239)
+            const isSettling = !isActiveDownload && !!job && downloadState === 'complete';
 
             // Sizes: drafted footprint (op-keyed) else the engine-scoped universe — a
             // Pod must show the current-engine footprint, not bf16+GGUF (MPI-163).
@@ -632,7 +648,7 @@ export const MpiModelManager = ComponentFactory.create({
             if (downloadState === 'idle') partial = _computePartial(model);
 
             return {
-                job, downloadState, isActiveDownload, sizeBytes,
+                job, downloadState, isActiveDownload, isSettling, sizeBytes,
                 installedOps, installedArch, draftDiffersFromInstalled, anyInstalled, partial,
             };
         }
@@ -657,6 +673,9 @@ export const MpiModelManager = ComponentFactory.create({
                 const pct = Math.min(Math.round((st.partial.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
             }
+            // Settling: a done job awaiting re-sync — keep the verifying sweep, never
+            // flash the "Install" chip back (MPI-239, same window as the detail footer).
+            if (st.isSettling) return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Finishing…</span></div>`;
             if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
             return `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
         }
@@ -930,6 +949,12 @@ export const MpiModelManager = ComponentFactory.create({
                 const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancel.on('click', () => downloadService.cancel(model.id));
                 detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
+            } else if (st.isSettling) {
+                // Terminal 'complete' job still in the queue; re-sync in flight. Show a
+                // disabled Finishing… (never a clickable Install) — the sig-guarded
+                // renderList() on re-sync repaints this to Uninstall. (MPI-239)
+                const finishing = MpiButton.mount(ce('div'), { text: 'Finishing…', variant: 'secondary', size: 'md', disabled: true });
+                detailActions.appendChild(finishing.el); _detailActionBtns.push(finishing);
             } else if (st.anyInstalled) {
                 const label = st.draftDiffersFromInstalled ? 'Update' : 'Uninstall';
                 const primary = MpiButton.mount(ce('div'), { text: label, variant: 'secondary', size: 'md' });
@@ -1198,6 +1223,7 @@ export const MpiModelManager = ComponentFactory.create({
         // ── Cleanup ────────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
+            _podDiskBar?.destroy?.(); // MPI-237
             _destroyAllCards();
             _destroyDetailToggles();
             _confirmDialog?.el?.destroy?.();

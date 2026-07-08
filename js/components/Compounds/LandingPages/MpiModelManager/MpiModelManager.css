@@ -77,6 +77,17 @@
     color: var(--accent-heat);
 }
 
+/* MPI-237: connected-Pod disk-usage bar slot (between sub-line and filters). The
+   inner .mpi-pod-disk carries its own spacing and hides itself until a Pod reports
+   usage, so the slot adds no margin of its own (no gap when disconnected). Give the
+   visible bar a little breathing room below it before the filters, and cap its
+   width (~1/3) so the full-bleed bar doesn't stretch edge-to-edge and read poorly. */
+.mpi-model-library__disk .mpi-pod-disk {
+    margin-bottom: var(--s-4);
+    max-width: 33%;
+    min-width: 260px;
+}
+
 .mpi-model-library__filters {
     display: flex;
     align-items: center;

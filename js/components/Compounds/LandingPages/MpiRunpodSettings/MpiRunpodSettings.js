@@ -3,7 +3,7 @@ import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
-import { MpiProgressBar } from '../../../Primitives/MpiProgressBar/MpiProgressBar.js';
+import { mountPodDiskBar } from '../../../../services/podDiskBar.js';
 import { MpiOkCancel } from '../../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModal } from '../../../Primitives/MpiModal/MpiModal.js';
 import { state } from '../../../../state.js';
@@ -112,10 +112,7 @@ export const MpiRunpodSettings = ComponentFactory.create({
         let _runpodVolumes = null;      // network volumes from the user's account, or null
         let _engineConnectInst = null;  // Connect/Disconnect MpiButton instance
         let _engineStatusTimer = null;  // setInterval id for the status poll
-        let _diskBarInst = null;        // MPI-169: MpiProgressBar for volume disk usage
-        let _diskBarWrap = null;        // its wrapper el (hidden until a pod reports usage)
-        let _diskBarText = null;        // inline "45GB / 130GB" label beside the bar
-        let _diskPollTimer = null;      // setInterval id for the disk-usage poll
+        let _podDiskBar = null;         // MPI-237: shared Pod disk-usage bar (volume OR ephemeral)
         let _engineBusy = false;        // true while a start/stop is in flight
         let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
         // MPI-110: the auto-retry wait LOOP lives in the shell (survives navigating
@@ -1287,6 +1284,10 @@ export const MpiRunpodSettings = ComponentFactory.create({
             volumeSlot.innerHTML = '';
             const cfg = _runpodCfg();
 
+            // MPI-237: any re-render orphans a prior disk bar + poll — tear it down
+            // once here so BOTH the ephemeral and volume branches start clean.
+            _teardownDiskBar();
+
             // MPI-78: "Any region" mode has no network volume — instead the user sizes
             // the ephemeral container disk the models download into (lost on Terminate).
             if (_isAnyRegion(cfg)) {
@@ -1317,6 +1318,10 @@ export const MpiRunpodSettings = ComponentFactory.create({
                     textContent: 'Ephemeral — models download each session and are deleted when you Terminate the Pod. No storage bill between sessions. Size the disk for the models you plan to install. First generation includes a one-time accelerator compile (a few minutes).',
                 });
                 volumeSlot.appendChild(warn);
+                // MPI-237: ephemeral pods use the container disk (/cubric-data), not a
+                // network volume — but the disk bar still applies. The helper resolves
+                // its total server-side and hides until a Pod reports usage.
+                _mountDiskBar(volumeSlot);
                 return;
             }
 
@@ -1327,10 +1332,6 @@ export const MpiRunpodSettings = ComponentFactory.create({
             if ((vol ? vol.id : null) !== (cfg.volumeId || null)) {
                 state.runpodConfig = { ..._runpodCfg(), volumeId: vol ? vol.id : null };
             }
-
-            // Re-rendering the volume slot orphans any prior disk bar + poll — tear
-            // them down before rebuilding (MPI-169).
-            _stopVolumeDiskPoll();
 
             const volRow = ce('div', { className: 'mpi-settings__volume-row' });
             volumeSlot.appendChild(volRow);
@@ -1368,68 +1369,23 @@ export const MpiRunpodSettings = ComponentFactory.create({
                 volRow.appendChild(createBtn.el);
             }
 
-            // MPI-169: live disk-usage bar for the volume. RunPod exposes no used-bytes,
-            // so this is fed by the connected Pod's wrapper (du -sb /workspace) via
-            // /remote/pod/disk — works on a GPU pod OR a CPU download pod. Hidden until a
-            // pod reports usage (idle/unconnected DC → total-only badge above). Denominator
-            // = vol.size (GB). Only mount when we know the total.
-            if (vol && vol.size > 0) {
-                // Inline: [====progress====] 45GB / 130GB
-                _diskBarWrap = ce('div', { className: 'mpi-settings__volume-disk' });
-                _diskBarWrap.style.display = 'none';
-                const barHost = ce('div', { className: 'mpi-settings__volume-disk-bar' });
-                _diskBarText = ce('span', { className: 'mpi-settings__volume-disk-text' });
-                _diskBarWrap.appendChild(barHost);
-                _diskBarWrap.appendChild(_diskBarText);
-                volumeSlot.appendChild(_diskBarWrap);
-                _diskBarInst = MpiProgressBar.mount(barHost, {
-                    min: 0,
-                    max: vol.size,
-                    value: 0,
-                    step: 1,
-                    interactive: false,
-                    handle: false,
-                    variant: 'primary',
-                    info: '', // no tooltip — the inline text beside it carries the numbers
-                });
-                _startVolumeDiskPoll(vol.size);
-            }
+            // MPI-237: live disk-usage bar for the volume. Fed by the connected Pod's
+            // wrapper (du) via /remote/pod/disk; total now resolved server-side. Mount
+            // unconditionally — the helper hides itself until a Pod reports usage. (An
+            // idle/unconnected DC → total-only badge above, bar stays hidden.)
+            _mountDiskBar(volumeSlot);
         }
 
-        // MPI-169: poll the connected Pod's volume disk usage. Shows the bar on first
-        // success, updates it quietly thereafter, hides it when no pod/old wrapper.
-        function _pollVolumeDisk(totalGb) {
-            fetch('/remote/pod/disk')
-                .then(r => r.json())
-                .then(data => {
-                    if (!_diskBarInst || !_diskBarWrap) return;
-                    if (data && data.success && Number.isFinite(data.used)) {
-                        const usedGb = Math.min(totalGb, Math.round((data.used / 1e9) * 10) / 10);
-                        _diskBarInst.el.setValueQuiet(usedGb);
-                        if (_diskBarText) _diskBarText.textContent = `${usedGb}GB / ${totalGb}GB`;
-                        // near-full → danger colour (recolour by swapping the variant class)
-                        const full = usedGb / totalGb >= 0.9;
-                        _diskBarInst.el.classList.toggle('mpi-progress--danger', full);
-                        _diskBarInst.el.classList.toggle('mpi-progress--primary', !full);
-                        _diskBarWrap.style.display = '';
-                    } else {
-                        _diskBarWrap.style.display = 'none';
-                    }
-                })
-                .catch(() => { if (_diskBarWrap) _diskBarWrap.style.display = 'none'; });
+        // MPI-237: mount the shared Pod disk-usage bar into `host`, tearing down any
+        // prior instance first. Used by both the volume slot and the ephemeral slot.
+        function _mountDiskBar(host) {
+            _teardownDiskBar();
+            _podDiskBar = mountPodDiskBar(host);
         }
 
-        function _startVolumeDiskPoll(totalGb) {
-            _pollVolumeDisk(totalGb); // immediate first read
-            _diskPollTimer = setInterval(() => _pollVolumeDisk(totalGb), 10000);
-        }
-
-        function _stopVolumeDiskPoll() {
-            if (_diskPollTimer) { clearInterval(_diskPollTimer); _diskPollTimer = null; }
-            _diskBarInst?.destroy?.();
-            _diskBarInst = null;
-            _diskBarWrap = null;
-            _diskBarText = null;
+        function _teardownDiskBar() {
+            _podDiskBar?.destroy?.();
+            _podDiskBar = null;
         }
 
         // Prompt for size, then POST /runpod/volumes in the configured data center.
@@ -1734,7 +1690,7 @@ export const MpiRunpodSettings = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
             if (_engineStatusTimer) { clearInterval(_engineStatusTimer); _engineStatusTimer = null; }
-            _stopVolumeDiskPoll(); // MPI-169
+            _teardownDiskBar(); // MPI-169/237
             // MPI-86: break any in-flight _pollEngineReady loop so it doesn't keep
             // fetching after the panel unmounts. The Pod is left booting on purpose
             // (backend _starting tracks it; the idle watchdog backstops) — destroy is

@@ -71,6 +71,9 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiToolOptionsResize/MpiToolOptionsResize.css',
   'js/components/Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.css',
 
+  // Services (shared, non-component)
+  'js/services/podDiskBar.css',
+
   // Blocks
   'js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css',
   'js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.css',

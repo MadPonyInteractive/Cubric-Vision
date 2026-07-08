@@ -1,0 +1,19 @@
+/* podDiskBar — shared connected-Pod disk-usage bar (MPI-237).
+   Used by RunPod Settings and the Model Library. Inline: [====bar====] 45GB / 130GB */
+.mpi-pod-disk {
+    margin-top: var(--s-2);
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+.mpi-pod-disk__bar {
+    flex: 1;
+    min-width: 0;
+}
+.mpi-pod-disk__text {
+    flex-shrink: 0;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
