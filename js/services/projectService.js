@@ -447,10 +447,28 @@ export async function persistGroups() {
             typeof item === 'string' ? item : item.id
         ),
     }));
-    return post('/update-project', {
-        folderPath: state.currentProject.folderPath,
-        updates: { itemGroups: serialized },
-    }).catch(err => clientLogger.warn('ProjectService', 'persistGroups failed:', err));
+    // MPI-226: a swallowed failure here caused silent save-loss — the in-memory
+    // group survived but project.json never persisted, so on reload the stale
+    // project.json + memory-only ghost ids fired load-meta 404s. Retry a few
+    // times (covers transient FS/EBUSY on the server's atomic-write queue), and
+    // only surface a ui:warning toast if every attempt fails. Check result.success
+    // too: the route returns { success:false } on a handled error, which the old
+    // `.catch`-only path treated as success.
+    const folderPath = state.currentProject.folderPath;
+    const body = { folderPath, updates: { itemGroups: serialized } };
+    for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+            const result = await post('/update-project', body);
+            if (result?.success !== false) return result;
+            clientLogger.warn('ProjectService', `persistGroups attempt ${attempt} rejected:`, result?.error);
+        } catch (err) {
+            clientLogger.warn('ProjectService', `persistGroups attempt ${attempt} failed:`, err);
+        }
+        if (attempt < 4) await new Promise(r => setTimeout(r, attempt * 200));
+    }
+    Events.emit('ui:warning', {
+        message: 'Could not save the project to disk — recent results may be lost on reload. Check disk space, then regenerate or re-open the project.',
+    });
 }
 
 /**

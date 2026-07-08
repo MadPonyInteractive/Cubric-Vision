@@ -1351,31 +1351,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
             return [first.placeholderGroup, ...(first.extraPlaceholders || [])].filter(Boolean);
         };
 
-        _unsubs.push(Events.on('generation:started', ({ id, scope, placeholderGroup, extraPlaceholders }) => {
+        _unsubs.push(Events.on('generation:started', ({ id, scope }) => {
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
-            // MPI-226: during a Stop-driven loop re-fire, the OLD cancelled entry is
-            // still status:'running' in the registry for a synchronous window (cancel
-            // re-orders: exec.cancel → new start+started → old marked cancelled). So
-            // _firstRunningEntry() would return the OLD entry here and mount the WRONG
-            // placeholder. If we are NOT yet the first-running entry, do nothing —
-            // _rebuildAfterEnd (fired on the OLD cancelled, moments later) promotes us
-            // via _placeholdersForFirst() once the OLD entry is gone. When we ARE first,
-            // mount OUR placeholder straight from the event payload (canonical), not
-            // via _placeholdersForFirst() which reads the same objects indirectly.
-            const first = _firstRunningEntry();
-            if (!first || first.id !== id) {
-                clientLogger.info('MPI226', `gallery generation:started id=${id} QUEUED (first=${first?.id||'null'}) — defer mount`);
-                return;
-            }
-            const _ph = [placeholderGroup, ...(extraPlaceholders || [])].filter(Boolean);
-            clientLogger.info('MPI226', `gallery generation:started id=${id} FIRST — mount placeholders=${_ph.map(p=>p.id).join(',')||'none'}`);
             const currentGroups = _visibleProjectGroups();
-            grid.el.setGroups([..._ph, ...currentGroups]);
+            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
-            clientLogger.info('MPI226', `gallery generation:preview id=${id} mine=${_myGenIds.has(id)} first=${_firstRunningEntry()?.id||'null'}`);
             if (!_myGenIds.has(id)) return;
             // Only paint preview for the first-running entry (the one whose
             // placeholder is actually mounted).
@@ -1402,10 +1385,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.delete(id);
             const allTempIds = [tid, ...extraTempIds].filter(Boolean);
             for (const t of allTempIds) grid.el.removeCard(t);
-            const _ph = _placeholdersForFirst();
-            clientLogger.info('MPI226', `_rebuildAfterEnd id=${id} removedTemps=${allTempIds.join(',')||'none'} firstRunning=${_firstRunningEntry()?.id||'null'} newPlaceholders=${_ph.map(p=>p.id).join(',')||'none'}`);
             const currentGroups = _visibleProjectGroups();
-            grid.el.setGroups([..._ph, ...currentGroups]);
+            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {
@@ -1422,7 +1403,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }));
 
         _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid, extraTempIds = [] }) => {
-            clientLogger.info('MPI226', `gallery generation:cancelled id=${id} mine=${_myGenIds.has(id)} firstRunning=${_firstRunningEntry()?.id||'null'}`);
             if (!_myGenIds.has(id)) {
                 // Second cancelled for an already-forgotten id = the interrupted
                 // gen returned EMPTY (no late complete is coming). Drop the bridge

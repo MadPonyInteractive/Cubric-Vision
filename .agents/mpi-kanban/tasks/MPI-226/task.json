@@ -1,13 +1,22 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-226",
-  "title": "Loop won't stop + silent save-loss desyncs project.json (post-208/213 refactor)",
-  "description": "Two bugs surfaced live during a Loop-driven t2i batch (Rossifi project, 2026-07-08). (1) LOOP WON'T STOP: pressing Stop mid-loop did not disarm the loop — it kept re-firing gens; user could not stop it. Suspect the generationStore lane-drain re-fire (_loopCallbacks, generationStore.js:242-249) firing after Stop and/or state.loopArmed not cleared on Stop. (2) SILENT SAVE-LOSS / project.json DESYNC: media PNGs wrote to disk (t2i_001-005, 14:35-14:38) but project.json stopped persisting after 13:41 and only 1 of ~8 gens registered. save-generation failures are caught+swallowed as a warn (generationService.js:923-925) so the flow continues with the item ONLY in renderer memory — no sidecar on disk. On reload, stale project.json loads 1 item and projectReconciler.js:121 fires load-meta for the memory-only ghost ids -> 404s (seen in console). Root is in the MPI-208/213 generationStore/queue refactor + the swallowed-save path, NOT MPI-225 (proven: projects.js server edit never ran (no restart); the MPI-225 generationService filter is pure/post-save/metadata-only; promptReuse is read-path only). NO DATA LOST on disk in this incident; the desync is a persistence/registration bug.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "title": "Stop-during-loop double-fires re-fire + silent project.json save-loss (post-208/213)",
+  "description": "Surfaced live during a Loop-driven t2i batch (Rossifi, 2026-07-08). SCOPE NARROWED after deep investigation (2 arch-map agents + instrumented logs). Two INDEPENDENT bugs SHIPPED here; a third (display-only) split to MPI-234.\n\n(1) STOP DOUBLE-FIRES THE LOOP [SHIPPED, live-verified]. Semantics CONFIRMED with user: Stop = 'skip THIS gen, keep looping' (loop stays armed; end it only by tapping the armed Loop button). The bug was NOT the semantics — it was that ONE Stop spawned 2-3 overlapping gens. Proven by log: cancelRunningCueJob → activeGenerations.cancel() runs the store cancel SYNCHRONOUSLY, which drains the lane + loop-re-fires a fresh gen (advancing _lanes[lane].active to the NEW job) all BEFORE cancel() returns; then the belt-and-suspenders `_onLaneDrain(lane)` at the end of cancelRunningCueJob drained that NEW job → a 2nd re-fire. FIX (generationService.js ~449): capture `_cancelledIntent = _lanes[lane].active` before cancel; run the belt-drain only `if (_lanes[lane].active === _cancelledIntent)` (the genuine stuck-lane case where the store never drained — exec.jobId never assigned → bare interrupt). Now exactly ONE re-fire per Stop (log-verified: no phantom extra gens).\n\n(2) SILENT SAVE-LOSS / project.json DESYNC [SHIPPED, logic-verified]. Real root was NOT the genService:923 swallow (that path's sidecar DID write) — it was `persistGroups()` (projectService.js ~435) swallowing BOTH network errors AND {success:false} from POST /update-project via a bare .catch(...warn). A transient write failure mid-batch left the group in renderer memory but never on disk → stale project.json + memory-only ghost ids → projectReconciler load-meta 404s on reload. FIX: check result.success, retry 4x with backoff, ui:warning toast only if all fail. Guard test tests/persist-groups-retry.test.cjs (4 assertions).\n\n(3) SPLIT → MPI-234 [PARKED]: after a Stop, the re-fired gen's LIVE placeholder card + preview latents + status-bar N/M don't show until it finishes (display-only; gen completes+saves fine). Ordering race in the gallery's _firstRunningEntry placeholder-ownership model. 6 point-fixes failed → needs an idempotent-reconcile rewrite. Full root + arch maps in MPI-234/research/system-map.md. User chose 'ship what works, park the rest'.\n\nNOT MPI-225 (proven). Original card's 'loop won't stop / loopArmed not cleared' framing was WRONG — Stop must KEEP the loop armed; the defect was the double-fire, not a missing disarm.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-08T14:45:00Z",
-  "updated_at": "2026-07-08T14:45:00Z",
+  "updated_at": "2026-07-08T21:30:00Z",
+  "shipped": [
+    "BUG1 double-fire guard — generationService.js cancelRunningCueJob (_cancelledIntent identity check on belt-drain). LIVE-VERIFIED: one Stop = one re-fire, no phantom gens.",
+    "BUG2 persistGroups retry+toast — projectService.js. Logic-verified via tests/persist-groups-retry.test.cjs; live save-fail injection NOT run (hard to force)."
+  ],
+  "verify_checklist": [
+    "BUG1: arm Loop, run 2 gens, press STOP once -> exactly ONE new gen re-fires (loop continues), NO burst of 2-3 phantom gens. [DONE — user + log verified 2026-07-08]",
+    "BUG2: run a batch with project.json write failing (Media read-only mid-batch or fill disk) -> ui:warning toast after 4 retries; happy path shows NO toast + all gens register on reload (no load-meta 404s). [NOT live-tested — defensive]"
+  ],
+  "wrong_attempts": "6 attempts before the split. (a) clearPendingQueue disarm — wrong, user presses Stop not Clear. (b) cancelRunningCueJob disarms loopArmed — wrong, user wants loop to KEEP going. (c-f) gallery placeholder point-fixes (payload placeholder, queue-guard, always-mount, paint-by-own-tempId) — each fixed one ordering permutation, exposed another → split to MPI-234 for a reconcile rewrite. genService double-fire guard + projectService retry are the two that stuck.",
   "links": {
     "plan": "plan.md",
     "events": "events.jsonl",

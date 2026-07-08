@@ -454,6 +454,13 @@ export function cancelRunningCueJob(queueJobId) {
     const lane = _lanes.remote.active?.queueJobId === queueJobId ? 'remote'
         : _lanes.local.active?.queueJobId === queueJobId ? 'local'
         : null;
+    // Capture the EXACT intent object we are about to cancel. `activeGenerations.
+    // cancel()` below runs the store cancel SYNCHRONOUSLY, which — when the store
+    // drains the lane — fires this lane's loop callback → `_onLaneDrain` → a loop
+    // re-fire that re-populates `_lanes[lane].active` with a NEW intent, all before
+    // cancel() returns. So after cancel we CANNOT tell "store drained" from the raw
+    // active flag. We compare identity against this captured object instead (MPI-226).
+    const _cancelledIntent = lane ? _lanes[lane].active : null;
 
     // Interrupt via the registry entry — entry.exec.cancel() delegates to
     // store.cancel(jobId) (Phase 2), which aborts the token, fires the FROZEN
@@ -474,13 +481,21 @@ export function cancelRunningCueJob(queueJobId) {
     // Belt-and-suspenders for the MPI-73 Bug 2 stuck-lane case: a job Stopped so
     // early that commandExecutor never assigned exec.jobId (store never registered)
     // — exec.cancel() then fell back to a bare interrupt() and the store never
-    // drained, so `_onLaneDrain` never fired. `_onLaneDrain` guards on
-    // `_lanes[lane].active`, so if the store DID drain (the usual case, active
-    // already cleared) this is a harmless no-op; otherwise it frees the stranded
-    // lane locally. Stop = "skip THIS job, keep going": loop armed re-fires a fresh
-    // iteration (lastJobForLoop KEPT — Stop behaves like "regenerate this one");
-    // loop off promotes the next pending intent or idles.
-    if (lane) _onLaneDrain(lane, { skipNext: false });
+    // drained, so `_onLaneDrain` never fired and `_lanes[lane].active` is STILL the
+    // intent we cancelled. In that (rare) case, drain it locally to free the lane.
+    //
+    // In the NORMAL case the store DID drain synchronously inside cancel() above,
+    // which already ran `_onLaneDrain` once (promoting the next pending intent or
+    // loop-re-firing). Draining AGAIN here double-fired the loop — one Stop spawned
+    // two+ overlapping gens, whose placeholders churned (invisible card) and whose
+    // tqdm bars bled together in the progress tracker ("5/5" instead of N/2). MPI-226.
+    //
+    // Guard by identity: only drain if the lane STILL points at the exact intent we
+    // cancelled. If the store drained (active is now null OR a fresh re-fired intent),
+    // skip — the store already owns the drain.
+    if (lane && _lanes[lane].active === _cancelledIntent) {
+        _onLaneDrain(lane, { skipNext: false });
+    }
     _emitQueueChanged();
     return true;
 }
