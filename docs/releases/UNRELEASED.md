@@ -193,6 +193,13 @@
 
 ## fixes
 
+- **Reuse Prompt no longer mishandles images on text-to-image cards.** Reusing a
+  prompt from a text-to-image result wrongly offered "Use Images" and could inject
+  an unrelated image. Text-to-image cards now correctly show no reusable image.
+  Separately, if the input image a generation depends on was deleted, the app now
+  shows a clear "input image was deleted — re-add it" message instead of crashing
+  with an error report.
+
 - **Stopping a generation is now reliable.** A stopped generation that was still
   waiting in the engine's queue (behind another running job) used to keep going and
   finish anyway — so a job you cancelled could reappear as a completed result when
