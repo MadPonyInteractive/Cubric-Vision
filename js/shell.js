@@ -6,7 +6,7 @@
 import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
-import { syncModelInstalled, MODELS, installedForOtherArch } from './data/modelRegistry.js';
+import { syncModelInstalled, MODELS, installedForOtherArch, getDriftedModelIds } from './data/modelRegistry.js';
 import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
 import { Storage, Session } from './core/storage.js';
@@ -1209,6 +1209,34 @@ async function _maybeNotifyArchChange() {
   });
 }
 
+// MPI-230: on the first remote connect, a custom node on the Pod volume may sit at
+// an out-of-date commit (a node_lock bump since it was installed). The LOCAL engine
+// already auto-heals node drift silently via the boot-repair modal; this brings the
+// REMOTE engine to parity — no manual Install click, no confirm, no toast (a node
+// re-clone is KB-scale, not the multi-GB weight fetch). Reuses the manual install
+// path (downloadService.start → server re-checks drift per dep → force re-clone of
+// the drifted node; already-complete weights dedupe out). First-connect-gated by the
+// caller so a transient reconnect never re-fires it.
+async function _healRemoteNodeDrift() {
+  const ids = getDriftedModelIds();
+  if (!ids.length) return;
+  const models = ids.map(id => MODELS.find(m => m.id === id)).filter(Boolean);
+  if (!models.length) return;
+
+  const { downloadService } = await import('./services/downloadService.js');
+  const { resolveFullUniverse } = await import('./data/modelConstants/resolveModelDeps.js');
+  const { DEPS } = await import('./data/modelConstants/dependencies.js');
+  const { remoteEngineClient } = await import('./services/remoteEngineClient.js');
+  const engine = remoteEngineClient.effectiveEngine();
+  for (const model of models) {
+    // Same resolution the manual Install path uses (engine-scoped full universe);
+    // the server re-checks drift per dep and re-clones only the stale node with force.
+    const deps = resolveFullUniverse(model, null, engine)
+      .map(id => DEPS[id]).filter(Boolean);
+    if (deps.length) await downloadService.start(model.id, deps);
+  }
+}
+
 async function _initDataRegistries() {
   // Subscribe to models:checked event to update state
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
@@ -1234,6 +1262,10 @@ async function _initDataRegistries() {
   // the model check when the remote engine reaches CONNECTED so the volume's real
   // installed set is read. Only on the connected edge; ignore transition phases.
   let _wasRemoteConnected = false;
+  // MPI-230: offer to auto-heal remote node-drift ONCE per session, on the genuine
+  // first resolved connect — never on later reconnect flaps (a multi-GB re-fetch is
+  // too heavy to fire on transient edges). Latches true after the check runs.
+  let _didFirstConnectDriftCheck = false;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('remote:connection', async ({ connected, phase = null } = {}) => {
     if (phase) return; // mid-transition, not a resolved state
@@ -1250,6 +1282,13 @@ async function _initDataRegistries() {
       try {
         await syncModelInstalled();
         await _maybeNotifyArchChange(); // MPI-207: Pod swap to a new arch
+        // MPI-230: syncModelInstalled just tagged any volume node at the wrong commit
+        // as drifted. On the genuine first connect only, silently auto-heal it (local
+        // parity — no prompt, no toast).
+        if (!_didFirstConnectDriftCheck) {
+          _didFirstConnectDriftCheck = true;
+          await _healRemoteNodeDrift();
+        }
       } catch (err) {
         clientLogger.error('shell', 'model registry sync on remote connect failed:', err);
       }

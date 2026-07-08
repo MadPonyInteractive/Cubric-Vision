@@ -278,6 +278,12 @@ commit is on disk and reinstalls on mismatch, **both engines**.
   drifted volume node installs WITH `force:true` (downloadManager → `remoteInstallDep`)
   so the wrapper `rmtree`s + re-clones at the pinned commit; without force it
   short-circuits `already_installed` on folder-exists → an endless install loop.
+- **Auto-heal on connect (remote, MPI-230):** the LOCAL engine auto-repairs drift at
+  boot via `/engine/repair-deps`; the REMOTE engine now matches — `shell.js
+  _healRemoteNodeDrift` fires once on the genuine first remote connect (latched),
+  silently re-running the manual install path for any model owning a drifted volume
+  node. No dialog, no toast (a node re-clone is KB-scale). `getDriftedModelIds()`
+  (modelRegistry) surfaces the owning model ids from the check's per-dep `drifted` flag.
 - **Bake vs volume = `installRequirements`:** `true` nodes bake into the Pod image at
   build (drift on a baked node → the warn-only toast, needs a rebuild); `false` nodes
   install on the volume at connect (drift heals in place, no rebuild). Bumping a

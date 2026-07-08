@@ -183,6 +183,49 @@ test('remote: a drifted volume node installs with force (no already_installed lo
     assert.equal(installBodyForce(plan), true, 'install body must send force:true');
 });
 
+// MPI-230: syncModelInstalled surfaces the models that own a drifted volume node so
+// the connect edge can offer a one-click re-fetch. Pure mirror of the extraction loop
+// in modelRegistry.syncModelInstalled — collect a model id whenever any of its deps in
+// the /comfy/models/check results carries drifted:true, then de-dup.
+function driftedModelIdsFromCheck(results) {
+    const drifted = [];
+    for (const [modelId, entry] of Object.entries(results)) {
+        for (const dep of (entry.deps || [])) {
+            if (dep.drifted) drifted.push(modelId);
+        }
+    }
+    return [...new Set(drifted)];
+}
+
+test('surface: a check result with a drifted dep yields the owning model id', () => {
+    const results = {
+        'ltx-2.3': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: false, drifted: true },
+            { id: 'ltx-vae', installed: true },
+        ] },
+        'chroma': { installed: true, deps: [{ id: 'chroma-unet', installed: true }] },
+    };
+    assert.deepEqual(driftedModelIdsFromCheck(results), ['ltx-2.3']);
+});
+
+test('surface: no drifted dep → empty list (no confirm dialog fires)', () => {
+    const results = {
+        'chroma': { installed: true, deps: [{ id: 'chroma-unet', installed: true }] },
+        'wan': { installed: false, deps: [{ id: 'wan-t2v', installed: false }] }, // missing, NOT drifted
+    };
+    assert.deepEqual(driftedModelIdsFromCheck(results), []);
+});
+
+test('surface: two drifted deps on one model de-dup to a single id', () => {
+    const results = {
+        'ltx-2.3': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: false, drifted: true },
+            { id: 'ComfyUI-KJNodes', installed: false, drifted: true },
+        ] },
+    };
+    assert.deepEqual(driftedModelIdsFromCheck(results), ['ltx-2.3']);
+});
+
 test('remote: a genuinely-missing volume node installs WITHOUT force', () => {
     // installed:false but NOT drifted (folder absent) → normal install, no force
     const missingDep = { id: 'ComfyUI-VideoHelperSuite', installed: false };

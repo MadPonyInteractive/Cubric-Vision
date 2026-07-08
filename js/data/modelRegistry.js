@@ -35,6 +35,13 @@ const _modelDepStatusCache = new Map();
 // the same "rebuild needed" toast. Keyed by node folder name. (MPI-222)
 const _warnedBakedDrift = new Set();
 
+// Models carrying a drifted VOLUME node (remote engine only). remoteModelsCheck
+// tags such deps installed:false + drifted:true; we surface the owning model ids
+// so the connect edge can offer a one-click re-fetch (MPI-230). Baked drift is a
+// separate rebuild-only signal (_warnedBakedDrift above), not in here.
+let _driftedModelIds = [];
+export function getDriftedModelIds() { return _driftedModelIds.slice(); }
+
 // ── Path Config ───────────────────────────────────────────────────────────────
 // Initialized asynchronously via initPaths() — defaults to Windows portable until server reports.
 
@@ -136,6 +143,7 @@ export async function syncModelInstalled() {
             }
         }
 
+        const drifted = [];
         for (const model of MODELS) {
             if (Object.prototype.hasOwnProperty.call(results, model.id)) {
                 model.installed = results[model.id].installed;
@@ -148,10 +156,15 @@ export async function syncModelInstalled() {
                             partialBytes: depResult.partialBytes || 0,
                         });
                     }
+                    // MPI-230: a volume node at the wrong commit is tagged drifted by
+                    // remoteModelsCheck. Record the owning model so the connect edge can
+                    // offer a one-click force re-fetch.
+                    if (depResult.drifted) drifted.push(model.id);
                 }
                 _modelDepStatusCache.set(model.id, depMap);
             }
         }
+        _driftedModelIds = [...new Set(drifted)];
 
         // Emit installed model IDs for reactive listeners. Use isModelUsable (≥1
         // op installed) not the raw all-deps-present `result.installed`, so a
@@ -159,7 +172,7 @@ export async function syncModelInstalled() {
         // model-manager list + pickers, which already gate on isModelUsable. The
         // dep-status cache was just populated above, so this resolves correctly.
         const installedModelIds = Object.keys(results).filter(id => isModelUsable(id));
-        Events.emit('models:checked', { installedModelIds });
+        Events.emit('models:checked', { installedModelIds, driftedModelIds: _driftedModelIds.slice() });
 
         return true;
     } catch (err) {
