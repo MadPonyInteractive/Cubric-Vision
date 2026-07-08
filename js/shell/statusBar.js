@@ -191,7 +191,17 @@ function _reconcileFromStore(snapshot) {
     // emit no tool:* events. Excluding null-genId jobs keeps a silent preview from
     // flashing "Starting" in the bar — only real generationService gens (which carry
     // _regId as genId) ever drive it.
-    if (job.genId !== null && job.genId !== _activeGenId) {
+    //
+    // MPI-234: also re-arm when the bar is IDLE but the store has a live job the bar
+    // already tracks (`genId === _activeGenId`). A Stop-driven loop re-fire runs
+    // synchronously inside the Stop flow: the bar can get killed (self-heal /
+    // terminal) around the new gen's `tool:running`, then a driving event `_latch`es
+    // the new genId while the bar is idle — after which the old owner-equality check
+    // skipped re-arming forever (stuck "IDLE" for the whole re-fired run; its
+    // tool:progress/stage no-op when idle). Store truth wins in BOTH directions:
+    // active-with-nothing-running heals to idle above; idle-with-something-running
+    // re-arms here.
+    if (job.genId !== null && (job.genId !== _activeGenId || _state !== 'active')) {
         _activeGenId = job.genId;
         _stageText = '';
         if (_state !== 'active') StatusBar.progress.prepare('Starting');

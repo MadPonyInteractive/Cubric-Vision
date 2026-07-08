@@ -1314,8 +1314,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     if (entry.queueJobId) cancelRunningCueJob(entry.queueJobId);
                     else activeGenerations.cancel(entry.id);
                 }
+                // MPI-234: cancelRunningCueJob runs the armed-loop re-fire
+                // SYNCHRONOUSLY inside the call above — by the time we get here a
+                // fresh gen may already be running with its placeholder mounted
+                // (via generation:cancelled → _rebuildAfterEnd). Rebuilding with
+                // project groups alone wiped that placeholder, leaving the
+                // re-fired gen invisible (no card, no latents) until it finished.
+                // Reconcile from the registry instead of assuming nothing runs.
                 const currentGroups = _visibleProjectGroups();
-                grid.el.setGroups(currentGroups);
+                grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
                 const continueBusy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
