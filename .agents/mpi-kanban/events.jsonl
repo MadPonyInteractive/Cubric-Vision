@@ -963,3 +963,4 @@
 {"ts":"2026-07-08T09:42:05Z","type":"plan.attached","id":"MPI-222","plan":"plan.md","by":"agent"}
 {"schema":"mpi-kanban/event/v1","id":"MPI-224","type":"task.created","at":"2026-07-08T09:50:00Z","actor":"claude","column":"doing","summary":"LTX LoRA slots hid the Clip knob though Input_Lora_* nodes have a live strength_clip (pinned to 1.0). Fix: both LTX tiers loraStrengths -> [model,clip]. Surfaced during MPI-223 live test; independent bug. Fix applied same pass."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-223","type":"task.moved","at":"2026-07-08T10:05:00Z","actor":"claude","from":"doing","to":"done","summary":"User live-verified: bypass greys slot, values preserved, real generations confirmed bypassed LoRAs have no effect. Guard test 5/5. Surfaced MPI-224 (LTX Clip knob) as independent side finding."}
+{"ts": "2026-07-08T10:15:00Z", "type": "task.moved", "id": "MPI-224", "from": "doing", "to": "done", "maturity": "complete"}

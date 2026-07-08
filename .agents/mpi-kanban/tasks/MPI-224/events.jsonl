@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-224","type":"task.created","at":"2026-07-08T09:50:00Z","actor":"claude","column":"doing","summary":"Created in doing. Fixed models.js:293 (ltx-23) + models.js:353 (ltx-23-balanced) -> [model,clip]. Plumbing already supported strength_clip end-to-end; only UI gate was wrong. node --check passes. Needs user live-verify: Clip knob appears on LTX slots."}
+{"ts": "2026-07-08T10:15:00Z", "type": "task.moved", "id": "MPI-224", "from": "doing", "to": "done", "maturity": "complete"}
