@@ -1021,3 +1021,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-228","type":"task.moved","at":"2026-07-08T23:25:28.689Z","actor":"claude","from":"todo","to":"done","summary":"Closed as could-not-reproduce (no code change). See validation.md."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-238","type":"task.created","at":"2026-07-09T12:00:00Z","actor":"claude","summary":"No connecting stage + local card lingers ~1min while ComfyUI reloads custom nodes on connect."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-238","type":"task.moved","at":"2026-07-09T12:00:02Z","actor":"claude","from":"doing","to":"done","summary":"Fixed in 7312249: feed tick now treats wrapper-ready/comfyReady=false as connecting. NOT live-validated."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.moved","at":"2026-07-08T23:07:57Z","actor":"claude","from":"doing","to":"done","summary":"Verified live on volume + ephemeral pods (RunPod-console cross-checked); committed b/ pathspec + mpi-ci start.sh. Closed."}
