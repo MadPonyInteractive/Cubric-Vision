@@ -71,6 +71,16 @@ Fixed 2026-07-02 (`v0.10.4-cpu`), live-verified (Settings volume bar on a fresh 
 
 Learned 2026-07-05 (live, twice). Editing a running Pod in the RunPod console (adding an exposed port, changing env) does NOT restart in place — it RECREATES the container: everything outside the network volume dies, including `/root` (re-downloaded models, side-launched processes, shell state). "Restart survives" claims apply only to in-place restarts (`/wrapper/restart-comfy`, container reboot). Need a new port/env on a debug pod → set it at CREATE time, or expect to re-download to container disk. Since MPI-204 the 8188 ComfyUI door auto-exposes at create in dev builds (`dev_mode` / `BUILD_HASH === 'dev'`) — no `.expose-comfy` marker needed; an "Open ComfyUI (dev)" link appears in RunPod Settings once the engine is ready.
 
+## Volume "disk full" triage — measure before theorizing (MPI-221)
+
+The Settings volume bar (`GET /remote/pod/disk` → wrapper `du -sb /workspace`) can read far higher than the sum of models the Model Library *shows as installed* — and that gap is almost always **honest, real weights**, NOT a leak. MPI-221 chased a phantom 88 GB gap (138 GB used vs a "3 installed / 50 GB" library view) through failed-uninstall-orphan and output-dir-leak theories; **both were wrong**. The truth: the library screenshot was a **filtered view** (SIZE/MEDIA chips narrowing it), and the volume genuinely held LTX-2.3 Balanced + Wan 2.2 t2v/i2v/5B + SDXL + shared encoders/VAEs. The disk was simply full of models.
+
+**Don't theorize — list the volume.** Wrapper `GET /wrapper/ls` (shipped MPI-221, wrapper ≥ 0.2.32, read-only, token-gated) returns per-top-level-dir `du` of `/workspace` **plus** a flat file walk of `mpi_models` with sizes. Reach it through the app's token-attached proxy: temporarily add a `/remote/pod/ls` route that forwards to `/wrapper/ls` (mirror `/remote/pod/disk`; needs an app reload since routes don't hot-reload), curl it, then revert the app route. That gives the exact file→GB breakdown in one shot. Diff it against the model registry's dep filenames to spot true orphans (there were only 2 zero-byte `Chroma…​.part.aria2` control files from a disk-full-killed install — trivial).
+
+**A model stuck at 99% (or any X%) with all its weights on disk is usually a bumped custom-node commit**, not a missing weight. MPI-219 bumped `ComfyUI-MpiNodes` in `dev_configs/node_lock.json`; a Pod that still had the OLD MpiNodes commit failed the node-version check on that ONE dep → LTX Balanced showed 99%. Fix = click Install (re-fetches the node). The node-version check compares the installed commit to the pinned `node_lock` commit, so any `node_lock` bump drops every Pod carrying the old node to <100% until re-installed.
+
+The Pod wrapper runs from R2, not the image (see `project_pod_wrapper_runtime_from_r2` memory / `mpi-ci/cubric-vision-pod/bootstrap.sh`); publish `/wrapper/ls` and future wrapper edits via `mpi-ci/cubric-vision-pod/publish-runtime.sh` — no image rebuild.
+
 ## CPU "download mode" Pod (MPI-88)
 
 Provision a CPU-only Pod purely to install models onto the volume with **no GPU billing**,
