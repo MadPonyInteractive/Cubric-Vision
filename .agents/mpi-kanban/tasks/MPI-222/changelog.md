@@ -164,6 +164,34 @@
 
 ---
 
+### Baked-node drift toast — LIVE-VERIFIED 2026-07-08 (the last un-run shipped path)
+
+The one path never live-run (baked-node commit drift → `ui:warning` toast) is now
+PROVEN end-to-end. Test: bumped RES4LYF (a baked `installRequirements:true` node) in
+`node_lock.json` `419de2d7`→`119679d8` (both real commits) WITHOUT a Pod rebuild —
+so the app's pinned commit disagreed with the already-baked Pod's `.mpi_node_commit`
+(`419de2d7`). Restart + connect the v0.14.0-cu130 GPU pod (console log confirms the
+image tag). Result:
+- ✅ **Toast fired** — "HEADS UP · Pod image is stale — rebuild needed (RES4LYF)" (a
+  warn toast, NOT the GitHub-report error dialog), once per session.
+- ✅ **Chroma stayed INSTALLED** (2 installed in the Model Library) — baked drift is
+  warn-only, never unsets.
+- ✅ **No install loop / no remote RES4LYF reinstall** — pod booted clean, ComfyUI up,
+  WebSocket accepted, generation-ready.
+
+Chain proven: v0.14.0 image bakes `.mpi_node_commit` → wrapper stamps it into the
+schema-2 manifest `nodes[]` → app `remoteModelsCheck` reads `RES4LYF: 419de2d7` ≠ pin
+`119679d8` → `bakedDrift[]` → `modelRegistry.syncModelInstalled` emits the once-per-node
+toast. `node_lock.json` reverted to `419de2d7` after (git diff clean). **EVERY path in
+the card is now live-proven.** (Side effect: the local engine drift-repaired RES4LYF to
+`119679d8` on the test restart; the revert means the next app restart does a one-time
+harmless local reinstall back to `419de2d7` — the fix working in reverse.)
+
+**Separately surfaced (NOT MPI-222, cardable):** the install-progress bar counts pip
+`installRequirements` output bytes into the numerator but the denominator is the
+git-archive download size only → the "203.0 MB / 15.0 MB" mismatch the user has seen
+across sessions. A progress-accounting display bug in the install flow, not a drift bug.
+
 ## Re-eval required (docs / rules / memory / skills / playbooks / commands)
 
 > Every row is something a Phase-1+ change has made stale or will make stale. Status:
