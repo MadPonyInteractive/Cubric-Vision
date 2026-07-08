@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-226","type":"task.created","at":"2026-07-08T13:49:50.569Z","actor":"claude","summary":"Investigation card: Loop-wont-stop + silent save-loss project.json desync (post-208/213 refactor). Ruled out MPI-225 as cause; may subsume MPI-225 404 via same race."}

@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-227","type":"task.created","at":"2026-07-08T16:54:42.737Z","actor":"claude","summary":"Large plan: content-addressed permanent preview-assets store + manual Cleanup GC + reuse video/audio toggles. 4-agent investigation done. Extends MPI-225 (root fix), MPI-226 separate."}

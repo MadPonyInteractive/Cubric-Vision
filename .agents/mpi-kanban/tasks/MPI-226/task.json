@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-226",
+  "title": "Loop won't stop + silent save-loss desyncs project.json (post-208/213 refactor)",
+  "description": "Two bugs surfaced live during a Loop-driven t2i batch (Rossifi project, 2026-07-08). (1) LOOP WON'T STOP: pressing Stop mid-loop did not disarm the loop — it kept re-firing gens; user could not stop it. Suspect the generationStore lane-drain re-fire (_loopCallbacks, generationStore.js:242-249) firing after Stop and/or state.loopArmed not cleared on Stop. (2) SILENT SAVE-LOSS / project.json DESYNC: media PNGs wrote to disk (t2i_001-005, 14:35-14:38) but project.json stopped persisting after 13:41 and only 1 of ~8 gens registered. save-generation failures are caught+swallowed as a warn (generationService.js:923-925) so the flow continues with the item ONLY in renderer memory — no sidecar on disk. On reload, stale project.json loads 1 item and projectReconciler.js:121 fires load-meta for the memory-only ghost ids -> 404s (seen in console). Root is in the MPI-208/213 generationStore/queue refactor + the swallowed-save path, NOT MPI-225 (proven: projects.js server edit never ran (no restart); the MPI-225 generationService filter is pure/post-save/metadata-only; promptReuse is read-path only). NO DATA LOST on disk in this incident; the desync is a persistence/registration bug.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-08T14:45:00Z",
+  "updated_at": "2026-07-08T14:45:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
