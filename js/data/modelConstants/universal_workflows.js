@@ -2,9 +2,9 @@
 // Available regardless of which model is active.
 // Keys must match commandRegistry entries marked universal: true.
 //
-// Dependencies for universal workflows are defined once in DEPS (dependencies.js)
-// with installOnEngine: true — they are installed automatically with the engine
-// and are never tracked per-workflow.
+// Dependencies for universal workflows are the universal DEPS set (dependencies.js):
+// every type:'custom_nodes' node + every engineAsset:true weight (MPI-222). They are
+// installed automatically with the engine and are never tracked per-workflow.
 
 /**
  * @typedef {Object} UniversalWorkflowDef

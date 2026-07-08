@@ -184,14 +184,25 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   arch switch) **+ PyTorch SDPA always-present fallback**. Readiness gates on ComfyUI-up only,
   never on sage. App readiness-poll timeout is **1200s** so the one-time compile can't abort
   readiness.
-- **Custom-node lifecycle split:** the 7 **universal** `installOnEngine` node packs (MpiNodes,
-  VideoHelperSuite, Impact-Pack, KJNodes, UltimateSDUpscale, Frame-Interpolation,
-  Impact-Subpack) **bake into the image**. **Per-model** nodes (PainterI2V + future) install
-  onto the **volume** via the wrapper at model-install time — a new model NEVER forces an
-  image rebuild. ComfyUI loads both via `--extra-model-paths-config` (`start.sh` writes
+- **Custom-node lifecycle split = `installRequirements` (MPI-222, replaced the old
+  `installOnEngine` bake list).** A node BAKES into the image iff `installRequirements: true`
+  in `node_lock.json` (the pip-req nodes: Impact-Pack, KJNodes, Frame-Interpolation,
+  Impact-Subpack — pip cost paid at build). Code-only nodes (`installRequirements: false`:
+  MpiNodes, VideoHelperSuite, UltimateSDUpscale, PainterI2V, LTXVideo, RES4LYF) install onto
+  the **volume** via the wrapper at connect/model-install — so bumping ANY of their commits
+  (a `node_lock.json` edit) NEVER forces an image rebuild; only a baked node's bump does.
+  ComfyUI loads both via `--extra-model-paths-config` (`start.sh` writes
   `/workspace/cubric/extra_model_paths.yaml`, mapping each model type → `mpi_models/<type>`
-  plus the volume `custom_nodes:` key). Per-model node install reports `needs_comfy_restart`
+  plus the volume `custom_nodes:` key). Volume node install reports `needs_comfy_restart`
   (ComfyUI scans `custom_nodes` only at boot) → the app warm-cycles the Pod.
+- **Node commit-drift (MPI-222).** Each node carries a `.mpi_node_commit` marker (stamped by
+  the wrapper's `_run_node_install`, read at boot into the schema-2 manifest `nodes[]`). The
+  app's `remoteModelsCheck` compares each pinned commit to the manifest: a **volume** node at
+  the wrong commit → `installed:false`+`drifted:true` → the installer sends `force:true` so the
+  wrapper `rmtree`s + re-clones at the pin (without force it loops `already_installed`); a
+  **baked** node at the wrong commit → `bakedDrift[]` → a warn-only "Pod image is stale —
+  rebuild needed" toast (an image node can't be volume-healed). Lazy in-folder weights (RIFE)
+  now ride a `targetPath` dep (see download-manager.md), also baked.
 - **Lazy-download weights are the remote trap.** Several baked node packs fetch model weights
   on first use, not at build (RIFE `rife47.pth`; Impact-Pack `bbox/face_yolov8n.pt` +
   `sam_vit_b_01ec64.pth`; upscale `4x-NMKD-Siax`/`4x-AnimeSharp`). On a Pod that runtime fetch
@@ -307,7 +318,7 @@ is committed).
 
 **On-demand model auto-upload (MPI-82)** — live-verified 2026-06-17 (L4). A LoRA/upscale present locally but absent on the Pod is auto-uploaded at generate-time (`comfyController._uploadRemoteModels`) before `/prompt`. Wrapper endpoint: `POST /wrapper/models/upload` (image v0.4.9+). `forceLocal:true` skips upload. Presence check is a live `os.path.exists` on the volume every gen (no app cache).
 
-**Manifest compat gate (MPI-90)** — wrapper writes `/workspace/cubric/manifest.json` at first boot; app reads it in `_evaluatePodHealth()` before first remote gen. Blocks (409) only when `manifest_schema_version > MANIFEST_SCHEMA_MAX` (=1); 404 = fresh volume = OK. Gate currently dormant (all real Pods report schema 1). Tests: `tests/runpod-remote-hardening.test.cjs` + `wrapper/test_manifest_stamp.py`.
+**Manifest compat gate (MPI-90 / MPI-222)** — wrapper writes `/workspace/cubric/manifest.json` at first boot; app reads it in `_evaluatePodHealth()` before first remote gen. Blocks (409) only when `manifest_schema_version > MANIFEST_SCHEMA_MAX` (now **=2**, `remotePodState.js`); 404 = fresh volume = OK. **Schema 2** (wrapper ≥0.2.33) adds an optional `nodes[]` `[{filename, commit}]` for node commit-drift detection — additive, so a v1 Pod (no `nodes[]`) reads as no-drift and a v2 app accepts it. Tests: `tests/runpod-remote-hardening.test.cjs` + `wrapper/test_manifest_stamp.py`.
 
 **Pod wrapper owns + supervises ComfyUI (v0.4.2)** — `POST /wrapper/restart-comfy` restarts ONLY ComfyUI without a Pod reboot. RunPod console op truth table: "Restart Pod" = NO-OP (uptime unchanged, processes NOT restarted); "Reset Pod" = WIPES container; "Stop → Start" = ONLY console op that reloads ComfyUI. `start.sh` `exec`s the wrapper as main process; unexpected ComfyUI death → `os._exit(1)` (safety preserved); intentional restart sets `_restarting` so supervisor relaunches.
 

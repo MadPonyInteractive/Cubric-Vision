@@ -46,22 +46,20 @@
 
 ## Engine Download & Engine-Deps Parallel Flow
 
-**Engine downloads run parallel with engine-level dependency downloads** for better UX. Engine-level deps are identified by `installOnEngine: true` in `dependencies.js` — they cover all universal workflow needs in one place.
+**Engine downloads run parallel with engine-level dependency downloads** for better UX. Engine-level deps are the UNIVERSAL set: every `type: 'custom_nodes'` dep plus every `engineAsset: true` weight in `dependencies.js` (MPI-222 — replaced the old `installOnEngine` flag). They cover all universal workflow needs in one place.
 
-1. **Combined size calculation:** `routes/shared.js` exports `getUniversalWorkflowDepsTotalSize()` which HEAD-requests each `installOnEngine` dep URL to get exact bytes
+1. **Combined size calculation:** `routes/shared.js` exports `getUniversalWorkflowDepsTotalSize()` which HEAD-requests each universal dep URL to get exact bytes
 2. **Parallel firing:** `routes/engine.js` fires both engine download AND `startUniversalWorkflowInstall(depIds, true, true)` immediately
 3. **Custom node install delayed:** The third parameter `true` skips custom node pip install until after engine extraction
 4. **Frontend aggregation:** `MpiEngineInstall.js` receives both `engine:downloading` and `download:progress` events and aggregates them into a single unified progress bar
 5. **Custom node finish:** After engine extraction, `finishCustomNodeInstall(modelJob, true)` is called to run pip install with Python now available
 
-**Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. If the new workflow requires a dep not yet marked `installOnEngine: true` in `dependencies.js`, add the flag there — it is automatically included in future engine installs.
+**Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. Any new node dep is `type: 'custom_nodes'`, which is in the universal set automatically (no flag) and included in future engine installs.
 
-**Custom_node deps — universal vs per-model (do NOT conflate):**
+**Custom_node deps are UNIVERSAL by TYPE (MPI-222 — replaced `installOnEngine`):**
 
-- **Universal nodes** (needed by the UNIVERSAL workflows — interpolate, upscale, resize, auto-mask — that every install must serve) MUST be marked `installOnEngine: true`. They are baked in with the engine so a fresh install can run any universal workflow with zero extra install. This is the ONLY case for `installOnEngine: true`. Examples: `ComfyUI-MpiNodes`, `comfyui-videohelpersuite`, `comfyui-frame-interpolation`, `comfyui-kjnodes`.
-- **Per-model nodes** (used only by a specific model's workflows) MUST NOT set `installOnEngine: true`. Put them in that model's `dependencies[]` (flat) or an `operations.<op>.deps[]` (op-keyed) so they install WHEN the model/op installs — and on a Pod, route to the wrapper for volume install (see `routes/remoteModels.js` `_isImageResident`), so a new model never forces an engine/image rebuild. Precedents: `ComfyUI-PainterI2Vadvanced` (Wan i2v op), `ComfyUI-LTXVideo` (LTX model). Setting `installOnEngine: true` on one of these is a BUG — it pulls the node (and its pip install) into EVERY fresh engine even when the model isn't installed.
-
-A per-model node is NOT missing after a fresh engine install because the model that needs it has not been installed yet; installing the model fetches it. The universal-vs-per-model split is the whole point — only universal needs proactive engine-time install.
+- **Every `type: 'custom_nodes'` dep** is universal: `getUniversalWorkflowDepIds()` selects `type==='custom_nodes' || engineAsset===true`, so all nodes bake in with the engine and a fresh install can run any universal workflow with zero extra install. There is no per-model node class anymore — the old `installOnEngine` flag and `getInstalledModelNodeDeps()` are deleted (once every node went universal, that fn returned `[]`). A former per-model node (`ComfyUI-PainterI2Vadvanced`, `ComfyUI-LTXVideo`) just installs as a universal node.
+- **On the Pod, the split is `installRequirements`:** `true` nodes BAKE into the image (pip cost at build); `false` nodes install onto the VOLUME at connect via the wrapper (see `routes/remoteModels.js` `_isImageResident`) — so bumping a volume node's commit never forces an image rebuild. A commit bump is a `dev_configs/node_lock.json` edit; the drift ladder (`.mpi_node_commit` marker) reinstalls at the new commit on both engines. See `.claude/rules/comfy_engine.md` § 2.5c.
 
 ---
 

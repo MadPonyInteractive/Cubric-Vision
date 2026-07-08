@@ -7,7 +7,7 @@
 
 **Platform paths:** All engine paths (Python binary, ComfyUI folder, models, custom nodes) are centralized in `routes/platformEngine.js`. Use `getPythonBin()`, `getComfyPath()`, `COMFY_DIR` — never hardcode `'ComfyUI_windows_portable'`.
 
-**Adding a custom-node dep — `installOnEngine` decision (do NOT copy the adjacent entry's flag):** `installOnEngine: true` = UNIVERSAL-workflow node (every workflow needs it, e.g. kjnodes/VHS/Impact) → installs with the engine always. A MODEL-SPECIFIC node (only one model uses it, e.g. `ComfyUI-PainterI2Vadvanced`/Wan, `ComfyUI-GGUF`/LTX-2.3) → **NO `installOnEngine`**; list it in that model's `dependencies[]` in `models.js` and it installs via `getInstalledModelNodeDeps()` when the model's weights are present + node missing. `installRequirements: true` is orthogonal — set it whenever the node has a real `requirements.txt`.
+**Adding a custom-node dep — nodes are UNIVERSAL by TYPE (MPI-222):** every `type: 'custom_nodes'` dep is in the universal set — there is no longer a model-specific node class (the old `installOnEngine` flag + `getInstalledModelNodeDeps()` are DELETED). `getUniversalWorkflowDepIds()` selects `type==='custom_nodes' || engineAsset===true`, so every node installs with the engine and every `engineAsset` weight (upscalers, yolo/sam, RIFE) comes with it. The ONE knob on a node entry is **`installRequirements: true/false`** — orthogonal to universality — set it whenever the node ships a real `requirements.txt` (it also gates Pod BAKE vs VOLUME, see below). A node's pinned commit lives in `dev_configs/node_lock.json` (`source: git-commit|git-tag|registry`); bumping it there triggers the drift ladder (marker `.mpi_node_commit`) on both engines — no other edit needed.
 
 **GPU detection + provisioning method:** `resolveDownloadConfig()` in platformEngine.js detects GPU (NVIDIA/AMD/Intel) and returns `{ method, comfy, gpu }`. **Windows** (`method: 'archive'`) selects a prebuilt portable build by **GPU architecture** via `selectNvidiaBuild()` (Comfy-Org: 20-series+/datacenter Turing+ → `_nvidia.7z`; 10-series & older/pre-Turing → `_nvidia_cu126.7z`; plus `_amd.7z`, `_intel.7z`) and sets `comfy: { url, filename }`. **Linux/macOS** (`method: 'uv-bootstrap'`) have no prebuilt portable, so `comfy` is `null` and the engine is built via uv + comfy-cli (see Engine Install below). CUDA version (parsed from a bare `nvidia-smi` header on **stdout**) is informational + a tiebreaker only, never the primary signal. Called once per engine install/upgrade; result cached for session. Result also exposes `gpu: { name, vendor, cudaVersion }` for UI consumption via `GET /system/gpu-info` (routes/system.js) — same cache, single `nvidia-smi` call per session.
 
@@ -23,10 +23,11 @@
 
 **New model checklist:** (1) Add to `MODELS` in `js/data/modelConstants/models.js`, (2) check `DEPS` in `modelConstants/dependencies.js` for dependency array, (3) provide `workflows` map with op→workflowFile entries, (4) **checkpoint filenames must match the actual on-disk path** — do not include subfolder prefixes (e.g. `SDXL/`, `ILL/`, `PONY/`) unless that subfolder actually exists in the models folder. The backend searches using the exact path in `dep.filename` against `customRoot` (or engine default); mismatches cause the model to show as "not installed" despite files being present.
 
-**`installOnEngine` is ONLY for UNIVERSAL-WORKFLOW deps — NOT for model-specific custom nodes.** When adding a NEW custom-node dep, decide by ROLE, not by copying the adjacent entry's shape:
-- **Universal (every workflow needs it, e.g. `comfyui-kjnodes`, `ComfyUI-VideoHelperSuite`, `ComfyUI-Impact-Pack`)** → `installOnEngine: true`. `getUniversalWorkflowDepIds()` (shared.js:481) filters on this flag and installs it WITH the engine, always, regardless of which models are present.
-- **Model-specific (only one model's workflow uses it, e.g. `ComfyUI-PainterI2Vadvanced` for Wan I2V, `ComfyUI-GGUF` for LTX-2.3 GGUF)** → **NO `installOnEngine`**. List it in that model's `dependencies[]` array in `models.js` instead. It installs via `getInstalledModelNodeDeps()` (shared.js:524) when the model's WEIGHTS are present on disk but its node is missing. Setting `installOnEngine: true` on a model-specific node wrongly forces it onto EVERY engine install (bloat) and mis-signals intent.
-- `installRequirements: true` is ORTHOGONAL — set it whenever the node ships a real `requirements.txt` (e.g. `ComfyUI-GGUF` needs `gguf>=0.13.0`), independent of the `installOnEngine` decision.
+**Custom nodes are universal by TYPE; weights opt in with `engineAsset` (MPI-222 — replaced the old `installOnEngine` flag).** When adding a NEW dep:
+- **Any `type: 'custom_nodes'`** → in the universal set automatically, no flag. `getUniversalWorkflowDepIds()` (shared.js) selects `type==='custom_nodes' || engineAsset===true` and installs it WITH the engine, always. There is no model-specific node class anymore (`installOnEngine` + `getInstalledModelNodeDeps()` deleted) — a model that needs a node just installs it as a universal node when its weights land; a node folder's presence + commit are what matter, not a per-model tie.
+- **A WEIGHT that must ship with the engine** (upscalers, yolo/sam detectors, RIFE) → `engineAsset: true`. This is the ONLY weight flag; it pulls the file into the universal install set + (on remote) marks it image-resident.
+- **`installRequirements: true/false`** → set `true` when the node ships a real `requirements.txt`. Orthogonal to universality, but it ALSO drives the Pod split: `installRequirements: true` nodes BAKE into the Pod image (pip cost paid at build); `false` nodes install onto the volume at connect (no rebuild to bump them). See § "Node commit-drift ladder" below.
+- **In-folder weights** (a node that hard-codes its own scan dir, e.g. RIFE's `ckpts/rife/`) → add a `targetPath: 'custom_nodes/<node>/<subdir>'` to the weight dep so the resolver installs it INSIDE the node folder instead of `mpi_models/`. See § "Node commit-drift ladder".
 
 **Extra model folders:** Additive user folders exist only for `loras` and `upscale_models`. They are stored in `extra_model_folders.json` and re-merged into `extra_model_paths.yaml`; do not parse multiline YAML entries as the source of truth. The configured paths are bucket folders, not parent model roots.
 
@@ -34,7 +35,7 @@
 
 **Engine upgrade/wipe MUST preserve the custom models root:** any op that wipes the engine folder (`/engine/upgrade`) destroys `extra_model_paths.yaml`. Capture the root FIRST with `getCustomRoot()` (shared.js — reads `base_path:`) and pass it to `_runEngineDownload(preservedRoot)`, which re-writes it at step 6. `hasCustomRoot` is a boolean flag, NOT the value — never rely on it for preservation. Otherwise the user's custom folder (e.g. `D:\CubricModels`) silently resets to the default `mpi_models` → 0 models → no prompt box. (MPI-118.)
 
-**Engine reinstall MUST restore installed-model-specific node deps:** the UW reinstall set only covers `installOnEngine: true` deps. A model-specific custom node (e.g. `ComfyUI-PainterI2Vadvanced` for Wan I2V) is dropped on engine wipe. `getInstalledModelNodeDeps()` (shared.js) returns the custom-node deps of models whose weights are present on disk but whose nodes are missing; `_runEngineDownload` merges these into `missingDepIds`. Without it, the model shows "partially installed" after upgrade. (MPI-118.)
+**Engine reinstall restores ALL nodes (MPI-222):** every `custom_nodes` dep is universal now, so the UW reinstall set already covers every node an engine wipe drops — `_runEngineDownload` just uses `missingDeps` directly (the old `getInstalledModelNodeDeps()` model-specific merge is deleted; it returned `[]` once all nodes went universal). A former model-specific node like `ComfyUI-PainterI2Vadvanced` is now restored the same as any universal node. (MPI-118/222.)
 
 **Models-path / folder change needs a ComfyUI restart:** ComfyUI builds `folder_names_and_paths` from `extra_model_paths.yaml` at startup ONLY — stock v0.25.1 has no runtime path-reload route. After a Settings path/folder change, `_setComfyPath` sets `state.comfyNeedsRestart = true`; `comfyController.js` then stops/starts ComfyUI at next generation so it re-reads the YAML. A running process keeps a stale (often empty) checkpoint list otherwise → `ckpt_name not in []`. A lighter `/object_info` refresh suffices ONLY for file add/remove in an already-registered folder, not a root change (see kanban MPI-121).
 
@@ -254,6 +255,49 @@ files). The build script emits one file PER (mode/stage × every variant token) 
 only the arch-specific loader node differs. Contract test: `testVariantAxis` in
 `tests/resolve-model-deps.test.cjs`.
 
+### 2.5c Node commit-drift ladder — `.mpi_node_commit` marker (MPI-222)
+
+A pinned custom-node commit bump (edit in `dev_configs/node_lock.json` only) used
+to leave installed nodes silently STALE — the install-check was folder-exists only,
+so a folder at the wrong commit read as installed forever. The fix records WHICH
+commit is on disk and reinstalls on mismatch, **both engines**.
+
+- **Marker:** after a node installs, its pinned commit is stamped into
+  `<node>/.mpi_node_commit` (written LAST, so the marker doubles as a success
+  sentinel). `getPinnedNodeCommit(depId)` / `writeNodeCommitMarker()` live in
+  `routes/shared.js`.
+- **Detection (local):** `checkUniversalWorkflowDepsStatus` (shared.js) drift-checks
+  every folder-present `custom_nodes` dep — marker ≠ pinned (or absent) → returns it
+  in `driftedDeps`. **Detection (remote):** `remoteModelsCheck` reads the Pod
+  manifest's `nodes[]` (schema v2); a VOLUME node at the wrong commit → `installed:false`
+  + `drifted:true`; a BAKED node at the wrong commit → `bakedDrift[]` (warn-only, never
+  unset — an image node can't be volume-healed, it needs a rebuild).
+- **Heal (local):** `/engine/repair-deps` (engine.js) unions missing+drifted and
+  **pre-wipes** each drifted folder (`fs.remove`) before reinstall — else
+  `startUniversalWorkflowInstall` skips it as already-on-disk. **Heal (remote):** a
+  drifted volume node installs WITH `force:true` (downloadManager → `remoteInstallDep`)
+  so the wrapper `rmtree`s + re-clones at the pinned commit; without force it
+  short-circuits `already_installed` on folder-exists → an endless install loop.
+- **Bake vs volume = `installRequirements`:** `true` nodes bake into the Pod image at
+  build (drift on a baked node → the warn-only toast, needs a rebuild); `false` nodes
+  install on the volume at connect (drift heals in place, no rebuild). Bumping a
+  volume node = node_lock edit only; bumping a baked node = node_lock edit + Pod image
+  rebuild + `POD_IMAGE_VERSION` bump + app restart.
+- **Dev-symlink escape hatch:** on a source/dev run (`BUILD_HASH === 'dev'`) the drift
+  check SKIPS `ComfyUI-MpiNodes` — it's the one node symlinked into `custom_nodes` for
+  live editing, always at/ahead of the pin, and a "repair" would `fs.remove` the
+  symlink. Release builds (no symlink) drift-repair it normally.
+- **`targetPath` in-folder weights:** a weight whose node hard-codes its scan dir
+  (RIFE → `custom_nodes/comfyui-frame-interpolation/ckpts/rife/`) declares
+  `targetPath: 'custom_nodes/<node>/<subdir>'` + `engineAsset: true`. The resolver
+  (`resolveComfyPath`, shared.js) installs it under the ComfyUI repo root, bypassing the
+  `mpi_models/` type→subdir map. On remote it's image-resident (baked inside the node
+  folder). **Trap (MPI-222):** the DOWNLOAD path (downloadManager.js, 3 resolve sites)
+  has its own resolve — pass the FULL dep so `targetPath` survives; a stripped
+  `{type,filename}` falls back to `mpi_models/`. The drift pre-wipe nukes the whole node
+  folder incl. in-folder weights, but a `targetPath` weight self-heals (it's a tracked
+  dep → boot-install re-fetches it). Guard tests: `tests/node-drift.test.cjs`.
+
 ### 2. ComfyUI Process State
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 
 - Do not add random CLI arguments to the spawn command without checking if they break compatibility with portable installs.
@@ -266,7 +310,7 @@ The engine installation is now **parallel-optimized** with aggregated progress r
 
 **Order of operations:**
 1. **GPU Detection** — `resolveDownloadConfig()` detects GPU (NVIDIA/AMD/Intel) and selects the engine build by GPU architecture (`selectNvidiaBuild`); CUDA version is informational/tiebreaker only
-2. Pre-calculate combined size: engine archive (selected variant) + all deps with `installOnEngine: true` in `dependencies.js`
+2. Pre-calculate combined size: engine archive (selected variant) + the universal dep set (every `type: 'custom_nodes'` + every `engineAsset: true` weight) in `dependencies.js`
 3. **Start engine download** (of GPU-specific variant; progress fed to frontend)
 4. **Immediately fire engine-deps download in parallel** with `skipCustomNodeInstall=true` (progress also fed to frontend)
 5. **Extract engine** (while deps continue downloading)
@@ -279,7 +323,7 @@ The engine installation is now **parallel-optimized** with aggregated progress r
 **Key file locations:**
 - Platform engine + GPU detection: `routes/platformEngine.js` (all path and GPU detection logic)
 - Engine download orchestration: `routes/engine.js` `_runEngineDownload()` — calls `resolveDownloadConfig()` first
-- Engine-deps source: `dependencies.js` (`installOnEngine: true` flag) — no per-workflow tracking needed
+- Engine-deps source: `dependencies.js` (the universal set: `type: 'custom_nodes'` + `engineAsset: true` weights) — no per-workflow tracking needed
 - Engine-deps download: `routes/downloadManager.js` (`startUniversalWorkflowInstall` with `skipCustomNodeInstall` param)
 - Custom node finish: `routes/downloadManager.js` (`finishCustomNodeInstall`)
 - Frontend aggregation: `js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js` (`el.setProgress`)

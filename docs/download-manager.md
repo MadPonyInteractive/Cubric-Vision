@@ -128,6 +128,43 @@ When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js
 
 `node-downloader-helper` v2.1.11 key traps: writes straight to final filename (no `.part` suffix). `resume:true` is NOT a real NDH option (silently ignored) — the real flag is `resumeIfFileExists` but it makes `pause()` fail; leave `resume:true` (harmless, keeps `start()` synchronous so pause works). `pause()` mid-chunk can throw `ERR_STREAM_WRITE_AFTER_END` — defer via `setImmediate`. `models/check` uses bare `fs.pathExists` — partial-at-final-path reads as installed (false positive). MPI-54: implemented `<file>.cubricdl` sidecar marker + `isCompleteOnDisk()` + `routes/downloadCompletion.js` to fix this.
 
+## Node commit-drift + `.mpi_node_commit` marker (MPI-222)
+
+A pinned custom-node commit bump (`dev_configs/node_lock.json`) used to leave the
+installed node silently STALE — the install-check was folder-exists only. Now each
+node install stamps `<node>/.mpi_node_commit` with its pinned commit (written LAST =
+success sentinel). `checkUniversalWorkflowDepsStatus` (`routes/shared.js`) drift-checks
+every folder-present `custom_nodes` dep (marker ≠ pinned, or absent → drifted) and
+returns `driftedDeps`.
+
+- **Local heal:** `/engine/repair-deps` (`routes/engine.js`) unions
+  `missingDeps + driftedDeps` and **pre-wipes** each drifted folder with `fs.remove`
+  BEFORE `startUniversalWorkflowInstall` — else the installer skips it as
+  already-on-disk (`isCompleteOnDisk`) and the wrong commit survives. **Gotcha:** the
+  pre-wipe nukes the WHOLE node folder, including any in-folder weight (see `targetPath`
+  below); a tracked `targetPath` weight self-heals on the next boot-install, an
+  untracked one is lost.
+- **Dev-symlink skip:** on a source run (`BUILD_HASH==='dev'`) the drift check skips
+  `ComfyUI-MpiNodes` — it's symlinked for live editing and a repair would `fs.remove`
+  the link.
+- **Remote heal:** a drifted volume node installs with `force:true` so the wrapper
+  re-clones at the pinned commit; without force it short-circuits `already_installed`
+  → an endless install loop. See [runpod-remote-engine.md](runpod-remote-engine.md) § 6.
+
+### `targetPath` — a weight that lives INSIDE a node folder
+
+Most weights resolve to `mpi_models/<type>/`. A node that hard-codes its own scan dir
+(RIFE reads only `custom_nodes/comfyui-frame-interpolation/ckpts/rife/`) needs its
+weight there instead. Such a weight dep declares
+`targetPath: 'custom_nodes/<node>/<subdir>'` + `engineAsset: true`; `resolveComfyPath`
+(`routes/shared.js`) installs it under the ComfyUI repo root, bypassing the type→subdir
+map. **Trap (MPI-222):** `downloadManager.js` has its OWN resolve at 3 sites
+(size-calc, preserve-rule, installer) — each must pass the FULL dep so `targetPath`
+survives; a stripped `{type,filename}` falls back to `mpi_models/` and the node never
+finds the weight. Being `engineAsset`, the weight boot-installs + self-heals; on remote
+it's image-resident (baked inside the node folder, so the wrapper never installs it).
+Guard: `tests/node-drift.test.cjs`.
+
 ## Remote (RunPod) Disk-Full Pre-Flight
 
 An old comment in `downloadManager.js` (MPI-100 era) claims a truthful remote
