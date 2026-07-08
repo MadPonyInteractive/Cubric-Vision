@@ -184,6 +184,13 @@
   cancellable **Queued** state, and the queue advances on its own (the next download
   starts as soon as the current finishes downloading).
 
+- **Bypass a LoRA without removing it.** Each LoRA slot in Model Settings now has
+  a bypass toggle — press it to grey out that slot (its model and strength values
+  stay visible, just dimmed) and the LoRA is skipped for the next generation,
+  injected at zero strength instead of being removed. Handy for quick A/B
+  comparisons without losing your slot setup, and it still works even if the LoRA
+  file itself is missing from your folders.
+
 ## fixes
 
 - **Stopping a generation is now reliable.** A stopped generation that was still
