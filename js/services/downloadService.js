@@ -351,26 +351,36 @@ const downloadService = {
                 fetch('/comfy/refresh-models', { method: 'POST' }).catch(() => {});
             }
 
-            // Capture installed IDs before re-sync to detect cascade installs
-            const preSync = new Set(MODELS.filter(m => m.installed).map(m => m.id));
-            reSyncInstalledModels().then(() => {
-                if (isUW) return;
-                // Toast any model that became installed as a side-effect (shared deps)
-                // Skip the primary modelId — already toasted above
-                for (const m of MODELS) {
-                    if (m.installed && !preSync.has(m.id) && m.id !== data.modelId) {
-                        const wrap = ce('div');
-                        document.body.appendChild(wrap);
-                        const t = MpiToast.mount(wrap, {
-                            message: `${m.name} installed.`,
-                            variant: 'success',
-                            duration: 4000,
-                        });
-                        t.on('close', () => wrap.remove());
+            // The backend broadcasts download:complete PER-DEP with { depId, modelId:null }
+            // as each file lands, then ONCE MORE model-level with a real modelId when the
+            // model's whole dep set is done (_checkModelJobsComplete). Only the model-level
+            // event needs the expensive registry re-sync (+ cascade-toast) — running it per
+            // dep re-synced the whole registry N times mid-install, and each sync fired
+            // models:checked → the Model Library rebuilt every card (visible flashing) and
+            // briefly derived a not-yet-installed / not-active state → the Install button
+            // flickered back. Per-dep completes carry no modelId, so gate the sync on it and
+            // emit only the model-level event downstream. (fixes the install-flash storm)
+            if (!isUW) {
+                // Capture installed IDs before re-sync to detect cascade installs
+                const preSync = new Set(MODELS.filter(m => m.installed).map(m => m.id));
+                reSyncInstalledModels().then(() => {
+                    // Toast any model that became installed as a side-effect (shared deps)
+                    // Skip the primary modelId — already toasted above
+                    for (const m of MODELS) {
+                        if (m.installed && !preSync.has(m.id) && m.id !== data.modelId) {
+                            const wrap = ce('div');
+                            document.body.appendChild(wrap);
+                            const t = MpiToast.mount(wrap, {
+                                message: `${m.name} installed.`,
+                                variant: 'success',
+                                duration: 4000,
+                            });
+                            t.on('close', () => wrap.remove());
+                        }
                     }
-                }
-            }).catch(err => clientLogger.error('downloadService', 're-sync after complete failed:', err));
-            Events.emit('download:complete', data);
+                }).catch(err => clientLogger.error('downloadService', 're-sync after complete failed:', err));
+                Events.emit('download:complete', data);
+            }
         });
 
         this._eventSource.addEventListener('download:failed', (e) => {

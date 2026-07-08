@@ -451,8 +451,11 @@ export const MpiModelManager = ComponentFactory.create({
             // (MPI-163 — engine-aware resolution, replaces the old post-filter)
             const dependencies = _draftDepIds(model).map(id => DEPS[id]).filter(Boolean);
             if (!dependencies.length) return;
+            // start() synchronously emits download:started → the download:started handler
+            // patches this tile + flips the open detail footer to Cancel. No renderList()
+            // here — a full rebuild was the third start-of-download flash. The model stays
+            // in its section until it completes (which re-syncs + sig-guarded renders).
             await downloadService.start(model.id, dependencies);
-            renderList();
         }
 
         // Whole-model uninstall (no toggle change, or flat model). Engine-scoped:
@@ -1127,9 +1130,15 @@ export const MpiModelManager = ComponentFactory.create({
 
         _unsubs.push(Events.on('download:progress', ({ modelId }) => { _patchTile(modelId, { rebuildDetail: false }); }));
 
-        // download:started rebuilds the whole grid so the started model's tile shows
-        // the progress bar + its detail footer flips to Pause/Cancel.
-        _unsubs.push(Events.on('download:started', () => { renderList(); }));
+        // download:started — patch ONLY the started model's tile (progress bar) + flip
+        // its open detail footer to Cancel. The model's tile already exists (the grid
+        // rendered when the Library opened) and an install doesn't move it between
+        // sections until it completes, so a full renderList() here just tore down and
+        // rebuilt every card = the start-of-download flash. (fired twice — client-side
+        // in downloadService.start() + the backend SSE echo — so a full rebuild also ran
+        // twice.) A section move (available → installed) is handled by the sig-guarded
+        // renderList() on download:complete.
+        _unsubs.push(Events.on('download:started', ({ modelId }) => { _patchTile(modelId); }));
 
         _unsubs.push(Events.on('download:paused', ({ modelId }) => { _patchTile(modelId); }));
         _unsubs.push(Events.on('download:resumed', ({ modelId }) => { _patchTile(modelId); }));
