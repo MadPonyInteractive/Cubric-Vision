@@ -111,6 +111,10 @@ If you need to access R2 (upload/list/verify/clean up model weights, builds, or 
 If you are in a cooperative session adding a model/workflow via the **Cubric Vision Builder** RunPod image (spin a Pod, install nodes/weights, author + test a ComfyUI workflow, save tuning research) — or you need locked research (LTX-2.3 tiers, LoRA strength law, prompt contract, model set):
 **->** **READ FIRST:** `docs/builder/README.md` (the operational loop) and `docs/builder/research/README.md` (concluded findings — read before re-testing). This is the home for all builder-Pod workflow + research, and it lives in THIS repo. The **image build + install scripts only** live in the separate `mpi-ci` repo at `c:\AI\Mpi\mpi-ci\cubric-vision-builder\` (Dockerfile, `install_*.sh`, `start-builder.sh`, its `README.md`); edit that repo with `git -C`. To BUILD/PUSH the image itself, use the `build-pod-image` skill.
 
+### Product Pod runtime — `wrapper.py` / `start.sh` (R2-floated, NOT baked)
+If you are editing the **product** Pod's `wrapper.py` or `start.sh` (in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`) — hot-store, install endpoints, disk reporting, boot flow, thresholds like `HOT_STORE_MIN_BYTES`:
+**->** **KNOW THIS:** editing these is **NOT an image rebuild.** `bootstrap.sh` (the image CMD) curls both fresh from R2 (`https://pod.cubric.studio/vision/stable/`) at every Pod boot; baked copies are fallback only. Ship an edit: change the file → `./publish-runtime.sh stable` (rclone push) → restart the Pod (or `POST /wrapper/restart-comfy`). Rebuild only for truly-baked layers (torch, ComfyUI, pip-requirement nodes, `bootstrap.sh` itself). Procedure: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize"; app-side context: `docs/runpod-remote-engine.md` § 5.
+
 ### Component Mount Map
 If you need to know who mounts a component, what props it receives, or where it appears in the UI:
 **->** **MUST READ:** `.claude/rules/component-mounts.md`

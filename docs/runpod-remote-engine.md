@@ -138,7 +138,7 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   network volume reads at ~750 MB/s; aimdo re-faults a big transformer at every gen-stage,
   re-reading it from that slow volume = the LTX stage-gap tax (36s warm gap). Fix: on a
   **remote gen preflight** (`_ensureRemoteHotStore` in `commandExecutor.js`), any single dep
-  file **≥ 15 GB** is copied onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe),
+  file **≥ 20 GB** is copied onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe),
   which ComfyUI scans BEFORE the volume extra-paths so the fast copy wins with no yaml change.
   Wrapper endpoint `POST /wrapper/hot-store/ensure` does the copy+sha-verify+SSE progress;
   it's **sticky** (one copy per pod lifetime) and **LRU-evicts** disk copies only when a NEW
@@ -147,12 +147,23 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   first remote gen after a fresh pod; every later gen is fast. Only **volume** pods pay the
   original tax — ephemeral pods (MPI-78) already root models on the disk.
   **⚠️ Disk budget:** volume-pod container disk is **50 GB** (`CONTAINER_DISK_GB`,
-  `remotePodLifecycle.js`) — fits exactly ONE ≥15GB model (LTX's 41 GB transformer). Today's
-  ≥15GB set = LTX only (Gemma TE 9.45 GB, every Wan file ≤13.55 GB stay on the volume). **When a
-  model arrives whose ≥15GB hot-set does not fit in 50 GB free** (a 60–70 GB weight, or a 2nd big
+  `remotePodLifecycle.js`) — fits exactly ONE ≥20GB model (LTX's 41 GB transformer). Today's
+  ≥20GB set = LTX only (Gemma TE 9.45 GB, every Wan file ≤13.55 GB stay on the volume). **When a
+  model arrives whose ≥20GB hot-set does not fit in 50 GB free** (a 60–70 GB weight, or a 2nd big
   model that must coexist), **bump `CONTAINER_DISK_GB`** — the add-model playbook has the
-  PING-USER gate for this. Threshold constant: `HOT_STORE_MIN_GB` (app) / `HOT_STORE_MIN_BYTES`
-  (wrapper), 15 GB.
+  PING-USER gate for this. Threshold constant: `HOT_STORE_MIN_GB` (app, threshold-of-record, 20 GB)
+  filters the file list BEFORE it reaches the wrapper; the wrapper's own `HOT_STORE_MIN_BYTES`
+  (env `CUBRIC_HOT_STORE_MIN_BYTES`, default 15 GB) is a looser Pod-side floor that never rejects
+  what the app already selected. Bumping the app constant is sufficient; the wrapper floor is a
+  no-rebuild R2 push if you ever want them aligned (see below).
+- **`wrapper.py` + `start.sh` are R2-floated, NOT baked (MPI-156).** Editing either is **NOT**
+  an image rebuild. `bootstrap.sh` (the image CMD) curls both fresh from R2
+  (`https://pod.cubric.studio/vision/stable/`) at every Pod boot; the baked copies are fallback
+  only. Ship a wrapper/start edit: edit the file in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`
+  (`wrapper/wrapper.py` or `start.sh`) → `./publish-runtime.sh stable` (rclone push) → restart
+  the Pod or `POST /wrapper/restart-comfy`. An image rebuild is only for truly-baked layers
+  (torch, ComfyUI, pip-requirement nodes, `bootstrap.sh` itself). Full procedure:
+  `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize".
 - **Design A (locked):** PyTorch + ComfyUI live in the **Docker image**, NOT the volume → the
   volume has **zero GPU-arch binding** and is portable across every card the image can run.
   Users never reinitialize the volume to switch cards.

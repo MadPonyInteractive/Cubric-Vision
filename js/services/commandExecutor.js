@@ -451,11 +451,11 @@ async function _findModelNotLocal(modelId, operation = null) {
 }
 
 // MPI-194: single-file size at/above which a remote weight is staged from the slow
-// network volume onto the Pod's fast container disk before generating. 15GB (binary,
+// network volume onto the Pod's fast container disk before generating. 20GB (binary,
 // to match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3). Selects only
 // the LTX 41GB transformer today; the 9.45GB TE and <=13.55GB Wan files stay on the
-// volume. See docs/add-model-playbook.md (>=15GB PING-USER gate) + docs/runpod-*.
-const HOT_STORE_MIN_GB = 15;
+// volume. See docs/add-model-playbook.md (>=20GB PING-USER gate) + docs/runpod-*.
+const HOT_STORE_MIN_GB = 20;
 
 /**
  * Remote-engine gen preflight (MPI-194): stage any weight file >= HOT_STORE_MIN_GB
@@ -470,7 +470,7 @@ async function _ensureRemoteHotStore(modelId, operation) {
     if (!model) return;
     const selectedOps = operation ? [operation] : null;
     // MPI-200: remote path → the pod's arch selects the one balanced transformer to
-    // stage (else the >=15GB filter would miss it / stage the wrong variant).
+    // stage (else the >=20GB filter would miss it / stage the wrong variant).
     const arch = await remoteEngineClient.arch('remote');
     const files = resolveDeps(model, selectedOps, null, 'remote', { arch })
         .map(id => DEPS[id])
@@ -1155,7 +1155,7 @@ export function runCommand(payload) {
             }
         }
 
-        // MPI-194: remote gen — stage big (>=15GB) weights from the Pod's slow
+        // MPI-194: remote gen — stage big (>=20GB) weights from the Pod's slow
         // network volume onto its fast container disk before dispatch (idempotent,
         // best-effort). Not for a force-local run (no Pod). Awaited so the one-time
         // ~55s first-stage shows a progress toast rather than a silent stall.

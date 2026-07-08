@@ -254,7 +254,7 @@ router.post('/remote/upload/model', async (req, res) => {
 });
 
 // MPI-194: forward the renderer's hot-store request to the Pod wrapper, which
-// stages big (>=15GB) weights from the slow network volume onto its fast container
+// stages big (>=20GB) weights from the slow network volume onto its fast container
 // disk before generation. Best-effort — the renderer treats any non-2xx as "not
 // staged, generate from the volume", so a failure here never blocks a gen. The
 // wrapper blocks until every file is staged (~55s for the 40GB LTX transformer on
