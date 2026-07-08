@@ -639,11 +639,18 @@ export const MpiModelManager = ComponentFactory.create({
         // A recently-installed heat dot rides absolute on the thumb. Click → detail.
         function _tileState(st) {
             if (st.isActiveDownload || (st.job && st.downloadState === 'downloading')) {
-                const pct = Math.round((st.job?.progress || 0) * 100);
+                // Indeterminate "Verifying…" sweep once all bytes are down and the
+                // manager flips phase (MPI-140/164). Otherwise a determinate bar,
+                // clamped to 100 — job.progress can momentarily exceed 1.0 on a mixed
+                // install (most deps on-disk + one real download over-counting).
+                if (st.job?.phase === 'verifying') {
+                    return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Verifying…</span></div>`;
+                }
+                const pct = Math.min(Math.round((st.job?.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
             }
             if (st.partial.hasPartialProgress) {
-                const pct = Math.round((st.partial.progress || 0) * 100);
+                const pct = Math.min(Math.round((st.partial.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
             }
             if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;

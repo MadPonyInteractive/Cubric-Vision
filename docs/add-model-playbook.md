@@ -216,11 +216,18 @@ multi-thread chunk writer probes/creates the bucket, which the scoped R2 token
 cannot do. **ALWAYS pass `--s3-no-check-bucket`** (documented in the R2 README).
 Belt-and-suspenders for big files: also `--multi-thread-streams 0`.
 
+**ALWAYS cap upload bandwidth: `--bwlimit 3M`.** Fabio's uplink is ~4 MB/s; an
+uncapped upload saturates it and blocks his system. Cap at **3 MB/s** to leave
+~1 MB/s of headroom. The cap is GLOBAL across concurrent transfers, so upload
+multiple weights **sequentially in one job** (not parallel jobs — two jobs each
+capped 3M = 6M total, defeating the cap). rclone resumes partials, so re-issuing
+a capped command after an uncapped run loses no progress.
+
 ```bash
 CONF="C:/Users/Fabio/.secrets/rclone-r2.conf"
 rclone --config "$CONF" copyto "LOCAL/file.safetensors" \
   "cubric-r2:cubric-models/vision/models/<type>/file.safetensors" \
-  --s3-no-check-bucket --multi-thread-streams 0 -P
+  --s3-no-check-bucket --multi-thread-streams 0 --bwlimit 3M -P
 ```
 
 **TRAP — a wrapping shell `echo "DONE"` masks rclone's non-zero exit.** Do NOT

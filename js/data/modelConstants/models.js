@@ -147,6 +147,40 @@ export const MODELS = [
         ],
     },
     {
+        // Chroma (Flash) — Flux-family image model, balanced tier. Same op shape as
+        // SDXL (t2i / upscale / detail); upscaler + detailer mirror the SDXL wiring.
+        // Extra vs SDXL: RES4LYF custom node (ClownShark sampler + ReChromaPatcher),
+        // and its LoRAs take MODEL strength only (loraStrengths: ['model']) — the
+        // MpiLoraModel node has no clip input. t2i is a single-step distilled gen.
+        // MPI-217.
+        id: 'chroma-flash',
+        sizeTier: 'balanced',
+        name: 'Chroma Flash',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        defaultUpscale: '4x-NMKD-Siax',
+        image: 'chroma-flash-01.webp',
+        type: 'chroma',
+        supportedOps: ['t2i', 'upscale', 'detail'],
+        loraStrengths: ['model'],
+        gen_speed: 'fast',
+        description: 'Chroma is a high-detail Flux-family image generator. This Flash build produces images in a single step for fast, uncensored results.',
+        workflows: {
+            t2i: 'Chroma_t2i.json',
+            upscale: 'Chroma_upscaler.json',
+            detail: 'Chroma_detailer.json',
+        },
+        dependencies: [
+            'chroma1-hd-flash',
+            't5xxl-fp16',
+            'vae-flux-ae',
+            '4x-NMKD-Siax',
+            'RES4LYF',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
         // NVIDIA PiD generative upscaler — one model, 4 VAE-locked paths picked at
         // runtime via the pidVariant control (Input_Type switch). Prompt-box driven
         // (needs an image + optional prompt). Only op = `pid`. Research + decisions:

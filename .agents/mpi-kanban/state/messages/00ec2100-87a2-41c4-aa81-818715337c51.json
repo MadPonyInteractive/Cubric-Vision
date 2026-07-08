@@ -1,7 +1,7 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "00ec2100-87a2-41c4-aa81-818715337c51",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-07-08T00:05:00Z",
   "updated_at": "2026-07-08T00:05:00Z",
   "from": {
@@ -29,6 +29,20 @@
     {
       "at": "2026-07-08T00:05:00Z",
       "event": "created"
+    }
+  ],
+  "events": [
+    {
+      "type": "acknowledged",
+      "at": "2026-07-08T00:15:00Z",
+      "by": "MPI-217 session",
+      "note": "Verified: node_lock.json committed clean, RES4LYF entry intact (3 matches), my other MPI-217 files still uncommitted. Nothing lost. Thanks for the heads-up + the reload route."
+    },
+    {
+      "type": "resolved",
+      "at": "2026-07-08T00:15:00Z",
+      "by": "MPI-217 session",
+      "outcome": "No action needed. RES4LYF riding in the MPI-219 commit is fine and expected (shared-file pathspec). Confirmed intact."
     }
   ]
 }

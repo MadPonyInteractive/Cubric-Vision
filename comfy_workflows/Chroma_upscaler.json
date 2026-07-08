@@ -1,0 +1,452 @@
+{
+  "1556": {
+    "inputs": {
+      "images": [
+        "1686",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_image"
+    }
+  },
+  "1557": {
+    "inputs": {
+      "image": "ComfyUI_temp_iacob_00003_.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "float": 0.4
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Denoise"
+    }
+  },
+  "1603": {
+    "inputs": {
+      "int": 2
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "1604": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "1605": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "1613": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Auto_Grid"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "horizontal_split": [
+        "1604",
+        0
+      ],
+      "vertical_split": [
+        "1605",
+        0
+      ],
+      "upscale_factor": [
+        "1657",
+        0
+      ],
+      "auto": [
+        "1613",
+        0
+      ],
+      "image": [
+        "1655",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "1640": {
+    "inputs": {
+      "value": [
+        "1594",
+        0
+      ],
+      "exponent": 1.8
+    },
+    "class_type": "MpiExpoFloat",
+    "_meta": {
+      "title": "Mpi Expo Float"
+    }
+  },
+  "1655": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "1557",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1656": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Input_Upscale_Model"
+    }
+  },
+  "1657": {
+    "inputs": {
+      "float": 1.5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Upscale_Factor"
+    }
+  },
+  "1669": {
+    "inputs": {
+      "shift": 1,
+      "model": [
+        "1670",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "Flow Shift"
+    }
+  },
+  "1670": {
+    "inputs": {
+      "style_dtype": "float64",
+      "enable": true,
+      "model": [
+        "1684",
+        0
+      ]
+    },
+    "class_type": "ReChromaPatcher",
+    "_meta": {
+      "title": "ReChromaPatcher"
+    }
+  },
+  "1671": {
+    "inputs": {
+      "text": [
+        "1673",
+        0
+      ],
+      "clip": [
+        "1674",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "1672": {
+    "inputs": {
+      "text": [
+        "1681",
+        0
+      ],
+      "clip": [
+        "1674",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "neg"
+    }
+  },
+  "1673": {
+    "inputs": {
+      "string": "A beautiful woman with red hair and an emo look, taking a selfie in her bedroom. She's wearing a monokini. The bedroom light is turned off and only a neon light is illuminating part of her body"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "1674": {
+    "inputs": {
+      "min_padding": 1,
+      "min_length": 0,
+      "clip": [
+        "1684",
+        1
+      ]
+    },
+    "class_type": "T5TokenizerOptions",
+    "_meta": {
+      "title": "T5TokenizerOptions"
+    }
+  },
+  "1675": {
+    "inputs": {
+      "model": [
+        "1669",
+        0
+      ]
+    },
+    "class_type": "Mahiro",
+    "_meta": {
+      "title": "patch"
+    }
+  },
+  "1676": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1682",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "1677": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1676",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "1678": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1677",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "1679": {
+    "inputs": {
+      "model": [
+        "1680",
+        0
+      ],
+      "clip": [
+        "1674",
+        0
+      ],
+      "vae": [
+        "1684",
+        2
+      ],
+      "positive": [
+        "1671",
+        0
+      ],
+      "negative": [
+        "1672",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "1680": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1678",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "1681": {
+    "inputs": {
+      "string": "anime, bad hands, pixelated, drawing, CGI, ai, stable diffusion, action figure, 2d, cartoon, sketch, render, 3d, anime, painting, drawing, digital art, fan art, 2d art, wax, doll-like, perfect skin, 2.5d, smooth skin, jewelry, hyperrealistic, ultrarealistic, ugly, extra fingers, extra limbs, femboy, trans, child, toddler, watermark"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "1682": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1683",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "1683": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1675",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "1684": {
+    "inputs": {
+      "model_name": "Chroma1-HD-Flash.safetensors",
+      "weight_dtype": "default",
+      "clip_name1_opt": "t5xxl_fp16.safetensors",
+      "clip_name2_opt": ".none",
+      "clip_name3_opt": ".none",
+      "clip_name4_opt": ".none",
+      "clip_type": "chroma",
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "ClownModelLoader",
+    "_meta": {
+      "title": "ClownModelLoader"
+    }
+  },
+  "1685": {
+    "inputs": {
+      "basic_pipe": [
+        "1679",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1686": {
+    "inputs": {
+      "upscale_by": [
+        "1657",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "bong_tangent",
+      "denoise": [
+        "1640",
+        0
+      ],
+      "mode_type": "Linear",
+      "tile_width": [
+        "1639",
+        0
+      ],
+      "tile_height": [
+        "1639",
+        1
+      ],
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 0.6,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": false,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "1655",
+        0
+      ],
+      "model": [
+        "1685",
+        0
+      ],
+      "positive": [
+        "1685",
+        3
+      ],
+      "negative": [
+        "1685",
+        4
+      ],
+      "vae": [
+        "1685",
+        2
+      ],
+      "upscale_model": [
+        "1656",
+        0
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Upscaling with Chroma..."
+    }
+  }
+}

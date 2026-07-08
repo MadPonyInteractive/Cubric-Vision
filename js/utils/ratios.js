@@ -188,11 +188,12 @@ export const SOCIAL_RATIOS = [
 // 'orientation' = portrait/landscape toggle. 'quality' = quality-tier radio.
 // Augmented below with types whose ModelDef declares ratios/qualityTiers (MPI-174).
 export const RATIO_MODES = {
-    flux:  'orientation',
-    sdxl:  'orientation',
-    wan:   'quality',
-    wan5b: 'quality',
-    ltx:   'quality',
+    flux:   'orientation',
+    sdxl:   'orientation',
+    chroma: 'orientation', // Flux-family image model (MPI-217) → Flux ratios below
+    wan:    'quality',
+    wan5b:  'quality',
+    ltx:    'quality',
 };
 
 // ── Model-declared behavior (MPI-174) ───────────────────────────────────────
@@ -277,7 +278,8 @@ export function getModelRatios(modelType, orientation, qualityTier = 'medium') {
         return declared[key] ?? declared[Object.keys(declared)[0]];
     }
     switch (type) {
-        case 'flux': return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
+        case 'flux':
+        case 'chroma': return FLUX_RATIOS[orientation] ?? FLUX_RATIOS.portrait;
         case 'social': return SOCIAL_RATIOS;
         case 'wan': return WAN_RATIOS[qualityTier] ?? WAN_RATIOS.medium;
         case 'wan5b': return WAN_5B_RATIOS[qualityTier] ?? WAN_5B_RATIOS.medium;

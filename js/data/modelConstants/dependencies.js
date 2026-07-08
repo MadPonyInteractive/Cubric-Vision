@@ -125,6 +125,16 @@ export const DEPS = {
         size: '9.31GB',
         sha256: '456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e'
     },
+    // Chroma Flash diffusion (Flux-family image model). MPI-217.
+    'chroma1-hd-flash': {
+        id: 'chroma1-hd-flash',
+        name: 'Chroma1-HD-Flash',
+        origin: 'lodestone-rock/Chroma (HD Flash)',
+        filename: 'diffusion_models/Chroma1-HD-Flash.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/Chroma1-HD-Flash.safetensors',
+        size: '17GB',
+        sha256: '2c0c7d908d04418a48b453c293237a9826d54472cf0ba76e28697d1309d1021b'
+    },
     'wan22-5b-turbo-lora': {
         id: 'wan22-5b-turbo-lora',
         name: 'Wan 2.2 5B Turbo (4-step)',
@@ -249,6 +259,15 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         size: '6.27GB',
         sha256: 'c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68'
+    },
+    // Chroma T5 text encoder (shared Flux-family t5xxl fp16). MPI-217.
+    't5xxl-fp16': {
+        id: 't5xxl-fp16',
+        name: 't5xxl_fp16',
+        filename: 'text_encoders/t5xxl_fp16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/t5xxl_fp16.safetensors',
+        size: '9.2GB',
+        sha256: '6e480b09fae049a72d2a8c5fbccb8d3e92febeb233bbe9dfe7256958a9167635'
     },
     // Upscale Models --------------------------------------------------------
     '4x-NMKD-Siax': {
@@ -498,6 +517,25 @@ export const DEPS = {
         installRequirements: true,
         size: '172KB',
         installOnEngine: true,
+    },
+    // RES4LYF (ClownShark sampler family + ReChromaPatcher). MODEL-SPECIFIC — only
+    // Chroma uses it → NO installOnEngine; listed in the Chroma model's dependencies[]
+    // so it installs via getInstalledModelNodeDeps() when Chroma weights are present.
+    // requirements.txt: opencv-python, matplotlib, pywavelets, numpy>=1.26.4.
+    // Those are UNPINNED — with --upgrade, install pulls newest across the WHOLE
+    // engine (MPI-217 bit this: opencv-python 4.13→5.0 major + numpy 2.5.0→2.5.1).
+    // Pin to the proven-good set (live-verified Chroma gen on 5.0.0/2.5.1) so a
+    // future install / engine reinstall can't drift the shared env. Same guard as
+    // ComfyUI-LTXVideo's kornia pin. pipPins run AFTER requirements (corrective).
+    'RES4LYF': {
+        id: 'RES4LYF',
+        name: 'RES4LYF',
+        type: 'custom_nodes',
+        filename: 'RES4LYF',
+        url: lockUrl('RES4LYF'),
+        installRequirements: true,
+        pipPins: ['opencv-python==5.0.0.93', 'numpy==2.5.1'],
+        size: '15MB',
     },
     'face-yolov8n': {
         id: 'face-yolov8n',
