@@ -127,3 +127,32 @@ When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js
 ## NDH Resumable Download Gotchas
 
 `node-downloader-helper` v2.1.11 key traps: writes straight to final filename (no `.part` suffix). `resume:true` is NOT a real NDH option (silently ignored) — the real flag is `resumeIfFileExists` but it makes `pause()` fail; leave `resume:true` (harmless, keeps `start()` synchronous so pause works). `pause()` mid-chunk can throw `ERR_STREAM_WRITE_AFTER_END` — defer via `setImmediate`. `models/check` uses bare `fs.pathExists` — partial-at-final-path reads as installed (false positive). MPI-54: implemented `<file>.cubricdl` sidecar marker + `isCompleteOnDisk()` + `routes/downloadCompletion.js` to fix this.
+
+## Remote (RunPod) Disk-Full Pre-Flight
+
+An old comment in `downloadManager.js` (MPI-100 era) claims a truthful remote
+pre-flight is impossible — that's now WRONG and superseded. `remoteVolumeFreeBytes()`
+in `routes/remotePodLifecycle.js` resolves real free space: `used` from the
+wrapper's `GET /wrapper/disk` (`du -sb` on the mounted volume — the only honest
+usage source, MPI-169), `size` (GB) from the RunPod REST volume object matched
+to the pod's `networkVolumeId` (falls back to the sole volume if only one
+exists). `_startRemoteDownload` in `downloadManager.js` gates on it the same
+shape as the LOCAL statfs gate (MPI-99): `toInstall` deps' seed bytes × 1.05 >
+free → reject with a 400 `[Errno 28] No space left on device` BEFORE any
+wrapper install call fires, instead of letting a doomed multi-GB download run
+and die near 100%. Either half unknown (old wrapper, `du` fail, volume
+unresolved) → skip the gate, never false-block. `downloadService.js`'s
+`_firePost` 400-handler must route this through `_isOutOfSpaceError()` to a
+warning TOAST, not the GitHub-report dialog — the same matcher the reactive
+`download:failed` SSE path already used.
+
+**Why the reactive-only catch used to miss it live:** MPI-136 (stall/speed-limit
+abort + httpx chunk-deadline) can make a genuinely-full volume manifest as a
+"peer closed connection" / "download stalled" error on the Pod wrapper BEFORE a
+clean `errno 28` ever gets raised — so the reactive string-match in
+`downloadService.js` silently missed a real disk-full and showed the wrong
+(GitHub-report) dialog. The pre-flight gate above sidesteps this entirely by
+never starting the doomed download. `wrapper.py` (≥0.2.31) also fast-fails a
+genuine mid-write `ENOSPC` (no pointless retry) and gives the httpx fallback
+path resume+retry so a transient CDN drop doesn't restart a multi-GB file from
+byte 0.

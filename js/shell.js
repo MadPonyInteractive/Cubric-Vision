@@ -359,7 +359,11 @@ async function _bootApp() {
     // background: bring the engine up SILENTLY at launch — no blocking "Starting
     // ComfyUI Engine…" overlay (auto-start is opt-in background prep; the overlay
     // is reserved for the engine spinning up in front of a manual generation).
-    ComfyUIController.ensureServerRunning({ background: true });
+    // Fire-and-forget: a connected download-mode (no-GPU) Pod makes _ensureRemoteReady
+    // throw pod_no_gpu — EXPECTED background state, not a failure. Swallow it (and any
+    // other background-prep error) so it doesn't surface as an uncaught promise
+    // rejection on every launch/reload while remote-connected to a CPU Pod.
+    ComfyUIController.ensureServerRunning({ background: true }).catch(() => {});
   }
 }
 

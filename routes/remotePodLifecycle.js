@@ -1160,27 +1160,70 @@ router.get('/remote/pod/stats', async (req, res) => {
 // never live usage (proven dead), so the wrapper's `du` is the ONLY source. Returns
 // success:false when no pod / old wrapper (pre /wrapper/disk) so the UI hides the bar.
 // Works for a GPU pod OR a CPU download pod — both mount the volume at /workspace.
-router.get('/remote/pod/disk', async (req, res) => {
+// Wrapper's truthful USED bytes of the mounted volume (`du`). Shared by the
+// /remote/pod/disk route and the download pre-flight. Returns null when no pod /
+// old wrapper / du failed (caller treats null as "unknown" and skips its gate).
+async function _remoteVolumeUsedBytes() {
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
-  if (!_mode.active || !podId) {
-    return res.json({ success: false, source: 'remote', unavailable: true, reason: 'remote_inactive' });
-  }
+  if (!_mode.active || !podId) return null;
   try {
     const headers = await _authHeaders();
-    if (headers) {
-      const upstream = await fetch(`${proxyUrl(podId)}/wrapper/disk`, { headers });
-      if (upstream.ok) {
-        const wrapperDisk = await upstream.json();
-        if (wrapperDisk && wrapperDisk.success && Number.isFinite(wrapperDisk.used)) {
-          return res.json({ success: true, source: 'wrapper', used: wrapperDisk.used });
-        }
-      }
-      // 404 = old wrapper without /wrapper/disk; 503 = volume not mounted / du failed.
+    if (!headers) return null;
+    const upstream = await fetch(`${proxyUrl(podId)}/wrapper/disk`, { headers });
+    if (!upstream.ok) return null; // 404 old wrapper / 503 not mounted
+    const wrapperDisk = await upstream.json();
+    if (wrapperDisk && wrapperDisk.success && Number.isFinite(wrapperDisk.used)) {
+      return wrapperDisk.used;
     }
   } catch (err) {
     logger.warn('runpod', `wrapper /wrapper/disk unavailable: ${err?.message || err}`);
   }
-  return res.json({ success: false, source: 'remote', unavailable: true, reason: 'disk_unavailable' });
+  return null;
+}
+
+// Free bytes on the connected Pod's network volume = configured size − used.
+// `used` is the wrapper's `du` (only honest source); `size` (GB) is the REST
+// volume object matched to the pod's networkVolumeId. Returns null if EITHER
+// half is unknown — the download pre-flight then skips its gate (never blocks a
+// legitimate install on missing telemetry), mirroring the local statfs skip.
+// This is the remote counterpart the MPI-100 note said was impossible; MPI-169's
+// `du` route made `used` real, so the gate is now truthful.
+async function remoteVolumeFreeBytes() {
+  const used = await _remoteVolumeUsedBytes();
+  if (!Number.isFinite(used)) return null;
+  try {
+    const key = await getRunPodApiKey();
+    const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+    if (!key || !podId) return null;
+    // Resolve the pod's volume id, then its configured size from the volume list.
+    const podRes = await client.getPod(key, podId);
+    const volumeId = podRes?.json?.networkVolumeId || null;
+    const volRes = await client.listVolumes(key);
+    const list = Array.isArray(volRes?.json)
+      ? volRes.json
+      : (volRes?.json?.networkVolumes || volRes?.json?.volumes || null);
+    if (!Array.isArray(list) || !list.length) return null;
+    // Match by id; fall back to the sole volume when the id is absent.
+    const vol = (volumeId && list.find(v => v.id === volumeId))
+      || (list.length === 1 ? list[0] : null);
+    const sizeGb = vol && Number(vol.size);
+    if (!sizeGb || sizeGb <= 0) return null;
+    const totalBytes = sizeGb * 1e9; // RunPod sizes are GB (base-10), matches the Settings bar
+    return { freeBytes: Math.max(0, totalBytes - used), usedBytes: used, totalBytes };
+  } catch (err) {
+    logger.warn('runpod', `remote volume free-space resolve failed: ${err?.message || err}`);
+    return null;
+  }
+}
+
+router.get('/remote/pod/disk', async (req, res) => {
+  const used = await _remoteVolumeUsedBytes();
+  if (Number.isFinite(used)) {
+    return res.json({ success: true, source: 'wrapper', used });
+  }
+  const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  const reason = (!_mode.active || !podId) ? 'remote_inactive' : 'disk_unavailable';
+  return res.json({ success: false, source: 'remote', unavailable: true, reason });
 });
 
 // Reap stranded stopped 'cubric-vision' Pods (Step 4.3.3). Settings "clean up old
@@ -1197,4 +1240,4 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   }
 });
 
-module.exports = { router };
+module.exports = { router, remoteVolumeFreeBytes };

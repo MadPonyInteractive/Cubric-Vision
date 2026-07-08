@@ -1055,7 +1055,13 @@ function _onRemoteInstallEvent(evt) {
     if (evt.type === 'models:install-progress') {
         const downloaded = Number(data.bytes) || 0;
         const total = Number(data.total) || depJob.totalBytes || 0;
-        depJob.downloadedBytes = downloaded;
+        // Per-dep bytes are physically monotonic (a download never un-downloads).
+        // A wrapper restart-from-0 (fast-path→fallback handoff) or an SSE
+        // reconnect can report a LOWER `bytes` for a tick; assigning it absolutely
+        // walked the whole-model aggregate BACKWARDS ("97% → 37%"). Clamp so the
+        // numerator only ever climbs within an install. Reset paths (cancel,
+        // fresh start) rebuild the depJob, so this never wedges a stale high.
+        depJob.downloadedBytes = Math.max(depJob.downloadedBytes || 0, downloaded);
         if (total) depJob.totalBytes = total;
         for (const modelJob of _modelJobs.values()) {
             const myDep = modelJob.deps.find(d => d.id === depId);
@@ -1283,6 +1289,42 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     // (the seed here is only the pre-first-tick placeholder). Here we show an
     // instant indeterminate "Preparing…" so the first frame isn't a fake number in
     // the gap before that first tick arrives; the tick clears it to a real %.
+    // ── Remote disk-full pre-flight gate (mirrors the local MPI-99 gate) ─────
+    // The MPI-100 note above said a truthful remote pre-flight was impossible;
+    // MPI-169's `du` route made the volume's USED bytes real, so free space =
+    // configured size − used is now knowable. Block a doomed install up-front
+    // (needed > free) with the SAME friendly disk-full message the reactive toast
+    // uses, instead of letting it run and die at ~98% with a cryptic stall/
+    // peer-closed error the disk-full matcher can't recognise. Only deps in
+    // toInstall need NEW space; a 5% margin covers .part overhead. Unknown free
+    // space (old wrapper / du fail / size unresolved) → skip the gate, never
+    // false-block. seedBytes = declared size, known NOW (totalBytes is still 0).
+    const remoteNeededBytes = toInstall.reduce(
+      (sum, d) => sum + _parseSizeToBytes(d.size), 0);
+    if (remoteNeededBytes > 0) {
+      let freeInfo = null;
+      try {
+        const { remoteVolumeFreeBytes } = _require('./remotePodLifecycle');
+        freeInfo = await remoteVolumeFreeBytes();
+      } catch (err) {
+        logger.warn('download', `remote free-space check unavailable: ${err.message}`);
+      }
+      if (freeInfo && Number.isFinite(freeInfo.freeBytes)
+          && freeInfo.freeBytes < remoteNeededBytes * 1.05) {
+        // Roll back the refCount bumps this call made so a later retry (after the
+        // user frees space) is not blocked by orphaned references. Mirrors local.
+        for (const dep of dependencies) {
+          const dj = _depJobs.get(dep.id);
+          if (dj) dj.refCount = Math.max(0, dj.refCount - 1);
+        }
+        modelJob.status = 'idle';
+        logger.warn('download', `remote install blocked — volume full: need ${_fmtGb(remoteNeededBytes)}, have ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}`);
+        return res.status(400).json({
+          error: `[Errno 28] No space left on device — ${_fmtGb(remoteNeededBytes)} needed, ${_fmtGb(freeInfo.freeBytes)} free on the Pod volume.`,
+        });
+      }
+    }
+
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
     modelJob.status = 'downloading';

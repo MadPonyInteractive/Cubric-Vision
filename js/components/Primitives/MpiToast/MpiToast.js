@@ -27,6 +27,9 @@ function _getStackContainer() {
     if (_stackContainer && document.contains(_stackContainer)) return _stackContainer;
     _stackContainer = document.createElement('div');
     _stackContainer.className = 'mpi-toast-stack';
+    // z-20000 fixed keeps it above the full-page Model Library overlay (MPI-215);
+    // MpiOverlay's body-stash explicitly EXEMPTS this stack (see its _doShow) so a
+    // toast fired while the overlay is open isn't detached + auto-dismissed.
     document.body.appendChild(_stackContainer);
     return _stackContainer;
 }
@@ -151,14 +154,20 @@ export const MpiToast = ComponentFactory.create({
         // dismiss (e.g. the stack container is torn down on navigation), free its
         // slot so the queue can still drain. Not a primary drain path.
         const observer = new MutationObserver(() => {
-            if (!document.contains(el)) {
+            if (document.contains(el)) return;
+            // Confirm the detach is PERMANENT, not a transient reparent. A full-page
+            // overlay opening (MpiOverlay stash) or an install-driven awaitReSync
+            // churns document.body and can momentarily pop the stack out of the DOM;
+            // firing on the first such mutation instant-dismissed a just-mounted toast
+            // (seen live: a disk-full warning over the Model Library flashed straight
+            // to --closing). Re-check on the next frame; only drain if it's still gone.
+            requestAnimationFrame(() => {
+                if (document.contains(el) || dismissed) return;
                 observer.disconnect();
-                if (!dismissed) {
-                    dismissed = true;
-                    clearTimeout(el._dismissTimer);
-                    requestAnimationFrame(_drainQueue);
-                }
-            }
+                dismissed = true;
+                clearTimeout(el._dismissTimer);
+                _drainQueue();
+            });
         });
         observer.observe(document.body, { childList: true, subtree: true });
 

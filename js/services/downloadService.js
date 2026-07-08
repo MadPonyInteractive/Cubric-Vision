@@ -139,6 +139,16 @@ const downloadService = {
             // not the GitHub-report error dialog.
             if (err.offline) {
                 Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models." });
+            } else if (_isOutOfSpaceError(err.error)) {
+                // Disk-full PRE-FLIGHT reject (local statfs gate OR remote volume
+                // free-space gate) — expected + user-actionable, so the friendly
+                // toast, never the Report-on-GitHub dialog. Matches the reactive
+                // download:failed handler. [[feedback_error_dialog_vs_toast]]
+                const model = getModelById(modelId);
+                const modelName = model?.name || modelId;
+                Events.emit('ui:warning', {
+                    message: `Not enough disk space to install ${modelName}. Free up space and try again.`,
+                });
             } else {
                 Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
             }
