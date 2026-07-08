@@ -249,6 +249,24 @@ function _depDenominator(d) {
     return d.totalBytes || d.seedBytes || 0;
 }
 
+// MPI-231 — byte-ratio for the download bar, custom_nodes EXCLUDED (work-not-bytes).
+// A GitHub `/archive/` zip has no Content-Length (denominator falls back to a tiny
+// registry seed) while the numerator counts real streamed bytes, and the requirements
+// pip phase pulls ~200MB of wheels with no honest total up-front — a node's bytes make
+// a determinate bar overshoot (RES4LYF read "203 MB / 15 MB"). Summing only weight deps
+// keeps both sides honest; the emitting tick decides whether to show the sweep instead.
+// `active` = 'local' (seed fallback) | 'remote' (real-total-or-seed via _depDenominator).
+function _byteRatioExcludingNodes(deps, active = 'local') {
+    let downloaded = 0;
+    let total = 0;
+    for (const d of deps) {
+        if (d.type === 'custom_nodes') continue;
+        downloaded += d.downloadedBytes || 0;
+        total += active === 'remote' ? _depDenominator(d) : (d.totalBytes || d.seedBytes || 0);
+    }
+    return { downloaded, total };
+}
+
 function _createModelJob(modelId, deps) {
     return {
         id: modelId,
@@ -867,17 +885,29 @@ function _wireProgress(depJob, downloader) {
             if (!myDep) continue;
             myDep.downloadedBytes = downloadedBytes;
             myDep.totalBytes = totalBytes;
-            modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
-            // Denominator must track each dep's REAL Content-Length once known, not the
-            // declared `size:` estimate — else the bar finishes short (e.g. Wan declared
-            // 15GB but is 14.3GB → bar caps ~91% then jumps to done). Prefer real total;
-            // fall back to seedBytes only while real is still 0 (dep not yet emitting).
-            // NB: NOT _depDenominator's Math.max(real,seed) here — when the declared seed
-            // is larger than the real size, max() keeps the inflated seed and the bar
-            // still finishes short. The actual byte count is the truth once it arrives.
-            modelJob.totalBytes = modelJob.deps.reduce(
-                (sum, d) => sum + (d.totalBytes || d.seedBytes || 0), 0);
+            // MPI-231 — custom_nodes are WORK, not bytes: a GitHub `/archive/` zip is
+            // served with no Content-Length (totalBytes stays 0 → denominator falls
+            // back to the tiny registry seed) while the numerator counts real streamed
+            // bytes, and the following pip requirements phase pulls ~200MB of wheels
+            // that no honest total covers up-front. Both make a determinate bar a lie
+            // (RES4LYF read "203 MB / 15 MB"). Exclude custom_nodes from BOTH sides of
+            // the ratio; when the active tick is a node download, show the indeterminate
+            // "Preparing…" sweep — the same work-not-bytes rule the verify aggregate
+            // already applies (MPI-164).
+            // Denominator tracks each weight dep's REAL Content-Length once known, not
+            // the declared `size:` estimate — else the bar finishes short (e.g. Wan
+            // declared 15GB but is 14.3GB → caps ~91% then jumps to done). Prefer real
+            // total; fall back to seedBytes only while real is still 0 (dep not yet
+            // emitting). NB: NOT _depDenominator's Math.max(real,seed) — when the seed
+            // over-declares, max() keeps the inflated seed and the bar finishes short.
+            const isNodeTick = myDep.type === 'custom_nodes';
+            const ratio = _byteRatioExcludingNodes(modelJob.deps, 'local');
+            modelJob.downloadedBytes = ratio.downloaded;
+            modelJob.totalBytes = ratio.total;
             modelJob.speed = _modelSpeedLabel(modelJob);
+            // A node-only job has a 0 byte-denominator — keep the sweep going rather
+            // than a static 0 MB / 0 MB.
+            const indeterminate = isNodeTick || modelJob.totalBytes <= 0;
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
@@ -886,6 +916,8 @@ function _wireProgress(depJob, downloader) {
                 totalBytes: modelJob.totalBytes,
                 speed: modelJob.speed,
                 progress: modelJob.progress,
+                indeterminate,
+                phase: indeterminate ? 'preparing' : undefined,
             });
         }
     };
@@ -1078,8 +1110,14 @@ function _onRemoteInstallEvent(evt) {
             // snaps to ~80% on the first tick (numerator outran a rounded
             // denominator) NOR sits at 100% while a not-yet-emitting dep counts as 0
             // in the denominator. Every dep is always counted at its best-known size.
-            modelJob.totalBytes = modelJob.deps.reduce((s, d) => s + _depDenominator(d), 0);
-            modelJob.downloadedBytes = modelJob.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
+            // MPI-231 — exclude custom_nodes from both sides (work-not-bytes): a node
+            // re-clone can report git bytes with no honest total vs a tiny seed, and a
+            // requirements pip run has no up-front total (twin of the local overshoot).
+            const isNodeTick = myDep.type === 'custom_nodes';
+            const ratio = _byteRatioExcludingNodes(modelJob.deps, 'remote');
+            modelJob.totalBytes = ratio.total;
+            modelJob.downloadedBytes = ratio.downloaded;
+            const nodeIndeterminate = isNodeTick || modelJob.totalBytes <= 0;
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
@@ -1088,9 +1126,11 @@ function _onRemoteInstallEvent(evt) {
                 totalBytes: modelJob.totalBytes,
                 speed: '',
                 progress: modelJob.progress,
-                // MPI-95: any real wrapper progress tick definitively clears the
+                // MPI-95: a real weight-progress tick definitively clears the
                 // Preparing… sweep (covers a HEAD-slower-than-first-tick race).
-                indeterminate: false,
+                // MPI-231: a custom_node tick (no honest total) stays indeterminate.
+                indeterminate: nodeIndeterminate,
+                phase: nodeIndeterminate ? 'preparing' : undefined,
             });
         }
     } else if (evt.type === 'models:install-verifying') {
@@ -2204,4 +2244,5 @@ module.exports = {
     runCustomNodeInstall: _runCustomNodeInstall,
     startUniversalWorkflowInstall,
     finishCustomNodeInstall,
+    _byteRatioExcludingNodes, // MPI-231 — exported for unit test
 };
