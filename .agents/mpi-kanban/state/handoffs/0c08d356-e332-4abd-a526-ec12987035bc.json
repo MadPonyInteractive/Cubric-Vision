@@ -1,0 +1,128 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "0c08d356-e332-4abd-a526-ec12987035bc",
+  "generated_at": "2026-07-08T09:56:45Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-222 large-plan authored (per-node commit-drift → targeted reinstall, both engines) — ready to execute Phase 1",
+    "branch": "1.2"
+  },
+  "goal": {
+    "original": "Continue MPI-222: node_lock pins each custom node's commit but nothing records which commit was installed and the install-check is folder-exists only (both engines), so a node bump leaves installs silently stale. Fix = per-node commit marker + drift check + targeted reinstall on boot, NO engine wipe. Plus remote node-install architecture change so a node bump never forces a Pod image rebuild. After implementation: update rules/docs/memory and remove dead code (the installOnEngine flag).",
+    "status": "in_progress",
+    "summary": "Card evaluated, all architectural decisions locked with the user, 4 read-only investigation agents run, 7-phase large plan written + attached. NO code written yet. Fresh session executes Phase 1 (data model)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+    "completed": [
+      "Card read + evaluated; design de-risked",
+      "Investigation (4 agents: A local-engine, B remote-engine, C deps/dead-code, D mpi-ci Pod image) — notes saved to research/",
+      "All architectural decisions LOCKED with user (see key_decisions)",
+      "7-phase plan authored + attached to card"
+    ],
+    "pending": [
+      "Phase 1: data model — add PainterI2Vadvanced node_lock entry w/ pinned commit + use lockUrl; rename installOnEngine→engineAsset (weights-only); drop flag from all 9 nodes; enforce installRequirements⇒pipPins (placeholder until live pins); remove nodeset_version; fix _doc 'RunPod branch only'",
+      "Phase 2: getPinnedNodeCommit helper + marker-write helper",
+      "Phase 3: local engine stamp/drift/reinstall (pre-wipe drifted folder!) + LIVE pin determination + delete getInstalledModelNodeDeps",
+      "Phase 4: remote app-side — retarget _universalNodeFilenames regex, drift check in remoteModelsCheck, ui:warning for baked drift",
+      "Phase 5: mpi-ci Pod image — resync node_lock, bake-split, Dockerfile+wrapper markers, manifest nodes[], remove start.sh MpiNodes git-pull, ONE rebuild",
+      "Phase 6: guard test both engines (no-wipe assertion)",
+      "Phase 7: docs/rules/memory + dead-code sweep (PERMISSION-GATED)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-222",
+    "title": "No runtime auto-update when a pinned custom-node commit bumps — installed nodes silently stay stale on both engines",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-222/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-222/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "test",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Investigation notes preserved to .agents/mpi-kanban/tasks/MPI-222/research/ (A/B/C/D)",
+      "Plan Current State + Preservation Notes written fresh in plan.md"
+    ],
+    "pending": [
+      "Phase 7 docs/rules/memory updates are PERMISSION-GATED (CLAUDE.md doc-drift cardinal rule) — ask user before editing .claude/rules/",
+      "MEMORY.md MPI-222 hook to be flipped to a Done one-liner at end-session (engineAsset rename + bake=installRequirements + GitHub-not-R2 + marker)"
+    ]
+  },
+  "next_action": {
+    "description": "Read the plan, then start Phase 1 (data model). FIRST sub-task: resolve the current main HEAD of princepainter/ComfyUI-PainterI2Vadvanced to a commit SHA and add a git-commit node_lock entry for it, then switch its dependencies.js url to lockUrl('ComfyUI-PainterI2Vadvanced'). Then rename installOnEngine→engineAsset on the 6 weight DEPS entries + getUniversalWorkflowDepIds filter/docblock + downloadManager Rule-1 comment, and DROP the flag from all 9 node entries. Verify with the greps in the plan's Phase 1.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Bake discriminator = installRequirements (pip-nodes BAKED in Pod image for venv determinism; code-only nodes VOLUME-install on connect). Confines cold-install + venv-drift risk to build time; Pods ~99% fresh. MpiNodes (highest churn, code-only) becomes rebuild-free.",
+      "installOnEngine flag does NOT vanish — it is shared by the LOCAL engine path AND 6 universal weights (upscalers + detailer models), not node-only. RENAMED to engineAsset, now on the 6 WEIGHTS only (4x-NMKD-Siax, 4x-AnimeSharp, face/hand/person-yolov8n, sam-vit-b). All 9 nodes DROP it. Meaning = 'universal engine asset, install with engine, never GC with a model' (it was never a re-download concern).",
+      "Volume node payload = GitHub archive @ pinned commit (github.com/<repo>/archive/<commit>.zip — what lockUrl()+wrapper already produce). NO R2 infra. Commit in URL = marker free. Only 4 tiny code-only nodes cold-install (~3.7MB). MPI-219 was a stale BAKED node, not a download failure.",
+      "Marker .mpi_node_commit mirrors existing .mpi_engine_version (plain UTF-8 trimmed commit).",
+      "Drift two outcomes: volume node drifted/missing → wrapper reinstalls on volume (folds into boot-repair); baked node drifted → WARN ONLY (ui:warning toast), never volume-heal. Local: no split, marker+drift+targeted repair-deps NO wipe.",
+      "Verify mode = user-ux: local half self-verifies; remote half needs a real Pod (feedback_runpod_not_local_engine_proof) — ship remote logic-verified + guard-tested, card the live check if no Pod."
+    ],
+    "constraints": [
+      "TRAP: startUniversalWorkflowInstall SKIPS folders that already exist (isCompleteOnDisk @ downloadManager.js:1999) → a drifted node (folder present) is marked complete and NEVER reinstalled. MUST pre-wipe the drifted folder (fs.remove) before repair-deps. This is THE core gotcha.",
+      "PainterI2Vadvanced has NO pinned commit (dependencies.js:450 hardcodes refs/heads/main.zip, not in node_lock). MUST get a node_lock entry with a pinned SHA FIRST (Phase 1) before it can join the class + get a marker.",
+      "getUniversalWorkflowDepIds (shared.js:481) is SHARED local+remote — do NOT retarget it to installRequirements (would break local). Retarget ONLY the remote _universalNodeFilenames regex (remoteModels.js:175).",
+      "The 4 unpinned req-nodes' pip pins (Impact-Pack, kjnodes, Frame-Interpolation, Impact-Subpack) need LIVE determination on a working engine — versions are NOT in the repo; do NOT guess.",
+      "mpi-ci node_lock copy is already DRIFTED (MpiNodes 780c7c3 stale, RES4LYF missing) = the bug live. Resync in Phase 5. mpi-ci is a SEPARATE git repo — edit with git -C c:\\AI\\Mpi\\mpi-ci, never git add from Cubric-Vision.",
+      "wrapper.py version is 0.2.32 in-file (memory says 0.2.31) — confirm before stamping build-arg.",
+      "Both engines mandatory (feedback_check_both_engine_paths — repo forgets remote twin). Shared-tree commit hygiene: commit by explicit pathspec, never git add -A."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md (created)",
+      ".agents/mpi-kanban/tasks/MPI-222/task.json (moved todo→doing, plan+research links)",
+      ".agents/mpi-kanban/tasks/MPI-222/research/ (A/B/C/D investigation notes, created)",
+      ".agents/mpi-kanban/board.json (MPI-222 todo→doing)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-222/research/A-local-engine.md",
+      ".agents/mpi-kanban/tasks/MPI-222/research/B-remote-engine.md",
+      ".agents/mpi-kanban/tasks/MPI-222/research/C-deps-schema-deadcode.md",
+      ".agents/mpi-kanban/tasks/MPI-222/research/D-mpi-ci-podimage.md",
+      "js/data/modelConstants/dependencies.js",
+      "dev_configs/node_lock.json",
+      "routes/shared.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "comfy_engine (Engine Split)",
+      "download-manager",
+      "runpod-remote-engine",
+      "add-model-playbook (node-bump flow)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/download-manager.md",
+    "docs/runpod-remote-engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-08T09:56:45Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-222 in Cubric Vision (branch 1.2). Read .agents/mpi-kanban/state/handoffs/0c08d356-e332-4abd-a526-ec12987035bc.json and the plan at .agents/mpi-kanban/tasks/MPI-222/plan.md, plus the four research notes under .agents/mpi-kanban/tasks/MPI-222/research/. The plan is written and attached; NO code is written yet; the card is in Doing. All architectural decisions are LOCKED — do NOT re-litigate: bake discriminator is installRequirements (pip=baked Pod image, code-only=volume install from GitHub archive at pinned commit, NO R2); the installOnEngine flag is RENAMED to engineAsset and kept ONLY on the 6 universal weights, dropped from all 9 nodes; marker file .mpi_node_commit mirrors .mpi_engine_version; drifted volume nodes reinstall on the volume, drifted BAKED nodes only warn (ui:warning toast, never volume-heal). Execute Phase 1 (data model) via mpi-continue. The very first sub-task: resolve the current main HEAD of princepainter/ComfyUI-PainterI2Vadvanced to a commit SHA, add a git-commit entry for it to dev_configs/node_lock.json, and switch its dependencies.js url to lockUrl(). CRITICAL gotchas: startUniversalWorkflowInstall skips folders that already exist, so a drifted node must be pre-wiped before reinstall; getUniversalWorkflowDepIds is shared local+remote so retarget only the remote _universalNodeFilenames regex; the 4 unpinned req-nodes' pip pins need LIVE determination (don't guess); mpi-ci is a separate git repo (edit with git -C). Phase 7 docs/rules/memory edits are permission-gated — ask before touching .claude/rules/."
+}
