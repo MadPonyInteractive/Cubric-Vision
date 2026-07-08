@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-225","type":"task.created","at":"2026-07-08T12:30:00Z","actor":"claude","summary":"Planned: fix deleted-preview upload 404 (fail soft) + stale card poster via mtime cache-bust."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-225","type":"task.updated","at":"2026-07-08T12:30:01Z","actor":"claude","summary":"Attached compact plan; maturity planned."}
