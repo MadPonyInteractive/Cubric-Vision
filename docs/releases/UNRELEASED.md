@@ -198,6 +198,14 @@
   comparisons without losing your slot setup, and it still works even if the LoRA
   file itself is missing from your folders.
 
+- **See your cloud disk usage while you browse models.** When you're connected to
+  a cloud GPU, the Model Library now shows a disk-usage bar right under the model
+  count — so you can see how much room is left before installing another pack,
+  without opening Settings. It works whether you're using a persistent network
+  volume or an ephemeral "Any region" pod (which uses the pod's own container
+  disk), and the bar turns red as the disk fills up. The same bar now also appears
+  in Settings for ephemeral pods, not just volume-backed ones.
+
 ## fixes
 
 - **Reuse Prompt no longer mishandles images on text-to-image cards.** Reusing a
