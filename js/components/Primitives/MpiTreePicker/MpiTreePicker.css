@@ -1,0 +1,217 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MpiTreePicker — Searchable folder-tree picker primitive (MPI-233)
+   BEM block: .mpi-tree-picker
+   Trigger mirrors .mpi-dropdown; the portalled box is its own tree UI.
+═══════════════════════════════════════════════════════════════════════════ */
+
+.mpi-tree-picker {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    width: 100%;
+    user-select: none;
+}
+
+/* ── Trigger (matches MpiDropdown) ───────────────────────────────────────── */
+
+.mpi-tree-picker__trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    padding: 10px 14px;
+    color: var(--ink-1);
+    font-family: inherit;
+    font-size: var(--t-sm);
+    cursor: pointer;
+    transition: background var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+    outline: none;
+    text-align: left;
+}
+
+.mpi-tree-picker__trigger:hover {
+    background: var(--surface-3);
+    border-color: var(--ink-2);
+}
+
+.mpi-tree-picker.is-open .mpi-tree-picker__trigger {
+    border-color: var(--accent-heat);
+    background: var(--surface-2);
+}
+
+.mpi-tree-picker__label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpi-tree-picker__chevron {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-right: 1.5px solid var(--ink-3);
+    border-bottom: 1.5px solid var(--ink-3);
+    rotate: 45deg;
+    transition: rotate var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+    margin-bottom: 2px;
+}
+
+.mpi-tree-picker.is-open .mpi-tree-picker__chevron {
+    rotate: 225deg;
+    margin-bottom: -2px;
+    border-color: var(--accent-heat);
+}
+
+/* ── Missing / invalid state ─────────────────────────────────────────────── */
+
+.mpi-tree-picker--missing .mpi-tree-picker__trigger {
+    border-color: var(--danger, #e05252);
+    color: var(--danger, #e05252);
+}
+
+/* ── Portalled box ──────────────────────────────────────────────────────────
+   Appended to document.body by setup(); coordinates injected inline. */
+
+.mpi-tree-picker__box {
+    position: fixed;
+    z-index: 11000;
+    display: flex;
+    flex-direction: column;
+    /* Grow to fit the trigger (min-width set inline) up to a viewport cap.
+       Long names beyond the cap scroll horizontally inside __tree. */
+    max-width: min(720px, 92vw);
+    background: var(--surface-1);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+    overflow: hidden;
+
+    opacity: 0;
+    pointer-events: none;
+    transform: scaleY(0.95);
+    transform-origin: top center;
+    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
+}
+
+.mpi-tree-picker__box.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scaleY(1);
+}
+
+/* ── Search ─────────────────────────────────────────────────────────────── */
+
+.mpi-tree-picker__search {
+    padding: 8px;
+    border-bottom: 1px solid var(--ink-3);
+    background: var(--surface-1);
+}
+
+.mpi-tree-picker__search-input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    padding: 8px 12px;
+    color: var(--ink-1);
+    font-family: inherit;
+    font-size: var(--t-sm);
+    outline: none;
+    transition: border-color var(--t-base) var(--ease);
+}
+
+.mpi-tree-picker__search-input:focus {
+    border-color: var(--accent-heat);
+}
+
+.mpi-tree-picker__search-input::placeholder {
+    color: var(--ink-3);
+}
+
+/* ── Tree ───────────────────────────────────────────────────────────────── */
+
+.mpi-tree-picker__tree {
+    overflow-y: auto;
+    overflow-x: auto;
+    max-height: 320px;
+    padding: 4px 0;
+}
+
+.mpi-tree-picker__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Indent by depth; folders/files at the same depth line up. */
+    padding: 8px 14px 8px calc(14px + var(--depth, 0) * 16px);
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: background var(--t-base) var(--ease), color var(--t-base) var(--ease);
+    /* Grow to the longest name (horizontal scroll on the tree) while still
+       filling the box for short rows so hover/active spans the full width. */
+    width: max-content;
+    min-width: 100%;
+}
+
+.mpi-tree-picker__row:hover {
+    background: var(--surface-2);
+    color: var(--ink-1);
+}
+
+.mpi-tree-picker__row-chevron,
+.mpi-tree-picker__row-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    color: var(--ink-3);
+}
+
+.mpi-tree-picker__row-label {
+    /* No ellipsis — the tree scrolls horizontally so full names stay readable. */
+    white-space: nowrap;
+}
+
+.mpi-tree-picker__row--folder {
+    color: var(--ink-1);
+    font-weight: 500;
+}
+
+.mpi-tree-picker__row--folder .mpi-tree-picker__row-icon {
+    color: var(--accent-heat);
+}
+
+/* File rows sit one indent past their folder (no chevron slot to fill). */
+.mpi-tree-picker__row--file {
+    padding-left: calc(14px + var(--depth, 0) * 16px + 18px);
+}
+
+.mpi-tree-picker__row--none {
+    color: var(--ink-3);
+    font-style: italic;
+}
+
+.mpi-tree-picker__row.is-active {
+    color: var(--accent-heat);
+    border-left-color: var(--accent-heat);
+    background: color-mix(in oklch, var(--accent-heat) 18%, var(--surface-2));
+}
+
+.mpi-tree-picker__row--missing {
+    color: var(--danger, #e05252);
+}
+
+.mpi-tree-picker__row.is-disabled {
+    cursor: not-allowed;
+}
+
+.mpi-tree-picker__empty {
+    padding: 16px 14px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: var(--t-sm);
+}

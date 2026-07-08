@@ -26,6 +26,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiTreePicker } from '../../Primitives/MpiTreePicker/MpiTreePicker.js';
 import { MpiFolderDrop } from '../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { renderIcon } from '../../../utils/icons.js';
@@ -439,17 +440,19 @@ export const MpiModelSettings = ComponentFactory.create({
                     _loraSlots[i].name = info.value;
                     _healedAny = true;
                 }
-                const dd = MpiDropdown.mount(dropHost, {
+                const dd = MpiTreePicker.mount(dropHost, {
                     options: _withMissingOption(loraOpts, missing ? slot.name : ''),
                     value: missing ? (slot.name || '') : (_loraSlots[i].name || ''),
                     placeholder: `Slot ${i + 1} — None`,
-                    extraClasses: missing ? 'mpi-dropdown--missing' : '',
+                    searchPlaceholder: 'Search LoRAs…',
+                    stripExtension: true,
+                    extraClasses: missing ? 'mpi-tree-picker--missing' : '',
                 });
 
                 dd.on('change', ({ value }) => {
                     _loraSlots[i].name = value || null;
                     slotEl.classList.toggle('mpi-model-settings__lora-slot--empty', !value);
-                    qs('.mpi-dropdown', dropHost)?.classList.toggle('mpi-dropdown--missing', _isMissing(value, state.availableLoras));
+                    qs('.mpi-tree-picker', dropHost)?.classList.toggle('mpi-tree-picker--missing', _isMissing(value, state.availableLoras));
                     _autoSave();
                 });
             });
@@ -523,17 +526,19 @@ export const MpiModelSettings = ComponentFactory.create({
                         _loraSlots[stage.key][i].name = info.value;
                         _healedAny = true;
                     }
-                    const dd = MpiDropdown.mount(dropHost, {
+                    const dd = MpiTreePicker.mount(dropHost, {
                         options: _withMissingOption(loraOpts, missing ? slot.name : ''),
                         value: missing ? (slot.name || '') : (_loraSlots[stage.key][i].name || ''),
                         placeholder: `${stage.label} ${i + 1} - None`,
-                        extraClasses: missing ? 'mpi-dropdown--missing' : '',
+                        searchPlaceholder: 'Search LoRAs…',
+                        stripExtension: true,
+                        extraClasses: missing ? 'mpi-tree-picker--missing' : '',
                     });
 
                     dd.on('change', ({ value }) => {
                         _loraSlots[stage.key][i].name = value || null;
                         slotEl.classList.toggle('mpi-model-settings__lora-slot--empty', !value);
-                        qs('.mpi-dropdown', dropHost)?.classList.toggle('mpi-dropdown--missing', _isMissing(value, state.availableLoras));
+                        qs('.mpi-tree-picker', dropHost)?.classList.toggle('mpi-tree-picker--missing', _isMissing(value, state.availableLoras));
                         _autoSave();
                     });
                 });
