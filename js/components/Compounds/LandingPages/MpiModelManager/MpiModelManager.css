@@ -345,6 +345,7 @@
     height: 2px;
     background: var(--line);
     position: relative;
+    overflow: hidden;
 }
 .mpi-tile__prog-bar > span {
     position: absolute;
