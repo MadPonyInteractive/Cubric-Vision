@@ -292,6 +292,17 @@ async function resolveComfyPath(dep, customRoot, config) {
     const isCustomNode = dep.type === 'custom_nodes';
     let localPath;
 
+    // MPI-222: a weight whose consuming node HARD-CODES an in-folder scan path
+    // (e.g. RIFE VFI reads only <node>/ckpts/rife/) can't live under mpi_models/ —
+    // the node never looks there. `targetPath` pins such a weight to a dir under the
+    // ComfyUI repo root (custom_nodes/...), bypassing the type->subdir mapping. It is
+    // always anchored on the engine (never the user's custom models root, which only
+    // holds mpi_models weights). filename is the bare basename here.
+    if (dep.targetPath) {
+        localPath = getComfyPath(ENGINE_ROOT, ...dep.targetPath.split(/[\\/]+/), dep.filename || '');
+        return { localPath, isCustomNode };
+    }
+
     if (customRoot && !isCustomNode) {
         const directPath = path.join(customRoot, dep.filename || '');
         if (dep.filename && await isCompleteOnDisk(directPath)) {
@@ -472,19 +483,61 @@ async function writeExtraModelPathsYaml(primaryRoot, extras = null) {
 }
 
 /**
- * Returns all DEPS ids marked for installation with the engine (installOnEngine: true).
- * These cover all universal workflow dependencies — no need to track them per-workflow.
+ * Marker filename stamped into a custom_node folder recording WHICH pinned commit
+ * was installed. Mirrors the engine's `.mpi_engine_version` precedent
+ * (routes/engine.js). A missing/mismatched marker = drift (MPI-222).
+ */
+const NODE_COMMIT_MARKER = '.mpi_node_commit';
+
+/**
+ * The pinned commit for a locked custom_node, read straight from the node-lock
+ * (the same single source of truth `lockUrl()` builds URLs from). Returns null
+ * for a node that is not commit-pinned (registry/tag source) or not in the lock —
+ * such nodes have no stable commit to diff, so they never drift-check.
+ * @param {string} depId dependencies.js id === node_lock key
+ * @returns {string|null} 40-char SHA or null
+ */
+function getPinnedNodeCommit(depId) {
+    const nodeLock = _require('../dev_configs/node_lock.json');
+    const e = nodeLock.nodes?.[depId];
+    return e && e.source === 'git-commit' ? e.commit : null;
+}
+
+/**
+ * Stamp the pinned-commit marker into an installed node folder. Trimmed UTF-8,
+ * same shape as `.mpi_engine_version`. No-op (returns false) when the node has no
+ * pinned commit — nothing to record.
+ * @param {string} nodeFolder absolute path to the installed custom_node folder
+ * @param {string} depId dependencies.js id
+ * @returns {Promise<boolean>} true if a marker was written
+ */
+async function writeNodeCommitMarker(nodeFolder, depId) {
+    const commit = getPinnedNodeCommit(depId);
+    if (!commit) return false;
+    await fs.writeFile(path.join(nodeFolder, NODE_COMMIT_MARKER), commit.trim(), 'utf8');
+    return true;
+}
+
+/**
+ * Returns all DEPS ids that install WITH the engine and are never GC'd with a model:
+ * every custom_node (all nodes are universal — MPI-222) plus the engine WEIGHTS flagged
+ * `engineAsset: true` (upscalers, detector/SAM models). These cover all universal workflow
+ * dependencies — no need to track them per-workflow.
  */
 function getUniversalWorkflowDepIds() {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     return Object.entries(DEPS)
-        .filter(([, dep]) => dep.installOnEngine === true)
+        .filter(([, dep]) => dep.type === 'custom_nodes' || dep.engineAsset === true)
         .map(([id]) => id);
 }
 
 /**
- * Checks which universal workflow dependencies are missing from disk.
- * Returns { needsDepsInstall, missingDeps } where missingDeps is an array of dep ids.
+ * Checks which universal workflow dependencies are missing OR drifted on disk.
+ * Missing = folder absent. Drifted = custom_node folder present but its stamped
+ * `.mpi_node_commit` marker does not match the node_lock pinned commit (MPI-222) —
+ * i.e. a node bump left an old install in place. Both route to the same boot-repair
+ * ladder (repair-deps pre-wipes drifted folders, then reinstalls at the pinned commit).
+ * Returns { needsDepsInstall, missingDeps, driftedDeps }.
  *
  * Uses resolveComfyPath so custom root and type→subdir mapping are respected.
  */
@@ -494,6 +547,7 @@ async function checkUniversalWorkflowDepsStatus() {
     const config = {};
     const depIds = getUniversalWorkflowDepIds();
     const missing = [];
+    const drifted = [];
 
     for (const depId of depIds) {
         const dep = DEPS[depId];
@@ -504,99 +558,29 @@ async function checkUniversalWorkflowDepsStatus() {
         const { localPath } = await resolveComfyPath(dep, customRoot, config);
         if (!(await fs.pathExists(localPath))) {
             missing.push(depId);
+            continue;
         }
-    }
-
-    return { needsDepsInstall: missing.length > 0, missingDeps: missing };
-}
-
-/**
- * Returns the custom-node dep ids required by currently-INSTALLED models that are
- * NOT already in the engine-reinstall set (installOnEngine). The universal-workflow
- * reinstall (`checkUniversalWorkflowDepsStatus` → `startUniversalWorkflowInstall`)
- * only covers `installOnEngine: true` deps, so a model-SPECIFIC custom node (e.g.
- * `ComfyUI-PainterI2Vadvanced`, required by the Wan I2V model) is dropped when the
- * engine folder is wiped on upgrade → the model shows "partially installed". This
- * finds those nodes for models whose WEIGHTS are present on disk, so the engine
- * reinstall can restore them too. Returns an array of missing custom-node dep ids.
- * (MPI-118: model-specific node deps must survive engine upgrade.)
- */
-async function getInstalledModelNodeDeps(customRootOverride) {
-    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
-    const { MODELS } = _require('../js/data/modelConstants/models.js');
-    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
-    // During an engine upgrade the YAML is already wiped when this runs, so
-    // getCustomRoot() would return null and the weights would resolve against the
-    // empty default root → every model reads "not installed" → no node deps. The
-    // caller passes the preserved root explicitly in that case. (MPI-118)
-    const customRoot = customRootOverride
-        ? resolveModelsRoot(customRootOverride)
-        : await getCustomRoot();
-    const config = {};
-    const engineSet = new Set(getUniversalWorkflowDepIds());
-    const missingNodeIds = new Set();
-
-    // True when a dep's file is on disk. Cached per-dep so the per-op weight gate
-    // and the node-restore pass don't stat the same path twice.
-    const _onDisk = new Map();
-    const isOnDisk = async (id) => {
-        if (_onDisk.has(id)) return _onDisk.get(id);
-        const { localPath } = await resolveComfyPath(DEPS[id], customRoot, config);
-        const present = await fs.pathExists(localPath);
-        _onDisk.set(id, present);
-        return present;
-    };
-
-    for (const model of MODELS) {
-        // Operation-keyed models (e.g. Wan 2.2) carry op-specific custom nodes
-        // (ComfyUI-PainterI2Vadvanced lives under operations.i2v_ms). The flat
-        // `.dependencies` field is gone, so resolve the FULL universe and restore a
-        // node only when the model's WEIGHTS for that node are present — a node whose
-        // op the user never installed must not be restored. (MPI-122, was MPI-118)
-        // Engine = 'local': this restores nodes for the LOCAL engine upgrade, so it
-        // must EXCLUDE Pod-only deps (e.g. the ComfyUI-GGUF node in engines.remote) —
-        // a local engine never has the GGUF node to restore. (MPI-163)
-        const depIds = resolveFullUniverse(model, null, 'local');
-        if (depIds.length === 0) continue;
-
-        // A node dep is restorable only if it's missing, not engine-reinstalled, and
-        // its sibling weights (the non-node deps in the SAME op group) are on disk —
-        // i.e. that operation is actually installed.
-        const nodeIds = depIds.filter(id => DEPS[id] && DEPS[id].type === 'custom_nodes' && !engineSet.has(id));
-        if (nodeIds.length === 0) continue;
-
-        const ops = model.operations || {};
-        for (const nodeId of nodeIds) {
-            if (await isOnDisk(nodeId)) continue; // present → nothing to restore
-
-            // Find the op group this node belongs to (if any). For a node carried in
-            // commonDeps or on a flat model, the gate is "the model's weights are
-            // present"; for an op-specific node it's "that op's weights are present".
-            const owningOp = Object.values(ops).find(o => Array.isArray(o.deps) && o.deps.includes(nodeId));
-            const gateDeps = owningOp
-                ? owningOp.deps
-                : depIds; // common / flat node → whole-model weight gate
-            const weightIds = gateDeps.filter(id => DEPS[id] && DEPS[id].type !== 'custom_nodes');
-
-            let weightsPresent = true;
-            for (const id of weightIds) {
-                if (!(await isOnDisk(id))) { weightsPresent = false; break; }
-            }
-            // Common-node gate: a flat/common node with no weights of its own still
-            // requires the model itself to be installed (any op's weights present).
-            if (!owningOp && weightIds.length === 0) {
-                weightsPresent = false;
-                for (const id of depIds) {
-                    if (DEPS[id] && DEPS[id].type !== 'custom_nodes' && await isOnDisk(id)) {
-                        weightsPresent = true; break;
-                    }
+        // Folder present — for a commit-pinned custom_node, check the marker for drift.
+        if (dep.type === 'custom_nodes') {
+            const pinned = getPinnedNodeCommit(depId);
+            if (pinned) {
+                let installed = null;
+                try {
+                    installed = (await fs.readFile(path.join(localPath, NODE_COMMIT_MARKER), 'utf8')).trim();
+                } catch { /* marker absent = pre-MPI-222 install → treat as drifted */ }
+                if (installed !== pinned) {
+                    drifted.push(depId);
+                    logger.info('comfy', `node drift: ${depId} installed=${installed ?? 'none'} pinned=${pinned}`);
                 }
             }
-            if (weightsPresent) missingNodeIds.add(nodeId);
         }
     }
 
-    return [...missingNodeIds];
+    return {
+        needsDepsInstall: missing.length > 0 || drifted.length > 0,
+        missingDeps: missing,
+        driftedDeps: drifted,
+    };
 }
 
 /**
@@ -691,6 +675,8 @@ module.exports = {
     cleanComfyUITempFiles,
     getUniversalWorkflowDepIds,
     checkUniversalWorkflowDepsStatus,
-    getInstalledModelNodeDeps,
     getUniversalWorkflowDepsTotalSize,
+    getPinnedNodeCommit,
+    writeNodeCommitMarker,
+    NODE_COMMIT_MARKER,
 };

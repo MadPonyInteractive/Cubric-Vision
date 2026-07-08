@@ -3,8 +3,9 @@
 // *********
 // IMPORTANT:
 // 1 - If you need to change a URL, you have to set the SHA256 back to null.
-// 2 - When adding universal workflow dependencies, they need to be installed with the engine
-//     Set installOnEngine: true for those.
+// 2 - Universal engine WEIGHTS (upscalers, detector/SAM models) install with the engine
+//     and are never GC'd with a model. Set engineAsset: true for those. (Custom nodes are
+//     NOT engineAsset — their bake/volume split is driven by installRequirements; see #3.)
 // 3 - Custom-node URLs are VERSION-LOCKED (MPI-117). They are NOT hardcoded here —
 //     they are derived from dev_configs/node_lock.json via lockUrl(). To bump a node,
 //     edit that lock file, NOT this file. The RunPod Pod image consumes the same lock.
@@ -277,7 +278,7 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/upscale_models/4x_NMKD-Siax_200k.pth',
         size: '67MB',
         sha256: '560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e',
-        installOnEngine: true,
+        engineAsset: true,
     },
     '4x-AnimeSharp': {
         id: '4x-AnimeSharp',
@@ -286,7 +287,7 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/upscale_models/4x-AnimeSharp.pth',
         size: '65MB',
         sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab',
-        installOnEngine: true,
+        engineAsset: true,
     },
     // LTX-2.3 (MPI-127) ------------------------------------------------------
     // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow
@@ -440,14 +441,13 @@ export const DEPS = {
         url: lockUrl('ComfyUI-MpiNodes'),
         installRequirements: false,
         size: '1.76MB',
-        installOnEngine: true,
     },
     'ComfyUI-PainterI2Vadvanced': {
         id: 'ComfyUI-PainterI2Vadvanced',
         name: 'ComfyUI-PainterI2Vadvanced',
         type: 'custom_nodes',
         filename: 'ComfyUI-PainterI2Vadvanced',
-        url: 'https://github.com/princepainter/ComfyUI-PainterI2Vadvanced/archive/refs/heads/main.zip',
+        url: lockUrl('ComfyUI-PainterI2Vadvanced'),
         installRequirements: false,
         size: '144KB',
     },
@@ -459,7 +459,6 @@ export const DEPS = {
         url: lockUrl('ComfyUI-VideoHelperSuite'),
         installRequirements: false,
         size: '806KB',
-        installOnEngine: true,
     },
     'ComfyUI-Impact-Pack': {
         id: 'ComfyUI-Impact-Pack',
@@ -468,8 +467,15 @@ export const DEPS = {
         filename: 'comfyui-impact-pack',
         url: lockUrl('ComfyUI-Impact-Pack'),
         installRequirements: true,
+        // requirements.txt is UNPINNED (numpy, scipy, transformers, opencv-python-headless,
+        // scikit-image, matplotlib, …) → a --upgrade install can major-bump a SHARED package
+        // engine-wide (MPI-217 class). Pin the drift-risky ones to the live proven-good set
+        // (captured from a working local engine, MPI-222). pipPins run AFTER reqs (corrective).
+        pipPins: [
+            'numpy==2.5.1', 'opencv-python-headless==5.0.0.93', 'scipy==1.18.0',
+            'scikit-image==0.26.0', 'transformers==5.13.0', 'matplotlib==3.11.0',
+        ],
         size: '5MB',
-        installOnEngine: true,
     },
     'comfyui-kjnodes': {
         id: 'comfyui-kjnodes',
@@ -478,7 +484,12 @@ export const DEPS = {
         filename: 'comfyui-kjnodes',
         url: lockUrl('comfyui-kjnodes'),
         installRequirements: true,
-        installOnEngine: true,
+        // Unpinned reqs (pillow, color-matcher, matplotlib, mss, opencv-python-headless).
+        // Live proven-good pins (MPI-222). Shared pins match the other nodes' set.
+        pipPins: [
+            'pillow==12.3.0', 'matplotlib==3.11.0', 'opencv-python-headless==5.0.0.93',
+            'color-matcher==0.6.0', 'mss==10.2.0',
+        ],
         size: '28MB',
     },
     // MPI-190: ComfyUI-GGUF removed. It existed only to load the Q8_0 GGUF LTX
@@ -495,7 +506,6 @@ export const DEPS = {
         url: lockUrl('ComfyUI-UltimateSDUpscale'),
         installRequirements: false,
         size: '940KB',
-        installOnEngine: true,
     },
     'ComfyUI-Frame-Interpolation': {
         id: 'ComfyUI-Frame-Interpolation',
@@ -505,8 +515,31 @@ export const DEPS = {
         url: lockUrl('ComfyUI-Frame-Interpolation'),
         installRequirements: true,
         installRequirementsCommand: 'python install.py',
+        // install.py resolves requirements-*.txt (numpy, kornia, scipy, Pillow, opencv-
+        // contrib, torch-family). torch/torchvision/einops/tqdm are engine-managed/baked
+        // and opencv-contrib is redundant with the headless build already present — pin
+        // only the drift-risky shared libs to the live set (MPI-222). pipPins run AFTER.
+        pipPins: ['numpy==2.5.1', 'kornia==0.8.2', 'scipy==1.18.0', 'pillow==12.3.0'],
         size: '37.4MB',
-        installOnEngine: true,
+    },
+    // RIFE 4.7 weight for ComfyUI-Frame-Interpolation (MPI-222). The node HARD-CODES
+    // its scan dir to <node>/ckpts/rife/ (vfi_utils config.yaml + MODEL_TYPE) and does
+    // NOT read extra_model_paths.yaml, so this weight can't live in mpi_models/ like
+    // the other engine assets — it MUST land inside the node folder. `targetPath` pins
+    // it there. Without this, the weight was an untracked lazy GitHub fetch on first
+    // node execution (fragile: stalls/fails if GH is down) AND was silently deleted by
+    // the node-drift pre-wipe. As a tracked engineAsset it now boot-installs when
+    // missing + self-heals (node re-clone wipes it → this dep re-installs it). Source =
+    // R2 (the same proven copy the Pod bakes from marduk191/rife). sha verified.
+    'rife47': {
+        id: 'rife47',
+        name: 'RIFE 4.7',
+        filename: 'rife47.pth',
+        targetPath: 'custom_nodes/comfyui-frame-interpolation/ckpts/rife',
+        url: 'https://models.cubric.studio/vision/models/frame_interpolation/rife/rife47.pth',
+        size: '20.4MB',
+        sha256: '6a8a825ab2750558bdd20dcced386fd82b7222c7ba58c11d3b611d9c44f1be63',
+        engineAsset: true,
     },
     'ComfyUI-Impact-Subpack': {
         id: 'ComfyUI-Impact-Subpack',
@@ -515,12 +548,17 @@ export const DEPS = {
         filename: 'ComfyUI-Impact-Subpack',
         url: lockUrl('ComfyUI-Impact-Subpack'),
         installRequirements: true,
+        // Unpinned reqs (matplotlib, ultralytics>=8.3.162, numpy, opencv-python-headless,
+        // dill). Live proven-good pins (MPI-222). ultralytics floats a minor — pin exact.
+        pipPins: [
+            'matplotlib==3.11.0', 'ultralytics==8.4.78', 'numpy==2.5.1',
+            'opencv-python-headless==5.0.0.93', 'dill==0.4.1',
+        ],
         size: '172KB',
-        installOnEngine: true,
     },
-    // RES4LYF (ClownShark sampler family + ReChromaPatcher). MODEL-SPECIFIC — only
-    // Chroma uses it → NO installOnEngine; listed in the Chroma model's dependencies[]
-    // so it installs via getInstalledModelNodeDeps() when Chroma weights are present.
+    // RES4LYF (ClownShark sampler family + ReChromaPatcher). Used by Chroma. All
+    // custom_nodes are now universal (MPI-222) — installs with the engine and never
+    // GC'd with a model; baked into the Pod image because it has pip requirements.
     // requirements.txt: opencv-python, matplotlib, pywavelets, numpy>=1.26.4.
     // Those are UNPINNED — with --upgrade, install pulls newest across the WHOLE
     // engine (MPI-217 bit this: opencv-python 4.13→5.0 major + numpy 2.5.0→2.5.1).
@@ -544,7 +582,7 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/face_yolov8n.pt',
         size: '5.9MB',
         sha256: '70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c',
-        installOnEngine: true,
+        engineAsset: true,
     },
     'hand-yolov8n': {
         id: 'hand-yolov8n',
@@ -553,7 +591,7 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/hand_yolov8n.pt',
         size: '5.9MB',
         sha256: '3991202eb69e9ddcb3b9ba80cdeb41e734ffaf844403d6c9f47d515cd88c6f29',
-        installOnEngine: true,
+        engineAsset: true,
     },
     'person-yolov8n-seg': {
         id: 'person-yolov8n-seg',
@@ -562,7 +600,7 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/person_yolov8n-seg.pt',
         size: '6.9MB',
         sha256: '38fc8aaae97cb6e70be4ec44770005b26ed473471362afcda62a0037d7ccf432',
-        installOnEngine: true,
+        engineAsset: true,
     },
     'sam-vit-b': {
         id: 'sam-vit-b',
@@ -571,6 +609,6 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/sams/sam_vit_b_01ec64.pth',
         size: '367MB',
         sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912',
-        installOnEngine: true,
+        engineAsset: true,
     },
 };

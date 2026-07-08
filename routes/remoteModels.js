@@ -30,6 +30,7 @@ const logger = require('./logger');
 const { getRemoteMode } = require('./remoteProxy');
 const { getWrapperToken, proxyUrl } = require('./remoteEngine');
 const { isNetworkDownError } = require('./netCheck');
+const { getPinnedNodeCommit } = require('./shared');
 
 // RunPod proxy is behind Cloudflare — the default fetch UA gets 403 error 1010.
 const { buildAuthHeaders } = require('./remoteHeaders');
@@ -143,14 +144,16 @@ async function wrapperFetch(routePath, { method = 'GET', body, retries = 15, ret
 }
 
 /**
- * The UNIVERSAL custom_nodes baked into the Pod image (Design B+): the
- * `installOnEngine: true` custom_nodes from dependencies.js. These are the
- * stable engine baseline (ComfyUI-MpiNodes, VHS, Impact, KJ, etc.) cloned into
- * /opt/ComfyUI/custom_nodes by the image Dockerfile, so the wrapper — which only
- * sees the /workspace volume — never finds them and they must be treated as
- * present. PER-MODEL custom_nodes (e.g. ComfyUI-PainterI2Vadvanced) are NOT in
- * this set: they install onto the volume via the wrapper so a new model never
- * forces an image rebuild. Loaded once from the app dep registry.
+ * The custom_nodes BAKED into the Pod image (Design B+): the nodes WITH pip
+ * requirements (`installRequirements: true`) from dependencies.js — baking them
+ * at build time keeps venv resolution deterministic. These (ComfyUI-LTXVideo,
+ * Impact-Pack, KJNodes, Frame-Interpolation, Impact-Subpack, RES4LYF) are cloned
+ * into /opt/ComfyUI/custom_nodes by the image Dockerfile, so the wrapper — which
+ * only sees the /workspace volume — never finds them and they must be treated as
+ * present. CODE-ONLY custom_nodes (MpiNodes, VHS, UltimateSDUpscale,
+ * PainterI2Vadvanced) are NOT in this set: they install onto the volume via the
+ * wrapper so a node bump never forces an image rebuild. Loaded from the app dep
+ * registry. (MPI-222: bake discriminator was installOnEngine, now installRequirements.)
  * @returns {Set<string>} dep.filename folder names of the universal node packs
  */
 let _universalNodeNames = null;
@@ -172,7 +175,7 @@ function _universalNodeFilenames() {
     for (let i = 0; i < starts.length; i++) {
       const block = src.slice(starts[i], starts[i + 1] ?? src.length);
       if (!/type:\s*'custom_nodes'/.test(block)) continue;
-      if (!/installOnEngine:\s*true/.test(block)) continue;
+      if (!/installRequirements:\s*true/.test(block)) continue;
       const fn = block.match(/filename:\s*'([^']+)'/);
       if (fn && fn[1]) _universalNodeNames.add(fn[1]);
     }
@@ -183,19 +186,49 @@ function _universalNodeFilenames() {
 }
 
 /**
- * True for a dep that lives in the Pod Docker IMAGE (universal engine nodes,
- * Design B+), not on the network volume. Only `installOnEngine: true`
+ * True for a dep that lives in the Pod Docker IMAGE (baked pip-req nodes,
+ * Design B+), not on the network volume. Only `installRequirements: true`
  * custom_nodes qualify — the wrapper can't see them on the volume, so they are
- * reported present. A per-model custom_node returns false → it routes to the
+ * reported present. A code-only custom_node returns false → it routes to the
  * wrapper for volume install.
  */
 function _isImageResident(dep) {
+  // MPI-222: a `targetPath` weight (e.g. RIFE) lives INSIDE a baked node folder in
+  // the Pod image (the Dockerfile bakes rife47.pth into comfyui-frame-interpolation/
+  // ckpts/rife/), so on remote it is image-resident just like the node — the wrapper
+  // can't see it on the volume and must not try to install it (bare filename → empty
+  // type → wrapper reject). Report present; the Pod already has it.
+  if (dep.targetPath) return true;
   const { type } = splitDepFilename(dep.filename);
   const depType = type || dep.type || '';
   if (depType !== 'custom_nodes') return false;
   // The node's folder name is the bare dep.filename (no subdir for nodes).
   const name = (splitDepFilename(dep.filename).filename) || dep.filename || '';
   return _universalNodeFilenames().has(name);
+}
+
+/**
+ * Best-effort map of installed node commit by folder name, read from the Pod
+ * manifest `nodes[]` (schema v2, MPI-222 — written by the wrapper for volume
+ * installs and stamped from the baked `.mpi_node_commit` at boot). Returns {} for
+ * an old wrapper (no `nodes[]`) or any fetch error — so a Pod that predates the
+ * commit-marker work reports NO drift instead of a false reinstall/warn.
+ * @returns {Promise<Record<string,string>>} folder → installed commit
+ */
+async function _installedNodeCommits() {
+  try {
+    const res = await wrapperFetch('/wrapper/manifest', { retries: 1 });
+    if (!res.ok) return {};
+    const manifest = await res.json().catch(() => null);
+    const nodes = manifest && Array.isArray(manifest.nodes) ? manifest.nodes : [];
+    const map = {};
+    for (const n of nodes) {
+      if (n && n.filename && n.commit) map[n.filename] = String(n.commit).trim();
+    }
+    return map;
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -206,28 +239,52 @@ function _isImageResident(dep) {
  * { type, filename } before forwarding. The wrapper response already speaks the
  * local check's shape ({ success, results: { [id]: { installed, deps: [...] } } }).
  *
- * Image-resident deps (custom_nodes code — Design A) are NOT on the volume the
- * wrapper sees, so they are marked installed inline and never sent to the
- * wrapper; otherwise the pack would read PARTIAL forever (they can't be
- * "installed" onto the volume). The model's overall `installed` is recomputed as
- * the AND of all deps (volume-checked + image-resident).
+ * Image-resident (BAKED) deps are NOT on the volume the wrapper sees, so they are
+ * marked installed inline and never sent to the wrapper; otherwise the pack would
+ * read PARTIAL forever. The model's overall `installed` is recomputed as the AND
+ * of all deps (volume-checked + image-resident).
+ *
+ * Node drift (MPI-222), by class:
+ *   - VOLUME node: installed commit (manifest nodes[]) ≠ node_lock pinned → mark
+ *     installed:false so the pack routes to the existing reinstall path.
+ *   - BAKED node: installed commit ≠ pinned → collect into response `bakedDrift`
+ *     (a stale Pod image needs a REBUILD); the client shows a ui:warning. Never
+ *     mark not-installed, never volume-heal a baked node.
  */
 async function remoteModelsCheck(models) {
+  const installedCommits = await _installedNodeCommits();
+  const bakedDrift = [];
   // Per model, partition deps into image-resident (always present) and
   // volume deps (asked of the wrapper). Track image-resident ids to fold back
   // into the response.
   const imageResidentByModel = {};
+  const volumeNodeDrifted = new Set(); // dep ids whose volume install is stale
   const split = (models || []).map((m) => {
     const residentIds = [];
     const volumeDeps = [];
     for (const d of (m.deps || [])) {
       if (_isImageResident(d)) {
+        // BAKED node — never volume-checked. Drift here = a stale Pod IMAGE.
+        const pinned = getPinnedNodeCommit(d.id);
+        if (pinned) {
+          const have = installedCommits[d.filename];
+          // Only warn when we actually KNOW the baked commit (manifest reported it)
+          // and it disagrees — an unknown commit (old wrapper) stays silent.
+          if (have && have !== pinned) bakedDrift.push({ id: d.id, filename: d.filename });
+        }
         residentIds.push(d.id || null);
         continue;
       }
       // Per-model custom_node: wrapper checks a folder, so keep type
       // 'custom_nodes' + the bare folder name (dep.filename has no subdir).
       if (d.type === 'custom_nodes') {
+        // VOLUME node — drift means the folder is present at the WRONG commit; flag
+        // it so the fold-back marks it not-installed → existing reinstall path.
+        const pinned = getPinnedNodeCommit(d.id);
+        if (pinned) {
+          const have = installedCommits[d.filename];
+          if (have && have !== pinned) volumeNodeDrifted.add(d.id);
+        }
         volumeDeps.push({ ...d, type: 'custom_nodes', filename: d.filename });
         continue;
       }
@@ -246,11 +303,15 @@ async function remoteModelsCheck(models) {
 
   // Fold the image-resident deps back in as installed:true and recompute the
   // per-model `installed` flag so a complete-on-volume pack is not dragged to
-  // PARTIAL by an image-resident dep the wrapper never saw.
+  // PARTIAL by an image-resident dep the wrapper never saw. Drifted VOLUME nodes
+  // are forced installed:false here so the pack routes to the reinstall path.
   const results = json.results || {};
   for (const [mid, residentIds] of Object.entries(imageResidentByModel)) {
     const entry = results[mid] || { installed: true, deps: [] };
     const deps = Array.isArray(entry.deps) ? entry.deps : [];
+    for (const d of deps) {
+      if (d && volumeNodeDrifted.has(d.id)) d.installed = false;
+    }
     for (const id of residentIds) {
       deps.push({ id, installed: true, partialBytes: 0 });
     }
@@ -259,6 +320,9 @@ async function remoteModelsCheck(models) {
     results[mid] = entry;
   }
   json.results = results;
+  // Surface baked-image drift so the client can warn (rebuild needed). Never
+  // affects `installed` — a baked node can't be volume-healed.
+  if (bakedDrift.length) json.bakedDrift = bakedDrift;
   return json;
 }
 
@@ -279,6 +343,10 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
       filename: dep.filename,
       url: dep.url,
     };
+    // MPI-222: pass the node_lock pinned commit so the wrapper stamps
+    // .mpi_node_commit + records it in manifest nodes[] for drift detection.
+    const pinnedCommit = getPinnedNodeCommit(dep.id);
+    if (pinnedCommit) body.commit = pinnedCommit;
     if (dep.installRequirementsCommand) body.install_command = dep.installRequirementsCommand;
     // requirements_only: the node folder is already on the volume, just (re-)run
     // its requirements.txt idempotently — do NOT re-download or remove the folder.
