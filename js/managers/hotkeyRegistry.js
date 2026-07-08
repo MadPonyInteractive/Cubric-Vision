@@ -226,6 +226,10 @@ export const HOTKEY_REGISTRY = [
     },
 
     // ── Radial Menu ───────────────────────────────────────────────────────────
+    // Tab opens the radial ONLY on the gallery / group-history pages, and never
+    // while a full-page body overlay (e.g. the Model Library) is open — there it
+    // must be inert. Native Tab focus-traversal is suppressed globally in
+    // hotkeyManager regardless, so Tab can never walk cards / enter the slide-over.
     {
         id:               'radialMenu.toggle',
         key:              'tab',
@@ -234,6 +238,9 @@ export const HOTKEY_REGISTRY = [
         scopeLabel:       'Radial Menu',
         description:      'Toggle radial menu',
         allowWhileTyping: false,
+        when: ({ state }) =>
+            (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
+            !document.querySelector('.mpi-overlay--body'),
     },
 
     // ── Modal ─────────────────────────────────────────────────────────────────

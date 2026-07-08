@@ -162,6 +162,13 @@ class HotkeyManager {
         const activeEl = document.activeElement;
         const isTyping = isTextEntryElement(activeEl);
 
+        // Tab is a shell-owned key: the ONLY thing it ever does is open the radial
+        // menu (gated by the registry `when`). Native Tab focus-traversal is never
+        // wanted — it walks buttons/inputs and can escape into overlays/slide-overs,
+        // wedging the UI. Suppress the browser default unconditionally on keydown,
+        // whether or not the radial handler ends up firing below.
+        if (key === 'tab' && type === KEY_TYPE.DOWN) e.preventDefault();
+
         const isSingleLetter = e.key.length === 1 && !e.ctrlKey && !e.metaKey;
         const isBareModifier = ['Shift', 'Alt', 'Control', 'Meta'].includes(e.key);
         const isFKey = /^F\d+$/.test(e.key);

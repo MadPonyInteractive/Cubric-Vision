@@ -203,7 +203,8 @@ export const MpiModelManager = ComponentFactory.create({
         // The row nearest the ACTIVE GPU (local box OR connected Pod) is flagged via
         // _activeVramGb(); engine + VRAM both follow the active engine so a Pod sees
         // its own curve highlighted against the Pod's VRAM. Rendered inline in the
-        // detail drawer (there's room now — no hover popup). Video/tiered models only.
+        // detail drawer (there's room now — no hover popup) for every model — small
+        // image models just floor at MIN_FLOOR and resolve in a row or two.
         function _tradeTableHtml(model) {
             const activeVram = _activeVramGb();
             const { rows, totalWeights, vramFloor } = tradeTable(model, _engine(), activeVram, { arch: remoteEngineClient.archSync(_engine()) });
@@ -904,10 +905,10 @@ export const MpiModelManager = ComponentFactory.create({
                 qs('#detail-arch', detailBody).style.display = '';
                 _buildArchRow(model, qs('#detail-arch-row', detailBody), { frozen: st.isActiveDownload });
             }
-            // VRAM→RAM trade table (MPI-168) — video/tiered models only.
-            if (model.mediaType === 'video') {
-                qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
-            }
+            // VRAM→RAM trade table (MPI-168) — all models. Image models (SDXL etc.)
+            // are small so the curve floors at MIN_FLOOR (8GB) and resolves in a row
+            // or two, but the memory need is still worth showing.
+            qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
 
             // Footer actions — the exact install/update/uninstall wiring from _buildCard.
             detailActions.innerHTML = '';
@@ -1110,14 +1111,19 @@ export const MpiModelManager = ComponentFactory.create({
         // live download's progress bar ticks without flashing the whole grid. The
         // state is recomputed from the live download job. If the model's detail
         // panel is open, rebuild it too so its footer/progress stay in sync.
-        function _patchTile(modelId) {
+        function _patchTile(modelId, { rebuildDetail = true } = {}) {
             const tileRef = _tileInstances.get(modelId);
             const model = MODELS.find(m => m.id === modelId);
             if (tileRef && model) tileRef.stateEl.innerHTML = _tileState(_modelState(model));
-            if (_activeDetail && _activeDetail.id === modelId && model) openDetail(model);
+            // Only rebuild the open slide-over on real STATE transitions (pause /
+            // resume / install-phase) — those flip the footer buttons. A byte-level
+            // progress tick changes nothing visible in the panel, so rebuilding it
+            // ~1×/sec just tore down + re-created the thumb <img>/<video> and remount
+            // components → the panel flashed and reflowed. (Progress passes false.)
+            if (rebuildDetail && _activeDetail && _activeDetail.id === modelId && model) openDetail(model);
         }
 
-        _unsubs.push(Events.on('download:progress', ({ modelId }) => { _patchTile(modelId); }));
+        _unsubs.push(Events.on('download:progress', ({ modelId }) => { _patchTile(modelId, { rebuildDetail: false }); }));
 
         // download:started rebuilds the whole grid so the started model's tile shows
         // the progress bar + its detail footer flips to Pause/Cancel.

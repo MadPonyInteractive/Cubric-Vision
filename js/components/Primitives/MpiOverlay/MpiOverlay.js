@@ -104,9 +104,14 @@ export const MpiOverlay = ComponentFactory.create({
             _stash.style.display = 'none';
             _stash.classList.add('mpi-overlay-stash');
 
+            // Keep the custom OS titlebar (min/max/close, drag region) live +
+            // visible — body-mode overlays sit BELOW it (inset: var(--titlebar-h)),
+            // so stashing it would leave a dead gap and make the window
+            // uncloseable/undraggable while the overlay is open.
+            const titlebar = mountTarget === 'body' ? gid('titlebar') : null;
             const children = Array.from(_target.children);
             children.forEach(child => {
-                if (child !== _backdrop) _stash.appendChild(child);
+                if (child !== _backdrop && child !== titlebar) _stash.appendChild(child);
             });
 
             _target.appendChild(_stash);
