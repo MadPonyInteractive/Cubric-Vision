@@ -70,6 +70,12 @@
   with a 4-step Turbo mode for quick drafts — ideal for iterating on a shot before
   committing to a heavier model. Image-to-video is its strong suit.
 
+- **New model: Chroma Flash.** An NSFW image generator with exceptionally detailed,
+  realistic skin. Chroma is a fine-tune of Flux Schnell by LodeStone; this Flash
+  build generates in 8 steps. Balanced tier, and like the SDXL models it comes with
+  matching **upscale** and **detail** passes — its **upscale** is a standout, adding
+  real skin detail as it enlarges.
+
 - **Wan 2.2 Smooth video quality boost.** Reworked the two-stage sampling schedule
   for **text-to-video** and **image-to-video**. Stage-1 (motion preview) now closely
   matches the final result instead of regenerating it, and stage-2 resolves more real
