@@ -288,8 +288,9 @@ export const MODELS = [
         video: 'ltx23_high_preview.mp4',
         type: 'ltx',
         // LTX has 6 flat user LoRA slots (Input_Lora_1..6), no high/low staging →
-        // no loraStages. Model-strength only.
-        loraStrengths: ['model'],
+        // no loraStages. The Input_Lora_* nodes have a live strength_clip input
+        // (default 1.0) and some LTX LoRAs use it, so surface both knobs. (MPI-224)
+        loraStrengths: ['model', 'clip'],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'medium',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes.',
@@ -347,7 +348,9 @@ export const MODELS = [
         capabilities: { multiStage: true, audio: true },
         video: 'ltx23_balanced_preview.mp4',
         type: 'ltx',
-        loraStrengths: ['model'],
+        // Same LoRA node shape as ltx-23 High: live strength_clip input, surface
+        // both knobs. (MPI-224)
+        loraStrengths: ['model', 'clip'],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes. A faster tier that trades a little quality for speed and lighter VRAM use.',

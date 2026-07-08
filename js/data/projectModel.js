@@ -334,6 +334,7 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
     name: null,
     strengthModel: 1.0,
     strengthClip: 1.0,
+    bypass: false,
 }));
 
 const _getModelDef = (modelId) => MODELS.find(m => m.id === modelId) ?? null;

@@ -307,6 +307,30 @@ function _resolveModelName(value, available) {
 }
 
 /**
+ * Build the injection object for one LoRA slot, or null to skip it.
+ *  - Empty slot (no name) → null.
+ *  - Bypassed slot (MPI-223) → strength 0 so the node stays in the graph with zero
+ *    effect (no shape change / reload), BUT if the file is missing/unresolvable the
+ *    slot is skipped (null) so it never trips the missing-LoRA block.
+ *  - Normal slot → its saved strengths.
+ */
+function _loraSlotParam(slot) {
+    if (!slot?.name) return null;
+    const resolved = _resolveModelName(slot.name, state.availableLoras);
+    if (slot.bypass) {
+        const loras = state.availableLoras || [];
+        const present = loras.some(f => _pathKey(f) === _pathKey(resolved));
+        if (!present) return null; // bypassed + gone → inject nothing, don't block
+        return { lora_name: resolved, strength_model: 0, strength_clip: 0 };
+    }
+    return {
+        lora_name:      resolved,
+        strength_model: slot.strengthModel ?? 1.0,
+        strength_clip:  slot.strengthClip  ?? 1.0,
+    };
+}
+
+/**
  * Resolve the upscale param for injection. Unlike LoRAs (which hard-block when
  * missing), upscale always has a guaranteed default (SIAX, bundled with the
  * engine), so a missing custom upscaler FALLS BACK to SIAX and warns rather than
@@ -625,17 +649,17 @@ function _buildParams(payload) {
             const settings = getModelSettings(project, payload.modelId);
             const modelDef = getModelById(payload.modelId);
 
-            // LoRA slots — only inject non-null entries
+            // LoRA slots — only inject non-null entries.
+            // Bypassed slots inject at strength 0 (the node stays in the graph, so no
+            // shape change / model reload) EXCEPT when the file is missing — then skip
+            // the slot entirely so a bypassed-but-gone LoRA never hits the missing-LoRA
+            // block (_findMissingModel). Bypass is meant to work regardless of the file. (MPI-223)
             if (modelDef?.loraStages?.length) {
                 modelDef.loraStages.forEach(stage => {
                     const stageSlots = settings.loras?.[stage.key] || [];
                     stageSlots.forEach((slot, i) => {
-                        if (!slot.name) return;
-                        params[`${stage.injectionPrefix}_${i + 1}`] = {
-                            lora_name:      _resolveModelName(slot.name, state.availableLoras),
-                            strength_model: slot.strengthModel ?? 1.0,
-                            strength_clip:  slot.strengthClip  ?? 1.0,
-                        };
+                        const param = _loraSlotParam(slot);
+                        if (param) params[`${stage.injectionPrefix}_${i + 1}`] = param;
                     });
                 });
             } else {
@@ -644,12 +668,8 @@ function _buildParams(payload) {
                 // loraStages, or {} from a partial settings merge), so coerce.
                 const flatLoras = Array.isArray(settings.loras) ? settings.loras : [];
                 flatLoras.forEach((slot, i) => {
-                    if (!slot?.name) return;
-                    params[`Lora_${i + 1}`] = {
-                        lora_name:      _resolveModelName(slot.name, state.availableLoras),
-                        strength_model: slot.strengthModel ?? 1.0,
-                        strength_clip:  slot.strengthClip  ?? 1.0,
-                    };
+                    const param = _loraSlotParam(slot);
+                    if (param) params[`Lora_${i + 1}`] = param;
                 });
             }
 

@@ -29,7 +29,7 @@ import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiFolderDrop } from '../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, on } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
 import {
@@ -125,6 +125,28 @@ function _buildStrengthsRow(slot, kinds, onModel, onClip) {
     }
 
     return strengthsEl;
+}
+
+/**
+ * Build the per-slot bypass toggle button. Pressed = neutralise this LoRA at
+ * generation (inject strength 0) without changing its saved name/values — the
+ * slot's controls grey out (CSS, via the --bypassed class) but stay readable.
+ * `bypassed` sets the initial pressed state; `onToggle(next)` fires with the new
+ * boolean. (MPI-223)
+ */
+function _buildBypassBtn(bypassed, onToggle) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mpi-model-settings__lora-bypass';
+    btn.title = 'Bypass this LoRA (inject at zero strength)';
+    btn.setAttribute('aria-pressed', String(Boolean(bypassed)));
+    btn.innerHTML = renderIcon('negative', 'sm');
+    on(btn, 'click', () => {
+        const next = btn.getAttribute('aria-pressed') !== 'true';
+        btn.setAttribute('aria-pressed', String(next));
+        onToggle(next);
+    });
+    return btn;
 }
 
 const _baseName = (f) => String(f || '').replace(/\\/g, '/').split('/').pop();
@@ -372,6 +394,7 @@ export const MpiModelSettings = ComponentFactory.create({
                     name: s.name || null,
                     strengthModel: s.strengthModel ?? 1.0,
                     strengthClip: s.strengthClip ?? 1.0,
+                    bypass: s.bypass ?? false,
                 };
             });
 
@@ -383,6 +406,7 @@ export const MpiModelSettings = ComponentFactory.create({
                 slotEl.className = [
                     'mpi-model-settings__lora-slot',
                     !slot.name ? 'mpi-model-settings__lora-slot--empty' : '',
+                    slot.bypass ? 'mpi-model-settings__lora-slot--bypassed' : '',
                 ].filter(Boolean).join(' ');
 
                 const dropHost = document.createElement('div');
@@ -394,8 +418,15 @@ export const MpiModelSettings = ComponentFactory.create({
                     (value) => { _loraSlots[i].strengthClip = value; _autoSave(); },
                 );
 
+                const bypassBtn = _buildBypassBtn(slot.bypass, (next) => {
+                    _loraSlots[i].bypass = next;
+                    slotEl.classList.toggle('mpi-model-settings__lora-slot--bypassed', next);
+                    _autoSave();
+                });
+
                 slotEl.appendChild(dropHost);
                 slotEl.appendChild(strengthsEl);
+                slotEl.appendChild(bypassBtn);
                 list.appendChild(slotEl);
 
                 const info = _resolveInfo(slot.name, state.availableLoras);
@@ -436,6 +467,7 @@ export const MpiModelSettings = ComponentFactory.create({
                     name: s.name || null,
                     strengthModel: s.strengthModel ?? 1.0,
                     strengthClip: s.strengthClip ?? 1.0,
+                    bypass: s.bypass ?? false,
                 };
             });
         }
@@ -462,6 +494,7 @@ export const MpiModelSettings = ComponentFactory.create({
                     slotEl.className = [
                         'mpi-model-settings__lora-slot',
                         !slot.name ? 'mpi-model-settings__lora-slot--empty' : '',
+                        slot.bypass ? 'mpi-model-settings__lora-slot--bypassed' : '',
                     ].filter(Boolean).join(' ');
 
                     const dropHost = document.createElement('div');
@@ -473,8 +506,15 @@ export const MpiModelSettings = ComponentFactory.create({
                         (value) => { _loraSlots[stage.key][i].strengthClip = value; _autoSave(); },
                     );
 
+                    const bypassBtn = _buildBypassBtn(slot.bypass, (next) => {
+                        _loraSlots[stage.key][i].bypass = next;
+                        slotEl.classList.toggle('mpi-model-settings__lora-slot--bypassed', next);
+                        _autoSave();
+                    });
+
                     slotEl.appendChild(dropHost);
                     slotEl.appendChild(strengthsEl);
+                    slotEl.appendChild(bypassBtn);
                     list.appendChild(slotEl);
 
                     const info = _resolveInfo(slot.name, state.availableLoras);
