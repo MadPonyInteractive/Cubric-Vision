@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-233",
+  "title": "Searchable LoRA tree picker",
+  "description": "New MpiLoraPicker primitive: trigger opens a portalled box with a search box + collapsible file-system folder tree built from state.availableLoras paths. Replaces MpiDropdown at both LoRA-slot mount sites in MpiModelSettings (flat + staged) for all model types; value stays the full path string so heal/missing/inject logic is untouched. Other 5 MpiDropdown consumers unchanged.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-08T20:35:00Z",
+  "updated_at": "2026-07-08T20:40:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl"
+  }
+}

@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-233","type":"task.created","at":"2026-07-08T20:35:00Z","actor":"claude","summary":"Searchable LoRA tree picker — new MpiLoraPicker primitive."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-233","type":"task.updated","at":"2026-07-08T20:40:00Z","actor":"claude","summary":"Compact plan attached; maturity idea -> planned."}
