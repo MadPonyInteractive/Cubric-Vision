@@ -1047,21 +1047,21 @@ function createEngine({ engine, alwaysLocal }) {
                     }
                 } catch (e) {
                     clientLogger.error('comfy', `Asset upload failed for ${paramKey}`, e);
-                    // A deleted input source (e.g. the user deleted the preview card
-                    // whose start-frame this gen sources from — the upload is lazy at
-                    // dispatch, so the /project-file source is already gone) 404s here.
-                    // Re-throw a friendly, actionable message instead of the raw
-                    // "Failed to prepare blob" crash; commandExecutor's catch surfaces
-                    // it as the ui:error dialog and settles the job cleanly. Shared
-                    // path → covers both local and remote engines (one _uploadImage).
+                    // A deleted input source (e.g. the reused frame's content asset
+                    // was removed by the manual Cleanup command, or the source is
+                    // otherwise gone — the upload is lazy at dispatch, so the
+                    // /project-file source 404s here). Tag it with a code so
+                    // commandExecutor surfaces a WARNING TOAST (user-actionable), not
+                    // the GitHub bug-reporter dialog (MPI-227 downgrade of MPI-225's
+                    // soft-fail). Shared path → covers local AND remote engines.
                     if (
                         typeof val === 'string' &&
                         val.includes('project-file') &&
                         /HTTP 404/.test(e.message || '')
                     ) {
-                        throw new Error(
-                            'The input image for this generation was deleted. Re-add it and try again.'
-                        );
+                        const softErr = new Error('Cannot reuse — prompt assets no longer exist. Re-add the input and try again.');
+                        softErr.code = 'input_asset_deleted';
+                        throw softErr;
                     }
                     throw e;
                 }

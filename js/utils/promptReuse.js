@@ -36,9 +36,10 @@ function _mediaItemsFrom(settings = {}) {
         : [];
 }
 
-function _opHasImageInput(op) {
-    return !!op && getCommandMediaInputs(op).some(slot => slot.mediaType === 'image');
+function _opHasMediaInput(op, mediaType) {
+    return !!op && getCommandMediaInputs(op).some(slot => slot.mediaType === mediaType);
 }
+function _opHasImageInput(op) { return _opHasMediaInput(op, 'image'); }
 
 // True when the reused operation declares an image input slot (op-driven, via
 // commandRegistry) — NOT a hardcoded model/op family. Drives whether saved
@@ -52,6 +53,19 @@ function _opHasImageInput(op) {
 function _opAcceptsImageInput(item = {}, source = {}) {
     if (_opHasImageInput(source.operation || item.operation)) return true;
     return _opHasImageInput(item.generationSettings?.operation);
+}
+
+// Video/audio input parallels of _opAcceptsImageInput (MPI-227). Same op-driven
+// gate (commandRegistry media slots), same extend fallback via generationSettings.
+// Video-input ops: extend, interpolate, videoUpscale, resizeVideo. Audio-input
+// ops: t2v_ms, i2v_ms (LTX only — capability-gated, so non-LTX naturally false).
+function _opAcceptsVideoInput(item = {}, source = {}) {
+    if (_opHasMediaInput(source.operation || item.operation, 'video')) return true;
+    return _opHasMediaInput(item.generationSettings?.operation, 'video');
+}
+function _opAcceptsAudioInput(item = {}, source = {}) {
+    if (_opHasMediaInput(source.operation || item.operation, 'audio')) return true;
+    return _opHasMediaInput(item.generationSettings?.operation, 'audio');
 }
 
 function _mediaItemsFromPreviewAssets(item = {}) {
@@ -70,50 +84,13 @@ function _mediaItemsFromPreviewAssets(item = {}) {
         }));
 }
 
-function _projectFileUrl(filePath) {
-    return `/project-file?path=${encodeURIComponent(filePath)}`;
-}
-
-async function _fileExists(filePath) {
-    try {
-        const res = await fetch(`/file-exists?path=${encodeURIComponent(filePath)}`);
-        if (!res.ok) return false;
-        const data = await res.json();
-        return data?.exists === true;
-    } catch (_) {
-        return false;
-    }
-}
-
-async function _materializedPreviewAssetMediaItems(item = {}, project = {}) {
+// MPI-227: the sidecar snapshot filePath is authoritative — the store is now
+// content-addressed, flat, and permanent (migration rewrites old per-item refs to
+// the flat SHA path). The old `_materializedPreviewAssetMediaItems` probed the
+// per-item `.preview-assets/<id>/startFrame.png` layout via /file-exists; that
+// path no longer exists, so we read the snapshot ref directly.
+function _previewAssetMediaItems(item = {}) {
     if (!_opAcceptsImageInput(item)) return [];
-    if (!item.id || !project.folderPath) return [];
-
-    const base = `${project.folderPath}\\Media\\.preview-assets\\${item.id}`;
-    const candidates = [
-        { role: 'startFrame', filename: 'startFrame.png' },
-        { role: 'endFrame', filename: 'endFrame.png' },
-    ];
-    const mediaItems = [];
-    for (const candidate of candidates) {
-        const filePath = `${base}\\${candidate.filename}`;
-        if (await _fileExists(filePath)) {
-            mediaItems.push({
-                id: `reuse-${item.id}-${candidate.role}`,
-                url: _projectFileUrl(filePath),
-                mediaType: 'image',
-                source: 'previewAsset',
-                role: candidate.role,
-            });
-        }
-    }
-    return mediaItems;
-}
-
-async function _previewAssetMediaItems(item = {}, project = {}) {
-    if (!_opAcceptsImageInput(item)) return [];
-    const materialized = await _materializedPreviewAssetMediaItems(item, project);
-    if (materialized.length) return materialized;
     return _mediaItemsFromPreviewAssets(item);
 }
 
@@ -149,16 +126,22 @@ export function buildPromptReusePayload(item = {}) {
     }
 
     const acceptsImage = _opAcceptsImageInput(item, source);
+    const acceptsVideo = _opAcceptsVideoInput(item, source);
+    const acceptsAudio = _opAcceptsAudioInput(item, source);
     const previewMediaItems = acceptsImage ? _mediaItemsFromPreviewAssets(item) : [];
-    // Drop saved IMAGE media when the op declares no image input. Heals sidecars
-    // corrupted before MPI-225's generationService fix, where a leftover
-    // start-frame chip was snapshotted into a t2i's generationSettings.mediaItems
-    // — that phantom image otherwise lights up "Use Images" on the Reuse dialog
-    // and injects the wrong image. Non-image saved media (audio, non-frame video)
-    // is never op-gated here — it flows through untouched.
-    const savedMediaItems = _mediaItemsFrom(source).filter(
-        m => acceptsImage || (m.mediaType ?? m.type) !== 'image'
-    );
+    // Op-gate saved media by its declared input slots (MPI-225 → MPI-227). Heals
+    // sidecars where a leftover chip was snapshotted into an op that can't consume
+    // it — e.g. a phantom start-frame on a t2i lights up "Use Images" and injects
+    // the wrong image. Each media type is now gated by whether the reused op
+    // declares that input: image (MPI-225), and video + audio (MPI-227). A media
+    // type with no declared slot is dropped so its Use-* toggle greys correctly.
+    const savedMediaItems = _mediaItemsFrom(source).filter(m => {
+        const type = m.mediaType ?? m.type;
+        if (type === 'image') return acceptsImage;
+        if (type === 'video') return acceptsVideo;
+        if (type === 'audio') return acceptsAudio;
+        return true;
+    });
 
     return {
         positive: item.prompt ?? source.prompt ?? '',
@@ -185,11 +168,12 @@ function _mergeReuseMedia(frameItems = [], savedItems = []) {
     return [...frameItems, ...savedNonImage];
 }
 
-export async function resolvePromptReuseMediaItems(payload = {}, project = {}) {
-    // Materialized preview-asset frames are the authoritative IMAGE source. Merge
-    // them with the payload's saved NON-image media (audio, non-frame video) so an
-    // i2v gen with audio recalls its frames AND its audio — not one or the other.
-    const previewItems = await _previewAssetMediaItems(payload.item, project);
+export async function resolvePromptReuseMediaItems(payload = {}) {
+    // Preview-asset frames (from the flat content-addressed store, MPI-227) are the
+    // authoritative IMAGE source. Merge them with the payload's saved NON-image
+    // media (audio, non-frame video) so an i2v gen with audio recalls its frames
+    // AND its audio — not one or the other. Kept async for caller compatibility.
+    const previewItems = _previewAssetMediaItems(payload.item);
     const existing = Array.isArray(payload.mediaItems) ? payload.mediaItems.filter(Boolean) : [];
     const merged = _mergeReuseMedia(previewItems, existing);
     return merged;
@@ -205,8 +189,22 @@ export async function resolvePromptReuseMediaItems(payload = {}, project = {}) {
 // materialized frames on disk, but only for ops that accept image input — which a
 // no-input-image source's op does not, so the sync check matches.
 export function payloadHasReusableImages(payload = {}) {
+    return _payloadHasReusableType(payload, 'image');
+}
+
+// Video/audio parallels (MPI-227). The op-gate in buildPromptReusePayload already
+// dropped video/audio that the reused op can't consume, so a truthy result means
+// the source both HAS that media and the op ACCEPTS it — the Reuse dialog uses
+// these to enable/grey the "Use Video" / "Use Audio" toggles.
+export function payloadHasReusableVideos(payload = {}) {
+    return _payloadHasReusableType(payload, 'video');
+}
+export function payloadHasReusableAudio(payload = {}) {
+    return _payloadHasReusableType(payload, 'audio');
+}
+function _payloadHasReusableType(payload = {}, mediaType) {
     const items = Array.isArray(payload?.mediaItems) ? payload.mediaItems : [];
-    return items.some(m => m && (m.url || m.filePath) && (m.mediaType === 'image' || m.type === 'image'));
+    return items.some(m => m && (m.url || m.filePath) && (m.mediaType === mediaType || m.type === mediaType));
 }
 
 export function itemHasReusablePrompt(item = {}) {

@@ -40,7 +40,7 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings, listProjects } from '../../../services/projectService.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
-import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages } from '../../../utils/promptReuse.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
     createImageItem,
     createVideoItem,
@@ -1036,6 +1036,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 settings: value.settings === true,
                 model: value.model === true,
                 images: value.images === true,
+                video: value.video === true,
+                audio: value.audio === true,
             };
         }
 
@@ -1053,11 +1055,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     includes: options,
                     source: state.promptReuseSource,
                     showSource: true,
-                    // Per-source image availability so the dialog can grey out
-                    // "Use Images" for a source with no reusable input image (MPI-212).
+                    // Per-source media availability so the dialog can grey out each
+                    // "Use …" toggle for a source lacking that input (MPI-212/227).
                     imageAvailability: {
                         original: payloadHasReusableImages(bundle.original),
                         current: payloadHasReusableImages(bundle.current),
+                    },
+                    videoAvailability: {
+                        original: payloadHasReusableVideos(bundle.original),
+                        current: payloadHasReusableVideos(bundle.current),
+                    },
+                    audioAvailability: {
+                        original: payloadHasReusableAudio(bundle.original),
+                        current: payloadHasReusableAudio(bundle.current),
                     },
                 });
                 dialog.on('apply', async ({ includes, source }) => {
@@ -1074,10 +1084,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (payload) _applyPromptReuse(payload, _reuseIncludes(options));
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
             if (!_pb?.el) return;
             const use = _reuseIncludes(includes);
-            if (!use.prompt && !use.settings && !use.model && !use.images) return;
+            if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 
             let targetModel = activeModel;
             if (use.model && payload.modelId) {
@@ -1120,16 +1130,23 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
-            // Only reuse images when the SOURCE actually has an input image to
-            // reuse. A card generated without one (e.g. a t2i output) carries no
-            // reusable image, so injecting for it does nothing but warn + leave an
-            // image-required target op empty (MPI-212). Skip the whole branch —
-            // the dialog also greys "Use Images" for such sources, but the
-            // ask-disabled path lands here directly with a stored images:true.
-            if (use.images && payloadHasReusableImages(payload)) {
+            // Reuse media the user opted into, gated per-type by what the SOURCE
+            // actually carries (MPI-212 image gate → MPI-227 video/audio). A card
+            // generated without a given input carries no reusable media of that type,
+            // so injecting does nothing but warn + leave a required slot empty — the
+            // dialog greys those toggles, and this mirrors the gate for the
+            // ask-disabled path that lands here with stored flags. Resolve ONCE
+            // (returns all types), then inject the enabled subset.
+            const _wantImages = use.images && payloadHasReusableImages(payload);
+            const _wantVideo = use.video && payloadHasReusableVideos(payload);
+            const _wantAudio = use.audio && payloadHasReusableAudio(payload);
+            if (_wantImages || _wantVideo || _wantAudio) {
                 _pb.el.clearMedia?.();
-                const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
-                if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
+                const resolved = await resolvePromptReuseMediaItems(payload);
+                const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
+                const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
+                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
+                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
                     StatusBar.notify('No saved frame images were found for this older entry.', 'warning');
                 }
                 // Resolve a reused input file back to its source group's custom
@@ -1334,14 +1351,31 @@ export const MpiGalleryBlock = ComponentFactory.create({
             return [first.placeholderGroup, ...(first.extraPlaceholders || [])].filter(Boolean);
         };
 
-        _unsubs.push(Events.on('generation:started', ({ id, scope }) => {
+        _unsubs.push(Events.on('generation:started', ({ id, scope, placeholderGroup, extraPlaceholders }) => {
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
+            // MPI-226: during a Stop-driven loop re-fire, the OLD cancelled entry is
+            // still status:'running' in the registry for a synchronous window (cancel
+            // re-orders: exec.cancel → new start+started → old marked cancelled). So
+            // _firstRunningEntry() would return the OLD entry here and mount the WRONG
+            // placeholder. If we are NOT yet the first-running entry, do nothing —
+            // _rebuildAfterEnd (fired on the OLD cancelled, moments later) promotes us
+            // via _placeholdersForFirst() once the OLD entry is gone. When we ARE first,
+            // mount OUR placeholder straight from the event payload (canonical), not
+            // via _placeholdersForFirst() which reads the same objects indirectly.
+            const first = _firstRunningEntry();
+            if (!first || first.id !== id) {
+                clientLogger.info('MPI226', `gallery generation:started id=${id} QUEUED (first=${first?.id||'null'}) — defer mount`);
+                return;
+            }
+            const _ph = [placeholderGroup, ...(extraPlaceholders || [])].filter(Boolean);
+            clientLogger.info('MPI226', `gallery generation:started id=${id} FIRST — mount placeholders=${_ph.map(p=>p.id).join(',')||'none'}`);
             const currentGroups = _visibleProjectGroups();
-            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            grid.el.setGroups([..._ph, ...currentGroups]);
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
+            clientLogger.info('MPI226', `gallery generation:preview id=${id} mine=${_myGenIds.has(id)} first=${_firstRunningEntry()?.id||'null'}`);
             if (!_myGenIds.has(id)) return;
             // Only paint preview for the first-running entry (the one whose
             // placeholder is actually mounted).
@@ -1368,8 +1402,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.delete(id);
             const allTempIds = [tid, ...extraTempIds].filter(Boolean);
             for (const t of allTempIds) grid.el.removeCard(t);
+            const _ph = _placeholdersForFirst();
+            clientLogger.info('MPI226', `_rebuildAfterEnd id=${id} removedTemps=${allTempIds.join(',')||'none'} firstRunning=${_firstRunningEntry()?.id||'null'} newPlaceholders=${_ph.map(p=>p.id).join(',')||'none'}`);
             const currentGroups = _visibleProjectGroups();
-            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            grid.el.setGroups([..._ph, ...currentGroups]);
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {
@@ -1386,6 +1422,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }));
 
         _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid, extraTempIds = [] }) => {
+            clientLogger.info('MPI226', `gallery generation:cancelled id=${id} mine=${_myGenIds.has(id)} firstRunning=${_firstRunningEntry()?.id||'null'}`);
             if (!_myGenIds.has(id)) {
                 // Second cancelled for an already-forgotten id = the interrupted
                 // gen returned EMPTY (no late complete is coming). Drop the bridge

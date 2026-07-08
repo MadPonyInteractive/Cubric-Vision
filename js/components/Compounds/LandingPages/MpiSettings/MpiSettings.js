@@ -18,6 +18,8 @@ const REUSE_PARTS = [
     { key: 'settings', label: 'Use Settings' },
     { key: 'model', label: 'Use Model' },
     { key: 'images', label: 'Use Images' },
+    { key: 'video', label: 'Use Video' },
+    { key: 'audio', label: 'Use Audio' },
 ];
 
 /**
@@ -208,6 +210,8 @@ export const MpiSettings = ComponentFactory.create({
                     settings: state.promptReuseOptions?.settings !== false,
                     model: state.promptReuseOptions?.model !== false,
                     images: state.promptReuseOptions?.images !== false,
+                    video: state.promptReuseOptions?.video !== false,
+                    audio: state.promptReuseOptions?.audio !== false,
                 };
                 const partChecks = new Map();
                 let askCheck = null;
@@ -224,6 +228,8 @@ export const MpiSettings = ComponentFactory.create({
                     options.settings = next.settings !== false;
                     options.model = next.model !== false;
                     options.images = next.images !== false;
+                    options.video = next.video !== false;
+                    options.audio = next.audio !== false;
                     syncChecks();
                 };
                 const saveOptions = () => {

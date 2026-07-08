@@ -38,7 +38,7 @@ import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
-import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages } from '../../../utils/promptReuse.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
@@ -891,6 +891,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 settings: value.settings === true,
                 model: value.model === true,
                 images: value.images === true,
+                video: value.video === true,
+                audio: value.audio === true,
             };
         }
 
@@ -901,9 +903,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     includes: options,
                     showSource: false,
                     // Single-source dialog (no Original/Current toggle) → the
-                    // dialog defaults source to 'original'; gate Use Images on
-                    // whether THIS payload has a reusable input image (MPI-212).
+                    // dialog defaults source to 'original'; gate each Use … toggle on
+                    // whether THIS payload carries that input (MPI-212/227).
                     imageAvailability: { original: payloadHasReusableImages(payload) },
+                    videoAvailability: { original: payloadHasReusableVideos(payload) },
+                    audioAvailability: { original: payloadHasReusableAudio(payload) },
                 });
                 dialog.on('apply', async ({ includes }) => {
                     await _applyPromptReuse(payload, _reuseIncludes(includes));
@@ -916,9 +920,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _applyPromptReuse(payload, _reuseIncludes(options));
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
             const use = _reuseIncludes(includes);
-            if (!use.prompt && !use.settings && !use.model && !use.images) return;
+            if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 
             let targetModel = activeModel;
             if (use.model && payload.modelId) {
@@ -966,13 +970,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
-            // Skip images reuse when the source has no reusable input image (e.g.
-            // a t2i output) — injecting for it only warns + leaves an image-required
-            // target op empty (MPI-212). Matches the gallery block + dialog grey-out.
-            if (use.images && payloadHasReusableImages(payload)) {
+            // Reuse the media the user opted into, gated per-type by what the source
+            // carries (MPI-212 image → MPI-227 video/audio). A source lacking a type
+            // injects nothing but a warning + an empty required slot, so skip it — the
+            // dialog greys those toggles; this mirrors the gate for the ask-disabled
+            // path. Resolve ONCE (all types), inject the enabled subset.
+            const _wantImages = use.images && payloadHasReusableImages(payload);
+            const _wantVideo = use.video && payloadHasReusableVideos(payload);
+            const _wantAudio = use.audio && payloadHasReusableAudio(payload);
+            if (_wantImages || _wantVideo || _wantAudio) {
                 _pb.el.clearMedia?.();
-                const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
-                if (!mediaItems.length && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
+                const resolved = await resolvePromptReuseMediaItems(payload);
+                const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
+                const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
+                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
+                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
                     _showToast('No saved frame images were found for this older entry.', 'warning');
                 }
                 for (const item of mediaItems) {

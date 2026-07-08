@@ -1734,6 +1734,19 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // MPI-227: a reused input asset was deleted (manual Cleanup wiped the
+            // content-addressed store, or the source is otherwise gone). Expected +
+            // user-actionable, so a warning toast — NOT the bug-reporter dialog
+            // (downgrade of MPI-225's soft-fail ui:error).
+            if (err?.code === 'input_asset_deleted') {
+                clientLogger.warn('comfy', `Reused input asset missing — ${workingPayload.operation} / ${workingPayload.modelId}`);
+                Events.emit('ui:warning', {
+                    title: 'Prompt assets no longer exist',
+                    message: err.message,
+                });
+                exec.onError?.(err);
+                return;
+            }
             clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });

@@ -104,7 +104,80 @@ untouched.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Phase 1** — content-addressed store helpers + write-site conversion.
+      Added `crypto` require, `computeFileSha256`, `placeContentAsset(sourceUrl,
+      ext, mediaDir, projectRoot)` (temp→hash→dedup-move to flat
+      `.preview-assets/<sha256><ext>`). Converted `materializePreviewAssets`,
+      `materializeGenerationFrameSnapshots` (covers `/extend-video` too), and moved
+      the generation-frame-snapshot call OUT of the `!replaceItemId` guard so Finish
+      also stamps flat SHA refs. Test `tests/content-addressed-store.test.cjs` PASS
+      (dedup: same bytes→1 file; distinct bytes→2 files; no temp scratch).
+- [x] **Phase 2** — neutralized card-delete `.preview-assets/<itemId>/` removal
+      (the reuse-404 root). Latent delete left intact per scope boundary (latents =
+      per-item stage-2 support, not reuse media). Grep confirms NO preview-assets
+      `fs.remove` survives on card-delete. Readiness-probe fallback candidate updated
+      to the flat store path.
+- [x] **Phase 3** — migration `migratePreviewAssetsStore(folderPath)` wired into the
+      existing `/migrate-project` route (fired once per project-open by
+      `openProject`). Flattens+dedups legacy per-item folders → flat SHA store,
+      rewrites all three sidecar ref shapes (previewAssets.snapshots[],
+      generationSettings.mediaItems[], frozenParams.mediaItems[]), removes empty
+      folders, writes `.migrated-v1` marker (idempotent). VERIFIED on a COPY of the
+      real Chroma project: 2 identical per-item frames → 1 flat file, 0 subdirs, all
+      5 sidecar refs resolve, re-run no-op. Guard test added (synthetic layout).
+- [x] **Phase 4** — reuse read + video/audio gates (`js/utils/promptReuse.js`).
+      DELETED `_materializedPreviewAssetMediaItems` (+ `_fileExists`/`_projectFileUrl`)
+      — the per-item `.preview-assets/<id>/startFrame.png` probe is gone; sidecar
+      `filePath` (flat, migration-rewritten) is authoritative via
+      `_mediaItemsFromPreviewAssets`. Added `_opAcceptsVideoInput`/`_opAcceptsAudioInput`
+      + `payloadHasReusableVideos`/`payloadHasReusableAudio`. Extended the MPI-225
+      op-gate in `buildPromptReusePayload` to gate saved video+audio too (image gate
+      preserved). `resolvePromptReuseMediaItems` de-async'd its internal read (kept
+      async signature for callers). Guard `tests/reuse-video-audio-gate.test.cjs`
+      (5/5): extend→video, i2v_ms→image+audio, t2v_ms→audio, t2i→none. Syntax check
+      clean; no dangling refs.
+- [x] **Phase 5 (CODE)** — Reuse dialog Use Video + Use Audio toggles.
+      `MpiReusePromptDialog.js`: PARTS + `_normalizeIncludes` gain video/audio;
+      generalized the images-only availability gate into a keyed `MEDIA_PARTS` loop
+      (`_syncMediaAvailability` greys any media toggle the source lacks). `types.js`:
+      documented `videoAvailability`/`audioAvailability` + backfilled `imageAvailability`.
+      Both mount sites (MpiGalleryBlock dual-source, MpiGroupHistoryBlock single):
+      pass the three `*Availability` maps; `_applyPromptReuse` resolves media ONCE
+      and injects the enabled subset (image/video/audio each gated by
+      `payloadHasReusable*`). 2-col CSS grid auto-flows 6 checkboxes (no CSS change).
+      All files syntax-clean. **USER-UX VERIFY PENDING** (see acceptance #3).
+- [x] **Phase 6 (CODE)** — Cleanup command + soft-fail downgrade.
+      Route `POST /project/cleanup-assets` wipes flat `.preview-assets/` content
+      (preserves `.migrated-v1`; keeps media/.meta/.latents) — LIVE-VERIFIED via
+      :3999 harness (`{success:true,removed:2}`, marker + media + sidecar + latent
+      intact). `projectUI.js`: "Cleanup assets…" context-menu item (sparkle) +
+      `_showCleanupConfirm` (MpiOkCancel → route → ui:success/warning toast).
+      Soft-fail DOWNGRADE: comfyController tags the deleted-input 404 with
+      `code:'input_asset_deleted'` + friendly message; commandExecutor's catch emits
+      a `ui:warning` toast (not the bug-reporter dialog) for that code. All files
+      syntax-clean. **USER-UX VERIFY PENDING** (see acceptance #5).
+- [x] **Phase 5b (CODE)** — Settings panel Reuse Prompt: added Use Video + Use Audio
+      to `MpiSettings.js` REUSE_PARTS + options object + `_syncReuseControls`. 6
+      checkboxes render + persist to `state.promptReuseOptions` (2-col grid, no CSS
+      change). USER-VERIFIED live (all 6 show + toggle in Settings).
+
+## Outstanding validation (session end 2026-07-08 — card stays doing/validating)
+
+USER-VERIFIED so far: Reuse dialog shows Use Video + Use Audio; Settings panel
+shows all 6 Reuse Prompt toggles; Cleanup route works on both migrated AND
+unmigrated (per-item) projects (harness-proven). STILL TO VALIDATE in the app:
+
+- [ ] **Reuse VIDEO** — reuse from an extend/interpolate/videoUpscale/resizeVideo
+      card with Use Video on → the source video chip actually injects into the
+      PromptBox; a plain image op greys "Use Video".
+- [ ] **Reuse AUDIO** — reuse from an LTX audio i2v/t2v card with Use Audio on →
+      the audio chip injects; a non-LTX / no-audio source greys "Use Audio".
+- [ ] Cleanup context-menu flow end-to-end (right-click project → Cleanup → confirm
+      → success toast) + reuse-after-cleanup shows a WARNING toast, not the error
+      dialog (`code:'input_asset_deleted'`).
+
+When these pass → commit (pathspec) + move to done (maturity complete, status
+accepted). NOT committed yet.
 
 ## Remaining Work
 

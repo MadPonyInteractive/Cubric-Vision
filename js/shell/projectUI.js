@@ -255,6 +255,38 @@ function _showDeleteConfirm(projectName, onConfirm) {
 }
 
 /**
+ * MPI-227: manual Cleanup — the only GC for the content-addressed preview-assets
+ * store. Confirms, then wipes Media/.preview-assets/ content for this project.
+ * History media + sidecars are untouched; a later reuse of a wiped frame soft-fails
+ * to a warning toast. Fresh mount per call (same rationale as _showDeleteConfirm).
+ * @param {Object} project
+ */
+function _showCleanupConfirm(project) {
+  const dialog = MpiOkCancel.mount(document.createElement('div'), {
+    title: 'Cleanup assets',
+    text: `Remove cached reuse assets (start/end frames) for "${project.name}"? This frees disk space. Your generated media and history are kept, but Reuse Prompt will no longer be able to re-add those input frames.`,
+    okLabel: 'Cleanup',
+    cancelLabel: 'Cancel',
+  });
+  dialog.on('ok', async () => {
+    try {
+      const res = await fetch('/project/cleanup-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: project.folderPath }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) throw new Error(data.error || 'Cleanup failed');
+      Events.emit('ui:success', { title: 'Cleanup complete', message: `Removed ${data.removed || 0} cached asset${data.removed === 1 ? '' : 's'}.` });
+    } catch (err) {
+      clientLogger.warn('projectUI', `cleanup-assets failed: ${err.message}`);
+      Events.emit('ui:warning', { title: 'Cleanup failed', message: err.message });
+    }
+  });
+  dialog.el.show();
+}
+
+/**
  * Prompts for a new display name and persists it to project.json (name field
  * only — the folder on disk is never renamed). Refreshes the grid on success.
  * @param {Object} project
@@ -436,15 +468,17 @@ function _buildProjectRow(project) {
       x: e.clientX,
       y: e.clientY,
       items: [
-        { key: 'notes',  icon: 'text',   label: 'Project notes' },
-        { key: 'rename', icon: 'edit',   label: 'Rename project' },
-        { key: 'open',   icon: 'folder', label: 'Open project folder' },
-        { key: 'delete', icon: 'trash',  label: 'Delete project', danger: true },
+        { key: 'notes',   icon: 'text',    label: 'Project notes' },
+        { key: 'rename',  icon: 'edit',    label: 'Rename project' },
+        { key: 'open',    icon: 'folder',  label: 'Open project folder' },
+        { key: 'cleanup', icon: 'sparkle', label: 'Cleanup assets…' },
+        { key: 'delete',  icon: 'trash',   label: 'Delete project', danger: true },
       ],
       onSelect: (key) => {
-        if (key === 'notes')  return void _showProjectNotes(project);
-        if (key === 'rename') return void _renameProject(project);
-        if (key === 'open')   return void _openProjectFolder(project);
+        if (key === 'notes')   return void _showProjectNotes(project);
+        if (key === 'rename')  return void _renameProject(project);
+        if (key === 'open')    return void _openProjectFolder(project);
+        if (key === 'cleanup') return void _showCleanupConfirm(project);
         if (key !== 'delete') return;
         _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
           try {

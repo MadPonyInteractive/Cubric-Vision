@@ -25,6 +25,7 @@ const express = require('express');
 const router = express.Router();
 const fs     = require('fs-extra');
 const path   = require('path');
+const crypto = require('crypto');
 const util = require('util');
 const { execFile } = require('child_process');
 const logger = require('./logger');
@@ -261,6 +262,160 @@ function snapshotExt(sourceUrl) {
     return ext && ext.length <= 8 ? ext : '.png';
 }
 
+function computeFileSha256(filePath) {
+    return new Promise((resolve, reject) => {
+        const hash = crypto.createHash('sha256');
+        const stream = fs.createReadStream(filePath);
+        stream.on('data', (chunk) => hash.update(chunk));
+        stream.on('end', () => resolve(hash.digest('hex')));
+        stream.on('error', reject);
+    });
+}
+
+/**
+ * Content-addressed preview-assets store (MPI-227). Materializes `sourceUrl`
+ * into a temp file (reusing copySnapshotSource), hashes the bytes, and places
+ * the content at a FLAT, deduped, PERMANENT path: `Media/.preview-assets/<sha256><ext>`.
+ * Identical bytes collapse to ONE file (reuse 100× = 1 file). Nothing here ever
+ * deletes — only the manual Cleanup command wipes the store.
+ *
+ * @param {string} sourceUrl  data:/project-file/http(s)/local path (copySnapshotSource inputs)
+ * @param {string} ext        file extension incl. leading dot (from snapshotExt)
+ * @param {string} mediaDir   project Media dir
+ * @param {string} projectRoot project root for relativePath
+ * @returns {Promise<{filePath, relativePath, absPath, sha256}>}
+ */
+async function placeContentAsset(sourceUrl, ext, mediaDir, projectRoot) {
+    const storeDir = path.join(mediaDir, '.preview-assets');
+    await fs.ensureDir(storeDir);
+    const tmpPath = path.join(storeDir, `.tmp-${process.pid}-${uuidv4()}${ext}`);
+    try {
+        await copySnapshotSource(sourceUrl, tmpPath);
+        const sha256 = await computeFileSha256(tmpPath);
+        const absPath = path.join(storeDir, `${sha256}${ext}`);
+        if (await fs.pathExists(absPath)) {
+            await fs.remove(tmpPath).catch(() => {});
+        } else {
+            await fs.move(tmpPath, absPath, { overwrite: true });
+        }
+        return {
+            filePath: projectFileUrl(absPath),
+            relativePath: relativeProjectPath(projectRoot, absPath),
+            absPath,
+            sha256,
+        };
+    } catch (err) {
+        await fs.remove(tmpPath).catch(() => {});
+        throw err;
+    }
+}
+
+// Normalize an abs path for cross-sidecar comparison (Windows: separators + case).
+function _normAbs(p) {
+    return path.resolve(String(p || '')).replace(/\\/g, '/').toLowerCase();
+}
+
+/**
+ * MPI-227 one-time migration: flatten + dedup the legacy per-item
+ * `Media/.preview-assets/<itemId>/<file>` layout into the content-addressed flat
+ * store `Media/.preview-assets/<sha256><ext>`, then rewrite every sidecar ref
+ * (previewAssets.snapshots[], generationSettings.mediaItems[],
+ * frozenParams.mediaItems[]) that pointed at an old per-item path. Idempotent —
+ * guarded by a `.migrated-v1` marker and skips if no per-item folders exist.
+ */
+async function migratePreviewAssetsStore(folderPath) {
+    const mediaDir = path.join(folderPath, 'Media');
+    const storeDir = path.join(mediaDir, '.preview-assets');
+    const marker = path.join(storeDir, '.migrated-v1');
+    if (!(await fs.pathExists(storeDir))) return { migrated: false };
+    if (await fs.pathExists(marker)) return { migrated: false };
+
+    // 1. Find per-item subfolders (a legacy folder is a dir whose name is not a bare sha file).
+    const entries = await fs.readdir(storeDir, { withFileTypes: true });
+    const itemDirs = entries.filter(e => e.isDirectory());
+    if (!itemDirs.length) {
+        await fs.writeFile(marker, `${new Date().toISOString()}\n`, 'utf8').catch(() => {});
+        return { migrated: false };
+    }
+
+    // 2. Flatten + dedup every file; build oldAbs(normalized) -> new flat abs path map.
+    const remap = new Map();
+    for (const dir of itemDirs) {
+        const subdir = path.join(storeDir, dir.name);
+        let files;
+        try { files = await fs.readdir(subdir); } catch { continue; }
+        for (const name of files) {
+            const oldAbs = path.join(subdir, name);
+            try {
+                const stat = await fs.stat(oldAbs);
+                if (!stat.isFile()) continue;
+                const ext = path.extname(name).toLowerCase() || '.png';
+                const sha256 = await computeFileSha256(oldAbs);
+                const newAbs = path.join(storeDir, `${sha256}${ext}`);
+                if (!(await fs.pathExists(newAbs))) {
+                    await fs.move(oldAbs, newAbs, { overwrite: true });
+                } else {
+                    await fs.remove(oldAbs).catch(() => {});
+                }
+                remap.set(_normAbs(oldAbs), newAbs);
+            } catch (err) {
+                logger.warn('project', `preview-assets migration: skip ${oldAbs}: ${err.message}`);
+            }
+        }
+        await fs.remove(subdir).catch(() => {});
+    }
+
+    // 3. Rewrite sidecar refs. A ref string is a /project-file?path= URL (or abs path)
+    //    pointing at an old per-item file → swap in the flat SHA path.
+    function rewriteRef(value) {
+        const abs = decodeProjectFilePath(value) || (path.isAbsolute(String(value || '')) ? String(value) : null);
+        if (!abs) return null;
+        const hit = remap.get(_normAbs(abs));
+        return hit ? projectFileUrl(hit) : null;
+    }
+
+    const metaDir = path.join(mediaDir, '.meta');
+    let rewrote = 0;
+    if (await fs.pathExists(metaDir)) {
+        const metaFiles = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        for (const mf of metaFiles) {
+            const metaPath = path.join(metaDir, mf);
+            try {
+                await updateItemMeta(metaPath, (meta) => {
+                    let changed = false;
+
+                    for (const snap of (meta?.previewAssets?.snapshots || [])) {
+                        const next = rewriteRef(snap.filePath) || rewriteRef(snap.relativePath && path.join(folderPath, snap.relativePath));
+                        if (next) {
+                            const abs = decodeProjectFilePath(next);
+                            snap.filePath = next;
+                            snap.relativePath = relativeProjectPath(folderPath, abs);
+                            snap.filename = path.basename(abs);
+                            changed = true;
+                        }
+                    }
+                    for (const bag of [meta?.generationSettings?.mediaItems, meta?.frozenParams?.mediaItems]) {
+                        for (const item of (bag || [])) {
+                            const nextUrl = rewriteRef(item.url);
+                            const nextFp = rewriteRef(item.filePath);
+                            if (nextUrl) { item.url = nextUrl; changed = true; }
+                            if (nextFp) { item.filePath = nextFp; changed = true; }
+                        }
+                    }
+                    if (changed) rewrote++;
+                    return meta;
+                });
+            } catch (err) {
+                logger.warn('project', `preview-assets migration: sidecar rewrite failed ${mf}: ${err.message}`);
+            }
+        }
+    }
+
+    await fs.writeFile(marker, `${new Date().toISOString()}\n`, 'utf8').catch(() => {});
+    logger.info('project', `preview-assets migrated to flat store: ${remap.size} files, ${rewrote} sidecars rewritten`);
+    return { migrated: true, files: remap.size, sidecars: rewrote };
+}
+
 function resolveComfyOutputFile(fileInfo) {
     if (!fileInfo?.filename) return null;
     const engineRoot = getEngineRoot();
@@ -356,25 +511,21 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
 
     const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
     if (snapshotRequests.length) {
-        const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-        await fs.ensureDir(snapshotDir);
-
         for (const request of snapshotRequests) {
             if (!request?.url || (request.role !== 'startFrame' && request.role !== 'endFrame')) continue;
             const ext = snapshotExt(request.url);
-            const filename = `${request.role}${ext}`;
-            const targetPath = path.join(snapshotDir, filename);
             const meta = {
                 role: request.role,
                 mediaType: request.mediaType || 'image',
                 originalUrl: request.url,
-                filename,
-                relativePath: relativeProjectPath(projectRoot, targetPath),
-                filePath: projectFileUrl(targetPath),
                 status: 'available',
             };
             try {
-                await copySnapshotSource(request.url, targetPath);
+                // MPI-227: content-addressed flat store — dedup by bytes, permanent.
+                const placed = await placeContentAsset(request.url, ext, mediaDir, projectRoot);
+                meta.filename = path.basename(placed.absPath);
+                meta.relativePath = placed.relativePath;
+                meta.filePath = placed.filePath;
             } catch (err) {
                 logger.warn('project', 'preview snapshot materialization failed', err.message);
                 meta.status = 'missing';
@@ -433,9 +584,6 @@ async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, item
         .filter(({ item }) => item?.mediaType === 'image' && (item.url || item.filePath));
     if (!imageItems.length) return { generationSettings, previewAssets: null };
 
-    const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-    await fs.ensureDir(snapshotDir);
-
     const snapshots = [];
     const usedRoles = new Set();
     for (const { item, index } of imageItems) {
@@ -445,20 +593,19 @@ async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, item
 
         const sourceUrl = item.url || item.filePath;
         const ext = snapshotExt(sourceUrl);
-        const filename = `${role}${ext}`;
-        const targetPath = path.join(snapshotDir, filename);
         const meta = {
             role,
             mediaType: 'image',
             originalUrl: sourceUrl,
-            filename,
-            relativePath: relativeProjectPath(projectRoot, targetPath),
-            filePath: projectFileUrl(targetPath),
             status: 'available',
         };
 
         try {
-            await copySnapshotSource(sourceUrl, targetPath);
+            // MPI-227: content-addressed flat store — dedup by bytes, permanent.
+            const placed = await placeContentAsset(sourceUrl, ext, mediaDir, projectRoot);
+            meta.filename = path.basename(placed.absPath);
+            meta.relativePath = placed.relativePath;
+            meta.filePath = placed.filePath;
             mediaItems[index] = {
                 ...mediaItems[index],
                 role,
@@ -739,6 +886,37 @@ router.post('/delete-project', async (req, res) => {
     }
 });
 
+// MPI-227: manual Cleanup — the ONLY GC for the content-addressed preview-assets
+// store. Wipes every content file under Media/.preview-assets/ (the deduped reuse
+// frames), preserving the `.migrated-v1` marker so a re-open stays migrated. Media
+// outputs, sidecars (.meta), and latents (.latents) are untouched. After cleanup a
+// reuse that resolves to a now-missing frame soft-fails to a warning toast.
+router.post('/project/cleanup-assets', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        const jsonPath = path.join(folderPath, 'project.json');
+        if (!(await fs.pathExists(jsonPath))) {
+            return res.status(400).json({ success: false, error: 'Not a project folder (no project.json)' });
+        }
+
+        const storeDir = path.join(folderPath, 'Media', '.preview-assets');
+        let removed = 0;
+        if (await fs.pathExists(storeDir)) {
+            for (const entry of await fs.readdir(storeDir)) {
+                if (entry === '.migrated-v1') continue;
+                await fs.remove(path.join(storeDir, entry)).catch(() => {});
+                removed++;
+            }
+        }
+        logger.info('project', `cleanup-assets: removed ${removed} preview-asset entries`);
+        res.json({ success: true, removed });
+    } catch (err) {
+        logger.error('project', 'cleanup-assets error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ── Media Library ─────────────────────────────────────────────────────────────
 
 router.get('/project-media/:projectId', async (req, res) => {
@@ -854,10 +1032,11 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                 catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
             }
 
-            // Support-asset cleanup: drop any saved stage-1 latent and durable
-            // start/end-frame snapshots owned by this item. Preview and final
-            // I2V cards can both own `.preview-assets/<itemId>/` folders.
-            // Both the video latent and the LTX audio latent (MPI-128, may be absent).
+            // Support-asset cleanup: drop any saved stage-1 latent owned by this
+            // item. Both the video latent and the LTX audio latent (MPI-128, may
+            // be absent). Latents stay per-item (STAGE-2 support, not reuse media,
+            // non-deterministic → no dedup benefit) so deleting a preview frees its
+            // latent — that is correct (MPI-227 scope boundary).
             for (const latentName of [`${itemId}.latent`, `${itemId}.audio.latent`]) {
                 const latentPath = path.join(mediaDir, '.latents', latentName);
                 if (hasSupportAssets && await fs.pathExists(latentPath)) {
@@ -865,11 +1044,11 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                     catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
                 }
             }
-            const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-            if (await fs.pathExists(snapshotDir)) {
-                try { await fs.remove(snapshotDir); }
-                catch (e) { logger.warn('project', 'preview snapshot dir remove failed', e.message); }
-            }
+            // MPI-227: preview-assets are now a content-addressed, deduped, PERMANENT
+            // store — a frame may be shared by many cards (reuse), so card-delete must
+            // NOT touch it. The old per-item `.preview-assets/<itemId>/` folder delete
+            // (the reuse-404 root, MPI-225 band-aided) is removed. Only the manual
+            // Cleanup command wipes the flat store.
         }
 
         // Delete the legacy filename-based .meta/ sidecar
@@ -979,6 +1158,9 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
                 candidates.push(path.join(folderPath, snap.relativePath));
             }
             if (snap.filename) {
+                // MPI-227: flat content-addressed store (filename === <sha><ext>).
+                candidates.push(path.join(mediaDir, '.preview-assets', snap.filename));
+                // Legacy per-item fallback (pre-migration sidecars).
                 candidates.push(path.join(mediaDir, '.preview-assets', itemId, snap.filename));
             }
             for (const candidate of candidates) {
@@ -1540,18 +1722,24 @@ router.post('/project/save-generation', async (req, res) => {
             });
             materializedFrozenParams = materialized.frozenParams;
             materializedPreviewAssets = materialized.previewAssets;
+        }
 
-            const generationSnapshots = await materializeGenerationFrameSnapshots({
-                projectRoot: normalizedFolderPath,
-                mediaDir,
-                itemId: id,
-                operation,
-                generationSettings: materializedGenerationSettings,
-            });
-            materializedGenerationSettings = generationSnapshots.generationSettings;
-            if (!materializedPreviewAssets && generationSnapshots.previewAssets) {
-                materializedPreviewAssets = generationSnapshots.previewAssets;
-            }
+        // MPI-227: run generation frame snapshots on BOTH the preview save AND the
+        // preview→final replace (replaceItemId). On Finish, materialization used to
+        // be skipped, leaving the final card's generationSettings.mediaItems pointing
+        // at preview-era refs. With the content-addressed store, re-materializing is a
+        // free dedup no-op when bytes are identical, and it stamps the final card with
+        // stable flat SHA refs that survive the preview card's deletion.
+        const generationSnapshots = await materializeGenerationFrameSnapshots({
+            projectRoot: normalizedFolderPath,
+            mediaDir,
+            itemId: id,
+            operation,
+            generationSettings: materializedGenerationSettings,
+        });
+        materializedGenerationSettings = generationSnapshots.generationSettings;
+        if (!materializedPreviewAssets && generationSnapshots.previewAssets) {
+            materializedPreviewAssets = generationSnapshots.previewAssets;
         }
 
         // Determine pixel dimensions: prefer client-supplied (from ratio control),
@@ -2043,6 +2231,13 @@ router.post('/migrate-project', async (req, res) => {
             const { migrateProject } = require('../js/migrations/projectMigrations.js');
             return migrateProject(project, folderPath);
         });
+        // MPI-227: one-time flatten+dedup of the preview-assets store (idempotent,
+        // marker-guarded). Runs on the same project-open call, after project.json.
+        try {
+            await migratePreviewAssetsStore(folderPath);
+        } catch (err) {
+            logger.warn('project', `preview-assets migration failed (non-fatal): ${err.message}`);
+        }
         res.json({ success: true, project: migrated });
     } catch (err) {
         logger.error('project', 'migrate-project error', err);
@@ -2269,3 +2464,6 @@ router.get('/project-stats/:projectId', async (req, res) => {
 
 module.exports = router;
 module.exports.materializeGenerationFrameSnapshots = materializeGenerationFrameSnapshots;
+module.exports.placeContentAsset = placeContentAsset;
+module.exports.computeFileSha256 = computeFileSha256;
+module.exports.migratePreviewAssetsStore = migratePreviewAssetsStore;

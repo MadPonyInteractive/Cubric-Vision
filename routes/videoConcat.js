@@ -303,9 +303,9 @@ router.post('/extend-video', async (req, res) => {
         // Reuse Prompt metadata: attach the underlying i2v generation snapshot so
         // the extended entry replays Duration/ratio/model from the values the user
         // had at Extend press (NOT the combined clip length), and materialize the
-        // start-frame image under the extended item's own .preview-assets/<id>/ so
-        // Reuse Prompt can load it. Materialization is gated on the i2v `op`; the
-        // extend item's own operation stays 'extend'.
+        // start-frame image into the content-addressed .preview-assets/ store
+        // (MPI-227) so Reuse Prompt can load it. Materialization is gated on the
+        // i2v `op`; the extend item's own operation stays 'extend'.
         if (generationSettings && typeof generationSettings === 'object') {
             let gs = generationSettings;
             let previewAssets = null;

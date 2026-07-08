@@ -209,6 +209,25 @@
  */
 
 /**
+ * @typedef {Object} MpiTreePickerProps (Primitive — js/components/Primitives/MpiTreePicker)
+ * Searchable folder-tree picker for path-shaped option lists (MPI-233). Drop-in
+ * alternative to MpiDropdown — value stays the full path string so upstream
+ * heal/resolve/inject logic is untouched. First consumer: LoRA slots in
+ * MpiModelSettings; reuse anywhere a large list of `Folder\Sub\file.ext` values
+ * needs search + folder structure.
+ * @property {Array<{label:string,value:string,disabled?:boolean}>} [options=[]] - Option list; the entry with value '' becomes the pinned clear row, disabled entries render as pinned non-selectable rows above the tree
+ * @property {string} [value=''] - Selected full path
+ * @property {string} [placeholder='Select...'] - Trigger label when nothing selected
+ * @property {string} [searchPlaceholder='Search…'] - Placeholder inside the search input
+ * @property {string} [fileIcon='image'] - icons.js key for file-row icons
+ * @property {boolean} [stripExtension=false] - Hide the file extension in row/trigger labels (the stored value keeps the full path)
+ * @property {string} [extraClasses=''] - Root modifier (e.g. 'mpi-tree-picker--missing' for the red invalid state)
+ *
+ * Emits:
+ * 'change' { value: string, label: string }
+ */
+
+/**
  * @typedef {Object} MpiRadioGroupProps (Primitive — js/components/Primitives/MpiRadioGroup)
  * @property {Array<string|{label:string,value:string}>} [options=[]] - Option list
  * @property {string} [value=''] - Currently selected value
@@ -861,9 +880,12 @@
 
 /**
  * @typedef {Object} MpiReusePromptDialogProps (Compound - js/components/Compounds/MpiReusePromptDialog)
- * @property {{prompt?:boolean,settings?:boolean,model?:boolean,images?:boolean}} [includes] - Initial checked reuse parts
+ * @property {{prompt?:boolean,settings?:boolean,model?:boolean,images?:boolean,video?:boolean,audio?:boolean}} [includes] - Initial checked reuse parts
  * @property {'original'|'current'} [source='original'] - Initial Gallery source option
  * @property {boolean} [showSource=true] - Whether to show Gallery source radio controls
+ * @property {{original?:boolean,current?:boolean}} [imageAvailability] - Per-source: does the source carry a reusable input image? false greys "Use Images" (MPI-212)
+ * @property {{original?:boolean,current?:boolean}} [videoAvailability] - Per-source: reusable input video? false greys "Use Video" (MPI-227)
+ * @property {{original?:boolean,current?:boolean}} [audioAvailability] - Per-source: reusable input audio? false greys "Use Audio" (MPI-227)
  *
  * Instance methods (on instance.el):
  *   show()    - open the modal
