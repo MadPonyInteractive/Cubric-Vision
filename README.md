@@ -4,7 +4,7 @@
 
 # Cubric Vision
 
-**Local AI image and video generation, in a desktop app made for artists.**
+**ComfyUI's engine, without the engine room — AI image and video made easy, free, and open source.**
 
 [![Latest release](https://img.shields.io/github/v/release/MadPonyInteractive/Cubric-Vision?label=download&color=e84a8a)](https://github.com/MadPonyInteractive/Cubric-Vision/releases/latest)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
@@ -22,19 +22,19 @@
 Cubric Vision is a desktop workspace for generating images and video on your
 own machine. It runs ComfyUI as its engine — curated models, tuned workflows,
 no node graphs to wire up. You type a prompt, pick a model, and refine the
-result with masking, detailing, upscaling, and video tools. Everything stays
-local: your prompts, your images, your videos, your files.
+result with masking, detailing, upscaling, and video tools. Your prompts, images,
+videos, and project files stay on your disk.
 
 Free, open source, and made by [Mad Pony Interactive](https://madponyinteractive.com).
-No accounts. No API fees. No cloud.
+No accounts. No API fees. Runs on your machine — remote GPU optional.
 
 ![Cubric Vision projects workspace](.github/readme/ui-projects.webp)
 
 ## What it does
 
 - **Image generation** — curated lineup of local models (SDXL, Illustrious,
-  Pony-style, Flux, and more), with workflows tuned to give strong results
-  without parameter fiddling.
+  Pony-style), with workflows tuned to give strong results without parameter
+  fiddling.
 - **Video generation** — text-to-video and image-to-video in stages: preview
   first, then take the shot further only when it's worth the render time.
 - **Masking and detailing** — brush masks or auto-detect, inpaint any region,
@@ -88,7 +88,6 @@ release channel.
 | Workflow | GPU VRAM | System RAM |
 | --- | --- | --- |
 | Images (SDXL / Illustrious / Pony-style) | 8 GB+ | 16–32 GB |
-| Images (Flux and newer) | 12 GB+ | 32 GB+ |
 | Video | 12–16 GB | 32–64 GB |
 
 ## Documentation
