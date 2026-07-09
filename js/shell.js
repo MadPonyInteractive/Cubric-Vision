@@ -1115,6 +1115,15 @@ function _initRemoteConnectionFeed() {
         _last = false;
         return;
       }
+      // MPI-240: the backend already reports not-connected (Pod stopped) while a
+      // 'disconnecting' phase is still active — the teardown finished. Resolve it to
+      // clean local · offline so a lost/raced finally emit can't leave the hero stuck
+      // on "disconnecting · online" (mirrors the stale-'connecting' recovery above).
+      if (_remotePhase === 'disconnecting') {
+        _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+        _last = false;
+        return;
+      }
       if (connected !== _last) {
         _last = connected;
         _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null });
@@ -1132,6 +1141,14 @@ function _initRemoteConnectionFeed() {
       const r = await fetch(`/remote/pod/specs${qp}`);
       if (r.ok) specs = await r.json();
     } catch (_) { /* keep the fallback */ }
+    // MPI-240: a Disconnect the user pressed WHILE this connected tick was awaiting
+    // /remote/pod/specs must win. The tick sampled the Pod as up (~5s ago) then
+    // blocked on the specs fetch; if the disconnect's 'disconnecting'/local·offline
+    // emit landed during that await, emitting the (now stale) Pod card here would
+    // clobber it — the hero froze on the dead Pod's GPU card until the miss-debounce
+    // eventually recovered (~15-70s). Re-read the shared phase AFTER the await: a
+    // 'disconnecting' phase means the teardown is authoritative — drop this emit.
+    if (_remotePhase === 'disconnecting') return;
     _emitRemoteConnection({ connected: true, ...specs });
   };
 
