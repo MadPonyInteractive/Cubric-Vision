@@ -6,8 +6,13 @@
   "column": "doing",
   "maturity": "validating",
   "status": "active",
+  "attention": {
+    "state": "required",
+    "reason": "Coded+unit-tested+committed (27b9204). Needs LIVE verify: a Pod that dies WHILE connected (ephemeral reaped / warm evicted) → footer self-heals to local + ws-token 503 spam stops. A clean Disconnect does NOT exercise this (that is MPI-240).",
+    "updated_at": "2026-07-09T14:10:00Z"
+  },
   "created_at": "2026-07-09T13:00:00Z",
-  "updated_at": "2026-07-09T13:05:00Z",
+  "updated_at": "2026-07-09T14:10:00Z",
   "links": {
     "plan": null,
     "checklist": null,
