@@ -3,13 +3,14 @@
   "id": "MPI-228",
   "title": "Wrong preview painted: LTX multi-stage preview displayed the previous (WAN) preview's video",
   "description": "THE original symptom that opened the 2026-07-08 session (MPI-225 chased a downstream 404 instead). Repro on the Chroma project: (1) WAN multi-stage gen with 'Preview Initial Stage' on -> preview shown, previewable OK; (2) Continue this preview -> final WAN video displayed correctly; (3) repeat for LTX multi-stage -> when the LTX preview FINISHED, the card showed the WAN preview's video instead of the LTX preview (WRONG-ITEM PAINT); (4) Continue -> finished with the correct LTX video. So the mis-paint was transient (preview-display stage only), self-corrected on Finish. Likely a cross-item preview-display bug: the preview card/player latches or reuses the prior multi-stage preview's video URL/element when a second multi-stage preview completes back-to-back. Possibly related to MPI-226 (generationStore/queue 208/213 refactor: wrong-state paint, survivor re-latch) OR the preview-latent/hot-store staging - needs investigation to confirm. NOT the same as the MPI-225 reuse-404 (that was the delete-source-then-cue error at step 9). NO data lost. Needs its own repro + investigation.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-08T15:20:00Z",
-  "updated_at": "2026-07-08T15:20:00Z",
+  "updated_at": "2026-07-08T23:25:28Z",
   "links": {
     "plan": "plan.md",
+    "validation": "validation.md",
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"

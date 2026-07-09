@@ -1,7 +1,6 @@
 ---
 name: mpi-end
 description: Cubric Vision session close-out. Runs the full MPI end-session workflow, then a release-awareness check (unreleased changelog + versioning drift). Use when the user says "end this session", "end session", "wrap up", "commit and close", "we're done", "$mpi-end", or "/mpi-end".
-model: sonnet
 ---
 
 # mpi-end Skill
@@ -23,6 +22,12 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
 `mpi-end-session` flows through automatically.
 
 ## Steps
+
+0. **Switch to Sonnet first (cost — this workflow is mechanical).** Frontmatter
+   `model:` only holds for one turn, so it can't pin a multi-turn workflow like
+   this one. Instead run `/model sonnet` NOW, before Step 1, so the whole
+   close-out runs on Sonnet. If the session is already on Sonnet, skip. Tell the
+   user you switched; the session model resumes when they next prompt.
 
 1. **Run the user-scope end-session workflow.** Execute the full
    `mpi-end-session` skill (sync docs/rules, persist memory, commit touched
