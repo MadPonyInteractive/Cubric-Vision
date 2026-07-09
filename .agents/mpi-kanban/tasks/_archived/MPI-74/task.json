@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-74",
+  "title": "Per-generation \"Run locally\" override toggle (remote mode)",
+  "description": "Per-gen 'Run locally' toggle (Phases 1-5) PLUS true cloud+local concurrency (Phase 6): per-engine ComfyUIController + two queue lanes + per-engine Stop + non-blocking boot overlay + loop-safe re-fire. A force-local gen runs on local ComfyUI WHILE the cloud Pod generates. Live-verified on a connected Pod (47d2cdb; Option B warm-local-on-connect in ac00689). See plan.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-13T00:00:00.000Z",
+  "updated_at": "2026-06-17T18:20:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

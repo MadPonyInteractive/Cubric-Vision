@@ -1,0 +1,9 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-112","at":"2026-06-18T04:31:31.386Z","actor":"vscode","summary":"Created MPI-112."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-112","at":"2026-06-18T04:39:36.888Z","actor":"vscode","summary":"Updated MPI-112."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:41.434Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:43.914Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:48.154Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T04:39:50.514Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-112 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T05:00:00.000Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-112: extend reuse-prompt loses Duration param + start-frame image (save-time fix)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-112","at":"2026-06-18T06:15:00.000Z","actor":"claude","from":"doing","to":"done","summary":"MPI-112 complete + user-verified (RTX 5090): extend reuse metadata, duration drift, double/0s toast, Create New, last-frame seed, live reuse settings. Scoped out MPI-113/MPI-115."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-112", "type": "task.deleted", "at": "2026-06-28T17:30:00Z", "actor": "agent", "summary": "Archived from done column to .agents/mpi-kanban/tasks/_archive/MPI-112/ (board cleanup)."}

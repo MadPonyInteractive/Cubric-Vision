@@ -1,0 +1,136 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "8ee9fbb1-ab1f-42c9-b152-a14b62e2e951",
+  "generated_at": "2026-07-07T12:15:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-208 Phase 4 + Phase 5 (derived UI, reconcile, docs) + MPI-213 lane-key fix; handoff at final-acceptance + commit boundary",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-208 — generation queue refactor (cue/loop/stop/dual-engine state machine). Replace patch-over-patch cue/stop/status with a single owned generationStore state machine.",
+    "status": "in_progress",
+    "summary": "ALL 5 phases of MPI-208 are code-complete. Foundation + Phase 2 + Phase 3 are COMMITTED (e326e3e / 675880e / fff8444). Phase 4 (derived statusBar + genId bridge + _runLocal removal), Phase 5 (recovered-toast + regression checklist + docs), and the MPI-213 lane-key fix are all done, auto-verified, and Phase 4 + MPI-213 are LIVE-VERIFIED by the user — but UNCOMMITTED. Remaining: the final 7-point end-to-end acceptance sweep, then commit Phase 4 + Phase 5 + MPI-213 via mpi-end."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+    "completed": [
+      "Foundation B1-A/B/C (COMMITTED e326e3e): generationStore + tests, engine-tagged/merged SSE, engineOverride + effectiveEngine + R31",
+      "Phase 2 (COMMITTED 675880e): commandExecutor on the store — job register at engine+arch freeze, abort-token bail, store-phase model-load, engine-filtered SSE, exec.cancel->store.cancel. LIVE-VERIFIED.",
+      "Phase 3 (COMMITTED fff8444): generationService on the store (Option A) — store = lane/running truth, _cueQueue = pending intents, drain via setLoopCallback->_onLaneDrain, id-matched tool:cancelled. LIVE-VERIFIED + 3 console-fix rounds.",
+      "Phase 4 (UNCOMMITTED, LIVE-VERIFIED): statusBar derived from generation-store:changed (survivor re-latch fixes empty-bar, self-heal to idle, stage/total scoped to display job fixes stale 4/4); genId bridge (startGeneration _regId -> payload.genId -> store.register + activeGenerations.start({id})); _runLocal mirror removed (forceLocal from state.engineOverride, completes B1-C). Blocks/QueuePanel needed no edits (already store-backed facades + mount rebuild).",
+      "Phase 5 (UNCOMMITTED, auto-verified): 5s store poll intentionally NOT built (duplicate coverage — every runWorkflow exit settles the store, remote backstopped by _startHistoryPoll, local by WS-close reject); shipped the 'generation recovered' ui:info toast on _reconcileFromHistory success (archaeology Part-4 gap). Regression checklist written (research/regression-checklist.md). Docs updated (user-approved): events.md, component-state.md, comfy_engine.md §2.5a, ui-gotchas.md.",
+      "MPI-213 (UNCOMMITTED, DONE + LIVE-VERIFIED): lane-key mismatch fix — _laneOf now mirrors the store's engine->lane rule (forceLocal? 'local' : isRemote()?'remote':'local') so a no-Pod local gen's intent lane == its store lane; no more phantom '1 RUNNING'. Guard test tests/lane-agreement.test.cjs. Card in done."
+    ],
+    "pending": [
+      "Final 7-point end-to-end acceptance (plan.md § Verification, user-ux): exact 2026-07-06 stuck-bar repro; dual-lane Stop independence; loop arm/disarm; multi-cue R05-R07; history extend flow; cloud toggle R31; preview Continue/Finish loop gates. Most are already live-verified piecemeal across Phases 3/4 + MPI-213 — this is the consolidated sweep.",
+      "Commit Phase 4 + Phase 5 + MPI-213 by EXPLICIT PATHSPEC (shared tree, never git add -A). Files in context.files_modified. Foundation/P2/P3 already committed — do NOT re-commit them.",
+      "Move MPI-208 card doing/validating -> done ONLY after the final acceptance passes and commit lands."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-208",
+    "title": "Generation queue refactor — cue/loop/stop/dual-engine state machine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-208/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-208/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-208/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "run final 7-point end-to-end acceptance (user-ux)",
+    "commit Phase 4 + Phase 5 + MPI-213 by explicit pathspec if user authorizes",
+    "move MPI-208 to done after acceptance + commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Phase 4 + Phase 5 STATUS banners (COMPLETE + LIVE/auto-verified) + Plan Drift notes (Phase-4 scope narrowed, Phase-5 5s-poll skipped)",
+      "validation.md: Phase 4 (live) + Phase 5 (auto) results recorded",
+      "research/regression-checklist.md: per-row R01-R31 / INV-1..7 / 19-bug evidence",
+      "MPI-213 card done + validation.md (lane-key root cause + fix + live-verify); tests/lane-agreement.test.cjs guard",
+      "Docs updated + user-approved: docs/events.md, .claude/rules/component-state.md, .claude/rules/comfy_engine.md §2.5a, docs/ui-gotchas.md",
+      "Inbox thread (6d4e3f09/0c4d4f48/ce09c986/7a1e...) RESOLVED — MPI-213 shipped + verified"
+    ],
+    "pending": [
+      "Commit Phase 4 + Phase 5 + MPI-213 (mpi-end). Explicit pathspec. Foundation/P2/P3 already committed.",
+      "Two pre-existing follow-ups still uncarded (NOT MPI-208): remote gen ~15s WS-ready gate; periodic syncModelInstalled poll ~6.5s while remote-connected.",
+      "MPI-213 residuals (narrow, deferred, uncarded): async register-gap race (_loopCallbacks.local consumed early by a prior local job terminating in the register() microtask gap); MPI-179 first-gen-after-connect isRemote() lag. Deeper fix: derive Cue panel + isGenerating from the store snapshot, not _lanes.active.",
+      "Phase 5 fold research/requirements-archaeology.md invariants into a docs/generation-queue.md later (optional)."
+    ]
+  },
+  "next_action": {
+    "description": "Run the final 7-point end-to-end acceptance from plan.md § Verification in the Electron app (user-ux): (1) exact 2026-07-06 stuck-bar repro — Pod installing + local CUE -> Stop -> navigate away/back -> bar idle, CUE+Stop again -> bar idle; (2) dual-lane remote+local, Stop each independently, other lane unaffected; (3) loop arm -> several drains -> disarm mid-run -> Stop, no re-fire storm; (4) multi-cue R05-R07 (Stop promotes, cancel one pending, clear rest); (5) history workspace gen + Stop + extend flow; (6) cloud toggle -> local selector + local gen + toggle back -> remote (R31); (7) preview Continue/Finish incl. loop-armed gates. Most are already live-verified piecemeal (Phase 3/4 + MPI-213) — this is the consolidated pass. THEN commit Phase 4 + Phase 5 + MPI-213 by explicit pathspec (list in context.files_modified) — Foundation/Phase-2/Phase-3 are ALREADY COMMITTED (e326e3e/675880e/fff8444), do NOT re-commit. THEN move MPI-208 card to done. NOTE: js/components/Primitives/MpiCanvas/MpiCanvas.js + managers/MaskManager.js are also dirty in the working tree but are NOT part of MPI-208 — verify their ownership (a concurrent session) before committing; do NOT sweep them into an MPI-208 commit.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 4 scope narrowed: blocks/QueuePanel already route Stop/Cancel through Phase-3 store-backed facades + already rebuild overlays on mount from module-scoped peekCueQueue()+activeGenerations, so they needed ZERO edits. isGenerating/QueuePanel snapshot migration skipped (churn, no behavior change). The real gaps were the genId bridge + derived statusBar + _runLocal removal.",
+      "genId bridge: the store record's genId was hardcoded null so the derived bar couldn't correlate a store job to its id-tagged tool:* events. Now startGeneration mints _regId up front, threads it as payload.genId -> store.register({genId}), and passes the SAME id to activeGenerations.start({id}) (new optional id param, default fresh uuid).",
+      "statusBar self-heal is gated on _activeGenId !== null so a NORMAL completion flash (which already nulled _activeGenId via tool:idle) is not stomped; only a still-set _activeGenId with an empty store (missed terminal) forces idle. The job.genId !== null re-latch guard is LOAD-BEARING — excludes suppressed tool-panel previews (MpiToolOptionsResize, no genId) from flashing 'Starting'.",
+      "Phase 5 reconcile: the 5s dual-engine store poll was NOT built — every runWorkflow exit already settles the store and the promise is guaranteed to settle (remote via _startHistoryPoll, local via WS-close reject), so the store can't orphan a running job. Shipped only the recovered-toast (the genuine invisible-recovery gap).",
+      "MPI-213 root cause: _laneOf keyed the intent lane on forceLocal alone ('remote' when false) while generationStore keys the job lane on the RESOLVED engine ('local' when no Pod). A no-Pod local gen parked its intent on 'remote' but its store job ran on 'local' -> the store's 'local' drain fired _loopCallbacks.local (never set) -> intent never cleared -> phantom '1 RUNNING'. Fixed by making _laneOf mirror the engine resolution. The original 'settle(DONE) no-op on a pre-cancelled job' hypothesis was DISPROVEN (a trace agent confirmed nothing cancels the active job without a user Stop)."
+    ],
+    "constraints": [
+      "scalable-foundation project mode — full guardrails.",
+      "Shared git tree — commit by EXPLICIT pathspec (git commit --only <paths>), NEVER git add -A / git add . . Push stays user-authorized.",
+      "Foundation (e326e3e), Phase 2 (675880e), Phase 3 (fff8444) are ALREADY COMMITTED — the remaining uncommitted work is Phase 4 + Phase 5 + MPI-213 only.",
+      "MpiCanvas.js + MaskManager.js are dirty but NOT MPI-208 — a concurrent session owns them; do not commit them under MPI-208.",
+      "Final acceptance verify mode is user-ux.",
+      "Preserve (do NOT drop): MPI-141/198 path heal, MPI-156 keepalive, MPI-157 stop-all, MPI-179 mirror refresh, MPI-194 hot-store, MPI-203 history replay, MPI-206 model re-sync, MPI-74 P6 two-lane loop.",
+      "Do NOT make cancelled->done a legal store transition (would resurrect the Phase-3 round-3 ghost-gen bug)."
+    ],
+    "files_modified": [
+      "js/services/generationService.js (Phase 4 genId-up-front + activeGenerations.start({id}); MPI-213 import remoteEngineClient + _laneOf mirrors store engine->lane)",
+      "js/services/commandExecutor.js (Phase 4: store.register({genId: payload.genId}))",
+      "js/services/generationStore.js (Phase 4: register accepts+stamps genId; JSDoc)",
+      "js/services/activeGenerations.js (Phase 4: start({id}) optional id param, default fresh uuid)",
+      "js/shell/statusBar.js (Phase 4: generation-store:changed subscription — survivor re-latch, self-heal to idle, stage/total scoped to display job; import generationStore)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (Phase 4: _runLocal removed, forceLocal from state.engineOverride)",
+      "js/services/comfyController.js (Phase 5: 'generation recovered' ui:info toast on _reconcileFromHistory success)",
+      "tests/generation-store.test.cjs (Phase 4: genId-threads assertion in testSnapshotApi)",
+      "tests/lane-agreement.test.cjs (NEW, MPI-213: asserts _laneOf and store engine->lane agree across forceLocal x isRemote)",
+      ".claude/rules/component-state.md (Phase 5 docs: engineOverride SOT, generationQueueCount store-derived)",
+      ".claude/rules/comfy_engine.md (Phase 5 docs: new § 2.5a SSE engine-tagging law + generationStore)",
+      "docs/events.md (Phase 5 docs: generation-store:changed row + genId<->tool:* note)",
+      "docs/ui-gotchas.md (Phase 5 docs: statusBar store-derivation evolution)",
+      ".agents/mpi-kanban/tasks/MPI-208/plan.md + validation.md + research/regression-checklist.md (preservation)",
+      ".agents/mpi-kanban/tasks/MPI-213/* + board.json + events (lane-key fix card, done)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-208/plan.md (Phase 4 + Phase 5 STATUS banners + § Verification 7-point list + Plan Drift)",
+      ".agents/mpi-kanban/tasks/MPI-208/validation.md (what's live-verified vs auto-verified)",
+      ".agents/mpi-kanban/tasks/MPI-208/research/regression-checklist.md (R01-R31 / INV / 19-bug per-row evidence)",
+      ".agents/mpi-kanban/tasks/MPI-213/task.json + validation.md (lane-key fix, done — context for the queue machinery)",
+      "js/shell/statusBar.js (_reconcileFromStore / _pickDisplayJob — the Phase-4 derived bar)",
+      "js/services/generationService.js (_laneOf, _dispatchNextCue, _onLaneDrain — the lane accounting MPI-213 corrected)",
+      "js/services/generationStore.js (getSnapshot, _onTerminal, setLoopCallback — the drain path)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["generation-queue", "engine-split", "dual-engine", "comfy-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-07T12:15:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-208 (generation queue refactor) in Cubric Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/8ee9fbb1-ab1f-42c9-b152-a14b62e2e951.json and use mpi-continue to pick up. ALL 5 phases are code-complete. Foundation + Phase 2 + Phase 3 are ALREADY COMMITTED (e326e3e / 675880e / fff8444). Phase 4 (statusBar derived from generation-store:changed — survivor re-latch fixes empty-bar, self-heal to idle, stage/total scoped to the display job fixes the stale 4/4; a genId bridge so the store job carries _regId as genId; the _runLocal mirror removed so forceLocal derives from state.engineOverride) is done and LIVE-VERIFIED by the user. Phase 5 (a 'generation recovered' ui:info toast on _reconcileFromHistory success — the 5s store poll was intentionally skipped as duplicate coverage; a regression checklist; user-approved doc updates) is done and auto-verified. A queue bug reported mid-session via the MPI-208 inbox — a no-Pod local gen stranding the Cue as a phantom '1 RUNNING' — was root-caused to a lane-key mismatch (_laneOf keyed the intent lane on forceLocal while generationStore keys the job lane on the resolved engine), fixed by making _laneOf mirror the store's engine->lane rule (+ a guard test tests/lane-agreement.test.cjs), filed and closed as MPI-213 (done, LIVE-VERIFIED). Phase 4 + Phase 5 + MPI-213 are all UNCOMMITTED. Your next action: run the final 7-point end-to-end acceptance from plan.md § Verification in the Electron app (user-ux) — most points are already live-verified piecemeal, this is the consolidated pass — then commit Phase 4 + Phase 5 + MPI-213 by EXPLICIT pathspec (shared tree, never git add -A; the file list is in the handoff; do NOT re-commit the already-committed Foundation/Phase-2/Phase-3), then move the MPI-208 card to done. Note: js/components/Primitives/MpiCanvas/MpiCanvas.js and managers/MaskManager.js are also dirty in the working tree but are NOT part of MPI-208 (a concurrent session owns them) — do not sweep them into an MPI-208 commit. Do NOT make cancelled->done a legal store transition (it would resurrect the Phase-3 ghost-gen bug)."
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-230",
+  "title": "Remote node-drift needs a manual Install click — no auto-heal on connect (optional UX)",
+  "description": "OPTIONAL UX polish (NOT a correctness bug — the manual path is live-proven, MPI-222). On the local engine a node commit-drift auto-repairs via the boot-repair modal; on the REMOTE engine a drifted volume node is detected on the connect edge (shell.js syncModelInstalled → remoteModelsCheck tags installed:false + drifted:true, routes/remoteModels.js:313) but the heal (force:true re-clone at the pinned commit) fires ONLY when the user presses Install in the Model Library. syncModelInstalled just READS status + emits the baked-drift toast; it never auto-dispatches the volume reinstall. So a user reconnecting to a pod after a node_lock bump sees the model flip to not-installed and must click Install. VERIFY-BEFORE-CARDING (done 2026-07-08): traced whether the MPI-219 reload-extra-paths machinery (routes/comfy.js reloadExtraPathsWhenReady + MpiNodes POST /mpi/reload-extra-paths) already covers this — it does NOT and structurally cannot: reload-extra-paths is LOCAL-only and re-reads extra_model_paths.yaml (model-FOLDER registration / where ComfyUI looks for weights), a different layer from re-cloning a custom-node's git repo at a pinned commit + reloading its Python module. Confirmed distinct. WHY NOT already auto-healed: remote reinstall is a multi-GB network+volume op; auto-firing it on EVERY connect edge (connect/disconnect/boot all call syncModelInstalled) is risky — transient reconnects, mid-session flaps. DESIGN if picked up: auto-heal on genuine FIRST connect only (debounced), gated behind a confirm for a multi-GB re-fetch, not on every edge. LOW priority — the manual Install path is proven safe and the Model Library surfaces not-installed state clearly.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "Auto-heal remote node-drift on first connect",
+  "created_at": "2026-07-08T19:45:00Z",
+  "updated_at": "2026-07-09T23:01:36Z",
+  "links": {
+    "plan": null,
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  }
+}

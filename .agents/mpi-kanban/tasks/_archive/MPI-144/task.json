@@ -1,0 +1,14 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-144",
+    "title": "Remote LTX OOM on 24GB cards (4090): Pod ComfyUI ran default normalvram, kept the 42GB transformer in VRAM. Add --lowvram (match local). FIXED + verified v0.8.1.",
+    "description": "SURFACED right after v0.8.0 shipped. A 5s 704x1280 LTX i2v OOM-disconnected on a 24GB RTX 4090 Pod ('remote engine disconnected mid-generation — the Pod may have run out of memory and restarted'). The SAME gen runs fine on the user's local 8GB 4060.\n\nROOT CAUSE: routes/comfy.js:283 launches the LOCAL engine with `--lowvram` for EVERY NVIDIA GPU (unconditionally) — that is why LTX-2.3's 42GB transformer + 14GB gemma run on an 8GB local card: lowvram offloads weights to system RAM and streams them, keeping the VRAM working set small. The Pod wrapper (_build_cmd) had NO vram flag → ComfyUI's default `normalvram` → tried to keep the model resident in VRAM → 24GB 4090 OOM. The 32GB 5090 only just survived normalvram (that is why v0.6.0/v0.7.0 worked on the 5090). NOT a RAM-total problem (user's local has LESS free RAM than the Pod) — it is a VRAM-mode problem.\n\nFIX: add `--lowvram` to the Pod wrapper _build_cmd, matching local exactly. Paired with the --cache-ram default (MPI-142) the working set fits.\n\nVERIFIED LIVE (v0.8.1, fresh 4090 Pod, 24GB VRAM / 57GB RAM): the same i2v that OOM'd now GENERATES and returns a video card. During the gen VRAM ~95% (23GB) + GPU util 98% (220W), RAM peaks ~98% on model LOAD then eases to ~91% during sampling. Tight (both VRAM+RAM near max) but it FITS and completes. Also verified t2v + 4K i2v on the 5090 earlier (v0.8.0).\n\nFIXED IN: mpi-ci commit 789b119 (wrapper.py _build_cmd + --lowvram, wrapper 0.2.13->0.2.14, image v0.8.0->v0.8.1). App ref bumped routes/remoteProxy.js -> v0.8.1/0.2.14 (commit b9ec6c6, RunPod). Image v0.8.1 built+pushed+pull-verified (cu124/cpu/cu128), wrapper 0.2.14 confirmed via cpu boot-smoke.\n\nFOLLOW-UP (NOT this card — see MPI-146): --lowvram was added BLANKET for all cards. The 5090 (32GB) did 4K WITHOUT lowvram on v0.7.0, so blanket lowvram may SLOW the 5090 unnecessarily. Per-card VRAM mode (lowvram for 24GB, normalvram for 32GB+) is MPI-146.\n\nBRANCH: RunPod / mpi-ci only.",
+    "column": "done",
+    "maturity": "complete",
+    "status": "accepted",
+    "created_at": "2026-06-26T12:00:00Z",
+    "updated_at": "2026-06-26T12:00:00Z",
+    "links": {"brief": "brief.md", "plan": "plan.md", "checklist": "checklist.md", "validation": "validation.md", "files": "files.json", "events": "events.jsonl", "handoffs": "handoffs/", "research": "research/"},
+    "tags": ["ltx", "runpod", "mpi-ci", "pod-image", "wrapper", "comfyui", "vram", "oom", "remote-engine"],
+    "priority": "high"
+}

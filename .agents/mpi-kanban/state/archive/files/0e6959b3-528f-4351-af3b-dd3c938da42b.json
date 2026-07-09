@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "0e6959b3-528f-4351-af3b-dd3c938da42b",
+  "path": "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/75ef0485-3b86-4e2a-a9e9-0e75ef7d71d0.json",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-11T19:45:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "notes": "RunPod section + comfy-url field removal",
+  "recent_events": [
+    {
+      "at": "2026-06-11T18:10:00Z",
+      "event": "claimed_for_mpi64_batch3_settings_bootgate"
+    },
+    {
+      "at": "2026-06-11T19:45:00Z",
+      "event": "edit_complete",
+      "note": "Batch #3 + #3.1 user-verified (key save/validate, pickers, advisory, volume-aware DC)."
+    }
+  ]
+}

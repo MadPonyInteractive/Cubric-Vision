@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1cdc80f1-b2e5-41f2-967f-1a261bf85272",
+  "generated_at": "2026-06-15T07:37:37Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 SESSION 8 — B3 SaveVideo conversion FINISHED + LIVE-VERIFIED (remote i2v_ms on L4, no NVENC, saves+plays); A2/A3 OOM recovery proven (container self-heals, A3 soft-503 toast shipped); M1 mask=B4 weight-bake; epic TRIAGE: 7 features spun out to cards MPI-86..92, MPI-85 done, MPI-78 backfilled. Tree CLEAN (committed 656831f, 7e8f0c4 + the MPI-85 agent's commits).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64: convert the remaining video workflows to the SaveVideo+SaveAudio split (B3); then verify remotely; triage the large epic into discrete cards; close MPI-64 correctly so only the spun-out cards remain.",
+    "status": "in_progress",
+    "summary": "B3 is DONE + live-verified on a real Pod. The epic was triaged — 7 discrete features promoted to their own cards (MPI-85 done, MPI-86..92 created), plan.md reconciled. MPI-64 now holds only epic-core residue + the final closeout. NEXT SESSION: close MPI-64 properly (this handoff sets that up) — the user explicitly wants the close to happen in the NEXT session, not this one."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "B3 NVENC->SaveVideo conversion COMPLETE: all 7 video workflows + every video output node (final Output_Video + preview Preview) converted off VHS_VideoCombine to CreateVideo->SaveVideo; zero VHS_VideoCombine remain; 6 ops bumped latestVersion 1.0->1.1 (extend left 1.0 — no workflow file). Committed 656831f.",
+      "B3 LIVE-VERIFIED (L4 Pod zqb7ab520jb9j6): minimal remote i2v_ms end-to-end -> encode with NO NVENC error -> SaveVideo captured -> video saved + PLAYS + respects input subject. M2 + M3 PASS.",
+      "A2/A3 OOM recovery: forced exit-137 twice on a 28.87GiB RTX 2000 Ada. Detection (A1/B4) clean PASS on a real OOM. Telemetry CONFIRMED the container self-heals (ComfyUI process OOM-killed, Memory 98%->2%, Processes 228->201, Pod Uptime NEVER resets -> start.sh restarts ComfyUI in-place; app re-arms WS on next gen). A3 fix shipped (committed): comfy_not_ready 503 -> soft 'restarting' toast; engine_error 503 -> surface detail.comfy_body; shell.js feed gates connected on comfyReady. A3 OOM-toast live-verify DEFERRED (weak test GPU reclaimed). Pod-DEATH recovery NOT tracked (reactive).",
+      "M1 mask remote = B4 lazy-weight 503 (auto-mask reached ComfyUI, 503'd) — face_yolov8n.pt + sam_vit_b_01ec64.pth not baked; added to MPI-81 bake list (with RIFE + upscale).",
+      "MPI-85 (local fallback when no Pod + auto-connect-on-start checkbox) spun out + DONE by a parallel agent (committed).",
+      "EPIC TRIAGE: 7 discrete features promoted to their own cards (MPI-64 stays the epic): MPI-86 cancel-connect, MPI-87 image-pull progress, MPI-88 no-GPU download-mode, MPI-89 remote input-asset transfer (B1), MPI-90 manifest-compat gate (Step 5), MPI-91 GPU-picker CUDA filter (Step 5.2), MPI-92 Phase-5 hardening (tests+secret+docs). plan.md reconciled — each promoted item is now [->] pointing at its card.",
+      "Backfilled MPI-78 (no-network-volume Pod) workspace — card was on the board but its linked files were left uncreated by a prior session.",
+      "current-architecture.md §10 SESSION 8 entry added. MPI-81 brief gained the unbaked-weight bake list. Tree COMMITTED + CLEAN (656831f conversion, 7e8f0c4 triage; plus the MPI-85 agent's 12992c3/be8c3ed)."
+    ],
+    "pending": [
+      "CLOSE MPI-64 (the user wants this done in THIS next session — that is the primary next action). It is a move to done only after: (a) validation.md represents the verified state, (b) the final closeout below is done, (c) the user explicitly approves the close. Per task-board-ops/mutate.md, a doing->done move sets maturity:complete.",
+      "FINAL CLOSEOUT (Phase 5 L153 + plan living-snapshot rule): promote current-architecture.md into durable docs (docs/PROJECT.md + a RunPod subsystem doc + docs/comfy.md touchpoints), rules (.claude/rules/), and project memory. This is MPI-64's closeout, NOT MPI-92.",
+      "Decide what literally remains IN MPI-64 after the spin-outs vs what is now its own card. Epic-core residue still in MPI-64: Step 5.1 (CUDA-floor — effectively decided, cu130 lives in MPI-81; doc-closeout only), F4 (fresh-volume init + bundle versioning — wrapper-coupled), Phase4 L142 (full remote VIDEO verify across surfaces: cancel/interrupt, queue-panel previews, thumbnails — SaveVideo half already proven M2/M3), F8 (lifecycle cleanup on quit/crash — delete-on-quit PASS, crash-watchdog verify), A2/A3 (committed; A3 OOM-toast live-verify deferred), L3/L4/L5 (UX polish + L5 status-poll debounce — L5 stakes raised by MPI-85 local-fallback), G-series (cosmetic).",
+      "Optional: fold UNRELEASED.md at the next /mpi-version-bump (I4); decide whether MPI-64 closes as the EPIC tracker (residue moves to a follow-up card) or stays open until the residue is done."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-64/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-64/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "close-card-on-approval", "promote-to-durable"],
+  "knowledge_preservation": {
+    "completed": [
+      "current-architecture.md §10 SESSION 8 entry (B3 done+verified, A2/A3 mechanism, M1=B4, epic triage, the 7 spun-out cards, what remains in MPI-64).",
+      "OPEN-ITEMS.md updated: B3 [x] + M2/M3 PASS, A2/A3, M1 result, Pod-death de-scoped, K1/L7 tombstoned->cards, MPI-81 weight-bake note.",
+      "plan.md reconciled: promoted items are [->] pointing at MPI-86..92.",
+      "MPI-81 brief: full unbaked-weight bake list (RIFE rife47.pth, face_yolov8n.pt, sam_vit_b_01ec64.pth, 4x-NMKD-Siax + 4x-AnimeSharp, + audit note + target dirs).",
+      "7 new cards created with full briefs (MPI-86..92); MPI-78 workspace backfilled. Board validated: no dup IDs, all cards have task.json, next_id=93.",
+      "All committed: 656831f (B3 conversion 13 files), 7e8f0c4 (triage + 7 cards + A3 commandExecutor + MPI-78, 63 files). Tree CLEAN."
+    ],
+    "pending": [
+      "current-architecture.md §10 SESSION 8 is uncommitted (edited just before this handoff) — commit it by explicit path next session (it is MPI-64's file).",
+      "FINAL: promote current-architecture.md into durable docs/rules/memory at MPI-64 close (the big closeout).",
+      "Project memory: the SaveVideo split contract (Output_Video/Output_Audio + server mux + MpiHasAudio gate) + the OOM-self-heal mechanism may each warrant a memory entry at close."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-64 to CLOSE IT properly (the user wants the close in THIS session). FIRST re-read .agents/mpi-kanban/state/index.json + tasks/MPI-64/OPEN-ITEMS.md + current-architecture.md §10 SESSION 8 + plan.md. Commit the uncommitted current-architecture.md §10 SESSION 8 edit by explicit path. Then drive the close: (1) confirm with the user what literally remains in MPI-64 vs the spun-out cards (MPI-86..92) — the epic-core residue is listed in plan.pending; (2) do the FINAL CLOSEOUT — promote current-architecture.md into durable docs (docs/PROJECT.md + a RunPod subsystem doc + docs/comfy.md), rules (.claude/rules/), and project memory; write tasks/MPI-64/validation.md with the verified state; (3) ONLY on explicit user approval, move MPI-64 doing->done (maturity:complete, status:accepted) per task-board-ops/mutate.md — update BOTH board.json AND task.json + a task.moved event in BOTH event logs. Do NOT close before the user approves. GIT: RunPod is the SHARED v1.1.0 trunk — stage by EXPLICIT PATH, commit your own files, --no-verify, never git add -A.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "B3 fix = CreateVideo->SaveVideo split (Output_Video final + Preview preview node + optional Output_Audio gated by MpiHasAudio), app captures videos[]/audio[] by title + muxes server-side. PROVEN remote on L4 (no NVENC, saves+plays).",
+      "OOM container self-heals (NOT a Pod death): the ComfyUI PROCESS is OOM-killed + restarted in-place by start.sh; Pod stays alive (Uptime never resets); app re-arms WS on next gen. So 'did we disconnect / did RunPod reconnect?' = we lost the WS, the container restarted ComfyUI, the next gen re-opened the socket. A3 = make the transient-503 a soft toast (comfy_not_ready) vs surface the body (engine_error).",
+      "Pod-DEATH recovery (whole Pod terminated) is DROPPED as a tracked validation item — hard to force, addressed reactively if it recurs (avoids a perpetual validation TODO). User decision 2026-06-15.",
+      "MPI-64 stays the EPIC/tracker; discrete features spin out as their own cards (MPI-85..92). Phase-5 hardening folded into ONE card (MPI-92). User decision 2026-06-15.",
+      "The user explicitly wants MPI-64 CLOSED in the NEXT session (the one resuming from this handoff), NOT the session that wrote this handoff.",
+      "M1 mask remote 503 = unbaked SAM/yolo weights (B4 class) — the fix is the MPI-81 image rebuild (USER-run), names already known (no live-discovery needed). The 503-body-surfacing app fix (shipped) makes future unbaked weights self-diagnose."
+    ],
+    "constraints": [
+      "RunPod is the SHARED v1.1.0 trunk (concurrent agents). STAGE BY EXPLICIT PATH, commit only your own files, --no-verify, NEVER git add -A. The MPI-85 agent shares comfyController.js + shell.js.",
+      "Agents NEVER edit comfy_workflows/*.json — the user owns them (external ComfyUI template). Document injection-title contracts; ask the user to author/re-export.",
+      "Backend changes (routes/, server.js, main.js) need a FULL app restart; renderer (js/) reloads with location.reload() in the DevTools console (Ctrl+R blocked).",
+      "USER runs ALL live Pod/volume/billing ops + image builds. The L4 + RTX 2000 Pods were STOPPED + DELETED at session end; app shut down. No billing.",
+      "Commit only when the USER asks. Closing the card requires explicit user approval.",
+      "MPI-81 (image rebuild + weight bake) is its own card, USER-run — interpolate/upscale/mask all 503 remotely until it ships. Do NOT block MPI-64 close on it.",
+      "current-architecture.md §10 SESSION 8 is the only uncommitted file (this handoff's own snapshot edit) — commit it next session."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js — A3: classify 503 (comfy_not_ready->engine_restarting, engine_error->surface detail.comfy_body) (COMMITTED 12992c3)",
+      "js/services/commandExecutor.js — A3 soft-503 toast branch (COMMITTED 7e8f0c4)",
+      "js/shell.js — feed gates connected on comfyReady (COMMITTED 12992c3)",
+      "js/core/operationRegistry.js + operation_registry.json — 6 video ops latestVersion 1.0->1.1 (COMMITTED 656831f)",
+      "comfy_workflows/*.json (7 files) — SaveVideo conversion, USER-authored (COMMITTED 656831f)",
+      ".claude/rules/comfy_injection.md — Preview row videos[] + Output_Video/Output_Audio (COMMITTED 656831f)",
+      ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md + plan.md — triage + reconciliation (COMMITTED 7e8f0c4)",
+      ".agents/mpi-kanban/tasks/MPI-81/brief.md — weight-bake list (COMMITTED 7e8f0c4)",
+      ".agents/mpi-kanban/tasks/MPI-78,86,87,88,89,90,91,92/ — backfill + 7 new cards (COMMITTED 7e8f0c4)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md — §10 SESSION 8 (UNCOMMITTED — commit next session)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/state/index.json (RE-READ FRESH)",
+      ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md (the consolidated register — what is done vs open)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (§10 SESSION 8 — the latest design truth)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (phases + the [->] spun-out pointers)",
+      "<mpi-lib>/task-board-ops/mutate.md + _schema.md (BEFORE any card close — doing->done = maturity:complete)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "ComfyUI workflow injection + capture", "video output / ffmpeg mux", "Pod image build (mpi-ci)", "engine-drop / OOM recovery"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-15T07:37:37Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod (the SHARED v1.1.0 integration trunk) in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/1cdc80f1-b2e5-41f2-967f-1a261bf85272.json, then RE-READ .agents/mpi-kanban/state/index.json fresh + tasks/MPI-64/OPEN-ITEMS.md + current-architecture.md §10 SESSION 8 + plan.md, then use mpi-continue. STATUS: SESSION 8 FINISHED B3 — all video workflows converted off NVENC to the CreateVideo->SaveVideo split (final Output_Video + preview Preview nodes, zero VHS_VideoCombine left; 6 ops bumped latestVersion 1.0->1.1; extend left 1.0). B3 is LIVE-VERIFIED on a real L4 Pod: a minimal remote i2v_ms ran end-to-end -> encode with NO NVENC error -> SaveVideo captured -> video saved + PLAYS + respects the input subject (M2/M3 PASS). A2/A3: a true exit-137 container OOM was forced twice (28GiB RTX 2000 Ada) — DETECTION passes, and Telemetry CONFIRMED the container SELF-HEALS (ComfyUI process OOM-killed + restarted in-place by start.sh; Pod Uptime never resets; the app re-arms the WS on the next gen) — so a container-OOM is NOT a Pod death. A3 fix shipped+committed: a comfy_not_ready 503 now shows a soft 'engine restarting, retry' toast instead of the bug-reporter modal, an engine_error 503 surfaces detail.comfy_body (names the missing weight), and shell.js gates the status-bar 'connected' on comfyReady. The A3 OOM-toast LIVE-verify is DEFERRED (the weak test GPU was reclaimed); Pod-DEATH recovery is NOT tracked (reactive). M1 mask remote = B4 lazy-weight 503 (face_yolov8n.pt + sam_vit_b_01ec64.pth not baked — added to MPI-81). The MPI-64 EPIC was TRIAGED: 7 discrete features were promoted to their own cards (MPI-85 done; MPI-86 cancel-connect, MPI-87 image-pull progress, MPI-88 no-GPU download-mode, MPI-89 remote input-asset transfer, MPI-90 manifest-compat gate, MPI-91 GPU-picker CUDA filter, MPI-92 Phase-5 hardening), plan.md reconciled (each [->] points at its card), and MPI-78 (no-volume Pod) was backfilled. The tree is CLEAN + COMMITTED (656831f B3 conversion, 7e8f0c4 triage) EXCEPT current-architecture.md §10 SESSION 8 (commit it by explicit path first). YOUR JOB THIS SESSION: CLOSE MPI-64 PROPERLY (the user explicitly wants the close done in THIS session). Drive it: confirm with the user what literally remains in MPI-64 (epic-core residue: Step 5.1 doc-closeout, F4 fresh-volume init, L142 full-video verify, F8 lifecycle, A2/A3 committed, L3/L4/L5 + G-series polish) vs the spun-out cards; do the FINAL CLOSEOUT — promote current-architecture.md into durable docs (docs/PROJECT.md + a RunPod subsystem doc + docs/comfy.md), rules (.claude/rules/), and project memory; write tasks/MPI-64/validation.md; then, ONLY on explicit user approval, move MPI-64 doing->done (maturity:complete) per <mpi-lib>/task-board-ops/mutate.md (update board.json AND task.json + a task.moved event in BOTH event logs). GOTCHAS: agents NEVER edit comfy_workflows/*.json; RunPod is shared -> stage by EXPLICIT PATH, --no-verify, never git add -A; backend changes need a full app restart, renderer reloads via location.reload(); the USER runs all live Pod/image ops; commit + close only when the USER says so; MPI-81 (image rebuild + weight bake) is USER-run and must NOT block the MPI-64 close. Brief before code (mpi-continue gate)."
+}

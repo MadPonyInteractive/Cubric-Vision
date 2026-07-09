@@ -46,17 +46,43 @@
 
 ## Engine Download & Engine-Deps Parallel Flow
 
-**Engine downloads run parallel with engine-level dependency downloads** for better UX. Engine-level deps are identified by `installOnEngine: true` in `dependencies.js` — they cover all universal workflow needs in one place.
+**Engine downloads run parallel with engine-level dependency downloads** for better UX. Engine-level deps are the UNIVERSAL set: every `type: 'custom_nodes'` dep plus every `engineAsset: true` weight in `dependencies.js` (MPI-222 — replaced the old `installOnEngine` flag). They cover all universal workflow needs in one place.
 
-1. **Combined size calculation:** `routes/shared.js` exports `getUniversalWorkflowDepsTotalSize()` which HEAD-requests each `installOnEngine` dep URL to get exact bytes
+1. **Combined size calculation:** `routes/shared.js` exports `getUniversalWorkflowDepsTotalSize()` which HEAD-requests each universal dep URL to get exact bytes
 2. **Parallel firing:** `routes/engine.js` fires both engine download AND `startUniversalWorkflowInstall(depIds, true, true)` immediately
 3. **Custom node install delayed:** The third parameter `true` skips custom node pip install until after engine extraction
 4. **Frontend aggregation:** `MpiEngineInstall.js` receives both `engine:downloading` and `download:progress` events and aggregates them into a single unified progress bar
 5. **Custom node finish:** After engine extraction, `finishCustomNodeInstall(modelJob, true)` is called to run pip install with Python now available
 
-**Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. If the new workflow requires a dep not yet marked `installOnEngine: true` in `dependencies.js`, add the flag there — it is automatically included in future engine installs.
+**Adding a new universal workflow:** No dependency changes needed in `universal_workflows.js`. Any new node dep is `type: 'custom_nodes'`, which is in the universal set automatically (no flag) and included in future engine installs.
 
-**Adding a custom_node dep to an image/video model:** If a `custom_nodes` dep is referenced by any entry in `models.js`, it MUST be marked `installOnEngine: true` in `dependencies.js`. Otherwise a fresh engine install leaves the custom node missing, `POST /comfy/models/check` reports the model as not installed, and the model manager pops up on project entry even though the user installed nothing extra. The engine install is the only path that handles `custom_nodes` deps proactively — regular model install only fetches them as a side effect of installing a specific model.
+**Custom_node deps are UNIVERSAL by TYPE (MPI-222 — replaced `installOnEngine`):**
+
+- **Every `type: 'custom_nodes'` dep** is universal: `getUniversalWorkflowDepIds()` selects `type==='custom_nodes' || engineAsset===true`, so all nodes bake in with the engine and a fresh install can run any universal workflow with zero extra install. There is no per-model node class anymore — the old `installOnEngine` flag and `getInstalledModelNodeDeps()` are deleted (once every node went universal, that fn returned `[]`). A former per-model node (`ComfyUI-PainterI2Vadvanced`, `ComfyUI-LTXVideo`) just installs as a universal node.
+- **On the Pod, the split is `installRequirements`:** `true` nodes BAKE into the image (pip cost at build); `false` nodes install onto the VOLUME at connect via the wrapper (see `routes/remoteModels.js` `_isImageResident`) — so bumping a volume node's commit never forces an image rebuild. A commit bump is a `dev_configs/node_lock.json` edit; the drift ladder (`.mpi_node_commit` marker) reinstalls at the new commit on both engines. See `.claude/rules/comfy_engine.md` § 2.5c.
+
+---
+
+## Operation-selectable models — the resolver chokepoint (MPI-122)
+
+A model declares its deps in ONE of two shapes (see `docs/data.md` § resolveModelDeps):
+- **Flat** (all image models): `dependencies: string[]`.
+- **Operation-keyed** (e.g. Wan 2.2 `wan-22`): `commonDeps: string[]` + `operations: { <opKey>: { deps: string[] } }`, and NO flat `dependencies`. The user picks which operations to install in the model manager.
+
+**The download lifecycle is frozen and op-blind.** `downloadService.start(modelId, deps)` and `uninstall(modelId, deps)` ALWAYS take a RESOLVED FLAT dep array. Operations are collapsed to that flat array by `js/data/modelConstants/resolveModelDeps.js` at the call site — BEFORE the lifecycle. Jobs/SSE/refcounts/`.cubricdl` markers never learn about operations; jobs stay keyed by `modelId`. **Do NOT add a per-operation download job, a second SSE channel, or operation-level refcounts.**
+
+**Which resolver call to use:**
+- **Install** → `resolveDeps(model, selectedOps)` (the user's op selection; `null` = all selectable ops = fresh full install).
+- **Whole-model uninstall** + **install-status checks** (`/comfy/models/check`) → `resolveFullUniverse(model)` so no op payload is orphaned and partial state is computed against the complete universe.
+- **Backend shared-dep protection** (`_findOtherModelsUsingDep`, `_remoteSharedDepIds` in `routes/downloadManager.js`; `getInstalledModelNodeDeps` in `routes/shared.js`) MUST resolve every OTHER model's full universe — never read a `.dependencies` field, which no longer exists on op-keyed models. Otherwise a shared/op-specific dep another installed model needs gets deleted (e.g. uninstalling Wan I2V trashing the VAE/text-encoder T2V also uses).
+
+**Never read `model.dependencies` directly.** Use the resolver. A flat model is treated as `commonDeps = dependencies` with no operations, so one code path covers both shapes.
+
+**Per-operation install AND uninstall.** The model-download page lets the user toggle ops on/off on an installed model:
+- Adding an op (Update / Install) downloads only its missing resolved deps.
+- Removing an op (Update, after a confirm) calls `downloadService.uninstall(modelId, deps)` with `deps` = the removed op's resolved deps MINUS any dep still used by an op that REMAINS installed/selected (incl. commonDeps, which any remaining op keeps). This intra-model subtraction is done CLIENT-SIDE — the backend's shared-dep guard only protects across OTHER models (it excludes the target model), so it would not stop you deleting a dep a sibling op of the same model still needs.
+- The button reads Install (0 installed) / Update (draft ≠ installed) / Uninstall (installed, no change). The op draft persists in `state.s_modelOpDraftByModel`.
+No change to the download/refcount/SSE contract — per-op uninstall is the same `uninstall()` call with a narrower dep list.
 
 ---
 

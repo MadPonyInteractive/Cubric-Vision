@@ -1,0 +1,21 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-105",
+ "title": "Remote Pod: request NVMe disk + investigate REST disk-type control",
+ "description": "App's _createPodInternal (routes/remoteProxy.js) never sets a disk type, so RunPod places Pods on whatever host storage is free (often slower SSD). NVMe is meaningfully faster for model load (big Wan/Flux weights). The RunPod console's NVMe/SSD toggle is a HOST-AVAILABILITY filter on the GPU picker, not a documented Pod-spec field — so the fix is likely a datacenter/host filter on the create path, not a 'diskType' field. Investigate whether RunPod REST /pods accepts any disk-type hint; if not, filter the GPU/DC list to NVMe-capable hosts. No image rebuild needed (deploy-time/host concern, not baked in the image). Applies to both product Pods and the new cubric-vision-builder authoring image. App. See brief.md.",
+ "column": "done",
+ "maturity": "complete",
+ "status": "denied",
+ "created_at": "2026-06-16T22:55:00Z",
+ "updated_at": "2026-06-18T09:30:00Z",
+ "links": {
+  "brief": "brief.md",
+  "plan": "plan.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "files": "files.json",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/",
+  "research": "research/"
+ }
+}

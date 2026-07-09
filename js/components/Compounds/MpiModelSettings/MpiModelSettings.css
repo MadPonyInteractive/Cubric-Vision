@@ -101,7 +101,7 @@
 
 .mpi-model-settings__lora-slot {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
@@ -119,6 +119,41 @@
     pointer-events: none;
 }
 
+/* ── Bypass toggle ────────────────────────────────────────────────────────
+   Pressed = neutralise this LoRA at generation (inject at zero strength)
+   WITHOUT changing its saved name/values. The dropdown + strengths grey out
+   but stay readable so the user sees what is being bypassed. (MPI-223) */
+.mpi-model-settings__lora-bypass {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    color: var(--ink-3);
+    cursor: pointer;
+}
+
+.mpi-model-settings__lora-bypass:hover {
+    color: var(--ink-1);
+    border-color: var(--ink-3);
+}
+
+.mpi-model-settings__lora-bypass[aria-pressed="true"] {
+    color: var(--accent-warn);
+    border-color: var(--accent-warn);
+    background: color-mix(in oklch, var(--accent-warn) 14%, var(--surface-1));
+}
+
+/* When bypassed, dim the dropdown + strengths (values stay visible) and block
+   interaction — same treatment as an empty slot's strengths. */
+.mpi-model-settings__lora-slot--bypassed .mpi-model-settings__lora-dropdown,
+.mpi-model-settings__lora-slot--bypassed .mpi-model-settings__lora-strengths {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .mpi-model-settings__lora-strengths {
     display: flex;
     align-items: center;
@@ -129,4 +164,35 @@
     font-size: var(--t-2xs);
     color: var(--ink-3);
     white-space: nowrap;
+}
+
+/* MpiInput size="sm" caps the field at 6ch, which clips a 2-decimal strength
+   like -1.00 (5 chars + padding). Widen the field for these strength inputs so
+   the value isn't cut off. */
+.mpi-model-settings__lora-strengths .mpi-input--sm .mpi-input__field {
+    width: 8ch;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+}
+
+/* A dropdown whose selected LoRA/upscale file is missing from the configured
+   folders — warn the user it cannot be loaded. */
+.mpi-dropdown--missing .mpi-dropdown__trigger {
+    border-color: var(--accent-warn);
+    background: color-mix(in oklch, var(--accent-warn) 14%, var(--surface-1));
+    color: var(--accent-warn);
+}
+
+/* Drop areas in the picker modal (one per configured folder). */
+.mpi-model-settings__drop-zones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.mpi-model-settings__drop-title {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    margin-bottom: 4px;
 }

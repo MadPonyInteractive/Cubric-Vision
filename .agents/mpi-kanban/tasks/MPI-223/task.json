@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-223",
+  "title": "Per-LoRA bypass toggle in Model Settings (grey out slot, inject strength 0 at gen, keep values visible)",
+  "description": "Model Settings LoRA slots get a per-slot bypass toggle button. Pressed = grey out that slot's dropdown + strength inputs (values stay VISIBLE and UNCHANGED — the stored 0.75 is not overwritten) and inject strength_model=0, strength_clip=0 at generation. Convenience so the user can neutralize a LoRA without setting the dropdown to None or editing its numbers; un-bypass restores the saved values instantly. Also works when the LoRA FILE is missing (bypassed slot must NOT hit the missing-LoRA generation block). DECISION (option A, hybrid rejected): always inject lora_name at strength 0 — no graph-shape change, matches the proven-safe strength-0<->0.5 A/B pattern that never triggers a model reload/OOM. Hybrid (zero-on-repeat / none-on-new) was rejected: the only repeat-detection we have is ComfyUI's post-submission exec cacheHit (generationService.js:716 'No changes, skipping...'), NOT a pre-flight last-workflow diff we own — building one = new state + diff engine = the complexity the user explicitly wanted to avoid, for a speculative OOM win we have zero data on. IMPLEMENTATION (all verified against live code): DATA — projectModel.js _defaultLoraSlots() adds bypass:false; MpiModelSettings _normaliseLoraSlots + inline normalise in _mountLoraSlots carry bypass. UI — bypass button per slot in BOTH _mountLoraSlots (flat) and _mountStagedLoraSlots (staged); click flips _loraSlots[i].bypass (or [stage.key][i]), toggles --bypassed class, sets disabled on that slot's dropdown + strength inputs, _autoSave(). Icon = existing 'negative' glyph (circle+slash) from icons.js (no new icon, no raw SVG). CSS — .mpi-model-settings__lora-slot--bypassed dims dropdown+strengths (reuse the opacity:0.35;pointer-events:none pattern at line 117), numbers stay readable. INJECTION — the ONE place that builds the {lora_name,strength_model,strength_clip} object is commandExecutor.js _buildParams (staged branch ~630, flat branch ~646); when slot.bypass force strength_model:0, strength_clip:0. MISSING-BLOCK — a bypassed slot with a missing file must not block: skip _findMissingModel by not emitting the param when bypassed+file-missing (or exempting bypassed slots from the check). BOTH ENGINES = FREE: bypass zeroes at param-build time, upstream of the engine split; local comfyController._inject AND the remote/Pod twin consume the same zeroed object — no twin to patch. TYPES — document bypass in js/components/types.js LoRA slot shape. GUARD — extend tests/lora-injection-routing.test.cjs with a bypass case (strengths -> 0). LIVE — bypass a slot + generate -> workflow JSON shows strength_model=0; bypass a slot whose LoRA file is deleted -> generation runs (no block).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-08T09:20:00Z",
+  "updated_at": "2026-07-08T10:05:00Z",
+  "resolution": "Live-verified by user: bypass button greys slot (values stay visible/unchanged), toggled 2 slots, ran real generations swapping bypassed LoRAs — confirmed no effect from bypassed ones. Guard test tests/lora-bypass-inject.test.cjs 5/5 pass. Surfaced MPI-224 (LTX missing Clip knob) as a side finding during this live test — separate card, not a regression of this one.",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "feature",
+    "components",
+    "model-settings",
+    "lora",
+    "comfy-injection"
+  ],
+  "priority": "medium",
+  "defaultExpanded": false
+}

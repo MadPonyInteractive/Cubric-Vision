@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "ccf04f9f-f727-47a2-80f5-2948ed9095e1",
+  "path": "routes/runpodRemote.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f7a4b6c5-d809-46e6-94b8-b1a68d18bf2e.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/7c05a0ac-d5fa-4e60-a7f3-3f48a1172fe1.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-14T07:50:00Z",
+  "allowed_actions": ["edit", "verify"],
+  "notes": "MPI-77: threaded dataCenterId + secureCloud:true into gpuTypes()/availability() lowestPrice input + route ?dataCenterId. Edited, lint-clean, user-verified live (62GB).",
+  "recent_events": [
+    {
+      "at": "2026-06-14T06:12:58Z",
+      "event": "claimed_for_mpi77_per_dc_ram"
+    },
+    {
+      "at": "2026-06-14T07:50:00Z",
+      "event": "edit_complete_verified",
+      "note": "Per-DC RAM live-verified; committed with MpiSettings.js."
+    }
+  ]
+}

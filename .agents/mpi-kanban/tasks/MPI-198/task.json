@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-198",
+  "title": "Baked backslash loader paths break LoRA workflows on Linux/macOS LOCAL engine (portable builds)",
+  "description": "Found 2026-07-05 during MPI-197 stock-pod test: workflow templates bake Windows backslash loader values (e.g. Merged-Loras lora_name 'ltx-2.3\\LTX23_softenhance_abliterated_detailer_merged.safetensors'). comfyController.js step 3b heals '\\'->'/' ONLY when remoteEngineClient.isRemote() (MPI-141). LOCAL engine on Linux/macOS portable builds gets the raw backslash value -> ComfyUI enumerates with '/' -> value_not_in_list 400 on every LoRA-baked workflow. The 'flipping would BREAK local' comment is Windows-local-only truth. FIX: gate the PATH_INPUTS heal on engine OS, not remote-ness — normalize when remote OR local platform != win32 (renderer: get platform from existing server/preload channel, don't assume process.platform available). Sweep: same baked-value risk for upscale_model/vae_name/clip_name etc (PATH_INPUTS list already covers). Verify on a Linux portable build (or CI) with LTX_t2v LoRA workflow before next distribution release. Related: MPI-141, docs/add-model-playbook.md loader-path normalization trap, .claude/rules/comfy_engine.md § list-files engine separator.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-07-05T12:10:00Z",
+  "updated_at": "2026-07-05T15:05:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "checklist": "checklist.md"
+  },
+  "tags": [
+    "portable",
+    "linux",
+    "macos",
+    "comfy-injection",
+    "lora",
+    "release-blocker"
+  ],
+  "priority": "high"
+}

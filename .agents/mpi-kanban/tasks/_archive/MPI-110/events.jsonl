@@ -1,0 +1,8 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"task.created","at":"2026-06-17T17:55:52Z","actor":"claude","summary":"Auto-retry GPU connect idea captured from brainstorm."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"task.updated","at":"2026-06-17T18:00:00Z","actor":"claude","summary":"Compact plan attached; maturity planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"task.moved","at":"2026-06-17T18:00:30Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started; maturity in-progress."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"checklist.updated","at":"2026-06-17T18:00:30Z","actor":"claude","summary":"Derived single implementation item from compact plan."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"checklist.updated","at":"2026-06-17T18:20:00Z","actor":"claude","summary":"Implementation item complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"validation.updated","at":"2026-06-17T18:20:00Z","actor":"claude","summary":"Code complete; lint+syntax+logic self-check pass; maturity validating, awaiting live RunPod verify."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-110","type":"task.moved","at":"2026-06-17T20:05:00Z","actor":"claude","from":"doing","to":"done","summary":"Auto-retry GPU wait live-verified end-to-end (waited ~15min, won L4, connected); maturity complete, accepted."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-110", "type": "task.deleted", "at": "2026-06-28T17:30:00Z", "actor": "agent", "summary": "Archived from done column to .agents/mpi-kanban/tasks/_archive/MPI-110/ (board cleanup)."}

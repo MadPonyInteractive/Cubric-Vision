@@ -19,19 +19,20 @@ export const OPERATION_REGISTRY = {
     detail:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     change:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    pid:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
     // Video operations
-    t2v:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    t2v_ms:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    i2v:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    i2v_ms:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    t2v:          { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    t2v_ms:       { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    i2v:          { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    i2v_ms:       { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     extend:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     // Universal operations (not model-tied)
-    interpolate:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    videoUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    interpolate:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    videoUpscale: { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     imageUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resize:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    resizeVideo:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    resizeVideo:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
 };
 
 /**

@@ -11,7 +11,9 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiSpinner/MpiSpinner.css',
   'js/components/Primitives/MpiProgressBar/MpiProgressBar.css',
   'js/components/Primitives/MpiInput/MpiInput.css',
+  'js/components/Primitives/MpiFolderDrop/MpiFolderDrop.css',
   'js/components/Primitives/MpiDropdown/MpiDropdown.css',
+  'js/components/Primitives/MpiTreePicker/MpiTreePicker.css',
   'js/components/Primitives/MpiRadioGroup/MpiRadioGroup.css',
   'js/components/Primitives/MpiColorPicker/MpiColorPicker.css',
   'js/components/Primitives/MpiPopup/MpiPopup.css',
@@ -28,6 +30,8 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiContextMenu/MpiContextMenu.css',
   'js/components/Compounds/MpiOptionSelector/MpiOptionSelector.css',
   'js/components/Compounds/MpiOkCancel/MpiOkCancel.css',
+  'js/components/Compounds/MpiNotesEditor/MpiNotesEditor.css',
+  'js/components/Compounds/MpiAddToProject/MpiAddToProject.css',
   'js/components/Compounds/MpiReusePromptDialog/MpiReusePromptDialog.css',
   'js/components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.css',
   'js/components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.css',
@@ -36,7 +40,8 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiProjectCard/MpiProjectCard.css',
   'js/components/Compounds/MpiNewProject/MpiNewProject.css',
   'js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css',
-  'js/components/Compounds/LandingPages/MpiHelp/MpiHelp.css',
+  'js/components/Compounds/LandingPages/MpiRunpodSettings/MpiRunpodSettings.css',
+  'js/components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.css',
   'js/components/Compounds/LandingPages/MpiAbout/MpiAbout.css',
   'js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css',
   'js/components/Compounds/MpiSlideOver/MpiSlideOver.css',
@@ -65,6 +70,9 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.css',
   'js/components/Organisms/MpiToolOptionsResize/MpiToolOptionsResize.css',
   'js/components/Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.css',
+
+  // Services (shared, non-component)
+  'js/services/podDiskBar.css',
 
   // Blocks
   'js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css',

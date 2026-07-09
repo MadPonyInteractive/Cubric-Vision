@@ -3,6 +3,8 @@ import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiFolderDrop } from '../../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
+import { MpiRunpodSettings } from '../MpiRunpodSettings/MpiRunpodSettings.js';
 import { state } from '../../../../state.js';
 import { Events } from '../../../../events.js';
 import { Storage } from '../../../../core/storage.js';
@@ -16,6 +18,8 @@ const REUSE_PARTS = [
     { key: 'settings', label: 'Use Settings' },
     { key: 'model', label: 'Use Model' },
     { key: 'images', label: 'Use Images' },
+    { key: 'video', label: 'Use Video' },
+    { key: 'audio', label: 'Use Audio' },
 ];
 
 /**
@@ -42,6 +46,16 @@ export const MpiSettings = ComponentFactory.create({
                         <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
                     </div>
                     <div class="mpi-settings__form-group">
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsPlayAudioOnHoverSlot"></div>
+                        <span class="mpi-settings__hint">Hovering a video or audio card in the gallery plays its sound. Turn off for silent hover.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Desktop Notifications</label>
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyGenerationSlot"></div>
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyDownloadsSlot"></div>
+                        <span class="mpi-settings__hint">Show an OS notification when these finish (only while the app is in the background). In-app messages are unaffected.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
                         <label class="mpi-settings__field-label">Pixel Rendering</label>
                         <div id="mpiSettingsPixelModeSlot"></div>
                         <span class="mpi-settings__hint">Auto shows smooth at fit-to-screen and individual pixels when zoomed past 300%. Pixel-perfect always shows pixels; Smooth never does.</span>
@@ -62,9 +76,6 @@ export const MpiSettings = ComponentFactory.create({
                 <div class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">External Connections</h3>
                     <div class="mpi-settings__form-group">
-                        <div id="mpiSettingsComfyUrlSlot"></div>
-                    </div>
-                    <div class="mpi-settings__form-group">
                         <div class="mpi-settings__folder-row">
                             <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
                             <div id="mpiSettingsBrowseBtnSlot"></div>
@@ -81,6 +92,7 @@ export const MpiSettings = ComponentFactory.create({
                                 </div>
                                 <div id="mpiSettingsLoraPrimarySlot"></div>
                                 <div class="mpi-settings__extra-folder-list" id="mpiSettingsLoraFoldersSlot"></div>
+                                <div class="mpi-settings__drop-zones" id="mpiSettingsLoraDropSlot"></div>
                             </div>
                             <div class="mpi-settings__extra-folder-group">
                                 <div class="mpi-settings__extra-folder-head">
@@ -89,11 +101,14 @@ export const MpiSettings = ComponentFactory.create({
                                 </div>
                                 <div id="mpiSettingsUpscalePrimarySlot"></div>
                                 <div class="mpi-settings__extra-folder-list" id="mpiSettingsUpscaleFoldersSlot"></div>
+                                <div class="mpi-settings__drop-zones" id="mpiSettingsUpscaleDropSlot"></div>
                             </div>
                         </div>
                         <span class="mpi-settings__hint">Extras are read-only additive folders. Cubric only installs, updates, and removes files from the primary managed folders.</span>
                     </div>
                 </div>
+
+                <div id="mpiSettingsRunpodMount"></div>
             </div>
         </div>`,
 
@@ -113,8 +128,12 @@ export const MpiSettings = ComponentFactory.create({
             clientLogger.warn('settings', '[MpiSettings] Electron IPC unavailable for folder picker', err);
         }
 
+        // RunPod Remote Engine section — own Compound since MPI-177; mounted once
+        // here, onOpen forwarded so it re-inits with fresh values on every open.
+        const _runpodInst = MpiRunpodSettings.mount(qs('#mpiSettingsRunpodMount', el), {});
+
         // Called by MpiSlideOver each time panel opens — re-init fields with fresh values.
-        el.onOpen = () => _initFields(el);
+        el.onOpen = () => { _initFields(el); _runpodInst?.el?.onOpen?.(); };
 
         function _initFields(root) {
             // ── Auto-start checkbox ──────────────────────────────────────────
@@ -127,6 +146,38 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 autoStartInst.on('change', ({ checked }) =>
                     Storage.setAutoStartComfy(checked));
+            }
+
+            // ── Play audio on hover checkbox ─────────────────────────────────
+            const hoverAudioSlot = qs('#mpiSettingsPlayAudioOnHoverSlot', root);
+            if (hoverAudioSlot) {
+                hoverAudioSlot.innerHTML = '';
+                MpiCheckbox.mount(hoverAudioSlot, {
+                    checked: Storage.getPlayAudioOnHover(),
+                    label: 'Play audio on hover',
+                }).on('change', ({ checked }) =>
+                    Storage.setPlayAudioOnHover(checked));
+            }
+
+            // ── Desktop notification prefs (per-type OS opt-out) ─────────────
+            const notifyGenSlot = qs('#mpiSettingsNotifyGenerationSlot', root);
+            const notifyDlSlot = qs('#mpiSettingsNotifyDownloadsSlot', root);
+            const _saveNotifyPref = (key, checked) => {
+                state.notificationPrefs = { ...state.notificationPrefs, [key]: checked === true };
+            };
+            if (notifyGenSlot) {
+                notifyGenSlot.innerHTML = '';
+                MpiCheckbox.mount(notifyGenSlot, {
+                    checked: state.notificationPrefs?.generation !== false,
+                    label: 'Generation complete',
+                }).on('change', ({ checked }) => _saveNotifyPref('generation', checked));
+            }
+            if (notifyDlSlot) {
+                notifyDlSlot.innerHTML = '';
+                MpiCheckbox.mount(notifyDlSlot, {
+                    checked: state.notificationPrefs?.downloads !== false,
+                    label: 'Download complete',
+                }).on('change', ({ checked }) => _saveNotifyPref('downloads', checked));
             }
 
             // ── Pixel rendering mode ─────────────────────────────────────────
@@ -159,6 +210,8 @@ export const MpiSettings = ComponentFactory.create({
                     settings: state.promptReuseOptions?.settings !== false,
                     model: state.promptReuseOptions?.model !== false,
                     images: state.promptReuseOptions?.images !== false,
+                    video: state.promptReuseOptions?.video !== false,
+                    audio: state.promptReuseOptions?.audio !== false,
                 };
                 const partChecks = new Map();
                 let askCheck = null;
@@ -175,6 +228,8 @@ export const MpiSettings = ComponentFactory.create({
                     options.settings = next.settings !== false;
                     options.model = next.model !== false;
                     options.images = next.images !== false;
+                    options.video = next.video !== false;
+                    options.audio = next.audio !== false;
                     syncChecks();
                 };
                 const saveOptions = () => {
@@ -227,18 +282,6 @@ export const MpiSettings = ComponentFactory.create({
                 _syncReuseSource = (value) => {
                     sourceInst.el.setValue?.(value === 'current' ? 'current' : 'original');
                 };
-            }
-
-            // ── ComfyUI URL ──────────────────────────────────────────────────
-            const comfyUrlSlot = qs('#mpiSettingsComfyUrlSlot', root);
-            if (comfyUrlSlot) {
-                comfyUrlSlot.innerHTML = '';
-                const comfyUrlInst = MpiInput.mount(comfyUrlSlot, {
-                    label: 'ComfyUI API URL',
-                    placeholder: 'http://localhost:8188',
-                    value: Storage.getComfyUrl() || 'http://localhost:8188',
-                });
-                comfyUrlInst.on('change', ({ value }) => Storage.setComfyUrl(value));
             }
 
             // ── ComfyUI root path ────────────────────────────────────────────
@@ -304,6 +347,7 @@ export const MpiSettings = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
             _clearExtraFolderControls();
+            _runpodInst?.destroy?.();
         };
 
         async function _hydrateComfyPath(pathInst) {
@@ -345,6 +389,12 @@ export const MpiSettings = ComponentFactory.create({
                 // in-memory flags stay stale and opening a project shows a false
                 // "no models installed" popup until some other surface re-syncs.
                 await reSyncInstalledModels();
+                // ComfyUI only reads extra_model_paths.yaml at startup, so a running
+                // process still has the OLD (empty) checkpoint list after a path
+                // change → generation fails with "ckpt_name not in []". Flag a
+                // restart so comfyController restarts ComfyUI and it re-scans the
+                // new root. Reuses the same mechanism as custom-node installs. (MPI-118)
+                state.comfyNeedsRestart = true;
             } catch (err) {
                 clientLogger.error('settings', '[MpiSettings] Error syncing ComfyUI path', err);
             }
@@ -399,6 +449,42 @@ export const MpiSettings = ComponentFactory.create({
             _renderPrimaryFolder(root, 'upscale_models', '#mpiSettingsUpscalePrimarySlot', 'Primary upscale folder');
             _renderExtraFolderBucket(root, 'loras', '#mpiSettingsLoraFoldersSlot', '#mpiSettingsAddLoraFolderSlot');
             _renderExtraFolderBucket(root, 'upscale_models', '#mpiSettingsUpscaleFoldersSlot', '#mpiSettingsAddUpscaleFolderSlot');
+            _renderDropZones(root, 'loras', '#mpiSettingsLoraDropSlot');
+            _renderDropZones(root, 'upscale_models', '#mpiSettingsUpscaleDropSlot');
+        }
+
+        /**
+         * Render one MpiFolderDrop per CONFIGURED folder (primary + extras),
+         * sourced from /comfy/model-folders so the absolute paths match the
+         * import route's allow-list exactly. Dropping a model file copies it in
+         * and refreshes the picker asset lists.
+         */
+        async function _renderDropZones(root, bucket, slotId) {
+            const slot = qs(slotId, root);
+            if (!slot) return;
+            slot.innerHTML = '';
+            let folders = [];
+            try {
+                const res = await fetch(`/comfy/model-folders?bucket=${bucket}`);
+                const data = await res.json();
+                folders = data.success ? (data.folders || []) : [];
+            } catch (err) {
+                clientLogger.error('settings', '[MpiSettings] model-folders fetch failed', err);
+                return;
+            }
+            folders.forEach(({ path: folderPath, primary }) => {
+                const inst = MpiFolderDrop.mount(ce('div'), {
+                    folderPath,
+                    bucket,
+                    primary,
+                    onImport: (filename) => {
+                        Events.emit('ui:success', { message: `Imported ${filename}.` });
+                        loadAssets();
+                    },
+                });
+                slot.appendChild(inst.el);
+                _extraFolderControls.push(inst);
+            });
         }
 
         function _renderExtraFolderBucket(root, bucket, listSelector, addSelector) {

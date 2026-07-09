@@ -25,6 +25,9 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * @param {'portrait'|'landscape'} [mediaRatio] - Preview box aspect. Defaults to 'landscape' when `video`
  *                                        is set, else 'portrait' (still art is ~4:5). Controls how the
  *                                        media slot is shaped so portrait art isn't cropped to a strip.
+ *                                        For `video`, this is only the pre-load fallback — once the clip's
+ *                                        metadata loads, the box is resized to the clip's real aspect ratio
+ *                                        (portrait clips get a 320px max-width cap).
  * @param {string} [icon='info']       - MpiIcon registry key for the info row icon
  * @param {string} [iconText='']       - Text shown alongside the icon in the info row
  * @param {'xs'|'sm'|'md'|'lg'|'xl'} [iconSize='sm'] - Size of the info row icon
@@ -38,13 +41,24 @@ import { formatBytes } from '../../../utils/formatBytes.js';
  * @param {number} [downloadedBytes=0]   - Bytes downloaded so far
  * @param {number} [totalBytes=0]        - Total bytes to download
  * @param {boolean} [canUninstall=false] - Show Uninstall button when true and installed
+ * @param {string} [uninstallLabel='Uninstall'] - Label for the installed-state primary button. Pass 'Update' when an operation-selectable model has pending toggle changes (MPI-122); the click still emits 'uninstall' — the caller decides install-missing vs uninstall-removed.
  * @param {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
  *   (e.g. some deps are on disk but missing others). Use with downloadState='idle' to show
  *   a progress bar while keeping the Install button.
+ * @param {boolean} [indeterminate=false] - Show an animated sweep instead of a real % (MPI-95).
+ *   Used by the remote install path while a real total isn't known yet (the gap before the
+ *   wrapper's first tick) and during the wrapper's post-download sha256 verify. Cleared by
+ *   setProgress({ indeterminate:false }).
+ * @param {'preparing'|'verifying'} [phase='preparing'] - Label for the indeterminate sweep
+ *   (MPI-95): 'preparing' before the first real-total tick, 'verifying' during the wrapper hash.
  *
  * Public APIs (on el):
- *   el.setProgress({ progress, speed, downloadedBytes, totalBytes }) — update progress bar in place
+ *   el.setProgress({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase }) — update progress bar in place
  *   el.setDownloadState(downloadState) — re-render buttons + badge for new state
+ *   el.opsSlot — static DOM slot between the badge row and the action button
+ *     (MPI-122). The model manager appends operation-toggle buttons here; it is
+ *     hidden by default and never touched by setDownloadState's button rebuild,
+ *     so toggle instances survive progress/state updates.
  *   el.destroy() — tear down all mounted children
  *
  * Emits:
@@ -68,6 +82,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             <div class="mpi-installed-display__image" id="idimage-slot"></div>
             <div class="mpi-installed-display__info-row" id="idinfo-slot"></div>
             <div class="mpi-installed-display__badge-row" id="idbadge-slot"></div>
+            <div class="mpi-installed-display__ops" id="idops-slot"></div>
             <div class="mpi-installed-display__actions" id="idactions-slot"></div>
         </div>
     `,
@@ -86,6 +101,18 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             totalBytes: props.totalBytes || 0,
             hasPartialProgress: !!props.hasPartialProgress,
             installed: !!props.installed,
+            // MPI-95: indeterminate sweep + phase label instead of a fake %. The
+            // remote install shows an animated bar in two spots: 'preparing' (the
+            // gap before the wrapper's first real-total tick) and 'verifying' (the
+            // wrapper's post-download sha256 hash, which is otherwise a silent
+            // freeze at ~100%). phase drives the label only; indeterminate drives
+            // the sweep.
+            indeterminate: !!props.indeterminate,
+            phase: props.phase || 'preparing',
+            // Remote (cloud Pod) downloads can't pause/resume — the wrapper's
+            // aria2c install has no pause API. Hide the Pause button when remote so
+            // the user isn't offered a no-op. (MPI-140)
+            isRemote: !!props.isRemote,
         };
 
         // Title
@@ -119,6 +146,17 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             video.loop = true;
             video.playsInline = true;
             video.preload = 'metadata';
+            // Match the preview box to the clip's real aspect once metadata loads, so
+            // portrait clips (i2v) aren't letterboxed into the landscape default and
+            // landscape clips (t2v) aren't cropped to a portrait strip. Caller-set
+            // props.mediaRatio (the --landscape/--portrait class) is the pre-load
+            // fallback; the runtime measurement is authoritative and respects any clip.
+            _mediaUnsubs.push(on(video, 'loadedmetadata', () => {
+                if (video.videoWidth && video.videoHeight) {
+                    imageSlot.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+                    if (video.videoHeight > video.videoWidth) imageSlot.style.maxWidth = '320px';
+                }
+            }));
             // Failed media must not collapse the card — hide the slot if the clip can't load.
             _mediaUnsubs.push(on(video, 'error', () => { imageSlot.style.display = 'none'; }));
             _mediaUnsubs.push(on(imageSlot, 'mouseenter', () => { video.play().catch(() => {}); }));
@@ -132,6 +170,15 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 src: `comfy_workflows/display/${props.image}`,
                 className: 'mpi-installed-display__image-img',
             });
+            // Match the box to the still's real aspect once it loads, so non-4:5 art
+            // (e.g. the square PiD preview) shows as-is instead of cover-cropping to
+            // the portrait default. Mirrors the video loadedmetadata trick above.
+            _mediaUnsubs.push(on(img, 'load', () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    imageSlot.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                    if (img.naturalHeight > img.naturalWidth) imageSlot.style.maxWidth = '320px';
+                }
+            }));
             _mediaUnsubs.push(on(img, 'error', () => { imageSlot.style.display = 'none'; }));
             imageSlot.appendChild(img);
         } else {
@@ -169,6 +216,14 @@ export const MpiInstalledDisplay = ComponentFactory.create({
         const badgeSlot = qs('#idbadge-slot', el);
         const actionsSlot = qs('#idactions-slot', el);
 
+        // MPI-122: static slot (between badge + actions) for operation toggles. The
+        // model manager populates it after mount via el.opsSlot. It is NOT touched by
+        // _renderState (download-state rebuilds), so toggle instances survive progress
+        // updates. Empty + display:none by default so non-op cards show nothing.
+        const opsSlot = qs('#idops-slot', el);
+        opsSlot.style.display = 'none';
+        el.opsSlot = opsSlot;
+
         // Live refs for in-place progress update (populated by _renderState)
         let _progressBarInst = null;
         let _progressLabelEl = null;
@@ -192,6 +247,7 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
             const isDownloading = ['downloading', 'paused', 'partial'].includes(downloadState);
             const isInstalling = downloadState === 'installing';
+            const isQueued = downloadState === 'queued'; // MPI-184: serialized, POST not fired yet
             const isComplete = downloadState === 'complete' || installed;
             const isCancelled = downloadState === 'cancelled';
             const showProgress = isDownloading || hasPartialProgress;
@@ -200,6 +256,10 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             _clearSlot(badgeSlot);
             if (isComplete) {
                 const badge = MpiBadge.mount(ce('div'), { label: 'INSTALLED', variant: 'success' });
+                badgeSlot.appendChild(badge.el);
+                _children.push(badge);
+            } else if (isQueued) {
+                const badge = MpiBadge.mount(ce('div'), { label: 'QUEUED', variant: 'secondary' });
                 badgeSlot.appendChild(badge.el);
                 _children.push(badge);
             } else if (hasPartialProgress && !installed) {
@@ -231,6 +291,8 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                     interactive: false,
                 });
                 _children.push(_progressBarInst);
+                // MPI-95: indeterminate sweep while real sizes resolve.
+                _applyIndeterminate(_current.indeterminate);
                 progressSlot.appendChild(barWrap);
 
                 _progressLabelEl = ce('div', { className: 'mpi-installed-display__progress-label' });
@@ -247,10 +309,13 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             }
 
             if (downloadState === 'downloading') {
-                const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
-                pauseBtn.on('click', () => emit('pause', {}));
-                actionsSlot.appendChild(pauseBtn.el);
-                _children.push(pauseBtn);
+                // Pause is local-only — remote (cloud) downloads have no pause API.
+                if (!_current.isRemote) {
+                    const pauseBtn = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
+                    pauseBtn.on('click', () => emit('pause', {}));
+                    actionsSlot.appendChild(pauseBtn.el);
+                    _children.push(pauseBtn);
+                }
                 const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancelBtn.on('click', () => emit('cancel', {}));
                 actionsSlot.appendChild(cancelBtn.el);
@@ -260,6 +325,21 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 resumeBtn.on('click', () => emit('resume', {}));
                 actionsSlot.appendChild(resumeBtn.el);
                 _children.push(resumeBtn);
+                const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                cancelBtn.on('click', () => emit('cancel', {}));
+                actionsSlot.appendChild(cancelBtn.el);
+                _children.push(cancelBtn);
+            } else if (isQueued) {
+                // MPI-184: waiting its turn in the serial install queue — no bar to
+                // pause, just a Cancel that drops it from the queue before its POST.
+                // 'Queued' with no trailing '…' — the ::after supplies the animated
+                // dots (a literal … here made six dots). A spacer pins Cancel right so
+                // the growing/shrinking dots don't shove it around.
+                const label = ce('div', { className: 'mpi-installed-display__installing-label' });
+                label.textContent = 'Queued';
+                actionsSlot.appendChild(label);
+                const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
+                actionsSlot.appendChild(spacer);
                 const cancelBtn = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancelBtn.on('click', () => emit('cancel', {}));
                 actionsSlot.appendChild(cancelBtn.el);
@@ -279,11 +359,13 @@ export const MpiInstalledDisplay = ComponentFactory.create({
                 actionsSlot.appendChild(actionBtn.el);
                 _children.push(actionBtn);
             } else if (installed && props.canUninstall) {
-                // Uninstall button — shown for fully installed models
+                // Installed-state primary button. Label defaults to 'Uninstall';
+                // op-selectable models pass 'Update' when toggles changed (MPI-122).
+                // The event is always 'uninstall' — the caller branches on its draft.
                 const spacer = ce('div', { className: 'mpi-installed-display__spacer' });
                 actionsSlot.appendChild(spacer);
                 const uninstallBtn = MpiButton.mount(ce('div'), {
-                    text: 'Uninstall',
+                    text: props.uninstallLabel || 'Uninstall',
                     variant: 'ghost',
                     size: 'md',
                 });
@@ -293,9 +375,22 @@ export const MpiInstalledDisplay = ComponentFactory.create({
             }
         }
 
+        // MPI-95: toggle the indeterminate sweep on the live progress bar. Reuses
+        // the MpiProgressBar `--loading` shimmer (animated full-width band) so the
+        // bar reads as "working" without showing a fake %.
+        function _applyIndeterminate(on) {
+            if (!_progressBarInst) return;
+            const bar = qs('.mpi-progress', _progressBarInst.el);
+            if (bar) bar.classList.toggle('mpi-progress--loading', !!on);
+        }
+
         function _updateProgressLabel() {
             if (!_progressLabelEl) return;
-            const { downloadState, hasPartialProgress, speed, downloadedBytes, totalBytes } = _current;
+            const { downloadState, hasPartialProgress, speed, downloadedBytes, totalBytes, indeterminate, phase } = _current;
+            if (indeterminate) {
+                _progressLabelEl.textContent = phase === 'verifying' ? 'Verifying…' : 'Preparing…';
+                return;
+            }
             if (downloadState === 'paused') {
                 const downloadedText = totalBytes ? `${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)}` : '';
                 const suffix = [downloadedText, speed].filter(Boolean).join(' - ');
@@ -312,11 +407,18 @@ export const MpiInstalledDisplay = ComponentFactory.create({
 
         // ── Public APIs ──────────────────────────────────────────────────────
 
-        el.setProgress = ({ progress, speed, downloadedBytes, totalBytes } = {}) => {
+        el.setProgress = ({ progress, speed, downloadedBytes, totalBytes, indeterminate, phase } = {}) => {
             if (typeof progress === 'number') _current.progress = progress;
             if (typeof speed === 'string') _current.speed = speed;
             if (typeof downloadedBytes === 'number') _current.downloadedBytes = downloadedBytes;
             if (typeof totalBytes === 'number') _current.totalBytes = totalBytes;
+            // MPI-95: phase drives the indeterminate label (Preparing…/Verifying…).
+            if (typeof phase === 'string') _current.phase = phase;
+            // MPI-95: clear/set the indeterminate sweep when a real total arrives.
+            if (typeof indeterminate === 'boolean') {
+                _current.indeterminate = indeterminate;
+                _applyIndeterminate(indeterminate);
+            }
 
             if (_progressBarInst) {
                 // MpiProgressBar has no public setter — update input value + track fill directly.

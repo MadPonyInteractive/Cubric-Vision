@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-237",
+  "title": "Pod disk-usage bar in Model Library (volume + ephemeral pods)",
+  "description": "Surface the connected Pod's disk usage as a bar in the Model Library, under the 'N installed · M available' sub-line and over the filters — so the user can manage disk space while browsing/installing models (not only in RunPod Settings). Also make the bar work for EPHEMERAL 'Any region' pods, which use the container disk (/cubric-data) not a network volume. Today the bar only exists in Settings (MPI-169) and only for volume-backed pods. Two gaps: (1) Model Library has no bar; (2) ephemeral pods report no usable telemetry — the wrapper's /wrapper/disk du's /workspace (CUBRIC_VOLUME_MOUNT default), but ephemeral models live in /cubric-data (start.sh sets CUBRIC_ROOT=/cubric-data but never exports CUBRIC_VOLUME_MOUNT), so du reads the wrong, unused ~20GB mount. Fix: start.sh exports CUBRIC_VOLUME_MOUNT=$CUBRIC_ROOT (R2-floated runtime, NO image rebuild); server /remote/pod/disk returns {used,total,ephemeral} resolving total from volume size OR ephemeral container-disk size; extract the Settings bar's mount+poll+colour-swap into ONE shared helper both surfaces call (no drift); Model Library mounts it; Settings reuses it and gains the ephemeral case for free.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "Claude implementation session",
+  "created_at": "2026-07-08T23:07:57Z",
+  "updated_at": "2026-07-08T23:07:57Z",
+  "links": {
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "model-library",
+    "runpod",
+    "downloads",
+    "pod-runtime"
+  ],
+  "priority": "medium"
+}

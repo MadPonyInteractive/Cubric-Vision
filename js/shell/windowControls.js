@@ -79,3 +79,8 @@ export function bindWindowControls() {
     });
   }
 }
+
+/** Close the app window (browser-safe no-op in dev). */
+export function quitApp() {
+  if (ipcRenderer) ipcRenderer.send('window-close');
+}

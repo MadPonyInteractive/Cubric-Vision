@@ -42,11 +42,12 @@ Since `state.js` fires a canonical event on mutation, components can listen to c
 ```javascript
 import { state } from '../../state.js';
 import { Events } from '../../events.js';
+import { clientLogger } from '../services/clientLogger.js';
 
 setup: (el, props, emit) => {
     const unsub = Events.on('state:changed', ({ key, value }) => {
         if (key === 'currentPage') {
-             console.log("Page updated to: ", value);
+             clientLogger.info('state', `Page updated to: ${value}`);
         }
     });
 

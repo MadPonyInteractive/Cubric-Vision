@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "561532ea-b014-4e3d-a111-874411036065",
+  "status": "closed",
+  "role": "implementer",
+  "agent": "codex",
+  "name": "MPI-92 RunPod remote engine hardening",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "task": ".agents/mpi-kanban/state/tasks/3350e6c9-63ed-4e81-870f-80458e1e811d.json",
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "claim_files",
+    "edit_owned_files",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:41:14.4623837Z",
+      "event": "session_started",
+      "note": "Started MPI-92 with scoped mocked tests and deferred user verification."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "session_closed",
+      "note": "MPI-92 moved to done after user verification."
+    }
+  ]
+}

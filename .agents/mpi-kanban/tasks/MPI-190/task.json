@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-190",
+  "title": "Revert Pod LTX transformer GGUF -> bf16 (cu130 killed the cold tax that justified GGUF)",
+  "description": "FOLLOW-UP to MPI-189 (blocked on it). The Q8_0 GGUF LTX transformer on the Pod (MPI-168, engines.remote.extraDeps in models.js) existed for ONE reason: to sidestep the ~5min aimdo cold tax on the old cu126/cu128 stack (bf16 41GB faulted in 108-127s per stage). cu130 (MPI-187) collapses that fault-in to ~11s -> the GGUF's whole justification is gone.\n\n=== WHY REVERT TO bf16 ON THE POD ===\n1. QUALITY: bf16 is the reference; GGUF Q8 is a quality trade. Local already runs bf16 (engines.local.extraDeps).\n2. KILLS MPI-185 ROOT CAUSE: the LTX i2v OOM on 24GB is the ComfyUI-GGUF dequantize_blocks_BF16 upcast spike (int16->int32->float32) at sample time. No GGUF = no dequant = no spike = OOM gone. (bf16 still needs a 32GB card, but that's a clean VRAM fit, not a transient dequant explosion.)\n3. SIMPLER: drops the engine-split on the transformer — both engines run the same bf16 file. Removes ComfyUI-GGUF node from the remote deps, the _gguf workflow suffix, and the GGUF gguf-loader path. One transformer, one workflow set. Big consumer-sweep reduction (the MPI-163/165 engine-split smear shrinks).\n\n=== SCOPE ===\n- models.js ltx-23 engines block: remote.extraDeps ['ltx23-transformer-gguf','ComfyUI-GGUF'] -> ['ltx23-transformer-bf16'] (= same as local); drop workflowSuffix '_gguf' on remote (both engines -> the bf16 workflow files). Possibly collapse the engines block entirely if local==remote now.\n- Verify the LTX workflow set: the _gguf.json variants become unused -> remove or regenerate. The bf16 LTX_{t2v,i2v}{,_stage2}.json become the single set.\n- dependencies.js: ltx23-transformer-gguf + ComfyUI-GGUF may become orphaned (check no other model uses them before removing).\n- Sweep ALL engine-split consumers (download / status-gate / prompt-box / resolveModelDeps) per the engine-split law — a half-revert leaves a broken resolver. cf .claude/rules/comfy_engine.md Engine Split.\n\n=== GATE ===\nDo NOT start until MPI-189 ships + a cu130 Pod live-confirms bf16 LTX faults in ~11s AND fits (32GB card, no OOM through both stages). If cu130-bf16 still OOMs the continue stage on 32GB, keep GGUF as a fallback for smaller cards and only revert the >=32GB tier. Verify on a real cu130 Pod before ripping GGUF out. This card also finally CLOSES MPI-185 (the OOM investigation) once bf16 is confirmed clean on cu130.\n\nBRANCH: RunPod. Cross-ref: MPI-189 (prereq), MPI-187 (cu130 proof), MPI-185 (OOM this closes), MPI-168 (the GGUF-add being reverted), MPI-163/165 (engine-split to unwind).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-04T15:30:00Z",
+  "updated_at": "2026-07-05T12:00:00Z",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "runpod",
+    "ltx",
+    "bf16",
+    "gguf-revert",
+    "cu130-followup",
+    "closes-mpi-185"
+  ],
+  "priority": "medium"
+}

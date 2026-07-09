@@ -1,0 +1,36 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "5f009df7-e7e0-457c-a4d4-79761e360861",
+  "status": "resolved",
+  "created_at": "2026-06-16T08:00:00Z",
+  "updated_at": "2026-06-16T08:10:00Z",
+  "resolution": "Fixed app-side in routes/downloadManager.js remote uninstall branch (reads deleteFiles, keeps volume bytes when unchecked, populates keptModelFiles). Folded into MPI-97 as Phase 5; renderer already consumes keptModelFiles. Pending USER live-verify on a CPU Pod. — Claude (MPI-97 owner)",
+  "from": {
+    "session": "Claude implementer — MPI-81 / MPI-98 (closed)",
+    "role": "implementer",
+    "workspace": "c:\\AI\\Mpi\\Cubric-Vision"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-97"
+  },
+  "subject": "Bug handoff: REMOTE uninstall ignores the 'delete files from disk' checkbox (you own downloadManager.js)",
+  "body": "Handing you this bug — you're live in downloadManager.js with fresher context, and it's the same file. Diagnosed, not fixed (left it to you to avoid colliding).\n\nREPRO (user hit it live, remote mode on an L4): uninstalled 'Wan 2.2 T2V Smooth' with 'delete files from disk' UNCHECKED, expecting the ~12GB UNet weights to stay on the Pod volume. Instead the model dropped to ~6.5GB/36.5GB PARTIALLY INSTALLED — the weights were deleted from the volume anyway. ~30GB lost (already gone; this fix only prevents recurrence).\n\nROOT CAUSE — routes/downloadManager.js POST /comfy/models/uninstall:\n- Line 1159 destructures `deleteFiles = true` (default true).\n- The LOCAL branch HONORS it correctly at lines 1294-1298: `if (!deleteFiles && isInModelsFolder) { keptModelFiles.push(...); continue; }` — keeps the file, skips the trash.\n- The REMOTE branch (the `if (remoteModels.isRemoteActive())` block, ~lines 1171-1230) NEVER reads `deleteFiles`. It calls `remoteModels.remoteUninstallDep(dep)` for every non-shared, non-universal dep unconditionally. The wrapper's POST /wrapper/models/delete DOES exist (wrapper.py:1248 — the old 'no delete endpoint' note is stale), so it really deletes from the volume. => unchecking the box is silently ignored in remote mode.\n\nSUGGESTED FIX (mirror the local semantics into the remote loop, ~line 1194): inside `for (const dep of dependencies)`, AFTER the universal-skip (1195) and shared-skip (1199) but BEFORE the `remoteUninstallDep` call (1204), add:\n  if (!deleteFiles && dep.type !== 'custom_nodes') { keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id }); continue; }\nThen include keptModelFiles in the `download:uninstalled` broadcast (line 1228) + the response (1229) like the local branch does (currently the remote branch hardcodes keptModelFiles:[]). Net: keep=files-stay-on-volume, just drop the install record / let the UI reflect 'not installed' while the bytes remain (so a re-install is near-instant). Decide whether the UI should then show 'partially installed' or a distinct 'on disk, not registered' state — that's a product call.\n\nNOTES:\n- This is the same family as the [[project_remote_route_branch_audit]] memory (remote routes touching model files must branch correctly). The branch EXISTS here; it just forgot the deleteFiles flag.\n- No image/wrapper change needed — app-side only.\n- I did NOT edit the file (you own it). If you'd rather I take it, say so and I'll coordinate a handoff. Consider a new card (MPI-99?) if you want it tracked separately from MPI-97's SSE-reconnect work.",
+  "related": {
+    "task_card": "MPI-97",
+    "files": [
+      "routes/downloadManager.js",
+      "routes/remoteModels.js"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-16T08:00:00Z",
+      "event": "created"
+    }
+  ]
+}

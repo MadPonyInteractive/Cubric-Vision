@@ -5,7 +5,7 @@
 
 ---
 
-## Organisms
+## Video Compounds
 
 ### MpiVideoSurface (Compound — js/components/Compounds/MpiVideoSurface/)
 EMITS:   `play`           `{ time: number }`
@@ -33,6 +33,8 @@ EMITS:   `seek`         `{ time: number }` — playhead committed (drag end / tr
          `range-change` `{ in: number, out: number }` — fired alongside in/out commits
 LISTENS: (none — pure pointer drag state)
 NOTE:    Two-handle trim seek bar. Pointer drag coalesces on RAF; commits on `pointerup`. Frame-snap via `Math.round(t*fps)/fps`. Constraints: `0 ≤ in+frame ≤ out ≤ duration`; playhead clamped to `[in, out]`. `seek-preview` enables live-scrub on the host video without re-firing on every RAF tick.
+
+## Organisms
 
 ### MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/)
 EMITS:   `play`, `pause`, `ended`, `timeupdate` — forwarded from MpiVideoSurface

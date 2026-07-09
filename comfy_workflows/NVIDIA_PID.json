@@ -1,0 +1,727 @@
+{
+  "1564": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 3,
+      "cfg": 1,
+      "model": [
+        "1573",
+        0
+      ],
+      "positive": [
+        "1568",
+        0
+      ],
+      "negative": [
+        "1567",
+        0
+      ],
+      "sampler": [
+        "1565",
+        0
+      ],
+      "sigmas": [
+        "1566",
+        0
+      ],
+      "latent_image": [
+        "1569",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "1565": {
+    "inputs": {
+      "sampler_name": "lcm"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "1566": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 4,
+      "denoise": 1,
+      "model": [
+        "1573",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "1567": {
+    "inputs": {
+      "conditioning": [
+        "1572",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "1568": {
+    "inputs": {
+      "latent_format": "flux",
+      "degrade_sigma": [
+        "1606",
+        0
+      ],
+      "positive": [
+        "1572",
+        0
+      ],
+      "latent": [
+        "1578",
+        0
+      ]
+    },
+    "class_type": "PiDConditioning",
+    "_meta": {
+      "title": "PiD Conditioning"
+    }
+  },
+  "1569": {
+    "inputs": {
+      "width": [
+        "1623",
+        0
+      ],
+      "height": [
+        "1623",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyChromaRadianceLatentImage",
+    "_meta": {
+      "title": "EmptyChromaRadianceLatentImage"
+    }
+  },
+  "1570": {
+    "inputs": {
+      "samples": [
+        "1607",
+        0
+      ],
+      "vae": [
+        "1576",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1571": {
+    "inputs": {
+      "clip_name": "gemma_2_2b_it_elm_bf16.safetensors",
+      "type": "pixeldit",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "1572": {
+    "inputs": {
+      "text": [
+        "1587",
+        0
+      ],
+      "clip": [
+        "1571",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1573": {
+    "inputs": {
+      "unet_name": "pid_flux1_1024_to_4096_4step_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1576": {
+    "inputs": {
+      "vae_name": "pixel_space"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1578": {
+    "inputs": {
+      "pixels": [
+        "1582",
+        0
+      ],
+      "vae": [
+        "1579",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1579": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1580": {
+    "inputs": {
+      "images": [
+        "1614",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "1582": {
+    "inputs": {
+      "width": [
+        "1609",
+        0
+      ],
+      "height": [
+        "1609",
+        1
+      ],
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "1583",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "1583": {
+    "inputs": {
+      "image": "imageUpscale_001.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1587": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "1588": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 3,
+      "cfg": 1,
+      "model": [
+        "1592",
+        0
+      ],
+      "positive": [
+        "1589",
+        0
+      ],
+      "negative": [
+        "1567",
+        0
+      ],
+      "sampler": [
+        "1565",
+        0
+      ],
+      "sigmas": [
+        "1593",
+        0
+      ],
+      "latent_image": [
+        "1569",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "1589": {
+    "inputs": {
+      "latent_format": "sd3",
+      "degrade_sigma": [
+        "1606",
+        0
+      ],
+      "positive": [
+        "1572",
+        0
+      ],
+      "latent": [
+        "1590",
+        0
+      ]
+    },
+    "class_type": "PiDConditioning",
+    "_meta": {
+      "title": "PiD Conditioning"
+    }
+  },
+  "1590": {
+    "inputs": {
+      "pixels": [
+        "1582",
+        0
+      ],
+      "vae": [
+        "1591",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1591": {
+    "inputs": {
+      "vae_name": "sd3_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1592": {
+    "inputs": {
+      "unet_name": "pid_sd3_1024_to_4096_4step_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1593": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 4,
+      "denoise": 1,
+      "model": [
+        "1592",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 3,
+      "cfg": 1,
+      "model": [
+        "1598",
+        0
+      ],
+      "positive": [
+        "1595",
+        0
+      ],
+      "negative": [
+        "1567",
+        0
+      ],
+      "sampler": [
+        "1565",
+        0
+      ],
+      "sigmas": [
+        "1599",
+        0
+      ],
+      "latent_image": [
+        "1569",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "1595": {
+    "inputs": {
+      "latent_format": "qwenimage",
+      "degrade_sigma": [
+        "1606",
+        0
+      ],
+      "positive": [
+        "1572",
+        0
+      ],
+      "latent": [
+        "1596",
+        0
+      ]
+    },
+    "class_type": "PiDConditioning",
+    "_meta": {
+      "title": "PiD Conditioning"
+    }
+  },
+  "1596": {
+    "inputs": {
+      "pixels": [
+        "1582",
+        0
+      ],
+      "vae": [
+        "1597",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1597": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1598": {
+    "inputs": {
+      "unet_name": "pid_qwenimage_1024_to_4096_4step_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1599": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 4,
+      "denoise": 1,
+      "model": [
+        "1598",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "1600": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 3,
+      "cfg": 1,
+      "model": [
+        "1604",
+        0
+      ],
+      "positive": [
+        "1601",
+        0
+      ],
+      "negative": [
+        "1567",
+        0
+      ],
+      "sampler": [
+        "1565",
+        0
+      ],
+      "sigmas": [
+        "1605",
+        0
+      ],
+      "latent_image": [
+        "1569",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "1601": {
+    "inputs": {
+      "latent_format": "sdxl",
+      "degrade_sigma": [
+        "1606",
+        0
+      ],
+      "positive": [
+        "1572",
+        0
+      ],
+      "latent": [
+        "1602",
+        0
+      ]
+    },
+    "class_type": "PiDConditioning",
+    "_meta": {
+      "title": "PiD Conditioning"
+    }
+  },
+  "1602": {
+    "inputs": {
+      "pixels": [
+        "1582",
+        0
+      ],
+      "vae": [
+        "1603",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1603": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1604": {
+    "inputs": {
+      "unet_name": "pid_sdxl_1024_to_4096_4step_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1605": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 4,
+      "denoise": 1,
+      "model": [
+        "1604",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "1606": {
+    "inputs": {
+      "float": 0
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Denoise"
+    }
+  },
+  "1607": {
+    "inputs": {
+      "select": 1,
+      "any_1": [
+        "1564",
+        0
+      ],
+      "any_2": [
+        "1588",
+        0
+      ],
+      "any_3": [
+        "1594",
+        0
+      ],
+      "any_4": [
+        "1600",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Input_Type"
+    }
+  },
+  "1609": {
+    "inputs": {
+      "size": 1024,
+      "side": true,
+      "image": [
+        "1583",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1613": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": [
+        "1618",
+        0
+      ],
+      "height": [
+        "1618",
+        1
+      ],
+      "crop": "disabled",
+      "image": [
+        "1570",
+        0
+      ]
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Upscale Image"
+    }
+  },
+  "1614": {
+    "inputs": {
+      "select": 3,
+      "any_1": [
+        "1613",
+        0
+      ],
+      "any_2": [
+        "1616",
+        0
+      ],
+      "any_3": [
+        "1570",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Input_Resolution"
+    }
+  },
+  "1616": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": [
+        "1619",
+        0
+      ],
+      "height": [
+        "1619",
+        1
+      ],
+      "crop": "disabled",
+      "image": [
+        "1570",
+        0
+      ]
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Upscale Image"
+    }
+  },
+  "1618": {
+    "inputs": {
+      "size": 1024,
+      "side": true,
+      "image": [
+        "1570",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1619": {
+    "inputs": {
+      "size": 2048,
+      "side": true,
+      "image": [
+        "1570",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1623": {
+    "inputs": {
+      "size": 4096,
+      "side": true,
+      "image": [
+        "1582",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  }
+}

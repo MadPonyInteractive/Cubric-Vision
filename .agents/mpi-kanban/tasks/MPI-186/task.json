@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-186",
+  "title": "Fast Pod cold-start: bake-and-cache (RunPod-style) + shrink image — decide image architecture BEFORE the cu130 rebuild",
+  "description": "RE-SCOPED 2026-07-04 (MPI-187 live findings inverted the original premise). This card now DECIDES the Pod image architecture, and it GATES MPI-189 (the cu130 rebuild) — settle the structure here first so we build the cu130 image the RIGHT way ONCE, not rebuild twice.\n\n=== WHY RE-SCOPED (the original premise was wrong) ===\nOriginal card (below, preserved) assumed 'image too big -> slow cold pull -> move ComfyUI OFF the image ONTO the /workspace volume'. But live on MPI-187 we watched RunPod's official image boot INSTANT + models download instant doing the OPPOSITE: it BAKES ComfyUI into the image (/opt/comfyui-baked) + cp -r to LOCAL overlay disk on boot (seconds, zero network), and RunPod FLEET-CACHES its own image across hosts (near-zero registry pull). Our slowness is NOT 'image too big' — it is (a) cold GHCR pull of a custom low-traffic image on every fresh host + (b) start.sh STREAMING ComfyUI/weights from the 1GB/s network volume. Moving ComfyUI TO the volume makes us stream MORE from the slow path — likely WORSE. So the winning direction is a HYBRID of what we found: bake-and-cache for boot speed + shrink the image so it pulls & fleet-caches faster. NOT volume-relocation (which also needs a risky aimdo .so relocation spike — why relocate the load-bearing allocator onto the slow disk?).\n\n=== THE DECISION SPIKE (do this FIRST, cheap, decides everything) ===\nThe one unknown that forks the whole architecture: DOES RUNPOD FLEET-CACHE A CUSTOM LOW-TRAFFIC TEMPLATE IMAGE the way it caches its own first-party image? Test it: register the CURRENT product image as a RunPod TEMPLATE, deploy it several times on fresh/cold hosts (vary datacenter), measure image-pull time each cold deploy. \n  - If template-caching WARMS it (pull drops to seconds after first use) -> PATH B/HYBRID wins: bake everything into the cu130 image + register a template + shrink. Skip volume-relocation entirely. This is the target.\n  - If it does NOT warm (custom images not fleet-pre-cached) -> the bake still gives fast BOOT (cp -r local, no volume stream) but the PULL stays cold -> shrink becomes the primary lever (smaller image = faster cold pull); also test Docker Hub vs GHCR pull speed, and whether a RunPod-hosted registry / their image cache helps.\nEither branch, volume-relocation of ComfyUI is OFF the table (loses to bake-and-cache). All live Pod ops USER-only.\n\n=== SCOPE (hybrid = bake-and-cache + shrink) ===\n1. BAKE + LOCAL-COPY: keep ComfyUI + deps BAKED in the image (like RunPod's /opt/comfyui-baked); on boot cp -r to container/local disk, NOT stream from the volume. start.sh: stop volume-streaming ComfyUI core. Volume holds MODELS ONLY (arch-agnostic, already the case for weights).\n2. FLEET-CACHE: register a RunPod template for the image so it pre-caches across hosts (pending the spike result).\n3. SHRINK: cut image size where free — multi-stage build discipline, drop build-only toolchains from the runtime layer, prune apt caches / pip caches / .pyc, remove any dev/devel base cruft not needed at runtime, squash where safe. Measure before/after. (torch trio + sage stay baked — arch-bound; that's the big weight but it's the price of a self-contained fast-boot image.)\n4. REGISTRY: evaluate Docker Hub vs GHCR pull speed from RunPod hosts; move if materially faster.\n\n=== RELATIONSHIP TO MPI-189 (SEQUENCE: this BEFORE 189) ===\nThis card's DECISION (bake-and-cache confirmed, shrink targets identified, registry chosen) feeds directly into HOW MPI-189 builds the single cu130 image. Do NOT build the cu130 image (189) until this architecture is settled — otherwise 189 builds it the old way and we rebuild again. Order: MPI-186 (decide+prototype architecture on the CURRENT image) -> MPI-189 (build the cu130 image THAT way) -> MPI-188 (guard, alongside 189) -> MPI-190 (bf16). The shrink + bake work itself can land in the SAME cu130 rebuild (189) — this card produces the DESIGN + the spike evidence; 189 executes it on cu130.\n\n=== KEEP FROM THE ORIGINAL INVESTIGATION ===\nresearch/investigation.md's dep classification + the aimdo/kitchen relocation-risk analysis stay useful REFERENCE (they prove WHY volume-relocation is risky = another reason to prefer bake-and-cache). The version-signal wiring ($CUBRIC_COMFYUI_REF -> manifest) is still valid if any skip-on-warm logic is wanted for the LOCAL-copy step. BRANCH: mpi-ci (Dockerfile/start.sh) + RunPod branch of Cubric-Vision if app-side template/manifest wiring is added.\n\n=== ORIGINAL CARD (pre-cu130 premise, PRESERVED) ===\nThe product Pod image (mpi-ci/cubric-vision-pod) bakes ComfyUI + its ~5GB uncompressed pip dep tree into a Docker layer. On a network volume that layer re-pulls on every cold host and can never be skipped. [Original GOAL was: move ComfyUI SOURCE + arch-agnostic pip deps ONTO the /workspace volume, install once per volume via a boot-time script gated on $CUBRIC_COMFYUI_REF, skip when unchanged. Torch trio + sage stay baked (arch-bound). ComfyUI core + deps ONLY; 7 node packs stay baked, declared in extra_model_paths.yaml. Spike-gated on aimdo/kitchen surviving pip --target relocation.] This direction is now SUPERSEDED by bake-and-cache above — the volume-relocation fights the slow path instead of avoiding it.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "MPI-186 decision: GHCR->Docker Hub + multi-stage shrink (feeds cu130 rebuild MPI-189)",
+  "created_at": "2026-07-03T22:30:00Z",
+  "updated_at": "2026-07-04T16:48:10Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "mpi-ci",
+    "pod-image",
+    "image-size",
+    "cold-start",
+    "bake-and-cache",
+    "runpod",
+    "spike-gated",
+    "gates-mpi-189"
+  ],
+  "priority": "high"
+}

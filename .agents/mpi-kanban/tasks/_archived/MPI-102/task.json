@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-102",
+  "title": "Install/Uninstall button DEAD after an uninstall — stale state.downloadJobs 'complete' makes the re-rendered card wire pause/cancel instead of install",
+  "description": "Live-found 2026-06-16 (MPI-100 verify, remote no-GPU Pod). After UNINSTALLING a model, pressing INSTALL on a card does NOTHING — no dialog, no download, NO backend log line (dies renderer-side before any fetch), console clean. Prior symptom in the same family was the dead UNINSTALL button (MPI-99, fixed in commit a28c7a8 by the SAME gate change this card needs — see correction below; NOT the MpiModal show() re-arm, which was MPI-99's first wrong hypothesis 3845756, harmless safety-net only). ROOT CAUSE (renderer-only, NO image): a model's download job lingers in state.downloadJobs with status 'complete' (download:complete sets status but never removes the job). On a post-uninstall renderList, MpiModelManager reads downloadState = job.status = 'complete' (js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js: installed branch ~line 251 `isActiveDownload`, uninstalled branch ~line 362 `downloadState !== 'idle'`). 'complete' !== 'idle' so the card wires pause/resume/cancel and SKIPS the install `delete` handler (line 371) / uninstall handler (line 263) → the visible Install/Uninstall button has no click handler → dead. CONTRAST: download:cancelled handler (line 469) explicitly calls awaitReSync() to rebuild cards 'so handlers wire to delete (Install) again'; the uninstall path does NOT re-render after clearing, and a lingering 'complete' job is never normalized. downloadService.uninstall() DOES filter the job (downloadService.js:121) but AFTER emitting download:uninstalled (line 120) and the timing vs the s_installedModelIds renderList needs a live probe. FIX DIRECTION (needs live probe to confirm ordering): (a) in renderList, treat downloadState 'complete'/'cancelled' as 'idle' for an installed-status-derived card so it ALWAYS wires the correct primary action; AND/OR (b) ensure the uninstall flow clears state.downloadJobs BEFORE the re-render and force a renderList (mirror download:cancelled's awaitReSync). APP-ONLY, NO IMAGE REBUILD (renderer state bug; click never reaches backend). MpiModelManager was the MPI-99 agent's file (session closed). MPI-99 AUTHOR CORRECTION + CONTEXT: this IS the exact MIRROR of the installed-branch gate fixed in a28c7a8 — that commit changed ONLY the installed branch (line ~251, to an explicit isActiveDownload whitelist) and LEFT this uninstalled branch (line 362) as the buggy !== 'idle'. So MPI-102 = finishing the half-done fix. Fix = copy the same isActiveDownload block here (downloading/paused/installing → pause/cancel; else → delete/Install handler). MUST preserve pause/cancel for a genuinely-downloading NOT-yet-installed pack (the whitelist does; a naive treat-all-as-idle would strip them). Implementer's-eye walkthrough + exact code + probe steps + regression checklist: research/mpi99-author-context.md. See brief.md + [[project_download_complete_lingering_job]] + [[project_slideover_close_popup_optout]].",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-16T12:50:00Z",
+  "updated_at": "2026-06-16T13:30:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

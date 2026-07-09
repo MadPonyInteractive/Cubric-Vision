@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-236",
+  "title": "Model Library flashes + Install button flickers back during install",
+  "description": "During a model install the Model Library grid re-drew all cards repeatedly and the Install button flickered back mid-download, settling correctly (Uninstall) only at completion. Root cause: (1) the backend broadcasts download:complete PER-DEP with { depId, modelId:null } then once model-level with a real modelId; the frontend download:complete SSE handler ran reSyncInstalledModels() + re-emitted download:complete unconditionally, so every dep fired models:checked -> s_installedModelIds write -> MpiModelManager.renderList() full grid rebuild x N, and mid-storm the installing model briefly derived a not-active/not-installed state -> Install button flicker. (2) download:started (fired twice: client-side in downloadService.start() + backend SSE echo) and _install() both called full renderList(). Fix: gate the download:complete re-sync + emit on data.modelId (model-level only); replace download:started renderList() and the _install() renderList() with targeted _patchTile(). Grid now only fully rebuilds on a genuine section move (complete). The ws-token 503 in the console is a separate, unrelated remote-engine-channel issue (install ran through the download SSE stream and succeeded). Docs: docs/download-manager.md (per-dep vs model-level complete) + docs/ui-gotchas.md (Model Library flash discipline).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-09T00:00:00Z",
+  "updated_at": "2026-07-09T00:00:00Z",
+  "links": {
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-122",
+  "title": "Revert Wan.2.2 to a single model.",
+  "description": "Revert Wan.2.2 to a single model and add new functionality to the downloads area. The Wan.2.2 model used to be a single model, and it still is on the master branch. In the RunPod branch, we decided to split it to make it easier for users not to have to download the full 78 GB that the model has. But a better option came to light. Although this option will influence dependencies and downloads. Instead of separating the model into two models, we're going to keep it as one. In the side panel for model downloads, we're going to add the operations that each model contains, and they should be selected by the user. They should default to all selected, and the user should be able to unselect the ones that he doesn't want. This way, the user could just select or deselect separate operations like:\n- text to video\n- image to video\n- etc.\nThis should be for all models, but not for all operations. Some operations just come with the model, and it's pointless to have them there. The selectors should be an MPI button in toggle mode. The selectors will change how dependencies work. Instead of models having a full list of dependencies, they will have also their operations with individual dependencies. So we probably need to update the whole download system and dependencies system. This is practically a refactor that needs to be addressed with care because there are many moving parts. We have to be very careful not to break anything while implementing this",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-22T02:11:14.884Z",
+  "updated_at": "2026-06-22T05:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

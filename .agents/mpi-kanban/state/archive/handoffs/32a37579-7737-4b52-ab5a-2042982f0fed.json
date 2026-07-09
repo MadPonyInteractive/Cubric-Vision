@@ -1,0 +1,112 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "32a37579-7737-4b52-ab5a-2042982f0fed",
+  "generated_at": "2026-06-28T10:15:00Z",
+  "from_session": "MPI-156 Fix #1 + Fix #2 perf-fix session (from handoff 462020db). Both stack/hardware fixes DISPROVEN live; disk conclusively cleared; Fix #3 (cache/--highvram) flag surface found + planned for next session. Wan workflow-divergence hypothesis opened.",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-156 perf: Fix #1 (bigger VRAM) DISPROVEN (96GB PRO 6000 still faulted 119s); Fix #2 (torch 2.11 bump) DISPROVEN (L4 faulted ~127s, same as 2.8); disk DEFINITIVELY cleared (read_bytes=0 entire fault-in); root cause = intrinsic per-page UVM fault-handler overhead (env-bound: Linux/py3.11/cu126 vs local Win/py3.13/cu130). Fix #3 (stop re-faulting via --highvram on a big card, or reserve-vram/cache-ram tune on 24GB) is the ONLY lever left + planned. v0.10.4 cu124+cu128 (torch 2.11) built/pushed but UNUSED (no win); app pin reverted to v0.10.3.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Chase a FIX for the cloud-vs-local LTX fault-in gap (perf was already SOLVED as aimdo per-page fault-in). Picked Fix #1 (bigger VRAM) first, then Fix #2 (torch bump), then Fix #3 (cache retention).",
+    "status": "in_progress",
+    "summary": "Fix #1 and Fix #2 both DISPROVEN on live hardware; disk conclusively ruled out by direct I/O measurement. Every external axis (bandwidth/VRAM/RAM/compute/torch/disk) is now eliminated. The cost is intrinsic per-page fault overhead, environment-bound. Fix #3 (stop the per-stage re-fault) is the only remaining controllable lever — flag surface found, test plan written, NOT yet run. A new alternative hypothesis (LTX-workflow-specific, test via Wan) was also opened."
+  },
+  "plan": {
+    "file": "docs/builder/research/pod-perf-investigation.md",
+    "completed": [
+      "FIX #1 (bigger-VRAM card) DISPROVEN LIVE on an RTX PRO 6000 Blackwell (96GB VRAM, 283GB RAM, torch 2.8+cu128, sm_120): stage-1 fault-in = 119.34s, IDENTICAL-to-worse than the 24GB 4090's 108s. Model fits VRAM 2x over + RAM caches it 7x over, yet still faulted. Live status bar showed VRAM climbing SLOWLY (35.9->40->44GB over 2+ min) = visible per-page fault-in, memory-headroom-independent. VRAM size = NOT the lever. (Then killed the PRO 6000.)",
+      "FIX #2 (torch 2.8 -> 2.12 bump) DISPROVEN LIVE on an L4 (24GB VRAM, 62GB RAM = RAM-matched to local's 64GB). torch 2.12 was NOT usable (torchaudio 2.12 unpublished on cu126/cu128, both top at 2.11) -> pinned the highest COMPLETE trio = torch 2.11.0. Built v0.10.4-cu124 (2.11.0+cu126) + v0.10.4-cu128 (2.11.0+cu128), both sage OK, both pushed + publicly resolvable. Q1: aimdo LOADS clean on torch 2.11 (hooks installed, DynamicVRAM enabled — ABI concern unfounded). Q2: stage-1 fault-in = 126.17s, stage-2 = 54.82s — SAME ballpark as torch 2.8 (108/119). torch version = NOT the lever. The 'just bump torch' theory is now WEAK (3 minors gained nothing; 2.11->2.12 producing a 4x cliff is implausible).",
+      "DISK / network volume DEFINITIVELY CLEARED by direct measurement. Watched /proc/<main.py PID>/io during a live L4 fault-in: read_bytes stayed at 0 the ENTIRE init (zero physical disk reads) while rchar climbed ~0.5-1 GB/s (served from RAM page cache). The fault-in NEVER touches disk -> volume / volume-age / network-volume speed is conclusively NOT the cause (the old dd 1GB/s number was a red herring). The ~25x gap between rchar's 0.5-1 GB/s and raw 25 GB/s bandwidth IS the per-page fault-handler overhead.",
+      "ROOT CAUSE (final, airtight): per-page fault-handler / UVM bookkeeping overhead (syscall + pagetable walk per 4KB page, serialized). EVERY external axis ruled out BY MEASUREMENT: bandwidth (25.7 GB/s), VRAM size (96GB=same), RAM size (62GB matched=same), compute (sampler faster on Pod), torch version (2.8->2.11=no change), disk (read_bytes=0). The ONLY remaining diff local(34s) vs Pod(127s) = the environment's fault-path efficiency (Linux/py3.11/cu126/driver vs Windows/py3.13/cu130/driver) — NOT image-movable.",
+      "Fix #3 FLAG SURFACE probed live (RTX PRO 4000, v0.10.3): aimdo exposes --highvram ('keeps models in GPU memory' instead of unloading to CPU after use = the direct no-re-fault knob, but OOMs on 24GB), --reserve-vram N, --vram-headroom N, --cache-ram [GB], --cache-none, --cache-lru, --fast-disk (prefer offload — WRONG direction), --async-offload [N], --disable/--enable-dynamic-vram.",
+      "App pin REVERTED v0.10.4 -> v0.10.3 (committed c45290f) — torch 2.11 gave no win, keep the proven tag. WRAPPER_VERSION stays 0.2.20. v0.10.4 images remain on GHCR, unused.",
+      "All committed to RunPod branch (UNPUSHED): pod-perf doc arc 5b9f569, 243ea3f, b5ada3c, 2278103, fedb640, 859e945 + pin commits 8b6d46a (bump, superseded), c45290f (revert). mpi-ci main (UNPUSHED): 65e112b, d1e8643 (cu124 torch 2.11), 69402e8 (cu128 torch 2.11)."
+    ],
+    "pending": [
+      "FIX #3 TEST #1 (cheapest, 24GB card) — can --reserve-vram <GB> / --cache-ram <GB> reduce the STAGE-2 re-fault (the 55-60s second hit) without OOM? Edit start.sh VRAM_MODE (or CUBRIC_VRAM_MODE Pod env), R2 push + restart-comfy, NO rebuild. Modest ceiling (the 1st 119-127s fault stays). First get FULL untruncated help: main.py --help 2>&1 | grep -A3 -iE 'reserve-vram|vram-headroom|cache-ram|highvram' for the defaults.",
+      "FIX #3 TEST #2 (THE SHOT, 48GB+ card) — --highvram on a card where the 40GB model FITS. This combination was NEVER run (the 96GB PRO 6000 used aimdo DEFAULT, which page-faults even with room). --highvram stops the post-use unload -> if it survives (watch RAM/VRAM for OOM — the FULL 3-stage resident set may still exceed VRAM), the fault-in should collapse to ~seconds. Set via start.sh VRAM_MODE='--highvram' (R2 + restart, no rebuild) on a 48GB+ Pod. If it OOMs even at 48GB, Fix #3 is dead too.",
+      "ALTERNATIVE HYPOTHESIS TEST (user instinct) — run Wan (being installed to the network volume now) on the same Pod. If Wan loads/faults FAST where LTX is slow -> the problem is LTX-WORKFLOW-specific (multi-stage 40GB re-stage), not the Pod/card/aimdo -> fix is in the LTX graph (fewer stages / smaller transformer / node-level prioritize()), NOT the image. If Wan ALSO slow -> broad multi-stage-on-cloud pattern. Splits the tree; may redirect the whole investigation.",
+      "AFTER a fix proves out: append result to pod-perf-investigation.md (structured for it), update MEMORY.md MPI-156 line, consider whether v0.10.4 (torch 2.11) should be deleted from GHCR or kept.",
+      "If Fix #3 + Wan both dead-end: the honest landing is 'the 127s+59s fault tax is the FLOOR for a 40GB model on 24GB under aimdo on Linux' — genuine fixes then are a smaller (fp8) transformer or accepting the per-gen load tax. Close the investigation.",
+      "PUSH (user-gated) when ready — RunPod branch + mpi-ci main both have unpushed commits."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-156",
+    "title": "Pod fast model loading (torch 2.8 -> aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+    "column": "done",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-156/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-156/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-156/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/pod-perf-investigation.md fully updated this session: Fix #1 DISPROVEN section (96GB test), Fix #2 BUILD + RESULT sections (torch 2.11 no win), DISK CLEARED section (read_bytes=0), Fix #3 flag-surface table + next-session test plan + the Wan alternative-hypothesis block. Read it FIRST.",
+      "App pin reverted to v0.10.3 (c45290f). v0.10.4 torch-2.11 images on GHCR but unused."
+    ],
+    "pending": [
+      "docs/gotchas.md still describes the perf section with the OLD two fixes (bigger VRAM + torch bump) as OPEN — update it: Fix #1 + Fix #2 are now DISPROVEN live, disk is cleared (read_bytes=0), and the only lever left is Fix #3 (--highvram on a big card) or the Wan-workflow hypothesis. Do this when a Fix #3/Wan result lands (don't rewrite gotchas mid-experiment).",
+      "MEMORY.md MPI-156 line still references the two old fixes; refresh when the investigation closes."
+    ]
+  },
+  "next_action": {
+    "description": "Perf root cause is SOLVED + every stack/hardware/disk fix is DISPROVEN (do NOT re-investigate or re-run Fix #1/#2 — read docs/builder/research/pod-perf-investigation.md first). Pursue Fix #3 (stop the per-stage re-fault): (TEST #2, the shot) spin a 48GB+ Pod and set start.sh VRAM_MODE='--highvram' (R2 push + restart-comfy, NO rebuild) so the model stays resident across stages — watch for OOM; if it survives the fault-in should collapse to ~seconds; OR (TEST #1, cheap) on a 24GB Pod tune --reserve-vram/--cache-ram to reduce the stage-2 re-fault. ALSO run the user's WAN test (Wan is being installed to the volume now): run Wan on the same Pod — if Wan is fast where LTX is slow, the gap is LTX-workflow-specific, not infra. Pod ops + R2 pushes + git pushes are USER-GATED. RunPod branch only.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Fix #1 (bigger VRAM) DISPROVEN: 96GB PRO 6000 faulted 119s = same as 24GB. VRAM size is not the lever; aimdo page-faults regardless of headroom.",
+      "Fix #2 (torch bump) DISPROVEN: torch 2.11 on an L4 faulted 127s = same as torch 2.8. Torch version is not the lever. (torch 2.12 was unbuildable — torchaudio 2.12 doesn't exist on cu126/cu128; 2.11 was the highest complete trio.)",
+      "Disk CLEARED by direct measurement: read_bytes=0 for the ENTIRE fault-in (model served from RAM page cache; rchar climbed but read_bytes never moved). The network volume / its age is NOT the cause. The dd 1GB/s sequential number was a red herring (fault never reads disk).",
+      "Root cause is intrinsic per-page fault-handler/UVM overhead, environment-bound (Linux/py3.11/cu126 Pod vs Windows/py3.13/cu130 local). Not movable by image/card/disk. Only architectural lever left = stop the re-fault.",
+      "Fix #3 found: --highvram = 'keeps models in GPU memory' (no post-use unload = no re-fault) but OOMs on 24GB (40GB>VRAM). The UNTESTED winning path = --highvram on a 48GB+ card where the model FITS (the 96GB run used aimdo DEFAULT, never --highvram).",
+      "User opened an alternative hypothesis: the LTX WORKFLOW may behave differently across cards. Test by running Wan (installing now) — splits 'LTX-graph-specific' vs 'broad multi-stage-on-cloud'.",
+      "App pin reverted to v0.10.3 — torch 2.11 gave no perf win, so the proven tag stays shipped."
+    ],
+    "constraints": [
+      "Pod ops + image builds + R2 runtime pushes + git pushes are ALL USER-GATED. A killed terminal orphans the Pod (stop/delete it in RunPod). L4 stock/hosts were flaky this session (slow container pulls); pick a good-bandwidth in-stock host.",
+      "Shared tree: commit by explicit pathspec, never git add -A.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci). Both repos have UNPUSHED commits (user-gated).",
+      "RunPod branch ONLY (MPI-131) — no master merge / GitHub release / git tag.",
+      "Do NOT disable aimdo (--disable-dynamic-vram/--highvram-on-small-card) to chase perf — OOMs the Pod (proven 3x: MPI-146 5090, MPI-156 4090, and the --highvram OOM risk). aimdo's fault-in is load-bearing on cards where the model doesn't fit. --highvram is SAFE only where the model FITS VRAM (48GB+).",
+      "start.sh VRAM_MODE / SAGE_DISABLED_ARCHS are R2-externalized: edit -> publish-runtime.sh stable -> restart-comfy = live, NO rebuild. CUBRIC_VRAM_MODE / CUBRIC_VRAM_BIGCARD_GIB / CUBRIC_SAGE_DISABLED_ARCHS Pod env override without even an R2 push. This is how Fix #3 ships for testing (no image rebuild).",
+      "cu124 image = cu126 guts, driver floor ~r560 (set RunPod CUDA filter >=12.6). cu128 = Blackwell sm_120, floor ~r570. v0.10.4 (torch 2.11) builds exist on GHCR but are UNUSED (no perf win).",
+      "Git-Bash curl on this box flakes (schannel) — verify R2 with rclone S3 read (rclone cat), not curl exit code.",
+      "torchaudio 2.12 does NOT exist on cu126 OR cu128 (both top at 2.11.0) — a torch 2.12 image needs torchaudio 2.12 to publish first, OR dropping torchaudio (check if the LTX pipeline even imports it — the LTX audio VAE is ComfyUI's own, not torchaudio)."
+    ],
+    "files_modified": [
+      "(committed, app RunPod, this session) docs/builder/research/pod-perf-investigation.md across 5b9f569, 243ea3f, b5ada3c, 2278103, fedb640, 859e945 (the Fix #1-disproven / Fix #2-disproven / disk-cleared / Fix #3-plan arc). routes/remoteProxy.js: 8b6d46a (pin -> v0.10.4, superseded) then c45290f (revert -> v0.10.3).",
+      "(committed, mpi-ci main, this session) cubric-vision-pod/Dockerfile: 65e112b (cu124 -> torch 2.12.1 attempt), d1e8643 (cu124 -> torch 2.11.0 trio, torchaudio fix), 69402e8 (cu128 -> torch 2.11.0 trio).",
+      "GHCR: pushed v0.10.4-cu124 (torch 2.11.0+cu126) + v0.10.4-cu128 (torch 2.11.0+cu128), both publicly resolvable, both UNUSED (app reverted to v0.10.3). v0.10.3-* retained (shipped). v0.10.2-* deleted (disk reclaim)."
+    ],
+    "files_to_read_first": [
+      "docs/builder/research/pod-perf-investigation.md (THE doc — read BEFORE anything. Has: Fix #1 disproven 96GB table, Fix #2 build+result torch-2.11 table, DISK CLEARED read_bytes=0 section, Fix #3 flag-surface table + next-session test plan, the Wan alternative-hypothesis block, and ALL ruled-out axes — so you do NOT re-investigate)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (~L132-165 VRAM_MODE block — this is where Fix #3's --highvram / --reserve-vram goes; CUBRIC_VRAM_MODE env override documented inline; R2 push via publish-runtime.sh stable, restart-comfy, NO rebuild)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (~L201-242 _build_cmd — how the vram_mode flag is appended to the ComfyUI launch cmd)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": ["RunPod/remote engine", "ComfyUI engine", "Pod/mpi-ci", "LTX-2.3 authoring", "build/release"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline MPI-131; shared-tree commit-by-pathspec; mpi-ci separate repo via git -C; push user-gated)",
+    "docs/gotchas.md (RunPod/remote, aimdo/torch, cu126-guts driver-floor, aimdo-off-OOM, fault-in-not-bandwidth, schannel-curl, sage-arch MPI-145 — NOTE the perf section is now STALE re: the two old fixes; pod-perf-investigation.md is current)",
+    "docs/builder/research/pod-perf-investigation.md (THE current perf doc — every axis disproven + Fix #3 plan + Wan hypothesis)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-28T10:15:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "Resume Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/32a37579-7737-4b52-ab5a-2042982f0fed.json then use mpi-continue. THE PERF ROOT CAUSE IS SOLVED AND EVERY STACK/HARDWARE/DISK FIX IS NOW DISPROVEN ON LIVE HARDWARE — do NOT re-investigate the cause and do NOT re-run Fix #1 or Fix #2. Read docs/builder/research/pod-perf-investigation.md FIRST (it has everything). Summary: the cloud-vs-local LTX gap is aimdo's per-page model FAULT-IN of the 40GB LTXAV transformer, and the cost is intrinsic per-page fault-handler/UVM overhead, NOT compute/bandwidth/VRAM/RAM/disk. Proven this session: FIX #1 (bigger VRAM) DISPROVEN — a 96GB RTX PRO 6000 (283GB RAM) faulted in 119s, IDENTICAL to a 24GB 4090's 108s (model fit VRAM 2x over, still page-faulted; live status bar showed VRAM climbing slowly = visible per-page fault). FIX #2 (torch bump) DISPROVEN — built v0.10.4 cu124+cu128 on torch 2.11.0 (torch 2.12 was unbuildable: torchaudio 2.12 doesn't exist on cu126/cu128), and on an L4 (RAM-matched 62GB) aimdo LOADED clean on 2.11 (ABI fine) BUT the fault-in was 126.17s = same as torch 2.8. DISK CONCLUSIVELY CLEARED — watching /proc/<main.py PID>/io during a live fault-in, read_bytes stayed at 0 the ENTIRE init (zero physical disk reads; the model is served from RAM page cache, rchar climbed ~0.5-1 GB/s) so the network volume / its age is NOT the cause and the old dd 1GB/s number was a red herring. Every external axis is now eliminated by direct measurement: bandwidth, VRAM size, RAM size, compute, torch version, disk. The ONLY remaining difference between local (34s fault) and Pod (127s) is the environment's per-page fault-path efficiency (Linux/py3.11/cu126 vs Windows/py3.13/cu130) — not movable by image, card, or disk. So the ONLY controllable lever left is FIX #3: STOP THE PER-STAGE RE-FAULT. aimdo's --highvram flag 'keeps models in GPU memory' instead of unloading to CPU after use (= no re-fault), but it OOMs on a 24GB card (the 40GB model doesn't fit). The UNTESTED winning path is --highvram on a 48GB+ card where the model FITS (the 96GB PRO 6000 run used aimdo's DEFAULT, never --highvram). NEXT ACTIONS: (TEST #2, the shot) spin a 48GB+ Pod, set start.sh VRAM_MODE='--highvram' (R2 push via publish-runtime.sh stable + POST /wrapper/restart-comfy, NO image rebuild), run an LTX gen, watch RAM/VRAM for OOM — if it survives the fault-in should collapse to ~seconds; (TEST #1, cheap) on a 24GB Pod tune --reserve-vram/--cache-ram to shave the stage-2 re-fault (get the full --help defaults first). ALSO run the user's WAN TEST: Wan is being installed to the network volume now — run Wan on the same Pod; if Wan loads FAST where LTX is slow, the gap is LTX-WORKFLOW-specific (multi-stage 40GB re-stage), not the Pod/card/aimdo, which redirects the fix into the LTX graph. Everything is committed, NOTHING is pushed (user-gated): app RunPod has the pod-perf doc arc (5b9f569, 243ea3f, b5ada3c, 2278103, fedb640, 859e945) + pin commits (8b6d46a bump then c45290f revert to v0.10.3); mpi-ci main has the Dockerfile torch-2.11 commits (65e112b, d1e8643, 69402e8). The app pin is back to v0.10.3 (torch 2.11 gave no win); v0.10.4 torch-2.11 images sit unused on GHCR. Pod ops + R2 + git pushes are USER-GATED; a killed terminal orphans the Pod; set the RunPod CUDA filter >=12.6; L4 hosts were flaky (slow pulls) this session. Do NOT disable aimdo to chase perf (OOMs, proven 3x) — --highvram is safe ONLY where the model fits VRAM (48GB+). RunPod branch ONLY (MPI-131)."
+}

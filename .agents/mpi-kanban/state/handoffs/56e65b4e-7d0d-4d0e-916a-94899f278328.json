@@ -1,0 +1,132 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "56e65b4e-7d0d-4d0e-916a-94899f278328",
+  "generated_at": "2026-07-06T21:42:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-208 Phase 2 implementation + live verify; handoff at Phase 3 design boundary",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-208 — generation queue refactor (cue/loop/stop/dual-engine state machine). Replace patch-over-patch cue/stop/status with a single owned generationStore state machine.",
+    "status": "in_progress",
+    "summary": "Foundation (B1-A/B/C) + Phase 2 (commandExecutor wired onto generationStore) are COMPLETE and LIVE-VERIFIED, but UNCOMMITTED. Phase 3 (generationService rewritten on the store) is NOT started — handed off at the reading/design boundary because it rewrites the live dispatch/lane/loop machinery (highest-risk phase). A layering tension was discovered and captured in plan.md Plan Drift; Option A is recommended."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+    "completed": [
+      "Investigation (4 agents) + requirements contract R01-R31 / INV-1..7 (research/)",
+      "B1-A generationStore.js + 14 Node tests (was 13; T14 added in Phase 2; all green)",
+      "B1-B SSE engine tagging + merged stream (routes/comfy.js + routes/remoteProxyForward.js) — live-proven",
+      "B1-C engineOverride first-class state + effectiveEngine() helper — live-proven",
+      "R31 selector-swaps-local (modelRegistry.js 4 gates -> effectiveEngine(); shell.js re-sync) — live-proven",
+      "Phase 2: commandExecutor.js on the store (job register at engine+arch freeze; _abortedBail at every await boundary => no /prompt POST on Stop-before-dispatch; _modelInitializing closure DELETED -> store phase; engine-filtered SSE via _frameEngineMatches; exec.cancel()->store.cancel(jobId) with frozen interruptCb; finish->settle(done)/catch->settle(error)). AUTO-verified (14/14 store + 14/14 resolver, parse clean) AND LIVE-verified by user (Stop during LOADING MODEL stops cleanly)."
+    ],
+    "pending": [
+      "Phase 3: generationService rewritten on store (NEXT — see Plan Drift: decide Option A vs B, A recommended)",
+      "Phase 4: UI derived from store (statusBar, PromptBox, QueuePanel, blocks)",
+      "Phase 5: reconcile-on-truth + regression sweep + docs (docs need explicit user permission per CLAUDE.md)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-208",
+    "title": "Generation queue refactor — cue/loop/stop/dual-engine state machine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-208/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-208/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement Phase 3",
+    "verify",
+    "commit Foundation + Phase 2 by explicit pathspec if user authorizes"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Phase 2 checkbox [x] with full integrator notes + STATUS banner (COMPLETE + LIVE-VERIFIED)",
+      "plan.md Plan Drift: the Phase-3 store-vs-cueQueue layering tension documented + Option A recommended (the KEY design decision for the next session)",
+      "events.jsonl (task + global): checklist.updated (Phase 2 done) + validation.updated (Phase 2 live-verified) appended",
+      "task.json updated_at bumped (column stays doing — Phases 3-5 remain)",
+      "js/events.js: generation-store:changed added to the MpiEventMap JSDoc typedef (doc-only, not a runtime registry)"
+    ],
+    "pending": [
+      "Commit Foundation + Phase 2 files (user-authorized / mpi-end territory — NOT committed). Commit by explicit pathspec, shared-tree hygiene, never git add -A.",
+      "Two pre-existing follow-ups to card separately (NOT MPI-208 scope): (1) remote gen fails at comfyController.js:~470 WS-ready gate ~15s timeout; (2) periodic syncModelInstalled poll every ~6.5s while remote-connected.",
+      "Phase 5: fold research/requirements-archaeology.md invariants into docs/ (likely new docs/generation-queue.md) + rule-file updates require explicit user permission."
+    ]
+  },
+  "next_action": {
+    "description": "Implement Phase 3: rewrite js/services/generationService.js onto generationStore, callers UNTOUCHED (public facade signatures unchanged: enqueueGeneration/cancelRunningCueJob/cancelPendingCueJob/clearCueQueue/removeCueJob/peekCueQueue/getGenerationQueueSnapshot/refreshQueueDepth). FIRST read plan.md '## Plan Drift' — it records the layering tension (store job = a runCommand EXECUTION registered at dispatch; _cueQueue job = a PENDING INTENT with display+callbacks+getNextGeneration that has not run yet) and recommends Option A: keep _cueQueue as the pending-intent holder, make the store the LANE-ACCOUNTING + running-truth authority. Under Option A: _lanes.{inFlight,active} derive from store.getSnapshot().running filtered by engine lane; loop re-fire moves to store.setLoopCallback(lane, cb) (once-per-drain, INV-5) reading LIVE getNextGeneration() instead of the hand-rolled guard in _finishActiveCueDispatch; generationQueueCount written ONLY by a store subscription (kill the direct write at MpiGroupHistoryBlock.js:867); tool:* + generation:* emitted from store transitions INCLUDING tool:cancelled on EVERY cancel regardless of scope (fixes Gallery-Stop-never-clears-bar at the source); the _finishCueDispatch identity-guard 'superseded' check and the _stoppedPendingComplete/R09 late-settle shim are DELETED (store lane-ownership + settle() rule subsume them structurally). Verify: repro archaeology bugs 04/05/06/07/09/13 as store-level integration tests green; live smoke: multi-cue x3 -> Stop running -> next promotes, pending intact (R05); trash clears pending only (R07); loop arm -> 2 drains -> disarm -> stops. Phase 3 verify mode is user-ux (status bar / Cue-Loop-Stop feel need the user's hands).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 2 shipped: commandExecutor.js is the ONLY module wired to the store so far (plus 1 events.js doc line + T14 store test). The store is now in the LIVE gen path for the execution half; the QUEUE/dispatch half is still generationService's private _cueQueue/_lanes (Phase 3).",
+      "Phase 2 phase-table gotcha (already handled, do not re-break): the store forbids ACCEPTED-before-LOADING, so the hasTerminalPhaseSampler loading-seed was moved from register-time to AFTER prompt_ack. Flow: register(queued) -> prompt_ack(accepted, seed loading if sampler) -> work/step/tile(_beginSampling->sampling) -> finish(settle done) / catch(settle error).",
+      "Phase 2 abort contract: _abortedBail() after EVERY await boundary checks generationStore.getSignal(jobId).aborted; on abort it cleans temp inputs, advance(cancelled), fires exec.onError('cancelled_before_dispatch'), returns — so /prompt is NEVER POSTed for a Stopped-before-dispatch job. exec.cancel() delegates to store.cancel(jobId); the frozen interruptCb = _closeSSE() + getEngine(forceLocal).interrupt().",
+      "Phase 3 recommended Option A over B: A keeps _cueQueue (pending-intent + display + callbacks + loop payload) and uses the store's lane/loop/running half; B would register cue intents as queued-phase store jobs (the store already HAS display/scope/loopSeed fields for this) but touches the store contract + every dispatch path — defer B unless A hits a wall.",
+      "The store was built anticipating Phase 3: it already exposes setLoopCallback(lane,cb) (once-per-lane-drain, INV-5), clearPending() (R07 pending-only clear), byScope(), getSnapshot() {jobs,running,pending,depth}, and per-lane MAX 1 active. Option A wires the lane/loop/running side; the pending side (register at enqueue) stays unused under A.",
+      "commandExecutor is browser ESM (imports state.js/DOM) so it can't run under Node — the Phase-2 unit contract lives as T14 in tests/generation-store.test.cjs (testCancelBeforeAckBlocksDispatch), proving the store-level invariant the pipeline relies on. Phase 3 tests should follow the same pattern: store-level integration tests in the cjs file, not a jsdom harness for generationService."
+    ],
+    "constraints": [
+      "scalable-foundation project mode — full guardrails, no prototype shortcuts.",
+      "Shared git tree — commit by explicit pathspec (git commit --only <paths>), NEVER git add -A / git add . . Push stays user-authorized. Foundation + Phase 2 are NOT committed yet.",
+      "Phase 3 public facade signatures MUST stay unchanged — callers in MpiGalleryBlock/MpiGroupHistoryBlock/MpiQueuePanel are UNTOUCHED this phase (they migrate in Phase 4).",
+      "MUST NOT change: ComfyUI injection contract, workflow compile, hot-store, LoRA upload, model install/download pipeline, project.json writes. Interface points only.",
+      "MPI-165 engine-split contract: engine resolved ONCE per gen AFTER remoteEngineClient.refresh(); Phase 2 already freezes engine+arch on the job record — Phase 3 reads job records, never re-resolves isRemote().",
+      "Preserve (do NOT silently drop): MPI-141/198 path heal (in comfyController), MPI-156 keepalive, MPI-157 stop-all, MPI-179 mirror refresh, MPI-194 hot-store, MPI-203 history replay, MPI-206 model re-sync. In Phase 3 specifically preserve the loop semantics (Stop with loop armed = regenerate-this-one, lastJobForLoop KEPT; the other lane untouched — MPI-74 P6 two-lane).",
+      "Rule-file + docs updates (events/state/component-*/comfy_engine, docs/generation-queue.md) are staged for Phase 5 and REQUIRE explicit user permission (CLAUDE.md cardinal rule 3).",
+      "Do NOT parallelize Phases 2-5 — sequential by dependency. mpi-execute-parallel was for the Foundation batch ONLY."
+    ],
+    "files_modified": [
+      "js/services/commandExecutor.js (Phase 2 — the whole rework: store register/abort-bail/phase-driven SSE/cancel delegation)",
+      "js/events.js (Phase 2 — 1 JSDoc line: generation-store:changed in MpiEventMap)",
+      "tests/generation-store.test.cjs (Phase 2 — +T14 testCancelBeforeAckBlocksDispatch; now 14 tests)",
+      "js/services/generationStore.js (Foundation B1-A — NEW, unchanged in Phase 2)",
+      "routes/comfy.js (Foundation B1-B)",
+      "routes/remoteProxyForward.js (Foundation B1-B)",
+      "js/state.js (Foundation B1-C — engineOverride)",
+      "js/services/remoteEngineClient.js (Foundation B1-C — effectiveEngine())",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (Foundation B1-C)",
+      "js/data/modelRegistry.js (Foundation R31)",
+      "js/shell.js (Foundation R31)",
+      ".claude/rules/component-state.md (Foundation B1-C — engineOverride doc row)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-208/plan.md (ESPECIALLY the '## Plan Drift' section — the Phase-3 layering decision)",
+      ".agents/mpi-kanban/tasks/MPI-208/research/requirements-archaeology.md (R01-R31 contract, esp R04/R05/R07/R09/R27 + INV-5)",
+      "js/services/generationStore.js (the store API Phase 3 wires onto — setLoopCallback/clearPending/getSnapshot/byScope)",
+      "js/services/generationService.js (the module Phase 3 rewrites — _cueQueue/_lanes/_dispatchNextCue/_finishActiveCueDispatch + the public facades)",
+      "js/services/commandExecutor.js (see how Phase 2 already registers/settles store jobs — Phase 3 must not double-manage)",
+      ".claude/rules/comfy_engine.md (§ Engine Split), .claude/rules/state.md, .claude/rules/events.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["generation-queue", "engine-split", "dual-engine", "comfy-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/components.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-06T21:42:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-208 (generation queue refactor) in Cubric Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/56e65b4e-7d0d-4d0e-916a-94899f278328.json and use mpi-continue to pick up. Foundation (B1-A generationStore.js + tests, B1-B SSE engine tagging/merge, B1-C engineOverride + R31) AND Phase 2 (commandExecutor.js wired onto the store: job registered at engine+arch freeze, abort-token _abortedBail at every await boundary so a Stop before dispatch never POSTs /prompt, _modelInitializing closure replaced by store phase driven by engine-filtered SSE frames, exec.cancel() delegates to store.cancel(jobId)) are COMPLETE and LIVE-VERIFIED (user confirmed a local gen Stop during LOADING MODEL stops cleanly) but UNCOMMITTED. Your next action is Phase 3: rewrite js/services/generationService.js onto the store with the public facade signatures UNCHANGED (callers untouched this phase). BEFORE editing, read plan.md's '## Plan Drift' section — it documents a layering tension (the store job is a runCommand EXECUTION registered at dispatch, whereas the _cueQueue job is a PENDING INTENT holding display+callbacks+getNextGeneration that has not run yet) and recommends Option A: keep _cueQueue as the pending-intent holder and make generationStore the lane-accounting + running-truth authority (derive _lanes from store.getSnapshot().running; move loop re-fire to store.setLoopCallback per INV-5; write generationQueueCount only from a store subscription; emit tool:*/generation:* from store transitions including tool:cancelled on every cancel; delete the _finishCueDispatch 'superseded' identity guard and the _stoppedPendingComplete late-settle shim, which the store's lane-ownership + settle() rule subsume). Preserve the MPI-74 P6 two-lane loop semantics (Stop with loop armed = regenerate-this-one, other lane untouched). Constraints: scalable-foundation mode, shared git tree (commit by explicit pathspec only — Foundation + Phase 2 not committed yet), do NOT parallelize Phases 2-5, do NOT change the ComfyUI injection/workflow/hot-store/install contracts, and do NOT change public facade signatures (that is Phase 4). Phase 3 verify mode is user-ux. Two pre-existing follow-ups to card separately (NOT MPI-208): remote gen failing at comfyController.js WS-ready gate, and a ~6.5s periodic syncModelInstalled poll while remote-connected."
+}

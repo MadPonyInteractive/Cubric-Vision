@@ -1,7 +1,7 @@
 /* BEM Block naming — mpi-prompt-box */
 .mpi-prompt-box {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto 1fr auto auto auto;
     align-items: end;
     gap: var(--s-2);
     background: var(--surface-bar);
@@ -44,7 +44,15 @@
     align-self: end;
 }
 
+.mpi-prompt-box__col--enhance {
+    flex-shrink: 0;
+}
+
 .mpi-prompt-box__col--settings {
+    flex-shrink: 0;
+}
+
+.mpi-prompt-box__col--engine {
     flex-shrink: 0;
 }
 
@@ -240,6 +248,14 @@
     padding: 4px 2px 2px;
 }
 
+/* Full-width op-slot button (LTX "Generate Audio") — span the settings row like
+   the slider controls, instead of sitting at natural button width. */
+.mpi-prompt-box__op-btn--full {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: center;
+}
+
 .mpi-prompt-box__slider-lbl {
     display: flex;
     justify-content: space-between;
@@ -332,10 +348,27 @@
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: var(--s-1);
+    padding: var(--s-1);
     background: var(--surface-2);
     color: var(--ink-1);
+}
+
+.mpi-prompt-box-media-strip__audio-name {
+    max-width: 100%;
+    font-size: var(--t-2xs);
+    line-height: 1.1;
+    color: var(--ink-2);
+    text-align: center;
+    /* Two-line clamp so a filename is readable in the square chip. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-all;
 }
 
 .mpi-prompt-box-media-strip__type {

@@ -10,8 +10,12 @@
 export const STORAGE_KEYS = {
   // Engine settings
   COMFY_ROOT_PATH:     'mpi_comfy_root_path',
-  COMFY_URL:           'mpi_comfy_url',
   AUTO_START_COMFY:    'mpi_auto_start_comfy',
+  PLAY_AUDIO_ON_HOVER: 'mpi_play_audio_on_hover',
+
+  // RunPod remote engine — NON-secret prefs only. The API key and wrapper
+  // token live in the main process (safeStorage via secrets:* IPC), never here.
+  RUNPOD_CONFIG:       'mpi_runpod_config',
 
   // Project management
   EXTRA_PROJECT_PATHS: 'mpi_extra_project_paths',
@@ -20,12 +24,19 @@ export const STORAGE_KEYS = {
   // Model selection (per-mediaType, persisted across sessions)
   SELECTED_MODELS:        'mpi_selected_models_by_type',
   LAST_SELECTED_MEDIATYPE:'mpi_last_selected_mediatype',
+  // Per-model operation toggle draft (MPI-122) — { [modelId]: string[] of opKeys }
+  MODEL_OP_DRAFT:         'mpi_model_op_draft_by_model',
+  // Per-model GPU-arch toggle draft (MPI-209) — { [modelId]: string[] of arch tokens }
+  MODEL_ARCH_DRAFT:       'mpi_model_arch_draft_by_model',
 
   // Dev tools
   COMP_DEBUG:          'mpi_comp_debug',
 
   // Viewer rendering
   PIXEL_MODE:          'mpi_pixel_mode',
+
+  // OS notification prefs (per-type opt-out)
+  NOTIFICATION_PREFS:  'mpi_notification_prefs',
 
   // PromptBox UI
   PROMPT_EXPANDED:     'mpi_prompt_expanded',
@@ -36,6 +47,9 @@ export const STORAGE_KEYS = {
 
   // Changelog overlay (last APP_VERSION the user dismissed the changelog for)
   LAST_SEEN_CHANGELOG_VERSION: 'mpi_last_seen_changelog_version',
+
+  // Adult-content / 18+ awareness overlay — true once the user has acknowledged it
+  MATURITY_ACKNOWLEDGED: 'mpi_maturity_acknowledged',
 };
 
 // --- sessionStorage keys ---

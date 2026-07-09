@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-232",
+  "title": "Raise remote hot-store threshold 15GB -> 20GB (exclude 17GB Chroma transformer from Pod disk staging)",
+  "description": "User request: bump the single-file size at/above which a remote weight is staged from the Pod's slow network volume onto its fast container disk. Chroma's 17GB transformer was crossing the old 15GB line and being hot-stored, but Chroma is fast served straight from the volume and doesn't need the disk copy. Raising HOT_STORE_MIN_GB to 20 leaves only LTX's 41GB transformer staged. FIX: single constant HOT_STORE_MIN_GB 15->20 in js/services/commandExecutor.js:458 (threshold-of-record; the app filters the file list BEFORE it reaches the Pod wrapper, so the wrapper's own looser HOT_STORE_MIN_BYTES floor default 15GB never rejects what the app already selected -> no wrapper edit / no Pod rebuild needed). Synced every stale 15GB comment/doc ref: commandExecutor.js (3 comments), routes/remoteProxyForward.js (forwarder comment), docs/add-model-playbook.md (PING-USER gate, committed by concurrent session), docs/runpod-remote-engine.md (S5 threshold line). LIVE-VERIFIED 2026-07-08: user ran a remote Chroma gen, confirmed the 17GB Chroma transformer never reached the disk, no regression (Chroma stays fast from the volume). SIDE-FIX (recurring-mistake guard): agent wrongly assumed a wrapper edit needs a Pod image rebuild. Root cause = the existing memory project_pod_wrapper_runtime_from_r2.md (wrapper.py/start.sh are R2-floated at boot, edits ship via publish-runtime.sh + Pod restart, NO rebuild) was NOT indexed in MEMORY.md so it never loaded. Fixed: added the index line + a durable repo pointer in CLAUDE.md (new S 'Product Pod runtime') and docs/runpod-remote-engine.md S5. Updated feedback_hotstore_warm_staging_wins.md with the current 20GB value (its 15<->26 figures are MPI-200 history, not live).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-08T20:00:00Z",
+  "updated_at": "2026-07-08T20:00:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-221",
+  "title": "Pod volume fills with orphaned model files (failed remote uninstall leaves stranded weights, no retry/reconcile)",
+  "description": "Remote Pod volume reads 138 GB used (du /workspace) but the app tracks only ~50 GB across 3 installed models. ~88 GB is untracked. ROOT CAUSE (read from LIVE wrapper 0.2.31 + routes/downloadManager.js + routes/remoteModels.js): remote uninstall is best-effort fire-and-forget. In /comfy/models/uninstall (remote branch), each dep delete goes to remoteUninstallDep -> POST /wrapper/models/delete. If that call throws (wrapper non-ok e.g. delete_failed/busy) OR returns 'unsupported' (network/proxy fail), the file is LEFT on the volume, anyUnsupported=true, NO retry, NO record. But as long as ONE other dep deleted OK (removed.length>0), the whole uninstall returns success:true, drops the model job, UI says 'uninstalled'. The failed-delete file is now orphaned on the volume, invisible to the app forever (no existing route lists volume files vs known-dep universe). Repeated across models/sessions -> tens of GB. RULED OUT: failed INSTALLS (clean: .part + os.replace-on-success, os.remove(part) on error+cancel); input/output dirs (app clears on close; user doesn't gen enough). The false 'disk full' install toast is a SYMPTOM: the remote pre-flight gate computes free = volumeSize - du(/workspace), and du is inflated by orphans -> near-zero free -> blocks legit installs. PLAN: (1) DIAGNOSE - add GET /wrapper/ls to wrapper (walk mpi_models, path+size), publish to R2 stable, build a fresh Pod to pull it, hit /wrapper/ls, diff vs known deps -> exact orphan list + GB. (2) RECLAIM the confirmed orphans. (3) DURABLE FIX - make remote uninstall reconcile not fire-and-forget: retry failed deletes AND/OR a reconcile pass that lists the volume and removes any file not owned by an installed model. KEY INFRA: Pod wrapper.py runs from R2 (pod.cubric.studio/vision/stable/wrapper.py) fetched at boot by bootstrap.sh, NOT the image. Repo copy is stale fallback. Live=0.2.31 (2156 lines); repo copy shorter. Publish via mpi-ci/cubric-vision-pod/publish-runtime.sh (derives version from wrapper.py default, computes shas, writes manifest, pushes 4 files). MUST base edits on the LIVE 0.2.31 file, not the stale repo copy, or publishing regresses the wrapper.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-08T01:53:19Z",
+  "updated_at": "2026-07-08T02:45:00Z",
+  "resolution": "no-bug — volume 138GB is all honest real weights (LTX-2.3 Balanced + Wan2.2 all tiers + SDXL + shared enc/vae). Earlier '3 installed/50GB' was a filtered library view. LTX 99% = old ComfyUI-MpiNodes commit (MPI-219 bumped node_lock); fix = re-Install. Shipped: GET /wrapper/ls diagnostic (wrapper 0.2.32, R2 stable, kept). Documented in docs/runpod-troubleshooting.md § Volume disk-full triage. Memory: project_pod_wrapper_runtime_from_r2.",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "bug",
+    "runpod",
+    "remote-engine",
+    "download-manager",
+    "disk"
+  ],
+  "priority": "high",
+  "defaultExpanded": false
+}

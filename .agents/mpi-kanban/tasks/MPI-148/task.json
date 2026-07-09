@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-148",
+  "title": "Bump ComfyUI core v0.26.0 -> v0.27.0 (app + Pod)",
+  "description": "Bump ComfyUI CORE from v0.26.0 (commit f6c162dd) to v0.27.0 (commit bb131be9e83d2f773c90f1d6f1e4b248a498c8c5 - VERIFIED = the v0.27.0 tag on Comfy-Org/ComfyUI). REPLACES the old Builder-only framing: the app + Pod both read core version from dev_configs/node_lock.json (app: js/data/modelConstants/dependencies.js; Pod: mpi-ci/cubric-vision-pod/node_lock.json is a COPY). Builder image split off to its own deferred card (MPI-183) - NOT in this card. SCOPE: (1) app dev_configs/node_lock.json comfyui block: core.tag v0.26.0->v0.27.0, core.commit f6c162dd->bb131be9, AND bump frontend pins to match v0.27.0: comfyui-frontend-package 1.45.19->1.45.20, comfyui-workflow-templates 0.10.3->0.11.1. (2) Sync the copy at mpi-ci/cubric-vision-pod/node_lock.json (edit mpi-ci with git -C c:/AI/Mpi/mpi-ci - separate repo). (3) Rebuild the Pod image via CI, make GHCR package public, anon-pull-verify all 3 tags before connect. CHANGELOG 0.26->0.27 (29 commits, verified): headline = int8 model support (+ int8 LoRA / turing / memory-leak fixes); Krea2 advanced merge node (#14621) + Ideogram bbox/JSON prompt (#14537) - the two nodes that gated 0.27; rest is partner/cloud nodes (Alibaba/Grok/ByteDance/Google) we don't use. NO breaking changes for our local+Pod stack. VERIFY: keep kornia 0.8.2 pin; LTX-2.3 + shipped models (Wan 5B, PiD) still load + gen clean on 0.27. Local dev ComfyUI (G:/ComfyUi) already on 0.27 since 2026-07-02. BRANCH: RunPod (app) + mpi-ci main (Pod).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-26T14:05:00Z",
+  "updated_at": "2026-07-03T22:20:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "runpod",
+    "mpi-ci",
+    "pod-image",
+    "comfyui-bump",
+    "engine"
+  ],
+  "priority": "low",
+  "activeSessionTitle": "ComfyUI v0.27 app+Pod bump - built, pending live verify"
+}

@@ -5,6 +5,7 @@
  *   GET  /comfy/status              — is ComfyUI running + ready?
  *   POST /comfy/start               — launch ComfyUI in background
  *   POST /comfy/stop                — stop ComfyUI process
+ *   POST /comfy/refresh-models      — reseed ComfyUI filename cache via GET /object_info (file-add; no restart)
  *   POST /comfy/unload              — unload models / free memory
  *   POST /comfy/set-path            — set custom models root path
  *   GET  /comfy/get-path            — read current custom models root path (from extra_model_paths.yaml)
@@ -37,19 +38,46 @@ const {
     writeExtraModelPathsYaml,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
+const remoteModels = require('./remoteModels');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
+// Repo-owned defaults staged into the engine input/ before every _ms submit.
+// ComfyUI validates EVERY LoadLatent/LoadImage node in a workflow even when its
+// output is unreached (e.g. behind an Is_Continue gate), so each model family's
+// load-node baked filenames must have a real file here. The engine input/ is
+// garbage-collected on shutdown (cleanComfyUITempFiles), but prepare runs every
+// submit so the defaults are always re-staged.
+//   ComfyUI_00001_.latent       — WAN _ms video latent (legacy default)
+//   ltx_video_latent_00001_     — LTX Input_Video_Latent (node 67)
+//   ltx_audio_latent_00001_     — LTX Input_Audio_Latent (node 69)
+//   placeholder.png             — generic Input_Start_Frame/End_Frame fallback (t2v
+//                                 has no real frame; i2v injects over it). Shared by
+//                                 any workflow with LoadImage frame nodes (LTX, Wan 5B).
+//                                 (was ltx_placeholder.png — renamed generic.)
+//   ltx_silence.wav             — LTX Input_Audio_File fallback (a gen with no
+//                                 audio input never injects this node; without a
+//                                 staged default it dies on Invalid audio file)
 const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
     'ComfyUI_00001_.latent',
+    'ltx_video_latent_00001_.latent',
+    'ltx_audio_latent_00001_.latent',
+    'placeholder.png',
+    'ltx_silence.wav',
 ]);
 
 function _broadcastComfyEvent(event, data) {
-    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    const payload = `event: ${event}\ndata: ${JSON.stringify({ ...data, engine: 'local' })}\n\n`;
     for (const client of _comfyEventClients) {
         try { client.write(payload); } catch (_) { /* client closed */ }
     }
 }
+
+/** Register / unregister an SSE response with the local broadcast set.
+ *  Used by the remote-mode relay (remoteProxyForward.js) so that merged-stream
+ *  clients still receive local-engine frames tagged engine:'local'. */
+function addComfyEventClient(res) { _comfyEventClients.add(res); }
+function removeComfyEventClient(res) { _comfyEventClients.delete(res); }
 
 function _classifyComfyOutput(defaultLevel, text) {
     if (defaultLevel === 'info') return 'info';
@@ -63,6 +91,13 @@ function _classifyComfyOutput(defaultLevel, text) {
     return 'info';
 }
 
+// tqdm progress line, e.g.  "14%|█▍ | 1/7 [00:07<00:43, 7.24s/it, ...]".
+// ComfyUI redraws with \r, so one stdout chunk can hold several states — we take
+// the LAST match (current state). `[` anchors N/M to the bar so we don't match
+// stray "1/7" elsewhere. (MPI-147 — the WS progress_state is useless for the
+// slow phases; the real per-step + model-init signal is only in stdout.)
+const TQDM_RE = /(\d+)\/(\d+)\s*\[/g;
+
 function _handleComfyOutput(level, chunk) {
     const text = chunk.toString().trim();
     if (!text) return;
@@ -73,6 +108,42 @@ function _handleComfyOutput(level, chunk) {
         _broadcastComfyEvent('comfy:model-init-complete', { message: text });
     } else if (/Model Initializing/i.test(text)) {
         _broadcastComfyEvent('comfy:model-initializing', { message: text });
+    }
+
+    // Detailer (MaskDetailerPipe / FaceDetailer) declares how many segments (detail
+    // areas) it found, then runs one sampler bar per segment. The count is the stage
+    // total ("Detail 2/3"); each per-segment step bar ticks the stage. (MPI-147)
+    const segs = /#\s*of\s*Detected\s*SEGS:\s*(\d+)/i.exec(text);
+    if (segs) {
+        const total = parseInt(segs[1], 10);
+        if (total > 0) _broadcastComfyEvent('comfy:segment-total', { total });
+        // no return — the line carries no tqdm bar
+    }
+
+    // UltimateSDUpscale emits a separate OUTER tile bar prefixed "USDU: t/T"
+    // interleaved with the inner step bars. The tile bar is the stage ("Tile 2/4");
+    // the inner step bar is the fill. Route them on different channels so the stage
+    // counter tracks tiles, not every interleaved bar. (MPI-147)
+    const usdu = /USDU:\s*\d+%\|[^|]*\|\s*(\d+)\/(\d+)\s*\[/.exec(text);
+    if (usdu) {
+        const tile  = parseInt(usdu[1], 10);
+        const tiles = parseInt(usdu[2], 10);
+        if (tiles > 0) _broadcastComfyEvent('comfy:tile-progress', { tile, tiles });
+        return; // a USDU line carries no inner step value worth forwarding
+    }
+
+    // Drive the status bar from the tqdm step counter. EVERY bar counts as a stage,
+    // including the model-load `0/1`→`1/1` bar (it's stage 1 — the load phase the
+    // user waits on). The renderer's stage tracker dedups consecutive ticks of the
+    // same bar (same max, rising value) and counts a new bar when max changes or
+    // value resets. Take the LAST N/M in the chunk (tqdm redraws with \r).
+    let m, last = null;
+    TQDM_RE.lastIndex = 0;
+    while ((m = TQDM_RE.exec(text)) !== null) last = m;
+    if (last) {
+        const value = parseInt(last[1], 10);
+        const max   = parseInt(last[2], 10);
+        if (max > 0) _broadcastComfyEvent('comfy:step-progress', { value, max });
     }
 }
 
@@ -100,15 +171,19 @@ function setAxios(ax) { _axios = ax; }
  * Response: { running: boolean, ready?: boolean }
  */
 router.get('/comfy/status', async (req, res) => {
+    // Server-authoritative restart flag (set by a local custom-node install). Echoed
+    // on every status so the gen gate honors it even when the frontend `state` was
+    // reset by an app/browser reload after the install. Cleared on a fresh start.
+    const needsRestart = processState.comfyNeedsRestart === true;
     try {
-        if (!processState.activeComfyProcess) return res.json({ running: false });
+        if (!processState.activeComfyProcess) return res.json({ running: false, needsRestart });
         const ax = getAxios();
-        if (!ax) return res.json({ running: true, ready: false });
+        if (!ax) return res.json({ running: true, ready: false, needsRestart });
         const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
             .then(() => true).catch(() => false);
-        res.json({ running: true, ready });
+        res.json({ running: true, ready, needsRestart });
     } catch (e) {
-        res.json({ running: false });
+        res.json({ running: false, needsRestart });
     }
 });
 
@@ -135,20 +210,35 @@ router.get('/comfy/events/stream', (req, res) => {
 router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
     try {
         const sourceDir = path.join(__dirname, '..', 'comfy_workflows', 'input');
-        const inputDir = getComfyPath(ENGINE_ROOT, 'input');
-        await fs.ensureDir(inputDir);
+        // MPI-74: a force-local run stages defaults into the LOCAL ComfyUI input dir
+        // even while remote-active, so the local _ms run finds them.
+        const remoteActive = remoteModels.isRemoteActive() && req.body?.forceLocal !== true;
+        const inputDir = remoteActive ? null : getComfyPath(ENGINE_ROOT, 'input');
+        if (!remoteActive) await fs.ensureDir(inputDir);
 
         const copied = [];
         for (const filename of WORKFLOW_INPUT_DEFAULTS) {
             const source = path.join(sourceDir, filename);
-            const target = path.join(inputDir, filename);
             if (!(await fs.pathExists(source))) {
                 return res.status(500).json({
                     success: false,
                     error: `Workflow input default missing: ${filename}`,
                 });
             }
-            await fs.copy(source, target, { overwrite: true });
+            // Remote engine: upload the bundled default to the Pod volume input
+            // dir (idempotent, overwrite) instead of a local copy. Route by
+            // extension — `.latent` via the latent endpoint, image/audio
+            // placeholders (LTX ltx_placeholder.png / ltx_silence.wav) via the
+            // generic media endpoint. Both land in the same Pod input/ dir, but
+            // the latent endpoint may reject non-.latent uploads.
+            if (remoteActive) {
+                const endpoint = filename.endsWith('.latent')
+                    ? '/wrapper/upload/latent'
+                    : '/wrapper/upload/media';
+                await remoteModels.remoteUploadInput(source, filename, endpoint);
+            } else {
+                await fs.copy(source, path.join(inputDir, filename), { overwrite: true });
+            }
             copied.push(filename);
         }
 
@@ -169,7 +259,7 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
  */
 router.post('/comfy/stage-preview-latent', async (req, res) => {
     try {
-        const { sourcePath, engineInputName } = req.body || {};
+        const { sourcePath, engineInputName, forceLocal } = req.body || {};
         if (!sourcePath || typeof sourcePath !== 'string') {
             return res.status(400).json({ success: false, error: 'sourcePath required' });
         }
@@ -180,6 +270,14 @@ router.post('/comfy/stage-preview-latent', async (req, res) => {
         const resolvedSource = path.normalize(sourcePath);
         if (!(await fs.pathExists(resolvedSource))) {
             return res.status(404).json({ success: false, error: `Preview latent missing: ${resolvedSource}` });
+        }
+
+        // Remote engine: upload the project-owned latent to the Pod volume input
+        // dir via the wrapper instead of copying into the local ComfyUI input.
+        // MPI-74: a force-local run skips the upload and copies into local input below.
+        if (remoteModels.isRemoteActive() && forceLocal !== true) {
+            await remoteModels.remoteUploadInput(resolvedSource, engineInputName, '/wrapper/upload/latent');
+            return res.json({ success: true, copied: engineInputName });
         }
 
         const inputDir = getComfyPath(ENGINE_ROOT, 'input');
@@ -203,7 +301,14 @@ router.post('/comfy/start', async (req, res) => {
         const isUserRestart = req.body && req.body.isUserRestart;
         if (isUserRestart) processState.comfyNeedsRestart = false;
 
+        // Already running → do NOT clear comfyNeedsRestart: a node may have been
+        // installed against THIS still-running process (its node scan already ran),
+        // so the restart is still pending. The gen gate will stop+start it.
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
+
+        // We are about to SPAWN a fresh process → its node scan will pick up any
+        // newly-installed custom node, satisfying the restart need. Clear the flag.
+        processState.comfyNeedsRestart = false;
 
         const pythonPath = getPythonBin(ENGINE_ROOT);
         const mainPath = getComfyPath(ENGINE_ROOT, 'main.py');
@@ -249,12 +354,20 @@ router.post('/comfy/start', async (req, res) => {
             args.push('--extra-model-paths-config', extraConfigPath);
         }
 
+        // Force UTF-8 for the embedded Python. On Windows, py3.13 still defaults
+        // source + stdio to cp1252, so any custom node with a non-Latin-1 char in
+        // a string literal (e.g. RES4LYF's "Δ" label) raises a SyntaxError on
+        // import AND crashes the traceback printer on the same char — killing the
+        // whole ComfyUI process (no server → no prompt box). PYTHONUTF8=1 fixes
+        // both. Surfaced by the v0.25.1 engine bump (py3.13). See MPI-118.
+        const baseEnv = { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' };
+
         // On Apple Silicon, PYTORCH_ENABLE_MPS_FALLBACK lets ops not yet implemented
         // for MPS fall back to CPU instead of throwing — the difference between a
         // graceful slowdown and a hard crash mid-generation.
         const spawnEnv = vendor === 'apple'
-            ? { ...process.env, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
-            : process.env;
+            ? { ...baseEnv, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
+            : baseEnv;
 
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
         processState.activeComfyProcess.stdout.on('data', (d) => _handleComfyOutput('info', d));
@@ -287,6 +400,30 @@ router.post('/comfy/stop', (req, res) => {
 router.post('/comfy/needs-restart', (req, res) => {
     processState.comfyNeedsRestart = req.body.value ?? true;
     res.json({ success: true, comfyNeedsRestart: processState.comfyNeedsRestart });
+});
+
+/**
+ * POST /comfy/refresh-models
+ * Calls ComfyUI GET /object_info to reseed the filename cache for model types
+ * already registered in folder_names_and_paths (equivalent to the "R" hotkey).
+ * Use this after a model FILE is added/removed in an existing root folder — no
+ * restart needed for pure file changes. Returns { success, notRunning } when
+ * ComfyUI is not running (caller may ignore — model list will reseed on next start).
+ */
+router.post('/comfy/refresh-models', async (req, res) => {
+    if (!processState.activeComfyProcess) {
+        return res.json({ success: true, notRunning: true });
+    }
+    const ax = getAxios();
+    if (!ax) return res.json({ success: true, notRunning: true });
+    try {
+        await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/object_info`, { timeout: 10000 });
+        logger.info('comfy', 'Model cache reseeded via /object_info (no restart needed)');
+        res.json({ success: true });
+    } catch (err) {
+        logger.error('comfy', 'refresh-models /object_info call failed', err);
+        res.status(502).json({ success: false, error: err.message });
+    }
 });
 
 /**
@@ -382,6 +519,60 @@ router.get('/comfy/extra-folders', async (_req, res) => {
     }
 });
 
+/**
+ * GET /comfy/model-folders?bucket=loras|upscale_models
+ * Returns the full set of configured drop targets for a bucket: the primary
+ * bucket folder + each stored extra. Used by the picker modal to render one
+ * named drop zone per folder. { success, folders: [{ path, primary }] }
+ */
+router.get('/comfy/model-folders', async (req, res) => {
+    const bucket = String(req.query.bucket || '');
+    try {
+        if (bucket !== 'loras' && bucket !== 'upscale_models') {
+            return res.status(400).json({ success: false, error: 'bucket must be loras or upscale_models' });
+        }
+        const customRoot = await getCustomRoot();
+        const primaryBucket = path.join(customRoot || getDefaultModelsRoot(), bucket);
+        const extras = await getExtraModelFolders();
+        const folders = [
+            { path: primaryBucket, primary: true },
+            ...((extras[bucket]) || []).map(p => ({ path: p, primary: false })),
+        ];
+        res.json({ success: true, folders });
+    } catch (err) {
+        logger.error('comfy', 'model-folders get failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * MPI-219 helper: wait for ComfyUI to answer /history (ready), then POST the
+ * MpiNodes runtime path-reload so a freshly-added extra folder registers without
+ * a restart. Bounded retries cover the boot window (socket refuses / booting).
+ * Fire-and-forget: callers must not await this — it's a background reconcile.
+ */
+async function reloadExtraPathsWhenReady(yamlPath, { attempts = 20, delayMs = 1000 } = {}) {
+    const ax = getAxios();
+    if (!ax) return;
+    for (let i = 0; i < attempts; i++) {
+        if (!processState.activeComfyProcess) return; // engine went away — nothing to reload
+        const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
+            .then(() => true).catch(() => false);
+        if (ready) {
+            try {
+                await ax.post(`http://127.0.0.1:${COMFYUI_PORT}/mpi/reload-extra-paths`,
+                    { yaml_path: yamlPath }, { timeout: 10000 });
+                logger.info('comfy', 'extra-folders: engine reloaded extra model paths (no restart)');
+            } catch (reloadErr) {
+                logger.warn('comfy', `extra-folders: runtime path reload failed (${reloadErr.message}) — restart engine to pick up new folders`);
+            }
+            return;
+        }
+        await new Promise(r => setTimeout(r, delayMs));
+    }
+    logger.warn('comfy', 'extra-folders: engine did not become ready — new folders will apply on next restart');
+}
+
 router.post('/comfy/extra-folders', async (req, res) => {
     try {
         const folders = await setExtraModelFolders(req.body || {});
@@ -389,7 +580,22 @@ router.post('/comfy/extra-folders', async (req, res) => {
         // Always (re)write the YAML so removed extra folders are dropped from it
         // (garbage collection) while the default root block is preserved. Never
         // delete the file — that would orphan models under the default root.
-        await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
+        const yamlPath = await writeExtraModelPathsYaml(primaryRoot || getDefaultModelsRoot(), folders);
+
+        // MPI-219: ComfyUI reads extra_model_paths.yaml only at boot, so a folder
+        // added mid-session is invisible to /prompt validation → 400 "Value not in
+        // list: lora_name". Ask the running engine to re-read the yaml at runtime
+        // (MpiNodes POST /mpi/reload-extra-paths) so the new path registers without
+        // a restart. Fire-and-forget with a boot-race guard: a user can add a folder
+        // while ComfyUI is still booting (socket not listening → ECONNREFUSED, or
+        // boot already passed its own load_extra_path_config before the yaml was
+        // rewritten). Wait for the engine to answer /history, THEN reload the now-
+        // current yaml. Don't block the HTTP response on it — the yaml is already
+        // written and correct for next boot regardless.
+        if (processState.activeComfyProcess) {
+            reloadExtraPathsWhenReady(yamlPath);
+        }
+
         res.json({ success: true, folders });
     } catch (err) {
         logger.error('comfy', 'extra-folders set failed', err);
@@ -410,60 +616,112 @@ router.post('/comfy/models/check', async (req, res) => {
     const { models } = req.body;
     if (!Array.isArray(models)) return res.status(400).json({ error: 'models array required' });
 
-    try {
-        const customRoot = await getCustomRoot();
-        const defaultModelsRoot = getDefaultModelsRoot();
-        const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
-
-        const results = {};
-
-        for (const model of models) {
-            if (!model.id || !Array.isArray(model.deps)) { results[model.id] = { installed: false, deps: [] }; continue; }
-
-            let allPresent = true;
-            const depResults = [];
-
-            for (const dep of model.deps) {
-                if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
-                let depPath;
-                if (dep.type === 'custom_nodes') {
-                    // custom_nodes: YAML does not remap this type — always use engine default
-                    depPath = path.join(defaultCustomNodesRoot, dep.filename);
-                } else if (customRoot) {
-                    const baseFilename = path.basename(dep.filename);
-                    const subDir = path.dirname(dep.filename);
-                    const directPath = path.join(customRoot, dep.filename);
-                    if (await isCompleteOnDisk(directPath)) {
-                        depPath = directPath;
-                    } else {
-                        // Search the custom root, then fall back to the default root:
-                        // the YAML keeps the default folder searchable, so engine deps
-                        // installed there before a path change must still count as present.
-                        const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
-                        depPath = found
-                            || (await isCompleteOnDisk(path.join(defaultModelsRoot, dep.filename))
-                                ? path.join(defaultModelsRoot, dep.filename)
-                                : directPath);
-                    }
-                } else {
-                    depPath = path.join(defaultModelsRoot, dep.filename);
-                }
-
-                const isInstalled = await isCompleteOnDisk(depPath);
-                const partialBytes = isInstalled ? 0 : await getPartialBytes(depPath);
-                if (!isInstalled) allPresent = false;
-                depResults.push({ id: dep.id || null, installed: isInstalled, partialBytes });
+    // Remote engine: resolve installed-state against the Pod volume via the
+    // wrapper instead of the local filesystem. Response shape is identical.
+    if (remoteModels.isRemoteActive()) {
+        try {
+            const out = await remoteModels.remoteModelsCheck(models);
+            return res.json(out);
+        } catch (err) {
+            // MPI-211: during the Pod-ready-polling window the wrapper HTTP
+            // endpoint isn't up yet (404 / connection refused). That's a
+            // transient boot state, not a failure — answer 200 with an empty
+            // not-ready result so the renderer doesn't log a hard 502. Every
+            // subsequent check reconciles clean once the Pod is ready.
+            const booting = /wrapper status 404\b/.test(err.message)
+                || /ECONNREFUSED|ENOTFOUND|socket hang up|fetch failed/i.test(err.message);
+            if (booting) {
+                logger.info('comfy', `remote models/check deferred — Pod wrapper still booting (${err.message})`);
+                return res.json({ success: true, results: {}, pending: true });
             }
-
-            results[model.id] = { installed: allPresent, deps: depResults };
+            logger.error('comfy', `remote models/check failed: ${err.message}`);
+            return res.status(502).json({ success: false, error: err.message });
         }
+    }
 
+    try {
+        const results = await _localModelsCheck(models);
         res.json({ success: true, results });
     } catch (err) {
         logger.error('comfy', 'models/check failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+/**
+ * MPI-74: local-filesystem model presence, IGNORING remote mode. The normal
+ * /comfy/models/check forks to the Pod wrapper when remote-active; a force-local
+ * run needs to know whether the model is on LOCAL disk (the engine that will run
+ * it) regardless of the remote connection. Same response shape as the local
+ * branch of /comfy/models/check.
+ */
+router.post('/comfy/models/check-local', async (req, res) => {
+    const { models } = req.body;
+    if (!Array.isArray(models)) return res.status(400).json({ error: 'models array required' });
+    try {
+        const results = await _localModelsCheck(models);
+        res.json({ success: true, results });
+    } catch (err) {
+        logger.error('comfy', 'models/check-local failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * Resolve installed-state for each model's deps against the LOCAL filesystem
+ * (primary/custom root + default root + engine custom_nodes). Shared by
+ * /comfy/models/check (local branch) and /comfy/models/check-local.
+ */
+async function _localModelsCheck(models) {
+    const customRoot = await getCustomRoot();
+    const defaultModelsRoot = getDefaultModelsRoot();
+    const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
+
+    const results = {};
+
+    for (const model of models) {
+        if (!model.id || !Array.isArray(model.deps)) { results[model.id] = { installed: false, deps: [] }; continue; }
+
+        let allPresent = true;
+        const depResults = [];
+
+        for (const dep of model.deps) {
+            if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
+            let depPath;
+            if (dep.type === 'custom_nodes') {
+                // custom_nodes: YAML does not remap this type — always use engine default
+                depPath = path.join(defaultCustomNodesRoot, dep.filename);
+            } else if (customRoot) {
+                const baseFilename = path.basename(dep.filename);
+                const subDir = path.dirname(dep.filename);
+                const directPath = path.join(customRoot, dep.filename);
+                if (await isCompleteOnDisk(directPath)) {
+                    depPath = directPath;
+                } else {
+                    // Search the custom root, then fall back to the default root:
+                    // the YAML keeps the default folder searchable, so engine deps
+                    // installed there before a path change must still count as present.
+                    const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
+                    depPath = found
+                        || (await isCompleteOnDisk(path.join(defaultModelsRoot, dep.filename))
+                            ? path.join(defaultModelsRoot, dep.filename)
+                            : directPath);
+                }
+            } else {
+                depPath = path.join(defaultModelsRoot, dep.filename);
+            }
+
+            const isInstalled = await isCompleteOnDisk(depPath);
+            const partialBytes = isInstalled ? 0 : await getPartialBytes(depPath);
+            if (!isInstalled) allPresent = false;
+            depResults.push({ id: dep.id || null, installed: isInstalled, partialBytes });
+        }
+
+        results[model.id] = { installed: allPresent, deps: depResults };
+    }
+
+    return results;
+}
 
 async function _findFile(dir, filename) {
     if (!(await fs.pathExists(dir))) return null;
@@ -488,6 +746,65 @@ async function _findFile(dir, filename) {
  * Lists all model files (.safetensors, .ckpt, .pt, .bin, .pth) in a subdirectory.
  * Returns: { success: true, files: string[] }
  */
+/**
+ * POST /comfy/import-model
+ * Copy a dropped LoRA / upscale model file from its absolute local path into one
+ * of the user's CONFIGURED folders for that bucket (primary root or a stored
+ * extra). Copies (does not move) — the original stays. Refuses to overwrite an
+ * existing same-name file unless { overwrite: true }.
+ *
+ * Body: { sourcePath, targetFolder, bucket: 'loras'|'upscale_models', overwrite? }
+ * Returns: { success, filename } | 409 { success:false, error:'exists', filename }
+ */
+const _MODEL_EXTS = new Set(['.safetensors', '.ckpt', '.pt', '.bin', '.pth']);
+
+router.post('/comfy/import-model', async (req, res) => {
+    const { sourcePath, targetFolder, bucket, overwrite } = req.body || {};
+    try {
+        if (!sourcePath || !targetFolder || !bucket) {
+            return res.status(400).json({ success: false, error: 'sourcePath, targetFolder and bucket are required' });
+        }
+        if (bucket !== 'loras' && bucket !== 'upscale_models') {
+            return res.status(400).json({ success: false, error: 'bucket must be loras or upscale_models' });
+        }
+        if (!(await fs.pathExists(sourcePath))) {
+            return res.status(400).json({ success: false, error: 'source file not found' });
+        }
+        const ext = path.extname(sourcePath).toLowerCase();
+        if (!_MODEL_EXTS.has(ext)) {
+            return res.status(400).json({ success: false, error: `unsupported file type: ${ext}` });
+        }
+
+        // Build the allow-list of configured folders for this bucket: primary
+        // bucket folder (custom root or default) + each stored extra. Reject any
+        // target outside it — no arbitrary writes / path traversal.
+        const customRoot = await getCustomRoot();
+        const primaryBucket = path.join(customRoot || getDefaultModelsRoot(), bucket);
+        const extras = await getExtraModelFolders();
+        const allowed = [primaryBucket, ...((extras[bucket]) || [])]
+            .map(p => path.resolve(p));
+        const resolvedTarget = path.resolve(targetFolder);
+        if (!allowed.includes(resolvedTarget)) {
+            return res.status(400).json({ success: false, error: 'target folder is not a configured model folder' });
+        }
+
+        await fs.ensureDir(resolvedTarget);
+        const filename = path.basename(sourcePath);
+        const dest = path.join(resolvedTarget, filename);
+
+        if (!overwrite && await fs.pathExists(dest)) {
+            return res.status(409).json({ success: false, error: 'exists', filename });
+        }
+
+        await fs.copy(sourcePath, dest, { overwrite: Boolean(overwrite) });
+        logger.info('comfy', `imported model ${filename} into ${bucket}`);
+        res.json({ success: true, filename });
+    } catch (err) {
+        logger.error('comfy', 'import-model failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.get('/comfy/list-files', async (req, res) => {
     const { subDir } = req.query;
     if (!subDir) return res.status(400).json({ success: false, error: 'subDir required' });
@@ -519,12 +836,16 @@ router.get('/comfy/list-files', async (req, res) => {
             return results;
         };
 
-        // ComfyUI builds its LoRA/upscale enum from path.relative against its own
-        // search roots, so the separator it expects matches the engine's OS. master
-        // is local-only → emit the native separator (Windows '\\'); forcing forward
-        // slash here 400s "value not in list" for subfolder models on Windows.
-        // Dedupe key stays forward-slash so it is stable regardless of separator.
-        const toEngineSep = (s) => path.sep === '/' ? s.replace(/\\/g, '/') : s.replace(/\//g, '\\');
+        // ComfyUI builds its LoRA/upscale enum from path.relative against ITS OWN
+        // search roots, so the separator it expects matches the ENGINE's OS:
+        // local engine = this host (Windows → '\\'), remote engine = Linux Pod
+        // ('/'). We emit the engine-native separator so the dropdown value matches
+        // ComfyUI's enum exactly (forward-slash here would 400 "value not in list"
+        // for subfolder models on Windows). Dedupe key stays forward-slash so it's
+        // stable regardless of the emitted separator.
+        const remoteActive = remoteModels.isRemoteActive();
+        const engineSep = remoteActive ? '/' : path.sep;
+        const toEngineSep = (s) => engineSep === '/' ? s.replace(/\\/g, '/') : s.replace(/\//g, '\\');
 
         const addFiles = async (dirPath, relativeTo, output, seen) => {
             const files = await getAllFiles(dirPath, relativeTo);
@@ -558,3 +879,10 @@ router.get('/comfy/list-files', async (req, res) => {
 
 module.exports = router;
 module.exports.setAxios = setAxios;
+module.exports.addComfyEventClient = addComfyEventClient;
+module.exports.removeComfyEventClient = removeComfyEventClient;
+// Exposed for the local shared-dep guard in downloadManager (MPI-216): the local
+// uninstall must protect deps still complete on disk for ANOTHER model, the same
+// way the remote path checks the Pod volume. Reuses the exact custom-root +
+// default-root + recursive-search + completeness logic used by /comfy/models/check.
+module.exports.localModelsCheck = _localModelsCheck;

@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-224",
+  "title": "LTX LoRA slots hide the Clip strength knob though the node has a live strength_clip input (silently pinned to 1.0)",
+  "description": "Model Settings shows LTX (both tiers: ltx-23 High + ltx-23-balanced Balanced) LoRA slots with only the Model strength knob \u2014 no Clip. But the LTX Input_Lora_1..6 nodes (ComfyUi-MpiNodes) DO have a live strength_clip input (default 1.00), confirmed in the LTX_i2v_t2v_template graph. Because models.js sets loraStrengths:['model'] for both LTX tiers, the UI hides Clip and never injects strength_clip \u2192 the node keeps its baked 1.00. Some LTX LoRAs genuinely use clip; the user cannot control it, so those render wrong (clip effectively locked at 1.0). Original ['model'] comment claimed 'strength_clip is inert' for LTX \u2014 that was incorrect. FIX (scope: LTX only, per user): loraStrengths -> ['model','clip'] on both ltx-23 (models.js:292) and ltx-23-balanced (models.js:350). Clip knob then renders, defaults 1.00 (no behavior change for existing LoRAs/projects \u2014 1.0 was already the injected default), user can lower it for clip-using LoRAs. END-TO-END PLUMBING ALREADY SUPPORTS CLIP: commandExecutor _loraSlotParam emits strength_clip from slot.strengthClip; the MPI-219 LoRA-object inject writes node.inputs.strength_clip when present. Only the UI gate + persistence of a non-1.0 value was missing. NOT a regression of MPI-223 (bypass) \u2014 surfaced during MPI-223 live testing but independent. Bypass already zeroes clip correctly regardless. Out of scope: Chroma/Wan/Wan5B loraStrengths (a broader audit was offered + declined; those stay ['model']).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-08T09:50:00Z",
+  "updated_at": "2026-07-08T10:15:00Z",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "bug",
+    "ltx",
+    "model-settings",
+    "lora",
+    "comfy-injection"
+  ],
+  "priority": "medium",
+  "defaultExpanded": false
+}

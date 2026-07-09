@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-206",
+  "title": "Arch-variant models show stale 'installed' after same-session Pod swap (4090\u00e2\u2020\u20195090) \u00e2\u20ac\u201d re-check on every Pod connect",
+  "description": "Found during MPI-200 live A/B. On a same-session Pod swap (connect 4090 \u00e2\u2020\u2019 delete \u00e2\u2020\u2019 connect 5090), the Models panel showed the LTX 2.3 balanced tier as INSTALLED, but the balanced card was correctly ABSENT from the generation picker, and gens fell back to the bf16 high tier.\n\nRoot cause: arch-variant models (MPI-200) need a DIFFERENT weight per GPU arch \u00e2\u20ac\u201d balanced tier = mxfp8_block32 on Blackwell (5090), fp8_scaled on Ada/modern (4090). Installing the balanced tier on the 4090 pulled ONLY fp8_scaled onto the shared volume; the 5090 needs mxfp8 (not present), so the card is correctly unusable there. All resolver paths verified correct via console + node repro (m.installed=false, isModelUsable=false, deriveInstalledOps fullyInstalled=false for every arch token). The DATA was right.\n\nThe bug was the install re-check gate in js/shell.js: `remote:connection {connected:true}` re-synced installed-state ONLY on the FIRST connect (`connected && !_wasRemoteConnected`). A second Pod in the same session (a new machine, possibly new arch) re-fires connected:true, but the edge-dedup skipped the re-sync \u00e2\u20ac\u201d so the previous Pod's arch dep-status cache persisted, and the panel rendered a tier 'installed' whose arch weight isn't on the new volume.\n\nFix (SHIPPED, uncommitted): js/shell.js \u00e2\u20ac\u201d re-sync on EVERY resolved connect (drop the `!_wasRemoteConnected` guard on the connect branch). syncModelInstalled rebuilds the per-model dep-status cache fresh (replaces the whole Map per model) and the new Pod's gpuType lands in state.runpodConfig before the sync, so archSync re-resolves the new arch. A resolved (non-phase) connected:true IS a real (re)connection edge \u00e2\u20ac\u201d re-checking each time is correct, not redundant.\n\nUX note (secondary, NOT fixed here): when a cross-arch model is partially installed (fp8 present, mxfp8 missing), the ideal is to surface it as 'install the missing arch weight', not silently hide/lie. This card only fixes the stale-cache lie so the panel/picker agree; the install-the-missing-weight UX is a follow-up if desired.\n\nNOT the same as MPI-205 (Wan crappy output) \u00e2\u20ac\u201d separate issue.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-06T12:30:00Z",
+  "updated_at": "2026-07-06T14:15:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "tags": [
+    "runpod",
+    "models",
+    "arch-variant",
+    "MPI-200"
+  ],
+  "priority": "high"
+}

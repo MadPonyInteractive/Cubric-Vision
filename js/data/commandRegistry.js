@@ -23,6 +23,7 @@ export const MEDIA_TYPE = Object.freeze({
 /**
  * @typedef {Object} CommandDef
  * @property {string}          label          - Display name shown in UI
+ * @property {string}          [icon]         - MpiIcon registry key for op selectors (model-manager operation toggles). Optional.
  * @property {'image'|'video'} mediaType      - Which group type this applies to
  * @property {number}          requiresImages - Min number of input images needed (0 = none)
  * @property {number}          [requiresVideo]- Min number of input videos needed (0 = none)
@@ -142,6 +143,22 @@ export const commands = {
         promptRequired: true,
         components: [],
     },
+    // NVIDIA PiD generative upscaler. One workflow, internal 4-path VAE selector
+    // (pidVariant → Input_Type) + output-size selector (pidResolution → Input_Resolution),
+    // both 1-indexed MpiAnySwitch. denoise slider maps to PiD's degrade_sigma (Input_Denoise);
+    // default 0.0 = faithful. Prompt optional (empty works).
+    pid: {
+        label: 'Upscale',
+        progressLabel: 'Upscaling',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        components: ['pidVariant', 'pidResolution', 'denoise'],
+        defaults: { denoise: 0.0 },
+    },
 
     // ── Video — Model Operations ──────────────────────────────────────────────
 
@@ -157,18 +174,32 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         mediaInputs: [
-            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Start_Frame', required: true },
-            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
+            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
+            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
         ],
         promptRequired: false,
         components: ['qualityTier', 'duration', 'motionIntensity', 'ratio'],
     },
     t2v_ms: {
         label: 'Text to Video',
+        icon: 'text',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
+        // Audio slot is model-capability-gated: only models with
+        // capabilities.audio (LTX) surface/accept it. WAN filters it out at the
+        // slot read points (MpiPromptBox._mediaSlotsForOperation, commandExecutor).
+        mediaInputs: [
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
+        ],
         promptRequired: true,
-        components: ['qualityTier', 'duration', 'ratio', 'previewStage'],
+        // audioMode is capability-gated (only models with capabilities.audio mount
+        // it — MpiPromptBox skips it for WAN). Ordered first in the op slot.
+        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'ratio', 'previewStage'],
+        // Two-stage (preview→stage-2) op. Drives the preview/latent-staging path
+        // in commandExecutor. Replaces the old `operation.endsWith('_ms')` magic
+        // (MPI-128). Whether a given MODEL exposes it is still gated by
+        // capabilities.multiStage.
+        isMultiStage: true,
         // Preview cards from this op show a Continue button (branch stage-2 to
         // a NEW card) in addition to Finish (replace preview with final).
         // WAN supports branching because its low-stage LoRAs vary the stage-2
@@ -178,14 +209,21 @@ export const commands = {
     },
     i2v_ms: {
         label: 'Image to Video',
+        icon: 'image',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
+        // Audio slot is model-capability-gated (see t2v_ms note). WAN gets only
+        // the two image frame slots; LTX additionally accepts the audio slot.
         mediaInputs: [
-            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Start_Frame', required: true },
-            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'End_Frame', required: false },
+            { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
+            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
         ],
         promptRequired: false,
-        components: ['qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
+        // audioMode capability-gated (see t2v_ms note); ordered first.
+        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
+        // Two-stage op (see t2v_ms note). MPI-128.
+        isMultiStage: true,
         allowsBranchingContinue: true,
     },
     extend: {
@@ -310,14 +348,26 @@ export const COMMANDS = commands;
  * @returns {Array<{key: string, available: boolean} & CommandDef>}
  */
 export function getAvailableCommands(mediaType, model = null, ctx = {}) {
-    const { imageCount = 0, videoCount = 0, hasMask = false } = ctx;
+    const { imageCount = 0, videoCount = 0, hasMask = false, installedOps = null } = ctx;
+
+    // When the caller supplies the model's physically-installed op set (MPI-122),
+    // a selectable op the user did NOT install is hidden — so a T2V-only install
+    // never offers I2V in the PromptBox. Absent installedOps (image models, or
+    // status not yet known) → fall back to static supportedOps, no behaviour change.
+    const installedSet = Array.isArray(installedOps) ? new Set(installedOps) : null;
 
     return Object.entries(commands)
         .filter(([, cmd]) => !cmd.stub && cmd.mediaType === mediaType)
         .filter(([key, cmd]) => {
             if (cmd.universal) return false;
             if (!model) return true;
-            return model.supportedOps.includes(key);
+            if (!model.supportedOps.includes(key)) return false;
+            // Only gate ops the model declares as selectable operation groups; ops
+            // that always ship with the model (no `operations` entry) stay visible.
+            if (installedSet && model.operations && model.operations[key]) {
+                return installedSet.has(key);
+            }
+            return true;
         })
         .map(([key, cmd]) => {
             const available =
@@ -387,6 +437,20 @@ export function getCommandMediaInputs(key) {
 }
 
 /**
+ * Capability-gates a slot list for a given model. The shared video ops
+ * (i2v_ms/t2v_ms) declare an audio slot, but only models with
+ * `capabilities.audio` (LTX) may surface/accept it; WAN must not. Call this at
+ * every read point where the slot list drives UI acceptance or injection.
+ * @param {Array<{mediaType:string}>} slots
+ * @param {import('./modelRegistry.js').ModelDef|null} [model]
+ * @returns {Array<{mediaType:string}>}
+ */
+export function filterMediaInputsForModel(slots, model = null) {
+    if (model?.capabilities?.audio === true) return slots;
+    return slots.filter(slot => slot.mediaType !== 'audio');
+}
+
+/**
  * Returns the component IDs for an operation's sub-controls injected into
  * MpiPromptBox's operation slot.
  * @param {string} key
@@ -418,8 +482,28 @@ export function getCommandDefault(key, controlId) {
  * @param {string} key
  * @returns {boolean}
  */
-export function commandAllowsBranchingContinue(key) {
-    return commands[key]?.allowsBranchingContinue === true;
+/**
+ * Whether an operation is a two-stage (preview → stage-2) command. Replaces the
+ * legacy `String(operation).endsWith('_ms')` suffix magic (MPI-128). Note this
+ * is op-level; whether a given MODEL exposes the multi-stage UI is separately
+ * gated by `model.capabilities.multiStage`.
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function commandIsMultiStage(key) {
+    return commands[key]?.isMultiStage === true;
+}
+
+export function commandAllowsBranchingContinue(key, model = null) {
+    if (commands[key]?.allowsBranchingContinue !== true) return false;
+    // The op-level flag is the ceiling (this op CAN branch). On a SHARED _ms op
+    // (WAN + LTX both use t2v_ms/i2v_ms), branching is additionally gated per
+    // model: only models whose stage-2 result varies (per-stage LoRAs) expose
+    // Continue. WAN declares capabilities.branchingContinue; LTX omits it →
+    // Finish-only. When no model is supplied, fall back to the op flag (callers
+    // that don't have a model in scope, e.g. WAN-era single-model checks).
+    if (model && model.capabilities) return model.capabilities.branchingContinue === true;
+    return true;
 }
 
 /**

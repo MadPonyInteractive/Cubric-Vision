@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-150",
+  "title": "Umbrella: RunPod-branch backlog (Clusters A/B/C) \u00e2\u20ac\u201d coordination plan",
+  "description": "UMBRELLA / coordination card for the RunPod-branch backlog. Groups the in-scope To Do cards into 3 dependency-ordered clusters, run cluster-by-cluster in focused sessions chained with mpi-handoff. Plan + file-level conflict matrix live in this card's plan.md.\n\nCLUSTER A (Pod v0.9.0/v0.10.0 batch, ACTIVE): MPI-139 \u00e2\u2020\u2019 MPI-149 \u00e2\u2020\u2019 MPI-145 \u00e2\u2020\u2019 MPI-146 \u00e2\u2020\u2019 MPI-148.\nCLUSTER B (remote download stack): MPI-129 \u00e2\u2020\u2019 MPI-140 \u00e2\u2020\u2019 MPI-136 \u00e2\u2020\u2019 MPI-135.\nCLUSTER C (LTX authoring polish): MPI-128 \u00e2\u2020\u2019 MPI-147.\n\nKEY CONFLICTS (see plan.md matrix): A must fully ship+commit before B (share downloadManager.js + wrapper.py + dependencies.js + remoteProxy.js). MPI-149 blocks the v0.26 floor. MPI-129 is upstream of 140/136. C is independent (parallelizable with a dedicated agent).\n\nOUT OF SCOPE (removed by user 2026-06-26): MPI-71, MPI-69, MPI-126, MPI-137 (still on board, not in this umbrella).\n\nThis card is a tracker, not implementation work \u00e2\u20ac\u201d it stays in todo as the map; the member cards do the work. v0.26 floor verified locally 2026-06-26 (i2v + audio + Wan all gen clean on RTX 4060 Ti).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-26T14:50:00Z",
+  "updated_at": "2026-06-28T18:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "umbrella",
+    "coordination",
+    "runpod",
+    "backlog",
+    "tracker"
+  ],
+  "priority": "medium"
+}

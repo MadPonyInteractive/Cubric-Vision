@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "45492c5e-96cf-44a9-8e67-7112afd6a470",
+  "status": "open",
+  "created_at": "2026-06-13T07:16:56+01:00",
+  "updated_at": "2026-06-13T07:16:56+01:00",
+  "from": { "selector": "task", "value": "MPI-64", "note": "RunPod Remote Engine, branch RunPod" },
+  "to": { "selector": "task", "value": "MPI-68" },
+  "subject": "MPI-64 active on branch RunPod — file overlap + 2 facts for the Wan I2V/T2V split",
+  "body": "MPI-64 (RunPod Remote Engine) is active on branch RunPod. My working tree is CLEAN — 3 commits pushed: dcd3482 (B4 engine-drop recovery + backend stream-pipe crash guard), 00b1b89 (B0 execution_error toast), 2982a9b (gallery empty-picker fallback fix).\n\nFiles I touch and may touch again: js/services/comfyController.js, js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js, js/shell.js, routes/remoteProxy.js. I do NOT plan to touch model-data files — those are yours.\n\nPlease claim model-data files (js/data/modelConstants/dependencies.js, modelConstants, modelRegistry, operationRegistry) via the kanban before editing. Ping me if you need the gallery or comfyController files.\n\nTwo facts relevant to splitting Wan into separate I2V + T2V models:\n\n(1) ComfyUI-PainterI2Vadvanced is a PER-MODEL custom_node (dependencies.js: type 'custom_nodes', installRequirements:false, installs to the volume on remote / to disk on local). It belongs to the I2V variant ONLY, not T2V — the T2V workflow does not reference PainterI2VAdvanced. On REMOTE, a freshly-installed per-model custom_node needs a ComfyUI restart to load (ComfyUI scans custom_nodes only at start); the app gates with a 'reconnect to load new nodes' message (B1) and manual Disconnect->Connect is the workaround until the /wrapper/restart-comfy endpoint ships (deferred rebuild). On LOCAL, the app auto-restarts ComfyUI after a node install (verified this session).\n\n(2) The gallery picker now falls back to the first installed model of ANY type when the last-touched mediaType has no installed model (commit 2982a9b). So a fresh I2V-only or T2V-only install will NOT blank the in-project picker.",
+  "related": {
+    "task_card": "MPI-64",
+    "files": [
+      "js/services/comfyController.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/shell.js",
+      "routes/remoteProxy.js",
+      "js/data/modelConstants/dependencies.js"
+    ]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-06-13T07:16:56+01:00", "event": "created" }
+  ]
+}

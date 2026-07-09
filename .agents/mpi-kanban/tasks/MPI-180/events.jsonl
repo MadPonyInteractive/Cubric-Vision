@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-07-02T19:30:00Z","actor":"claude","id":"MPI-180","title":"GPU dropdown drops the SELECTED card when its stock flips unavailable"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T19:30:00Z","actor":"claude","id":"MPI-180","from":"todo","to":"doing","reason":"Implementation started immediately (live-verify find)."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","at":"2026-07-02T19:45:00Z","actor":"claude","id":"MPI-180","note":"Fix shipped; needs one live re-open check while connected."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T20:15:00Z","actor":"claude","id":"MPI-180","from":"doing","to":"done","reason":"Live-verified by user: connect/generate/disconnect + terminate and delete Pod paths; dropdown fix confirmed."}

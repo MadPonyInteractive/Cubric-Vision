@@ -1,5 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, qsa } from '../../../utils/dom.js';
 
 /**
  * MpiToast — Brief floating notifications.
@@ -10,15 +10,35 @@ import { qs } from '../../../utils/dom.js';
  * @param {number} [duration=3000] - Lifespan in ms (set to 0 for persistent)
  */
 
-// Module-level stack — tracks visible toasts (max 3) and a pending queue
+// Max toasts shown at once. Everything else waits its turn inside the same
+// stack container, hidden via the .mpi-toast--queued class. The DOM is the
+// single source of truth — there are no parallel JS arrays to drift out of
+// sync (a past bug: array bookkeeping desynced from the DOM and toasts
+// surfaced at the top-left or over-drained past the cap).
 const MAX_VISIBLE_TOASTS = 2;
-const _toastStack = [];   // { el, hidden }
-const _toastQueue = [];    // { el } — waiting for a slot
 
-function _reassignStackPositions() {
-    _toastStack.forEach((item, i) => {
-        item.el.style.setProperty('--toast-stack-index', i);
-    });
+// Shared fixed container. Toasts — both visible and queued — live in normal
+// flow inside it (flex column-reverse) so each grows to its own height without
+// overlapping its neighbours; see .mpi-toast-stack in MpiToast.css. Queued
+// toasts are present but hidden (display:none) so they never paint in the wrong
+// spot before getting a slot. Created lazily.
+let _stackContainer = null;
+function _getStackContainer() {
+    if (_stackContainer && document.contains(_stackContainer)) return _stackContainer;
+    _stackContainer = document.createElement('div');
+    _stackContainer.className = 'mpi-toast-stack';
+    // z-20000 fixed keeps it above the full-page Model Library overlay (MPI-215);
+    // MpiOverlay's body-stash explicitly EXEMPTS this stack (see its _doShow) so a
+    // toast fired while the overlay is open isn't detached + auto-dismissed.
+    document.body.appendChild(_stackContainer);
+    return _stackContainer;
+}
+
+// Visible = mounted in the stack and not flagged as queued. Queried from the
+// DOM every time so the count can never drift from reality.
+function _visibleCount() {
+    if (!_stackContainer) return 0;
+    return qsa(':scope > .mpi-toast:not(.mpi-toast--queued)', _stackContainer).length;
 }
 
 function _startTimer(el, duration, dismiss) {
@@ -33,35 +53,28 @@ function _startTimer(el, duration, dismiss) {
     el._dismissTimer = setTimeout(dismiss, duration);
 }
 
-function _showToast(item) {
-    item.hidden = false;
-    item.el.style.removeProperty('visibility');
-    item.el.style.removeProperty('opacity');
-    item.el.style.setProperty('--toast-stack-index', _toastStack.length - 1);
+// Promote a queued toast into a live slot. It's already in the right place in
+// the DOM, so this only flips the class, kicks the open animation, and starts
+// its timer.
+function _showToast(el) {
+    el.classList.remove('mpi-toast--queued');
 
     // Trigger animation by forcing a reflow
-    void item.el.offsetWidth;
-    item.el.classList.add('mpi-toast--open');
+    void el.offsetWidth;
+    el.classList.add('mpi-toast--open');
 
     // Start timer and progress bar only when actually shown
-    _startTimer(item.el, item._duration, item._dismissFn);
+    _startTimer(el, el._duration, el._dismissFn);
 }
 
+// Reveal the next queued toast if a slot is free. column-reverse means the
+// oldest queued toast sits last in the DOM, so promote that one.
 function _drainQueue() {
-    if (_toastQueue.length === 0) return;
-    if (_toastStack.length >= MAX_VISIBLE_TOASTS) return;
-    const next = _toastQueue.shift();
-    next.hidden = false;
-    _toastStack.push(next);
-    _reassignStackPositions();
-    _showToast(next);
-}
-
-function _removeFromStack(el) {
-    const idx = _toastStack.findIndex(item => item.el === el);
-    if (idx !== -1) _toastStack.splice(idx, 1);
-    _reassignStackPositions();
-    _drainQueue();
+    if (_visibleCount() >= MAX_VISIBLE_TOASTS) return;
+    if (!_stackContainer) return;
+    const queued = qsa(':scope > .mpi-toast--queued', _stackContainer);
+    const next = queued[queued.length - 1];
+    if (next) _showToast(next);
 }
 
 export const MpiToast = ComponentFactory.create({
@@ -88,7 +101,7 @@ export const MpiToast = ComponentFactory.create({
         const label = labelByVariant[variant] || labelByVariant.info;
 
         return `<div class="mpi-toast mpi-toast--${variant}">
-            <img class="mpi-toast__mascot" src="assets/mascot/${mascot}.png" alt="" aria-hidden="true">
+            <img class="mpi-toast__mascot" src="assets/mascot/${mascot}.png" alt="" aria-hidden="true" onerror="this.style.display='none'">
             <div class="mpi-toast__content">
                 <div class="mpi-toast__meta">
                     <span class="mpi-toast__dot"></span>
@@ -101,50 +114,64 @@ export const MpiToast = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const progress = qs('.mpi-toast__progress', el);
         const duration = props.duration !== undefined ? props.duration : 3000;
 
-        let item;
+        // Stash params so _showToast can start the timer when a queued toast is
+        // promoted later.
+        el._duration = duration;
 
+        let dismissed = false;
         const dismiss = () => {
+            if (dismissed) return;   // single clean exit — guards double-fire
+            dismissed = true;
             clearTimeout(el._dismissTimer);
             el.classList.remove('mpi-toast--open');
             el.classList.add('mpi-toast--closing');
             el.addEventListener('transitionend', () => {
-                _removeFromStack(el);
                 observer.disconnect();
+                // We reparent el into the shared stack container during setup, so
+                // the caller's `close` handler (which removes its own wrapper)
+                // can't take el out of the DOM — remove it here. This also drops
+                // it from _visibleCount before we drain.
+                el.remove();
                 emit('close');
+                // Slot freed — promote the next queued toast.
+                _drainQueue();
             }, { once: true });
         };
+        el._dismissFn = dismiss;
 
-        if (_toastStack.length < MAX_VISIBLE_TOASTS) {
-            // Assign a visible slot
-            const stackIndex = _toastStack.length;
-            item = { el, hidden: false };
-            _toastStack.push(item);
-            el.style.setProperty('--toast-stack-index', stackIndex);
-        } else {
-            // Queue — mount hidden, will show when a slot frees up
-            item = { el, hidden: true, _duration: duration, _dismissFn: dismiss };
-            _toastQueue.push(item);
-            el.style.setProperty('--toast-stack-index', -1);
-            el.style.setProperty('visibility', 'hidden');
-            el.style.setProperty('opacity', '0');
-        }
+        const container = _getStackContainer();
+        const isVisible = _visibleCount() < MAX_VISIBLE_TOASTS;
 
-        // Reindex when a toast is removed from DOM
+        // Mount into the shared stack either way — queued toasts are hidden via
+        // the class, never parked in the document body where they'd paint at the
+        // top-left corner.
+        if (!isVisible) el.classList.add('mpi-toast--queued');
+        container.appendChild(el);
+
+        // Safety net only: if this toast is yanked from the DOM without a clean
+        // dismiss (e.g. the stack container is torn down on navigation), free its
+        // slot so the queue can still drain. Not a primary drain path.
         const observer = new MutationObserver(() => {
-            if (!document.contains(el)) {
-                _removeFromStack(el);
+            if (document.contains(el)) return;
+            // Confirm the detach is PERMANENT, not a transient reparent. A full-page
+            // overlay opening (MpiOverlay stash) or an install-driven awaitReSync
+            // churns document.body and can momentarily pop the stack out of the DOM;
+            // firing on the first such mutation instant-dismissed a just-mounted toast
+            // (seen live: a disk-full warning over the Model Library flashed straight
+            // to --closing). Re-check on the next frame; only drain if it's still gone.
+            requestAnimationFrame(() => {
+                if (document.contains(el) || dismissed) return;
                 observer.disconnect();
-            }
+                dismissed = true;
+                clearTimeout(el._dismissTimer);
+                _drainQueue();
+            });
         });
         observer.observe(document.body, { childList: true, subtree: true });
 
-        // Start timer only when actually shown (not when queued)
-        if (!item.hidden) {
-            el.classList.add('mpi-toast--open');
-            _startTimer(el, duration, dismiss);
-        }
+        // Start timer/animation only when actually shown (not when queued).
+        if (isVisible) _showToast(el);
     }
 });

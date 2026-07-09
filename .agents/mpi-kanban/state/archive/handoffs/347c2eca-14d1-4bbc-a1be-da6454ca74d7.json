@@ -1,0 +1,114 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "347c2eca-14d1-4bbc-a1be-da6454ca74d7",
+  "generated_at": "2026-06-30T11:15:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-163 shipped + live-verified (deps half) → found the workflow-swap bf16-on-Pod bug → planned MPI-165 engine-variant consolidation (Option A, phased). Resume at Phase A.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Fix the half-wired LTX bf16-local/GGUF-Pod engine split so a fresh GGUF-only Pod installs + generates correctly; then (user's escalation) the system had grown confusing session-over-session, so consolidate the engine-variant smear into one clean structure rather than keep symptom-patching.",
+    "status": "in_progress",
+    "summary": "MPI-163 (deps half) is DONE + live-verified on an A100 Pod (correct GGUF set installs, prompt box returns). But a live gen then FAILED because the WORKFLOW swap sent the bf16 graph to the Pod. Root-caused via 4 parallel agents. Planned MPI-165: consolidate deps+workflow+engine-signal into one engines: profile + resolve(model,op,engine) + resolve-engine-once. Plan is written + committed. NEXT = implement Phase A (the signal fix that fixes the live Pod bug)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-165/plan.md",
+    "completed": [
+      "MPI-163 deps half SHIPPED + LIVE-VERIFIED on A100 Pod (commits 546b0f6 gate + 0572bd1 footprint/preflight): engine-aware dep resolution. LTX installs the 44.8GB GGUF set (NOT the 85.8GB union, bf16 never fetched), reads INSTALLED, prompt box returns, gen unblocked. MPI-163 card = done/accepted.",
+      "start.sh republished to R2 stable (mpi-ci 09c1e5d boot-scan node-deps self-heal). 3-way sha match (local=manifest=published=5532af3f...). Live.",
+      "Root-caused the workflow-swap bug (4 parallel read-only agents): the swap in commandExecutor.js (~line 869) reads remoteEngineClient.isRemote() (a STALE _active mirror) BEFORE the per-gen refresh() runs inside ensureServerRunning(). First gen after Pod connect reads stale false -> bf16 filename locked -> runs on Pod -> ComfyUI rejects `unet_name ...bf16... not in []`. comfyController.js:31-33 already documents this race for deps.",
+      "Mapped the whole engine-variant surface: 3 mechanisms (deps localDeps/remoteDeps, workflow ggufWhenRemote/_toGgufFilename, per-consumer isRemote() threading), 3 disagreeing engine signals (renderer isRemote no-podId, server isRemoteActive active+podId, forceLocal), + residual union risks (_confirmWholeUninstall MpiModelManager:241, _opUninstallDepIds :221-222 latent, MpiPromptBox:137 latent). Full map in research/investigation-summary.md.",
+      "DESIGN DECIDED with user (scalable-foundation front-load): Option A = one engines:{local,remote} profile block (extraDeps + workflowSuffix) replacing all 3 mechanisms; one resolve(model, op, engine) -> {deps, workflow, nodes}; engine resolved ONCE per gen (fresh, post-refresh) + threaded as a 'local'|'remote' string. Operation axis (Wan commonDeps+operations, Painter i2v-only) UNTOUCHED — composes with engine axis via union.",
+      "DELIVERY DECIDED with user: phased. Phase A = resolve-once + thread to swap+deps (fixes live bug, small diff). Phase B = migrate to engines: profile + one resolver (parity-tested + synthetic op-keyed+engine-split fixture). Phase C = delete old mechanisms + fix residual unions + rewrite the STALE .claude/rules/comfy_engine.md + update gotchas/memory.",
+      "Plan + card + investigation summary written + committed (plan commit on RunPod). Board: MPI-165 todo/planned, MPI-164 todo (separate verify-bar bug), MPI-163 done."
+    ],
+    "pending": [
+      "PHASE A (PRIMARY — fixes the live Pod bug): in commandExecutor.js runCommand, ensure the per-gen refresh() has run BEFORE the workflow-file selection, resolve `engine = forceLocal ? 'local' : (isRemote() ? 'remote' : 'local')` ONCE, and make the ggufWhenRemote swap use this resolved engine (not the pre-refresh _remoteRun). Thread the same engine string to the deps-touching calls in the gen path. Live-verify on a Pod (connect → first LTX t2v gen sends the GGUF workflow, no bf16 reject).",
+      "PHASE B: add engines:{local,remote} block to LTX in models.js (keep legacy fields temporarily); make engineDepsOf read engines[engine].extraDeps (fallback to legacy); add resolveWorkflowFile(model,op,engine,{stage2}) + resolve(model,ops,engine,{...}); retarget the workflow swap to resolveWorkflowFile. Parity + composition tests.",
+      "PHASE C: delete localDeps/remoteDeps/ggufWhenRemote/_toGgufFilename + legacy fallbacks; fix _confirmWholeUninstall union (MpiModelManager:241); rewrite .claude/rules/comfy_engine.md (NEEDS USER PERMISSION — CLAUDE.md rule); update docs/gotchas.md engine-split entry + feedback_engine_split_sweep_all_consumers memory. Final live re-verify both engines.",
+      "SEPARATE (not part of 165): MPI-164 — remote install bar flips to 'Verifying…' at ~95% not full 100% (regresses MPI-140 fill-then-verify contract). Own card.",
+      "Add a gotcha entry the moment Phase A verifies: 'resolve engine once, after refresh, then thread it — never read isRemote() per-consumer mid-gen' (the timing rule that this whole bug taught)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-165",
+    "title": "Consolidate engine-variant into one per-model profile + resolve-engine-once (fixes bf16-workflow-on-Pod)",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-165/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-165/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-165/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "Plan written to .agents/mpi-kanban/tasks/MPI-165/plan.md (committed).",
+      "Investigation map written to .agents/mpi-kanban/tasks/MPI-165/research/investigation-summary.md (committed).",
+      "docs/gotchas.md engine-split entry added (after 546b0f6); feedback_engine_split_sweep_all_consumers memory written this session.",
+      "MPI-163 → done/accepted; MPI-164 created; both committed (386d330)."
+    ],
+    "pending": [
+      "Phase C: rewrite .claude/rules/comfy_engine.md (STALE — never mentions engine-split/the swap) — needs explicit user permission before editing the rule file.",
+      "Phase C: update docs/gotchas.md engine-split entry + the feedback memory to the single-resolver invariant once consolidated.",
+      "Post-Phase-A: add the 'resolve engine once after refresh + thread it' timing gotcha."
+    ]
+  },
+  "next_action": {
+    "description": "Implement MPI-165 Phase A (the signal fix — fixes the live bf16-workflow-on-Pod bug). Read the plan + research summary FIRST (zero re-investigation needed — it's all mapped). THE BUG: in js/services/commandExecutor.js, runCommand selects the workflow file (~line 858-876) and swaps LTX_t2v.json -> LTX_t2v_gguf.json via `_model?.ggufWhenRemote && _remoteRun` where `_remoteRun = payload.forceLocal !== true && remoteEngineClient.isRemote()`. isRemote() returns a STALE _active mirror; the per-gen refresh() runs LATER inside ensureServerRunning() (called ~line 1339, AFTER the swap). So the first gen after Pod connect reads stale false -> bf16 locked. THE FIX: ensure refresh() runs BEFORE the workflow-file selection (await getEngine(forceLocal).ensureServerRunning() — or remoteEngineClient.refresh() — first), then resolve `const engine = workingPayload.forceLocal === true ? 'local' : (remoteEngineClient.isRemote() ? 'remote' : 'local')` ONCE, and use `engine === 'remote'` for the ggufWhenRemote swap. Thread the same engine string to any deps-touching call in the gen path that re-reads isRemote(). KEEP localDeps/remoteDeps/ggufWhenRemote in place for Phase A (they're deleted in Phase C). VERIFY: a check proving forceLocal:false + remote-active selects the _gguf file; then LIVE on a Pod (user spins it) — connect → first LTX t2v gen sends the GGUF workflow, completes, no `...bf16... not in []` reject; also test connect-then-immediately-gen (the original failure). Phase A is user-ux (needs the user to confirm the Pod gen). The Pod can stay TERMINATED until Phase A is built; only spin it for the live verify. Brief the user before writing code (mpi-continue gate). Shared git tree: explicit pathspec only, no git add ., push is user-only.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Option A structure (user-confirmed): engine variance lives in ONE engines:{local,remote} block (extraDeps + workflowSuffix); one resolve(model,op,engine) -> {deps,workflow,nodes}. Replaces localDeps/remoteDeps + ggufWhenRemote + _toGgufFilename. The OPERATION axis (commonDeps/operations, e.g. Painter i2v-only) is orthogonal + UNTOUCHED; the two axes compose via union.",
+      "Resolve-engine-ONCE (the core principle, from the engine-signal investigation): resolve a concrete 'local'|'remote' string ONCE per gen AFTER refresh(), then thread it. NEVER let each consumer call isRemote() independently — that's the smear that caused every half-wire (a read milliseconds before vs after refresh disagrees).",
+      "Phased delivery (user-confirmed): A signal-fix fixes the live bug fast; B migrates to the profile (parity-tested); C deletes old mechanisms + fixes residual unions + rewrites the stale rule. Each phase independently verifiable.",
+      "forceLocal determines the ENGINE INSTANCE (getEngine); the resolved engine string determines the WORKFLOW + DEP UNIVERSE. They must align: forceLocal=true -> 'local'; forceLocal=false -> isRemote()?'remote':'local'.",
+      "MPI-163 deps half is genuinely DONE + live-verified — do NOT reopen it. The remaining bug is the WORKFLOW axis + the signal timing, which 163 deliberately left untouched ('Core + move GGUF node only')."
+    ],
+    "constraints": [
+      "Shared git tree — commit by explicit pathspec, never git add . / -A. Push is user-only.",
+      "resolveModelDeps.js must stay browser/DOM-free (node-unit-testable via tests/resolve-model-deps.test.cjs; 10/10 currently pass).",
+      "Suffix order must yield ..._stage2_gguf.json (workflowSuffix applied AFTER _stage2), matching generate_ltx.py output. The _gguf workflow files already exist locally (LTX_t2v_gguf.json etc) + use UnetLoaderGGUF.",
+      ".claude/rules/comfy_engine.md is STALE (never mentions engine-split) — rewriting it (Phase C) needs explicit user permission per CLAUDE.md.",
+      "Two engine signals can disagree: renderer isRemote() (_active, no podId) vs server isRemoteActive() (active && podId). Server side is already fresh; the renderer side is the stale one.",
+      "Pod create/delete is NEVER autonomous — the user spins/kills it. Pod can stay terminated until Phase A is built; only needed for the live verify.",
+      "Caveman + ponytail output modes active (terse prose, minimal solutions) — cosmetic."
+    ],
+    "files_modified": [
+      "COMMITTED this session: js/data/modelConstants/{resolveModelDeps,models,dependencies}.js + js/data/modelRegistry.js + js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js + routes/{downloadManager,shared}.js + js/services/commandExecutor.js + tests/resolve-model-deps.test.cjs + docs/gotchas.md (546b0f6, 0572bd1)",
+      "COMMITTED kanban: 386d330 (MPI-163 done + MPI-164) + the MPI-165 plan commit",
+      "mpi-ci (separate repo, git -C c:/AI/Mpi/mpi-ci): 09c1e5d start.sh published to R2 — no further mpi-ci work pending"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-165/plan.md (the phased plan — READ FIRST)",
+      ".agents/mpi-kanban/tasks/MPI-165/research/investigation-summary.md (the full surface map — zero re-investigation needed)",
+      "js/services/commandExecutor.js (runCommand ~844-1340; the swap ~858-876; _toGgufFilename ~467; ensureServerRunning call ~1339)",
+      "js/services/remoteEngineClient.js (isRemote ~71, _active, refresh ~40-68)",
+      "js/services/comfyController.js (ensureServerRunning ~217 calls refresh; the documented isRemote-race comment ~31-33)",
+      "js/data/modelConstants/models.js (LTX-23 entry: workflows ~216, ggufWhenRemote ~226, localDeps/remoteDeps)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["comfy_engine", "downloads", "runpod-remote-engine", "ltx-2.3"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/downloads.md",
+    "docs/gotchas.md (engine-split entry + RunPod/remote engine section)"
+  ],
+  "recent_events": [
+    { "at": "2026-06-30T11:15:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/347c2eca-14d1-4bbc-a1be-da6454ca74d7.json and use mpi-continue. We are on branch RunPod implementing MPI-165 (engine-variant consolidation). CONTEXT (no re-investigation needed — it's all mapped in the plan + research/investigation-summary.md): the LTX bf16-local/GGUF-Pod split was smeared across 3 mechanisms (deps localDeps/remoteDeps, workflow ggufWhenRemote/_toGgufFilename, per-consumer isRemote() threading). MPI-163 fixed + LIVE-VERIFIED the DEPS half on a Pod (done — do NOT reopen). But a live gen then FAILED because the WORKFLOW swap sent the bf16 graph to the Pod: in js/services/commandExecutor.js the swap reads remoteEngineClient.isRemote() (a STALE _active mirror) BEFORE the per-gen refresh() runs inside ensureServerRunning(), so the first gen after Pod connect reads stale false and locks in the bf16 workflow. The user (correctly) called out that the system had grown confusing, so we are CONSOLIDATING, not symptom-patching. Design = Option A (user-confirmed): one engines:{local,remote} profile block + one resolve(model,op,engine) -> {deps,workflow,nodes} + engine resolved ONCE per gen after refresh and threaded as a 'local'|'remote' string; the operation axis (Wan commonDeps/operations, Painter i2v-only) is untouched and composes. Delivery = phased (user-confirmed): PHASE A (do this first) = ensure refresh() runs before the workflow-file selection in runCommand, resolve the engine once, make the ggufWhenRemote swap use that resolved engine, thread it to the gen-path deps calls — this fixes the live Pod bug with a small diff while keeping localDeps/remoteDeps/ggufWhenRemote in place (deleted in Phase C). Then live-verify on a Pod (the user spins it; it can stay terminated until Phase A is built). Phase B migrates to the engines: profile + one resolver (parity + a synthetic op-keyed+engine-split test). Phase C deletes the old mechanisms, fixes residual union risks (_confirmWholeUninstall MpiModelManager:241), and rewrites the STALE .claude/rules/comfy_engine.md (needs user permission). Brief me before writing code. Shared git tree: explicit pathspec only, never git add .; push is user-only; mpi-ci is a separate repo. Separately, MPI-164 tracks a remote-install verify-bar cosmetic bug — leave it on its own card."
+}

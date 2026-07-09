@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-114",
+  "title": "Add snapshot to context menu.",
+  "description": "In the History workspace video mode, the only way to create a snapshot image of the current frame that goes into the gallery as a single image is by going into the Crop tool and pressing the Create Snapshot button. I'd like to also add this option to the context menu that is triggered on top of the video by right-clicking. This is our custom context menu, so I'd like to add that feature there as well.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-18T05:42:48.622Z",
+  "updated_at": "2026-06-18T00:00:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

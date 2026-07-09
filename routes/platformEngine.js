@@ -200,6 +200,12 @@ function selectNvidiaBuild(gpuName, cudaVersion) {
     return NVIDIA_DEFAULT;
 }
 
+// Arch classifier: the SINGLE source of truth is the browser-safe ESM module
+// js/data/modelConstants/gpuArch.js (shared with the client, which classifies the
+// remote pod's gpuType). Loaded via createRequire since this route file is CJS and
+// the shared module is ESM (same interop downloadManager.js uses for the data modules).
+const { gpuArch } = require('module').createRequire(__filename)('../js/data/modelConstants/gpuArch.js');
+
 /**
  * Detect AMD GPU via WMI (Windows only).
  * @returns {Promise<boolean>}
@@ -268,6 +274,9 @@ async function resolveDownloadConfig() {
         name: nvidiaResult.gpuName || (hasAmd ? 'AMD GPU' : hasIntel ? 'Intel Arc GPU' : isAppleSilicon ? 'Apple Silicon GPU' : null),
         vendor: nvidiaResult.hasGPU ? 'nvidia' : hasAmd ? 'amd' : hasIntel ? 'intel' : isAppleSilicon ? 'apple' : null,
         cudaVersion: nvidiaResult.cudaVersion || null,
+        // Arch token for the generic runtime-variant axis (MPI-200); null for
+        // non-NVIDIA. Consumed as variantTokens.arch by the dep/workflow resolver.
+        arch: nvidiaResult.hasGPU ? gpuArch(nvidiaResult.gpuName, nvidiaResult.cudaVersion) : null,
     };
 
     let result;
@@ -365,6 +374,7 @@ module.exports = {
     getComfyRepoRel,
     resolveDownloadConfig,
     selectNvidiaBuild,
+    gpuArch,
     resolveUvBin,
     getEngineRoot,
     COMFY_DIR_MAP,

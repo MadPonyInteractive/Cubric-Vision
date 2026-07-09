@@ -8,6 +8,7 @@ import { listProjects, createProject, deleteProject, openProject, addProjectByFo
 import { fetchStats } from '../services/projectStatsService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
+import { remoteEngineClient } from '../services/remoteEngineClient.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
@@ -15,13 +16,13 @@ import { APP_VERSION } from '../core/appVersion.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
+import { MpiNotesEditor } from '../components/Compounds/MpiNotesEditor/MpiNotesEditor.js';
 import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.js';
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
-import { MpiHelp } from '../components/Compounds/LandingPages/MpiHelp/MpiHelp.js';
+import { MpiHotkeys } from '../components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
-import { MpiModelManager } from '../components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
 
 // DOM refs
@@ -39,6 +40,26 @@ let _statsBatchAC = null;
 // reusing a singleton would fire all prior handlers on every confirmation.
 
 /**
+ * Download-mode navigation guard (MPI-88). A no-GPU "download mode" Pod can install
+ * models to the volume but CANNOT generate — so block entering the gallery and steer
+ * the user to connect a GPU first. Refreshes the remote-mode mirror so the check is
+ * live (the user may have connected the download Pod since the page loaded).
+ * @returns {Promise<boolean>} true = blocked (caller must NOT navigate).
+ */
+async function _blockedByDownloadMode() {
+  try {
+    await remoteEngineClient.refresh();
+  } catch (_) { /* refresh failed — fall through; isDownloadOnly() uses last state */ }
+  if (remoteEngineClient.isDownloadOnly()) {
+    Events.emit('ui:warning', {
+      message: 'This is a download-only Pod (no GPU). Install models, then pick a GPU in Settings → RunPod and Connect to generate.',
+    });
+    return true;
+  }
+  return false;
+}
+
+/**
  * Initializes the project management UI: trigger button and grid loading.
  */
 export function initProjectUI() {
@@ -48,13 +69,13 @@ export function initProjectUI() {
   const versionEl = gid('heroVersion');
   if (versionEl) versionEl.textContent = `Cubric Vision · v${APP_VERSION}`;
 
-  // ── Hero nav: plain text links (Settings · Help · About) ─────────────────
+  // ── Hero nav: plain text links (Settings · Hotkeys · About) ──────────────
   const navSlot = gid('landingActions');
   if (navSlot) {
     const defs = [
-      { label: 'Models',   handler: () => Events.emit('slide-over:open', { title: 'Models',   component: MpiModelManager }) },
+      { label: 'Models',   handler: () => Events.emit('models:open') },
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
-      { label: 'Help',     handler: () => Events.emit('slide-over:open', { title: 'Help',     component: MpiHelp     }) },
+      { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
     ];
     defs.forEach(({ label, handler }) => {
@@ -199,6 +220,7 @@ function _openNewProjectDialog() {
   const newProjectDialog = MpiNewProject.mount(document.createElement('div'));
   newProjectDialog.on('create', async ({ name, location }) => {
     try {
+      if (await _blockedByDownloadMode()) return;
       const project = await createProject(name || 'Untitled Project', location);
       await openProject(project);
       navigate(PAGE_GALLERY);
@@ -230,6 +252,125 @@ function _showDeleteConfirm(projectName, onConfirm) {
     onConfirm({ deleteFiles: !!checkboxChecked });
   });
   dialog.el.show();
+}
+
+/**
+ * MPI-227: manual Cleanup — the only GC for the content-addressed preview-assets
+ * store. Confirms, then wipes Media/.preview-assets/ content for this project.
+ * History media + sidecars are untouched; a later reuse of a wiped frame soft-fails
+ * to a warning toast. Fresh mount per call (same rationale as _showDeleteConfirm).
+ * @param {Object} project
+ */
+function _showCleanupConfirm(project) {
+  const dialog = MpiOkCancel.mount(document.createElement('div'), {
+    title: 'Cleanup assets',
+    text: `Remove cached reuse assets (start/end frames) for "${project.name}"? This frees disk space. Your generated media and history are kept, but Reuse Prompt will no longer be able to re-add those input frames.`,
+    okLabel: 'Cleanup',
+    cancelLabel: 'Cancel',
+  });
+  dialog.on('ok', async () => {
+    try {
+      const res = await fetch('/project/cleanup-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: project.folderPath }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) throw new Error(data.error || 'Cleanup failed');
+      Events.emit('ui:success', { title: 'Cleanup complete', message: `Removed ${data.removed || 0} cached asset${data.removed === 1 ? '' : 's'}.` });
+    } catch (err) {
+      clientLogger.warn('projectUI', `cleanup-assets failed: ${err.message}`);
+      Events.emit('ui:warning', { title: 'Cleanup failed', message: err.message });
+    }
+  });
+  dialog.el.show();
+}
+
+/**
+ * Prompts for a new display name and persists it to project.json (name field
+ * only — the folder on disk is never renamed). Refreshes the grid on success.
+ * @param {Object} project
+ */
+function _renameProject(project) {
+  const dialog = MpiOkCancel.mount(document.createElement('div'), {
+    title: 'Rename Project',
+    text: 'Enter a new name for this project.',
+    inputPlaceholder: 'Project name',
+    inputValue: project.name || '',
+    okLabel: 'Rename',
+  });
+  dialog.on('ok', async ({ inputValue }) => {
+    const name = (inputValue || '').trim();
+    if (!name || name === project.name) return;
+    try {
+      const res = await fetch('/update-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: project.folderPath, updates: { name } }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'rename failed');
+      loadProjectGrid();
+    } catch (err) {
+      clientLogger.warn('projectUI', 'rename project failed', err);
+      window.MpiAlert('Could not rename project: ' + err.message);
+    }
+  });
+  dialog.el.show();
+}
+
+/**
+ * Opens the project notes (project.md) in the in-app notes editor overlay.
+ * Reads current notes from the server, then persists on Save.
+ * @param {Object} project
+ */
+async function _showProjectNotes(project) {
+  let notes = '';
+  try {
+    const res = await fetch('/project-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderPath: project.folderPath }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.success) notes = data.notes || '';
+  } catch (err) {
+    clientLogger.warn('projectUI', 'read project notes failed', err);
+  }
+
+  // Fresh mount per open — factory.on() accumulates listeners with no unsub.
+  const editor = MpiNotesEditor.mount(document.createElement('div'), {
+    title: `Notes — ${project.name}`,
+    value: notes,
+    onSave: async (value) => {
+      const res = await fetch('/project-notes/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: project.folderPath, notes: value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'save failed');
+    },
+  });
+  editor.el.show();
+}
+
+/**
+ * Opens the project folder in the OS default file browser.
+ * @param {Object} project
+ */
+async function _openProjectFolder(project) {
+  try {
+    const res = await fetch('/open-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folderPath: project.folderPath }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+  } catch (err) {
+    clientLogger.warn('projectUI', 'open project folder failed', err);
+    window.MpiAlert('Could not open project folder: ' + err.message);
+  }
 }
 
 /**
@@ -316,6 +457,7 @@ function _buildProjectRow(project) {
     });
 
   row.addEventListener('click', async () => {
+    if (await _blockedByDownloadMode()) return;
     await openProject(project);
     navigate(PAGE_GALLERY);
   });
@@ -326,9 +468,17 @@ function _buildProjectRow(project) {
       x: e.clientX,
       y: e.clientY,
       items: [
-        { key: 'delete', icon: 'trash', label: 'Delete project', danger: true },
+        { key: 'notes',   icon: 'text',    label: 'Project notes' },
+        { key: 'rename',  icon: 'edit',    label: 'Rename project' },
+        { key: 'open',    icon: 'folder',  label: 'Open project folder' },
+        { key: 'cleanup', icon: 'sparkle', label: 'Cleanup assets…' },
+        { key: 'delete',  icon: 'trash',   label: 'Delete project', danger: true },
       ],
       onSelect: (key) => {
+        if (key === 'notes')   return void _showProjectNotes(project);
+        if (key === 'rename')  return void _renameProject(project);
+        if (key === 'open')    return void _openProjectFolder(project);
+        if (key === 'cleanup') return void _showCleanupConfirm(project);
         if (key !== 'delete') return;
         _showDeleteConfirm(project.name, async ({ deleteFiles }) => {
           try {

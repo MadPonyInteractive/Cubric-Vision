@@ -7,7 +7,9 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel } from '../../../data/commandRegistry.js';
+import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
+import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -15,6 +17,8 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
+import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/connectorOps.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -32,7 +36,7 @@ import { activeGenerations } from '../../../services/activeGenerations.js';
  *   el.getMediaItems()
  *   el.clearMedia()
  *   el.removeMedia(id)
- *   el.injectMedia({ url, mediaType, role? })  — role tags chip to a slot key (e.g. 'startFrame', 'endFrame')
+ *   el.injectMedia({ url, mediaType, role?, name? })  — role tags chip to a slot key (e.g. 'startFrame', 'endFrame'); name is the user-facing chip label (customName/derived)
  *   el.getMediaByRole(role)         — returns role-assigned item or undefined
  *   el.removeMediaByRole(role)      — removes the chip currently assigned to that role
  *   el.swapMediaRoles(roleA, roleB) — flips role tags between two chips (no re-upload)
@@ -66,7 +70,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
             <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--enhance hide" id="enhance-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--engine hide" id="engine-toggle-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
         </div>
     `,
@@ -74,11 +80,78 @@ export const MpiPromptBox = ComponentFactory.create({
     setup: (el, props, emit) => {
         let isExpansionLocked = state.promptExpanded === false;
         let isNegativeMode    = false;
-        let positiveValue     = props.value || '';
-        let negativeValue     = props.negativeValue || '';
+        // Drafts (text + chips) are localized PER WORKSPACE — the gallery box and
+        // history box never share. Keyed on props.workspaceKey; defaults to
+        // 'gallery'. Explicit props (e.g. a recall) win over the restored draft.
+        const _wsKey = props.workspaceKey === 'history' ? 'history' : 'gallery';
+        // History reuses ONE slot for every card, so each saved draft is tagged
+        // with its card id (props.workspaceId). On mount we restore only when the
+        // tag matches the card being opened — otherwise the previous card's draft
+        // would leak onto a different card. Gallery has no card (id null) so it
+        // always matches and stays persistent. ponytail: single tagged slot, not a
+        // per-card map — no growth/cleanup; only the last-touched card round-trips.
+        const _wsId = props.workspaceId ?? null;
+        const _matchesSlot = (saved) => (saved?.id ?? null) === _wsId;
+
+        const _draftSlot = state.promptDraft?.[_wsKey] || {};
+        const _draft = _matchesSlot(_draftSlot) ? _draftSlot : {};
+        let positiveValue     = props.value || _draft.positive || '';
+        let negativeValue     = props.negativeValue || _draft.negative || '';
+
+        function _saveDraft() {
+            state.promptDraft = {
+                ...state.promptDraft,
+                [_wsKey]: { id: _wsId, positive: positiveValue, negative: negativeValue },
+            };
+        }
+
+        // True while re-injecting restored chips at mount — suppresses the
+        // snapshot write so the restore doesn't clobber the source it reads from.
+        let _restoringMedia = false;
+
+        // Persist staged chips per-workspace so they survive nav. Only durable
+        // (non-blob) urls are kept — blob: urls are revoked on unmount and would
+        // 404 if restored.
+        function _saveMedia() {
+            if (_restoringMedia) return;
+            const items = el.getMediaItems()
+                .filter(m => typeof m.url === 'string' && !m.url.startsWith('blob:'))
+                .map(({ url, mediaType, role, name }) => ({ url, mediaType, role, name }));
+            state.promptMedia = { ...state.promptMedia, [_wsKey]: { id: _wsId, items } };
+        }
         let activeOperation   = props.operation || 't2i';
         let isGenerating      = props.generating || false;
+        let _remoteTransitioning = false; // MPI-73: remote engine connecting/disconnecting — block Cue
         let _context          = props.context || {};
+
+        // The physically-installed op set for a model, derived from the last
+        // /comfy/models/check result. Passed into getAvailableCommands so the
+        // PromptBox hides a selectable op the user chose not to install (MPI-122).
+        // Returns null when status is unknown → getAvailableCommands falls back to
+        // static supportedOps (no behaviour change for image / pre-check models).
+        function _ctxWithInstalledOps(model) {
+            if (!model?.operations) return _context;
+            const depStatus = getModelDepStatus(model.id);
+            if (!depStatus) return _context;
+            // R31 (MPI-208): use effectiveEngine() so the "Run locally" override
+            // is honoured — when the toggle is ON, installedOps are derived from
+            // the LOCAL engine's weights, not the remote Pod's.
+            const engine = remoteEngineClient.effectiveEngine();
+            const { installedOps } = deriveInstalledOps(
+                model,
+                depId => {
+                    const s = depStatus.get(depId);
+                    return s === true || s?.installed === true;
+                },
+                // Engine-scoped (MPI-165): an engine-split model's installed-op set
+                // depends on the current engine's weights. (LTX is flat → early-return
+                // above; this guards a future op-keyed engine-split model.)
+                engine,
+                // MPI-200: arch token for a future op-keyed model with a variants: block.
+                { arch: remoteEngineClient.archSync(engine) },
+            );
+            return { ..._context, installedOps };
+        }
 
         /** @type {Map<string, Object>} */
         const _activeControls = new Map();
@@ -108,7 +181,9 @@ export const MpiPromptBox = ComponentFactory.create({
         const _mediaItems = [];
 
         function _mediaSlotsForOperation(operation = activeOperation) {
-            return getCommandMediaInputs(operation);
+            // Audio slot on the shared video ops is gated by model capability —
+            // WAN never accepts/shows it, LTX does.
+            return filterMediaInputsForModel(getCommandMediaInputs(operation), model);
         }
 
         function _maxMediaForOperation(operation, mediaType) {
@@ -202,12 +277,20 @@ export const MpiPromptBox = ComponentFactory.create({
                 _refreshOpDropdown();
             }
 
+            // Notify the audioMode control (LTX) that audio presence changed so
+            // it can enable/disable its radio. The useAudio toggle takes the same
+            // signal but disables INVERSELY (off when a clip is present).
+            const _audioPresent = el.audioCount > 0;
+            _activeControls.get('audioMode')?.setAudioPresent?.(_audioPresent);
+            _activeControls.get('useAudio')?.setAudioPresent?.(_audioPresent);
+
             const renderedItems = _withAssignedRoles();
             _renderStrip(renderedItems);
+            _saveMedia();
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
-        function _tryAddMedia({ url, file, mediaType, source, role }) {
+        function _tryAddMedia({ url, file, mediaType, source, role, name }) {
             const maxCount = _maxMediaForCurrentOperation(mediaType);
             if (maxCount <= 0) { _showIncompatibleToast(); return; }
 
@@ -230,6 +313,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
             if (role) item.role = role;
+            if (name) item.name = name; // user-facing name (customName/derived) for chip label
             _mediaItems.push(item);
             _emitMediaChange();
         }
@@ -253,9 +337,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 const appData = e.dataTransfer.getData('application/mpi-media');
                 if (appData) {
                     try {
-                        const { filePath, type } = JSON.parse(appData);
+                        const { filePath, type, name } = JSON.parse(appData);
                         if (!_acceptsMediaType(type)) { _showIncompatibleToast(); return; }
-                        _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app' });
+                        _tryAddMedia({ url: filePath, file: null, mediaType: type, source: 'app', name });
                     } catch { /* malformed */ }
                     return;
                 }
@@ -343,10 +427,18 @@ export const MpiPromptBox = ComponentFactory.create({
             clearBtn?.el?.setDisabled?.(!active);
         };
 
+        // Re-mount the active op's controls so each re-reads its persisted value.
+        // Used by Reuse Prompt: applyPromptReuseSettings writes the recalled
+        // settings to project state AFTER setModel/setOperation already mounted
+        // the controls (which read the pre-reuse value), so without this refresh
+        // the live PromptBox keeps showing the old ratio/quality/duration until
+        // the next navigation re-mount.
+        el.refreshControls = () => _refreshOpSlot();
+
         function _pickOpForModel(candidate) {
             if (!candidate?.supportedOps?.length) return activeOperation;
             const supported = candidate.supportedOps;
-            const cmds = getAvailableCommands(candidate.mediaType, candidate, _context);
+            const cmds = getAvailableCommands(candidate.mediaType, candidate, _ctxWithInstalledOps(candidate));
             const byKey = new Map(cmds.map(c => [c.key, c]));
             const hasImages = (el.imageCount ?? 0) > 0;
             const hasVideo  = (el.videoCount  ?? 0) > 0;
@@ -371,12 +463,25 @@ export const MpiPromptBox = ComponentFactory.create({
             return supported[0];
         }
 
+        // L/B/H tier marker (MPI-168): only disambiguates when the SAME family has
+        // 2+ installed tiers in the list — a lone SDXL/Wan/LTX gets no letter (no
+        // clutter). The letter goes on `label` (flows to the closed trigger via
+        // textContent); `meta` only shows in the open list, the wrong slot.
         function _modelDropdownOptions() {
-            return modelList.map(m => ({
-                value: m.id,
-                label: m.name,
-                meta: m.dropdownMeta || '',
-            }));
+            const TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
+            const familyCounts = new Map();
+            modelList.forEach(m => {
+                if (m.modelFamily) familyCounts.set(m.modelFamily, (familyCounts.get(m.modelFamily) || 0) + 1);
+            });
+            return modelList.map(m => {
+                const ambiguous = m.modelFamily && familyCounts.get(m.modelFamily) > 1;
+                const letter = ambiguous ? TIER_LETTER[m.sizeTier] : '';
+                return {
+                    value: m.id,
+                    label: letter ? `${m.name} ${letter}` : m.name,
+                    meta: m.dropdownMeta || '',
+                };
+            });
         }
 
         el.setModel = (newModel) => {
@@ -447,6 +552,22 @@ export const MpiPromptBox = ComponentFactory.create({
         _stripEl.className = 'mpi-prompt-box-media-strip';
         el.prepend(_stripEl);
 
+        // Best-effort display name for an audio chip: the user-facing name
+        // carried on the item (group customName/derived — MPI-130), else the
+        // dropped File's name, else the basename of its project URL.
+        function _audioName(item) {
+            if (item.name) return item.name;
+            if (item.file?.name) return item.file.name;
+            try {
+                const raw = item.url || '';
+                const pathPart = raw.includes('path=')
+                    ? decodeURIComponent(raw.split('path=')[1])
+                    : decodeURIComponent(raw.split('?')[0]);
+                const base = pathPart.split(/[\\/]/).pop() || '';
+                return base || 'audio';
+            } catch { return 'audio'; }
+        }
+
         function _renderStrip(items) {
             if (!_stripEl) return;
             _stripEl.innerHTML = '';
@@ -460,8 +581,10 @@ export const MpiPromptBox = ComponentFactory.create({
                     : item.mediaType === 'video'
                         ? `<video src="${item.url}" class="mpi-prompt-box-media-strip__thumb" muted playsinline preload="metadata" draggable="false"></video>
                            <span class="mpi-prompt-box-media-strip__type">${renderIcon('video', 'xs')}</span>`
-                        : `<div class="mpi-prompt-box-media-strip__audio-thumb">${renderIcon('audio', 'sm')}</div>
-                           <span class="mpi-prompt-box-media-strip__type">${renderIcon('audio', 'xs')}</span>`;
+                        : `<div class="mpi-prompt-box-media-strip__audio-thumb">
+                               ${renderIcon('audio', 'sm')}
+                               <span class="mpi-prompt-box-media-strip__audio-name" title="${_audioName(item)}">${_audioName(item)}</span>
+                           </div>`;
                 chip.innerHTML = `
                     ${mediaHtml}
                     <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
@@ -495,9 +618,9 @@ export const MpiPromptBox = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
-        el.injectMedia = ({ url, mediaType, role }) => {
+        el.injectMedia = ({ url, mediaType, role, name }) => {
             if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return false; }
-            _tryAddMedia({ url, file: null, mediaType, source: 'app', role });
+            _tryAddMedia({ url, file: null, mediaType, source: 'app', role, name });
             return true;
         };
 
@@ -514,8 +637,9 @@ export const MpiPromptBox = ComponentFactory.create({
         el.injectPrompts = ({ positive, negative }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
-            if (!isNegativeMode) textareaEl.value = positiveValue;
+            textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
             updateHeight();
+            _saveDraft();
         };
         const _onInjectPrompts = ({ positive, negative }) => el.injectPrompts({ positive, negative });
 
@@ -583,6 +707,7 @@ export const MpiPromptBox = ComponentFactory.create({
             updateHeight();
             if (isNegativeMode) negativeValue = textareaEl.value;
             else positiveValue = textareaEl.value;
+            _saveDraft();
             emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
         }));
 
@@ -671,7 +796,10 @@ export const MpiPromptBox = ComponentFactory.create({
         badgeBtn.el.appendChild(badgeHost);
 
         function _renderBadge() {
-            const modelName  = model?.name ?? '—';
+            // MPI-200: append the size-tier letter (H/B/L) so the button matches the
+            // dropdown + gallery cards (e.g. "LTX 2.3 B"). Empty for models with no tier family.
+            const _tier = tierLetterFor(model);
+            const modelName  = model ? `${model.name}${_tier ? ` ${_tier}` : ''}` : '—';
             const opLabel    = commands[activeOperation]?.label ?? activeOperation;
             const batchCtrl  = _activeControls.get('batch');
             const batchCount = batchCtrl ? parseInt(batchCtrl.getValue(), 10) : 1;
@@ -742,7 +870,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 modelSlot.appendChild(_modelDropdown.el);
             }
 
-            if (props.showSettings !== false) {
+            // Gear opens model settings (upscale-model + LoRA pickers). A model can
+            // opt out with showSettings:false when it configures neither — e.g. the
+            // PiD upscaler, which takes no upscale model and no LoRAs.
+            if (props.showSettings !== false && model.showSettings !== false) {
                 const gearBtn = MpiButton.mount(document.createElement('div'), {
                     icon: 'settings', variant: 'ghost', size: 'sm', info: 'Model Settings',
                 });
@@ -753,14 +884,14 @@ export const MpiPromptBox = ComponentFactory.create({
 
         function _pickTextOnlyOp() {
             if (!model) return null;
-            const cmds = getAvailableCommands(model.mediaType, model, _context);
+            const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const textOnly = cmds.filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0);
             return textOnly[0]?.key ?? null;
         }
 
         function _pickFallbackOp() {
             if (!model) return null;
-            const cmds = getAvailableCommands(model.mediaType, model, _context);
+            const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const candidates = cmds.filter(c => (c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
             const ready = candidates.find(c => c.available);
             return (ready ?? candidates[0])?.key ?? null;
@@ -771,7 +902,7 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!opDropdownSlot) return;
 
             const hasMedia = el.imageCount > 0 || el.videoCount > 0;
-            const availableCmds = getAvailableCommands(model.mediaType, model, _context);
+            const availableCmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const filteredCmds = _context.filterNoInputOps
                 ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
                 : availableCmds;
@@ -784,11 +915,6 @@ export const MpiPromptBox = ComponentFactory.create({
             opDropdownSlot.innerHTML = '';
             if (availableOps.length === 0) return;
 
-            const labelEl = document.createElement('span');
-            labelEl.className = 'mpi-prompt-box__op-label';
-            labelEl.textContent = 'Op:';
-            labelEl.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-right:0.25rem;';
-
             _opDropdown = MpiDropdown.mount(document.createElement('div'), {
                 options: availableOps,
                 value: activeOperation,
@@ -797,7 +923,6 @@ export const MpiPromptBox = ComponentFactory.create({
             });
             _opDropdown.on('change', ({ value }) => el.setOperation(value));
 
-            opDropdownSlot.appendChild(labelEl);
             opDropdownSlot.appendChild(_opDropdown.el);
         }
 
@@ -821,6 +946,19 @@ export const MpiPromptBox = ComponentFactory.create({
                 // restores in gallery contexts.
                 if (componentId === 'previewStage' && _context.historyMode === true) continue;
 
+                // Preview toggle is capability-gated: only multi-stage models
+                // (WAN + LTX) show it. A model with multiStage:false hides it.
+                if (componentId === 'previewStage' && model?.capabilities?.multiStage !== true) continue;
+
+                // audioMode radio + useAudio toggle are capability-gated: only
+                // models with audio (LTX) show them. WAN never mounts them.
+                if ((componentId === 'audioMode' || componentId === 'useAudio') && model?.capabilities?.audio !== true) continue;
+
+                // Motion intensity is capability-gated: only models whose workflow
+                // has an Input_Motion_Intensity node (WAN) show it. LTX has no such
+                // node, so the control would be dead UI — hide it.
+                if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);
@@ -832,6 +970,12 @@ export const MpiPromptBox = ComponentFactory.create({
                     clientLogger.error('PromptBox', `Control "${componentId}" mount failed`, err);
                 }
             }
+
+            // Seed audioMode + useAudio enablement from current media (audio may
+            // already be present when the op/controls (re)mount).
+            const _seedAudioPresent = (el.audioCount || 0) > 0;
+            _activeControls.get('audioMode')?.setAudioPresent?.(_seedAudioPresent);
+            _activeControls.get('useAudio')?.setAudioPresent?.(_seedAudioPresent);
         }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
@@ -848,6 +992,72 @@ export const MpiPromptBox = ComponentFactory.create({
                 emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
             });
         }
+
+        // ── Enhance (Cubric Prompt, MPI-5) ─────────────────────────────────────
+        // Capability-gated: the control is only mounted when cubric.prompt is
+        // registered and advertises prompt.enhance. Absent Prompt → no control
+        // at all (the slot stays hidden), so PromptBox is a clean standalone
+        // editor. Toggleable icon button, on by default (signals "available").
+        // Clicking enhances the active prompt field via the broker and writes
+        // the result back through the existing injectPrompts().
+        const enhanceSlot = qs('#enhance-slot', el);
+        let _enhanceBtn = null;
+        let _enhancing = false;
+
+        function _enhanceToast(message, variant) {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+            document.body.appendChild(wrapper);
+            const toast = MpiToast.mount(wrapper, { message, variant, duration: 3000 });
+            toast.on('close', () => wrapper.remove());
+        }
+
+        async function _runEnhance() {
+            if (_enhancing) return;
+            const source = isNegativeMode ? negativeValue : positiveValue;
+            if (!source.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }
+            _enhancing = true;
+            _enhanceBtn?.el?.setDisabled?.(true);
+            try {
+                // Vision owns the recipe key: Cubric Prompt selects its enhancer
+                // recipe by this id. Default to the model's `type` (e.g. 'sdxl',
+                // 'wan' — already aligns with Prompt's recipe ids); a model may
+                // override with an explicit `enhanceRecipe` when they diverge.
+                const result = await enhancePrompt({
+                    prompt: positiveValue,
+                    negativePrompt: negativeValue,
+                    targetModelId: model?.enhanceRecipe ?? model?.type,
+                    operation: activeOperation,
+                });
+                if (result.ok) {
+                    el.injectPrompts({
+                        positive: result.prompt ?? positiveValue,
+                        negative: result.negativePrompt ?? negativeValue,
+                    });
+                    emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
+                    // result.note is set when Prompt had no recipe for this model
+                    // and fell back to a default enhancer — surface it honestly.
+                    _enhanceToast(result.note || 'Prompt enhanced.', result.note ? 'info' : 'success');
+                } else {
+                    _enhanceToast(result.error || 'Enhance failed.', 'warning');
+                }
+            } finally {
+                _enhancing = false;
+                _enhanceBtn?.el?.setDisabled?.(false);
+            }
+        }
+
+        // Probe capability async; reveal the button only if Prompt is live.
+        checkPromptEnhanceAvailable().then((available) => {
+            if (!available || !enhanceSlot) return;
+            enhanceSlot.classList.remove('hide');
+            _enhanceBtn = MpiButton.mount(enhanceSlot, {
+                icon: 'enhance',
+                info: 'Enhance prompt with Cubric Prompt',
+                size: 'sm', variant: 'primary', toggleable: true, active: true,
+            });
+            _enhanceBtn.on('click', () => { void _runEnhance(); });
+        }).catch(() => { /* no broker / no Prompt → stay standalone */ });
 
         // ── Run / Stop ─────────────────────────────────────────────────────────
         runSlotEl = qs('#bottom-right-slot', el);
@@ -877,6 +1087,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 injectionParams,
                 previewOnly,
                 historyMode,
+                // MPI-208 B1-C: per-gen local override derived from the single source of
+                // truth (state.engineOverride), not a component-private mirror.
+                forceLocal: state.engineOverride === 'local',
             };
         };
 
@@ -924,7 +1137,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             runBtn = MpiButton.mount(runHost, {
                 icon: 'play',
-                info: 'Tap to cue. Hold to toggle loop.',
+                info: 'Tap to cue. Hold to toggle loop. (Ctrl+Enter) | Access Queue (Q)',
                 size: 'sm', variant: 'primary',
                 label: _runLabel(),
                 extraClasses: 'mpi-prompt-box__cue-btn',
@@ -985,7 +1198,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
             stopBtn = MpiButton.mount(stopHost, {
                 icon: 'stop',
-                info: 'Stop current job',
+                info: 'Stop current job (Ctrl+Alt+Enter)',
                 size: 'sm', variant: 'secondary',
                 disabled: !isGenerating,
             });
@@ -1012,6 +1225,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Run / Stop / Loop hotkeys ──────────────────────────────────────────
         const _triggerRun = () => {
+            // MPI-73: the run hotkey bypasses the (now-disabled) Cue button — block
+            // it too while the remote engine is connecting/disconnecting.
+            if (_remoteTransitioning) return;
             if (state.loopArmed) {
                 state.loopArmed = false;
                 return;
@@ -1044,13 +1260,96 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             if (key === 'loopArmed') {
                 _refreshRunLabel();
+                return;
+            }
+            if (key === 'remoteEnginePhase') {
+                _applyRemotePhase(); // MPI-73: enable/disable Cue on transition
+                return;
+            }
+            // R31 (MPI-208): rebuild op dropdown + badge when the engine override
+            // changes so the selector shows the correct installed-op set for the
+            // effective engine ('local' override → local weights; null → remote).
+            if (key === 'engineOverride') {
+                _refreshOpDropdown();
+                _renderBadge();
             }
         }));
+
+        // MPI-122: when install status is re-checked (e.g. the user adds the I2V op
+        // to an already-installed Wan model), refresh the op dropdown so newly-
+        // installed operations appear (and removed ones vanish) without a remount.
+        _unsubs.push(Events.on('models:checked', () => { _refreshOpDropdown(); }));
+
+        // MPI-73: disable the Cue button while the remote engine is connecting or
+        // disconnecting. Generation mid-transition would fall to the wrong engine
+        // and surface a misleading error — prevention beats a scary popup, so block
+        // the button outright. Driven by `state.remoteEnginePhase` (not the live
+        // event) so a PromptBox mounted DURING a transition reads the current phase
+        // immediately at mount, then stays in sync via state:changed below.
+        const _applyRemotePhase = () => {
+            const phase = state.remoteEnginePhase;
+            _remoteTransitioning = phase === 'connecting' || phase === 'disconnecting';
+            runBtn?.el?.setDisabled?.(_remoteTransitioning);
+        };
+        _applyRemotePhase();
+
+        // MPI-74: "Run locally" toggle. Shown ONLY while the app is remote-connected;
+        // when ON, the next Cue/Q dispatch is force-routed onto the LOCAL ComfyUI
+        // (forceLocal in getRunPayload). Sticky within a remote session, reset to OFF
+        // on disconnect. UI-only for now — the flag is inert until MPI-82's spine
+        // reads opts.forceLocal. Mount-time visibility reads the cached remote flag;
+        // live show/hide follows the `remote:connection` event (same source the
+        // landing/status bar already use).
+        const engineToggleSlot = qs('#engine-toggle-slot', el);
+        const engineToggleBtn = MpiButton.mount(engineToggleSlot, {
+            icon: 'cloud',
+            iconActive: 'laptop',
+            toggleable: true,
+            active: state.engineOverride === 'local',
+            size: 'sm',
+            info: 'Run this generation on your local engine instead of the cloud Pod.',
+            extraClasses: 'mpi-prompt-box__engine-toggle',
+        });
+        engineToggleBtn.on('toggle', ({ active }) => {
+            // R31 (MPI-208): the toggle writes the single source of truth. getRunPayload,
+            // selector derivation and installed-op gating all read state.engineOverride
+            // (via effectiveEngine()) — no component-private mirror.
+            state.engineOverride = active ? 'local' : null;
+        });
+        const _showEngineToggle = (connected) => {
+            engineToggleSlot?.classList.toggle('hide', !connected);
+            if (!connected) {
+                state.engineOverride = null; // R31: clear override on disconnect
+                engineToggleBtn.el.setActive(false);
+            }
+        };
+        _showEngineToggle(remoteEngineClient.isRemote());
+        _unsubs.push(Events.on('remote:connection', ({ connected }) => _showEngineToggle(!!connected)));
 
         // ── Initialise ─────────────────────────────────────────────────────────
         _refreshOpDropdown();
         _refreshOpSlot();
         _renderBadge();
+
+        // Restore staged chips persisted by a prior mount of this mediaType, so
+        // start/end-frame (and input-video) media survive nav. _acceptsMediaType
+        // scans all of the model's supported ops, so a frame chip is accepted
+        // even if the initial op is text-only — adding it then auto-switches to a
+        // media op via _emitMediaChange. Reuse Prompt clears+replaces these after
+        // mount, so it always wins over a restore.
+        {
+            const _mediaSlot = state.promptMedia?.[_wsKey];
+            const _saved = _matchesSlot(_mediaSlot) ? (_mediaSlot.items || []) : [];
+            if (_saved.length) {
+                _restoringMedia = true;
+                try {
+                    for (const m of _saved) el.injectMedia({ url: m.url, mediaType: m.mediaType, role: m.role, name: m.name });
+                } finally {
+                    _restoringMedia = false;
+                }
+                _saveMedia(); // re-sync snapshot to what actually landed (capacity/role eviction)
+            }
+        }
 
         // ── Portaled popup teardown on el removal ──────────────────────────────
         const domObserver = new MutationObserver(() => {

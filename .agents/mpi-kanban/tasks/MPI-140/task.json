@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-140",
+  "title": "Download progress bar LIES \u00e2\u20ac\u201d jumps to ~85% (40-50GB) in <1s then crawls; aria2c preallocation reported as real bytes (recurring, ~6 sessions unfixed)",
+  "description": "THE recurring bug the user has chased across ~6 sessions; every agent goes in circles and never fixes it. CORRECT DIAGNOSIS (2026-06-25): it is a FALSE-PROGRESS / progress-REPORTING bug, NOT a throughput bug. On pressing Install for a large model, the progress bar snaps to ~85% \u00e2\u20ac\u201d which for LTX is 40-50GB \u00e2\u20ac\u201d in UNDER A SECOND. That much data CANNOT physically transfer in <1s, so the number is a LIE. The bar then 'crawls' through the rest, which is actually the REAL download finally happening. Users see 85% instantly, then apparent stall, and CONCLUDE THE APP IS BROKEN. That perception is the actual damage. ROOT CAUSE: aria2c (-x16 -s16 in wrapper _download_aria2) PREALLOCATES the full output file and/or reports optimistic per-segment byte counts before bytes are truly flushed; the wrapper's models:install-progress emits THOSE bytes, and the app renders them as real progress. So progress = preallocated/claimed bytes, NOT actually-downloaded-and-flushed bytes. WHY 6 SESSIONS FAILED: docs/gotchas.md (~line 79 'remote install progress \u00e2\u20ac\u201d 80% snap is aria2c (not a bug)') + docs/builder/03-spin-and-install.md (~line 58) declare this 'aria2c preallocation artifact, do NOT fix the app for it.' Agents read 'not a bug', stop, circle. The doc is RIGHT about the cause and WRONG about the conclusion: 'not a transfer bug' does NOT mean 'not a problem' \u00e2\u20ac\u201d a progress bar that lies to the user IS a shipping-grade UX bug. MPI-95 (commit dc27f33) attempted a fix (denominator re-derivation + verifying-phase determinate bar) but did NOT kill the lie, because it still trusts aria2c's REPORTED bytes, which include preallocated/not-yet-downloaded space. THE REAL FIX (design, then implement): make progress reflect ACTUAL downloaded bytes, not aria2c's optimistic count. Options to evaluate: (a) wrapper-side \u00e2\u20ac\u201d emit progress from the REAL on-disk flushed size of the .part minus aria2c's preallocation (or parse aria2c's actual completedLength, NOT the allocated file size); aria2c's RPC/--summary exposes completedLength vs totalLength \u00e2\u20ac\u201d use completedLength. (b) disable/avoid preallocation skew: --file-allocation=none is already set, so the skew is likely from aria2c reporting per-CONNECTION claimed ranges; investigate whether the wrapper reads os.path.getsize(.part) (which on a sparse/preallocated file overreports) vs aria2c's true downloaded counter. (c) app-side guard: cap displayed progress to a sane rate (bytes cannot exceed elapsed*max-throughput) so a <1s 50GB jump is impossible to render. PREFER fixing at the SOURCE (wrapper reports true bytes) over masking in the app. DISCRIMINATING CHECK: on a fresh Pod, log aria2c completedLength vs the file's os.path.getsize over time \u00e2\u20ac\u201d if getsize jumps to ~full instantly (preallocation) while completedLength climbs slowly, that proves the wrapper is reading the wrong number. WRAPPER: c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (_download_aria2 ~line 992, emit_progress ~line 1070, _run_install). App: routes/downloadManager.js _onRemoteInstallEvent (models:install-progress handler ~line 873). MUST also CORRECT the misleading gotcha + builder doc so the next session does not re-trust 'not a bug'. RELATED: MPI-136 (silent-stall watchdog) and MPI-139-was-taken (this is MPI-140). Ship-tonight decision: NOT fixed tonight (user shipping the slow-but-working path); fix properly next session with the completedLength logging test. SUCCESS = on a large install the bar climbs in proportion to ACTUAL transferred bytes (no instant 85% jump); a 50GB file never shows >a-few-% in the first second.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-25T22:55:00Z",
+  "updated_at": "2026-06-29T02:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "downloads",
+    "runpod",
+    "wrapper",
+    "mpi-ci",
+    "aria2c",
+    "progress-bar",
+    "ux",
+    "recurring",
+    "high-value"
+  ],
+  "priority": "high"
+}

@@ -53,7 +53,7 @@
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
-      "divisible_by": 2,
+      "divisible_by": 16,
       "device": "cpu",
       "image": [
         "841",
@@ -79,7 +79,7 @@
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
-      "divisible_by": 2,
+      "divisible_by": 16,
       "device": "cpu",
       "image": [
         "839",
@@ -144,63 +144,13 @@
       "title": "Duration"
     }
   },
-  "637": {
-    "inputs": {
-      "frame_rate": [
-        "635",
-        2
-      ],
-      "loop_count": 0,
-      "filename_prefix": "PrevGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "776",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Preview"
-    }
-  },
   "717": {
     "inputs": {
-      "int": 31
+      "int": 33
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
-    }
-  },
-  "722": {
-    "inputs": {
-      "frame_rate": [
-        "635",
-        2
-      ],
-      "loop_count": 0,
-      "filename_prefix": "FinalGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "774",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Output"
+      "title": "Input_Seed"
     }
   },
   "723": {
@@ -219,31 +169,7 @@
       "title": "CLIP Text Encode (Negative Prompt)"
     }
   },
-  "725": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 5,
-      "denoise": 1,
-      "model": [
-        "738",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
   "726": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "729": {
     "inputs": {
       "sampler_name": "euler"
     },
@@ -263,19 +189,6 @@
     "class_type": "ModelSamplingSD3",
     "_meta": {
       "title": "ModelSamplingSD3"
-    }
-  },
-  "731": {
-    "inputs": {
-      "step": 2,
-      "sigmas": [
-        "725",
-        0
-      ]
-    },
-    "class_type": "SplitSigmas",
-    "_meta": {
-      "title": "SplitSigmas (2 to 4)"
     }
   },
   "732": {
@@ -312,12 +225,12 @@
         0
       ],
       "sampler": [
-        "729",
+        "726",
         0
       ],
       "sigmas": [
-        "731",
-        1
+        "857",
+        0
       ],
       "latent_image": [
         "775",
@@ -425,11 +338,11 @@
   },
   "743": {
     "inputs": {
-      "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. "
+      "string": "a woman in a bikini and a backpack, recording herself with a hand-held camera and placing her sunglasses on her eyes while walking "
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
     }
   },
   "744": {
@@ -454,12 +367,12 @@
         "751",
         0
       ],
-      "string_b": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "string_b": "\u8272\u8c03\u8273\u4e3d\uff0c\u8fc7\u66dd\uff0c\u9759\u6001\uff0c\u7ec6\u8282\u6a21\u7cca\u4e0d\u6e05\uff0c\u5b57\u5e55\uff0c\u98ce\u683c\uff0c\u4f5c\u54c1\uff0c\u753b\u4f5c\uff0c\u753b\u9762\uff0c\u9759\u6b62\uff0c\u6574\u4f53\u53d1\u7070\uff0c\u6700\u5dee\u8d28\u91cf\uff0c\u4f4e\u8d28\u91cf\uff0cJPEG\u538b\u7f29\u6b8b\u7559\uff0c\u4e11\u964b\u7684\uff0c\u6b8b\u7f3a\u7684\uff0c\u591a\u4f59\u7684\u624b\u6307\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u624b\u90e8\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u8138\u90e8\uff0c\u7578\u5f62\u7684\uff0c\u6bc1\u5bb9\u7684\uff0c\u5f62\u6001\u7578\u5f62\u7684\u80a2\u4f53\uff0c\u624b\u6307\u878d\u5408\uff0c\u9759\u6b62\u4e0d\u52a8\u7684\u753b\u9762\uff0c\u6742\u4e71\u7684\u80cc\u666f\uff0c\u4e09\u6761\u817f\uff0c\u80cc\u666f\u4eba\u5f88\u591a\uff0c\u5012\u7740\u8d70",
       "delimiter": ""
     },
     "class_type": "StringConcatenate",
     "_meta": {
-      "title": "Concatenate"
+      "title": "Concatenate Text"
     }
   },
   "751": {
@@ -468,7 +381,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "752": {
@@ -477,16 +390,16 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Preview_Only"
+      "title": "Input_Preview_Only"
     }
   },
   "759": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
-      "title": "Use_End_Image"
+      "title": "Input_Use_End_Image"
     }
   },
   "765": {
@@ -628,7 +541,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_1"
+      "title": "Input_Lora_High_1"
     }
   },
   "788": {
@@ -642,7 +555,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_3"
+      "title": "Input_Lora_High_3"
     }
   },
   "789": {
@@ -656,7 +569,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_5"
+      "title": "Input_Lora_High_5"
     }
   },
   "790": {
@@ -670,7 +583,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_2"
+      "title": "Input_Lora_High_2"
     }
   },
   "791": {
@@ -684,7 +597,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_4"
+      "title": "Input_Lora_High_4"
     }
   },
   "792": {
@@ -698,7 +611,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_6"
+      "title": "Input_Lora_High_6"
     }
   },
   "793": {
@@ -712,7 +625,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "794": {
@@ -726,7 +639,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "795": {
@@ -740,7 +653,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "796": {
@@ -754,7 +667,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "797": {
@@ -768,7 +681,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "798": {
@@ -782,7 +695,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "825": {
@@ -892,43 +805,43 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Motion_Intensity"
+      "title": "Input_Motion_Intensity"
     }
   },
   "836": {
     "inputs": {
-      "int": 368
+      "int": 480
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Width"
+      "title": "Input_Width"
     }
   },
   "837": {
     "inputs": {
-      "int": 640
+      "int": 832
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Height"
+      "title": "Input_Height"
     }
   },
   "839": {
     "inputs": {
-      "image": "Girl_with_cat_202603182027.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "End_Frame"
+      "title": "Input_End_Frame"
     }
   },
   "841": {
     "inputs": {
-      "image": "Detailed_00005_small.png"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
-      "title": "Start_Frame"
+      "title": "Input_Start_Frame"
     }
   },
   "842": {
@@ -937,7 +850,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Duration"
+      "title": "Input_Duration"
     }
   },
   "843": {
@@ -950,7 +863,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "SaveLatent"
+      "title": "Output_Video_Latent"
     }
   },
   "844": {
@@ -959,7 +872,7 @@
     },
     "class_type": "LoadLatent",
     "_meta": {
-      "title": "LoadLatent"
+      "title": "Input_Video_Latent"
     }
   },
   "845": {
@@ -968,7 +881,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Is_Continue"
+      "title": "Input_Is_Continue"
     }
   },
   "846": {
@@ -1022,6 +935,54 @@
     "class_type": "MpiBooleanCompare",
     "_meta": {
       "title": "Mpi Boolean Compare"
+    }
+  },
+  "857": {
+    "inputs": {
+      "sigmas": " 0.85, 0.65, 0.45, 0.25, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg2"
+    }
+  },
+  "858": {
+    "inputs": {
+      "sigmas": "1.0, 0.93, 0.85"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg1"
+    }
+  },
+  "872": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "873": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "776",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
     }
   }
 }

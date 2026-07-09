@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-209",
+  "title": "Arch weights as install toggles (like ops)",
+  "description": "Unify GPU-arch weight variants (MPI-200: LTX balanced = mxfp8 on Blackwell / fp8_scaled on Ada+older) into the SAME per-item toggle UX the model manager already uses for operations (Wan t2v/i2v). Replace the app silently auto-picking ONE arch (from the live GPU) with on/off toggle buttons — one per arch — so the user chooses which GPU(s) to install for. Keep-both = both toggles on.\n\nWHY (user-driven): on a CPU download-pod there is NO live GPU to detect — gpuArch('__cpu__') falls to 'modern' → the app silently installs fp8, WRONG for a user whose real generation GPU is Blackwell. They then re-download 24GB when the GPU connects. The toggle model makes arch a visible, deliberate choice like ops.\n\nDESIGN (brainstorm-approved 2026-07-06):\n1. Arch axis → a toggle ROW (reuse _buildToggleRow machinery). Card-driven: labels + sizes come from variants.arch.options[].{label,size} so the panel stays generic (hundreds of models coming; a future model may add a 3rd tier). Labels = GPU family names: 'RTX 50 Series (Blackwell)' / 'RTX 40 & Older'.\n2. DEFAULT pre-select = live GPU arch; else the saved runpodConfig.gpuType arch (CPU-pod smart default); else both off. Always overridable.\n3. Install / uninstall / size / draft resolve arch as a SELECTED SET, not the gpuArch() scalar. Turning a toggle OFF that is installed = uninstall that arch weight (replaces MPI-207's 'Remove old weight' button). Downloader dedupes shared VAE/clip/LoRA.\n4. RUN-TIME GUARD (block + offer install): generation still auto-resolves arch from the LIVE GPU (commandExecutor already does this, unchanged). If the live GPU's arch weight is not on disk → BEFORE dispatch, show a dialog 'This GPU needs the Blackwell weight (~24GB). Install now?' → install → generate. No cryptic missing-file failure. Powered by MPI-207's detectOtherArchInstall.\n\nSUPERSEDES MPI-207's PANEL UI ('Install for your GPU' button + 'Remove old weight' + connect toast). REUSES its primitives: detectOtherArchInstall, arch-aware isInstalled, the 1-dep arch-scoped install path (all live-proven 5090/mxfp8 2026-07-06). No revert needed — swap button code for toggle code.\n\nOUT OF SCOPE / YAGNI: proactive connect-toast (block-at-generate covers it); 3rd arch tier (declaration supports it, no card needs it); arch×op composition (resolver already composes both axes — free when a model needs it).\n\nRELATES: MPI-200 (variant axis), MPI-207 (detection primitives, superseded UI).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-06T19:45:00Z",
+  "updated_at": "2026-07-06T21:10:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "plan": "plan.md",
+    "validation": "validation.md"
+  }
+}

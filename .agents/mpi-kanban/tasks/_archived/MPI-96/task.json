@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-96",
+  "title": "Connect: detect a created-but-not-running Pod instead of crawling the fake bar to 99%",
+  "description": "Found 2026-06-15. User pressed Connect (RTX 2000 Ada, Pod sc2vdkrk6cvb3s); the progress bar crept to 99% as if downloading, then parked. RunPod console showed the Pod 'Start for $0.24/hr' / Compute 'Not running' — RunPod accepted createPod (201) but the container never started on a host (no host slot / immediate exit). The app only polls /remote/comfy/status (wrapper health) and paints an elapsed->% time-estimate (_pct in MpiSettings.js:531 + _connectPct in shell.js, clamp 0-99) with NO RunPod runtime-status signal behind it, so 'booting slowly' and 'Pod stopped, never started' look identical: both crawl to 99%. The MPI-86 boot watchdog (5 min) did fire (yellow 'stuck on a bad host' hint + Cancel showed) so the user wasn't trapped — but the misleading 99% bar implies a download that isn't happening. Fix: while polling, also read RunPod Pod runtime status (getPod) and if the Pod is EXITED/TERMINATED/not-running after create, stop the fake progress and surface 'Pod failed to start on host — Cancel and pick another GPU' immediately rather than crawling 4 min to 99%. Distinguishes dead-host from healthy slow-boot. App-side; needs a backend getPod-status route the renderer can poll alongside /remote/comfy/status. See brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-15T17:40:00Z",
+  "updated_at": "2026-06-16T13:27:21Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

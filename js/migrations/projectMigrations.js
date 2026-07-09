@@ -16,7 +16,7 @@ const fs   = require('fs-extra');
 const path = require('path');
 
 /** Current schema version — must match SCHEMA_VERSION in js/core/appVersion.js */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 4;
 
 const MIGRATIONS = {
     /**
@@ -118,6 +118,109 @@ const MIGRATIONS = {
             shared:        sharedOut,
             schemaVersion: 2,
         };
+    },
+
+    /**
+     * v2 → v3 (MPI-115): Normalize .meta/<uuid>.json sidecars to the clean schema.
+     *
+     * Removes duplicated/dead fields and introduces generationSettings.controlState
+     * as the single source for replayable PromptBox state:
+     *  - delete top-level `ratioLabel`   (dup of injectionParams.Ratio_Label)
+     *  - delete `videoMeta`              (dup of canonical top-level fps/duration/...)
+     *  - delete `generationSettings.modelSettings` and rewrite its loras/upscaleModel
+     *    into `generationSettings.controlState.model`. The shared/op buckets are NOT
+     *    reconstructed here — Reuse Prompt's legacy fallback still reverse-derives them
+     *    from the preserved injectionParams, so old items keep working. New items get
+     *    a full controlState (shared+op+model) at generate time.
+     *
+     * Operates only on project.json's own groups' sidecars (Media/.meta).
+     */
+    2: async (project, folderPath) => {
+        const metaDir = path.join(folderPath, 'Media', '.meta');
+        if (fs.existsSync(metaDir)) {
+            const files = fs.readdirSync(metaDir).filter(f => f.endsWith('.json'));
+            for (const f of files) {
+                const p = path.join(metaDir, f);
+                let meta;
+                try { meta = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { continue; }
+
+                let changed = false;
+                if ('ratioLabel' in meta) { delete meta.ratioLabel; changed = true; }
+                if ('videoMeta' in meta)  { delete meta.videoMeta;  changed = true; }
+
+                const gs = meta.generationSettings;
+                if (gs && typeof gs === 'object' && gs.modelSettings && typeof gs.modelSettings === 'object') {
+                    const ms = gs.modelSettings;
+                    const model = {};
+                    if ('loras' in ms) model.loras = ms.loras;
+                    if ('upscaleModel' in ms) model.upscaleModel = ms.upscaleModel ?? null;
+                    gs.controlState = gs.controlState || {};
+                    if (Object.keys(model).length) gs.controlState.model = model;
+                    delete gs.modelSettings;
+                    changed = true;
+                }
+
+                if (changed) fs.writeFileSync(p, JSON.stringify(meta, null, 2));
+            }
+        }
+
+        return { ...project, schemaVersion: 3 };
+    },
+
+    /**
+     * v3 → v4 (MPI-133): qualityTier becomes per-model.
+     *
+     * Pre-v4 stored the quality tier in the cross-model shared bucket
+     * (`shared[mediaType].ratioSelector.qualityTier`), so switching models or
+     * reusing across model families silently carried/dropped the tier. v4 copies
+     * the existing shared tier into each model's own `modelSettings[id].qualityTier`
+     * (matched by the model's mediaType) so every model remembers its own quality.
+     *
+     * The old shared `ratioSelector.qualityTier` is LEFT in place — it is a
+     * harmless lazy-read fallback for any model whose per-model slot is still
+     * empty, and `selectedRatio`/`orientation` continue to live there. No sidecars
+     * are touched (gen-time controlState now snapshots qualityTier under .model).
+     */
+    3: async (project) => {
+        const { MODELS } = require('../data/modelConstants/models.js');
+        const mediaTypeById = new Map(MODELS.map(m => [m.id, m.mediaType]));
+        const typeById = new Map(MODELS.map(m => [m.id, m.type]));
+
+        // Tier lists per model family. New types declare ModelDef.qualityTiers
+        // (MPI-174) — read those first so this migration never drifts from the
+        // registry. The inline table is the frozen legacy fallback for the
+        // built-in families (matches BUILTIN_QUALITY_TIERS in js/utils/ratios.js,
+        // which this Node-side file must not import). A shared tier copied to a
+        // model that lacks it (e.g. a phantom 2k on Wan, left over from when the
+        // tier was shared and LTX set it) clamps to the family's max
+        // ('very_high') so the stored value is valid from the start.
+        const declaredTiersByType = new Map(
+            MODELS.filter(m => m.type && m.qualityTiers)
+                  .map(m => [String(m.type).toLowerCase(), m.qualityTiers]));
+        const tiersFor = (t) => declaredTiersByType.get(String(t || '').toLowerCase()) ?? ({
+            wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
+            wan5b: ['low', 'medium', 'high'],   // 720p-only, 3 tiers
+            ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
+        })[String(t || '').toLowerCase()] ?? ['very_low', 'low', 'medium', 'high', 'very_high'];
+
+        const sharedTierByType = {
+            image: project.shared?.image?.ratioSelector?.qualityTier,
+            video: project.shared?.video?.ratioSelector?.qualityTier,
+        };
+
+        const nextModelSettings = { ...(project.modelSettings ?? {}) };
+        for (const [modelId, model] of Object.entries(nextModelSettings)) {
+            // Don't clobber a model that already has a per-model tier.
+            if (model && typeof model === 'object' && model.qualityTier != null) continue;
+            const mediaType = mediaTypeById.get(modelId) ?? 'image';
+            const tier = sharedTierByType[mediaType];
+            if (tier != null) {
+                const valid = tiersFor(typeById.get(modelId)).includes(tier) ? tier : 'very_high';
+                nextModelSettings[modelId] = { ...model, qualityTier: valid };
+            }
+        }
+
+        return { ...project, modelSettings: nextModelSettings, schemaVersion: 4 };
     },
 };
 

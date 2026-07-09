@@ -37,8 +37,7 @@ const _registry = new Map();
  * @param {{ scope, groupId, tempId, operation, modelId, placeholderGroup, exec }} opts
  * @returns {{ id: string }}
  */
-function start({ scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null, sourceGroupId = null, queueJobId = null, queueDisplay = null, queueSource = null, isLoop = false }) {
-    const id = crypto.randomUUID();
+function start({ id = crypto.randomUUID(), scope, groupId = null, tempId = null, operation, modelId, placeholderGroup = null, extraTempIds = [], extraPlaceholders = [], exec, replaceItemId = null, sourceGroupId = null, queueJobId = null, queueDisplay = null, queueSource = null, isLoop = false }) {
     const entry = { id, scope, groupId, tempId, extraTempIds, extraPlaceholders, operation, modelId, status: 'running', latestPreviewUrl: null, placeholderGroup, exec, promptId: null, replaceItemId, sourceGroupId, queueJobId, queueDisplay, queueSource, isLoop };
     _registry.set(id, entry);
     Events.emit('generation:started', { id, scope, groupId, tempId, operation, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId, sourceGroupId, queueJobId, queueDisplay, queueSource, isLoop });
@@ -82,6 +81,13 @@ function setPreview(id, url) {
     Events.emit('generation:preview', { id, url });
 }
 
+/** Signal a new preview window (new sampler stage) — the card drops its current
+ *  looping clip so stages don't accumulate. MPI-167. */
+function resetPreview(id) {
+    if (!_registry.has(id)) return;
+    Events.emit('generation:preview-reset', { id });
+}
+
 /** Update entry status. */
 function setStatus(id, status) {
     const entry = _registry.get(id);
@@ -97,7 +103,12 @@ function end(id, { revokePreview = true } = {}) {
     const entry = _registry.get(id);
     if (!entry) return;
     if (revokePreview && entry.latestPreviewUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(entry.latestPreviewUrl);
+        // MPI-211: defer the revoke past this task so the store broadcast can
+        // derender the placeholder tile + queue-panel thumbnail (both still hold
+        // this blob as an <img> src synchronously). Revoking now makes the
+        // browser refetch the dead blob → ERR_FILE_NOT_FOUND console noise.
+        const url = entry.latestPreviewUrl;
+        setTimeout(() => URL.revokeObjectURL(url), 0);
     }
     _registry.delete(id);
 }
@@ -119,4 +130,4 @@ function cancelAll() {
     for (const id of _registry.keys()) cancel(id);
 }
 
-export const activeGenerations = { start, get, list, listFor, setPreview, setPromptId, setStatus, end, cancel, cancelAll };
+export const activeGenerations = { start, get, list, listFor, setPreview, resetPreview, setPromptId, setStatus, end, cancel, cancelAll };

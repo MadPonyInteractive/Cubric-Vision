@@ -8,15 +8,19 @@
  */
 
 import { state } from '../state.js';
-import { getModelsByType } from '../data/modelRegistry.js';
+import { getModelsByType, isModelUsable } from '../data/modelRegistry.js';
+import { canonicalModelId } from '../data/modelConstants/resolveModelDeps.js';
 
 /**
- * Read the persisted model id for a given mediaType.
+ * Read the persisted model id for a given mediaType. Legacy split ids
+ * (wan-22-t2v / wan-22-i2v) canonicalize to the merged wan-22 so a selection
+ * persisted in the split era still resolves to a real model. (MPI-122)
  * @param {'image'|'video'} mediaType
  * @returns {string|null}
  */
 export function getSelectedModelId(mediaType) {
-    return state.s_selectedModelIdByType?.[mediaType] ?? null;
+    const id = state.s_selectedModelIdByType?.[mediaType] ?? null;
+    return id ? canonicalModelId(id) : null;
 }
 
 /**
@@ -56,7 +60,7 @@ export function setSelectedModelId(mediaType, modelId, opts = {}) {
  */
 export function resolveActiveModel(mediaType) {
     const installedModels = getModelsByType(mediaType)
-        .filter(m => m.installed !== false);
+        .filter(isModelUsable);
 
     const persisted = getSelectedModelId(mediaType);
     const modelId = persisted

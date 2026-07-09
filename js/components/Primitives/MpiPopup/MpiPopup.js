@@ -62,7 +62,24 @@ export const MpiPopup = ComponentFactory.create({
             el.style.left   = '';
             el.style.right  = '';
 
-            switch (position) {
+            // For top/bottom, flip to whichever side has room: prefer the requested
+            // side, but if the popup's measured height won't fit there, use the other.
+            // The popup is already in the DOM (portaled on mount) so offsetHeight is real.
+            let place = position;
+            if (position === 'top' || position === 'bottom') {
+                const needed = el.offsetHeight + gap;
+                const roomAbove = rect.top;
+                const roomBelow = window.innerHeight - rect.bottom;
+                if (position === 'top' && roomAbove < needed && roomBelow > roomAbove) place = 'bottom';
+                else if (position === 'bottom' && roomBelow < needed && roomAbove > roomBelow) place = 'top';
+            }
+
+            // Keep the BEM placement class (drives the caret + entrance transform)
+            // in sync with the resolved side so a flipped popup points the right way.
+            ['top', 'bottom', 'left', 'right'].forEach(p =>
+                el.classList.toggle(`mpi-popup--${p}`, p === place));
+
+            switch (place) {
                 case 'bottom':
                     el.style.top  = `${rect.bottom + gap}px`;
                     el.style.left = `${rect.left + rect.width / 2}px`;
@@ -79,6 +96,22 @@ export const MpiPopup = ComponentFactory.create({
                     el.style.bottom = `${window.innerHeight - rect.top + gap}px`;
                     el.style.left   = `${rect.left + rect.width / 2}px`;
                     break;
+            }
+
+            // Horizontal clamp for top/bottom (anchored by center via translateX(-50%)).
+            // The center can sit near a viewport edge (e.g. a badge top-right of a card),
+            // spilling half the popup off-screen. Nudge the center so both edges stay in
+            // view, then drop the -50% transform so `left` is the true clamped position.
+            if (place === 'top' || place === 'bottom') {
+                const margin = 8;
+                const w = el.offsetWidth;
+                let center = rect.left + rect.width / 2;
+                const minCenter = margin + w / 2;
+                const maxCenter = window.innerWidth - margin - w / 2;
+                if (w + margin * 2 < window.innerWidth) {
+                    center = Math.min(Math.max(center, minCenter), maxCenter);
+                }
+                el.style.left = `${center}px`;
             }
         };
 

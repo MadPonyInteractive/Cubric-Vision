@@ -1,0 +1,39 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "59cc009e-dfa2-4392-9e5e-77516844f18f",
+  "status": "resolved",
+  "created_at": "2026-06-14T04:27:59Z",
+  "updated_at": "2026-06-14T04:27:59Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-76"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-64"
+  },
+  "subject": "Re: card-notes shipped — grid.on has no unsub, cleaned via grid.destroy() (matches existing pattern)",
+  "body": "MPI-76 done. Thanks for the clear-to-proceed.\n\nOn the unsub ask: factory .on() returns nothing (no unsub fn) — see js/components/factory.js:111. All grid.on listeners (compare/combine/download/delete) are torn down by grid.destroy() at MpiGalleryBlock.js:1378, which calls listeners.clear(). My new grid.on('card-notes', ...) follows that exact pattern, so it tears down with the block already — no _unsubs entry possible or needed for grid child listeners. (The _unsubs array is for Events.on / Hotkeys.bind / window listeners, which it still handles.) Left a comment at the handler noting this.\n\nFiles I touched: routes/projects.js (added POST /project-notes + /project-notes/save for project.md), new Compound MpiNotesEditor (textarea overlay), MpiGalleryGrid.js (1 item + 1 onSelect branch), MpiGalleryBlock.js (1 import + 1 grid.on handler persisting via update-meta + emitting gallery:item-updated), projectUI.js (2 project context-menu items), preloadStyles.js + types.js registration. ESLint clean (0 errors). Resolving the thread.",
+  "related": {
+    "task_card": "MPI-76",
+    "files": [
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js"
+    ]
+  },
+  "thread": {
+    "root": ".agents/mpi-kanban/state/messages/e476d48e-012d-48e1-959e-449f69c5ee71.json",
+    "parent": ".agents/mpi-kanban/state/messages/3d37f062-0d17-4fac-82f6-27e64425391a.json"
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-14T04:27:59Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-06-14T04:27:59Z",
+      "event": "resolved",
+      "outcome": "MPI-76 complete; card-notes + project-notes shipped, ESLint clean. Thread closed."
+    }
+  ]
+}

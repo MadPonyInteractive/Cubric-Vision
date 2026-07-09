@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-91","at":"2026-06-15T07:27:46Z","actor":"claude","note":"Promoted from MPI-64 - Step 5.2 GPU-picker CUDA filter."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-91","at":"2026-06-16T07:36:13.138Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-91 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-91","at":"2026-06-16T09:14:30.5783396+01:00","actor":"codex","summary":"Archived to .agents/mpi-kanban/tasks/_archived/MPI-91/ because cu124-default eliminated the broad host-driver refusal class and the remaining Blackwell tail risk is not pre-filterable from RunPod picker data."}

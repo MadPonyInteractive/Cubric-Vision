@@ -11,6 +11,16 @@ const PARTS = [
     { key: 'settings', label: 'Use Settings' },
     { key: 'model', label: 'Use Model' },
     { key: 'images', label: 'Use Images' },
+    { key: 'video', label: 'Use Video' },
+    { key: 'audio', label: 'Use Audio' },
+];
+
+// Media parts gated per-source by an availability prop (MPI-227). Each maps its
+// includes key to the `*Availability` prop the mount site passes.
+const MEDIA_PARTS = [
+    { key: 'images', availabilityProp: 'imageAvailability' },
+    { key: 'video', availabilityProp: 'videoAvailability' },
+    { key: 'audio', availabilityProp: 'audioAvailability' },
 ];
 
 function _normalizeIncludes(value = {}) {
@@ -19,6 +29,8 @@ function _normalizeIncludes(value = {}) {
         settings: value.settings !== false,
         model: value.model !== false,
         images: value.images !== false,
+        video: value.video !== false,
+        audio: value.audio !== false,
     };
 }
 
@@ -60,6 +72,19 @@ export const MpiReusePromptDialog = ComponentFactory.create({
         const sourceSlot = qs('#reuse-source-slot', el);
         const actionsSlot = qs('#reuse-actions-slot', el);
 
+        // Per-source availability for each media part (MPI-212 → MPI-227): does the
+        // reuse source actually carry an image / video / audio input to reuse? A card
+        // generated WITHOUT one (e.g. a t2i output has no image; an image op has no
+        // video/audio) has none, so that "Use …" toggle is meaningless — greying it
+        // out (vs silently no-op-ing) tells the user why and stops it injecting an
+        // empty slot. Keep each media checkbox so the source radio can re-toggle its
+        // disabled state live.
+        const availabilityMaps = {};
+        for (const { key, availabilityProp } of MEDIA_PARTS) {
+            availabilityMaps[key] = props[availabilityProp] || {};
+        }
+        const mediaCheckboxes = {};
+
         PARTS.forEach(({ key, label }) => {
             const wrap = document.createElement('div');
             const checkbox = MpiCheckbox.mount(wrap, {
@@ -76,7 +101,26 @@ export const MpiReusePromptDialog = ComponentFactory.create({
                 };
             });
             partsSlot.appendChild(checkbox.el);
+            if (key in availabilityMaps) mediaCheckboxes[key] = checkbox;
         });
+
+        // Disable + uncheck a media toggle when the active source lacks that media.
+        // `includes[key]` (the applied value) is forced false so Apply doesn't try to
+        // inject nothing. The user's STORED default is left untouched — this is a
+        // per-source availability gate, not a preference change.
+        const _syncMediaAvailability = () => {
+            for (const { key } of MEDIA_PARTS) {
+                const checkbox = mediaCheckboxes[key];
+                if (!checkbox) continue;
+                const has = availabilityMaps[key][source] !== false;
+                checkbox.el.setDisabled?.(!has);
+                if (!has) {
+                    includes[key] = false;
+                    checkbox.el.setChecked?.(false);
+                }
+            }
+        };
+        _syncMediaAvailability();
 
         if (props.showSource === false) {
             sourceSection.style.display = 'none';
@@ -93,6 +137,9 @@ export const MpiReusePromptDialog = ComponentFactory.create({
             sourceRadio.on('select', ({ value }) => {
                 source = value === 'current' ? 'current' : 'original';
                 state.promptReuseSource = source;
+                // Availability is per-source (Original may have an input image,
+                // Current may not, or vice-versa) — re-gate all media on switch.
+                _syncMediaAvailability();
             });
         }
 

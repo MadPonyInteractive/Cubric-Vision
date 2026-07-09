@@ -1,10 +1,25 @@
-.mpi-toast {
+/* Shared stack container — fixed to bottom-left, lays toasts out in normal
+   flow so each can grow to its own height without overlapping its neighbours.
+   column-reverse keeps the newest toast nearest the bottom edge. */
+.mpi-toast-stack {
     position: fixed;
-    --toast-bottom: var(--s-4);
-    --toast-stack-offset: 104px;
-    --toast-stack-index: 0;
-    bottom: calc(var(--toast-bottom) + var(--toast-stack-index) * var(--toast-stack-offset));
+    bottom: var(--toast-bottom, var(--s-4));
     left: var(--s-4);
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: var(--s-3);
+    max-height: calc(100vh - var(--s-6));
+    z-index: 20000;
+    pointer-events: none;
+}
+
+body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi-toast-stack {
+    --toast-bottom: calc(var(--s-8) + var(--s-2));
+}
+
+.mpi-toast {
+    position: relative;
     display: flex;
     align-items: flex-start;
     gap: var(--s-3);
@@ -18,17 +33,21 @@
     border-radius: var(--r-2);
     box-shadow: 0 10px 30px color-mix(in oklch, var(--surface-canvas) 72%, transparent);
     color: var(--ink-1);
-    z-index: 20000;
-    pointer-events: auto;
+    /* Keep visible so the mascot can poke out above the container. The
+       height cap + scroll lives on .mpi-toast__content instead — capping
+       it here would clip the overhanging mascot. */
     overflow: visible;
+    pointer-events: auto;
     user-select: none;
     opacity: 0;
     transform: translateY(18px);
-    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease), bottom var(--t-base) var(--ease);
+    transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
 }
 
-body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi-toast {
-    --toast-bottom: calc(var(--s-8) + var(--s-2));
+/* Queued toasts live in the stack container but stay out of layout until a
+   slot frees up — keeps them from painting at the wrong spot before reveal. */
+.mpi-toast--queued {
+    display: none;
 }
 
 .mpi-toast--open {
@@ -58,6 +77,10 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
     min-width: 0;
     max-width: 420px;
     padding-top: var(--s-1);
+    /* Grow to fit the full message; cap extreme lengths and scroll here so
+       the toast's overflow stays visible for the overhanging mascot. */
+    max-height: 40vh;
+    overflow-y: auto;
 }
 
 .mpi-toast__meta {
@@ -94,15 +117,12 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
 }
 
 .mpi-toast__msg {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
     margin: 0;
     color: var(--ink-1);
     font-size: var(--t-sm);
     font-weight: 500;
     line-height: 1.45;
-    overflow: hidden;
+    white-space: normal;
     overflow-wrap: anywhere;
 }
 

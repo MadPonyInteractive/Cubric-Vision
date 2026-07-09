@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-75",
+  "title": "Pending Pod-image rebuild changes (wrapper + Dockerfile batch)",
+  "description": "v0.4.0 Pod-image rebuild batch SHIPPED (remote uninstall + aria2c). Candidates 3/4/5 spun into a new card. See brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-13T09:06:48.000Z",
+  "updated_at": "2026-06-14T12:50:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

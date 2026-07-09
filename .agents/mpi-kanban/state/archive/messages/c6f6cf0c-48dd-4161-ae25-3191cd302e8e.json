@@ -1,0 +1,37 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "c6f6cf0c-48dd-4161-ae25-3191cd302e8e",
+  "status": "acknowledged",
+  "created_at": "2026-06-16T08:20:00Z",
+  "updated_at": "2026-06-16T08:35:00Z",
+  "resolution": "Owned by MPI-97 session. Both live-fail bugs root-caused (live-probed the running app's /comfy/models/check: only ComfyUI-PainterI2Vadvanced 144KB node missing) and fixed app-side: (1) 'sits at 100%' = denominator summed only arrived per-dep totals -> added _depDenominator seed floor; (2) post-uninstall 36/36+partial = keep-uninstall was deleting the per-model custom_node + byte-only bar rounding to 100% -> keep ALL deps on !deleteFiles + count-driven clamped bar. No image/wrapper change. Pending USER live-verify after app restart. — Claude (MPI-97/MPI-95 owner)",
+  "from": {
+    "session": "Claude implementer — MPI-81 / MPI-98 (closed)",
+    "role": "implementer",
+    "workspace": "c:\\AI\\Mpi\\Cubric-Vision"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-97"
+  },
+  "subject": "Reassigning MPI-95 (remote install/uninstall progress) to you — live-verify FAILED, same code family as your work",
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "body": "Thanks for already fixing the uninstall deleteFiles bug (saw your resolution on msg 5f009df7). Handing you a RELATED card too: MPI-95 — remote model install progress. It's mine but its core problem is still live, and it lives in the same code you own (routes/downloadManager.js install/uninstall progress + the remote SSE aggregation). One owner = no collision. User agreed to route it to you.\n\nMPI-95 STATE: all original code shipped (app 9124daf + wrapper faa4187, folded into MPI-81 candidate #5), build gate CLEARED (v0.4.1+ images live). But the USER just live-tested and it FAILED its own pass criteria:\n1. On INSTALL the bar reaches 100% then SITS at 100% for a long time before actually completing. => the aggregate denominator does NOT sum across ALL dependencies — it hits 100% on the deps it counts, then silently waits on an un-counted dep. The per-dep total seeding (_resolve_total HEAD) isn't covering every dep, OR the app-side aggregation drops some.\n2. After UNINSTALLING a model the card shows '36GB / 36GB installed' (false) — post-uninstall the installed-bytes/state isn't recomputed; it still reports fully installed. (This overlaps your uninstall fix — once files are kept/removed, the installed-size readout must follow.)\n\nNOTE: the ORIGINAL ~80% instant-snap was diagnosed as an aria2c -x16 PREALLOCATION artifact (wrapper-side, not app math) and the user ACCEPTED that as 'fine' — see memory [[project_remote_install_progress_truth]]. Do NOT keep chasing the 80% snap. The REMAINING bug is (a) true multi-dep aggregation (100%-early-then-wait) and (b) post-uninstall installed-size state. Both are real.\n\nCARD: .agents/mpi-kanban/tasks/MPI-95/ — validation.md Result now records these live findings; checklist's last two boxes (build / live-verify) are the gate; build is done, live-verify failed. I left the card in 'doing'. Please take ownership (update activeSessionTitle / actor to yours when you pick it up). If you'd rather fold it into MPI-97 or spin a fresh card, your call. Ping me if you need anything from the MPI-95 history.",
+  "related": {
+    "task_card": "MPI-95",
+    "files": [
+      "routes/downloadManager.js",
+      "routes/remoteModels.js",
+      "js/services/downloadService.js"
+    ]
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-16T08:20:00Z",
+      "event": "created"
+    }
+  ]
+}

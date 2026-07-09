@@ -74,8 +74,9 @@ function _buildBlock(blockKey, normalizedBase, normalizedExtras) {
         if (firstSegment) folderKeys.add(firstSegment);
     }
 
-    // Static extras registered by custom nodes at runtime (Impact Pack).
-    // Not derivable from dep filenames — must be listed explicitly.
+    // Static extras registered by custom nodes at runtime (Impact Pack). Not derivable
+    // from dep filenames — must be listed explicitly. (MPI-190: dropped `unet_gguf`,
+    // the city96/ComfyUI-GGUF category — no GGUF weight resolves to it anymore.)
     const staticExtras = {
         onnx: 'onnx/',
         ultralytics: 'ultralytics/',

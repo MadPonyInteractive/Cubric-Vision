@@ -1,0 +1,10 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"task.created","at":"2026-07-07T14:30:00Z","actor":"claude","summary":"Captured from brainstorm: Model Library full-page overlay with grid + image/video filters."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"task.updated","at":"2026-07-07T15:10:00Z","actor":"claude","summary":"Compact plan attached; maturity idea->planned. Detail panel = drawer inside overlay DOM (overlays stack above slide-over, confirmed by user)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"task.moved","at":"2026-07-07T15:44:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started — Model Library overlay build."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"checklist.updated","at":"2026-07-07T15:44:00Z","actor":"claude","summary":"Derived Implementation checklist item from compact plan."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"checklist.item_checked","at":"2026-07-07T16:07:00Z","actor":"claude","summary":"Implementation built + self-verified in running app."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"validation.updated","at":"2026-07-07T16:07:00Z","actor":"claude","summary":"Self-verification recorded; maturity validating, attention required for user UX sign-off."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"attention.required","at":"2026-07-07T16:07:00Z","actor":"claude","summary":"Needs user UX sign-off against model-library-B.html."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"validation.updated","at":"2026-07-07T16:30:00Z","actor":"claude","summary":"User UX-verified (\"looks great\") + post-UX refinements (name clamp, true-aspect previews, autoplay + fullscreen video) applied and re-verified live."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"attention.cleared","at":"2026-07-07T16:30:00Z","actor":"claude","summary":"User sign-off received."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-215","type":"task.moved","at":"2026-07-07T16:30:00Z","actor":"claude","from":"doing","to":"done","summary":"Model Library overlay accepted — done/complete."}

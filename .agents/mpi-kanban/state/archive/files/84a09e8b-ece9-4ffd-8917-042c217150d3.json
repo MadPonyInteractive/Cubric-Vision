@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "84a09e8b-ece9-4ffd-8917-042c217150d3",
+  "path": "js/services/commandExecutor.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/75ef0485-3b86-4e2a-a9e9-0e75ef7d71d0.json",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-11T17:45:00Z",
+  "allowed_actions": ["edit", "verify"],
+  "notes": "Pending provenance read: e0020eac (MPI-60 mac progress fallback, needs_verification) — change already in working tree, treated as current baseline.",
+  "recent_events": [
+    { "at": "2026-06-11T17:00:00Z", "event": "claimed_for_mpi64_batch2_boundary_adapter" },
+    { "at": "2026-06-11T17:45:00Z", "event": "edit_complete", "note": "One-line view-URL swap to ComfyUIController.httpBase(); user-verified." }
+  ]
+}

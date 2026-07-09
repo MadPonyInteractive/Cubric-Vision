@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1d24fd4a-3190-42b6-ae0c-fe2cad36dd59",
+  "generated_at": "2026-06-11T21:55:00Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Phase 3 Step 1 (Volume UX) DONE+verified; Step 2 (Pod start/stop) backend live-verified on L4 + app cold-start user-confirmed, boot-UX fixes done/unverified; Design A locked",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from Cubric Vision via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Phase 3 reordered Pod-start-first. Step 1 (Volume create/list/delete UX) DONE + user-verified on real RunPod account. Step 2 (Pod start/stop lifecycle) backend is LIVE-VERIFIED (wrapper /health ready on a new L4 Pod) and the app cold-start was user-confirmed (Pod starts after ComfyUI start; Pod stops on app close). Two boot-UX bugs (UI blocked during cold-boot; Pod starting before advisory dismissed) were then fixed but are NOT yet re-verified. Design A locked: PyTorch lives in the Docker IMAGE, volume holds models only. NOTHING committed. Pod is STOPPED — no GPU billing."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 design docs + Phase 2 wrapper (24/24 local + live on Pod)",
+      "Batch #1 backend RunPod client + safeStorage secret store",
+      "Batch #2 Comfy boundary adapter (remoteProxy + remoteEngineClient + httpBase seam); local byte-identical, user-verified",
+      "Batch #3/#3.1 Settings RunPod section + boot gate + volume-aware pickers; user-verified",
+      "UI polish — MpiDropdown meta truncation fix + GPU $/hr (securePrice); user-verified",
+      "Phase 3 Step 1 — Volume create/list/delete UX in Settings; USER-VERIFIED on real RunPod account (created + deleted, confirmed in web console)",
+      "Phase 3 Step 2 — Pod start/stop backend (remoteProxy /remote/pod/start|stop|stop-active) + renderer _ensureRemoteReady starts Pod + shell auto-start gate + main.js quit-stop; BACKEND LIVE-VERIFIED on L4 + app cold-start user-confirmed (Pod start after ComfyUI start, Pod stop on app close)",
+      "DESIGN LOCK — Design A: PyTorch/ComfyUI in the Docker image, volume = models only (arch-agnostic); multi-image per CUDA build covers all cards; supersedes the volume arch_family reinit gate"
+    ],
+    "pending": [
+      "Step 2 boot-UX fixes (code DONE, UNVERIFIED): advisory-gated background Pod start + suppressed fullscreen modal + start/ready toasts (6000ms) — user must re-test the cold-start flow",
+      "Step 3 — Wrapper POST /wrapper/models/install + manifest writes (Python, cubric-remote-wrapper) + GET /wrapper/models/status; start with ONE SDXL checkpoint, NOT WAN. NEEDS the updated full-contract image pushed (GHCR 502 earlier) since the new endpoint isn't in v0.1.0",
+      "Step 4 — App↔wrapper download wiring (intercept models/check → /wrapper/models/status; download trigger → /wrapper/models/install; existing download UI)",
+      "Step 5 — Manifest compatibility gate + repair/reinitialize UI (Batch #4 fold-in); NOTE arch_family gate is now superseded by Design A — update volume-manifest-schema.md",
+      "Slide-over pop-up close UX (backlog, user-deferred): opening any pop-up closes the Settings slide-over (ui:close-all-popups)",
+      "Compat-warning UI for cards no current image supports (Blackwell/cu128) — deferred until a 2nd image exists",
+      "Re-key wrapper token to new podId e4s5bxubw4qfy2 in the app secret store before any generation (current stored token is keyed to the deleted A4000 podId; Step 2 health path needs no token so this was deferred)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Step 1 ticked with verify notes; Step 2 status + boot-UX-fix notes added; Design A lock recorded as a Plan Drift entry (supersedes arch_family reinit gate); Phase 3 ordering + GPU↔PyTorch-arch constraint already recorded",
+      "events.jsonl: Step 1 done, slide-over backlog, (this handoff adds Step 2 + boot-UX events)",
+      "Standing podId updated to e4s5bxubw4qfy2 in gitignored c:/AI/Mpi/cubric-remote-wrapper/.secrets/runpod.env"
+    ],
+    "pending": [
+      "volume-manifest-schema.md must be updated to reflect Design A (arch_family field becomes informational; compatibility = image-CUDA-build vs card-arch, not a volume reinit) — requires the architectural-rule/doc edit; do at a natural break (not mid-flight)",
+      "Push the updated full-contract image ghcr.io/madponyinteractive/cubric-vision-pod (was blocked by GHCR 502) before Step 3 — the live image v0.1.0 lacks /wrapper/models/install",
+      "Fold docs/releases/UNRELEASED.md (comfy-url field removal) into release notes at next /mpi-version-bump",
+      "Re-key wrapper token to e4s5bxubw4qfy2 before generation testing"
+    ]
+  },
+  "next_action": {
+    "description": "Re-verify the Step 2 boot-UX fixes with the user (UNVERIFIED): set Settings RunPod podId = e4s5bxubw4qfy2, auto-start ON, FULLY restart Electron, then restart again — on boot the 'RunPod Active' advisory ('Got it') should appear; dismissing it should start the L4 Pod IN THE BACKGROUND with a 'Remote engine starting…' toast (UI usable, NO fullscreen Starting-ComfyUI modal), then a 'Remote engine ready' toast (~60-90s). Quit → Pod stops. This incurs live L4 billing ($0.39/hr) until quit. Once confirmed, proceed to Step 3 (wrapper /models/install — needs the updated image pushed first). Inline-sequential, no sub-agent workers, never commit unless asked.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "DESIGN A LOCKED (user, resolves a doc contradiction): PyTorch + ComfyUI live in the Docker IMAGE (/opt/comfyui per template-distribution.md:204), the network volume holds MODELS ONLY (arch-agnostic safetensors). One volume is portable across every card whose arch the booted image's CUDA build supports. New arch support = Cubric publishes another image (cu124 → Ampere/Ada/Hopper; future cu128 → Blackwell/5090). User NEVER reinitializes/recreates the volume to switch cards. This SUPERSEDES the volume-manifest-schema.md gpu_profile.arch_family Reinitialize gate (that assumed PyTorch-on-volume).",
+      "Phase 3 reordered Pod-start-first: model download needs a running Pod (wrapper is in-Pod, volume mounts at /workspace), so a minimal Pod-start slice (normally Phase 4) is pulled forward as Step 2.",
+      "Step 2 boot UX (user feedback): the 'RunPod Active' advisory is now an acknowledge dialog (MpiOkCancel, single 'Got it', showCancel:false); the BACKGROUND Pod start fires only on its dismiss (gated on auto-start ON + podId set). Remote background start suppresses the fullscreen comfy:starting modal and uses 6000ms toasts; background errors route to ui:error (not the modal-bound comfy:error). Lazy start on first generation (auto-start OFF) keeps the foreground modal.",
+      "Pod GPU type is fixed at create. A4000 was unavailable, so the existing A4000 Pod (k8pr35yto3xy7n) was DELETED and a new L4 Pod (e4s5bxubw4qfy2, EUR-IS-1) created via the RunPod REST API directly (in-app Pod-create is Phase 4), reusing the same CUBRIC_TOKEN + attaching volume cfwqthmdrg. cu124 image runs fine on L4 (Ada) — Design A proven.",
+      "Step 2 backend: POST /remote/pod/start (resume + waitForWrapperReady, tolerates 400=already-running), /remote/pod/stop, /remote/pod/stop-active (reads remoteProxy _mode.podId) all live in routes/remoteProxy.js (it already owns _mode + proxyUrl; avoids a circular import with remoteEngine). main.js stopActiveRemotePod() (8s best-effort) called in the quit-confirm path before window close; wrapper idle watchdog is the backstop.",
+      "Volume UX (Step 1): in-dropdown '+ Create volume in {DC}…' (sentinel __create__ → MpiOkCancel size prompt, default 150GB → POST /runpod/volumes); existing volumes badged '✓ Ready'; Delete button → DELETE /runpod/volumes/:id with re-download warning; _runpodErrText surfaces RunPod's real error. RunPod refuses to delete a volume attached to a Pod even when EXITED (500)."
+    ],
+    "constraints": [
+      "NOTHING is committed (never commit unless the user explicitly asks). All MPI-64 app work is uncommitted on branch RunPod (only worktree: c:/AI/Mpi/Cubric-Vision).",
+      "USER IS NAPPING ~2h. Pod e4s5bxubw4qfy2 is STOPPED (EXITED) — NO GPU billing. Only the network volume cfwqthmdrg bills storage (~$10.50/mo, expected, must stay up). Do NOT start the Pod. If the app is left open with auto-start ON + podId set, dismissing the advisory would start the Pod — user was told to close the app.",
+      "INLINE-SEQUENTIAL execution for app code — do not dispatch sub-agent workers.",
+      "RunPod secrets + standing IDs in GITIGNORED c:/AI/Mpi/cubric-remote-wrapper/.secrets/runpod.env: Pod e4s5bxubw4qfy2 (L4, EUR-IS-1, STOPPED), volume cfwqthmdrg (150GB, EUR-IS-1), template ejrwtsej15, image ghcr.io/madponyinteractive/cubric-vision-pod:v0.1.0 (public). NEVER paste the API key in chat/logs. AVOID grep on runpod.env (it echoes the key). Use Python to read secrets, never echo the key.",
+      "RunPod proxy + API are behind Cloudflare: always send a browser User-Agent (UA const exists in runpodRemote.js/remoteProxy.js/remoteEngine.js). Windows curl flakes on POST/multipart through the proxy — use Python for remote tests.",
+      "RunPod REST DELETE/stop/create return HTTP 500/4xx with a real message in {error}; create returns the Pod with desiredStatus RUNNING (a fresh Pod starts immediately — billing begins at create unless stopped).",
+      "routes/remoteProxy.js MUST stay mounted BEFORE routes/comfy.js in server.js (SSE intercept fall-through).",
+      "routes/logger.js warn/info take only (category, message); only error() takes err.",
+      "The wrapper token in the app secret store is keyed by podId (getWrapperToken returns null on podId mismatch) — re-key to e4s5bxubw4qfy2 before generation. Step 2 /health path needs no token.",
+      "DOCS WEBSITE PUSH BLOCK still applies (never push c:/AI/Mpi/Cubric Studio (Docs))."
+    ],
+    "files_modified": [
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js + .css (Step 1 volume UX: create/delete, badges, _runpodErrText, _reloadRunpodVolumes; DC-change re-renders volume slot)",
+      "routes/runpodRemote.js (UI polish: securePrice added to gpuTypes query)",
+      "routes/remoteProxy.js (Step 2: /remote/pod/start|stop|stop-active; imports client + getRunPodApiKey + waitForWrapperReady)",
+      "js/services/comfyController.js (Step 2: _ensureRemoteReady starts Pod; ensureServerRunning(opts); background mode suppresses comfy:starting + routes errors to ui:error)",
+      "js/shell.js (Step 2: _initRemoteBoot now an acknowledge dialog gating background start; boot-tail auto-start reverted to local-only; imports MpiOkCancel)",
+      "js/shell/statusBar.js (notify gained a duration param)",
+      "main.js (Step 2: stopActiveRemotePod() called in quit-confirm path)",
+      "js/components/Primitives/MpiDropdown/MpiDropdown.js + .css (UI polish: forward extraClasses to portalled list; meta scope)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Phase 3 sequence, Design A lock, Step 1/2 notes)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/template-distribution.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/wrapper-api-contract.md",
+      ".agents/mpi-kanban/tasks/MPI-64/research/volume-manifest-schema.md",
+      "routes/remoteProxy.js",
+      "routes/remoteEngine.js",
+      "js/services/comfyController.js",
+      "js/shell.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "volume + model storage", "wrapper API contract", "ComfyUI execution boundary"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-11T21:55:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (only worktree: c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/1d24fd4a-3190-42b6-ae0c-fe2cad36dd59.json and use mpi-continue. STATUS: Phase 3 is Pod-start-first. Step 1 (Volume create/list/delete UX in Settings) is DONE + user-verified on the real RunPod account. Step 2 (Pod start/stop lifecycle) backend is LIVE-VERIFIED — a new L4 Pod e4s5bxubw4qfy2 (EUR-IS-1, cu124 image, volume cfwqthmdrg) returned wrapper /health ready, and the app cold-start was user-confirmed (Pod starts after ComfyUI start, Pod stops on app close). Two boot-UX bugs were then FIXED but are NOT yet re-verified: (1) the long Pod cold-boot no longer blocks the UI (background start, no fullscreen modal, 6000ms toasts), (2) the Pod now starts only AFTER the user dismisses the 'RunPod Active' advisory ('Got it'). DESIGN A IS LOCKED: PyTorch/ComfyUI live in the Docker IMAGE, the volume holds MODELS ONLY (arch-agnostic) — one volume works on any card whose arch the booted image's CUDA build supports; new arch support = a new Cubric image; this supersedes the volume arch_family reinit gate (update volume-manifest-schema.md). NOTHING is committed (never commit unless asked). The Pod is STOPPED — no GPU billing; only volume storage bills. IMMEDIATE NEXT STEP: re-verify the Step 2 boot-UX fixes with the user (set podId e4s5bxubw4qfy2, auto-start ON, restart Electron fully twice; advisory → dismiss → background start toast → ready toast; quit → Pod stops; this incurs live L4 billing $0.39/hr until quit). Then Step 3 (wrapper /models/install — first push the updated full-contract image, GHCR 502'd earlier; v0.1.0 lacks that endpoint) and re-key the wrapper token to e4s5bxubw4qfy2 before any generation. GOTCHAS: RunPod is behind Cloudflare (browser UA required; Windows curl flakes on multipart — use Python); never paste the API key and never grep runpod.env (it echoes the key); routes/remoteProxy.js must stay mounted before routes/comfy.js; inline-sequential only, no sub-agent workers."
+}

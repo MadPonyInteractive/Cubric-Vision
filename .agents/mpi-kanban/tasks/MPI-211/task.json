@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-211",
+  "title": "Blob-404 on Stop — revoked preview URL still fetched by DOM img",
+  "description": "On Stop of a running generation, activeGenerations.end({revokePreview:true}) revokes the preview blob URL (URL.revokeObjectURL) while a DOM <img> still references it — the gallery 'Generating...' placeholder tile and/or the CUE panel running-row thumbnail (latestPreviewUrl). The browser then refetches the revoked blob and logs `GET blob:http://127.0.0.1:3000/<uuid> net::ERR_FILE_NOT_FOUND`. Cosmetic only (one failed image request, no functional impact). PRE-EXISTING — the revoke path in js/services/activeGenerations.js:103-108 is untouched by the MPI-208 queue refactor; surfaced during MPI-208 Phase-3 Stop testing (2026-07-07). Fix = revoke-AFTER-derender ordering: clear the <img> src / rebuild the placeholder+queue-panel views BEFORE revoking, or revoke on a microtask after the store broadcast so no live DOM node still points at the blob. Touch points: js/services/activeGenerations.js (end/cancel), js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js (setGenerating placeholder), js/services/generationService.js:178 (_queueSnapshotItem previewUrl), MpiQueuePanel running-row thumbnail. NOT in MPI-208 scope.\n\n=== RELATED CONSOLE NOISE (observed 2026-07-07 during MPI-208 live generation session; NOT the blob-404 bug, NOT MPI-208 — grouped here as the nearest cosmetic-console-error card) ===\n\n(1) `Failed to load resource: :3000/comfy/models/check 502 (Bad Gateway)` x2, right after CONNECT. Root cause: Pod container still booting — the pod wrapper HTTP endpoint is not up yet, returns `wrapper status 404` (logs/app.log ~17:10:34, ~35s after createPod 201), which the local /comfy/models/check route surfaces to the renderer as a 502. Transient boot-window only; every subsequent gen reconciled clean. Route: routes/comfy.js remote proxy (untouched by MPI-208). Fix idea: suppress/retry the models/check during the known Pod-ready-polling window instead of logging a hard 502, or don't fire models/check until pod ready=true.\n\n(2) `GET :3000/remote/ws-token 409 (Conflict)` + `[remoteEngine] WS token fetch failed — remote event channel unavailable` (clientLogger). Observed on the LOCAL·OFFLINE landing (remote engine 'stopped', no Pod). The renderer tried to open the remote event channel while remote is stopped → 409. Benign — no remote engine to talk to. Source: js/services/remoteEngineClient.js ws-token fetch. Fix idea: skip the ws-token fetch (or downgrade the log) when remote engine is stopped/disconnected.\n\nBoth cosmetic; no functional impact. Split into their own cards if either becomes worth a real fix — they do not share the blob-404 revoke-ordering root cause."
+,
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-07T00:00:00.000Z",
+  "updated_at": "2026-07-07T18:51:03Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

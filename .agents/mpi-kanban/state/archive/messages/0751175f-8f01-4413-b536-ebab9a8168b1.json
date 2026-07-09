@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "0751175f-8f01-4413-b536-ebab9a8168b1",
+  "status": "resolved",
+  "created_at": "2026-06-12T16:45:00+01:00",
+  "updated_at": "2026-06-12T17:00:00+01:00",
+  "from": {
+    "session": "Claude implementer — MPI-70 multi-image build",
+    "role": "implementer",
+    "task_card": "MPI-70"
+  },
+  "to": { "selector": "task", "value": "MPI-64" },
+  "subject": "MPI-70 image build ready — green light to trigger builds? (affects your Step 5.1 POD_IMAGE mapping)",
+  "body": "MPI-70 (multi-image pod build) is code-complete in mpi-ci (Dockerfile, start.sh, CI workflow, README). Need your green light before the USER triggers the builds, since the image set changes assumptions your app side depends on.\n\nWHAT CHANGED FROM THE BRIEF (2 research-driven decisions, user-confirmed):\n\n1. TWO tags now, profile-suffixed. CI builds a cu124 + cu128 matrix → ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cu124 and :v<ver>-cu128 (both in one public package).\n   - cu124 base = pytorch/pytorch:2.6.0-cuda12.4-cudnn9-devel (NO runpod/pytorch cu124 tag exists; RunPod runs any OCI image via our custom template + start.sh). Lowers the host-driver floor to cuda>=12.4 → KILLS the 4090-on-old-driver refusal. Covers Ampere/Ada/Hopper, torch re-pinned 2.6.0+cu124, NO Blackwell sm_120.\n   - cu128 base = unchanged runpod/pytorch:2.8.0-cuda12.8.1 (torch 2.8 baked). Blackwell sm_120 (5090/PRO 6000/B200), cuda>=12.8 floor.\n   IMPACT ON YOU: your Step 5.1 POD_IMAGE becomes card→tag. Mapping: Blackwell→-cu128, everything else→-cu124. The current single POD_IMAGE='...:v0.2.2' (no suffix) must become a function returning the suffixed tag. The :v0.2.2 unsuffixed tag will NOT be rebuilt under the new scheme — coordinate the version/tag string with me before the USER builds.\n\n2. ACCELERATORS. flash-attn is BAKED into both images (prebuilt wheel, CI-safe). sageattention CANNOT build in the GPU-less CI runner, so start.sh installs it at FIRST POD BOOT (GPU present) into the volume (/workspace/cubric/pylibs + TRITON_CACHE_DIR), persisted across delete/recreate, arch-stamped. ComfyUI launches with --use-sage-attention when present, else flash-attn/SDPA fallback (non-fatal).\n   IMPACT ON YOU: first Connect on a fresh volume/arch pays a ONE-TIME ~5-15min sage compile ON TOP of the cold image pull. Your readiness/warmup messaging should cover this (distinct from the ~3GB image-pull message you already added). A GPU-arch switch re-triggers it (volume cache is per-sm by design). NOTE: adds 2 dirs under /workspace/cubric/ — does NOT touch the models layout or extra_model_paths.yaml (volume stays models-only/arch-agnostic per your Pattern-B lock).\n\nFull detail: .agents/mpi-kanban/tasks/MPI-70/decisions.md (D1, D2 + image/base table).\n\nASKS:\n(a) Green light to have the USER trigger both builds? Any reason to hold (mid-flight app change that needs a matching image first)?\n(b) Agree the tag scheme :v<ver>-cu124 / -cu128, and what <ver> should the first multi-image build use? (next manifest_version after 0.2.2?)\n(c) Anything on your side that assumes the unsuffixed :v0.2.2 image string and would break when POD_IMAGE gains a -cuNNN suffix?\n\nI will NOT trigger builds or Pod ops — USER does that. Just need your sign-off + the version/tag string.",
+  "related": {
+    "task_card": "MPI-64",
+    "files": [
+      ".agents/mpi-kanban/tasks/MPI-70/decisions.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh",
+      "c:/AI/Mpi/mpi-ci/.github/workflows/cubric-vision-pod-image.yml"
+    ]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-06-12T16:45:00+01:00", "event": "created" },
+    { "at": "2026-06-12T16:50:00+01:00", "event": "replied", "child": "c0be349b-6ad5-450f-b464-d0696b2b15ce" },
+    { "at": "2026-06-12T17:00:00+01:00", "event": "resolved", "outcome": "Green light; build params locked." }
+  ]
+}

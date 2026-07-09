@@ -1,0 +1,113 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "edbb4328-d146-40af-a387-5e076bb70504",
+  "generated_at": "2026-06-27T01:50:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "v0.10.1 live-verify (4090 sage crash FIXED) → root-caused 6-min loads to torch<2.8 disabling aimdo → planned MPI-156 (torch 2.8 + externalize start.sh/wrapper to R2)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-150 Cluster A perf: ship sage + per-card VRAM (MPI-145/146) on the v0.26 floor; live-verify on real Pods. Then: make remote model loading not take ~6-7 minutes per generation (unusable for a multi-model app).",
+    "status": "in_progress",
+    "summary": "v0.10.1 built (sage gated OFF Ada / ON Blackwell, VRAM threshold >=28) and LIVE-VERIFIED: the Ada sage CUDA crash is FIXED (4090 + 5090 both generate). BUT live testing exposed the real blocker: ~6-min model LOADS. Root-caused + CONFIRMED from the live Pod log: ComfyUI v0.26's dynamic-vram allocator (comfy-aimdo v0.4.10, installed) refuses to init because torch < 2.8 → legacy ModelPatcher + --lowvram CPU-encoder = 6-min loads. The Pod Dockerfile pins torch 2.6 (cu124) / 2.7.1 (cu128, deliberately downgraded from the base's 2.8 nightly). FIX planned in MPI-156: externalize start.sh/wrapper to R2 FIRST (kill the rebuild treadmill), THEN torch 2.8 → aimdo. NOTHING implemented yet on MPI-156 — plan + card created, then this handoff."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+    "completed": [
+      "v0.10.1 images built (cu124+cu128 LOCAL, cpu CI) + pushed + pull-verified on GHCR: sage gated off sm_89 (SDPA), on sm_120; VRAM threshold >=28.",
+      "App pointed at v0.10.1 / wrapper 0.2.17 (routes/remoteProxy.js, committed 24e2803). mpi-ci committed+pushed 9810e27.",
+      "LIVE: 4090/cu124 generated a full LTX t2v (Prompt executed, video, MPI-152 card settle clean) — the Ada sage crash is FIXED. 5090/cu128 also completed (sage ON Blackwell verified).",
+      "Root-caused the 6-min loads + CONFIRMED from the live cu124 Pod boot log: 'WARNING: Unsupported Pytorch detected. DynamicVRAM support requires Pytorch version 2.8 or later. Falling back to legacy ModelPatcher' + 'comfy-aimdo version: 0.4.10'.",
+      "aimdo research (general-purpose agent, sourced from ComfyUI GitHub/blog): aimdo = silent default in v0.26 when nvidia+not-WSL+torch>=2.8; NO enable flag; --lowvram does NOT disable it (it's the fallback when aimdo is off); fp8 transformer+encoder fit 24GB with aimdo JIT fault-in; torch 2.8+cu128 / cu130 is the fix.",
+      "Externalize feasibility confirmed: image has git/curl/aria2, /workspace volume, POST /wrapper/restart-comfy live-reload; existing rclone→R2 setup (cubric-builds).",
+      "Created MPI-156 (large plan) + MPI-155 (local-engine per-card VRAM, separate) cards."
+    ],
+    "pending": [
+      "PHASE 1 (FIRST): externalize start.sh + wrapper.py to a DEDICATED public R2 bucket (cubric-pod-runtime, separate from cubric-builds per MPI-137); boot-fetch via curl with baked-in fallback; live-reload via restart-comfy; ONE rebuild to ship the bootstrap, then ~zero rebuilds.",
+      "PHASE 2: pin torch 2.8.0 stable+cu128 (cu124 can't reach 2.8 on cu124 wheels — decide: move to cu128/cu130 base, or evaluate cu130 for all GPU profiles per the log's 'cu130 for optimized ops' hint); rebuild; DROP --lowvram once aimdo confirmed initializing; re-verify baked sage still compiles against torch 2.8.",
+      "PHASE 3: reframe MPI-146 (lowvram/normalvram split is moot under aimdo); measure load-time win (target: ~6min → seconds/tens-of-seconds; fast model switch).",
+      "Commit this session's kanban drift (board + MPI-145/146/155/156 workspace) at the next mpi-end (code is already committed; only kanban is uncommitted)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-156",
+    "title": "Pod fast model loading (torch 2.8 → aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-156/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-156/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-156 plan.md holds the full sequenced plan (externalize-first → torch-2.8/aimdo → reframe), the confirmed root cause, the cu124/cu128/cu130 torch tradeoff, and Preservation Notes (gotchas to add).",
+      "MPI-145 validation.md + events record the live results: sage crashes Ada / works Blackwell; the VRAM 31GiB<32 threshold bug (fixed to >=28); v0.10.1 verdicts.",
+      "MPI-146 events note the threshold fix + that the whole lowvram/normalvram approach is reframed by aimdo.",
+      "MPI-155 created (local-engine per-card VRAM — sage risk is Pod-only/local is sage-free; only the blanket-lowvram gap remains; runtime fix, not a per-card distribution build)."
+    ],
+    "pending": [
+      "docs/gotchas.md (add via mpi-end): (a) v0.26 dynamic-vram (comfy-aimdo) needs torch>=2.8 — the Dockerfile downgraded the base's 2.8 nightly to 2.7.1 (MPI-70) which DISABLED aimdo → legacy ModelPatcher + --lowvram CPU-encoder = 6-min loads; fix=torch 2.8 stable; aimdo is default (no flag); --lowvram doesn't disable it; confirm via boot log 'requires Pytorch 2.8 ... Falling back to legacy ModelPatcher' vs 'aimdo inited for GPU'. (b) sage-attention crashes the LTX-2.3 forward on Ada sm_89 (CUDA unspecified launch failure) but runs clean on Blackwell sm_120 — gate via SAGE_DISABLED_ARCHS (env-overridable). (c) Pod VRAM total reports ~1GB under nominal (24GB→23GiB, 32GB→31GiB) — threshold must be >=28 not >=32. (d) start.sh+wrapper will be R2-fetched at boot (after MPI-156 Phase 1) — edit+push+restart, no rebuild.",
+      "Commit the kanban drift at next mpi-end (board.json, MPI-145/146 plan+validation+events, MPI-155/156 workspaces). CODE is already committed (24e2803 app, 9810e27 mpi-ci, 14f9c3e UI).",
+      "mpi-ci pod README → v0.10.1 shipped tag block (currently still references older). Update when MPI-156 ships its rebuild."
+    ]
+  },
+  "next_action": {
+    "description": "Read MPI-156 plan.md, then start Phase 1 (externalize start.sh+wrapper.py to a dedicated public R2 bucket cubric-pod-runtime: design the bucket path layout, add the image bootstrap entrypoint that curls them at boot with baked-in fallback + bash -n validation, add an rclone publish helper, then ONE user-gated rebuild to ship the bootstrap). Per the user's decision this is externalize-FIRST so Phase 2 (torch 2.8 → aimdo) iterates via fast R2 push instead of rebuilds. Do NOT skip to torch-2.8 first. Brief before code (Continue Brief gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Externalize start.sh+wrapper to R2 BEFORE the torch-2.8 work (user) — most rebuilds this session were shell/wrapper edits; externalizing makes aimdo iteration (drop --lowvram, tune reserve-vram) fast R2-pushes, not 25-min rebuilds.",
+      "Separate R2 bucket for Pod runtime (user) — NOT cubric-builds (build artifacts + models; MPI-137 already splitting models to cubric-models). New cubric-pod-runtime, public-read.",
+      "torch 2.8 is the load-speed fix, CONFIRMED from the live Pod log (not a guess) — aimdo v0.4.10 is installed but gated off by torch<2.8. cu128→torch 2.8 stable easy; cu124 can't reach 2.8 on cu124 wheels (decide base change / cu130).",
+      "sage stays gated OFF Ada / ON Blackwell (live-verified). Env-overridable via CUBRIC_SAGE_DISABLED_ARCHS for no-rebuild testing.",
+      "MPI-146 (per-card lowvram/normalvram) is largely MOOT under aimdo — reframe to 'drop the vram flags, let aimdo manage'.",
+      "Local distribution stays per-OS (NOT per-card): sage is Pod-only (local engine never installs it), so the only local gap is blanket-lowvram VRAM mode → MPI-155, a runtime fix not a new build dimension."
+    ],
+    "constraints": [
+      "RunPod branch only — NO master merge / GitHub release / git tag (MPI-131) until the public master release.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci); push IS part of the build flow. Shared git tree — commit by EXPLICIT pathspec, never git add -A/.",
+      "Pod ops + image builds are USER-GATED. cu124 + cu128 build LOCAL only (sage compile overflows the GitHub CI runner disk — see build-pod-image doc); only cpu via CI. comfyui_ref = node_lock core TAG v0.26.0 (product Dockerfile clone --branch needs the tag, not a SHA).",
+      "An image/version bump needs an APP RESTART (Express child bakes POD_IMAGE_VERSION/WRAPPER_VERSION at boot) + a FRESH Pod.",
+      "Docker: WSL ext4.vhdx never shrinks on its own — prune old image tags per build (build-pod-image Step 0); vhdx FILE shrink needs user 'wsl --shutdown' + compact. Closing the app via a clean quit tears down the Pod (teardownRemotePod, main.js:114; delete-on-quit pref); a KILLED terminal (VS Code restart) orphans the Pod → stop it manually in RunPod.",
+      "kornia stays pinned 0.8.2 — re-check it + the baked node set still import after the torch 2.8 bump (a torch bump can break pinned deps — MPI-149 lesson).",
+      "The timing-mismatch (gallery card time vs progress-bar/toast time) is a SEPARATE known issue with its own card — do not chase it in MPI-156."
+    ],
+    "files_modified": [
+      "(committed) routes/remoteProxy.js v0.10.1/0.2.17 (24e2803); mpi-ci cubric-vision-pod/{start.sh sage-arch-gate + VRAM>=28, wrapper.py 0.2.17, Dockerfile WRAPPER 0.2.17} (9810e27 pushed); .claude/commands/build-pod-image.md (8d9bcfc)",
+      "(uncommitted, kanban only) .agents/mpi-kanban/board.json; MPI-145 plan.md+validation.md+events+task.json; MPI-146 task.json+events; MPI-155/ (new); MPI-156/ (new plan+task+events)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-145/validation.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile",
+      "docs/builder/04-add-models.md (existing rclone→R2 pattern)",
+      ".claude/commands/build-pod-image.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["RunPod/remote engine", "Pod/mpi-ci", "ComfyUI engine", "LTX-2.3 authoring", "build/release"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline; shared-tree commit hygiene; mpi-ci separate repo via git -C)",
+    ".claude/rules/comfy_engine.md",
+    ".claude/commands/build-pod-image.md (cu124+cu128 LOCAL-only since v0.10.0; Step 0 disk reclaim; externalize will add an R2 publish step)",
+    "docs/gotchas.md (RunPod/remote, ComfyUI engine, LTX, aimdo/torch)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-27T01:50:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming the Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/edbb4328-d146-40af-a387-5e076bb70504.json then use mpi-continue. STATUS: v0.10.1 Pod images are built + pushed + LIVE-VERIFIED — the Ada sage-attention CUDA crash is FIXED (sage gated OFF sm_89 / ON sm_120; VRAM threshold >=28; 4090 and 5090 both generate; MPI-152 completion settle clean). Live testing then exposed the REAL blocker: ~6-minute model LOADS per generation (unusable for a multi-model app). Root cause CONFIRMED from the live cu124 Pod boot log: ComfyUI v0.26's dynamic-vram allocator comfy-aimdo (v0.4.10, INSTALLED) refuses to init because torch < 2.8 ('DynamicVRAM support requires Pytorch version 2.8 or later. Falling back to legacy ModelPatcher') → legacy ModelPatcher + --lowvram puts the 15GB Gemma encoder on CPU + streams the 42GB transformer through RAM = 6-min loads. The Pod Dockerfile pins torch 2.6 (cu124) / 2.7.1 (cu128 — it deliberately downgrades the base's 2.8 nightly, MPI-70). The fix is planned in MPI-156 (.agents/mpi-kanban/tasks/MPI-156/plan.md), a large plan with THREE SEQUENTIAL phases, sequenced by user decision as: PHASE 1 FIRST = externalize start.sh + wrapper.py to a DEDICATED public R2 bucket (cubric-pod-runtime, separate from cubric-builds which MPI-137 is splitting; boot-fetch via curl with baked-in fallback; live-reload via POST /wrapper/restart-comfy; ONE rebuild to ship the bootstrap, then ~zero rebuilds for shell/wrapper edits). PHASE 2 = pin torch 2.8 stable+cu128 (cu124 can't reach 2.8 on cu124 wheels — decide base/cu130) → aimdo initializes → DROP --lowvram → loads drop to seconds. PHASE 3 = reframe MPI-146 (lowvram/normalvram is moot under aimdo) + measure the win. NOTHING is implemented on MPI-156 yet — only the plan + card exist. Start Phase 1. CODE is already committed (app 24e2803, mpi-ci 9810e27 pushed, build doc 8d9bcfc); only the kanban drift is uncommitted (commit at next mpi-end). GOTCHAS: RunPod branch ONLY (no master/release/tag — MPI-131); mpi-ci separate repo (git -C, push is part of the build); builds USER-GATED, cu124+cu128 LOCAL only (sage overflows CI), comfyui_ref = node_lock TAG v0.26.0; image/version bump needs app restart + fresh Pod; a killed terminal orphans the Pod (stop it manually); re-check kornia 0.8.2 + baked nodes after the torch 2.8 bump (MPI-149 lesson). Brief before code (Continue Brief gate)."
+}

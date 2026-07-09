@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    { "path": "routes/netCheck.js", "note": "NEW — isNetworkDownError + checkOnline HEAD probe" },
+    { "path": "routes/downloadManager.js", "note": "offline pre-flight on download start + NDH timeout 30s" },
+    { "path": "routes/remoteProxy.js", "note": "offline pre-flight on /remote/pod/create + /reconnect" },
+    { "path": "routes/remoteModels.js", "note": "wrapperFetch fast-fail on network-down (was 32s retry)" },
+    { "path": "routes/remoteEngine.js", "note": "waitForWrapperReady bails on network-down (was 4-min poll)" },
+    { "path": "js/services/downloadService.js", "note": "offline 503 -> ui:warning toast (not error dialog)" },
+    { "path": "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js", "note": "Connect offline branch -> warning toast + hint" },
+    { "path": "js/shell.js", "note": "boot auto-connect offline branch -> StatusBar warning, stay local" }
+  ]
+}

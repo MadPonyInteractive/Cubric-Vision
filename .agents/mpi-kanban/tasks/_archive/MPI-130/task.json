@@ -1,0 +1,29 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-130",
+    "title": "User-renamable gallery cards (group customName)",
+    "description": "Let users give a gallery card a custom name via the existing card context menu. NEW FIELD: group.customName (string|null) on the ItemGroup object in project.json itemGroups[] (groups live INLINE in project.json, NOT in a .meta sidecar — only history ITEMS get sidecars; do not invent a group sidecar). Precedence everywhere: customName || <existing derive>. The card name is currently DERIVED, never user-owned: MpiGalleryGrid.js:786 reads `selected?.name || group.name || ''`. customName must WIN and STICK so the next generation into the group does not clobber it. THREE READ SITES (display only): (1) gallery card hover name — MpiGalleryGrid.js:786, prepend `group.customName ||`; (2) History breadcrumb crumb — navigation.js:244 `setGroupLabel(group?.customName || group?.name || 'Group')`; (3) MpiProjectName component is dumb (caller pushes the string) — untouched. WRITE PATH (gallery card ONLY, per user): add a 'Rename' item to the card context menu next to 'Card notes' (MpiGalleryGrid.js:913), disabled unless exactly 1 card selected. Action = swap the `.mpi-group-card__name` span for an INLINE MpiInput (focus + select-all), Enter/blur commits, Esc cancels. EMPTY/whitespace commit => customName = null (falls back to derived = the 'un-rename' affordance). Trim. Persist via updateProjectJson() (the per-file queued atomic write chokepoint — NO direct fs.writeJson) and replace the top-level state key (state.currentProject = {...state.currentProject, itemGroups:[...]}, never mutate a sub-object in place). VERIFY: project-integrity reconcile/hydrate PRESERVES the new group.customName key (group scalars come from project.json's itemGroups[] on reload — confirm the group rebuild does not drop non-enumerated keys). COORDINATION — overlaps MPI-127 (audio media type, Phase 4.5 landed today): both cards touch MpiGalleryGrid.js. MPI-127 added _swapThumbToAudio + _ensureAudioCardControls where AUDIO card-click = play/pause toggle. The inline-rename edit must stopPropagation so typing/committing on an audio card does NOT trigger audio playback, and rename must work for audio groups too (audio groups are non-click-through but still renamable via context menu). Sequence after MPI-127's MpiGalleryGrid edits settle to avoid a parallel-edit collision. ~40 lines.",
+    "column": "done",
+    "maturity": "complete",
+    "status": "accepted",
+    "created_at": "2026-06-25T11:00:00Z",
+    "updated_at": "2026-06-25T13:10:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "ui",
+        "gallery",
+        "components",
+        "project-data",
+        "needs-coordination"
+    ],
+    "priority": "medium"
+}

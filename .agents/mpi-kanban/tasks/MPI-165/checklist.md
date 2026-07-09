@@ -1,0 +1,5 @@
+# MPI-165 Checklist
+
+- [x] Resolve engine once + thread to swap and deps (FIXES THE LIVE POD BUG) — + workflow-converter loader-swap & media-stamp; live-verified both engines (commit 66efefe)
+- [x] Migrate deps + workflow to the `engines:` profile + one resolver — engines:{local,remote} on ltx-23 (legacy fields kept), engineDepsOf reads engines[].extraDeps (legacy fallback), resolveWorkflowFile + thin resolve added, swap retargeted; 13/13 tests (parity + 3 filenames + op×engine 4-combo), auto-verified
+- [x] Delete old mechanisms + fix residual unions + update docs/rule — deleted localDeps/remoteDeps/ggufWhenRemote/_toGgufFilename + legacy fallbacks; fixed hasEngineDeps gate (modelRegistry:251) + _confirmWholeUninstall/_opUninstallDepIds (MpiModelManager) + _ctxWithInstalledOps (MpiPromptBox); rewrote comfy_engine.md (§ Engine Split + briefing) + comfy_injection/component-comfy/comfy.md/dependencies.js/shared.js comments + gotchas single-resolver note; 12/12 resolver + all 6 test files green; repro proven offline. Live re-verify (user-spun Pod) PENDING.

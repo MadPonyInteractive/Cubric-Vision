@@ -1,0 +1,2 @@
+{"ts":"2026-06-26T12:00:00Z","type":"task.created","id":"MPI-144","column":"done","by":"agent","note":"--lowvram fix shipped v0.8.1, verified live on 4090."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-144", "type": "task.deleted", "at": "2026-06-28T17:30:00Z", "actor": "agent", "summary": "Archived from done column to .agents/mpi-kanban/tasks/_archive/MPI-144/ (board cleanup)."}

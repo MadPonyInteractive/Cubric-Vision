@@ -92,63 +92,13 @@
       "title": "Mpi Wan Seconds"
     }
   },
-  "637": {
-    "inputs": {
-      "frame_rate": [
-        "635",
-        2
-      ],
-      "loop_count": 0,
-      "filename_prefix": "PrevGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "776",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Preview"
-    }
-  },
   "717": {
     "inputs": {
-      "int": 9554843544356
+      "int": 9554843544358
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
-    }
-  },
-  "722": {
-    "inputs": {
-      "frame_rate": [
-        "635",
-        2
-      ],
-      "loop_count": 0,
-      "filename_prefix": "FinalGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "774",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Output"
+      "title": "Input_Seed"
     }
   },
   "723": {
@@ -165,21 +115,6 @@
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "CLIP Text Encode (Negative Prompt)"
-    }
-  },
-  "725": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 6,
-      "denoise": 1,
-      "model": [
-        "738",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
     }
   },
   "726": {
@@ -202,19 +137,6 @@
     "class_type": "ModelSamplingSD3",
     "_meta": {
       "title": "ModelSamplingSD3"
-    }
-  },
-  "731": {
-    "inputs": {
-      "step": 3,
-      "sigmas": [
-        "725",
-        0
-      ]
-    },
-    "class_type": "SplitSigmas",
-    "_meta": {
-      "title": "SplitSigmas (2 to 4)"
     }
   },
   "732": {
@@ -258,8 +180,8 @@
         0
       ],
       "sigmas": [
-        "731",
-        1
+        "918",
+        0
       ],
       "latent_image": [
         "775",
@@ -326,11 +248,11 @@
   },
   "743": {
     "inputs": {
-      "string": "a beautiful woman with black-pink gradient hair and braids, wearing a bikini, running gracefully on a sunny sandy beach, sea and sun in the background. low angle cowboy shot, ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
+      "string": "Full body shot of a woman running with her dog at a park. ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
     }
   },
   "744": {
@@ -355,12 +277,12 @@
         "751",
         0
       ],
-      "string_b": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "string_b": "\u8272\u8c03\u8273\u4e3d\uff0c\u8fc7\u66dd\uff0c\u9759\u6001\uff0c\u7ec6\u8282\u6a21\u7cca\u4e0d\u6e05\uff0c\u5b57\u5e55\uff0c\u98ce\u683c\uff0c\u4f5c\u54c1\uff0c\u753b\u4f5c\uff0c\u753b\u9762\uff0c\u9759\u6b62\uff0c\u6574\u4f53\u53d1\u7070\uff0c\u6700\u5dee\u8d28\u91cf\uff0c\u4f4e\u8d28\u91cf\uff0cJPEG\u538b\u7f29\u6b8b\u7559\uff0c\u4e11\u964b\u7684\uff0c\u6b8b\u7f3a\u7684\uff0c\u591a\u4f59\u7684\u624b\u6307\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u624b\u90e8\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u8138\u90e8\uff0c\u7578\u5f62\u7684\uff0c\u6bc1\u5bb9\u7684\uff0c\u5f62\u6001\u7578\u5f62\u7684\u80a2\u4f53\uff0c\u624b\u6307\u878d\u5408\uff0c\u9759\u6b62\u4e0d\u52a8\u7684\u753b\u9762\uff0c\u6742\u4e71\u7684\u80cc\u666f\uff0c\u4e09\u6761\u817f\uff0c\u80cc\u666f\u4eba\u5f88\u591a\uff0c\u5012\u7740\u8d70",
       "delimiter": ""
     },
     "class_type": "StringConcatenate",
     "_meta": {
-      "title": "Concatenate"
+      "title": "Concatenate Text"
     }
   },
   "751": {
@@ -369,7 +291,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "752": {
@@ -378,7 +300,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Preview_Only"
+      "title": "Input_Preview_Only"
     }
   },
   "768": {
@@ -444,7 +366,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_1"
+      "title": "Input_Lora_High_1"
     }
   },
   "788": {
@@ -458,7 +380,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_3"
+      "title": "Input_Lora_High_3"
     }
   },
   "789": {
@@ -472,7 +394,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_5"
+      "title": "Input_Lora_High_5"
     }
   },
   "790": {
@@ -486,7 +408,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_2"
+      "title": "Input_Lora_High_2"
     }
   },
   "791": {
@@ -500,7 +422,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_4"
+      "title": "Input_Lora_High_4"
     }
   },
   "792": {
@@ -514,7 +436,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_High_6"
+      "title": "Input_Lora_High_6"
     }
   },
   "793": {
@@ -528,7 +450,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "794": {
@@ -542,7 +464,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "795": {
@@ -556,7 +478,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "796": {
@@ -570,7 +492,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "797": {
@@ -584,7 +506,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "798": {
@@ -598,7 +520,7 @@
     },
     "class_type": "MpiLoraModel",
     "_meta": {
-      "title": "Lora_Low_1"
+      "title": "Input_Lora_Low_1"
     }
   },
   "823": {
@@ -636,20 +558,20 @@
   },
   "827": {
     "inputs": {
-      "int": 320
+      "int": 480
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Width"
+      "title": "Input_Width"
     }
   },
   "828": {
     "inputs": {
-      "int": 176
+      "int": 832
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Height"
+      "title": "Input_Height"
     }
   },
   "838": {
@@ -658,7 +580,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Duration"
+      "title": "Input_Duration"
     }
   },
   "883": {
@@ -703,7 +625,7 @@
     },
     "class_type": "SaveLatent",
     "_meta": {
-      "title": "SaveLatent"
+      "title": "Output_Video_Latent"
     }
   },
   "886": {
@@ -729,7 +651,7 @@
     },
     "class_type": "MpiBoolean",
     "_meta": {
-      "title": "Is_Continue"
+      "title": "Input_Is_Continue"
     }
   },
   "888": {
@@ -758,7 +680,55 @@
     },
     "class_type": "LoadLatent",
     "_meta": {
-      "title": "LoadLatent"
+      "title": "Input_Video_Latent"
+    }
+  },
+  "905": {
+    "inputs": {
+      "sigmas": "1.0, 0.92, 0.84, 0.77, 0.70"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg1"
+    }
+  },
+  "918": {
+    "inputs": {
+      "sigmas": "0.70, 0.47, 0.24, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg2"
+    }
+  },
+  "932": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "933": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "images": [
+        "776",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
     }
   }
 }

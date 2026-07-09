@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-171",
+  "title": "Settle LTX-2.3 + Wan 2.2 resolution tiers (grid rules, official sizes)",
+  "description": "Re-derived LTX_RATIOS from deep research on Lightricks LTX-2.3. Killed the /64 'silent collapse' myth in docs: LTX needs only /32 (VAE 32x spatial); the template's ImageResizeKJv2 nodes already enforce divisible_by:32. The multi-stage stage-1 downscale is MpiMath floor(a/2) (nodes 155/156) NOT the FloatConstant 0.5 -> ImageScaleBy the old doc claimed (that node isn't in the template). /32-but-not-/64 sizes run fine with a few-% output drift (LTX pads the halved latent); /64 = pixel-exact stages. New tiers snapped to Lightricks-blessed sizes: low 768x448 (training), medium 960x544 (THE canonical, all official ComfyUI JSON), high 1216x704 (inference.py default + user's live-tested winner, beat old 1280x704 on quality+audio+speed), very_high 1920x1088 (1080p prod). 1:1 = short edge of tier. 2K/4K KEPT (earlier 'motion dies' verdict was a wrong i2v-anatomy assumption): 2K 2560x1472 (Lightricks 1440p snapped /64), 4K 3840x2176 (4K-UHD snapped /64). 17:9 cinema (2048x1088, 4096x2176) recorded but NOT shipped. Files: js/utils/ratios.js (LTX_RATIOS + header comment), docs/builder/research/ltx-2.3-tiers.md (size rule + tier table + 2K/4K rewrite). WAN 2.2 (same session): grid = /16 both variants (Wan two-sampler multi-stage is NOT LTX ÷2/×2 — both samplers same res, no half-clean rule); frame 4n+1; NO native 2K/4K (720p ceiling; 4K is Wan 2.5). Revised WAN_RATIOS (14B, /16): raised very_low 320x176->512x288, low 1:1 640->512, medium 1:1 720->624 (official 480p 832x480 kept), high 1280x720 (official), very_high 1920x1088 KEPT as above-native detail/upscale band (user chose keep). NEW WAN_5B_RATIOS (5B TI2V, /32 — Wan2.2-VAE 4x32x32, UI step=32; official native 1280x704 NOT 720): 3 tiers 720p-only (low 960x544 / medium 1152x640 / high 1280x704) — no very_low/very_high, 720p is its whole band. Wired 'wan5b' into getModelRatios + RATIO_MODES (fallback medium); NOT yet attached to a shipped model card (add when 5B workflow lands). New doc docs/builder/research/wan-2.2-tiers.md + docs/README.md map pointer. VERIFIED: all tables parse + pass grid (WAN /16, WAN_5B /32, LTX /32), router routes wan5b. NOT live-tested (LTX high 1216x704 was user-verified pre-session; Wan values + LTX medium not yet run in-app).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-01T13:00:00Z",
+  "updated_at": "2026-07-02T04:00:00Z",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "ltx",
+    "resolution",
+    "ratios",
+    "research",
+    "docs"
+  ],
+  "priority": "medium"
+}

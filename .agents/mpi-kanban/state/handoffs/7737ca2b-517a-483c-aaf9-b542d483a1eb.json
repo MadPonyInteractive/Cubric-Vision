@@ -1,0 +1,116 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7737ca2b-517a-483c-aaf9-b542d483a1eb",
+  "generated_at": "2026-07-07T15:20:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-215 Model Library overlay — brainstorm + design + plan (design frozen, ready to build)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Redesign the Models page: move it from the narrow slide-over into a full-page overlay with a grid of model cards, and add Image/Video filters. Soon there will be hundreds of models.",
+    "status": "in_progress",
+    "summary": "Design fully explored, approved, and frozen as a working reference mockup. Compact plan is written and attached to MPI-215 (todo, planned). No code written yet. Fresh session runs mpi-continue to build end-to-end and matches the mockup."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-215/plan.md",
+    "completed": [
+      "Design brainstormed and approved (Option 1: Models opens overlay directly; slide-over keeps settings/hotkeys/queue).",
+      "Layout chosen: Contact Sheet (variant B) — preview-led tiles.",
+      "Full interaction model resolved: lean uniform tiles + click-to-open right-drawer detail panel.",
+      "Working reference mockup built + verified (search, media/size filters, split-block grid, video hover-play, detail panel all functional).",
+      "Compact plan written and attached; card maturity idea->planned."
+    ],
+    "pending": [
+      "Build the Model Library overlay end to end (single Implementation item in plan.md), matching the reference mockup.",
+      "Stop for user UX verification of the running overlay (verify mode: user-ux)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-215",
+    "title": "Model Library overlay",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-215/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-215/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-215/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "Plan.md carries full design spec, reference-mockup path, architecture decisions, and a Preservation Notes section listing which .claude/rules to offer updating on completion."
+    ],
+    "pending": [
+      "On completion: offer to update .claude/rules/component-mounts.md (MpiModelManager now overlay-hosted not slide-over; new detail drawer; fix the ~line 43 note calling it a slide-over content component), component-events.md (models:open -> overlay), component-state.md if new state keys added.",
+      "On completion: add an UNRELEASED changelog entry for the Model Library.",
+      "Doc-drift rule (CLAUDE.md): ask user before editing architectural rule files."
+    ]
+  },
+  "next_action": {
+    "description": "Read the reference mockup (open model-library-B.html — it is the authoritative visual + interaction spec), read plan.md, then build the Model Library overlay end to end: (1) route models:open to open MpiModelManager inside MpiOverlay body-mode instead of slide-over; (2) restyle into 'Model Library' with dark ground + Media/Size/search filters; (3) split-block grid (Installed/Available, each Image 4:5 then Video 16:9 sub-grid); (4) lean uniform tiles with inline install-state + progress bar + absolute recently-installed heat dot; (5) right-drawer detail panel INSIDE the overlay DOM reusing MpiSlideOver visual chrome (NOT its singleton) carrying moved card logic (op toggles, arch toggles, VRAM table, description, install/update/uninstall). Then stop for user UX verification against the mockup.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Models opens the full-page overlay DIRECTLY (Option 1). The app slide-over is NOT used for models anymore; it stays reserved for settings/hotkeys/queue, unchanged.",
+      "Layout = Contact Sheet: preview-led tiles, NOT an identical card grid (DESIGN.md + impeccable both ban identical grids). The mixed aspect ratios (image 4:5, video 16:9) plus split Image/Video sub-blocks provide visual rhythm without an artificial 'featured' tile.",
+      "Ragged-hole fix: within each section render an Image sub-grid then a Video sub-grid — each holds ONE aspect ratio so rows align.",
+      "Card payload (description, op toggles, arch toggles, VRAM table, disk, install/uninstall) does NOT fit a lean preview tile AND video-hover=play conflicts with hover-to-reveal. Resolution: lean tile + CLICK opens a right-drawer detail panel holding all controls.",
+      "CRITICAL stacking decision: MpiOverlay body-mode renders ABOVE MpiSlideOver (user confirmed). So the detail panel must be a drawer rendered INSIDE the overlay's own DOM (position:absolute child), reusing MpiSlideOver's visual CHROME/CSS only — NOT the app-level slide-over:open singleton (which would sit behind the overlay).",
+      "Image/Video filter reads existing model.mediaType field directly — NO data-model change, no op-prefix parsing (earlier brainstorm idea superseded).",
+      "Reuse existing MpiModelManager install/op/arch/VRAM/download logic (MPI-122/163/168/200/209) — MOVE it into the detail panel, do NOT reimplement (would regress hard-won correctness).",
+      "Recently-installed marker = heat dot ABSOLUTE on the thumb (zero layout shift). An earlier text-line marker was rejected because it changed card height and broke grid alignment.",
+      "Design tooling: the 'impeccable' skill (pbakaus/impeccable, installed globally this session) is the design authority the user wants — not the local frontend-design skill. It is model-invocable via the Skill tool now."
+    ],
+    "constraints": [
+      "CONCURRENT AGENT is editing model-installation logic inside MpiModelManager.js. Edit by content anchors (never line numbers), re-read on stale-Edit errors, re-grep after each edit, reconcile if both touched the same region. Commit by explicit pathspec, never git add -A.",
+      "This is a NEW surface: consulted docs/redesign/PRODUCT.md + DESIGN.md during design. Stage design system authoritative: mono JetBrains Mono, sharp radius (--r-1:0), heat accent theatrical-only, no hardcoded colors (use tokens from styles/01_base.css), BEM class naming, ComponentFactory.create, register CSS in preloadStyles.js, document props in types.js.",
+      "Dark surface tokens (final target from the mockup): --lib-bg oklch(0.26 0.020 350), --lib-card oklch(0.33 0.022 350), hover ~0.37. The user has a darkness tuner in the mockup; if unsure of exact value, confirm.",
+      "verify mode is user-ux: after mechanical self-verification (routing, filters, no console errors, install/download fire, tests green), STOP for the user to look at the running overlay and confirm it matches the approved mockup before marking done.",
+      "Launch the real Electron app to verify (unset ELECTRON_RUN_AS_NODE, npm start bg, poll /comfy/get-path). Screenshot the overlay + an open detail panel and compare against model-library-B.html."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/board.json (added MPI-215 to todo)",
+      ".agents/mpi-kanban/tasks/MPI-215/task.json (created; maturity planned; plan linked)",
+      ".agents/mpi-kanban/tasks/MPI-215/plan.md (created — full spec)",
+      ".agents/mpi-kanban/tasks/MPI-215/events.jsonl (created)",
+      ".agents/mpi-kanban/events.jsonl (appended task.created + task.updated)"
+    ],
+    "files_to_read_first": [
+      "C:\\Users\\Fabio\\AppData\\Local\\Temp\\claude\\c--AI-Mpi-Cubric-Vision\\d6c3f9a0-cb79-4e4b-beb8-4f38e1bd7ff8\\scratchpad\\model-library-B.html",
+      ".agents/mpi-kanban/tasks/MPI-215/plan.md",
+      "js/shell.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css",
+      "js/components/Primitives/MpiOverlay/MpiOverlay.js",
+      "js/components/Compounds/MpiSlideOver/MpiSlideOver.js",
+      "js/components/Compounds/MpiSlideOver/MpiSlideOver.css",
+      "js/data/modelConstants/models.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["components", "events", "component-mounts", "component-state", "stage-design-baseline"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/component-mounts.md",
+    ".claude/rules/component-events.md",
+    ".claude/rules/component-state.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-07T15:20:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming work on Cubric Vision task MPI-215 \"Model Library overlay\" (branch RunPod). Read .agents/mpi-kanban/state/handoffs/7737ca2b-517a-483c-aaf9-b542d483a1eb.json and .agents/mpi-kanban/tasks/MPI-215/plan.md, then run mpi-continue to build. The design is FULLY APPROVED and frozen as a working reference mockup at C:\\Users\\Fabio\\AppData\\Local\\Temp\\claude\\c--AI-Mpi-Cubric-Vision\\d6c3f9a0-cb79-4e4b-beb8-4f38e1bd7ff8\\scratchpad\\model-library-B.html — OPEN IT FIRST; it is the authoritative visual + interaction spec, and the built feature must look and behave like it. Build end to end: (1) change js/shell.js models:open (~line 344) to open MpiModelManager inside MpiOverlay body-mode instead of emitting slide-over:open; (2) restyle MpiModelManager into 'Model Library' — dark ground oklch(0.26 0.020 350)/cards oklch(0.33 0.022 350), Media (Image/Video via model.mediaType) + Size (Low/Balanced/High) + live search filters; (3) split-block grid: per section Installed then Available, each an Image sub-grid (4:5) then a Video sub-grid (16:9) so rows align; (4) lean uniform tiles — preview (image still, video plays on hover, no play button), name, category·tier, media badge, fixed-height inline state (Installed/Install/live progress bar), recently-installed heat dot absolute on the thumb; (5) a right-drawer detail panel rendered INSIDE the overlay's own DOM (NOT the app slide-over singleton — overlays stack ABOVE the slide-over, so a real slide-over would be hidden behind) reusing MpiSlideOver's visual chrome, opened on tile click, carrying the EXISTING MpiModelManager card logic MOVED here: description, Operations toggles (MPI-122), GPU-weight arch toggles (MPI-200/209, video/arch models only), VRAM->RAM table (MPI-168, video only), disk size, Install/Update/Uninstall. CRITICAL: a concurrent agent is editing model-installation logic in MpiModelManager.js — edit by content anchors, re-read on stale errors, re-grep after each edit. Reuse existing install/download logic; do not reimplement it. Follow Stage design tokens (styles/01_base.css), BEM, ComponentFactory, register CSS in preloadStyles.js, document props in types.js — no hardcoded colors. Verify mode is user-ux: after self-verifying routing/filters/no-console-errors in the real Electron app and screenshotting the overlay, STOP for the user to confirm it matches the mockup before marking done."
+}

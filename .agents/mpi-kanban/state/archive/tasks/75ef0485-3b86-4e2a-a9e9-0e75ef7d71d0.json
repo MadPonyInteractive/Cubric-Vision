@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/coordination-task/v1",
+  "id": "75ef0485-3b86-4e2a-a9e9-0e75ef7d71d0",
+  "title": "MPI-64 RunPod Remote Engine — app integration (Batches #2-#4, Phases 3-5)",
+  "status": "in_progress",
+  "task_card": "MPI-64",
+  "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "heartbeat_at": "2026-06-11T17:00:00Z",
+  "file_claims": [
+    ".agents/mpi-kanban/state/files/35fac019-1910-4796-a8bf-7fdac9399c8f.json",
+    ".agents/mpi-kanban/state/files/84a09e8b-ece9-4ffd-8917-042c217150d3.json",
+    ".agents/mpi-kanban/state/files/ac1a8f71-e411-4c5b-9291-22b5d49957a5.json",
+    ".agents/mpi-kanban/state/files/8f1f4097-8a47-4c45-b6a7-3453f188d29d.json",
+    ".agents/mpi-kanban/state/files/55acff2c-c115-4c1b-9dce-b34d81ac9db9.json"
+  ],
+  "allowed_actions": ["coordinate", "claim_files", "handoff"],
+  "recent_events": [
+    { "at": "2026-06-11T16:45:00Z", "event": "task_attached", "summary": "Attached after handoff 886fe559. Next: Batch #1 npm-start smoke-test confirmation, then Batch #2 Comfy boundary adapter (brief-before-code, local mode byte-identical)." }
+  ]
+}

@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-125","at":"2026-06-24T07:42:25Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-125","at":"2026-06-24T08:06:10Z","actor":"claude","summary":"Rescoped: clip knob is per-TEMPLATE not per-LoRA. Wan=model-only nodes->drop Clip from UI; LTX=clip-capable loaders->keep Strength+Clip."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-125","at":"2026-06-24T08:10:00Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up: model-only LoRA settings UI."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-125","at":"2026-06-24T08:10:30Z","actor":"claude","from":"doing","to":"done","summary":"Shipped loraStrengths flag (Wan=[model]); _buildStrengthsRow hides Clip; CSS width cap fixes clipping. Verified live: Wan 12 slots Model-only, SDXL both."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-125", "type": "task.deleted", "at": "2026-06-28T17:30:00Z", "actor": "agent", "summary": "Archived from done column to .agents/mpi-kanban/tasks/_archive/MPI-125/ (board cleanup)."}

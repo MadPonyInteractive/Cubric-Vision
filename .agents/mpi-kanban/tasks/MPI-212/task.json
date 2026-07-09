@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-212",
+  "title": "Image-required op guard + Reuse-Prompt image gating (PiD upscaler)",
+  "description": "Two related fixes surfaced by the NVIDIA PiD Upscaler — our FIRST image-only model (its ONLY op is 'pid'/upscale, requiresImages:1). Prior models always had a no-image op (t2i/t2v) to fall back to, so an op with a REQUIRED media slot never got queued empty.\n\nBUG 1 — false no-image job wedges the queue: pressing Q (Cue) on PiD with no image chip queued a job that only failed its required-slot guard at DISPATCH (the guard lived in startGeneration, not enqueue). The bad job sat pending, then desynced the prompt-bar isGenerating flag → Stop/Clear disabled over a stuck queue. FIX: validate the required media slot at ENQUEUE, before the job enters _cueQueue — toast + no-op. Extracted _findMissingMediaSlot()/_warnMissingMediaSlot() shared by both the new enqueue guard and the refactored dispatch-time guard. Rejected enqueue also nudges _emitPromptBoxGenerationEndIfIdle() so the Cue button's optimistic isGenerating flips back. (js/services/generationService.js)\n\nBUG 2 — Reuse Prompt injects an empty image slot: reusing a t2i (no input image) onto PiD with Use Model OFF tried to reuse images from a source that has none → 'No saved frame images' warning + an unrunnable image-required op → then Bug-1's 'Add an image' toast. Two misleading toasts. FIX (user-directed): a card generated WITHOUT an input image never offers/attempts image reuse. New payloadHasReusableImages(payload) (promptReuse.js). Apply-path (both blocks) runs the images branch only when the source has a reusable image — this is the load-bearing fix for the NO-DIALOG path (Settings default ask:false, images:true — the dialog never shows). Dialog (ask:true) greys + unchecks 'Use Images' for such sources, re-gated live on Original/Current switch. (promptReuse.js, MpiReusePromptDialog.js, MpiGalleryBlock.js, MpiGroupHistoryBlock.js)\n\nNOT MINE — a separate queue-lifecycle bug found during the same live test (completed PiD upscale job does not DRAIN from the Cue; stays 'running') is MPI-208 scope. Messaged that agent (state/messages/6d4e3f09-…). Do NOT fix it here.\n\nSTATUS: code shipped. Reuse gating + enqueue toast LIVE-VERIFIED by user this session (Use Images greyed for t2i source; correct toast; upscale ran after dragging an image). UNCOMMITTED.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-07T10:33:38Z",
+  "updated_at": "2026-07-07T10:41:35Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

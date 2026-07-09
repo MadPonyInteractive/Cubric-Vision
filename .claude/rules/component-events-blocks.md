@@ -15,10 +15,12 @@ EMITS:   `open-group`      `{ group: ItemGroup }`
          `gc-group`        `{ group: ItemGroup }`
          `gc-remove`       `{ groupId: string }`
          `favourite`       `{ group: ItemGroup, favourite: boolean }`
+         `rename`          `{ group: ItemGroup }` — user set `group.customName` via the context-menu **Rename** action (inline MpiInput swaps the card name span; Enter/blur commits, Escape cancels, empty clears to derived). Block persists via `updateGroup(group)`. Precedence `group.customName || derived` at all name read sites.
          `reuse`           `{ positive: string, negative: string }`
          `select`          `{ group: ItemGroup, selected: boolean }`
          `media-missing`   `{ group: ItemGroup, itemId: string }`
          `combine`         `{ groups: ItemGroup[] }` — Combine chosen from context menu (≥2 selected, all `type === 'video'`; click-order via Set insertion)
+         `add-to-project`  `{ groups: ItemGroup[] }` — "Add to project" from context menu (any selection ≥1). Block copies each group's selected item into a chosen OTHER project.
          `selection-start` `{}` — selection mode activated (hide PromptBox)
          `selection-end`   `{}` — selection mode exited (show PromptBox)
          `preview:continue`     `{ group: ItemGroup, item: MediaItem }` — Continue button on preview-stage card. Block runs `validatePreviewAssets(item.id)` first. Fast path: enqueue stage-2 with `isStage2: true` and NO `replaceItemId` (final lands as a NEW gallery card; preview stays). Cold fallback: enqueue stage-1 rerun (`previewOnly: true`, `replaceItemId: item.id`) to rebuild the latent in place; then on `gallery:item-updated` auto-enqueue the stage-2 branch. Blocked: toast + no-op. Gated by `commandAllowsBranchingContinue(item.operation)` — button is hidden when the op disallows branching.
@@ -57,7 +59,7 @@ LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea v
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
 API:     `el.getRunPayload()` returns the current live run payload. Loop re-fire reads it via `getNextGeneration` callback so prompt/model/control changes apply to the next iteration.
          `el.setModel(model)` / `el.setModelList(list)` auto-pick `activeOperation` for current media context (image/video counts) and emit `operation-change` when the picked op differs. Block-side `model-change` listeners must NOT force-reset op to `model.supportedOps[0]` — only override when current op is unsupported by the new model.
-         `el.injectMedia({ url, mediaType, role? })` adds one item to the strip (overflow evicts oldest of same type). Optional `role` ('startFrame' | 'endFrame') is honored by `_withAssignedRoles` so role-tagged chips map to their slot regardless of insertion order. Bulk callers should query `el.remainingCapacity(mediaType)` first and inject only that many — exceeding capacity silently evicts earlier items, which is rarely what bulk drops want.
+         `el.injectMedia({ url, mediaType, role?, name? })` adds one item to the strip (overflow evicts oldest of same type). Optional `role` ('startFrame' | 'endFrame') is honored by `_withAssignedRoles` so role-tagged chips map to their slot regardless of insertion order. Optional `name` is the user-facing chip label (a card's `customName`/derived name); it is threaded through `_tryAddMedia` → `item.name` and MUST also be serialized by `_saveMedia` (and re-passed on restore) or the label reverts to the filename after workspace nav. Bulk callers should query `el.remainingCapacity(mediaType)` first and inject only that many — exceeding capacity silently evicts earlier items, which is rarely what bulk drops want.
          `el.getMediaByRole(role)` returns the chip currently tagged with that role, or `null`.
          `el.removeMediaByRole(role)` drops the role-tagged chip from `_media`.
          `el.swapMediaRoles(roleA, roleB)` swaps role tags on existing chips (no re-upload).
@@ -67,6 +69,7 @@ REMOUNT: On fresh mount, `_renderRunCluster` reconciles `isGenerating` against B
 
 ### MpiGalleryBlock (Block — js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js)
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
+GRID HANDLER: `grid 'add-to-project'` — `listProjects()` (excludes `state.currentProject.id`; toast if none), builds `cards[]` from each group's `getSelectedItem`, mounts `MpiAddToProject` (dropdown) on demand; on confirm POSTs `/project-media/:targetId/add-from-cards` `{ folderPath, cards }` and emits `ui:success`. Copy, not move — source untouched.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
          `state:changed` (`s_installedModelIds`) — mounts/unmounts PromptBox based on installed model count; emits `models:open` if no image models (zero-model gate)
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
@@ -81,6 +84,7 @@ EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on 
          `models:open` — when zero image models installed
          `gallery:item-updated` `{ groupId, item, group }` — fired by `generationService` after a `replaceItemId` run mutates an existing history slot (preview → final). Block listens and refreshes the matching card via `grid.el.refreshGroup(group)`; clears any continuing-state flag.
          `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
+         `grid.on('rename')` handler: `({ group }) => updateGroup(group)` — persists `group.customName` (same path as `grid.on('favourite')`). customName lives inline in `project.json` `itemGroups[]`; `persistGroups()` must whitelist the key (it is not spread).
          `grid.on('combine')` handler: POSTs `/combine-videos { folderPath, itemIds, jobId }` (item ids derived from each group's `getSelectedItem`); awaits `trackConcatJob`; on success creates fresh video group via `createVideoItem` + `createItemGroup` + `addGroup`, then snapshots pre-add `currentGroups` and calls `grid.el.setGroups([populated, ...currentGroups])` so the new card appears immediately (keyed reuse preserves existing cards' DOM/state). Errors truncated to first line / 160 chars via `ui:error`. Full ffmpeg stderr stays in `logs/app.log`.
 NOTE:    Reads `state.s_selectedModelIdByType` (via `resolveActiveModel('image')`), `state.currentProject`; writes selected model via `setSelectedModelId(model.mediaType, id)` (in `js/utils/modelHelpers.js`), `state.currentProject`. NEVER writes at mount time.
          On mount: rehydrates from `activeGenerations.listFor('gallery', null)` — placeholder card shown immediately with cached preview. After PromptBox mount, also calls `_refreshPbGenerating()` so Stop/Clear buttons restore enabled state when remounting mid-flight (e.g. returning from History while a gallery-scoped job is still running). `_refreshPbGenerating` busy predicate = `_continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0 || stage2Total > 0 || activeGenerations.listFor('gallery', null).some(e => e.status === 'running')`.

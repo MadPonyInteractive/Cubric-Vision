@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-69","at":"2026-06-12T11:12:58.596Z","actor":"vscode","summary":"Created MPI-69."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-69","at":"2026-06-16T07:35:20.178Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-69 from To do to To do."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-69", "type": "task.deleted", "at": "2026-06-28T17:40:00Z", "actor": "agent", "summary": "Archived (icebox): high-VRAM model variants, user-excluded (MPI-150), idea-only, never developed."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-69", "type": "task.deleted", "at": "2026-06-28T17:40:00Z", "actor": "agent", "summary": "Workspace archived to .agents/mpi-kanban/tasks/_archive/MPI-69/ (board cleanup 2026-06-28)."}

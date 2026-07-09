@@ -25,6 +25,12 @@ const FILES = {
   releasesDir: rel('docs', 'releases'),
   systemDependencies: rel('dev_configs', 'system_dependencies.json'),
   preReleaseTest: rel('scripts', 'pre_release_test.py'),
+  dependencies: rel('js', 'data', 'modelConstants', 'dependencies.js'),
+  // The product Pod's start.sh is in the SIBLING mpi-ci repo. It hardcodes the
+  // extra_model_paths.yaml ComfyUI reads on the volume. MPI-143: a model whose
+  // dep `filename` targets a folder type NOT mapped here => ComfyUI can't see the
+  // file => silent "Output will be ignored" => gen "succeeds" but saves nothing.
+  podStartSh: path.resolve(REPO_ROOT, '..', 'mpi-ci', 'cubric-vision-pod', 'start.sh'),
 };
 
 const failures = [];
@@ -361,6 +367,41 @@ async function checkPreReleaseEngineSource() {
   }
 }
 
+// MPI-143 guardrail: every ComfyUI folder type a model dep installs into MUST be
+// mapped in the product Pod's extra_model_paths.yaml (hardcoded in mpi-ci
+// start.sh). Otherwise ComfyUI on the Pod can't enumerate the on-volume file =>
+// validation drops the node's output => remote gen "succeeds" but writes nothing.
+async function checkPodModelPaths() {
+  let startSh;
+  try {
+    startSh = await readText(FILES.podStartSh);
+  } catch {
+    // mpi-ci not checked out alongside (e.g. app-only CI) — skip, don't fail.
+    console.warn(`Skipping Pod model-paths check: ${FILES.podStartSh} not found (mpi-ci sibling repo absent).`);
+    return;
+  }
+  const depsText = await readText(FILES.dependencies);
+  // Folder type = first path segment of each dep `filename:` (e.g.
+  // 'latent_upscale_models/x.safetensors' -> 'latent_upscale_models').
+  const folderTypes = new Set();
+  for (const m of depsText.matchAll(/filename:\s*['"]([^'"\/]+)\//g)) {
+    folderTypes.add(m[1]);
+  }
+  // 'custom_nodes' installs are handled by the node-lock clone path, not the
+  // model yaml — they map under comfyui/custom_nodes/, which start.sh already has.
+  folderTypes.delete('custom_nodes');
+  // yaml keys mapped in start.sh (lines like `  latent_upscale_models: mpi_models/...`).
+  const mapped = new Set();
+  for (const m of startSh.matchAll(/^\s+([a-z0-9_]+):\s*mpi_models\//gm)) {
+    mapped.add(m[1]);
+  }
+  for (const ft of folderTypes) {
+    if (!mapped.has(ft)) {
+      fail(`Pod extra_model_paths.yaml (mpi-ci start.sh) does not map model folder type '${ft}', but dependencies.js installs a model there. ComfyUI on the Pod will not see it -> remote gen silently produces no output (MPI-143). Add '  ${ft}: mpi_models/${ft}/' to start.sh.`);
+    }
+  }
+}
+
 async function main() {
   try {
     const { appVersion, schemaVersion } = await checkVersions();
@@ -368,6 +409,7 @@ async function main() {
     await checkSchema(schemaVersion);
     await checkOperations();
     await checkPreReleaseEngineSource();
+    await checkPodModelPaths();
   } catch (err) {
     fail(err.message);
   }

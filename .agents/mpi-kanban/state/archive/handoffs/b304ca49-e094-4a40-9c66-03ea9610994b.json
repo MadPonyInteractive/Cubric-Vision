@@ -1,0 +1,109 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b304ca49-e094-4a40-9c66-03ea9610994b",
+  "generated_at": "2026-06-27T17:35:00Z",
+  "from_session": "MPI-156 resumed session (from handoff a57fe80c) — built + live-proved Option A, closed MPI-156, pushed both repos",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-156 DONE (Option A cu126-guts live-proven on 4090+A4500, both repos pushed). Two remote-engine follow-ups folded into MPI-156, NOT yet fixed: (1) progress SSE idle-abort ~128s; (2) local gen wedges after Pod disconnect. ~2.5wk runway, NO subscribers yet → no release pressure; fix the long tail then ship clean.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Make remote model loading fast (not ~6-7 min/gen). Externalize start.sh/wrapper to R2 first, then torch 2.8 -> aimdo. Then bring aimdo to the broad (non-Blackwell) GPU profile.",
+    "status": "complete",
+    "summary": "MPI-156 is DONE. Phases 1 (R2-externalize) + 2 (torch 2.8 -> aimdo) shipped + live-verified. Option A (broad profile = cuda12.6 base + torch 2.8.0+cu126, tagged cu124) is BUILT (v0.10.3-cu124, pushed+public) and LIVE-PROVEN on a 4090 (drv 580) AND an A4500 (drv 550): aimdo inits on both arches, fast dynamic-VRAM loads, image+video gens complete server-side. Driver-floor lowered (550-host accepts cu126; cu128 would refuse) = wider host coverage. Both repos pushed. NEXT WORK = two known remote-engine bugs folded into MPI-156 (no new card per user)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+    "completed": [
+      "Option A build: rebuilt the cu124-TAG profile on base pytorch:2.6.0-cuda12.6-cudnn9-devel + torch 2.8.0+cu126 (the original bk1yutk3y build had DIED at the prior session boundary — registry confirmed manifest-unknown; rebuilt as task bnw24mn44, exit 0). In-image verify asserted torch 2.8.0+cu126 / cuda 12.6 / sage OK. Pushed v0.10.3-cu124 to GHCR, manifest live+public.",
+      "LIVE 4090 (drv 580.126.20, CUDA 13.0, Ada sm_89): boot log 'comfy-aimdo inited for GPU: RTX 4090' + DynamicVRAM enabled; torch 2.8.0+cu126; t2v+audio 'Prompt executed in 132.31s / 300.89s'. sage gated OFF (sm_89, MPI-145) -> SDPA.",
+      "LIVE A4500 (drv 550.127.05, CUDA 12.4, Ampere sm_86): 'comfy-aimdo inited for GPU: RTX A4500' + DynamicVRAM; sage ON ('sageattention enabled for sm_86', backend sageattention) ran clean under SDXL gen 'Prompt executed in 59.29s'. THIS host (drv 550) proves the lower floor — cu128 (cuda>=12.8, ~r570) would have refused it; cu126 (cuda>=12.6 + 470/535/550 fwd-compat carve-outs) accepted it.",
+      "App pin committed+pushed: routes/remoteProxy.js POD_IMAGE_VERSION v0.10.2->v0.10.3 AND WRAPPER_VERSION 0.2.17->0.2.18 (handoff a57fe80c's edit had MISSED the wrapper bump — caught+fixed). Commit 1e8a45d.",
+      "mpi-ci committed+pushed (main, origin updated d5bba40..eb2df6e): Dockerfile cu124->cuda12.6 base + torch 2.8.0+cu126 (eb2df6e), + the earlier unpushed backlog incl 21bc929 curl-fix (reproducibility-critical), ba55268 cu128 torch 2.8, 7c006fb, ee9bdae.",
+      "MPI-156 card moved doing->done (board.json + task.json maturity=complete/status=accepted + task.moved events in both logs). validation.md appended with the full 4090+A4500 live proof + driver-floor proof + the two follow-up investigations. gotchas.md +2 entries (cu124-tag/cu126-guts split; SSE-idle + local-wedge). MEMORY.md MPI-156 line rewritten to DONE. build-pod-image.md cu124 base corrected cuda12.4->cuda12.6 (cd94304).",
+      "App RunPod pushed b9ec6c6..cd94304 (incl 860412e completion-fix from the prior session, the pins, the docs/close commits)."
+    ],
+    "pending": [
+      "FOLLOW-UP 1 (folded into MPI-156, NO new card) — remote progress SSE idle-abort: routes/remoteProxy.js GET /comfy/events/stream is a dumb Readable.fromWeb(upstream.body).pipe(res) with NO keepalive. During quiet sampling/load stretches the upstream wrapper SSE emits nothing >~128s and the socket is reaped -> '[runpod] remote SSE stream aborted: terminated' fires at a ~128s cadence -> the live progress bar FREEZES while connected (gen still completes server-side). FIX: emit a ':ping\\n\\n' SSE comment every ~15-30s in the relay (setInterval, cleared on req close / nodeStream error). Small, low-risk. NOTE the progress-bar agent (MPI-147) is actively reworking progress UI — coordinate via mpi-message before touching progress code so you don't collide.",
+      "FOLLOW-UP 2 (folded into MPI-156, NO new card) — local gen WEDGES after Pod disconnect+delete: sequence local-works -> connect Pod -> disconnect+DELETE -> local gen HANGS (zero [comfy] log lines; full app restart clears it). All three pieces are INDIVIDUALLY correct: remoteProxy delete-active/stop-active -> setRemoteMode({active:false}) (~L858/881); remoteEngineClient.refresh() reads /remote/mode -> clears _active (L40); comfyController._ensureReady local path ALREADY relaunches ComfyUI if !status.running (~L278-292). The wedge is a TIMING/ORDER edge: the renderer's isRemote() (comfyController.js ~L226 'if isRemote() return _ensureRemoteReady') was still true at the post-delete gen -> took the REMOTE branch against the dead Pod -> hung, never reaching local-start. CANNOT be pinned from app.log alone — needs the RENDERER CONSOLE at hang-time (what isRemote()/refresh() returned, whether refresh ran before that gen). REPRO: connect a Pod, run a remote gen, disconnect+DELETE, then immediately try a LOCAL gen with DevTools console open. FIX DIRECTION: make return-to-local self-healing — in _ensureReady, if isRemote() but the wrapper is unreachable (Pod gone), force remoteEngineClient.refresh() + fall through to local-start; a gen must never block on a torn-down engine. Also check whether delete-active proactively emits remote:connection {connected:false} the renderer acts on.",
+      "OPTIONAL polish: the cu124->cu126 TAG/profile RENAME (deferred Dockerfile TODO). Touches mpi-ci Dockerfile branch + BASE_IMAGE arg + build matrix + routes/remoteProxy.js podImageForCard suffix + README tags + rollback-tag matching. Only worth doing when you're in that code anyway — purely cosmetic (the image already works tagged cu124).",
+      "OPTIONAL: Phase 3 formal measurement of the load-time win (was ~6min, now seconds) if you want the number documented. MPI-146 already reframed (vram-flag split moot under aimdo)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-156",
+    "title": "Pod fast model loading (torch 2.8 -> aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+    "column": "done",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-156/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-156/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-156/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "validation.md = full live-proof record (4090+A4500 table, driver-floor proof, both follow-up investigations with root-cause + fix direction).",
+      "gotchas.md = cu124-tag/cu126-guts split entry + the SSE-idle/local-wedge entry + the existing aimdo/torch/--normalvram/completion-hang/sage-arch entries.",
+      "MEMORY.md MPI-156 line = DONE state + the two open follow-ups + unpushed->pushed status.",
+      "build-pod-image.md cu124 recipe corrected to cuda12.6 base."
+    ],
+    "pending": [
+      "When FOLLOW-UP 1 or 2 is fixed: add a 'FIXED' note to the gotchas.md SSE-idle/local-wedge entry + the MPI-156 validation.md follow-up section, and update the MEMORY.md MPI-156 line.",
+      "If the cu124->cu126 rename ever happens: update the gotchas cu124-tag/cu126-guts entry to past-tense + the build-pod-image recipe + remoteProxy podImageForCard."
+    ]
+  },
+  "next_action": {
+    "description": "MPI-156 is DONE + pushed — no resume needed on it. NEXT session picks up the two folded follow-ups (both remote-engine, both need a LIVE Pod to verify). Start with whichever the user prefers. RECOMMENDED order: (1) the local-gen-wedge-after-disconnect (more user-visible, restart-only workaround is bad UX) — repro with DevTools console open (connect Pod, remote gen, disconnect+DELETE, then local gen) to confirm isRemote()/refresh() timing, then add the self-healing return-to-local guard in comfyController._ensureReady; (2) the SSE idle-abort heartbeat in remoteProxy /comfy/events/stream (':ping' every ~15-30s). COORDINATE with the progress-bar agent (MPI-147 'LTX Progress Bar', actively editing js/services/progressAggregator.js + generationService.js + commandExecutor.js + new progressStages.js/phaseProgress.js + routes/comfy.js) via mpi-message BEFORE touching any progress/SSE code — shared tree, real collision risk. No release pressure (no subscribers yet, ~2.5wk runway to ~July 9 public-master target). Brief before code (Continue Brief gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Option A CONFIRMED in production: broad profile = cuda12.6 base + torch 2.8.0+cu126; aimdo gate is torch>=2.8 ONLY (no torch.version.cuda check) so the cu126 wheel passes -> aimdo on a lower driver floor (~r550/r560) than cu128 (r570). PROVEN, not theory: A4500 on drv 550 connected+ran.",
+      "Profile KEY+tag STAYS 'cu124' (it's a cu126 image wearing a cu124 label, ON PURPOSE). Rename deferred to avoid touching podImageForCard suffix logic + rollback-tag matching. DON'T 'fix' the name.",
+      "The original bk1yutk3y build had genuinely DIED at the prior session boundary (registry was manifest-unknown). A late mpi-message from the other agent claimed it completed — that was stale/wrong; my rebuild (bnw24mn44) is what shipped the live image. Same Dockerfile/tag, idempotent, so outcome identical; only one build ever ran (no double-build).",
+      "Two bugs found during testing are NOT regressions and NOT caused by the v0.10.3/cu126 work (ruled out by chronology — local gens worked mid-session with the same committed code — and mechanism — the pins are two strings read only by podImageForCard + the wrapper env). They are pre-existing remote-relay gaps the harder testing surfaced.",
+      "No new cards (user directive — card sprawl). Both follow-ups live INSIDE MPI-156 (validation.md + gotchas.md).",
+      "No release pressure: zero Pro/Early-Access Patreon subscribers yet; ~2.5 weeks to the ~July 9 first-public-master target. Fix the long tail, ship clean. RunPod branch ONLY (no master merge / GitHub release / git tag — MPI-131)."
+    ],
+    "constraints": [
+      "SHARED TREE + a SECOND AGENT active on the progress bar (MPI-147). Commit ONLY your pathspec, NEVER git add -A/.; the progress-bar agent owns js/services/progressAggregator.js, generationService.js, commandExecutor.js, routes/comfy.js, statusBar.js, js/data/progressStages.js, js/services/phaseProgress.js, MPI-147/*, state/events.jsonl. mpi-message before touching progress/SSE code.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci). Push IS done for this session (both repos pushed). Future pushes user-gated.",
+      "Pod ops + image builds USER-GATED. cu124 + cu128 GPU profiles build LOCAL-only (sage overflows CI); only cpu via CI. A killed terminal orphans the Pod — stop it manually in RunPod. Image/version bump needs an APP RESTART (POD_IMAGE_VERSION bakes at Express-child boot) + a FRESH Pod.",
+      "Git-Bash curl on Windows: looped 'curl -o' against pod.cubric.studio returns false HTTP 000 (schannel). Verify public R2 with a single verbose curl or rclone S3 API.",
+      "Both follow-ups need a LIVE Pod to verify (renderer console for the wedge; a real remote gen for the SSE heartbeat). Pod creation is user-gated."
+    ],
+    "files_modified": [
+      "(committed+pushed) app RunPod: routes/remoteProxy.js (1e8a45d pin v0.10.3 + wrapper 0.2.18), .claude/commands/build-pod-image.md (cd94304 cu126 base), docs/gotchas.md + all MPI-156 kanban (1e4302b close), 860412e comfyController completion-fix (prior session, now pushed)",
+      "(committed+pushed) mpi-ci main: cubric-vision-pod/{Dockerfile, wrapper/wrapper.py, start.sh} (eb2df6e) + 21bc929 curl-fix + ba55268 cu128-torch-2.8 + 7c006fb + ee9bdae",
+      "(NOT mine — other agent, left uncommitted in the working tree) js/services/{progressAggregator,generationService,commandExecutor}.js, routes/comfy.js, js/data/progressStages.js, js/services/phaseProgress.js, .agents/mpi-kanban/tasks/MPI-147/*, .agents/mpi-kanban/state/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-156/validation.md (the two follow-up sections at the bottom = the next work, with root-cause + fix direction)",
+      "docs/gotchas.md (search 'SSE idle-abort' + 'cu126 guts' + 'aimdo')",
+      "js/services/comfyController.js (~L218-298 _ensureReady: the L226 isRemote() branch + the L278-292 local-start path = where the wedge fix goes)",
+      "routes/remoteProxy.js (~L1403-1444 /comfy/events/stream relay = where the SSE heartbeat goes; ~L853-889 delete-active/stop-active = remote-mode reset)",
+      "js/services/remoteEngineClient.js (~L40-73 refresh()/isRemote())"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["RunPod/remote engine", "ComfyUI engine", "Pod/mpi-ci", "build/release"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline MPI-131; shared-tree commit-by-pathspec; mpi-ci separate repo via git -C; push user-gated)",
+    "docs/gotchas.md (RunPod/remote, aimdo/torch, cu126-guts, SSE-idle/local-wedge, completion-hang, sage-arch, schannel-curl)",
+    ".claude/commands/build-pod-image.md (cu124+cu128 LOCAL-only; cu124 base now cuda12.6)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-27T17:35:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/b304ca49-e094-4a40-9c66-03ea9610994b.json then use mpi-continue. STATUS: MPI-156 is DONE + pushed. Option A — the broad/low-driver-floor GPU profile (4090/Ampere/Hopper, tagged 'cu124' but cu126 INSIDE: base cuda12.6 + torch 2.8.0+cu126) — was built (image v0.10.3-cu124, public on GHCR) and LIVE-PROVEN on a 4090 (driver 580) AND an A4500 (driver 550): ComfyUI v0.26's comfy-aimdo allocator inits on both, model loads dropped from ~6min to seconds (dynamic VRAM), and full image + video gens complete. The A4500's driver-550 host proved the LOWER FLOOR — a cu128 image (cuda>=12.8) would have refused that host, a cu126 image (cuda>=12.6 + 470/535/550 fwd-compat) accepted it = wider host coverage, Option A's whole purpose. sage runs ON for Ampere sm_86 (A4500), gated OFF for Ada sm_89 (4090, MPI-145). Both repos are PUSHED (app RunPod + mpi-ci main incl the curl-fix). The card is closed (done/complete), validation.md + gotchas.md + MEMORY + build-pod-image.md all updated. THE NEXT WORK = two remote-engine bugs found during testing, FOLDED INTO MPI-156 (the user does NOT want new cards): (1) the remote PROGRESS SSE idle-aborts at a ~128s cadence — routes/remoteProxy.js GET /comfy/events/stream is a dumb pipe with NO keepalive, so the upstream wrapper SSE going quiet during long sampling/load reaps the socket -> the live progress bar freezes WHILE CONNECTED (the gen still finishes server-side). Fix = emit a ':ping' SSE heartbeat every ~15-30s in that relay. (2) a LOCAL gen WEDGES after you disconnect+DELETE a Pod (local gens then hang with zero ComfyUI log lines until a full app restart) — the renderer took the remote branch (comfyController.js ~L226 'if isRemote() return _ensureRemoteReady') against the now-dead Pod instead of the already-present local-relaunch path (~L278-292); it's a timing/order edge that needs the RENDERER CONSOLE at hang-time to pin (repro: connect Pod, remote gen, disconnect+DELETE, then local gen with DevTools open). Fix direction = make return-to-local self-healing (force refresh() + fall through to local-start when the wrapper is unreachable). NEITHER bug is a regression or caused by the cu126 work (ruled out by chronology + mechanism). BOTH need a live Pod to verify (user-gated). CRITICAL: a SECOND AGENT is actively working the progress bar (card MPI-147 'LTX Progress Bar') and owns js/services/progressAggregator.js + generationService.js + commandExecutor.js + routes/comfy.js + new progressStages.js/phaseProgress.js + state/events.jsonl — SHARED TREE, so commit ONLY your own files by explicit pathspec (never git add -A) and mpi-message that agent BEFORE touching any progress/SSE code. NO release pressure: zero Pro/Early-Access subscribers yet, ~2.5 weeks to the ~July 9 first-public-master target; fix the long tail then ship clean. RunPod branch ONLY (no master merge / GitHub release / git tag, MPI-131). Pod ops + image builds are USER-GATED; a killed terminal orphans the Pod (stop it in RunPod). Brief before code (Continue Brief gate)."
+}

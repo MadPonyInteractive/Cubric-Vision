@@ -56,6 +56,21 @@
   transition: width var(--t-slow) var(--ease), opacity var(--t-slow) var(--ease), box-shadow var(--t-slow) var(--ease);
 }
 
+/* Indeterminate pulse (MPI-147) — for black-box nodes that emit no progress
+   (ImageUpscaleWithModel / ESRGAN: a single-shot tensor op, no step signal). A
+   band slides across so the user sees "working, duration unknown" instead of a
+   frozen 0% or a fake climb. Overrides the data-driven width. */
+.shell-info__fill--indeterminate {
+  width: 35% !important;
+  opacity: 0.4;
+  animation: sb-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes sb-indeterminate {
+  0%   { left: -35%; }
+  100% { left: 100%; }
+}
+
 /* ── Job state slot (left side) ──────────────────────────────────────────────── */
 .shell-info__job {
   display: flex;

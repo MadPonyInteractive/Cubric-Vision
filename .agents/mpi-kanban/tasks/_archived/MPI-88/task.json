@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-88",
+  "title": "No-GPU 'download mode' Pod — install models to the volume with no GPU billing",
+  "description": "Promoted from MPI-64 Phase 4 (plan line 145) / OPEN-ITEMS F6 (user request 2026-06-12). Let the user provision a Pod with NO GPU (or the cheapest CPU-only instance) purely to download/install models onto the volume, avoiding GPU billing during a long (e.g. 78GB) model download. The wrapper still runs, the volume mounts at /workspace, and /wrapper/models/install lands files exactly as on a GPU Pod; the user then disconnects + reconnects a real GPU for generation (volume + models persist — Design A). OPEN QUESTIONS to resolve first: (a) does client.createPod accept a CPU-only / gpuCount:0 spec on Secure Cloud, or is a separate CPU-Pod API path required? (b) UI: a 'Download only (no GPU)' affordance distinct from Connect, or auto-pick the cheapest instance when the only pending action is a download? (c) gate generation OFF in download-mode (no GPU = a sampler workflow fails/CPU-crawls — surface 'connect a GPU to generate'); (d) idle-watchdog still applies. App + decision. See brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-15T07:23:16Z",
+  "updated_at": "2026-06-15T12:15:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

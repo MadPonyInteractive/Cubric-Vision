@@ -21,13 +21,15 @@ import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpo
 import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
 import { MpiToolOptionsPrompt } from '../../Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
+import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
 import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
-import { getModelsByType } from '../../../data/modelRegistry.js';
+import { getModelsByType, isModelUsable } from '../../../data/modelRegistry.js';
+import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
-import { enqueueGeneration, clearPendingQueue, refreshQueueDepth } from '../../../services/generationService.js';
+import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -36,7 +38,7 @@ import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
-import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../../utils/promptReuse.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
     promoteHistoryEntry,
     appendToHistory,
@@ -111,10 +113,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── Model / operation context ─────────────────────────────────────────
 
-        const { model: activeModelInit, modelId: activeModelIdInit, installedModels } =
+        // Video history is a frame-driven workspace: its prompt toolbar (Start/End
+        // frame, Extend, Create new) only makes sense for models that accept image
+        // input. After the combined→split model change, t2v-only models carry no
+        // i2v op, so they must NOT be selectable here — gate the MODEL LIST, not the
+        // tools. Image history is unaffected.
+        const _modelSupportsI2V = (m) =>
+            Array.isArray(m?.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v'));
+        const _promptModelFilter = (m) => (isVideo ? _modelSupportsI2V(m) : true);
+
+        const { model: activeModelInit, modelId: activeModelIdInit, installedModels: _allInstalledModels } =
             resolveActiveModel(isVideo ? 'video' : 'image');
-        let activeModelId = activeModelIdInit;
-        let activeModel   = activeModelInit;
+        // Models offered in this workspace's prompt box. For video, i2v-capable only.
+        const installedModels = _allInstalledModels.filter(_promptModelFilter);
+        // If the resolver picked a model the filter excludes (e.g. last-selected was
+        // t2v), fall back to the first eligible model. May be undefined when no i2v
+        // model is installed — handled as read-only by _syncPromptToolDisabled.
+        const activeModelInitEligible = installedModels.includes(activeModelInit)
+            ? activeModelInit
+            : (installedModels[0] || null);
+        let activeModelId = activeModelInitEligible?.id ?? activeModelIdInit;
+        let activeModel   = activeModelInitEligible;
         // No mount-time write-back: resolver returns a valid id for the
         // group's mediaType. Persisting here would clobber the sibling-type
         // slot (e.g. entering image history would wipe a video selection).
@@ -443,6 +462,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Active-generation registry / spinner ──────────────────────────────
 
         const _myGenIds = new Set();
+        // Ids Stopped by the user whose gen may still finish with real output —
+        // ComfyUI /interrupt is advisory, so an LTX inter-stage Stop runs to
+        // completion. Stop removes the id from _myGenIds synchronously, so the
+        // late generation:complete would otherwise be dropped and the finished
+        // item never repaints the viewer (MPI-195). Bridge our own stopped ids
+        // only; a concurrent local/remote lane (MPI-74 P6) is never affected.
+        const _stoppedPendingComplete = new Set();
         let _mascotLingerTimer = null;
 
         const _mascotShow = (src) => {
@@ -471,6 +497,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.el.setGenerating?.(flag);
         };
 
+        // MPI-113: mirror this group's running jobs into the PromptBox so its
+        // inline Stop/Clear enable when an op (e.g. extend) is dispatched from
+        // outside the Cue button. Gallery does the same via _refreshPbGenerating;
+        // history previously left Stop disabled, forcing a trip to the gallery queue.
+        const _syncPbGenerating = () => {
+            const busy = activeGenerations.listFor('groupHistory', _group.id)
+                .some(e => e.status === 'running');
+            _pb?.el?.setGenerating?.(busy);
+        };
+
         for (const entry of activeGenerations.listFor('groupHistory', _group.id)) {
             if (entry.status !== 'running') continue;
             _myGenIds.add(entry.id);
@@ -492,9 +528,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // free for the user to queue more ops while generation runs.
                 return;
             }
-            viewer.el.isComparisonMode = false;
-            if (url?.startsWith('blob:')) viewer.el.setMaskHidden?.(true);
-            viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
+            if (!url) return;
+            // Some models emit ComfyUI preview frames that can't be TAESD-decoded
+            // (e.g. NVIDIA PiD — vae_approx=None), so the blob is a broken JPEG.
+            // Painting it into the viewer swaps the current image out BEFORE the
+            // <img> errors, leaving the canvas blank for the whole run. Probe-decode
+            // first; only swap once the frame actually loads, else keep the current
+            // image on screen until a valid preview (or the final result) arrives.
+            const probe = new Image();
+            probe.onload = () => {
+                viewer.el.isComparisonMode = false;
+                if (url.startsWith('blob:')) viewer.el.setMaskHidden?.(true);
+                viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
+            };
+            probe.src = url;
         }
 
         function _restoreCurrentEntryAfterCancel() {
@@ -519,6 +566,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             } else {
                 _setGenerating(true);
             }
+            _syncPbGenerating();
         }));
 
         _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
@@ -531,9 +579,31 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _applyPreview(url);
         }));
 
+        // Repaint the open viewer with `item` (preview→video swap, image reload).
+        // Shared by the in-block generation:complete handler and the gallery
+        // in-place-finish bridge below.
+        function _reloadViewerWithEntry(item) {
+            if (isVideo) {
+                viewer.el.exitCropMode?.();
+                viewer.el.loadVideo?.(resolveMediaUrl(item.filePath), {
+                    fps:        item.fps || _group.fps || 24,
+                    duration:   item.duration,
+                    frameCount: item.frameCount,
+                    hasAudio:   item.hasAudio,
+                    trim:       item.trim,
+                });
+            } else {
+                viewer.el.exitMode?.();
+                viewer.el.loadEntry?.(item, _currentIdx);
+                viewer.el.setMaskHidden?.(false);
+            }
+        }
+
         _unsubs.push(Events.on('generation:complete', ({ id, item, group }) => {
-            if (!_myGenIds.has(id)) return;
+            // Accept our own ids AND ids we Stopped that finished anyway (bridge).
+            if (!_myGenIds.has(id) && !_stoppedPendingComplete.has(id)) return;
             _myGenIds.delete(id);
+            _stoppedPendingComplete.delete(id);
             viewer.el.setGenerating?.(false);
             // Tool-only transforms (resize) skip the mascot — model ops only.
             if (item?.operation !== 'resize' && item?.operation !== 'resizeVideo') {
@@ -551,41 +621,60 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 historyList.el.appendEntry(item);
             }
             Events.emit('history:stats-dirty', { group: _group });
-            if (isVideo) {
-                viewer.el.exitCropMode?.();
-                viewer.el.loadVideo?.(resolveMediaUrl(item.filePath), {
-                    fps:        item.fps || _group.fps || 24,
-                    duration:   item.duration,
-                    frameCount: item.frameCount,
-                    hasAudio:   item.hasAudio,
-                    trim:       item.trim,
-                });
-            } else {
-                viewer.el.exitMode?.();
-                viewer.el.loadEntry?.(item, _currentIdx);
-                viewer.el.setMaskHidden?.(false);
-            }
+            _reloadViewerWithEntry(item);
             // Resize tool stays mounted across Apply — re-target the active
             // item so its thumbnail re-extracts and the inline preview
             // refreshes on the new entry.
             if (item?.operation === 'resize' || item?.operation === 'resizeVideo') {
                 _options?.el?.setCurrentItem?.(item);
             }
+            _syncPbGenerating();
+        }));
+
+        // In-place Finish (preview→final) is dispatched scope:'gallery', so its
+        // generation:complete is not in _myGenIds and the handler above skips it.
+        // When that replace lands on the group this viewer is currently showing,
+        // the open viewer would keep painting the stale preview frame until a
+        // re-nav. Bridge it: on gallery:item-updated for the current group,
+        // re-sync _group and reload the viewer if the replaced item is the one
+        // on screen. Guard against re-handling a gen this block already owns.
+        _unsubs.push(Events.on('gallery:item-updated', ({ groupId, item, group }) => {
+            if (groupId !== _group.id || !item || !group) return;
+            const viewedId = _group.history?.[_currentIdx]?.id;
+            _group = group;
+            _currentIdx = _group.selectedIndex;
+            historyList.el.replaceEntry?.(item);
+            Events.emit('history:stats-dirty', { group: _group });
+            if (item.id === viewedId) {
+                viewer.el.setGenerating?.(false);
+                _reloadViewerWithEntry(item);
+            }
         }));
 
         _unsubs.push(Events.on('generation:error',     ({ id }) => {
+            _stoppedPendingComplete.delete(id);
             if (_myGenIds.delete(id)) {
                 viewer.el.setGenerating?.(false);
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
             }
+            _syncPbGenerating();
         }));
         _unsubs.push(Events.on('generation:cancelled', ({ id }) => {
             if (_myGenIds.delete(id)) {
+                // The gen may still finish with real output after this Stop —
+                // remember the id so the late generation:complete repaints the
+                // viewer (MPI-195).
+                _stoppedPendingComplete.add(id);
                 viewer.el.setGenerating?.(false);
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
+            } else {
+                // Second cancelled for an already-forgotten id = interrupted gen
+                // returned EMPTY; no late complete is coming — drop the bridge.
+                _stoppedPendingComplete.delete(id);
             }
+            _syncPbGenerating();
         }));
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
@@ -687,11 +776,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
          *  even without staged media so the user can drop a frame to unlock. */
         function _syncPromptToolDisabled() {
             const has = _shouldShowPromptBox();
+            // Video history needs an Image-to-Video model (t2v is filtered out of the
+            // model list). When none is installed, surface the requirement via the
+            // tool button's hover info so it reads in the status bar.
+            const reason = has
+                ? ''
+                : (isVideo && installedModels.length === 0
+                    ? 'Install an Image-to-Video model to edit video here'
+                    : 'No prompt-driven ops available for this model');
             historyTools.el.setDisabled?.({
-                prompt: {
-                    disabled: !has,
-                    reason: has ? '' : 'No prompt-driven ops available for this model',
-                },
+                prompt: { disabled: !has, reason },
             });
             return has;
         }
@@ -711,6 +805,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 modelList: installedModels,
                 operation: activeOperation,
                 includeNegative: true,
+                workspaceKey: 'history',
+                workspaceId: _group.id,
             });
             _pb?.el?.hide();
 
@@ -758,13 +854,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(_pb.on('cancel', ({ mode } = {}) => {
                 const active = activeGenerations.listFor('groupHistory', _group.id).filter(e => e.status === 'running');
                 const target = mode === 'queue' ? active[0] : active.at(-1);
-                if (target) activeGenerations.cancel(target.id);
+                // A CUE-managed job that never got a prompt_id (remote WS down —
+                // MPI-73 Bug 2) must free the stuck dispatcher + clear the queue, not
+                // just cancel its registry entry, or repeated Stop is a no-op.
+                if (target?.queueJobId) cancelRunningCueJob(target.queueJobId);
+                else if (target) activeGenerations.cancel(target.id);
                 else _activeExec?.cancel();
                 if (mode !== 'queue') _activeExec = null;
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
                 if (noRunning && (mode !== 'queue' || queueIdle)) {
-                    if (mode !== 'queue') state.generationQueueCount = 0;
+                    // MPI-208 Phase 3: generationQueueCount is derived from the store
+                    // + cue queue (one subscription in generationService). Do NOT hand-set
+                    // it here — refreshQueueDepth() below re-derives the true depth, and a
+                    // direct `= 0` would fight the store subscription (INV-2).
                     Events.emit('promptbox:generation-end');
                 }
                 refreshQueueDepth();
@@ -773,6 +876,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(_pb.on('queue-clear', () => {
                 clearPendingQueue();
             }));
+            // PromptBox may have restored persisted chips during mount (before the
+            // media-change handler above was wired), so its counts can already be
+            // non-zero. Re-sync block context + op gating from the live box.
+            _syncBaseCtxFromPromptBox();
+            _refreshOpOptions();
+            _syncPromptToolDisabled();
             return true;
         }
 
@@ -782,6 +891,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 settings: value.settings === true,
                 model: value.model === true,
                 images: value.images === true,
+                video: value.video === true,
+                audio: value.audio === true,
             };
         }
 
@@ -791,6 +902,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const dialog = MpiReusePromptDialog.mount(document.createElement('div'), {
                     includes: options,
                     showSource: false,
+                    // Single-source dialog (no Original/Current toggle) → the
+                    // dialog defaults source to 'original'; gate each Use … toggle on
+                    // whether THIS payload carries that input (MPI-212/227).
+                    imageAvailability: { original: payloadHasReusableImages(payload) },
+                    videoAvailability: { original: payloadHasReusableVideos(payload) },
+                    audioAvailability: { original: payloadHasReusableAudio(payload) },
                 });
                 dialog.on('apply', async ({ includes }) => {
                     await _applyPromptReuse(payload, _reuseIncludes(includes));
@@ -803,13 +920,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _applyPromptReuse(payload, _reuseIncludes(options));
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
             const use = _reuseIncludes(includes);
-            if (!use.prompt && !use.settings && !use.model && !use.images) return;
+            if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 
             let targetModel = activeModel;
             if (use.model && payload.modelId) {
-                targetModel = installedModels.find(m => m.id === payload.modelId) || null;
+                // Canonicalize legacy split ids (wan-22-t2v/i2v → wan-22). (MPI-122)
+                const canonId = canonicalModelId(payload.modelId);
+                targetModel = installedModels.find(m => m.id === canonId) || null;
             }
             if (!targetModel) {
                 const label = payload.modelId || 'Unknown model';
@@ -834,15 +953,39 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _mountPromptBoxIfNeeded({ force: true });
             if (!_pb?.el) return;
 
+            // The reused operation is authoritative — it determines media
+            // acceptance and which controls the panel reads. Establish it BEFORE
+            // injecting media or applying settings, otherwise setModel's
+            // media-state-driven op guess (_pickOpForModel) leaves us on the
+            // wrong op and image inject is falsely rejected ("media type not
+            // supported"). Falls back to activeOperation when the payload op is
+            // not supported by the target model.
+            const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+                ? payload.operation
+                : activeOperation;
+
             if (use.model) _pb.el.setModel?.(targetModel);
+            _setPromptOperation(targetOperation, { remember: true });
+
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
-            if (use.images) {
+            // Reuse the media the user opted into, gated per-type by what the source
+            // carries (MPI-212 image → MPI-227 video/audio). A source lacking a type
+            // injects nothing but a warning + an empty required slot, so skip it — the
+            // dialog greys those toggles; this mirrors the gate for the ask-disabled
+            // path. Resolve ONCE (all types), inject the enabled subset.
+            const _wantImages = use.images && payloadHasReusableImages(payload);
+            const _wantVideo = use.video && payloadHasReusableVideos(payload);
+            const _wantAudio = use.audio && payloadHasReusableAudio(payload);
+            if (_wantImages || _wantVideo || _wantAudio) {
                 _pb.el.clearMedia?.();
-                const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
-                if (!mediaItems.length && String(payload.operation || '').startsWith('i2v')) {
-                    _showToast('No saved frame images were found for this older I2V entry.', 'warning');
+                const resolved = await resolvePromptReuseMediaItems(payload);
+                const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
+                const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
+                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
+                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
+                    _showToast('No saved frame images were found for this older entry.', 'warning');
                 }
                 for (const item of mediaItems) {
                     _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
@@ -851,9 +994,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncBaseCtxFromPromptBox();
 
             if (use.settings) {
-                const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
-                    ? payload.operation
-                    : activeOperation;
                 const settings = buildPromptReuseSettings(payload, targetModel);
                 applyPromptReuseSettings({
                     modelId: targetModel.id,
@@ -861,7 +1001,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     operation: targetOperation,
                     ...settings,
                 });
-                _setPromptOperation(targetOperation, { remember: true });
+                // Settings were written AFTER the controls mounted (via setModel/
+                // setOperation above), so the live controls still show the old
+                // values. Re-mount them to re-read the recalled ratio/quality/
+                // duration. Without this the PromptBox only updates on next nav.
+                _pb.el.refreshControls?.();
             }
             _refreshOpOptions();
             historyTools.el.setMode?.('prompt');
@@ -875,6 +1019,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // Initial tool: prompt if available (including frame-drop unlock), else crop.
         if (_shouldShowPromptBox()) historyTools.el.setMode('prompt');
         else                        historyTools.el.setMode('crop');
+
+        // Nav'd into history while a job for this group is already running:
+        // enable the inline Stop on the freshly-mounted PromptBox.
+        _syncPbGenerating();
 
         // ── Generation runners ───────────────────────────────────────────────
 
@@ -891,7 +1039,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return { in: rangeIn, out: rangeOut };
         }
 
-        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null }) {
+        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null, forceLocal = false }) {
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
@@ -922,7 +1070,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             return {
                 config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
-                opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id },
+                opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id, forceLocal },
             };
         }
 
@@ -932,7 +1080,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             _setGenerating(true);
             const callbacks = {
-                onCancel: () => { _activeExec = null; },
+                onCancel: () => { _activeExec = null; _setGenerating(false); },
+                onError:  () => { _activeExec = null; _setGenerating(false); },
                 getNextGeneration: () => _generationFromPromptPayload(_pb?.el?.getRunPayload?.() || payload),
             };
             enqueueGeneration(next.config, callbacks, next.opts);
@@ -1250,6 +1399,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             navigate(PAGE_GALLERY);
         }));
 
+        // ── Cue queue slide-over (Q) — same panel/payload as the gallery ──────
+        const _queuePanelPayload = {
+            title: 'Cue',
+            component: MpiQueuePanel,
+            extraClasses: 'mpi-slide-over--queue',
+            panelId: 'generation-queue',
+        };
+        _unsubs.push(Hotkeys.bind('queue.toggle', () => {
+            Events.emit('slide-over:toggle', _queuePanelPayload);
+        }));
+        _unsubs.push(Events.on('generation-queue:open', () => {
+            Events.emit('slide-over:open', _queuePanelPayload);
+        }));
+
         if (!isVideo) {
             viewer.on('compare-clicked', async () => {
                 const indices = _currentSelectionIndices;
@@ -1362,7 +1525,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     duration:        ext.duration ?? 0,
                     frameCount:      ext.frameCount ?? 0,
                     hasAudio:        ext.hasAudio ?? false,
-                    videoMeta:       ext.videoMeta ?? null,
                 });
                 // History workspace: append to current group (video group only).
                 _group = appendToHistory(_group, newItem);
@@ -1673,21 +1835,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // PromptBox mounts via the s_installedModelIds watcher (option A) when
         // models become available, not via the removed `models:closed` event.
         _unsubs.push(Events.onState('s_installedModelIds', () => {
-            const currentModels = getModelsByType(modeKind).filter(m => m.installed !== false);
-            // If activeModel was null (zero-installed on entry) and models have now
-            // become available, re-resolve so PromptBox can mount. Without this,
+            // Video history only offers i2v-capable models (frame-driven workspace).
+            const currentModels = getModelsByType(modeKind)
+                .filter(isModelUsable)
+                .filter(_promptModelFilter);
+            // If activeModel was null (none eligible on entry) and an eligible model
+            // has now been installed, adopt it so PromptBox can mount. Without this,
             // activeModel stays null for the lifetime of the block even after install.
             if (!activeModel && currentModels.length > 0) {
-                const { model: resolvedModel, modelId: resolvedModelId } =
-                    resolveActiveModel(modeKind);
-                if (resolvedModel) {
-                    activeModel   = resolvedModel;
-                    activeModelId = resolvedModelId;
-                    _refreshOpOptions();
-                    const nowHas = _syncPromptToolDisabled();
-                    if (nowHas) _mountPromptBoxIfNeeded();
-                }
+                activeModel   = currentModels[0];
+                activeModelId = currentModels[0].id;
+                _refreshOpOptions();
+                const nowHas = _syncPromptToolDisabled();
+                if (nowHas) _mountPromptBoxIfNeeded();
             }
+            // Keep the read-only hint current when the last eligible model is removed.
+            _syncPromptToolDisabled();
             _pb?.el?.setModelList?.(currentModels);
         }));
 
@@ -1714,14 +1877,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         /** @returns {boolean} */
         function _anyInstalledModelHasI2V() {
             return getModelsByType('video')
-                .filter(m => m.installed !== false)
+                .filter(isModelUsable)
                 .some(m => Array.isArray(m.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v')));
         }
 
         /** @returns {Object|null} */
         function _findFirstI2VCapableModel() {
             return getModelsByType('video')
-                .filter(m => m.installed !== false)
+                .filter(isModelUsable)
                 .find(m => Array.isArray(m.supportedOps) && m.supportedOps.some(op => op.startsWith('i2v')))
                 || null;
         }
@@ -1808,13 +1971,53 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Toolbar emits semantic events on the global bus; this block is
             // the only listener (single video-history mount at a time, since
             // mountOptions('prompt') guards mount on isVideo + I2V model).
-            _unsubs.push(Events.on('prompt-box-tools:create-new', () => {
+            // Both Create New and Extend seed the I2V chunk from the current clip's
+            // LAST frame (trim out-point, or full duration). Any startFrame already
+            // in the PromptBox (e.g. populated by Reuse Prompt, which recalls the
+            // ORIGINAL gen's start frame) is the wrong frame for a continuation, so
+            // it's dropped and the current clip's end frame is re-captured. Returns
+            // the rebuilt mediaItems (startFrame first), or null on capture failure.
+            async function _captureLastFrameMedia(payload, hasTrim, trim) {
+                const baseMedia = (payload.mediaItems || []).filter(m => m.role !== 'startFrame');
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) return baseMedia;
+                try {
+                    const vid = viewer.el.getSourceElement?.();
+                    const lastTime = hasTrim ? +trim.out
+                        : (Number.isFinite(vid?.duration) && vid.duration > 0 ? Math.max(0, vid.duration - 1e-3) : null);
+                    const { blob } = await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
+                    if (blob) {
+                        const file = new File([blob], 'frame-startFrame.png', { type: 'image/png' });
+                        const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
+                            filenamePrefix: 'frame-startFrame',
+                            operation: 'extend-last-frame',
+                        });
+                        if (uploaded) {
+                            return [
+                                { url: uploaded.filePath, mediaType: 'image', role: 'startFrame', pixelDimensions: uploaded.pixelDimensions },
+                                ...baseMedia,
+                            ];
+                        }
+                    }
+                } catch (err) {
+                    clientLogger.warn('MpiGroupHistoryBlock', 'last-frame capture failed; falling back to guard', err);
+                }
+                return baseMedia;
+            }
+
+            // Create New = same as Extend (seed from current clip's last frame) but
+            // WITHOUT the concat — the generated video lands as a standalone entry.
+            _unsubs.push(Events.on('prompt-box-tools:create-new', async () => {
                 if (!_pb?.el) return;
                 const payload = _pb.el.getRunPayload?.();
                 if (!payload) return;
-                _runGenerate({ ...payload, historyMode: true });
+                const currentItem = _group.history[_currentIdx];
+                const trim = currentItem?.trim;
+                const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
+                const mediaItems = await _captureLastFrameMedia(payload, hasTrim, trim);
+                _runGenerate({ ...payload, mediaItems, historyMode: true });
             }));
-            _unsubs.push(Events.on('prompt-box-tools:extend', () => {
+            _unsubs.push(Events.on('prompt-box-tools:extend', async () => {
                 if (!_pb?.el) return;
                 const payload = _pb.el.getRunPayload?.();
                 if (!payload) return;
@@ -1824,13 +2027,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     return;
                 }
                 const trim = currentItem.trim;
+                const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
+                const extendMedia = await _captureLastFrameMedia(payload, hasTrim, trim);
+
                 const extendCfg = {
                     ...payload,
+                    mediaItems: extendMedia,
                     historyMode: true,
                     extend: true,
                     sourceItemId: currentItem.id,
                 };
-                if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
+                if (hasTrim) {
                     extendCfg.trimIn  = +trim.in;
                     extendCfg.trimOut = +trim.out;
                 }
@@ -1843,12 +2050,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 MpiContextMenu.show({
                     x, y,
                     items: [
+                        { key: 'snapshot',  icon: 'camera',       label: 'Create snapshot',    info: 'Save current frame as image' },
                         { key: 'set-start', icon: 'frameBack',    label: 'Set as start frame', disabled, info: reason },
                         { key: 'set-end',   icon: 'frameForward', label: 'Set as end frame',   disabled, info: reason },
                         { key: 'reverse',   icon: 'reverse',      label: 'Reverse video' },
                     ],
                     onSelect: (key) => {
-                        if (key === 'set-start') _setFrameFromVideo('startFrame');
+                        if (key === 'snapshot') _handleCropSnapshot();
+                        else if (key === 'set-start') _setFrameFromVideo('startFrame');
                         else if (key === 'set-end') _setFrameFromVideo('endFrame');
                         else if (key === 'reverse') _handleReverseVideo();
                     },

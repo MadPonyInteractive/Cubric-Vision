@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-109",
+  "title": "Empty-media I2V dispatch hits remote bug-dialog instead of a toast",
+  "description": "Pressing Cue (Q) with an empty PromptBox on an image-to-video op dispatched a generation anyway. With no media injected, ComfyUI fell back to the workflow's baked-in default filenames on BOTH LoadImage nodes (Start_Frame 841 = Detailed_00005_small.png, End_Frame 839 = Girl_with_cat_202603182027.png). Those leftover files exist in the LOCAL ComfyUI input dir (authoring residue) so a local run silently 'works'; a remote Pod has a clean volume so ComfyUI rejects the whole prompt (prompt_outputs_failed_validation -> custom_validation_failed on 841+839) -> 503 -> the Report-on-GitHub bug dialog. Root cause was NOT an empty prompt and NOT a lingering prior image (log confirms NO image was injected) - it was an unguarded empty-media dispatch. Fix (app-only, no rebuild): guard at the top of startGeneration (generationService.js) - if the operation has a required media slot (image/video/audio) with no matching item, emit a ui:warning toast ('Add an image before generating - this workflow needs one.') and abort (return null). Covers Q-key, Cue button, and loop re-fire (single chokepoint). Required-slot satisfaction = role-exact OR mediaType fallback, item must have a url.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-17T10:53:01Z",
+  "updated_at": "2026-06-17T10:53:01Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

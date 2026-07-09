@@ -1,0 +1,39 @@
+{
+  "schema": "mpi-kanban/coordination-task/v1",
+  "id": "3350e6c9-63ed-4e81-870f-80458e1e811d",
+  "title": "MPI-92 RunPod remote engine hardening",
+  "status": "closed",
+  "task_card": "MPI-92",
+  "plan": ".agents/mpi-kanban/tasks/MPI-92/plan.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/561532ea-b014-4e3d-a111-874411036065.json",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "file_claims": [
+    ".agents/mpi-kanban/state/files/4c9d5885-58a0-4107-8d2e-ab89df55363c.json",
+    ".agents/mpi-kanban/state/files/dbd1743c-a7a8-4285-8884-3d32c077b264.json",
+    ".agents/mpi-kanban/state/files/6005cbee-a42e-4840-9eb5-173a4a6248b9.json",
+    ".agents/mpi-kanban/state/files/2c2e0bba-bca5-41ba-94e4-d36d4f0f77d6.json",
+    ".agents/mpi-kanban/state/files/eb35c595-8561-46b2-9c53-f23e1bfeb5b1.json"
+  ],
+  "allowed_actions": [
+    "coordinate",
+    "claim_files",
+    "handoff"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:41:14.4623837Z",
+      "event": "task_attached",
+      "summary": "Started with board move to doing. Initial scope: mocked lifecycle tests first, defer user verification to the end."
+    },
+    {
+      "at": "2026-06-15T17:52:12.5977923Z",
+      "event": "verification_ready",
+      "summary": "Automated coverage and redaction hardening complete. Waiting on user-only live UI/log verification."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "closed",
+      "summary": "User completed live verification; coordination task closed."
+    }
+  ]
+}

@@ -104,9 +104,22 @@ export const MpiOverlay = ComponentFactory.create({
             _stash.style.display = 'none';
             _stash.classList.add('mpi-overlay-stash');
 
+            // Keep the custom OS titlebar (min/max/close, drag region) live +
+            // visible — body-mode overlays sit BELOW it (inset: var(--titlebar-h)),
+            // so stashing it would leave a dead gap and make the window
+            // uncloseable/undraggable while the overlay is open.
+            const titlebar = mountTarget === 'body' ? gid('titlebar') : null;
             const children = Array.from(_target.children);
             children.forEach(child => {
-                if (child !== _backdrop) _stash.appendChild(child);
+                // Keep the toast stack live + on top: stashing it (like the titlebar)
+                // would detach every in-flight toast — and a toast fired WHILE the
+                // overlay is open (e.g. a disk-full warning from an Install click in
+                // the Model Library) belongs ABOVE the overlay, not buried under it.
+                // The stack is position:fixed z-20000 so it paints over the overlay
+                // regardless of DOM order. (Its MutationObserver also stops
+                // false-dismissing toasts that a stash would have yanked from the DOM.)
+                const isToastStack = child.classList && child.classList.contains('mpi-toast-stack');
+                if (child !== _backdrop && child !== titlebar && !isToastStack) _stash.appendChild(child);
             });
 
             _target.appendChild(_stash);

@@ -332,6 +332,20 @@
     font-weight: 700;
 }
 
+/* MPI-74: force-local job chip — cyan to mark the engine exception */
+.mpi-queue-panel__meta-line--engine {
+    justify-self: start;
+    margin-top: 2px;
+    padding: 1px 7px;
+    color: var(--accent-frost);
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .mpi-queue-panel__action {
     justify-self: start;
     min-width: 80px;

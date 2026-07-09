@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-182",
+  "title": "Integrate NVIDIA PiD as a prompt-box image upscaler model",
+  "description": "One model entry, internal 4-path VAE selector (SDXL/Flux/SD3/Qwen), new `pid` op, denoise slider -> degrade_sigma. Gated on user-authored workflow template. Research + decisions in docs/builder/research/pid-upscaler.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-03T01:40:51Z",
+  "updated_at": "2026-07-03T04:49:19Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "research": "research/",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  },
+  "activeSessionTitle": "PiD upscaler wiring session"
+}

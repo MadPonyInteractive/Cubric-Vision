@@ -1,9 +1,9 @@
 /**
- * notificationService.js — Bridges generation lifecycle events to OS notifications.
+ * notificationService.js — Bridges generation/download lifecycle events to OS notifications.
  *
- * Listens for `generation:complete` and forwards a minimal payload to the main process
- * via IPC. Main gates delivery on `mainWindow.isMinimized()`, so this module fires
- * unconditionally; the in-app toast (statusBar) handles the not-minimized case.
+ * Listens for `generation:complete` and `download:complete` and forwards a minimal payload
+ * to the main process via IPC. Main gates delivery on `!mainWindow.isFocused()`, so this
+ * module fires unconditionally; the in-app toast handles the focused case.
  *
  * Browser mode: no-op (ipcRenderer unavailable).
  */
@@ -11,7 +11,9 @@
 'use strict';
 
 import { Events } from '../events.js';
+import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
+import { getModelById } from '../data/modelRegistry.js';
 
 let ipcRenderer = null;
 try {
@@ -20,7 +22,7 @@ try {
     }
 } catch (e) { /* Browser Mode — silent */ }
 
-let _unsub = null;
+const _unsubs = [];
 
 function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
     if (!ipcRenderer) return false;
@@ -38,10 +40,11 @@ function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
  * Initialize the notification bridge. Idempotent.
  */
 export function initNotificationService() {
-    if (!ipcRenderer || _unsub) return;
+    if (!ipcRenderer || _unsubs.length) return;
 
-    _unsub = Events.on('generation:complete', ({ item, group } = {}) => {
+    _unsubs.push(Events.on('generation:complete', ({ item, group } = {}) => {
         try {
+            if (state.notificationPrefs?.generation === false) return; // user opted out
             const op = group?.operation || item?.operation || 'Generation';
             ipcRenderer.send('notify-generation-complete', {
                 title: 'Generation complete',
@@ -51,14 +54,31 @@ export function initNotificationService() {
         } catch (err) {
             clientLogger.error('notificationService', 'failed to send IPC:', err);
         }
-    });
+    }));
+
+    _unsubs.push(Events.on('download:complete', (data = {}) => {
+        try {
+            if (state.notificationPrefs?.downloads === false) return; // user opted out
+            // UW installs surface through engine UI — skip OS notification
+            if (!data.modelId || data.modelId === '__universal_workflow__') return;
+            const model = getModelById(data.modelId);
+            const modelName = model?.name || data.modelId;
+            ipcRenderer.send('notify-download-complete', {
+                title: 'Download complete',
+                subtitle: 'Cubric Studio',
+                body: `${modelName} installed.`,
+            });
+        } catch (err) {
+            clientLogger.error('notificationService', 'failed to send IPC:', err);
+        }
+    }));
 }
 
 /**
- * Tear down the listener. Primarily for hot-reload / tests.
+ * Tear down the listeners. Primarily for hot-reload / tests.
  */
 export function destroyNotificationService() {
-    if (_unsub) { _unsub(); _unsub = null; }
+    while (_unsubs.length) { _unsubs.pop()(); }
 }
 
 export function triggerGenerationCompleteNotification({ minimizeFirst = false } = {}) {

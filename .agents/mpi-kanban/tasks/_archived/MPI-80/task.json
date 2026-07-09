@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-80",
+  "title": "Session cost feedback",
+  "description": "Let's create a feedback badge for session cost when connected to the cloud. This could be part of the bottom left information in the projects page. Right now we have the last session when it was performed. To be honest, that's not very helpful. It would be better if we replace it with this. Instead of \"last session\", we could have something like \"current session\", and then the money below it of how much money has been spent so far when working remotely connected to the cloud.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-14T10:57:40.840Z",
+  "updated_at": "2026-06-18T00:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,5 @@
+{"ts":"2026-07-07T15:17:48Z","type":"task.created","id":"MPI-216","column":"doing","by":"agent"}
+{"ts":"2026-07-07T15:17:48Z","type":"task.moved","id":"MPI-216","from":"todo","to":"doing","by":"agent"}
+{"ts":"2026-07-07T15:23:12Z","type":"task.progress","id":"MPI-216","note":"both fixes shipped + logic-verified vs live disk; pending live end-to-end verify (server restart + renderer reload)","by":"agent"}
+{"ts":"2026-07-07T15:35:09Z","type":"task.progress","id":"MPI-216","note":"3rd bug: local Verifying-at-<100% (MPI-164 gate never ported to local); fixed + gate asserted","by":"agent"}
+{"ts":"2026-07-07T15:42:30Z","type":"task.moved","id":"MPI-216","from":"doing","to":"done","by":"agent"}

@@ -11,12 +11,13 @@
  *   3. Add the control ID to the desired operation's components[] in commandRegistry.js
  */
 
-import { MpiOptionSelector } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
+import { MpiOptionSelector, clampQualityTier } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { qsa } from '../../../utils/dom.js';
 import { state } from '../../../state.js';
-import { getOpSettings, getSharedSettings } from '../../../data/projectModel.js';
+import { getOpSettings, getSharedSettings, getModelSettings } from '../../../data/projectModel.js';
 import { getCommandDefault } from '../../../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../../../data/promptControlDefaults.js';
 import { Events } from '../../../events.js';
@@ -24,9 +25,10 @@ import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
 
 // ── Scope helpers ─────────────────────────────────────────────────────────────
 //
-// Controls declare `scope: 'shared' | 'perOp'`.
-//   'shared' → project.shared[mediaType] (cross-model, partitioned by image|video)
-//   'perOp'  → project.modelSettings[modelId].operations[opName]
+// Controls declare `scope: 'shared' | 'perOp' | 'perModel'`.
+//   'shared'   → project.shared[mediaType] (cross-model, partitioned by image|video)
+//   'perOp'    → project.modelSettings[modelId].operations[opName]
+//   'perModel' → project.modelSettings[modelId] (model-wide, NOT op-scoped)
 // `opName` is provided by MpiPromptBox via mount opts. If a perOp control mounts
 // without an opName (legacy/demo), it falls back to the shared bucket.
 
@@ -38,6 +40,9 @@ function _readSaved(ctrl, opts) {
     if (!state.currentProject) return {};
     if (ctrl.scope === 'perOp' && opts.opName && opts.model?.id) {
         return getOpSettings(state.currentProject, opts.model.id, opts.opName);
+    }
+    if (ctrl.scope === 'perModel' && opts.model?.id) {
+        return getModelSettings(state.currentProject, opts.model.id);
     }
     return getSharedSettings(state.currentProject, _mediaTypeOf(opts));
 }
@@ -62,6 +67,15 @@ function _emitUpdate(ctrl, opts, key, value) {
         });
         return;
     }
+    if (ctrl.scope === 'perModel') {
+        const modelId = opts.model?.id;
+        if (!modelId) return;
+        // Model-wide write — reuse the existing opName-less model:update path
+        // (same one loras/upscaleModel use). The key must be in _MODEL_WIDE_KEYS
+        // in projectService so it routes to modelSettings[modelId][key].
+        Events.emit('settings:model:update', { modelId, opName: null, key, value });
+        return;
+    }
     Events.emit('settings:shared:update', {
         mediaType: _mediaTypeOf(opts),
         key,
@@ -84,7 +98,13 @@ export const PROMPT_BOX_CONTROLS = {
      */
     qualityTier: {
         nodeTitle: null,
-        scope: 'shared',
+        // perModel (MPI-133): the tier lives at modelSettings[modelId].qualityTier
+        // so each model remembers its own quality independently — switching
+        // LTX↔Wan (or reusing across models) never silently downgrades quality.
+        // The sibling `ratio` control keeps selectedRatio/orientation in the
+        // SHARED bucket (framing is cross-model), so this control reads ratio
+        // from shared but tier from the model bucket.
+        scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.qualityTier,
         mount(el, opts = {}) {
             const model = opts.model || {};
@@ -99,9 +119,20 @@ export const PROMPT_BOX_CONTROLS = {
                 return;
             }
 
-            const saved = _readSaved(this, opts);
-            const initialTier = saved.ratioSelector?.qualityTier || this.defaultValue;
-            const initialRatio = saved.ratioSelector?.selectedRatio || '1:1';
+            // Tier from the per-model bucket; lazy-fallback to the legacy shared
+            // ratioSelector.qualityTier for projects not yet migrated to SCHEMA 4.
+            const modelBucket = state.currentProject
+                ? getModelSettings(state.currentProject, modelId) : {};
+            const sharedBucket = getSharedSettings(state.currentProject || {}, _mediaTypeOf(opts));
+            const savedTier = modelBucket.qualityTier
+                ?? sharedBucket.ratioSelector?.qualityTier
+                ?? this.defaultValue;
+            // Clamp to a tier this model actually has. A cross-model carry (LTX
+            // 2k/4k → Wan) clamps to 'very_high' (Wan's max), NOT 'medium' — the
+            // nearest-equivalent quality, so a reused 2K clip doesn't silently
+            // drop to mid. If the clamp changed the value, persist the correction.
+            const initialTier = clampQualityTier(modelType, savedTier);
+            const initialRatio = sharedBucket.ratioSelector?.selectedRatio || '1:1';
             this.value = initialTier;
 
             this._instance = MpiOptionSelector.mount(el, {
@@ -111,9 +142,16 @@ export const PROMPT_BOX_CONTROLS = {
                 selectedRatio: initialRatio,
             });
 
+            if (initialTier !== modelBucket.qualityTier) {
+                // Persist the resolved tier into the model bucket (covers both the
+                // clamp case and the first-time migration-fallback read).
+                _emitUpdate(this, opts, 'qualityTier', initialTier);
+                Events.emit('ratio:quality-change', { modelId, qualityTier: initialTier });
+            }
+
             this._instance.on('change', ({ qualityTier }) => {
                 this.value = qualityTier;
-                _emitUpdate(this, opts, 'ratioSelector', { qualityTier });
+                _emitUpdate(this, opts, 'qualityTier', qualityTier);
                 // Notify sibling ratio control to re-render its ratio set.
                 Events.emit('ratio:quality-change', { modelId, qualityTier });
             });
@@ -150,12 +188,21 @@ export const PROMPT_BOX_CONTROLS = {
             const modelType = model.type ?? 'flux';
             const modelId = model.id;
 
-            // Read persisted settings from project
+            // Read persisted settings from project. selectedRatio/orientation are
+            // SHARED (cross-model framing); qualityTier is PER-MODEL (MPI-133) —
+            // read it from the model bucket, lazy-falling back to the legacy
+            // shared value for projects not yet migrated to SCHEMA 4, then clamp
+            // to a tier this model supports.
             const saved = _readSaved(this, opts);
             const savedRatioSettings = saved.ratioSelector || {};
             const initialOrientation = savedRatioSettings.orientation || PROMPT_CONTROL_DEFAULTS.orientation;
             const initialValue = savedRatioSettings.selectedRatio || this.defaultValue;
-            const initialQualityTier = savedRatioSettings.qualityTier || PROMPT_CONTROL_DEFAULTS.qualityTier;
+            const modelBucket = state.currentProject
+                ? getModelSettings(state.currentProject, modelId) : {};
+            const initialQualityTier = clampQualityTier(
+                modelType,
+                modelBucket.qualityTier ?? savedRatioSettings.qualityTier ?? PROMPT_CONTROL_DEFAULTS.qualityTier,
+            );
 
             // Mount selector with saved state
             this._instance = MpiOptionSelector.mount(el, {
@@ -261,6 +308,161 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             return {};
+        },
+    },
+
+    /**
+     * audioMode — LTX audio routing (Reference | Original). Only meaningful when
+     * an audio file is present; the radio is disabled otherwise (baked workflow
+     * defaults win with no injection). `setAudioPresent(bool)` is called by
+     * MpiPromptBox from _emitMediaChange when el.audioCount crosses 0.
+     *   Reference → Input_Use_Reference_Audio (voice-ID from the clip)
+     *   Original  → Input_Use_Input_Audio (direct audio)
+     * Either mode forces Input_Use_Transition true (the i2v motion/lipsync enabler
+     * — see [[project-ltx-transition-lora-enables-lipsync]]). No seed UI, no
+     * influence slider ([[feedback-no-seed-ui]]).
+     */
+    audioMode: {
+        nodeTitle: null,
+        scope: 'shared',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.audioMode,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const initial = (saved.audioMode === 'original' || saved.audioMode === 'reference')
+                ? saved.audioMode : this.defaultValue;
+            this.value = initial;
+            this._audioPresent = false;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Audio';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: 'Reference', value: 'reference', icon: 'audio',
+                      info: 'Reference voice — clone the speaker from the audio clip' },
+                    { label: 'Original', value: 'original', icon: 'volumeHigh',
+                      info: 'Original audio — use the input audio directly' },
+                ],
+                value: initial,
+                name: 'audioMode',
+                size: 'sm',
+                columns: 2,
+            });
+
+            this._instance.on('select', ({ value }) => {
+                if (value !== 'reference' && value !== 'original') return;
+                this.value = value;
+                _emitUpdate(this, opts, 'audioMode', value);
+            });
+
+            // Disabled until an audio chip is present.
+            this._applyEnabled(this._audioPresent);
+        },
+        /** Enable/disable the radio + dim the host based on audio presence. */
+        _applyEnabled(present) {
+            const root = this._instance?.el;
+            if (!root) return;
+            qsa('.mpi-radio-group__btn', root).forEach((btn) => {
+                btn.disabled = !present;
+            });
+            root.style.opacity = present ? '' : '0.4';
+            root.style.pointerEvents = present ? '' : 'none';
+        },
+        /** Called by MpiPromptBox when audio media presence changes. */
+        setAudioPresent(present) {
+            this._audioPresent = !!present;
+            this._applyEnabled(this._audioPresent);
+        },
+        getValue() { return this.value ?? this.defaultValue; },
+        getInjectionParams() {
+            // No audio → inject nothing; the workflow's baked gates apply.
+            if (!this._audioPresent) return {};
+            const mode = this.value ?? this.defaultValue;
+            return {
+                Input_Use_Reference_Audio: mode === 'reference',
+                Input_Use_Input_Audio: mode === 'original',
+                Input_Use_Transition: true,
+            };
+        },
+        destroy() {
+            this._instance?.destroy?.();
+            this._instance = null;
+        },
+    },
+
+    /**
+     * useAudio — LTX "generate audio" toggle (Input_Use_Audio MpiSimpleBoolean).
+     * ON → the model generates its own audio track from the prompt. Sits directly
+     * under the audioMode radio. DISABLED while an audio chip is present — then the
+     * audioMode radio (Reference/Original) drives audio from the clip, so this
+     * gate is moot. `setAudioPresent(bool)` is called by MpiPromptBox alongside
+     * audioMode's, from _emitMediaChange when el.audioCount crosses 0.
+     */
+    useAudio: {
+        nodeTitle: 'Input_Use_Audio',
+        scope: 'shared',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.useAudio,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const initialActive = saved.useAudio !== false; // default ON
+            this.value = initialActive;
+            this._audioPresent = false;
+
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'audio',
+                label: 'Generate Audio',
+                labelPosition: 'right',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initialActive,
+                info: 'Generate audio — the model produces its own audio track from the prompt',
+            });
+            // Full-width: span the settings row like the slider controls do. The
+            // ctrlEl host is display:contents, so the modifier rides the button root.
+            this._instance.el?.classList.add('mpi-prompt-box__op-btn--full');
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                _emitUpdate(this, opts, 'useAudio', !!active);
+            });
+
+            // Disabled while an audio clip is present (radio drives audio then).
+            this._applyEnabled(this._audioPresent);
+        },
+        /** Disable + dim the toggle WHEN an audio chip is present (inverse of audioMode). */
+        _applyEnabled(present) {
+            const root = this._instance?.el;
+            if (!root) return;
+            root.style.opacity = present ? '0.4' : '';
+            root.style.pointerEvents = present ? 'none' : '';
+        },
+        /** Called by MpiPromptBox when audio media presence changes. */
+        setAudioPresent(present) {
+            this._audioPresent = !!present;
+            this._applyEnabled(this._audioPresent);
+        },
+        getValue() { return this.value === true; },
+        getInjectionParams() {
+            // An audio clip present → the audioMode radio owns the audio gates;
+            // don't fight it. Inject only when no clip is attached.
+            if (this._audioPresent) return {};
+            return { Input_Use_Audio: this.value === true };
+        },
+        destroy() {
+            this._instance?.destroy?.();
+            this._instance = null;
         },
     },
 
@@ -608,6 +810,130 @@ export const PROMPT_BOX_CONTROLS = {
         getInjectionParams() {
             const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
             return { Denoise: v };
+        },
+    },
+
+    /**
+     * pidVariant — NVIDIA PiD path/VAE selector (used by the `pid` op only).
+     * Injects a 1-indexed int into the "Input_Type" MpiAnySwitch node:
+     * 1=flux, 2=sd3, 3=qwen, 4=sdxl. Each path is a distinct look (see
+     * docs/builder/research/pid-upscaler.md): sdxl=sharp/punchy, flux=faithful
+     * color, sd3=sharp, qwen=natural all-rounder. Persists per-op.
+     */
+    pidVariant: {
+        nodeTitle: 'Input_Type',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.pidVariant,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'pidVariant', opts);
+            const savedNum = Number(saved.pidVariant ?? fallback);
+            const allowed = [1, 2, 3, 4];
+            const initial = allowed.includes(savedNum) ? savedNum : fallback;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Model';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: 'Flux', value: '1' },
+                    { label: 'SD3',  value: '2' },
+                    { label: 'Qwen', value: '3' },
+                    { label: 'SDXL', value: '4' },
+                ],
+                value: String(initial),
+                name: 'pidVariant',
+                size: 'sm',
+                columns: 4,
+                info: 'Upscaler model — Flux (faithful color), SD3 (sharp), Qwen (natural), SDXL (sharp/punchy)',
+            });
+
+            this._instance.on('select', ({ value }) => {
+                const v = Number(value);
+                if (!allowed.includes(v)) return;
+                this.value = v;
+                _emitUpdate(this, opts, 'pidVariant', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
+            return { Input_Type: v };
+        },
+    },
+
+    /**
+     * pidResolution — NVIDIA PiD output-size selector (used by the `pid` op only).
+     * Injects a 1-indexed int into the "Input_Resolution" MpiAnySwitch node:
+     * 1=1K, 2=2K, 3=4K. PiD always renders native 4x (4K); 1K/2K downscale that
+     * result (4K = passthrough, best quality). Persists per-op.
+     */
+    pidResolution: {
+        nodeTitle: 'Input_Resolution',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.pidResolution,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'pidResolution', opts);
+            const savedNum = Number(saved.pidResolution ?? fallback);
+            const allowed = [1, 2, 3];
+            const initial = allowed.includes(savedNum) ? savedNum : fallback;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Output';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: '1K', value: '1' },
+                    { label: '2K', value: '2' },
+                    { label: '4K', value: '3' },
+                ],
+                value: String(initial),
+                name: 'pidResolution',
+                size: 'sm',
+                columns: 3,
+                info: 'Output resolution — 4K is native PiD quality; 1K/2K downscale it',
+            });
+
+            this._instance.on('select', ({ value }) => {
+                const v = Number(value);
+                if (!allowed.includes(v)) return;
+                this.value = v;
+                _emitUpdate(this, opts, 'pidResolution', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
+            return { Input_Resolution: v };
         },
     },
 

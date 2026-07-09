@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    {
+      "path": "js/services/downloadService.js",
+      "note": "FIX A (EDITED): serial install queue. start() now enqueues on _installChain; each install POSTs via _doStart then _awaitTerminal(modelId) waits for download:complete/failed/cancelled (30min safety timeout) before releasing the next. Wrapper only ever runs 1 install at a time -> no CPU-pod starvation, no set-diff race."
+    },
+    {
+      "path": "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "note": "FIX B(2) (EDITED ~line 1734): node-install extracted-dir detection now reads the zip's OWN namelist (top-level '<repo>-<branch>/') instead of a before/after listdir set-diff of CUSTOM_NODES_DIR. Race-proof -> kills false 'archive produced no folder'. NEEDS IMAGE REBUILD to take effect."
+    },
+    {
+      "path": "routes/remoteModels.js",
+      "note": "DIAGNOSIS ref (not edited): line 556 bad-response = !res.ok||!res.body on /wrapper/events/stream reconnect"
+    },
+    {
+      "path": "routes/downloadManager.js",
+      "note": "DIAGNOSIS ref (not edited): lines 884/923 silent-stall watchdog + _onRemoteStreamClosed reconnect loop"
+    }
+  ]
+}

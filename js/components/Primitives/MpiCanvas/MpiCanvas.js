@@ -285,7 +285,7 @@ class _CanvasCore {
         });
         // Write into manual layer; recomposite refreshes display.
         this.mask.manualCtx.globalCompositeOperation = 'source-over';
-        this.mask.manualCtx.drawImage(img, 0, 0);
+        this.mask.manualCtx.drawImage(img, 0, 0, this.mask.manualCanvas.width, this.mask.manualCanvas.height);
         this.mask._recomposite();
         this.draw();
     }
@@ -806,7 +806,12 @@ class _CanvasCore {
         const compX = (baseW - compW) / 2;
         const compY = (baseH - compH) / 2;
 
-        const clipX = this.comparison.sliderPos * baseW;
+        // sliderPos is a fraction of the CONTAINER (screen space) so the split bar
+        // stays fixed while the image pans/zooms under it. Overlay ctx is un-transformed
+        // image-px, so convert: screen bar x → image-px via the inverse view transform.
+        const rect = this.container.getBoundingClientRect();
+        const sliderScreenX = this.comparison.sliderPos * rect.width;
+        const clipX = (sliderScreenX - this.view.offsetX) / (this.view.scale || 1);
 
         ctx.beginPath();
         ctx.rect(clipX, 0, baseW - clipX, baseH);
@@ -847,8 +852,8 @@ class _CanvasCore {
         const ctx = this.screenUICtx;
         const W = this.screenUICanvas.width;
         const H = this.screenUICanvas.height;
-        const display = this._displayImage();
-        const barX = this.view.offsetX + this.comparison.sliderPos * display.width * this.view.scale;
+        // Screen-space bar: fixed fraction of the container, independent of pan/zoom.
+        const barX = this.comparison.sliderPos * W;
         ctx.save();
         ctx.strokeStyle = BRUSH_CURSOR;
         ctx.lineWidth = 2;

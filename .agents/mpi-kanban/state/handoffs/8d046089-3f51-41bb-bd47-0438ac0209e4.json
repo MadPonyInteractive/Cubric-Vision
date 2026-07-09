@@ -1,0 +1,107 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "8d046089-3f51-41bb-bd47-0438ac0209e4",
+  "generated_at": "2026-06-30T20:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-168 model tiers (L/B/H) + computed VRAM↔RAM trade table — Phases A+B done, resuming at C+D",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Replace one-size-fits-all model weights with explicit tiers (Low/Balanced/High) shipped as SEPARATE model cards. Help low-VRAM users pick the right card without lying about requirements (VRAM↔RAM is a trade curve, not a single number). Models page gets a filter + tier badge with a COMPUTED hover trade table; prompt box gets an L/B/H marker to disambiguate installed tiers.",
+    "status": "in_progress",
+    "summary": "Formula (the gating unknown) is SOLVED, coded, node-verified (Phase A). Registry fields added + verified (Phase B). Remaining: Phase C (models-page UI — filter toggles, tier badge, computed hover table) and Phase D (prompt-box L/B/H marker). Both are component work and were fully scoped by 4 investigation agents — exact files/lines below."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-168/plan.md",
+    "completed": [
+      "Phase A — footprint.js formula module (constants OVERHEAD=1.3, k=0.25, MIN_FLOOR=8). Node self-check PASS; reproduces user's RTX 4060 16GB box (LTX bf16 raw 44GB RAM at V=16). Exports tradeTable/totalWeightsGb/ramNeededGb/vramFloorGb/sizeToGb.",
+      "Phase B — ModelDef typedef + 7 model entries tagged: sizeTier (5 SDXL=low, wan-22+ltx-23=balanced) + modelFamily (Wan-2.2, LTX-2.3). Live tradeTable on real deps verified."
+    ],
+    "pending": [
+      "Phase C — Models page (MpiModelManager): 3 multi-select filter toggles (L/B/H, no ALL, all-off=show all), tier badge per card (full word), COMPUTED hover trade table via MpiPopup (NOT the hardcoded placeholder), user-row + matching-toggle highlight (local engine only — suppress when remote).",
+      "Phase D — Prompt-box selector (MpiPromptBox _modelDropdownOptions): append L/B/H letter to label, ONLY when 2+ installed models share modelFamily (no clutter on lone cards).",
+      "Phase E — Verify end-to-end on the real 16GB/62GB box + a remote Pod (fit UI suppressed remote)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-168",
+    "title": "Model tiers (L/B/H) + computed VRAM↔RAM trade table",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-168/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-168/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-168/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md fully written with locked design + fitted constants + investigation-confirmed implementation surface",
+      "Phases A+B logged to both event logs (.agents/mpi-kanban/events.jsonl + tasks/MPI-168/events.jsonl)"
+    ],
+    "pending": [
+      "After Phase C/D ship: register new component CSS in js/shell/preloadStyles.js if any new .css file is created (rule: every new component registers its css). Doc-drift check at session end: a new component-wiring change may warrant updating .claude/rules/ (ASK first — never edit rule files without explicit permission).",
+      "End-session: commit by explicit pathspec (shared tree — never git add -A)."
+    ]
+  },
+  "next_action": {
+    "description": "Read .agents/mpi-kanban/tasks/MPI-168/plan.md, then implement Phase C (MpiModelManager filter + badge + computed hover table) followed by Phase D (MpiPromptBox L/B/H marker). BRIEF YOURSELF on the component rules first (see rules_active) — this is component-sensitive work. Use the exact file/line targets in context.key_decisions. The hover table MUST be computed from footprint.js tradeTable(), NOT the hardcoded placeholder the UI investigation sketched.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "FORMULA (locked, in js/data/modelConstants/footprint.js): footprint = totalWeights + 1.3; vramFloor = max(8, totalWeights*0.25); ramNeeded(V) = ceil(max(0, footprint - V)/8)*8. Never under-states (rounding IS the margin; over-stating is acceptable, under = OOM). Table states MODEL need only — OS reserve (~10-20GB, varies per machine) is the user's own headroom, shown as a FOOTNOTE, never baked in.",
+      "Constants fitted from published GGUF rec tables + user's 4060 anchor; independently corroborated by a 50-datapoint sweep (fixed-overhead consensus ~0.75-1.5GB centers on our 1.3; image-model k~1.0-1.15). LTX real-dep total = 62.9GB → 16GB VRAM shows ~56GB RAM (vs lived 44 — user OK with this approximation; users land on 16/32/64/128 tiers so rounding swallows it).",
+      "FIELD NAMES (3 collisions found): `tier` = TAKEN (numeric node-title gen, commandExecutor.js:564). `qualityTier` = TAKEN (per-project resolution setting in project.json). USED `sizeTier` ('low'|'balanced'|'high') + `modelFamily` (string). DO NOT reuse tier/qualityTier.",
+      "PHASE C — MpiModelManager (js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js): grid built by renderList()→_buildCard(model) (~line 408-553). Existing 'VRAM badge' = plain <span> in MpiInstalledDisplay info row (NOT a real badge) — DON'T extend it; add a SIBLING tier badge in _buildCard's card wrapper div (mpi-model-manager__card). Filter bar mounts between __separator and __slot (template ~line 48-56) OR in toolbar. Filter = 3 MpiButton toggleable:true (same pattern as existing op-toggle rows), variant secondary, size sm. all-off → show all. Hover table = reuse MpiPopup primitive (js/components/Primitives/MpiPopup/MpiPopup.js — portals to body so won't clip; pass table HTML as `children`; wire on(badgeEl,'mouseenter'/'mouseleave') to toggle is-active; store+destroy per card). Hardware read = one-shot fetch('/system/stats') in onOpen() → data.vram.total/data.ram.total (GB); cache in closure; NO state lift. Remote detect = existing _isRemote closure + remote:connection sub already in this file (lines ~67,595); suppress hardware highlight when _isRemote. Engine for resolveDeps = remoteEngineClient.isRemote()?'remote':'local' (existing _engine() helper ~line 207).",
+      "PHASE D — MpiPromptBox (js/components/Organisms/MpiPromptBox/MpiPromptBox.js): the ONLY model-option builder is _modelDropdownOptions() at lines 461-467 (called from setModel line ~475 + setModelList ~515; no other mount site). Append ' L'/' B'/' H' to the `label` string (label flows to the closed trigger via textContent; `meta` only shows in the open list so it's the wrong slot). Map sizeTier low→L, balanced→B, high→H. GATE: only when 2+ installed models share the same modelFamily (lone SDXL/Wan/LTX get NO letter — no clutter). The dropdown trigger is plain text (no HTML pill possible without modifying MpiDropdown — don't).",
+      "Tiers are SPARSE: not every family fills all 3 levels. Currently SDXL=low (permanent), Wan+LTX=balanced (low/high are FUTURE separate cards). Out of scope: authoring the actual low/high WEIGHTS+workflows — this plan ships the SYSTEM + tags current cards.",
+      "Wan mid-class wart ACCEPTED (design a): Wan (~20GB weights) floors at MIN_FLOOR=8 not its published 12 — the RAM column (~16GB at that floor) carries the warning, no third constant. Don't 'fix' it."
+    ],
+    "constraints": [
+      "COMPONENT RULES ARE MANDATORY (this work is component-sensitive): BEM (.mpi-block__element--modifier); ComponentFactory.create() for any new component; NEVER modify js/components/factory.js; js/utils/dom.js helpers (qs/qsa/gid/ce/on/off — NO raw querySelector/addEventListener; on/off return cleanup fns); js/utils/icons.js (no raw SVG — register missing icons there first); CSS variables ONLY from styles/01_base.css (no hardcoded hex/colors); Events.on/emit with STORED unsubscribes called on cleanup; if setup adds listeners/observers it MUST define el.destroy() collecting unsubs in const _unsubs=[]; new components register .css in js/shell/preloadStyles.js AND document props in js/components/types.js.",
+      "Per the UI investigation: NO new component files are needed — everything fits inside MpiModelManager + existing primitives (MpiButton, MpiPopup) and one MpiPromptBox function. If you DO add a standalone component, follow the full registration rules above.",
+      "Hover table HTML the UI agent sketched was HARDCODED (8/16, 12/24, 24/32) — that is a PLACEHOLDER. Build it from footprint.js tradeTable(model, engine, userVramGb).rows so it's the real computed curve.",
+      "footprint.js is a PURE data module (no DOM/Events/state) — import it directly: import { tradeTable } from '/js/data/modelConstants/footprint.js' (browser absolute path) or relative for node tests.",
+      "Shared-tree git: commit only by explicit pathspec; never git add -A/.; push is user-authorized only."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/footprint.js (NEW — formula module + self-check)",
+      "js/data/modelConstants/models.js (typedef + 7 entries: sizeTier + modelFamily)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-168/plan.md",
+      "js/data/modelConstants/footprint.js",
+      ".claude/rules/components.md",
+      ".claude/rules/dos_and_donts.md",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+      "js/components/Primitives/MpiPopup/MpiPopup.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["components", "dos_and_donts", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-30T20:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-168 (Model tiers L/B/H + computed VRAM↔RAM trade table) on branch RunPod, in the Cubric-Vision Electron app. Phases A and B are DONE and node-verified: js/data/modelConstants/footprint.js holds the locked formula (footprint = totalWeights + 1.3; vramFloor = max(8, totalWeights*0.25); ramNeeded(V) = ceil(max(0, footprint-V)/8)*8 — exports tradeTable/totalWeightsGb/ramNeededGb/vramFloorGb/sizeToGb), and js/data/modelConstants/models.js has every model tagged with sizeTier ('low'|'balanced'|'high') + modelFamily. Read .agents/mpi-kanban/state/handoffs/8d046089-3f51-41bb-bd47-0438ac0209e4.json and .agents/mpi-kanban/tasks/MPI-168/plan.md first. Your job is Phase C then Phase D — both are COMPONENT-SENSITIVE, so brief yourself on .claude/rules/components.md + dos_and_donts.md before writing any code. Phase C: in MpiModelManager add a 3-button L/B/H multi-select filter (MpiButton toggleable, no ALL, all-off=show all), a per-card tier badge (full word), and a hover trade table built with the MpiPopup primitive whose rows come from footprint.js tradeTable() (NOT a hardcoded table); read the user's VRAM/RAM via a one-shot fetch('/system/stats') in onOpen() and highlight the matching toggle + table row — but ONLY in local engine mode (suppress when remoteEngineClient.isRemote()). Phase D: in MpiPromptBox._modelDropdownOptions() (lines 461-467) append an L/B/H letter to the option label, but only when 2+ installed models share a modelFamily. Exact file/line targets and all four investigation findings are in the handoff's context.key_decisions. Do NOT reuse the field names `tier` or `qualityTier` (both taken). Use mpi-continue to proceed."
+}

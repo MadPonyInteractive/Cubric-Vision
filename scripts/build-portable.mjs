@@ -9,6 +9,7 @@ import zlib from 'node:zlib';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { assertApproved } from './release-notes-approval.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -538,7 +539,12 @@ function assertConnectorManifest(manifest) {
   const errors = [];
   if (manifest.appId !== 'cubric.vision') errors.push('appId must be cubric.vision');
   if (manifest.protocolVersion !== '0.1.0') errors.push('protocolVersion must be 0.1.0');
-  if (manifest.metadata?.manifestOnly !== true) errors.push('metadata.manifestOnly must be true');
+  // Vision is now a live connector responder (MPI-5): it provides
+  // system.memory.release. The old manifestOnly:true assertion is replaced by
+  // asserting the live capability is advertised.
+  const hasMemoryRelease = Array.isArray(manifest.capabilities)
+    && manifest.capabilities.some((c) => c.id === 'system.memory.release');
+  if (!hasMemoryRelease) errors.push('capabilities must include system.memory.release');
   if (errors.length) {
     throw new Error(`Connector manifest smoke assertions failed: ${errors.join('; ')}`);
   }
@@ -984,6 +990,16 @@ async function main() {
   const packageJson = await readJson(path.join(REPO_ROOT, 'package.json'));
   await assertAppPackageVersionParity(packageJson.version);
   opts.version ??= packageJson.version;
+
+  // Release-notes review gate: a real (non-dry-run) build refuses to proceed
+  // until the user has reviewed and approved the exact notes that ship in the
+  // in-app changelog. Approval is recorded as docs/releases/.approved-<ver>.json
+  // (a hash of the rendered notes); editing the notes after approval invalidates
+  // it. Dry runs stage no shippable artifact, so they skip the gate.
+  if (!opts.dryRun) {
+    await assertApproved(opts.version);
+  }
+
   opts.buildHash = await resolveBuildHash(opts.buildHash);
 
   const config = PLATFORM_CONFIG[opts.platform];

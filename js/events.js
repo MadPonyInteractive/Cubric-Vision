@@ -181,6 +181,7 @@ export const Events = new EventBus();
  * 'generation:preview'    { id, url }
  * 'generation:cancelled'  { id, tempId, extraTempIds }
  * 'generation:complete'   { id, item, group, tempId?, extraTempIds? } — generation succeeded and persisted
+ * 'generation-store:changed' { jobs, running, pending, depth } — generationStore snapshot after any job transition (MPI-208; the single source of truth all generation UI derives from)
  *
  * Focus mode events (state-driven; subscribe via `Events.onState('focusMode', ...)`):
  * 'state:changed' { key: 'focusMode', value: boolean } — focus mode toggled

@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-181",
+  "title": "CPU download-Pod image bakes stale wrapper (no /wrapper/disk) \u2014 volume usage bar never shows on CPU Pods",
+  "description": "BUG (found live 2026-07-02, CPU download Pod lcs0nzjypyfaqh): the Settings network-volume usage bar (MPI-169) never appears on a No-GPU download Pod. NOT by design \u2014 the bar is fed by GET /remote/pod/disk -> wrapper /wrapper/disk (du -sb /workspace), which was written to work on ANY pod. PROOF: the running CPU wrapper's openapi.json lists every route EXCEPT /wrapper/disk, yet /health reports wrapper_version 0.2.23 (a LIE \u2014 0.2.23 is the commit that ADDED /wrapper/disk, mpi-ci a5d1812 2026-07-01; the baked code is 0.2.22).\n\nROOT: the GPU image bootstraps start.sh + wrapper.py fresh from R2 at every boot (MPI-156 bootstrap.sh), so GPU Pods always run the latest wrapper. Dockerfile.cpu has NO bootstrap \u2014 it bakes wrapper.py at build time (COPY wrapper/wrapper.py). The published ghcr.io/madponyinteractive/cubric-vision-pod:v0.10.2-cpu was built from the 0.2.22 tree but stamped WRAPPER_VERSION=0.2.23 via build-arg, so /health lies about what it runs. Every wrapper fix since that build silently never reaches CPU Pods \u2014 this WILL recur on the next wrapper change.\n\nFIX (proposed): give Dockerfile.cpu the same R2 bootstrap the GPU image uses (fetch wrapper.py + start-cpu.sh at boot, unset CUBRIC_WRAPPER_VERSION on successful fetch so /health stays honest \u2014 bootstrap.sh already implements this contract), then rebuild + push a new -cpu tag (build-pod-image skill, user-gated billing/publish) and bump POD_IMAGE_VERSION_CPU in routes/remotePodLifecycle.js. Minimal alternative (no parity): just rebuild -cpu from current wrapper source \u2014 fixes today's bar but the divergent update path stays and rots again.\n\nVERIFY: fresh CPU download Pod -> Settings shows the volume usage bar (denominator = volume size, numerator = du of /workspace); /health wrapper_version matches the R2-fetched wrapper. IMPORTANT (user): the bar on CPU Pods is a core promise \u2014 download mode exists so users manage installs WITHOUT paying for a GPU. FILES: mpi-ci/cubric-vision-pod/Dockerfile.cpu, bootstrap.sh, start-cpu.sh; Cubric-Vision routes/remotePodLifecycle.js (POD_IMAGE_VERSION_CPU). Relates: MPI-169 (the bar), MPI-88 (download mode), MPI-156 (GPU bootstrap), MPI-179 (found chasing its verify).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-02T12:27:49Z",
+  "updated_at": "2026-07-02T12:56:06Z",
+  "links": {
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "tags": [
+    "runpod",
+    "pod-image",
+    "cpu-download-pod",
+    "wrapper",
+    "settings",
+    "bug"
+  ],
+  "priority": "high"
+}

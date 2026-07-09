@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "3f9c1a20-7d84-4e6b-9c11-2a5e8f0b6d33",
+  "generated_at": "2026-07-08T19:35:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-222 LIVE-VERIFY session — RIFE self-heal + MpiNodes symlink guard + CPU pin + REMOTE drift-heal all LIVE-PROVEN; 4 bugs found+fixed on a real Pod. Next = commit the fixes, then Phase 7 docs sweep. Nothing committed.",
+    "branch": "1.2"
+  },
+  "goal": {
+    "original": "Continue MPI-222: per-node commit-drift → targeted auto-reinstall on boot (no engine wipe), BOTH engines. node_lock pins each node's commit but nothing recorded which commit was installed + the install-check was folder-exists only → a node bump left installs silently stale. Fix = .mpi_node_commit marker + drift check + targeted reinstall, both engines. Plus remote node-install architecture so a node bump never forces a Pod rebuild. Track every change in a ledger.",
+    "status": "in_progress",
+    "summary": "Phases 1-8 DONE. This session ran the USER-ONLY live verifies on a real Pod and they PAID OFF HARD — caught + fixed 4 real bugs that were shipped/pending, ALL now LIVE-PROVEN. The core drift system (local + remote, detection + heal) is proven end-to-end. Remaining: commit this session's fixes (shared-tree hygiene), then Phase 7 (permission-gated docs/rules/memory sweep — the changelog 'Re-eval required' table). Nothing is committed yet."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+    "completed": [
+      "Phases 1-8 (prior sessions): data model (engineAsset rename, Painter pin, universal filter), marker helpers (.mpi_node_commit), LOCAL drift ladder (LIVE-PROVEN earlier), REMOTE app-side drift check + baked warn, Phase 5 mpi-ci v0.14.0 pod image (built+published+R2), Phase 8 RIFE-as-dep + targetPath primitive.",
+      "THIS SESSION — 4 LIVE-FOUND bugs, all fixed + live-proven (full detail in changelog.md):",
+      "(1) RIFE self-heal downloaded to the WRONG dir — Phase-8 targetPath branch was only in the drift-check resolver (routes/shared.js resolveComfyPath), NOT the DOWNLOAD resolver. 3 call sites in downloadManager.js (717/1856/2001) stripped dep.targetPath, passing only {type,filename} → RIFE resolved to G:/CubricModels instead of the node ckpts dir. Fix: guard clause at each site forwards the FULL dep. LIVE-PROVEN: user deleted rife47.pth + restarted → self-heal landed it in custom_nodes/comfyui-frame-interpolation/ckpts/rife/rife47.pth, sha 6a8a825a byte-match.",
+      "(2) MpiNodes dev symlink clobbered by the drift pre-wipe (fs.remove follows symlinks). Fix: dev-mode skip `if (_devMode && depId==='ComfyUI-MpiNodes') continue;` in checkUniversalWorkflowDepsStatus (routes/shared.js) + a server-side _devMode const (buildInfo.js regex, mirrors remotePodLifecycle.js). User-scoped: MpiNodes is the ONE symlinked node, forever (user's decision). LIVE-PROVEN: symlink survived a restart.",
+      "(3) CPU image pin stale — POD_IMAGE_VERSION_CPU was 'v0.11.0' in remotePodLifecycle.js. CI built v0.14.0-cpu (verified present on GHCR) but the app pin was missed in Phase 5. Fix: bumped to 'v0.14.0'. Takes effect next CPU pod deploy.",
+      "(4) REMOTE drift-HEAL was DEAD (the node-bump test caught it — its whole reason). Drift DETECTION worked (bumped MpiNodes 2d409b5->ba4b37a → Chroma flipped not-installed) but pressing Install LOOPED `already_installed`: the app never sent force:true for a drifted volume node, so wrapper.py:2068 `if complete and not force: return already_installed` short-circuited → never re-fetched at the pinned commit. Fix (app-side only, no wrapper change — its force path already rmtree's+re-clones): remoteModels.js:313 tags the drifted dep `drifted:true`; downloadManager else-branch carries `{...dep, forceReinstall:true}`; install dispatch (:1367) sends `remoteInstallDep(dep,{force:dep.forceReinstall})`. LIVE-PROVEN: Chroma installed NO-loop, prompt box returned, generation succeeded twice. node-drift 20/20.",
+      "Phase 5 remote live-verify DONE: v0.14.0-cu130 GPU image boots clean, baked-vs-volume dedup (node-dedupe quarantined RES4LYF), schema-2 manifest stamped, generation works. The earlier crash-loop was volume z6l1p5kstn pollution only (stale ComfyUI-LTXVideo.mpi193.disabled → non-defensive `mv` in start.sh); a FRESH volume boots clean."
+    ],
+    "pending": [
+      "COMMIT this session's fixes (nothing committed yet). Shared-tree hygiene: explicit pathspec, NEVER git add -A/.  (feedback_shared_tree_commit_hygiene). Branch 1.2 is AHEAD of origin with OTHER-session commits — do NOT push without user authorization. Files: routes/shared.js, routes/downloadManager.js, routes/remoteModels.js, routes/remotePodLifecycle.js, tests/node-drift.test.cjs (+ dependencies.js/remotePodState.js/engine.js/node_lock.json from prior phases if not already committed — check git log; node_lock.json was bump-then-REVERTED this session, so its diff should be prior-phase content only, verify before staging).",
+      "Phase 7 — PERMISSION-GATED docs/rules/memory + dead-code sweep. Work the changelog.md 'Re-eval required' table to zero (comfy_engine.md, downloads.md, download-manager.md, runpod-remote-engine.md, add-model-playbook.md, universal_workflows.js:6 comment, engine.js:366 comment, build-pod-image skill prose x3, targetPath doc, MEMORY.md hook, + the symlink-clobber + CPU-pin + drift-heal rows added this session). Grep-clean installOnEngine. ASK before editing any .claude/rules/ or docs/ file (CLAUDE.md doc-drift rule).",
+      "VERIFY-BEFORE-CARDING (user flag, do NOT re-card blindly): the remote node-drift heal is currently MANUAL (marks model not-installed → user presses Install in Model Library). A naive read says this should AUTO-heal on connect like the local boot-repair modal. BUT the user flagged that existing MpiNodes-v14 / MPI-219 `reload-extra-paths` machinery (routes/comfy.js reloadExtraPathsWhenReady + MpiNodes POST /mpi/reload-extra-paths) may already avoid the manual re-install. A premature MPI-230 'auto-heal' card was created THEN DELETED this session for exactly this reason. Before carding: trace the connect-edge flow (js/shell.js syncModelInstalled → js/data/modelRegistry.js → js/services/comfyController.js) and confirm whether remote node-drift genuinely requires a manual install or existing machinery auto-resolves it. Card ONLY if a real uncovered gap. NOTE: MPI-219's reload-extra-paths is about MODEL-FOLDER registration (no restart), which is DIFFERENT from node-drift; don't assume it covers node-drift without tracing.",
+      "OPTIONAL live-verify (cardable, not blocking): a BAKED-node bump → ui:warning 'image stale' toast (the last unproven remote sub-item — logic+guard-tested, not live-run; needs a deliberate baked-node node_lock bump on a v0.14.0 GPU pod).",
+      "OPTIONAL hardening (cardable): (a) the drift pre-wipe (engine.js:578) fs.remove is over-broad for a GENERAL symlinked node — the dev-mode guard only covers MpiNodes; a future symlinked node would still be clobbered. (b) pre-wipe nukes in-folder weights (RIFE now covered by its targetPath dep, but a future in-folder-weight node isn't). (c) mpi-ci start.sh `mv` dedup (line 197) is non-defensive — crashes (Directory not empty) on a volume with a stale .disabled twin (real crash-loop hit on volume z6l1p5kstn this session; fresh volumes dodge it). Fix = rm stale .disabled target before mv, republish start.sh to R2 stable."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-222",
+    "title": "No runtime auto-update when a pinned custom-node commit bumps — installed nodes silently stay stale on both engines",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-222/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-222/handoffs/",
+      "changelog": ".agents/mpi-kanban/tasks/MPI-222/changelog.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "test", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "changelog.md updated through this session: 4 new '(fix)' sub-sections (Phase 8 targetPath download fix, Phase 5 CPU pin, Phase 4 drift-heal) + Phase 5 GPU/CPU live-verify results + symlink-clobber row + all marked LIVE-VERIFIED. The 'Re-eval required' table is the Phase 7 worklist.",
+      "plan.md Plan Drift + Completed updated with this session's 4 fixes + the verify-before-carding note (replacing the deleted MPI-230 reference).",
+      "MPI-230 card was created then DELETED (board.json next_id restored to 230, task dir removed, both event logs cleaned) per the user's flag it may duplicate existing machinery — this is now a verify-before-carding item in this handoff instead."
+    ],
+    "pending": [
+      "Phase 7 docs/rules edits PERMISSION-GATED (CLAUDE.md doc-drift rule) — ask before editing .claude/rules/ or docs/.",
+      "MEMORY.md MPI-222 hook to flip to a Done one-liner at end-session (engineAsset rename + bake=installRequirements + GitHub-not-R2 + .mpi_node_commit marker + drift ladder + targetPath primitive + RIFE-as-dep + the 4 live-found fixes: targetPath-download-resolver, MpiNodes-symlink-devguard, CPU-pin, remote-drift-force-heal). Add a hook for the new targetPath add-model primitive.",
+      "Verify node_lock.json diff before committing — it was bumped to ba4b37a for the drift test then REVERTED to 2d409b5 (HEAD); its remaining git diff should be prior-phase content (Painter pin, installOnEngine removal etc.), NOT the test bump. Confirm with git diff before staging."
+    ]
+  },
+  "next_action": {
+    "description": "Read changelog.md (ALL the 2026-07-08 '(fix)' sections — this session found+fixed 4 bugs on a real Pod, all LIVE-PROVEN) then plan.md. The core work is DONE and live-verified. Next: (1) COMMIT this session's fixes by explicit pathspec (shared-tree hygiene; branch 1.2 ahead of origin — do NOT push without asking). (2) Phase 7 permission-gated docs sweep — work the changelog 'Re-eval required' table; ASK before editing .claude/rules/ or docs/. Do NOT re-card the remote auto-heal without first tracing the connect-edge flow (a premature MPI-230 was deleted — the user flagged existing MpiNodes-v14/reload machinery may already cover it). Do NOT re-litigate locked architecture. Do NOT start a pod image build (v0.14.0 is built+published).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "All 4 bugs this session were the SAME class: a fix landed on ONE code path but its twin was missed. targetPath was in the drift resolver not the download resolver; the symlink guard local-only; CPU pin missed while GPU bumped; remote drift got detection but not the force-heal the local pre-wipe provides. This is feedback_check_both_engine_paths + feedback_engine_split_sweep_all_consumers biting repeatedly. Phase 7 / future work: when touching a resolver or install path, grep ALL call sites.",
+      "The remote drift-heal fix needs NO wrapper/image change — wrapper.py:2081 _run_node_install already rmtree's (line 1920) + re-clones at the pinned commit + re-stamps the marker WHEN force:true is sent. The bug was purely that the app never SET force for a drifted node. So the fix ships in the app alone (no Pod rebuild, no R2 republish).",
+      "node_lock MpiNodes was bumped 2d409b5->ba4b37a (real 1.1.3 commit, NOT a fake SHA — a fake would 404) to create real drift for the test, then REVERTED to 2d409b5 (HEAD/1.1.4) after. The test VOLUME e6hn41a5ea now has MpiNodes at ba4b37a; the next reconnect after an app restart will drift-detect + force-reinstall @ 2d409b5 (the fix working in reverse — one-time expected reinstall, harmless).",
+      "The GPU-pod crash-loop earlier was VOLUME POLLUTION (volume z6l1p5kstn had a stale ComfyUI-LTXVideo.mpi193.disabled dir), NOT a v0.14.0 image bug: mpi-ci start.sh:197 `mv \"$d\" \"$d.mpi193.disabled\"` is non-defensive → collides `Directory not empty` → non-zero exit → container restart loop. A FRESH volume boots clean (proven on e6hn41a5ea). start.sh hardening is a cardable follow-up (rm stale .disabled target first), NOT release-blocking.",
+      "CPU download-mode pods install ALL nodes onto the volume (they have no baked ComfyUI); GPU pods have baked nodes + the start.sh dedup quarantines volume twins. So the CPU-pod test exercised the wrapper manifest/install path but NOT the baked-node markers — those needed the GPU pod."
+    ],
+    "constraints": [
+      "NOTHING committed this session — all fixes are on disk only. Commit by explicit pathspec (never git add -A). Branch 1.2 is AHEAD of origin with OTHER-session commits; do NOT push without user authorization.",
+      "mpi-ci is a SEPARATE git repo (c:/AI/Mpi/mpi-ci) — the start.sh hardening follow-up (if carded) edits there with git -C, never git add from Cubric-Vision.",
+      "Phase 7 docs edits PERMISSION-GATED — ask before touching .claude/rules/ or docs/.",
+      "Do NOT re-litigate locked architecture: bake=installRequirements, engineAsset (weights only), .mpi_node_commit marker, drift ladder (volume reinstall / baked warn), GitHub-archive-@-commit for nodes NOT R2, Design A for RIFE (targetPath dep), force:true for remote drift heal.",
+      "Do NOT start a pod image build — v0.14.0 is built+published+live-verified. The CPU-pin fix uses the ALREADY-BUILT v0.14.0-cpu on GHCR (no rebuild).",
+      "Do NOT re-card the remote auto-heal UX without tracing the connect-edge flow first (verify-before-carding — a premature MPI-230 was already deleted)."
+    ],
+    "files_modified": [
+      "routes/shared.js (this session: _devMode const + dev-mode MpiNodes drift-skip; prior: targetPath branch in resolveComfyPath)",
+      "routes/downloadManager.js (this session: targetPath guard at 3 resolve sites + drifted->forceReinstall carry + force:true dispatch)",
+      "routes/remoteModels.js (this session: drifted-dep tag at :313; prior Phase 4/5/8 work)",
+      "routes/remotePodLifecycle.js (this session: POD_IMAGE_VERSION_CPU v0.11.0->v0.14.0; prior: POD_IMAGE_VERSION v0.14.0)",
+      "tests/node-drift.test.cjs (this session: +dev-mode skip +2 drift-heal force guards + targetPath download-call-site guard = 20/20; prior 16/16)",
+      "dev_configs/node_lock.json (bumped for the drift test then REVERTED to 2d409b5 — net diff should be prior-phase only; VERIFY before commit)",
+      "routes/engine.js, routes/remotePodState.js, js/data/modelConstants/dependencies.js (prior phases — check git log for what's already committed)",
+      ".agents/mpi-kanban/tasks/MPI-222/changelog.md + plan.md (updated this session)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-222/changelog.md",
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      "routes/downloadManager.js",
+      "routes/remoteModels.js",
+      "routes/shared.js",
+      "tests/node-drift.test.cjs"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "comfy_engine (Engine Split)",
+      "download-manager (node drift + targetPath weights + drift force-heal)",
+      "runpod-remote-engine (volume vs baked, manifest nodes[], CPU image pin, start.sh dedup)",
+      "add-model-playbook (node-bump flow + targetPath in-folder weights)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/download-manager.md",
+    "docs/runpod-remote-engine.md",
+    "docs/add-model-playbook.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-08T19:35:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-222 in Cubric Vision (branch 1.2). Read .agents/mpi-kanban/state/handoffs/3f9c1a20-7d84-4e6b-9c11-2a5e8f0b6d33.json, then the change ledger at .agents/mpi-kanban/tasks/MPI-222/changelog.md (READ ALL the 2026-07-08 '(fix)' sections FIRST), then plan.md. Phases 1-8 are DONE. This session ran the USER-ONLY live verifies on a real Pod and caught+fixed 4 real bugs, ALL now LIVE-PROVEN: (1) RIFE self-heal downloaded to the wrong dir — the targetPath branch was only in the drift-check resolver, not the 3 DOWNLOAD resolve sites in downloadManager.js (they stripped dep.targetPath); fixed by forwarding the full dep; live-proven (lands in ckpts/rife/, sha-match). (2) MpiNodes dev symlink clobbered by the drift pre-wipe; fixed with a dev-mode `_devMode && depId==='ComfyUI-MpiNodes'` skip in checkUniversalWorkflowDepsStatus; live-proven (symlink survived restart). (3) CPU image pin stale (POD_IMAGE_VERSION_CPU v0.11.0->v0.14.0; CI built v0.14.0-cpu, app pin was missed). (4) REMOTE drift-HEAL was dead — the node-bump test (bump MpiNodes 2d409b5->ba4b37a) exposed an `already_installed` install-loop: the app never sent force:true for a drifted volume node, so the wrapper short-circuited on folder-exists and never re-fetched. Fixed app-side (remoteModels.js tags drifted, downloadManager carries forceReinstall, remoteInstallDep sends force); NO wrapper/image change (the wrapper's force path already rmtree's+re-clones+re-stamps). LIVE-PROVEN (Chroma installed no-loop, generation succeeded twice). node-drift 20/20. node_lock was reverted to 2d409b5 (HEAD). NOTHING IS COMMITTED — all fixes are on disk. NEXT: (1) commit by explicit pathspec (shared-tree hygiene; branch 1.2 ahead of origin, do NOT push without asking; verify node_lock.json diff is prior-phase only, not the reverted test bump). (2) Phase 7 permission-gated docs/rules/memory sweep — work the changelog 'Re-eval required' table; ASK before editing any .claude/rules/ or docs/ file. DO NOT re-card the remote auto-heal UX without first tracing the connect-edge flow (js/shell.js syncModelInstalled -> modelRegistry.js -> comfyController.js) — a premature MPI-230 was created THEN DELETED this session because the user flagged existing MpiNodes-v14 / MPI-219 reload-extra-paths machinery may already cover it. DO NOT start a pod image build (v0.14.0 is built+published+live-verified). DO NOT re-litigate locked architecture (bake=installRequirements; engineAsset weights; .mpi_node_commit marker; drift ladder; GitHub-archive-@-commit for nodes NOT R2; targetPath dep for in-folder weights; force:true for remote drift heal)."
+}

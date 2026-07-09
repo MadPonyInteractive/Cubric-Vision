@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "139e9611-9e1e-4f23-a503-25002c3ce3f4",
+  "generated_at": "2026-06-21T14:02:49Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "LTX-2.3 template: reinstated audio-latent subgraph, wired transition LoRA (cross-op), built input-audio voice lip-sync (WORKING via LTXVConditioning fps fix)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-4: author the LTX-2.3 multi-mode template in live ComfyUI (cooperative session, user drives ComfyUI, agent edits workflow JSON directly). This session: pick next ops after i2v/t2v/FL.",
+    "status": "in_progress",
+    "summary": "Three features added to the live template this session, all working: (1) reinstated the stage-1 audio save/continue subgraph the prior session accidentally removed; (2) transition LoRA wired as a cross-op toggle (stage1+stage2, model-only, float-switch self-bypass); (3) INPUT AUDIO voice lip-sync built and CONFIRMED WORKING after adding the missing LTXVConditioning fps-embedding node. Open question for next session: input-audio influence is image-dependent (strength 1.0 worked on every image tested) -> may drop the slider entirely and just auto-enable at 1.0 when an audio file is present; needs more image/prompt testing to confirm."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "Reinstated stage-1 audio save/continue subgraph (9 nodes from .bak2) - fixed multi-stage audio break (CreateVideo 66.audio was unlinked; 124 Stage-1 Audio Latent was reading raw fresh not continue-aware)",
+      "Researched transition LoRA (valiantcat/LTX-2.3-Transition-LORA) - confirmed model-only (1152 tensors all diffusion_model.*, zero CLIP), works on i2v/t2v/FL not FL-only, downloaded to C:\\AI\\loras\\LTX2.3\\ltx2.3-transition.safetensors (372MB)",
+      "Wired transition LoRA: node 191 MpiLoraModel (model-only) + node 192 Input_Use_Transition (MpiBoolean float->strength self-bypass). User moved it to TRUNK (stage1+stage2) because stage-2-only had NO visual effect on live test",
+      "Investigated monolith input-audio section (saved research/monolith-input-audio.md) + BFS head-swap (saved research/monolith-bfs-headswap.md, DEFERRED)",
+      "Built input-audio chain in template: 197 LoadAudio(Input_Audio_File) -> 198 LTXVAudioVAEEncode -> 200 SetLatentNoiseMask <- 199 SolidMask <- 202 MpiNormalizeValue(inverse) <- 201 Input_Audio_Influence; gated by 204 MpiIfElse <- 203 Input_Use_Input_Audio; -> 145 stage-1 concat",
+      "User wired SolidMask 199 width/height to real latent dims (155/156 floor(a/2))",
+      "THE FIX: added node 212 LTXVConditioning 'LTX Conditioning (fps)' between conditioning reroutes 84->86, frame_rate <- 98 FPS <- 76 Duration.fps. This was the missing piece - input-audio lip-sync now WORKS",
+      "Added model DEPENDENCIES section to spec (7 files) + decision: extra LoRA ship as deps NOT user dropdown",
+      "Created Cubric-Audio app folder + README (voice-recording = future Cubric Audio capability, mic icon)"
+    ],
+    "pending": [
+      "TEST after lunch: does input-audio strength 1.0 work on EVERY image/prompt? If yes -> DROP the Input_Audio_Influence slider, auto-enable input audio at strength 1.0 whenever user drops an audio file (no slider, no button). If some images need <1.0 -> keep slider.",
+      "Test whether audio/video LENGTH must match (user ran 8s audio + 4s video, worked, audio captured at end - confirm if mismatch causes artifacts)",
+      "Then continue op build-out: video extend (latent-continue half-wired via IfElse 51/56, sampler-side feed unverified), then ControlNet, then head-swap (BFS - deferred, research saved)",
+      "Finalize operation taxonomy for the app (i2v/t2v/FL/extend + deferred CN/headswap/guide-video) - user said decide later after testing",
+      "Eventually: export template into per-op app API files via workflow-gen orchestrator (add generate_ltx.py), resolve dep URLs/SHAs"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session)",
+    "research with sub-agents (user prefers sub-agents for research) - but VERIFY all sub-agent claims against live JSON before trusting"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Spec doc fully updated this session: research/ltx-integration-spec.md (node inventory, controls, ops, deps section 3b, input-audio AS-BUILT section 3d with the fps fix + influence findings)",
+      "research/monolith-input-audio.md + research/monolith-bfs-headswap.md saved",
+      "Event logged to MPI-4 events.jsonl + global"
+    ],
+    "pending": [
+      "After input-audio slider decision is made, update spec 3d + controls table to lock 'slider vs auto-1.0'",
+      "Consider memory entry: LTX input-audio lip-sync needs LTXVConditioning fps embedding (without it, audio never maps to mouth motion regardless of mask strength)"
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4 input-audio testing. User is testing whether input-audio strength 1.0 works on every image/prompt to decide if the Input_Audio_Influence slider can be dropped (auto-enable at 1.0 when audio file present). Re-scan the live template FIRST (G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json) - prior context is summarized not live. After the slider decision, continue op build-out (video extend next).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Input-audio lip-sync FIX = LTXVConditioning fps embedding (node 212). Template had no LTXVConditioning so conditioning lacked fps metadata and audio timing never mapped to mouth motion. THIS was the missing piece - feature works now.",
+      "Input_Audio_Influence slider is INVERTED via MpiNormalizeValue mode=inverse: slider 1.0 = mask 0.0 = FULL audio strength (= monolith's mask-strength-0). Creator's video used mask 0.7 = our slider 0.3.",
+      "Influence is IMAGE-DEPENDENT: image A worked at slider 0.3 AND 1.0; image B needed 1.0 (0.3 = no movement). 1.0 = safe default. May drop slider entirely if 1.0 always works.",
+      "Transition LoRA on TRUNK (stage1+stage2), not stage-2-only - user's live test showed stage-2-only had NO visual effect, contradicting the official valiantcat workflow. Live test wins.",
+      "Extra LoRA (transition + gemma-abliterated) ship as model DEPENDENCIES, not user-dropdown entries."
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI; agent edits JSON on disk. ALWAYS ask user to CLOSE the ComfyUI tab AND confirm SAVED before writing JSON - disk != live until user saves. This bit us 3x this session (stale disk reads). Re-scan disk and CONFIRM saved-state before every write.",
+      "DO NOT TRUST SUB-AGENT CLAIMS without verifying against live JSON. A sub-agent FABRICATED audio_normalization_factors='1,1,0.33,1,1,0.33,1,1' and CFG=4 - both FALSE (real = all 1s, CFG=1). User caught it. Same skepticism as the LoRA author claims.",
+      "Windows Python cp1252 - ALWAYS run helpers with PYTHONUTF8=1, open files encoding='utf-8'.",
+      "MPI custom nodes only, never rgthree. MpiMath floor(a/2) not int(a/2).",
+      "Splice method that works: clone exact node shapes from existing instances (other templates/monolith), renumber link IDs past last_link_id, fix input.link + output.links refs, validate no dangling links before writing. Write a temp .py script, run, then rm it.",
+      "Node naming: Input_*/Output_* for app-read/write; Tier-1 titles bare (Seed, Duration, Lora_*, etc). Worker nodes get plain descriptive titles.",
+      "Monolith custom-audio chain was SAVED bypassed; user toggled ON and confirmed it WORKS = working reference exists. audio_normalization_factors = all 1s in both."
+    ],
+    "files_modified": [
+      "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json",
+      ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      ".agents/mpi-kanban/tasks/MPI-4/research/monolith-input-audio.md",
+      ".agents/mpi-kanban/tasks/MPI-4/research/monolith-bfs-headswap.md",
+      "C:\\AI\\Mpi\\Cubric-Audio\\README.md"
+    ],
+    "files_to_read_first": [
+      "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json",
+      ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      ".agents/mpi-kanban/tasks/MPI-4/research/monolith-input-audio.md",
+      ".agents/mpi-kanban/tasks/MPI-4/brief.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "ComfyUI workflows / injection",
+      "Comfy node naming law (Input_/Output_ prefix)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-21T14:02:49Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX 2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/139e9611-9e1e-4f23-a503-25002c3ce3f4.json and use mpi-continue. COOPERATIVE LIVE session: the user drives ComfyUI on 127.0.0.1:8188 and you edit the workflow JSON on disk at G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\LTX_i2v_t2v_template.json. RE-SCAN that file FIRST (prior context is summarized, not live). This session built INPUT AUDIO voice lip-sync into the template and it WORKS - the fix was adding an LTXVConditioning node (212) that embeds fps into the conditioning. The open question the user is testing after lunch: does input-audio strength 1.0 work on EVERY image/prompt? If yes, drop the Input_Audio_Influence slider and just auto-enable input audio at strength 1.0 whenever an audio file is present (no slider, no button). Influence slider is INVERTED (slider 1.0 = mask 0 = full strength). After that decision, continue op build-out: video extend next, then ControlNet, then head-swap (BFS, deferred - research saved). CRITICAL GOTCHAS: (1) always confirm the user has SAVED and CLOSED the ComfyUI tab before writing JSON - disk != live until saved (bit us 3x). (2) DO NOT trust sub-agent research claims without verifying against live JSON - a sub-agent fabricated norm-factor and CFG values this session. (3) PYTHONUTF8=1 + utf-8 for all python helpers. (4) MPI nodes only, no rgthree. Full as-built details + decisions in research/ltx-integration-spec.md section 3d."
+}

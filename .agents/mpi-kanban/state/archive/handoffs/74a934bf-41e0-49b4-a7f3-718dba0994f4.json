@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "74a934bf-41e0-49b4-a7f3-718dba0994f4",
+  "generated_at": "2026-06-13T09:15:43+01:00",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 session 2 — 6 fixes committed (B4 engine-drop recovery + backend stream-pipe crash guard, B0 execution_error, gallery empty-picker, Disconnect mode-reset) all live-verified except B0 (code-verified); video/I2V input-asset TRANSPORT verified; remote-I2V-wrong-subject + MPI-73 logged open",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64 from handoff e06cb1d8: pick the next app-side no-rebuild work item (B4 then B0), brief before code. Session expanded into live remote-engine bug hunting on an L4 Pod.",
+    "status": "in_progress",
+    "summary": "Shipped + committed 6 RunPod fixes this session (commits dcd3482, 00b1b89, 2982a9b, 6c60591, 765293b, 4d13ce8, ef9e009 — note 765293b/4d13ce8 are kanban/docs). All live-verified except B0 (code-verified, trigger is a hardened corner case). Video/I2V input-asset TRANSPORT proven correct end-to-end. TWO bugs remain OPEN: (1) remote I2V ignores the input subject — reproducible on a clean path, LOCAL I2V respects it, so remote-engine-specific; user's strongest lead = MPI-68 model-split regression in image paths (NOT MPI-64 transport). (2) MPI-73 (premature 'Connected' before preview-WS up → queued jobs hang in STARTING; Stop can't clear a STARTING job with no prompt_id) — logged, backlog."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "B4 part 1+3 (LIVE-VERIFIED dcd3482): comfyController WS reconnect cap (_WS_MAX_RECONNECTS=6) → _onWsDropped() rejects pending gens via _promptRejectors → OOM-aware 'Generation failed' modal + spinner ends + status stays IDLE·REMOTE; shell.js _initRemoteConnectionFeed self-scheduling loop + abortable 4s fetch + 5s→30s backoff (kills the 6000+ runaway). Confirmed on an L4 OOM.",
+      "Backend stream-pipe crash guard (LIVE-VERIFIED dcd3482): routes/remoteProxy.js _streamthrough (/view) + SSE relay (/comfy/events/stream) now have nodeStream.on('error')+res.on('error') — an OOM-time upstream socket drop was crashing the whole Express backend (exit 1). Confirmed: clean 502 on SSE, no exit-1.",
+      "B0 (CODE-VERIFIED 00b1b89): comfyController.runWorkflow internalListener handles execution_error → rejects with '<node_type> failed: <exception_type>: <exception_message>' → ui:error toast + ends gen. Live trigger abandoned (hardened corner case — B1 gate + reconnect-reprovision self-heal the missing-node path).",
+      "Gallery empty-picker fallback (LIVE-VERIFIED 2982a9b): MpiGalleryBlock — when activeModel is null (last-touched mediaType has no installed model) but installedAllModels.length>0, fall back to installedAllModels[0]. Root-caused via TEMP-DEBUG (state was correct; render-fallback gap).",
+      "Disconnect mode-reset (LIVE-VERIFIED ef9e009): stop-active + delete-active now setRemoteMode({active:false}) so isRemoteActive() returns false → local _ms gen after Disconnect takes the local copy path (was 'wrapper upload 404' → 500 → blocked). Verified via local↔remote↔local video round-trip reaching stage 2.",
+      "Video/I2V input-asset TRANSPORT VERIFIED (no code change): full-res image (1100×1354) uploads to Start_Frame + End_Frame, role→title injection correct (commandExecutor 295-361), Wan22_i2v graph wiring correct (MpiIfElse on Use_End_Image → 741 WanFirstLastFrameToVideo / 825 PainterI2VAdvanced, start_image wired), remote PainterI2Vadvanced node byte-identical to local. Closes the handoff's 'untested input-asset' item.",
+      "Verified (no code): B1 LOCAL custom-node auto-restart (ensureServerRunning line-89 block); B1 REMOTE gate (the 'reconnect to load nodes' modal); remote Stop/interrupt for a SINGLE healthy gen (~5s + Pod VRAM drops — earlier 'stuck' was the backend crash, now fixed); MPI-68 split + node re-provisioning runs clean.",
+      "MPI-73 created (todo) for the two connect/stop bugs; coordination message 45492c5e sent to MPI-68; memory project_video_gen_ram_wall saved."
+    ],
+    "pending": [
+      "OPEN BUG — remote I2V ignores the input subject (different woman than supplied). REPRODUCIBLE on a clean path (full app restart + clean connect + single I2V). LOCAL I2V RESPECTS the image with the same workflow JSON / injection / byte-identical node. So it is REMOTE-ENGINE-SPECIFIC, NOT MPI-64 transport (transport is proven). USER'S STRONGEST LEAD: the MPI-68 model split (combined wan-22 → separate wan-22-i2v) changed something — possibly image paths or the i2v workflow/op wiring — because I2V respected the image with the OLD combined model and broke after the split. Secondary candidate: sage-attention on the L4 degrading conditioning (UNCONFIRMED). NEXT: coordinate with the (active) MPI-68 agent to diff the i2v workflow/model-dependency wiring vs the old combined model; OR run a Pod-side sage-off (SDPA) retry; OR capture the exact prompt JSON the remote ComfyUI received (node 825/841 image values + which IfElse branch).",
+      "MPI-73 (backlog): premature 'Connected' before the preview-WS is up → queued jobs hang in STARTING; Stop can't clear a STARTING job with no prompt_id. Connects to B4 part 2/4.",
+      "B4 part 2/4 (DEFERRED, cosmetic now): auto re-hydrate project/model panels + one-click reconnect after an engine drop (the crash + relaunch-requirement are gone, so this is polish).",
+      "Step 5.2 (GPU-picker CUDA-floor filter) + Step 5 manifest-compat gate (not built).",
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift: full session logged (B4+crash, B0 conclusion, picker, B1 local+remote, Stop, video/I2V transport verified, remote-I2V-wrong-subject reproducible+MPI-68-lead, Disconnect mode-reset fixed).",
+      "current-architecture.md updated: §2 Disconnect mode-reset; header date + session-2 summary; verification reflected.",
+      "memory project_video_gen_ram_wall saved (advise 64GB+ RAM Pods for video; container-RAM is the wall not VRAM).",
+      "MPI-73 task card created (task-card/v1 schema, after a first wrong-schema attempt broke the board — fixed in 4d13ce8).",
+      "Coordination message 45492c5e sent to MPI-68 (file overlap + PainterI2V/picker facts)."
+    ],
+    "pending": [
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory.",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal) folds at next /mpi-version-bump.",
+      "MPI-73 + the remote-I2V-wrong-subject bug need their own work (do NOT fold into MPI-64 transport)."
+    ]
+  },
+  "next_action": {
+    "description": "Pick the next item (brief before code, mpi-continue gate). RECOMMENDED: investigate the remote-I2V-ignores-subject bug as a likely MPI-68 split regression — coordinate with the active MPI-68 agent and diff the new wan-22-i2v workflow/model-dependency/image-path wiring vs the old combined wan-22 (I2V respected the image before the split, not after). The MPI-64 input-asset TRANSPORT is already proven correct, so do NOT re-investigate upload/injection. OTHER options: MPI-73 (premature-Connected + stop-on-STARTING), B4 part 2/4 (re-hydrate, cosmetic), Step 5.2 GPU filter. FIRST read current-architecture.md + plan.md Plan Drift (top entries).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "B4 reject path is the canonical mechanism: _onWsDropped (WS drop) + execution_error (B0) + (future) cancel all reject the pending runWorkflow promise via _promptRejectors → existing commandExecutor catch → ui:error + ends gen. Reuse this pattern.",
+      "B0 accepted code-verified: the missing-node path self-heals (B1 gate intercepts a fresh-install node; reconnect/recreate re-provisions a deleted per-model node) so a raw execution_error is a corner case. The reject mirrors the live-proven B4 reject.",
+      "Disconnect = 'use local now': stop-active/delete-active flip _mode.active=false (podId preserved for warm-resume). isRemoteActive() = active && podId.",
+      "Video gen is CONTAINER-RAM-bound not VRAM (B2/B3): even minimum 1s/low T2V OOMs the L4 at ~57GB; advise 64GB+ RAM Pods; pick by container-RAM not VRAM tier.",
+      "remote-I2V-wrong-subject is NOT transport: image is full-res + correctly injected + correctly wired + byte-identical node, and LOCAL works — so it's remote-engine-specific; user's lead is the MPI-68 split.",
+      "Warm-pod keep is KEPT (user): useful on medium-availability DCs + quick re-grab; not removed despite thin current DC.",
+      "MPI-74 (hybrid local-image + remote-video routing) DEFERRED until MPI-64 is done+stable (user-agreed; it builds on the still-fragile local↔remote state)."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete or image builds (the USER runs all live Pod ops + builds).",
+      "PowerShell-via-Bash is BLOCKED — read app.log with the Read tool (offset/limit) or wc/grep, NOT Get-Content. uuids via python -c 'import uuid; print(uuid.uuid4())'.",
+      "POD_IMAGE/WRAPPER_VERSION + the in-process _mode consts need an APP RESTART to take effect. routes/remoteProxy.js MUST stay mounted before routes/comfy.js.",
+      "Kanban task cards MUST use schema 'mpi-kanban/task-card/v1' with `description` (not `body`) + valid maturity/status enums (todo: idea/pending, idea/active, planned/active) — read mpi-lib docs/coordination/schemas.md before creating cards (a wrong schema broke the board this session).",
+      "_ms (multi-stage / video) ops call _prepareWorkflowInputs; plain image (t2i) does NOT — only _ms exercises the remote input-prep path. Test mode-state bugs with an _ms op, not image gen.",
+      "L4 video gen OOMs easily; use remote IMAGE or short I2V to test mode/path without the OOM (B4 catches OOMs cleanly).",
+      "MPI-68 (model split) + MPI-72 (OS notifications) are SEPARATE active cards — do NOT fold their files into MPI-64. notificationService.js stays MPI-72.",
+      "INLINE-SEQUENTIAL for app code. Never commit unless the USER asks (this session the user authorized commits explicitly)."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js (B4 _onWsDropped + _promptRejectors + WS reconnect cap; B0 execution_error) — COMMITTED dcd3482/00b1b89",
+      "js/shell.js (B4 connection-feed backoff poll) — COMMITTED dcd3482",
+      "routes/remoteProxy.js (B4 stream-pipe crash guards; Disconnect mode-reset) — COMMITTED dcd3482/ef9e009",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js (empty-picker fallback) — COMMITTED 2982a9b",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md + current-architecture.md — COMMITTED (multiple)",
+      ".agents/mpi-kanban/tasks/MPI-73/ (new card), board.json, message 45492c5e, index.json — COMMITTED 765293b/4d13ce8"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (latest-truth snapshot — KEEP UPDATED)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Plan Drift top — this session's entries)",
+      "comfy_workflows/Wan22_i2v.json (i2v graph: nodes 741/825/839/841 + MpiIfElse 765/766/767 on Use_End_Image 759)",
+      "js/services/commandExecutor.js (_prepareWorkflowInputs ~58; media→slot mapping ~295-361; onMessage ~778)",
+      "js/data/commandRegistry.js (startFrame/endFrame slots ~160/184) + js/data/modelConstants/models.js (wan-22-i2v) + dependencies.js (ComfyUI-PainterI2Vadvanced)",
+      "routes/comfy.js (prepare-workflow-inputs ~136; stage-preview-latent ~177 — isRemoteActive() branches)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "ComfyUI execution boundary", "input-asset transfer", "engine reconnect / recovery", "per-model custom-node install", "container RAM / OOM / model offload", "model/operation picker"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/components.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-13T09:15:43+01:00", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/74a934bf-41e0-49b4-a7f3-718dba0994f4.json, then READ .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (latest-truth snapshot — KEEP IT UPDATED) and plan.md Plan Drift (top), then use mpi-continue. STATUS: session 2 shipped + COMMITTED 6 RunPod fixes (all live-verified except B0 which is code-verified): (1) B4 part 1+3 out-of-band engine-drop recovery — comfyController WS reconnect cap → _onWsDropped() rejects pending gens via _promptRejectors → OOM-aware modal + spinner ends + status stays IDLE·REMOTE; shell.js connection-feed self-scheduling backoff poll (kills the 6000+ runaway); (2) backend stream-pipe crash guard — remoteProxy _streamthrough + SSE relay now guard nodeStream 'error' (an OOM-time socket drop was crashing the whole Express backend exit-1); (3) B0 — comfyController surfaces execution_error as a real toast; (4) gallery empty-picker fallback — MpiGalleryBlock falls back to installedAllModels[0] when the last-touched mediaType has no installed model; (5) Disconnect mode-reset — stop-active/delete-active now setRemoteMode({active:false}) so a local _ms gen after Disconnect stops hitting 'wrapper upload 404'. ALSO VERIFIED (no code): video/I2V input-asset TRANSPORT is correct end-to-end (full-res image→Start/End frame, correct injection+graph wiring, byte-identical PainterI2V node), B1 local auto-restart, B1 remote gate, remote Stop for a single gen. TWO BUGS OPEN: (A) REMOTE I2V ignores the input subject (different person than supplied) — REPRODUCIBLE on a clean path, but LOCAL I2V RESPECTS the image with the same JSON/injection/node, so it is REMOTE-ENGINE-SPECIFIC, NOT MPI-64 transport. User's strongest lead: the MPI-68 model split (combined wan-22 → separate wan-22-i2v) regressed it (I2V respected the image before the split, broke after); secondary unconfirmed candidate is sage-attention on the L4. (B) MPI-73 (backlog): premature 'Connected' before the preview-WS is up → queued jobs hang in STARTING, and Stop can't clear a STARTING job with no prompt_id. NEXT (brief before code): investigate bug A as a likely MPI-68 split regression — coordinate with the active MPI-68 agent and diff the new wan-22-i2v workflow/model/image-path wiring vs the old combined wan-22; do NOT re-investigate upload/injection (transport is proven). Other options: MPI-73, B4 part 2/4 (re-hydrate, cosmetic), Step 5.2 GPU filter. GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env; never run autonomous Pod ops or image builds (USER runs all live ops); PowerShell-via-Bash is BLOCKED (read app.log with the Read tool); POD_IMAGE/WRAPPER_VERSION + in-process _mode need an app restart; only _ms (multi-stage/video) ops exercise the remote input-prep path (test mode bugs with _ms, not image gen); L4 video OOMs easily (container-RAM-bound not VRAM — advise 64GB+ Pods); kanban cards MUST use schema mpi-kanban/task-card/v1 (read mpi-lib schemas.md first — a wrong schema broke the board this session); MPI-68 + MPI-72 are SEPARATE active cards (don't fold their files in); MPI-74 hybrid routing is deferred until MPI-64 is done+stable; never commit unless the USER asks. Brief before code (mpi-continue gate)."
+}

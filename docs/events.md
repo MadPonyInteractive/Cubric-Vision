@@ -21,12 +21,13 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | Event | When it fires |
 |---|---|
 | `ui:error` | Request the shell to show an error dialog |
-| `ui:close-all-popups` | Signal to close all floating UIs |
+| `ui:close-all-popups` | Signal to close all floating UIs. Optional `{ reason: 'overlay-open' }` payload lets long-lived panels (`MpiSlideOver`) ignore the overlay-open pulse |
 | `state:changed` | Global reactive state mutation (auto-fired by state Proxy) |
 | `project:changed` | User switched active project |
 | `project:group-added` | Group added to current project `{ group }` |
 | `project:group-updated` | Group updated in current project `{ group }` |
 | `project:group-removed` | Group removed from current project `{ groupId }` |
+| `projects:listed` | Project grid loaded `{ projects }` — emitted by `projectUI.js loadProjectGrid()`, consumed by `heroStats.js` to repaint the session stat slot |
 | `comfy:starting` | ComfyUI engine is starting |
 | `comfy:ready` | ComfyUI engine is ready |
 | `comfy:error` | ComfyUI engine error |
@@ -51,6 +52,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `slide-over:toggle` | Toggle a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |
 | `generation-queue:open` | Open the Cue queue panel |
 | `generation-queue:changed` | Cue queue snapshot changed `{ running, pending, items, depth, pendingCount, runningCount, loopArmed }` |
+| `generation-store:changed` | **generationStore snapshot after any job transition** `{ jobs, running, pending, depth }` (MPI-208). The single source of truth all generation UI derives from — statusBar (bar ownership + self-heal to idle), the Cue count, and QueuePanel react to this. Each job carries `{ jobId, genId, engine, scope, phase, promptId, lane, … }`; `genId` === the `id` on that gen's `tool:*` events, so the derived statusBar correlates a store job to its live progress events. |
 | `generation:started` | Generation registered in activeGenerations `{ id, scope, groupId, tempId, placeholderGroup, queueJobId?, queueDisplay? }` |
 | `generation:preview` | New latent preview blob URL available `{ id, url }`; gallery cards keep the generating spinner visible until the preview image has loaded |
 | `generation:complete` | Generation finished, item persisted `{ id, item, group, tempId? }` |

@@ -1,8 +1,8 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-06-01
-last_refresh_notes: refresh pass — removed 3 dead memory pointers (zero_model_promptbox_gate, comfy_workflows_readonly, model_type_vs_mediatype); wired 11 existing memory files into matching topics
+last_refresh: 2026-07-02
+last_refresh_notes: memory pointers pruned to the consolidated ~/.claude memory set (33 actual files); removed ~55 stale references that no longer exist in the memory dir.
 ---
 
 # Project Knowledge Index
@@ -11,13 +11,15 @@ last_refresh_notes: refresh pass — removed 3 dead memory pointers (zero_model_
 
 Topic-to-files map. Match the topic closest to the current task and read the listed files first. If no topic matches, read the profile and ask the user for a pointer rather than scanning the repo.
 
+**Memory layering:** the authoritative "how the system works" lives in `docs/` and `.claude/rules/`. The `**Memory:**` files below are companions — they capture the *why a fix exists*, breadcrumbs, gotchas, and process feedback that don't belong in the docs. Read the doc/rule first, then the memory for the war-story context.
+
 ## Topics
 
 ### Components & UI
 
 - **Read first:** `.claude/rules/components.md`
 - **Rules:** `.claude/rules/dos_and_donts.md`, `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, `.claude/rules/component-state.md`
-- **Memory:** `project_canvas_viewer_spinner_flags.md`, `project_queue_panel_render_diff.md`, `project_gallery_card_chrome.md`, `project_gallery_slider_sizing.md`, `project_gallery_video_thumb_pattern.md`, `project_mpi_radio_emits_select.md`
+- **Memory:** none (topic files consolidated into docs/)
 
 ### Events & cross-component communication
 
@@ -29,7 +31,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `js/state.js`
 - **Rules:** `.claude/rules/state.md`, `.claude/rules/component-state.md`
-- **Memory:** `project_reuse_prompt_recall.md`
+- **Memory:** none (topic files consolidated into docs/)
 
 ### Workspaces & routing
 
@@ -41,36 +43,77 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/comfy.md`
 - **Rules:** `.claude/rules/comfy_injection.md`, `.claude/rules/component-comfy.md`
-- **Memory:** `project_reuse_prompt_recall.md`, `project_cue_queue_contract.md`
+- **Memory:** `feedback_comfy_node_naming_law.md`
 
 ### ComfyUI engine / backend / models
 
 - **Read first:** `docs/comfy.md`
 - **Rules:** `.claude/rules/comfy_engine.md`
-- **Memory:** `project_comfy_models_path_source.md`, `project_comfy_cache_dedupe.md`
+- **Memory:** none (topic files consolidated into docs/)
 
 ### Downloads
 
 - **Read first:** `docs/comfy.md#download-manager`
 - **Rules:** `.claude/rules/downloads.md`
-- **Memory:** none
+- **Memory:** none (topic files consolidated into docs/)
 
 ### Project data & integrity
 
 - **Read first:** `docs/project-integrity.md`, `docs/data.md`
 - **Rules:** none
-- **Memory:** `project_reuse_prompt_recall.md`, `project_remove_history_entry_guard.md`, `project_video_trim_frame_semantics.md`
+- **Memory:** none (topic files consolidated into docs/)
 
 ### Versioning & migrations
 
 - **Read first:** `docs/versioning.md`
 - **Rules:** `.claude/rules/versioning.md`
-- **Notes:** APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, operation registry, release-health gate.
+- **Memory:** none (topic files consolidated into docs/)
+- **Notes:** APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, operation registry, release-health gate. APP_STAGE + dev_mode are DERIVED (never hand-set) — see docs/versioning.md.
+
+### RunPod / remote engine
+
+- **Read first:** `docs/runpod-remote-engine.md`
+- **Rules:** `.claude/rules/comfy_engine.md` (engine routing), `.claude/rules/comfy_injection.md` (remote upload path)
+- **Memory:** `project_reconnect_deletes_warm_pod.md`, `project_stale_pod_reconnect_toast.md`
+
+### Pod image / mpi-ci
+
+- **Read first:** `docs/runpod-remote-engine.md` (image/volume/secrets), the private `mpi-ci` repo
+- **Memory:** none (topic files consolidated into docs/)
+- **Notes:** image builds are USER-authorized; live Pod ops stay USER-only.
+
+### Build / release / distribution
+
+- **Read first:** `docs/releases/portable-distribution-contract.md`
+- **Memory:** none (topic files consolidated into docs/)
+
+### macOS
+
+- **Read first:** `docs/releases/portable-distribution-contract.md` (mac section)
+- **Memory:** none (topic files consolidated into docs/)
+
+### Release ops / versioning skills
+
+- **Read first:** `mpi-release-shared` skill references
+- **Memory:** none (topic files consolidated into docs/)
+- **Notes:** Patreon 1.0.x patches ship via Cloudflare with NO git tag / NO GitHub publish; tags reserved for public GitHub releases.
+
+### Cross-project / product
+
+- **Read first:** `docs/PROJECT.md`
+- **Memory:** `project_product_scope.md`, `project_cubric_studio_agent_vision.md`, `project_connector_ownership_split.md`, `project_hub_scalable_foundation.md`, `project_madpony_identity_folder.md`
+- **Notes:** Vision = image/video only; audio + prompt-gen are sibling Cubric apps.
+
+### Conventions / gotchas
+
+- **Read first:** `CLAUDE.md` § "Critical Rules Snapshot"
+- **Memory:** `feedback_shared_tree_commit_hygiene.md`, `feedback_no_toast_user_stop.md`, `feedback_error_dialog_vs_toast.md`
 
 ### Shell, overlays, hotkeys
 
 - **Read first:** `docs/shell.md`
 - **Rules:** none
+- **Memory:** none (topic files consolidated into docs/)
 - **Notes:** all blocking UI via `Overlays.request/release`; hotkeys via `Hotkeys.bind` + `hotkeyRegistry.js`.
 
 ### Utilities (DOM, icons, ratios, seed)
@@ -89,7 +132,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Worktrees & engine sharing
 
 - **Read first:** `docs/worktrees.md`
-- **Notes:** `.engine-config.json` shares ComfyUI engine across worktrees.
+- **Memory:** none (topic files consolidated into docs/)
+- **Notes:** `.engine-config.json` shares ComfyUI engine across worktrees. RunPod is the active shared integration branch (v1.1.0).
 
 ### Desktop and browser testing
 
@@ -105,7 +149,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Sibling website / docs
 
 - **Read first:** `c:\AI\Mpi\Cubric Studio (Website)\`, `c:\AI\Mpi\Cubric Studio (Docs)\`, design source at `c:\AI\Mpi\CubricStudio_Redesign\`
-- **Memory:** `project_website_subdomain_strategy.md`
+- **Memory:** `project_website_subdomain_strategy.md`, `tool_website_image_converter.md`
 - **Notes:** separate repos; use absolute paths and `git -C`; CLAUDE.md does NOT auto-load there.
 
 ### Cubric Studio user docs (sibling Docs repo)
@@ -116,6 +160,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Dev configs & engine internals
 
 - **Read first:** `dev_configs/app_config.js`, `dev_configs/system_dependencies.json`
+- **Memory:** none (topic files consolidated into docs/)
 - **Notes:** `engine/ComfyUI_windows_portable/` is the portable runtime; `engine/mpi_models/` holds MPI-bundled model assets. Treat both as runtime artifacts — do not commit engine binaries.
 
 ## Cross-cutting

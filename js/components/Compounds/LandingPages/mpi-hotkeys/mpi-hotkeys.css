@@ -1,0 +1,119 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiHotkeys — Hotkeys slide-over compound
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-hotkeys {
+    display: contents;
+}
+
+.mpi-hotkeys__content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.mpi-hotkeys__header {
+    margin-bottom: 0.5rem;
+}
+
+.mpi-hotkeys__title {
+    font-size: var(--t-lg);
+    font-weight: 600;
+    color: var(--ink-1);
+    margin: 0 0 0.4rem;
+}
+
+.mpi-hotkeys__desc {
+    color: var(--ink-3);
+    margin: 0;
+    font-size: var(--t-sm);
+}
+
+/* ── Shortcuts block ─────────────────────────────────────────── */
+.mpi-hotkeys__shortcuts {
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    padding: 1.25rem 1.5rem;
+}
+
+.mpi-hotkeys__shortcuts-title {
+    font-size: var(--t-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    margin: 0 0 1rem;
+}
+
+.mpi-hotkeys__shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.mpi-hotkeys__shortcut-group {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding: 0.85rem 1rem;
+}
+
+.mpi-hotkeys__shortcut-group h4 {
+    font-size: var(--t-xs);
+    font-weight: 600;
+    color: var(--ink-1);
+    margin: 0 0 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mpi-hotkeys__shortcut-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mpi-hotkeys__shortcut-group li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+}
+
+.mpi-hotkeys__shortcut-group li span:first-child {
+    color: var(--ink-1);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding: 0.1rem 0.45rem;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.mpi-hotkeys__shortcut-group li span:last-child {
+    color: var(--ink-3);
+}
+
+
+.mpi-hotkeys__shortcut-group p {
+    font-size: var(--t-2xs);
+    font-weight: 200;
+    color: var(--ink-1);
+    letter-spacing: 0.05em;
+}    
+
+.mpi-hotkeys__subheading {
+    padding-top: 0.4rem;
+}
+
+.mpi-hotkeys__subheading strong {
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    font-weight: 500;
+}

@@ -12,7 +12,7 @@
 - **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
 - **BEM naming is mandatory.** Format: `.mpi-block__element--modifier`.
 - **For image surfaces: prefer CSS `transform` on a stack element over `ctx.translate/scale`.** CSS transform uses the GPU compositor — no re-rasterize per frame. `ctx` transforms belong only to screen-UI overlays drawn in container px.
-- **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `seed.js`, `ratios.js` may already do what you need.
+- **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `ratios.js` may already do what you need.
 - **Frontend logging:** `import { clientLogger } from '../services/clientLogger.js'` — never use bare `console.log/error`.
 - **Backend logging:** `const logger = require('./logger')` from `routes/logger.js`.
 
@@ -30,8 +30,6 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
    - Use the shorthands in this file instead of raw, verbose `document.querySelector` or generic DOM manipulation where applicable.
 3. **`ratios.js` (Aspect Ratios):** 
    - The absolute source of truth for all image/canvas aspect ratios. 
-4. **`seed.js`:** 
-   - Use this for generating randomized seeds (particularly useful for ComfyUI generation payloads).
 
 **Other available utilities you should check before writing code:**
 - `async.js`

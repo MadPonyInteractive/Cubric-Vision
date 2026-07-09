@@ -1,0 +1,125 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "32fc527b-c791-481c-81e3-7bacd89b641f",
+  "generated_at": "2026-06-12T18:30:00+01:00",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 Phase 4 — first remote-video live test: input-asset transfer shipped + ffmpeg root cause + multi-image (MPI-70) green-lit + 5 bugs logged",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64 Phase 4: implement remote INPUT-ASSET transfer (video/audio upload, trimmed-video, .latent staging), then live-test remote video generation on a RunPod Pod.",
+    "status": "blocked",
+    "summary": "Input-asset transfer code is SHIPPED (uncommitted) + statically verified but NOT live-verified. First remote VIDEO gen was attempted live (Wan 2.2 T2V on an L4) and the whole remote pipeline proved working (prompt, WS events, preview frames, progress, render) EXCEPT the final encode: the Pod image has NO ffmpeg, so VHS_VideoCombine crashes (ProcessLookupError) on EVERY video output. Fix is owned by MPI-70 (multi-image build, v0.3.0, ffmpeg added) which is GREEN-LIT and building. All video gen is blocked until v0.3.0 ships + the app is pointed at it (Step 5.1). 5 UI/lifecycle bugs found+logged. TEMP debug logging is still in commandExecutor.js and MUST be removed before commit."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Input-asset transfer CODE (uncommitted): comfyController._uploadRemoteMedia + /remote/upload/media (remoteProxy) + remoteModels.remoteUploadInput + remote branches in routes/comfy.js (stage-preview-latent, prepare-workflow-inputs). Static-verified (multipart fields match wrapper, bare-basename, target=ComfyUI --input-directory, syntax/lint/ESM clean). NOT live-verified.",
+      "Diagnosed remote-video 'no output returned' to ROOT CAUSE: image has no ffmpeg → VHS_VideoCombine ProcessLookupError (live, via temp WS logging).",
+      "MPI-70 (multi-image build) created + GREEN-LIT: v0.3.0-cu124 + v0.3.0-cu128, ffmpeg+git+flash-attn baked, sageattention runtime-to-volume, torch pinned 2.7.1+cu128. Build #1 failed (3 base-image gaps incl ffmpeg), build #2 re-fired with fixes (mpi-ci commit a505634).",
+      "Living snapshot current-architecture.md updated (§5/§6/§9/§10 + ffmpeg + multi-image + execution_error).",
+      "5 bugs logged to plan.md Plan Drift (see knowledge_preservation)."
+    ],
+    "pending": [
+      "WAIT for MPI-70 build #2 green + USER makes GHCR package public → USER pings the final :v0.3.0-cu124/-cu128 tags.",
+      "Step 5.1 (app): turn POD_IMAGE (remoteProxy.js:48, the ONLY app reference) into a card→tag fn (Blackwell→-cu128, else→-cu124). Keep WRAPPER_VERSION='0.2.2' (wrapper.py unchanged). Add warmup messaging for the one-time sage compile (~5-15min, distinct from the cold image pull).",
+      "REMOVE the TEMP-DEBUG logging from js/services/commandExecutor.js BEFORE any commit (TEMP-DEBUG, TEMP-DEBUG-DONE, TEMP-DEBUG-MSG, TEMP-DEBUG-ERR/-TB + the _tempSawExecuted Set).",
+      "Live-verify on a fresh v0.3.0 Pod: (1) remote VIDEO gen (T2V) now saves a video + gallery card; (2) the still-UNTESTED input-asset code via a video-INPUT workflow (upscale/interpolate on an uploaded video) — fires _uploadRemoteMedia.",
+      "App bug: handle the execution_error WS event (surface the real exception to ui:error instead of generic 'no output returned').",
+      "The other 4 logged bugs (stale model-status on volume change, stale connection-feed + VRAM/RAM monitor, video-only-install empty picker, cancel/stuck-boot watchdog).",
+      "Then: Step 5 manifest gate, lifecycle crash verify, Phase 5 hardening + temp-log removal + promote snapshot at FINAL mpi-end-session."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift: 5 bugs + strategy logged this session — (1) ffmpeg-missing root cause + app execution_error swallow; (2) host-driver vs image-CUDA wall (real axis = image-CUDA-floor <= host-driver-CUDA, NOT card arch); (3) Pattern B locked + multi-image + accelerator gap + CUDA-13 tracking + RunPod reliability risk; (4) stale model-status across volume change; (5) stale connection-feed + VRAM/RAM monitor shows local; (6) video-only-install empty picker; (7) cancel/stuck-boot escape + no-GPU download-mode Pod (both deferred Phase-4 items added).",
+      "current-architecture.md updated to reflect ffmpeg block, MPI-70 multi-image incoming, torch 2.7.1+cu128, verification table.",
+      "MPI-70 card + brief + decisions.md created; coordination thread with the MPI-70 agent fully resolved (green light, tags v0.3.0, ffmpeg added pre-ship).",
+      "Snapshot is current per the maintenance contract."
+    ],
+    "pending": [
+      "REMOVE temp debug from commandExecutor.js before commit (hard requirement).",
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory (unchanged contract).",
+      "docs/releases/UNRELEASED.md (mpi_comfy_url removal) folds at next /mpi-version-bump.",
+      "MPI-67/68/69 + the MpiHelp->hotkeys work remain SEPARATE uncommitted bodies — do NOT fold into MPI-64."
+    ]
+  },
+  "next_action": {
+    "description": "WAIT for the USER to confirm MPI-70 build #2 is green + the GHCR package is public + they give you the final :v0.3.0-cu124/-cu128 tags. THEN do Step 5.1 (POD_IMAGE at remoteProxy.js:48 → card→tag fn) + sage-compile warmup messaging, point the app at the new image, and live-verify remote VIDEO gen + the uncommitted input-asset code on a fresh Pod. FIRST: read current-architecture.md (live truth) + plan.md, and REMOVE the TEMP-DEBUG logging from commandExecutor.js before any commit. Brief before code (mpi-continue gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "ROOT CAUSE of remote-video failure = Pod image has no ffmpeg → VHS_VideoCombine (the 'Output' node, all video workflows end in it) raises ProcessLookupError. NOT the app, NOT the WS relay (relay forwards everything verbatim), NOT CUDA, NOT the input-asset code. Local works because the local ComfyUI portable bundles ffmpeg.",
+      "REAL GPU-compat axis = image-CUDA-floor <= host-driver-provided-CUDA, NOT card arch (a 4090 was refused on an old-driver host by nvidia-container-cli 'cuda>=12.8'; an L4 host accepted it). Decoupling torch does NOT fix it — the rejection is the base image's CUDA label at the runtime hook. Fix = multi-image (cu124 lowers the floor) = MPI-70.",
+      "Pattern B LOCKED (ComfyUI/torch in the image, volume = models-only/arch-agnostic) BECAUSE it enables serving a different image PER CARD without touching the volume — card→image is pre-flight/deterministic, killing the arch-mismatch class. Pattern A (ComfyUI-on-volume, user's old Jupyter approach) boots faster but arch-locks the volume.",
+      "MPI-70 image facts: cu128 image runs torch 2.7.1 STABLE (not the base's nightly 2.8 — nightly broke flash-attn ABI); still Blackwell sm_120. sageattention compiles at first Pod boot to /workspace/cubric/pylibs (per-arch, ~5-15min one-time) — app needs warmup messaging.",
+      "The Pod 'disappearing' during the break was: idle watchdog STOPPED it (EXITED, correct — watchdog never deletes), then a Connect tried to warm-resume, the STOPPED Pod was host-pinned (its GPU taken while idle → 'not enough free GPUs on the host machine'), and the app's Step-4.3 recreate-fallback deleted+recreated fresh (new podId + cold image pull). Working as designed.",
+      "User KEEPS the EU-RO-1 volume + Wan 2.2 (78GB) installed (EU-RO-1 performs better than the prior DC). RunPod stock was severely degraded all session (3 host failures: stuck-init, corrupt Docker layer, CUDA refusal; thin stock everywhere). MPI-71 (Vast.ai fallback) exists as a provider-alternative investigation."
+    ],
+    "constraints": [
+      "NEVER read/grep cubric-remote-wrapper/.secrets/runpod.env; NEVER run autonomous Pod create/delete (classifier blocks both — the USER runs all live Pod ops + builds). RunPod secrets: CUBRIC_TOKEN sha8 4bc82fb9, template ejrwtsej15, EU-RO-1 volume kgowc2ypyb 150GB with Wan 2.2 installed.",
+      "PowerShell-via-Bash is BLOCKED by the classifier — read app.log with the Read tool (offset/limit) or `wc`/grep, NOT Get-Content. Generate uuids with python -c 'import uuid; print(uuid.uuid4())'.",
+      "POD_IMAGE bump needs an APP RESTART (running process holds it in memory). Current app POD_IMAGE='...:v0.2.2' (no ffmpeg). routes/remoteProxy.js MUST stay mounted before routes/comfy.js.",
+      "ComfyUI direct UI is NOT browser-reachable by design (Pod exposes only wrapper port 8889, not ComfyUI 8188). To debug a workflow in the ComfyUI UI: SSH port-forward `-L 8188:127.0.0.1:8188` to the Pod, open localhost:8188.",
+      "Image builds run via PRIVATE mpi-ci: gh workflow run cubric-vision-pod-image.yml. The MPI-70 agent owns the images; build #2 (v0.3.0) running at handoff. KEEP WRAPPER_VERSION='0.2.2' (wrapper.py unchanged this build).",
+      "INLINE-SEQUENTIAL execution for app code. Never commit unless the USER asks. The TEMP-DEBUG logging in commandExecutor.js MUST be stripped before any commit."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js (video/audio branch awaits _uploadRemoteMedia in remote mode + NEW _uploadRemoteMedia helper)",
+      "js/services/commandExecutor.js (remote latent/media seams unchanged here; PLUS TEMP-DEBUG logging that MUST BE REMOVED: per-msg, executed-node dump, _tempSawExecuted Set, execution_error dump)",
+      "routes/remoteModels.js (NEW remoteUploadInput + export)",
+      "routes/comfy.js (remote branches in /comfy/stage-preview-latent + /comfy/prepare-workflow-inputs)",
+      "routes/remoteProxy.js (NEW POST /remote/upload/media)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (5 bugs + strategy in Plan Drift + Step 5.1/5.2 + deferred items)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (snapshot updated)",
+      ".agents/mpi-kanban/tasks/MPI-70/ (NEW card: multi-image build — owned by a parallel agent)",
+      "(ALL Cubric-Vision changes UNCOMMITTED on branch RunPod; MPI-70 image work is in the sibling mpi-ci repo)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-70/decisions.md (multi-image + accelerator decisions)",
+      "routes/remoteProxy.js (POD_IMAGE:48 = the single Step 5.1 seam; NEW /remote/upload/media)",
+      "routes/remoteModels.js (remoteUploadInput)",
+      "js/services/comfyController.js (_uploadRemoteMedia ~615; video/audio branch ~418)",
+      "js/services/commandExecutor.js (TEMP-DEBUG to remove; output collection ~42, _collectComfyOutputUrls, executed handler ~879)",
+      "comfy_workflows/Wan22_t2v.json (the 'Output' node = VHS_VideoCombine id 722)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "Pod image + CUDA/driver", "input-asset transfer", "ComfyUI execution boundary", "video output / VHS / ffmpeg"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/components.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-12T18:30:00+01:00", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/32fc527b-c791-481c-81e3-7bacd89b641f.json, then READ .agents/mpi-kanban/tasks/MPI-64/current-architecture.md (living latest-truth snapshot — KEEP IT UPDATED when the design changes) and plan.md, then use mpi-continue. STATUS: This session shipped the remote INPUT-ASSET TRANSFER code (uncommitted, static-verified, NOT live-verified): video/audio upload via comfyController._uploadRemoteMedia → POST /remote/upload/media → remoteModels.remoteUploadInput → /wrapper/upload/media, plus remote branches in routes/comfy.js for .latent staging + prepare-workflow-inputs. Then the first remote VIDEO generation was attempted live (Wan 2.2 T2V on an EU-RO-1 L4) and the ENTIRE remote pipeline proved working (prompt, WS events, preview frames, progress, render) EXCEPT the final encode: the Pod image has NO ffmpeg, so VHS_VideoCombine (the 'Output' node every video workflow ends in) raises ProcessLookupError on EVERY video output. This is NOT the app, the WS relay, CUDA, or the input-asset code — it is purely a missing image dependency. ALL remote video is blocked until that fix ships. The fix is owned by MPI-70 (multi-image Pod build: :v0.3.0-cu124 + :v0.3.0-cu128, ffmpeg+git+flash-attn baked, sageattention runtime-to-volume, torch pinned 2.7.1+cu128) — GREEN-LIT this session, build #2 running in the private mpi-ci repo. ALSO LOGGED (plan.md Plan Drift, all this session): the real GPU-compat axis is image-CUDA-floor <= host-driver-CUDA (NOT card arch — a 4090 was refused on an old-driver host); Pattern B locked (volume = models-only → serve a different image per card, the whole point of MPI-70); + 4 more app bugs (app silently swallows the execution_error WS event → shows generic 'no output returned'; stale model-status across volume change; stale connection-feed + the VRAM/RAM monitor showing LOCAL while remote; video-only-install leaves the model picker empty; + deferred cancel/stuck-boot watchdog and no-GPU download-mode Pod). NEXT (brief before code): (1) FIRST remove the TEMP-DEBUG logging from js/services/commandExecutor.js (TEMP-DEBUG/-DONE/-MSG/-ERR/-TB + the _tempSawExecuted Set) — it MUST NOT be committed. (2) WAIT for the USER to confirm MPI-70 build #2 is green + GHCR public + give you the final tags. (3) Do Step 5.1 — turn POD_IMAGE (routes/remoteProxy.js line 48, the ONLY app reference to the image tag) into a card→tag function (Blackwell→-cu128, else→-cu124), keep WRAPPER_VERSION='0.2.2' (wrapper.py unchanged), add warmup messaging for the one-time ~5-15min sage compile. (4) Live-verify on a fresh v0.3.0 Pod: remote video gen now saves a video + gallery card, AND the still-untested input-asset code via a video-INPUT workflow (upscale/interpolate on an uploaded video). GOTCHAS: never read/grep cubric-remote-wrapper/.secrets/runpod.env; never run autonomous Pod create/delete or builds (the USER does all live ops); PowerShell-via-Bash is BLOCKED (read app.log with the Read tool); ComfyUI UI is only reachable via SSH -L 8188 port-forward (Pod exposes only wrapper 8889); POD_IMAGE bump needs an app restart; inline-sequential, never commit unless asked. The USER keeps the EU-RO-1 volume + Wan 2.2 (78GB) installed (volume id kgowc2ypyb). Brief before code (mpi-continue gate)."
+}

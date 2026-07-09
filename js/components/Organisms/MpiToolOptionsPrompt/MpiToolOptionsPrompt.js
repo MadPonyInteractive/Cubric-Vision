@@ -199,7 +199,7 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
         // ── Action buttons ───────────────────────────────────────────────────
         const extendBtn = MpiButton.mount(document.createElement('div'), {
             label: 'Extend', icon: 'chevronRight', variant: 'primary', size: 'sm',
-            info: 'Extend source video with the generated continuation',
+            info: 'Extend video from last frame',
         });
         actionsEl.appendChild(extendBtn.el);
         extendBtn.on('click', () => Events.emit('prompt-box-tools:extend'));
@@ -207,7 +207,7 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
 
         const createBtn = MpiButton.mount(document.createElement('div'), {
             label: 'Create new', icon: 'plus', variant: 'primary', size: 'sm',
-            info: 'Generate a new video from the frames + prompt',
+            info: 'Create video from last frame',
         });
         actionsEl.appendChild(createBtn.el);
         createBtn.on('click', () => Events.emit('prompt-box-tools:create-new'));

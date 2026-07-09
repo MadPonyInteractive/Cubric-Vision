@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-152",
+  "title": "v0.26 WS-event protocol regression \u00e2\u20ac\u201d remote gen completes but app hangs (progress\u00e2\u2020\u2019progress_state, executing-null\u00e2\u2020\u2019execution_success)",
+  "description": "ComfyUI v0.26.0 renamed/reshaped its WebSocket execution events; the app + Pod wrapper still listen for the v0.25.1 names, so a remote (and likely local) generation COMPLETES on the engine but the app never settles \u00e2\u20ac\u201d status stuck 'LOADING MODEL', gallery card spins forever, gen clock counts endlessly. Floor-blocker for the v0.26 bump (MPI-139). PROVEN from live data: (1) `progress` \u00e2\u2020\u2019 `progress_state` (new batched shape {prompt_id, nodes:{id:{value,max,state:'running'|'finished'}}}) \u00e2\u20ac\u201d app's progress + sampling-start handlers (commandExecutor.js:1106) dead \u00e2\u2020\u2019 status never advances. (2) `executing` with node===null sentinel REMOVED; completion now a dedicated `execution_success` message (v0.26 execution.py:815, broadcast=False, client-targeted) \u00e2\u20ac\u201d TWO app handlers depend on the old sentinel: the Promise-resolve (comfyController.js:975, partially patched) AND exec.onComplete (commandExecutor.js:1139, drives the gallery placeholder\u00e2\u2020\u2019asset swap). (3) wrapper.py watchdog.gen_end() (line 1470) + ModelInitSynth (line 386) also key off old executing/progress names \u00e2\u2020\u2019 wrapper-side gen-end + model-init-complete broken. (4) the model-init SSE channel (/comfy/events/stream) reconnect-loops every ~2min during long gens (cosmetic-ish, separate). UNINVESTIGATED: node renames (#14547) + category changes (#14460) vs the baked LTX-2.3 workflow class_type refs; other v0.26 API/route shape changes. NOTE: model_type FLUX log line for LTX = NORMAL (DiT arch class, not a bug). CPU-offloaded Gemma text-encoder + lowvram transformer thrash = slow load = MPI-146 (separate perf card), aggravates but does not cause the hang.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "v0.26 WS-event protocol regression \u00e2\u20ac\u201d fix verified local, remote pending Pod build",
+  "created_at": "2026-06-26T14:45:00Z",
+  "updated_at": "2026-06-28T17:50:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "runpod",
+    "remote-engine",
+    "comfyui",
+    "v0.26",
+    "ws-events",
+    "regression",
+    "floor-blocker",
+    "mpi-139"
+  ],
+  "priority": "high"
+}

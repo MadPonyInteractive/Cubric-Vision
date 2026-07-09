@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-111",
+  "title": "Gallery: stale thumbnail sticks on card after Stop-at-completion",
+  "description": "Stop-at-completion on a Cue gallery job. Live repro 2026-06-18 (L4 + RTX 5090, instrumented). The carded STALE-THUMBNAIL did NOT reproduce in 7 hand Stops + a force-race hook (interrupt always discarded output → clean; likely a path changed by MPI-74 P6). TWO adjacent real bugs found in the logs and FIXED+verified: (1) null-tempId swallowed `generation:cancelled` — empty-output/cacheHit/onError branches read tempId from a registry entry already ended by Stop → null → gallery block swallowed the placeholder-teardown event; fixed with a stable opts snapshot. (2) Stuck status-bar timer — a superseded Cue job's complete()/cancel() early-returned without clearing its interval → frozen mm:ss at idle; fixed by hard-stopping the timer in _setIdle(). Files: js/services/generationService.js, js/shell/statusBar.js. The original stale-thumb stays DOCUMENTED-OPEN (see validation.md) — re-open only if it resurfaces in real use. See brief.md + validation.md + research/.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-17T18:10:00Z",
+  "updated_at": "2026-06-18T04:20:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

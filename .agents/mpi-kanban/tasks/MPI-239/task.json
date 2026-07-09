@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-239",
+  "title": "Stale remote hero card + ws-token 503 spam after an untracked Pod death",
+  "description": "After an ephemeral A40 was reaped host-side (out-of-stock host, no user Disconnect), the app never learned the Pod was gone: hero footer stayed 'remote · online · A40 · 48GB' indefinitely, console spammed `GET /remote/ws-token 503 (wrapper_token_missing)` + `[remoteEngine] WS token fetch failed`. Hitting CONNECT (recreate-failed) incidentally emitted connected:false → footer corrected. NOT the MPI-238 connect-stage bug — this is untracked DEATH of an already-connected Pod.\n\nSINGLE ROOT: nothing flips server-side `_mode.active=false` when a connected Pod dies without a user action. Three downstream symptoms: (1) heroStats is a pure event slave and the shell feed tick can't emit offline — its `connected !== _last` guard (js/shell.js:1102) never fires because the feed never OWNED the connect (Settings' MpiRunpodSettings.js emitted connected:true, not the feed), so `false !== false` = no emit, footer frozen. (2) /remote/ws-token (routes/remoteProxyForward.js:32) hits getWrapperToken on the dead Pod → 503 wrapper_token_missing red rows. (3) remoteEngineClient.refresh reads /remote/mode active:true → proceeds to ws-token → gets 503 → warn spam.\n\nFIX (server-side self-heal, root not symptom): in GET /remote/comfy/status (routes/remotePodLifecycle.js), when the Pod is confirmed terminal/gone (EXITED/TERMINATED podStatus, or getPod 404 = absent) while _mode.active is still true, call setRemoteMode({active:false}) + _starting=false. ws-token then answers 200 {inactive:true} (no red row), /remote/mode goes active:false (client stops retrying), and the feed emits connected:false → footer repaints local. Must NOT false-positive on a transient RunPod network blip (getPod throw) — only flip on a definite terminal/absent signal.\n\nElectron Security warnings (Node integration / CSP) in the same console = unrelated dev-mode boilerplate, ignore.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "attention": {
+    "state": "required",
+    "reason": "Coded+unit-tested+committed (27b9204). Needs LIVE verify: a Pod that dies WHILE connected (ephemeral reaped / warm evicted) → footer self-heals to local + ws-token 503 spam stops. A clean Disconnect does NOT exercise this (that is MPI-240).",
+    "updated_at": "2026-07-09T14:10:00Z"
+  },
+  "created_at": "2026-07-09T13:00:00Z",
+  "updated_at": "2026-07-09T14:10:00Z",
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "runpod",
+    "remote-engine",
+    "hero-card",
+    "self-heal"
+  ],
+  "priority": "medium"
+}

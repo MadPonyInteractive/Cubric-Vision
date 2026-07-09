@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-85",
+  "title": "Remote/local routing: local fallback when no Pod + 'Auto-connect on start' checkbox",
+  "description": "UX/routing fix found live 2026-06-15 (MPI-64 mask test). When 'Enable RunPod remote engine' is ON but NO Pod is connected (app start with no/unavailable Pod, OR a mid-session disconnect), every generation hard-fails at _ensureRemoteReady with 'Remote engine not connected' — even though the LOCAL engine is ready (status bar showed LOCAL·OFFLINE, RTX 4060 Ti, 7/7 models). The toggle fuses two concepts: 'remote is available' and 'route ALL gens to remote'. Decisions (user, 2026-06-15): (1) when no Pod is connected, AUTO-FALLBACK generation to the local engine + a one-time info toast (guard remote-only models with a clear 'Connect to use this model' message); (2) add a new 'Automatically connect on app start' checkbox (default OFF) that owns the boot auto-connect lifecycle, decoupled from 'Enable RunPod remote engine' (which becomes 'remote available / show panel', not 'force remote'). Routing follows ACTUAL connection state, not the toggle. See brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-15T06:35:20Z",
+  "updated_at": "2026-06-15T07:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

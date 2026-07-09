@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-119",
+  "files": [
+    { "path": ".claude/commands/build-pod-image.md", "change": "edit", "why": "v-prefix tag guard + public pull-verify + /wrapper/stats boot smoke + done-definition" },
+    { "path": ".claude/hooks/bump-rebuild-reminder.py", "change": "add", "why": "Deliverable B — Stop-event advisory bump/rebuild reminder net" },
+    { "path": ".claude/settings.json", "change": "edit", "why": "wire hooks.Stop -> bump-rebuild-reminder.py" },
+    { "path": ".agents/mpi-kanban/tasks/MPI-119/research/trigger-table.md", "change": "add", "why": "Deliverable A inventory + Deliverable C hook-vs-skill division" }
+  ]
+}

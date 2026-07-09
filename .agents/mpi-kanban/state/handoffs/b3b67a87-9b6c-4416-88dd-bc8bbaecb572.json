@@ -1,0 +1,132 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b3b67a87-9b6c-4416-88dd-bc8bbaecb572",
+  "generated_at": "2026-07-06T01:32:39Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-200 LTX quality tiers — resolver variant axis + arch detection + cards + 4-template save-node swap + tier UI (code complete)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "MPI-200: ship an LTX-2.3 balanced quality tier (smaller transformer that FITS 32GB) alongside the bf16 high tier, to kill the MPI-197 bf16-eviction stage boundary; build the arch selection UNIVERSAL + card-based for hundreds of future models.",
+    "status": "in_progress",
+    "summary": "All code COMPLETE + auto-verified (13/13 resolver tests, e2e resolution proof, gpuArch 17-case, footprint demo, all node --check). NOT committed (mpi-end will commit). Blocked only on: mxfp8 weight finishing its R2 upload overnight, then the live A/B on the pods."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-200/plan.md",
+    "completed": [
+      "Generic runtime-variant resolver axis (resolveModelDeps.js) — universal, card-based, additive, composes with engine axis; 13/13 tests incl new testVariantAxis",
+      "Shared gpuArch.js classifier (browser-safe ESM, one source, server+client); 17-case check",
+      "Client arch resolver remoteEngineClient.arch/archSync/warmLocalArch + /system/gpu-info gpu.arch; arch threaded through all consumers (commandExecutor resolve-once, modelRegistry gates, MpiModelManager, MpiPromptBox, footprint)",
+      "Two cards models.js: ltx-23 (high, bf16) + new ltx-23-balanced (variants.arch: blackwell->mxfp8, modern->fp8); both name 'LTX 2.3' (badge disambiguates)",
+      "Two deps dependencies.js hashed: ltx23-transformer-fp8 + ltx23-transformer-mxfp8",
+      "generate_ltx.py 3-variant loop -> 12 LTX workflow files (only UNETLoader differs, bf16 stamped too)",
+      "All 4 video templates swapped to MpiSaveVideo node (LTX + Wan i2v/t2v + Wan5B); orchestrate.py --all rebuilt; no CreateVideo left; app captures by title->videos key transparently",
+      "tierLetterFor() helper -> gallery cards + prompt-box button show H/B/L tier letter",
+      "comfy_engine.md §2.5b documents the variant axis (user-approved)",
+      "R2 upload COMPLETE + verified 2026-07-06: bf16 + fp8_scaled (25226571988) + mxfp8_block32 (24052755552) all on cubric-models/vision/models/diffusion_models/, HTTP 200, sizes exact-match dependencies.js"
+    ],
+    "pending": [
+      "LIVE A/B on pods (user has 5090 + 4090): 5090 mxfp8 clean-load on v0.27+cu130 + no LTX2_NAG artifact (#576); 4090 fp8_scaled; eviction-floor collapse vs bf16 48s@10s/116s@20s (measure via pod /history + per-phase log NOT UI); quality vs bf16 locked seed",
+      "On live-proof -> move card MPI-200 to done"
+    ],
+    "_r2_status": "DONE — the 'verify upload' step is complete; next session goes straight to the live A/B."
+  },
+  "task_card": {
+    "id": "MPI-200",
+    "title": "LTX transformer quality tiers: bf16 (high) + fp8_scaled/mxfp8 (balanced) workflow split",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-200/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-200/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-200/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "verify", "continue"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md ## Plan Drift fully updated with all completed work + remaining items",
+      "comfy_engine.md §2.5b variant-axis contract documented (user-approved)",
+      "MEMORY.md: MPI-200 in-flight entry + feedback_agent_can_upload_r2 pointer added",
+      "memory file feedback_agent_can_upload_r2.md written"
+    ],
+    "pending": [
+      "CHANGELOG (deferred until live-proven): add to docs/releases/UNRELEASED.md whatIsNew after the A/B confirms the tier: (1) new 'LTX 2.3 Balanced' faster tier that fits smaller VRAM; (2) fix the L/B/H sentence (~line 86) — the tier letter now shows on GALLERY CARDS + the prompt-box BUTTON too, not just the dropdown. Deferred so the changelog doesn't describe an unproven feature.",
+      "After live-proof: consider a docs/builder LTX research note on the tier variant map; drop the stale 'both engines run same bf16' comments in models.js/generate_ltx.py"
+    ]
+  },
+  "next_action": {
+    "description": "Verify mxfp8_block32 landed on R2 overnight (rclone lsf cubric-r2:cubric-models/vision/models/diffusion_models/ — expect size 24052755552 + HTTP HEAD https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors), then run the live A/B on the pods (5090 mxfp8 + 4090 fp8, eviction-floor proof vs bf16). On live-proof, move MPI-200 to done.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Tier UX = separate model cards same modelFamily (sizeTier contract), NOT one card with a toggle — user decision; badge H/B/L disambiguates",
+      "Arch selection = a GENERIC card-declared variant axis (not a bespoke arch axis) — user directive: universal for hundreds of future models (arch nodes, LoRAs, any runtime token); zero resolver code per future axis",
+      "Additive design: variantTokens trailing param defaults {} so all ~15 existing engine callers are byte-unchanged; engine axis untouched",
+      "Backend resolve sites stay UNION (no arch token) — permissive filter + shared-dep protection; NO server-side variant heal (arch has no stale-mirror race, YAGNI)",
+      "Free fp8_e4m3fn_fast probe SKIPPED — bf16 file stays 42GB in VRAM regardless of weight_dtype, so it never fits 32GB; probe measures the wrong axis",
+      "MpiSaveVideo swap is transparent to app+script: app captures by node TITLE (Output_Video/Output_Preview) -> videos output key; script gate matches by title. No app/script edits needed beyond re-export",
+      "MpiSaveVideo gains NO generation time (save step isn't the bottleneck; CPU x264 encode) — swapped Wan for pipeline consistency only, user's call"
+    ],
+    "constraints": [
+      "Models are NOT version-bumped — new deps only, do not touch appVersion",
+      "RunPod = the REMOTE code path only; a local-engine tier fix is NOT proven by any pod run",
+      "Measure boundary timing via pod /history timestamps + per-phase log, NOT UI timing",
+      "mxfp8 needs weight_dtype=mxfp8 + our v0.27+cu130 stack (native Blackwell path); Ada/older dequant so they take fp8_scaled",
+      "Kijai comfy-format weights ONLY — official Lightricks fp8 repo is broken",
+      "R2 upload background task bbkmgtfbx running capped 3.5 MB/s; machine stays on so it finishes overnight (~2h from ~01:30Z)",
+      "DO NOT re-open: NVFP4 (rejected), low tier (deferred, needs GGUF), fp8_input_scaled_v3 (TRAP — v1.0 weights not 1.1)"
+    ],
+    "files_modified": [
+      "js/data/modelConstants/resolveModelDeps.js",
+      "js/data/modelConstants/gpuArch.js",
+      "js/data/modelConstants/models.js",
+      "js/data/modelConstants/dependencies.js",
+      "js/data/modelConstants/footprint.js",
+      "js/data/modelRegistry.js",
+      "js/services/remoteEngineClient.js",
+      "js/services/commandExecutor.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "routes/platformEngine.js",
+      "routes/system.js",
+      "comfy_workflows/scripts/workflow_generation/generate_ltx.py",
+      "comfy_workflows/LTX_*.json (12 files)",
+      "comfy_workflows/Wan22_i2v.json + Wan22_i2v_stage2.json + Wan22_t2v.json + Wan22_t2v_stage2.json + Wan5B_i2v.json + Wan5B_t2v.json",
+      "comfy_workflows/scripts/workflow_generation/*_template.json (LTX + Wan i2v/t2v/5B — user re-exported with MpiSaveVideo)",
+      "tests/resolve-model-deps.test.cjs",
+      ".claude/rules/comfy_engine.md",
+      ".agents/mpi-kanban/tasks/MPI-200/plan.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-200/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-197/research/quant-tiers.md",
+      ".claude/rules/comfy_engine.md",
+      "js/data/modelConstants/resolveModelDeps.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["comfy_engine (variant axis §2.5b)", "runpod-remote-engine", "builder/research/quant-tiers"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    "docs/add-model-playbook.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-06T01:32:39Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/b3b67a87-9b6c-4416-88dd-bc8bbaecb572.json and use mpi-continue to continue MPI-200 (LTX quality tiers). All code is complete and auto-verified from the prior session; nothing is blocked in code. First verify the mxfp8_block32 weight finished its overnight R2 upload (rclone lsf cubric-r2:cubric-models/vision/models/diffusion_models/ — expect 24052755552 bytes, then HTTP HEAD the public URL). Then run the live A/B on the pods: the user has a 5090 (check mxfp8 loads clean on v0.27+cu130 and has no LTX2_NAG mxfp8 artifact, kijai/ComfyUI-KJNodes #576) and a 4090 (fp8_scaled). The decisive test is whether the balanced tier collapses the bf16 stage boundary (48s@10s / 116s@20s on 32GB) — measure via the pod /history timestamps and per-phase log, NOT UI timing. Quality A/B vs bf16 on a locked seed (faces/text/motion). On live-proof, move MPI-200 to done. Do NOT re-open the fp8_e4m3fn probe, NVFP4, the low tier, or fp8_input_scaled_v3 (v1.0 trap)."
+}

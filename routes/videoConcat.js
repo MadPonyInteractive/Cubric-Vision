@@ -28,6 +28,7 @@ const logger = require('./logger');
 const { concatVideos } = require('../services/videoConcat');
 const { probeVideo }   = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { materializeGenerationFrameSnapshots } = require('./projects');
 
 // ── SSE channel ──────────────────────────────────────────────────────────────
 const _clients = new Set();
@@ -123,12 +124,6 @@ async function _writeOutputSidecar({ mediaDir, metaDir, outputPath, finalName, o
         duration:   outMeta.duration   || 0,
         frameCount: outMeta.frameCount || 0,
         hasAudio:   !!outMeta.hasAudio,
-        videoMeta:  {
-            fps:        outMeta.fps        || 0,
-            duration:   outMeta.duration   || 0,
-            frameCount: outMeta.frameCount || 0,
-            hasAudio:   !!outMeta.hasAudio,
-        },
         ...extraFields,
     };
     const thumbAbs = path.join(metaDir, `${newId}.thumb.jpg`);
@@ -235,7 +230,7 @@ router.post('/extend-video', async (req, res) => {
         folderPath, sourceItemId, generatedFilePath,
         jobId: clientJobId,
         modelId, prompt, negativePrompt, seed,
-        frozenParams, op,
+        frozenParams, op, generationSettings,
         trimIn, trimOut,
     } = req.body || {};
     const jobId = clientJobId || `extend-${Date.now()}`;
@@ -304,6 +299,33 @@ router.post('/extend-video', async (req, res) => {
             mediaDir, metaDir, outputPath, finalName, operation: 'extend',
             extraFields,
         });
+
+        // Reuse Prompt metadata: attach the underlying i2v generation snapshot so
+        // the extended entry replays Duration/ratio/model from the values the user
+        // had at Extend press (NOT the combined clip length), and materialize the
+        // start-frame image into the content-addressed .preview-assets/ store
+        // (MPI-227) so Reuse Prompt can load it. Materialization is gated on the
+        // i2v `op`; the extend item's own operation stays 'extend'.
+        if (generationSettings && typeof generationSettings === 'object') {
+            let gs = generationSettings;
+            let previewAssets = null;
+            try {
+                const materialized = await materializeGenerationFrameSnapshots({
+                    projectRoot: folderPath,
+                    mediaDir,
+                    itemId: sidecar.id,
+                    operation: op,
+                    generationSettings,
+                });
+                gs = materialized.generationSettings;
+                previewAssets = materialized.previewAssets;
+            } catch (snapErr) {
+                logger.warn('project', `extend: frame snapshot materialization failed: ${snapErr.message}`);
+            }
+            sidecar.generationSettings = gs;
+            if (previewAssets) sidecar.previewAssets = previewAssets;
+            await fs.writeJson(path.join(metaDir, `${sidecar.id}.json`), sidecar, { spaces: 2 });
+        }
 
         // Delete the intermediate generated file (caller passed it in; disk hygiene).
         // Belt+suspenders: never delete the source. Probe path equality first.

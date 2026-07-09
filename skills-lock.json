@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "comfyui-api": {
+      "source": "mckruz/comfyui-expert",
+      "sourceType": "github",
+      "skillPath": "skills/comfyui-api/SKILL.md",
+      "computedHash": "c0c1646f0ad9f5c2a57be047510c385919bfc535c828eb9942a29c46657397ab"
+    },
+    "comfyui-workflow-builder": {
+      "source": "mckruz/comfyui-expert",
+      "sourceType": "github",
+      "skillPath": "skills/comfyui-workflow-builder/SKILL.md",
+      "computedHash": "4599f6517d43eb24ccfb799989fb0e2e41166811cf8049e5e263851d9f8b7721"
+    }
+  }
+}

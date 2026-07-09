@@ -14,6 +14,8 @@
     "build:portable:linux": "node scripts/build-portable.mjs --clean --platform linux --arch x64 --stage-dir D:\\tmp\\cubric-portable --no-source-manifest",
     "build:portable:mac": "node scripts/build-portable.mjs --clean --platform darwin --arch arm64 --stage-dir D:\\tmp\\cubric-portable --no-source-manifest",
     "release:check": "node scripts/release-health-check.mjs",
+    "release:approve": "node scripts/release-notes-approval.mjs approve",
+    "release:notes": "node scripts/release-notes-approval.mjs show",
     "test:desktop": "playwright test --config=playwright.desktop.config.js",
     "lint": "eslint js/ --max-warnings=9999",
     "lint:components": "eslint js/components/ --max-warnings=9999",
@@ -22,6 +24,7 @@
   "author": "MadPonyInteractive",
   "license": "AGPL-3.0-only",
   "dependencies": {
+    "@cubric/connector": "file:../Cubric-Studio/packages/connector",
     "7zip-bin": "^5.2.0",
     "axios": "^1.13.6",
     "body-parser": "^1.20.2",

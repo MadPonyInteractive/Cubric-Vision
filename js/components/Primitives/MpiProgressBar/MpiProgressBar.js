@@ -29,9 +29,12 @@ export const MpiProgressBar = ComponentFactory.create({
         const value = props.value !== undefined ? props.value : 50;
         const variant = props.variant || 'primary';
 
-        // info template: explicit string wins, then prefix/suffix, then bare value
+        // info template: explicit string wins, then prefix/suffix, then bare value.
+        // Explicit empty string ('') opts out of the status-bar tooltip entirely.
+        const infoOptOut = props.info === '';
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;
         const info = infoTpl.replace('{value}', value);
+        const infoAttr = infoOptOut ? '' : `data-info="${info}"`;
 
         const isInteractive = props.interactive === true;
         const isDisabledAttr = isInteractive ? '' : 'disabled';
@@ -40,7 +43,7 @@ export const MpiProgressBar = ComponentFactory.create({
         const fillPercent = ((value - min) / (max - min)) * 100;
         const handleHtml = props.handle ? `<div class="mpi-progress__handle" style="left: ${fillPercent}%"></div>` : '';
 
-        return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}" data-info="${info}">
+        return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}" ${infoAttr}>
             <div class="mpi-progress__track-container">
                 <input
                     type="range"
@@ -62,7 +65,9 @@ export const MpiProgressBar = ComponentFactory.create({
         const trackFill = qs('.mpi-progress__track-fill', el);
         const handleEl = qs('.mpi-progress__handle', el);
 
-        // Resolve info template once from props (supports prefix/suffix pattern too)
+        // Resolve info template once from props (supports prefix/suffix pattern too).
+        // Explicit empty string ('') opts out of the status-bar tooltip.
+        const infoOptOut = props.info === '';
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;
 
         const updateVisuals = (val) => {
@@ -72,7 +77,7 @@ export const MpiProgressBar = ComponentFactory.create({
             if (trackFill) trackFill.style.width = `${percent}%`;
             if (handleEl) handleEl.style.left = `${percent}%`;
 
-            if (infoTpl.includes('{value}')) {
+            if (!infoOptOut && infoTpl.includes('{value}')) {
                 el.dataset.info = infoTpl.replace('{value}', val);
             }
         };

@@ -1,0 +1,3 @@
+{"at":"2026-06-24T00:00:00Z","event":"task.created","card":"MPI-126","column":"todo","note":"Wan stage-2 sigma drift fix carded from LTX MPI-4 finding"}
+{"event": "task.moved", "task": "MPI-126", "from": "todo", "to": "doing", "note": "Picking up — Wan t2v stage-2 sigma drift. Port LTX low-start-sigma refine. I2V may follow.", "at": "2026-07-02T13:20:00Z", "by": "agent"}
+{"event": "task.moved", "task": "MPI-126", "from": "doing", "to": "done", "note": "Live-proven in-app (t2v + i2v). Two-stage manual-sigma rework shipped: t2v 4+3@0.70, i2v 2+4@0.85. Findings in docs/builder/research/wan-2.2-two-stage-sigmas.md. Generator media-stamp fix included.", "at": "2026-07-02T14:30:00Z", "by": "agent"}

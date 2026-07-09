@@ -1,0 +1,142 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "817d1e95-2775-435d-b9b2-f22339e45409",
+  "generated_at": "2026-07-08T10:59:57Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "superseded",
+  "session": {
+    "name": "MPI-222 Phases 1-4 SHIPPED (data model + marker helpers + local drift/repair + remote drift/warn); next = Phase 5 (mpi-ci Pod image, cross-repo) then 6-7",
+    "branch": "1.2"
+  },
+  "goal": {
+    "original": "Continue MPI-222: node_lock pins each custom node's commit but nothing records which commit was installed and the install-check is folder-exists only (both engines), so a node bump leaves installs silently stale. Fix = per-node commit marker + drift check + targeted reinstall on boot, NO engine wipe. Plus remote node-install architecture change so a node bump never forces a Pod image rebuild. After implementation: update rules/docs/memory and remove dead code (the installOnEngine flag). Track ALL code + doc/rule/memory/skill/playbook/command changes in a ledger file so nothing drifts at close-out.",
+    "status": "in_progress",
+    "summary": "Phases 1-4 of the 7-phase plan are DONE and self-verified (local half fully; remote half logic-verified + guard-tested, live-gated on a Pod). node-drift.test.cjs = 12/12. A change-ledger file (changelog.md) tracks every code change + every doc/rule/memory needing re-eval and is linked on the card. Next session executes Phase 5 (the mpi-ci Pod image \u00e2\u20ac\u201d a SEPARATE git repo), then 6 (finish guard tests) and 7 (permission-gated docs/rules/memory sweep + dead-code)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+    "completed": [
+      "Phase 1 \u00e2\u20ac\u201d data model: PainterI2Vadvanced pinned in node_lock (commit a044ac7b2a33565343ddc75283c94a41371b4352) + lockUrl(); installOnEngine renamed to engineAsset on the 6 WEIGHTS only, dropped from all nodes; nodeset_version removed; _doc de-staled; getUniversalWorkflowDepIds filter retargeted to (type==='custom_nodes' || engineAsset===true) = all 10 nodes + 6 weights; remote baked/volume regex pulled forward to /installRequirements:\\s*true/ (baked=6, volume=4)",
+      "Phase 2 \u00e2\u20ac\u201d routes/shared.js: getPinnedNodeCommit(depId), writeNodeCommitMarker(nodeFolder,depId), NODE_COMMIT_MARKER='.mpi_node_commit'; all exported",
+      "Phase 3 \u00e2\u20ac\u201d LOCAL engine: marker stamped at end of _runCustomNodeInstall; checkUniversalWorkflowDepsStatus returns driftedDeps (marker mismatch OR absent); repair-deps unions missing+drifted + PRE-WIPES drifted folders before reinstall; getInstalledModelNodeDeps DELETED (all nodes universal now); LIVE pip pins captured from the running engine for Impact-Pack/kjnodes/Frame-Interpolation/Impact-Subpack (dry-run: all already-satisfied)",
+      "Phase 4 \u00e2\u20ac\u201d REMOTE app-side: _installedNodeCommits() reads manifest nodes[] (best-effort); remoteModelsCheck VOLUME drift -> installed:false, BAKED drift -> bakedDrift[] warn-only; modelRegistry syncModelInstalled emits ui:warning toast (deduped/session); MANIFEST_SCHEMA_MAX 1->2",
+      "tests/node-drift.test.cjs \u00e2\u20ac\u201d 12/12 (local drift/marker/pre-wipe/no-wipe + baked-pipPins + no-conflict invariants + 4 remote-drift cases)",
+      "changelog.md ledger created + linked on card (task.json links.changelog); card maturity planned->in-progress"
+    ],
+    "pending": [
+      "Phase 5 \u00e2\u20ac\u201d mpi-ci Pod image (SEPARATE repo c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\, edit with git -C): (1) resync node_lock copy (cp from Cubric-Vision); (2) Dockerfile bake loop ~L147-205 -> bake ONLY installRequirements:true nodes + write .mpi_node_commit per baked node; (3) wrapper/wrapper.py _run_node_install ~L1827-1909 -> write .mpi_node_commit on volume install + record manifest nodes[] {filename,commit,installed_at}; startup -> read baked .mpi_node_commit into manifest nodes[]; bump WRAPPER_VERSION + MANIFEST_SCHEMA_VERSION 1->2; (4) start.sh L232-246 -> remove MpiNodes git-pull hook; (5) add `commit` field to remoteInstallDep custom_nodes body (Cubric-Vision side) so wrapper can stamp it; (6) ONE image rebuild (build-pod-image skill / gh workflow run) + update the pinned image tag consumer \u00e2\u20ac\u201d USER-GATED live op",
+      "Phase 6 \u00e2\u20ac\u201d finish guard tests if any remote assertions need real fixtures (local + remote logic already covered by node-drift.test.cjs)",
+      "Phase 7 \u00e2\u20ac\u201d PERMISSION-GATED docs/rules/memory sweep + dead-code: work the changelog.md 'Re-eval required' table to zero (comfy_engine.md, downloads.md, download-manager.md, runpod-remote-engine.md, add-model-playbook.md, universal_workflows.js:6 comment, engine.js:366 comment, MEMORY.md hook); grep-clean installOnEngine everywhere"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-222",
+    "title": "No runtime auto-update when a pinned custom-node commit bumps \u00e2\u20ac\u201d installed nodes silently stay stale on both engines",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-222/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-222/handoffs/",
+      "changelog": ".agents/mpi-kanban/tasks/MPI-222/changelog.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "test",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "changelog.md ledger tracks every Phase 1-4 code change + a 'Re-eval required' table (13 rows) of every doc/rule/memory/comment the changes stale; 3 rows already closed (RES4LYF comment, shared.js:517 docblock/dead-code)",
+      "plan.md Completed + Plan Drift + Preservation Notes kept current; Preservation Notes point at changelog.md as the anti-drift ledger to read first",
+      "Two comment de-stalings already applied inline (RES4LYF, getInstalledModelNodeDeps docblock deleted with the fn)"
+    ],
+    "pending": [
+      "Phase 7 docs/rules/memory edits are PERMISSION-GATED (CLAUDE.md doc-drift cardinal rule) \u00e2\u20ac\u201d ask user before editing .claude/rules/ or docs/. The full worklist is the changelog.md 'Re-eval required' table.",
+      "MEMORY.md MPI-222 hook to flip to a Done one-liner at end-session (engineAsset rename + bake=installRequirements + GitHub-not-R2 + .mpi_node_commit marker + drift ladder)",
+      "Move research/B-remote-engine.md from session scratchpad into the task research/ dir before end-session"
+    ]
+  },
+  "next_action": {
+    "description": "Read the plan + changelog.md, then start Phase 5 (mpi-ci Pod image \u00e2\u20ac\u201d SEPARATE git repo at c:\\AI\\Mpi\\mpi-ci, edit with git -C, never git add from Cubric-Vision). FIRST sub-task: resync the build node_lock copy (cp c:/AI/Mpi/Cubric-Vision/dev_configs/node_lock.json c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json) so it diff-cleans (picks up MpiNodes 2d409b5, RES4LYF, the PainterI2Vadvanced pin, and the dropped installOnEngine flag). Then Dockerfile bake-split + markers, wrapper.py markers + manifest nodes[] + schema/version bump, start.sh MpiNodes git-pull removal, and add the `commit` field to remoteInstallDep's custom_nodes body on the Cubric-Vision side. The ONE image rebuild + live Pod verification is USER-GATED \u00e2\u20ac\u201d do the repo edits, then stop and ask before rebuilding. Log every change into changelog.md.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Change-ledger file changelog.md is the anti-drift mechanism the USER asked for: every code change + every doc/rule/memory/skill/playbook/command needing re-eval goes in it, so Phase 7 closes them ALL out (nothing forgotten). Linked on the card. Update it as each phase lands.",
+      "Bake discriminator = installRequirements (pip-nodes BAKED in Pod image for venv determinism; code-only nodes VOLUME-install on connect). baked=6 (LTXVideo, Impact-Pack, kjnodes, Frame-Interpolation, Impact-Subpack, RES4LYF), volume=4 (MpiNodes, Painter, VHS, UltimateSDUpscale). MpiNodes (highest churn) is now rebuild-free.",
+      "installOnEngine RENAMED to engineAsset, kept ONLY on the 6 universal WEIGHTS. All nodes dropped it. getUniversalWorkflowDepIds now selects (type==='custom_nodes' || engineAsset===true) \u00e2\u20ac\u201d ALL nodes are universal (this is why getInstalledModelNodeDeps could be deleted).",
+      "Marker .mpi_node_commit mirrors .mpi_engine_version (plain UTF-8 trimmed commit). Stamped LAST in the install (after reqs+pins) so it's a success sentinel.",
+      "Drift two outcomes: VOLUME node drifted/missing -> reinstall (local: pre-wipe + repair-deps; remote: installed:false -> existing install path). BAKED node drifted -> WARN ONLY (ui:warning toast, once/session), never volume-heal.",
+      "Remote fail-safe: absent manifest nodes[] (old wrapper / pre-Phase-5) -> NO drift reported -> zero false reinstalls/warns. Makes Phase 4 harmless until Phase 5 ships the wrapper data.",
+      "LIVE pip pins captured from the user's RUNNING engine (they were mid-generation) and verified already-satisfied via pip --dry-run \u00e2\u20ac\u201d the proven-good set, not guessed.",
+      "Verify mode = user-ux: local half self-verified; remote half needs a real Pod from the Phase-5 image (feedback_runpod_not_local_engine_proof) \u00e2\u20ac\u201d ship remote logic-verified + guard-tested, card the live check."
+    ],
+    "constraints": [
+      "mpi-ci is a SEPARATE git repo (c:\\AI\\Mpi\\mpi-ci). Edit with git -C c:\\AI\\Mpi\\mpi-ci; NEVER git add from Cubric-Vision. Shared-tree commit hygiene: commit by explicit pathspec, never git add -A (feedback_shared_tree_commit_hygiene).",
+      "mpi-ci node_lock copy is STALE (MpiNodes 780c7c3, missing RES4LYF, no Painter, still has installOnEngine) = the bug live. Resync FIRST in Phase 5.",
+      "wrapper.py version was 0.2.32 in-file per plan (memory said 0.2.31) \u00e2\u20ac\u201d CONFIRM before stamping the build-arg.",
+      "TRAP (already handled locally, mirror on remote): startUniversalWorkflowInstall SKIPS folders that already exist (isCompleteOnDisk) -> a drifted node (folder present) is marked complete and never reinstalled. MUST pre-wipe before repair. Local repair-deps already does this; the remote wrapper reinstall path must also remove the folder (force) for a drifted volume node.",
+      "The ONE Pod image rebuild + live verification is USER-GATED (live op). Do the mpi-ci repo edits, then STOP and ask before rebuilding.",
+      "Both engines mandatory (feedback_check_both_engine_paths). Phase 5 adds the remote DATA that Phase 4's app-side already consumes \u00e2\u20ac\u201d they ship as a lockstep pair (MANIFEST_SCHEMA_MAX 1->2 already bumped app-side).",
+      "Phase 7 docs edits are PERMISSION-GATED \u00e2\u20ac\u201d ask before touching .claude/rules/ or docs/.",
+      "Do NOT re-litigate locked architecture (bake=installRequirements, engineAsset, marker, drift ladder, GitHub-archive-not-R2). All settled with the user."
+    ],
+    "files_modified": [
+      "dev_configs/node_lock.json (Painter pin, dropped installOnEngine, removed nodeset_version, _doc)",
+      "js/data/modelConstants/dependencies.js (Painter lockUrl, engineAsset rename, 4 LIVE pipPins, RES4LYF comment)",
+      "routes/shared.js (getPinnedNodeCommit + writeNodeCommitMarker + NODE_COMMIT_MARKER; drift in checkUniversalWorkflowDepsStatus; getUniversalWorkflowDepIds filter; getInstalledModelNodeDeps DELETED)",
+      "routes/engine.js (repair-deps union+pre-wipe; missingDepIds collapse; imports)",
+      "routes/downloadManager.js (marker stamp + import; Rule-1 comment)",
+      "routes/remoteModels.js (regex retarget; _installedNodeCommits; remoteModelsCheck volume+baked drift)",
+      "routes/remotePodState.js (MANIFEST_SCHEMA_MAX 1->2)",
+      "js/data/modelRegistry.js (bakedDrift -> ui:warning, deduped)",
+      "tests/node-drift.test.cjs (NEW, 12/12)",
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md (Phases 1-4 marked done + Plan Drift + Preservation)",
+      ".agents/mpi-kanban/tasks/MPI-222/changelog.md (NEW anti-drift ledger)",
+      ".agents/mpi-kanban/tasks/MPI-222/task.json (maturity in-progress + links.changelog)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-222/changelog.md",
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-222/research/D-mpi-ci-podimage.md",
+      "dev_configs/node_lock.json",
+      "routes/remoteModels.js",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\Dockerfile",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\wrapper\\wrapper.py",
+      "c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\start.sh"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "comfy_engine (Engine Split)",
+      "download-manager",
+      "runpod-remote-engine",
+      "add-model-playbook (node-bump flow)",
+      "builder/02-image-and-rebuild (Pod image rebuild)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/download-manager.md",
+    "docs/runpod-remote-engine.md",
+    "docs/builder/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-08T10:59:57Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-222 in Cubric Vision (branch 1.2). Read .agents/mpi-kanban/state/handoffs/817d1e95-2775-435d-b9b2-f22339e45409.json, then the change ledger at .agents/mpi-kanban/tasks/MPI-222/changelog.md (READ THIS FIRST \u00e2\u20ac\u201d it records every code change AND a 'Re-eval required' table of every doc/rule/memory the work stales; Phase 7 must drive it to zero), then the plan at .agents/mpi-kanban/tasks/MPI-222/plan.md. Phases 1-4 are DONE and self-verified: data model (installOnEngine renamed to engineAsset on the 6 weights, dropped from all nodes; PainterI2Vadvanced pinned; getUniversalWorkflowDepIds now selects all custom_nodes+engineAsset), marker helpers (getPinnedNodeCommit/writeNodeCommitMarker/.mpi_node_commit in routes/shared.js), the LOCAL engine drift ladder (driftedDeps in checkUniversalWorkflowDepsStatus, repair-deps unions missing+drifted and PRE-WIPES drifted folders, getInstalledModelNodeDeps deleted, LIVE pip pins captured), and the REMOTE app-side (remoteModelsCheck: volume drift->installed:false, baked drift->ui:warning toast; MANIFEST_SCHEMA_MAX bumped 1->2). tests/node-drift.test.cjs is 12/12. DO NOT re-litigate locked architecture: bake discriminator = installRequirements (baked=6 pip nodes, volume=4 code-only nodes installed from GitHub archive at pinned commit, NO R2); marker .mpi_node_commit mirrors .mpi_engine_version; drifted volume nodes reinstall, drifted BAKED nodes only warn. Execute Phase 5 (the mpi-ci Pod image) via mpi-continue: mpi-ci is a SEPARATE git repo at c:\\AI\\Mpi\\mpi-ci \u00e2\u20ac\u201d edit with git -C, never git add from Cubric-Vision. First sub-task: resync the node_lock copy (cp c:/AI/Mpi/Cubric-Vision/dev_configs/node_lock.json c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json). Then Dockerfile bake-split (bake only installRequirements:true nodes + write .mpi_node_commit), wrapper.py (write markers on volume install + manifest nodes[] {filename,commit} + bump MANIFEST_SCHEMA_VERSION to 2 and WRAPPER_VERSION \u00e2\u20ac\u201d confirm 0.2.32 in-file first), start.sh (remove the MpiNodes git-pull hook), and add a `commit` field to remoteInstallDep's custom_nodes body on the Cubric-Vision side so the wrapper can stamp it. The ONE image rebuild + live Pod verification is USER-GATED: do the repo edits, then STOP and ask before rebuilding. Log every change into changelog.md. Phase 7 (docs/rules/memory) is PERMISSION-GATED \u00e2\u20ac\u201d ask before editing .claude/rules/ or docs/."
+}

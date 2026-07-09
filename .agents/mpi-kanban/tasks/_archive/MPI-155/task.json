@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-155",
+  "title": "Local engine: per-card VRAM mode (mirror Pod MPI-146) \u00e2\u20ac\u201d blanket --lowvram on ALL NVIDIA cards, 32GB+ should get --normalvram",
+  "description": "SPUN OFF from the v0.10.1 Pod work (MPI-145/146), after a per-card distribution-build concern (user: 'our user builds are per-OS, not per-card \u00e2\u20ac\u201d could a local 4090 hit the same crash?'). Investigation verdict:\n\nGOOD NEWS \u00e2\u20ac\u201d the scary risk does NOT apply locally. The sage-on-Ada CUDA crash we hit on the Pod CANNOT happen on a user's local machine: the local engine NEVER installs sageattention (MPI-50, deliberately rejected) and NEVER passes --use-sage-attention (docs/gotchas.md:166 \u00e2\u20ac\u201d explicitly removed; Windows embedded-python Triton JIT 2x-slowdown). So NO per-card DISTRIBUTION build is needed \u00e2\u20ac\u201d the per-card images matter only for the Pod (which runs sage); the local build is sage-free. Per-OS (Mac/Linux/Windows) distribution stays correct.\n\nTHE ACTUAL GAP (this card): the LOCAL ComfyUI launch hardcodes --lowvram for EVERY non-Apple GPU. routes/comfy.js (~line 283, POST /comfy/start): `} else { modeArgs = ['--lowvram']; }` covers nvidia/amd/intel equally \u00e2\u20ac\u201d NO VRAM-size branch. A local 5090/3090-32GB/etc gets --lowvram when it should get --normalvram (the same blanket-lowvram bug MPI-146 just fixed on the Pod). This is the OLD parity point the Pod has now outgrown (remoteProxy.js:87-90 documents the local-match that's now stale).\n\nMITIGATING: docs/gotchas.md:224-226 \u00e2\u20ac\u201d on ComfyUI v0.26+, --lowvram is a NO-OP when dynamic-vram (aimdo) is active (the default). So the wrong flag may be HARMLESS locally IF aimdo initializes on the user's card. UNVERIFIED in code. Low stakes, but worth confirming.\n\nFIX (runtime, NOT a new build dimension \u00e2\u20ac\u201d same per-OS build):\n1. In routes/comfy.js /comfy/start, before the modeArgs else-branch, read total VRAM (nvidia-smi --query-gpu=memory.total is ALREADY queried in routes/system.js:getVramStats:25-33 \u00e2\u20ac\u201d reuse/lift it) and branch: <=24GB -> --lowvram, >=28GB -> --normalvram (use the SAME >=28 threshold as the Pod start.sh, accounts for usable-VRAM under-report: 24GB reads ~23, 32GB reads ~31). Default --lowvram if detection fails.\n2. Mirror the Pod's MPI-146 logic exactly so local + Pod behave identically per card.\n3. FIRST verify whether aimdo actually initializes on a local v0.26 engine (check ComfyUI startup stdout for 'aimdo'/'dynamic') \u00e2\u20ac\u201d if aimdo is always on locally, --lowvram is already a no-op and this is cosmetic-only (downgrade priority). If aimdo is NOT initializing locally (same CPU-offloaded-encoder reason flagged for the Pod in MPI-146 research), the wrong VRAM mode is REAL and this matters.\n\nDETECTION ALREADY EXISTS: routes/platformEngine.js resolveDownloadConfig() caches gpu.name/vendor/cudaVersion; routes/system.js getVramStats() reads memory.total. The launch path (comfy.js) just doesn't USE the VRAM number. Wiring it in is the whole task.\n\nNON-GOAL: sage on local (MPI-50 rejected \u00e2\u20ac\u201d fragile, Windows JIT tax). Do NOT add sage. NON-GOAL: per-GPU distribution builds (unnecessary \u00e2\u20ac\u201d sage is the only per-card-critical thing and local doesn't ship it).\n\nBRANCH: app-side (Cubric-Vision), local-engine only, no Pod/mpi-ci. Likely a small change. VERIFY: a local 32GB+ card launches ComfyUI with --normalvram; a 24GB card keeps --lowvram; gen completes on both.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-26T23:40:00Z",
+  "updated_at": "2026-06-28T18:12:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "local-engine",
+    "comfyui",
+    "vram",
+    "performance",
+    "per-card",
+    "mpi-146-parity"
+  ],
+  "priority": "medium"
+}

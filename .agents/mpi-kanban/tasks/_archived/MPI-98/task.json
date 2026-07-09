@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-98",
+  "title": "Truthful pod VRAM/RAM in the status-bar memory monitor",
+  "description": "DONE + LIVE-VERIFIED on an L4 Pod (2026-06-16). Status-bar memory monitor now shows truthful Pod VRAM/RAM in remote mode via the wrapper's GET /wrapper/stats (in-Pod nvidia-smi VRAM + cgroup RAM), app /remote/pod/stats prefers the wrapper over the RunPod REST guess, MpiMemoryMonitor is mode-aware with a 'Pod N/A' fallback. Shipped in image v0.4.4 / wrapper 0.2.7 (cgroup-v1 RAM fix: RunPod Pods are v1; v0.4.2/0.4.3 read v2-only -> RAM null). Verified live: RAM 0.7 idle -> 22.6 under load, VRAM tracks gen, both match the RunPod console (app is fresher). Also shipped taesd vae_approx preview prebake (previews now crisp). Remaining cosmetic (separate backlog, NOT this card): app bar TOTAL uses the connection-feed spec (24GB VRAM / 62GB RAM) instead of the wrapper's true totals (22.5GiB / 57.74GiB); used values are correct. mpi-ci 9dc17b9, app b17cc64. See brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-15T20:15:00Z",
+  "updated_at": "2026-06-16T07:50:00Z",
+  "activeSessionTitle": "Investigation + implementation: truthful remote memory monitor",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

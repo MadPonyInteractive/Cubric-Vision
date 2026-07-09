@@ -1,0 +1,130 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d1142879-f071-4109-b50b-aa68c9018c72",
+  "generated_at": "2026-06-12T06:31:30Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Step 4.2 (create-on-Connect) DONE+verified; Step 4.2.1 (custom-nodes false-PARTIAL fix) DONE+verified; dep-hashes filled; Step 4.3 (stop-not-delete + auto-reconnect + delete-fallback) CODE DONE + LIVE-VERIFIED working (the 'ready but no Pod' was browser cache). NEXT: Step 4.3.3 orphan-Pod sweep + Step 4.3.1 delete-Pod-before-volume-delete (user-picked recommendation), then Step 4.3.2 Disconnect choice popup.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from Cubric Vision via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Phase 3 Steps 1-4.1 done+verified. This session: Step 4.2 create-on-Connect/delete-on-Disconnect (DONE+verified), Step 4.2.1 custom-nodes false-PARTIAL fix (DONE+verified, model card flips INSTALLED on refresh), dep-hashes filled (9 null sha256), then Step 4.3 RE-REVISED the teardown to STOP-not-delete + auto-reconnect-on-boot with a self-healing delete+recreate fallback (CODE DONE + LIVE-VERIFIED: stale podId → resume host-pinned-fail → auto-recreate fresh Pod 3ukammu6gnsmxh → wrapper ready). The 'ready but no Pod' scare was a RunPod-console browser-cache stale view (Step 4.3.0 closed = not a bug). Live test exposed a REAL orphan-Pod class (Step 4.3.3). NOTHING committed. LIVE BILLING: Pod 3ukammu6gnsmxh is RUNNING (A4000) + an orphan ...vos2 is STOPPED — user should delete both in the RunPod console if not testing."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 design docs + Phase 2 wrapper (full contract)",
+      "Phase 3 Steps 1/2/2.1/3/4 + Step 4.1 (Connect/Disconnect button) — all user-verified",
+      "Step 4.2 — Create-on-Connect / Delete-on-Disconnect lifecycle; USER-VERIFIED (advisory at boot, Connect disabled until GPU picked, fresh Pod on Connect, Pod-ID field hidden, Disconnect+quit removed the Pod)",
+      "Step 4.2.1 — Custom-nodes false-PARTIAL fix; USER-VERIFIED (remoteModelsCheck marks type==='custom_nodes' image-resident inline, never sent to wrapper; per-model installed recomputed as AND; installOnEngine model WEIGHTS stay volume-installed). Ran mpic-compute-dep-hashes — filled the 9 null sha256 in dependencies.js",
+      "Step 4.3 — Stop-not-delete + auto-reconnect (delete-fallback); CODE DONE + LIVE-VERIFIED working via app.log (reconnect → host-pinned resume fail → recreate fresh → ready)",
+      "Step 4.3.0 — closed as NOT-A-BUG (RunPod console browser cache)"
+    ],
+    "pending": [
+      "Step 4.3.3 (NEXT, user-picked) — orphan stopped-Pod sweep: on Connect/boot list account Pods named 'cubric-vision' and delete EXITED ones that are not the tracked podId; recreate-fallback must target the saved podId being replaced (not whatever _startedPodId points at)",
+      "Step 4.3.1 (NEXT, user-picked, pairs with 4.3.3) — delete attached Pod BEFORE deleting a volume (RunPod refuses volume-delete while a Pod is attached): MpiSettings._confirmDeleteVolume → delete-active + clear podId/wasConnected → DELETE /runpod/volumes/:id",
+      "Step 4.3.2 — Disconnect choice popup: Delete Pod vs Keep Pod (warm). Delete → delete-active + clear podId/wasConnected; Keep → stop-active + clear wasConnected (keep podId). Lean Keep as default",
+      "Step 4.4 — Persistent connection feedback in status bars (landing 'Local·Offline'→'Remote·Online'+Pod card; gallery 'Idle'→'IDLE·Local / IDLE·Remote')",
+      "Step 5 — Manifest compatibility gate + repair/reinitialize UI (Batch #4 fold-in)",
+      "Phase 4 — remote input-asset transfer; remote image+video generation end-to-end (NOTE: a real Pod is live now — a generation can be tested immediately)",
+      "Fresh-volume init + bundle versioning",
+      "Phase 5 — hardening/tests/secret-hygiene/docs"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md fully updated this session: Step 4.2 + 4.2.1 ticked with verify notes; Step 4.3 rewritten as stop-not-delete + auto-reconnect + delete-fallback; Step 4.3.0 ticked (not-a-bug, browser cache); Step 4.3.1/4.3.2/4.3.3/4.4 written as NEXT items; two Plan Drift entries (2026-06-12) record the 4.2→4.3 lifecycle re-revision + cost facts (RUNNING bills per-second; STOPPED bills only volume+container disk; DELETED bills only volume)"
+    ],
+    "pending": [
+      "Diagnostic logging added this session to routes/remoteProxy.js (create/reconnect entry + createPod REST result + wrapper-ready) and MpiSettings._connectEngine (clientLogger 'create' vs 'reconnect' + response) — KEEP IT (cheap, podId is non-secret). Note in any future cleanup that it is intentional.",
+      "After Step 4.3.x lands, fold docs/releases/UNRELEASED.md (comfy-url removal) into release notes at next /mpi-version-bump",
+      "mpi-ci + cubric-remote-wrapper still uncommitted; commit only when the user asks",
+      "Update any docs that still reference the manual DevTools setWrapperToken step — obsolete since create/reconnect generate+store the token server-side"
+    ]
+  },
+  "next_action": {
+    "description": "Continue MPI-64 with the user-picked recommendation: Step 4.3.3 (orphan stopped-Pod sweep) + Step 4.3.1 (delete attached Pod before volume delete), implemented together (both are Pod-cleanup, both prevent stranded billing + a blocked volume delete). 4.3.3: add an account-Pod reconcile — list Pods named 'cubric-vision' via the RunPod client and delete EXITED ones that are not the currently-tracked podId, triggered on Connect/boot (and/or a Settings 'clean up old Pods' action); also make the recreate-fallback in /remote/pod/reconnect delete the SAVED podId being replaced rather than relying on _startedPodId. 4.3.1: in MpiSettings._confirmDeleteVolume, before DELETE /runpod/volumes/:id, first call POST /remote/pod/delete-active and clear runpodConfig.podId+wasConnected, then delete the volume; keep _runpodErrText 'delete the Pod first' as the fallback for a non-tracked attached Pod. Then Step 4.3.2 (Disconnect choice: Delete vs Keep popup). Reuse client.deletePod/listPods? (NOTE: runpodRemote.js exposes createPod/startPod/stopPod/deletePod/getPod but NO list-pods method yet — add a client.listPods that GETs /pods if a sweep needs it; verify the REST shape). Backend lifecycle helpers live in routes/remoteProxy.js (_createPodInternal, _deleteTrackedPod, _isGpuAvailable, _startedPodId, _mode). INLINE-SEQUENTIAL, no sub-agent workers, never commit unless asked. Live Pod ops bill + the classifier BLOCKS reading .secrets/runpod.env and autonomous Pod create/delete — the USER runs live tests. Brief before code (mpi-continue gate).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "LIFECYCLE RE-REVISION (user, 2026-06-12): STOP-not-delete on quit/Disconnect REPLACES Step 4.2's delete-on-Disconnect. A STOPPED Pod bills NO GPU (only volume + reserved container disk) and warm-resumes faster than a cold create. DELETE only on GPU-switch, on a failed resume (host-pinned), or when the saved GPU is unavailable. RUNNING bills per-second so it is never left running across quit. The self-healing delete+recreate fallback fixes the host-pinning wall ('not enough free GPUs on the host machine') that originally killed start/stop — a failed resume auto-deletes the stuck Pod and creates fresh on the same GPU.",
+      "Step 4.3 endpoints (routes/remoteProxy.js): /remote/pod/create (first Connect + GPU-switch, fresh Pod + new token), /remote/pod/reconnect ({podId,gpuTypeId,volumeId,datacenter} → availability pre-check → if gone delete stuck Pod + {unavailable:true}; else startPod warm-resume same podId+token; on fail delete+createPod fresh new token → {ready,podId,recreated}), /remote/pod/delete-active (GPU-switch/unavailable/explicit), /remote/pod/stop-active (Disconnect+quit teardown — STOP, KEEPS podId+token so boot warm-resumes). main.js quit → stopActiveRemotePod (/remote/pod/stop-active). js/shell.js _initRemoteBoot auto-reconnects when wasConnected+podId+gpuType (background, toasts; unavailable → 'pick another GPU' popup + clears intent; else advisory-only).",
+      "wasConnected intent: added to DEFAULT_RUNPOD_CONFIG + normalizeRunpodConfig (storage.js) — set true on a ready Connect/reconnect, cleared on explicit Disconnect. Drives boot auto-reconnect. GPU-switch in Settings deletes the old Pod (delete-active) so the next Connect creates fresh on the new card.",
+      "Step 4.2.1 root cause: /comfy/models/check remote branch forwarded custom_nodes deps to the wrapper, which only sees the /workspace volume; custom_nodes ship in the Pod IMAGE (/opt/comfyui/custom_nodes, Design A) → always read missing → pack stuck PARTIAL. The wrapper's _is_complete_on_disk checks file-presence + non-zero size only (sha256 NOT consulted for status) so the null sha256 was NOT the cause. Fix in remoteModels.remoteModelsCheck: type==='custom_nodes' marked installed inline, never sent; per-model installed = AND. installOnEngine is NOT image-resident (4x-NMKD-Siax, yolo/sam .pth are real volume models installed via the wrapper).",
+      "Connect branches in MpiSettings._connectEngine: a saved cfg.podId → warm /remote/pod/reconnect ('resuming…'); no podId → /remote/pod/create ('creating…'). data.unavailable → clear podId+wasConnected + 'pick another GPU' hint. data.recreated → 'ready (Pod recreated)'.",
+      "MpiButton imperative API (setLabel/setDisabled) lives on instance.el NOT the instance (helpers _engineBtnLabelSet/_engineBtnDisabled call instance.el.setX). MpiDropdown emits 'change' ONLY on a real option click (not on mount/re-render) — so re-rendering the GPU picker does NOT fire the GPU-switch delete."
+    ],
+    "constraints": [
+      "LIVE BILLING NOW: Pod 3ukammu6gnsmxh is RUNNING (A4000, EUR-IS-1, volume cfwqthmdrg) and an orphan ...vos2 is STOPPED. If not testing a generation, the user should delete both in the RunPod console (manual until Step 4.3.3 lands). The volume cfwqthmdrg (150GB) bills storage (~$10.50/mo, expected).",
+      "NOTHING is committed in Cubric-Vision (never commit unless the user explicitly asks). All MPI-64 app work is uncommitted on branch RunPod. mpi-ci + cubric-remote-wrapper also uncommitted.",
+      "INLINE-SEQUENTIAL execution for app code — do not dispatch sub-agent workers.",
+      "RunPod secrets + standing IDs in GITIGNORED cubric-remote-wrapper/.secrets/runpod.env: CUBRIC_TOKEN sha8 4bc82fb9, volume cfwqthmdrg, template ejrwtsej15. NEVER paste the API key/token; NEVER read/grep runpod.env (the classifier BLOCKS reading it AND scanning %APPDATA% for the secret store AND autonomous Pod create/delete that needs the key). For live Pod ops the USER runs cubric-remote-wrapper/recreate_pod.py. RunPod is behind Cloudflare — always a browser User-Agent; Windows curl flakes — use Python; RunPod REST stop/delete returns an EMPTY body on success; createPod returns HTTP 201 + {id}.",
+      "routes/remoteProxy.js MUST stay mounted BEFORE routes/comfy.js (SSE intercept fall-through). routes/logger.js warn/info take only (category, message). The wrapper token in the app store is keyed by podId (getWrapperToken returns null on podId mismatch) — create/recreate MUST setWrapperToken keyed to the NEW podId; warm resume keeps the same podId so the stored token still matches. The proxy 404s wrapper routes for a few seconds right after Pod ready — remoteModels.wrapperFetch already retries.",
+      "PowerShell via Bash is BLOCKED by the classifier (user's PowerShell deny rule) — read app.log with the Read tool (offset/limit), not Get-Content. scripts/new_uuid.py does NOT exist — generate uuids with python -c 'import uuid; print(uuid.uuid4())'.",
+      "Generation path (comfyController._ensureRemoteReady) does NOT lazy-create a Pod — it proceeds only if already Connected, else errors 'press Connect'. So a generation test requires an active Connect first (a Pod is live now).",
+      "DOCS WEBSITE PUSH BLOCK still applies (never push 'Cubric Studio (Docs)')."
+    ],
+    "files_modified": [
+      "routes/remoteProxy.js (Step 4.3: _createPodInternal + _deleteTrackedPod + _isGpuAvailable helpers; /remote/pod/create, NEW /remote/pod/reconnect, /remote/pod/delete-active, /remote/pod/stop-active=STOP; /remote/mode relaxed to allow active w/o podId; diagnostic logging)",
+      "routes/remoteEngine.js (Step 4.2: clearWrapperToken bridge + export)",
+      "routes/remoteModels.js (Step 4.2.1: _isImageResident=custom_nodes-only; remoteModelsCheck folds image-resident deps in as installed, recomputes per-model installed)",
+      "routes/comfy.js (Step 4 prior + 4.2.1 remote models/check branch routes to remoteModelsCheck)",
+      "routes/downloadManager.js (Step 4 prior — remote install wiring; custom_nodes complete-inline)",
+      "js/core/storage.js (Step 4.3: wasConnected in DEFAULT_RUNPOD_CONFIG + normalizeRunpodConfig)",
+      "js/state.js (runpodConfig comment + wasConnected)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (Step 4.2/4.3: Connect=create-or-reconnect, Disconnect=stop-active, hide Pod-ID field, GPU-switch deletes old Pod, wasConnected set/clear, diagnostic logging)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css (Step 4.1 connect row + status)",
+      "js/components/Primitives/MpiDropdown/MpiDropdown.js (prior — extraClasses onto portalled list)",
+      "js/shell.js (Step 4.3: _initRemoteBoot auto-reconnect / advisory)",
+      "js/services/comfyController.js (Step 4.2: _ensureRemoteReady no lazy-create — Connect-only)",
+      "main.js (Step 4.3: quit teardown stopActiveRemotePod → /remote/pod/stop-active)",
+      "js/data/modelConstants/dependencies.js (dep-hashes: 9 null sha256 filled)",
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md (Step 4.2/4.2.1/4.3 + 4.3.0-4.3.3 + 4.4 + Plan Drift)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "routes/remoteProxy.js (lifecycle helpers + create/reconnect/delete-active/stop-active)",
+      "routes/runpodRemote.js (client.createPod/startPod/stopPod/deletePod/getPod — NO listPods yet; add one for the sweep)",
+      "routes/remoteEngine.js (generateWrapperToken/setWrapperToken/clearWrapperToken/waitForWrapperReady/proxyUrl)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js (_connectEngine/_disconnectEngine, GPU-switch handler, _confirmDeleteVolume to patch for 4.3.1)",
+      "js/shell.js (_initRemoteBoot auto-reconnect)",
+      "js/core/storage.js (runpodConfig + wasConnected)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "Pod lifecycle", "volume + model storage", "wrapper API contract", "ComfyUI execution boundary"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-12T06:31:30Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (only worktree: c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/d1142879-f071-4109-b50b-aa68c9018c72.json and use mpi-continue. STATUS: Phase 3 Steps 1-4.1 done+verified. This session shipped Step 4.2 (create-on-Connect/delete-on-Disconnect, USER-VERIFIED), Step 4.2.1 (custom-nodes false-PARTIAL fix — remoteModelsCheck marks type==='custom_nodes' image-resident inline and never sends them to the wrapper; model card now flips INSTALLED on refresh; USER-VERIFIED), filled the 9 null sha256 in dependencies.js via mpic-compute-dep-hashes, then RE-REVISED the teardown as Step 4.3 to STOP-not-delete on quit/Disconnect + auto-reconnect on boot with a self-healing delete+recreate fallback (CODE DONE + LIVE-VERIFIED via app.log: stale saved podId → /remote/pod/reconnect → startPod host-pinned-fail → recreate fresh Pod 3ukammu6gnsmxh → wrapper ready). The earlier 'Connect says ready but no Pod' scare was a RunPod-console BROWSER-CACHE stale view (Step 4.3.0 closed = not a bug). NOTHING is committed. LIVE BILLING RIGHT NOW: Pod 3ukammu6gnsmxh is RUNNING (A4000, volume cfwqthmdrg) plus an orphan ...vos2 is STOPPED — tell the user to delete both in the RunPod console if not running a generation. IMMEDIATE NEXT (user-picked recommendation): Step 4.3.3 (orphan stopped-Pod sweep — list account Pods named 'cubric-vision' and delete EXITED ones that aren't the tracked podId; recreate-fallback should target the saved podId being replaced) + Step 4.3.1 (delete the attached Pod BEFORE deleting a volume, because RunPod refuses a volume-delete while a Pod is attached — patch MpiSettings._confirmDeleteVolume to delete-active + clear podId/wasConnected, then DELETE the volume), implemented together; then Step 4.3.2 (Disconnect choice popup: Delete Pod vs Keep Pod warm). Backend lifecycle lives in routes/remoteProxy.js (_createPodInternal, _deleteTrackedPod, _isGpuAvailable, /remote/pod/create|reconnect|delete-active|stop-active; routes/runpodRemote.js client has createPod/startPod/stopPod/deletePod/getPod but NO listPods — add one for the sweep, verify the GET /pods REST shape). wasConnected (storage.js) drives boot auto-reconnect. GOTCHAS: never read/grep .secrets/runpod.env and never run autonomous Pod create/delete (classifier blocks both — the USER runs live tests); PowerShell-via-Bash is BLOCKED (read app.log with the Read tool, not Get-Content); scripts/new_uuid.py does NOT exist (use python -c 'import uuid'); routes/remoteProxy.js stays mounted before routes/comfy.js; tokens are keyed by podId (create/recreate must store a fresh token keyed to the new podId; warm resume keeps the same podId); generation requires an explicit Connect (comfyController._ensureRemoteReady does not lazy-create); inline-sequential, no sub-agent workers, never commit unless asked. Keep the diagnostic logging in remoteProxy.js/MpiSettings (podId is non-secret). Brief before code (mpi-continue gate)."
+}

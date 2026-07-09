@@ -34,7 +34,7 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 
 ### APP_VERSION
 
-- **Purpose:** Identifies the Cubric Studio release. Bumped on every public release.
+- **Purpose:** Identifies the Cubric Vision release. Bumped on every public release.
 - **Format:** Semantic versioning (`MAJOR.MINOR.PATCH`).
 - **When to bump:**
   - **Patch** (0.0.x → 0.0.y): Bug fixes, no new operations, no schema change.
@@ -217,7 +217,7 @@ These helpers compare `APP_VERSION` against each operation's `appVersionIntroduc
 - `js/core/operationRegistry.js` — operation registry
 - `js/managers/versioningManager.js` — version queries
 - `js/migrations/projectMigrations.js` — schema migration functions
-- `.claude/skills/mpi-version-bump.md` — the interactive version-bump skill (use this for releases)
+- `.claude/skills/mpi-version-bump/SKILL.md` — the interactive version-bump skill (use this for releases)
 - `docs/releases/` — archived release notes per version (user-facing markdown)
 - `js/data/releaseNotes.js` — runtime release-note source consumed by the startup changelog overlay
 - `js/components/Compounds/MpiChangelogDialog/` — the changelog overlay component

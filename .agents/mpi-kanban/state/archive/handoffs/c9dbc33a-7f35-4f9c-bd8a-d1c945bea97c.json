@@ -1,0 +1,134 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c9dbc33a-7f35-4f9c-bd8a-d1c945bea97c",
+  "generated_at": "2026-06-21T23:12:25Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "LTX-2.3 motion/censorship tuning marathon + capability-LoRA acquisition. Rejected STG, adopted heretic-gemma encoder, characterized censorship as 2 layers, hunted+downloaded 4 CivitAI LoRAs (VBVR I2V/T2V, Singularity, Soft Enhance). No template structural changes shipped this session beyond STG wiring (now rejected) + input-audio decode the user added.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-4 LTX-2.3 template authoring. This session began as input-audio slider testing; pivoted into a deep motion/prompt-adherence + censorship investigation, then a CivitAI capability-LoRA hunt + download.",
+    "status": "in_progress",
+    "summary": "Big-picture motion/quality findings locked: motion is dominated by start-POSE + SEED (not resolution/settings); STG rejected (color blowout, no motion); heretic abliterated gemma fp8 adopted as encoder (suggestive A/B conclusive); censorship is 2 layers (encoder refusal = heretic fixes; training-capability gaps like gore/fluid-physics = no LoRA exists for 2.3). 4 capability LoRAs downloaded + moved to C:/AI/loras/. Next session = test them, decide keep/merge/switch, then polish-and-ship for the ~25th June Patreon Pro release (extend/headswap/CN DEFERRED to next release unless tomorrow goes great)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "STG (Spatio-Temporal Guidance) tested + REJECTED — A/B (same seed, STGGuider vs CFGGuider): plain CFGGuider gave tongue-out+hand-hip+NO color degradation; STG at any scale destroyed color, added no motion. Matches Lightricks shipping distilled at stg_scale=0. Node kept wired-but-OUT of gen path; delete in cleanup.",
+      "Tiled VAE decode investigated (sourced from Lightricks repo) + DISCONNECTED — plain VAEDecode in use (8s OK on 16GB). Lightricks PR#471 swapped tiled->plain themselves (flickering). last_frame_fix rides on tiled node; watch last frame on plain. Research saved: research/tiled-vae-decode.md.",
+      "Motion/adherence research (sourced) saved: research/motion-adherence-tuning.md. KEY: motion = pose+seed dominated, not res. 2K moved BETTER than expected (original 2K/4K-drop was confounded). Samplers already correct (Lightricks-official). Higher-res motion loss = sigma_shift auto-scaling. max_shift 1.8 = cheap lever (untested live).",
+      "Censorship characterized as 2 layers: (1) encoder REFUSAL — heretic abliterated gemma fp8 ADOPTED (A/B same-seed: original gemma=hand on hip; heretic=hand ON buttock). LoRA abliterated rank64 BYPASSED (CLIP-only, ~50x layer-diluted, superseded). (2) training CAPABILITY gaps — gore renders CGI-fake, no exit-wound physics; abliteration can't fix; no 2.3 gore LoRA exists.",
+      "Downloaded heretic gemma fp8 (13.5GB) to G:/ComfyUi/ComfyUI/models/text_encoders/. fp4 deleted, bf16 never pulled (won't fit 16GB). Verified headers.",
+      "CivitAI capability-LoRA hunt (sub-agent, API-sourced). Downloaded + moved to C:/AI/loras/: VBVR I2V (Sulphur V4, 786MB), VBVR T2V (V1, 658MB), Singularity OmniCine V1 (2.5GB), Soft Enhance (344MB). Fight LoRA SKIPPED (examples bad). Gore LoRA = none exist. NSFW full-model path = Sulphur 2 checkpoint family (noted, not pulled).",
+      "LoRA delivery architecture decided: merge always-on quality LoRAs into model (no deps); keep toggleable LoRAs (transition) separate; heretic gemma stays separate (text encoder). VBVR complication: it's MODE-DEPENDENT (I2V=V4, T2V=V1) so may need per-mode merge OR Input_Mode auto-switch — pending the mode-coverage test.",
+      "Spec fully updated: §0 release constraint, §0b test queue, §3e motion-tuning session, heretic-adopted, LoRA-architecture, CivitAI results, mirroring TODO.",
+      "User added the missing stage-1/preview LTXVAudioVAEDecode node (fixed the SaveVideo KeyError 'sample_rate' — preview path was feeding a raw audio LATENT to CreateVideo instead of decoded AUDIO)."
+    ],
+    "pending": [
+      "TEST 1 (decides merge architecture): VBVR mode-coverage. T2V mode, same prompt+seed: (A) VBVR-V1 vs (B) VBVR-I2V-V4 vs (C) none. If V4 works on T2V >= V1 -> use V4 both modes, drop V1, one LoRA, clean merge. If broken -> mode-specific, auto-switch by Input_Mode. Use LITERAL step-by-step prompts.",
+      "TEST 2: does VBVR fix the floaty-motion + 'won't do prompt action' problem? Re-run old failing repros. Strength 0.7-1.0 (1.5-2.0 = more adherence but t2v 16fps-choppy). image_strength 0.85 = more motion.",
+      "TEST 3: stack Singularity OmniCine 0.8-1.0 -> 3-finger/anatomy fix + lip-sync. Has STRICT prompt template (Cinematic Timeline Structure) — test with it.",
+      "TEST 4: stack Soft Enhance -> realistic polish. Watch TOTAL stacked strength (transition+VBVR+Singularity+Soft) < ~1.5 or quality degrades.",
+      "Input-audio slider decision (open since prior handoff): does strength 1.0 work on EVERY image? If yes -> drop Input_Audio_Influence slider (201) + invert (202), auto-enable at 1.0 on file present.",
+      "Cleanup: DELETE the rejected STG nodes (LTXVApplySTG 226, STGGuider 229) from the template — confirmed out.",
+      "RELEASE DECISION (~25th June): ship refined base (i2v/t2v/FL + audio + validated LoRA stack) OR add extend/headswap/CN if tomorrow goes great. Bias = ship solid base, defer the rest.",
+      "Mirror heretic-gemma-fp8 + Singularity (low-following repos) to our own repo before shipping as deps.",
+      "Eventually: workflow-gen orchestrator generate_ltx.py (per-op API file export), resolve LTX dep URLs/SHAs."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session)",
+    "research with sub-agents — but VERIFY all sub-agent claims against live JSON / real URLs before trusting"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Spec research/ltx-integration-spec.md fully updated (§0 release+scope, §0b test queue, §3e motion-tuning, STG-rejected, heretic-adopted, LoRA-delivery-architecture, CivitAI-results, mirroring-TODO).",
+      "Separate research docs saved: research/tiled-vae-decode.md, research/motion-adherence-tuning.md.",
+      "All 4 LoRAs + heretic gemma fp8 verified + moved to correct ComfyUI folders (loras = C:/AI/loras/ via extra_model_paths; text_encoders = G:/ComfyUi/.../text_encoders/)."
+    ],
+    "pending": [
+      "After LoRA tests: lock which LoRAs kept + merge-vs-switch decision in spec §'LoRA DELIVERY ARCHITECTURE'.",
+      "After input-audio decision: lock spec §3d/controls (slider vs auto-1.0).",
+      "Consider memory entries: (1) LTX heretic gemma encoder beats abliterated LoRA (~50x layer dilution); (2) STG rejected on distilled LTX (color blowout, no motion); (3) motion = pose+seed dominated not resolution; (4) VBVR is mode-dependent (I2V V4 / T2V V1).",
+      "Mirror heretic-gemma-fp8 + Singularity to own repo before shipping as deps."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4. RE-SCAN the live template FIRST (G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json — prior context summarized not live; user may have edited after handoff). Then run the LoRA test queue in spec §0b: TEST 1 is the priority — VBVR mode-coverage (T2V: V1 vs I2V-V4 vs none, same seed) decides whether VBVR can be ONE merged LoRA or needs Input_Mode auto-switch. Then VBVR motion/adherence, stack Singularity + Soft Enhance, then the input-audio slider decision + STG node deletion. Release ~25th June — bias toward shipping a refined base, defer extend/headswap/CN.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "STG REJECTED on distilled LTX-2.3 — same-seed A/B: plain CFGGuider beat STGGuider (STG destroyed color, no motion gain). Matches Lightricks distilled default stg_scale=0. cfg MUST stay 1 (cfg=2 = contrast blowout, confirmed).",
+      "Heretic abliterated gemma fp8 ADOPTED as encoder, abliterated LoRA BYPASSED. Same-seed A/B: original gemma=hand on hip; heretic=hand on buttock. The full abliterated encoder beats the LoRA (LoRA edits only Gemma layer 48, but LTX averages all 49 layers ~equally -> ~50x dilution; fp8-base is a red herring, not the cause).",
+      "Motion is dominated by START-POSE + SEED, not resolution/settings. 2K moved BETTER than expected -> original 2K/4K-drop was confounded (bad pose blamed on res). Seed flipped results ~3x this session. Implication: 'low motion' can be the INPUT's fault, not a knob (UX truth).",
+      "Censorship = 2 layers. Encoder refusal (heretic fixes suggestive + some violence). Training-capability gaps (gore CGI-fake, no exit-wound physics, fluid = computer-y) -> abliteration CANNOT fix; no LTX-2.3 gore/fluid LoRA exists. Gore = train-own or accept ceiling.",
+      "VBVR LoRA is MODE-DEPENDENT: I2V build = Sulphur V4 (rank128), T2V build = V1. Both NSFW LoRAs. TEST whether I2V-V4 also works on T2V — decides one-LoRA-merge vs per-mode-switch. VBVR is NOT a motion LoRA (dev: 'stacks with motion LoRAs') — VBVR(reasoning) + Singularity(motion/anatomy) are complementary, stack both.",
+      "LoRA delivery: MERGE always-on quality LoRAs into the model (no download deps); KEEP toggleable LoRAs (transition) separate; style/effect LoRAs = open design (switchable ops vs new styles system).",
+      "Fight scenes are BAD on this model even with the fight LoRA -> SKIPPED. Don't build fight ops on LTX-2.3.",
+      "RELEASE ~25th June to Patreon Pro: likely ship refined base only (i2v/t2v/FL + audio + LoRA stack); DEFER video-extend/head-swap/ControlNet/guide-video to next release unless tomorrow's progress is strong."
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI; agent edits JSON on disk. ALWAYS confirm user SAVED + CLOSED the ComfyUI tab before writing JSON — disk != live until saved. Stale disk reads bit us repeatedly. The tool 'srcof' helper can misread multi-output reroutes (it grabbed first matching input name and falsely reported pos==neg on node 84 — verify per-slot before trusting).",
+      "DO NOT trust sub-agent claims without verifying against live JSON / real URLs. Multiple sub-agents this/prior sessions fabricated values; this session's sub-agents were API/repo-sourced and held up, but still verify.",
+      "ComfyUI LoRA path = C:/AI/loras/ (via extra_model_paths comfyui_external), NOT the default models/loras/. text_encoders = G:/ComfyUi/ComfyUI/models/text_encoders/. Downloads land in ~/Downloads; agent moves them.",
+      "16GB VRAM: full bf16 gemma (24.4GB) won't fit alongside transformer. heretic fp8 (~13.5GB) = drop-in for gemma_3_12B_it_fp8_scaled.",
+      "Windows Python cp1252 — ALWAYS run helpers with PYTHONUTF8=1, open files encoding='utf-8'.",
+      "MPI custom nodes only, never rgthree. CFG locked at 1 (distilled). Node naming Input_*/Output_* for app-read/write.",
+      "CivitAI split NSFW to civitai.red (separate account+gating); main-site NSFW search now sparse. User's own NSFW LoRA was lost in that migration."
+    ],
+    "files_modified": [
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (STG nodes added then rejected; user added stage-1 audio decode)",
+      ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      ".agents/mpi-kanban/tasks/MPI-4/research/tiled-vae-decode.md (new)",
+      ".agents/mpi-kanban/tasks/MPI-4/research/motion-adherence-tuning.md (new)",
+      "C:/AI/loras/ (4 new LoRAs moved in)",
+      "G:/ComfyUi/ComfyUI/models/text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors (new)"
+    ],
+    "files_to_read_first": [
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json",
+      ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      ".agents/mpi-kanban/tasks/MPI-4/research/motion-adherence-tuning.md",
+      ".agents/mpi-kanban/tasks/MPI-4/research/tiled-vae-decode.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "ComfyUI workflows / injection",
+      "Comfy node naming law (Input_/Output_ prefix)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-21T23:12:25Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX 2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/c9dbc33a-7f35-4f9c-bd8a-d1c945bea97c.json and use mpi-continue. COOPERATIVE LIVE session: the user drives ComfyUI on 127.0.0.1:8188 and you edit the workflow JSON on disk at G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json. RE-SCAN that file FIRST (prior context is summarized, not live — the user may have edited after the handoff). Yesterday was a big tuning + LoRA-acquisition session: STG was REJECTED (color blowout, no motion — use plain CFGGuider, cfg=1); the heretic abliterated gemma fp8 encoder was ADOPTED (in G:/ComfyUi/ComfyUI/models/text_encoders/gemma-3-12b-it-heretic-fp8-comfy.safetensors) and the abliterated LoRA bypassed; we learned motion is dominated by start-pose+seed not resolution; and we downloaded 4 capability LoRAs to C:/AI/loras/ (VBVR I2V=LTX2.3_reasoning_Sulphur-2_I2V_V4, VBVR T2V=LTX2.3_Reasoning_V1, Singularity-LTX-2.3_OmniCine_V1, LTX2.3_Soft_Enhance). The NEXT priority is the LoRA test queue in spec §0b: TEST 1 = VBVR mode-coverage (T2V mode, same prompt+seed: V1 vs I2V-V4 vs none) which DECIDES whether VBVR can be ONE merged always-on LoRA or needs an Input_Mode auto-switch. Then test VBVR motion/adherence on the old failing repros, stack Singularity (0.8-1.0) + Soft Enhance, make the input-audio slider decision (drop slider + auto-enable at 1.0 if it works on every image), and DELETE the rejected STG nodes (226 LTXVApplySTG, 229 STGGuider) from the template. RELEASE TARGET ~25th June to Patreon Pro — bias toward shipping a refined base (i2v/t2v/FL + audio + validated LoRA stack); DEFER video-extend/head-swap/ControlNet to the next release unless progress is strong. GOTCHAS: confirm user SAVED+CLOSED ComfyUI before any JSON write; ComfyUI LoRA path is C:/AI/loras/ not the default; PYTHONUTF8=1 for python helpers; MPI nodes only; cfg locked at 1. Full as-built + decisions in research/ltx-integration-spec.md (read §0, §0b, §3e first)."
+}

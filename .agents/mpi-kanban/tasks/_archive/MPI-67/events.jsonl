@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-67","at":"2026-06-12T06:16:43.997Z","actor":"vscode","summary":"Created MPI-67."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-67","at":"2026-06-12T16:28:12.172Z","actor":"vscode","summary":"Deleted MPI-67."}

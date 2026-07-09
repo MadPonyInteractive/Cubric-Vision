@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-219",
+  "title": "Adding an extra LoRA/upscale folder never reloads ComfyUI paths → 400 on gen",
+  "description": "400 'Prompt outputs failed validation' when a LoRA is selected on Chroma (also LTX/WAN). ROOT CAUSE (corrected — NOT the reload theory in brief.md): the LoRA-object injector regex in comfyController.js only matched bare keys (^Lora_...), but the MPI-127 alias pass emits Input_Lora_1..6 and flat/staged workflows title their nodes Input_Lora_*. The aliased key fell to the generic _inject, which wrote the whole {lora_name,strength_model,strength_clip} OBJECT into node.inputs.lora_name -> ComfyUI 'Value not in list: lora_name: {dict}' + cascade strength_model=None FLOAT crash. FIX: regex now ^(?:Input_)?Lora_... (1 line). Also fixes WAN (nodes titled Input_Lora_High/Low_*). NOT a folder/yaml/reload bug — restart never fixed it because injection was structurally broken. Guard test: tests/lora-injection-routing.test.cjs.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-07T22:35:00Z",
+  "updated_at": "2026-07-08T00:08:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "tags": [
+    "bug",
+    "comfy-engine",
+    "lora"
+  ],
+  "priority": "high",
+  "defaultExpanded": false
+}

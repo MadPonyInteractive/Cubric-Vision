@@ -1,0 +1,136 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1cf92947-5d45-4c8e-bdac-02ff162756b2",
+  "supersedes": "c57162cd-17cd-40da-86c6-ee53b9a7183e",
+  "generated_at": "2026-06-24T16:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 LTX-2.3 — VOICE-ID SOLVED (Solution B revived). Found the abandoned 'voice-ID dead on distilled' conclusion was a WRONG NODE, not a model limit: official ComfyUI template uses LTXVReferenceAudio (uncancelled post-cfg identity term), NOT LTXVSetAudioRefTokens (cancels in cfg). Spliced LTXVReferenceAudio + talk3_ID_Lora into the main i2v/t2v template; voice-ID WORKS at 8 steps/cfg1. Tuned end-to-end live: scale 1.5, stage-2 sigmas 0.65,0.45,0.25,0; removed redundant stage-2 ref-audio node (sigma was the real fix). Also found+fixed a graph-corruption bug (stale last_link_id) and diagnosed MpiClearVram/RAM-eviction forcing full reruns. Built lipdub v2v workflow (deferred). Carded MPI-126 (Wan stage-2 sigma drift). Next: test goal-2 basic input-audio, then implement on Cubric-Vision + version bump for release ~25 June.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "MPI-4 LTX-2.3: get input-audio voice + generated video working. Originally 'Solution B' (voice+ambient mix) — was abandoned as impossible on distilled. This session REVIVED it via the correct node and got voice-ID working. Finalize ship config for the ~25-June release.",
+    "status": "in_progress",
+    "summary": "Goal-1 (voice-reference) WORKS and is tuned + wired into the main template (saved). Goal-2 (direct input audio / Original mode) basic path is next to test. Then app implementation (radio + gates) + version bump to release tomorrow. Lipdub v2v + extend + Wan-sigma (MPI-126) deferred — no time before release."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "ROOT-CAUSE CORRECTION: prior 'voice-ID dead on distilled, needs 30 steps' was WRONG. We had tested LTXVSetAudioRefTokens (attaches ref_audio to pos+neg → CANCELS in the (cfg-1)*(pos-neg) term → zero identity). The RIGHT node is LTXVReferenceAudio (comfy-core comfy_extras/nodes_lt.py): same ref_audio attach PLUS a set_model_sampler_post_cfg_function that adds an UNCANCELLED (cond_pred - pred_noref)*identity_guidance_scale term. cfg=1 SAFE. Official ComfyUI template video_ltx2_3_id_lora.json proves it works at 8 steps/cfg1.",
+      "SPLICED LTXVReferenceAudio (#274) into stage-1 guider #33 of LTX_i2v_t2v_template.json (model via talk3_ID_Lora #277 = MpiLoraModel talkvid-3k @1.0 → MpiReroute#196; pos/neg from LTXVConditioning#212; ref_audio from existing LoadAudio#197 Input_Audio_File; audio_vae from VAELoaderKJ#2). ID-LoRA loader titled talk3_ID_Lora (NOT Input_* — that prefix is for app injection points; a baked loader is internal).",
+      "VOICE-ID CONFIRMED WORKING on our distilled base (live tests). Measured tuning beats official defaults: identity_guidance_scale 1.5 (official 3 = too hot/distorts); accent transfer is a LOTTERY (sometimes carries e.g. Indian accent, seed-dependent); whole capability is seed-variable even single-speaker; multi-speaker UNRELIABLE (mute / one-identity-bleed / dialogue-attribution-drift — route multi-char to Original mode); t2v white-screens, i2v (portrait/human) WORKS with good lip-sync + sound.",
+      "STAGE-2 DRIFT FIXED via SIGMAS. Our stage-2 was regenerating not refining (started σ=0.909 on a raw model). Swept on HUMAN faces (animated hides the difference): 0.5 too soft, 0.65 = THE KNEE (ship: 0.65,0.45,0.25,0.0), 0.7 audio starts to drift, 0.85 over-sharp/plasticky+drift. Audio-changing-from-stage-1 = the hard ceiling signal.",
+      "STAGE-2 ref-audio node REMOVED — A/B proved identical with/without once sigmas right. The sigma was the cure; the node only cost an extra forward pass. Lesson: only re-patch identity on a stage that denoises HARD.",
+      "FINAL WIRING SAVED (user): two gates — Input_Use_Reference_Audio (MpiIfElse, goal-1) + Input_Use_Input_Audio (MpiIfElse, goal-2). Both audio inputs kept. talk3_ID_Lora @1.0, scale 1.5 baked. Stage-1 keeps LTXVScheduler (8 steps, max_shift 2.05).",
+      "GRAPH-CORRUPTION BUG FOUND+FIXED (this was the 'wires jump when I touch something else' glitch the user hit repeatedly): my JSON-surgery scripts left last_link_id/last_node_id STALE → ComfyUI's frontend allocated an already-used id on the next manual connection → id collision → rewiring corruption. Fixed counters in LTX_i2v_t2v_template.json AND LTX_lipdub_v2v_template.json. RULE saved to memory: always bump last_node_id/last_link_id to true max after scripting comfy JSON.",
+      "MpiClearVram diagnosed: OUTPUT_NODE=True + unload_all_models() defeats ComfyUI partial-cache → editing a downstream node reruns the whole chain incl. stage-1. Two instances (#58,#65); also RAM/VRAM eviction can force the same. Not corruption. User decided not to chase it (infrequent).",
+      "BUILT LTX_lipdub_v2v_template.json (single-stage v2v lipdub, from the online lipdub two-stage stripped + our loaders) — DEFERRED. Has bugs (LoadVideoUpload outputs split on connect). Goal-3.",
+      "Installed project-local skills .agents/skills/comfyui-workflow-builder + comfyui-api (mckruz/comfyui-expert). NOTE: they target the API/prompt JSON format, NOT our UI-graph format — useful for inventory/validation discipline only, not direct graph edits.",
+      "CARDED MPI-126: Wan workflows have the SAME stage-2 sigma drift (BasicScheduler denoise 1.0) — apply the LTX low-start-sigma refine fix. Future session.",
+      "Audio sources: user generates multi-speaker dialogue clips on SpeechGen (speechgen.io/en/node/multi-voice/) — works. Downloaded one eslyes dialogue clip to user's Downloads (test-only, not for ship)."
+    ],
+    "pending": [
+      "TEST GOAL-2 BASIC (DO FIRST — user was mid-test): the Input_Use_Input_Audio path (direct input audio drives video, audio returned). Confirm it works as the 'Original' mode.",
+      "IMPLEMENT ON CUBRIC-VISION: a RADIO 'Reference' | 'Original' (enabled ONLY when audio present) driving the two gates (Input_Use_Reference_Audio + Input_Use_Input_Audio) so only one audio mode is live per gen. Plus integrate the saved template into the app (workflow-generation system → app API files).",
+      "VERSION BUMP + RELEASE ~25 June (tomorrow). Use the release skills. RELEASE BLOCKER: re-host the third-party ID-LoRA (ltx-2.3-id-lora-talkvid-3k.safetensors, AviadDahan) to our HF/R2 + point the dep manifest there BEFORE public ship (user's project_dep_rehost_rule). Same for any other non-official dep the shipped template needs.",
+      "DEFERRED (NOT before release): lipdub v2v (goal-3, LTX_lipdub_v2v_template.json — fix LoadVideoUpload-split bug), lipsync-v2v-2 (goal-4), video extend, MPI-126 (Wan stage-2 sigmas), modality_scale for audio↔video SYNC.",
+      "COMMIT: all docs/spec/memory edits this session are UNCOMMITTED (cooperative live session). Commit at next mpi-end by explicit pathspec. Prior-session uncommitted edits also still pending.",
+      "Push the two reorg commits when ready (Cubric-Vision 9455e90 + mpi-ci 93be372) — user-authorized, NOT done."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session) — STRUCTURAL edits only; ALWAYS sync last_node_id/last_link_id to true max after any script edit (see feedback-comfy-json-sync-id-counters), place new nodes inside the target group's bounding box, back up + confirm the tab is SAVED+CLOSED before a disk write",
+    "the USER sets knob values (cfg, strength, sigmas, scale) himself in the UI — user's live save is the source of truth",
+    "guide the user through ComfyUI (cooperative live session); the user drives generation + UI tweaks",
+    "implement Cubric-Vision app changes (radio + gate UI) — but BRIEF before code per MPI execution rules",
+    "run release skills for the version bump (mpi-version-bump / mpi-merge-branches) when the user says go",
+    "edit the Builder playbook + research at c:/AI/Mpi/Cubric-Vision/docs/builder/ — living docs"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/audio-input.md — REWRITTEN: leads with the ✅✅ VOICE-ID WORKS block (LTXVReferenceAudio vs LTXVSetAudioRefTokens, official 8-step recipe, our splice, full measured tuning table, stage-2 sigma sweep + 0.65 decision, stage-2 node REMOVED, FINAL two-gate+radio wiring). Old 'SOLUTION B ABANDONED' block marked SUPERSEDED.",
+      "Memory NEW: project-ltx-refaudio-not-setrefaudio (the fix + measured tuning), project-ltx-audio-four-goals (taxonomy + ship radio), feedback-comfy-json-sync-id-counters (the corruption bug), project-comfy-groups-position-based, project-mpiclearvram-forces-rerun, feedback-no-seed-ui. Memory UPDATED: project_ltx_audio_id_distilled_deadend (now SUPERSEDED header). MEMORY.md index updated + compacted to ~133 lines.",
+      "MPI-126 card created (Wan stage-2 sigma drift) with full brief; board.json todo + next_id=127; event logged."
+    ],
+    "pending": [
+      "ALL doc/spec/memory edits this session are UNCOMMITTED — mpi-end must sweep + commit by explicit pathspec.",
+      "spec ltx-integration-spec.md §0b still describes the OLD 'Solution B abandoned' pivot — should be updated to reflect voice-ID SOLVED + the final ship wiring (not done this session; audio-input.md is the current source of truth).",
+      "ID-LoRA re-host (talkvid-3k) must be done before public release — track as a release blocker."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4. DO FIRST: confirm the goal-2 'Original' path (Input_Use_Input_Audio) works (user was mid-test). THEN implement on Cubric-Vision: a RADIO 'Reference' | 'Original' enabled only when audio is present, driving the two gates (Input_Use_Reference_Audio for goal-1 voice-ID, Input_Use_Input_Audio for goal-2), so only one audio mode runs per generation; integrate the saved LTX_i2v_t2v_template.json into the app via the workflow-generation system. THEN version-bump + release (~25 June) — RELEASE BLOCKER: re-host the third-party ID-LoRA talkvid-3k to our HF/R2 + repoint the dep manifest first. Read docs/builder/research/audio-input.md (the ✅✅ block at top = current source of truth) before touching the workflow. Cooperative live session: agent does STRUCTURAL JSON edits (always sync last_node_id/last_link_id to true max; place nodes inside group bounding boxes; back up + confirm SAVED+CLOSED before disk write); user sets all knob values.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "VOICE-ID WORKS on distilled via LTXVReferenceAudio (NOT LTXVSetAudioRefTokens). The prior 'dead-end / needs 30 steps' was a wrong node, not a model limit. Do NOT relitigate — it's tested working at 8 steps/cfg1.",
+      "SHIP TUNING: identity_guidance_scale = 1.5; stage-2 manual sigmas = 0.65,0.45,0.25,0.0; talk3_ID_Lora (talkvid-3k) MODEL-ONLY @1.0; stage-1 keeps LTXVScheduler 8 steps. Stage-2 LTXVReferenceAudio REMOVED (redundant once sigmas right).",
+      "AUDIO PRODUCT MODEL: one 'Audio' RADIO = Reference (goal-1 voice-ID) | Original (goal-2 input-audio / Audio Mask, claims multi-char), enabled only when audio present. Two MpiIfElse gates already wired in the template (Input_Use_Reference_Audio + Input_Use_Input_Audio).",
+      "NO SEED UI — random seed every gen, never show/save seed (too technical, against product register). Everything in AI gen is a seed lottery; the model is seed-tolerant enough. Do NOT propose seed controls.",
+      "STALE last_link_id/last_node_id = the graph-corruption glitch. Any script editing comfy UI-graph JSON MUST bump both counters to true max, else the next manual connection collides ids and corrupts the graph. Fixed in both template files.",
+      "Multi-speaker = a lottery (mute/identity-bleed/attribution-drift); single-voice = better odds, still not one-shot reliable. Multi-character belongs in Original mode, not Reference. Accent transfer is also seed-dependent (can carry, not guaranteed).",
+      "RELEASE is tomorrow (~25 June). Ship the audio Reference+Original modes; DEFER lipdub/extend/Wan-sigmas. Re-host the third-party ID-LoRA before public ship (project_dep_rehost_rule)."
+    ],
+    "constraints": [
+      "WORKING LOCAL — NOT a Pod. G:/ComfyUi/ComfyUI = local install; MpiNodes symlink → C:/AI/Mpi/ComfyUi-MpiNodes. LoRAs under C:/AI/loras/LTX2.3 (+ C:/AI/loras, G:/CubricModels/loras via extra_model_paths.yaml). ID-LoRA at C:/AI/loras/LTX2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors.",
+      "COOPERATIVE LIVE SESSION: confirm SAVED+CLOSED + back up before any disk JSON write. Working file G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json; after save copy → D:/WORK/workflows/App/. Backup this session: LTX_i2v_t2v_template.pre-refaudio-20260624-131500.bak.json.",
+      "Distilled base = UNETLoader ltx-2.3-22b-distilled-1.1_transformer_only_bf16; DualCLIPLoader gemma-heretic-fp8 + text_projection; VAELoader LTX23_video_vae; VAELoaderKJ LTX23_audio_vae. cfg locked at 1 (distilled). LTXVReferenceAudio is cfg=1-safe (the MultimodalGuider noise_pred_neg bug does NOT apply).",
+      "ComfyUI groups track membership by bounding-box POSITION not nodes[] (array is empty). Place a scripted node inside the target group's bounding box ([x+40,y+60]) or it lands outside.",
+      "MpiClearVram (OUTPUT_NODE=True + unload_all_models) + RAM/VRAM eviction can force full-chain reruns on a downstream-only edit — expected, not corruption; user chose not to chase it.",
+      "Node naming law: new non-Tier-1 nodes that are app INJECTION points = Input_*/Output_*; baked internal loaders (fixed path) get a plain descriptive title (e.g. talk3_ID_Lora). LTX/IC-LoRA vendor nodes kept as-is.",
+      "comfyui-workflow-builder skill targets API JSON format, NOT our UI-graph format — do not use it to author/edit our templates; scripted Python surgery (with counter-sync) is the method."
+    ],
+    "files_modified": [
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (LTXVReferenceAudio #274 + talk3_ID_Lora #277 spliced into stage-1, stage-2 sigmas 0.65, stage-2 ref-audio removed, two gates wired, counters fixed — SAVED by user)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.pre-refaudio-20260624-131500.bak.json (backup)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_lipdub_v2v_template.json (NEW single-stage v2v lipdub, deferred, counters fixed)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/audio-input.md (REWRITTEN — voice-ID solved, source of truth — UNCOMMITTED)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-126/ (NEW card: Wan stage-2 sigma drift)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/board.json (MPI-126 added to todo, next_id=127)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/skills/comfyui-workflow-builder + comfyui-api (project-local skills installed)",
+      "memory NEW: project-ltx-refaudio-not-setrefaudio, project-ltx-audio-four-goals, feedback-comfy-json-sync-id-counters, project-comfy-groups-position-based, project-mpiclearvram-forces-rerun, feedback-no-seed-ui; UPDATED project_ltx_audio_id_distilled_deadend + MEMORY.md (compacted)"
+    ],
+    "files_to_read_first": [
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/audio-input.md (the ✅✅ VOICE-ID WORKS block at the TOP = current source of truth: the node, the recipe, tuning, sigmas, final wiring)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (the live saved template with the audio modes wired)",
+      "G:/ComfyUi/ComfyUI/comfy_extras/nodes_lt.py (LTXVReferenceAudio node ~line 811 — the identity mechanism)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/video_ltx2_3_id_lora.json (official ID-LoRA template — the reference recipe)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "Builder-Pod model-onboarding playbook (docs/builder/)",
+      "ComfyUI workflows / injection"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-24T16:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX-2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/1cf92947-5d45-4c8e-bdac-02ff162756b2.json and use mpi-continue. COOPERATIVE LIVE LOCAL session: you do STRUCTURAL ComfyUI-JSON edits, the USER drives ComfyUI and sets all knob values (cfg, strength, sigmas, scale) himself; back up + confirm the tab is SAVED+CLOSED before any disk write, AND always sync last_node_id/last_link_id to true max after any script edit (stale counters caused a graph-corruption glitch this session) and place new nodes inside their group's bounding box. Working LOCAL (NOT a Pod): G:/ComfyUi/ComfyUI; ID-LoRA at C:/AI/loras/LTX2.3/id-lora-talkvid/. THE BIG RESULT (do NOT relitigate): voice-identity transfer WORKS on our distilled base — the earlier 'dead on distilled / needs 30 steps' was a WRONG NODE. The fix = LTXVReferenceAudio (comfy-core, an uncancelled post-cfg identity term), NOT LTXVSetAudioRefTokens (which cancels in cfg). It's spliced into LTX_i2v_t2v_template.json stage-1 with talk3_ID_Lora (talkvid-3k MODEL-ONLY @1.0). SHIP TUNING: identity_guidance_scale=1.5, stage-2 manual sigmas 0.65,0.45,0.25,0.0, stage-2 ref-audio node REMOVED (the sigma fix was the real cure). Multi-speaker is a lottery → route to Original mode; NO seed UI ever. Product model: one 'Audio' RADIO = Reference (voice-ID) | Original (input-audio), enabled only when audio present, driving two MpiIfElse gates already wired (Input_Use_Reference_Audio + Input_Use_Input_Audio). NEXT: (1) confirm the goal-2 'Original' input-audio path works (user was mid-test); (2) implement the radio+gates on Cubric-Vision + integrate the saved template via the workflow-generation system; (3) version-bump + release (~25 June) — RELEASE BLOCKER: re-host the third-party ID-LoRA talkvid-3k to our HF/R2 and repoint the dep manifest first. DEFERRED (not before release): lipdub v2v (LTX_lipdub_v2v_template.json, has a LoadVideoUpload-split bug), lipsync-v2v-2, extend, MPI-126 (Wan stage-2 sigma drift — same fix). Read docs/builder/research/audio-input.md (the ✅✅ block at top) first — it's the source of truth. All this session's doc/spec/memory edits are UNCOMMITTED; commit at the next mpi-end."
+}

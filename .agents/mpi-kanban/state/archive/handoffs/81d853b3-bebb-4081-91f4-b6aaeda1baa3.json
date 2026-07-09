@@ -1,0 +1,110 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "81d853b3-bebb-4081-91f4-b6aaeda1baa3",
+  "generated_at": "2026-06-27T19:23:02Z",
+  "from_session": "MPI-156 follow-ups session (from handoff b304ca49). SSE idle-abort FIXED + live-verified on 4090; local-wedge guard committed-unverified; cloud-4090-slow perf side-quest researched (torch bump = dead end). All committed, NOTHING pushed (user-gated).",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-156 follow-ups: (1) SSE idle-abort = DONE+verified. (2) local-wedge = committed, NEEDS live verify. (3) cloud-4090-slower-than-local-4060Ti = researched, torch/cu130 bump RULED OUT; two unmeasured live suspects (aimdo overhead / host throttle) + test plan in docs/builder/research/pod-perf-investigation.md. NEXT = a Pod test session for #2 + #3. No release pressure (~July 9 public target).",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Fix the two remote-engine follow-ups folded into MPI-156 (SSE idle-abort + local-gen wedge), then chase why the cloud 4090 is slower than a local 4060 Ti on LTX.",
+    "status": "in-progress",
+    "summary": "SSE idle-abort = FIXED + LIVE-VERIFIED on a 4090 (4:34 gen ran past the 128s window, zero 'SSE stream aborted', bar stayed live). Local-wedge self-heal = code committed (21b8fdf), NOT yet live-verified (needs the disconnect+DELETE+local-gen repro with DevTools open). Perf side-quest = deep-researched: a torch 2.8+cu126 -> 2.12+cu130 bump is a DEAD END (cu130 cuBLAS gains are Blackwell-only, costs the r580 driver floor). Two unmeasured live suspects remain + an exact test plan."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+    "completed": [
+      "SSE idle-abort FIX (two layers): (a) wrapper.py /wrapper/events/stream now asyncio.wait_for(q.get(), timeout=15) -> yields ': ping' on TimeoutError (the REAL cure: the ~128s reap is on the UPSTREAM relay->Pod leg, only a source-side heartbeat keeps it alive). Wrapper 0.2.19->0.2.20, mpi-ci commit 8a32037. (b) remoteProxy.js /comfy/events/stream also emits a downstream ':ping' every 20s cleared on every teardown path (app 21b8fdf) as defense-in-depth.",
+      "SSE FIX PUBLISHED + LIVE-VERIFIED: publish-runtime.sh stable pushed wrapper 0.2.20 to R2 (3-way sha match local==R2==manifest c57e12b4...). A fresh 4090 Pod (ln1pe8w67lejn5) bootstrap-fetched 0.2.20 ('[cubric-bootstrap] installed fetched wrapper.py' + 'manifest wrapper 0.2.20' + 'comfy-aimdo inited for GPU: RTX 4090'). A 4:34 LTX t2v gen ran PAST the 128s window with ZERO 'remote SSE stream aborted: terminated' (prior gens aborted every ~128s: 16:55/16:57/17:00/17:01/17:15/17:17/18:29) and the progress bar stayed live (user-confirmed). DONE.",
+      "Local-wedge self-heal CODE (committed 21b8fdf, NOT verified): in comfyController.ensureServerRunning, moved remoteEngineClient.refresh() to run BEFORE the _remoteTransition guard; a stale 'disconnecting' transition + !isRemote() now clears the flag + falls through to local-start instead of throwing the transition-refusal error for every later (incl local) gen. The 'connecting' guard is unchanged. A clientLogger.warn('Stale \"disconnecting\" transition...') marks the self-heal path.",
+      "PERF deep-research (108-agent harness, 25 claims adversarially verified, commit fcbeaaa, docs/builder/research/pod-perf-investigation.md): torch 2.8+cu126 -> 2.12+cu130 bump RULED OUT. cu130 cuBLAS gains are Blackwell-ONLY (Ada sm_89 gets zero fp16/bf16 speedup, 3-0); cu130 needs a hard r580 driver floor vs cu126's ~r525-560 (3-0) = would kill Option A's wide coverage. All cost, no benefit. The ONLY real local-vs-Pod diff was confirmed = torch/CUDA version (both run ComfyUI 0.26 + aimdo 0.4.10 + SDPA, sage gated off on Ada both sides).",
+      "Docs + bookkeeping: gotchas.md SSE entry marked FIXED; MPI-156/validation.md SSE section = full live proof; pod-perf-investigation.md + research README row created; MEMORY.md MPI-156 line rewritten; MPI-147 coordination message 9987fa99 resolved (c5b9105)."
+    ],
+    "pending": [
+      "POD TEST #1 (do FIRST — free, just terminal commands) — measure cloud-host throttle (perf suspect B, the research's #1 open question). On a live Pod web terminal DURING a gen: `nvidia-smi -q -d CLOCK,PERFORMANCE,POWER | grep -iE 'Performance State|SM |Graphics|Memory |Power Draw|Power Limit|Persistence|Throttle'`, `nvidia-smi dmon -s pucm -c 20`, and the bf16-8k-matmul TFLOPS probe (in pod-perf-investigation.md). 4090 telemetry showed idle P8 — confirm it reaches P0/P2 under load. If TFLOPS is 4090-class (~150-160) + clocks full -> throttle is NOT it -> go to suspect A. If clocks/P-State capped under load -> host throttle, independent of any image change.",
+      "POD TEST #2 — verify the local-wedge fix (21b8fdf). Repro: connect a Pod, run a remote gen, disconnect+DELETE the Pod, then immediately try a LOCAL gen with DevTools console OPEN. Expect: local gen runs ([comfy] log lines appear); if the wedge path was hit, console shows the `Stale \"disconnecting\" transition...` warn. If it still wedges WITHOUT that warn -> the cause is the other branch (stale isRemote() into _ensureRemoteReady, comfyController ~226->321) and the L427 local-fallback isn't catching it -> capture isRemote()/refresh() return values at hang-time.",
+      "POD TEST #3 (only if test #1 clears throttle) — aimdo-overhead test (perf suspect A). LTX peaks ~18GB, fits a 24GB 4090 without offload, so aimdo's dynamic stage/evict may be wasted overhead. Edit cubric-vision-pod/start.sh VRAM_MODE to pass --disable-dynamic-vram (or --highvram) when VRAM_GIB >= 24 (keep aimdo below, or LTX OOMs on 20GB cards like the A4500). R2 push (publish-runtime.sh stable) + POST /wrapper/restart-comfy, no rebuild. Re-time warm gen vs 1:41. Watch for OOM on the disable path.",
+      "AFTER perf is resolved: write the conclusion into docs/builder/research/pod-perf-investigation.md (close the OPEN section), update the ltx-tiers timing doc with the cold-vs-warm + per-GPU numbers (A4500 5:51 cold; 4090 4:34 cold / 1:41 warm; local 4060Ti 1:14), and add a GPU-picker hint if a card class is clearly bad for LTX.",
+      "PUSH (user-gated) when ready: app RunPod (origin/RunPod..HEAD = 3a09e4f, 64b306a, 21b8fdf, 7479c67, fcbeaaa, c5b9105 — note 3a09e4f/64b306a are the OTHER agent's MPI-147 commits, push them too) + mpi-ci main (origin/main..HEAD = 075933f MPI-147 wrapper, 8a32037 MPI-156 heartbeat)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-156",
+    "title": "Pod fast model loading (torch 2.8 -> aimdo) + externalize start.sh/wrapper to a dedicated R2 bucket",
+    "column": "done",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-156/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-156/plan.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-156/validation.md",
+      "research": "docs/builder/research/pod-perf-investigation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-156/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/pod-perf-investigation.md = the torch/cu130 DEAD-END verdict + the two-suspect test plan (so the version-gap is never re-researched).",
+      "docs/gotchas.md SSE entry = FIXED + the upstream-vs-downstream-leg root cause (downstream :ping alone can't fix it).",
+      "MPI-156/validation.md = full 4090 SSE live proof + the wedge-still-open note.",
+      "MEMORY.md MPI-156 line = current 3-part state (SSE done / wedge committed-unverified / perf researched)."
+    ],
+    "pending": [
+      "When the wedge is verified: mark it FIXED in gotchas.md + validation.md + MEMORY.md.",
+      "When perf concludes: close the OPEN section in pod-perf-investigation.md + update ltx-2.3-tiers.md timings + MEMORY.md."
+    ]
+  },
+  "next_action": {
+    "description": "Spin a Pod (USER-GATED) and run, in order: (1) the cloud-host throttle diagnostics (free terminal commands — settles perf suspect B fast), (2) the local-wedge repro (disconnect+DELETE+local gen with DevTools open — verifies fix 21b8fdf), (3) if throttle is clear, the aimdo-off start.sh test (perf suspect A). The exact commands + decision rule are in docs/builder/research/pod-perf-investigation.md. Do NOT bump torch/cu130 (researched dead end). Brief before code (Continue Brief gate). RunPod branch only.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SSE ~128s reap is on the UPSTREAM (relay->Pod) leg, NOT relay->client — so an app-side downstream :ping CANNOT fix it; only the wrapper-side source heartbeat (0.2.20) does. The remoteProxy :ping stays as defense-in-depth.",
+      "torch 2.8+cu126 -> 2.12+cu130 bump = DEAD END (deep-research verified). cu130 gains Blackwell-only; r580 floor kills coverage. Never propose it again.",
+      "Cloud 4090 1:41 warm vs local 4060Ti 1:14: a real ~27s gap, but NOT the torch version. Two unmeasured suspects: aimdo overhead on a card that fits the model, or cloud-host clock/P-State throttle. Measure throttle FIRST (free).",
+      "Cold gen (4:34 4090 / 5:51 A4500) is mostly one-time aimdo model-staging tax; warm is the fair comparison. Don't panic at a cold number.",
+      "Local app engine ALSO runs ComfyUI 0.26 + aimdo 0.4.10 + SDPA (sage never installed locally, MPI-50). Only torch/CUDA differs (local 2.12+cu130). So aimdo is NOT inherently the throttle on its own — both sides have it; the question is whether aimdo offload is wasted on a 24GB card specifically.",
+      "No new cards (user directive). Follow-ups + perf live INSIDE MPI-156 + the research doc."
+    ],
+    "constraints": [
+      "Pod ops + image builds + R2 runtime pushes + git pushes are ALL USER-GATED. A killed terminal orphans the Pod (stop/delete it in RunPod).",
+      "Shared tree: commit by explicit pathspec, never git add -A. The MPI-147 agent finished + closed their card this session (commits 3a09e4f, 64b306a, mpi-ci 075933f) — their files are no longer contested.",
+      "mpi-ci is a SEPARATE repo (git -C c:/AI/Mpi/mpi-ci). NOTHING is pushed yet this session (both repos have unpushed commits, user-gated).",
+      "RunPod branch ONLY (MPI-131) — no master merge / GitHub release / git tag. ~July 9 public-master target, no subscribers yet = no release pressure.",
+      "Git-Bash curl on this box flakes HTTP 000 (schannel) against pod.cubric.studio; verify R2 with rclone S3 read, not looped curl. publish-runtime.sh's curl verify step exits 43 from this even when the upload succeeded — confirm with rclone cat.",
+      "start.sh VRAM_MODE / SAGE_DISABLED_ARCHS are R2-externalized: edit -> publish-runtime.sh stable -> restart-comfy = live with NO rebuild. CUBRIC_VRAM_MODE / CUBRIC_SAGE_DISABLED_ARCHS Pod env override without even an R2 push."
+    ],
+    "files_modified": [
+      "(committed, app RunPod) routes/remoteProxy.js + js/services/comfyController.js (21b8fdf); docs/gotchas.md + MPI-156/validation.md (7479c67); docs/builder/research/pod-perf-investigation.md + research/README.md (fcbeaaa); state/index.json + message 9987fa99 (c5b9105)",
+      "(committed, mpi-ci main) cubric-vision-pod/wrapper/wrapper.py (8a32037 — wrapper 0.2.20 SSE heartbeat)",
+      "(committed by the OTHER agent, app RunPod) MPI-147 progress: 3a09e4f + 64b306a; (mpi-ci) 075933f"
+    ],
+    "files_to_read_first": [
+      "docs/builder/research/pod-perf-investigation.md (THE next-work doc — torch dead-end + the 3-test plan with exact commands)",
+      ".agents/mpi-kanban/tasks/MPI-156/validation.md (SSE live proof + the wedge-open section at the very bottom)",
+      "js/services/comfyController.js (~L195-243 ensureServerRunning: the moved refresh() + stale-transition guard = the wedge fix to verify; ~L321-455 _ensureRemoteReady: the L427 local-fallback that's the other wedge candidate)",
+      "routes/remoteProxy.js (~L1403-1453 /comfy/events/stream = the relay :ping)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (~L1559-1585 events_stream = the source heartbeat; ~L56 WRAPPER_VERSION 0.2.20)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (~L83-148 sage gate + VRAM_MODE = where the aimdo-off perf test edits go)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": ["RunPod/remote engine", "ComfyUI engine", "Pod/mpi-ci", "build/release", "LTX-2.3 authoring"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline MPI-131; shared-tree commit-by-pathspec; mpi-ci separate repo via git -C; push user-gated)",
+    "docs/gotchas.md (RunPod/remote, aimdo/torch, cu126-guts, SSE-idle FIXED, schannel-curl, sage-arch MPI-145)",
+    "docs/builder/research/pod-perf-investigation.md (torch/cu130 dead end; perf test plan)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-27T19:23:02Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "Resume Cubric Vision RunPod-branch work in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/81d853b3-bebb-4081-91f4-b6aaeda1baa3.json then use mpi-continue. STATUS of the three MPI-156 follow-ups from the last session: (1) the remote progress SSE idle-abort at ~128s is FIXED + LIVE-VERIFIED on a 4090 — the real cure was a wrapper-side source heartbeat (wrapper.py /wrapper/events/stream now asyncio.wait_for(q.get(),15)->':ping', wrapper 0.2.19->0.2.20, mpi-ci 8a32037, R2-pushed to stable and bootstrap-fetched by the Pod), because the ~128s reap is on the UPSTREAM relay->Pod leg, so the app-side downstream ':ping' in remoteProxy.js (21b8fdf) is only defense-in-depth; a 4:34 LTX gen ran past 128s with zero 'SSE stream aborted' and the bar stayed live. (2) the local-gen wedge after a Pod disconnect+DELETE has its self-heal code COMMITTED (21b8fdf: comfyController.ensureServerRunning now refresh()es before the _remoteTransition guard and clears a stale 'disconnecting' flag + falls through to local-start) but is NOT yet live-verified — repro it with DevTools console open (connect Pod, remote gen, disconnect+DELETE, then a LOCAL gen; expect a 'Stale \"disconnecting\" transition...' warn if the fix fires). (3) the cloud-4090-slower-than-local-4060Ti perf gap (1:41 warm vs 1:14) was DEEP-RESEARCHED (108-agent harness, commit fcbeaaa, docs/builder/research/pod-perf-investigation.md): a torch 2.8+cu126 -> 2.12+cu130 bump is a confirmed DEAD END (cu130 cuBLAS gains are Blackwell-only, Ada gets nothing, and cu130 needs a hard r580 driver floor that would kill Option A's wide host coverage) — DO NOT bump it. Two unmeasured live suspects remain with an exact test plan in that doc: (A) aimdo dynamic-VRAM overhead on a 24GB card where LTX (~18GB) fits without offload, tested by passing --disable-dynamic-vram via start.sh (R2 push, no rebuild); (B) cloud-host P-State/clock throttle (the research's #1 open question), measured FIRST with free nvidia-smi/dmon/TFLOPS-probe commands during a gen (4090 idle telemetry showed P8 — confirm it reaches P0/P2 under load). NEXT = a Pod test session: run (B) throttle diagnostics first, then (2) the wedge repro, then (A) the aimdo-off test if throttle is clear; conclude the perf doc + ltx-tiers timings after. EVERYTHING is committed; NOTHING is pushed (user-gated): app RunPod has 6 commits ahead of origin (incl the other agent's now-closed MPI-147 work 3a09e4f/64b306a) and mpi-ci main has 2 (075933f, 8a32037). Pod ops + R2 pushes + git pushes are all USER-GATED; a killed terminal orphans the Pod. RunPod branch ONLY (MPI-131), no subscribers yet (~July 9 public target) so no release pressure. Brief before code (Continue Brief gate)."
+}

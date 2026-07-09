@@ -1,0 +1,137 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d7e2f1a3-9c4b-4e8a-bf21-3a6d8e90c5f2",
+  "supersedes": "b0c41d90-657f-4b64-b1ad-85f3e3ec8f5d",
+  "generated_at": "2026-06-23T18:10:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "superseded",
+  "session": {
+    "name": "MPI-4 LTX-2.3 \u00e2\u20ac\u201d built the Builder-Pod model-onboarding PLAYBOOK (new), staged VBVR/Civitai LoRAs to R2, optimized install_models_ltx23.sh (-12.6GB, R2-sourced), survived a 2-hour bad-Pod install nightmare, then re-spun a HEALTHY Pod (RTX PRO 4500 Blackwell) and got the full LTX-2.3 set installed clean on a 90GB persistent volume. Template loaded, 3 backslash-path LoRAs re-selected. ABOUT TO RUN the long multi-part-motion tests (the open VBVR keep/drop decider) \u00e2\u20ac\u201d handing off here before the test phase.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-4 LTX-2.3 LoRA test queue (spec \u00c2\u00a70b). Move to a RunPod Builder Pod for faster gen iteration, run the long multi-part-motion tests that decide VBVR keep/drop. Release ~25th June \u00e2\u20ac\u201d bias ship refined base.",
+    "status": "in_progress",
+    "summary": "Pod is now FULLY INSTALLED + READY on a healthy Pod (id 7n6ct9lcguz6h0, RTX PRO 4500 Blackwell, /opt/ComfyUI, 90GB PERSISTENT VOLUME at /workspace \u00e2\u20ac\u201d survives Stop). All weights + 5 LoRAs verified on disk. Template LTX_i2v_t2v_template.json loaded into Pod ComfyUI; the 3 'missing' LoRAs (backslash-vs-forwardslash path issue, NOT missing files) were re-selected from the dropdowns. THE OPEN DECIDER IS UNCHANGED: does VBVR @0.5 deliver its multi-part-sequencing claim on LONG ordered-action prompts? Resume = set strengths (Soft 0.5!), unbypass chain, run the multi-part tests. Then Stop the Pod (volume persists) to resume on the 25th."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "BUILT a new BUILDER-POD MODEL-ONBOARDING PLAYBOOK at c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/ (14 files): README + 01-environments + 02-image-and-rebuild + 03-spin-and-install + 04-add-models + 05-author-and-test + 06-teardown + app-handoff, plus research/ (README + ltx-2.3-tiers MOVED from Cubric-Vision/docs + lora-strength-law + prompt-contract + model-set + strategy). This is the durable home for cooperative Pod-onboarding sessions. CLAUDE.md got a new router pointer ('Builder Pod \u00e2\u20ac\u201d Model Onboarding'). docs/ltx-2.3-tiers.md is now a pointer stub. MPI-4 spec \u00c2\u00a70b got a 'findings graduated' banner. ALL UNCOMMITTED in mpi-ci + Cubric-Vision.",
+      "STAGED 4 LoRAs to Cloudflare R2 (cubric-builds bucket, models/ltx-2.3/loras/): VBVR V1 (674249584), VBVR Sulphur-I2V-V4 (805412760), Singularity (2695584680), Soft_Enhance (352679864). All public-URL HEAD-verified. Reason: Jupyter drag-drop uploads died twice over the home uplink; Civitai 403s from Pod datacenter IPs. R2 = host dl.cubric.studio, free egress, ~1min Pod pulls.",
+      "REWROTE install_models_ltx23.sh: DROPPED plain gemma_3_12B_it_fp8_scaled (-12GB, template superseded it) + abliterated_heretic LoRA (not used). FOLDED IN the heretic-fp8 encoder (anongecko, 14.5GB \u00e2\u20ac\u201d the template's ONLY gemma/DualCLIPLoader). LoRAs (VBVR\u00c3\u20142, Singularity, Soft, transition) now pulled from R2 not Civitai. Self-check (.aria2 find) built in. ~56GB HF + ~4.5GB R2.",
+      "ABANDONED first Pod (L40S id 5fo3cq4mek3m3v) after ~2hr \u00e2\u20ac\u201d bad HF Xet route (sawtooth 0\u00e2\u20ac\u201c38MiB/s, expired 1hr signed URLs, plain-gemma stalled). Compounded by running the install script in TWO terminals (self-contention). Terminated.",
+      "RE-SPUN a HEALTHY Pod (id 7n6ct9lcguz6h0, RTX PRO 4500 Blackwell, $0.76/hr, 90GB persistent volume). HF route steady 90-101MiB/s. Ran old baked /opt/install_models_ltx23.sh FIRST (it pulled the old 68GB set incl. wasted plain gemma \u00e2\u20ac\u201d the image bakes a STALE script copy). THEN ran the dragged NEW script from /opt/ComfyUI/install_models_ltx23.sh \u00e2\u20ac\u201d aria2c -c --allow-overwrite=false SKIPPED everything already down, ADDED only heretic encoder + 4 R2 LoRAs + transition. Whole install ~12min vs the 2hr disaster.",
+      "VERIFIED clean: zero *.aria2; /workspace/models/loras/LTX2.3/ holds all 5 LoRAs at full size; heretic-fp8 in text_encoders; diffusion 40G, text_encoders 16G, vae 1.7G, latent_upscale_models present.",
+      "Loaded LTX_i2v_t2v_template.json into Pod ComfyUI. 3 LoRAs showed 'missing' = BACKSLASH path issue (template saved LTX2.3\\ from Windows; Linux ComfyUI wants LTX2.3/). Files are fine. User RE-SELECTED the 3 from the dropdowns."
+    ],
+    "pending": [
+      "SET STRENGTHS before testing: Soft_Enhance(236) \u00e2\u2020\u2019 0.5 (NOT 1.0 \u00e2\u20ac\u201d hallucinates a necklace + kills autofocus); VBVR V4 I2V \u00e2\u2020\u2019 0.5; VBVR V1 T2V \u00e2\u2020\u2019 0.5; Singularity \u00e2\u2020\u2019 ~0.5. Keep TOTAL stacked LoRA strength < ~1.5. UNBYPASS the LoRA chain.",
+      "RE-SAVE the workflow on the Pod after re-selecting (writes Linux / paths \u00e2\u2020\u2019 next Linux load is clean, no re-pick). Optional pre-fix: sed 's#LTX2.3\\\\#LTX2.3/#g' the template JSON.",
+      "THE OPEN DECIDER: run LONG MULTI-PART-MOTION tests \u00e2\u20ac\u201d does VBVR @0.5 deliver its sequencing claim? Use LITERAL ordered step prompts, named body parts (the prompt-contract). Short single-action tests showed ~no on/off diff + flat 0.7-1.5 response. If 0.5 delivers nothing on multi-part \u00e2\u2020\u2019 DROP VBVR for i2v.",
+      "Then stack Singularity @~0.5 (its Cinematic Timeline template) + re-confirm Soft @0.5.",
+      "When done testing: STOP the Pod (NOT terminate) \u00e2\u20ac\u201d the 90GB volume persists, resume on the 25th with any available GPU, zero re-download. (Volume may be region-locked to this datacenter \u00e2\u20ac\u201d if a future Pod can't mount it, re-run the install script; it's now fast + R2-backed.)",
+      "Input-audio slider decision (open): does strength 1.0 work on every image? If yes \u00e2\u2020\u2019 drop slider, auto-enable at 1.0 on file present.",
+      "RELEASE DECISION ~25th June: ship refined base (i2v/t2v/FL + audio + validated LoRA stack) OR add extend/headswap/CN. Bias = ship solid base.",
+      "COMMIT the playbook + script + README + CLAUDE.md changes (mpi-ci repo AND Cubric-Vision). Currently all uncommitted. Push is user-authorized.",
+      "After LoRA decision: write the Cubric-Prompt LTX recipe (prompt-contract \u00e2\u20ac\u201d now in playbook/research/prompt-contract.md). Mirror heretic-fp8 + Singularity to own repo before shipping as deps."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session)",
+    "guide the user through Pod shell ops (Jupyter / RunPod Web Terminal) \u00e2\u20ac\u201d agent has NO SSH to this ephemeral Pod, user drives the shell",
+    "run rclone to/from R2 (cubric-builds bucket) for model staging",
+    "edit the Builder playbook at c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/ \u00e2\u20ac\u201d it's the living doc, keep updating it each session"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "ALL durable LTX research GRADUATED to the playbook research/ folder (tiers, distilled-LoRA strength law, prompt-contract, model-set, strategy). The MPI-4 spec \u00c2\u00a70b stays the LIVE TASK LOG.",
+      "install_models_ltx23.sh is the canonical optimized installer (heretic-only gemma, R2 LoRAs, plain-gemma+abliterated dropped).",
+      "Playbook now records the hard-won sourcing lessons: Civitai 403s from Pod IPs; HF Xet throttles + 1hr signed-URL expiry; NEVER run the install script in two terminals (self-contention); Pod is worth it only when gen-volume >> install cost; Jupyter root = /opt/ComfyUI (can't write /opt/); the baked image script is STALE vs the edited local one."
+    ],
+    "pending": [
+      "Consider memory entries (after the LoRA decision lands): R2-as-last-resort-mirror-for-Civitai/no-URL weights + GC discipline; the Builder-Pod playbook home; HF-Xet-throttle + Civitai-Pod-403 sourcing rules; baked-image-script-staleness.",
+      "HELD: UNMUTE the 2\u00c3\u2014 SaveLatent nodes before the final logged workflow.",
+      "HELD: repath NerdyRodent monolith LoRAs root->LTX2.3/ (now also a Windows-backslash-vs-Linux-forwardslash awareness).",
+      "Mirror heretic-gemma-fp8 (anongecko) + Singularity to own repo before shipping as deps."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4 on the HEALTHY Pod (id 7n6ct9lcguz6h0, RTX PRO 4500 Blackwell, /opt/ComfyUI, 90GB PERSISTENT volume at /workspace). Install is COMPLETE + verified; template loaded; the 3 backslash-path LoRAs re-selected. NEXT: set strengths (Soft_Enhance 0.5, VBVR 0.5, Singularity ~0.5; total < ~1.5), unbypass the LoRA chain, re-save the workflow, then RUN the long multi-part-motion tests \u00e2\u20ac\u201d the open decider for whether VBVR @0.5 earns a slot. Use literal ordered step prompts with named body parts. When done, STOP the Pod (volume persists for the 25th). Then commit the new playbook + script + README + CLAUDE.md changes.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Builder-Pod model-onboarding now has a PLAYBOOK home: c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/ (loop files 01-06 + app-handoff + research/). It's the living doc \u00e2\u20ac\u201d keep updating it each cooperative session. CLAUDE.md routes to it.",
+      "R2 (cubric-builds, dl.cubric.studio) is the LAST-RESORT mirror for weights with no usable public URL (Civitai 403s on Pod IPs; local-only VBVR). Stage once from local, pull fast on every Pod (free egress). GC after a permanent home exists (own HF mirror / merged model). R2 has NO payment method set as of this session \u00e2\u20ac\u201d 12GB+ items would need billing; the staged LoRAs total ~4.5GB (under the 10GB free tier).",
+      "install_models_ltx23.sh: heretic-fp8 encoder is the ONLY gemma. Plain gemma_3_12B_it_fp8_scaled DROPPED (-12GB; the file that stalled the bad Pod for an hour). abliterated_heretic LoRA dropped.",
+      "Pod is worth it ONLY when gen-iteration volume >> install cost. The ~68GB install over a flaky datacenter route ate the speed win on the bad Pod (~2hr, $2, zero tests). For a handful of decider gens, LOCAL (~100s/gen) would have finished. Logged in playbook/03.",
+      "The image bakes a STALE copy of install_models_ltx23.sh at /opt/. Editing the local script does NOT update the Pod's baked copy. Drag the fresh script into /opt/ComfyUI/ (Jupyter root) and run it BY THAT PATH (bash install_models_ltx23.sh, no /opt/ prefix) \u00e2\u20ac\u201d NOT bash /opt/install_models_ltx23.sh (that's the stale baked one).",
+      "Template LoRA names saved with Windows backslash (LTX2.3\\) show as 'missing' on Linux ComfyUI (wants LTX2.3/). Files are fine; re-select from dropdown or sed the JSON. Re-save on Linux to fix permanently.",
+      "ALL 4 capability LoRAs are MODEL-ONLY (strength_MODEL only). VBVR i2v norm 0.5 (max 0.7). DISTILLED-LoRA STRENGTH LAW: 0.3-0.7, sweet spot 0.5. Soft Enhance = autofocus/DoF, hallucinates @1.0. LTX stage-1 > WAN. (All in playbook/research/.)"
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI (Pod) + Pod shell; agent edits JSON on disk / guides commands / runs rclone for R2. Confirm user SAVED+CLOSED the ComfyUI tab before any JSON write (stale disk != live).",
+      "HEALTHY Pod id 7n6ct9lcguz6h0 (RTX PRO 4500 Blackwell, driver 580/CUDA 13). PERSISTENT 90GB volume at /workspace (survives Stop, maybe region-locked). $CIVITAI_TOKEN + $HF_TOKEN in env. NEVER pkill -f main.py (cascades, kills Jupyter terminals) \u00e2\u20ac\u201d restart via RunPod console Restart Pod.",
+      "NEVER run the install script in two terminals (self-contention on the same .part \u00e2\u20ac\u201d looks stuck, CN:0/DL:0B forever). ONE install process.",
+      "Jupyter file root = /opt/ComfyUI (drag-drops land there; can't write host /opt/). RunPod Web Terminal preferred for long installs; Jupyter flaky on long silent steps.",
+      "aria2c preallocates full file size upfront (FileAlloc% with DL:0B = prealloc artifact, NOT a stall). HF Xet route quality is a per-datacenter lottery \u00e2\u20ac\u201d steady 90MiB+ = good Pod; sawtooth to 0B = bad route, re-spin early (different DCs have different GPUs).",
+      "R2 staging commands: rclone at C:/Users/Fabio/AppData/Local/Microsoft/WinGet/.../rclone.exe, config C:/Users/Fabio/.secrets/rclone-r2.conf, remote cubric-r2:cubric-builds, --s3-no-check-bucket required. Path models/ltx-2.3/loras/. Public host dl.cubric.studio. Deletion approval-gated.",
+      "MPI custom nodes only in anything that ships, never rgthree in the APP (authoring-only). CFG locked at 1. Node naming Input_*/Output_*. PYTHONUTF8=1 for local python helpers."
+    ],
+    "files_modified": [
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/ (NEW \u00e2\u20ac\u201d 14 files, uncommitted)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/install_models_ltx23.sh (rewritten \u00e2\u20ac\u201d uncommitted)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/README.md (R2 upload-cost warning added \u00e2\u20ac\u201d uncommitted)",
+      "c:/AI/Mpi/Cubric-Vision/CLAUDE.md (new router pointer to the playbook \u00e2\u20ac\u201d uncommitted)",
+      "c:/AI/Mpi/Cubric-Vision/docs/ltx-2.3-tiers.md (now a pointer stub \u00e2\u20ac\u201d uncommitted)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (graduated-findings banner \u00e2\u20ac\u201d uncommitted)",
+      "Cloudflare R2 cubric-builds/models/ltx-2.3/loras/ (4 LoRAs staged)",
+      "RunPod Pod 7n6ct9lcguz6h0 /workspace/models/ (full LTX-2.3 set installed)"
+    ],
+    "files_to_read_first": [
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/README.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/research/README.md",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "Pod image / mpi-ci",
+      "Builder-Pod model-onboarding playbook (NEW)",
+      "Comfy node naming law (Input_/Output_ prefix)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-23T18:10:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX 2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/d7e2f1a3-9c4b-4e8a-bf21-3a6d8e90c5f2.json and use mpi-continue. COOPERATIVE LIVE session: the user drives ComfyUI + the Pod shell; you edit JSON / guide commands / run rclone for R2. We are on a HEALTHY RunPod Builder Pod (id 7n6ct9lcguz6h0, RTX PRO 4500 Blackwell, ComfyUI at /opt/ComfyUI, with a 90GB PERSISTENT volume at /workspace that SURVIVES Stop). $CIVITAI_TOKEN + $HF_TOKEN are in the Pod env; you have no usable SSH so the user runs all Pod shell commands. THE INSTALL IS DONE + VERIFIED: the full LTX-2.3 set + all 5 LoRAs (VBVR V1/V4, Singularity, Soft_Enhance, transition) are on /workspace/models, heretic-fp8 encoder is the only gemma, zero *.aria2. The template LTX_i2v_t2v_template.json is loaded and the 3 'missing' LoRAs (a Windows-backslash LTX2.3\\ vs Linux LTX2.3/ path mismatch, NOT missing files) have been re-selected from the dropdowns. RESUME by: (1) setting strengths \u00e2\u20ac\u201d Soft_Enhance(236) to 0.5 (it hallucinates a necklace + kills autofocus at 1.0), VBVR V4 I2V to 0.5, VBVR V1 T2V to 0.5, Singularity to ~0.5, keep total stacked < ~1.5; (2) UNBYPASS the LoRA chain; (3) re-save the workflow on the Pod (writes Linux / paths so the next load is clean); (4) running the LONG MULTI-PART-MOTION tests \u00e2\u20ac\u201d the open decider for whether VBVR @0.5 earns a slot. Use literal ordered step prompts with named body parts (the prompt-contract: brief scene anchor front-loaded then discrete ordered motion steps). Short single-action tests showed ~no on/off benefit + a flat 0.7-1.5 strength response; the hypothesis is VBVR shines on long multi-part action sequences. If 0.5 delivers nothing on multi-part -> drop VBVR for i2v. When testing is done, STOP the Pod (do NOT terminate) \u00e2\u20ac\u201d the volume persists so you can resume on the 25th-June release day with any available GPU and zero re-download. KEY DURABLE KNOWLEDGE now lives in the NEW Builder-Pod playbook at c:/AI/Mpi/mpi-ci/cubric-vision-builder/playbook/ (read README + research/README first) \u00e2\u20ac\u201d it holds the LTX tiers, the distilled-LoRA strength law (0.3-0.7, sweet spot 0.5; all 4 LoRAs model-only), the prompt-contract, the model-set, the strategy markers, AND the hard-won sourcing lessons (Civitai 403s from Pod IPs -> R2; HF Xet throttle + 1hr signed-URL expiry; NEVER run the install script in two terminals; the image bakes a STALE install script so drag the fresh one into /opt/ComfyUI and run it by that path; Pod-worth-it only when gen-volume >> install cost). install_models_ltx23.sh is the optimized canonical installer (R2 LoRAs, heretic-only gemma, -12.6GB). All the playbook + script + README + CLAUDE.md changes are UNCOMMITTED in both mpi-ci and Cubric-Vision \u00e2\u20ac\u201d commit them (user-authorized push). RELEASE TARGET ~25th June \u00e2\u20ac\u201d bias toward shipping a refined base."
+}

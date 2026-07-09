@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-229",
+  "title": "Remote LoRA rejected (value_not_in_list): user-LoRA uploaded FLAT to pod but injection ships the local subfolder prefix",
+  "description": "Live 2026-07-08 Rossifi Chroma t2i on REMOTE pod. ComfyUI 503 prompt_outputs_failed_validation node 2596: lora_name 'CHROMA/Rossifi-Ds5-E309.safetensors' not in ['None','Rossifi-Ds5-E309.safetensors']. NOT a missing LoRA (file IS on pod, listed flat). NOT MPI-198 (that is the '\\'->'/' separator heal; this value is already '/'-separated and would not be touched). ROOT = the two halves of the remote LoRA pipeline disagree on layout: (1) UPLOAD remoteUploadModel (routes/remoteModels.js:534) and presence-check remoteModelPresent (:491) both force path.basename -> user LoRA lands FLAT on the pod (loras/Rossifi-Ds5-E309.safetensors), ComfyUI lists it flat; (2) INJECTION comfyController.js:1141 writes val.lora_name VERBATIM = the local subfoldered dropdown value (loras/CHROMA/... -> 'CHROMA/Rossifi...'). Flat pod enum != subfoldered injected value -> value_not_in_list. A blanket basename-strip is UNSAFE: registry deps (splitDepFilename, remoteModels.js:291/357) legitimately PRESERVE subfolders on the pod (loras/LTX2.3/x) and their subfoldered lora_name is correct there. User-LoRA subfolder ('CHROMA/') and registry subfolder ('LTX2.3/') are structurally indistinguishable at injection (both real on-disk subfolders from the same list-files scan feeding availableLoras, MpiModelSettings.js:69). FIX (remote-only, cannot break registry): reconcile lora_name at remote injection against the pod's ACTUAL lora list via /object_info -> if the exact value is absent but its basename is present, rewrite to basename; if the full path is present (registry case) leave it. Local engines (Win/mac/Linux) are UNAFFECTED: no upload/flatten step, disk layout == enum == injected value, so this is NOT a cross-platform local bug and needs no Pod image rebuild. UX safety net (secondary): a genuinely-absent remote LoRA should surface as a friendly TOAST ('LoRA X not on the remote pod - install it or switch engine'), not the value_not_in_list GitHub-report error DIALOG.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-08T17:44:12Z",
+  "updated_at": "2026-07-08T19:45:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

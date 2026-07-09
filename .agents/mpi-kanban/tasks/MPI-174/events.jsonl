@@ -1,0 +1,8 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-07-02T15:00:00Z","actor":"claude","id":"MPI-174","title":"Move model.type behavior (ratios, qualityTiers) into ModelDef — shrink the add-model sweep"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.moved", "at": "2026-07-02T11:29:18Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Implementation started."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.updated", "at": "2026-07-02T11:29:18Z", "actor": "claude", "summary": "maturity=in-progress, status=active, session attached."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "checklist.updated", "at": "2026-07-02T11:29:18Z", "actor": "claude", "summary": "Derived compact checklist: Implementation."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "checklist.item_checked", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "Implementation complete."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "validation.updated", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "Auto-verified: equivalence + declared-path tests pass, lint clean."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.updated", "at": "2026-07-02T11:33:34Z", "actor": "claude", "summary": "maturity=validating (awaiting commit at end-session)."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-174", "type": "task.moved", "at": "2026-07-02T11:38:22Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Auto-verified + user-approved at end-session; shipped with commit."}

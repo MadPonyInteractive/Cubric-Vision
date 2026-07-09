@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-183", "type": "task.created", "at": "2026-07-03T16:44:26Z", "actor": "vscode", "summary": "Created (deferred) - Builder image ComfyUI bump v0.25.1->v0.27.0, split from MPI-148. Pick up when Builder next used."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-183","at":"2026-07-05T10:56:25.834Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-183 from To do to To do."}

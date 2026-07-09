@@ -1,0 +1,138 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "14f0b6df-1498-436b-8acb-8df8b2019eed",
+  "generated_at": "2026-07-08T12:55:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-222 Phase 5 SHIPPED (v0.14.0 pod image built+published, node-drift live-proven local) + Phase 8 RIFE targetPath fix SHIPPED; next = live verifies (Pod + RIFE self-heal) then Phase 7 docs sweep",
+    "branch": "1.2"
+  },
+  "goal": {
+    "original": "Continue MPI-222: node_lock pins each custom node's commit but nothing records which commit was installed and the install-check is folder-exists only (both engines), so a node bump leaves installs silently stale. Fix = per-node commit marker + drift check + targeted reinstall on boot, NO engine wipe. Plus remote node-install architecture so a node bump never forces a Pod image rebuild. Track every code + doc/rule/memory change in a ledger so nothing drifts at close-out.",
+    "status": "in_progress",
+    "summary": "Phases 1-5 + a new Phase 8 are DONE and largely self-verified. Local drift ladder is now LIVE-PROVEN (a real restart triggered it: all 10 nodes reinstalled at pinned commits, markers stamped, deps-status drift=0). Phase 5 built + published the v0.14.0 pod image (wrapper 0.2.33, manifest schema v2) — repo edits + CI build + R2 publish all done + verified; only the fresh-Pod GPU verify (user-only) remains. The live restart ALSO surfaced a bug: the drift pre-wipe deleted the RIFE weight (it lives inside the Frame-Interp node folder) — fixed in Phase 8 by making RIFE a tracked engineAsset dep via a new general `targetPath` primitive. Remaining: 2 user-only live verifies (Pod node-drift; RIFE self-heal) + Phase 7 permission-gated docs/rules/memory sweep."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+    "completed": [
+      "Phase 1-4 (prior session): data model (engineAsset rename, Painter pin, universal-set filter), marker helpers (getPinnedNodeCommit/writeNodeCommitMarker/.mpi_node_commit), LOCAL drift ladder (driftedDeps + repair-deps union + pre-wipe + getInstalledModelNodeDeps deleted + LIVE pip pins), REMOTE app-side (remoteModelsCheck volume->installed:false / baked->ui:warning; MANIFEST_SCHEMA_MAX 1->2). node-drift 12/12.",
+      "Phase 5 — mpi-ci Pod image (SEPARATE repo): node_lock resynced byte-identical; Dockerfile bake-split (bake ONLY installRequirements:true; write .mpi_node_commit per baked node); wrapper.py 0.2.32->0.2.33 + MANIFEST_SCHEMA_VERSION 1->2 (_manifest_record_node + _stamp_baked_node_commits + _run_node_install threads commit); start.sh MpiNodes git-pull hook removed; README node-freshness+bake-loop rewritten. Committed 1ab3fa6 + PUSHED to mpi-ci.",
+      "Phase 5 build — app pins bumped (remotePodLifecycle.js POD_IMAGE_VERSION v0.12.0->v0.14.0, WRAPPER_VERSION 0.2.24->0.2.33; committed 53b1b1d). CI run 28939295236 SUCCESS both legs (v0.14.0-cu130 Docker Hub + v0.14.0-cpu GHCR), both public+pull-verified. R2 publish gap CAUGHT: wrapper ships via R2 stable not the image; ran publish-runtime.sh stable (wrapper 0.2.33 + start scripts + manifest); cpu boot smoke PASS (/health 0.2.33, manifest schema 2). Skipped v0.13.0 (collides with MPI-191 experiment tag).",
+      "LOCAL drift ladder LIVE-PROVEN: user restarted the app -> boot repair fired (no markers existed pre-v0.14.0 -> all 10 nodes read drifted -> full reinstall). Completed clean: all 10 .mpi_node_commit markers stamped, live deps-status = needsDepsInstall:false/missing:0/drifted:0. UI progress bar froze during silent phases (git-build/custom-cmd/boot) but work proceeded — NOT a hang (user confirmed completed).",
+      "Phase 8 — RIFE weight = tracked engineAsset dep + new `targetPath` primitive. Surfaced by the live restart: the pre-wipe DELETED rife47.pth (it lives inside custom_nodes/comfyui-frame-interpolation/ckpts/rife/). Fix: shared.js resolveComfyPath targetPath branch; rife47 dep in dependencies.js (engineAsset, targetPath, R2 url, sha256, universal set 16->17); remoteModels.js _isImageResident true for targetPath weights; node-drift +4 cases = 16/16. rife47.pth uploaded to R2 (sha-verified). Local weight RESTORED (app unblocked). Committed deeb935."
+    ],
+    "pending": [
+      "USER-ONLY live Pod verify (Phase 5 final): deploy a fresh GPU Pod from v0.14.0 + generate -> 6 baked nodes present, 4 volume nodes install on connect, a MpiNodes commit bump (node_lock only, no rebuild) reinstalls on the volume WITHOUT a rebuild prompt, a baked-node bump -> ui:warning 'image stale'. App must be RESTARTED first (POD_IMAGE_VERSION baked into the Express child at boot). Not provable without a Pod (feedback_runpod_not_local_engine_proof).",
+      "USER-ONLY live RIFE self-heal verify (Phase 8): delete engine/.../custom_nodes/comfyui-frame-interpolation/ckpts/rife/rife47.pth + RESTART the app -> deps-status sees rife47 missing -> boot-installs it from R2 into the node ckpts dir, sha-verified. (The running app still has the OLD registry without the RIFE dep; needs a restart to load it. Weight is present now so nothing triggers until deleted.)",
+      "Phase 6 — guard tests: already covered by node-drift 16/16 (local drift/marker/pre-wipe/no-wipe + remote drift + targetPath). Likely a no-op confirm; add real fixtures only if a remote assertion needs one.",
+      "Phase 7 — PERMISSION-GATED docs/rules/memory + dead-code sweep: drive the changelog.md 'Re-eval required' table to zero (comfy_engine.md, downloads.md, download-manager.md, runpod-remote-engine.md, add-model-playbook.md, universal_workflows.js:6 comment, engine.js:366 comment, build-pod-image skill prose x3, targetPath doc, MEMORY.md hook, + the 2 optional-hardening rows). Grep-clean installOnEngine everywhere. ASK before editing .claude/rules/ or docs/."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-222",
+    "title": "No runtime auto-update when a pinned custom-node commit bumps — installed nodes silently stay stale on both engines",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-222/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-222/handoffs/",
+      "changelog": ".agents/mpi-kanban/tasks/MPI-222/changelog.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "test",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "changelog.md ledger updated through Phase 8: every code change logged + a 'Re-eval required' table (now ~17 rows) of every doc/rule/memory/skill the changes stale; Phase-5 README rows + mpi-ci node_lock row CLOSED, new rows added (targetPath doc, pre-wipe over-broad hardening, Dockerfile RIFE HF->R2 cosmetic parity, build-pod-image skill prose).",
+      "plan.md Completed/Remaining/Plan Drift kept current: Phase 5 marked done (build+publish+R2, one sub-box = user-only Pod verify); Phase 8 added to changelog.",
+      "mpi-ci README node-freshness + bake-loop sections rewritten to bake=installRequirements + MpiNodes-is-volume (done in the Phase-5 commit, not deferred)."
+    ],
+    "pending": [
+      "Phase 7 docs/rules edits are PERMISSION-GATED (CLAUDE.md doc-drift cardinal rule) — ask the user before editing .claude/rules/ or docs/. The full worklist is the changelog.md 'Re-eval required' table.",
+      "MEMORY.md MPI-222 hook to flip to a Done one-liner at end-session (engineAsset rename + bake=installRequirements + GitHub-not-R2-for-nodes + .mpi_node_commit marker + drift ladder + the targetPath primitive + RIFE-as-dep). Also add a hook for the new `targetPath` add-model primitive.",
+      "Move research/B-remote-engine.md from session scratchpad into the task research/ dir before end-session (if not already moved).",
+      "Optional-hardening follow-ups (cardable, NOT blocking): (1) pre-wipe is over-broad — preserve ckpts/ + weight files across a drifted-node wipe (RIFE now covered by its dep, but a future in-folder-weight node isn't); (2) Dockerfile RIFE bakes from HF while dependencies.js now points at R2 (byte-identical; switch Dockerfile to R2 on the next rebuild for parity — NOT worth a rebuild alone); (3) install-modal UX: indeterminate spinner + phase text during byte-less phases (git-build/custom-cmd/boot) so a drift repair doesn't look hung. User said leave the UX for now."
+    ]
+  },
+  "next_action": {
+    "description": "Read the changelog.md ledger FIRST (it records every Phase 1-8 code change + the 'Re-eval required' table Phase 7 must drive to zero), then the plan. The two remaining live verifies are USER-ONLY and need an app restart + a Pod: (1) RIFE self-heal (delete ckpts/rife/rife47.pth + restart -> boot-installs from R2); (2) fresh v0.14.0 GPU Pod node-drift verify. If the user wants to proceed WITHOUT those, start Phase 7 — the PERMISSION-GATED docs/rules/memory sweep — by working the changelog.md 'Re-eval required' table; ASK before editing any .claude/rules/ or docs/ file. Do NOT start a new pod image build (v0.14.0 is already built + published). Do NOT re-litigate locked architecture.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "v0.14.0 NOT v0.13.0 for the pod image: v0.13.0-cu130 already exists on Docker Hub (MPI-191's failed torch-2.12 experiment, reverted but the tag is live + referenced as historical evidence). Rebuilding v0.13.0 would overwrite it. v0.14.0 is on the SAME proven 2.10+cu130 cold stack (torch unchanged — MPI-222 is a node/wrapper/manifest change, not torch).",
+      "The wrapper ships via R2 stable, NOT the image (MPI-156/181 bootstrap): the image bakes wrapper.py as a fallback but bootstrap fetches it from R2 at boot. The v0.14.0 rebuild alone was INERT — a first smoke showed image=0.2.33 but /health=0.2.32 (stale R2 override). publish-runtime.sh stable fixed it. LESSON: a node/wrapper change needs BOTH a rebuild (bootstrap.sh + Dockerfile bake-split are image-only) AND an R2 publish.",
+      "RIFE fix = Design A (make it a tracked dep) chosen by the user over B (re-host all nodes on R2). Rationale: A keeps node identity = immutable git commit (drift markers intact, node bump = one node_lock line), and adds a NARROW reusable `targetPath` primitive for the rare in-folder-weight case. B would couple node identity to manual R2 uploads and break the commit-drift system. A = less code, fewer break points. ControlNet-and-beyond concern answered: most future weights go in mpi_models/ (already handled); only RIFE-like in-folder weights use targetPath.",
+      "`targetPath` primitive: a dep with `targetPath` installs to getComfyPath(ENGINE_ROOT, ...targetPath, filename) under the ComfyUI repo root (bypasses the mpi_models type->subdir mapping), always engine-anchored. filename is a BARE basename. Guard-tested (bare filename + sha256 invariant). This is THE add-model recipe for any node that hard-codes an in-folder weight scan dir.",
+      "RIFE node hard-codes its scan dir to <node>/ckpts/rife/ (vfi_utils config.yaml ckpts_path + MODEL_TYPE=folder name); it does NOT read extra_model_paths.yaml, so the weight CANNOT live in mpi_models/. install.py does NOT download RIFE (pip-only); the node lazy-fetches from GitHub on first EXECUTION (load_file_from_github_release). That lazy fetch was the only install path -> a missing weight was invisible to the boot dep-check. Now it's a tracked dep.",
+      "The first restart after v0.14.0 reinstalled ALL 10 nodes because no .mpi_node_commit markers existed before this version (installed=none -> all drifted). This is a ONE-TIME cost by design; markers now stamped -> next boot clean (live-confirmed deps-status drift=0). The UI progress bar froze during byte-less phases (git-build/custom-cmd/boot) but was NOT hung."
+    ],
+    "constraints": [
+      "mpi-ci is a SEPARATE git repo (c:\\AI\\Mpi\\mpi-ci). Edit with git -C; NEVER git add from Cubric-Vision. Shared-tree commit hygiene: explicit pathspec, never git add -A (feedback_shared_tree_commit_hygiene). Cubric-Vision branch 1.2 is AHEAD of origin with other-session commits — do NOT push without user authorization.",
+      "NO pod image build is running or needed — v0.14.0 is built + published + verified. Do NOT start build-pod-image. The build-pod-image SKILL is STALE (logged in ledger): its prose says 'clones each installOnEngine pack' + stale examples (SHIPPED=v0.11.0, COMFYUI_REF v0.19.3) + describes the removed MpiNodes git-pull hook — fix in Phase 7. The bake-split itself is Dockerfile-internal so the skill still BUILDS correctly.",
+      "Both live verifies (Pod node-drift; RIFE self-heal) are USER-ONLY and need an APP RESTART: the running app has the OLD dep registry (no rife47 dep, old POD_IMAGE_VERSION). RIFE weight is PRESENT now (restored) so nothing triggers until deleted + restarted.",
+      "Phase 7 docs edits are PERMISSION-GATED — ask before touching .claude/rules/ or docs/.",
+      "Do NOT re-litigate locked architecture: bake=installRequirements, engineAsset (weights only), .mpi_node_commit marker, drift ladder (volume reinstall / baked warn), GitHub-archive-@-commit for nodes (NOT R2), Design A for RIFE (targetPath dep, not R2-hosted nodes).",
+      "remoteModelsCheck fail-safe: absent manifest nodes[] (old wrapper / pre-v0.14.0 Pod) -> NO drift reported -> zero false reinstalls/warns. Harmless on old Pods."
+    ],
+    "files_modified": [
+      "routes/shared.js (Phase 8: resolveComfyPath targetPath branch)",
+      "js/data/modelConstants/dependencies.js (Phase 8: rife47 engineAsset+targetPath dep)",
+      "routes/remoteModels.js (Phase 8: _isImageResident true for targetPath weights; + prior Phase-5 body.commit)",
+      "routes/remotePodLifecycle.js (Phase 5: POD_IMAGE_VERSION v0.14.0 + WRAPPER_VERSION 0.2.33)",
+      "tests/node-drift.test.cjs (16/16: +4 targetPath cases)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json (Phase 5: resynced)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile (Phase 5: bake-split + .mpi_node_commit + comments)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (Phase 5: 0.2.33, schema v2, node commit record/stamp)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (Phase 5: MpiNodes git-pull hook removed)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md (Phase 5: node-freshness + bake-loop rewritten)",
+      ".agents/mpi-kanban/tasks/MPI-222/changelog.md (ledger through Phase 8)",
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md (Phase 5 done + Phase 8 note)",
+      ".agents/mpi-kanban/tasks/MPI-222/task.json (updated_at)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-222/changelog.md",
+      ".agents/mpi-kanban/tasks/MPI-222/plan.md",
+      "routes/shared.js",
+      "js/data/modelConstants/dependencies.js",
+      "routes/remoteModels.js",
+      "tests/node-drift.test.cjs"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "comfy_engine (Engine Split)",
+      "download-manager (node drift + targetPath weights)",
+      "runpod-remote-engine (volume vs baked, manifest nodes[])",
+      "add-model-playbook (node-bump flow + targetPath in-folder weights)",
+      "builder/02-image-and-rebuild (Pod image rebuild + R2 publish lesson)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/download-manager.md",
+    "docs/runpod-remote-engine.md",
+    "docs/add-model-playbook.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-08T12:55:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-222 in Cubric Vision (branch 1.2). Read .agents/mpi-kanban/state/handoffs/14f0b6df-1498-436b-8acb-8df8b2019eed.json, then the change ledger at .agents/mpi-kanban/tasks/MPI-222/changelog.md (READ FIRST — it records every Phase 1-8 code change AND a 'Re-eval required' table of every doc/rule/memory the work stales; Phase 7 must drive it to zero), then the plan at .agents/mpi-kanban/tasks/MPI-222/plan.md. Phases 1-5 + a new Phase 8 are DONE and largely self-verified. The LOCAL node-drift ladder is LIVE-PROVEN (a real app restart triggered it: all 10 nodes reinstalled at pinned commits, .mpi_node_commit markers stamped, live deps-status drift=0). Phase 5 built + published the v0.14.0 pod image (wrapper 0.2.33, manifest schema v2) — repo edits + CI (run 28939295236 success) + R2 publish (publish-runtime.sh stable) all done + smoke-verified; the wrapper ships via R2 not the image, so a rebuild ALSO needs an R2 publish (learned live). Phase 8: the drift pre-wipe deleted the RIFE weight (it lives inside the Frame-Interp node folder), FIXED by making RIFE a tracked engineAsset dep via a NEW general `targetPath` primitive (installs a weight into a dir under custom_nodes/ instead of mpi_models/, for nodes that hard-code an in-folder scan dir); rife47.pth uploaded to R2, local weight restored, node-drift 16/16. Committed 53b1b1d + deeb935 (branch 1.2, NOT pushed — other-session commits are ahead; do not push without asking). DO NOT start a pod image build (v0.14.0 already built+published). DO NOT re-litigate locked architecture (bake=installRequirements; engineAsset weights; .mpi_node_commit marker; drift ladder; GitHub-archive-@-commit for nodes NOT R2; Design A for RIFE = targetPath dep). Two USER-ONLY live verifies remain, each needing an app restart: (1) RIFE self-heal — delete engine/.../custom_nodes/comfyui-frame-interpolation/ckpts/rife/rife47.pth + restart -> boot-installs from R2; (2) fresh v0.14.0 GPU Pod node-drift verify (6 baked present, 4 volume install on connect, MpiNodes bump reinstalls on volume w/o rebuild, baked bump -> ui:warning). If the user skips those, do Phase 7: the PERMISSION-GATED docs/rules/memory + dead-code sweep — work the changelog.md 'Re-eval required' table (comfy_engine.md, downloads.md, download-manager.md, runpod-remote-engine.md, add-model-playbook.md, universal_workflows.js:6, engine.js:366, build-pod-image skill prose, the targetPath doc, MEMORY.md hook) and grep-clean installOnEngine everywhere. ASK before editing any .claude/rules/ or docs/ file (CLAUDE.md doc-drift rule)."
+}

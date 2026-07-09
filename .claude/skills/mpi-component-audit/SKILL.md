@@ -23,7 +23,7 @@ Also invoke at the end of any completed plan execution to verify no new violatio
 
 ### Step 1: Run ESLint
 
-Execute the following command (from project root `C:/AI/Mpi/CubricStudio`):
+Execute the following command (from project root `C:/AI/Mpi/Cubric-Vision`):
 
 ```bash
 npx eslint js/components/ --format=json --max-warnings=9999 2>/dev/null

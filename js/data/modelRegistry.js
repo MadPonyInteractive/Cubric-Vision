@@ -18,6 +18,8 @@
 
 import { DEPS } from './modelConstants/dependencies.js';
 import { MODELS } from './modelConstants/models.js';
+import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstalledOps, detectOtherArchInstall } from './modelConstants/resolveModelDeps.js';
+import { remoteEngineClient } from '../services/remoteEngineClient.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 import { Events } from '../events.js';
@@ -27,6 +29,18 @@ import { clientLogger } from '../services/clientLogger.js';
 // ── Per-dep status cache (populated by syncModelInstalled) ────────────────────
 // Map of modelId → Map of depId → installed: boolean
 const _modelDepStatusCache = new Map();
+
+// Baked Pod-image nodes whose stale-image warning has already fired this session,
+// so the connect-edge sync (which runs on every connect/disconnect) doesn't spam
+// the same "rebuild needed" toast. Keyed by node folder name. (MPI-222)
+const _warnedBakedDrift = new Set();
+
+// Models carrying a drifted VOLUME node (remote engine only). remoteModelsCheck
+// tags such deps installed:false + drifted:true; we surface the owning model ids
+// so the connect edge can offer a one-click re-fetch (MPI-230). Baked drift is a
+// separate rebuild-only signal (_warnedBakedDrift above), not in here.
+let _driftedModelIds = [];
+export function getDriftedModelIds() { return _driftedModelIds.slice(); }
 
 // ── Path Config ───────────────────────────────────────────────────────────────
 // Initialized asynchronously via initPaths() — defaults to Windows portable until server reports.
@@ -78,25 +92,58 @@ export async function initPaths() {
  * @returns {Promise<boolean>} true if the sync succeeded
  */
 export async function syncModelInstalled() {
+    // MPI-200: warm the local-arch cache so the sync gates (isModelUsable /
+    // isOperationInstalled) have a concrete arch token when they run. Fire-and-forget
+    // — one gpu-info fetch, cached for the session.
+    remoteEngineClient.warmLocalArch();
     try {
         // Build payload for model-tied workflows
+        // Resolve the FULL dep universe (commonDeps + every selectable op) so the
+        // server stats the complete set and partial state is computed against
+        // everything — flat models resolve to their plain dependency list.
+        // Resolve for the CURRENT engine so the status check only stats deps the
+        // engine actually installs. Without this, a model with engine-split weights
+        // (e.g. LTX-2.3 bf16-local / GGUF-remote) shows a false "not installed"
+        // because the other engine's transformer file is legitimately absent. The
+        // resolver adds engines[engine].extraDeps; shared deps are always in.
+        // (MPI-163 — engine-aware resolution, replaces the old post-filter)
+        // R31 (MPI-208): resolve against the EFFECTIVE engine so a "Run locally"
+        // override checks LOCAL install-state while the app is remote-connected.
+        const engine = remoteEngineClient.effectiveEngine();
         const modelPayload = MODELS.map(model => ({
             id: model.id,
-            deps: model.dependencies.map(depId => {
-                const dep = DEPS[depId];
-                return dep ? { id: depId, type: dep.type, filename: dep.filename } : null;
-            }).filter(Boolean),
+            deps: resolveFullUniverse(model, null, engine)
+                .map(depId => DEPS[depId]).filter(Boolean)
+                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
-        const res = await fetch('/comfy/models/check', {
+        // R31: when remote-connected but the override forces LOCAL, hit the
+        // force-local endpoint (MPI-74) so we stat the local disk, not the Pod.
+        const checkPath = (remoteEngineClient.isRemote() && engine === 'local')
+            ? '/comfy/models/check-local'
+            : '/comfy/models/check';
+        const res = await fetch(checkPath, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ models: modelPayload }),
         });
 
         if (!res.ok) return false;
-        const { results } = await res.json();
+        const { results, bakedDrift } = await res.json();
 
+        // MPI-222: a baked Pod-image node at the wrong commit can't be volume-healed
+        // — the image needs a rebuild. Warn once per node per session (toast, not the
+        // error dialog). Volume-node drift is handled silently by the reinstall path.
+        if (Array.isArray(bakedDrift)) {
+            for (const n of bakedDrift) {
+                const key = n && n.filename;
+                if (!key || _warnedBakedDrift.has(key)) continue;
+                _warnedBakedDrift.add(key);
+                Events.emit('ui:warning', { message: `Pod image is stale — rebuild needed (${key})` });
+            }
+        }
+
+        const drifted = [];
         for (const model of MODELS) {
             if (Object.prototype.hasOwnProperty.call(results, model.id)) {
                 model.installed = results[model.id].installed;
@@ -109,16 +156,23 @@ export async function syncModelInstalled() {
                             partialBytes: depResult.partialBytes || 0,
                         });
                     }
+                    // MPI-230: a volume node at the wrong commit is tagged drifted by
+                    // remoteModelsCheck. Record the owning model so the connect edge can
+                    // offer a one-click force re-fetch.
+                    if (depResult.drifted) drifted.push(model.id);
                 }
                 _modelDepStatusCache.set(model.id, depMap);
             }
         }
+        _driftedModelIds = [...new Set(drifted)];
 
-        // Emit installed model IDs for reactive listeners
-        const installedModelIds = Object.entries(results)
-            .filter(([, result]) => result.installed)
-            .map(([id]) => id);
-        Events.emit('models:checked', { installedModelIds });
+        // Emit installed model IDs for reactive listeners. Use isModelUsable (≥1
+        // op installed) not the raw all-deps-present `result.installed`, so a
+        // deliberately partial install (e.g. Wan T2V-only) counts — matching the
+        // model-manager list + pickers, which already gate on isModelUsable. The
+        // dep-status cache was just populated above, so this resolves correctly.
+        const installedModelIds = Object.keys(results).filter(id => isModelUsable(id));
+        Events.emit('models:checked', { installedModelIds, driftedModelIds: _driftedModelIds.slice() });
 
         return true;
     } catch (err) {
@@ -150,12 +204,32 @@ export function getModelsByType(mediaType) {
 }
 
 /**
- * Returns a model by id.
+ * Returns a model by id. Legacy split ids (wan-22-t2v / wan-22-i2v) canonicalize
+ * to the merged wan-22 entry so historical media/sidecars/localStorage resolve.
  * @param {string} id
  * @returns {ModelDef|null}
  */
 export function getModelById(id) {
-    return MODELS.find(m => m.id === id) ?? null;
+    const canonical = canonicalModelId(id);
+    return MODELS.find(m => m.id === canonical) ?? null;
+}
+
+/**
+ * The size-tier letter (H/B/L) for a model, or '' when the model has no tier
+ * family (MPI-200). Shared by the model dropdown, prompt-box button, and gallery
+ * cards so all three read the same tier convention. A model shows its letter only
+ * when it belongs to a `modelFamily` (i.e. tier siblings exist) — a lone model
+ * with no family gets no letter (no clutter). Unlike the live dropdown (which
+ * gates on 2+ INSTALLED tiers), this is install-independent: a gallery asset made
+ * by a specific tier should always show which tier made it.
+ * @param {ModelDef|string|null} modelOrId
+ * @returns {'H'|'B'|'L'|''}
+ */
+const _TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
+export function tierLetterFor(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model || !model.modelFamily) return '';
+    return _TIER_LETTER[model.sizeTier] || '';
 }
 
 /**
@@ -190,14 +264,15 @@ export function resolveDep(depId) {
 }
 
 /**
- * Returns all resolved dependencies for a model.
+ * Returns all resolved dependencies for a model (full universe: commonDeps +
+ * every selectable operation). Flat models resolve to their plain dep list.
  * @param {string} modelId
  * @returns {Object[]}
  */
 export function getModelDependencies(modelId) {
     const model = getModelById(modelId);
     if (!model) return [];
-    return model.dependencies.map(id => DEPS[id]).filter(Boolean);
+    return resolveFullUniverse(model).map(id => DEPS[id]).filter(Boolean);
 }
 
 /**
@@ -208,4 +283,106 @@ export function getModelDependencies(modelId) {
  */
 export function getModelDepStatus(modelId) {
     return _modelDepStatusCache.get(modelId) ?? null;
+}
+
+/**
+ * Whether a model is USABLE for generation (should appear in model pickers).
+ *
+ * Flat models: usable when `installed !== false` (the server's all-deps-present
+ * flag) — unchanged behaviour.
+ *
+ * Operation-keyed models (e.g. Wan 2.2): usable when AT LEAST ONE operation is
+ * installed (commonDeps + that op's deps complete), derived from the per-dep
+ * status cache. The server's `model.installed` flag is all-deps-present, which is
+ * FALSE for a deliberately partial (e.g. T2V-only) install — so it must NOT gate
+ * op-keyed models, or a usable Wan vanishes from the dropdown. (MPI-122)
+ *
+ * @param {ModelDef|string} modelOrId
+ * @returns {boolean}
+ */
+export function isModelUsable(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model) return false;
+    // Flat models: the engine-split weights (engines[].extraDeps) make the bare
+    // server `installed` flag (all-deps-present, engine-agnostic) wrong on a Pod —
+    // so flat models with engine deps ALSO go through deriveInstalledOps below.
+    // Plain flat models (no engine deps) keep the cheap `installed` path. (MPI-163,
+    // MPI-165: reads the engines: block, not the deleted localDeps/remoteDeps)
+    const hasEngineDeps = !!(model.engines?.local?.extraDeps?.length
+        || model.engines?.remote?.extraDeps?.length);
+    // MPI-200: a flat balanced model has arch-VARIANT deps (not engine deps) that
+    // are equally invisible to the engine-agnostic server `installed` flag — route
+    // it through deriveInstalledOps too so the CURRENT arch's weight is required.
+    const hasVariantDeps = !!model.variants && Object.keys(model.variants).length > 0;
+    if (!hasOperationGroups(model) && !hasEngineDeps && !hasVariantDeps) return model.installed !== false;
+    const depStatus = getModelDepStatus(model.id);
+    if (!depStatus) return model.installed === true; // no cache yet → trust server flag
+    const isOn = id => {
+        const s = depStatus.get(id);
+        return s === true || s?.installed === true;
+    };
+    const engine = remoteEngineClient.effectiveEngine(); // R31 (MPI-208): follow the "Run locally" override
+    return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).fullyInstalled;
+}
+
+/**
+ * Whether a SPECIFIC operation of a model is installed (commonDeps + that op's
+ * deps complete). Use this — not `model.installed` — to gate per-operation
+ * actions (e.g. finishing a T2V preview when only T2V is installed and I2V is
+ * not). The server's `model.installed` is all-ops-present, so it wrongly blocks
+ * a partial install for an op it CAN actually run. (MPI-122 / MPI-157 follow-up)
+ *
+ * Flat models: no op groups → fall back to `isModelUsable`.
+ * Op-keyed models: true when `op` is in the derived installedOps set.
+ *
+ * @param {ModelDef|string} modelOrId
+ * @param {string} op
+ * @returns {boolean}
+ */
+export function isOperationInstalled(modelOrId, op) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model) return false;
+    if (!op || !hasOperationGroups(model)) return isModelUsable(model);
+    const depStatus = getModelDepStatus(model.id);
+    if (!depStatus) return model.installed === true; // no cache yet → trust server flag
+    const isOn = id => {
+        const s = depStatus.get(id);
+        return s === true || s?.installed === true;
+    };
+    const engine = remoteEngineClient.effectiveEngine(); // R31 (MPI-208): follow the "Run locally" override
+    return deriveInstalledOps(model, isOn, engine, { arch: remoteEngineClient.archSync(engine) }).installedOps.includes(op);
+}
+
+/**
+ * Detects the MPI-207 "installed for a DIFFERENT GPU arch" state: the current
+ * machine's arch-variant weight is NOT on disk, but exactly one OTHER arch's
+ * variant weight IS. This is what lets the Models panel show "Install for your
+ * GPU" (you have this model, just not the weight this GPU runs) instead of a
+ * bare "never installed", and surface the now-unused other-arch weight for
+ * opt-in removal.
+ *
+ * Returns null when it does not apply: the model has no `arch` variant axis, the
+ * current arch's weight IS present, no other-arch weight is present, the
+ * current arch is unknown (null token → nothing to compare against), or the
+ * dep-status cache has not been populated yet.
+ *
+ * Pure read over the existing `_modelDepStatusCache` + `variantDepsOf` — no
+ * server call. Only the `arch` axis is considered (weights coexist on disk;
+ * node axes are single-version-pinned and out of scope — see the card).
+ *
+ * @param {ModelDef|string} modelOrId
+ * @returns {{ otherArch: string, unusedDepIds: string[] }|null}
+ */
+export function installedForOtherArch(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model) return null;
+    const depStatus = getModelDepStatus(model.id);
+    if (!depStatus) return null; // no cache yet
+    const engine = remoteEngineClient.effectiveEngine(); // R31 (MPI-208): follow the "Run locally" override
+    const curArch = remoteEngineClient.archSync(engine);
+    const isOn = id => {
+        const s = depStatus.get(id);
+        return s === true || s?.installed === true;
+    };
+    return detectOtherArchInstall(model, curArch, isOn);
 }

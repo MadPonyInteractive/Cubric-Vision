@@ -1,0 +1,32 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-136",
+    "title": "Remote download stall watchdog \u00e2\u20ac\u201d wrapper read-timeout/resume + app-side silent-SSE-stall recovery",
+    "description": "GAP nothing currently owns: a remote (RunPod wrapper) model download can STALL mid-flight with the SSE stream STILL OPEN, and neither the app nor the wrapper recovers \u00e2\u20ac\u201d the progress bar freezes forever at the last byte with a stale speed reading. Caught live 2026-06-25 installing LTX-2.3 on a fresh Pod (yjax3iotxkzw78, image v0.5.0-cu128, wrapper 0.2.11): download ran to 60.1/63.0GB at ~26MB/s then went silent; telemetry net/CPU dropped to idle, Container log showed only /wrapper/stats + /health polls, zero further /wrapper/models/install activity; app card stuck PAUSE/CANCEL showing a frozen bar. Only recovery was Cancel -> Install (remote has no .part, so Pause/Resume is a no-op \u00e2\u20ac\u201d must restart from byte 0). ROOT CAUSE is two-sided. (A) WRAPPER (mpi-ci c:/AI/Mpi/mpi-ci, wrapper.py): _download_httpx uses httpx.Timeout(read=300.0) which a zombie/half-open HF socket (CDN stops sending bytes without RST/FIN) can defeat entirely -> aiter_bytes await suspends; emit_progress() is called INLINE from that loop so SSE progress stops the instant bytes stop, but the events/stream coroutine stays open -> silent frozen stream, no error emitted. _download_aria2 passes --max-tries=5 --retry-wait=3 but NO --timeout / --connect-timeout / --lowest-speed-limit and NO --continue, so a stalled aria2c hangs ~60s then retries from byte 0. No Range-header resume on EITHER path. No SSE heartbeat. (B) APP (routes/downloadManager.js): MPI-97 added SSE-CLOSE recovery (_onRemoteStreamClosed -> reconcile + reconnect with backoff) but there is NO watchdog for a stream that stays OPEN but stops emitting models:install-progress. _onRemoteInstallEvent only reacts to events that arrive; ticks simply ceasing triggers nothing. RELATION TO MPI-129/MPI-128: MPI-129 (HF->R2 migration) reduces the THROTTLE that triggers stalls but does NOT eliminate them (a single dropped socket still hangs), and per MPI-129 scope guard the UPSTREAM LTX base files (Kijai/LTX2.3_comfy 22B transformer + VAEs, Lightricks spatial-upscaler) STAY ON HF until MPI-128 item 2 self-hosts them to R2 \u00e2\u20ac\u201d so the biggest/most-stall-prone file keeps coming from throttle-prone HF. This watchdog is the defense-in-depth that matters even post-R2. SEPARATE pre-existing bug to keep in view (already noted on MPI-129 event 2026-06-25T10:30): a local download stream error is UNHANDLED and kills the server (ERR_STREAM_WRITE_AFTER_END) instead of failing just the dep \u00e2\u20ac\u201d different path (local, not remote SSE) but same family of missing error-handling on downloads. PROPOSED FIX (confirm behaviour before implementing each): app-side \u00e2\u20ac\u201d add a silent-stall watchdog in the remote install driver that, when _remoteDepIds is non-empty and no models:install-progress tick has arrived for N seconds (e.g. 60-90s), treats the stream as stalled: run _reconcileOutstandingRemoteDeps against the volume, abort+reconnect the SSE, and if a dep is genuinely stuck surface a fail (not a frozen bar). Wrapper-side (mpi-ci) \u00e2\u20ac\u201d give aria2c stall detection (--lowest-speed-limit=1M --timeout=30 --connect-timeout=30) and --continue for resume; wrap the httpx stream iteration in an asyncio per-chunk wall-clock deadline; add Range-header resume so a retry continues from partial bytes; optionally emit an SSE heartbeat so a frozen download is visible to the app even when the download loop is blocked. Both sides should converge on: a stalled remote download self-recovers OR fails cleanly within ~1-2 min, never a permanent ghost bar.",
+    "column": "done",
+    "maturity": "complete",
+    "status": "accepted",
+    "created_at": "2026-06-25T18:15:00Z",
+    "updated_at": "2026-06-29T13:00:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "downloads",
+        "runpod",
+        "remote-engine",
+        "wrapper",
+        "mpi-ci",
+        "watchdog",
+        "reliability",
+        "sse"
+    ],
+    "priority": "high"
+}

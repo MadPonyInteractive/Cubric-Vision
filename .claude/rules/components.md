@@ -6,14 +6,14 @@
 
 Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type scale, and motion timings live in `styles/01_base.css` — that file is canonical. Key rules:
 
-- **Tokens only** — OKLCH variables from `styles/01_base.css` (`--surface-*`, `--ink-*`, `--line*`, `--accent-{heat,frost,ok,warn}`, `--t-*`, `--s-*`, `--r-*`, `--ease`, `--t-fast|base|slow`). No legacy `--neon-*`, `--bg*`, `--primary*`, `--surface-glass`, `--text*`, `--border*`, `--radius*`, `--font-main`/`--font-display`, `--transition`/`--bounce`.
+- **Tokens only** — Token families + banned legacy tokens: see `.claude/rules/dos_and_donts.md` § CSS & Styling.
 - **No neon, no glass, no `backdrop-filter`.** Solid surfaces, 1px lines, sharp corners.
 - **Sharp corners default** — `MpiButton` `shape: 'sharp'` (`--r-1: 0`); pass `shape: 'pill'` to opt-out.
 - **Gradient text only on wordmark** — no `background-clip: text` anywhere else.
 - **Wordmark** — `--font-wordmark` = `'Russo One', 'JetBrains Mono', sans-serif` at `assets/fonts/RussoOne-Regular.woff2`. Body = `'JetBrains Mono'`. Lockup: `.mpi-wordmark` + `.mpi-wordmark__suffix` ("Cubric" stays `--ink-1`, suffix takes `--accent-heat`). Live text only — never `assets/lettering.png`.
 - **Mascot** — canonical 4-file set in `assets/mascot/`: `logo.png`, `idle.png`, `greet.png`, `happy.png`. Block-owned peek uses `idle`/`happy`; landing empty uses `greet`.
 - **App accent (`--accent-heat`)** = rose lift. Drive via token only, never hardcode oklch values.
-- **Slide-over canonical for Settings/Help/About/Models/Cue** — trigger `Events.emit('slide-over:open', { title, component })` or `slide-over:toggle` for toggleable panels. Never mount content components directly. Content may own chrome only through an explicit slide-over variant such as Cue's `mpi-slide-over--queue`.
+- **Slide-over canonical for Settings/Hotkeys/About/Models/Cue** — trigger `Events.emit('slide-over:open', { title, component })` or `slide-over:toggle` for toggleable panels. Never mount content components directly. Content may own chrome only through an explicit slide-over variant such as Cue's `mpi-slide-over--queue`.
 - **`MpiButton` imperative sync** — callers use `el.setActive(bool)` / `el.setDisabled(bool)`; DOM-only mutation leaves stale props.
 - **`MpiOptionSelector` ratio variant** — raw-template children inside portaled popup must be handled by `MpiOptionSelector`'s delegated popup listeners (no child `setup()` runs for raw HTML).
 - **`MpiContextMenu` items** — support `kbd` (right-aligned hint) and `separator: true`.
@@ -178,7 +178,7 @@ All state management, hotkeys, and overlay mounting MUST happen inside the compo
 * Hotkey typing suppression applies only to text-entry controls. Do not blur sliders or buttons just to keep shortcuts alive; `input[type="range"]` and other non-text controls are not treated as typing contexts by `hotkeyManager`.
 * When `allowWhileTyping: false`, the typing gate blocks single-letter keys, bare modifiers, AND named edit/navigation keys (`Delete`, `Backspace`, `ArrowLeft/Right/Up/Down`, `Home`, `End`, `PageUp`, `PageDown`) so the user can edit text natively. F-keys and Ctrl/Meta-modified combos still fire while typing.
 * Generation hotkeys: `generation.run` (`Ctrl+Enter`) cues a generation, `generation.stop` (`Ctrl+Alt+Enter`) interrupts current job, `generation.loop` (`Ctrl+L`) toggles `state.loopArmed`. `MpiPromptBox` owns all three bindings. There is no Single mode — Cue is the only execution path; Loop is a flag layered on top that re-fires on queue drain.
-* **The Help overlay (`MpiHelp.js`) is hand-authored static HTML, NOT generated from the registry.** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row inside `MpiHelp.js`'s `template`. Treat the two files as paired — a registry change without a help-page edit is incomplete work. Row format and grouping conventions: see `docs/shell.md` § "Help page — hand-authored HTML".
+* **The Hotkeys slide-over (`mpi-hotkeys.js`) is hand-authored static HTML, NOT generated from the registry.** Whenever you add, rename, or remove a hotkey in `hotkeyRegistry.js`, you MUST also add/rename/remove the matching `<li><span>KEY</span><span>Description</span></li>` row inside `mpi-hotkeys.js`'s `template`. Treat the two files as paired — a registry change without a hotkeys-page edit is incomplete work. Row format and grouping conventions: see `docs/shell.md` § "Hotkeys page — hand-authored HTML".
 
 ---
 

@@ -10,7 +10,14 @@
  *
  * Brush at P → manualCanvas[P]=white, subtractCanvas[P]=black (clears erased).
  * Eraser at P → manualCanvas[P]=black (clears painted), subtractCanvas[P]=white.
+ *
+ * Working resolution is capped at MASK_MAX_EDGE (masks don't need high precision —
+ * a 4K image recomposited full-frame per brush dab is unusably laggy). Paint
+ * coords arrive in image-px and are scaled by `_scale` into mask-px. Display/export
+ * upscale back automatically (overlay drawImage + ComfyUI's own mask resize).
  */
+const MASK_MAX_EDGE = 1536;
+
 export class MaskManager {
     constructor() {
         this.manualCanvas = document.createElement('canvas');
@@ -25,6 +32,10 @@ export class MaskManager {
         this.autoPickMasks = new Map();
         this.selectedAutoPicks = new Set();
 
+        // mask-px per image-px. Set in init(); paint() multiplies incoming
+        // image-px coords + brush radius by this to hit the downscaled canvas.
+        this._scale = 1;
+
         this.isMaskingMode = false;
         this.isDrawingMask = false;
         this.brushSize = 40;
@@ -37,12 +48,15 @@ export class MaskManager {
     }
 
     init(width, height) {
-        this.manualCanvas.width = width;
-        this.manualCanvas.height = height;
-        this.subtractCanvas.width = width;
-        this.subtractCanvas.height = height;
-        this.maskCanvas.width = width;
-        this.maskCanvas.height = height;
+        this._scale = Math.min(1, MASK_MAX_EDGE / Math.max(width, height));
+        const w = Math.max(1, Math.round(width * this._scale));
+        const h = Math.max(1, Math.round(height * this._scale));
+        this.manualCanvas.width = w;
+        this.manualCanvas.height = h;
+        this.subtractCanvas.width = w;
+        this.subtractCanvas.height = h;
+        this.maskCanvas.width = w;
+        this.maskCanvas.height = h;
         this.clear();
     }
 
@@ -55,7 +69,11 @@ export class MaskManager {
     }
 
     paint(imgX, imgY) {
-        const r = this.brushSize / 2;
+        // Incoming coords + brush are in image-px; map to downscaled mask-px.
+        const s = this._scale;
+        imgX *= s;
+        imgY *= s;
+        const r = (this.brushSize * s) / 2;
         if (this.brushType === 'eraser') {
             // Manual: clear painted pixels at P
             this.manualCtx.save();

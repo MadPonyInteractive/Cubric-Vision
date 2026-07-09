@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-201",
+  "title": "mpi-ci start.sh: make CUBRIC_COMFY_ENABLED overridable (${VAR:-1}, line ~245 hardcodes export=1)",
+  "description": "Found during MPI-197 round 3: start.sh line ~245 hardcodes `export CUBRIC_COMFY_ENABLED=1`, so a pod env override (CUBRIC_COMFY_ENABLED=0 for bare-launch debug) is impossible — had to side-launch ComfyUI on 8189 as a workaround. Change to `export CUBRIC_COMFY_ENABLED=${CUBRIC_COMFY_ENABLED:-1}` in c:/AI/Mpi/mpi-ci/cubric-vision-pod/start.sh (separate repo — edit with git -C). start.sh is R2 runtime-fetched at boot (publish-runtime.sh), no image rebuild needed. Low risk, debug-ergonomics only.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-06T00:30:00Z",
+  "updated_at": "2026-07-06T01:00:00Z",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "runpod",
+    "mpi-ci",
+    "debug"
+  ],
+  "priority": "low"
+}

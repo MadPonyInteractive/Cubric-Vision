@@ -1,0 +1,132 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "717bf2f9-6573-454f-8a43-5f97a8f38cd9",
+  "supersedes": "c3f8a1e7-2b9d-4f6a-8e13-7c5b9d04a2f1",
+  "generated_at": "2026-06-24T09:07:24Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 LTX-2.3 — AUDIO DEEP-DIVE + LoRA STAGE RULE + REPO REORG. Mapped the audio-input wiring (gate + influence = latent-inpaint), found voice+ambient mix is impossible on the plain SolidMask pipeline BUT achievable via IC-LoRA ref-tokens (Solution B, chosen) or a temporal mask (Solution A). Found modality_scale lives on GuiderParameters/MultimodalGuider (our template uses plain CFGGuider → not wired). Locked: ALL LoRAs ship STAGE-1 ONLY (stage-2=low-denoise upscaler), NO model merge. Added 6 generic Input_Lora_N (MpiLoraModelClip) slots. Moved the Builder playbook+research from mpi-ci into Cubric-Vision docs/builder/ (committed). Created+closed MPI-125 (clip-knob UI per-template). Cubric-Studio orchestration vision doc.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "MPI-4 LTX-2.3: finalize the ship config for the ~25th-June release on a Builder Pod; this session = audio-input behavior + LoRA stage placement + repo reorg.",
+    "status": "in_progress",
+    "summary": "Ship config tightened: base distilled LTX-2.3 + prompt-contract; ALL LoRAs (Soft, transition, user) ship STAGE-1 ONLY, NO merge; 6 generic Input_Lora_N slots added. Audio fully characterized. NEXT (chosen, do first): implement Solution B — input-audio + generated-ambient MIX via the IC-LoRA ref-token path (LTXVSetAudioRefTokens) — alter the workflow's 'Audio Input' group, put new nodes in the 'New Nodes' group. THEN: modality_scale guider swap; video-extend."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "AUDIO-INPUT FULLY CHARACTERIZED. Two nodes: Input_Use_Input_Audio (MpiSimpleBoolean, id 203) = binary gate (true=dropped audio, false=empty/generated); Input_Audio_Influence (MpiFloat, id 201) → Invert → SolidMask(199) → SetLatentNoiseMask(200) = a UNIFORM latent-inpaint mask (NOT volume): influence 1.0→mask0→preserve all input; 0.0→mask1→fully regenerate. Live: 0.0=model's own audio; 0.1=identity kept, delivery regenerated (coarse structure survives partial renoise); lower influence→more movement (audio-lock loosens). Full detail in docs/builder/research/audio-input.md.",
+      "MIX QUESTION RESOLVED. Voice+ambient in ONE pass is IMPOSSIBLE on the plain A2V+SolidMask pipeline (official LTX guide: input audio returned UNMODIFIED, drives video only; generating ambient = the no-input path). BUT achievable via OTHER nodes: (A) LTXVAudioVideoMask (KJNodes) = TIME-RANGE mask (audio=25 latent-fps; existing_mask_mode add/subtract/overwrite) for sequential voice-here/ambient-there; (B) LTXVSetAudioRefTokens + audio IC-LoRA (Lightricks/IC-LoRA) = input audio as identity CONTEXT (negative temporal positions) → model generates the whole soundscape in that voice = TRUE simultaneous mix, matches the 0.1 finding. USER CHOSE SOLUTION B.",
+      "modality_scale FOUND: on GuiderParameters node (lightricks/LTXV) → MultimodalGuider (replaces CFGGuider). Formula: noise_pred += (modality_scale-1)*(pos - modality_pass) = CFG-style guidance on audio↔video cross-attn. OUR TEMPLATE USES PLAIN CFGGuider (cfg=1) → modality_scale NOT wired at all. Official 2.3 vals: modality_scale=3 (audio cfg7 / video cfg3, rescale 0.7/0.9, skip_blocks '28') — but that's the _Full (non-distilled) example; ours is distilled cfg=1, so test cfg=1 + modality_scale=3.",
+      "LoRA STAGE RULE generalized + DECIDED: LTX stage-2 = low-denoise UPSCALER (hi-res-fix), not a 2nd sampler. Stage-1 LoRA effect ports to stage-2 via the latent. Transition stage-1-only = ZERO diff; Soft stage-1-only = MARGINAL diff (A/B'd). → ALL LoRAs ship STAGE-1 ONLY, bypass stage-2 (incl. user LoRAs). Avoids the per-stage LoRA time tax.",
+      "NO MODEL MERGE (reversed the prior Soft-merge plan). Soft ships as a normal stage-1 LoRA loader (one of 6 generic Input_Lora_N = MpiLoraModelClip, clip-capable, added this session). Killed by all-LoRAs-stage-1 + generic loader slots → merged artifact buys nothing.",
+      "TRANSITION LoRA on FL = WORKS (smooth A→B morph, stage-1 only, audio-safe, ~+17% time). It ALWAYS spans the whole clip = a short atomic morph primitive (transform-then-act = short transition + separate extension). Orchestration constraint → recorded in Cubric-Studio/docs/agentic-orchestration-vision.md.",
+      "AUDIO GATE verdict: ship binary 'audio present/not' gate; keep influence at 1.0 for input-audio mode; DON'T expose the influence slider (the mix it was meant for doesn't exist on this path — use Solution B instead).",
+      "REPO REORG (committed): moved the Builder playbook + research from mpi-ci/cubric-vision-builder/playbook/ → Cubric-Vision/docs/builder/. mpi-ci keeps only image-build (Dockerfile, install scripts). Cubric-Vision 9455e90, mpi-ci 93be372 (NEITHER PUSHED). Repointed CLAUDE.md, docs/comfy.md, 01-environments.md, spec graduation note, install-script comments.",
+      "MPI-125 created+closed (user moved to done): clip-knob UI is per-TEMPLATE — Wan template = model-only LoRA nodes → drop Clip from UI; LTX = clip-capable loaders (MpiLoraModelClip) → keep Strength+Clip. NOT per-LoRA detection (overkill).",
+      "Memory updated: project_ltx_stage1_motion_stage2_detail (stage-2=upscaler + all-LoRAs-stage-1), project_ltx23_capability_loras_dropped (no-merge + paths fixed), project_transition_lora_short_morph (NEW), MEMORY.md compacted 161→152 (dropped 2 dead). Workflow saved + copied to D:/WORK/workflows/App/LTX23.json."
+    ],
+    "pending": [
+      "SOLUTION B (DO FIRST — user's explicit next ask): implement input-audio + generated-ambient MIX via the IC-LoRA ref-token path. BEFORE editing: confirm user SAVED+CLOSED the ComfyUI tab, then BACK UP the workflow (copy LTX_i2v_t2v_template.json to a .bak). Then alter the 'Audio Input' GROUP to use LTXVSetAudioRefTokens (input audio → reference tokens on positive+negative conditioning, model generates soundscape in that voice; frozen_audio out for stage-2). Put any genuinely-new nodes in the 'New Nodes' GROUP (user repositions after — keep new nodes there for easy review). Reference workflows: ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json (+ _V2V_ICLoRA_ / _Inpaint_ / _Outpaint_). NEEDS the audio IC-LoRA model dep on the Pod. UNTESTED on distilled — expect tuning. Agent CAN edit the JSON directly (confirmed in-scope).",
+      "modality_scale guider swap: replace CFGGuider with MultimodalGuider + 2 GuiderParameters (VIDEO + AUDIO). Keep distilled cfg=1, set modality_scale=3. Test if it tightens audio-driven motion/sync + strengthens prompt-driven ambient. do_modality()≠1 runs an extra guidance pass = slower.",
+      "VIDEO EXTEND (optional op): test extend-from-stage-1-latent vs extend-from-final-video (quality/seams/practicality) — decides the extend architecture. Half-wired (IfElse 51/56 feed save-gate not sampler). Lengthy, likely its own Pod.",
+      "Push the two reorg commits when ready (Cubric-Vision 9455e90 + mpi-ci 93be372) — push is user-authorized, NOT done.",
+      "Loose ends (only if fast): LTXVAudioVideoMask temporal mask (Solution A) as the secondary mix option; v3 i2v MOTION test; music style-word test; LTX2 Audio Latent Normalizing Sampling for generated-audio quality.",
+      "RELEASE ~25th June: ship refined base (i2v/t2v/FL + audio gate + stage-1 LoRA loaders). Add extend + audio-mix only if they land clean in time.",
+      "Mirror heretic-gemma-fp8 (anongecko) to own repo before shipping as a dep (supply-chain)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session) — alter the 'Audio Input' group, add new nodes to the 'New Nodes' group; ALWAYS back up the workflow first + confirm the ComfyUI tab is SAVED+CLOSED before a disk write",
+    "guide the user through Pod shell ops (Jupyter / RunPod Web Terminal) — agent has NO SSH; user drives the shell",
+    "run rclone to/from R2 (cubric-builds bucket) for model staging (the audio IC-LoRA dep)",
+    "edit the Builder playbook at c:/AI/Mpi/Cubric-Vision/docs/builder/ — living doc, keep updating",
+    "append findings to Cubric-Prompt card MPI-11 + Cubric-Studio/docs/agentic-orchestration-vision.md"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/audio-input.md — full audio characterization, the mix Solutions A+B, modality_scale, input-prep rules (COMMITTED-NO, written this session, uncommitted)",
+      "spec §0b SESSION PROGRESS + STILL PENDING updated; tested-loras-versions.md + model-set.md transition/Soft verdicts + no-merge; Cubric-Studio orchestration doc; 3 memory files + MEMORY.md compaction"
+    ],
+    "pending": [
+      "audio-input.md + spec edits this session are UNCOMMITTED (work was mid-flight) — commit at next mpi-end by explicit pathspec.",
+      "MEMORY.md compaction flagged by hook (now 152 lines); deeper trim optional at mpi-end (needs stale-entry triage + user sign-off per memory rule).",
+      "Decide if Solution B / audio-mix + extend warrant their own MPI cards once scoped."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4 on the Builder Pod. DO SOLUTION B FIRST (user's explicit next ask): implement the input-audio + generated-ambient MIX via the IC-LoRA ref-token path. STEP 1: confirm the user SAVED+CLOSED the ComfyUI tab, then BACK UP the workflow (copy G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json to a .bak). STEP 2: edit the JSON — alter the 'Audio Input' group to use LTXVSetAudioRefTokens (input audio as identity-context reference tokens on positive+negative conditioning → model generates the whole soundscape in that voice; frozen_audio out for stage-2), put any genuinely-new nodes in the 'New Nodes' group so the user can review + reposition. Mirror ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json. NEEDS the audio IC-LoRA model dep on the Pod; UNTESTED on distilled. THEN: modality_scale guider swap (CFGGuider→MultimodalGuider, cfg=1 + modality_scale=3); video-extend. Read the spec §0b + docs/builder/research/audio-input.md first.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "VOICE+AMBIENT MIX = use SOLUTION B (LTXVSetAudioRefTokens + audio IC-LoRA): input audio as identity CONTEXT, model generates the soundscape in that voice. Chosen over Solution A (temporal LTXVAudioVideoMask) as the most sound. The plain SolidMask pipeline CANNOT mix (only flips preserve↔generate).",
+      "ALL LoRAs ship STAGE-1 ONLY (bypass stage-2): LTX stage-2 = low-denoise upscaler; latent carries the stage-1 LoRA effect; stage-2 LoRA = marginal/none. Skips the per-stage time tax. Applies to user LoRAs too.",
+      "NO MODEL MERGE: Soft ships as a normal stage-1 LoRA loader (one of 6 generic Input_Lora_N = MpiLoraModelClip). Reverses the prior Soft-merge plan.",
+      "AUDIO GATE: ship binary present/not gate at fixed influence 1.0; don't expose the influence slider (its intended mix is impossible on this path — Solution B does mixing instead). The real audio↔video coupling knob is modality_scale (not wired today).",
+      "CLIP-KNOB UI is per-TEMPLATE (MPI-125, closed): Wan model-only nodes → drop Clip; LTX clip-capable loaders → keep Strength+Clip. Not per-LoRA detection.",
+      "Builder playbook+research now lives in Cubric-Vision/docs/builder/, not mpi-ci (image-build only). Committed both repos, not pushed."
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI + Pod shell; agent edits JSON / guides / runs rclone. CONFIRM user SAVED+CLOSED the ComfyUI tab AND back up the workflow before any disk JSON write.",
+      "WORKFLOW FILES: WRITE/edit G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (working file); after save, copy → D:/WORK/workflows/App/LTX23.json (final location).",
+      "When editing the workflow JSON: preserve existing node IDs + links; put NEW nodes in the 'New Nodes' group (user reviews + repositions); alter the 'Audio Input' group in place.",
+      "Live Pod ops (create/Stop/Terminate) are USER-only; agent has NO usable SSH. Persistent 75GB volume survives Pod deletion.",
+      "Distilled base, CFG locked at 1. Node naming Input_*/Output_*. Solution B needs an audio IC-LoRA dep; the 2.3 ICLoRA example workflows recommend a different (possibly fp8/full) base — test on our distilled bf16, expect tuning.",
+      "A/B LoRAs via strength 0↔0.5, NEVER bypass-toggle (model reload → RAM-leak OOM). Lock a good base seed first."
+    ],
+    "files_modified": [
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/ (NEW — moved playbook+research; COMMITTED 9455e90)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/audio-input.md (audio findings + Solutions A/B + modality_scale — written this session, UNCOMMITTED)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/tested-loras-versions.md + model-set.md (transition/Soft verdicts, no-merge — UNCOMMITTED)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (§0b session progress — UNCOMMITTED)",
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-125/ (NEW card, closed) + board.json",
+      "c:/AI/Mpi/Cubric-Studio/docs/agentic-orchestration-vision.md (NEW — orchestration vision + transition-morph constraint)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/ (playbook removed, README+install-script repointed; COMMITTED 93be372)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (6 Input_Lora_N slots, transition+Soft stage-1-only, saved) + D:/WORK/workflows/App/LTX23.json (copied)",
+      "memory: project_ltx_stage1_motion_stage2_detail, project_ltx23_capability_loras_dropped, project_transition_lora_short_morph (NEW), MEMORY.md"
+    ],
+    "files_to_read_first": [
+      "c:/AI/Mpi/Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (§0b SESSION PROGRESS + STILL PENDING)",
+      "c:/AI/Mpi/Cubric-Vision/docs/builder/research/audio-input.md (the MIX Solutions A+B + modality_scale — THE doc for Solution B)",
+      "G:/ComfyUi/ComfyUI/custom_nodes/ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json (Solution B reference wiring)",
+      "G:/ComfyUi/ComfyUI/custom_nodes/ComfyUI-LTXVideo/iclora.py (LTXVSetAudioRefTokens source)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "Builder-Pod model-onboarding playbook (now docs/builder/)",
+      "ComfyUI workflows / injection"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-24T09:07:24Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX-2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/717bf2f9-6573-454f-8a43-5f97a8f38cd9.json and use mpi-continue. COOPERATIVE LIVE session: the user drives ComfyUI + the Pod shell; you edit the workflow JSON / guide commands / run rclone. THE NEXT ASK (do this first) is to implement SOLUTION B: an input-audio + generated-ambient MIX via the IC-LoRA ref-token path. Background: this session fully characterized LTX-2.3 audio. The two nodes Input_Use_Input_Audio (binary gate) + Input_Audio_Influence (a UNIFORM latent-inpaint mask, NOT volume) can only FLIP between 'preserve all input audio' (influence 1.0) and 'fully generate' (0.0) — a true voice+ambient mix is IMPOSSIBLE on that plain SolidMask path (official LTX guide: input audio is returned unmodified and only drives video). BUT it IS achievable two ways: (A) LTXVAudioVideoMask = a TIME-RANGE mask (voice 0-3s, ambient 3-6s, sequential); (B) LTXVSetAudioRefTokens + an audio IC-LoRA = the input audio as identity CONTEXT (negative temporal positions) so the model GENERATES the whole soundscape IN that voice (true simultaneous mix, and it matches the live finding that influence 0.1 kept the speaker identity while regenerating the delivery). THE USER CHOSE SOLUTION B. Implement it: (1) confirm the user SAVED+CLOSED the ComfyUI tab, then BACK UP G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json to a .bak; (2) edit the JSON — alter the 'Audio Input' GROUP to use LTXVSetAudioRefTokens, and put any genuinely-NEW nodes into the 'New Nodes' GROUP so the user can review and reposition them (the user prefers new stuff parked there). Mirror ComfyUI-LTXVideo/example_workflows/2.3/LTX-2.3_ICLoRA_Lipdub_Two_Stage_Distilled.json; read iclora.py for the node. It NEEDS the audio IC-LoRA as a new model dep on the Pod, and it's UNTESTED on our distilled bf16 base, so expect tuning. After Solution B: (next) swap the template's plain CFGGuider for MultimodalGuider + two GuiderParameters (VIDEO + AUDIO) to expose modality_scale — keep distilled cfg=1 but set modality_scale=3 (official 2.3 value) and test whether it tightens audio-driven motion/sync and strengthens prompt-driven ambient; (then) video-extend (test extend-from-stage-1-latent vs extend-from-final-video). LOCKED DECISIONS from this session, don't relitigate: ALL LoRAs ship STAGE-1 ONLY (stage-2 is a low-denoise upscaler; the latent carries the effect; applies to user LoRAs too); NO model merge (Soft ships as a normal stage-1 LoRA in one of the 6 new generic Input_Lora_N = MpiLoraModelClip slots); transition LoRA works on FL, stage-1 only, is a short atomic A→B morph primitive; the audio gate ships as a binary present/not gate at fixed influence 1.0 with the slider NOT exposed; the Builder playbook+research now lives in Cubric-Vision/docs/builder/ (mpi-ci keeps only image-build). Read the spec §0b and docs/builder/research/audio-input.md before touching the workflow. Method reminders: edit the G: working file then copy to D:/WORK/workflows/App/LTX23.json; preserve existing node IDs/links; A/B LoRAs via strength not bypass; the user drives all live Pod ops. RELEASE TARGET ~25th June."
+}

@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-233","type":"task.created","at":"2026-07-08T20:35:00Z","actor":"claude","summary":"Searchable LoRA tree picker — new MpiLoraPicker primitive."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-233","type":"task.updated","at":"2026-07-08T20:40:00Z","actor":"claude","summary":"Compact plan attached; maturity idea -> planned."}
+{"ts": "2026-07-08T21:00:00Z", "type": "task.moved", "task": "MPI-233", "from": "todo", "to": "doing", "by": "agent"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-233", "type": "task.moved", "at": "2026-07-08T21:45:00Z", "actor": "claude", "from": "doing", "to": "done", "summary": "MpiTreePicker shipped + user-verified (searchable folder tree, extension strip, horizontal scroll). maturity complete."}

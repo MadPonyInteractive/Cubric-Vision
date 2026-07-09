@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "6005cbee-a42e-4840-9eb5-173a4a6248b9",
+  "path": "routes/logger.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/561532ea-b014-4e3d-a111-874411036065.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/3350e6c9-63ed-4e81-870f-80458e1e811d.json",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-06-15T18:12:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "notes": "Apply central secret redaction before console and app.log writes.",
+  "recent_events": [
+    {
+      "at": "2026-06-15T17:48:16.4313125Z",
+      "event": "claimed_for_mpi92_logger_redaction"
+    },
+    {
+      "at": "2026-06-15T17:52:12.5977923Z",
+      "event": "verification_ready",
+      "note": "Logger now redacts secrets before console and file writes."
+    },
+    {
+      "at": "2026-06-15T18:12:00Z",
+      "event": "verified",
+      "note": "Task closed after user verification."
+    }
+  ]
+}

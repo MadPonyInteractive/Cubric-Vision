@@ -1,0 +1,139 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b0c41d90-657f-4b64-b1ad-85f3e3ec8f5d",
+  "generated_at": "2026-06-23T15:31:47Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 LTX-2.3 LoRA testing — local strength/identity tuning concluded, then moved to a RunPod L40S Builder Pod for faster iteration. Verified all 4 capability LoRAs are MODEL-ONLY (strength_MODEL only). Concluded VBVR i2v strength norm = 0.5 and a general distilled-LoRA strength law (0.3-0.7, sweet spot 0.5). Set up the Pod install (nodes + ~68GB base models + extras + 2 drag-dropped VBVR LoRAs). Downloads in flight at handoff.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-4 LTX-2.3 template authoring / LoRA test queue (spec §0b). This session: characterize the 4 capability LoRAs, conclude strengths, then move to a RunPod L40S Pod for faster gen iteration to run the longer multi-part-motion tests that decide VBVR keep/drop.",
+    "status": "in_progress",
+    "summary": "Local testing DONE + concluded (VBVR i2v norm 0.5; distilled-LoRA law 0.3-0.7; all 4 LoRAs model-only; LTX stage-1 quality > WAN). Now on a RunPod L40S Builder Pod (id 5fo3cq4mek3m3v) installing nodes + ~68GB base LTX models + extras. The OPEN decider remains: does VBVR @0.5 actually deliver its multi-part-sequencing claim? Resume = finish Pod install, restart, drag-drop the saved template, unbypass the LoRA chain, run long multi-part-motion tests. Release ~25th June — bias ship refined base."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+    "completed": [
+      "Re-scanned live local template — matches all prior decisions: STG nodes already DELETED by user (cleanup done); 2 plain CFGGuider (32 stage-1 / 33 stage-2); heretic-fp8 encoder live in DualCLIPLoader(3); abliterated LoraLoader(5) bypassed (mode 4).",
+      "VERIFIED via safetensors tensor headers (not agent-guess): all 4 capability LoRAs (VBVR-V1, VBVR-Sulphur-I2V-V4, Singularity, Soft Enhance) are 100% diffusion_model.* keys = MODEL-ONLY → strength_MODEL is the only live knob, strength_CLIP is INERT. Load via MpiLoraModel. Abliterated heretic LoRA = opposite (100% text_encoders.* = CLIP-only, confirms the ~50x-dilution/superseded call).",
+      "LoRA folder reorg: ALL LTX LoRAs moved from C:/AI/loras/ ROOT into C:/AI/loras/LTX2.3/ (rgthree 'Auto Nest Subdirectories in Menus' gives folder submenus). New LoRA-name strings carry the LTX2.3\\ prefix.",
+      "CONCLUDED — VBVR i2v strength norm = 0.5 (max ~0.7). Across 4 tests/3 images/2 res: high strength = identity drift/face-squash + speech-naturalness loss + fine-detail erosion + NO motion payoff. Partly compounded by low stage-1 res + far face, but persists at higher res = it's the LoRA.",
+      "CONCLUDED — DISTILLED-LoRA STRENGTH LAW: distilled LTX wants LoRAs at 0.3-0.7, sweet spot ~0.5. Matches user's WAN experience exactly; confirmed across VBVR (best 0.5) + Soft Enhance (clean 0.5, HALLUCINATES a necklace @1.0). Default any LTX LoRA to 0.5.",
+      "Soft Enhance characterized = AUTOFOCUS/depth-of-field LoRA (back-into-focus as subject approaches). @0=dominant+good, @0.5=weaker, @1.0=KILLS it. Another high-strength-destroys data point.",
+      "NSFW = dead end on this model: VBVR does NOT add genitalia/anatomy capability (confirmed). Layer-2 capability gap — model can ANIMATE what's visible in frame 1, can't SYNTHESIZE unseen anatomy. No LoRA fixes it. Dropped NSFW testing.",
+      "Audio prompt rule found: if ambient sound not described, model defaults to MUSIC over the clip. Always specify ambient sound or add music/soundtrack/score to negative.",
+      "Strategic markers logged (spec): LTX stage-1 quality > WAN (the moat); own NSFW MOTION-only LoRA = future market-gap epic (5-10 short clips, RTX 6000, ~2-3 days per WAN; motion not anatomy; under consideration, post-first-release, NOT a 25th item).",
+      "Saved local template re-scanned: LoRA chain wired = UNETLoader(4)->MpiLoraModel(234 VBVR-I2V-Sulphur-V4 @0.5 ACTIVE)->MpiLoraModel(236 Soft_Enhance @1.0 ACTIVE)->MpiLoraModel(237 Singularity @1.0 BYPASS)->MpiLoraModel(235 VBVR-T2V-V1 @1.0 BYPASS)->LoraLoader(5 abliterated BYPASS)->Transition LoRA(191 ACTIVE, gated by Input_Use_Transition)->CFGGuiders. DualCLIPLoader(3)=heretic-fp8.",
+      "RunPod L40S Builder Pod spun (id 5fo3cq4mek3m3v, EPHEMERAL — no network volume; proxy SSH only). ComfyUI root = /opt/ComfyUI (Jupyter file-tree shows this as '/'). $CIVITAI_TOKEN + $HF_TOKEN both set in template env.",
+      "Pod install IN FLIGHT at handoff: install_nodes.sh running (finishing BFS/sam2 deps); install_models_ltx23.sh RUNNING (39GB diffusion bf16 downloading); 2 VBVR LoRAs uploading to /opt/ComfyUI root via Jupyter (~30-60min)."
+    ],
+    "pending": [
+      "FINISH POD INSTALL (in flight). 1) let install_nodes.sh finish. 2) install_models_ltx23.sh finishes (~68GB base). 3) run the EXTRAS block (heretic-fp8 + transition + Singularity + Soft — aria2c, auto-pull to correct folders, URLs in context.constraints). 4) UPDATE MpiNodes: cd /opt/ComfyUI/custom_nodes/ComfyUI-MpiNodes && git fetch && git log --oneline -1 origin/main (compare to installed) && git pull --ff-only — install_nodes.sh SKIPS existing dirs, so the 2 NEW reroute nodes (just released) won't arrive without this pull. 5) move the 2 uploaded VBVR files root->models/loras/LTX2.3/.",
+      "ONE Restart Pod after ALL installs (registers KJNodes-type packs clean; mid-way Manager-restart leaves red ✗). NEVER pkill -f main.py (cascades, kills Jupyter terminals).",
+      "Drag-drop the saved template (G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json) into Pod ComfyUI. ⚠️ DROP Soft_Enhance(236) from 1.0 to 0.5 (or bypass) before clean tests — it's @1.0 in the saved template and hallucinates/kills autofocus.",
+      "THE OPEN DECIDER: run LONG MULTI-PART-MOTION tests — does VBVR @0.5 deliver its sequencing claim? (Short single-action tests showed ~no on/off diff + flat 0.7-1.5 strength response.) If 0.5 delivers nothing on multi-part sequences → DROP VBVR for i2v. Use literal ordered step prompts, named body parts.",
+      "Then stack Singularity @0.5-ish (its Cinematic Timeline template) + re-confirm Soft @0.5. Watch TOTAL stacked strength < ~1.5.",
+      "Input-audio slider decision (open): does strength 1.0 work on every image? If yes → drop slider, auto-enable at 1.0 on file present.",
+      "RELEASE DECISION ~25th June: ship refined base (i2v/t2v/FL + audio + validated LoRA stack) OR add extend/headswap/CN if progress strong. Bias = ship solid base.",
+      "After LoRA decision: write the Cubric-Prompt LTX recipe (prompt-CONTRACT finding — see knowledge_preservation). Mirror heretic-gemma-fp8 (anongecko, low-trust) + Singularity to own repo before shipping as deps.",
+      "Eventually: workflow-gen orchestrator generate_ltx.py; resolve LTX dep URLs/SHAs."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit workflow JSON directly (cooperative live-ComfyUI session)",
+    "guide the user through Pod shell ops (Jupyter / RunPod Web Terminal) — agent has NO SSH to this ephemeral Pod, user drives the shell",
+    "research with sub-agents — but VERIFY all sub-agent claims against live JSON / real URLs before trusting"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Spec research/ltx-integration-spec.md §0b heavily updated this session: SESSION PROGRESS block, VBVR strength-norm conclusion, DISTILLED-LoRA STRENGTH LAW, Soft-Enhance/autofocus finding, NSFW dead-end + 2-layer confirm, audio-music prompt rule, LTX>WAN marker, NSFW-motion-LoRA strategic epic, RunPod authoring plan (5090→L40S), held reminders, LoRA tensor-header facts, folder reorg.",
+      "install_extras.sh authored at scratchpad path AND given inline to user (heretic + transition + Singularity + Soft, token-gated CivitAI)."
+    ],
+    "pending": [
+      "Write the Cubric-Prompt LTX recipe ONCE the ship LoRA set is locked. PROMPT-CONTRACT finding: VBVR/Singularity = no trigger word, the SEQUENCE STRUCTURE is the trigger. Contract = brief scene anchor FRONT-LOADED then DISCRETE ORDERED literal motion steps, named body parts. i2v=MINIMAL scene anchor (frame carries description; over-describing fights pixels)+steps; t2v=FULL scene+steps. Matches Singularity Cinematic Timeline. Recipe home: Cubric-Prompt/src/main/recipes/{model-id}.recipe.ts + dev-docs/recipe-research/.",
+      "HELD REMINDER 1: UNMUTE the 2× SaveLatent nodes (ltx_video_latent, ltx_audio_latent) before the final logged workflow (muted to avoid polluted test outputs).",
+      "HELD REMINDER 2: Repath NerdyRodent MONOLITH LoRAs root->LTX2.3\\ (heretic-abliterated, head_swap_v3 ×2, ic-lora-union-control + the 4 new) — they moved folders, monolith still points at root.",
+      "Mirror heretic-gemma-fp8 (anongecko/gemma-3-12b-it-heretic-ltx) + Singularity to own repo before shipping as deps (supply-chain risk; anongecko verified as the heretic source this session: gemma-3-12b-it-heretic-fp8-comfy.safetensors 14.5GB root dir).",
+      "Consider memory entries: VBVR i2v norm 0.5; distilled-LoRA strength law 0.3-0.7; capability LoRAs are model-only (strength_CLIP inert); VBVR/Singularity prompt-contract; LTX stage-1 > WAN."
+    ]
+  },
+  "next_action": {
+    "description": "Resume MPI-4 on the RunPod L40S Pod (id 5fo3cq4mek3m3v, /opt/ComfyUI, ephemeral, no agent-SSH — user drives Jupyter/Web Terminal). FINISH the install: let install_nodes.sh finish; let install_models_ltx23.sh finish (~68GB); run the EXTRAS aria2c block (heretic-fp8 + transition + Singularity + Soft); git pull ComfyUI-MpiNodes (install_nodes SKIPS existing dirs so the 2 new reroute nodes need a manual pull); move the 2 uploaded VBVR files root->models/loras/LTX2.3/. Then ONE Restart Pod, drag-drop the saved template, DROP Soft_Enhance to 0.5, unbypass the LoRA chain, and run the LONG MULTI-PART-MOTION tests — the open decider for whether VBVR @0.5 earns a slot. Release ~25th June, bias refined base.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "ALL 4 capability LoRAs are MODEL-ONLY (verified via safetensors headers: 100% diffusion_model.* keys). Tune strength_MODEL only; strength_CLIP is inert. Load via MpiLoraModel. The abliterated heretic LoRA is the opposite (CLIP-only, superseded by the heretic-fp8 full encoder).",
+      "VBVR i2v strength norm = 0.5 (max 0.7). High strength costs identity (face squash), speech/lip-sync naturalness, and fine detail, with NO motion gain. Concluded across 4 tests/3 images/2 resolutions.",
+      "DISTILLED-LoRA STRENGTH LAW: distilled LTX wants LoRAs at 0.3-0.7, sweet spot 0.5 (distilled = few steps, no error-averaging, cfg=1 no headroom → LoRA commits hard). Confirmed on VBVR + Soft Enhance; matches WAN. Default any LTX LoRA to 0.5. Over-strength tell on enhancer LoRAs = HALLUCINATED detail (invented jewelry).",
+      "VBVR does NOT add NSFW/anatomy capability — it's reasoning/sequencing. Layer-2 capability gap: model animates visible content, can't synthesize unseen anatomy. NSFW testing dropped. Future option = train OWN motion-only NSFW LoRA (market gap: high-quality open video that does NSFW; WAN is the only current option and lower quality). Post-first-release epic, under consideration, NOT 25th.",
+      "Identity drift is PARTLY low stage-1 res + far face (freckles stayed consistent at higher res), not pure LoRA — de-risks the merge plan. FL start/end frame = user's identity-lock escape hatch.",
+      "LTX stage-1 quality (352×640, pre-upscale) already beats WAN — confirms the core thesis/moat (strength-independent, bankable).",
+      "Moved tests to RunPod for SPEED (local ~100s/gen too slow for seed/strength hunt; L40S ~20-30s). L40S 48GB VRAM (more than a 5090's 32) — also fits full-bf16 gemma if ever wanted. Ada sm_89 → cu128/cu130 both fine, no Blackwell-kernel worry.",
+      "Gap-fill strategy: agent has NO usable SSH to this ephemeral Pod (proxy ssh.runpod.io refuses non-PTY exec; the automation harness can't allocate a real TTY). So Pod downloads run via aria2c IN the Pod (datacenter downlink, fast) — user drives the shell. Only the 2 VBVR LoRAs (no clean HF URL / wrong-weight risk per project_dep_url_filename_integrity) are uploaded from local disk via Jupyter."
+    ],
+    "constraints": [
+      "COOPERATIVE LIVE SESSION: user drives ComfyUI (local AND Pod) + Pod shell; agent edits JSON on disk locally / guides Pod commands. ALWAYS confirm user SAVED+CLOSED the ComfyUI tab before any local JSON write (stale disk != live).",
+      "EPHEMERAL Pod: NO network volume → models wiped on Stop (survive Restart). Proxy SSH only (ssh 5fo3cq4mek3m3v-64412320@ssh.runpod.io) — works for the USER interactively, NOT for agent non-PTY automation. ComfyUI at /opt/ComfyUI; $CIVITAI_TOKEN + $HF_TOKEN set in env.",
+      "Pod EXTRAS download block (run in a Jupyter/Web terminal, from /opt/ComfyUI): aria2c -c -x16 -s16 of — (a) heretic encoder: https://huggingface.co/anongecko/gemma-3-12b-it-heretic-ltx/resolve/main/gemma-3-12b-it-heretic-fp8-comfy.safetensors -> models/text_encoders/ ; (b) transition: https://huggingface.co/valiantcat/LTX-2.3-Transition-LORA/resolve/main/ltx2.3-transition.safetensors -> models/loras/LTX2.3/ ; (c) Singularity: https://civitai.com/api/download/models/3001143?token=$CIVITAI_TOKEN -> models/loras/LTX2.3/ as Singularity-LTX-2.3_OmniCine_V1.safetensors ; (d) Soft: https://civitai.com/api/download/models/2849706?token=$CIVITAI_TOKEN -> models/loras/LTX2.3/ as LTX2.3_Soft_Enhance.safetensors.",
+      "MpiNodes UPDATE REQUIRED: install_nodes.sh does git clone but SKIPS existing dirs ([skip] ComfyUI-MpiNodes exists). The 2 NEW reroute nodes were just released — cd custom_nodes/ComfyUI-MpiNodes && git fetch && git pull --ff-only. Registry-publish ≠ GitHub-push: confirm git log origin/main has the new commits; if registry-only, install via Manager 'comfy node' instead.",
+      "Jupyter on this Pod is FLAKY (terminals look unresponsive on long silent pip/git steps but ARE working; file-tree won't expand subfolders — only shows root). Prefer RunPod Web Terminal for long installs. NEVER pkill -f main.py (cascades to all Jupyter terminals). Restart ComfyUI via RunPod console Restart Pod.",
+      "aria2c preallocates the full file size upfront (e.g. 39GB diffusion shows 'Allocating disk space' / FileAlloc at 1%) — that's the prealloc artifact (the '80% snap' from memory project_remote_install_progress_truth), NOT a stall.",
+      "DO NOT trust sub-agent claims without verifying vs live JSON / real URLs. This session's web lookups were verified (heretic HF repo confirmed; VBVR HF mirror does NOT match local filenames → upload local files instead).",
+      "MPI custom nodes only, never rgthree in the APP (rgthree is authoring-only on the Builder). CFG locked at 1 (distilled). Node naming Input_*/Output_*. PYTHONUTF8=1 for local python helpers.",
+      "Saved template Soft_Enhance(236) is ACTIVE @1.0 — MUST drop to 0.5 before clean tests (own finding: 1.0 hallucinates + kills autofocus)."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md (heavy §0b additions this session)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json (user wired full LoRA chain: nodes 234/235/236/237; saved 2026-06-23 15:49)",
+      "C:/AI/loras/LTX2.3/ (all LTX LoRAs moved here from root; folder-nesting)",
+      "RunPod L40S Pod /opt/ComfyUI/ (install in flight: nodes + ~68GB models + 2 VBVR uploads)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/install_models_ltx23.sh",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-builder/install_nodes.sh"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "LTX-2.3 workflow authoring",
+      "ComfyUI workflows / injection",
+      "Pod image / mpi-ci",
+      "Comfy node naming law (Input_/Output_ prefix)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-06-23T15:31:47Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-4 (LTX 2.3 video model integration) in a fresh session. Read .agents/mpi-kanban/state/handoffs/b0c41d90-657f-4b64-b1ad-85f3e3ec8f5d.json and use mpi-continue. COOPERATIVE LIVE session: the user drives ComfyUI + the Pod shell; you edit JSON / guide commands. We are on a RunPod L40S Builder Pod (id 5fo3cq4mek3m3v, ComfyUI at /opt/ComfyUI, EPHEMERAL — no volume, models die on Stop; proxy SSH only so YOU have no usable SSH — the user runs Pod shell commands in a Jupyter or RunPod Web Terminal). $CIVITAI_TOKEN + $HF_TOKEN are set in the Pod env. At handoff, the Pod install was IN FLIGHT: install_nodes.sh finishing, install_models_ltx23.sh downloading ~68GB base LTX models, and the 2 VBVR LoRAs uploading to /opt/ComfyUI root via Jupyter. RESUME by finishing the install: (1) let install_nodes.sh + install_models_ltx23.sh finish; (2) run the EXTRAS aria2c block (heretic-fp8 encoder + transition + Singularity + Soft Enhance — exact URLs are in the handoff context.constraints); (3) git pull custom_nodes/ComfyUI-MpiNodes (install_nodes SKIPS existing dirs, so the 2 newly-released reroute nodes need a manual pull — confirm git log origin/main has them); (4) move the 2 uploaded VBVR files from /opt/ComfyUI root into models/loras/LTX2.3/. Then do ONE Restart Pod (registers nodes clean; NEVER pkill main.py), drag-drop the saved template (G:/ComfyUi/ComfyUI/user/default/workflows/LTX_i2v_t2v_template.json), DROP Soft_Enhance(236) from 1.0 to 0.5 (it hallucinates + kills autofocus at 1.0), unbypass the LoRA chain, and run the LONG MULTI-PART-MOTION tests — the open decider for whether VBVR @0.5 earns a slot (short tests showed ~no benefit). KEY CONCLUSIONS already locked this session (in spec §0b): all 4 capability LoRAs are MODEL-ONLY (tune strength_MODEL only, strength_CLIP inert); VBVR i2v strength norm = 0.5 (max 0.7 — high strength = identity/lip-sync/detail loss, no motion gain); the DISTILLED-LoRA STRENGTH LAW = 0.3-0.7 sweet-spot 0.5 (matches WAN, confirmed on VBVR + Soft Enhance which hallucinates a necklace @1.0); Soft Enhance is an autofocus/DoF LoRA; NSFW is a dead end on this model (capability gap, not abliteration-fixable) — dropped, but a future motion-only NSFW LoRA is a market-gap epic; LTX stage-1 quality already beats WAN (the moat). Jupyter on this Pod is flaky (terminals look frozen on long silent steps but work; file-tree won't expand subfolders — prefer the RunPod Web Terminal). RELEASE TARGET ~25th June to Patreon Pro — bias toward shipping a refined base (i2v/t2v/FL + audio + validated LoRA stack); defer extend/headswap/ControlNet unless progress is strong. Held reminders: unmute the 2× SaveLatent before the final workflow; repath the NerdyRodent monolith LoRAs root->LTX2.3\\; write the Cubric-Prompt LTX recipe (prompt-CONTRACT: brief scene anchor front-loaded + discrete ordered literal motion steps, no trigger word) once the ship LoRA set is locked. Full detail in research/ltx-integration-spec.md §0b."
+}

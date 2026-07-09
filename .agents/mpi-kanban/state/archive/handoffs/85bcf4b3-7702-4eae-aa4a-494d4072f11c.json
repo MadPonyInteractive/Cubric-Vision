@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "85bcf4b3-7702-4eae-aa4a-494d4072f11c",
+  "generated_at": "2026-06-25T13:30:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-127 LTX-2.3 — Phases 4/5/4.5 landed + verified; engine kornia+MpiNodes unblocked; verification mid-flight",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Stand up the LTX-2.3 video model family in Cubric Vision (model entry + deps + ops + audio-mode UI + audio-as-input-media), then verify end-to-end and finish the plan.",
+    "status": "in_progress",
+    "summary": "Phases 4 (model entry, flat deps), 5 (audio-mode radio), and the drift-discovered 4.5 (audio as first-class INPUT media: drop/upload/gallery-card/play-stop/chip) are all CODE-COMPLETE, lint-clean, and VERIFIED in-app, including a t2v generation with audio in the output (Original + Reference). Two engine blockers were diagnosed + fixed this session (kornia 0.8.2 pin, stale MpiNodes bump). Remaining: i2v+audio gen, the i2v op-gating dropdown issue, whatever failed the LATEST verify attempt, then Phase 6 (rules/release:check) + ship tasks."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+    "completed": [
+      "Phase 4: ltx-23 model entry (flat dependencies[], no per-op toggle, both ops install together)",
+      "Phase 5: audioMode Reference|Original radio (presence-gated, WAN-excluded, param dump verified)",
+      "Phase 4.5: audio as first-class input media (drop classify, server sidecar type:audio, createAudioItem, gallery audio card play/STOP + length, drag-to-prompt, chip filename label)",
+      "GEN PROOF t2v: Original + Reference audio both generate with audio in output",
+      "Engine fix: kornia==0.8.2 (local + durable pipPins); MpiNodes bump 780c7c3c (local sync + node_lock)",
+      "Rule fixes: downloads.md installOnEngine split; comfy_injection.md tier-2 + audio gates",
+      "Coordination: MPI-130 resolved (no collision); MPI-131 created (Pod rebuild)"
+    ],
+    "pending": [
+      "GET THE LATEST VERIFY ERROR FIRST — user said the most recent verification 'failed due to something else'; the new error was not captured. Reproduce, read it (console + logs/app.log tail), diagnose.",
+      "Verify i2v + audio (#10): LTX i2v with start frame + audio (Reference voice-ID + Original) — never tested.",
+      "Investigate i2v op-gating: on LTX the operation dropdown will NOT let the user pick 'Image to Video'. Likely tied to LTX being a FLAT single-install model + how getAvailableCommands/installedOps gate i2v_ms. Confirm both ops are actually selectable for LTX.",
+      "Phase 6: update .claude/rules/component-comfy.md (audioMode control + LTX ops + audio gate titles) + npm run release:check.",
+      "Ship tasks: run mpic-compute-dep-hashes (9 LTX sha256 still null in dependencies.js).",
+      "Dispatch MPI-131 (product RunPod Pod rebuild: LTXVideo + kornia pin + bumped MpiNodes) — separate session, cross-repo mpi-ci."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-127",
+    "title": "LTX-2.3 app integration — stand up the LTX video model family (workflow-gen + deps + audio modes UI)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-127/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-127/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md updated with Session-2 progress, engine fixes, rule/doc updates, coordination, Phase 4.5 detail",
+      "MPI-131 created (todo) for the product RunPod Pod rebuild (kornia + LTXVideo + MpiNodes)",
+      "node_lock.json bumped (MpiNodes 780c7c3c); pipPins durable kornia fix shipped"
+    ],
+    "pending": [
+      "Run mpic-compute-dep-hashes before any build (9 sha256:null on LTX deps in dependencies.js)",
+      "Phase 6 rule file: .claude/rules/component-comfy.md needs audioMode control + LTX ops (architectural rule — needs user approval per CLAUDE.md)",
+      "End-session memory notes: LTX first non-merged-LoRA model; ship-deps=workflow-scan; tier-2 dual-emit alias; flat-vs-operations model rule; pipPins field; audio-as-first-class-media pattern; kornia/MpiNodes engine-sync gotcha. Verify/extend [[project-ltxvideo-kornia-pad]], [[project-node-version-lock]].",
+      "DEBUG LOG STILL IN: temporary console.log('[MPI-127 param dump]...) in MpiPromptBox.js el.getRunPayload (~L1044) — REMOVE after verification is fully done."
+    ]
+  },
+  "next_action": {
+    "description": "FIRST: RESTART the app/ComfyUI (engine kornia + MpiNodes fixes need a reload), then reproduce the user's latest verification attempt and capture the NEW error (console + last 100 lines of logs/app.log) — do NOT assume it's kornia/MpiNodes again, those are fixed. Diagnose + fix that. THEN verify i2v+audio (#10), investigate the i2v op-gating dropdown issue (LTX won't let you select Image to Video), finish Phase 6 (component-comfy.md + release:check), and run mpic-compute-dep-hashes. Also remove the temporary param-dump console.log in MpiPromptBox.js getRunPayload.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "LTX is a FLAT model (dependencies[], not commonDeps/operations) — one transformer serves t2v+i2v, no separable install unit, no per-op toggle. This is WHY the i2v-gating issue may exist: getAvailableCommands gates ops via installedOps for operations-keyed models; a flat model resolves differently. Investigate there.",
+      "Audio is first-class input media: drop→upload→gallery audio card (play/STOP, length m:ss, non-click-through) + prompt-box chip with filename. Sidecar type:'audio' in .meta/<uuid>.json. createAudioItem in projectModel.js.",
+      "audioMode radio is a proper PromptBoxControl (PROMPT_BOX_CONTROLS.audioMode), capability-gated by model.capabilities.audio; previewStage gated by capabilities.multiStage (LTX=false this release).",
+      "Engine custom nodes are NOT installed via a manager for the local dev app — they live in engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/. To update one, sync from source + RESTART ComfyUI. node_lock.json is the durable source (app + Pod consume it).",
+      "kornia MUST be pinned 0.8.2 for ComfyUI-LTXVideo (0.8.3 removed pyramid.pad). New `pipPins` dep field handles this durably; the local engine was hand-fixed.",
+      "MpiNodes current = 780c7c3c (local repo C:/AI/Mpi/ComfyUi-MpiNodes, pushed). Adds MpiReroute + MpiConditioningReroute. 'IMG2' workflow node = a renamed MpiReroute."
+    ],
+    "constraints": [
+      "RunPod is a SHARED branch — commit by explicit pathspec, never git add -A. Do not push unless asked.",
+      "REMAINING BLOCKER (unknown): the LATEST verify attempt failed for a NEW reason not yet captured. Get the real error before guessing.",
+      "App/ComfyUI must be RESTARTED to load the kornia + MpiNodes engine fixes.",
+      "Temporary debug console.log in MpiPromptBox.js getRunPayload (~L1044) must be removed before ship.",
+      "9 LTX dep sha256 still null — mpic-compute-dep-hashes before any build.",
+      "Architectural rule files (.claude/rules/*) need explicit user approval to edit (downloads.md + comfy_injection.md were already approved this session; component-comfy.md still pending)."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/models.js (ltx-23 flat entry + wan-22 tier/capabilities + typedef)",
+      "js/data/commandRegistry.js (audio mediaInputs slot, frame retitle, filterMediaInputsForModel, audioMode in components)",
+      "js/data/promptControlDefaults.js (audioMode default)",
+      "js/data/modelConstants/dependencies.js (LTX deps; LTXVideo pipPins kornia; installOnEngine removed; transformer 41GB)",
+      "js/services/commandExecutor.js (audio-slot model gate; flat-lora forEach guard)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (audioMode gate+seed, audio chip filename _audioName, name through drop/_tryAddMedia, TEMP param-dump log)",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js (audioMode control)",
+      "js/components/Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js (audio classify)",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js (audio media:imported + open-group audio skip)",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js (audio card render, play/STOP, length, drag name) + .css",
+      "js/data/projectModel.js (createAudioItem)",
+      "routes/projects.js (mediaTypeFromExt audio, upload sidecar type:audio)",
+      "routes/downloadManager.js (pipPins install step)",
+      "dev_configs/node_lock.json (MpiNodes 780c7c3c)",
+      ".claude/rules/downloads.md + .claude/rules/comfy_injection.md (approved updates)",
+      "engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-MpiNodes (hand-synced — NOT git-tracked engine artifact)",
+      "engine python: kornia downgraded to 0.8.2 (NOT git-tracked)",
+      ".agents/mpi-kanban/tasks/MPI-131/* (new card) + board.json + plan.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-127/plan.md",
+      "js/data/modelConstants/models.js",
+      "js/data/commandRegistry.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "logs/app.log"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["ComfyUI workflow injection", "ComfyUI engine / backend / models", "Components & UI", "Downloads"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/component-comfy.md",
+    ".claude/rules/downloads.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-25T13:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/85bcf4b3-7702-4eae-aa4a-494d4072f11c.json and use mpi-continue to resume MPI-127 (LTX-2.3 app integration, branch RunPod). Phases 4 (model entry), 5 (audio-mode radio), and 4.5 (audio as first-class input media) are CODE-COMPLETE, lint-clean, and verified in-app — a t2v generation with audio in the output works (both Original and Reference). Two engine blockers were fixed this session: kornia pinned to 0.8.2 (local + durable pipPins) and MpiNodes bumped to 780c7c3c (local engine hand-synced + node_lock.json bumped) — BOTH need an APP/ComfyUI RESTART to load. Your FIRST action: restart the app, reproduce the user's LATEST verification attempt and capture the NEW error (it failed for a reason NOT yet diagnosed — do not assume kornia/MpiNodes, those are fixed; read console + last 100 lines of logs/app.log). Then verify i2v+audio, investigate why the LTX operation dropdown won't let the user select 'Image to Video' (LTX is a flat single-install model — check getAvailableCommands/installedOps gating), finish Phase 6 (.claude/rules/component-comfy.md needs user approval + npm run release:check), run mpic-compute-dep-hashes (9 null sha256), and REMOVE the temporary console.log('[MPI-127 param dump]') in MpiPromptBox.js getRunPayload (~L1044). MPI-131 is a separate carded task for the product RunPod Pod rebuild. Commit by explicit pathspec only (shared RunPod branch); do not push."
+}

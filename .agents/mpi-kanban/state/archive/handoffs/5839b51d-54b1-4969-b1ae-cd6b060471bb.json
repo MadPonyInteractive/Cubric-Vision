@@ -1,0 +1,119 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "5839b51d-54b1-4969-b1ae-cd6b060471bb",
+  "generated_at": "2026-06-26T15:35:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "v0.26 floor (MPI-139) Build A verified live + MPI-152 v0.26 WS-event completion-hang fix (research + 3-layer fix, local-verified)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue the umbrella plan (MPI-150), Cluster A: finish MPI-139 v0.26 floor (Build A), then perf (MPI-145/146 → Build B).",
+    "status": "in_progress",
+    "summary": "Build A (v0.9.0, bare v0.26 floor) was built (cu124) + verified live on a fresh 4090 Pod — LTX-2.3 generates clean on v0.26. BUT live testing surfaced a v0.26 regression: remote (and local) gens COMPLETE on the engine but the app HANGS (gallery card spins, clock counts, status stuck) — carded MPI-152. Root-caused via 4 research agents + live WS capture, fixed across 3 layers, LOCAL-verified clean. Remote verification + the reconnect-reconcile path need a v0.9.1 Pod rebuild (wrapper 0.2.15). All work UNCOMMITTED (RunPod branch + mpi-ci)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-150/plan.md",
+    "completed": [
+      "MPI-139 Build A prep: bumped routes/remoteProxy.js POD_IMAGE_VERSION v0.8.1→v0.9.0; removed Phase 1.5 (Krea2/Boogu — deferred, no model facts); updated MPI-139 + MPI-150 plans; committed b4a6dcf (RunPod).",
+      "Build A image built: dispatched CI cu124 leg (after a first failure — used the commit SHA for comfyui_ref; product Dockerfile `git clone --branch` needs the TAG `v0.26.0`, not a SHA; re-dispatched with the tag → SUCCESS). cu124 image v0.9.0 pushed + pull-verified. mpi-ci committed f823a99 + pushed (node_lock sync + README).",
+      "Build A live-verified on a fresh 4090 cu124 Pod: ComfyUI 0.26 boots, 8 nodes register, LTX-2.3 i2v generates a CLEAN video (dragon clip, Prompt executed). v0.26 FLOOR IS GOOD.",
+      "MPI-152 created + root-caused: v0.26 dropped the `executing node===null` terminal sentinel for `execution_success` (broadcast=False, not replayed on reconnect). The app's gallery/status completion (commandExecutor.js exec.onComplete) AND the Promise resolve (comfyController.js) both depended on the dropped sentinel → gen completes, outputs land (via `executed`), but the app never SETTLES.",
+      "4 research agents (HIGH-confidence, from v0.26 source): (1) events NOT renamed — v0.26 sends both old+new; real cause is the broadcast=False terminal not replayed on reconnect; (2) node renames #14547 = display-name only, ZERO workflow breakage; (3) /history reconciliation is the robust fix (shape documented); (4) `--lowvram` is a NO-OP when dynamic-vram/aimdo is enabled — the Pod's CPU-offloaded Gemma means aimdo is NOT initializing → reframes MPI-146.",
+      "MPI-152 FIX (3 layers, LOCAL-verified clean — user confirmed 'successful Generation'): comfyController.js (execution_success terminal + _promptResolvers + _reconcileFromHistory on WS onopen + removed temp debug); commandExecutor.js (execution_success → _finishGeneration → exec.onComplete — the fix for the VISIBLE hang); remoteProxy.js (/proxy/history/:promptId) + wrapper.py (/wrapper/history + bump 0.2.15); app POD_IMAGE_VERSION→v0.9.1 / WRAPPER_VERSION→0.2.15.",
+      "Self-verify: all 3 app files node --check clean; wrapper.py ast.parse clean; release:check PASSED; reconcile logic smoke-tested 6/6."
+    ],
+    "pending": [
+      "COMMIT this session (mpi-end-session): RunPod branch (comfyController.js, commandExecutor.js, remoteProxy.js, MPI-152 workspace, board.json) by EXPLICIT pathspec; mpi-ci main (cubric-vision-pod/wrapper/wrapper.py).",
+      "Build the v0.9.1 Pod image (wrapper 0.2.15 with /wrapper/history) — user-gated build-pod-image, cu124 (or all). REMOTE reconcile cannot be verified without it.",
+      "REMOTE verify on a fresh v0.9.1 Pod: LTX t2v + i2v settle clean; AND the reconnect-reconcile fires (look for `Reconciled completed gen <id> from /history` in logs/app.log when the WS blips mid-gen). Then MPI-152 → done.",
+      "MPI-139 → done once remote v0.26 is confirmed shippable (floor + completion).",
+      "Resume umbrella Cluster A Phase 2: MPI-145 (sage) + MPI-146 (per-card VRAM) → Build B (v0.10.0). NOTE MPI-146 reframed: investigate why aimdo/dynamic-vram is not initializing on the Pod (check ComfyUI startup stdout for `aimdo`/`dynamic`); if off, ENABLE it + DROP --lowvram rather than tune lowvram.",
+      "Then Cluster B (download stack: 129→140→136→135 — note MPI-136 stall-watchdog overlaps MPI-152's reconcile mechanism) AFTER A commits; Cluster C (128,147) independent."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-152",
+    "title": "v0.26 WS-event protocol regression — remote gen completes but app hangs (executing-null→execution_success)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-152/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-152/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-152/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-152/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-152 research/live-evidence.md + research/findings-synthesis.md hold the corrected root cause (NOT an event rename — broadcast=False terminal + reconnect), the /history shape, the node-rename = no-breakage finding, and the aimdo-not-initializing finding.",
+      "MPI-152 validation.md records the 3-layer fix + the LOCAL PASS; checklist.md tracks done vs pending.",
+      "MPI-139 plan.md + MPI-150 plan.md updated (Krea2/Boogu removed, conflict matrix fixed, drift notes).",
+      "mpi-ci cubric-vision-pod/README.md updated to v0.9.0 shipped tag (NOTE: needs a follow-up bump to v0.9.1 for the wrapper 0.2.15 /history change when that image ships)."
+    ],
+    "pending": [
+      "docs/gotchas.md (add via mpi-end): (a) ComfyUI v0.26 product-Pod Dockerfile uses `git clone --branch ${COMFYUI_REF}` → MUST pass node_lock core.TAG (v0.26.0), NOT the commit SHA (clone --branch rejects a SHA, exit 128); the Builder Dockerfile `git checkout` takes the SHA. (b) v0.26 dropped the `executing node===null` terminal → completion is `execution_success` (broadcast=False, not replayed on reconnect); the app needs BOTH terminal handlers + /history reconcile. (c) v0.26 `--lowvram` is a NO-OP when dynamic-vram (aimdo) is enabled; CPU-offloaded encoder on the Pod = aimdo not initializing — the real MPI-146 lever. (d) v0.26 node renames #14547 = display-name only, class_types unchanged (no workflow breakage). (e) `model_type FLUX` log line for LTX = normal (DiT arch class).",
+      "mpi-ci README → v0.9.1 shipped-tag update when the wrapper-0.2.15 image is built.",
+      "Remove the pre-existing MpiGalleryBlock `TEMP-DEBUG B` logging (NOT this session's — predates it; flag, don't silently delete)."
+    ]
+  },
+  "next_action": {
+    "description": "Run mpi-end-session to commit this session (RunPod branch + mpi-ci, explicit pathspec) and add the docs/gotchas.md entries. THEN build the v0.9.1 Pod image (user-gated build-pod-image, cu124, wrapper 0.2.15) and verify REMOTE: a fresh v0.9.1 Pod settles an LTX t2v + i2v clean, and the reconnect-reconcile fires (`Reconciled completed gen` in logs/app.log on a WS blip). Then MPI-152 + MPI-139 → done, and resume umbrella Cluster A Phase 2 (MPI-145 sage + MPI-146 VRAM/aimdo → Build B v0.10.0). Read MPI-152 validation.md + research/findings-synthesis.md + MPI-150 plan.md first.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Two-build order KEPT (user): Build A = bare v0.26 floor (v0.9.0, stability gate); Build B = sage+VRAM (v0.10.0). Krea2/Boogu removed from MPI-139 (no model facts; future onboarding card).",
+      "MPI-152 fix is engine-version-AGNOSTIC: accept both the legacy `executing node===null` AND the v0.26 `execution_success` terminal in BOTH handlers; the /history reconcile is belt-and-suspenders for reconnect-lost terminals.",
+      "Stopped reactive single-symptom patching mid-session (user's call) and fanned out 4 research agents — corrected a WRONG initial theory (event-rename) to the real cause (broadcast=False terminal + reconnect). Lesson: research-first on cross-version protocol breaks.",
+      "Triton (local Windows PatchTritonVAE import error) = cosmetic, NOT fixed: we don't use PatchTritonVAE (LTX uses standard VideoVAE); fixing risks embedded-python crash + the 2x-Windows-slowdown gotcha for zero gain. Deferred.",
+      "MPI-146 reframed by research: the slow Pod load is aimdo/dynamic-vram NOT initializing (CPU-offloaded encoder), not a lowvram-tuning problem. --lowvram is a no-op when aimdo is on."
+    ],
+    "constraints": [
+      "RunPod branch only — NO master merge / GitHub release / git tag (MPI-131) until the public master release.",
+      "Shared git tree — commit by EXPLICIT pathspec (git commit --only <paths> or git add <explicit paths>), never git add -A/.; untracked files need explicit git add first.",
+      "mpi-ci is a SEPARATE repo — edit/commit with `git -C c:/AI/Mpi/mpi-ci`. Pushing mpi-ci is part of the build flow (CI builds the pushed ref). The DOCS-website push block does NOT apply to mpi-ci.",
+      "Pod ops + image builds are USER-GATED. build-pod-image: cu124+cpu via CI, cu128 LOCAL-only. `<ver>`/`<wver>` are BARE numbers (no v prefix). comfyui_ref = the node_lock core.TAG (v0.26.0), NOT the commit SHA (product Dockerfile clone --branch).",
+      "A POD_IMAGE_VERSION/WRAPPER_VERSION bump needs an APP RESTART (Express child bakes them at boot) + a FRESH Pod.",
+      "The warm test Pod (vnque097lez1tt) was DELETED — remote verify needs a fresh v0.9.1 Pod.",
+      "kornia stays pinned 0.8.2 (MPI-149, code-verified; live-verify still pending on a real engine-upgrade — rides the next Pod)."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js (execution_success terminal + _promptResolvers + _reconcileFromHistory + onopen hook; temp debug removed)",
+      "js/services/commandExecutor.js (_finishGeneration + execution_success terminal → exec.onComplete)",
+      "routes/remoteProxy.js (POD_IMAGE_VERSION v0.9.1 / WRAPPER_VERSION 0.2.15; /proxy/history/:promptId)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (/wrapper/history + version 0.2.15 + docstring)",
+      ".agents/mpi-kanban/tasks/MPI-152/ (task.json, brief.md, checklist.md, validation.md, research/live-evidence.md, research/findings-synthesis.md, events.jsonl)",
+      ".agents/mpi-kanban/board.json (MPI-152 added to doing; next_id), events.jsonl",
+      "(already committed b4a6dcf: remoteProxy v0.9.0 + MPI-139/MPI-150 plans; mpi-ci f823a99: node_lock + README)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-152/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-152/research/findings-synthesis.md",
+      ".agents/mpi-kanban/tasks/MPI-152/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-150/plan.md",
+      "routes/remoteProxy.js (POD_IMAGE_VERSION/WRAPPER_VERSION + /proxy/history)",
+      ".claude/commands/build-pod-image.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["RunPod/remote engine", "Pod/mpi-ci", "ComfyUI engine", "LTX-2.3 authoring"]
+  },
+  "rules_active": [
+    "CLAUDE.md (RunPod branch discipline; shared-tree commit hygiene; mpi-ci is a separate repo via git -C)",
+    ".claude/rules/comfy_engine.md",
+    ".claude/commands/build-pod-image.md (Build A/B flow; comfyui_ref = TAG not SHA)",
+    "docs/gotchas.md (RunPod/remote, ComfyUI engine, LTX)"
+  ],
+  "recent_events": [
+    {"at": "2026-06-26T15:35:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming the Cubric Vision RunPod-branch umbrella plan (MPI-150, Cluster A) in c:/AI/Mpi/Cubric-Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/5839b51d-54b1-4969-b1ae-cd6b060471bb.json then use mpi-continue. STATUS: The v0.26.0 floor (MPI-139) Build A (image v0.9.0, cu124) was built + live-verified on a fresh 4090 Pod — LTX-2.3 generates clean on v0.26. Live testing then surfaced a v0.26 regression (MPI-152): gens COMPLETE on the engine but the app HANGS (gallery card spins, clock counts, status stuck) — because v0.26 dropped the `executing node===null` terminal WS event for `execution_success` (broadcast=False, NOT replayed on reconnect), and the app's completion paths depended on the dropped sentinel. Root-caused with 4 research agents (events were NOT renamed; node renames = no breakage; /history is the robust reconcile; and --lowvram is a no-op under dynamic-vram so the slow Pod load = aimdo not initializing, reframing MPI-146). FIXED across 3 layers and LOCAL-verified clean (user confirmed): js/services/comfyController.js (execution_success terminal + _promptResolvers + _reconcileFromHistory on reconnect), js/services/commandExecutor.js (execution_success → _finishGeneration → exec.onComplete — the visible-hang fix), routes/remoteProxy.js (/proxy/history + POD_IMAGE_VERSION v0.9.1 / WRAPPER_VERSION 0.2.15), and mpi-ci cubric-vision-pod/wrapper/wrapper.py (/wrapper/history + bump 0.2.15). ALL WORK IS UNCOMMITTED. NEXT: run mpi-end-session to commit (RunPod branch + mpi-ci via git -C, EXPLICIT pathspec — shared tree; untracked files need explicit git add) and add the docs/gotchas.md entries (clone --branch needs the TAG not the SHA; the execution_success terminal change; --lowvram no-op under aimdo; node-renames = no breakage; model_type FLUX is normal). THEN build the v0.9.1 Pod image (user-gated build-pod-image, cu124, wrapper 0.2.15 — comfyui_ref = node_lock core.TAG v0.26.0, NOT the SHA) and verify REMOTE on a fresh Pod (the warm test Pod was deleted): LTX t2v + i2v settle clean and the reconnect-reconcile fires (`Reconciled completed gen <id> from /history` in logs/app.log on a WS blip). Then MPI-152 + MPI-139 → done and resume Cluster A Phase 2 (MPI-145 sage + MPI-146 VRAM/aimdo → Build B v0.10.0). GOTCHAS: RunPod branch ONLY (no master/release/tag — MPI-131); shared tree → explicit pathspec; mpi-ci is a separate repo (git -C, push IS part of the build flow); image builds + Pod ops are user-gated; an image/wrapper version bump needs an app restart + fresh Pod; kornia stays 0.8.2; comfy-kitchen is a confirmed non-issue. Brief before code."
+}

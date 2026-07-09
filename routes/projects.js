@@ -12,6 +12,8 @@
  *   DELETE /project-media/:projectId/:filename
  *   GET    /project-media/:projectId/download/:filename
  *   POST   /project-media/:projectId/update-meta
+ *   POST   /project-notes
+ *   POST   /project-notes/save
  *   POST   /project-media/:projectId/upload
  *   POST   /project-data/:projectId/upload
  *   GET    /project-file
@@ -23,6 +25,7 @@ const express = require('express');
 const router = express.Router();
 const fs     = require('fs-extra');
 const path   = require('path');
+const crypto = require('crypto');
 const util = require('util');
 const { execFile } = require('child_process');
 const logger = require('./logger');
@@ -32,6 +35,7 @@ const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
+const { muxAudioIntoVideo } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
 
 const projectJsonQueues = new Map();
@@ -82,7 +86,9 @@ function pathFromProjectFileUrl(value) {
 }
 
 function mediaTypeFromExt(ext) {
-    return ['mp4', 'webm'].includes(ext) ? 'video' : 'image';
+    if (['mp4', 'webm'].includes(ext)) return 'video';
+    if (['mp3', 'wav', 'flac', 'm4a', 'ogg', 'aac', 'opus'].includes(ext)) return 'audio';
+    return 'image';
 }
 
 async function findRecentProjectThumbnail(mediaDir) {
@@ -256,6 +262,160 @@ function snapshotExt(sourceUrl) {
     return ext && ext.length <= 8 ? ext : '.png';
 }
 
+function computeFileSha256(filePath) {
+    return new Promise((resolve, reject) => {
+        const hash = crypto.createHash('sha256');
+        const stream = fs.createReadStream(filePath);
+        stream.on('data', (chunk) => hash.update(chunk));
+        stream.on('end', () => resolve(hash.digest('hex')));
+        stream.on('error', reject);
+    });
+}
+
+/**
+ * Content-addressed preview-assets store (MPI-227). Materializes `sourceUrl`
+ * into a temp file (reusing copySnapshotSource), hashes the bytes, and places
+ * the content at a FLAT, deduped, PERMANENT path: `Media/.preview-assets/<sha256><ext>`.
+ * Identical bytes collapse to ONE file (reuse 100× = 1 file). Nothing here ever
+ * deletes — only the manual Cleanup command wipes the store.
+ *
+ * @param {string} sourceUrl  data:/project-file/http(s)/local path (copySnapshotSource inputs)
+ * @param {string} ext        file extension incl. leading dot (from snapshotExt)
+ * @param {string} mediaDir   project Media dir
+ * @param {string} projectRoot project root for relativePath
+ * @returns {Promise<{filePath, relativePath, absPath, sha256}>}
+ */
+async function placeContentAsset(sourceUrl, ext, mediaDir, projectRoot) {
+    const storeDir = path.join(mediaDir, '.preview-assets');
+    await fs.ensureDir(storeDir);
+    const tmpPath = path.join(storeDir, `.tmp-${process.pid}-${uuidv4()}${ext}`);
+    try {
+        await copySnapshotSource(sourceUrl, tmpPath);
+        const sha256 = await computeFileSha256(tmpPath);
+        const absPath = path.join(storeDir, `${sha256}${ext}`);
+        if (await fs.pathExists(absPath)) {
+            await fs.remove(tmpPath).catch(() => {});
+        } else {
+            await fs.move(tmpPath, absPath, { overwrite: true });
+        }
+        return {
+            filePath: projectFileUrl(absPath),
+            relativePath: relativeProjectPath(projectRoot, absPath),
+            absPath,
+            sha256,
+        };
+    } catch (err) {
+        await fs.remove(tmpPath).catch(() => {});
+        throw err;
+    }
+}
+
+// Normalize an abs path for cross-sidecar comparison (Windows: separators + case).
+function _normAbs(p) {
+    return path.resolve(String(p || '')).replace(/\\/g, '/').toLowerCase();
+}
+
+/**
+ * MPI-227 one-time migration: flatten + dedup the legacy per-item
+ * `Media/.preview-assets/<itemId>/<file>` layout into the content-addressed flat
+ * store `Media/.preview-assets/<sha256><ext>`, then rewrite every sidecar ref
+ * (previewAssets.snapshots[], generationSettings.mediaItems[],
+ * frozenParams.mediaItems[]) that pointed at an old per-item path. Idempotent —
+ * guarded by a `.migrated-v1` marker and skips if no per-item folders exist.
+ */
+async function migratePreviewAssetsStore(folderPath) {
+    const mediaDir = path.join(folderPath, 'Media');
+    const storeDir = path.join(mediaDir, '.preview-assets');
+    const marker = path.join(storeDir, '.migrated-v1');
+    if (!(await fs.pathExists(storeDir))) return { migrated: false };
+    if (await fs.pathExists(marker)) return { migrated: false };
+
+    // 1. Find per-item subfolders (a legacy folder is a dir whose name is not a bare sha file).
+    const entries = await fs.readdir(storeDir, { withFileTypes: true });
+    const itemDirs = entries.filter(e => e.isDirectory());
+    if (!itemDirs.length) {
+        await fs.writeFile(marker, `${new Date().toISOString()}\n`, 'utf8').catch(() => {});
+        return { migrated: false };
+    }
+
+    // 2. Flatten + dedup every file; build oldAbs(normalized) -> new flat abs path map.
+    const remap = new Map();
+    for (const dir of itemDirs) {
+        const subdir = path.join(storeDir, dir.name);
+        let files;
+        try { files = await fs.readdir(subdir); } catch { continue; }
+        for (const name of files) {
+            const oldAbs = path.join(subdir, name);
+            try {
+                const stat = await fs.stat(oldAbs);
+                if (!stat.isFile()) continue;
+                const ext = path.extname(name).toLowerCase() || '.png';
+                const sha256 = await computeFileSha256(oldAbs);
+                const newAbs = path.join(storeDir, `${sha256}${ext}`);
+                if (!(await fs.pathExists(newAbs))) {
+                    await fs.move(oldAbs, newAbs, { overwrite: true });
+                } else {
+                    await fs.remove(oldAbs).catch(() => {});
+                }
+                remap.set(_normAbs(oldAbs), newAbs);
+            } catch (err) {
+                logger.warn('project', `preview-assets migration: skip ${oldAbs}: ${err.message}`);
+            }
+        }
+        await fs.remove(subdir).catch(() => {});
+    }
+
+    // 3. Rewrite sidecar refs. A ref string is a /project-file?path= URL (or abs path)
+    //    pointing at an old per-item file → swap in the flat SHA path.
+    function rewriteRef(value) {
+        const abs = decodeProjectFilePath(value) || (path.isAbsolute(String(value || '')) ? String(value) : null);
+        if (!abs) return null;
+        const hit = remap.get(_normAbs(abs));
+        return hit ? projectFileUrl(hit) : null;
+    }
+
+    const metaDir = path.join(mediaDir, '.meta');
+    let rewrote = 0;
+    if (await fs.pathExists(metaDir)) {
+        const metaFiles = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        for (const mf of metaFiles) {
+            const metaPath = path.join(metaDir, mf);
+            try {
+                await updateItemMeta(metaPath, (meta) => {
+                    let changed = false;
+
+                    for (const snap of (meta?.previewAssets?.snapshots || [])) {
+                        const next = rewriteRef(snap.filePath) || rewriteRef(snap.relativePath && path.join(folderPath, snap.relativePath));
+                        if (next) {
+                            const abs = decodeProjectFilePath(next);
+                            snap.filePath = next;
+                            snap.relativePath = relativeProjectPath(folderPath, abs);
+                            snap.filename = path.basename(abs);
+                            changed = true;
+                        }
+                    }
+                    for (const bag of [meta?.generationSettings?.mediaItems, meta?.frozenParams?.mediaItems]) {
+                        for (const item of (bag || [])) {
+                            const nextUrl = rewriteRef(item.url);
+                            const nextFp = rewriteRef(item.filePath);
+                            if (nextUrl) { item.url = nextUrl; changed = true; }
+                            if (nextFp) { item.filePath = nextFp; changed = true; }
+                        }
+                    }
+                    if (changed) rewrote++;
+                    return meta;
+                });
+            } catch (err) {
+                logger.warn('project', `preview-assets migration: sidecar rewrite failed ${mf}: ${err.message}`);
+            }
+        }
+    }
+
+    await fs.writeFile(marker, `${new Date().toISOString()}\n`, 'utf8').catch(() => {});
+    logger.info('project', `preview-assets migrated to flat store: ${remap.size} files, ${rewrote} sidecars rewritten`);
+    return { migrated: true, files: remap.size, sidecars: rewrote };
+}
+
 function resolveComfyOutputFile(fileInfo) {
     if (!fileInfo?.filename) return null;
     const engineRoot = getEngineRoot();
@@ -268,7 +428,25 @@ function resolveComfyOutputFile(fileInfo) {
     return safeJoinInside(root, fileInfo.subfolder || '', fileInfo.filename);
 }
 
-async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, frozenParams, previewAssets }) {
+// Build a ComfyUI /view URL for a given output file by reusing the proven
+// comfyViewUrl base (origin + /view path — the local proxy in remote mode, which
+// attaches the wrapper token server-side) and swapping in this file's params.
+// Returns null when there is no usable base.
+function buildViewUrlFromBase(comfyViewUrl, fileInfo) {
+    if (!comfyViewUrl || !fileInfo?.filename) return null;
+    try {
+        const base = new URL(comfyViewUrl);
+        const u = new URL(base.origin + base.pathname); // keep host + /view path
+        u.searchParams.set('filename', fileInfo.filename);
+        u.searchParams.set('type', fileInfo.type || 'output');
+        if (fileInfo.subfolder) u.searchParams.set('subfolder', fileInfo.subfolder);
+        return u.href;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, frozenParams, previewAssets, comfyViewUrl }) {
     if (stage !== 'preview' || !previewAssets) {
         return { frozenParams, previewAssets: null };
     }
@@ -283,18 +461,34 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
         : [];
 
     const latentDir = path.join(mediaDir, '.latents');
-    const latentInfo = previewAssets.latent;
-    if (latentInfo?.filename) {
+    await fs.ensureDir(latentDir);
+
+    // Pull one SaveLatent output into the project's .latents/ folder. `filename` is
+    // the project-side basename (also the engineInputName re-staged on Continue/Finish);
+    // it must be unique per role so the video + audio latents (LTX dual-latent, MPI-128)
+    // don't collide on disk.
+    async function _materializeLatent(latentInfo, filename) {
+        if (!latentInfo?.filename) {
+            return { status: 'missing', error: 'SaveLatent output was not reported by ComfyUI' };
+        }
         const sourcePath = resolveComfyOutputFile(latentInfo);
-        const filename = `${itemId}.latent`;
         const targetPath = path.join(latentDir, filename);
         try {
-            if (!sourcePath || !(await fs.pathExists(sourcePath))) {
-                throw new Error(sourcePath ? `Latent source missing: ${sourcePath}` : 'Latent source missing');
+            const hasLocal = sourcePath && (await fs.pathExists(sourcePath));
+            if (hasLocal) {
+                // Local engine: the SaveLatent output is on disk — move it in.
+                await fs.move(sourcePath, targetPath, { overwrite: true });
+            } else {
+                // Remote engine: the latent lives on the Pod, not local disk.
+                // Stream it from the wrapper via the same authed /view base the
+                // video output uses (mirrors line ~1398's streamDownload).
+                const latentUrl = buildViewUrlFromBase(comfyViewUrl, latentInfo);
+                if (!latentUrl) {
+                    throw new Error(sourcePath ? `Latent source missing: ${sourcePath}` : 'Latent source missing');
+                }
+                await streamDownload(latentUrl, targetPath);
             }
-            await fs.ensureDir(latentDir);
-            await fs.move(sourcePath, targetPath, { overwrite: true });
-            result.latent = {
+            return {
                 filename,
                 relativePath: relativeProjectPath(projectRoot, targetPath),
                 filePath: projectFileUrl(targetPath),
@@ -304,41 +498,34 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
             };
         } catch (err) {
             logger.warn('project', 'preview latent materialization failed', err.message);
-            result.latent = {
-                engineInputName: filename,
-                source: latentInfo,
-                status: 'missing',
-                error: err.message,
-            };
+            return { engineInputName: filename, source: latentInfo, status: 'missing', error: err.message };
         }
-    } else {
-        result.latent = {
-            status: 'missing',
-            error: 'SaveLatent output was not reported by ComfyUI',
-        };
     }
+
+    result.latent = await _materializeLatent(previewAssets.latent, `${itemId}.latent`);
+    // Audio latent (LTX dual-latent). Only present when the workflow saved a
+    // second, audio-role latent; WAN previews have none → audioLatent stays null.
+    result.audioLatent = previewAssets.audioLatent
+        ? await _materializeLatent(previewAssets.audioLatent, `${itemId}.audio.latent`)
+        : null;
 
     const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
     if (snapshotRequests.length) {
-        const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-        await fs.ensureDir(snapshotDir);
-
         for (const request of snapshotRequests) {
             if (!request?.url || (request.role !== 'startFrame' && request.role !== 'endFrame')) continue;
             const ext = snapshotExt(request.url);
-            const filename = `${request.role}${ext}`;
-            const targetPath = path.join(snapshotDir, filename);
             const meta = {
                 role: request.role,
                 mediaType: request.mediaType || 'image',
                 originalUrl: request.url,
-                filename,
-                relativePath: relativeProjectPath(projectRoot, targetPath),
-                filePath: projectFileUrl(targetPath),
                 status: 'available',
             };
             try {
-                await copySnapshotSource(request.url, targetPath);
+                // MPI-227: content-addressed flat store — dedup by bytes, permanent.
+                const placed = await placeContentAsset(request.url, ext, mediaDir, projectRoot);
+                meta.filename = path.basename(placed.absPath);
+                meta.relativePath = placed.relativePath;
+                meta.filePath = placed.filePath;
             } catch (err) {
                 logger.warn('project', 'preview snapshot materialization failed', err.message);
                 meta.status = 'missing';
@@ -397,9 +584,6 @@ async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, item
         .filter(({ item }) => item?.mediaType === 'image' && (item.url || item.filePath));
     if (!imageItems.length) return { generationSettings, previewAssets: null };
 
-    const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-    await fs.ensureDir(snapshotDir);
-
     const snapshots = [];
     const usedRoles = new Set();
     for (const { item, index } of imageItems) {
@@ -409,20 +593,19 @@ async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, item
 
         const sourceUrl = item.url || item.filePath;
         const ext = snapshotExt(sourceUrl);
-        const filename = `${role}${ext}`;
-        const targetPath = path.join(snapshotDir, filename);
         const meta = {
             role,
             mediaType: 'image',
             originalUrl: sourceUrl,
-            filename,
-            relativePath: relativeProjectPath(projectRoot, targetPath),
-            filePath: projectFileUrl(targetPath),
             status: 'available',
         };
 
         try {
-            await copySnapshotSource(sourceUrl, targetPath);
+            // MPI-227: content-addressed flat store — dedup by bytes, permanent.
+            const placed = await placeContentAsset(sourceUrl, ext, mediaDir, projectRoot);
+            meta.filename = path.basename(placed.absPath);
+            meta.relativePath = placed.relativePath;
+            meta.filePath = placed.filePath;
             mediaItems[index] = {
                 ...mediaItems[index],
                 role,
@@ -703,6 +886,37 @@ router.post('/delete-project', async (req, res) => {
     }
 });
 
+// MPI-227: manual Cleanup — the ONLY GC for the content-addressed preview-assets
+// store. Wipes every content file under Media/.preview-assets/ (the deduped reuse
+// frames), preserving the `.migrated-v1` marker so a re-open stays migrated. Media
+// outputs, sidecars (.meta), and latents (.latents) are untouched. After cleanup a
+// reuse that resolves to a now-missing frame soft-fails to a warning toast.
+router.post('/project/cleanup-assets', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        const jsonPath = path.join(folderPath, 'project.json');
+        if (!(await fs.pathExists(jsonPath))) {
+            return res.status(400).json({ success: false, error: 'Not a project folder (no project.json)' });
+        }
+
+        const storeDir = path.join(folderPath, 'Media', '.preview-assets');
+        let removed = 0;
+        if (await fs.pathExists(storeDir)) {
+            for (const entry of await fs.readdir(storeDir)) {
+                if (entry === '.migrated-v1') continue;
+                await fs.remove(path.join(storeDir, entry)).catch(() => {});
+                removed++;
+            }
+        }
+        logger.info('project', `cleanup-assets: removed ${removed} preview-asset entries`);
+        res.json({ success: true, removed });
+    } catch (err) {
+        logger.error('project', 'cleanup-assets error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ── Media Library ─────────────────────────────────────────────────────────────
 
 router.get('/project-media/:projectId', async (req, res) => {
@@ -818,19 +1032,23 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                 catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
             }
 
-            // Support-asset cleanup: drop any saved stage-1 latent and durable
-            // start/end-frame snapshots owned by this item. Preview and final
-            // I2V cards can both own `.preview-assets/<itemId>/` folders.
-            const latentPath = path.join(mediaDir, '.latents', `${itemId}.latent`);
-            if (hasSupportAssets && await fs.pathExists(latentPath)) {
-                try { await fs.remove(latentPath); }
-                catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
+            // Support-asset cleanup: drop any saved stage-1 latent owned by this
+            // item. Both the video latent and the LTX audio latent (MPI-128, may
+            // be absent). Latents stay per-item (STAGE-2 support, not reuse media,
+            // non-deterministic → no dedup benefit) so deleting a preview frees its
+            // latent — that is correct (MPI-227 scope boundary).
+            for (const latentName of [`${itemId}.latent`, `${itemId}.audio.latent`]) {
+                const latentPath = path.join(mediaDir, '.latents', latentName);
+                if (hasSupportAssets && await fs.pathExists(latentPath)) {
+                    try { await fs.remove(latentPath); }
+                    catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
+                }
             }
-            const snapshotDir = path.join(mediaDir, '.preview-assets', itemId);
-            if (await fs.pathExists(snapshotDir)) {
-                try { await fs.remove(snapshotDir); }
-                catch (e) { logger.warn('project', 'preview snapshot dir remove failed', e.message); }
-            }
+            // MPI-227: preview-assets are now a content-addressed, deduped, PERMANENT
+            // store — a frame may be shared by many cards (reuse), so card-delete must
+            // NOT touch it. The old per-item `.preview-assets/<itemId>/` folder delete
+            // (the reuse-404 root, MPI-225 band-aided) is removed. Only the manual
+            // Cleanup command wipes the flat store.
         }
 
         // Delete the legacy filename-based .meta/ sidecar
@@ -888,11 +1106,11 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
         const frozenParams  = sidecar.frozenParams || null;
         const missing       = [];
 
-        // Latent
-        let latentStatus = 'missing';
-        let latentDiskPath = null;
-        const latentInfo = previewAssets.latent;
-        if (latentInfo?.engineInputName || latentInfo?.filename || latentInfo?.filePath || latentInfo?.relativePath) {
+        // Stat one latent sidecar entry against disk. Returns {status, diskPath}.
+        async function _statLatent(latentInfo, defaultFilename) {
+            if (!(latentInfo?.engineInputName || latentInfo?.filename || latentInfo?.filePath || latentInfo?.relativePath)) {
+                return { status: 'missing', diskPath: null };
+            }
             const candidates = [];
             if (latentInfo.filePath) {
                 const decoded = decodeProjectFilePath(latentInfo.filePath);
@@ -901,18 +1119,28 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             if (latentInfo.relativePath) {
                 candidates.push(path.join(folderPath, latentInfo.relativePath));
             }
-            const filename = latentInfo.filename || latentInfo.engineInputName || `${itemId}.latent`;
+            const filename = latentInfo.filename || latentInfo.engineInputName || defaultFilename;
             candidates.push(path.join(mediaDir, '.latents', filename));
-
             for (const candidate of candidates) {
-                if (await fs.pathExists(candidate)) {
-                    latentStatus  = 'available';
-                    latentDiskPath = candidate;
-                    break;
-                }
+                if (await fs.pathExists(candidate)) return { status: 'available', diskPath: candidate };
             }
+            return { status: 'missing', diskPath: null };
         }
+
+        // Video latent (always required for the fast path).
+        const latentInfo = previewAssets.latent;
+        const _videoStat = await _statLatent(latentInfo, `${itemId}.latent`);
+        const latentStatus = _videoStat.status;
+        const latentDiskPath = _videoStat.diskPath;
         if (latentStatus !== 'available') missing.push({ kind: 'latent' });
+
+        // Audio latent (LTX dual-latent, MPI-128). Only gates the fast path when the
+        // sidecar declares one — WAN previews carry none. A declared-but-missing audio
+        // latent blocks the fast path (stage-2 would fail validation on its LoadLatent).
+        const audioLatentInfo = previewAssets.audioLatent;
+        const hasAudioLatent = !!(audioLatentInfo?.engineInputName || audioLatentInfo?.filename || audioLatentInfo?.filePath || audioLatentInfo?.relativePath);
+        const _audioStat = hasAudioLatent ? await _statLatent(audioLatentInfo, `${itemId}.audio.latent`) : { status: 'n/a', diskPath: null };
+        if (hasAudioLatent && _audioStat.status !== 'available') missing.push({ kind: 'audio-latent' });
 
         // Snapshots (I2V only — T2V sidecars carry empty/no snapshots array)
         const snapshotResults = [];
@@ -930,6 +1158,9 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
                 candidates.push(path.join(folderPath, snap.relativePath));
             }
             if (snap.filename) {
+                // MPI-227: flat content-addressed store (filename === <sha><ext>).
+                candidates.push(path.join(mediaDir, '.preview-assets', snap.filename));
+                // Legacy per-item fallback (pre-migration sidecars).
                 candidates.push(path.join(mediaDir, '.preview-assets', itemId, snap.filename));
             }
             for (const candidate of candidates) {
@@ -956,7 +1187,7 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             && typeof frozenParams.dims.w === 'number'
             && typeof frozenParams.dims.h === 'number');
 
-        const canFastPath = latentStatus === 'available';
+        const canFastPath = latentStatus === 'available' && (!hasAudioLatent || _audioStat.status === 'available');
         // Cold fallback requires frozenParams + all declared snapshots present.
         // For T2V, snapshotRequests is empty, so snapshots condition is trivially true.
         const allSnapshotsPresent = snapshotResults.every(s => s.status === 'available');
@@ -970,6 +1201,9 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             canColdFallback,
             blocked,
             latent: { status: latentStatus, filePath: latentDiskPath ? projectFileUrl(latentDiskPath) : null, engineInputName: latentInfo?.engineInputName || `${itemId}.latent` },
+            audioLatent: hasAudioLatent
+                ? { status: _audioStat.status, filePath: _audioStat.diskPath ? projectFileUrl(_audioStat.diskPath) : null, engineInputName: audioLatentInfo?.engineInputName || `${itemId}.audio.latent` }
+                : null,
             snapshots: snapshotResults,
             frozenComplete,
             missing,
@@ -1018,6 +1252,44 @@ router.post('/project-media/:projectId/update-meta', async (req, res) => {
     }
 });
 
+// ── Project notes (project.md sidecar) ──────────────────────────────────────
+// project.md lives next to project.json (created at project creation). These
+// two routes read/write it for the in-app notes editor. Folder must hold a
+// project.json (same safety guard as delete-project) before we touch it.
+router.post('/project-notes', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        const notesPath = path.join(folderPath, 'project.md');
+        let notes = '';
+        if (await fs.pathExists(notesPath)) {
+            notes = await fs.readFile(notesPath, 'utf8');
+        }
+        res.json({ success: true, notes });
+    } catch (err) {
+        logger.error('project', 'read project notes failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+router.post('/project-notes/save', async (req, res) => {
+    try {
+        const { folderPath, notes } = req.body;
+        if (!folderPath || typeof notes !== 'string') {
+            return res.status(400).json({ success: false, error: 'folderPath and notes (string) required' });
+        }
+        // Safety: only write inside an actual project folder.
+        if (!(await fs.pathExists(path.join(folderPath, 'project.json')))) {
+            return res.status(400).json({ success: false, error: 'Refusing to write: no project.json in target folder' });
+        }
+        await fs.writeFile(path.join(folderPath, 'project.md'), notes);
+        res.json({ success: true });
+    } catch (err) {
+        logger.error('project', 'save project notes failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/project-media/:projectId/upload', async (req, res) => {
     try {
         const { folderPath } = req.query;
@@ -1060,7 +1332,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const metaPath = path.join(metaDir, `${id}.json`);
         const metaContent = {
             id,
-            type:           mediaType === 'video' ? 'video' : 'image',
+            type:           mediaType === 'video' ? 'video' : mediaType === 'audio' ? 'audio' : 'image',
             filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
             operation:      req.body.operation || 'imported',
             displayName:    finalFileName.replace(/\.[^.]+$/, ''),
@@ -1081,9 +1353,6 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 metaContent.duration   = v.duration;
                 metaContent.frameCount = v.frameCount;
                 metaContent.hasAudio   = v.hasAudio;
-                metaContent.videoMeta  = {
-                    fps: v.fps, duration: v.duration, frameCount: v.frameCount, hasAudio: v.hasAudio,
-                };
                 if (!metaContent.pixelDimensions.w && v.width)  metaContent.pixelDimensions.w = v.width;
                 if (!metaContent.pixelDimensions.h && v.height) metaContent.pixelDimensions.h = v.height;
             }
@@ -1093,9 +1362,26 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             if (thumbed) {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
+        } else if (mediaType === 'audio') {
+            // Audio: no frames/dimensions/thumb — render an icon card.
+            // ponytail: no duration probe — probeVideo returns null without a
+            // video stream; add a dedicated audio probe if the card must show length.
+            metaContent.thumbPath = null;
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
-        res.json({ success: true, filePath, filename: finalFileName, itemId: id, thumbPath: metaContent.thumbPath || null });
+        res.json({
+            success: true,
+            filePath,
+            filename: finalFileName,
+            itemId: id,
+            thumbPath: metaContent.thumbPath || null,
+            // Video probe results so the client shows fps/duration immediately
+            // without waiting for a reload + sidecar reconcile (MPI-83 Bug 2).
+            fps:        metaContent.fps        ?? null,
+            duration:   metaContent.duration   ?? null,
+            frameCount: metaContent.frameCount ?? null,
+            hasAudio:   metaContent.hasAudio   ?? null,
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -1111,7 +1397,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
  * POST /project-media/:projectId/probe-videos
  * Body: { folderPath }
  * Scans Media/ for video files, probes any whose sidecar lacks fps, and patches
- * the sidecar with { fps, duration, frameCount, hasAudio, videoMeta }.
+ * the sidecar with { fps, duration, frameCount, hasAudio }.
  * Returns { patched: number, total: number }.
  */
 router.post('/project-media/:projectId/probe-videos', async (req, res) => {
@@ -1152,7 +1438,6 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
             meta.duration   = v.duration;
             meta.frameCount = v.frameCount;
             meta.hasAudio   = v.hasAudio;
-            meta.videoMeta  = { fps: v.fps, duration: v.duration, frameCount: v.frameCount, hasAudio: v.hasAudio };
             if (meta.pixelDimensions) {
                 if (!meta.pixelDimensions.w && v.width)  meta.pixelDimensions.w = v.width;
                 if (!meta.pixelDimensions.h && v.height) meta.pixelDimensions.h = v.height;
@@ -1323,7 +1608,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1397,6 +1682,29 @@ router.post('/project/save-generation', async (req, res) => {
         // Download from ComfyUI server-side
         await streamDownload(comfyViewUrl, filePath);
 
+        // Split video/audio output (B3): a video workflow saves VIDEO (no audio)
+        // + AUDIO as two separate files (the single "Output" VHS_VideoCombine,
+        // whose nvenc encode fails on the Blackwell Pod, is replaced by
+        // "Output_Video" SaveVideo + an optional "Output_Audio" SaveAudio). When
+        // the workflow produced audio, mux it into the just-downloaded video here
+        // (video is master, stream-copied — no re-encode, encoder/GPU-agnostic).
+        // audioViewUrl is a ready /view URL (same authed proxy base in remote
+        // mode). On any failure, keep the silent video rather than fail the save.
+        if (isVideo && audioViewUrl) {
+            const tmpAudio = path.join(mediaDir, `.tmp_audio_${id}.mp3`);
+            const tmpMuxed = path.join(mediaDir, `.tmp_muxed_${id}.${ext}`);
+            try {
+                await streamDownload(audioViewUrl, tmpAudio);
+                await muxAudioIntoVideo(filePath, tmpAudio, tmpMuxed);
+                await fs.move(tmpMuxed, filePath, { overwrite: true });
+            } catch (muxErr) {
+                logger.warn('project', `audio mux failed for ${id} — keeping silent video: ${muxErr.message}`);
+            } finally {
+                await fs.remove(tmpAudio).catch(() => {});
+                await fs.remove(tmpMuxed).catch(() => {});
+            }
+        }
+
         let materializedFrozenParams = frozenParams;
         let materializedPreviewAssets = null;
         let materializedGenerationSettings = (meta.generationSettings && typeof meta.generationSettings === 'object')
@@ -1410,21 +1718,28 @@ router.post('/project/save-generation', async (req, res) => {
                 stage,
                 frozenParams,
                 previewAssets,
+                comfyViewUrl,
             });
             materializedFrozenParams = materialized.frozenParams;
             materializedPreviewAssets = materialized.previewAssets;
+        }
 
-            const generationSnapshots = await materializeGenerationFrameSnapshots({
-                projectRoot: normalizedFolderPath,
-                mediaDir,
-                itemId: id,
-                operation,
-                generationSettings: materializedGenerationSettings,
-            });
-            materializedGenerationSettings = generationSnapshots.generationSettings;
-            if (!materializedPreviewAssets && generationSnapshots.previewAssets) {
-                materializedPreviewAssets = generationSnapshots.previewAssets;
-            }
+        // MPI-227: run generation frame snapshots on BOTH the preview save AND the
+        // preview→final replace (replaceItemId). On Finish, materialization used to
+        // be skipped, leaving the final card's generationSettings.mediaItems pointing
+        // at preview-era refs. With the content-addressed store, re-materializing is a
+        // free dedup no-op when bytes are identical, and it stamps the final card with
+        // stable flat SHA refs that survive the preview card's deletion.
+        const generationSnapshots = await materializeGenerationFrameSnapshots({
+            projectRoot: normalizedFolderPath,
+            mediaDir,
+            itemId: id,
+            operation,
+            generationSettings: materializedGenerationSettings,
+        });
+        materializedGenerationSettings = generationSnapshots.generationSettings;
+        if (!materializedPreviewAssets && generationSnapshots.previewAssets) {
+            materializedPreviewAssets = generationSnapshots.previewAssets;
         }
 
         // Determine pixel dimensions: prefer client-supplied (from ratio control),
@@ -1466,7 +1781,6 @@ router.post('/project/save-generation', async (req, res) => {
             negativePrompt: meta.negativePrompt || '',
             seed:           meta.seed          ?? -1,
             modelId:        meta.modelId       || null,
-            ratioLabel:     meta.ratioLabel    || null,
             generationSettings: materializedGenerationSettings,
             createdAt:      new Date().toISOString(),
             name:           null,
@@ -1484,12 +1798,6 @@ router.post('/project/save-generation', async (req, res) => {
                 metaContent.duration   = videoInfo.duration;
                 metaContent.frameCount = videoInfo.frameCount;
                 metaContent.hasAudio   = videoInfo.hasAudio;
-                metaContent.videoMeta  = {
-                    fps: videoInfo.fps,
-                    duration: videoInfo.duration,
-                    frameCount: videoInfo.frameCount,
-                    hasAudio: videoInfo.hasAudio,
-                };
             }
             const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
             const thumbed = await extractVideoThumb(filePath, thumbPath);
@@ -1605,7 +1913,6 @@ router.post('/project/save-generation', async (req, res) => {
             duration: metaContent.duration || 0,
             frameCount: metaContent.frameCount || 0,
             hasAudio: metaContent.hasAudio || false,
-            videoMeta: metaContent.videoMeta || null,
             stage:         metaContent.stage         ?? null,
             frozenParams:  metaContent.frozenParams  ?? null,
             loraSnapshot:  metaContent.loraSnapshot  ?? null,
@@ -1615,6 +1922,107 @@ router.post('/project/save-generation', async (req, res) => {
         });
     } catch (err) {
         logger.error('project', 'save-generation error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * POST /project-media/:projectId/add-from-cards
+ *
+ * Copies gallery cards from another project into this project. For each card we
+ * copy its currently-selected media file (and companion thumb) into this
+ * project's Media/ + .meta/, write a fresh UUID-keyed sidecar cloned from the
+ * source sidecar (so all metadata survives), then append a single-item group to
+ * project.json via the atomic writer. Source project is left untouched (copy,
+ * not move).
+ *
+ * Body:
+ *   folderPath  {string}  — absolute target project folder path
+ *   cards       {Array<{ type, name, item }>}  where item is the selected
+ *               MediaItem (needs at least filePath; thumbPath optional).
+ *
+ * Returns { success, added: number }.
+ */
+router.post('/project-media/:projectId/add-from-cards', async (req, res) => {
+    try {
+        const { folderPath, cards } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        if (!Array.isArray(cards) || !cards.length) {
+            return res.status(400).json({ success: false, error: 'cards required' });
+        }
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir  = path.join(mediaDir, '.meta');
+        await fs.ensureDir(metaDir);
+
+        const newGroups = [];
+        for (const card of cards) {
+            const item = card?.item;
+            const srcMedia = pathFromProjectFileUrl(item?.filePath);
+            if (!srcMedia || !(await fs.pathExists(srcMedia))) continue;
+
+            const id = uuidv4();
+            const ext = path.extname(srcMedia);
+            // Unique on-disk name; keep readable stem, avoid collisions.
+            const stem = path.basename(srcMedia, ext).replace(/_\d+$/, '') || 'copied';
+            const destName = `${stem}_${id.slice(0, 8)}${ext}`;
+            const destMedia = path.join(mediaDir, destName);
+            await fs.copy(srcMedia, destMedia);
+
+            // Clone the source sidecar when present so metadata survives; else
+            // synthesize a minimal one from the item fields the client sent.
+            const srcMetaCandidate = pathFromProjectFileUrl(item?.filePath)
+                ? path.join(path.dirname(srcMedia), '.meta', `${item.id}.json`)
+                : null;
+            let meta = {};
+            if (srcMetaCandidate && await fs.pathExists(srcMetaCandidate)) {
+                try { meta = await fs.readJson(srcMetaCandidate); } catch (_) { meta = {}; }
+            }
+            meta.id = id;
+            meta.filePath = `/project-file?path=${encodeURIComponent(destMedia)}`;
+            meta.createdAt = new Date().toISOString();
+            if (!meta.type) meta.type = card.type || 'image';
+            if (!meta.displayName) meta.displayName = card.name || stem;
+
+            // Copy companion thumb if the source had one.
+            const srcThumb = pathFromProjectFileUrl(item?.thumbPath) || pathFromProjectFileUrl(meta.thumbPath);
+            if (srcThumb && await fs.pathExists(srcThumb)) {
+                const destThumb = path.join(metaDir, `${id}.thumb.jpg`);
+                await fs.copy(srcThumb, destThumb);
+                meta.thumbPath = `/project-file?path=${encodeURIComponent(destThumb)}`;
+            } else {
+                delete meta.thumbPath;
+            }
+
+            await fs.writeJson(path.join(metaDir, `${id}.json`), meta, { spaces: 2 });
+
+            newGroups.push({
+                id:            uuidv4(),
+                type:          card.type || meta.type || 'image',
+                name:          card.name || meta.displayName,
+                createdAt:      new Date().toISOString(),
+                selectedIndex: 0,
+                open:          false,
+                favourite:     false,
+                customName:    null,
+                history:       [id],
+            });
+        }
+
+        if (!newGroups.length) {
+            return res.status(404).json({ success: false, error: 'no copyable media found' });
+        }
+
+        const jsonPath = path.join(folderPath, 'project.json');
+        await updateProjectJson(jsonPath, project => ({
+            ...project,
+            itemGroups: [...newGroups, ...(project.itemGroups || [])],
+            updatedAt: new Date().toISOString(),
+        }));
+
+        res.json({ success: true, added: newGroups.length });
+    } catch (err) {
+        logger.error('project', 'add-from-cards error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -1823,6 +2231,13 @@ router.post('/migrate-project', async (req, res) => {
             const { migrateProject } = require('../js/migrations/projectMigrations.js');
             return migrateProject(project, folderPath);
         });
+        // MPI-227: one-time flatten+dedup of the preview-assets store (idempotent,
+        // marker-guarded). Runs on the same project-open call, after project.json.
+        try {
+            await migratePreviewAssetsStore(folderPath);
+        } catch (err) {
+            logger.warn('project', `preview-assets migration failed (non-fatal): ${err.message}`);
+        }
         res.json({ success: true, project: migrated });
     } catch (err) {
         logger.error('project', 'migrate-project error', err);
@@ -2048,3 +2463,7 @@ router.get('/project-stats/:projectId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.materializeGenerationFrameSnapshots = materializeGenerationFrameSnapshots;
+module.exports.placeContentAsset = placeContentAsset;
+module.exports.computeFileSha256 = computeFileSha256;
+module.exports.migratePreviewAssetsStore = migratePreviewAssetsStore;

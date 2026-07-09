@@ -12,6 +12,9 @@ llama_models/
 .engine-config.json
 
 # User data
+# Dev-fallback external-project registry — holds machine-local paths; the durable
+# copy lives in <Documents>/Cubric Vision/. Never track (see routes/shared.js).
+project-paths.json
 resources/*
 !resources/enhancer_prompts.md
 !resources/cubric/
@@ -54,3 +57,4 @@ project-paths.json
 # Secrets / local config (if any added later)
 .env
 .env.local
+.expose-comfy

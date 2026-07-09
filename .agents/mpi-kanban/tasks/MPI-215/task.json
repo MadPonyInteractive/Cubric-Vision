@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-215",
+  "title": "Model Library overlay",
+  "description": "Move model manager from slide-over into a full-page MpiOverlay (body mode, X close), titled 'Model Library', with a contact-sheet grid of lean tiles + a right-drawer detail panel. Media (Image/Video) + Size (L/B/H) + search filters. Reuse all MpiModelManager install/op/arch/download logic; only rendering + shell.js routing change. Design frozen as reference mockup model-library-B.html.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "MPI-215 Model Library overlay — implementation",
+  "created_at": "2026-07-07T14:30:00Z",
+  "updated_at": "2026-07-07T16:30:00Z",
+  "links": {
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

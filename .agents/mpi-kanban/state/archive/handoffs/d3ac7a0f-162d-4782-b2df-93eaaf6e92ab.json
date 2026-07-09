@@ -1,0 +1,135 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d3ac7a0f-162d-4782-b2df-93eaaf6e92ab",
+  "generated_at": "2026-06-11T19:55:00Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/d74baea7-f3f5-4575-ab33-fcfa67638e59.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 RunPod Remote Engine — Batches #1-#3.1 done + user-verified (secret store, Comfy boundary adapter, Settings section + boot gate, picker polish)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Implement MPI-64 RunPod Remote Engine: run ComfyUI generation on a user's RunPod Secure Cloud GPU from the Cubric Vision desktop app, via a Cubric-owned hidden Pod template + token-auth HTTP wrapper, network-volume persistence, app-managed lifecycle, GPU/PyTorch compatibility gates.",
+    "status": "in_progress",
+    "summary": "Wrapper proven live on a real A4000 Pod (prior session). This session: Batch #2 (Comfy boundary adapter — backend proxy routes/remoteProxy.js + renderer adapter js/services/remoteEngineClient.js + ComfyUIController.httpBase() seam; local mode byte-identical, USER-VERIFIED with a real local generation) and Batch #3/#3.1 (Settings RunPod section, secrets IPC client, remote boot gate + advisory pop-up, volume-aware DC/GPU pickers; USER-VERIFIED incl. key save+validate and live EUR-IS-1 availability). Next: small UI polish (dropdown meta truncation + GPU $/hr), then Batch #4 / Phase 3. NOTHING committed."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+    "completed": [
+      "Phase 1 — all 6 design decision docs + gpu-availability-and-datacenter.md",
+      "Phase 2 — wrapper full contract 24/24 local verify + LIVE end-to-end on Pod k8pr35yto3xy7n (A4000, EUR-IS-1); readiness item still PARTIAL (manifest version gate + app polling helper remain)",
+      "Parallel Batch #1 — main/secretsStore.js + routes/runpodRemote.js + routes/remoteEngine.js, wired in server.js/main.js; smoke-tested via npm start",
+      "Parallel Batch #2 — routes/remoteProxy.js (proxy /proxy/* + /remote/mode|ws-token|comfy/status + SSE intercept mounted BEFORE comfy routes) + js/services/remoteEngineClient.js + comfyController httpBase()/_ensureRemoteReady + commandExecutor view-URL swap; 19/19 mocked-router test; local generation user-verified byte-identical",
+      "Parallel Batch #3 — js/core/secretsClient.js + runpodConfig (storageKeys/storage/state) + MpiSettings RunPod section + js/shell.js _bootApp remote gate + advisory; user-verified",
+      "Batch #3.1 — GET /runpod/volumes + volume dropdown + DC 'your volume' marker + mismatch warning + stock-first N/A-labeled GPU meta; user-verified labels correct; removed dead ComfyUI API URL field + mpi_comfy_url (changelog note in docs/releases/UNRELEASED.md)"
+    ],
+    "pending": [
+      "RunPod Settings UI polish (NEXT, small): (1) MpiDropdown option meta truncated/invisible at Settings panel width — make stock+VRAM readable; (2) add GPU price-per-hour to picker meta (GraphQL gpuTypes price fields, e.g. securePrice — verify exact field names live)",
+      "Parallel Batch #4 — compatibility/manifest validation UI (consumes volume-manifest-schema.md)",
+      "Phase 2 leftover — /wrapper/manifest version-match gate vs APP_VERSION/COMFY_VERSION (needs manifest written to volume — Phase 3)",
+      "Phase 3 — volume init/repair, remote model download onto volume (start with ONE SDXL checkpoint, NOT WAN), models/check routing to wrapper, workflow bundle versioning",
+      "Phase 4 — Pod auto-create/start at comfy-start trigger + quit-stop lifecycle, input-asset transfer (media/latent upload intercepts), end-to-end remote generation (SDXL image first), crash watchdog verify",
+      "Phase 5 — hardening, global logger redaction hook, secret-hygiene audit, user-facing cost docs",
+      "Push UPDATED full-contract image: docker push ghcr.io/madponyinteractive/cubric-vision-pod:v0.1.0 (was blocked by GHCR 502; original live-tested image is public)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Batch #1/#2/#3 boxes ticked with implementation notes; new UI-polish item added; Current State status paragraph; 3 new Plan Drift entries (boundary seam reality, comfy-url removal + UNRELEASED.md convention, GraphQL-vs-console availability semantics)",
+      "docs/releases/UNRELEASED.md created (NEW convention: pending changelog notes, fold in at /mpi-version-bump then clear) with the comfy-url removal entry",
+      "events.jsonl: per-batch implementation + verification events",
+      "All 13 session file claims set to complete (pending_file_states)"
+    ],
+    "pending": [
+      "Fold UNRELEASED.md into release notes at next /mpi-version-bump (the frozen 1.0.0 tutorial mentions the removed ComfyUI API URL field — must be called out)",
+      "Phase 5: global redaction hook in routes/logger.js (currently per-call redactSecret in runpodRemote.js only)",
+      "Retry docker push ghcr.io/madponyinteractive/cubric-vision-pod:v0.1.0 (updated full-contract image)",
+      "3 stale unrelated coordination records in state/ (MPI-8/58/60, heartbeats 2026-06-06/10) — mpi-cleanup candidates",
+      "Consider memory file for the GraphQL available-vs-stockStatus semantics if it bites again"
+    ]
+  },
+  "next_action": {
+    "description": "Implement the 'RunPod Settings UI polish' plan item (brief before code): fix MpiDropdown option-meta truncation in the Settings panel so stock+VRAM are readable (check MpiDropdown.css ellipsis/max-width vs a Settings-scoped fix; wrapLabels prop exists), and add GPU price-per-hour to the picker meta — extend client.gpuTypes GraphQL query in routes/runpodRemote.js with price fields (likely securePrice; VERIFY exact field names against the live API with the user's key), pipe through /runpod/gpu-availability into MpiSettings gpuOptions meta. Verify with the user at default panel width and spot-check prices vs the RunPod console. Then proceed to Batch #4 (manifest validation UI) or Phase 3 per user choice.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Transport implemented per research/transport-topology.md: Express backend proxy holds the wrapper token; renderer base-URL seam is ComfyUIController.httpBase() (returns http://127.0.0.1:8188 verbatim in local mode → byte-identical) + js/services/remoteEngineClient.js (refresh per ensureServerRunning; wsUrl(clientId) renderer-direct WSS exception, token in memory only).",
+      "routes/remoteProxy.js owns backend remote-mode state ({active, podId}, set via POST /remote/mode; 422 if activating without podId) and MUST stay mounted BEFORE routes/comfy.js in server.js (its GET /comfy/events/stream intercept falls through with next() when inactive).",
+      "Settings 'ComfyUI API URL' field + mpi_comfy_url + getComfyUrl/setComfyUrl REMOVED (user decision after learning it was dead config never read by the app). Changelog entry parked in docs/releases/UNRELEASED.md — new convention, fold in at next /mpi-version-bump.",
+      "GPU availability semantics (verified vs live console screenshots): GraphQL gpuAvailability.available:true does NOT equal console availability; console badge = stockStatus where null renders N/A but such cards may still deploy. UI mirrors console: stock leads dropdown meta, labels High/Medium/Low/N/A, N/A sorted last, all available:true cards stay selectable.",
+      "Non-secret RunPod prefs = state.runpodConfig {enabled,podId,datacenter,gpuType,volumeId}, localStorage key mpi_runpod_config; API key is write-only from renderer via js/core/secretsClient.js (secrets:* IPC; setApiKey returns {ok, weakEncryption} → one-time warning at save time).",
+      "Boot gate: js/shell.js _bootApp — RunPod enabled → _initRemoteBoot (pushes /remote/mode when podId set, advisory pop-up via showError('RunPod Active', ...), skips local engine version/install gate via `else try` so the local path is textually untouched); ComfyUI auto-start skipped in remote mode until Phase 4 Pod start.",
+      "Scope splits kept: media/latent upload intercepts = Phase 4; models/check routing = Phase 3; Pod create/start lifecycle = Phase 4; js/shell/memoryOps.js VRAM unload deliberately stays hardcoded local."
+    ],
+    "constraints": [
+      "NEVER commit unless the user explicitly asks. ALL MPI-64 app work is uncommitted on branch RunPod (only worktree: c:/AI/Mpi/Cubric-Vision).",
+      "User chose INLINE-SEQUENTIAL execution for app code — do not dispatch sub-agent workers for implementation.",
+      "RunPod secrets + standing resource IDs in GITIGNORED c:/AI/Mpi/cubric-remote-wrapper/.secrets/runpod.env: Pod k8pr35yto3xy7n (STOPPED, A4000, EUR-IS-1), volume cubric-vision-vol cfwqthmdrg (150GB, EUR-IS-1, ~$10.50/mo), template ejrwtsej15, image ghcr.io/madponyinteractive/cubric-vision-pod:v0.1.0 (public). NEVER paste the key in chat/logs. User's key is also SAVED in the app's secret store now (safeStorage).",
+      "RunPod proxy + API are behind Cloudflare: always send a browser User-Agent (UA const exists in runpodRemote.js/remoteProxy.js/remoteEngine.js); Windows curl flakes on POST-multipart through the proxy — use Python for remote tests.",
+      "GraphQL key goes in the Authorization header, NEVER the URL (fixed key-leak); redactSecret() in runpodRemote.js scrubs rpa_/Bearer/api_key=.",
+      "routes/logger.js warn/info take only (category, message) — 3rd arg silently dropped; only error() takes err.",
+      "Settings file MpiSettings.js: _initFields re-runs on every panel open via el.onOpen; _runpodAvailability/_runpodVolumes cache per component instance; volume REST list shape handled defensively (array | .networkVolumes | .volumes).",
+      "state/index.json may carry a BOM (PowerShell-written) — read with utf-8-sig in Python scripts.",
+      "The frozen 1.0.0 tutorial mentions the removed ComfyUI API URL field — next release notes MUST call out the removal (entry already in docs/releases/UNRELEASED.md).",
+      "DOCS WEBSITE PUSH BLOCK still applies (never push c:/AI/Mpi/Cubric Studio (Docs))."
+    ],
+    "files_modified": [
+      "routes/remoteProxy.js (NEW — Batch #2: /proxy/* forwards, /remote/mode|ws-token|comfy/status, SSE intercept; mounted before comfy routes)",
+      "js/services/remoteEngineClient.js (NEW — Batch #2: narrow renderer adapter)",
+      "js/services/comfyController.js (Batch #2: httpBase() seam, _ensureRemoteReady, WS URL fallback)",
+      "js/services/commandExecutor.js (Batch #2: view URL via httpBase())",
+      "server.js (Batch #2: mount remoteProxy before comfy)",
+      "js/core/secretsClient.js (NEW — Batch #3: sole renderer secrets:* IPC wrapper)",
+      "js/core/storageKeys.js + js/core/storage.js (Batch #3: RUNPOD_CONFIG; removed COMFY_URL/getComfyUrl/setComfyUrl)",
+      "js/state.js (Batch #3: runpodConfig + mirror subscriber)",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js + .css (Batch #3/#3.1: RunPod section, pickers, volume dropdown, warn hint; removed ComfyUI API URL field)",
+      "js/shell.js (Batch #3: _bootApp remote gate + _initRemoteBoot advisory; auto-start skip)",
+      "routes/runpodRemote.js (Batch #3.1: client.listVolumes + GET /runpod/volumes)",
+      "docs/releases/UNRELEASED.md (NEW — pending changelog notes convention)",
+      "Batch #1 files from prior session (uncommitted too): main/secretsStore.js, routes/remoteEngine.js, main.js"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+      "js/components/Primitives/MpiDropdown/MpiDropdown.js (+ its .css for the meta truncation fix)",
+      "routes/runpodRemote.js",
+      "routes/remoteProxy.js",
+      "js/services/remoteEngineClient.js",
+      ".agents/mpi-kanban/tasks/MPI-64/research/gpu-availability-and-datacenter.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "ComfyUI execution boundary", "secret storage", "Pod lifecycle", "GPU availability"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-11T19:55:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod in the Cubric-Vision Electron app (only worktree: c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/d3ac7a0f-162d-4782-b2df-93eaaf6e92ab.json and use mpi-continue. STATUS: Batches #1 (backend RunPod client + safeStorage secret store), #2 (Comfy boundary adapter: routes/remoteProxy.js + js/services/remoteEngineClient.js + ComfyUIController.httpBase() seam; local mode byte-identical), and #3/#3.1 (Settings RunPod section + js/core/secretsClient.js + remote boot gate/advisory in js/shell.js + volume-aware DC/GPU pickers with stock labels matching the RunPod console) are ALL implemented and USER-VERIFIED. NOTHING is committed (never commit unless asked). THE IMMEDIATE NEXT STEP is the plan's 'RunPod Settings UI polish' item — brief before code: (1) fix MpiDropdown option-meta truncation in the Settings panel so stock+VRAM are readable, (2) add GPU price-per-hour to the picker (extend the gpuTypes GraphQL query in routes/runpodRemote.js with price fields — verify exact names live, likely securePrice — and pipe into MpiSettings gpuOptions meta). After that: Batch #4 (manifest validation UI) or Phase 3 (volume init + SDXL model download), user picks. Inline-sequential only, no sub-agent workers. RunPod secrets + standing resources (Pod k8pr35yto3xy7n stopped, volume cfwqthmdrg, template ejrwtsej15, all EUR-IS-1) are in GITIGNORED c:/AI/Mpi/cubric-remote-wrapper/.secrets/runpod.env — never paste the key; it is also saved in the app's secret store. Gotchas: RunPod API/proxy are behind Cloudflare (browser User-Agent required; Windows curl flakes on multipart — use Python); GraphQL available:true ≠ console availability (console badge = stockStatus, null = N/A); docs/releases/UNRELEASED.md holds pending changelog notes (comfy-url field removal) to fold in at the next /mpi-version-bump; routes/remoteProxy.js must stay mounted before routes/comfy.js in server.js."
+}

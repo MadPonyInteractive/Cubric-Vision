@@ -34,7 +34,7 @@
   },
   "608": {
     "inputs": {
-      "model_name": "4x_NMKD-Siax_200k.pth"
+      "model_name": "4x-AnimeSharp.pth"
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
@@ -69,10 +69,14 @@
   },
   "742": {
     "inputs": {
-      "math_expression": "a/4",
+      "math_expression": "a/b",
       "a": [
         "739",
         0
+      ],
+      "b": [
+        "751",
+        1
       ]
     },
     "class_type": "MpiMath",
@@ -116,6 +120,19 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Upscale_Using_Model"
+    }
+  },
+  "751": {
+    "inputs": {
+      "fallback_scale": 1,
+      "upscale_model": [
+        "608",
+        0
+      ]
+    },
+    "class_type": "MpiUpscaleModelScale",
+    "_meta": {
+      "title": "Mpi Upscale Model Scale"
     }
   }
 }

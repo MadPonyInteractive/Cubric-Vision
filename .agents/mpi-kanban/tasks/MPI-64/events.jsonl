@@ -1,3 +1,0 @@
-{"schema":"mpi-kanban/event/v1","id":"MPI-64","type":"task.created","at":"2026-06-10T17:52:46+01:00","actor":"codex","summary":"Captured approved Secure Cloud RunPod remote engine direction."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-64","type":"task.updated","at":"2026-06-10T17:52:46+01:00","actor":"codex","summary":"Attached large adaptive plan and preserved investigation notes."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-64","type":"task.updated","at":"2026-06-11T06:25:45+01:00","actor":"claude","summary":"Plan review: added verified local-coupling inventory and closed gaps (transport topology, template distribution, input-asset transfer, remote model installs, crash watchdog, secret hygiene)."}

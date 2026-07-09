@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-240",
+  "title": "Disconnect leaves hero stuck on remote card — slow feed tick clobbers the local paint",
+  "description": "User pressed Disconnect; the hero footer stayed 'remote · online · <PodGPU>' instead of flipping to 'local · offline · <local GPU>'. Settings panel correctly showed 'stopped' + label 'Connect', but the footer was frozen on the Pod card (self-corrected only ~15-70s later, or when the user did something else like Connect).\n\nHero engine has 4 stages (heroStats.js _renderEngine): local·offline, connecting·offline (live %), remote·online (Pod GPU card), disconnecting·online (blank slot); + a hidden sticky 'disconnected' for involuntary drops. Disconnect cycle is remote → disconnecting → local. This bug = the disconnecting→local hop was clobbered back to remote.\n\nROOT (race): the app-wide connection feed (js/shell.js tick) samples /remote/comfy/status as connected:true (Pod still up), then AWAITS /remote/pod/specs (~0.5s) before emitting the Pod card. If the user's Disconnect finally-emit (MpiRunpodSettings.js:835, connected:false phase:null → local paint) lands DURING that await, the tick then emits the now-stale connected:true Pod card at shell.js:1135 and clobbers the local paint. Feed-local _last is then true, so the miss-debounce (shell.js:1083, _misses<MISS_THRESHOLD && _last) suppresses recovery for ~3 ticks × 5-30s backoff — hence 'frozen' until something forces it.\n\nSecond, latent asymmetry: the feed's !connected ladder had stale-'connecting' recovery (two spots) but NO stale-'disconnecting' recovery, so a lost/raced disconnect finally-emit could also leave the hero stuck on 'disconnecting · online'.\n\nFIX (js/shell.js): (1) after the specs await, re-read the shared _remotePhase — if it became 'disconnecting', the teardown is authoritative → DROP the stale connected:true emit (return). (2) Add stale-'disconnecting' recovery to the !connected ladder (mirror the existing 'connecting' one): backend reports not-connected while phase==='disconnecting' → resolve to clean local·offline.\n\nDistinct from MPI-239 (untracked Pod DEATH self-heal, server-side). This is the user-initiated Disconnect race, renderer-side. NOT live-verified — user to test by pressing Disconnect and watching the footer flip to local immediately.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-09T13:20:00Z",
+  "updated_at": "2026-07-09T14:10:00Z",
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "runpod",
+    "remote-engine",
+    "hero-card",
+    "race"
+  ],
+  "priority": "medium"
+}

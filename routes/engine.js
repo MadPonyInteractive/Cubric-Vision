@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -361,6 +361,8 @@ async function _runEngineDownload(chosenModelsRoot) {
         const targetDir = ENGINE_ROOT;
 
         // ── Pre-calculate combined size (engine + UW deps) ──────────────────────
+        // Every custom_node is now universal (MPI-222: no model-specific node class),
+        // so the UW set already covers all nodes an engine reinstall must restore.
         const { missingDeps } = await checkUniversalWorkflowDepsStatus();
         const missingDepIds = missingDeps;
         if (missingDeps.length > 0) {
@@ -405,6 +407,14 @@ async function _runEngineDownload(chosenModelsRoot) {
             if (!content.includes('--enable-cors-header')) {
                 logger.info('system', 'Patching run_nvidia_gpu.bat with taesd, cors and listen flags...');
                 content = content.replace('ComfyUI\\main.py', 'ComfyUI\\main.py --listen 127.0.0.1 --preview-method taesd --enable-cors-header');
+                await fs.writeFile(batPath, content, 'utf8');
+            }
+            // Force UTF-8 so a user running the .bat directly gets the same crash
+            // protection as the app spawn (py3.13 cp1252 default — see comfy.js /
+            // MPI-118). Idempotent: only insert once.
+            if (!content.includes('PYTHONUTF8')) {
+                content = await fs.readFile(batPath, 'utf8');
+                content = 'set PYTHONUTF8=1\r\n' + content;
                 await fs.writeFile(batPath, content, 'utf8');
             }
         }
@@ -546,13 +556,31 @@ router.post('/engine/repair-deps', async (req, res) => {
     res.json({ success: true, status: 'repair-started' });
 
     try {
-        const { missingDeps } = await checkUniversalWorkflowDepsStatus();
-        if (!missingDeps.length) {
+        const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
+        const repairSet = [...new Set([...missingDeps, ...driftedDeps])];
+        if (!repairSet.length) {
             broadcastEngineEvent('engine:uw-installing', { status: 'All dependencies already present' });
             broadcastEngineEvent('engine:complete', { success: true });
             return;
         }
-        await startUniversalWorkflowInstall(missingDeps, true);
+
+        // Pre-wipe drifted node folders: startUniversalWorkflowInstall skips folders
+        // that already exist (isCompleteOnDisk), so a drifted node (folder PRESENT, wrong
+        // commit) would be marked complete and never reinstalled. Removing the folder first
+        // forces a clean re-extract at the pinned commit. Missing deps have no folder to wipe.
+        if (driftedDeps.length) {
+            const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+            const customRoot = await getCustomRoot();
+            for (const depId of driftedDeps) {
+                const dep = DEPS[depId];
+                if (!dep) continue;
+                const { localPath } = await resolveComfyPath(dep, customRoot, {});
+                await fs.remove(localPath);
+                logger.info('engine', `pre-wiped drifted node folder: ${depId} (${localPath})`);
+            }
+        }
+
+        await startUniversalWorkflowInstall(repairSet, true);
         broadcastEngineEvent('engine:complete', { success: true });
     } catch (err) {
         logger.error('engine', `UW deps repair failed: ${err.message}`);
@@ -570,6 +598,12 @@ router.post('/engine/upgrade', async (req, res) => {
 
         // 1. Check if models are inside engine (legacy user)
         const hasCustomRoot = await fs.pathExists(extraConfigPath);
+        // Capture the user's configured models root from the existing YAML BEFORE
+        // wiping the engine — step 2 removes the YAML and the fresh-install extract
+        // scrubs it, so without this the upgrade silently resets the path to the
+        // default mpi_models (user's D:\CubricModels etc. is lost → 0 models → no
+        // prompt box). getCustomRoot returns null if no custom YAML exists. (MPI-118)
+        const preservedRoot = await getCustomRoot();
         if (!hasCustomRoot) {
             broadcastEngineEvent('engine:upgrade-status', { status: 'Moving models to safe location...' });
             const defaultModels = getComfyPath(ENGINE_ROOT, 'models');
@@ -587,8 +621,11 @@ router.post('/engine/upgrade', async (req, res) => {
         // Respond immediately — frontend listens on SSE
         res.json({ success: true, status: 'upgrade-started' });
 
-        // 3. Download + install new version async (SSE reports progress)
-        await _runEngineDownload();
+        // 3. Download + install new version async (SSE reports progress). Pass the
+        // preserved models root so the post-extract step 6 re-writes the YAML with
+        // the user's path instead of falling back to the default.
+        if (preservedRoot) logger.info('engine', `Preserving custom models root across upgrade: ${preservedRoot}`);
+        await _runEngineDownload(preservedRoot || undefined);
 
     } catch (e) {
         logger.error('system', 'Engine upgrade failed', e);

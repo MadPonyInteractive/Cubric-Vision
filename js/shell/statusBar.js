@@ -27,6 +27,7 @@ import { Events } from '../events.js';
 import { gid, qs } from '../utils/dom.js';
 import { state } from '../state.js';
 import { getCommandProgressLabel } from '../data/commandRegistry.js';
+import { generationStore } from '../services/generationStore.js';
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 let _job       = null;  // #shell-info-job
@@ -42,11 +43,18 @@ let _state        = 'idle';   // 'idle' | 'active'
 let _hoverTarget  = null;
 let _hoverObs     = null;
 let _currentLabel = '';
+let _stageText  = '';   // " · 2/3" stage suffix (MPI-147), '' when no multi-stage
 let _queueDepth = 0;
 let _elapsedSec   = 0;
 let _activeStartedAt = null;
+let _remoteConnected = false; // MPI-64 4.4: drives the IDLE · Local/Remote scope
+let _remotePhase = null;      // MPI-73: 'connecting' | 'disconnecting' | null — transient connect feedback
 let _timerInterval = null;
 let _completionToken = 0;
+// Id of the gen the bar is currently tracking. A terminal (cancelled/idle)
+// carrying a DIFFERENT id is a late settle from a Stopped gen and is ignored so
+// it can't reset the bar while a promoted successor is running (MPI-203).
+let _activeGenId = null;
 const _listenUnsubs = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,9 +78,10 @@ function _setFill(pct) {
 }
 
 function _getDisplayLabel(label = _currentLabel) {
+    const base = `${label}${_stageText}`;
     const pending = Math.max(0, _queueDepth - 1);
-    if (_state !== 'active' || pending === 0) return label;
-    return `${label} (${pending} queued)`;
+    if (_state !== 'active' || pending === 0) return base;
+    return `${base} (${pending} queued)`;
 }
 
 function _renderJobLabel() {
@@ -82,7 +91,7 @@ function _renderJobLabel() {
 
 function _beginActiveCycle() {
     _completionToken++;
-    _fill?.classList.remove('shell-info__fill--flash', 'shell-info__fill--fade');
+    _fill?.classList.remove('shell-info__fill--flash', 'shell-info__fill--fade', 'shell-info__fill--indeterminate');
 }
 
 function _startTimer() {
@@ -101,11 +110,117 @@ function _stopTimer() {
     }
 }
 
+function _idleScopeLabel() {
+    // MPI-73: a transient connect/disconnect overrides the steady Local/Remote
+    // scope so the status bar reflects the in-progress transition.
+    if (_remotePhase === 'connecting') return 'Connecting';
+    if (_remotePhase === 'disconnecting') return 'Disconnecting';
+    // MPI-64 A1: a sticky 'disconnected' phase = involuntary engine drop (OOM/WS
+    // death); show it distinctly from a user Disconnect (plain 'Local').
+    if (_remotePhase === 'disconnected') return 'Disconnected';
+    return _remoteConnected ? 'Remote' : 'Local';
+}
+
+// Last-active gen wins the single status bar. Any DRIVING event (running,
+// accepted, loading, sampling, progress, stage, indeterminate) latches the bar
+// to its own gen; a terminal only clears the bar if it still owns it. With two
+// concurrent lanes (local + remote, MPI-74 P6) this means whichever gen most
+// recently emitted a driving event owns the bar, and when the owner ends, the
+// other lane's next event re-latches it — no lane runs progress-blind (MPI-203).
+// A null id (untagged legacy emit) is a no-op on the latch, not a reset.
+function _latch(id) {
+    if (id !== null && id !== undefined) _activeGenId = id;
+}
+
+// ── Store-derived latch reconcile (MPI-208 Phase 4) ─────────────────────────────
+// The bar's ownership + idleness are DERIVED from the generation store, not left to
+// the race between id-tagged tool:* terminals. The tool:* events still feed the
+// visual detail (label, %, stage); the store answers two questions the event race
+// got wrong:
+//   (a) SURVIVOR RE-LATCH — when the bar's owner leaves `running` but another lane
+//       still has a live job, re-latch to that survivor so a concurrent gen never
+//       leaves the bar empty (the user-observed "empty bar while a gen runs" bug).
+//   (b) SELF-HEAL TO IDLE — when the store has NO running job, the bar goes idle even
+//       if a terminal tool:* event was dropped/mismatched (stuck-bar class of bugs).
+// A store job carries `genId` (= generationService _regId = the id on every tool:*
+// event), so the store snapshot correlates directly to `_activeGenId`.
+
+// Pick the running job that should drive the bar: keep the current owner if it is
+// still running; otherwise the most-recently-active survivor.
+function _pickDisplayJob(running) {
+    if (!running.length) return null;
+    if (_activeGenId !== null) {
+        const owner = running.find(j => j.genId === _activeGenId);
+        if (owner) return owner;
+    }
+    // Most-recent driving = latest phase timestamp across the job's transitions.
+    let best = null, bestT = -1;
+    for (const j of running) {
+        const ts = j.timestamps ? Math.max(...Object.values(j.timestamps)) : 0;
+        if (ts >= bestT) { bestT = ts; best = j; }
+    }
+    return best;
+}
+
+// Reconcile the bar against store truth on every `generation-store:changed`.
+function _reconcileFromStore(snapshot) {
+    const running = snapshot?.running ?? generationStore.getSnapshot().running;
+    // No live job anywhere → self-heal to idle, but ONLY if the bar still thinks it
+    // owns a gen (`_activeGenId` set). A normal done/cancelled already routed through
+    // tool:idle/tool:cancelled, which nulls `_activeGenId` and runs the completion
+    // flash — self-heal must NOT stomp that animation. A still-set `_activeGenId` with
+    // an empty store means the owner's terminal event never arrived (dropped/mismatched
+    // WS terminal) → the stuck-bar case the self-heal exists for.
+    if (!running.length) {
+        if (_state === 'active' && _activeGenId !== null) {
+            _activeGenId = null;
+            StatusBar.progress.cancel(); // silent, no toast — a missed terminal, not a real completion
+        }
+        return;
+    }
+    const job = _pickDisplayJob(running);
+    if (!job) return;
+    // Survivor re-latch: the bar's owner is gone but another lane is live. Re-latch to
+    // it and clear the prior job's stage suffix (fixes the stale "N/M" bleed — a
+    // 4-stage upscale suffix must not survive onto a 2-stage successor). The tool:*
+    // events from the survivor's own gen will repaint label/%/stage.
+    //
+    // The `job.genId !== null` guard is LOAD-BEARING, do not drop it: tool-panel
+    // previews (MpiToolOptionsResize) call runCommand directly with
+    // suppressLifecycleEvents and NO genId, so their store jobs carry genId:null and
+    // emit no tool:* events. Excluding null-genId jobs keeps a silent preview from
+    // flashing "Starting" in the bar — only real generationService gens (which carry
+    // _regId as genId) ever drive it.
+    //
+    // MPI-234: also re-arm when the bar is IDLE but the store has a live job the bar
+    // already tracks (`genId === _activeGenId`). A Stop-driven loop re-fire runs
+    // synchronously inside the Stop flow: the bar can get killed (self-heal /
+    // terminal) around the new gen's `tool:running`, then a driving event `_latch`es
+    // the new genId while the bar is idle — after which the old owner-equality check
+    // skipped re-arming forever (stuck "IDLE" for the whole re-fired run; its
+    // tool:progress/stage no-op when idle). Store truth wins in BOTH directions:
+    // active-with-nothing-running heals to idle above; idle-with-something-running
+    // re-arms here.
+    if (job.genId !== null && (job.genId !== _activeGenId || _state !== 'active')) {
+        _activeGenId = job.genId;
+        _stageText = '';
+        if (_state !== 'active') StatusBar.progress.prepare('Starting');
+        _renderJobLabel();
+    }
+}
+
 function _setIdle() {
     _state = 'idle';
+    // Idle is the single funnel for "no job running". A rapid Cue Stop→promote
+    // sequence can bump _completionToken so a superseded job's complete()/cancel()
+    // early-returns (state already stole by the newer cycle) without clearing its
+    // interval, stranding a ticking timer that reads as a frozen mm:ss at idle
+    // (MPI-111 timer symptom). Hard-stop here so reaching idle ALWAYS kills it.
+    _stopTimer();
     _job.className = 'shell-info__job';
-    _jobLabel.textContent = 'IDLE';
+    _jobLabel.textContent = `IDLE · ${_idleScopeLabel()}`;
     _currentLabel = '';
+    _stageText = '';
     _activeStartedAt = null;
 
     _jobPct.textContent  = '';
@@ -205,6 +320,7 @@ export const StatusBar = {
             _beginActiveCycle();
             _stopTimer();
             _elapsedSec = 0;
+            _stageText = '';
             _activeStartedAt = Date.now();
             _setFill(0);
             if (_jobPct) _jobPct.textContent = '';
@@ -229,6 +345,19 @@ export const StatusBar = {
         },
 
         /**
+         * Start the elapsed clock AND re-anchor the wall-clock basis (MPI-147).
+         * Called at prompt_ack so the visible timer, the toast's totalElapsed, and
+         * the card's generationMs all measure the same span (accepted → done),
+         * excluding ComfyUI's cold-start boot. Idempotent — re-anchors only once.
+         */
+        startClock() {
+            if (_state !== 'active') return;
+            if (_timerInterval !== null) return; // already counting — don't re-anchor
+            _activeStartedAt = Date.now();       // toast wall-clock basis
+            _startTimer();                        // resets _elapsedSec → ticks from 0
+        },
+
+        /**
          * Convenience: prepare(label) + startTimer(). For callers that skip pre-phases.
          * @param {string} label
          */
@@ -249,12 +378,43 @@ export const StatusBar = {
         },
 
         /**
+         * Toggle the indeterminate pulse (MPI-147) for nodes with no progress
+         * signal (e.g. ESRGAN upscale). Clears the % readout while active; restores
+         * normal mode (and a 0 fill) when turned off.
+         * @param {boolean} active
+         */
+        setIndeterminate(active) {
+            if (_state !== 'active' || !_fill) return;
+            if (active) {
+                _fill.classList.add('shell-info__fill--indeterminate');
+                if (_jobPct) _jobPct.textContent = '';
+            } else {
+                _fill.classList.remove('shell-info__fill--indeterminate');
+            }
+        },
+
+        /**
          * Update job label text mid-job (e.g. phase change). Does not affect timer.
          * @param {string} label
          */
         updateLabel(label) {
             if (_state !== 'active') return;
             _currentLabel = label.toUpperCase();
+            _renderJobLabel();
+        },
+
+        /**
+         * Set the "Stage N/M" suffix shown after the job label (MPI-147). Pass
+         * stage 0 (or no multi-stage workflow) to clear it. total 0 = unknown →
+         * shows "· N" with no "/M".
+         * @param {number} stage
+         * @param {number} [total]
+         */
+        setStage(stage, total) {
+            if (_state !== 'active') return;
+            _stageText = stage > 0
+                ? (total > 0 ? ` · ${stage}/${total}` : ` · ${stage}`)
+                : '';
             _renderJobLabel();
         },
 
@@ -278,9 +438,27 @@ export const StatusBar = {
             state.lastGeneration = { label, elapsed: totalElapsed };
             Events.emit('generation:timing', { elapsed: totalElapsed, label });
 
+            _fill.classList.remove('shell-info__fill--indeterminate');  // exit pulse before the 100% flash (MPI-147)
             _setFill(100);
+            if (_jobPct)  _jobPct.textContent  = '100%';  // keep pct text in sync with the 100% fill (MPI-147)
             if (_jobTime) _jobTime.textContent = _fmtTime(totalElapsed);
             _fill.classList.add('shell-info__fill--flash');
+
+            // Fire the completion toast NOW, before the deferred fill/idle animation.
+            // The toast reports a job that genuinely finished, so it must NOT be gated
+            // by the supersession token: when a second queued job starts within the
+            // 400ms defer window it bumps _completionToken, which previously swallowed
+            // the first job's toast entirely (back-to-back queue → only one toast).
+            if (!silent) {
+                const wrapper = document.createElement('div');
+                document.body.appendChild(wrapper);
+                const t = MpiToast.mount(wrapper, {
+                    message: `${toastMessage} in ${_fmtDuration(totalElapsed)}`,
+                    variant: 'success',
+                    duration: 3000,
+                });
+                t.on('close', () => { t.destroy(); wrapper.remove(); });
+            }
 
             setTimeout(() => {
                 if (token !== _completionToken) return;
@@ -293,17 +471,6 @@ export const StatusBar = {
                     _fill.classList.remove('shell-info__fill--fade');
                     _setIdle();
                 }, 600);
-
-                if (!silent) {
-                    const wrapper = document.createElement('div');
-                    document.body.appendChild(wrapper);
-                    const t = MpiToast.mount(wrapper, {
-                        message: `${toastMessage} in ${_fmtDuration(totalElapsed)}`,
-                        variant: 'success',
-                        duration: 3000,
-                    });
-                    t.on('close', () => { t.destroy(); wrapper.remove(); });
-                }
             }, 400);
         },
 
@@ -335,10 +502,10 @@ export const StatusBar = {
      * @param {string} message
      * @param {'success'|'info'|'warning'|'danger'} [variant='info']
      */
-    notify(message, variant = 'info') {
+    notify(message, variant = 'info', duration = 6000) {
         const wrapper = document.createElement('div');
         document.body.appendChild(wrapper);
-        const t = MpiToast.mount(wrapper, { message, variant, duration: 4000 });
+        const t = MpiToast.mount(wrapper, { message, variant, duration });
         t.on('close', () => { t.destroy(); wrapper.remove(); });
     },
 
@@ -347,29 +514,64 @@ export const StatusBar = {
      */
     listen() {
         if (_listenUnsubs.length > 0) return;
-        // tool:running — ComfyUI graph executing, pre-model phase. Spinner on, no timer.
-        _listenUnsubs.push(Events.on('tool:running', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.prepare('Starting');
+        // tool:running — job dispatched. Spinner + label only; NO timer yet (ComfyUI
+        // may still be booting — MPI-147: don't count cold-start in the clock).
+        _listenUnsubs.push(Events.on('tool:running', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.prepare('Starting');
         }));
-        // tool:loading-model — VRAM load phase. Update label only, timer still not running.
-        _listenUnsubs.push(Events.on('tool:loading-model', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.updateLabel('Loading model');
+        // tool:accepted — ComfyUI accepted the prompt (prompt_ack). NOW start the
+        // clock so it matches the card's generationMs + toast (all anchored here).
+        _listenUnsubs.push(Events.on('tool:accepted', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.startClock();
         }));
-        // tool:sampling-start — KSampler firing. NOW start the timer + update label.
-        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool, operation }) => {
-            if (tool === 'groupHistory') {
-                StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
-                StatusBar.progress.startTimer();
-            }
+        // tool:loading-model — VRAM load phase. Update label only (timer already running).
+        _listenUnsubs.push(Events.on('tool:loading-model', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.updateLabel('Loading model');
         }));
-        _listenUnsubs.push(Events.on('tool:progress', ({ tool, value }) => {
-            if (tool === 'groupHistory') StatusBar.progress.update(value);
+        // tool:sampling-start — KSampler firing. Switch the label to the op name;
+        // timer is already running from tool:running.
+        _listenUnsubs.push(Events.on('tool:sampling-start', ({ tool, id = null, operation }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.updateLabel(getCommandProgressLabel(operation));
         }));
-        _listenUnsubs.push(Events.on('tool:cancelled', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.cancel();
+        _listenUnsubs.push(Events.on('tool:progress', ({ tool, id = null, value }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.update(value);
         }));
-        _listenUnsubs.push(Events.on('tool:idle', ({ tool }) => {
-            if (tool === 'groupHistory') StatusBar.progress.complete('Generation finished');
+        // tool:stage — multi-stage workflow phase counter (MPI-147). Shows "· N/M".
+        _listenUnsubs.push(Events.on('tool:stage', ({ tool, id = null, stage, total }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.setStage(stage, total);
+        }));
+        // tool:indeterminate — no-progress-signal node (ESRGAN upscale). Pulse.
+        _listenUnsubs.push(Events.on('tool:indeterminate', ({ tool, id = null, active }) => {
+            if (tool !== 'groupHistory') return;
+            _latch(id);
+            StatusBar.progress.setIndeterminate(active === true);
+        }));
+        _listenUnsubs.push(Events.on('tool:cancelled', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            // Ignore a late terminal from a gen we are no longer tracking (a
+            // Stopped predecessor settling after a successor took over). A null id
+            // is an untagged explicit cancel (queue-mode block emit) — honor it.
+            if (id !== null && _activeGenId !== null && id !== _activeGenId) return;
+            _activeGenId = null;
+            StatusBar.progress.cancel();
+        }));
+        _listenUnsubs.push(Events.on('tool:idle', ({ tool, id = null }) => {
+            if (tool !== 'groupHistory') return;
+            if (id !== null && _activeGenId !== null && id !== _activeGenId) return;
+            _activeGenId = null;
+            StatusBar.progress.complete('Generation finished');
         }));
         _listenUnsubs.push(Events.onState('generationQueueCount', (count) => {
             _queueDepth = Math.max(0, Number(count) || 0);
@@ -378,5 +580,20 @@ export const StatusBar = {
         _listenUnsubs.push(Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success')));
         _listenUnsubs.push(Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning')));
         _listenUnsubs.push(Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info')));
+        // MPI-64 4.4: idle label scope tracks the remote engine connection.
+        // MPI-73: `phase` ('connecting'|'disconnecting') overrides the steady
+        // Local/Remote scope while a transition is in progress.
+        _listenUnsubs.push(Events.on('remote:connection', ({ connected, phase = null }) => {
+            _remoteConnected = !!connected;
+            _remotePhase = phase || null;
+            if (_state === 'idle') _setIdle();
+        }));
+        // MPI-208 Phase 4: the store is the authority for bar ownership + idleness.
+        // Survivor re-latch (a live lane re-occupies a freed bar) + self-heal (no live
+        // job → idle) both come from here, correcting whatever the tool:* terminal race
+        // got wrong. The tool:* listeners above still paint the visual detail.
+        _listenUnsubs.push(Events.on('generation-store:changed', (snapshot) => {
+            _reconcileFromStore(snapshot);
+        }));
     },
 };

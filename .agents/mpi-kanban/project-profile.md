@@ -4,8 +4,8 @@ mode: scalable-foundation
 mode_rationale: user-confirmed at setup; strong repo evidence (17 .claude/rules, 10 docs/, schema versioning, husky CI, kanban archives)
 mode_source: user
 setup_date: 2026-05-23
-last_refresh: 2026-06-05
-last_refresh_notes: refresh pass - validated board/state/index against repo; all 19 index pointers exist, boot docs route to JSON board, done-column statuses resolved; archived orphan task folders MPI-1 (moved) and MPI-5 (deleted) into tasks/_archived/.
+last_refresh: 2026-07-02
+last_refresh_notes: Architecture Summary collapsed to pointer (duplicated docs/PROJECT.md); knowledge-index memory pointers pruned to consolidated ~/.claude memory set.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
@@ -17,15 +17,7 @@ Cubric Vision is a desktop Electron app that wraps ComfyUI as its generation eng
 
 ## Architecture Summary
 
-- Electron main: `main.js`, `server.js` (Express on 127.0.0.1:3000)
-- Frontend SPA: `js/` (components, pages, services, state, shell, router, events)
-- Backend routes: `routes/` (comfy, projects, downloadManager, engine, videoConcat, ...)
-- Node services: `services/` (ffmpeg binary/thumb/probe, videoConcat)
-- ComfyUI engine: `engine/ComfyUI_windows_portable/` (portable, shared via `.engine-config.json` across worktrees)
-- Workflows: `comfy_workflows/*.json` (read-only — author in graph editor)
-- Projects data: `<Documents>/Cubric Studio/Projects/` (self-contained, portable)
-
-Detail: see `docs/PROJECT.md`.
+Architecture: Electron shell + Express server + vanilla-JS SPA — full map in `docs/PROJECT.md`.
 
 ## Conventions
 
@@ -38,7 +30,6 @@ See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, Compon
 - `npm run test:desktop` — Playwright Electron tests (sets `CUBRIC_E2E_USER_DATA`)
 - `npm run lint` / `npm run lint:components` — ESLint
 - `npm run release:check` — mandatory release-health gate before bump builds, pre-release generation tests, tags, pushes, or publication
-- `Start.bat` — Windows quick launch
 - `npm run build:portable:win` — build full Windows portable artifact (single source `scripts/build-portable.mjs`; `:linux` / `:mac` target other platforms via `--platform`/`--arch`). Stages to `D:\tmp\cubric-portable` (C: is space-constrained; never stage inside the repo — the script refuses it). Windows portable is install-validated (fresh install + model download + generation). Default launchers are no-terminal (`start.vbs` / `start.sh`); `*-with-terminal` variants exist for diagnostics. Linux/macOS staging and the update path are not real-host validated (update flow tracked in MPI-49). Tracked in MPI-8.
 - Read `logs/app.log` tail (offset, never full) for runtime debugging
 - `node scripts/convert-images.cjs --prefix=<name> --out=<name>` — batch PNG/JPG → WebP for sibling website carousels (defaults: brand-assets marketing-media → website vision-media, quality 85). See [[tool-website-image-converter]] memory.

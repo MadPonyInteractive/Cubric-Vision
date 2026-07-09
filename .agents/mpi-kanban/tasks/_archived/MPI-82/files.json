@@ -1,0 +1,14 @@
+{"schema":"mpi-kanban/task-files/v1","files":[
+  {"path":"routes/comfy.js","note":"Phase 1: POST /comfy/import-model (validated local copy) + GET /comfy/model-folders (primary+extras). Removed the Phase-0 remote-presence route."},
+  {"path":"js/components/Primitives/MpiFolderDrop/MpiFolderDrop.js","note":"Phase 1: new drop-zone primitive — webUtils.getPathForFile + import POST + 409 confirm-replace"},
+  {"path":"js/components/Primitives/MpiFolderDrop/MpiFolderDrop.css","note":"Phase 1: drop-zone styling (drag-over state, CSS vars)"},
+  {"path":"js/shell/preloadStyles.js","note":"Phase 1: register MpiFolderDrop.css"},
+  {"path":"js/components/types.js","note":"Phase 1: MpiFolderDropProps doc"},
+  {"path":"js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js","note":"Phase 1: drop zones per configured folder under each bucket"},
+  {"path":"js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css","note":"Phase 1: __drop-zones spacing"},
+  {"path":"js/components/Compounds/MpiModelSettings/MpiModelSettings.js","note":"Phase 1: drop zones in picker + red-bg/(missing) on missing dropdown value. Removed Phase-0 presence plumbing."},
+  {"path":"js/components/Compounds/MpiModelSettings/MpiModelSettings.css","note":"Phase 1: .mpi-dropdown--missing red trigger + __drop-zones"},
+  {"path":"js/services/commandExecutor.js","note":"Phase 1: _findMissingModel local guard -> ui:warning + abort (replaced remote variant)"},
+  {"path":"js/services/assetService.js","note":"Phase 0: reverted remote-presence annotate"},
+  {"path":"js/state.js","note":"Phase 0: reverted remote-presence keys"}
+]}

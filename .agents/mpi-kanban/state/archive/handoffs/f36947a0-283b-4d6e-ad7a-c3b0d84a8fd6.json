@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f36947a0-283b-4d6e-ad7a-c3b0d84a8fd6",
+  "generated_at": "2026-06-14T11:45:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-64 SESSION 6 — built + committed A1 engine-drop recovery (0c243f5); ran a full live fresh-volume validation of the MPI-75 v0.4.0 image; consolidated all open items into OPEN-ITEMS.md; handed remote-uninstall (L6) to the MPI-75 agent; promoted slide-over fix to MPI-79.",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-64 RunPod remote engine. This session: consolidated the scattered open items into a durable register, coded A1 (engine-drop recovery), and ran ONE expensive fresh-volume live cycle to validate everything that needed a live Pod (MPI-75 v0.4.0 image + A1 + G5 + F8 + remote T2V).",
+    "status": "in_progress",
+    "summary": "A1 is DONE + LIVE-VERIFIED + COMMITTED (0c243f5). The fresh-volume live session passed A1, B-T2V, aria2c(G4), volume-delete(G5), delete-on-quit(F8); FOUND remote-uninstall broken (L6/G3, handed to MPI-75 agent) + Blackwell create-400 (L1) + 4 minor (L2-L5). RunPod is now the shared v1.1.0 trunk. Two agents finishing concurrently: MPI-75 (image/uninstall coupling) and MPI-79 (slide-container). Next session resumes the MPI-64 masterplan AFTER those agents finish."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md",
+    "completed": [
+      "OPEN-ITEMS.md consolidated register built (all MPI-64 + connected open items, categorized A-L) — the SINGLE source of truth now; read it FIRST.",
+      "A1 engine-drop recovery SHIPPED + COMMITTED 0c243f5 + LIVE-VERIFIED end-to-end (renderer-only: js/shell.js _initEngineDropRecovery, js/shell/heroStats.js + js/shell/statusBar.js 'disconnected' state). Drop -> sticky remote·disconnected hero + IDLE·Disconnected status + ui:warning toast + clean gen-end, no false local, no relaunch; manual reconnect -> online + model panel re-hydrate across a GPU switch.",
+      "Bug 4 (verify-only) CLOSED — project.json stores shared I2V/T2V duration/quality coherently (single project.shared.video bucket keyed by mediaType).",
+      "C1 CLOSED (remote-I2V-ignores-image resolved by the dep-cross fix). F2 effectively done (cu124 default per-card multi-image; only cu13/cu130 Blackwell remains as a rebuild candidate).",
+      "LIVE fresh-volume session on MPI-75 v0.4.0 (wrapper 0.2.3): B-T2V PASS (RAM peak 92%=53.68/57.74GiB, no OOM), aria2c PASS (G4), volume-delete PASS (G5), delete-on-quit PASS (F8); cu124/cu128 arch routing + Step 4.3 self-heal + D1 cache-stacking all confirmed live.",
+      "MPI-79 brief written (slide-container click-away fix, generalized from MPI-64 H3); H3 marked moved. Committed in 0c243f5."
+    ],
+    "pending": [
+      "L6 / G3 — remote UNINSTALL not working: handed to the MPI-75 agent (message 9e2964f7). Root: stale 'endpoint doesn't exist' fallback in downloadManager.js:962-967 + remoteModels.js:272-275 (the endpoint NOW ships in v0.4.0) + a 2-step-confirm re-test question (app.log didn't grow on the press -> request never reached /comfy/models/uninstall). MPI-75 agent to fix + re-test.",
+      "B1 — remote input-asset transfer (video/audio upload, trimmed-video, remote .latent staging) — UNWRITTEN; blocks remote I2V gen. The big remaining Phase-4 app feature.",
+      "D1 — model-cache --cache-lru 2 (re-confirmed live: ~35GiB held after a completed gen) + D2 /wrapper/free — MPI-75 NEXT rebuild.",
+      "L1 — Blackwell RTX PRO 4500 createPod 400 (Blackwell-specific; L4+2000Ada create 201 clean). L2 — surface RunPod's create-error body (would diagnose L1). L3 (downgraded) / L4 no remote dl-speed / L5 status-poll false-negative flicker.",
+      "E1 — /wrapper/restart-comfy (custom-node remote restart) — MPI-75 NEXT rebuild.",
+      "At FINAL mpi-end-session: promote current-architecture.md into durable docs/rules/memory; fold UNRELEASED.md at next version-bump; remove Bug B TEMP-DEBUG when fixed."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-64",
+    "title": "RunPod Remote Engine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-64/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-64/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-64/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "brief-then-code"],
+  "knowledge_preservation": {
+    "completed": [
+      "OPEN-ITEMS.md created = consolidated register (read FIRST); pointers added to plan.md Plan Drift header + current-architecture.md header.",
+      "current-architecture.md §10 header: SESSION 6 entry added (A1 + live-verify results + L1-L6 + MPI-79 promotion).",
+      "All session verification + bug-finding events appended to tasks/MPI-64/events.jsonl.",
+      "Project memory written: project_runpod_branch_v110.md (RunPod=v1.1.0 shared trunk; master=patch-only + merge-back to RunPod). MEMORY.md indexed.",
+      "A1 + MPI-64 docs + MPI-79 brief committed 0c243f5 (staged by explicit path — did NOT touch the MPI-75 agent's uncommitted routes/remoteProxy.js or MPI-75/78/80/board.json).",
+      "Two coordination messages sent to MPI-75: bf0bbd6d (earlier, superseded by index reset) and 9e2964f7 (v0.4.0 live results + L6 handoff + L1/L2 pointers)."
+    ],
+    "pending": [
+      "MPI-75 agent: finish + commit routes/remoteProxy.js (v0.4.0/wrapper-0.2.3, still uncommitted in the shared tree) + the MPI-75 card; fix L6 uninstall coupling; re-test uninstall confirm dialog.",
+      "MPI-79 agent (parallel session): slide-container click-away fix per tasks/MPI-79/brief.md.",
+      "Next MPI-64 session: AFTER both agents finish, resume the masterplan from OPEN-ITEMS.md (top candidates: B1 remote input-asset transfer, or L1/L2 Blackwell-400 + error-body)."
+    ]
+  },
+  "next_action": {
+    "description": "Resume the MPI-64 masterplan from OPEN-ITEMS.md AFTER the MPI-75 and MPI-79 agents have finished (check git log on RunPod for their commits + read any new open_messages). FIRST re-read .agents/mpi-kanban/state/index.json fresh + tasks/MPI-64/OPEN-ITEMS.md (the consolidated register) + current-architecture.md §10 header. Then pick the next item: strongest candidates are B1 (remote input-asset transfer — unblocks remote I2V, the big remaining Phase-4 feature) or L1/L2 (Blackwell create-400 + surface RunPod's error body). Confirm L6 (remote uninstall) status with the MPI-75 agent before re-testing it. Brief before code (mpi-continue gate). GIT: RunPod is the shared v1.1.0 trunk — stage by EXPLICIT PATH only, commit your own files, --no-verify per convention; never git add -A.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "ONE expensive fresh-volume live cycle was used to validate everything needing a live Pod at once (MPI-75 v0.4.0 + A1 + G5 + F8 + T2V) rather than repeating the costly volume-delete/reinstall.",
+      "A1 reconnect is MANUAL (Settings -> Connect), not auto — never surprise-rebill a Pod the user may have wanted stopped. The drop is a sticky 'disconnected' phase reusing the existing MPI-73 phase machinery; A1 deliberately does NOT reimplement the connect orchestration (Settings owns it with all its billing/availability guards).",
+      "A1 fix is renderer-only and reuses comfyController's already-emitted remote:engine-dropped (previously no subscriber) — minimal new surface.",
+      "L6 (remote uninstall) is MPI-75's app-side coupling, not MPI-64's — the stale 'endpoint doesn't exist' fallback predates the v0.4.0 /wrapper/models/delete ship. Handed off, not fixed here, to avoid colliding with the MPI-75 agent's backend files.",
+      "RAM is the OOM wall for video, re-confirmed live (T2V peaked 92% RAM / 14% VRAM; ~35GiB cache held after a completed gen = D1 stacking). Advise 64GB+ container-RAM Pods for video.",
+      "RunPod is the shared v1.1.0 integration trunk; master is patch-only with merge-back. Concurrent agents share the working tree -> stage by explicit path."
+    ],
+    "constraints": [
+      "RunPod branch is SHARED by concurrent agents (MPI-64, MPI-75, MPI-79). STAGE BY EXPLICIT PATH, commit only your own files, git commit --no-verify; NEVER git add -A. Others' uncommitted work (e.g. MPI-75's routes/remoteProxy.js) sits in the same tree.",
+      "NEVER run autonomous Pod create/delete/stop or image builds — the USER runs ALL live Pod/volume/billing ops and image builds; Claude drives steps + observes.",
+      "Backend changes (routes/, server.js, main.js) need a FULL app restart; renderer changes (js/, css/) reload with Ctrl+R. The MPI-75 WRAPPER_VERSION bump in routes/remoteProxy.js is a backend change.",
+      "Backend logger (routes/logger.js) + clientLogger warn/info take only (category, message). PowerShell-via-Bash is DENIED in this env (use the Read tool for app.log, not Get-Content).",
+      "Commit only when the USER asks (A1 commit was user-authorized this session).",
+      "Current live volume: cubric-vision-EU-RO-1 (id 14kabihaki), 80GB, EU-RO-1, holds the Wan 2.2 T2V model (uninstall didn't delete it). Real volume path on the Pod = /workspace/mpi_models (UNDERSCORE); models under diffusion_models/ + vae/ + text_encoders/; manifest at /workspace/cubric/manifest.json.",
+      "B1 unwritten -> remote I2V gen is NOT testable; only T2V is. Image gen already works remotely."
+    ],
+    "files_modified": [
+      "js/shell.js (A1 _initEngineDropRecovery) — COMMITTED 0c243f5",
+      "js/shell/heroStats.js (remote·disconnected hero state) — COMMITTED 0c243f5",
+      "js/shell/statusBar.js (IDLE·Disconnected) — COMMITTED 0c243f5",
+      ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md (NEW consolidated register) — COMMITTED 0c243f5",
+      ".agents/mpi-kanban/tasks/MPI-64/LIVE-VERIFY-2026-06-14.md (NEW combined checklist) — COMMITTED 0c243f5",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md + plan.md + events.jsonl — COMMITTED 0c243f5",
+      ".agents/mpi-kanban/tasks/MPI-79/brief.md (NEW) — COMMITTED 0c243f5",
+      "routes/remoteProxy.js + MPI-75/* — NOT mine (MPI-75 agent, uncommitted in shared tree)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/state/index.json (RE-READ FRESH)",
+      ".agents/mpi-kanban/tasks/MPI-64/OPEN-ITEMS.md (the consolidated register — read FIRST)",
+      ".agents/mpi-kanban/tasks/MPI-64/current-architecture.md (header + §10 SESSION 6)",
+      ".agents/mpi-kanban/state/messages/9e2964f7-a1a4-4553-841e-3ac056dd2776.json (L6 handoff to MPI-75)",
+      "js/services/comfyController.js (_onWsDropped / remote:engine-dropped) if touching remote connect",
+      "routes/downloadManager.js + routes/remoteModels.js (L6 uninstall path) — coordinate with MPI-75 agent before editing"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["RunPod remote engine", "CUE queue / generation pipeline", "ComfyUI execution boundary", "container RAM / OOM / model cache", "model install/uninstall + wrapper"]
+  },
+  "rules_active": [
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-06-14T11:45:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-64 (RunPod Remote Engine) on branch RunPod (the SHARED v1.1.0 integration trunk) in the Cubric-Vision Electron app (c:/AI/Mpi/Cubric-Vision). Read .agents/mpi-kanban/state/handoffs/f36947a0-283b-4d6e-ad7a-c3b0d84a8fd6.json, then RE-READ .agents/mpi-kanban/state/index.json fresh + tasks/MPI-64/OPEN-ITEMS.md (the consolidated open-items register — READ IT FIRST, it is the single source of truth) + current-architecture.md §10 SESSION 6, then use mpi-continue. STATUS: SESSION 6 shipped + live-verified + COMMITTED (0c243f5) A1 engine-drop recovery — an out-of-band remote WS drop (container OOM) now shows a sticky 'remote · disconnected' hero + 'IDLE · Disconnected' status + a ui:warning toast instead of a false 'local · offline', with manual reconnect (Settings → Connect) that re-hydrates the model panel; renderer-only (js/shell.js _initEngineDropRecovery, heroStats.js, statusBar.js). A full live fresh-volume cycle on the new MPI-75 v0.4.0 image (wrapper 0.2.3) PASSED: remote T2V gen (RAM peaked 92%=53.68/57.74GiB, no OOM — RAM is the wall), aria2c fast download (G4), volume-delete (G5), delete-on-quit (F8); cu124/cu128 arch routing + Step 4.3 self-heal + D1 cache-stacking all confirmed live. FOUND + HANDED OFF: remote model UNINSTALL not working (L6/G3) — handed to the MPI-75 agent via message 9e2964f7 (stale 'endpoint doesn't exist' fallback in downloadManager.js:962-967 / remoteModels.js:272-275 now that v0.4.0 ships /wrapper/models/delete, plus a 2-step-confirm re-test). Also found: Blackwell RTX PRO 4500 create-400 (L1, Blackwell-specific — L4+2000Ada create clean), error-body dropped from log/UI (L2), + L3-L5 minor. H3 slide-over-closes promoted to its own card MPI-79 (a parallel session is doing it; brief at tasks/MPI-79/brief.md). DO NOT resume until the MPI-75 and MPI-79 agents have finished — check git log on RunPod + new open_messages first. Then pick the next masterplan item from OPEN-ITEMS.md: strongest candidates are B1 (remote input-asset transfer — unblocks remote I2V, the big remaining Phase-4 feature) or L1/L2 (Blackwell-400 + surface RunPod's create-error body). GOTCHAS: RunPod is shared by concurrent agents → stage by EXPLICIT PATH, commit only your own files, --no-verify, NEVER git add -A; the USER runs ALL live Pod/volume/image ops; backend (routes/) changes need a FULL app restart, renderer reloads with Ctrl+R; logger warn/info = (category, message) only; PowerShell-via-Bash is DENIED (use the Read tool for app.log); commit only when the USER asks. Brief before code (mpi-continue gate)."
+}

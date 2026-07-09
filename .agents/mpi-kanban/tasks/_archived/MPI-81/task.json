@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-81",
+  "title": "Next Pod-image rebuild batch",
+  "description": "Pod-image rebuild batch DONE. v0.4.2/wrapper-0.2.5 built + pushed PUBLIC on GHCR (all 3 profiles: cu124+cpu CI, cu128 local). Shipped + LIVE-VERIFIED on L4: #6 wrapper-owns-ComfyUI + /wrapper/restart-comfy; #4 lazy-weight pre-bake (auto-mask + interpolate + upscale all PASS, no 503); #1 --cache-lru 2 OOM fix; #5 MPI-95 progress; MPI-88 /health. Deferred to NEXT rebuild (batched w/ MPI-98): #2 /wrapper/free, #3 cu130, taesd vae_approx prebake. App-side interpolate path fix committed RunPod 3aad81e. See brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-14T12:50:00Z",
+  "updated_at": "2026-06-15T21:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

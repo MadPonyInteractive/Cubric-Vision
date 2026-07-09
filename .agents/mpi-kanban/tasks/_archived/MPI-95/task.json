@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-95",
+  "title": "Remote download progress jumps to ~80% then crawls",
+  "description": "Remote (RunPod) model install bar pops to ~80% instantly then crawls; fix denominator + hold indeterminate until real totals known.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-15T11:05:00Z",
+  "updated_at": "2026-06-16T10:05:00Z",
+  "activeSessionTitle": "Owned by MPI-97 session. Fixed: (1) 'sits at 100%' aggregation via _depDenominator seed floor; (2) post-uninstall 36/36+partial contradiction = keep-uninstall deleting per-model custom_node + byte-only bar. Live-verified 2026-06-16 (4 concurrent installs, no 100%-sit). App-side, no image.",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

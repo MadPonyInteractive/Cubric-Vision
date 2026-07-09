@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-112",
+  "files": [
+    { "path": "js/utils/promptReuse.js", "why": "Duration reads saved param only (no clip-length fallback); _opAcceptsImageInput also checks generationSettings.operation for extend." },
+    { "path": "js/services/generationService.js", "why": "extendBody sends generationSettings; extendedItem carries generationSettings + previewAssets; extend concat uses silentComplete." },
+    { "path": "routes/videoConcat.js", "why": "/extend-video accepts generationSettings, materializes start-frame snapshot under extended item id, persists into sidecar." },
+    { "path": "routes/projects.js", "why": "export materializeGenerationFrameSnapshots for reuse by videoConcat." },
+    { "path": "js/services/concatProgress.js", "why": "silentComplete: concat no longer touches StatusBar.progress (no toast, no gen-timer reset)." },
+    { "path": "js/shell/statusBar.js", "why": "completion toast fires immediately, not inside the supersession-token-gated 400ms defer (fixes swallowed first toast on queue)." },
+    { "path": "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js", "why": "Create New = Extend minus concat; shared _captureLastFrameMedia (always last-frame seed, strip stale startFrame); refreshControls after reuse settings." },
+    { "path": "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js", "why": "refreshControls after applyPromptReuseSettings." },
+    { "path": "js/components/Organisms/MpiPromptBox/MpiPromptBox.js", "why": "new el.refreshControls() re-mounts active controls to re-read persisted settings." },
+    { "path": "js/components/Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js", "why": "status-bar info strings: 'Extend video from last frame' / 'Create video from last frame'." }
+  ]
+}

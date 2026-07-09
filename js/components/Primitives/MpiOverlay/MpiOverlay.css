@@ -12,9 +12,12 @@
 }
 
 /* ── Backdrop (body-mount only) ──────────────────────────────── */
+/* Top inset = titlebar height so the custom OS bar (min/max/close, drag)
+   stays visible + clickable behind the overlay. --titlebar-h collapses to
+   0px in F11 fullscreen (titlebar.css) → full cover only when fullscreen. */
 .mpi-overlay-backdrop {
     position: fixed;
-    inset: 0;
+    inset: var(--titlebar-h) 0 0 0;
     z-index: 10009; /* fallback; JS overrides via inline style */
     background: var(--surface-0);
 }
@@ -41,9 +44,11 @@
     background: var(--surface-0);
 }
 
-/* ── Body mode — full viewport on top of backdrop ───────────── */
+/* ── Body mode — fills viewport below the titlebar, on top of backdrop ── */
+/* Leaves the custom OS bar exposed (see backdrop note); collapses to full
+   cover in F11 fullscreen when --titlebar-h is 0px. */
 .mpi-overlay--body {
-    inset: 0;
+    inset: var(--titlebar-h) 0 0 0;
     z-index: 10010; /* fallback; JS overrides via inline style */
 }
 

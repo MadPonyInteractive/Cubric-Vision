@@ -17,9 +17,10 @@ export const KEY_TYPE = {
  * `when`            — optional fn({ state, event, activeElement, isTyping }) → bool
  * `allowWhileTyping`— if true, fires even when an input/textarea has focus
  *
- * NOTE: This registry is the runtime source of truth for binding. The help
- * page (`MpiHelp.js`) does NOT consume this file — its layout is hand-authored
- * HTML. When you add/change a hotkey here, also update `MpiHelp.js` HTML.
+ * NOTE: This registry is the runtime source of truth for binding. The hotkeys
+ * page (`mpi-hotkeys.js`) does NOT consume this file — its layout is
+ * hand-authored HTML. When you add/change a hotkey here, also update
+ * `mpi-hotkeys.js` HTML.
  */
 export const HOTKEY_REGISTRY = [
 
@@ -75,7 +76,16 @@ export const HOTKEY_REGISTRY = [
         type:             KEY_TYPE.DOWN,
         category:         'memory',
         scopeLabel:       'Memory',
-        description:      'Refresh memory',
+        description:      'Release VRAM',
+        allowWhileTyping: true,
+    },
+    {
+        id:               'memory.refresh.deep',
+        key:              'control+f5',
+        type:             KEY_TYPE.DOWN,
+        category:         'memory',
+        scopeLabel:       'Memory',
+        description:      'Deep clean (VRAM + RAM)',
         allowWhileTyping: true,
     },
 
@@ -177,11 +187,11 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: false,
     },
     {
-        id:               'gallery.queue.toggle',
+        id:               'queue.toggle',
         key:              'q',
         type:             KEY_TYPE.DOWN,
-        category:         'gallery',
-        scopeLabel:       'Gallery',
+        category:         'queue',
+        scopeLabel:       'Queue',
         description:      'Toggle Cue panel',
         allowWhileTyping: false,
     },
@@ -216,6 +226,10 @@ export const HOTKEY_REGISTRY = [
     },
 
     // ── Radial Menu ───────────────────────────────────────────────────────────
+    // Tab opens the radial ONLY on the gallery / group-history pages, and never
+    // while a full-page body overlay (e.g. the Model Library) is open — there it
+    // must be inert. Native Tab focus-traversal is suppressed globally in
+    // hotkeyManager regardless, so Tab can never walk cards / enter the slide-over.
     {
         id:               'radialMenu.toggle',
         key:              'tab',
@@ -224,6 +238,9 @@ export const HOTKEY_REGISTRY = [
         scopeLabel:       'Radial Menu',
         description:      'Toggle radial menu',
         allowWhileTyping: false,
+        when: ({ state }) =>
+            (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
+            !document.querySelector('.mpi-overlay--body'),
     },
 
     // ── Modal ─────────────────────────────────────────────────────────────────
@@ -377,6 +394,15 @@ export const HOTKEY_REGISTRY = [
         category:         'video',
         scopeLabel:       'Video Player',
         description:      'Toggle loop',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'video.mute',
+        key:              'm',
+        type:             KEY_TYPE.DOWN,
+        category:         'video',
+        scopeLabel:       'Video Player',
+        description:      'Toggle mute',
         allowWhileTyping: false,
     },
     {

@@ -52,6 +52,7 @@ const renderOption = (opt, value) => {
  *
  * Emits:
  * 'change' { value: string, label: string }
+ * 'open'   {}  — fired when the option list opens (use to refresh live options)
  */
 export const MpiDropdown = ComponentFactory.create({
     name: 'MpiDropdown',
@@ -65,7 +66,9 @@ export const MpiDropdown = ComponentFactory.create({
         const direction   = props.direction || 'down';
         const info        = props.info ? `data-info="${props.info}"` : '';
         const extraClasses = props.extraClasses || '';
-        const listClasses = props.wrapLabels ? 'mpi-dropdown__list--wrap' : '';
+        // Forward extraClasses to the portalled list too — it lives in document.body,
+        // so a root-only modifier can't reach its options (e.g. .mpi-dropdown--runpod).
+        const listClasses = `${props.wrapLabels ? 'mpi-dropdown__list--wrap' : ''} ${extraClasses}`.trim();
 
         const selected = options.find(o => optionValue(o) === value);
         const triggerLabel = selected
@@ -153,6 +156,9 @@ export const MpiDropdown = ComponentFactory.create({
                 positionList();
                 root.classList.add('is-open');
                 list.classList.add('is-open');
+                // Lets callers refresh live data when the list opens (e.g. the
+                // RunPod GPU picker re-fetches stock so it is never stale).
+                emit('open', {});
                 cleanupScroll = on(window, 'scroll', (e) => {
                     if (list.contains(e.target)) return;
                     closeList();

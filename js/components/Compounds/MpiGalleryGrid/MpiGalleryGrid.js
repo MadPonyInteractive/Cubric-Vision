@@ -1,17 +1,33 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
-import { ce, qs, on } from '/js/utils/dom.js';
+import { ce, qs, qsa, on } from '/js/utils/dom.js';
+import { renderIcon } from '/js/utils/icons.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
-import { getModelById } from '../../../data/modelRegistry.js';
+import { getModelById, tierLetterFor } from '../../../data/modelRegistry.js';
 import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
 import { state } from '../../../state.js';
+import { Storage } from '../../../core/storage.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
+
+// One-card-at-a-time: stop every OTHER playing media element in the gallery —
+// audio cards (<audio data-src>) AND unmuted hover videos — so a hover/click
+// never overlaps another card's sound. Pass the element that should keep
+// playing (or null to stop everything). Also re-mutes stopped hover videos.
+function _stopOtherGalleryMedia(except) {
+    qsa('audio[data-src], video.mpi-group-card__thumb--video').forEach((m) => {
+        if (m === except) return;
+        m.pause();
+        try { m.currentTime = 0; } catch (_) {}
+        if (m.tagName === 'VIDEO') m.muted = true;
+    });
+}
 
 /**
  * MpiGalleryGrid — Compound: adaptive grid of ItemGroup cards with size slider
@@ -42,6 +58,7 @@ import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReu
  *   'compare'     { groups: [g1, g2] }   — compare 2 selected groups
  *   'delete'      { groups: [...] }      — delete selected groups
  *   'download'    { groups: [...] }      — download selected groups
+ *   'rename'      { group }              — user set group.customName; persist to disk
  *   'gc-group'    { group }              — group mutated by GC; persist to disk
  *   'gc-remove'   { groupId }            — all history entries missing; remove from grid
  *   'selection-start' {}                 — selection mode activated (hide PromptBox)
@@ -69,6 +86,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <div class="mpi-gallery-grid__tab-slot" data-filter="all"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="images"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="videos"></div>
+                    <div class="mpi-gallery-grid__tab-slot" data-filter="audios"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="previews"></div>
                     <div class="mpi-gallery-grid__tab-slot" data-filter="favorites"></div>
                     <div class="mpi-gallery-grid__info-btn-slot"></div>
@@ -333,6 +351,66 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const preview    = qs('.mpi-group-card__preview', cardEl);
             const spinner    = qs('.mpi-group-card__spinner', cardEl);
             let previewImg   = null;
+            // Latent-preview frame pacing + loop. Most models send one evolving still
+            // per step, but video models (LTX via the KJNodes preview override) emit a
+            // SEQUENCE of frames (different frame POSITIONS) per step. LTX is distilled:
+            // after step 1 the latent barely changes, so every step's frames are at
+            // ~final preview quality — the value is the MOTION across positions, not
+            // refinement. The frames arrive as instant bursts (the node uses a
+            // synchronous Thread(...).run()), so painting on arrival flashes to the last
+            // frame and then freezes. We hold the most-recent frames as a rolling CLIP
+            // and cycle them at ~8fps, LOOPING until the gen ends — that replays the
+            // motion continuously instead of freezing. New frames append; over
+            // PREVIEW_CLIP_MAX the oldest is evicted + its blob URL revoked. Only
+            // evicted/teardown URLs are revoked (clip frames stay alive to repaint).
+            // ponytail: an array + cursor + interval, no <video> element.
+            const PREVIEW_FPS = 8;
+            const PREVIEW_CLIP_MAX = 48; // a latent video preview is short; loop the window
+            let _previewClip = [];   // rolling buffer of frame URLs
+            let _previewCursor = 0;  // play head into _previewClip
+            let _previewTimer = null;
+            // CLIP mode = loop a motion clip (LTX only). Gated by the VHS_latentpreview
+            // WS event, which ONLY the KJNodes LTX preview override emits. Wan/SDXL/5B
+            // send core single-frame step previews and never fire that event → they stay
+            // in STILL mode: each preview replaces the last (a refining still), NOT a
+            // growing loop. (Fix: the loop used to run for every model unconditionally.)
+            let _isClipMode = false;
+            function _revokePreviewUrl(url) {
+                if (url && url.startsWith('blob:')) { try { URL.revokeObjectURL(url); } catch { /* already revoked */ } }
+            }
+            function _stopPreviewPlayback() {
+                _isClipMode = false;
+                if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
+                for (const url of _previewClip) _revokePreviewUrl(url);
+                _previewClip = [];
+                _previewCursor = 0;
+            }
+            function _paintNextPreviewFrame() {
+                if (!_generating || !_previewClip.length) return;
+                if (_previewCursor >= _previewClip.length) _previewCursor = 0; // loop
+                _setPreviewImageSrc(_ensurePreviewImage(), _previewClip[_previewCursor++]);
+            }
+            function _enqueuePreviewFrame(url) {
+                if (!url) return;
+                // STILL mode (non-LTX): replace the current preview with each new frame.
+                // The old frame is revoked so blobs don't leak.
+                if (!_isClipMode) {
+                    const prev = _previewClip[0];
+                    _previewClip = [url];
+                    if (prev && prev !== url) _revokePreviewUrl(prev);
+                    _setPreviewImageSrc(_ensurePreviewImage(), url);
+                    return;
+                }
+                _previewClip.push(url);
+                if (_previewClip.length > PREVIEW_CLIP_MAX) {
+                    _revokePreviewUrl(_previewClip.shift());
+                    if (_previewCursor > 0) _previewCursor--; // keep cursor aligned after eviction
+                }
+                if (!_previewTimer) {
+                    _paintNextPreviewFrame(); // first frame immediately, then pace
+                    _previewTimer = setInterval(_paintNextPreviewFrame, 1000 / PREVIEW_FPS);
+                }
+            }
             const nameEl     = qs('.mpi-group-card__name', cardEl);
             const subEl      = qs('.mpi-group-card__sub', cardEl);
             const topBadgeEl   = qs('.mpi-group-card__top-badge', cardEl);
@@ -403,7 +481,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // Continue button — only Finish + Discard remain.
             const _sel0 = group?.history?.[group.selectedIndex];
             const _allowBranch = _sel0?.operation
-                ? commandAllowsBranchingContinue(_sel0.operation)
+                ? commandAllowsBranchingContinue(_sel0.operation, getModelById(_sel0.modelId))
                 : false;
             continueWrap.style.display = _allowBranch ? '' : 'none';
 
@@ -474,6 +552,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
 
             function _clearPreviewImage() {
+                _stopPreviewPlayback();
                 previewImg?.remove();
                 previewImg = null;
             }
@@ -542,6 +621,88 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 imageThumb.src = src;
             }
 
+            function _swapThumbToAudio() {
+                // Audio has no frame — render a centered play/pause icon thumb
+                // (white, turns pink when the card is selected via CSS). The icon
+                // doubles as the play/pause feedback button.
+                const audioThumb = document.createElement('div');
+                audioThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--audio';
+                audioThumb.draggable = true; // enable drag-into-prompt (like img/video thumbs)
+                audioThumb.innerHTML = `<span class="mpi-group-card__audio-icon">${renderIcon('play', 'lg')}</span>`;
+                _replaceThumb(audioThumb);
+                _removeHoverVideo();
+                _videoThumb = null;
+                cardEl.classList.remove('mpi-group-card--missing');
+            }
+
+            // Click the audio card → toggle play/pause (no loop). The center icon
+            // swaps play↔pause as feedback. A hidden <audio> element drives it.
+            let _audioEl = null;
+            function _ensureAudioCardControls(src, selected) {
+                const iconWrap = qs('.mpi-group-card__audio-icon', cardEl);
+                if (_audioEl && _audioEl.dataset.src === src) return;
+                if (_audioEl) { _audioEl.pause(); _audioEl.remove(); _audioEl = null; }
+
+                const audio = document.createElement('audio');
+                audio.preload = 'metadata';
+                audio.dataset.src = src;
+                const _setIcon = (name) => { if (iconWrap) iconWrap.innerHTML = renderIcon(name, 'lg'); };
+                on(audio, 'loadedmetadata', () => {
+                    if (Number.isFinite(audio.duration)) _setAudioLength(audio.duration);
+                });
+                // Play/Stop (short clips): playing shows Stop; stop/end resets to 0.
+                on(audio, 'play',  () => _setIcon('stop'));
+                on(audio, 'pause', () => _setIcon('play'));
+                on(audio, 'ended', () => { _setIcon('play'); try { audio.currentTime = 0; } catch (_) {} });
+                audio.addEventListener('error', () => {
+                    cardEl.classList.add('mpi-group-card--missing');
+                    emit('media-missing', { group, itemId: selected?.id });
+                });
+                audio.src = src;
+                cardEl.appendChild(audio);
+                _audioEl = audio;
+
+                // Card click → play/pause toggle. Stop every OTHER playing card
+                // (audio + hover video) first so two clips never overlap.
+                on(cardEl, 'click', (e) => {
+                    // Selection mode / action buttons keep their own handlers.
+                    if (e.target.closest('.mpi-group-card__top-actions, .mpi-group-card__select-wrap')) return;
+                    e.stopPropagation();
+                    if (audio.paused) {
+                        _stopOtherGalleryMedia(audio);
+                        audio.play().catch(() => {});
+                    } else {
+                        // Stop (not pause): reset to the beginning.
+                        audio.pause();
+                        try { audio.currentTime = 0; } catch (_) {}
+                    }
+                });
+
+                // Play audio on hover (setting, default on): hovering an audio
+                // card plays it (stop button shows via the 'play' listener);
+                // leaving stops + resets. Click-to-stop still works.
+                on(cardEl, 'mouseenter', () => {
+                    if (!Storage.getPlayAudioOnHover()) return;
+                    if (!audio.paused) return;
+                    _stopOtherGalleryMedia(audio);
+                    audio.play().catch(() => {});
+                });
+                on(cardEl, 'mouseleave', () => {
+                    if (audio.paused) return;
+                    audio.pause();
+                    try { audio.currentTime = 0; } catch (_) {}
+                });
+
+                if (selected?.duration > 0) _setAudioLength(selected.duration);
+            }
+
+            function _setAudioLength(seconds) {
+                const s = Math.max(0, Math.round(seconds));
+                const mm = Math.floor(s / 60);
+                const ss = String(s % 60).padStart(2, '0');
+                subEl.textContent = `${mm}:${ss}`;
+            }
+
             function _swapThumbToEmpty() {
                 const emptyThumb = document.createElement('div');
                 emptyThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--empty';
@@ -583,12 +744,22 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             function _onCardEnter() {
                 if (!_videoThumb) return;
+                // Play audio on hover (setting, default on): stop any other
+                // playing card first, then unmute so this card is the only sound.
+                const withAudio = Storage.getPlayAudioOnHover();
+                if (withAudio) {
+                    _stopOtherGalleryMedia(_videoThumb);
+                    _videoThumb.muted = false;
+                } else {
+                    _videoThumb.muted = true;
+                }
                 _videoThumb.play().catch(() => {});
             }
 
             function _onCardLeave() {
                 if (!_videoThumb) return;
                 _videoThumb.pause();
+                _videoThumb.muted = true; // re-mute so it never plays sound off-hover
                 try { _videoThumb.currentTime = 0; } catch (_) {}
             }
 
@@ -698,13 +869,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 if (src) {
                     const isVideo = selected?.type === 'video' || (group.type === 'video' && selected?.type !== 'image');
+                    const isAudio = selected?.type === 'audio' || group.type === 'audio';
                     if (!isVideo) {
                         // Reaching non-video render path — drop any video state
                         // from a prior selection so hover doesn't replay it.
                         _removeHoverVideo();
                         _videoSrc = null;
                     }
-                    if (selected?.inputPreview) {
+                    if (isAudio) {
+                        _swapThumbToAudio();
+                        _ensureAudioCardControls(src, selected);
+                    } else if (selected?.inputPreview) {
                         _swapThumbToBackgroundImage(src);
                     } else if (isVideo) {
                         _swapThumbToVideo(src, selected);
@@ -715,14 +890,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _swapThumbToEmpty();
                 }
 
-                nameEl.textContent = selected?.name || group.name || '';
+                nameEl.textContent = group.customName || selected?.name || group.name || '';
 
                 // Top-left badge: original source/model on row 1, current selected operation on row 2.
                 const originalModel = getModelById(original?.modelId);
                 const command = getCommand(selected?.operation);
-                const modelLabel = original?.uploaded
-                    ? 'IMPORTED'
-                    : (originalModel?.name || original?.modelId || '');
+                // MPI-200: append the size-tier letter (H/B/L) so a card shows WHICH
+                // tier made the asset (e.g. "LTX 2.3 B"). Empty for models with no
+                // tier family. Uses the original model's id (the tier that generated it).
+                const tierLetter = tierLetterFor(originalModel);
+                const modelName = originalModel
+                    ? `${originalModel.name}${tierLetter ? ` ${tierLetter}` : ''}`
+                    : (original?.modelId || '');
+                const modelLabel = original?.uploaded ? 'IMPORTED' : modelName;
                 const operationLabel = selected?.uploaded
                     ? ''
                     : (command?.label || selected?.operation || '');
@@ -758,7 +938,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         timeStr = `${totalSec}s`;
                     }
                 }
-                subEl.textContent = [dimStr, timeStr].filter(Boolean).join(' · ');
+                // Audio cards show their length here (m:ss). Sidecar duration is
+                // the canonical source; the <audio> loadedmetadata handler refines
+                // it if the sidecar lacks one. This must run inside _render so a
+                // re-render doesn't blank the length set asynchronously.
+                if (group.type === 'audio') {
+                    const aDur = Number(selected?.duration);
+                    subEl.textContent = (Number.isFinite(aDur) && aDur > 0)
+                        ? `${Math.floor(aDur / 60)}:${String(Math.round(aDur % 60)).padStart(2, '0')}`
+                        : '';
+                } else {
+                    subEl.textContent = [dimStr, timeStr].filter(Boolean).join(' · ');
+                }
 
                 if (!thumb.dataset.mpiDragBound) {
                     thumb.dataset.mpiDragBound = '1';
@@ -767,6 +958,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         e.dataTransfer.setData('application/mpi-media', JSON.stringify({
                             groupId: group.id, itemId: sel?.id,
                             filePath: sel?.filePath, type: group.type,
+                            // User-facing name: customName (MPI-130) wins, else the
+                            // derived group/item name. Carried so the PromptBox
+                            // media chip shows the real name, not the raw filename.
+                            name: group.customName || group.name || sel?.name || '',
                         }));
                     });
                 }
@@ -821,6 +1016,66 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
             });
 
+            // ── Inline rename ────────────────────────────────────────────────
+            // Swaps the card's name span for an inline MpiInput. Enter/blur
+            // commits, Escape cancels. Empty/whitespace clears customName (falls
+            // back to the derived label). Persisted by the parent block via the
+            // 'rename' event → updateGroup() (same path as 'favourite').
+            let _renaming = false;
+            function _startRename() {
+                if (_renaming) return;
+                _renaming = true;
+
+                const sel = group?.history?.[group.selectedIndex];
+                const current = group.customName || sel?.name || group.name || '';
+                const inst = MpiInput.mount(ce('div'), {
+                    type: 'text', value: current,
+                });
+                inst.el.classList.add('mpi-group-card__rename');
+                const field = qs('.mpi-input__field', inst.el);
+
+                cardEl.classList.add('mpi-group-card--renaming');
+                nameEl.style.display = 'none';
+                nameEl.parentNode.insertBefore(inst.el, nameEl);
+                field.focus();
+                field.select();
+
+                let _done = false;
+                const _teardown = () => {
+                    inst.el.remove();
+                    nameEl.style.display = '';
+                    cardEl.classList.remove('mpi-group-card--renaming');
+                    _renaming = false;
+                };
+                const _commit = () => {
+                    if (_done) return;
+                    _done = true;
+                    const next = field.value.trim();
+                    const value = next.length ? next : null;
+                    if (value !== (group.customName ?? null)) {
+                        group.customName = value;
+                        nameEl.textContent = group.customName || sel?.name || group.name || '';
+                        emit('rename', { group });
+                    }
+                    _teardown();
+                };
+                const _cancel = () => {
+                    if (_done) return;
+                    _done = true;
+                    _teardown();
+                };
+
+                // stopPropagation so typing on an audio card (left-click = play/stop)
+                // or any card does not bubble into card-level click handlers.
+                on(field, 'click', (ev) => ev.stopPropagation());
+                on(field, 'keydown', (ev) => {
+                    ev.stopPropagation();
+                    if (ev.key === 'Enter') { ev.preventDefault(); _commit(); }
+                    else if (ev.key === 'Escape') { ev.preventDefault(); _cancel(); }
+                });
+                on(field, 'blur', _commit);
+            }
+
             // ── Right-click context menu ─────────────────────────────────────
             cardEl.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -840,19 +1095,25 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     x: e.clientX,
                     y: e.clientY,
                     items: [
-                        { key: 'compare',  icon: 'compare',  label: 'Compare',  disabled: compareDisabled },
-                        { key: 'combine',  icon: 'merge',    label: 'Combine',  disabled: combineDisabled },
-                        { key: 'download', icon: 'download', label: 'Download' },
-                        { key: 'delete',   icon: 'trash',    label: 'Delete',   danger: true },
+                        { key: 'compare',    icon: 'compare',  label: 'Compare',    disabled: compareDisabled },
+                        { key: 'combine',    icon: 'merge',     label: 'Combine',    disabled: combineDisabled },
+                        { key: 'add-to-project', icon: 'folder', label: 'Add to project' },
+                        { key: 'rename',     icon: 'edit',      label: 'Rename',     disabled: targetIds.length !== 1 },
+                        { key: 'card-notes', icon: 'text',      label: 'Card notes', disabled: targetIds.length !== 1 },
+                        { key: 'download',   icon: 'download',  label: 'Download' },
+                        { key: 'delete',     icon: 'trash',     label: 'Delete',     danger: true },
                     ],
                     onSelect: (key) => {
                         const selected = targetIds
                             .map(id => _groups.find(g => g.id === id))
                             .filter(Boolean);
-                        if (key === 'compare')  emit('compare',  { groups: selected });
-                        if (key === 'combine')  emit('combine',  { groups: selected });
-                        if (key === 'download') emit('download', { groups: selected });
-                        if (key === 'delete')   emit('delete',   { groups: selected, source: 'context' });
+                        if (key === 'compare')    emit('compare',  { groups: selected });
+                        if (key === 'combine')    emit('combine',  { groups: selected });
+                        if (key === 'add-to-project') emit('add-to-project', { groups: selected });
+                        if (key === 'rename')     _startRename();
+                        if (key === 'card-notes') emit('card-notes', { group });
+                        if (key === 'download')   emit('download', { groups: selected });
+                        if (key === 'delete')     emit('delete',   { groups: selected, source: 'context' });
                         if (useSelection) _exitSelectionMode();
                     },
                 });
@@ -886,8 +1147,20 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             cardEl.updatePreview = (previewUrl) => {
                 if (!_generating) return;
-                const img = _ensurePreviewImage();
-                _setPreviewImageSrc(img, previewUrl);
+                _enqueuePreviewFrame(previewUrl);
+            };
+
+            // A new sampler stage = a fresh preview window. Drop the current clip so
+            // stages don't concatenate into one growing loop; the timer keeps running
+            // and the next frames build the new window. MPI-167.
+            // This fires ONLY on the VHS_latentpreview WS event (LTX preview override) →
+            // it's also the signal that this gen is a looping motion clip, so enter CLIP
+            // mode here. Non-LTX gens never call this → they stay in STILL mode.
+            cardEl.resetPreviewClip = () => {
+                _isClipMode = true;
+                for (const url of _previewClip) _revokePreviewUrl(url);
+                _previewClip = [];
+                _previewCursor = 0;
             };
 
             cardEl.setDone = (newGroup) => {
@@ -964,6 +1237,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _clearPreviewImage();
                 }
                 _render();
+                // In-place Finish (preview→video) replaces the entry on a card
+                // that is already in view, so the grid IntersectionObserver never
+                // re-fires to promote the hover <video>. Promote it here so the
+                // finished video plays on hover immediately (no scroll / re-nav).
+                // _promoteVideo self-guards on _videoPromoted + isVideo.
+                _promoteVideo();
             };
 
             _render();
@@ -1105,6 +1384,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 let display = _groups.filter(g => {
                     if (filter === 'images')   return g.type === 'image';
                     if (filter === 'videos')    return g.type === 'video';
+                    if (filter === 'audios')    return g.type === 'audio';
                     if (filter === 'previews')  return g.history?.[g.selectedIndex]?.stage === 'preview';
                     if (filter === 'favorites') return g.favourite === true;
                     return true;
@@ -1238,12 +1518,28 @@ export const MpiGalleryGrid = ComponentFactory.create({
             grid.scrollTop += e.deltaY;
         }, { passive: false }));
 
+        // Scrolling moves a playing card out from under the cursor without
+        // firing mouseleave (the element moves, the pointer doesn't) — so hover
+        // audio/video would keep playing off-screen. On any scroll, stop every
+        // media element whose card is no longer hovered. Keeps the one still
+        // under the cursor playing.
+        _unsubs.push(on(grid, 'scroll', () => {
+            const hovered = qs('.mpi-group-card:hover', grid);
+            qsa('audio[data-src], video.mpi-group-card__thumb--video', grid).forEach((m) => {
+                if (m.paused) return;
+                if (hovered && hovered.contains(m)) return;
+                m.pause();
+                try { m.currentTime = 0; } catch (_) {}
+                if (m.tagName === 'VIDEO') m.muted = true;
+            });
+        }, { passive: true }));
+
         // ── Info toggle button ───────────────────────────────────────────────
 
         const infoBtnSlot = qs('.mpi-gallery-grid__info-btn-slot', el);
         const _infoTip = (on) => on
-            ? 'Hide card info — mouse over shows it'
-            : 'Show card info always — mouse over hides it';
+            ? 'Hide card info — mouse over shows it (I)'
+            : 'Show card info always — mouse over hides it (I)';
         const infoBtn = MpiButton.mount(infoBtnSlot, {
             icon: 'info', size: 'sm', variant: 'ghost', toggleable: true,
             active: state.galleryShowInfo, info: _infoTip(state.galleryShowInfo),
@@ -1275,6 +1571,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             { filter: 'all',       label: 'All' },
             { filter: 'images',    label: 'Images' },
             { filter: 'videos',    label: 'Videos' },
+            { filter: 'audios',    label: 'Audio' },
             { filter: 'previews',  label: 'Previews' },
             { filter: 'favorites', label: 'Favs' },
         ];
@@ -1321,6 +1618,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         el.updatePreview = (tempId, previewUrl) => {
             _cardMap.get(tempId)?.card.el.updatePreview(previewUrl);
+        };
+
+        el.resetPreviewClip = (tempId) => {
+            _cardMap.get(tempId)?.card.el.resetPreviewClip();
         };
 
         el.removeCard = (groupId) => {

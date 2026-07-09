@@ -181,15 +181,15 @@ export const MpiVideoControlBar = ComponentFactory.create({
         let _pendingTrim = null;
 
         // ── Mount sub-components ──────────────────────────────────────────
-        const playBtn = MpiButton.mount(qs('[data-mount="play"]', el),         { icon: 'play', iconActive: 'pause', size: 'sm', info: 'Play/Pause' });
-        const frameBackBtn = MpiButton.mount(qs('[data-mount="frame-back"]', el), { icon: 'frameBack', size: 'sm', info: 'Previous Frame' });
-        const frameFwdBtn  = MpiButton.mount(qs('[data-mount="frame-forward"]', el), { icon: 'frameForward', size: 'sm', info: 'Next Frame' });
+        const playBtn = MpiButton.mount(qs('[data-mount="play"]', el),         { icon: 'play', iconActive: 'pause', size: 'sm', info: 'Play/Pause (SPACE)' });
+        const frameBackBtn = MpiButton.mount(qs('[data-mount="frame-back"]', el), { icon: 'frameBack', size: 'sm', info: 'Previous Frame (←)' });
+        const frameFwdBtn  = MpiButton.mount(qs('[data-mount="frame-forward"]', el), { icon: 'frameForward', size: 'sm', info: 'Next Frame (→)' });
         const framesToggleBtn = MpiButton.mount(qs('[data-mount="frames-toggle"]', el), { icon: 'frames', active: _showFrames, size: 'sm', info: 'Show frames / seconds' });
         if (_showFrames) framesToggleBtn.el.classList.add('is-active');
 
         const loopBtn  = MpiButton.mount(qs('[data-mount="loop"]', el),       { icon: 'loop', size: 'sm', info: 'Loop (L)' });
-        const muteBtn  = MpiButton.mount(qs('[data-mount="mute"]', el),       { icon: 'volumeHigh', iconActive: 'volumeOff', size: 'sm', info: 'Mute/Unmute' });
-        const fsBtn    = MpiButton.mount(qs('[data-mount="fullscreen"]', el), { icon: 'fullscreen', size: 'sm', info: 'Fullscreen' });
+        const muteBtn  = MpiButton.mount(qs('[data-mount="mute"]', el),       { icon: 'volumeHigh', iconActive: 'volumeOff', size: 'sm', info: 'Mute/Unmute (M)' });
+        const fsBtn    = MpiButton.mount(qs('[data-mount="fullscreen"]', el), { icon: 'fullscreen', size: 'sm', info: 'Fullscreen (F)' });
 
         const volumeSlider = MpiProgressBar.mount(qs('[data-mount="volume"]', el), {
             min: 0, max: 100, step: 1, value: 100,
@@ -317,8 +317,12 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
         fsBtn.on('click', async () => {
             try {
-                if (document.fullscreenElement) await document.exitFullscreen();
-                else                            await el.requestFullscreen();
+                if (document.fullscreenElement) {
+                    await document.exitFullscreen();
+                } else {
+                    const videoEl = _surface ? _surface.getVideoElement() : null;
+                    if (videoEl) await videoEl.requestFullscreen();
+                }
             } catch (err) { console.error('Fullscreen request failed:', err); }
         });
 
@@ -404,6 +408,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.up',     () => _adjustVolume(+10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.volume.down',   () => _adjustVolume(-10)));
             _hotkeyUnsubs.push(Hotkeys.bind('video.loop',          () => loopBtn.el.click()));
+            _hotkeyUnsubs.push(Hotkeys.bind('video.mute',          () => muteBtn.el.click()));
             _hotkeyUnsubs.push(Hotkeys.bind('video.frame.first',   () => {
                 if (!_surface) return;
                 _surface.getVideoElement().pause();

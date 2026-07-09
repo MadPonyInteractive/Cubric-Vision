@@ -1,0 +1,4 @@
+{"ts":"2026-07-02T03:00:00Z","event":"task.created","column":"todo"}
+{"ts":"2026-07-02T03:00:00Z","event":"task.moved","from":"todo","to":"doing"}
+{"ts":"2026-07-02T03:30:00Z","event":"task.progress","note":"All code+deps+upload+hashes+workflow done & verified (parse, cross-ref, byte-match HEAD, workflow served 200). Awaiting user app-reload to confirm card render + one gen per op."}
+{"ts":"2026-07-02T04:00:00Z","event":"task.moved","id":"MPI-172","from":"doing","to":"done"}

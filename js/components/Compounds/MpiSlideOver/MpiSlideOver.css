@@ -87,6 +87,8 @@
 .mpi-slide-over--queue {
     left: auto;
     width: min(460px, calc(100vw - 48px));
+    /* Dock above the prompt bar so its controls stay clickable. */
+    bottom: calc(var(--statusbar-h, 32px) + var(--promptbar-h, 0px));
 }
 
 .mpi-slide-over--queue .mpi-slide-over__header,

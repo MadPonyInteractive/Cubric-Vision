@@ -1,0 +1,84 @@
+{
+  "schema": "cubric/node-lock/v1",
+  "_doc": "Single source of truth for ComfyUI core + frontend + custom-node pins. BOTH install paths consume this: the app (js/data/modelConstants/dependencies.js builds node download URLs from it) and the RunPod Pod image build (mpi-ci/cubric-vision-pod). Per-node `source`: registry|git-tag|git-commit. `installRequirements` discriminates BAKED (pip-req nodes → Pod image at build time) from VOLUME (code-only nodes → installed on connect via the wrapper). To bump a node, edit its entry here only.",
+  "comfyui": {
+    "core": { "tag": "v0.27.0", "commit": "bb131be9e83d2f773c90f1d6f1e4b248a498c8c5" },
+    "frontend": {
+      "comfyui-frontend-package": "1.45.20",
+      "comfyui-workflow-templates": "0.11.1"
+    }
+  },
+  "nodes": {
+    "ComfyUI-LTXVideo": {
+      "source": "git-commit",
+      "repo": "Lightricks/ComfyUI-LTXVideo",
+      "commit": "4f45fd6c222eb06eb3e46605da62e7c889e4be5c",
+      "filename": "ComfyUI-LTXVideo",
+      "installRequirements": true
+    },
+    "ComfyUI-MpiNodes": {
+      "source": "git-commit",
+      "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
+      "commit": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
+      "filename": "ComfyUI-MpiNodes",
+      "installRequirements": false
+    },
+    "ComfyUI-PainterI2Vadvanced": {
+      "source": "git-commit",
+      "repo": "princepainter/ComfyUI-PainterI2Vadvanced",
+      "commit": "a044ac7b2a33565343ddc75283c94a41371b4352",
+      "filename": "ComfyUI-PainterI2Vadvanced",
+      "installRequirements": false
+    },
+    "ComfyUI-VideoHelperSuite": {
+      "source": "git-commit",
+      "repo": "Kosinkadink/ComfyUI-VideoHelperSuite",
+      "commit": "4ee72c065db22c9d96c2427954dc69e7b908444b",
+      "filename": "comfyui-videohelpersuite",
+      "installRequirements": false
+    },
+    "ComfyUI-Impact-Pack": {
+      "source": "git-commit",
+      "repo": "ltdrdata/ComfyUI-Impact-Pack",
+      "commit": "429d0159ad429e64d2b3916e6e7be9c22d025c3c",
+      "filename": "comfyui-impact-pack",
+      "installRequirements": true
+    },
+    "comfyui-kjnodes": {
+      "source": "git-commit",
+      "repo": "kijai/ComfyUI-KJNodes",
+      "commit": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
+      "filename": "comfyui-kjnodes",
+      "installRequirements": true
+    },
+    "ComfyUI-UltimateSDUpscale": {
+      "source": "git-commit",
+      "repo": "ssitu/ComfyUI_UltimateSDUpscale",
+      "commit": "bebd5696fddd61cb0d08949a222c508898ab5577",
+      "filename": "comfyui_ultimatesdupscale",
+      "installRequirements": false
+    },
+    "ComfyUI-Frame-Interpolation": {
+      "source": "git-commit",
+      "repo": "Fannovel16/ComfyUI-Frame-Interpolation",
+      "commit": "26545cc2dd95bc3d27f056016300673bdeee78f5",
+      "filename": "comfyui-frame-interpolation",
+      "installRequirements": true,
+      "installRequirementsCommand": "python install.py"
+    },
+    "ComfyUI-Impact-Subpack": {
+      "source": "git-commit",
+      "repo": "ltdrdata/ComfyUI-Impact-Subpack",
+      "commit": "50c7b71a6a224734cc9b21963c6d1926816a97f1",
+      "filename": "ComfyUI-Impact-Subpack",
+      "installRequirements": true
+    },
+    "RES4LYF": {
+      "source": "git-commit",
+      "repo": "ClownsharkBatwing/RES4LYF",
+      "commit": "419de2d7c78f415dde9aa352a7231820ebfc17a4",
+      "filename": "RES4LYF",
+      "installRequirements": true
+    }
+  }
+}

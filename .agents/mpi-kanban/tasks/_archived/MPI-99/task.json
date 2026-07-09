@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-99",
+  "title": "Uninstall confirm dialog dead after an install (no dialog opens)",
+  "description": "FIXED + verified live (commit a28c7a8). After installing a model, pressing UNINSTALL opened NO confirm dialog. REAL CAUSE (not the singleton-dialog/Overlays theory in the original brief): download:complete sets the download job's status to 'complete' but never removes the job from state.downloadJobs, so the post-install renderList() found a lingering 'complete' job and the MpiModelManager installed-section gate (downloadState !== 'idle') wired pause/resume/cancel handlers INSTEAD of card.on('uninstall'). The card still showed an Uninstall button (canUninstall:true) but the click emitted 'uninstall' with no listener — _uninstallDialog.el.show() was never called (zero logs from the show path; confirmed by instrumented build). A plain uninstall worked because cancel/uninstall DO filter the job out → downloadState 'idle' → uninstall branch bound. FIX: gate the active-download branch on genuinely-active states only (downloading/paused/installing); any terminal/complete state takes the uninstall branch. Also removed the false 'Models are stored locally and never shared' footer (untrue in remote mode) + its orphaned CSS. A harmless MpiModal _isShown-vs-_backdrop reconcile from the first (wrong) hypothesis shipped earlier (3845756) and was left in as a safety net. App-side, no image.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-16T09:55:00Z",
+  "updated_at": "2026-06-16T10:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

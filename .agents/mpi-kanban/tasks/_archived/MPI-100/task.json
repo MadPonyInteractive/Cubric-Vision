@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-100",
+  "title": "Remote disk-full handling: reactive toast (pre-flight gate NOT feasible — RunPod volume quota is unobservable)",
+  "description": "Remote model install on a full Pod volume must show a friendly 'disk full' toast, not a doomed download ending in the Report-on-GitHub error dialog. INVESTIGATION OUTCOME (live, 2026-06-16): a truthful pre-flight gate is NOT possible. statvfs('/workspace/mpi_models') reports the multi-PB container overlay (722TB free live), NOT the 80GB RunPod network-volume QUOTA — statvfs is blind to the quota. RunPod REST /networkvolumes carries only the configured size (80), never live used (confirmed live). RunPod REST getPod has no live volume usage either ([[project_runpod_pod_shape_rest]]). The only in-Pod source would be `du -sb` (slow, rebuild) — deferred by user. SHIPPED instead (commit 083aef6, app-only, no rebuild): (1) REMOVED the dead remote statvfs pre-flight gate from downloadManager.js _startRemoteDownload (kept the LOCAL fs.statfs gate — local drive free space IS truthful); (2) downloadService catches the wrapper's '[Errno 122] Disk quota exceeded' / '[Errno 28] No space left' on download:failed and emits ui:warning (TOAST) not ui:error (GitHub dialog). Wrapper v0.4.5 `disk` block (commit 58ff0fc) is now inert-but-harmless; leave til next rebuild. ALSO this session: fixed stale-_depJobs false-INSTALLED re-install bug (commit ac1c308, msg 36220820). See brief.md + [[feedback_error_dialog_vs_toast]].",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-16T10:30:00Z",
+  "updated_at": "2026-06-16T13:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

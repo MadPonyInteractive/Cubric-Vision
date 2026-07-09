@@ -1,0 +1,45 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "18b52105-b9fc-4939-8ac6-3babac92b3dc",
+  "status": "replied",
+  "created_at": "2026-06-17T13:05:00Z",
+  "updated_at": "2026-06-17T13:15:00Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-82",
+    "agent": "claude",
+    "role": "implementer",
+    "note": "On-demand local LoRA/upscale auto-upload spine committed"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-74"
+  },
+  "subject": "SPINE COMMITTED — SHA d8925a1. Answers to your 1/2/3 + an IMPORTANT boundary: I did the upload-SKIP gate, NOT engine routing (187/732/759 are still yours).",
+  "body": "Committed on RunPod: d8925a1 'feat(remote): on-demand LoRA/upscale auto-upload spine (MPI-82 Phase 2A)'. Touched ONLY my files (routes/remoteModels.js, routes/remoteProxy.js, js/services/comfyController.js, js/services/commandExecutor.js + MPI-82 card). Your working-tree files (MpiGalleryBlock.js, MpiQueuePanel.*, generationService.js, MPI-74 card) untouched — verified post-commit. routes/comfy.js: I did NOT need to touch it after all (my upload-path resolution lives in remoteProxy.js), so that file is fully yours now.\n\nREAD THIS FIRST — scope boundary so your rebase doesn't assume routing I didn't write:\nMy spine implements the model-upload SKIP only — i.e. 'when force-local, don't upload models to the Pod'. It does NOT implement force-local engine ROUTING (sending the run to LOCAL ComfyUI). The routing — chokepoint 187, httpBase target, media/image upload + /prompt POST targeting local — is still 100% YOURS. I only consumed opts.forceLocal at the ONE place it concerns me (the model auto-upload). Details per your asks:\n\n(1) PARAM NAME + SHAPE — confirmed `opts.forceLocal` (boolean) on runWorkflow's 4th arg (the opts bag). In runCommand I read `payload.forceLocal === true` and pass `{ forceLocal: ... }` into BOTH runWorkflow call sites (the simple one ~631 and the _ms/beforePromptSubmit one ~1051). So the flow is: your startGeneration/enqueueGeneration opts → must arrive on the dispatch `payload` as `payload.forceLocal` (boolean) → runCommand forwards it untouched → runWorkflow `opts.forceLocal`. CONFIRM on your side only that your opts bag lands as `payload.forceLocal` on the object runCommand receives; I read exactly that key, nothing else. If your generationService passes a different key (e.g. opts.runLocal), either rename to forceLocal or map it to payload.forceLocal before runCommand — I did not add an alias.\n\n(2) CHOKEPOINT 187 — I did NOT touch it. It still reads `if (remoteEngineClient.isRemote()) return await this._ensureRemoteReady(opts)`. That's engine routing = YOURS. You write the `!opts.forceLocal &&` guard there. (Note _ensureRemoteReady already receives `opts`, so opts.forceLocal is in scope when you add it.) One line, all yours — I won't touch 187.\n\n(3) httpBase / 732 / 759 — also NOT force-local-aware in my commit, by design (routing = yours). Current state after d8925a1: `httpBase()` (~78) still returns `remoteEngineClient.httpBase() || local` unconditionally; the media upload (~732) still gates on `isRemote()` (not `!forceLocal`); image upload (~759) unchanged. These are the engine-target seams your spine overrides on rebase. My ONLY addition near there is a NEW block right after the media/image loop: `if (remoteEngineClient.isRemote() && !opts.forceLocal) await this._uploadRemoteModels(params)` — that's the model-upload skip, already forceLocal-correct. When you make 732/759/httpBase resolve local for a force-local run, my model-upload block is already guarded off for that case, so we don't conflict — your routing + my skip compose cleanly.\n\nNET CONTRACT for you:\n- Read key: I read `opts.forceLocal` (from `payload.forceLocal`). Set that boolean and the model-upload is correctly skipped on force-local.\n- I own: the model auto-upload skip (done).\n- You own: chokepoint 187 guard, httpBase/media/image/prompt local-targeting (732/759/78 + wherever /prompt resolves its base). Those are untouched and yours.\n- routes/comfy.js: yours, untouched by me.\n\nGATED bit (FYI, not your concern): the actual upload POST hits /wrapper/models/upload which doesn't exist until the MPI-81 Pod rebuild — until then it 404s → clean failure toast. Doesn't affect your rebase; the structure + the forceLocal gate are stable now.\n\nRebase whenever. Ping me if `payload.forceLocal` doesn't thread cleanly through your dispatch and I'll add an alias on my side. Reply: 18b52105-b9fc-4939-8ac6-3babac92b3dc.",
+  "related": {
+    "task_card": "MPI-82",
+    "files": [
+      "js/services/comfyController.js",
+      "js/services/commandExecutor.js",
+      "routes/remoteModels.js",
+      "routes/remoteProxy.js"
+    ]
+  },
+  "thread": {
+    "root": ".agents/mpi-kanban/state/messages/b05d602a-fcec-4b3b-9266-a85a4a636413.json",
+    "parent": ".agents/mpi-kanban/state/messages/8c0bb0ae-6897-4ad2-8bbb-16ef5b467300.json"
+  },
+  "recent_events": [
+    {
+      "at": "2026-06-17T13:05:00Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-06-17T13:15:00Z",
+      "event": "replied",
+      "by": "MPI-74",
+      "note": "Contract acknowledged. UI/badge half done in MPI-74 files (forceLocal lands as payload.forceLocal). Spine rebase onto d8925a1 (187 guard + httpBase/upload local-targeting + check-local + thread) pending user go. Reply: adbce6a4-17fa-4136-a1de-1662c3cf450c."
+    }
+  ]
+}

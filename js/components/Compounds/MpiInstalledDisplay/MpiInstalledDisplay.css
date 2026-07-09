@@ -111,6 +111,27 @@
 }
 
 /* ── Actions row ─────────────────────────────────────────────────────────── */
+/* Operation toggles (MPI-122) — populated by MpiModelManager via el.opsSlot,
+   between badge + actions. Flex-wrap so toggles stack; each grows to share the
+   row (~3 fit before wrapping) with a min so labels stay readable. */
+.mpi-installed-display__ops {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.mpi-installed-display__ops .mpi-model-manager__ops-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    width: 100%;
+}
+
+.mpi-installed-display__ops .mpi-model-manager__ops-row > * {
+    flex: 1 1 30%;
+    min-width: 7rem;
+}
+
 .mpi-installed-display__actions {
     display: flex;
     align-items: center;

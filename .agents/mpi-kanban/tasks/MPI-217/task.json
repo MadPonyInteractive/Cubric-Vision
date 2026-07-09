@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-217",
+  "title": "Chroma image model integration (Flash, balanced tier)",
+  "description": "CONTINUE/HELPER card. Wire Chroma (Flux-family image model) into the app at the BALANCED tier using the Chroma Flash checkpoint. Three phases, one card (like MPI-4): (1) generation workflow — IN PROGRESS now; (2) upscaler — later; (3) detailer — later. Read brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-07T19:15:00Z",
+  "updated_at": "2026-07-08T01:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "research": "research/"
+  },
+  "tags": [
+    "PLAN",
+    "image",
+    "model"
+  ],
+  "priority": "high",
+  "defaultExpanded": false
+}

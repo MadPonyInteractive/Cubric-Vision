@@ -18,6 +18,8 @@ import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
+import { MpiNotesEditor } from '../../Compounds/MpiNotesEditor/MpiNotesEditor.js';
+import { MpiAddToProject } from '../../Compounds/MpiAddToProject/MpiAddToProject.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
@@ -27,20 +29,22 @@ import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
-import { MODELS, getModelsByType } from '../../../data/modelRegistry.js';
-import { getAvailableCommands } from '../../../data/commandRegistry.js';
+import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
+import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
+import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
-import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue } from '../../../services/generationService.js';
+import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings } from '../../../services/projectService.js';
+import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAssets, applyPromptReuseSettings, listProjects } from '../../../services/projectService.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
-import { buildPromptReuseSettings, resolvePromptReuseMediaItems } from '../../../utils/promptReuse.js';
+import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
     createImageItem,
     createVideoItem,
+    createAudioItem,
     createItemGroup,
     appendToHistory,
     getSelectedItem,
@@ -83,11 +87,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const _openQueuePanel = () => {
             Events.emit('slide-over:open', _queuePanelPayload);
         };
-        _unsubs.push(Hotkeys.bind('gallery.queue.toggle', _toggleQueuePanel));
+        _unsubs.push(Hotkeys.bind('queue.toggle', _toggleQueuePanel));
         _unsubs.push(Events.on('generation-queue:open', _openQueuePanel));
 
         // ── Rehydrate any in-flight gallery generations ───────────────────────
         const _myGenIds = new Set();
+        // Ids Stopped by the user but whose gen may still finish with real output
+        // (ComfyUI /interrupt is advisory; an LTX inter-stage Stop runs to
+        // completion). The Stop path removes the id from _myGenIds synchronously,
+        // so the late generation:complete would otherwise fail the ownership guard
+        // and the finished card would never render (MPI-195). Bridge it here —
+        // scoped to OUR own stopped ids only, so a concurrent local/remote lane
+        // (MPI-74 P6) is never affected.
+        const _stoppedPendingComplete = new Set();
         const _runningGallery = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
         // Only the first-running entry gets a visible placeholder. Queued
         // siblings are tracked in activeGenerations but stay invisible until
@@ -142,6 +154,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         itemId: uploaded.itemId,
                         thumbPath: uploaded.thumbPath,
                         pixelDimensions: uploaded.pixelDimensions,
+                        fps: uploaded.fps,
+                        duration: uploaded.duration,
+                        frameCount: uploaded.frameCount,
+                        hasAudio: uploaded.hasAudio,
                         mediaType,
                     });
                     if (inject) {
@@ -179,7 +195,43 @@ export const MpiGalleryBlock = ComponentFactory.create({
         window.addEventListener('drop',      _onDrop);
 
         // ── Navigate to group history ───────────────────────────────────────────
-        grid.on('open-group', ({ group }) => navigate(PAGE_GROUP_HISTORY, { groupId: group.id }));
+        // Audio-only groups are not click-through (like preview cards) — they are
+        // input assets played in-place via the card's native controls, not a
+        // history workspace target.
+        grid.on('open-group', ({ group }) => {
+            if (group?.type === 'audio') return;
+            navigate(PAGE_GROUP_HISTORY, { groupId: group.id });
+        });
+
+        // ── Card notes ──────────────────────────────────────────────────────────
+        // Edits notes on the card's selected history item, persisted into the
+        // item sidecar (.meta/<id>.json). grid.on listeners are torn down by
+        // grid.destroy() (factory listeners.clear()), so no separate unsub here.
+        grid.on('card-notes', ({ group }) => {
+            const project = state.currentProject;
+            const item = getSelectedItem(group);
+            if (!project?.folderPath || !item) return;
+            const editor = MpiNotesEditor.mount(document.createElement('div'), {
+                title: 'Card notes',
+                value: item.notes || '',
+                onSave: async (notes) => {
+                    const res = await fetch(
+                        `/project-media/${project.id}/update-meta?folderPath=${encodeURIComponent(project.folderPath)}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ itemId: item.id, updates: { notes } }),
+                        }
+                    );
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data.success) throw new Error(data.error || 'update-meta failed');
+                    // Mirror in memory (sidecar/in-memory parity) and notify viewers.
+                    item.notes = notes;
+                    Events.emit('gallery:item-updated', { groupId: group.id, group });
+                },
+            });
+            editor.el.show();
+        });
 
         // ── Compare ─────────────────────────────────────────────────────────────
         const _compareOverlay = MpiCompareOverlay.mount(document.createElement('div'));
@@ -232,7 +284,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     duration:        ext.duration ?? 0,
                     frameCount:      ext.frameCount ?? 0,
                     hasAudio:        ext.hasAudio ?? false,
-                    videoMeta:       ext.videoMeta ?? null,
                 });
                 const newGroup = createItemGroup('video', {
                     name: newItem.displayName,
@@ -255,6 +306,54 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
         });
 
+        // ── Add to project ───────────────────────────────────────────────────────
+        // Copies the selected cards' shown version into another existing project
+        // (copy, not move — cards stay here too). Opens a dropdown overlay
+        // populated from the project list, excluding the current project.
+        grid.on('add-to-project', async ({ groups: g }) => {
+            if (!Array.isArray(g) || !g.length) return;
+            let projects;
+            try {
+                projects = await listProjects();
+            } catch (err) {
+                clientLogger.warn('MpiGalleryBlock', 'add-to-project list failed', err);
+                Events.emit('ui:error', { title: 'Add to project', message: 'Could not load projects.' });
+                return;
+            }
+            const others = projects.filter(p => p.id !== state.currentProject?.id);
+            if (!others.length) {
+                Events.emit('ui:warning', { title: 'Add to project', message: 'No other projects to add to.' });
+                return;
+            }
+            const byId = new Map(others.map(p => [p.id, p]));
+
+            const cards = g.map(group => {
+                const item = getSelectedItem(group);
+                return item ? { type: group.type, name: group.name, item } : null;
+            }).filter(Boolean);
+            if (!cards.length) return;
+
+            const dialog = MpiAddToProject.mount(document.createElement('div'), {
+                projects: others,
+                onConfirm: async (projectId) => {
+                    const target = byId.get(projectId);
+                    if (!target) throw new Error('project not found');
+                    const resp = await fetch(`/project-media/${target.id}/add-from-cards`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folderPath: target.folderPath, cards }),
+                    });
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok || !data.success) throw new Error(data.error || 'add-from-cards failed');
+                    Events.emit('ui:success', {
+                        title: 'Added to project',
+                        message: `${data.added} card${data.added === 1 ? '' : 's'} added to "${target.name}".`,
+                    });
+                },
+            });
+            dialog.el.show();
+        });
+
         // ── Persist helper ──────────────────────────────────────────────────────
         // (removed — now in ProjectService)
 
@@ -266,6 +365,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
             removeGroup(groupId);
         });
         grid.on('favourite', ({ group }) => {
+            updateGroup(group);
+        });
+        grid.on('rename', ({ group }) => {
             updateGroup(group);
         });
 
@@ -398,12 +500,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 StatusBar.notify('Disarm Loop before continuing a preview.', 'warning');
                 return;
             }
-            const model = MODELS.find(m => m.id === item.modelId);
+            const model = getModelById(item.modelId);
             if (!model) {
                 StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot continue.`, 'warning');
                 return;
             }
-            if (model.installed === false) {
+            if (!isOperationInstalled(model, item.operation)) {
                 const name = model.label || model.name || model.id;
                 StatusBar.notify(`Model "${name}" that created this preview is not installed — install it to continue.`, 'warning');
                 return;
@@ -430,6 +532,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             const latentInfo = item.previewAssets?.latent;
+            const audioLatentInfo = item.previewAssets?.audioLatent;
             const isColdFallback = !report.canFastPath && report.canColdFallback;
 
             // Sync PB to the preview's model + op so the user sees Cue progress
@@ -466,7 +569,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             // Build a placeholder + dispatcher for the stage-2 branch job.
             // Used either directly (fast path) or as a follow-up after the
             // stage-1 rerun completes (cold fallback).
-            const _bumpAndDispatchStage2 = (latentName, latentFilePath) => {
+            const _bumpAndDispatchStage2 = (latentName, latentFilePath, audioLatentName, audioLatentFilePath) => {
                 const _tempId = crypto.randomUUID();
                 const _previewThumbUrl = item.thumbPath
                     ? resolveMediaUrl(item.thumbPath)
@@ -504,6 +607,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     isStage2:              true,
                     loadLatentName:        latentName,
                     previewLatentFilePath: latentFilePath,
+                    // Dual-latent (LTX, MPI-128) — undefined for WAN (single latent).
+                    loadAudioLatentName:   audioLatentName,
+                    audioLatentFilePath:   audioLatentFilePath,
                 };
                 enqueueGeneration(stage2Config, {}, {
                     scope: 'gallery',
@@ -516,7 +622,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
             if (!isColdFallback) {
                 // Fast path: latent is on disk, jump straight to stage-2.
-                _bumpAndDispatchStage2(latentInfo.engineInputName, latentInfo.filePath);
+                _bumpAndDispatchStage2(
+                    latentInfo.engineInputName, latentInfo.filePath,
+                    audioLatentInfo?.engineInputName, audioLatentInfo?.filePath,
+                );
                 return;
             }
 
@@ -545,15 +654,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (groupId !== g.id || _chainSettled) return;
                 const refreshedItem = updatedGroup?.history?.find(h => h.id === item.id);
                 const newLatent = refreshedItem?.previewAssets?.latent;
+                const newAudioLatent = refreshedItem?.previewAssets?.audioLatent;
                 if (!newLatent || newLatent.status !== 'available' || !newLatent.engineInputName || !newLatent.filePath) {
-                    StatusBar.notify('Stage 1 rerun finished but latent was not produced.', 'warning');
+                    StatusBar.notify('Stage 1 rerun finished but did not rebuild the preview latent. Continue cannot resume this preview.', 'warning');
                     _settle();
                     _chainUnsub();
                     return;
                 }
                 _settle();
                 _chainUnsub();
-                _bumpAndDispatchStage2(newLatent.engineInputName, newLatent.filePath);
+                _bumpAndDispatchStage2(
+                    newLatent.engineInputName, newLatent.filePath,
+                    newAudioLatent?.engineInputName, newAudioLatent?.filePath,
+                );
             });
 
             enqueueGeneration(stage1Config, {
@@ -573,12 +686,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 StatusBar.notify('Disarm Loop before finishing a preview.', 'warning');
                 return;
             }
-            const model = MODELS.find(m => m.id === item.modelId);
+            const model = getModelById(item.modelId);
             if (!model) {
                 StatusBar.notify(`Model "${item.modelId}" that created this preview is unknown — cannot finish.`, 'warning');
                 return;
             }
-            if (model.installed === false) {
+            if (!isOperationInstalled(model, item.operation)) {
                 const name = model.label || model.name || model.id;
                 StatusBar.notify(`Model "${name}" that created this preview is not installed — install it to finish.`, 'warning');
                 return;
@@ -603,6 +716,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             const latentInfo = item.previewAssets?.latent;
+            const audioLatentInfo = item.previewAssets?.audioLatent;
             const isColdFallback = !report.canFastPath && report.canColdFallback;
 
             const modelMismatch = activeModelId !== model.id;
@@ -655,6 +769,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 isStage2:              true,
                 loadLatentName:        latentInfo.engineInputName,
                 previewLatentFilePath: latentInfo.filePath,
+                // Dual-latent (LTX, MPI-128) — undefined for WAN (single latent).
+                loadAudioLatentName:   audioLatentInfo?.engineInputName,
+                audioLatentFilePath:   audioLatentInfo?.filePath,
                 replaceItemId:    item.id,
             };
 
@@ -885,9 +1002,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // last-touched mediaType so a video pick survives navigation/restart.
         const _lastType = state.s_lastSelectedMediaType === 'video' ? 'video' : 'image';
         const { model: activeModelInit, modelId: activeModelIdInit } = resolveActiveModel(_lastType);
-        let installedAllModels = MODELS.filter(m => m.installed !== false);
+        let installedAllModels = MODELS.filter(isModelUsable);
         let activeModelId = activeModelIdInit;
         let activeModel = activeModelInit;
+        // Fallback: the last-touched mediaType may have NO installed model (e.g.
+        // the only video model was uninstalled or went partial after a video
+        // session, leaving _lastType='video' with an empty resolve) — yet other
+        // mediaTypes ARE installed. Without this the PromptBox mounts with a
+        // populated modelList but a null active model → an empty picker the user
+        // can't generate from. Fall back to the first installed model of ANY
+        // type so the picker is always usable when ≥1 model is installed.
+        if (!activeModel && installedAllModels.length > 0) {
+            activeModel = installedAllModels[0];
+            activeModelId = activeModel.id;
+        }
         // No mount-time write-back: resolver already returned a valid id for
         // 'image'. Persisting it would clobber a sibling-type selection
         // (e.g. video model picked earlier) on every Gallery mount.
@@ -908,6 +1036,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 settings: value.settings === true,
                 model: value.model === true,
                 images: value.images === true,
+                video: value.video === true,
+                audio: value.audio === true,
             };
         }
 
@@ -925,6 +1055,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     includes: options,
                     source: state.promptReuseSource,
                     showSource: true,
+                    // Per-source media availability so the dialog can grey out each
+                    // "Use …" toggle for a source lacking that input (MPI-212/227).
+                    imageAvailability: {
+                        original: payloadHasReusableImages(bundle.original),
+                        current: payloadHasReusableImages(bundle.current),
+                    },
+                    videoAvailability: {
+                        original: payloadHasReusableVideos(bundle.original),
+                        current: payloadHasReusableVideos(bundle.current),
+                    },
+                    audioAvailability: {
+                        original: payloadHasReusableAudio(bundle.original),
+                        current: payloadHasReusableAudio(bundle.current),
+                    },
                 });
                 dialog.on('apply', async ({ includes, source }) => {
                     const payload = _resolveReusePayload(bundle, source);
@@ -940,14 +1084,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (payload) _applyPromptReuse(payload, _reuseIncludes(options));
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
             if (!_pb?.el) return;
             const use = _reuseIncludes(includes);
-            if (!use.prompt && !use.settings && !use.model && !use.images) return;
+            if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 
             let targetModel = activeModel;
             if (use.model && payload.modelId) {
-                targetModel = installedAllModels.find(m => m.id === payload.modelId) || null;
+                // Canonicalize legacy split ids (wan-22-t2v/i2v → wan-22) so reuse
+                // from split-era history resolves to the merged model. (MPI-122)
+                const canonId = canonicalModelId(payload.modelId);
+                targetModel = installedAllModels.find(m => m.id === canonId) || null;
             }
             if (!targetModel) {
                 const label = payload.modelId || 'Unknown model';
@@ -959,6 +1106,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (!targetModel) return;
             }
 
+            // The reused operation is authoritative — it determines media
+            // acceptance and which controls the panel reads. Establish it BEFORE
+            // injecting media or applying settings, otherwise setModel's
+            // media-state-driven op guess (_pickOpForModel) leaves us on the
+            // wrong op and image inject is falsely rejected ("media type not
+            // supported"). Falls back to activeOperation when the payload op is
+            // not supported by the target model.
+            const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+                ? payload.operation
+                : activeOperation;
+
             if (use.model) {
                 activeModel = targetModel;
                 activeModelId = targetModel.id;
@@ -966,25 +1124,55 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 Events.emit('settings:model:select', { modelId: targetModel.id });
                 _pb.el.setModel?.(targetModel);
             }
+            activeOperation = targetOperation;
+            _pb.el.setOperation?.(targetOperation);
 
             if (use.prompt) {
                 _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
             }
-            if (use.images) {
+            // Reuse media the user opted into, gated per-type by what the SOURCE
+            // actually carries (MPI-212 image gate → MPI-227 video/audio). A card
+            // generated without a given input carries no reusable media of that type,
+            // so injecting does nothing but warn + leave a required slot empty — the
+            // dialog greys those toggles, and this mirrors the gate for the
+            // ask-disabled path that lands here with stored flags. Resolve ONCE
+            // (returns all types), then inject the enabled subset.
+            const _wantImages = use.images && payloadHasReusableImages(payload);
+            const _wantVideo = use.video && payloadHasReusableVideos(payload);
+            const _wantAudio = use.audio && payloadHasReusableAudio(payload);
+            if (_wantImages || _wantVideo || _wantAudio) {
                 _pb.el.clearMedia?.();
-                const mediaItems = await resolvePromptReuseMediaItems(payload, state.currentProject);
-                if (!mediaItems.length && String(payload.operation || '').startsWith('i2v')) {
-                    StatusBar.notify('No saved frame images were found for this older I2V entry.', 'warning');
+                const resolved = await resolvePromptReuseMediaItems(payload);
+                const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
+                const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
+                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
+                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
+                    StatusBar.notify('No saved frame images were found for this older entry.', 'warning');
                 }
+                // Resolve a reused input file back to its source group's custom
+                // name (if the user renamed that card), so the chip shows the
+                // custom name instead of the raw filename. Match by basename —
+                // the reuse mediaItem carries a url/filePath, the source group's
+                // selected item carries a filePath pointing at the same file.
+                const _basename = (p) => String(p || '').split(/[\\/]/).pop();
+                const _customNameForUrl = (url) => {
+                    const base = _basename(url);
+                    if (!base) return undefined;
+                    const groups = state.currentProject?.itemGroups || [];
+                    for (const g of groups) {
+                        if (!g.customName) continue;
+                        const sel = g.history?.[g.selectedIndex ?? 0];
+                        if (sel && _basename(sel.filePath) === base) return g.customName;
+                    }
+                    return undefined;
+                };
                 for (const item of mediaItems) {
-                    _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
+                    const url = item.url || item.filePath;
+                    _pb.el.injectMedia?.({ url, mediaType: item.mediaType || item.type, role: item.role, name: _customNameForUrl(url) ?? item.name });
                 }
             }
 
             if (use.settings) {
-                const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
-                    ? payload.operation
-                    : activeOperation;
                 const settings = buildPromptReuseSettings(payload, targetModel);
                 applyPromptReuseSettings({
                     modelId: targetModel.id,
@@ -992,8 +1180,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     operation: targetOperation,
                     ...settings,
                 });
-                activeOperation = targetOperation;
-                _pb.el.setOperation?.(targetOperation);
+                // Settings written after controls mounted (setModel/setOperation
+                // above) — re-mount so controls re-read the recalled ratio/quality/
+                // duration. Without this the live PromptBox lags until next nav.
+                _pb.el.refreshControls?.();
             }
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
@@ -1086,12 +1276,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 };
             };
 
-            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {}, previewOnly = false }) => {
+            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {}, previewOnly = false, forceLocal = false }) => {
                 if (!activeModel) return;
                 const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams, previewOnly };
                 return {
                     config,
-                    opts: _galleryGenerationOptions(injectionParams, activeModel.mediaType, mediaItems),
+                    // MPI-74: forceLocal rides in opts (a routing hint, not gen config).
+                    opts: { ..._galleryGenerationOptions(injectionParams, activeModel.mediaType, mediaItems), forceLocal },
                 };
             };
 
@@ -1106,11 +1297,32 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
 
             pb.on('cancel', () => {
-                const active = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
-                const target = active[0];
-                if (target) activeGenerations.cancel(target.id);
+                // Stop cancels EVERY running gallery gen, not just the first
+                // (MPI-157): the old `active[0]`-only logic missed a second
+                // in-flight gen (e.g. a remote gen while a local one is also
+                // running, or a multi-stage entry whose displayed stage wasn't
+                // active[0]) → the unstopped gen kept running on the Pod (zombie)
+                // and contended VRAM with the next gen. Pending queue is left
+                // intact by design — Stop halts running work, the queue resumes.
+                const running = activeGenerations.listFor('gallery', null).filter(e => e.status === 'running');
+                // Route a CUE-managed job through cancelRunningCueJob so a job that
+                // never got a prompt_id (e.g. remote WS down — MPI-73 Bug 2) also
+                // frees the stuck dispatcher instead of leaving a dead "running"
+                // slot that no repeated Stop can clear. A direct (non-queue) gen
+                // has no queueJobId and cancels in place.
+                for (const entry of running) {
+                    if (entry.queueJobId) cancelRunningCueJob(entry.queueJobId);
+                    else activeGenerations.cancel(entry.id);
+                }
+                // MPI-234: cancelRunningCueJob runs the armed-loop re-fire
+                // SYNCHRONOUSLY inside the call above — by the time we get here a
+                // fresh gen may already be running with its placeholder mounted
+                // (via generation:cancelled → _rebuildAfterEnd). Rebuilding with
+                // project groups alone wiped that placeholder, leaving the
+                // re-fired gen invisible (no card, no latents) until it finished.
+                // Reconcile from the registry instead of assuming nothing runs.
                 const currentGroups = _visibleProjectGroups();
-                grid.el.setGroups(currentGroups);
+                grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
                 const continueBusy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
@@ -1127,7 +1339,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         function _mountPb(props) {
             _pb?.el?.destroy?.();
-            _pb = MpiPromptBox.mount(gid('prompt-box-mount'), props);
+            _pb = MpiPromptBox.mount(gid('prompt-box-mount'), { ...props, workspaceKey: 'gallery' });
             return _pb;
         }
 
@@ -1163,6 +1375,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
             for (const t of allTempIds) grid.el.updatePreview(t, url);
         }));
 
+        // New preview window (new sampler stage) → drop the card's current clip so
+        // stages don't accumulate into one growing loop. MPI-167.
+        _unsubs.push(Events.on('generation:preview-reset', ({ id }) => {
+            if (!_myGenIds.has(id)) return;
+            const first = _firstRunningEntry();
+            if (!first || first.id !== id) return;
+            const allTempIds = [first.tempId, ...(first.extraTempIds || [])].filter(Boolean);
+            for (const t of allTempIds) grid.el.resetPreviewClip(t);
+        }));
+
         // After a job ends, rebuild the grid: remove its placeholders if they
         // were mounted (only the first-running's are), and re-mount the new
         // first-running's placeholders if any remain in the queue.
@@ -1175,17 +1397,29 @@ export const MpiGalleryBlock = ComponentFactory.create({
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+            // Accept our own ids AND ids we Stopped that finished anyway (bridge).
+            if (!_myGenIds.has(id) && !_stoppedPendingComplete.has(id)) return;
+            _stoppedPendingComplete.delete(id);
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+            const _bridged = _stoppedPendingComplete.delete(id);
+            if (!_myGenIds.has(id) && !_bridged) return;
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
         _unsubs.push(Events.on('generation:cancelled', ({ id, tempId: tid, extraTempIds = [] }) => {
-            if (!_myGenIds.has(id)) return;
+            if (!_myGenIds.has(id)) {
+                // Second cancelled for an already-forgotten id = the interrupted
+                // gen returned EMPTY (no late complete is coming). Drop the bridge
+                // entry so it can't leak (MPI-195).
+                _stoppedPendingComplete.delete(id);
+                return;
+            }
+            // The gen may still finish with real output after this Stop — remember
+            // the id so the late generation:complete is re-admitted (MPI-195).
+            _stoppedPendingComplete.add(id);
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
@@ -1201,6 +1435,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
             _pb?.el?.show();
             _wirePromptBox(_pb);
+            // PromptBox may have restored persisted chips during mount (before
+            // _wirePromptBox subscribed to media-change), so sync counts + radial
+            // from the live box.
+            imageCount = Number(_pb.el.imageCount) || 0;
+            videoCount = Number(_pb.el.videoCount) || 0;
+            _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
+            refreshRadial({ imageCount, videoCount, modelId: activeModelId });
             // Restore Stop/Clear enabled state when remounting into a
             // workspace that still has gallery-scoped jobs in flight (e.g.
             // returning from history mid-video) or block-owned busy state
@@ -1211,16 +1452,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions }) => {
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio }) => {
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
+            const isAudio = mediaType === 'audio';
             const dims = pixelDimensions?.w > 0 && pixelDimensions?.h > 0
                 ? pixelDimensions
                 : null;
             const displayName = filename
                 ? filename.replace(/\.[^.]+$/, '')
-                : (isVideo ? 'Imported Video' : 'Imported Image');
+                : (isVideo ? 'Imported Video' : isAudio ? 'Imported Audio' : 'Imported Image');
 
             const id = itemId || filename.replace(/\.[^.]+$/, '');
             const item = isVideo
@@ -1231,6 +1473,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     uploaded: true,
                     operation: 'imported',
                     pixelDimensions: dims || { w: 0, h: 0 },
+                    // Server-probed metadata so the card shows fps/duration on
+                    // the very first import without a reload (MPI-83 Bug 2).
+                    fps:        fps        ?? 0,
+                    duration:   duration   ?? 0,
+                    frameCount: frameCount ?? 0,
+                    hasAudio:   hasAudio   ?? false,
+                })
+                : isAudio
+                ? createAudioItem({
+                    id,
+                    filePath: url,
+                    uploaded: true,
+                    operation: 'imported',
+                    duration: duration ?? 0,
                 })
                 : createImageItem({
                     id,
@@ -1296,7 +1552,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // and the deleted `models:closed` listener. `models:closed` no longer fires;
         // PromptBox mount is triggered by install-state change instead (option A).
         _unsubs.push(Events.onState('s_installedModelIds', () => {
-            installedAllModels = MODELS.filter(m => m.installed !== false);
+            installedAllModels = MODELS.filter(isModelUsable);
             if (installedAllModels.length === 0) {
                 // Zero models: if project is empty/new → prompt once; otherwise read-only.
                 if (!_projectHasMedia) _promptInstallModels();

@@ -1,0 +1,31 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-128",
+    "title": "LTX-2.3 next-release \u00e2\u20ac\u201d multi-stage preview, dual-latent staging, deferred capabilities",
+    "description": "Follow-up to MPI-127 (LTX-2.3 shipped single-stage). This card carries everything deferred from the first LTX release: (1) DUAL-LATENT stage-2 staging \u00e2\u20ac\u201d LTX saves Output_Video_Latent + Output_Audio_Latent and stage-2 loads BOTH (Input_Video_Latent + Input_Audio_Latent), but /comfy/stage-preview-latent + loadLatentName stage a SINGLE file; wiring this unlocks LTX preview->Continue/Finish (MPI-127 shipped stage-1 only). (2) UPDATED 2026-06-27 \u00e2\u20ac\u201d SUPERSEDED BY R2: the LTX-2.3 weights are now self-hosted on Cloudflare R2 (bucket cubric-models, host https://models.cubric.studio/vision/ltx-2.3/<type>/), and the app + builder dep URLs already point there (MPI-137 migration done except GC; dependencies.js + install_models_ltx23.sh swapped). The original 'mirror to MPI HF / Mad-Pony-Interactive/cubric-studio' plan is OBSOLETE \u00e2\u20ac\u201d R2 is the home of record now. What MAY remain here: confirm ALL 5 LTX base files (39GB transformer + 2 VAEs + text-projection + spatial-upscaler) are on R2 and reachable (they are, HEAD-200 verified), and that no remaining dep still points at HF/community mirrors for the BASE files. Coordinate with MPI-137 (bucket migration) + MPI-129 (HF->R2 dep migration) before touching any model URL \u00e2\u20ac\u201d do NOT re-introduce HF self-hosting. (3) Kill the _ms key-suffix magic -> command.isMultiStage flag across commandExecutor. (4) Multimodal input UI (5+ images) when LTX upstream lands it \u00e2\u20ac\u201d the {min,max} media-slot seam is already in place, max is a data bump. (5) Deferred LTX branches (separate workflows, own templates): lipdub v2v, lipsync-v2v-2, video extend, CTRL/pose, head-swap (BFS nodes). Distinct from MPI-4 (the LTX AUTHORING/research card) \u00e2\u20ac\u201d this is the APP-integration follow-up.",
+    "column": "done",
+    "maturity": "complete",
+    "status": "accepted",
+    "created_at": "2026-06-25T00:00:00Z",
+    "updated_at": "2026-06-27T09:15:00Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    },
+    "tags": [
+        "ltx",
+        "workflow",
+        "model-integration",
+        "audio",
+        "multi-stage",
+        "deferred",
+        "next-release"
+    ],
+    "priority": "medium"
+}

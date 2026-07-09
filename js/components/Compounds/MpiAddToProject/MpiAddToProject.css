@@ -1,0 +1,44 @@
+/* ── MpiAddToProject ────────────────────────────────────────────────────────── */
+
+.mpi-add-to-project {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1rem;
+    background: var(--surface-1);
+    border-radius: var(--r-1);
+}
+
+.mpi-add-to-project__title {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    color: var(--ink-1);
+    line-height: 1.2;
+}
+
+.mpi-add-to-project__field {
+    display: flex;
+    flex-direction: column;
+}
+
+.mpi-add-to-project__field .mpi-dropdown {
+    width: 100%;
+}
+
+.mpi-add-to-project__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+}
+
+.mpi-add-to-project__actions .mpi-button {
+    flex: 0 0 auto;
+    min-width: 6rem;
+}
+
+.mpi-add-to-project__actions .mpi-button button {
+    min-width: 5rem;
+    padding: 0.5rem 1rem;
+}

@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "adc160d1-b967-4375-a249-42fc93c4adbd",
+  "generated_at": "2026-07-05T00:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "superseded",
+  "superseded_note": "Consumed + completed 2026-07-05. Its 'culprit is the wrapper' conclusion was DISPROVEN live (direct-8188 gen = identical timing). Real cause = network-volume read bandwidth; see docs/builder/research/pod-perf-investigation.md SOLVED banner + cards MPI-194 (fix) / MPI-193 (dup nodes). Do NOT resume from this handoff.",
+  "session": {
+    "name": "MPI-191 LTX inter-stage gap — root-cause bisect (cause isolated to the wrapper/request path)",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-191: kill the wasteful ~60-93s LTX stage-1->stage-2 re-fault gap on the Pod (real stage-2 compute is ~5s).",
+    "status": "in_progress",
+    "summary": "The Pod's slow LTX gen was live-bisected against RunPod's official comfyui-cuda13.0 image running our EXACT LTX_t2v.json on the same 5090. Every hardware/stack/flag/node suspect is now CLEARED by direct measurement. The ~2.5x slowdown is on OUR side and the ONLY remaining difference is that our app drives generation THROUGH THE CUBRIC WRAPPER, whereas the fast stock test queued the prompt DIRECTLY in ComfyUI's web UI. Next step is an OFFLINE (no-Pod) investigation of the wrapper + the exact prompt JSON our app POSTs."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Lever (a) torch 2.10->2.12+cu130: BUILT (mpi-ci edc09a8), image v0.13.0-cu130 pushed to Docker Hub, live-tested — FAILED (stage-gap unchanged ~86s; 2.12 is actually a REGRESSION: full warm 2:48 vs 2.10's 1:23). App pin REVERTED to v0.12.0 (commit 3d8e5cc). v0.13.0 image still on Docker Hub but unused.",
+      "Root cause reframed: a FULL (non-preview) LTX gen is ONE /prompt, not two. LTX_t2v.json runs both samplers in one graph (no load/save latent). Node 58 (MpiClearVram = unload_all_models) between stages is NOT the culprit (stock ran OUR graph WITH node 58 at ~11s).",
+      "Fix #2 research (comfy-aimdo keep-resident) documented — prioritize() API exists, --highvram gambles/OOMs on 24GB, single-prompt merge collides with the preview->pick->continue product feature. All in pod-perf-investigation.md.",
+      "LIVE BISECT on stock runpod/comfyui:cuda13.0 (5090 32GB, torch 2.10.0+cu130, aimdo 0.4.10, our LTX_t2v.json): plain stock ~32-35s warm / ~8-14s gap. Added our differences one at a time, ALL still fast: +--preview-method taesd (32s), +input/output-dir (~35s), +ComfyUI-GGUF pack (35.95s), +Impact-Pack present (~38s). CONCLUSION: flags + node packs = ALL INNOCENT.",
+      "cache-ram REJECTED (OOMs + is default). All findings committed to docs/builder/research/pod-perf-investigation.md (commits 766c296, cefa394, a4070de)."
+    ],
+    "pending": [
+      "OFFLINE: diff the exact prompt JSON our app POSTs (via js/services/comfyController.js:1189 -> wrapper -> ComfyUI) vs the LTX_t2v.json template a user runs manually — check for extra nodes, different widget values, LoRA-stack wiring differences.",
+      "OFFLINE: read the wrapper prompt-submit path (mpi-ci/cubric-vision-pod/wrapper/wrapper.py) for a polling loop, synchronous stall, or SSE/queue difference that could add ~50s vs ComfyUI's native queue.",
+      "OFFLINE: re-examine whether --preview-method taesd is truly free IN OUR APP — on the stock Pod it SILENTLY SKIPPED ('TAESD previews enabled, but could not find models/vae_approx/None'). If vae_approx IS present in our app, the preview decode may actually RUN every step (never tested on the Pod because the approx model was absent).",
+      "After the offline diff narrows it to 1-2 suspects, do ONE targeted live test to confirm the fix."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-191",
+    "title": "Pin the 40GB LTX transformer resident across the stage-1 -> stage-2 transition (kill the per-stage re-fault)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-191/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-191/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "investigate offline (grep/read wrapper.py + comfyController.js + the workflow JSON)",
+    "diff the POSTed prompt JSON vs the template"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/builder/research/pod-perf-investigation.md fully updated with the whole MPI-191 arc: torch-2.12-fail, one-prompt reframe, node-58-cleared, the stock-vs-ours bisect table, and the WRAPPER conclusion (commits 766c296, cefa394, a4070de, 3d8e5cc).",
+      "App pin reverted v0.13.0 -> v0.12.0 in routes/remotePodLifecycle.js (3d8e5cc).",
+      "MPI-192 card created (todo): expose ComfyUI port 8188 on the Pod for direct testing (surfaced when we couldn't run the workflow manually on our own image).",
+      "MPI-191 card moved todo -> doing (board.json + task.json + event logs)."
+    ],
+    "pending": [
+      "Once the wrapper culprit is found + fixed: update pod-perf-investigation.md with the fix, move MPI-191 to done, and consider whether the deferred Fix #2 (single-prompt merge / prioritize node) is still needed or moot.",
+      "v0.13.0-cu130 image is orphaned on Docker Hub (torch 2.12, unused after the revert) — optional cleanup."
+    ]
+  },
+  "next_action": {
+    "description": "Do the OFFLINE wrapper investigation (no Pod needed). Start by diffing the exact prompt JSON our app POSTs (trace js/services/comfyController.js:1189 and how the app builds the workflow via commandExecutor.js / generationService.js) against the plain LTX_t2v.json template. In parallel, read mpi-ci/cubric-vision-pod/wrapper/wrapper.py's prompt-submit + completion-polling path for added latency. Also re-check the taesd-with-vae_approx thread. The whole live investigation already proved the ~2.5x tax (stock ~35s vs our-app 1:23, identical card/torch/aimdo/workflow/flags/nodes) lives in the wrapper or the request — NOT hardware, torch, flags, or node packs.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "torch 2.12+cu130 is a REGRESSION (not just neutral) — reverted to v0.12.0 (torch 2.10). Do NOT re-try a torch bump for this gap.",
+      "Node 58 (MpiClearVram) is NOT the cause and is load-bearing for speed — do NOT remove it (proven twice: MPI-157 + the stock test ran our graph WITH it at ~11s).",
+      "A full LTX gen is ONE /prompt (both samplers in LTX_t2v.json, no disk round-trip). The earlier research agents' 'two separate prompts' premise was WRONG for the full-gen path.",
+      "The cause is the WRAPPER / request path — reached by elimination: stock ComfyUI + ALL our launch flags + our node packs still runs ~35s vs our app's 1:23.",
+      "Investigate OFFLINE — the Pod work is done. Killing/rebuilding a test Pod is expensive and slow (10MB/s), and the answer is now in our own code."
+    ],
+    "constraints": [
+      "All LIVE Pod ops are USER-only. Do NOT create/delete/deploy Pods autonomously.",
+      "RunPod naming is BACKWARDS: 'Volume' = small persistent network volume (~50GB); 'Disk' = big ephemeral container disk (~150GB). Download test models to the DISK, not the volume.",
+      "RunPod's official comfyui image is managed by a supervisor (start.sh PID 51) that RESPAWNS ComfyUI on pkill — kill the specific ComfyUI PID directly + confirm the port frees before relaunching, else Exit-1 on the busy port.",
+      "The Pod only exposes 8889 (Cubric wrapper); ComfyUI 8188 is private (MPI-192 tracks exposing it).",
+      "kornia MUST be pinned 0.8.2 after the LTX node (0.8.3 removed geometry.transform.pyramid.pad -> LTX import fails).",
+      "Impact-Pack hard-imports segment_anything + skimage + piexif + dill etc.; it import-FAILS without them but the gen still runs fast regardless (Impact is not the culprit)."
+    ],
+    "files_modified": [
+      "docs/builder/research/pod-perf-investigation.md",
+      "routes/remotePodLifecycle.js",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-191/task.json",
+      ".agents/mpi-kanban/tasks/MPI-191/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-192/task.json (new)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile (torch 2.12 bump, edc09a8 — already pushed to mpi-ci main)"
+    ],
+    "files_to_read_first": [
+      "docs/builder/research/pod-perf-investigation.md",
+      "js/services/comfyController.js",
+      "js/services/commandExecutor.js",
+      "js/services/generationService.js",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "comfy_workflows/LTX_t2v.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "docs/builder/research/pod-perf-investigation.md (the MPI-191 banners at the TOP)",
+      "docs/README.md (knowledge map)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-05T00:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-191 (kill the wasteful ~60-93s LTX stage-1->stage-2 re-fault on the RunPod Pod). Read .agents/mpi-kanban/state/handoffs/adc160d1-b967-4375-a249-42fc93c4adbd.json and use mpi-continue. The whole live investigation is DONE and it delivered a clean answer: the ~2.5x slowdown is NOT the hardware, torch version, launch flags, or node packs — all were eliminated by a direct live bisect against RunPod's official comfyui-cuda13.0 image running our EXACT LTX_t2v.json on the same 5090 (stock ~35s warm / ~9s gap vs our app 1:23 / 39s gap, identical card+torch+aimdo+workflow+flags+node-packs). The ONLY remaining difference: our app drives generation THROUGH THE CUBRIC WRAPPER (POST /wrapper/prompt on 8889 -> proxy to internal ComfyUI 8188), whereas the fast stock test queued the prompt DIRECTLY in ComfyUI's web UI. So the culprit is the wrapper or the exact prompt JSON our app POSTs. Your next action is an OFFLINE (no-Pod) investigation: (1) diff the actual prompt JSON our app POSTs (js/services/comfyController.js:1189, built via commandExecutor.js/generationService.js) vs the plain LTX_t2v.json template — extra nodes, different widget values, LoRA-stack wiring; (2) read the wrapper's submit + completion-polling path in mpi-ci/cubric-vision-pod/wrapper/wrapper.py for added latency/stall/SSE-or-queue difference; (3) re-check whether --preview-method taesd is truly free in our app — it SILENTLY SKIPPED on the stock Pod ('could not find models/vae_approx/None'), so if vae_approx IS present in our app the preview decode may actually run every step. Read docs/builder/research/pod-perf-investigation.md first (the MPI-191 banners at the top). Do NOT re-try a torch bump (2.12 was a regression, reverted to v0.12.0). Do NOT remove node 58 (load-bearing). All live Pod ops are USER-only."
+}

@@ -76,7 +76,10 @@
   },
   "9": {
     "inputs": {
-      "video": "D:\\WORK\\Images\\Outputs\\t2v_480.mp4",
+      "video": [
+        "12",
+        0
+      ],
       "force_rate": 0,
       "custom_width": 0,
       "custom_height": 0,
@@ -90,35 +93,6 @@
       "title": "Input_Video"
     }
   },
-  "10": {
-    "inputs": {
-      "frame_rate": [
-        "11",
-        0
-      ],
-      "loop_count": 0,
-      "filename_prefix": "FinalGen",
-      "format": "video/nvenc_h264-mp4",
-      "pix_fmt": "yuv420p",
-      "bitrate": 10,
-      "megabit": true,
-      "save_metadata": false,
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "4",
-        0
-      ],
-      "audio": [
-        "9",
-        2
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Output"
-    }
-  },
   "11": {
     "inputs": {
       "video_info": [
@@ -129,6 +103,89 @@
     "class_type": "VHS_VideoInfoSource",
     "_meta": {
       "title": "Video Info (Source) 🎥🅥🅗🅢"
+    }
+  },
+  "12": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Video"
+    }
+  },
+  "13": {
+    "inputs": {
+      "filename_prefix": "audio/interpolate",
+      "quality": "V0",
+      "audioUI": "",
+      "audio": [
+        "17",
+        1
+      ]
+    },
+    "class_type": "SaveAudioMP3",
+    "_meta": {
+      "title": "Output_Audio"
+    }
+  },
+  "14": {
+    "inputs": {
+      "filename_prefix": "video/interpolate",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "15": {
+    "inputs": {
+      "video_path": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "MpiHasAudio",
+    "_meta": {
+      "title": "Mpi Has Audio"
+    }
+  },
+  "16": {
+    "inputs": {
+      "fps": [
+        "11",
+        0
+      ],
+      "images": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video"
+    }
+  },
+  "17": {
+    "inputs": {
+      "boolean": [
+        "15",
+        0
+      ],
+      "input": [
+        "9",
+        2
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Has Audio"
     }
   }
 }

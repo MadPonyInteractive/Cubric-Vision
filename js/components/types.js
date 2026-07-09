@@ -209,6 +209,25 @@
  */
 
 /**
+ * @typedef {Object} MpiTreePickerProps (Primitive — js/components/Primitives/MpiTreePicker)
+ * Searchable folder-tree picker for path-shaped option lists (MPI-233). Drop-in
+ * alternative to MpiDropdown — value stays the full path string so upstream
+ * heal/resolve/inject logic is untouched. First consumer: LoRA slots in
+ * MpiModelSettings; reuse anywhere a large list of `Folder\Sub\file.ext` values
+ * needs search + folder structure.
+ * @property {Array<{label:string,value:string,disabled?:boolean}>} [options=[]] - Option list; the entry with value '' becomes the pinned clear row, disabled entries render as pinned non-selectable rows above the tree
+ * @property {string} [value=''] - Selected full path
+ * @property {string} [placeholder='Select...'] - Trigger label when nothing selected
+ * @property {string} [searchPlaceholder='Search…'] - Placeholder inside the search input
+ * @property {string} [fileIcon='image'] - icons.js key for file-row icons
+ * @property {boolean} [stripExtension=false] - Hide the file extension in row/trigger labels (the stored value keeps the full path)
+ * @property {string} [extraClasses=''] - Root modifier (e.g. 'mpi-tree-picker--missing' for the red invalid state)
+ *
+ * Emits:
+ * 'change' { value: string, label: string }
+ */
+
+/**
  * @typedef {Object} MpiRadioGroupProps (Primitive — js/components/Primitives/MpiRadioGroup)
  * @property {Array<string|{label:string,value:string}>} [options=[]] - Option list
  * @property {string} [value=''] - Currently selected value
@@ -336,6 +355,14 @@
  * @property {boolean} [showSettings=true]
  * @property {boolean} [generating=false]
  * @property {Object} [context={}]
+ * @property {'gallery'|'history'} [workspaceKey='gallery']
+ *   Selects which session draft slot (`state.promptDraft` / `state.promptMedia`)
+ *   this box reads + writes, so gallery and history drafts never bleed (MPI-113).
+ * @property {string|null} [workspaceId=null]
+ *   Card id stamped into the saved slot. On mount the box restores its slot ONLY
+ *   when the slot's stored id matches this — so opening a different history card
+ *   shows a clean box, never the previous card's text/chips. Gallery omits it
+ *   (id null = always matches = persistent). See component-state.md.
  *
  * Instance methods (on instance.el):
  *   imageCount    {number}
@@ -370,7 +397,8 @@
  * @property {string} [info] - Info bar description for the unload button
  *
  * Instance methods (on instance.el):
- *   startPolling()          — begin or resume polling /system/stats
+ *   startPolling()          — begin or resume polling the active stats source
+ *                             (/system/stats locally, remote Pod stats while connected)
  *   stopPolling()           — pause polling
  *   showStatus(text)        — show a temporary badge message (called by shell after release)
  *
@@ -508,12 +536,22 @@
  */
 
 /**
- * @typedef {Object} MpiHelpProps (Compound — js/components/Compounds/MpiHelp)
+ * @typedef {Object} MpiRunpodSettingsProps (Compound — js/components/Compounds/LandingPages/MpiRunpodSettings)
+ * No props required — reads state.runpodConfig + secretsClient internally (MPI-177 extraction).
+ *
+ * The RunPod Remote Engine section of the Settings panel. Mounted once by
+ * MpiSettings into #mpiSettingsRunpodMount; MpiSettings forwards el.onOpen()
+ * each panel open. el.destroy() clears the status/disk polls and aborts any
+ * in-flight connect poll (the Pod itself is left booting — destroy ≠ Cancel).
+ */
+
+/**
+ * @typedef {Object} MpiHotkeysProps (Compound — js/components/Compounds/LandingPages/mpi-hotkeys)
  * No props required. Static content.
  *
  * Content component for MpiSlideOver.
  *
- * Trigger via: Events.emit('slide-over:open', { title: 'Help', component: MpiHelp })
+ * Trigger via: Events.emit('slide-over:open', { title: 'Hotkeys', component: MpiHotkeys })
  */
 
 /**
@@ -527,7 +565,7 @@
  * @typedef {Object} MpiSlideOverProps (Compound — js/components/Compounds/MpiSlideOver)
  * @property {string} title       - UPPERCASE label shown in panel header
  * @property {Object} component   - ComponentFactory blueprint to mount in the body slot
- *                                  (MpiSettings | MpiHelp | MpiAbout).
+ *                                  (MpiSettings | MpiHotkeys | MpiAbout).
  *                                  If component.el.onOpen exists, it is called on open.
  * @property {string} [extraClasses] - Optional classes added to the slide-over root.
  *                                     Queue uses this to provide its own chrome.
@@ -591,15 +629,22 @@
 /**
  * @typedef {Object} MpiModelManagerProps (Compound — js/components/Compounds/LandingPages/MpiModelManager)
  *
- * Takes no props. Model-manager content for the MpiSlideOver panel — renders
- * installed + available models as MpiInstalledDisplay cards and owns refresh,
- * install, pause/resume/cancel, uninstall confirmation, and download:* subs.
+ * Takes no props. The Model Library (MPI-215): self-hosts a full-page
+ * MpiOverlay(body) styled as a dark contact sheet — lean preview tiles split
+ * into Installed/Available × Image/Video sub-grids, with Media/Size/search
+ * filters and a right-drawer detail panel (an absolute child of the overlay)
+ * carrying description, Operations toggles, GPU-weight arch toggles, VRAM→RAM
+ * trade table, disk footprint, and Install/Update/Uninstall. Owns all model
+ * logic: refresh, install, pause/resume/cancel, uninstall confirmation, and
+ * download:* subs.
  *
- * Opened via: Events.emit('slide-over:open', { title: 'Models', component: MpiModelManager }).
+ * Opened via: Events.emit('models:open') → shell mounts it once and calls el.open().
  *
  * Instance methods (on instance.el):
- *   onOpen()  — called by MpiSlideOver each time the panel opens; re-syncs installed state.
- *   destroy() — tears down all subscriptions, card instances, and the uninstall dialog.
+ *   open()    — shows the overlay + re-syncs installed state (alias: onOpen).
+ *   close()   — hides the overlay.
+ *   destroy() — tears down subscriptions, tiles, detail toggles, the uninstall
+ *               dialog, and the hosted overlay.
  */
 
 /**
@@ -650,6 +695,53 @@
  */
 
 /**
+ * @typedef {Object} MpiNotesEditorProps (Compound — js/components/Compounds/MpiNotesEditor)
+ * @property {string}   [title='Notes']      - Dialog title.
+ * @property {string}   [value='']           - Initial notes text shown in the textarea.
+ * @property {string}   [placeholder='Write your notes here…'] - Textarea placeholder.
+ * @property {Function} [onSave]             - async (notes: string) => void. Persists the notes.
+ *                                             While it runs the Save button is disabled and the modal
+ *                                             stays open; on rejection the modal stays open for retry.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *
+ * Usage:
+ *   const e = MpiNotesEditor.mount(document.createElement('div'), {
+ *       title: 'Card notes', value: item.notes || '',
+ *       onSave: async (notes) => { await persist(notes); },
+ *   });
+ *   e.el.show();
+ *
+ * Emits:
+ * 'save'   { value: string } — Save succeeded (after onSave resolves).
+ * 'cancel' {}                — Cancel BUTTON clicked only (NOT emitted on Escape or hide()).
+ */
+
+/**
+ * @typedef {Object} MpiAddToProjectProps (Compound — js/components/Compounds/MpiAddToProject)
+ * @property {Array<{id:string,name:string}>} [projects=[]] - Selectable target projects for the dropdown.
+ * @property {Function} [onConfirm] - async (projectId: string) => void. Copies the selected cards.
+ *                                    While it runs the OK button is disabled and the modal stays open;
+ *                                    on rejection the modal stays open for retry.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *
+ * Usage:
+ *   const d = MpiAddToProject.mount(document.createElement('div'), {
+ *       projects, onConfirm: async (projectId) => { await copy(projectId); },
+ *   });
+ *   d.el.show();
+ *
+ * Emits:
+ * 'confirm' { projectId: string } — Confirm succeeded (after onConfirm resolves).
+ * 'cancel'  {}                    — Cancel BUTTON clicked only (NOT emitted on Escape or hide()).
+ */
+
+/**
  * @typedef {Object} MpiInstalledDisplayProps (Compound — js/components/Compounds/MpiInstalledDisplay)
  * @property {string} [title='']          - Title text on the top-left
  * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
@@ -674,6 +766,7 @@
  * @property {number} [totalBytes=0]        - Total bytes to download
  * @property {boolean} [canUninstall=false] - Show Uninstall button when true and installed
  * @property {boolean} [hasPartialProgress=false] - Show progress bar for a partially-installed dep
+ * @property {boolean} [isRemote=false]    - App is cloud-connected; hides Pause (remote has no pause/resume API)
  *
  * Emits:
  * 'delete' {}     — Action button clicked (Install when idle; context-dependent)
@@ -787,9 +880,12 @@
 
 /**
  * @typedef {Object} MpiReusePromptDialogProps (Compound - js/components/Compounds/MpiReusePromptDialog)
- * @property {{prompt?:boolean,settings?:boolean,model?:boolean,images?:boolean}} [includes] - Initial checked reuse parts
+ * @property {{prompt?:boolean,settings?:boolean,model?:boolean,images?:boolean,video?:boolean,audio?:boolean}} [includes] - Initial checked reuse parts
  * @property {'original'|'current'} [source='original'] - Initial Gallery source option
  * @property {boolean} [showSource=true] - Whether to show Gallery source radio controls
+ * @property {{original?:boolean,current?:boolean}} [imageAvailability] - Per-source: does the source carry a reusable input image? false greys "Use Images" (MPI-212)
+ * @property {{original?:boolean,current?:boolean}} [videoAvailability] - Per-source: reusable input video? false greys "Use Video" (MPI-227)
+ * @property {{original?:boolean,current?:boolean}} [audioAvailability] - Per-source: reusable input audio? false greys "Use Audio" (MPI-227)
  *
  * Instance methods (on instance.el):
  *   show()    - open the modal
@@ -1072,6 +1168,22 @@
  */
 
 /**
+ * @typedef {Object} MpiFolderDropProps (Primitive — js/components/Primitives/MpiFolderDrop)
+ * @property {string} folderPath — absolute target folder; MUST be a configured
+ *   model folder (primary root or a stored extra) — the import route rejects others.
+ * @property {'loras'|'upscale_models'} bucket — model bucket this folder holds.
+ * @property {string} [label] — display label (defaults to folderPath).
+ * @property {boolean} [primary] — mark the primary managed folder.
+ * @property {function(string): void} [onImport] — called with the imported
+ *   filename after a successful copy (use to refresh asset lists / dropdowns).
+ *
+ * A labeled folder path that is also an OS drop target for model files. On drop
+ * it resolves the file's absolute path via Electron `webUtils.getPathForFile`
+ * and POSTs /comfy/import-model to COPY it into this folder (original stays).
+ * A same-name collision triggers a confirm-then-replace. Browser dev mode (no
+ * webUtils) ignores drops. Rejects non-model extensions with a ui:warning toast.
+ *
+ *
  * @typedef {Object} MpiProjectDropOverlayProps (Primitive — js/components/Primitives/MpiProjectDropOverlay)
  * @property {function({ folderPath: string, source: 'folder'|'json' }): void} [onDrop]
  *   Called when the user drops a project folder or a project.json onto the

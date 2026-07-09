@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-238",
+  "title": "Connect shows no connecting stage + local card lingers while ComfyUI reloads nodes",
+  "description": "On connect (warm resume, panel-less feed driving), the hero card stayed 'local · offline' for ~1min with NO connecting stage, then snapped to remote. Root cause in the app-wide remote-connection feed poll (js/shell.js `tick`): after (re)connect, /wrapper/health reports `ready:true` before ComfyUI finishes reloading custom nodes, and the backend `_starting` flag clears on wrapper-ready (routes/remotePodLifecycle.js:378 `if (health.ready) _starting=false`) — so `connecting:false` while `comfyReady:false`. The tick computed connected=false (the comfyReady gate at shell.js:1040) AND connecting=false, then fell through to emit plain `connected:false, phase:null` = local · offline for the whole comfy-reload window; hero snapped to remote only when comfyReady finally flipped. Exposed by the recent background-node-install fix (MPI-222/231 area) which moved custom_node installs into that window and stretched the reload to ~1min. Only happens when custom nodes are installing/reloading in the background; clean connects were fine. Fix: js/shell.js — when `ready && !noGpu && comfyReady===false`, set connecting=true so the feed emits phase:'connecting' and the hero shows the transition through the node reload. Old wrappers (no comfyReady field) and noGpu download Pods unaffected. Verified with an inline truth-table (7 cases incl. old-wrapper + download-Pod regression); NOT live-validated — user could not validate this session.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-09T12:00:00Z",
+  "updated_at": "2026-07-09T12:00:00Z",
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "runpod",
+    "remote-engine",
+    "hero-card"
+  ],
+  "priority": "medium"
+}

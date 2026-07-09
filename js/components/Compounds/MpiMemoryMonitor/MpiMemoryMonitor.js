@@ -3,13 +3,15 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { ce, qs } from '/js/utils/dom.js';
 import { Hotkeys } from '/js/managers/hotkeyManager.js';
+import { Events } from '/js/events.js';
 
 /**
  * MpiMemoryMonitor — Compound: MpiProgressBar (×2) + MpiButton (unload).
  *
  * Displays live VRAM + RAM usage bars using the MpiProgressBar primitive
  * with the 'vram' and 'ram' variants defined in MpiProgressBar.css.
- * Polls /system/stats on a configurable interval.
+ * Polls local /system/stats by default, and switches to remote Pod telemetry
+ * while RunPod is connected.
  *
  * Props:
  * @param {number}  [pollInterval=2000] - Stats fetch interval in ms
@@ -31,6 +33,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
 
     setup: (el, props, emit) => {
         const pollInterval = props.pollInterval ?? 2000;
+        const GB = 1024 ** 3;
 
         // ── Layout structure ─────────────────────────────────────────────────
         const barsEl    = ce('div', { className: 'mpi-mem-monitor__bars' });
@@ -60,6 +63,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
                 value: 0,
                 variant: type,       // 'vram' or 'ram' — maps to .mpi-progress--vram / --ram
                 interactive: false,
+                info: '',            // opt out of status-bar hover tooltip
             });
 
             return { rowEl: row, barInstance, valueEl };
@@ -80,7 +84,7 @@ export const MpiMemoryMonitor = ComponentFactory.create({
             icon: 'unload',
             size: 'md',
             variant: 'ghost',
-            info: props.info ?? 'Release VRAM — F5 standard · Ctrl+F5 deep clean',
+            info: props.info ?? 'Release VRAM — F5 · Ctrl+click or Ctrl+F5 for deep clean (VRAM + RAM)',
         });
 
         // ── Ctrl-held visual (signals deep clean mode) ───────────────────────
@@ -103,7 +107,12 @@ export const MpiMemoryMonitor = ComponentFactory.create({
         const _unsubKeydown = Hotkeys.bind('memoryMonitor.ctrl.down', _onKeydown);
         const _unsubKeyup   = Hotkeys.bind('memoryMonitor.ctrl.up', _onKeyup);
 
-        unloadBtn.on('click', () => emit('release', { deep: _ctrlHeld }));
+        // Read the modifier off the click event itself — authoritative and
+        // immune to _ctrlHeld desync (missed keydown on focus steal / DevTools).
+        unloadBtn.on('click', ({ originalEvent }) => {
+            const deep = !!(originalEvent && (originalEvent.ctrlKey || originalEvent.metaKey)) || _ctrlHeld;
+            emit('release', { deep });
+        });
 
         // ── Public status API ────────────────────────────────────────────────
         /**
@@ -139,30 +148,118 @@ export const MpiMemoryMonitor = ComponentFactory.create({
 
         // ── Polling ──────────────────────────────────────────────────────────
         let _pollTimer = null;
+        let _remote = {
+            connected: false,
+            phase: null,
+            vramTotal: null,
+            ramTotal: null,
+        };
+
+        const _isRemoteLive = () => _remote.connected && !_remote.phase;
+        const _numOrNull = (value) => {
+            const n = Number(value);
+            return Number.isFinite(n) ? n : null;
+        };
+
+        const _setUnavailable = (valueEl, barInst, text = '—') => {
+            valueEl.textContent = text;
+            _setBarValue(barInst, 0);
+        };
+
+        const _applyMetric = ({ total, used, percent, valueEl, barInst, fallbackText = '—' }) => {
+            if (!(Number.isFinite(total) && total > 0)) {
+                _setUnavailable(valueEl, barInst, fallbackText);
+                return false;
+            }
+            const resolvedPercent = Number.isFinite(percent)
+                ? percent
+                : (Number.isFinite(used) ? ((used / total) * 100) : null);
+            const resolvedUsed = Number.isFinite(used)
+                ? used
+                : (Number.isFinite(resolvedPercent) ? total * (resolvedPercent / 100) : null);
+            if (!Number.isFinite(resolvedUsed) || !Number.isFinite(resolvedPercent)) {
+                _setUnavailable(valueEl, barInst, fallbackText);
+                return false;
+            }
+            valueEl.textContent = `${(resolvedUsed / GB).toFixed(1)} / ${(total / GB).toFixed(0)} GB`;
+            _setBarValue(barInst, resolvedPercent);
+            return true;
+        };
+
+        const _applyRemoteStats = (data) => {
+            const hasRemoteVram = Number.isFinite(_remote.vramTotal) && _remote.vramTotal > 0;
+            vramRow.hidden = !hasRemoteVram;
+            barsEl.classList.toggle('mpi-mem-monitor__bars--vram-hidden', vramRow.hidden);
+
+            const ramOk = _applyMetric({
+                total: _remote.ramTotal,
+                used: _numOrNull(data?.ram?.used),
+                percent: _numOrNull(data?.ram?.percent),
+                valueEl: ramValue,
+                barInst: ramBar,
+                fallbackText: 'Pod N/A',
+            });
+
+            if (!vramRow.hidden) {
+                _applyMetric({
+                    total: _remote.vramTotal,
+                    used: _numOrNull(data?.vram?.used),
+                    percent: _numOrNull(data?.vram?.percent),
+                    valueEl: vramValue,
+                    barInst: vramBar,
+                    fallbackText: 'Pod N/A',
+                });
+            }
+
+            if (!ramOk && vramRow.hidden) {
+                _setUnavailable(ramValue, ramBar, 'Pod N/A');
+            }
+        };
+
+        const _applyLocalStats = (data) => {
+            const ramGB      = (data.ram.used  / GB).toFixed(1);
+            const totalRamGB = (data.ram.total / GB).toFixed(0);
+            ramValue.textContent = `${ramGB} / ${totalRamGB} GB`;
+            _setBarValue(ramBar, data.ram.percent);
+
+            const isAppleUnified = data.gpu?.vendor === 'apple' || data.vram?.memoryModel === 'unified';
+            const hasDiscreteVram = data.vram?.available !== false && data.vram?.total > 0;
+            vramRow.hidden = isAppleUnified && !hasDiscreteVram;
+            barsEl.classList.toggle('mpi-mem-monitor__bars--vram-hidden', vramRow.hidden);
+            if (!vramRow.hidden) {
+                const vramGB      = (data.vram.used  / GB).toFixed(1);
+                const totalVramGB = (data.vram.total / GB).toFixed(0);
+                vramValue.textContent = `${vramGB} / ${totalVramGB} GB`;
+                _setBarValue(vramBar, data.vram.percent);
+            }
+        };
 
         const _updateStats = async () => {
             try {
-                const res  = await fetch('/system/stats');
+                const endpoint = _isRemoteLive() ? '/remote/pod/stats' : '/system/stats';
+                const res  = await fetch(endpoint);
                 const data = await res.json();
-                if (!data.success) return;
-
-                const ramGB      = (data.ram.used  / (1024 ** 3)).toFixed(1);
-                const totalRamGB = (data.ram.total / (1024 ** 3)).toFixed(0);
-                ramValue.textContent = `${ramGB} / ${totalRamGB} GB`;
-                _setBarValue(ramBar, data.ram.percent);
-
-                const isAppleUnified = data.gpu?.vendor === 'apple' || data.vram?.memoryModel === 'unified';
-                const hasDiscreteVram = data.vram?.available !== false && data.vram?.total > 0;
-                vramRow.hidden = isAppleUnified && !hasDiscreteVram;
-                barsEl.classList.toggle('mpi-mem-monitor__bars--vram-hidden', vramRow.hidden);
-                if (!vramRow.hidden) {
-                    const vramGB      = (data.vram.used  / (1024 ** 3)).toFixed(1);
-                    const totalVramGB = (data.vram.total / (1024 ** 3)).toFixed(0);
-                    vramValue.textContent = `${vramGB} / ${totalVramGB} GB`;
-                    _setBarValue(vramBar, data.vram.percent);
+                if (_isRemoteLive()) {
+                    if (!data.success) {
+                        vramRow.hidden = !(Number.isFinite(_remote.vramTotal) && _remote.vramTotal > 0);
+                        barsEl.classList.toggle('mpi-mem-monitor__bars--vram-hidden', vramRow.hidden);
+                        _setUnavailable(ramValue, ramBar, 'Pod N/A');
+                        if (!vramRow.hidden) _setUnavailable(vramValue, vramBar, 'Pod N/A');
+                        return;
+                    }
+                    _applyRemoteStats(data);
+                    return;
                 }
+                if (!data.success) return;
+                _applyLocalStats(data);
             } catch {
-                // Silently ignore — network may not be ready on boot
+                if (_isRemoteLive()) {
+                    vramRow.hidden = !(Number.isFinite(_remote.vramTotal) && _remote.vramTotal > 0);
+                    barsEl.classList.toggle('mpi-mem-monitor__bars--vram-hidden', vramRow.hidden);
+                    _setUnavailable(ramValue, ramBar, 'Pod N/A');
+                    if (!vramRow.hidden) _setUnavailable(vramValue, vramBar, 'Pod N/A');
+                }
+                // Silently ignore otherwise — network may not be ready on boot
             }
         };
 
@@ -181,12 +278,23 @@ export const MpiMemoryMonitor = ComponentFactory.create({
             }
         };
 
+        const _unsubRemote = Events.on('remote:connection', ({ connected = false, phase = null, vramGb = null, ramGb = null } = {}) => {
+            _remote = {
+                connected: !!connected,
+                phase: phase || null,
+                vramTotal: Number.isFinite(Number(vramGb)) && Number(vramGb) > 0 ? Number(vramGb) * GB : null,
+                ramTotal: Number.isFinite(Number(ramGb)) && Number(ramGb) > 0 ? Number(ramGb) * GB : null,
+            };
+            _updateStats();
+        });
+
         // Cleanup when element is permanently removed from the DOM
         const _observer = new MutationObserver(() => {
             if (!document.contains(el)) {
                 el.stopPolling();
                 _unsubKeydown();
                 _unsubKeyup();
+                _unsubRemote();
                 clearTimeout(_statusTimer);
                 _observer.disconnect();
             }

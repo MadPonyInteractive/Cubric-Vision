@@ -38,7 +38,10 @@ class OverlayManager {
             return { depth: 0, zIndex: BASE_Z };
         }
 
-        Events.emit('ui:close-all-popups');
+        // reason: 'overlay-open' lets long-lived panels (MpiSlideOver) ignore this
+        // pulse — a child modal opening must not close the panel underneath it.
+        // Transient popups (dropdowns, context menus) ignore the payload and still close.
+        Events.emit('ui:close-all-popups', { reason: 'overlay-open' });
         this._stack.push(instance);
         const depth = this._stack.length;
         const zIndex = BASE_Z + depth * STEP_Z;

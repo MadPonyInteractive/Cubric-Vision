@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-110",
+  "title": "Auto-retry GPU connect",
+  "description": "Opt-in 'Auto-retry connection' checkbox: when on, picker shows out-of-stock GPUs and Connect polls availability every 15s in the background (non-blocking, phase stays null so local generation is free) until the picked GPU frees, then hands off to the existing create path. Boot-resume only when autoConnectOnStart is also on.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "Claude implementation session",
+  "created_at": "2026-06-17T17:55:52Z",
+  "updated_at": "2026-06-17T20:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl"
+  }
+}

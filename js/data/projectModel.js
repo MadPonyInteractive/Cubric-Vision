@@ -113,18 +113,47 @@ export function createVideoItem(overrides = {}) {
     };
 }
 
+/**
+ * Creates a new AudioItem. Audio is a first-class imported media type (LTX-2.3
+ * input); it has duration but no pixel frame, so the card renders an icon.
+ * @param {Partial<object>} overrides
+ * @returns {object}
+ */
+export function createAudioItem(overrides = {}) {
+    return {
+        id:               generateId(),
+        type:             'audio',
+        filePath:         '',
+        createdAt:        new Date().toISOString(),
+        modelId:          null,
+        operation:        null,
+        displayName:      null,
+        prompt:           '',
+        negativePrompt:   '',
+        seed:             -1,
+        generationSettings: null,
+        name:             null,
+        uploaded:         false,
+        pixelDimensions:  { w: 0, h: 0 },
+        generationMs:     null,
+        duration:         0,
+        ...overrides,
+    };
+}
+
 // ── ItemGroup ─────────────────────────────────────────────────────────────────
 
 /**
  * @typedef {Object} ItemGroup
  * @property {string}         id           - Unique id
- * @property {'image'|'video'} type        - Fixed at creation, never changes
+ * @property {'image'|'video'|'audio'} type - Fixed at creation, never changes
  * @property {string}         name         - User-assigned name
  * @property {string}         createdAt    - ISO timestamp
  * @property {number}         selectedIndex - Index into `history` of the current selected entry
  * @property {MediaItem[]}    history      - Append-only stack, index 0 = oldest
  * @property {boolean}        open         - Whether the group is expanded in the gallery (UI hint)
  * @property {boolean}        [favourite=false] - Whether this group is marked as a favourite
+ * @property {string|null}    [customName=null] - User-assigned card name; overrides the derived label when set. Null = fall back to derived.
  */
 
 /**
@@ -143,6 +172,7 @@ export function createItemGroup(type, overrides = {}) {
         history:       [],
         open:          false,
         favourite:     false,
+        customName:    null,
         ...overrides,
     };
 }
@@ -304,6 +334,7 @@ const _defaultLoraSlots = () => Array.from({ length: 6 }, () => ({
     name: null,
     strengthModel: 1.0,
     strengthClip: 1.0,
+    bypass: false,
 }));
 
 const _getModelDef = (modelId) => MODELS.find(m => m.id === modelId) ?? null;

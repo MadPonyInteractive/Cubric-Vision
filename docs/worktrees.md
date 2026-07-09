@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Run multiple working copies of Cubric Studio from a single git repo without duplicating massive engine/model folders. Each worktree is an isolated branch checkout but shares the underlying `.git` object store.
+Run multiple working copies of Cubric Vision from a single git repo without duplicating massive engine/model folders. Each worktree is an isolated branch checkout but shares the underlying `.git` object store.
 
 ## Why Worktrees Matter Here
 

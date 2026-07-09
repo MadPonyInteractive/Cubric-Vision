@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-203",
+  "title": "Remote gen wedges when terminal WS missed: reconcile resolves but nobody consumes it",
+  "description": "LIVE-REPRODUCED 2026-07-05 (pod 81kol4nhlutsx0, gen 7176fd33): remote gen completed on the pod (GPU 0%/P8 idle, 1 output in /history), the terminal WS/SSE event was missed, `_reconcileFromHistory` fired correctly — log: 'Reconciled completed gen 7176fd33... from /history via poll (1 outputs) — terminal WS event was missed' — but the app stayed wedged: queue card RUNNING forever, spinner placeholder in gallery, no card, no save, lane never freed; user had to press Stop manually (which settles the lane locally by design). ROOT CAUSE: `commandExecutor.js:1401` `await getEngine(...).runWorkflow(workflow, params, onMessage, ...)` DISCARDS the resolved value. Completion fires only from onMessage events ('executing null' / 'execution_success' -> `_finishGeneration()` at 1365/1376). The reconcile backstop (comfyController.js `_reconcileFromHistory` ~790-845, MPI-152/156) resolves the runWorkflow promise with `{success:true, images}` — a value with no consumer. Net: the backstop built to prevent missed-terminal hangs logs success and heals nothing. SILENT DATA LOSS: the output exists on the pod but never becomes a card. FIX DIRECTION (pick one): (a) commandExecutor — capture `const result = await runWorkflow(...)`; if `result?.success && !_generationFinished`, feed `result.images` through the same URL-collection used by the 'executed' handler and call `_finishGeneration()`; or (b) comfyController — in `_reconcileFromHistory`, before resolving, forward synthetic 'executed' (per node output) + 'execution_success' messages to the prompt's listener so the normal onMessage path drives completion (likely cleaner — reuses all existing filtering of output-titled nodes; note reconcile rebuilds outputs from EVERY history node, while commandExecutor filters to output-titled node ids — synthetic-message route preserves that filter, direct-images route must re-apply it). Also fold in: status bar goes IDLE while the other lane still runs (single-slot statusBar in two-lane mode — local completion at 19:23:55 stomped the remote lane's status; cosmetic but confusing, decide whether in-scope). Interplay: composes with MPI-195's stopped-gen bridge — reconcile-after-stop would emit a late generation:complete which the MPI-195 bridge now admits. Discovered during MPI-195 two-lane verification; the original MPI-195 user report (step 3 'I tried to connect to a pod') was plausibly BOTH bugs stacked.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-05T19:40:00Z",
+  "updated_at": "2026-07-05T22:30:00Z",
+  "links": {
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl"
+  },
+  "activeSessionTitle": "MPI-203 reconcile-consume fix",
+  "tags": [
+    "runpod",
+    "remote-engine",
+    "data-loss",
+    "two-lane",
+    "mpi-195-sibling"
+  ],
+  "priority": "high"
+}

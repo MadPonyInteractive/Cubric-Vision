@@ -288,6 +288,14 @@ export const MpiQueuePanel = ComponentFactory.create({
                     textContent: sizeLabel,
                 }));
             }
+            // MPI-74: flag a force-local job. Only the 'local' exception is shown \u2014
+            // default remote/local jobs carry no chip (absence = default engine).
+            if (job.engine === 'local') {
+                meta.appendChild(ce('span', {
+                    className: 'mpi-queue-panel__meta-line mpi-queue-panel__meta-line--engine',
+                    textContent: 'Local',
+                }));
+            }
             body.appendChild(meta);
             body.appendChild(_renderAction(job));
             card.appendChild(body);
@@ -299,7 +307,7 @@ export const MpiQueuePanel = ComponentFactory.create({
         const _cardByJobId = new Map();
 
         const _signature = (items) => items
-            .map(j => `${j.queueJobId || ''}|${j.status}|${j.isLoop ? 1 : 0}|${j.previewKind || ''}|${j.previewUrl ? 1 : 0}|${j.promptExcerpt || ''}|${j.width}x${j.height}|${j.modelName || ''}|${j.operation || ''}`)
+            .map(j => `${j.queueJobId || ''}|${j.status}|${j.isLoop ? 1 : 0}|${j.previewKind || ''}|${j.previewUrl ? 1 : 0}|${j.promptExcerpt || ''}|${j.width}x${j.height}|${j.modelName || ''}|${j.operation || ''}|${j.engine || ''}`)
             .join('\n');
 
         const _patchPreview = (items) => {
@@ -322,7 +330,7 @@ export const MpiQueuePanel = ComponentFactory.create({
             depthEl.textContent = items.length
                 ? `${snapshot.runningCount || 0} running / ${pendingCount} queued`
                 : 'Idle';
-            nextEl.textContent = pendingCount ? `Next up · ${String((snapshot.running ? 2 : 1)).padStart(2, '0')}` : '';
+            nextEl.textContent = pendingCount ? `Next up · ${String((snapshot.runningCount || 0) + 1).padStart(2, '0')}` : '';
 
             const sig = _signature(items);
             if (sig === _lastSig && _cardByJobId.size === items.length) {

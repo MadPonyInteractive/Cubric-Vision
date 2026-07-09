@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-149",
+  "title": "kornia pipPins skipped on engine UPGRADE path \u00e2\u2020\u2019 LTXVideo breaks (pad ImportError) after every ComfyUI engine update",
+  "description": "FOLDED INTO the MPI-139 v0.26 floor batch (Phase 1) \u00e2\u20ac\u201d blocker, fixed in that session, not standalone. Plan: .agents/mpi-kanban/tasks/MPI-139/plan.md. BUG found live during the MPI-139 v0.26.0 local engine upgrade (2026-06-26). After the app updated the local ComfyUI engine to v0.26.0, kornia ended up at 0.8.3 (LTXVideo's requirements.txt pulls it unpinned), NOT the required 0.8.2. Result: `ImportError: cannot import name 'pad' from kornia.geometry.transform.pyramid` \u00e2\u2020\u2019 LTXVideo's LTXVNormalizingSampler/Stage1_Bypass/SpatioTemporalTiledVAEDecode/ICLoRALoaderModelOnly fail to register \u00e2\u2020\u2019 any LTX gen dies with `Node 'Stage1_Bypass' not found`.\n\nROOT CAUSE: the `pipPins: ['kornia==0.8.2']` fix (MPI-127) lives on the DEP definition in js/data/modelConstants/dependencies.js:270, and the enforce code is correct (routes/downloadManager.js:1308-1316, runs AFTER requirements). BUT on the engine-upgrade path the field never fires. Proof from logs/app.log this run: line 2848 `Running: python -m pip install -r ...LTXVideo\\requirements.txt --upgrade` (= downloadManager.js:1294) \u00e2\u2020\u2019 line 2932 `pip requirements installed for ComfyUI-LTXVideo` (= line 1295) \u00e2\u2020\u2019 THEN straight to `Patching engine...`. The `pip pins installed for ComfyUI-LTXVideo: kornia==0.8.2` line (1311) NEVER appears, so the `if (Array.isArray(dep.pipPins) && dep.pipPins.length)` guard at 1308 was FALSE \u00e2\u2020\u2019 `dep.pipPins` is undefined on the runtime `modelJob.deps` object.\n\nfinishCustomNodeInstall (downloadManager.js:1803) filters `modelJob.deps` and passes them to `_runCustomNodeInstall`. The `modelJob.deps` objects are assembled when the engine-deps download job is created and copy only a SUBSET of the dependencies.js DEP fields (filename/url/type/installRequirements/...) \u00e2\u20ac\u201d `pipPins` is dropped. So the enforce block can never see it on the upgrade/engine-deps path.\n\nFIX (proposed): carry `pipPins` (and any other enforce-relevant fields) through to the `modelJob.deps` shape when the engine-deps job is built, so it reaches downloadManager.js:1308 on BOTH fresh-install and upgrade paths. Find the job-dep assembler (the thing that builds modelJob.deps from dependencies.js DEPS for the universal-workflow/engine-deps install) and include `pipPins`. Then re-verify on an engine upgrade: kornia ends at 0.8.2 + `pad OK` + LTXVideo nodes register.\n\nNOT a v0.26 regression \u00e2\u20ac\u201d this would break on ANY engine update (was masked before because prior installs happened to keep 0.8.2). It is also a SHIP risk: every user who updates the engine gets a broken LTXVideo until fixed.\n\nIMMEDIATE MITIGATION already applied to the dev box (2026-06-26): manually ran `python_embeded\\python.exe -m pip install kornia==0.8.2` in the live engine \u00e2\u2020\u2019 kornia 0.8.2, `pad OK`. So local LTX testing for MPI-139 is UNBLOCKED. This card is the real code fix.\n\nRelated: MPI-127 (the pipPins mechanism), MPI-139 (the v0.26 bump that surfaced it). Files: routes/downloadManager.js (job-dep assembler + 1308 enforce), js/data/modelConstants/dependencies.js:270.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-06-26T14:25:00Z",
+  "updated_at": "2026-06-28T17:50:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "bug",
+    "comfy-engine",
+    "kornia",
+    "ltxvideo",
+    "engine-upgrade",
+    "pippins",
+    "ship-risk"
+  ],
+  "priority": "high"
+}

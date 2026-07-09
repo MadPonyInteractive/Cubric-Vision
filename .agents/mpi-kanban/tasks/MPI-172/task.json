@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-172",
+  "title": "Register Wan 2.2 5B (TI2V) model + write model-onboarding playbook",
+  "description": "Wire the Wan 2.2 TI2V-5B model into the app end-to-end AND write the missing 'add a new model' playbook doc (recon found the knowledge scattered across 7 places, no single procedure). 5B = combined t2v+i2v single-transformer (LTX-shape: flat dependencies[], NOT Wan-22's commonDeps+operations{}). type:'wan5b' (ratios.js already routes wan5b -> WAN_5B_RATIOS from MPI-171). id:'wan22-5b', name:'Wan 2.2 5B', tier low, single-stage (multiStage:false), Finish-only (no branchingContinue), audio:false. Ships the quanhaol 4-step turbo LoRA (model-only, str 0.8, SA_Solver/simple/4-step/CFG-1). Workflow: comfy_workflows/wan22_5b_ti2v.json (t2v/i2v gated via MpiSimpleBoolean Input_Text_to_video + MpiIfElse, like LTX). 3 NEW deps to R2 (cubric-models bucket, vision/wan-2.2-5b/): model 9.31GB, wan2.2_vae 1.31GB, turbo-lora 317MB. Reused deps (already hosted): umt5_xxl_fp8_e4m3fn_scaled (shared w/ 14B), ComfyUI-MpiNodes, comfyui-kjnodes, ComfyUI-VideoHelperSuite. GOTCHA: lora path on disk has space+backslash 'loras/wan 2.2/' -> normalize. VRAM auto-computes from footprint.js (8GB floor via MIN_FLOOR; near-zero RAM since 5B fp16 ~10GB fits). NO version bump (models aren't versioned). Files: dependencies.js (+3), models.js (+1 entry), workflow placement, docs/add-model-playbook.md (NEW), CLAUDE.md router pointer.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-02T03:00:00Z",
+  "updated_at": "2026-07-02T04:00:00Z",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "models",
+    "wan5b",
+    "onboarding",
+    "playbook",
+    "r2",
+    "dependencies"
+  ],
+  "priority": "high"
+}

@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "ff1372cb-ab0b-47c4-aaeb-77608dbb1491",
+  "generated_at": "2026-07-07T00:10:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-208 Phase 3 implementation + live-verify + 3 console-fix rounds; handoff at Phase 4 boundary",
+    "branch": "RunPod"
+  },
+  "goal": {
+    "original": "Continue MPI-208 — generation queue refactor (cue/loop/stop/dual-engine state machine). Replace patch-over-patch cue/stop/status with a single owned generationStore state machine.",
+    "status": "in_progress",
+    "summary": "Foundation (B1-A/B/C) + Phase 2 (commandExecutor on store) + Phase 3 (generationService on store, Option A) are all COMPLETE and LIVE-VERIFIED by the user, but UNCOMMITTED. Phase 3 also required 3 rounds of console-noise/behavior fixes (phase-table too strict for real async SSE ordering; a cancelled-but-queued ComfyUI prompt surviving cancel) — all landed + re-tested clean. Next is Phase 4 (UI derived from store). Two residuals: blob-404-on-Stop carded as MPI-211 (cosmetic, pre-existing); empty-status-bar + stale stage/total suffix are Phase-4-scope and already documented in the plan."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+    "completed": [
+      "Investigation (4 agents) + requirements contract R01-R31 / INV-1..7 (research/)",
+      "B1-A generationStore.js + tests, B1-B SSE engine tagging + merged stream, B1-C engineOverride + effectiveEngine() + R31 (all live-proven)",
+      "Phase 2: commandExecutor.js on the store (job register at engine+arch freeze; _abortedBail; store-phase model-load; engine-filtered SSE; exec.cancel->store.cancel). LIVE-VERIFIED.",
+      "Phase 3: generationService.js rewritten on the store (Option A). _lanes.inFlight DELETED -> derived from store.getSnapshot().running (_laneBusy/_runningCount); _cueQueue stays pending-intent holder; _finishActiveCueDispatch + superseded-guard DELETED -> _onLaneDrain fired from store.setLoopCallback (once-per-drain, INV-5); generationQueueCount written by ONE generation-store:changed subscription; direct write at MpiGroupHistoryBlock.js:867 DELETED; cancelRunningCueJob emits id-matched tool:cancelled at source (R18); MPI-74 P6 two-lane loop preserved. LIVE-VERIFIED all 5 acceptance (R05/R07/R18/R04/R08).",
+      "Phase 3 console-fix round 1: sampling->loading made legal (staged reload); terminal-origin illegal moves silenced (R09 late-settle no-op is not a bug); 'no output returned' warn gated on !cancelling.",
+      "Phase 3 console-fix round 2: submitting->{loading,sampling,finalizing,done} made legal (work signal can beat prompt_ack on fast dispatch); NEW generationStore.setPromptId() decouples the promptId stamp from the phase transition; prompt_ack advances to accepted only if still pre-accepted; loading-seed gated on !_samplingStartFired.",
+      "Phase 3 console-fix round 3: interruptCb now also calls getEngine(forceLocal).deleteQueueItem(exec.promptId) — a cancelled-but-queued ComfyUI prompt (accepted, waiting in FIFO behind another gen on the same lane) survived interrupt() and ran when the queue advanced. Fixed the 'cancelled image gen completes when the next gen starts' bug. Re-tested clean.",
+      "MPI-211 carded (blob-404-on-Stop, cosmetic, pre-existing); board.json + events updated."
+    ],
+    "pending": [
+      "Phase 4: UI derived from store — statusBar (pure derivation, survivor re-latch, self-heal, stage/total from job record), MpiPromptBox (isGenerating/Cue/Stop from snapshot; remove _runLocal mirror -> engineOverride completes B1-C), MpiQueuePanel + MpiGalleryBlock/MpiGroupHistoryBlock (cancel->store.cancel per job, overlays rebuilt from store on mount).",
+      "Phase 5: reconcile-on-truth + regression sweep + docs (docs need explicit user permission per CLAUDE.md).",
+      "Commit Foundation + Phase 2 + Phase 3 + console-fix rounds (user-authorized / mpi-end territory — NOT committed). Commit by explicit pathspec, shared-tree hygiene, never git add -A."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-208",
+    "title": "Generation queue refactor — cue/loop/stop/dual-engine state machine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-208/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-208/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-208/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-208/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement Phase 4",
+    "verify",
+    "commit Foundation + Phase 2 + Phase 3 + console-fixes by explicit pathspec if user authorizes"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md: Phase 3 checkbox [x] with full Option-A integrator notes + STATUS banner (COMPLETE + LIVE-VERIFIED, console clean); 3 console-fix rounds documented in the Phase-3 STATUS banner",
+      "plan.md Plan Drift: Option A chosen + implemented note (no wall hit; intent->exec bridge lives in activeGenerations registry, not a new field)",
+      "plan.md Phase 4 line: the two USER-OBSERVED statusBar bugs (empty bar during concurrent gens = survivor-re-latch R18; stale 4/4 stage/total bleed from an orphaned job) documented as Phase-4-scope with root causes",
+      "validation.md: Phase 3 auto + live acceptance results recorded",
+      "events.jsonl (task + global): validation.updated (Phase 3 live-verified + 3 rounds) appended; MPI-211 task.created appended",
+      "MPI-211 task card created (blob-404-on-Stop); board.json todo + next_id(212) + updated_at bumped"
+    ],
+    "pending": [
+      "Commit everything (user-authorized / mpi-end). Commit by explicit pathspec, never git add -A. Files list in context.files_modified.",
+      "Two pre-existing follow-ups still uncarded (NOT MPI-208): (1) remote gen fails at comfyController.js:~470 WS-ready gate ~15s timeout; (2) periodic syncModelInstalled poll every ~6.5s while remote-connected.",
+      "Phase 5: fold research/requirements-archaeology.md invariants into docs/ (likely new docs/generation-queue.md) + rule-file updates require explicit user permission."
+    ]
+  },
+  "next_action": {
+    "description": "Implement Phase 4: make the UI DERIVED from generationStore. Start with statusBar (js/shell/statusBar.js) — rewrite as pure derivation: subscribe generation-store:changed, pick the display job (most-recent driving; when the owner terminates, re-derive from the remaining running jobs so a SURVIVING lane re-latches — this fixes the USER-OBSERVED empty-bar-during-concurrent-gens bug, R18); render phase->label map (STARTING/LOADING MODEL/op label/%); read stage/total from the job record NOT bar-local _stageText (fixes the stale 4/4 suffix bleed); self-heal: no live jobs -> _setIdle(). Keep tool:* listeners as thin compat shims during transition. Then MpiPromptBox (isGenerating/Cue-label/Stop-Clear enable from store snapshot on mount+change; remove the _runLocal mirror -> forceLocal derived from state.engineOverride, completing B1-C), MpiQueuePanel + MpiGalleryBlock/MpiGroupHistoryBlock (cancel handlers -> store.cancel per job; placeholder/overlay Maps rebuilt from store on mount). Public facade signatures already stable from Phase 3 — Phase 4 migrates the CALLERS to read the store. Verify mode is user-ux (status bar / Cue-Loop-Stop feel + navigation need the user's hands). Do NOT parallelize; sequential by dependency.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 3 shipped Option A: generationStore = lane-accounting + running-truth authority; _cueQueue stays the pending-INTENT holder (config/callbacks/display/getNextGeneration the store has no record of until dispatch). _lanes[lane] keeps only .active (dispatched intent) + .lastJobForLoop; inFlight is DERIVED via _laneBusy(lane)=store.getSnapshot().running.some(j=>j.lane===lane).",
+      "The intent->exec bridge is NOT a new field — Stop routes through the existing activeGenerations registry entry (keyed by queueJobId, already holds the exec handle) -> exec.cancel() -> store.cancel(jobId). exec.jobId is assigned ASYNC inside runCommand (after refresh()), so it is null at dispatch; never snapshot it.",
+      "The store phase table was modeling an idealized event order the real async/coalesced SSE stream does not guarantee. Fixed generically: sampling->loading legal (staged reload), submitting->{work phases} legal (work beats ack), terminal-origin illegal moves are SILENT (expected R09 late-settle race), and setPromptId() stamps the promptId WITHOUT a phase move. Genuine violations (illegal move from a NON-terminal phase) still warn.",
+      "interrupt() only aborts the RUNNING ComfyUI prompt. A cancelled job whose prompt was accepted-but-still-queued in ComfyUI's FIFO survived and ran later — so interruptCb now ALSO deleteQueueItem(exec.promptId). This is THE fix for 'a cancelled gen completes when the next gen starts'.",
+      "The stale '4/4' status-bar suffix is upscale-specific (only upscale/detail have 4 stages; WAN i2v=2, SDXL t2i=2 per progressStages.js) — it was a leftover from a prior upscale gen re-latched by an ORPHANED job via progress/idle events WITHOUT a fresh tool:running->prepare() that clears _stageText. Root orphan killed by the deleteQueueItem fix; the permanent fix (stage/total read from the job record) is Phase 4's derived statusBar."
+    ],
+    "constraints": [
+      "scalable-foundation project mode — full guardrails, no prototype shortcuts.",
+      "Shared git tree — commit by explicit pathspec (git commit --only <paths>), NEVER git add -A / git add . . Push stays user-authorized. NOTHING in MPI-208 is committed yet.",
+      "Phase 4 verify mode is user-ux (statusBar / Cue-Loop-Stop feel + navigation).",
+      "Public facade signatures of generationService are STABLE (Phase 3) — Phase 4 migrates the callers to read the store, and removes the _runLocal mirror (payload forceLocal derived from state.engineOverride).",
+      "Preserve (do NOT silently drop): MPI-141/198 path heal, MPI-156 keepalive, MPI-157 stop-all, MPI-179 mirror refresh, MPI-194 hot-store, MPI-203 history replay, MPI-206 model re-sync, and the MPI-74 P6 two-lane loop semantics.",
+      "Rule-file + docs updates (events/state/component-*/comfy_engine, docs/generation-queue.md) are staged for Phase 5 and REQUIRE explicit user permission (CLAUDE.md cardinal rule 3).",
+      "Do NOT parallelize Phases 2-5 — sequential by dependency."
+    ],
+    "files_modified": [
+      "js/services/generationService.js (Phase 3 — machinery rewrite: store-derived lanes, _onLaneDrain, store subscription for count, cancelRunningCueJob->store.cancel + id-matched tool:cancelled, no-output warn gated on !cancelling)",
+      "js/services/generationStore.js (Phase 3 console-fixes — phase table: sampling->loading + submitting->work legal; silent terminal-origin no-op; NEW setPromptId())",
+      "js/services/commandExecutor.js (Phase 3 console-fixes — prompt_ack decouples setPromptId from the accepted transition + gated loading-seed; interruptCb also deleteQueueItem(promptId))",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js (Phase 3 — killed the direct state.generationQueueCount = 0 write at :867)",
+      "tests/generation-store.test.cjs (Phase 3 — +T15-T20: Stop-promotes-next / loop-refire-chain / two-lane-drain-isolation / stop-before-ack-drain / staged-reload+silent-late-settle / fast-dispatch-ack-after-work; T01 updated for silent terminal-origin)",
+      ".agents/mpi-kanban/tasks/MPI-208/plan.md + validation.md + task.json + events.jsonl (preservation)",
+      ".agents/mpi-kanban/tasks/MPI-211/* + board.json + global events.jsonl (blob-404 card)",
+      "PLUS all Foundation + Phase 2 files from the prior session (generationStore.js NEW, routes/comfy.js, routes/remoteProxyForward.js, js/state.js, js/services/remoteEngineClient.js, js/components/Organisms/MpiPromptBox/MpiPromptBox.js, js/data/modelRegistry.js, js/shell.js, js/events.js, .claude/rules/component-state.md) — all UNCOMMITTED"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-208/plan.md (Phase 3 STATUS banner + Phase 4 line with the two USER-OBSERVED statusBar bugs + Plan Drift)",
+      ".agents/mpi-kanban/tasks/MPI-208/research/requirements-archaeology.md (R18 status-bar identity, R19 navigation-never-desyncs, R27 idleness, INV-1/2 + the UI-surface table PART 2)",
+      "js/shell/statusBar.js (the Phase-4 rewrite target — _latch/_setIdle/_setActive/_stageText/setStage + the tool:* listeners at :439-490)",
+      "js/services/generationStore.js (the store API Phase 4 derives from — getSnapshot {jobs,running,pending,depth}, byId, byScope, generation-store:changed)",
+      "js/services/generationService.js (how Phase 3 wired the store — getGenerationQueueSnapshot, _onLaneDrain, the store subscription; Phase 4 must not double-manage)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (isGenerating/Cue-label/_runLocal at :1062-1310 — Phase 4 derives these from the store + completes engineOverride)",
+      "js/data/progressStages.js (stage counts per workflow — proves 4/4 is upscale-only, WAN i2v=2 / SDXL t2i=2)",
+      ".claude/rules/events.md, .claude/rules/state.md, .claude/rules/components.md, .claude/rules/comfy_engine.md (§ Engine Split)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["generation-queue", "engine-split", "dual-engine", "comfy-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-07T00:10:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-208 (generation queue refactor) in Cubric Vision on branch RunPod. Read .agents/mpi-kanban/state/handoffs/ff1372cb-ab0b-47c4-aaeb-77608dbb1491.json and use mpi-continue to pick up. Foundation (B1-A generationStore.js + tests, B1-B SSE engine tagging/merge, B1-C engineOverride + R31), Phase 2 (commandExecutor on the store), and Phase 3 (generationService rewritten on the store, Option A: store = lane/running truth, _cueQueue = pending intents, drain via store.setLoopCallback -> _onLaneDrain) are ALL COMPLETE and LIVE-VERIFIED by the user, but UNCOMMITTED. Phase 3 also needed 3 console-fix rounds, all landed + re-tested clean: (1) the store phase table was too strict for the real async SSE order — sampling->loading and submitting->{work phases} are now legal, terminal-origin illegal moves are silent (expected R09 late-settle), and the 'no output returned' warn is gated on !cancelling; (2) a new generationStore.setPromptId() decouples the promptId stamp from the accepted transition so a work signal beating prompt_ack no longer warns; (3) the frozen interruptCb now also calls deleteQueueItem(promptId) so a cancelled-but-queued ComfyUI prompt is truly killed — this fixed a cancelled gen completing when the next gen started. Your next action is Phase 4: make the UI DERIVED from the store. Start with js/shell/statusBar.js as pure derivation (subscribe generation-store:changed; pick the most-recent driving job; when the owner terminates re-derive from the remaining running jobs so a SURVIVING lane re-latches — this fixes the user-observed empty-status-bar-during-concurrent-gens bug; read stage/total from the job record not bar-local _stageText — fixes the stale '4/4' suffix; self-heal to idle when no live jobs). Then MpiPromptBox (isGenerating/Cue/Stop from the store snapshot; remove the _runLocal mirror -> forceLocal from state.engineOverride, completing B1-C), MpiQueuePanel, and MpiGalleryBlock/MpiGroupHistoryBlock (cancel -> store.cancel per job; overlays rebuilt from store on mount). Public facade signatures are stable from Phase 3; Phase 4 migrates the callers. Constraints: scalable-foundation mode, shared git tree (commit by explicit pathspec only — nothing in MPI-208 is committed yet), do NOT parallelize, preserve the MPI-74 P6 two-lane loop semantics. Phase 4 verify mode is user-ux. Two residuals already handled: blob-404-on-Stop is carded as MPI-211 (cosmetic, pre-existing — do not fix in MPI-208); the empty-bar + stale-suffix are the Phase-4 statusBar work above."
+}

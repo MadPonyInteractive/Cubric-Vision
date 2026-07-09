@@ -331,6 +331,12 @@ export const MpiEngineInstall = ComponentFactory.create({
 
             if (mode === 'upgrading') {
                 _subscribeEngineEvents();
+                // Connect SSE BEFORE the POST so engine:downloading broadcasts are
+                // not missed (without this the progress bar stays stuck on the
+                // static "Preparing download..." placeholder until SSE lazily
+                // connects, then jumps straight to extracting). Matches the
+                // install + repair paths.
+                downloadService._ensureSSE();
                 fetch('/engine/upgrade', { method: 'POST' }).catch(err => {
                     _setError(`Upgrade failed: ${err.message}`);
                 });
@@ -395,6 +401,19 @@ export const MpiEngineInstall = ComponentFactory.create({
             const combinedDownloaded = _engineDownloadedBytes + _uwDepsDownloadedBytes;
             const combinedTotal = _engineTotalBytes + _uwDepsTotalBytes;
             const combinedProgress = combinedTotal > 0 ? Math.round((combinedDownloaded / combinedTotal) * 100) : 0;
+
+            // MPI-231 — custom_nodes are work-not-bytes: a UW tick can arrive
+            // indeterminate (git-archive has no Content-Length, pip has no up-front
+            // total). With no engine archive downloading alongside it, there is no
+            // honest ratio to show — a "0.0 MB / 0.0 MB" bar reads as broken. Flip to
+            // the loading sweep + a Preparing… label instead. When the engine archive
+            // IS downloading, it owns the determinate bar; keep the real ratio.
+            const engineHasBytes = _engineTotalBytes > 0;
+            if (isUWProgress && data.indeterminate && !engineHasBytes) {
+                el.setLoading(true);
+                progressInfo.textContent = 'Preparing dependencies…';
+                return;
+            }
 
             // Update progress bar
             const input = qs('.mpi-progress__input', _progressBarInst.el);

@@ -861,6 +861,29 @@ but is UNVERIFIED on real Apple hardware. Specifics:
 
 ---
 
+## macOS build fixes — eight bugs, 1.0.0 (2026-06-10)
+
+All eight verified on M4 via 0.0.8 fresh install + 0.0.8→0.0.9 offline update (arm64-only). MPI-60/61/62 closed.
+
+1. MPS/`--cpu` forced on every Mac (GPU detection wrong).
+2. ZIP exec bits dropped on extraction.
+3. Gatekeeper quarantine unhandled in release copy.
+4. ffprobe config typo (wrong key name).
+5. ffmpeg/ffprobe binaries non-executable after extract.
+6. `.app` symlink dropped via `ditto` (hand-rolled archive writer).
+7. Archive Utility strips exec bits on macOS (another layer).
+8. Version display bug (wrong field read).
+
+Note: fp32-VAE was tried and **REVERTED** — caused OOM and incorrectly overrode per-workflow VAE settings.
+
+---
+
+## ELECTRON_RUN_AS_NODE + asar stall in apply-update.cjs
+
+`apply-update.cjs` runs via `ELECTRON_RUN_AS_NODE=1`. Electron's asar-aware `fs` hook intercepts writes to any path named `*.asar`. Update bundles contain `app/node_modules/electron/dist/resources/default_app.asar`. When extract-zip (yauzl `lazyEntries`) reaches that entry, the write is silently rejected and `lazyEntries` **stalls — no throw, no reject, process exits 0 with a partial tree**. Fix: add `process.noAsar = true;` at the very top of `apply-update.cjs`, before requiring fs or extract-zip. Why it hid: small delta bundles finish before reaching the asar entry — only large/full bundles hit the stall.
+
+---
+
 ## Template for new entries
 
 ```

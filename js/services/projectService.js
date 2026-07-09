@@ -64,7 +64,7 @@ const _sharedQueues = new Map();
 
 const _QUEUE_DEBOUNCE_MS = 300;
 
-const _MODEL_WIDE_KEYS = new Set(['loras', 'upscaleModel']);
+const _MODEL_WIDE_KEYS = new Set(['loras', 'upscaleModel', 'qualityTier']);
 
 function _enqueueModelUpdate(modelId, opName, key, value) {
     if (!_modelQueues.has(modelId)) {
@@ -442,25 +442,44 @@ export async function persistGroups() {
         selectedIndex: g.selectedIndex,
         open:          g.open,
         favourite:     g.favourite,
+        customName:    g.customName ?? null,
         history:       g.history.map(item =>
             typeof item === 'string' ? item : item.id
         ),
     }));
-    return post('/update-project', {
-        folderPath: state.currentProject.folderPath,
-        updates: { itemGroups: serialized },
-    }).catch(err => clientLogger.warn('ProjectService', 'persistGroups failed:', err));
+    // MPI-226: a swallowed failure here caused silent save-loss — the in-memory
+    // group survived but project.json never persisted, so on reload the stale
+    // project.json + memory-only ghost ids fired load-meta 404s. Retry a few
+    // times (covers transient FS/EBUSY on the server's atomic-write queue), and
+    // only surface a ui:warning toast if every attempt fails. Check result.success
+    // too: the route returns { success:false } on a handled error, which the old
+    // `.catch`-only path treated as success.
+    const folderPath = state.currentProject.folderPath;
+    const body = { folderPath, updates: { itemGroups: serialized } };
+    for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+            const result = await post('/update-project', body);
+            if (result?.success !== false) return result;
+            clientLogger.warn('ProjectService', `persistGroups attempt ${attempt} rejected:`, result?.error);
+        } catch (err) {
+            clientLogger.warn('ProjectService', `persistGroups attempt ${attempt} failed:`, err);
+        }
+        if (attempt < 4) await new Promise(r => setTimeout(r, attempt * 200));
+    }
+    Events.emit('ui:warning', {
+        message: 'Could not save the project to disk — recent results may be lost on reload. Check disk space, then regenerate or re-open the project.',
+    });
 }
 
 /**
  * Save a generation result to the project folder.
  * @returns {{ success: boolean, filePath?: string, filename?: string }}
  */
-export async function saveGeneration({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }) {
+export async function saveGeneration({ folderPath, comfyViewUrl, audioViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }) {
     const res = await fetch('/project/save-generation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderPath, comfyViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }),
+        body: JSON.stringify({ folderPath, comfyViewUrl, audioViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }),
     });
     if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
     return res.json();

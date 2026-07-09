@@ -22,9 +22,18 @@
       "mediaTypes": ["image", "video"],
       "requiresConsent": true,
       "version": "0.1.0"
+    },
+    {
+      "id": "system.memory.release",
+      "providerAppId": "cubric.vision",
+      "kind": "transform",
+      "label": "Release VRAM",
+      "description": "Free GPU VRAM held by Vision's image/video models so another Cubric app can run local inference.",
+      "requiresConsent": false,
+      "version": "0.1.0"
     }
   ],
   "metadata": {
-    "manifestOnly": true
+    "manifestOnly": false
   }
 }

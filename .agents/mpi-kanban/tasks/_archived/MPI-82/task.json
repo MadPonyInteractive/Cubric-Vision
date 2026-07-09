@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-82",
+  "title": "External connections: local LoRA/upscale drag-drop + missing guard",
+  "description": "Phase 1 (local drag-drop into configured folders + local missing guard) SHIPPED + accepted. RE-SCOPED 2026-06-17: Phase 2/3 is now ON-DEMAND auto-upload, mirroring the existing latent/media upload — NOT manual drop-to-Pod. Local stays the single source of truth; at generate-time in remote mode, a selected LoRA/upscale that's local-but-not-on-Pod auto-uploads (toast 'Uploading <model> to cloud…'), then generation proceeds. Skip re-upload via /wrapper/models/status (works as-is). Phase 2A app-side builds NOW; Phase 2B = new /wrapper/models/upload endpoint, gated on MPI-81 Pod-image rebuild. See plan.md RE-SCOPE block.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "attention": {
+    "state": "none",
+    "reason": "DONE — Phase 3 live-verified on an L4 (USER, 2026-06-17). On-demand auto-upload of a Pod-absent local LoRA/upscale works end-to-end: app spine (d8925a1) + app-pin flip to v0.4.9/0.2.11 (553a1b9) + wrapper POST /wrapper/models/upload (mpi-ci 249ea37) on the published v0.4.9 images (cu124/cu128/cpu, all public). Loop closes via the existing /wrapper/models/status presence check (no re-upload).",
+    "updated_at": "2026-06-17T15:45:00Z"
+  },
+  "created_at": "2026-06-14T12:35:34.928Z",
+  "updated_at": "2026-06-17T15:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

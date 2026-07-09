@@ -37,9 +37,10 @@ Props: none
   - `updateContext`: called on `media-change` event — `{ imageCount, videoCount, hasMask: false }`
 - `MpiCompareOverlay`   props: none   slot: `document.createElement('div')` — singleton; shown on `grid 'compare-requested'` event from MpiGalleryGrid
 - `MpiOkCancel`   props: `{ title: 'Delete', text: '...', okLabel: 'Delete', cancelLabel: 'Cancel' }`   slot: `document.createElement('div')` — singleton delete-confirmation dialog; shown on `grid 'delete'` event
+- `MpiAddToProject`   props: `{ projects: [{id,name}], onConfirm(projectId) }`   slot: `document.createElement('div')` — mounted on demand on `grid 'add-to-project'` event; dropdown picks a target project, `onConfirm` POSTs `/project-media/:id/add-from-cards` to copy the selected cards
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
 
-> **Note:** `MpiModelManager` is NOT mounted here — it is a slide-over content component opened via `slide-over:open`. `MpiGalleryBlock` emits `Events.emit('models:open')` which shell re-emits as `slide-over:open { title: 'Models', component: MpiModelManager }`. PromptBox mounts only when `s_installedModelIds.length > 0`; post-install mount is keyed off `state:changed (s_installedModelIds)`, not a `models:closed` event.
+> **Note:** `MpiModelManager` is NOT mounted here — it is the **Model Library** overlay (MPI-215). It self-hosts an `MpiOverlay(mountTarget:'body')` and shell mounts it once as a lazy singleton, calling `el.open()` on `models:open` (`shell.js`). `MpiGalleryBlock` emits `Events.emit('models:open')`. PromptBox mounts only when `s_installedModelIds.length > 0`; post-install mount is keyed off `state:changed (s_installedModelIds)`, not a `models:closed` event.
 > **Selection:** No `MpiSelectionBar`. Ctrl/Cmd-click toggles card into selection; shift-click range-selects; right-click opens `MpiContextMenu`. `MpiCheckbox` is also removed from cards.
 
 ---
@@ -69,7 +70,7 @@ const TOOL_OPTIONS_REGISTRY = {
 - `MpiHistoryList`   props: `{ history, selectedIndex, isVideo }` — ctrl/shift/right-click selection   slot: `#right-bottom-slot`
 - `MpiMediaDropOverlay`   props: `{ onDrop({ files: [{ file, mediaType }, ...] }) }` callback   slot: `document.createElement('div')` appended to `el` — loops files: uploads each, calls `_pb.el.injectMedia()` per file (no history card created). Suppressed while video prompt mode is active so start/end-frame slot drops keep local targeting.
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; shown on `promptBox 'settings'` event
-- *(no model manager here — MpiModelManager is a slide-over content component, not mounted by MpiGroupHistoryBlock)*
+- *(no model manager here — MpiModelManager is the shell-hosted Model Library overlay, not mounted by MpiGroupHistoryBlock)*
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
@@ -123,14 +124,16 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 - `MpiProjectDropOverlay`   props: `{ onDrop({ folderPath, source }) }` callback   slot: `document.createElement('div')` appended to `#page-landing` — full-area OS drop target for project folders / `project.json`; shown/hidden via `#page-landing` `dragenter`/`dragleave`/`drop` listeners (drag counter prevents flicker); `onDrop` calls `addProjectByFolder()` then `loadProjectGrid()`. Feature-gated on `window.require` — skipped in plain-browser dev mode.
 - `MpiNewProject`, `MpiOkCancel` (delete-confirm)   slot: `document.createElement('div')` — lazy singletons shown on user action; not mounted until first trigger.
 - `MpiProjectCard` (one per project)   props: `{ title, date, media, ... }`   slot: `#projectGrid` children — rebuilt on every `loadProjectGrid()`. Stage redesign: rendered as a row, not a card-grid item. Per-row stats (asset count + bytes-on-disk) come from `fetchStats()` in `js/services/projectStatsService.js`; in-flight fetches are aborted via the module-local `_statsBatchAC` AbortController when the grid rebuilds, so late responses don't write into rows that no longer exist.
-- **`#landingActions` slot:** plain `<a>` text links (`Settings · Help · About`) — NOT `MpiButton`s. Each click dispatches `Events.emit('slide-over:open', { title, component })` where `component` is one of `MpiSettings | MpiHelp | MpiAbout` (imported as content blueprints, not mounted directly). Hero version label `Cubric Studio · v${APP_VERSION}` mounts at `#heroVersion`.
-- **`MpiSlideOver`**   import-side-effect at module load: `import '../components/Compounds/MpiSlideOver/MpiSlideOver.js'` registers the module-level `Events.on('slide-over:open', ...)` handler. No direct mount call. The handler mounts a fresh instance per open into `document.createElement('div')`, appended to `document.body` by `el.open()`.
+- **`#landingActions` slot:** plain `<a>` text links (`Settings · Hotkeys · About`) — NOT `MpiButton`s. Each click dispatches `Events.emit('slide-over:open', { title, component })` where `component` is one of `MpiSettings | MpiHotkeys | MpiAbout` (imported as content blueprints, not mounted directly). Hero version label `Cubric Studio · v${APP_VERSION}` mounts at `#heroVersion`.
+- **`MpiSlideOver`**   import-side-effect at module load: `import '../components/Compounds/MpiSlideOver/MpiSlideOver.js'` registers the module-level `Events.on('slide-over:open', ...)` handler. No direct mount call. The handler mounts a fresh instance per open into `document.createElement('div')`, appended to `document.body` by `el.open()`. On close, `_doClose` destroys the content instance (MPI-177) before removing the panel node (`transitionend` + 400ms backstop).
 
 > **MpiSettings is NOT mounted directly anymore.** It is a *content component* of `MpiSlideOver` — its body element is mounted inside `.mpi-slide-over__body` via `props.component.mount(bodyEl)` from inside `MpiSlideOver.setup()`. The legacy `el.show()/el.hide()` methods are gone. Field initialisation runs via `el.onOpen()`, which `MpiSlideOver` calls once on every open. Internal mounts inside `MpiSettings._initFields()` are unchanged:
 > - `MpiCheckbox`   props: `{ checked: Storage.getAutoStartComfy(), label:'Auto-start ComfyUI on Launch' }`   slot: `#mpiSettingsAutoStartSlot`
 > - `MpiInput` (ComfyUI URL)   props: `{ label:'ComfyUI API URL', placeholder:'http://localhost:8188', value }`   slot: `#mpiSettingsComfyUrlSlot`
 > - `MpiInput` (ComfyUI path)   props: `{ label:'ComfyUI Models Path', placeholder:'Default (internal engine)', value }`   slot: `#mpiSettingsComfyRootPathSlot`
 > - `MpiButton` (Browse)   props: `{ text:'Browse', variant:'secondary', size:'md', extraClasses:'mpi-settings__browse-btn' }`   slot: `#mpiSettingsBrowseBtnSlot`
+>
+> **`MpiRunpodSettings` (MPI-177):** the whole RunPod Remote Engine section is its own Compound. Mounted ONCE in `MpiSettings.setup()` (not per `onOpen`) — props: `{}`, slot: `#mpiSettingsRunpodMount`. `MpiSettings.el.onOpen()` forwards to `_runpodInst.el.onOpen()` (runs `_initRunpodSection`); `MpiSettings.el.destroy()` destroys it. Its internal mounts (RunPod toggle/key/DC/volume/GPU/connect controls) all target `#mpiSettingsRunpod*` slots inside its own template.
 
 ---
 
@@ -139,7 +142,7 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 - `MpiErrorDialog`     props: none   slot: `document.createElement('div')` — shown on `ui:error` event
 - `MpiChangelogDialog` props: none   slot: `document.createElement('div')` — "What's New" overlay. Shown once per `APP_VERSION` by `_maybeShowChangelog()` in `_bootApp`, AFTER engine/deps gates + dev-state restore, BEFORE optional Comfy auto-start. Skipped when `Storage.getLastSeenChangelogVersion() === APP_VERSION` or `getReleaseNotes(APP_VERSION)` has no content. Content set via `el.open({ version, stage, notes })`; internally mounts `MpiButton` (Done) + `MpiIcon` (per-section). Reads notes from `js/data/releaseNotes.js`. NOT an updater.
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
-- *(MpiModelsModal removed — model manager is now `MpiModelManager`, a slide-over content component opened via `models:open` → `slide-over:open { title: 'Models', component: MpiModelManager }`. No shell-level singleton for models.)*
+- `MpiModelManager` (the **Model Library** overlay)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `models:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + an in-overlay right-drawer detail panel. Shell calls `el.open()` each time (MPI-215). Reserved slide-over stays for Settings/Hotkeys/Queue only.
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
 - `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.
@@ -203,9 +206,22 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 - `MpiOverlay`   props: `{ closable: true }`   slot: `document.createElement('div')`
 - `MpiDropdown` (upscale)   props: `{ options: upscaleOptions from state.upscaleModels, value, placeholder }`   slot: `.mpi-model-settings__upscale-slot`; remounted on each `open()` call
-- `MpiDropdown` (lora slot ×6)   props: `{ options: loraOptions from state.availableLoras, value, placeholder }`   slot: per-slot `dropHost` div; remounted on each `open()` call
+- `MpiTreePicker` (lora slot ×6)   props: `{ options: loraOptions from state.availableLoras, value, placeholder, searchPlaceholder:'Search LoRAs…', stripExtension:true, extraClasses: missing ? 'mpi-tree-picker--missing' : '' }`   slot: per-slot `dropHost` div; remounted on each `open()` call. Searchable folder tree (MPI-233) — replaced the flat `MpiDropdown` at BOTH flat (`_mountLoraSlots`) and staged (`_mountStagedLoraSlots`) sites. Value stays the full path string (heal/inject untouched).
 - `MpiInput` (model strength ×6)   props: `{ type:'number', size:'sm', value, min:-2, max:2, step:0.05, decimals:2 }`   slot: per-slot `strengthsEl`
 - `MpiInput` (clip strength ×6)   props: same pattern as model strength
+- `MpiFolderDrop` (one per configured folder)   props: `{ folderPath, bucket, primary, onImport }`   slot: `[data-drop="loras"]` / `[data-drop="upscale_models"]`; sourced from `GET /comfy/model-folders`; remounted per `open()` via render-token-guarded async `_renderDropZones` (guard prevents duplicate zones when the live-rerender fires mid-fetch). Also mounted in `MpiSettings` External Connections.
+  - Missing-model UX: a selected LoRA/upscale absent from `state.availableLoras`/`upscaleModels` shows red (LoRA: `mpi-tree-picker--missing`; upscale: `mpi-dropdown--missing`) + a synthetic `(missing)` option. A relocated file self-heals by UNIQUE basename (path updated, persisted); ambiguous same-name across folders stays red. LoRA missing → blocking `ui:warning` at generate; upscale missing → fall back to SIAX + warn. The picker live-rerenders on `state:changed` for those keys while open.
+
+---
+
+## MpiFolderDrop (Primitive: model-folder drop zone — js/components/Primitives/MpiFolderDrop)
+
+Labeled model folder that is also an OS drop target. Resolves the dropped file's
+disk path via Electron `webUtils.getPathForFile` and POSTs `/comfy/import-model`
+to COPY it into that folder (409 → `window.confirm` replace). `onImport(filename)`
+fires after success (callers call `loadAssets()`). Drop does **preventDefault only,
+NOT stopPropagation** — the gallery's window-level drop cleanup must still fire, or
+its media-drop overlay sticks open. Browser dev mode (no `webUtils`) ignores drops.
 
 ---
 

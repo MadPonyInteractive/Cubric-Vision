@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-77",
+  "claims": [
+    {
+      "path": "routes/runpodRemote.js",
+      "claim": ".agents/mpi-kanban/state/files/ccf04f9f-f727-47a2-80f5-2948ed9095e1.json",
+      "status": "claimed",
+      "shared": false,
+      "note": "gpuTypes() lowestPrice input — add dataCenterId + secureCloud:true."
+    },
+    {
+      "path": "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+      "claim": ".agents/mpi-kanban/state/files/534c178e-8b5b-4a1f-99bf-5bf7989fa6c9.json",
+      "status": "claimed",
+      "shared": true,
+      "note": "GPU-picker RAM line (~L938) + DC-change re-query. SHARED with MPI-73 (uncommitted). Coordinate before editing."
+    }
+  ]
+}

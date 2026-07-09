@@ -1,6 +1,7 @@
 import { findClosestRatio, getModelRatios, RATIO_MODES } from './ratios.js';
-import { getCommand, getCommandDefault } from '../data/commandRegistry.js';
+import { getCommand, getCommandDefault, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../data/promptControlDefaults.js';
+import { clampQualityTier } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
 
 const QUALITY_TIERS = ['very_low', 'low', 'medium', 'high', 'very_high'];
 
@@ -35,12 +36,36 @@ function _mediaItemsFrom(settings = {}) {
         : [];
 }
 
-function _operationOf(item = {}, source = {}) {
-    return source.operation || item.operation || item.generationSettings?.operation || '';
+function _opHasMediaInput(op, mediaType) {
+    return !!op && getCommandMediaInputs(op).some(slot => slot.mediaType === mediaType);
+}
+function _opHasImageInput(op) { return _opHasMediaInput(op, 'image'); }
+
+// True when the reused operation declares an image input slot (op-driven, via
+// commandRegistry) — NOT a hardcoded model/op family. Drives whether saved
+// frame snapshots are resurfaced for reuse, so any current/future image-input
+// op works without special-casing.
+//
+// Extend is the special case: the extended item's own op is `extend` (video
+// input only), but the start-frame image lives in its generationSettings — the
+// underlying i2v op the chunk was generated with. So also accept when the
+// generation snapshot's op declares an image input.
+function _opAcceptsImageInput(item = {}, source = {}) {
+    if (_opHasImageInput(source.operation || item.operation)) return true;
+    return _opHasImageInput(item.generationSettings?.operation);
 }
 
-function _isI2V(item = {}, source = {}) {
-    return _operationOf(item, source).startsWith('i2v');
+// Video/audio input parallels of _opAcceptsImageInput (MPI-227). Same op-driven
+// gate (commandRegistry media slots), same extend fallback via generationSettings.
+// Video-input ops: extend, interpolate, videoUpscale, resizeVideo. Audio-input
+// ops: t2v_ms, i2v_ms (LTX only — capability-gated, so non-LTX naturally false).
+function _opAcceptsVideoInput(item = {}, source = {}) {
+    if (_opHasMediaInput(source.operation || item.operation, 'video')) return true;
+    return _opHasMediaInput(item.generationSettings?.operation, 'video');
+}
+function _opAcceptsAudioInput(item = {}, source = {}) {
+    if (_opHasMediaInput(source.operation || item.operation, 'audio')) return true;
+    return _opHasMediaInput(item.generationSettings?.operation, 'audio');
 }
 
 function _mediaItemsFromPreviewAssets(item = {}) {
@@ -59,49 +84,13 @@ function _mediaItemsFromPreviewAssets(item = {}) {
         }));
 }
 
-function _projectFileUrl(filePath) {
-    return `/project-file?path=${encodeURIComponent(filePath)}`;
-}
-
-async function _fileExists(filePath) {
-    try {
-        const res = await fetch(`/file-exists?path=${encodeURIComponent(filePath)}`);
-        if (!res.ok) return false;
-        const data = await res.json();
-        return data?.exists === true;
-    } catch (_) {
-        return false;
-    }
-}
-
-async function _materializedPreviewAssetMediaItems(item = {}, project = {}) {
-    if (!_isI2V(item)) return [];
-    if (!item.id || !project.folderPath) return [];
-
-    const base = `${project.folderPath}\\Media\\.preview-assets\\${item.id}`;
-    const candidates = [
-        { role: 'startFrame', filename: 'startFrame.png' },
-        { role: 'endFrame', filename: 'endFrame.png' },
-    ];
-    const mediaItems = [];
-    for (const candidate of candidates) {
-        const filePath = `${base}\\${candidate.filename}`;
-        if (await _fileExists(filePath)) {
-            mediaItems.push({
-                id: `reuse-${item.id}-${candidate.role}`,
-                url: _projectFileUrl(filePath),
-                mediaType: 'image',
-                source: 'previewAsset',
-                role: candidate.role,
-            });
-        }
-    }
-    return mediaItems;
-}
-
-async function _previewAssetMediaItems(item = {}, project = {}) {
-    const materialized = await _materializedPreviewAssetMediaItems(item, project);
-    if (materialized.length) return materialized;
+// MPI-227: the sidecar snapshot filePath is authoritative — the store is now
+// content-addressed, flat, and permanent (migration rewrites old per-item refs to
+// the flat SHA path). The old `_materializedPreviewAssetMediaItems` probed the
+// per-item `.preview-assets/<id>/startFrame.png` layout via /file-exists; that
+// path no longer exists, so we read the snapshot ref directly.
+function _previewAssetMediaItems(item = {}) {
+    if (!_opAcceptsImageInput(item)) return [];
     return _mediaItemsFromPreviewAssets(item);
 }
 
@@ -136,8 +125,23 @@ export function buildPromptReusePayload(item = {}) {
         injectionParams.Seed = item.seed;
     }
 
-    const previewMediaItems = _isI2V(item, source) ? _mediaItemsFromPreviewAssets(item) : [];
-    const savedMediaItems = _mediaItemsFrom(source);
+    const acceptsImage = _opAcceptsImageInput(item, source);
+    const acceptsVideo = _opAcceptsVideoInput(item, source);
+    const acceptsAudio = _opAcceptsAudioInput(item, source);
+    const previewMediaItems = acceptsImage ? _mediaItemsFromPreviewAssets(item) : [];
+    // Op-gate saved media by its declared input slots (MPI-225 → MPI-227). Heals
+    // sidecars where a leftover chip was snapshotted into an op that can't consume
+    // it — e.g. a phantom start-frame on a t2i lights up "Use Images" and injects
+    // the wrong image. Each media type is now gated by whether the reused op
+    // declares that input: image (MPI-225), and video + audio (MPI-227). A media
+    // type with no declared slot is dropped so its Use-* toggle greys correctly.
+    const savedMediaItems = _mediaItemsFrom(source).filter(m => {
+        const type = m.mediaType ?? m.type;
+        if (type === 'image') return acceptsImage;
+        if (type === 'video') return acceptsVideo;
+        if (type === 'audio') return acceptsAudio;
+        return true;
+    });
 
     return {
         positive: item.prompt ?? source.prompt ?? '',
@@ -145,19 +149,62 @@ export function buildPromptReusePayload(item = {}) {
         modelId: item.modelId ?? source.modelId ?? null,
         operation: source.operation ?? item.operation ?? null,
         injectionParams,
-        mediaItems: previewMediaItems.length ? previewMediaItems : savedMediaItems,
+        // Frame snapshots are the authoritative IMAGE source; saved media supplies
+        // everything else (audio, non-frame video). Merging — not either/or — so an
+        // i2v gen with audio carries BOTH its start/end frames AND its audio clip.
+        mediaItems: _mergeReuseMedia(previewMediaItems, savedMediaItems),
         previewOnly: source.previewOnly === true,
         generationSettings: _clone(source),
         item,
     };
 }
 
-export async function resolvePromptReuseMediaItems(payload = {}, project = {}) {
-    const previewItems = await _previewAssetMediaItems(payload.item, project);
-    if (previewItems.length) return previewItems;
+// Frames (from preview-assets) are authoritative for images; saved media fills
+// every OTHER media type (audio, non-frame video). If frames are present, saved
+// images are dropped to avoid a duplicate start-frame chip.
+function _mergeReuseMedia(frameItems = [], savedItems = []) {
+    if (!frameItems.length) return savedItems;
+    const savedNonImage = savedItems.filter(m => (m.mediaType ?? m.type) !== 'image');
+    return [...frameItems, ...savedNonImage];
+}
+
+export async function resolvePromptReuseMediaItems(payload = {}) {
+    // Preview-asset frames (from the flat content-addressed store, MPI-227) are the
+    // authoritative IMAGE source. Merge them with the payload's saved NON-image
+    // media (audio, non-frame video) so an i2v gen with audio recalls its frames
+    // AND its audio — not one or the other. Kept async for caller compatibility.
+    const previewItems = _previewAssetMediaItems(payload.item);
     const existing = Array.isArray(payload.mediaItems) ? payload.mediaItems.filter(Boolean) : [];
-    if (existing.length) return existing;
-    return [];
+    const merged = _mergeReuseMedia(previewItems, existing);
+    return merged;
+}
+
+// True when a reuse payload actually carries an input image to reuse. A card
+// generated WITHOUT an input image (e.g. a t2i output) resolves to no image
+// media here, so "Use Images" is meaningless for it — offering it injects an
+// empty slot, which both warns ("No saved frame images…") and leaves an
+// image-required target op unrunnable (MPI-212). Callers use this to grey out /
+// skip the images reuse for such sources. Sync: reads the payload's already-built
+// mediaItems (buildPromptReusePayload); the async resolver can additionally find
+// materialized frames on disk, but only for ops that accept image input — which a
+// no-input-image source's op does not, so the sync check matches.
+export function payloadHasReusableImages(payload = {}) {
+    return _payloadHasReusableType(payload, 'image');
+}
+
+// Video/audio parallels (MPI-227). The op-gate in buildPromptReusePayload already
+// dropped video/audio that the reused op can't consume, so a truthy result means
+// the source both HAS that media and the op ACCEPTS it — the Reuse dialog uses
+// these to enable/grey the "Use Video" / "Use Audio" toggles.
+export function payloadHasReusableVideos(payload = {}) {
+    return _payloadHasReusableType(payload, 'video');
+}
+export function payloadHasReusableAudio(payload = {}) {
+    return _payloadHasReusableType(payload, 'audio');
+}
+function _payloadHasReusableType(payload = {}, mediaType) {
+    const items = Array.isArray(payload?.mediaItems) ? payload.mediaItems : [];
+    return items.some(m => m && (m.url || m.filePath) && (m.mediaType === mediaType || m.type === mediaType));
 }
 
 export function itemHasReusablePrompt(item = {}) {
@@ -255,7 +302,32 @@ function _defaultRatioSettings(model = {}) {
     };
 }
 
+// Clamp a reused per-model qualityTier (MPI-133) to one the TARGET model has.
+// A cross-model reuse (LTX 2k/4k → Wan, model toggle OFF) carries a tier the
+// target lacks; clampQualityTier maps it to 'very_high' (nearest equivalent),
+// so the reused clip lands at the target's max quality, never a silent mid drop.
+function _clampReusedTier(modelUpdates, model) {
+    if (!modelUpdates || !('qualityTier' in modelUpdates)) return modelUpdates;
+    return { ...modelUpdates, qualityTier: clampQualityTier(model?.type, modelUpdates.qualityTier) };
+}
+
 export function buildPromptReuseSettings(payload = {}, model = {}) {
+    // Fast path: items generated after MPI-115 carry the exact PromptBox control
+    // state snapshotted at gen time. Replay it directly — no reverse-derivation.
+    // Requires shared/op (the full snapshot); migrated old sidecars carry only
+    // controlState.model and fall through to the legacy derive below.
+    const controlState = payload.generationSettings?.controlState;
+    if (controlState && (controlState.shared || controlState.op)) {
+        return {
+            sharedUpdates: _clone(controlState.shared || {}),
+            opUpdates:     _clone(controlState.op || {}),
+            modelUpdates:  _clampReusedTier(_clone(controlState.model || {}), model),
+        };
+    }
+
+    // Legacy fallback: pre-controlState sidecars (and frozenParams-only preview
+    // items) reverse-derive the buckets from injectionParams. Kept for robustness;
+    // the v2→v3 migration backfills controlState onto all on-disk sidecars.
     const params = payload.injectionParams || {};
     const operation = payload.operation || '';
     const components = _commandComponents(operation);
@@ -283,7 +355,13 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
     if (batch != null) sharedUpdates.batch = Math.min(4, Math.max(1, Math.round(batch)));
     else if (_hasComponent(components, 'batch')) sharedUpdates.batch = PROMPT_CONTROL_DEFAULTS.batch;
 
-    const duration = _number(params.Duration ?? payload.item?.duration ?? payload.item?.videoMeta?.duration);
+    // Duration comes ONLY from the saved generation param (the seconds the user
+    // set in the PromptBox at generate time). Do NOT fall back to the clip's
+    // actual length: derived ops (extend/videoUpscale/interpolate) have no
+    // Duration param, and their item.duration is the COMBINED output length
+    // (e.g. a 21s extend chain), which would wrongly drive the next generation.
+    // Absent param → component default, same as every other control.
+    const duration = _number(params.Duration);
     if (duration != null) sharedUpdates.duration = Math.min(30, Math.max(1, Math.round(duration)));
     else if (_hasComponent(components, 'duration')) sharedUpdates.duration = PROMPT_CONTROL_DEFAULTS.duration;
 
@@ -308,11 +386,14 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
         opUpdates.denoise = opDefault != null ? opDefault : PROMPT_CONTROL_DEFAULTS.denoise;
     }
 
-    const modelSettings = payload.generationSettings?.modelSettings;
+    // Model-wide settings: prefer the migrated controlState.model, fall back to
+    // the pre-MPI-115 modelSettings shape on un-migrated sidecars.
+    const modelSrc = payload.generationSettings?.controlState?.model
+        ?? payload.generationSettings?.modelSettings;
     const modelUpdates = {};
-    if (modelSettings && typeof modelSettings === 'object') {
-        if ('loras' in modelSettings) modelUpdates.loras = _clone(modelSettings.loras);
-        if ('upscaleModel' in modelSettings) modelUpdates.upscaleModel = modelSettings.upscaleModel ?? null;
+    if (modelSrc && typeof modelSrc === 'object') {
+        if ('loras' in modelSrc) modelUpdates.loras = _clone(modelSrc.loras);
+        if ('upscaleModel' in modelSrc) modelUpdates.upscaleModel = modelSrc.upscaleModel ?? null;
     }
 
     return { sharedUpdates, opUpdates, modelUpdates };
