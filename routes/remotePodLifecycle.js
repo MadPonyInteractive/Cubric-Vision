@@ -275,6 +275,9 @@ const POD_STATUS_TTL_MS = 12000;
 // renderer can offer "host looks bad — Cancel & retry" early. Stuck-PULL hosts (the
 // other bad-host case) are NOT detectable: the REST API exposes no image-pull progress.
 let _lastPodMaintenance = null; // { note, start, end } | null
+// MPI-239: true when the last getPod returned HTTP 404 (Pod deleted/reaped host-side),
+// distinct from a network throw (unknown). Drives the /remote/comfy/status self-heal.
+let _lastPodAbsent = false;
 
 function _readPath(obj, path) {
   if (!obj || !path) return undefined;
@@ -334,6 +337,11 @@ async function _podRuntimeStatus(podId) {
     if (!key) return _lastPodStatus;
     const r = await client.getPod(key, podId);
     const p = (r && r.json) || {};
+    // MPI-239: a 404 means the Pod no longer exists (deleted/reaped host-side) —
+    // record it distinctly from "reachable but no status string" so the status
+    // route can self-heal _mode.active. A network throw (caught below) is NOT
+    // absence, so this flag only flips on a real HTTP response.
+    _lastPodAbsent = (r && r.status === 404);
     // REST shape varies; desiredStatus is the v1 field. Normalise to uppercase.
     const raw = p.desiredStatus || p.currentStatus || p.status || null;
     _lastPodStatus = raw ? String(raw).toUpperCase() : null;
@@ -348,6 +356,36 @@ async function _podRuntimeStatus(podId) {
     _lastPodStatusAt = Date.now();
   } catch (_) { /* best-effort — leave podStatus null, no regression */ }
   return _lastPodStatus;
+}
+
+// MPI-239: self-heal when a CONNECTED Pod has died without a user Disconnect
+// (ephemeral reaped host-side, warm Pod evicted). Nothing else clears _mode.active
+// in that case, so the app stays "remote · online" forever: the hero footer freezes
+// on the stale GPU card (the feed tick can't emit offline — its connected!==_last
+// guard never fires because the feed never OWNED the connect, Settings did), and
+// /remote/ws-token keeps 503-ing (wrapper_token_missing) → red console rows + a WS
+// retry loop. Flipping _mode.active=false here makes all three fall out for free:
+// ws-token → 200 {inactive:true}, /remote/mode → active:false (client stops), and
+// the feed emits connected:false → footer repaints local.
+//
+// Only flip on a DEFINITE terminal/absent signal (EXITED/TERMINATED status, or a
+// 404 Pod-absent), and NEVER while a connect/resume is in flight — a booting Pod
+// legitimately has no health yet and must not be torn down. A network throw is NOT
+// treated as death (_lastPodAbsent stays false), so a transient RunPod blip can't
+// false-positive a disconnect. The decision is split into a pure `_isPodDead`
+// (testable) and the mutation in `_selfHealIfPodDead`.
+function _isPodDead(podStatus, connecting, absent) {
+  if (connecting) return false;
+  return absent === true || podStatus === 'EXITED' || podStatus === 'TERMINATED';
+}
+
+function _selfHealIfPodDead(podStatus, connecting) {
+  if (!_isPodDead(podStatus, connecting, _lastPodAbsent)) return false;
+  logger.warn('runpod', `remote Pod ${_mode.podId} is ${_lastPodAbsent ? 'gone (404)' : podStatus} while connected — self-healing to local`);
+  _starting = false;
+  setRemoteMode({ active: false, noGpu: false });
+  if (_startedPodId && _lastPodAbsent) _startedPodId = null;
+  return true;
 }
 
 router.get('/remote/comfy/status', async (req, res) => {
@@ -370,6 +408,9 @@ router.get('/remote/comfy/status', async (req, res) => {
       // tell a slow boot from a Pod that never started (MPI-96), plus any host
       // maintenance flag so it can bail early on a draining host (MPI-135 C).
       const podStatus = await _podRuntimeStatus(_mode.podId);
+      if (_selfHealIfPodDead(podStatus, inFlight())) {
+        return res.json({ running: false, ready: false, connecting: false, podStatus, dead: true });
+      }
       return res.json({ running: false, ready: false, connecting: inFlight(), podStatus, maintenance: _lastPodMaintenance });
     }
     const health = await r.json();
@@ -382,6 +423,9 @@ router.get('/remote/comfy/status', async (req, res) => {
     // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96)
     // and any host maintenance flag (MPI-135 C).
     const podStatus = await _podRuntimeStatus(_mode.podId);
+    if (_selfHealIfPodDead(podStatus, inFlight())) {
+      return res.json({ running: false, ready: false, connecting: false, podStatus, dead: true });
+    }
     res.json({ running: false, ready: false, connecting: inFlight(), podStatus, maintenance: _lastPodMaintenance });
   }
 });
@@ -1311,4 +1355,4 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   }
 });
 
-module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes };
+module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead };

@@ -1009,6 +1009,7 @@ function _initRemoteConnectionFeed() {
     }
     let connected = false;
     let connecting = false; // MPI-110: backend reports a create/resume in flight
+    let dead = false;       // MPI-239: backend self-healed a died-while-connected Pod
     try {
       const ac = new AbortController();
       const to = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS);
@@ -1019,6 +1020,7 @@ function _initRemoteConnectionFeed() {
       } finally {
         clearTimeout(to);
       }
+      dead = !!(s && s.dead);
       // MPI-110: the backend tracks an in-flight connect (_connecting/_starting) and
       // exposes it as `connecting`. Surface it app-wide so the hero/status bar show
       // "connecting" even when Settings is closed — the connect/wait used to live only
@@ -1051,6 +1053,20 @@ function _initRemoteConnectionFeed() {
       }
     } catch (_) {
       connected = false;
+    }
+    // MPI-239: the backend just self-healed a Pod that DIED while connected
+    // (ephemeral reaped / warm evicted, no user Disconnect). Force local · offline
+    // NOW, bypassing both the miss-debounce and the `connected !== _last` guard —
+    // that guard would otherwise swallow this flip because the feed never OWNED the
+    // connect (Settings emitted connected:true), so `_last` is still false and the
+    // hero footer would stay frozen on the dead Pod's GPU card. Explicit phase:null
+    // always emits and clears any stale transition phase.
+    if (dead) {
+      _misses = 0;
+      _delay = HEALTHY_MS;
+      _last = false;
+      _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
+      return;
     }
     // Healthy → poll at the base cadence; down/unreachable → back off so slow
     // requests against a dead proxy can't pile up.
