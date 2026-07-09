@@ -38,6 +38,52 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.1.0': {
+    version: '1.1.0',
+    importantChanges: [
+      'INSTALL INDIVIDUAL MODEL OPERATIONS — Multi-capability models (e.g. Wan 2.2 does both text-to-video and image-to-video) now let you toggle which operations to download in the detail panel; shared parts like the VAE and text encoder download once. Only the operations you install appear in the prompt box. Image models are unchanged.',
+      'PICK WHICH GPU TO INSTALL FOR — Models with separate RTX 50-series and 40-series weights (e.g. LTX 2.3 Balanced) show a per-GPU toggle so you never fetch the wrong weight. Your GPU is pre-selected; a missing weight is offered on demand.',
+      'REMOVED THE DEAD "COMFYUI API URL" FIELD — In Settings → External Connections. It was never wired: generation always used the built-in engine. Pointing Cubric at a separately running ComfyUI instance is not supported.',
+    ],
+    whatIsNew: [
+      'RUNPOD REMOTE ENGINE — Run generation on a rented cloud GPU instead of your own machine. Connect in Settings → RunPod and the app starts, installs models to, and generates on the Pod. Includes an optional minimum-system-RAM requirement and a live disk-usage bar showing used and total GB while connected.',
+      'FULL-PAGE MODEL LIBRARY — Opening Models now brings up a full-screen grid split into Installed/Available and Image/Video, with media, size and search filters, a per-model detail panel, a VRAM table, and fullscreen video previews.',
+      'NEW VIDEO MODEL: LTX 2.3 — A fast video model that generates with sound: produce an audio track or drive it from your own clip. Does text-to-video and image-to-video with first/last-frame guidance, up to 2K and 4K. Quality tier is now remembered per model.',
+      'NEW MODEL: NVIDIA PiD UPSCALER — A generative 4x image upscaler that adds real detail. Pick a look (Flux, SD3, Qwen, or SDXL), output size (1K/2K/4K), and how much new detail to invent. Works on any aspect ratio.',
+      'NEW MODEL: WAN 2.2 5B — A fast low-tier video model doing both text-to-video and image-to-video in one compact 720p download, with a 4-step Turbo mode for quick drafts.',
+      'NEW MODEL: CHROMA FLASH — An NSFW image model with exceptionally realistic skin: an 8-step Flux Schnell fine-tune, with standout matching upscale and detail passes.',
+      'WAN 2.2 SMOOTH QUALITY BOOST — Reworked the two-stage sampling so the motion preview matches the final result and stage-2 resolves more real detail.',
+      'SEARCHABLE LoRA PICKER — LoRA slots open a searchable, collapsible folder tree instead of a flat list, and long or deeply-nested names are no longer clipped.',
+      'MODEL MEMORY GUIDANCE — Each model shows a size tier (Low/Balanced/High) with a hover table of the VRAM-plus-RAM trade-off, your own GPU row highlighted.',
+      'DRAG-AND-DROP MODEL IMPORT — Drop a .safetensors/.ckpt/.pt/.bin/.pth onto one of your model folders in Settings and Cubric copies it in.',
+      'MODEL DOWNLOAD QUEUE — Installing several models queues them one at a time; each waiting model shows a cancellable Queued state and the queue advances on its own.',
+      'PROMPT DRAFTS SURVIVE NAVIGATION — Prompt text and staged input media persist when you switch between the gallery and a card view (session-only, kept separate per surface).',
+      'PROJECT RIGHT-CLICK MENU — Right-click a project on the projects page to add notes, rename it, open its folder, or clean up cached assets. Cleanup frees disk by removing the reuse frames the system saved for Reuse Prompt (your generated media and history are kept).',
+      'REUSE PROMPT NOW COVERS VIDEO AND AUDIO — Reusing a prompt can now carry over the source video and audio too, not just images and settings. Toggle what gets reused in Settings → Reuse Prompt.',
+      'RENAME AND ANNOTATE GALLERY CARDS — Right-click a gallery card to rename it or add notes. Select multiple cards to copy them into another project at once. Renames stick across reloads and show on the card, breadcrumb, and prompt-box chip.',
+      'MULTIPLE MODEL FOLDERS — Add more than one LoRA or upscale folder in Settings → External Connections. Cubric reads models from all of them (extra folders are read-only; only your primary folder is managed for installs and removals).',
+      'BYPASS A LoRA WITHOUT REMOVING IT — A per-slot toggle skips a LoRA at zero strength for quick A/B comparisons.',
+      'HOVER TO HEAR YOUR CLIPS — Hovering a video or audio card plays its sound (one at a time; toggle "Play audio on hover" in Settings → App Behavior).',
+      'SMARTER, CONFIGURABLE NOTIFICATIONS — OS notifications now fire whenever the app is unfocused (including when a download finishes), with independent toggles for generation-complete and download-complete.',
+      'VIDEO PLAYER AND CUE QUALITY-OF-LIFE — Press M to mute, Q to reach the Cue queue from inside a clip history, and every player button shows its shortcut on hover.',
+      'MISSING-MODEL FEEDBACK — A project referencing a missing LoRA or upscale model flags it in red: a missing LoRA blocks generation, a missing upscale falls back to the default with a warning.',
+    ],
+    fixes: [
+      'UNIVERSAL UPSCALE HONORS EACH MODEL NATIVE SCALE — So 1x/2x/8x upscalers no longer produce the wrong final size.',
+      'RELOCATED MODELS NO LONGER SHOW AS MISSING — When the same file is found unambiguously in another of your folders.',
+      'FASTER MODEL INSTALLS — From a faster download network.',
+      'WAN 2.2 LoRA SETTINGS DROP THE INERT CLIP SLIDER — Wan uses Model strength only.',
+      'REMOTE DOWNLOAD CANCEL CLEARS LEFTOVER BYTES IMMEDIATELY.',
+      'CUE QUEUE PANEL NO LONGER COVERS THE PROMPT BAR.',
+      'DOWNLOADS PANEL NO LONGER FLASHES ON EVERY REFRESH — Only changed cards redraw.',
+      'CARDS STOP PLAYING WHEN THEY SCROLL OFF-SCREEN.',
+      'WAN 2.2 SMOOTH LOW-TIER DRAFT RESOLUTION RAISED — For sharper quick drafts.',
+    ],
+    breakingChanges: [],
+    engineNotes: [
+      'COMFYUI ENGINE UPDATED TO 0.27.0.',
+    ],
+  },
   '1.0.1': {
     version: '1.0.1',
     whatIsNew: [],
