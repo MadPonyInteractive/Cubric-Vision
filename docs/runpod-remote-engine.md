@@ -83,6 +83,17 @@ Community Cloud is unsupported (unstable/limited for this use case).
 - **Disconnect** (Settings): 3-button popup — **Terminate** (stop warm), **Delete Pod**,
   **Cancel**. Both stop/delete flip backend `_mode.active = false` (podId preserved) so
   `isRemoteActive()` returns false and local generation resumes.
+- **Untracked-death self-heal (MPI-239):** when a CONNECTED Pod dies with no user
+  Disconnect (ephemeral reaped host-side, warm Pod evicted), nothing else clears
+  `_mode.active`. `GET /remote/comfy/status` detects a terminal (`EXITED`/`TERMINATED`)
+  or 404-absent Pod (and NOT while a connect is in flight) → flips `_mode.active=false`
+  + returns `dead:true`. This ends the `ws-token` 503 spam and lets the hero feed
+  repaint local. Never fires on a network blip (throw).
+- **Disconnect hero race (MPI-240):** the app-wide connection feed (`js/shell.js`)
+  awaits `/remote/pod/specs` before emitting the Pod card; a Disconnect landing during
+  that await used to be clobbered by the stale connected emit. The feed now drops the
+  connected emit when `_remotePhase === 'disconnecting'` (teardown is authoritative)
+  and self-heals a stuck `disconnecting` phase.
 - **Boot auto-reconnect:** persisted `wasConnected && podId && gpuType` → background
   reconnect with toasts. **Skipped when delete-on-quit is set** (the deleted Pod can't
   resume; a stale podId is cleared so manual Connect uses the create path).
