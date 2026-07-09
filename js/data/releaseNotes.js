@@ -38,6 +38,16 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.2.0': {
+    version: '1.2.0',
+    whatIsNew: [
+      'In development — changelog entries are added here as features land.',
+    ],
+    fixes: [],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '1.1.0': {
     version: '1.1.0',
     importantChanges: [
