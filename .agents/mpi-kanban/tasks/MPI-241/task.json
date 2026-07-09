@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-241",
+  "title": "Model Library Install button reverts mid-download (first install after reload, remote pod)",
+  "description": "On a remote/ephemeral Pod, pressing Install in the Model Library detail drawer sometimes flashed to Cancel then reverted to Install while the download was actually running (tile bar kept climbing). Intermittent: only the FIRST install after app open/reload. Finished installs always ended correctly (Uninstall), so the pipeline was fine — only the mid-flight footer/tile state was wrong.\n\nROOT (proven by console trace): downloadService.start() calls _ensureSSE(), which opens the SSE stream for the first time this session AND creates the client 'downloading' job in the same tick. The SSE 'open' handler then fetches /comfy/downloads/status and OVERWROTE state.downloadJobs with the backend list. On a fresh install that list held only OLD complete jobs (the just-started install not yet registered backend-side), so the overwrite WIPED the live 'downloading' job → _modelState saw no job → footer/tile reverted to Install. Once SSE was already open (2nd+ install), _ensureSSE no-ops and the race never fired — hence 'sometimes'.\n\nFIX (js/services/downloadService.js SSE 'open'): MERGE instead of clobber — keep any ACTIVE client job (downloading/queued/paused/installing) whose modelId the backend list doesn't yet include; backend copy wins for shared ids. Preserves the reconnect-recovery purpose without dropping an in-flight install.\n\nDEFENSIVE (js/components/.../MpiModelManager.js): also hardened the footer/tile state machine against the separate fast started->complete ephemeral window — a lingering terminal 'complete' job now counts as 'busy' (holds Cancel/progress, never flashes Install), and anyInstalled is checked BEFORE busy so Uninstall wins the instant re-sync flips installed. No new label (the pre-existing 'Verifying...' sweep is the only end-phase text).\n\nGuard: tests/model-footer-settling.test.cjs (9 cases: footer branch order + SSE-open merge).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-09T14:00:00Z",
+  "updated_at": "2026-07-09T14:00:00Z",
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "downloads",
+    "model-library",
+    "runpod",
+    "remote-engine",
+    "race"
+  ],
+  "priority": "medium"
+}

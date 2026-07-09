@@ -257,8 +257,22 @@ const downloadService = {
                                 }
                             }
                         }
-                        state.downloadJobs = jobs;
-                        state.downloadQueueActive = jobs.some(j => j.status === 'downloading' || j.status === 'installing');
+                        // MPI-241: PRESERVE a live client-side job the backend list does
+                        // not yet include. start() calls _ensureSSE() and creates the job
+                        // in the SAME tick; the SSE 'open' status-fetch that follows can
+                        // race ahead of the backend registering that install, returning a
+                        // list of only OLD (complete) jobs. Blindly overwriting wiped the
+                        // just-created 'downloading' job → the detail footer reverted from
+                        // Cancel to Install (worst on the first install after a reload,
+                        // before SSE was ever open). Keep any active client job the
+                        // backend hasn't caught up to; the backend copy wins for shared ids.
+                        const backendIds = new Set(jobs.map(j => j.modelId));
+                        const ACTIVE = ['downloading', 'queued', 'paused', 'installing'];
+                        const orphanedActive = state.downloadJobs.filter(
+                            j => !backendIds.has(j.modelId) && ACTIVE.includes(j.status));
+                        state.downloadJobs = [...jobs, ...orphanedActive];
+                        state.downloadQueueActive = state.downloadJobs.some(
+                            j => j.status === 'downloading' || j.status === 'installing');
                     }
                 }
             } catch (e) { /* non-critical */ }

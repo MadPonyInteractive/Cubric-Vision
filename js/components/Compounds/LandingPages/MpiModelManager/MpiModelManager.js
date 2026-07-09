@@ -606,14 +606,17 @@ export const MpiModelManager = ComponentFactory.create({
             const downloadState = job ? job.status : 'idle';
             // 'queued' (MPI-184 serial install queue) counts as active.
             const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
-            // A 'complete' job still sits in state.downloadJobs until the async
+            // A terminal 'complete' job lingers in state.downloadJobs until the async
             // reSyncInstalledModels() (fired on download:complete) flips model.installed.
-            // In that window the footer would compute NOT active + NOT installed → the
-            // Install button reappeared (worst on a fast ephemeral-pod install where
-            // started→complete collapses before re-sync lands). Treat that lingering
-            // terminal job as "settling" so the footer shows a disabled Finishing… until
-            // re-sync moves the model to Installed. (MPI-239)
-            const isSettling = !isActiveDownload && !!job && downloadState === 'complete';
+            // In that window the footer/tile computed NOT active + NOT installed → the
+            // Install button/chip reappeared (worst on a fast ephemeral-pod install where
+            // started→complete collapses before re-sync lands). Treat that lingering job
+            // as still-busy so the card holds its download UI (Cancel + progress bar)
+            // instead of flashing Install — but ONLY until installed flips (anyInstalled
+            // is checked first in both branch chains, so Uninstall wins the moment
+            // re-sync lands). No new label — same Cancel/progress the download showed.
+            // (MPI-241)
+            const isBusy = isActiveDownload || (!!job && downloadState === 'complete');
 
             // Sizes: drafted footprint (op-keyed) else the engine-scoped universe — a
             // Pod must show the current-engine footprint, not bf16+GGUF (MPI-163).
@@ -648,7 +651,7 @@ export const MpiModelManager = ComponentFactory.create({
             if (downloadState === 'idle') partial = _computePartial(model);
 
             return {
-                job, downloadState, isActiveDownload, isSettling, sizeBytes,
+                job, downloadState, isActiveDownload, isBusy, sizeBytes,
                 installedOps, installedArch, draftDiffersFromInstalled, anyInstalled, partial,
             };
         }
@@ -658,7 +661,13 @@ export const MpiModelManager = ComponentFactory.create({
         // media badge + a FIXED-HEIGHT inline state row (chip OR live progress bar).
         // A recently-installed heat dot rides absolute on the thumb. Click → detail.
         function _tileState(st) {
-            if (st.isActiveDownload || (st.job && st.downloadState === 'downloading')) {
+            // anyInstalled first (MPI-241): once re-sync flips installed, show the chip
+            // even if a terminal 'complete' job still lingers in state.downloadJobs.
+            if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
+            // isBusy holds the progress UI through the whole download AND the brief
+            // post-'complete' window before re-sync lands, so the Install chip never
+            // flashes back on a fast ephemeral-pod install (MPI-241).
+            if (st.isBusy || (st.job && st.downloadState === 'downloading')) {
                 // Indeterminate "Verifying…" sweep once all bytes are down and the
                 // manager flips phase (MPI-140/164). Otherwise a determinate bar,
                 // clamped to 100 — job.progress can momentarily exceed 1.0 on a mixed
@@ -673,10 +682,6 @@ export const MpiModelManager = ComponentFactory.create({
                 const pct = Math.min(Math.round((st.partial.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
             }
-            // Settling: a done job awaiting re-sync — keep the verifying sweep, never
-            // flash the "Install" chip back (MPI-239, same window as the detail footer).
-            if (st.isSettling) return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Finishing…</span></div>`;
-            if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
             return `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
         }
 
@@ -935,8 +940,18 @@ export const MpiModelManager = ComponentFactory.create({
             qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
 
             // Footer actions — the exact install/update/uninstall wiring from _buildCard.
+            // anyInstalled is checked BEFORE isBusy so a lingering terminal 'complete'
+            // job never keeps Cancel up once re-sync flips installed (MPI-241).
             detailActions.innerHTML = '';
-            if (st.isActiveDownload) {
+            if (st.anyInstalled) {
+                const label = st.draftDiffersFromInstalled ? 'Update' : 'Uninstall';
+                const primary = MpiButton.mount(ce('div'), { text: label, variant: 'secondary', size: 'md' });
+                primary.on('click', () => {
+                    if (st.draftDiffersFromInstalled) _applyUpdate(model);
+                    else _confirmWholeUninstall(model);
+                });
+                detailActions.appendChild(primary.el); _detailActionBtns.push(primary);
+            } else if (st.isBusy) {
                 if (st.downloadState === 'downloading' && !_isRemote) {
                     const pause = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
                     pause.on('click', () => downloadService.pause(model.id));
@@ -949,20 +964,6 @@ export const MpiModelManager = ComponentFactory.create({
                 const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
                 cancel.on('click', () => downloadService.cancel(model.id));
                 detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
-            } else if (st.isSettling) {
-                // Terminal 'complete' job still in the queue; re-sync in flight. Show a
-                // disabled Finishing… (never a clickable Install) — the sig-guarded
-                // renderList() on re-sync repaints this to Uninstall. (MPI-239)
-                const finishing = MpiButton.mount(ce('div'), { text: 'Finishing…', variant: 'secondary', size: 'md', disabled: true });
-                detailActions.appendChild(finishing.el); _detailActionBtns.push(finishing);
-            } else if (st.anyInstalled) {
-                const label = st.draftDiffersFromInstalled ? 'Update' : 'Uninstall';
-                const primary = MpiButton.mount(ce('div'), { text: label, variant: 'secondary', size: 'md' });
-                primary.on('click', () => {
-                    if (st.draftDiffersFromInstalled) _applyUpdate(model);
-                    else _confirmWholeUninstall(model);
-                });
-                detailActions.appendChild(primary.el); _detailActionBtns.push(primary);
             } else {
                 const install = MpiButton.mount(ce('div'), { text: 'Install', variant: 'primary', size: 'md' });
                 install.on('click', () => { _install(model); });
