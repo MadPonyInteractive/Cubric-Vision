@@ -5,3 +5,7 @@
 > `RELEASE_NOTES['<newVersion>']` entry in `js/data/releaseNotes.js` and the
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
+
+## fixes
+
+- Fixed a missing LoRA (its folder removed from Settings) showing the crash-report dialog instead of a clear "not found in your LoRA folders" notice, and no longer leaving the queue stuck with an unresponsive Stop button.
