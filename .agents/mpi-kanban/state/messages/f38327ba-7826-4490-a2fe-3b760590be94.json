@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "f38327ba-7826-4490-a2fe-3b760590be94",
-  "status": "open",
+  "status": "acknowledged",
   "created_at": "2026-07-10T19:55:00Z",
-  "updated_at": "2026-07-10T19:55:00Z",
+  "updated_at": "2026-07-10T22:20:00Z",
   "from": {
     "session": "MPI-243 1.1.1 patch session",
     "role": "implementer"
@@ -36,6 +36,11 @@
     {
       "at": "2026-07-10T19:55:00Z",
       "event": "created"
+    },
+    {
+      "at": "2026-07-10T22:20:00Z",
+      "event": "acknowledged",
+      "note": "Session 6 close (MPI-242): acknowledged. poseReference mirror drift is deferred to the next /mpi-version-bump on 1.2.0, which regenerates operation_registry.json. Not a bug; blocks release only, not dev/run. Left open-but-acknowledged for whoever cuts the 1.2.0 bump."
     }
   ]
 }

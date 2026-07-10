@@ -515,3 +515,46 @@ Everything below must be validated before this card closes. Grouped by what unbl
 pre-existing fails, proven at pristine HEAD). New guards this session:
 `inject-params-titles.test.cjs` (2), extended `permodel-key-allowlist.test.cjs` (+1).
 eslint clean on all changed files.
+
+## Session 6 (2026-07-10) — NSFW variant + filter-bypass LoRA + preview finding
+
+**SHIPPED + user-verified local (commits 14f50066, 3b799d5c; docs 2e2418d2 — branch 1.2.0, NOT pushed, NOT on master):**
+
+### NSFW variant — a SECOND independent model (NOT an LTX-style arch variant)
+- Key distinction settled with the user: LTX-balanced = mutually-exclusive arch variants
+  (one card, GPU picks one). Krea2 SFW/NSFW = TWO independent installable models — a user
+  can have BOTH. So: two ModelDefs, not a `variants` block.
+- `krea2-turbo` (SFW, unchanged id) → workflows repointed to `_sfw` files.
+- NEW card `krea2-turbo-nsfw` ("Krea 2 Turbo NSFW") → `_nsfw` files + int8 dep. Lustify Krea
+  (Coyotte's Lustify v10 KREA-Turbo, int8_convrot). Description borrows the SDXL-NSFW/Lustify
+  framing + an INT8 GPU note (fastest on NVIDIA RTX Turing+; older/non-NVIDIA slow/unsupported).
+- `generate_krea2.py` reworked: emits `_sfw` + `_nsfw` per template (all 3), FORCE-baking the
+  UNETLoader weight per variant (never trusts the export). Registry unchanged (`krea2_` prefix
+  already routes all three). Orphan unsuffixed runtime files deleted; inject-params test repointed.
+- Dep `krea2-turbo-transformer-nsfw` (int8_convrot, 12.25GB) — R2-uploaded + verified (HTTP 200,
+  content-length 13148974712 exact) + hashed (0505412e…). Shares every other dep with SFW.
+- `progressStages.stagesFor()` now strips `_sfw`/`_nsfw` (identical graph = identical bar count).
+- Preview webps for both cards (`krea2-turbo-sfw.webp`, `krea2-turbo-nsfw.webp`, 896×1088).
+
+### Filter-bypass LoRA (always-on, per-variant strength)
+- SFW fp8_scaled ships the built-in content filter; NSFW int8_convrot self-unfilters.
+- Dedicated always-on `Input_Bypass_Filter_Lora` node on ALL THREE graphs (t2i/detailer/upscaler).
+- `generate_krea2.py::_bake_bypass_strength()` forces strength per variant: SFW 1.0, NSFW 0.0.
+  No-op on a graph lacking the node. Verified across all 6 files.
+- Dep `krea2-lora-filterbypass` (160B — a 12-float projector nudge, a real minimal safetensors,
+  NOT a stub) on BOTH cards. R2-uploaded + hashed (ec5901a2…).
+
+### Latent preview mediocre — INVESTIGATED, decided NO-CHANGE (do NOT re-open)
+- Root cause: Krea2 = Qwen-Image = `Wan21` latent format, which wants decoder `lighttaew2_1`;
+  it's not installed → `get_previewer()` falls back to harmless `Latent2RGB` linear projection.
+- **DO NOT install `lighttaew2_1`.** ComfyUI issue #13366 (UNRESOLVED): with it present + taesd
+  preview on (we force it), the previewer CORRUPTS the actual generation latent — degraded OUTPUT.
+  Triggers on Qwen-Image/Wan21 = Krea2. User decided: keep the safe fallback.
+- Full detail: `docs/krea2/preview-taesd.md` (+ README pointer). Memory: project_krea2_preview_taesd_landmine.
+
+**Still BLOCKED on MPI-244 (unchanged):** both cards can't run remote until the Pod image bakes
+the ControlNet nodes. The NSFW weight adds NO new node requirement — same Pod blocker as SFW.
+User will open a FRESH session to verify RunPod/remote when MPI-244 lands.
+
+**OUTSTANDING (non-blocking):** preview build images (user, blocked on another agent's work);
+detailer/upscaler bypass nodes now present + baking correctly (user added them this session).
