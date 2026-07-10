@@ -177,6 +177,8 @@ Traps, all of which bit us:
 
 Anything that classifies a ComfyUI rejection MUST handle both shapes — see the "fix BOTH engine paths" law. Guard: `tests/lora-missing-local-toast.test.cjs`.
 
+**Not every node's path enum uses the OS separator — self-listing nodes are always forward-slash (MPI-246).** `comfyController.runWorkflow`'s `PATH_INPUTS` separator heal assumes a loader lists paths with the ENGINE-OS separator (`folder_paths`: `\` on Windows, `/` elsewhere) and flips values to match. That holds for `folder_paths`-backed loaders (`LoraLoader`, `UpscaleModelLoader`, `SAMLoader`, checkpoint/vae/clip) but NOT for nodes that build their own enum — Impact Pack's `UltralyticsDetectorProvider` lists `model_name` as `bbox/face_yolov8n.pt` with a forward slash on **every** OS. The Windows-local `/`→`\` heal (MPI-229) corrupted that to `bbox\face_yolov8n.pt` → `value_not_in_list`, breaking auto-mask on the released build. Fix = `SLASH_ONLY_NODE_TYPES` set skips `model_name` for such nodes in BOTH heal directions. When adding a new node whose path list is self-built (not from `folder_paths`), add its `class_type` to that set. Guard: `tests/` self-check + the standalone assert in the MPI-246 commit.
+
 ## Generation / Prompt Gotchas
 
 **Cue queue contract — Ratio_Label injection:** `generationService.getGenerationQueueSnapshot()` and `generation-queue:changed` own the user-visible queue state (not ComfyUI polling). Ratio injection includes `Ratio_Label` alongside `Width` and `Height` — Cue cards and sidecar metadata should display the selected label (e.g. `16:9`), not derive from output pixels.
