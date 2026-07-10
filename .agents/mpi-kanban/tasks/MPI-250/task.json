@@ -3,11 +3,11 @@
   "id": "MPI-250",
   "title": "History workspace: op dropdown reverts to i2i after applying a tool-panel operation (upscale)",
   "description": "SPLIT FROM MPI-247 symptom (b). MPI-247 fixed the Gallery<->History revert (symptom a) in MpiPromptBox.setModelList. This card is the SECOND, DISTINCT symptom the user reported: in the History workspace, applying an Upscale (or other tool-panel op) makes the PromptBox op dropdown snap back to Image-to-Image.\n\nSTATUS: under-specified, needs a clean repro. A trace of MpiGroupHistoryBlock.js was done (attached below). The History block has its OWN op-preservation mechanism (`_preferredOperation`, set with remember:true on genuine user picks at L836/L1790/L968; restored in `_refreshOpOptions` L755-759). It is a DIFFERENT mechanism from MPI-247(a) -- do not assume shared root cause (confirmed distinct).\n\nONLY defect the trace found (narrow, arguably-correct behavior):\n- `generation:complete` handler clears the mask UNCONDITIONALLY at MpiGroupHistoryBlock.js:613 (`_canvasHasMask = false`) then calls `_refreshOpOptions()` at L614.\n- If the user's preferred op was mask-required (inpaint) and a mask was drawn, clearing the mask makes inpaint `disabled` in `_opOptions()` (commandRegistry gates `!requiresMask || hasMask`).\n- `_refreshOpOptions` L761 finds current op no longer OK -> L763-765 falls back to first non-disabled op = i2i (declaration order) -> `_setPromptOperation('i2i')` -> PromptBox visually shows i2i.\n- `_preferredOperation` correctly stays 'inpaint' (the `_isProgrammaticOperationSync` guard works), so it self-restores once a mask is drawn again. So this is arguably CORRECT: inpaint genuinely can't run without a mask.\n\nWHY THIS CARD IS STILL OPEN: the user's report (\"apply an upscale -> reverts to i2i\") mentioned NO mask and NO inpaint. The trace could NOT pin a clean always-reproduces revert matching the plain-upscale wording. Upscale is `universal:true` (commandRegistry L404-405) so it is NEVER in the PromptBox dropdown -- it's a tool-panel button. A dropdown that reads i2i after an upscale the user launched from the tool panel may simply be i2i-since-mount (L206 defaults `_preferredOperation` to first available op = i2i), i.e. NOT a regression at all.\n\nNEXT STEP: get exact repro from the user -- which op the dropdown showed BEFORE the upscale, whether a mask was involved, and whether the upscale was the tool-panel button or a model-supported op. THEN decide if a fix is warranted (candidate: keep a mask-required preferred op selected but grey the Cue button instead of swapping to i2i -- same shape as MPI-247's chosen direction).\n\nKEY FILE: js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js (L162-206 op resolve, L734-772 preferred/refresh, L602-624 generation:complete, L834-836 operation-change listener).",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "rejected",
   "created_at": "2026-07-10T16:20:00Z",
-  "updated_at": "2026-07-10T16:20:00Z",
+  "updated_at": "2026-07-10T20:42:09Z",
   "links": {
     "events": "events.jsonl"
   },
