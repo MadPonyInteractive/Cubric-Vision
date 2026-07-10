@@ -80,9 +80,22 @@ These are genuinely cross-cutting — they belong to no single subsystem.
 
 When creating or editing MPI Kanban cards (`.agents/mpi-kanban/tasks/<id>/task.json`), read the mpi-lib schema FIRST (`C:\Users\Fabio\.agents\skills\mpi-lib/task-board-ops/_schema.md`, `mutate.md`, `validate.md`). Common breakages: (1) `status` is NOT free-form — canonical values are `active`/`accepted`; put blocking info in `description` or `brief.md`. (2) `links` must be the full 8-key set for the board's TASK WORKSPACE panel to render. (3) `description` is a SHORT one-line card summary — long-form goes in `brief.md`. `maturity` enum: `idea`, `planned`, `in-progress`, `validating`, `complete`. LIFECYCLE: every card with real work passes `todo → doing → done`. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in BOTH event logs. The live board is `board.json` with `todo`/`doing`/`done` columns — NOT the legacy `kanban-ops/` Markdown board doc (5-column BACKLOG/PLANNING/… board that does NOT exist).
 
+**A single stray `\` takes the WHOLE BOARD DOWN.** Card/event text is markdown inside a JSON string, so describing a Windows path or a separator heal (`` `\` `` , `` `/`->`\` ``) writes a lone backslash. `\`` is not a valid JSON escape → the board fails to render with *"Bad escaped character in JSON at position N"* and every card disappears, not just the bad one. Write `\\` in the raw JSON (renders as one `\`). Prefer the word "backslash" over the character in card prose. Before finishing any card/event write, validate: `python -c "import json;[json.loads(l) for l in open(P,encoding='utf-8') if l.strip()]"` for `.jsonl`, `json.load` for `.json`. Repair is escape-only — after fixing, assert the raw line differs from the original ONLY by backslashes so no wording drifts. (Bit us 4× across `events.jsonl`, `MPI-67`, `MPI-118`, `MPI-246`.)
+
 ### shared-tree commit hygiene
 
-The RunPod branch is shared by concurrent agents. Commit by explicit pathspec (`git commit --only <paths>`), NEVER `git add -A`/`git add .`. Push stays user-authorized (do not push unless asked).
+The branch is shared by concurrent agents. NEVER `git add -A`/`git add .`. Push stays user-authorized.
+
+**When a sibling agent has UNSTAGED edits in a file you also touched, `git commit --only <paths>` is NOT safe.** MPI-245 committed another session's in-progress MPI-242 work twice before catching it. Two independent traps: (1) `--only <paths>` commits those paths **as they are in the WORKING TREE**, discarding your hunk-level staging; (2) the `lint-staged` pre-commit hook stashes unstaged changes, runs, and reapplies — that cycle folds the sibling's edits in even when your index was clean.
+
+Safe recipe for a co-owned file:
+
+1. Stage ONLY your hunks, anchored by **content**, never line numbers (they drift under you): `git diff -- <file> > p.patch`, keep the hunks whose *added* lines contain a marker unique to your change, then `git apply --cached --recount <filtered.patch>`.
+2. Verify: `git diff --cached -- js/ | grep -c '<their marker>'` must be `0`, and each staged blob must parse standalone (`git show ":<file>" > /tmp/x.js && node --check /tmp/x.js`) — a half-applied hunk still lints fine in the working tree.
+3. Commit the INDEX: bare `git commit -n`, **no pathspec at all**. `-n` bypasses the lint-staged stash/reapply — run eslint yourself first; you are opting out of the hook, not the check.
+4. Confirm the sibling's files are still `M` (modified, uncommitted) afterwards.
+
+Already committed their work? Nothing is lost: `git tag backup HEAD` → `git reset --soft HEAD~1` → `git reset HEAD -- <co-owned files>` → re-apply your filtered patch → commit the index → verify `git status --short` shows their files back as `M`.
 
 ### no toast on user Stop
 

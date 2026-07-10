@@ -68,7 +68,9 @@ were deleted would show a green INSTALLED and hide the loss.
 
 - SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
 - Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
-- On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and repopulate `state.downloadJobs`.
+- On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and **MERGES** it into `state.downloadJobs` — it must NOT overwrite.
+
+**SSE-open clobber (MPI-241) — don't reintroduce.** `start()` opens the SSE stream *and* creates the client `downloading` job in the SAME tick, so on the FIRST install after a reload the `open` handler's `/status` fetch races ahead of the backend registering it and returns only OLD `complete` jobs. Overwriting `state.downloadJobs` with that snapshot wiped the live job → the Model Library footer reverted Cancel→**Install** mid-download (bar kept climbing; only the state was wrong). Later installs never hit it — `_ensureSSE()` no-ops once open, hence "only the first time". Contract: keep any **active** client job (`downloading`/`queued`/`paused`/`installing`) whose `modelId` the backend snapshot omits; backend wins for shared ids. Footer hardening: a lingering terminal `complete` job still counts as *busy* (holds Cancel/progress, never flashes Install), and `anyInstalled` is checked BEFORE busy so Uninstall wins on re-sync. No "Finishing…" label — `Verifying…` is the only end-phase text. Guard: `tests/model-footer-settling.test.cjs`.
 
 ## Backend — `routes/downloadManager.js`
 Non-blocking download router using `node-downloader-helper` with pause/resume support.
