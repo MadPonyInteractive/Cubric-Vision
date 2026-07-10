@@ -920,7 +920,7 @@ export const MpiPromptBox = ComponentFactory.create({
             const availableOps = filteredCmds.map(cmd => {
                 const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
                 const disabled = !cmd.available || (hasMedia && isTextOnly);
-                return { value: cmd.key, label: cmd.label, disabled };
+                return { value: cmd.key, label: cmd.label, disabled, info: cmd.info };
             });
 
             opDropdownSlot.innerHTML = '';

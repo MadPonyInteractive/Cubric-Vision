@@ -23,6 +23,7 @@ export const MEDIA_TYPE = Object.freeze({
 /**
  * @typedef {Object} CommandDef
  * @property {string}          label          - Display name shown in UI
+ * @property {string}          [info]         - One-line description shown in the status bar on hover in the op dropdown.
  * @property {string}          [icon]         - MpiIcon registry key for op selectors (model-manager operation toggles). Optional.
  * @property {'image'|'video'} mediaType      - Which group type this applies to
  * @property {number}          requiresImages - Min number of input images needed (0 = none)
@@ -76,6 +77,7 @@ export const commands = {
 
     t2i: {
         label: 'Text to Image',
+        info: 'Text to Image — generate a new image from your prompt alone',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
@@ -92,6 +94,7 @@ export const commands = {
     },
     i2i: {
         label: 'Image to Image',
+        info: 'Image to Image — reshape an input image toward your prompt',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -116,6 +119,7 @@ export const commands = {
     // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
     poseReference: {
         label: 'Pose Reference',
+        info: 'Pose Reference — copy the pose/composition of an input image',
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -128,6 +132,7 @@ export const commands = {
     },
     upscale: {
         label: 'Upscale',
+        info: 'Upscale — raise resolution while adding fine detail',
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -140,6 +145,7 @@ export const commands = {
     },
     edit: {
         label: 'Edit',
+        info: 'Edit — change the whole image following your prompt',
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -151,6 +157,7 @@ export const commands = {
     },
     detail: {
         label: 'Detail',
+        info: 'Detail — refine only the masked area with more detail',
         progressLabel: 'Detailing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -164,6 +171,7 @@ export const commands = {
     },
     change: {
         label: 'Change',
+        info: 'Change — replace the masked area to match your prompt',
         progressLabel: 'Changing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -176,6 +184,7 @@ export const commands = {
     },
     remove: {
         label: 'Remove',
+        info: 'Remove — erase the masked area and fill the background',
         progressLabel: 'Removing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -192,6 +201,7 @@ export const commands = {
     // default 0.0 = faithful. Prompt optional (empty works).
     pid: {
         label: 'Upscale',
+        info: 'Upscale — raise resolution while adding fine detail',
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -207,6 +217,7 @@ export const commands = {
 
     t2v: {
         label: 'Text to Video',
+        info: 'Text to Video — generate a video clip from your prompt alone',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
@@ -214,6 +225,7 @@ export const commands = {
     },
     i2v: {
         label: 'Image to Video',
+        info: 'Image to Video — animate an input image into a video clip',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         mediaInputs: [
@@ -225,6 +237,7 @@ export const commands = {
     },
     t2v_ms: {
         label: 'Text to Video',
+        info: 'Text to Video — generate a video clip from your prompt alone',
         icon: 'text',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
@@ -252,6 +265,7 @@ export const commands = {
     },
     i2v_ms: {
         label: 'Image to Video',
+        info: 'Image to Video — animate an input image into a video clip',
         icon: 'image',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
@@ -271,6 +285,7 @@ export const commands = {
     },
     extend: {
         label: 'Extend',
+        info: 'Extend — continue an input video with more footage',
         progressLabel: 'Extending',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,

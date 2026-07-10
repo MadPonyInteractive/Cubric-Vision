@@ -1155,7 +1155,7 @@ export const PROMPT_BOX_CONTROLS = {
                 variant: 'primary',
                 toggleable: true,
                 active: initialActive,
-                info: 'Enhance prompt — expands your prompt before rendering, at the cost of longer generation time',
+                info: 'Enhance prompt — expands your prompt before rendering (does not play well with Pose Reference)',
             });
 
             this._instance.on('click', ({ active }) => {
