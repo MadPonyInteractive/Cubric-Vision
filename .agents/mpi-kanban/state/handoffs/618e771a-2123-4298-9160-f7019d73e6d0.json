@@ -1,0 +1,138 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "618e771a-2123-4298-9160-f7019d73e6d0",
+  "generated_at": "2026-07-10T01:00:00Z",
+  "from_session": null,
+  "to_role": "researcher",
+  "status": "open",
+  "session": {
+    "name": "MPI-242 Krea2 onboarding - research + live sampler A/B closed; workflow authoring in progress",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Krea2 (Flux-lineage image model) to Cubric Vision end-to-end. Phase 1 = Turbo variant. User authors + proves the ComfyUI workflow; agent does research + app wiring per docs/add-model-playbook.md.",
+    "current": "Base t2i workflow is settled (style LoRAs + sampler config both closed). NEXT SESSION IS RESEARCH-FIRST, NOT IMPLEMENTATION: investigate additional Krea2 workflows (ControlNet, image-to-image / image editing, multi-reference conditioning) and the incoming NSFW finetune. Experiment first; decide what to implement afterwards."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-242/brief.md",
+    "completed": [
+      "Research: 9 style LoRAs + trigger-phrase contract (research/style-loras.md)",
+      "Research: samplers/resolution/injection seam (research/sampler-and-resolution.md)",
+      "Live A/B (user-run): sampler + refiner config SETTLED, 6 agent theories refuted",
+      "docs/krea2.md written + routed in docs/README.md",
+      "Corrected card: VAE is qwen_image_vae (reuse vae-qwen-image dep), NOT vae-flux-ae"
+    ],
+    "remaining": [
+      "RESEARCH (next session): ControlNet, i2i/edit, Conditioning-Rebalance, NSFW finetune",
+      "Finish workflow graph: strip enhancement branch + ResolutionSelector, ONE Output_Image",
+      "Export API-format template -> comfy_workflows/scripts/workflow_generation/Krea2_template.json",
+      "registry.py HANDLERS prefix rule + generate_krea2.py build()",
+      "dependencies.js entries (+9 style LoRAs) + R2 upload + /mpic-compute-dep-hashes",
+      "models.js ModelDef (new type, multiStage:true, FLUX_RATIOS values, loraStrengths:['model'], enhanceRecipe:'flux')",
+      "Input_Style int injection (clamp 0..9) + PromptBoxControls entry",
+      "progressStages.js entry - COUNT tqdm bar restarts LIVE per run mode"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-242",
+    "title": "Add Krea2 (Flux family) - Turbo variant first, full variant later",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-242/",
+    "links": {
+      "brief": "brief.md",
+      "research": "research/style-loras.md, research/sampler-and-resolution.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "research",
+    "experiment in live ComfyUI",
+    "continue",
+    "write docs/krea2.md",
+    "implement only after user says the workflow is ready"
+  ],
+  "knowledge_preservation": {
+    "authoritative_doc": "docs/krea2.md (333 lines) - settled sampler config, style-LoRA table + trigger contract, resolution verdict, injection seam, and a 'Dead theories - do NOT re-propose' table.",
+    "completed": [
+      "SAMPLER SETTLED: stage1 euler/beta/6/denoise1.0/eta0.5/cfg1 -> stage2 refiner euler/beta/3/denoise0.35/eta0.5, latent hand-off, no VAE round-trip. Refiner beat stage-1-alone at every setting => workflow IS multiStage.",
+      "NO shift node: comfy/supported_models.py:1828 already sets Krea2 shift=1.15. AuraFlow verified inert live.",
+      "Constraints (each isolated by single-variable run): first-order sampler ONLY; ~6 steps under beta (optimum is SCHEDULER-dependent); symmetric tapered schedule (beta > bong_tangent > simple); eta>0 load-bearing (4 confirmations).",
+      "9 style LoRAs, model-only (528 tensors, all 'transformer.' prefix, rank 32 F32). LoraLoaderModelOnly + loraStrengths:['model']. No CLIP LoRA is possible - musubi-tuner pre-caches text-encoder outputs, cannot train it.",
+      "Trigger phrase APPENDED to prompt with ', ' AFTER any enhancement. 0 = no style.",
+      "Style seam: ONE int. MpiInt 'Input_Style' -> 9x MpiMath (1.0 if a==N else 0.0) -> 9x always-present MpiLoraModel.strength_model, AND -> MpiPromptList.specific_item (VERIFIED 1-indexed, 0 bails; prompt_gen/prompt_list.py:139,175)."
+    ],
+    "traps": [
+      "mode:4 = BYPASS, mode:2 = MUTE in the workflow JSON. ALWAYS check before claiming a node is live - agent got this wrong once and invented two blocker bugs.",
+      "The saved .json LAGS the ComfyUI canvas. ASK THE USER TO SAVE before reading the workflow file.",
+      "Output_Image IS a valid capture title (MPI-182 alias, commandExecutor.js:1253). The add-model-playbook s8 'must be exactly Output' text is STALE.",
+      "comfyController.js:1113 targets has NO string_a/string_b -> StringConcatenate is not injectable. _inject writes EVERY matching input on a node.",
+      "RES4LYF samplers.py:340 - supplying a manual `sigmas` array does NOT bypass `denoise`; it MULTIPLIES it. Set denoise=1.0 and denoise_alt=1.0.",
+      "denoise 0.35 on stage 2 starts at sigma .329 (> stage1's .275) => partial REGENERATION, not pure polish. Refiner cannot be a user on/off toggle. Stage 2 MUST get the same conditioning (style trigger) as stage 1.",
+      "ComfyUI lists LoRAs by path relative to loras root: 'krea-2\\\\style\\\\krea2_darkbrush.safetensors' (subfoldered, BACKSLASH). Touches open MPI-198 path-heal on non-Windows local engine.",
+      "Stale model list after adding files = refresh browser. NOT a YAML bug (extra_model_paths.yaml is correct)."
+    ]
+  },
+  "next_action": {
+    "description": "RESEARCH ONLY - user wants to experiment before deciding what to implement. Three threads, all Krea2 workflow variants beyond the settled t2i:",
+    "threads": [
+      {
+        "topic": "ControlNet",
+        "finding_so_far": "A NATIVE Krea2 ControlNet exists - no Qwen-as-base-model hop needed, contrary to the video the user saw. github.com/facok/comfyui-krea2-controlnet provides 3 nodes: 'Krea2 Control LoRA Loader', 'Krea2 Control Image Encode' (encodes the control image with the Krea2/Qwen VAE we ALREADY ship as vae-qwen-image), 'Krea2 Control Apply'. Consumes comfyui_controlnet_aux preprocessor output (Depth Anything, Canny, OpenPose, lineart, normal). Keeps ComfyUI's built-in Krea2 inference path intact. Public depth LoRA weights: huggingface.co/Patil/Krea-2-depth-controlnet. No requirements.txt seen (only __init__.py + nodes.py).",
+        "to_do": "Verify the 'Qwen base image then hand to Krea for last steps' approach the user saw in a video - it may be an older workaround now obsoleted by the native control LoRA. Test the native path first. If adopted: new custom_nodes dep + node_lock pin + a control-LoRA weight dep."
+      },
+      {
+        "topic": "Conditioning Rebalance / multi-reference",
+        "finding_so_far": "github.com/nova452/ComfyUI-Conditioning-Rebalance (also a ...ConditioningKrea2Rebalance repo - check which is canonical). 'IP-Adapter-like' per-layer conditioning weighting for Krea2 image-reference editing. High-level nodes Krea2EditRebalance / Krea2EncodeRebalance. Uses qwen3vl to process UP TO FOUR images + the text prompt (base image / style ref / subject ref in the example workflow). Files: conditioning_rebalance.py, krea2.py, ideogram4.py; pyproject.toml, no requirements.txt seen.",
+        "caution": "The repo ALSO advertises 'bypassing the built in quality dilution from the trained safety filter' and 'works as a means to unfilter the model'. That is a safety-filter-removal feature. Evaluate the conditioning/multi-reference capability on its own merits; do NOT ship the unfilter behaviour as a product feature. Read the source before adopting - a third-party node that patches conditioning to defeat a model's safety training is a supply-chain and product-liability consideration, not just a technical one. Raise with the user explicitly.",
+        "to_do": "Read the actual source (deepwiki.com/nova452/ComfyUI-Conditioning-Rebalance has an 'Example Workflow: Krea 2 Image Edit' page). Determine whether multi-reference editing can be had WITHOUT the unfilter path."
+      },
+      {
+        "topic": "NSFW finetune",
+        "finding_so_far": "User says 'Coyote' is releasing an NSFW Krea2 finetune, expected 2026-07-10. Unverified - agent found nothing; search after release.",
+        "to_do": "Confirm the release + exact HF repo. If it is a full finetune (not a LoRA) it is a separate ModelDef + transformer weight upload. If a LoRA, it may just be a dep. Would motivate a variation workflow. Note Krea2 already has an internal safety filter (see the Rebalance repo's claims) - a finetune may or may not address that."
+      }
+    ],
+    "also_open": [
+      "beta @ 4 and @ 5 - the 6-step optimum is only bracketed from ABOVE (8 distorts). 5 may tie and be cheaper.",
+      "Native 2K single-pass: Turbo is spec'd 1024-2048 native (Raw <=1024). Untested. If Krea2 holds structure at 1536/1920 the hi-res question may be moot.",
+      "Whether core ComfyUI euler+beta (no RES4LYF) matches the ClownsharK config. Blocked on: plain KSampler has no eta, and eta is load-bearing. Probably cannot drop RES4LYF - but it is already a dep, so zero cost.",
+      "Krea2 detailer: 'detail' is an EXISTING op. Every Cubric detailer is LoadImage + LoadImageMask -> MaskDetailerPipe -> Output, declared per-model as workflows.detail in models.js. A Krea2 detailer = clone Chroma_detailer.json with the model stack swapped. No new op needed."
+    ]
+  },
+  "context": {
+    "key_decisions": [
+      "Prompt enhancement branch CUT from the app workflow (user tested Comfy's TextGenerate: over-expands, drifts from intent). Cubric Prompt is the app's answer to enhancement.",
+      "ResolutionSelector DELETED - app injects width/height into EmptyLatentImage. Reuse FLUX_RATIOS VALUES on the ModelDef (orientation mode). Do NOT set type:'flux' to inherit the table.",
+      "Style system: user's single-int design beat the agent's proposed object-injection seam. App injects ONE value: Input_Style (int 0-9).",
+      "Refiner ships => workflow is multiStage (needs _stage2 file + progressStages entry, 9 NFE vs 6).",
+      "Krea2 is Flux-lineage in ARCHITECTURE ONLY. Conditioning + VAE stack is Qwen. Reuse vae-qwen-image; qwen3vl_4b_fp8_scaled is a NEW upload."
+    ],
+    "user_workflow_files": {
+      "live_authoring": "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\krea2_turbo_t2i.json",
+      "app_export_staging": "D:\\WORK\\workflows\\App\\krea2_turbo_t2i.json (currently UI format, NOT API format)",
+      "local_models": "G:\\CubricModels (loras/krea-2/style/*.safetensors x9, diffusion_models/krea2_turbo_fp8_scaled.safetensors)"
+    },
+    "collaboration_note": "User owns workflow authoring and sets knob values live; agent does structural edits, research, and app wiring. The user's live A/B beat the agent's reasoning six times this session - test the user's instinct FIRST. See feedback_test_user_instinct_first."
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["add-model", "krea2", "comfy-workflows", "samplers", "r2-upload"],
+    "must_read": [
+      "docs/krea2.md",
+      "docs/add-model-playbook.md",
+      ".agents/mpi-kanban/tasks/MPI-242/research/"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {"at": "2026-07-10T01:00:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming MPI-242 (add Krea2 to Cubric Vision) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/618e771a-2123-4298-9160-f7019d73e6d0.json, then docs/krea2.md. The base t2i workflow is SETTLED (style LoRAs + sampler config both closed - do not re-litigate; docs/krea2.md has a 'Dead theories' table). This session is RESEARCH-FIRST, not implementation: investigate Krea2 ControlNet (a NATIVE control-LoRA path exists at facok/comfyui-krea2-controlnet - the 'use Qwen as base then hand to Krea' video approach may be obsolete), image-to-image / image editing, and the Conditioning-Rebalance multi-reference nodes (nova452 - CAUTION: that repo also advertises safety-filter removal; evaluate multi-reference on its own merits and raise the unfilter question with the user before adopting). Also check whether the 'Coyote' NSFW Krea2 finetune shipped. The user experiments live in G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\krea2_turbo_t2i.json and will decide when a workflow is ready to implement - do not start app wiring until told. ASK THE USER TO SAVE before reading the workflow JSON (the file lags the canvas), and check node `mode` (4=bypass, 2=mute) before claiming any node is live."
+}

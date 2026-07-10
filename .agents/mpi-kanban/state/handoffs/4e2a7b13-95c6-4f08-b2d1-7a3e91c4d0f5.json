@@ -1,0 +1,182 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "4e2a7b13-95c6-4f08-b2d1-7a3e91c4d0f5",
+  "generated_at": "2026-07-10T14:35:00Z",
+  "from_session": "KREA2 Session4 — user-ux pass attempted; surfaced + fixed 4 real bugs (persistence, style picker, ratio system, pre-existing tier bugs)",
+  "supersedes": "9d1e6f42-8b07-4c35-a1e9-3c7d20f5b6a8",
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-242 Krea2 — CODE COMPLETE + auto-verified. Remaining work is VERIFICATION ONLY: (1) user-ux in-app, (2) remote/Pod after MPI-244. NOTHING IS COMMITTED.",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Krea2 (Flux-lineage image model) to Cubric Vision end-to-end. Phase 1 = Turbo variant.",
+    "current": "Everything implemented and auto-verified (127 tests / 123 pass / 4 pre-existing fails). NOTHING IS COMMITTED. Two verification passes remain: (1) user-ux in the app — 12 checks, the card's verify_mode; (2) remote/Pod, BLOCKED on MPI-244. Do NOT write new features."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-242/validation.md",
+    "completed": [
+      "PRIOR SESSIONS: node_lock +2 pins, dependencies.js +14 (12 sha256 filled, zero nulls across all 67), krea2-turbo ModelDef, QUALITY_LABELS 1k/2k, _prepareWorkflowInputs staging gate, progressStages entry.",
+      "PRIOR: prompt-box controls (styleSelect / stylization / enhancePrompt), op-gated to t2i+i2i and model-gated on capabilities.styleLoras + capabilities.promptEnhance (both default FALSE).",
+      "PRIOR: prompt enhancement IN-WORKFLOW via TextGenerate (LM head of the already-loaded Qwen3-VL encoder — zero extra model/VRAM/dep).",
+      "PRIOR: `Output_prompt` capture — readComfyOutputText() + title-scoped outputPromptNodeIds; rides the side-outputs bag as onComplete(urls,{latents,audioUrl,promptText}). generationService shadows `positive` once at the top of onComplete.",
+      "PRIOR: stagesFor(file, mode, extraBars) — enhanced run shows N/3, not 3/2.",
+      "PRIOR: krea2_turbo_t2i.json is a GENERATED workflow (template + generate_krea2.py + registry.py). Stamps placeholder.png, asserts the style rack at build time.",
+      "THIS SESSION — 4 REAL BUGS FIXED (see next_action.what_changed). All auto-verified, 3 new mutation-tested guards. This was PLAN DRIFT the user explicitly sanctioned: 'Fixing wrong things is part of verification.'"
+    ],
+    "remaining": [
+      "USER-UX VERIFY in the app — 12 checks, listed in next_action.threads[0] and validation.md.",
+      "REMOTE/POD VERIFY — BLOCKED on MPI-244. Deferred by the user.",
+      "COMMIT by explicit pathspec once user-ux passes (file list in next_action.threads[2]).",
+      "OPTIONAL: two DEFECTS found in the system prompt (template node 60), left in place at the user's instruction — see traps.",
+      "LATER: Krea2 Raw (52-step) variant; int8/mxfp8 quant axis (own card)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-242",
+    "title": "Add Krea2 (Flux family) - Turbo variant first, full variant later",
+    "column": "doing",
+    "maturity": "validating",
+    "status": "active",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-242/",
+    "links": {
+      "validation": "validation.md — READ FIRST. The 2026-07-10 session-4 section has the full bug list + evidence + the 12-point user-ux checklist.",
+      "checklist": "checklist.md",
+      "research": "research/workflow-surface.md (authoritative graph read)"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "run the app and perform the user-ux verification",
+    "commit by explicit pathspec (never `git add -A`) AFTER user-ux passes",
+    "fix the two U+FFFD chars in the TEMPLATE's node 60, then re-run `python orchestrate.py`"
+  ],
+  "knowledge_preservation": {
+    "authoritative_docs": "docs/add-model-playbook.md §9 (style rack) + §10 (Output_prompt contract) — both are GENERAL procedure now, not Krea2 notes. .agents/mpi-kanban/tasks/MPI-242/validation.md has the full evidence trail. docs/krea2/ for model specifics. NOTE: docs/krea2/resolution.md and the ratio docs are now STALE on where the tables live — they moved into js/utils/ratios.js.",
+    "completed": [
+      "*** RATIO_MODES IS NO LONGER BINARY. *** Three values: 'orientation' (flux/sdxl/chroma, table keyed [orientation]), 'quality' (wan/wan5b/ltx, keyed [tier]), and NEW 'quality-orientation' (krea2, keyed [tier][orientation]). Every consumer used to write `=== 'quality'` or `?? 'orientation'` and silently mis-branched the third. ASK usesOrientation(type) / usesQualityTier(type) from js/utils/ratios.js — never compare the mode to a string. tests/ratio-modes-exhaustive.test.cjs enforces this with a source scan.",
+      "*** RATIOS LIVE IN ratios.js. *** KREA2_RATIOS moved OUT of the ModelDef and INTO js/utils/ratios.js beside FLUX/SDXL/WAN/WAN_5B/LTX. User's rule: 'ratios.js is the source of truth for all ratios — that's where I go to get resolutions for my tests.' The MPI-174 declared-ratios path still works but now has ZERO users. The ModelDef keeps only `qualityTiers: ['1k','2k']`.",
+      "*** KREA2_RATIOS['1k'] IS FLUX_RATIOS — THE SAME OBJECT. *** Byte-identical (asserted), shared by reference so they cannot drift. This created an aliasing hazard: Object.freeze is SHALLOW, so the outer object was protected while the arrays stayed writable. PROVEN by pushing to FLUX_RATIOS.portrait and watching Krea2's 1k tier grow to 6 entries. Fixed with deepFreeze() over all seven tables. Both mutations now throw TypeError. Do NOT 'simplify' the freeze away.",
+      "getModelRatios(type, orientation, tier) now takes BOTH axes ALWAYS and ignores whichever its mode doesn't use. Do NOT pass `undefined` to withhold an axis — that is what broke the third mode. There is no cross-model `qualityTier` default any more: 'medium' is meaningless to a model whose tiers are ['1k','2k']. A foreign tier resolves to the model's own 'medium' if it has one (LTX must not drop to very_low), else its first tier.",
+      "usesOrientation / usesQualityTier / clampQualityTier all live in ratios.js. clampQualityTier MOVED OUT of MpiOptionSelector: promptReuse imported it from a UI component, which pulled MpiButton → icons.js on a browser-absolute path and made promptReuse UNLOADABLE under Node. A util must never import a component. MpiOptionSelector re-exports all three for its existing importers.",
+      "clampQualityTier's fallback is now tiers[last] (the target's real max), not the hardcoded 'very_high' — a tier wan5b DOES NOT HAVE (its tiers are low/medium/high). That was a latent bug.",
+      "A `scope: 'perModel'` prompt-box control emits `settings:model:update` with opName:null. projectService DROPS that write (with a warning) unless the key is in _MODEL_WIDE_KEYS. Add every new perModel key there. tests/permodel-key-allowlist.test.cjs parses both files and enforces it.",
+      "The quality-tier control is gated on usesQualityTier(model.type), NOT on a new capability flag. The ratio table already states the fact; a second source would drift. Same reasoning as styleLoraLabels living on the ModelDef.",
+      "MpiOptionSelector renders the orientation header TWICE — once in _templateRatio and once in updateUI()'s runtime re-render. Fixing only the template leaves the toggle vanishing on the first interaction. The exhaustive guard caught this; a manual sweep did not.",
+      "The prior session's `Output_prompt` contract is unchanged and still correct (playbook §10). PreviewAny.main returns {'ui':{'text':(value,)}} and is OUTPUT_NODE=True. The tap at node 242 reads node 241 (Input_enhance_prompt, MpiIfElse), UPSTREAM of the style concat at 114 — so the saved prompt carries NO style trigger and stays re-styleable on reuse."
+    ],
+    "traps": [
+      "*** NOTHING IS COMMITTED. The git tree is SHARED with a parallel session. Commit by explicit pathspec (`git commit --only <paths>`), NEVER `git add -A` / `git add .`. There is also a `lint-staged automatic backup` stash from another session — leave it. ***",
+      "*** THE SUITE IS 127 TESTS / 123 PASS / 4 FAIL. All four failures are in tests/runpod-remote-hardening.test.cjs and are PRE-EXISTING — proven this session by running that file at pristine HEAD in a temp worktree, where all four fail with none of this code present. The PRIOR handoff said '26 pass / 1 fail'; that was FILE-level counting, and it undercounted the failures as 1. Do NOT chase three phantom regressions, and do NOT try to fix the RunPod tests here. ***",
+      "REMOTE/POD PATH IS UNVERIFIED. `_reconcileFromHistory` reads /history; whether it preserves `ui.text` like the live `executed` message does is UNKNOWN. It CANNOT be tested until MPI-244 ships (both ControlNet node packs are MANDATORY for EVERY Krea2 t2i run — ComfyUI validates every node CLASS before MpiIfElse picks a branch). [[feedback_check_both_engine_paths]]",
+      "`Output_prompt` HAS NEVER LIVE-FIRED. Payload shape proven from nodes_preview_any.py source, not a real generation. First in-app run is the real test.",
+      "*** SYSTEM PROMPT (template node 60) WAS READ THIS SESSION — the prior handoff wrongly said it never was. *** It ALREADY carries nine faithfulness rules (1 'Faithfulness First', 5 'Avoid Over-Specification', 7 'Respect Existing Detail', 9 'Preserve User Medium'). So the ebb3a1a4 drift hypothesis is already addressed in the wording. TWO DEFECTS found, LEFT IN PLACE at the user's instruction ('let's run as is and see'): (a) rules 7 and 9 each contain a U+FFFD replacement char where an em-dash belongs — lossy, from a non-UTF-8 round-trip; one-char fix each in the TEMPLATE then `python orchestrate.py`. (b) node 58 sets `thinking:false` but node 60's text says 'Think step by step' and 'one cohesive paragraph AFTER THE THINKING BLOCK' — with thinking off there is no such block, so the model may inline its planning into the visible answer, which LOOKS EXACTLY LIKE over-expansion. IF THE ENHANCED OUTPUT DRIFTS, SUSPECT (b) BEFORE concluding the 4B model is too weak.",
+      "`use_default_template: true` on node 58 is NOT moot. Node 60's string does NOT start with `<|im_start|>`, so the skip_template escape hatch is disengaged and the system prompt rides as user-turn text. That is the standard Qwen3-VL workaround (its default chat template has no system role) and it is correct as-is.",
+      "TextGenerate exposes image/video/audio sockets on EVERY clip, but Qwen3-VL honours `image` ONLY — video/audio are SILENTLY SWALLOWED. Do not wire them.",
+      "capabilities.promptEnhance REQUIRES a text encoder whose CLIP implements .generate(). Qwen3-VL (Krea2) yes, Gemma3/4 (LTX-2) yes, T5/umT5 (Chroma, Wan) NO — the node raises AttributeError, it does NOT degrade gracefully.",
+      "BOTH new capabilities default FALSE (styleLoras, promptEnhance) — the INVERSE of negativePrompt, which defaults TRUE when absent.",
+      "The saved prompt comes from the graph EVEN WITH THE ENHANCER OFF (MpiIfElse passes raw text through). Intentional — one read path — so node 242 must always be reachable, never bypassed (mode:4) or muted (mode:2).",
+      "NEVER hand-edit comfy_workflows/krea2_turbo_t2i.json — it is BUILD OUTPUT. Edit scripts/workflow_generation/krea2_turbo_t2i_template.json and run `python orchestrate.py`. Generated runtime workflows ARE committed (LTX's and Wan5B's are tracked); .state.json is gitignored.",
+      "REQUIRED-image ops (upscale, detail, i2i) bake local scratch filenames and that is CORRECT — the injector overwrites the widget before submit. Only an OPTIONAL LoadImage needs placeholder.png. Do NOT 'fix' the detailer/upscaler.",
+      "MpiProgressBar bakes `interactive` at mount and has NO runtime disabled setter. The Stylization slider's disabled state is a class + a guard in the change handler; remounting would drop an in-progress drag.",
+      "Capture titles are TIER-decided: tier-1 = `Output`, tier-2 = `Output_Image`. Krea2 is tier-2. `Output_image` (lowercase i) in the detailer/upscaler is CORRECT — matching is case-insensitive. NEVER normalize one to the other.",
+      "MpiOptionSelector's `variant:'buttons'` now has ZERO consumers (it had zero at HEAD too — styleSelect was its only user, added and removed within these uncommitted sessions). It is PRE-EXISTING DEAD CODE and was left in place. It carries a latent trap: `.mpi-opt-sel__grid` is `display:flex` with NO `flex-wrap`, so the next caller with >4 options gets the same 1280px horizontal overflow. The `--number` and `--ratio` variants each override it; `--buttons` never did.",
+      "`.agents/mpi-kanban/tasks/MPI-242/events.jsonl` line 5 is MALFORMED JSON (a raw Windows path `krea-2\\style\\...` embedded unescaped — `\\s` is an invalid escape). It is PRE-EXISTING and ALREADY COMMITTED, so it was NOT touched. Any tool that json-parses that log will choke on line 5. Worth a one-char fix in a separate commit."
+    ]
+  },
+  "next_action": {
+    "description": "Verification only. Do not add features. Thread 0 is the next session's job; thread 1 is blocked; thread 2 closes the card.",
+    "what_changed_this_session": [
+      "BUG 1 — PERSISTENCE. styleSelect/stylization/enhancePrompt are scope:'perModel', which emits settings:model:update with opName:null. projectService only routes an opName-less write when the key is in _MODEL_WIDE_KEYS; otherwise it logs `missing opName for non-model-wide key` and DROPS the value. All three were missing, so none of the three controls persisted. Caught from the USER's devtools console, not by any test. FIX: projectService.js:67. GUARD: tests/permodel-key-allowlist.test.cjs.",
+      "BUG 2 — STYLE PICKER. The prior session shipped MpiOptionSelector variant:'buttons' (a horizontal chip strip); ten long labels overflowed to ~1280px and clipped off-screen. The USER NEVER CHOSE THAT COMPONENT — the prior handoff recorded it as a settled decision. FIX: inline MpiDropdown (direction:'up', wrapLabels:true), a `Style` label above, reusing the slider's own slider-lbl/slider-name classes so Style and Stylization align by construction. Index-0 label 'No Style' → 'None' (display-only; the INDEX is what gets injected).",
+      "BUG 3 — 2K WAS UNREACHABLE AND THE SIDECAR LIED. Krea2 declared qualityTiers, which auto-flipped RATIO_MODES.krea2 to 'quality'. But t2i/i2i never registered the qualityTier control, so the tier defaulted to 'medium' — not a Krea2 tier — and getModelRatios silently fell through `declared[Object.keys(declared)[0]]` to the 1k table. Meanwhile generationService wrote `orientation: null` for any 'quality' model and promptReuse's quality branch never restored orientation, so REUSING A 2K LANDSCAPE IMAGE WOULD HAVE RESTORED A 1K PORTRAIT ONE, silently, with no error. FIX: new RATIO_MODES value 'quality-orientation'; KREA2_RATIOS moved into ratios.js with '1k': FLUX_RATIOS + deepFreeze; getModelRatios does the two-level lookup; sidecar + promptReuse carry both axes; qualityTier registered on t2i/i2i gated on usesQualityTier(model.type). GUARDS: tests/ratio-modes-exhaustive.test.cjs, tests/krea2-ratio-roundtrip.test.cjs.",
+      "BUG 4 — PRE-EXISTING, found in passing, fixed. (a) promptReuse.js:6 hardcoded QUALITY_TIERS=['very_low'..'very_high'] with no '2k'/'4k' — LTX 4K clips ALREADY lost their tier on Reuse Prompt, before Krea2 existed. (b) clampQualityTier fell back to 'very_high', a tier wan5b does not have. (c) MpiOptionSelector's orientation-flip used Math.min(currentIdx, len-1) with currentIdx===-1 from a findIndex miss → indexes off the end; newly reachable because Krea2's labels differ across orientations.",
+      "THREE REGRESSIONS I INTRODUCED AND CAUGHT BEFORE SHIPPING: (1) my first getModelRatios fell back to tiers[0], silently downgrading LTX from medium (512px) to very_low (384px) on an unknown tier. (2) The exhaustive guard caught FOUR `mode === 'orientation'` sites my manual sweep missed, including the RUNTIME header gate in updateUI() — without it the orientation toggle would have vanished on the first interaction. (3) deepFreeze referenced SOCIAL_RATIOS before its const (TDZ ReferenceError at import)."
+    ],
+    "threads": [
+      {
+        "topic": "THREAD 0 (NEXT SESSION): user-ux verification in the app",
+        "finding_so_far": "Everything is CODED and auto-verified. NONE of it has been seen in a running app. The card's verify_mode is user-ux. Launch on the LOCAL engine (Krea2 cannot run remote — MPI-244). NOTE: the app auto-installs comfyui_controlnet_aux + ComfyUI-Krea2-ControlNet on first boot if absent (~90s); do not generate until both land, or you'll get a missing-node-class validation error and misread it as the placeholder fix failing.",
+        "to_do": "1. Krea 2 Turbo on t2i. Prompt box shows: a `Style` label + inline dropdown reading `None`, a `Stylization` label + slider beneath it, an Enhance toggle, and a `1K`/`2K` quality radio.\n2. The positive/negative toggle is ABSENT (negativePrompt:false — first production use of the real ModelDef).\n3. Stylization slider is DIMMED and inert at `None`; live on any other style.\n4. Style dropdown opens UPWARD, 10 entries, long names wrap (no horizontal overflow).\n5. Ratio popup KEEPS its orientation toggle on Krea2 — and it must SURVIVE clicking a ratio (updateUI re-renders the header).\n6. Selecting `2K` changes the dimensions: 1:1 → 1472×1472, not 1024×1024.\n7. Flipping orientation at 2K keeps the tier: 16:9 → 1936×1088 (not 1024×1024, and not 1088×1936).\n8. The per-tier hints in the quality radio flip with orientation.\n9. Switch to upscale/detail — Style, Stylization, Enhance all VANISH. Switch to SDXL/Chroma on t2i — those three AND the quality radio vanish.\n10. Style / Stylization / Enhance survive a project reload (the _MODEL_WIDE_KEYS fix). Watch the devtools console for `missing opName` — there should be none.\n11. Run a plain t2i, no image, enhancer OFF. Passes graph validation (the placeholder fix) and matches pre-change output.\n12. Run t2i with the enhancer ON. The prompt box KEEPS SHOWING YOUR OWN TEXT. The status bar reads N/3 (not N/2, and never 3/2). Then open the card's sidecar / Reuse Prompt: it must return the EXPANDED prompt with NO style trigger appended. Repeat with a style selected — still no trigger.\n13. Generate a 2K LANDSCAPE image, then Reuse Prompt on it: the tier AND the orientation must both come back.\n14. i2i and pose-reference once each.",
+        "verify_mode": "user-ux"
+      },
+      {
+        "topic": "THREAD 1 (BLOCKED — do not attempt): remote/Pod verification",
+        "finding_so_far": "Krea2 CANNOT run on the Pod. Both ControlNet node packs are mandatory for EVERY t2i run (ComfyUI validates every node class before MpiIfElse picks a branch), and the Pod image lacks comfyui_controlnet_aux. MPI-244 (Pod image rebuild) was DEFERRED by the user to batch with the Boogu model.",
+        "to_do": "AFTER MPI-244 ships: connect the remote engine, run one Krea2 t2i with the enhancer ON, and confirm `Output_prompt` round-trips. The specific risk is `_reconcileFromHistory` (commandExecutor) — it rebuilds outputs from /history, and whether /history preserves the PreviewAny `ui.text` payload the way the live `executed` message does is UNVERIFIED. If it does not, the remote path silently falls back to the prompt-box text and the sidecar saves the WRONG prompt — no error, no toast. [[feedback_check_both_engine_paths]]"
+      },
+      {
+        "topic": "THREAD 2 (AFTER thread 0 passes): commit",
+        "to_do": "Shared tree — commit by explicit pathspec. Files this work owns:\n  js/utils/ratios.js                 (KREA2_RATIOS, 'quality-orientation', deepFreeze, predicates, clampQualityTier)\n  js/utils/promptReuse.js            (both axes; killed the hardcoded tier list; import from ratios not the component)\n  js/utils/comfyOutputUrls.js\n  js/services/generationService.js   (sidecar orientation)\n  js/services/projectService.js      (_MODEL_WIDE_KEYS)\n  js/services/commandExecutor.js\n  js/data/progressStages.js\n  js/data/promptControlDefaults.js\n  js/data/commandRegistry.js         (qualityTier on t2i/i2i)\n  js/data/modelConstants/models.js   (ratios table REMOVED; qualityTiers kept)\n  js/data/modelConstants/dependencies.js\n  js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js\n  js/components/Organisms/MpiPromptBox/PromptBoxControls.js\n  js/components/Organisms/MpiPromptBox/MpiPromptBox.js\n  js/components/types.js\n  dev_configs/node_lock.json\n  comfy_workflows/krea2_turbo_t2i.json  (GENERATED — commit it, like LTX/Wan5B's)\n  comfy_workflows/krea2_turbo_detailer.json\n  comfy_workflows/krea2_turbo_upscaler.json\n  comfy_workflows/scripts/workflow_generation/krea2_turbo_t2i_template.json\n  comfy_workflows/scripts/workflow_generation/generate_krea2.py\n  comfy_workflows/scripts/workflow_generation/registry.py\n  tests/output-prompt-capture.test.cjs\n  tests/optional-media-placeholder.test.cjs\n  tests/negative-prompt-gate.test.cjs\n  tests/workflow-input-staging-gate.test.cjs\n  tests/controlnet-aux-torch-guard.test.cjs\n  tests/permodel-key-allowlist.test.cjs   (NEW)\n  tests/ratio-modes-exhaustive.test.cjs   (NEW)\n  tests/krea2-ratio-roundtrip.test.cjs    (NEW)\n  docs/add-model-playbook.md, docs/README.md, docs/krea2/, docs/builder/research/krea2-int8-quant.md\n  .agents/mpi-kanban/ (MPI-242 card + events + validation + board.json)\nDo NOT commit .state.json (gitignored). Do NOT touch the other session's kanban files or the lint-staged stash.\nThen move the card to done (maturity: complete, status: accepted), noting that remote verification remains outstanding pending MPI-244.\nALSO WORTH DOING (separate commit): docs/krea2/resolution.md and any ratio docs still say the tables live on the ModelDef. They moved to js/utils/ratios.js."
+      }
+    ],
+    "also_open": [
+      "MPI-244 (Pod image rebuild for controlnet_aux) — gates ALL remote Krea2 use. Deferred, batching with Boogu.",
+      "MPI-243 (verify the shipped 1.1.0 build on a clean machine) — user tests this.",
+      "System-prompt tuning: the two U+FFFD chars + the thinking:false contradiction (template node 60). Both left in place deliberately.",
+      "events.jsonl line 5 is malformed JSON (pre-existing, committed). One-char escape fix.",
+      "MpiOptionSelector 'buttons' variant is dead code with a latent flex-wrap trap.",
+      "OPTIONAL: give the Krea2 detailer/upscaler templates + handlers too (they are correctly hand-exported today).",
+      "Krea2 Raw (52-step) = phase 2. Raw has only 3 quant variants (bf16/fp8_scaled/int8_convrot) — NO mxfp8, NO nvfp4."
+    ]
+  },
+  "context": {
+    "key_decisions": [
+      "PLAN DRIFT, user-sanctioned: 'This is just a plan drift because the plan was misinterpreted' + 'Fixing wrong things is part of verification.' The prior handoff said verification-only; the verification pass surfaced four real defects that BLOCKED the checklist.",
+      "Style picker is an inline MpiDropdown with a `Style` label and `None` at index 0 — no popover trigger, no brush icon. User: 'It's just a drop-down with None as default so that it fits nicely in the UI with a slider under it. That's what I asked from the beginning.'",
+      "Krea2 gets a two-tier quality radio (1K/2K) like LTX, AND keeps the SDXL-style orientation toggle. No model had both axes; this created RATIO_MODES 'quality-orientation'.",
+      "Ratio TABLES live in js/utils/ratios.js, not on the ModelDef. User: 'that's the source of truth for all ratios — when I'm doing tests, that's where I go to get resolutions.' The MPI-174 declared-ratios path saved no file edits here anyway.",
+      "KREA2_RATIOS['1k'] IS FLUX_RATIOS, shared by reference (user's suggestion). Required deepFreeze, because Object.freeze is shallow and the shared arrays stayed writable.",
+      "qualityTier is gated on usesQualityTier(model.type), NOT a new capabilities flag — the ratio table already states the fact and a second source would drift.",
+      "Label = framing, tier = resolution. selectedRatio + orientation stay SHARED across models; qualityTier stays per-model (MPI-133). So `1:1` reused across tiers means 1024² at 1k and 1472² at 2k.",
+      "The system prompt's two defects (U+FFFD, thinking:false) are LEFT IN PLACE. User: 'I've never tested thinking. It's been working fine as it is. Let's run as is and see if it runs or not.'",
+      "Verification happens in a SEPARATE session; RunPod verification deferred until MPI-244 (user, 2026-07-10)."
+    ],
+    "files_changed_uncommitted": [
+      "MOD  js/utils/ratios.js                — KREA2_RATIOS (1k: FLUX_RATIOS), 'quality-orientation', deepFreeze, usesOrientation/usesQualityTier/clampQualityTier, two-level getModelRatios, no cross-model tier default",
+      "MOD  js/utils/promptReuse.js           — both axes recovered; hardcoded QUALITY_TIERS deleted; imports from ratios.js not MpiOptionSelector",
+      "MOD  js/services/generationService.js  — sidecar writes a real orientation for quality-orientation models",
+      "MOD  js/services/projectService.js     — _MODEL_WIDE_KEYS += styleSelect, stylization, enhancePrompt",
+      "MOD  js/data/commandRegistry.js        — qualityTier on t2i + i2i",
+      "MOD  js/data/modelConstants/models.js  — ratios table REMOVED (moved to ratios.js); qualityTiers kept; index-0 label 'None'",
+      "MOD  js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js — 10 mode sites swept; header gate in BOTH template and updateUI; setOrientation setter; clampQualityTier moved out + re-exported",
+      "MOD  js/components/Organisms/MpiPromptBox/PromptBoxControls.js      — styleSelect → MpiDropdown; qualityTier gate + orientation prop + ratio:orientation-change sub/unsub",
+      "MOD  js/components/Organisms/MpiPromptBox/MpiPromptBox.js           — qualityTier capability gate in _refreshOpSlot",
+      "NEW  tests/permodel-key-allowlist.test.cjs   (2 tests)",
+      "NEW  tests/ratio-modes-exhaustive.test.cjs   (5 tests)",
+      "NEW  tests/krea2-ratio-roundtrip.test.cjs    (6 tests)",
+      "MOD  tests/output-prompt-capture.test.cjs    — index-0 assertion loosened to the positional contract",
+      "MOD  .agents/mpi-kanban/tasks/MPI-242/{task.json,validation.md,events.jsonl}, .agents/mpi-kanban/{board.json,events.jsonl}",
+      "(plus everything from prior sessions, all still uncommitted — see next_action.threads[2])"
+    ],
+    "test_status": "127 tests / 123 pass / 4 fail. All four failures are tests/runpod-remote-hardening.test.cjs and are PRE-EXISTING — proven by running that file at pristine HEAD in a temp git worktree, where all four fail with none of this code present. It is the known uncarded 'reconnect deletes warm Pod' bug. All three new guards were mutation-tested (deliberately broken → they fail with the right message → restored). eslint clean on all 9 changed files, including the custom component rules.",
+    "collaboration_note": "THE USER WAS RIGHT FOUR MORE TIMES. (1) 'This was supposed to be a drop down. Was a new component created?' — no new component, but the wrong VARIANT, and he had never chosen it; the handoff had recorded it as settled. (2) He spotted the ratio inconsistency by eye ('The ratios are inconsistent with the other models') — that was 2K being unreachable via a silent table fallback. (3) 'I'm not sure where the orientation is saved in the sidecar if it doesn't even exist' — it was being written as literal null, and Reuse Prompt dropped it. (4) 'Can't we inject flux ratios into the 1K?' — the tables were byte-identical and I had duplicated ten entries; his dedup also exposed a shallow-freeze aliasing hazard neither of us had considered. HIS DEVTOOLS CONSOLE also caught the persistence bug that no test covered. PATTERN CONFIRMED AGAIN: when he says 'I'm not sure that will work', 'that will be an issue', or just points at something that looks off — TEST IT FIRST. [[feedback_test_user_instinct_first]]"
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["add-model", "krea2", "comfy-workflows", "components", "state", "ratios"],
+    "must_read": [
+      ".agents/mpi-kanban/tasks/MPI-242/validation.md § '2026-07-10 — session 4' (the four bugs, the evidence, the 12-point checklist)",
+      "js/utils/ratios.js § 'UI Mode Mapping' + § 'Mode predicates' (the three-value contract)",
+      "docs/add-model-playbook.md §10 (Output_prompt contract) and §9 (style rack)",
+      "docs/krea2/README.md + docs/krea2/injection.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md"
+  ],
+  "recent_events": [
+    {"at": "2026-07-10T14:30:00Z", "event": "task.note — plan drift + 4 bugs fixed"},
+    {"at": "2026-07-10T14:31:00Z", "event": "validation.updated — maturity in-progress → validating"},
+    {"at": "2026-07-10T14:35:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming MPI-242 (Krea2 Turbo) on branch 1.2.0. THE CODE IS COMPLETE AND AUTO-VERIFIED. Your job is VERIFICATION, not implementation. Do not add features.\n\nRead `.agents/mpi-kanban/tasks/MPI-242/validation.md` first — its '2026-07-10 — session 4' section has the four bugs found and fixed, the evidence, and the 12-point user-ux checklist. Then `js/utils/ratios.js` (the three-value RATIO_MODES contract) and `docs/add-model-playbook.md` §10 (the Output_prompt contract).\n\nWHAT THE PRIOR SESSION SHIPPED: three prompt-box controls (style dropdown, Stylization slider, enhance toggle), op-gated to t2i/i2i and model-gated on capabilities.styleLoras / capabilities.promptEnhance (both default FALSE). Prompt enhancement runs IN the workflow via TextGenerate, using the LM head of the already-loaded Qwen3-VL encoder (no extra model, no extra VRAM). A title-scoped text capture reads the graph's `Output_prompt` (PreviewAny) node, which emits `ui.text` and was being silently dropped. generationService saves THAT string whenever the node exists. The tap sits upstream of the style concat, so the saved prompt has no style trigger and stays re-styleable on reuse.\n\nWHAT THIS SESSION FIXED (four real bugs the user-ux pass surfaced; the user sanctioned the drift with 'Fixing wrong things is part of verification'):\n(1) styleSelect/stylization/enhancePrompt were scope:'perModel' but missing from projectService's `_MODEL_WIDE_KEYS`, so every write was SILENTLY DROPPED with a console warning. None of the three persisted. The user's devtools console caught it; no test did.\n(2) The style picker was MpiOptionSelector `variant:'buttons'` — a horizontal chip strip that overflowed to 1280px with ten long labels. The user never chose that component. It is now an inline MpiDropdown with a `Style` label and `None` at index 0.\n(3) *** Krea2's 2K was UNREACHABLE and the sidecar was writing `orientation: null`. *** Declaring `qualityTiers` auto-flipped RATIO_MODES.krea2 to 'quality', but nobody registered the qualityTier control, so the tier defaulted to 'medium' (not a Krea2 tier) and getModelRatios silently fell through to the 1k table. Reusing a 2K landscape image would have restored a 1K portrait one, with no error. Fixed with a THIRD RATIO_MODES value, 'quality-orientation'.\n(4) Pre-existing: promptReuse had a hardcoded tier list with no '2k'/'4k', so LTX 4K clips ALREADY lost their tier on reuse; clampQualityTier fell back to 'very_high', a tier wan5b does not have.\n\nTHE NEW RATIO CONTRACT — read this before touching anything ratio-shaped:\n* RATIO_MODES has THREE values: 'orientation' (keyed [orientation]), 'quality' (keyed [tier]), 'quality-orientation' (keyed [tier][orientation], krea2 only). NEVER compare a mode to a string literal — ask `usesOrientation(type)` / `usesQualityTier(type)` from js/utils/ratios.js. `tests/ratio-modes-exhaustive.test.cjs` scans the source and fails you if you do.\n* getModelRatios(type, orientation, tier) takes BOTH axes ALWAYS and ignores the one its mode doesn't use. Do NOT pass `undefined` to withhold an axis — that is exactly what broke the third mode.\n* Ratio TABLES live in js/utils/ratios.js, not on the ModelDef. `KREA2_RATIOS['1k'] IS FLUX_RATIOS` — the same object, shared by reference. All seven tables are deepFrozen because Object.freeze is shallow and the shared arrays would otherwise alias.\n* There is no cross-model qualityTier default. 'medium' is meaningless to a model whose tiers are ['1k','2k'].\n\nDO THIS:\n\n(0) USER-UX VERIFY in the app, LOCAL engine only. The 14-step list is in next_action.threads[0]. The load-bearing new ones: the 1K/2K radio appears on Krea2 and NOT on SDXL; the ratio popup keeps its orientation toggle AND that toggle survives clicking a ratio (updateUI re-renders the header); 2K gives 1472² not 1024²; flipping orientation at 2K gives 1936×1088; the three controls survive a reload with no `missing opName` warning in the console; and a 2K landscape gen round-trips BOTH tier and orientation through Reuse Prompt. NOTE: on first boot the app auto-installs comfyui_controlnet_aux + ComfyUI-Krea2-ControlNet (~90s). Do not generate until they land, or a missing-node-class error will look like the placeholder fix failing.\n\n(1) DO NOT attempt remote/Pod verification. Krea2 cannot run on the Pod — both ControlNet node packs are mandatory for every t2i run (ComfyUI validates every node class before MpiIfElse picks a branch) and the image lacks comfyui_controlnet_aux. Blocked on MPI-244. When it lands, the specific risk is `_reconcileFromHistory`: it rebuilds outputs from /history, and whether /history preserves PreviewAny's `ui.text` like the live `executed` message does is UNVERIFIED. If it doesn't, the remote path silently saves the prompt-box text instead — no error, no toast.\n\n(2) COMMIT ONLY AFTER (0) PASSES. The git tree is SHARED with a parallel session: commit by explicit pathspec (`git commit --only <paths>`), NEVER `git add -A`. The file list is in next_action.threads[2]. There is also a `lint-staged automatic backup` stash from another session — leave it alone. Generated runtime workflows ARE committed; `.state.json` is gitignored. Then move the card to done.\n\nSUITE IS 127 TESTS / 123 PASS / 4 FAIL. All four failures are tests/runpod-remote-hardening.test.cjs and are PRE-EXISTING — proven by running that file at pristine HEAD in a temp worktree, where all four fail with none of this code present. The PRIOR handoff claimed '26 pass / 1 fail'; that was file-level counting and it undercounted the failures. Do not chase three phantom regressions, and do not try to fix the RunPod tests.\n\nSTILL UNRESOLVED — the SYSTEM PROMPT (template node 60). It WAS read this session (the prior handoff wrongly said it never was) and it ALREADY carries nine faithfulness rules, so the drift hypothesis is addressed in the wording. But it has TWO DEFECTS, left in place at the user's instruction: (a) rules 7 and 9 each contain a U+FFFD replacement char where an em-dash belongs, from a non-UTF-8 round-trip; (b) node 58 sets `thinking:false` while node 60's text says 'Think step by step' and 'one cohesive paragraph after the thinking block' — with thinking off there is no such block, so the model may inline its planning into the visible answer, which LOOKS EXACTLY LIKE over-expansion. IF THE ENHANCED OUTPUT DRIFTS, SUSPECT (b) BEFORE concluding the 4B model is too weak. Fix either one in the TEMPLATE, never the runtime json, then run `python orchestrate.py`.\n\nDO NOT re-litigate: multiStage is FALSE. Capture titles are tier-decided (tier-1 `Output`, tier-2 `Output_Image`), case-insensitive, never normalized. The detailer/upscaler's baked scratch filenames are CORRECT (required-image ops overwrite the widget). promptEnhance requires a CLIP with `.generate()` — T5/umT5 (Chroma, Wan) CRASH on TextGenerate. `use_default_template:true` is correct as-is. MpiOptionSelector's 'buttons' variant is pre-existing dead code — leave it."
+}

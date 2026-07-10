@@ -1,0 +1,155 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "9d1e6f42-8b07-4c35-a1e9-3c7d20f5b6a8",
+  "generated_at": "2026-07-10T13:15:00Z",
+  "from_session": "KREA2 Session3 — prompt-enhance + style controls + Output_prompt capture + generator",
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-242 Krea2 — CODE COMPLETE, all auto-verification green. Remaining work is VERIFICATION ONLY (user-ux in-app, then remote/Pod after MPI-244).",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Krea2 (Flux-lineage image model) to Cubric Vision end-to-end. Phase 1 = Turbo variant.",
+    "current": "Everything is implemented and auto-verified. NOTHING IS COMMITTED. Two verification passes remain: (1) user-ux in the app (this session's job); (2) remote/Pod, BLOCKED on MPI-244 (Pod image rebuild for controlnet_aux). Do NOT write new features."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-242/checklist.md",
+    "completed": [
+      "WIRING PASS 1 (prior session): node_lock +2 pins, dependencies.js +14, krea2-turbo ModelDef, QUALITY_LABELS['1k'], _prepareWorkflowInputs staging gate widened, progressStages entry.",
+      "THREAD 0 — PROMPT-BOX CONTROLS: styleSelect (Input_Style, MpiOptionSelector 'buttons' variant), stylization (Input_Stylization, MpiProgressBar slider, disabled at index 0), enhancePrompt (Input_Enhance_Prompt, MpiButton toggle w/ status-bar info text). All three op-gated to t2i+i2i ONLY and model-gated on NEW capabilities.styleLoras / capabilities.promptEnhance (both default FALSE — a model opts in).",
+      "THREAD 0b — PROMPT ENHANCEMENT (reversal, per message ebb3a1a4): shipped in-workflow, not via Cubric Prompt. TextGenerate runs the LM head of the ALREADY-LOADED Qwen3-VL text encoder — zero extra model/VRAM/dep.",
+      "THREAD 0c — `Output_prompt` CAPTURE (the load-bearing new subsystem): PreviewAny emits `ui.text` and the app was SILENTLY DROPPING it. Added readComfyOutputText() + a title-scoped outputPromptNodeIds set; rides out on the existing side-outputs bag as onComplete(urls,{latents,audioUrl,promptText}). generationService shadows `positive` ONCE at the top of onComplete → all six sidecar/history writes inherit it.",
+      "THREAD 0d — ENHANCER PROGRESS BAR: stagesFor(file, mode, extraBars); commandExecutor passes 1 when Input_Enhance_Prompt is true. Without it an enhanced run showed 3/2 (counter climbs past its own total = reads as a hang).",
+      "THREAD 1 — sha256: R2 upload confirmed COMPLETE (12/12, byte-exact, verified via rclone lsf AND public HTTP HEAD). /mpic-compute-dep-hashes run. ZERO `sha256: null` remain across all 67 deps.",
+      "THREAD 2 — PLACEHOLDER (superseded + solved properly): user promoted the graph to a GENERATED workflow. New generate_krea2.py + ('krea2_','krea2') in registry.py. Stamps Input_Image→placeholder.png on EVERY build, and asserts the style rack at build time.",
+      "DOCS: playbook §10 (the reusable Output_prompt contract), §2 (hand-exported workflows need a handler), §9 (build-time style-rack assert), + checklist line."
+    ],
+    "remaining": [
+      "USER-UX VERIFY in the app (this session — see next_action.threads[0]).",
+      "REMOTE/POD VERIFY — BLOCKED on MPI-244. Deferred by the user.",
+      "COMMIT by explicit pathspec once user-ux passes (see next_action.threads[2]).",
+      "OPTIONAL: read + tune the system prompt (t2i template node 60). The research message calls the wording THE deliverable; drift is the known failure mode. Not yet read.",
+      "LATER: Krea2 Raw (52-step) variant; int8/mxfp8 quant axis (own card)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-242",
+    "title": "Add Krea2 (Flux family) - Turbo variant first, full variant later",
+    "column": "doing",
+    "maturity": "in-progress",
+    "status": "active",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-242/",
+    "links": {
+      "validation": "validation.md — READ THIS FIRST, it has the full auto-verified/pending split",
+      "checklist": "checklist.md",
+      "research": "research/workflow-surface.md (authoritative graph read)"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "run the app and perform the user-ux verification",
+    "commit by explicit pathspec (never `git add -A`) AFTER user-ux passes",
+    "tune the system prompt string in the TEMPLATE (never the runtime json)"
+  ],
+  "knowledge_preservation": {
+    "authoritative_docs": "docs/add-model-playbook.md §9 (style rack) + §10 (Output_prompt contract) — BOTH WRITTEN THIS SESSION and both are now the general procedure, not Krea2 notes. .agents/mpi-kanban/tasks/MPI-242/validation.md has the evidence trail. docs/krea2/ for model specifics.",
+    "completed": [
+      "*** THE `Output_prompt` CONTRACT (general, playbook §10) *** A workflow carrying a PreviewAny node titled `Output_prompt` declares: the string I ENCODED is the prompt of record. The app then reads the saved prompt from that node instead of the prompt box — ALWAYS, toggle on or off. Workflows without the node yield null → prompt-box text, unchanged. This is why there is ONE read path and no 'sometimes the box, sometimes the graph' branch.",
+      "THE TAP POINT IS LOad-BEARING. Node 242 (Output_prompt) taps node 241 (Input_enhance_prompt, MpiIfElse) — UPSTREAM of the style concat at node 114. So the captured prompt carries NO style trigger, which is exactly what lets Reuse Prompt restore the text and leave the style free to change. Tapping StringConcatenate instead would bake the trigger in and double-append on the next run.",
+      "PreviewAny.main returns {\"ui\": {\"text\": (value,)}} and is OUTPUT_NODE=True (comfy_extras/nodes_preview_any.py:39) → the string arrives on the `executed` message as text:[str]. VERIFIED FROM SOURCE, not guessed. `collectComfyOutputUrls` reads only images/gifs/videos, so it was being silently dropped. readComfyOutputText() returns null (NEVER '') for an empty capture, because generationService falls back on falsy — '' would silently blank the saved prompt.",
+      "TEXT MUST NEVER JOIN THE MEDIA URL ARRAY. It has no file dict; every downstream media consumer (gallery, sidecar, preview) would choke on a bare string. Guarded by an assertion.",
+      "capabilities.promptEnhance REQUIRES a text encoder whose CLIP implements .generate(). Qwen3-VL (Krea2) ✅, Gemma3/Gemma-4 (LTX-2) ✅, T5/umT5 (Chroma, Wan) ✗ — the node raises AttributeError, it does NOT degrade gracefully. NEVER wire it on a T5 model. A test asserts only type:'krea2' carries the capability today.",
+      "BOTH new capabilities default FALSE (styleLoras, promptEnhance) — the INVERSE of negativePrompt, which defaults TRUE when absent. Get that backwards and every model either loses its negatives or grows a crashing enhance button.",
+      "styleLoraLabels lives on the ModelDef (index 0 = 'No Style'), not hardcoded in the control, so the next style-rack model ships its own list.",
+      "GENERATED WORKFLOW (new this session). comfy_workflows/krea2_turbo_t2i.json is now BUILD OUTPUT. The authored source is scripts/workflow_generation/krea2_turbo_t2i_template.json. NEVER hand-edit the runtime file — run `python orchestrate.py`. The template KEEPS the user's scratch filename; the handler stamps placeholder.png into the artifact. Generated runtime workflows ARE committed (LTX's and Wan5B's are tracked), and .state.json (the hash cache) is gitignored.",
+      "generate_krea2.py asserts at BUILD time: (a) slot N's strength_model is gated by the MpiMath reading `b if a == N`; (b) len(MpiPromptList.options) == number of style LoRAs. Mutation-tested — all three asserts bite; the 8-triggers/9-LoRAs case is the bug that actually shipped once.",
+      "stagesFor(file, mode, extraBars): an UNRECORDED workflow stays 0 even with a delta — a delta on top of 'unknown' is still unknown, and returning 1 would invent a total and show '2/1'."
+    ],
+    "traps": [
+      "*** NOTHING IS COMMITTED. The git tree is SHARED with a parallel session. Commit by explicit pathspec (`git commit --only <paths>`), NEVER `git add -A` / `git add .`. Files from other sessions are in the tree (kanban handoffs/messages, _archive moves) — do not touch them. ***",
+      "THE SUITE IS 26 PASS / 1 FAIL. The failure (tests/runpod-remote-hardening.test.cjs, 'reconnect recreates the pod when warm start fails') is PRE-EXISTING. I PROVED it this session by checking out pristine HEAD in a temp worktree — it fails there too, with none of this code present. It is the known uncarded 'reconnect deletes warm Pod' bug. Do NOT try to fix it here.",
+      "REMOTE/POD PATH IS UNVERIFIED. `_reconcileFromHistory` reads /history; whether it preserves `ui.text` like the live `executed` message does is UNKNOWN. This repo has forgotten the remote twin on MPI-122/163/164/216/222/229/231/237. It CANNOT be tested until MPI-244 ships (both ControlNet node packs are MANDATORY for EVERY Krea2 t2i run — ComfyUI validates every node CLASS before MpiIfElse picks a branch — so Krea2 cannot run on the Pod at all). [[feedback_check_both_engine_paths]]",
+      "`Output_prompt` HAS NEVER LIVE-FIRED. The payload shape is proven from the node's Python source, not from a real generation. First in-app run is the real test.",
+      "PROMPT DRIFT IS UNSOLVED. The research message (ebb3a1a4) is emphatic: the SYSTEM PROMPT is the feature, and shipping without faithfulness rules reproduces the exact over-expansion that got enhancement cut the first time. Template node 60 supplies it (→ StringConcatenate 240.string_a → TextGenerate 58). I did NOT read or tune that string. If enhanced output drifts WITH a faithfulness-constrained system prompt, escalate — that would mean 4B is too weak and Cubric Prompt was right.",
+      "Qwen3-VL's default chat template has NO system role. Escape hatch: a prompt starting with `<|im_start|>` sets skip_template=True and passes through raw. `use_default_template: true` is currently set on node 58 — if node 60's string already starts with `<|im_start|>`, that flag is moot. CHECK BEFORE CHANGING EITHER.",
+      "TextGenerate exposes image/video/audio sockets on EVERY clip, but Qwen3-VL honours `image` ONLY — video/audio are SILENTLY SWALLOWED (they fall into **kwargs and die in SDTokenizer). Do not wire them.",
+      "The saved prompt now comes from the graph EVEN WITH THE ENHANCER OFF (the MpiIfElse passes raw text through). Intentional — one read path — but it means node 242 must always be reachable, never bypassed (mode:4) or muted (mode:2).",
+      "REQUIRED-image ops (upscale, detail, i2i) bake local scratch filenames and that is CORRECT — the injector overwrites the widget before submit. Chroma's detailer/upscaler have shipped that way for months. Only an OPTIONAL LoadImage needs placeholder.png. Do NOT 'fix' the detailer/upscaler.",
+      "MpiProgressBar bakes `interactive` at mount and has NO runtime disabled setter. The Stylization slider's disabled state is driven by a class + a guard in the change handler; remounting would drop an in-progress drag.",
+      "Capture titles are TIER-decided: tier-1 = `Output`, tier-2 = `Output_Image`. Krea2 is tier-2. `Output_image` (lowercase i) in the detailer/upscaler is CORRECT — matching is case-insensitive. NEVER normalize one to the other.",
+      "Injection matching is case-insensitive on BOTH sides (comfyController.js:984). The node is titled `Input_enhance_prompt`; the control's key is `Input_Enhance_Prompt`. They match. `_paramIsTrue()` reads it case-insensitively too, so the two spellings cannot disagree about the bar count."
+    ]
+  },
+  "next_action": {
+    "description": "Verification only. Do not add features. Thread 0 is this session's job; thread 1 is blocked; thread 2 closes the card.",
+    "threads": [
+      {
+        "topic": "THREAD 0 (THIS SESSION): user-ux verification in the app",
+        "finding_so_far": "Everything below is CODED and auto-verified (26/25 suite, eslint clean, guard tests mutation-tested). None of it has been seen in a running app. The card's verify_mode is user-ux.",
+        "to_do": "Launch the app on the LOCAL engine (Krea2 cannot run remote — MPI-244). Then check, in order:\n1. Select Krea 2 Turbo. On t2i AND i2i the prompt box must show: a Style dropdown (brush icon, 10 entries, 'No Style' first), a Stylization slider, and an Enhance toggle (enhance icon).\n2. Switch to upscale and detail — ALL THREE must VANISH (those graphs have no style rack and no enhancer).\n3. Select SDXL/Chroma on t2i — all three must vanish (capability-gated, both default false).\n4. At Style = 'No Style' the Stylization slider must be DIMMED and inert. Pick any other style → it becomes live.\n5. Hover the Enhance toggle → the status bar shows 'Enhance prompt — expands your prompt before rendering, at the cost of longer generation time'.\n6. Run a plain t2i with NO image and the enhancer OFF. It must pass graph validation (this is the placeholder fix) and produce an image. Output should be identical to pre-change behaviour.\n7. Run t2i with the enhancer ON. The prompt box must KEEP SHOWING YOUR OWN TEXT. The status bar must show N/3 (not N/2). The gen will be slower — that is expected and disclosed.\n8. Open the resulting card's sidecar / Reuse Prompt. It must return the EXPANDED prompt, with NO style trigger appended (so you can change style on reuse).\n9. Repeat 7-8 with a style selected — the saved prompt must STILL have no trigger phrase.\n10. Run i2i and pose-reference once each to confirm the shared graph still works.",
+        "verify_mode": "user-ux"
+      },
+      {
+        "topic": "THREAD 1 (BLOCKED — do not attempt): remote/Pod verification",
+        "finding_so_far": "Krea2 CANNOT run on the Pod. Both ControlNet node packs are mandatory for EVERY t2i run (ComfyUI validates every node class before MpiIfElse picks a branch), and the Pod image lacks comfyui_controlnet_aux. MPI-244 (Pod image rebuild) was DEFERRED by the user to batch with the Boogu model.",
+        "to_do": "AFTER MPI-244 ships: connect the remote engine, run one Krea2 t2i with the enhancer ON, and confirm `Output_prompt` round-trips. The specific risk is `_reconcileFromHistory` (commandExecutor) — it rebuilds outputs from /history, and whether /history preserves the PreviewAny `ui.text` payload the way the live `executed` message does is UNVERIFIED. If it does not, the remote path will silently fall back to the prompt-box text and the sidecar will save the WRONG prompt (no error, no toast). [[feedback_check_both_engine_paths]]"
+      },
+      {
+        "topic": "THREAD 2 (AFTER thread 0 passes): commit",
+        "to_do": "Shared tree — commit by explicit pathspec. The files THIS work owns:\n  js/utils/comfyOutputUrls.js\n  js/data/progressStages.js\n  js/data/promptControlDefaults.js\n  js/data/commandRegistry.js\n  js/data/modelConstants/models.js\n  js/data/modelConstants/dependencies.js   (sha256 fill)\n  js/services/commandExecutor.js\n  js/services/generationService.js\n  js/components/Organisms/MpiPromptBox/PromptBoxControls.js\n  js/components/Organisms/MpiPromptBox/MpiPromptBox.js\n  js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js\n  js/components/types.js\n  dev_configs/node_lock.json\n  comfy_workflows/krea2_turbo_t2i.json  (GENERATED — commit it, like LTX/Wan5B's)\n  comfy_workflows/krea2_turbo_detailer.json\n  comfy_workflows/krea2_turbo_upscaler.json\n  comfy_workflows/scripts/workflow_generation/krea2_turbo_t2i_template.json\n  comfy_workflows/scripts/workflow_generation/generate_krea2.py\n  comfy_workflows/scripts/workflow_generation/registry.py\n  tests/output-prompt-capture.test.cjs\n  tests/optional-media-placeholder.test.cjs\n  tests/negative-prompt-gate.test.cjs\n  tests/workflow-input-staging-gate.test.cjs\n  tests/controlnet-aux-torch-guard.test.cjs\n  docs/add-model-playbook.md, docs/README.md, docs/krea2/, docs/builder/research/krea2-int8-quant.md\n  .agents/mpi-kanban/ (MPI-242 card + events + validation)\nDo NOT commit .state.json (gitignored). Then move the card to done (maturity: complete, status: accepted) per CLAUDE.md's kanban law — but ONLY after the user-ux pass. Note in the card that remote verification remains outstanding pending MPI-244."
+      }
+    ],
+    "also_open": [
+      "MPI-244 (Pod image rebuild for controlnet_aux) — gates ALL remote Krea2 use. Deferred, batching with Boogu.",
+      "MPI-243 (verify the shipped 1.1.0 build on a clean machine) — user tests this.",
+      "System-prompt tuning (template node 60). Nobody has read the string. See traps.",
+      "OPTIONAL follow-up: give the Krea2 detailer/upscaler templates + handlers too. They are still hand-exported (correctly — required-image ops need no placeholder), but they would then also get build-time asserts.",
+      "Krea2 Raw (52-step) = phase 2. Raw has only 3 quant variants (bf16/fp8_scaled/int8_convrot) — NO mxfp8, NO nvfp4."
+    ]
+  },
+  "context": {
+    "key_decisions": [
+      "Prompt enhancement ships IN the workflow (reverses both prior handoffs). Cubric Prompt deferred. Rationale: TextGenerate runs the LM head of the already-loaded encoder — the cost argument that favoured deferring does not apply.",
+      "`Output_prompt` is the SINGLE source of truth for the saved prompt whenever the node exists — enhancer on OR off. User decision: 'workflows that have an output prompt node will pull only from this node, not from the prompt box.' Generalized into playbook §10.",
+      "The tap sits upstream of the style concat, so the saved prompt has no trigger phrase and stays re-styleable on reuse. User decision.",
+      "Styles + enhancer are t2i/i2i only; hidden on upscale/detail.",
+      "Krea2's t2i is now a GENERATED workflow (template + handler), because a hand-export cannot be trusted to carry the placeholder. User's framing: 'the only way I'm going to remember is by saving the file with _Template at the end.'",
+      "capabilities.styleLoras and capabilities.promptEnhance both default FALSE (opt-in).",
+      "No seed exposed or saved for the enhancer's sampling — consistent with the standing no-seed-UI rule.",
+      "Verification happens in a SEPARATE session; RunPod verification deferred until the Pod image build completes (user, 2026-07-10)."
+    ],
+    "files_changed_uncommitted": [
+      "NEW  js/utils/comfyOutputUrls.js :: readComfyOutputText()",
+      "NEW  comfy_workflows/scripts/workflow_generation/generate_krea2.py",
+      "NEW  comfy_workflows/scripts/workflow_generation/krea2_turbo_t2i_template.json (user-authored)",
+      "NEW  tests/output-prompt-capture.test.cjs, tests/optional-media-placeholder.test.cjs",
+      "GEN  comfy_workflows/krea2_turbo_t2i.json (build output — do not hand-edit)",
+      "MOD  registry.py (+krea2_ rule), progressStages.js (extraBars), promptControlDefaults.js (+3), commandRegistry.js (t2i/i2i components), models.js (+2 capabilities, +styleLoraLabels, jsdoc), dependencies.js (12 sha256 filled), commandExecutor.js (outputPromptNodeIds, _paramIsTrue, extraBars, promptText on onComplete), generationService.js (positive shadow), PromptBoxControls.js (+3 controls), MpiPromptBox.js (+2 gates), docs/add-model-playbook.md (§2, §9, §10, checklist)"
+    ],
+    "test_status": "26 pass / 1 fail. The failure is tests/runpod-remote-hardening.test.cjs and is PRE-EXISTING — proven this session by running it at pristine HEAD in a temp git worktree, where it also fails. Both new guards were mutation-tested (deliberately broken → they fail with the right message → restored).",
+    "collaboration_note": "THE USER WAS RIGHT TWICE MORE THIS SESSION. (1) He suspected the Output_prompt node might not be readable ('we never attempt to read from it... we need to test'). It was NOT — collectComfyOutputUrls harvests only images/gifs/videos and the string was being silently dropped. Proven from the node's Python source. (2) He flagged the enhancer's latency as a progress-bar problem before any code was written; that became stagesFor's extraBars, without which an enhanced run shows 3/2 and reads as a hang. He also correctly rejected hand-saving the placeholder in favour of a generator. PATTERN: when he says 'I'm not sure that will work' or 'that will be an issue', TEST IT FIRST — see [[feedback_test_user_instinct_first]]."
+    },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["add-model", "krea2", "comfy-workflows", "components", "state"],
+    "must_read": [
+      ".agents/mpi-kanban/tasks/MPI-242/validation.md (the evidence trail + the pending split)",
+      "docs/add-model-playbook.md §10 (Output_prompt contract) and §9 (style rack)",
+      "docs/krea2/README.md + docs/krea2/injection.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {"at": "2026-07-10T13:15:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming MPI-242 (Krea2 Turbo) on branch 1.2.0. THE CODE IS COMPLETE AND AUTO-VERIFIED. Your job is VERIFICATION, not implementation. Do not add features.\n\nRead `.agents/mpi-kanban/tasks/MPI-242/validation.md` first — it has the full auto-verified vs pending split. Then `docs/add-model-playbook.md` §10 (the Output_prompt contract, written last session and now the GENERAL procedure for any model whose graph rewrites the prompt).\n\nWHAT SHIPPED: three prompt-box controls (style dropdown, Stylization slider, enhance toggle), op-gated to t2i/i2i and model-gated on new `capabilities.styleLoras` / `capabilities.promptEnhance` (both default FALSE — inverse of negativePrompt). Prompt enhancement runs IN the workflow via TextGenerate, which uses the LM head of the already-loaded Qwen3-VL encoder (no extra model, no extra VRAM). A new title-scoped text capture reads the graph's `Output_prompt` (PreviewAny) node — it emits `ui.text` and the app was SILENTLY DROPPING it (proven from comfy_extras/nodes_preview_any.py). generationService now saves THAT string instead of the prompt-box text whenever the node exists. The tap sits upstream of the style concat, so the saved prompt has no style trigger and stays re-styleable on reuse. `stagesFor(file, mode, extraBars)` adds one progress bar when the enhancer is on, or the status bar shows 3/2 and reads as a hang.\n\nAlso: Krea2's t2i is now a GENERATED workflow. The authored source is `scripts/workflow_generation/krea2_turbo_t2i_template.json`; `generate_krea2.py` stamps `Input_Image → placeholder.png` on every build and ASSERTS the style rack (slot N gated by `b if a == N`; len(options) == N). NEVER hand-edit `comfy_workflows/krea2_turbo_t2i.json` — run `python orchestrate.py`.\n\nDO THIS:\n\n(0) USER-UX VERIFY in the app, LOCAL engine only. Controls appear on t2i/i2i and vanish on upscale/detail and on SDXL/Chroma. Stylization slider is dimmed+inert at style 0. Enhance toggle's hover text shows in the status bar. A plain t2i with no image and the enhancer OFF passes graph validation (the placeholder fix) and matches pre-change output. With the enhancer ON: the prompt box still shows YOUR text, the status bar reads N/3, and the sidecar + Reuse Prompt return the EXPANDED prompt with NO style trigger appended. Then i2i and pose-reference once each.\n\n(1) DO NOT attempt remote/Pod verification. Krea2 cannot run on the Pod — both ControlNet node packs are mandatory for every t2i run (ComfyUI validates every node class before MpiIfElse picks a branch) and the image lacks comfyui_controlnet_aux. Blocked on MPI-244, deferred by the user. When it lands, the specific risk is `_reconcileFromHistory`: it rebuilds outputs from /history, and whether /history preserves PreviewAny's `ui.text` like the live `executed` message does is UNVERIFIED. If it doesn't, the remote path silently saves the prompt-box text instead — no error, no toast.\n\n(2) COMMIT ONLY AFTER (0) PASSES. The git tree is SHARED with a parallel session: commit by explicit pathspec (`git commit --only <paths>`), NEVER `git add -A`. The file list is in next_action.threads[2]. Generated runtime workflows ARE committed (LTX's and Wan5B's are tracked); `.state.json` is gitignored. Then move the card to done.\n\nSUITE IS 26 PASS / 1 FAIL. The failure (tests/runpod-remote-hardening.test.cjs) is PRE-EXISTING — I proved it by running that test at pristine HEAD in a temp worktree, where it also fails. It is the known uncarded 'reconnect deletes warm Pod' bug. Do not try to fix it.\n\nSTILL UNRESOLVED, and worth raising with the user: the SYSTEM PROMPT (template node 60) has never been read or tuned. The research message insists the wording IS the feature — enhancement was cut once for over-expanding and drifting from intent, and the hypothesis is that the drift was the missing system prompt, not the model. If enhanced output drifts WITH faithfulness rules in place, escalate rather than iterate.\n\nDO NOT re-litigate: multiStage is FALSE. Capture titles are tier-decided (tier-1 `Output`, tier-2 `Output_Image`), case-insensitive, never normalized. The detailer/upscaler's baked scratch filenames are CORRECT (required-image ops overwrite the widget). promptEnhance requires a CLIP with `.generate()` — T5/umT5 (Chroma, Wan) CRASH on TextGenerate."
+}

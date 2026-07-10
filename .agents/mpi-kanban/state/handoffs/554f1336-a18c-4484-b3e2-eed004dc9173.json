@@ -1,0 +1,173 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "554f1336-a18c-4484-b3e2-eed004dc9173",
+  "generated_at": "2026-07-10T06:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-242 Krea2 - research CLOSED (t2i + i2i + depth ControlNet all live-proven). Next: app wiring + negative-prompt gate + detailer/upscaler ops",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Krea2 (Flux-lineage image model) to Cubric Vision end-to-end. Phase 1 = Turbo variant. User authors + proves the ComfyUI workflow; agent does research + app wiring per docs/add-model-playbook.md.",
+    "current": "ALL RESEARCH IS DONE AND LIVE-PROVEN. The workflow (t2i + i2i + style LoRAs + Stylization slider + depth ControlNet) is settled and working in ComfyUI. Two threads remain: (1) WIRE KREA2 INTO THE APP per docs/add-model-playbook.md; (2) NEW SUB-TASK the user just scoped: gate the prompt-box negative toggle on a model capability, because Krea2-Turbo cannot do negative prompts (NAG does not work on it - see traps). Then: detailer + upscaler operations."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-242/brief.md",
+    "completed": [
+      "Research: 9 style LoRAs + trigger-phrase contract (research/style-loras.md)",
+      "Research: samplers/resolution/injection seam (research/sampler-and-resolution.md)",
+      "Research: image conditioning + ControlNet + i2i + NSFW (research/image-conditioning-and-controlnet.md)",
+      "Live A/B (user-run): sampler + refiner config SETTLED, 6 agent theories refuted",
+      "LIVE: depth ControlNet works end-to-end (facok node cloned @79ebfd3, weights on disk)",
+      "LIVE: i2i works, both stages, denoise usable down to 0.19 (a predicted 'denoise floor' was WRONG, retracted)",
+      "LIVE: 2K band proven - 1024x2048 = 61.04s vs 896x1152 = 28.36s (time scales LINEARLY with pixels, not quadratically)",
+      "USER SHIPPED: 'Stylization' slider (strength_model on the style LoRA, default 1.0) - already added to the workflow",
+      "DROPPED: Conditioning-Rebalance (user: 'just false advertising, not really an image editor')",
+      "DROPPED: Qwen->Krea2 sampler handoff, both as editor (structurally impossible) and for ControlNet (user: 'forget it, depth is enough')",
+      "docs/krea2.md written + routed in docs/README.md"
+    ],
+    "remaining": [
+      "TASK 0 (FIRST - user-requested): split docs/krea2.md -> docs/krea2/ folder, DELETE krea2.md (no stub), retarget docs/README.md:59 (see next_action.threads[0])",
+      "NEW: negative-prompt capability gate in the prompt box (see next_action.threads[1])",
+      "Finish workflow graph -> export API-format template -> comfy_workflows/scripts/workflow_generation/Krea2_template.json",
+      "registry.py HANDLERS prefix rule + generate_krea2.py build()",
+      "dependencies.js entries (+9 style LoRAs, +depth control LoRA, +facok custom_nodes) + R2 upload + /mpic-compute-dep-hashes",
+      "models.js ModelDef (new type 'krea2', multiStage:true, ratios+qualityTiers ['1k','2k'], loraStrengths:['model'], enhanceRecipe:'flux', capabilities.negativePrompt:false)",
+      "Input_Style int injection (clamp 0..9) + Stylization float injection + PromptBoxControls entry",
+      "progressStages.js entry - COUNT tqdm bar restarts LIVE per run mode",
+      "QUALITY_LABELS needs a '1k' key (MpiOptionSelector.js:141 - '2k' exists, '1k' does NOT)",
+      "LATER: detailer + upscaler operations"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-242",
+    "title": "Add Krea2 (Flux family) - Turbo variant first, full variant later",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-242/",
+    "links": {
+      "brief": "brief.md",
+      "research": "research/style-loras.md, research/sampler-and-resolution.md, research/image-conditioning-and-controlnet.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "research",
+    "implement app wiring (user says the workflow is ready)",
+    "split docs/krea2.md into docs/krea2/ and delete the original (TASK 0)",
+    "write docs/krea2/*",
+    "ask before any R2 upload"
+  ],
+  "knowledge_preservation": {
+    "authoritative_doc": "docs/krea2.md TODAY (448 lines, 2.2x OVER the 200-line rule). AFTER TASK 0 (do it FIRST) this becomes docs/krea2/ - a folder, with NO krea2.md stub left behind. Holds settled sampler config, style-LoRA table + trigger contract, resolution verdict + the /16 rule, injection seam, i2i notes, NAG-does-not-work, depth-ControlNet wiring, a 'Dead theories - do NOT re-propose' table, and 'Krea2 cannot edit images, it re-composes them'.",
+    "completed": [
+      "SAMPLER SETTLED: stage1 euler/beta/6/denoise1.0/eta0.5/cfg1 -> stage2 refiner euler/beta/3/denoise0.35/eta0.5, latent hand-off, no VAE round-trip. Workflow IS multiStage (9 NFE).",
+      "NO shift node: comfy/supported_models.py:1828 already sets Krea2 shift=1.15. AuraFlow verified inert live.",
+      "9 style LoRAs, model-only (528 tensors, all 'transformer.' prefix, rank 32 F32). LoraLoaderModelOnly + loraStrengths:['model']. No CLIP LoRA is possible.",
+      "Trigger phrase APPENDED to prompt with ', ' AFTER any enhancement. Input_Style = ONE int (0=none, 1-9 = style, 1-indexed via MpiPromptList.specific_item).",
+      "NEW: 'Stylization' slider = strength_model on the style LoRA. Default 1.0. Live-tested 0.1/0.3/0.5/0.8/1.0 - each produces a DIFFERENT image, not just 'more style' (at 0.1 you get a colour photo with ink texture; at 1.0 a near-monochrome ink drawing). Works at 0 because the trigger phrase stays in the prompt regardless. Named 'Stylization' (user chose) - NOT 'style strength' (implies degree, it changes kind) and NOT 'style variation' (implies randomness, it is monotonic + reproducible).",
+      "DIMENSIONS MUST BE /16, NOT /8. VAE spacial_compression=8 (comfy/sd.py:724) x DiT patch=2 (comfy/ldm/krea2/model.py:183). Off-multiple does NOT crash - model.py:239 pad_to_patch_size(circular) pads then crops, silently wrapping one edge. ALL 9 FLUX_RATIOS values are /16-clean (verified), and SDXL_RATIOS (the default: fallback) too.",
+      "2K TIER PROVEN: 1024x2048 (2.00MP) = 61.04s vs 896x1152 (0.98MP) = 28.36s. 2.03x pixels -> 2.18x time => LINEAR in pixels, NOT quadratic. Chroma is 58-62s at ~1MP => Krea2 does 2x the pixels in the same wall clock at better quality. My earlier '>=4x attention cost' warning was WRONG.",
+      "i2i IS FREE: VAEEncode(source) -> denoise<1.0. Zero nodes, zero deps. VAEEncode is model-agnostic; Krea2 is ModelType.FLUX. Live-verified with BOTH stages running, sensitive down to denoise 0.19.",
+      "DEPTH CONTROLNET WORKS (live): facok/comfyui-krea2-controlnet cloned to G:/ComfyUi/ComfyUI/custom_nodes/ @ 79ebfd3. Weights at loras/krea-2/control/depth-control-lora.safetensors (861995928 B). comfyui_controlnet_aux already installed."
+    ],
+    "traps": [
+      "mode:4 = BYPASS, mode:2 = MUTE in the workflow JSON. ALWAYS check before claiming a node is live - agent got this wrong once and invented two blocker bugs.",
+      "The saved .json LAGS the ComfyUI canvas. ASK THE USER TO SAVE before reading the workflow file.",
+      "Output_Image IS a valid capture title (MPI-182 alias, commandExecutor.js:1253). The add-model-playbook s8 'must be exactly Output' text is STALE.",
+      "comfyController.js:1113 targets has NO string_a/string_b -> StringConcatenate is not injectable. _inject writes EVERY matching input on a node.",
+      "RES4LYF samplers.py:340 - supplying a manual `sigmas` array does NOT bypass `denoise`; it MULTIPLIES it. Set denoise=1.0 and denoise_alt=1.0.",
+      "denoise 0.35 on stage 2 starts at sigma .329 (> stage1's .275) => partial REGENERATION, not pure polish. Refiner cannot be a user on/off toggle for t2i. Stage 2 MUST get the same conditioning (style trigger) as stage 1.",
+      "ComfyUI lists LoRAs by path relative to loras root, SUBFOLDERED + BACKSLASH. Live-queried /object_info: the depth LoRA is 'krea-2\\\\control\\\\depth-control-lora.safetensors'. Same shape as the 9 style LoRAs => rides the MPI-229 heal. Windows-local is now PROVEN; non-Windows LOCAL is still MPI-198 (open, unverified - RunPod does NOT test it).",
+      "*** NAG DOES NOT WORK ON KREA2. *** Core comfy_extras/nodes_nag.py NAGuidance hooks via set_model_attn1_output_patch. Krea2's DiT (comfy/ldm/krea2/model.py) threads transformer_options down to optimized_attention_masked but NEVER reads transformer_options['patches'] - grepped every use, there is no dispatch. So NAGuidance on Krea2 is a SILENT NO-OP that still calls disable_model_cfg1_optimization() => forces the uncond pass => DOUBLES NFE (9 -> 18) for ZERO effect. Worst kind of failure: slower, identical output, no error. KJNodes' NAG is WanVideoNAG (monkey-patches Wan attention classes by name) - also useless here. Fixing it = a ~5-line upstream patch to krea2/model.py mirroring flux/layers.py:199. Do NOT fork locally.",
+      "docs/krea2.md is 448 lines, 2.2x OVER the repo's 200-line-per-doc rule, and NOT exempt. USER HAS NOW APPROVED THE SPLIT and asked for it FIRST - see next_action.threads[0] (TASK 0). The docs/krea2/ folder does NOT exist yet despite being proposed twice; create it, move the sections verbatim, DELETE krea2.md (no stub - LTX has no docs/ltx.md either), retarget docs/README.md:59.",
+      "AGENT ENV TRAP: system python has NO numpy. ComfyUI's interpreter is G:/ComfyUi/python_embeded/python.exe - use it for comfy-dependent computation. ALSO: a POSIX '/g/...' path passed into `python -c` is treated as LITERAL on Windows (the Bash tool translates it, Python does not). Use r'G:/...' in Python. I reported a file as missing because of this.",
+      "AGENT PROCESS TRAP (bit me twice): I predicted an i2i 'denoise floor ~0.40' by reasoning from core common_ksampler (nodes.py:1563) - but the workflow's stage 2 is RES4LYF ClownsharKSampler_Beta, which has its OWN noise machinery (noise_stdev at beta/samplers.py:75, d_noise, denoise_alt, sampler_mode). The user's live test refuted me. DO NOT re-derive an i2i floor from core-KSampler semantics. If a real answer is ever needed, INSTRUMENT the live run."
+    ]
+  },
+  "next_action": {
+    "description": "FOUR threads, IN ORDER. Thread 0 is a docs restructure the user explicitly asked to be THE FIRST THING DONE. Thread 1 is a NEW, well-scoped sub-task the user designed. Thread 2 is the main app wiring. Thread 3 is later. User's workflow is READY - app wiring is authorized.",
+    "threads": [
+      {
+        "topic": "TASK 0 - DO THIS FIRST: split docs/krea2.md into a docs/krea2/ FOLDER, then DELETE docs/krea2.md",
+        "why": "User's explicit instruction (2026-07-10): 'can't we break that file up into different files... or make it not even exist actually, because we already have a subfolder called KREA2... Can you add that to the handoff please, to be the first thing to do?' NOTE: the user believed docs/krea2/ already existed. IT DOES NOT - verified, no such folder. It was proposed twice in the prior session and never created. docs/krea2.md is 448 lines, 2.2x over the repo's 200-line-per-doc rule (docs/README.md), and is NOT on the exemption list (exemptions = append-only evidence logs or coherent single-subject contracts; krea2.md is 6+ distinct subjects).",
+        "no_stub": "Do NOT leave a docs/krea2.md pointer stub. LTX sets the precedent: there is no docs/ltx.md - docs/README.md routes straight into builder/. Verified by grep: docs/krea2.md has EXACTLY ONE inbound link in the whole repo, docs/README.md:59. Every other hit is handoff JSON. So: retarget that one row, delete the file.",
+        "split_plan": "Sections already ARE the topics - the split is mechanical. Verified line spans (all resulting files well under 200; largest 119):\n  docs/krea2/README.md                  ~46  <- hub: header, variants table, dep reuse, routing table, Sources (from L1-24 + L428-449)\n  docs/krea2/samplers.md               ~119  <- L25-143: SETTLED config, the 3 constraints, steps<->denoise invariant, RES4LYF-is-already-a-dep, 'Dead theories' table\n  docs/krea2/conditioning-and-control.md ~92 <- L144-235: 'Krea2 cannot edit images', i2i + denoise, NAG-does-not-work, depth ControlNet wiring + traps\n  docs/krea2/style-loras.md             ~66  <- L236-301: 9 LoRAs, trigger contract, STALE SOURCES warning (+ add the new 'Stylization' slider notes here)\n  docs/krea2/resolution.md              ~55  <- L329-383: FLUX_RATIOS verdict, delete-ResolutionSelector, the /16 rule\n  docs/krea2/injection.md               ~71  <- L384-427 (app injection seam) + L302-328 (local install layout)",
+        "to_do": "1) mkdir docs/krea2/. 2) Move each section verbatim - do NOT rewrite content, this is a MOVE not an edit; the content is live-verified and hard-won. 3) Write docs/krea2/README.md as a thin hub with a routing table (copy the shape of docs/builder/README.md, 42 lines, and docs/builder/research/README.md, 37 lines). 4) DELETE docs/krea2.md. 5) Update docs/README.md:59 - replace the single `| Krea2 - variants, style LoRAs + trigger contract, samplers, resolution, injection seam | [krea2.md](krea2.md) |` row with rows pointing into krea2/ (mirror how lines 60-64 route into builder/). 6) Fix the cross-links INSIDE the moved sections - several reference 'docs/krea2.md' or say 'see below'/'see above' across what will become file boundaries; also .agents/mpi-kanban/tasks/MPI-242/research/image-conditioning-and-controlnet.md links to docs/krea2.md. 7) Verify: `wc -l docs/krea2/*.md` - every file <=200; `grep -rn 'krea2.md' --include=*.md docs/` returns nothing."
+      },
+      {
+        "topic": "NEW: negative-prompt capability gate (user-designed, do this AFTER task 0 - it is small and self-contained)",
+        "why": "Krea2-Turbo is distilled and runs at cfg 1.0, so it has NO working negative prompt, and NAG cannot fix it (see traps). The prompt box currently always shows the positive/negative toggle button. Future models will have the same problem. USER'S CALL: this is MODEL-gated, NOT operation-gated - which matches how `capabilities` is already documented ('capability-gated UI on SHARED ops').",
+        "finding_so_far": "THE GATE MECHANISM ALREADY EXISTS. MpiPromptBox.js:982 already reads `if (props.includeNegative) { ...mount the toggle... }`. But `includeNegative` is HARDCODED TRUE at exactly 3 call sites: MpiGalleryBlock.js:1434, MpiGalleryBlock.js:1582, MpiGroupHistoryBlock.js:807 (+ pages/components.js:700, the dev gallery). Declared in types.js:354 as `@property {boolean} [includeNegative=false]`. So this is a REWIRING, not new machinery.",
+        "to_do": "Add `negativePrompt: false` to Krea2's `capabilities` in models.js (existing pattern: capabilities.{multiStage, audio, branchingContinue, motion} at models.js:230,287,348,406 - documented at models.js:13 as driving 'capability-gated UI on SHARED ops'; consumers in commandRegistry.js:189-502). Then drive `includeNegative` from the ACTIVE MODEL's capability at the 3 call sites instead of the literal `true`. DEFAULT MUST BE TRUE (absent capability => negative supported) so no existing model regresses. EDGE CASES TO HANDLE: (a) if the user has text in the negative box and switches to a no-negative model, what happens to that text? (b) if `isNegativeMode` is currently true and the toggle disappears, the textarea must snap back to positive or the user is stranded typing into an invisible field - see MpiPromptBox.js:988-989. (c) projectModel.js still persists negativePrompt ('' default) - keep persisting it, just do not surface the UI."
+      },
+      {
+        "topic": "Krea2 app wiring (docs/add-model-playbook.md is the procedure - follow it verbatim)",
+        "finding_so_far": "Model shape is fully determined. type:'krea2' (NEW type -> consumer sweep per playbook s6). multiStage:true (needs _stage2 runtime file + progressStages entry, bars COUNTED LIVE). loraStrengths:['model']. enhanceRecipe:'flux'. VAE = reuse existing dep vae-qwen-image (already on R2, ZERO upload). Text encoder qwen3vl_4b_fp8_scaled.safetensors = NEW upload. Transformer krea2_turbo_fp8_scaled.safetensors = NEW upload. NOT a version bump.",
+        "ratios_decision": "SETTLED: declare BOTH `ratios` and `qualityTiers:['1k','2k']` on the ModelDef. Krea2 will be the FIRST model ever to use the MPI-174 declared-ratios path (grepped: NO model in models.js sets `ratios:` today, so DECLARED_RATIOS_BY_TYPE is empty and that branch has NEVER executed in production - expect to find its bugs). Declaring qualityTiers auto-flips RATIO_MODES['krea2'] to 'quality' (ratios.js:222) - no edit to ratios.js needed. CRITICAL SHAPE: getModelRatios indexes a declared table by ONE key (ratios.js:276, `mode==='quality' ? qualityTier : orientation`), and _buildQualityOptions (MpiOptionSelector.js:167) does getModelRatios(type, undefined, tier).find(r => r.label === selectedRatio). So each tier MUST be a FLAT ARRAY of 9 entries carrying BOTH orientations' labels (1:1 appears once - square is orientation-free), exactly like LTX/Wan. Verified: labels unique per tier, and switching 1k<->2k preserves the selected label. CHROMA NEEDS NO GATING - `declared` returns EARLY (ratios.js:274) so Krea2 never reaches the switch, and Chroma's `case 'chroma': return FLUX_RATIOS[orientation]` never sees a declared table. The 2K tier lives on Krea2's ModelDef, NOT inside FLUX_RATIOS, so FLUX_RATIOS is never mutated. Zero changes to ratios.js, Chroma, or MpiOptionSelector. ONE EXCEPTION: QUALITY_LABELS (MpiOptionSelector.js:141) has '2k' but NOT '1k' -> add `'1k': '1K',` or the tier picker renders undefined.",
+        "ratio_tables": {
+          "1k": "1:1 1024x1024 | 3:4 896x1152 | 4:5 896x1088 | 5:8 768x1280 | 9:16 768x1344 | 4:3 1152x896 | 5:4 1088x896 | 8:5 1280x768 | 16:9 1344x768",
+          "2k": "1:1 1472x1472 | 3:4 1248x1664 | 4:5 1280x1600 | 5:8 1120x1792 | 9:16 1088x1936 | 4:3 1664x1248 | 5:4 1600x1280 | 8:5 1792x1120 | 16:9 1936x1088",
+          "note": "ALL values /16-clean (zero circular padding). 2K tier is 1.91-2.07 MP. 1472x1472 deliberately matches LTX's 2K square for cross-model visual consistency. The user's live 1024x2048 test is 1:2 (0.5000), NOT 9:16 (0.5625) - it proved the 2MP BAND, it does not pin a ratio."
+        },
+        "to_do": "Follow docs/add-model-playbook.md verbatim. Two NEW injections beyond the usual: Input_Style (int, clamp 0..9) and the Stylization float (strength_model on the style LoRA, default 1.0) - both need PromptBoxControls entries. Depth ControlNet + the facok custom_nodes dep is a SEPARATE, LOWER-PRIORITY card (installRequirements:FALSE - the repo has no requirements.txt at all; pin @79ebfd3 in dev_configs/node_lock.json)."
+      },
+      {
+        "topic": "AFTER the above: detailer + upscaler operations",
+        "finding_so_far": "'detail' is an EXISTING op. Every Cubric detailer is LoadImage + LoadImageMask -> MaskDetailerPipe -> Output, declared per-model as workflows.detail in models.js. A Krea2 detailer = clone Chroma_detailer.json with the model stack swapped. No new op needed. The upscaler (PiD) is a different model with its own guidance story (docs/builder/research/pid-upscaler.md).",
+        "to_do": "Read Chroma_detailer.json first. Note a detailer's negative prompt matters far less than a t2i's (refining a masked region, not steering global composition), so the NAG gap hurts less here."
+      }
+    ],
+    "also_open": [
+      "beta @ 4 and @ 5 - the 6-step optimum is only bracketed from ABOVE (8 distorts). 5 may tie and be cheaper.",
+      "Whether the style trigger phrase should scale out with the Stylization slider. Today the trigger is appended at FULL force even at Stylization 0.1, so the prompt asks for 'monochrome ink wash style' while the LoRA barely applies it. The user says it works well (0 still produces a styled image because the prompt carries it). That tension may BE the good part - but it is untested as a deliberate design.",
+      "Krea2 detailer + upscaler ops (see the last thread).",
+      "NSFW 'Coyote' finetune: NOT FOUND as of 2026-07-10 (7 searches, HF + Civitai). Near-matches exist (uzumix/krea2_nsfw is a LoRA, verified). Re-check in days.",
+      "Upstream: file a ComfyUI issue/PR so krea2/model.py dispatches transformer_options['patches'] -> would make NAG (negative prompts on the distilled Turbo) work."
+    ]
+  },
+  "context": {
+    "key_decisions": [
+      "Prompt enhancement branch CUT from the app workflow (user tested Comfy's TextGenerate: over-expands, drifts from intent). Cubric Prompt is the app's answer to enhancement.",
+      "ResolutionSelector DELETED - app injects width/height into EmptyLatentImage. Krea2 declares its OWN ratios+qualityTiers on the ModelDef. Do NOT set type:'flux' to inherit the hardcoded table.",
+      "Style system: user's single-int design beat the agent's proposed object-injection seam. App injects ONE int (Input_Style 0-9) + ONE float (Stylization).",
+      "Refiner ships => workflow is multiStage (needs _stage2 file + progressStages entry, 9 NFE vs 6).",
+      "Krea2 is Flux-lineage in ARCHITECTURE ONLY. Conditioning + VAE stack is Qwen. Reuse vae-qwen-image; qwen3vl_4b_fp8_scaled is a NEW upload.",
+      "Krea2 = reference-conditioned GENERATION (recomposes; reads vision embeddings, has NO reference_latents slot). Qwen-Image = the real EDITOR (reads reference_latents => spatially targeted). Two different operations, not two implementations of one. If a Krea2 'image edit' op is ever built, name it a reference/style op or users will expect locality it cannot deliver.",
+      "Qwen-Image may still ship as its OWN edit operation later (with masking, which also kills its ~1MP 'zoom' artifact). Separate card, not MPI-242.",
+      "DROPPED for good: Conditioning-Rebalance (false advertising), Qwen->Krea2 sampler handoff (editor: structurally impossible; ControlNet: user says depth is enough)."
+    ],
+    "user_workflow_files": {
+      "live_authoring": "G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\krea2_turbo_t2i.json",
+      "app_export_staging": "D:\\WORK\\workflows\\App\\krea2_turbo_t2i.json (currently UI format, NOT API format)",
+      "local_models": "G:\\CubricModels (loras/krea-2/style/*.safetensors x9, loras/krea-2/control/depth-control-lora.safetensors, diffusion_models/krea2_turbo_fp8_scaled.safetensors, text_encoders/qwen3vl_4b_fp8_scaled.safetensors, vae/qwen_image_vae.safetensors)",
+      "note": "text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors (9.38GB) was ALSO downloaded, for the user's separate Qwen+Krea experiment. It is Qwen2.5-VL-7B (hidden 3584) and is NOT a Krea2 dep - Krea2's encoder is qwen3vl_4b (Qwen3-VL-4B, hidden 2560). Do NOT put the 7B in dependencies.js."
+    },
+    "collaboration_note": "User owns workflow authoring and sets knob values live; agent does structural edits, research, and app wiring. THE USER'S LIVE TESTS BEAT THE AGENT'S REASONING REPEATEDLY THIS SESSION - the i2i denoise floor (wrong), the 2K cost estimate (wrong, 2x not 4x), the Rebalance capability read (agent said 'use core nodes', the expert comparison and then the user's own test settled it), and the ControlNet framing (agent called the Qwen+Krea video an 'obsolete mischaracterization'; the user knew it was about ControlNet, not editing). TEST THE USER'S INSTINCT FIRST. See feedback_test_user_instinct_first."
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["add-model", "krea2", "comfy-workflows", "components", "state", "r2-upload"],
+    "must_read": [
+      "docs/krea2.md (becomes docs/krea2/ after TASK 0)",
+      "docs/add-model-playbook.md",
+      "docs/builder/README.md + docs/builder/research/README.md (the hub+topics SHAPE to copy for TASK 0)",
+      ".agents/mpi-kanban/tasks/MPI-242/research/image-conditioning-and-controlnet.md",
+      ".claude/rules/components.md (for the prompt-box gate)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {"at": "2026-07-10T06:30:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming MPI-242 (add Krea2 to Cubric Vision) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/554f1336-a18c-4484-b3e2-eed004dc9173.json, then docs/krea2.md, then docs/add-model-playbook.md.\n\nALL RESEARCH IS DONE AND LIVE-PROVEN - do not re-litigate any of it. docs/krea2.md has a 'Dead theories' table. The workflow (t2i + i2i + 9 style LoRAs + a 'Stylization' strength slider + depth ControlNet) works in ComfyUI today. App wiring is now AUTHORIZED.\n\nDo THREE things, IN ORDER:\n\n(0) *** DO THIS FIRST - USER'S EXPLICIT INSTRUCTION. *** Split docs/krea2.md (448 lines, 2.2x over the repo's 200-line rule, not exempt) into a docs/krea2/ FOLDER, then DELETE docs/krea2.md. The folder does NOT exist yet. Do NOT leave a pointer stub - LTX has no docs/ltx.md; docs/README.md routes straight into builder/. krea2.md has EXACTLY ONE inbound repo link: docs/README.md:59 - retarget it. The section->file split is pre-computed in this handoff (next_action.threads[0].split_plan) and every resulting file is <=200 lines (largest 119). MOVE the content verbatim - do NOT rewrite it; it is live-verified and hard-won. Copy the hub shape from docs/builder/README.md (42 lines). Then fix cross-links inside the moved sections (several say 'see below'/'see above' across what become file boundaries) and in .agents/mpi-kanban/tasks/MPI-242/research/image-conditioning-and-controlnet.md. Verify: every docs/krea2/*.md is <=200 lines, and `grep -rn 'krea2.md' --include=*.md docs/` returns nothing.\n\n(1) THE NEGATIVE-PROMPT GATE (small, self-contained, user-designed). Krea2-Turbo is distilled at cfg 1.0 and has no working negative prompt; NAG cannot fix it (core NAGuidance hooks set_model_attn1_output_patch, and comfy/ldm/krea2/model.py never dispatches transformer_options['patches'] - it would be a SILENT NO-OP that doubles NFE). The gate mechanism ALREADY EXISTS: MpiPromptBox.js:982 reads `props.includeNegative`, but it is hardcoded `true` at MpiGalleryBlock.js:1434 + :1582 and MpiGroupHistoryBlock.js:807. Add `negativePrompt:false` to Krea2's `capabilities` (models.js - existing pattern alongside multiStage/audio/branchingContinue) and drive includeNegative from the ACTIVE MODEL. Default MUST be true (absent => supported) so nothing regresses. Handle: stranded isNegativeMode when the toggle vanishes (MpiPromptBox.js:988), and keep persisting projectModel.negativePrompt.\n\n(2) KREA2 APP WIRING per docs/add-model-playbook.md verbatim. type:'krea2' (new type => consumer sweep). multiStage:true. loraStrengths:['model']. enhanceRecipe:'flux'. Reuse dep vae-qwen-image (zero upload); qwen3vl_4b_fp8_scaled + krea2_turbo_fp8_scaled are NEW uploads (ASK before any R2 upload). Declare ratios + qualityTiers:['1k','2k'] on the ModelDef - the exact /16-clean tables are in this handoff under next_action.threads[1].ratio_tables. Each tier is a FLAT 9-entry array (both orientations' labels; 1:1 once), like LTX. Chroma needs NO gating (declared returns early). Add `'1k':'1K'` to QUALITY_LABELS (MpiOptionSelector.js:141). Krea2 is the FIRST user of the MPI-174 declared-ratios path - expect to find its bugs.\n\nTRAPS: dimensions must be /16 not /8 (off-multiple silently circular-pads); ASK THE USER TO SAVE before reading the workflow JSON (the file lags the canvas); check node `mode` (4=bypass, 2=mute) before claiming a node is live; use G:/ComfyUi/python_embeded/python.exe for comfy-dependent computation and r'G:/...' (not '/g/...') inside `python -c`.\n\nAFTER those: detailer (clone Chroma_detailer.json, swap the model stack - 'detail' is an existing op) and upscaler operations."
+}

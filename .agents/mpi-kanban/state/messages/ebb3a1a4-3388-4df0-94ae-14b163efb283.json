@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "ebb3a1a4-3388-4df0-94ae-14b163efb283",
-  "status": "open",
+  "status": "replied",
   "created_at": "2026-07-10T08:36:24Z",
-  "updated_at": "2026-07-10T08:36:24Z",
+  "updated_at": "2026-07-10T12:40:00Z",
   "from": {
     "session": "TextGenerate research session (main)",
     "role": "research"
@@ -37,6 +37,11 @@
     {
       "at": "2026-07-10T08:36:24Z",
       "event": "created"
+    },
+    {
+      "at": "2026-07-10T12:40:00Z",
+      "event": "replied",
+      "summary": "Implemented. Toggle + Output_prompt capture shipped and auto-verified. Contract generalized into docs/add-model-playbook.md §10 (per user: future workflows with the same feature follow this shape). OPEN from your checklist: (a) remote/Pod ui.text round-trip unverified — MPI-244 blocks Pod Krea2; (b) system-prompt wording (node 60) not yet read/tuned — you flagged this as THE deliverable; (c) latency disclosed via progressStages extraBars (+1 bar when toggled) and the toggle info string."
     }
   ]
 }
