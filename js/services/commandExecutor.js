@@ -35,7 +35,7 @@ import { buildWeightMap, create as createAggregator } from './progressAggregator
 import { createStageProgress } from './phaseProgress.js';
 import { stagesFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
-import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputUrls.js';
+import { buildComfyViewUrl, collectComfyOutputUrls, readComfyOutputText } from '../utils/comfyOutputUrls.js';
 import { generationStore, PHASES } from './generationStore.js';
 
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176). MPI-74: a
@@ -77,12 +77,43 @@ function _collectComfyLatents(nodeOutput, target, role = 'video') {
     });
 }
 
-async function _prepareWorkflowInputs(payload) {
-    // Video workflows carry LoadImage frame nodes (+ LoadLatent on _ms) whose baked
-    // placeholder filenames must exist in the engine input/ or the graph fails
-    // validation. Stage for ANY video op — multi-stage OR single-stage (5B t2v/i2v
-    // are single-stage but still have Input_Start_Frame → need placeholder.png).
-    if (COMMANDS[payload.operation]?.mediaType !== 'video') return;
+/**
+ * Case-insensitive truthy lookup of an injection param by node title. Titles are
+ * matched case-insensitively at injection time (comfyController), and the graphs
+ * are authored by hand — `Input_enhance_prompt` and `Input_Enhance_Prompt` are the
+ * same node. Reading the param must be just as forgiving or the two spellings
+ * disagree about how many progress bars the run will emit.
+ */
+function _paramIsTrue(params, title) {
+    const want = title.toLowerCase();
+    for (const [k, v] of Object.entries(params || {})) {
+        if (k.toLowerCase() === want) return v === true;
+    }
+    return false;
+}
+
+/** Media-input node classes whose baked filename must resolve in the engine `input/`. */
+const _MEDIA_INPUT_CLASSES = new Set(['LoadImage', 'LoadImageMask', 'LoadAudio', 'LoadLatent']);
+
+async function _prepareWorkflowInputs(payload, workflow) {
+    // A workflow carrying ANY media-input node (LoadImage/LoadAudio/LoadLatent) has a
+    // baked placeholder filename that must exist in the engine `input/`, or ComfyUI
+    // rejects the graph at prompt time — even for nodes whose output is gated off (a
+    // t2v never uses the frame; a plain Krea2 t2i never uses Input_Image).
+    //
+    // This used to gate on `mediaType === 'video'`, which was itself a widening of an
+    // earlier `commandIsMultiStage` gate. Both were op-type proxies for the real
+    // question. Krea2 (MPI-242) is the first IMAGE model whose t2i graph carries an
+    // OPTIONAL LoadImage, so the proxy failed again. Inspect the workflow instead —
+    // that is the rule the add-model playbook §2 asks for.
+    //
+    // Staging is ~2.3MB locally (a copy), but on the REMOTE engine it uploads each
+    // default to the Pod, so we must not run it for graphs that have no media node.
+    if (!workflow || typeof workflow !== 'object') return;
+    const hasMediaInput = Object.values(workflow).some(
+        node => _MEDIA_INPUT_CLASSES.has(node?.class_type)
+    );
+    if (!hasMediaInput) return;
     const res = await fetch('/comfy/prepare-workflow-inputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,7 +287,7 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
  * @typedef {Object} Execution
  * @property {function(string):void}   onPreview  - Called with each latent preview URL
  * @property {function(number):void}   onProgress - Called with 0–1 progress value from ComfyUI
- * @property {function(string[], {latents?: object[]}):void} onComplete - Called with final output URLs and side outputs on success
+ * @property {function(string[], {latents?: object[], audioUrl?: string|null, promptText?: string|null}):void} onComplete - Called with final output URLs and side outputs on success. `promptText` is the string an `Output_prompt` node encoded (null when the workflow has none).
  * @property {function(Error):void}    onError    - Called on failure
  * @property {function():void}         cancel     - Interrupt the running generation
  */
@@ -539,6 +570,11 @@ function _buildParams(payload) {
         Negative: negative || '',
         Seed:     resolvedSeed,
     };
+
+    // Constant params the OP always injects (commandRegistry.injectParams) — the
+    // branch-selecting booleans on graphs shared by several ops (Krea2's t2i / i2i /
+    // poseReference). Merged BEFORE injectionParams so a user control still wins.
+    Object.assign(params, COMMANDS[payload.operation]?.injectParams || {});
 
     // Merge operation-specific control params (ratio, steps, denoise, etc.)
     Object.assign(params, injectionParams);
@@ -1184,7 +1220,13 @@ export function runCommand(payload) {
         // unrecorded → stages tick up without a total.
         const _stageMode = workingPayload.isStage2 === true ? 'stage2'
             : workingPayload.previewOnly === true ? 'preview' : 'single';
-        const stageProgress = createStageProgress({ stages: stagesFor(workflowFile, _stageMode) });
+        // The prompt enhancer (MPI-242) runs the text encoder's LM head autoregressively
+        // before sampling, emitting its own tqdm bar — but only when the toggle is on.
+        // The static table can't know that, so the delta is supplied per run. Without
+        // this the status bar shows `3/2` on an enhanced run: the counter climbs past
+        // its own total, which reads as a hang right when the run is genuinely slower.
+        const _enhanceBars = _paramIsTrue(params, 'Input_Enhance_Prompt') ? 1 : 0;
+        const stageProgress = createStageProgress({ stages: stagesFor(workflowFile, _stageMode, _enhanceBars) });
 
         const opDef = COMMANDS[workingPayload.operation];
         if (opDef?.injector) {
@@ -1210,7 +1252,7 @@ export function runCommand(payload) {
         }
 
         try {
-            await _prepareWorkflowInputs(workingPayload);
+            await _prepareWorkflowInputs(workingPayload, workflow);
         } catch (err) {
             clientLogger.error('commandExecutor', 'Failed to prepare workflow input defaults', err);
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
@@ -1265,6 +1307,26 @@ export function runCommand(payload) {
             )
         );
 
+        // `Output_prompt` capture (MPI-242) — a `PreviewAny` node carrying the exact
+        // string the text encoder saw. A workflow that has one is declaring "the
+        // prompt I encoded is not necessarily the prompt the user typed": the app
+        // may have injected an enhancer toggle upstream, and the graph may append a
+        // style trigger downstream. Tapping the node instead of the prompt box gives
+        // one unconditional read path — no "sometimes the box, sometimes the graph"
+        // branch — and is why the tap sits BEFORE the style concat: the saved prompt
+        // must stay re-styleable on reuse.
+        //
+        // Title-scoped on purpose. A workflow may use PreviewAny for debugging; only
+        // the node titled `Output_prompt` is the contract. Case-insensitive, matching
+        // every other title lookup here.
+        //
+        // GENERAL CONTRACT, not a Krea2 special case — see docs/add-model-playbook.md §10.
+        const outputPromptNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id]._meta?.title?.toLowerCase() === 'output_prompt'
+            )
+        );
+
         // Cache-hit dedupe only fires for workflows that do NOT inject a fresh
         // seed. Convention: every seeded workflow has a node titled exactly
         // "Seed" (case-insensitive). Universal workflows like Upscale have no
@@ -1316,6 +1378,10 @@ export function runCommand(payload) {
         // audio (the workflow's MpiHasAudio gate skips the audio save). Muxed
         // into the video server-side at save time.
         let audioOutputUrl = null;
+        // The string captured from an `Output_prompt` PreviewAny node, when the
+        // workflow has one. null for every workflow that doesn't — which is the
+        // signal generationService uses to fall back to the prompt-box text.
+        let promptTextOutput = null;
         let _samplingStartFired = false;
         // MPI-208 Phase 2: model-load state is now the store job's phase, not a
         // private closure. `_modelInitializing` is DERIVED — the job sits in
@@ -1514,7 +1580,7 @@ export function runCommand(payload) {
             // is belt-and-suspenders for the fill. Only when stdout drove (local).
             if (_stdoutDriving) { stageProgress.finish(); emitProgress(stageProgress.percent()); }
             closeComfyEventSource();
-            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl });
+            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl, promptText: promptTextOutput });
         };
 
         const onMessage = (msg) => {
@@ -1668,6 +1734,9 @@ export function runCommand(payload) {
                 }
                 if (outputAudioNodeIds.has(nodeId)) {
                     audioOutputUrl = _collectComfyAudioUrl(nodeOutput, workingPayload.forceLocal === true) || audioOutputUrl;
+                }
+                if (outputPromptNodeIds.has(nodeId)) {
+                    promptTextOutput = readComfyOutputText(nodeOutput) || promptTextOutput;
                 }
             }
         };

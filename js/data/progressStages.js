@@ -48,15 +48,34 @@ export const PROGRESS_STAGES = Object.freeze({
     // NVIDIA PiD upscaler — one 4-step distilled sampler pass = a single tqdm bar
     // (no separate model-load bar surfaces). Live-confirmed 2026-07-03.
     'NVIDIA_PID.json':           Object.freeze({ single: 1 }),
+    // Krea2 Turbo (MPI-242) — single-stage: BOTH ClownsharK sampler passes live in
+    // one file with a direct latent hand-off, so there is no `preview`/`stage2` mode.
+    // One file serves t2i, i2i AND poseReference (Input_Is_i2i / Input_pose_reference
+    // select the branch), and this table is keyed by FILE, so one key covers all three.
+    // 2 bars = model-load + sampler (user-confirmed 2026-07-10). If the pose branch's
+    // depth preprocessor surfaces its own tqdm bar, this needs a per-op split.
+    // Its detailer/upscaler get NO entry, per the convention above.
+    'krea2_turbo_t2i.json':      Object.freeze({ single: 2 }),
 });
 
 /**
  * Recorded bar count for a workflow file in a given run mode, or 0 if unrecorded.
+ *
+ * `extraBars` adds run-time bars the static table cannot know about, because
+ * they depend on a toggle rather than on the file+mode. Today's only case is the
+ * prompt enhancer (MPI-242): a `TextGenerate` node runs the text encoder's LM
+ * head for up to `max_length` autoregressive steps, which surfaces as its OWN
+ * tqdm bar — but only when `Input_Enhance_Prompt` is true. Folding it into the
+ * table would show `3/2` with the toggle on and `2/3` with it off; both are
+ * worse than no total. An unrecorded workflow (0) stays unrecorded — a delta on
+ * top of "unknown" is still unknown.
+ *
  * @param {string} workflowFile  e.g. 'LTX_t2v.json' or 'LTX_t2v_stage2.json'
  * @param {'single'|'preview'|'stage2'} mode
+ * @param {number} [extraBars=0]  additional tqdm bars this specific run will emit
  * @returns {number}
  */
-export function stagesFor(workflowFile, mode = 'single') {
+export function stagesFor(workflowFile, mode = 'single', extraBars = 0) {
     if (!workflowFile) return 0;
     // Strip _stage2, then any arch-variant suffix (MPI-200: _fp8/_mxfp8/…). A
     // variant swaps only the loader node, not the sampler graph, so the bar
@@ -66,5 +85,6 @@ export function stagesFor(workflowFile, mode = 'single') {
         .replace(/_stage2\.json$/i, '.json')
         .replace(/_(?:fp8|mxfp8)\.json$/i, '.json');
     const entry = PROGRESS_STAGES[base];
-    return entry ? (entry[mode] || 0) : 0;
+    const recorded = entry ? (entry[mode] || 0) : 0;
+    return recorded === 0 ? 0 : recorded + Math.max(0, extraBars | 0);
 }

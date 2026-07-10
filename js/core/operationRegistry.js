@@ -14,6 +14,7 @@ export const OPERATION_REGISTRY = {
     // Image operations
     t2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     i2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    poseReference: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
     upscale:      { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     edit:         { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     detail:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },

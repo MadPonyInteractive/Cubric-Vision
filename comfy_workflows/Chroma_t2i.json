@@ -125,7 +125,10 @@
         "2604",
         0
       ],
-      "batch_size": 1
+      "batch_size": [
+        "2608",
+        0
+      ]
     },
     "class_type": "EmptyLatentImage",
     "_meta": {
@@ -349,6 +352,15 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Seed"
+    }
+  },
+  "2608": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Batch_Size"
     }
   }
 }

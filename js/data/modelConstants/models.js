@@ -10,7 +10,8 @@
  * @property {number}   [tier]       - Workflow node-title generation: 1 = legacy bare titles, 2 = Input_ / Output_ prefixed titles. Video models are tier 2. (NOT the size tier — see sizeTier.)
  * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
  * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
- * @property {{multiStage?:boolean, audio?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot. Absent → both false.
+ * @property {{multiStage?:boolean, audio?:boolean, negativePrompt?:boolean, styleLoras?:boolean, promptEnhance?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot; styleLoras shows the style dropdown + Stylization slider; promptEnhance shows the enhance toggle. Absent → false. EXCEPTION: negativePrompt defaults to TRUE when absent (a model supports negatives unless it opts out) — set `negativePrompt: false` for distilled cfg-1.0 models (Krea2-Turbo) where the negative prompt has no effect and NAG cannot rescue it. Hides the prompt box's positive/negative toggle; the stored negativePrompt value is still persisted. `promptEnhance` requires a text encoder whose CLIP implements `.generate()` (Qwen3-VL, Gemma) — T5/umT5 models (Chroma, Wan) CRASH on the TextGenerate node, so never set it there.
+ * @property {string[]} [styleLoraLabels] - Style-LoRA display names, index-aligned with the workflow's MpiMath gates and MpiPromptList trigger lines. Index 0 must be the no-style entry (every gate zeroed); its label is free text. Required when `capabilities.styleLoras` is true.
  * @property {Record<string, Array<{label:string,w:number,h:number,icon:string}>>} [ratios] - Per-type ratio table (MPI-174), keyed by quality tier (quality-mode models) or 'portrait'/'landscape' (orientation-mode). First model declaring it for a NEW `type` wins; existing types (flux/sdxl/wan/wan5b/ltx) keep their built-in tables in js/utils/ratios.js — do not redeclare them here.
  * @property {string[]} [qualityTiers] - Ordered quality-tier ids for a NEW `type` (MPI-174), e.g. ['low','medium','high']. Presence ⇒ quality UI mode (tier radio); absent + `ratios` present ⇒ orientation mode. Consumed via qualityTiersFor() in js/utils/ratios.js and the v3 project migration.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
@@ -178,6 +179,84 @@ export const MODELS = [
             'RES4LYF',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        // Krea2 Turbo (MPI-242). Flux-lineage in ARCHITECTURE ONLY — conditioning +
+        // VAE stack is Qwen. Full notes: docs/krea2/.
+        //
+        // SINGLE-STAGE despite a two-pass sampler: both ClownsharKSampler_Beta passes
+        // live in ONE workflow file with a direct latent hand-off. `capabilities.
+        // multiStage` gates the preview/Continue UI on a shared `_ms` op — t2i/i2i are
+        // NOT `_ms` (commandRegistry `isMultiStage:false`), and there is no _stage2
+        // file. Setting it true would surface a preview toggle with nothing behind it.
+        //
+        // ONE t2i graph serves t2i + i2i + pose-reference, switched by two injected
+        // booleans (Input_Is_i2i, Input_pose_reference). They COMPOSE.
+        //
+        // Krea2-Turbo is distilled at cfg 1.0 ⇒ NO working negative prompt, and NAG is
+        // a silent no-op that doubles NFE. The t2i graph has no negative node at all
+        // (ConditioningZeroOut supplies the uncond) ⇒ capabilities.negativePrompt:false.
+        id: 'krea2-turbo',
+        sizeTier: 'balanced',
+        modelFamily: 'Krea-2',
+        name: 'Krea 2 Turbo',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        tier: 2,
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'krea2',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
+        capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true },
+        // Style-LoRA labels, INDEX-ALIGNED with the workflow's nine MpiMath gates and
+        // its MpiPromptList trigger lines (index 0 = no style, so entry N here selects
+        // slot N there). Declared on the ModelDef rather than hardcoded in the control,
+        // so the next model with a style rack ships its own list. See playbook §9.
+        styleLoraLabels: [
+            'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
+            'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+        ],
+        gen_speed: 'fast',
+        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships nine built-in style LoRAs and a depth-guided pose reference. Renders at up to 2K.',
+        workflows: {
+            t2i: 'krea2_turbo_t2i.json',
+            i2i: 'krea2_turbo_t2i.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_turbo_t2i.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            upscale: 'krea2_turbo_upscaler.json',
+            detail: 'krea2_turbo_detailer.json',
+        },
+        // Krea2 is keyed by BOTH tier and orientation (RATIO_MODES.krea2 ===
+        // 'quality-orientation'), so `1:1` means 1024² at 1k and 1472² at 2k. The
+        // TABLE lives in js/utils/ratios.js as KREA2_RATIOS, beside FLUX/SDXL/WAN/LTX —
+        // that file answers "what resolutions does model X offer?" for every model.
+        // Only the tier LIST is declared here. See docs/krea2/resolution.md.
+        qualityTiers: ['1k', '2k'],
+        dependencies: [
+            'krea2-turbo-transformer',
+            'krea2-qwen3vl-clip',
+            'vae-qwen-image',            // shared — already on R2, zero upload
+            'krea2-lora-depth-control',
+            'krea2-style-darkbrush',
+            'krea2-style-dotmatrix',
+            'krea2-style-kidsdrawing',
+            'krea2-style-neondrip',
+            'krea2-style-rainywindow',
+            'krea2-style-retroanime',
+            'krea2-style-softwatercolor',
+            'krea2-style-sunsetblur',
+            'krea2-style-vintagetarot',
+            '4x-NMKD-Siax',
+            'RES4LYF',                   // ClownsharKSampler_Beta (both stages)
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',           // ImageResizeKJv2, ResizeImageMaskNode
+            'ComfyUI-Impact-Pack',       // MaskDetailerPipe, To/FromBasicPipe
+            'ComfyUI-UltimateSDUpscale',
+            // Both are MANDATORY even for a plain t2i run: ComfyUI validates every
+            // node class before MpiIfElse picks a branch.
+            'ComfyUI-Krea2-ControlNet',
+            'comfyui_controlnet_aux',
         ],
     },
     {

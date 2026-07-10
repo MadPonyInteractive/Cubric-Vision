@@ -9,6 +9,7 @@ import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel } from '../../../data/commandRegistry.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
+import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
@@ -959,6 +960,23 @@ export const MpiPromptBox = ComponentFactory.create({
                 // node, so the control would be dead UI — hide it.
                 if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
 
+                // Style rack (Input_Style + Input_Stylization) is capability-gated:
+                // only models shipping style LoRAs (Krea2) mount it. Unlike
+                // negativePrompt this defaults FALSE — a model must opt in.
+                if ((componentId === 'styleSelect' || componentId === 'stylization')
+                    && model?.capabilities?.styleLoras !== true) continue;
+
+                // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
+                // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.
+                // Never infer this from the op; the model declares it.
+                if (componentId === 'enhancePrompt' && model?.capabilities?.promptEnhance !== true) continue;
+
+                // Quality-tier radio mounts only for models whose ratio set is keyed
+                // by tier ('quality' + 'quality-orientation'). NOT a capability flag:
+                // the ratio table already states it, and a second source would drift.
+                // Without this, an orientation model (SDXL) would render Wan's tiers.
+                if (componentId === 'qualityTier' && !usesQualityTier(model?.type)) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);
@@ -976,15 +994,51 @@ export const MpiPromptBox = ComponentFactory.create({
             const _seedAudioPresent = (el.audioCount || 0) > 0;
             _activeControls.get('audioMode')?.setAudioPresent?.(_seedAudioPresent);
             _activeControls.get('useAudio')?.setAudioPresent?.(_seedAudioPresent);
+
+            // The negative toggle is model-gated too, and `model` is reassigned
+            // live by setModel/setModelList without a remount. Both converge here.
+            _refreshNegToggle();
         }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
-        if (props.includeNegative) {
-            MpiButton.mount(qs('#bottom-neg-slot', el), {
+        // Two conditions, re-evaluated whenever the model changes:
+        //   props.includeNegative — does this SURFACE offer negatives at all?
+        //   capabilities.negativePrompt — does the ACTIVE MODEL support them?
+        // The capability defaults to TRUE when absent (a model supports negatives
+        // unless it opts out), inverting the convention of multiStage/audio/motion.
+        // Krea2-Turbo is distilled at cfg 1.0 and opts out: its negative prompt has
+        // no effect and NAG is a silent no-op that doubles NFE.
+        const negSlot = qs('#bottom-neg-slot', el);
+        let _negBtn = null;
+
+        function _refreshNegToggle() {
+            const show = props.includeNegative === true
+                && model?.capabilities?.negativePrompt !== false;
+
+            if (show === !!_negBtn) return;
+
+            if (!show) {
+                // Toggle is going away. If the user was typing INTO the negative
+                // field, they would be stranded editing an invisible value — snap
+                // the textarea back to positive and tell consumers.
+                _negBtn.destroy();   // factory destroy() also removes el from the slot
+                _negBtn = null;
+                if (isNegativeMode) {
+                    isNegativeMode = false;
+                    textareaEl.value = positiveValue;
+                    textareaEl.placeholder = 'Type your prompt...';
+                    updateHeight();
+                    emit('mode-change', { mode: 'positive' });
+                }
+                return;
+            }
+
+            _negBtn = MpiButton.mount(negSlot, {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
                 size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
-            }).on('click', (data) => {
+            });
+            _negBtn.on('click', (data) => {
                 isNegativeMode = data.active;
                 textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
                 textareaEl.placeholder = isNegativeMode ? 'Type negative prompt...' : 'Type your prompt...';
@@ -992,6 +1046,8 @@ export const MpiPromptBox = ComponentFactory.create({
                 emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
             });
         }
+
+        _refreshNegToggle();
 
         // ── Enhance (Cubric Prompt, MPI-5) ─────────────────────────────────────
         // Capability-gated: the control is only mounted when cubric.prompt is
@@ -1363,6 +1419,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Cleanup ─────────────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
+            _negBtn?.destroy?.();
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();

@@ -125,6 +125,33 @@ runtime files, one per boolean value.
      (or make it inspect the workflow's Load* nodes) rather than adding another
      op-type special-case.
 
+  **Only OPTIONAL media inputs need any of this.** The distinction that decides whether you
+  care:
+
+  | the op's media input | what the injector does | placeholder needed? |
+  |---|---|---|
+  | **required** (`requiresImages ≥ 1`, `mediaInputs[].required: true`) — upscale, detail, i2i | overwrites the `LoadImage` widget before submit | **No.** The baked value is never read. `Chroma_detailer.json` bakes `ComfyUI_temp_iacob_00003_.png` and has shipped for months. |
+  | **optional** — a `LoadImage` on a graph that can run with no image | injects **nothing**; ComfyUI validates the **baked** filename | **Yes.** Bake `placeholder.png` **and** stage it. |
+
+  Optional-input graphs shipped today: `LTX_t2v*` (`Input_Start_Frame`, `Input_End_Frame`),
+  `Wan5B_t2v` (`Input_Start_Frame`) — all bake `placeholder.png`. `Chroma_t2i` has no
+  `LoadImage` at all.
+
+  ⚠ **Krea2 is the first IMAGE model with an optional `LoadImage`** (its t2i graph serves
+  t2i + i2i + pose-reference from one file, so plain t2i runs with no image). It needs BOTH
+  halves. The `mediaType === 'video'` gate at `commandExecutor.js` was widened for it — the
+  staging now fires whenever the workflow carries ANY `Load*` node (MPI-242).
+
+  > **A hand-exported workflow has nothing to stamp the placeholder — give it a handler.**
+  > LTX/Wan never hit this bug because their generators re-stamp on every build
+  > (`generate_ltx.py`, `generate_wan5b.py::_stamp_placeholders`). Krea2 originally shipped
+  > its runtime JSON by hand, so its t2i baked a local scratch filename that existed on no
+  > other machine. Fixed by `generate_krea2.py` + a `krea2_` rule in `registry.py`: the
+  > template keeps whatever the export carried, the runtime file is stamped. Even a model
+  > that needs **no op split** wants a handler when it has an optional media input.
+  > Guard: `tests/optional-media-placeholder.test.cjs` derives the optional-media set from
+  > the registry (`workflows` × `requiresImages: 0`) and fails on any unstaged baked name.
+
 Verify the op-boolean node feeds ONLY the MpiIfElse gate (nothing else changes
 between t2v/i2v) before trusting a single-boolean split:
 `node <id>.inputs → only the MpiIfElse boolean`.
@@ -180,6 +207,23 @@ Weight dep shape (see `dependencies.js` for live examples):
 **Reuse shared deps — do not re-host.** The 5B reuses `umt5_xxl_fp8_e4m3fn_scaled`
 (same clip as the 14B, already on HF/R2) — just list the existing dep id. Only
 host what's genuinely new.
+
+**BAKED LoRAs are normal deps.** A LoRA the *workflow* loads (not a user slot) travels with
+the model and is declared exactly like a weight: `filename: 'loras/<family>/<file>.safetensors'`,
+a `size` string, `sha256`, and **no `type` field** — only `custom_nodes` and `json` carry `type`.
+Precedent: LTX-2.3 ships three (`ltx23-lora-merged`, `-transition`, `-talkvid`), Wan-5B one
+(`wan22-5b-turbo-lora`). Put them in a per-family lora subfolder (`loras/ltx-2.3/`,
+`loras/wan-2.2-5b/`, `loras/krea-2/…`); R2 mirrors that path. Do NOT confuse these with the
+user LoRA slots (`Input_Lora_1..N`), which are runtime files the user supplies and are never deps.
+
+> **TRAP — `isWeightDep()` counts EVERY LoRA dep toward `totalWeightsGb()`.** That is correct
+> when the workflow loads them all every run (LTX). It **over-counts** when the LoRAs are
+> *mutually exclusive* — e.g. Krea2's 9 style LoRAs, where an `MpiMath` gate zeroes all but one
+> and `MpiLoraModel.apply_lora` short-circuits at `strength_model == 0` (`loras.py:100`, returns
+> before `load_lora_cached`). Only ONE is ever resident. Before special-casing `footprint.js`,
+> **measure**: Krea2's over-count is 3.50 GB and changes **no row** of the table (the floor is
+> pinned by `MIN_FLOOR = 8` and `ceil(spill/8)*8` absorbs the rest). Only act if a future
+> model's idle LoRAs push `totalWeights` across a floor or row boundary.
 
 **Custom-node dep + node-bump flow (MPI-222).** A model that needs a custom node
 adds `type: 'custom_nodes'` — it's universal by type (no `installOnEngine` flag;
@@ -400,18 +444,35 @@ A prompt-box-driven model that adds a NEW op + a runtime switch inside ONE workf
 an output-size selector, both `MpiAnySwitch` picked at submit time. Lessons that cost real
 debugging:
 
-- **Image output CAPTURE node MUST be titled exactly `Output`** (case-insensitive) — NOT
-  `Output_Image` or any other `Output_*`. Set this title IN ComfyUI and re-export — do NOT
-  hand-edit the workflow JSON (workflows change only via authoring/scripts; a manual JSON edit
-  is silently lost on the next re-export → the bug returns). The IMAGE capture
-  (`commandExecutor.js` ~L970: `_captureTitle = 'output'`) matches bare `output`. Video is the
-  only split — `Output_Video` / `Output_Audio` are special-cased there; IMAGE stays bare
-  `Output`. `output_image` is recognized NOWHERE. A node titled `Output_Image` runs fine,
-  lands in ComfyUI `/history` with `images`, but the app reports **"Generation completed but
-  no output returned"** because capture never fires. EVERY shipped image workflow (t2i,
-  upscaler, detailer, image_upscale, img_auto_mask) titles its `PreviewImage` exactly `Output`.
-  (Use `PreviewImage`, not `SaveImage` — all Cubric image workflows use PreviewImage, type
-  `temp`; the app builds a `/view?...type=temp` URL fine.)
+- **Image output CAPTURE node title is decided by the workflow's TIER — they are not
+  interchangeable.** `tier` (`models.js` `@property [tier]`) is the node-title generation:
+  **1 = legacy bare titles**, **2 = `Input_`/`Output_` prefixed**.
+
+  | tier | capture title | models |
+  |---|---|---|
+  | 1 | `Output` | SDXL family, Pony, Illustrious (18 workflows) |
+  | 2 | `Output_Image` | Chroma, NVIDIA PiD, **Krea2** (7 workflows) |
+
+  Both are matched by `commandExecutor.js:1249-1253`: `_captureTitle = 'output'` plus the
+  tier-2 alias `_imageOutputTitle = 'output_image'` (added MPI-182 for PiD, mirroring video's
+  `Output_Video`). Matching is **case-insensitive** (`.toLowerCase()`), so `Output_image` also
+  resolves — Chroma's detailer/upscaler use that spelling.
+
+  **Use the title that matches your workflow's tier, and stay consistent within a model.**
+  A tier-2 workflow (`Input_*` node naming) titles its capture `Output_Image`; a tier-1
+  workflow titles it bare `Output`. Do NOT mix, and do NOT "normalize" an existing workflow
+  from one to the other.
+  - Preview capture is the parallel split: a multi-stage `previewOnly` run captures
+    `Preview` (tier-1) / `Output_Preview` (tier-2) instead.
+  - Set the title IN ComfyUI and re-export — do NOT hand-edit the workflow JSON (a manual
+    edit is silently lost on the next re-export → the bug returns).
+  - Use `PreviewImage`, not `SaveImage` — all Cubric image workflows use PreviewImage, type
+    `temp`; the app builds a `/view?...type=temp` URL fine.
+
+  > ⚠ **This section previously claimed the capture node "MUST be titled exactly `Output`" and
+  > that `Output_Image` is "recognized NOWHERE", producing "Generation completed but no output
+  > returned."** That was STALE (pre-MPI-182) and would lead an agent to "fix" a working tier-2
+  > workflow. Corrected 2026-07-10 against `commandExecutor.js:1249-1253` and the live set.
 - **Injecting an `MpiAnySwitch` needs `'select'` in the injector target list.** The switch's
   selector input is `select` (int). `comfyController.js` `_inject` targets did NOT include it
   until MPI-182 — injection matched the node by title but wrote nothing → the dropdown
@@ -446,19 +507,241 @@ debugging:
   fails because VAELoader wants a `vae.`-prefixed safetensors state_dict. (PiD's qwen VAE took
   3 tries — see `docs/builder/research/pid-upscaler.md`.)
 
+---
+
+## 9. Style-LoRA system (Krea2 pattern, MPI-242) — scalable to any model
+
+A model that ships a **set of mutually-exclusive style LoRAs** with trigger phrases. Krea2 is
+the first; LTX is next. The whole system is driven by **two injected scalars** — never a
+filename, never a trigger string.
+
+**In the workflow:**
+- N `MpiLoraModel` nodes titled `Input_style_lora_1..N`, each with its **`lora_name` hardcoded**
+  and its `strength_model` **linked** (not a widget).
+- Each strength comes from an `MpiMath` evaluating `b if a == N else 0.0`, where
+  `a ← Input_Style` (`MpiInt`) and `b ← Input_Stylization` (`MpiFloat`).
+  ⇒ Selecting style N sets slot N to the slider value and **zeroes the other N-1**.
+  `Input_Style = 0` zeroes all of them.
+- The **same int** feeds `MpiPromptList.specific_item` (1-indexed; `options` holds the trigger
+  phrases newline-joined, `prefix: ", "`, `suffix: "."`), whose output flows through
+  `MpiPromptProcessor` → `StringConcatenate.string_b`, with `Input_Positive` as `string_a`.
+
+**Why this shape:** one integer drives BOTH the LoRA choice and the trigger phrase, so the two
+lists cannot drift. Do not port the upstream `CustomCombo` + `RegexExtract` two-list design —
+it ships already drifted.
+
+**Traps:**
+- **`options` line count MUST equal the LoRA count.** A missing line means that style loads its
+  LoRA but appends no trigger — a *silent half-application* that reads as "the LoRA is weak."
+  (Krea2 shipped 8 lines for 9 LoRAs; caught by diffing the two.) **Assert `len(options) == N`.**
+  Krea2 now asserts this **at build time** in `generate_krea2.py::_assert_style_rack`, which also
+  checks that slot `N`'s `strength_model` is gated by the `MpiMath` reading `b if a == N` — a
+  swapped gate silently loads the wrong LoRA. Copy that function for the next style rack.
+- **`MpiLoraModel.apply_lora` short-circuits at `strength_model == 0`** (`loras.py:100` — returns
+  before `load_lora_cached`). So only ONE style LoRA is ever resident. See the `isWeightDep()`
+  over-count note in §4.
+- The style LoRAs are **deps** (they travel with the model), not user slots. The user rack stays
+  `Input_Lora_1..6`.
+
+**In the app:**
+- Two `PROMPT_BOX_CONTROLS` entries: a style dropdown (`nodeTitle: 'Input_Style'`, injects the
+  **index**) and a Stylization slider (`nodeTitle: 'Input_Stylization'`, float). Disable the
+  slider at index `0`.
+- **Labels** = the filename stem after the model prefix, title-cased
+  (`krea2_softwatercolor` → `Soft Water Color`). Index `0` = `No Style`.
+- **Gate the controls on BOTH the op and the model**, exactly like `previewStage`:
+  add the control ids to the relevant ops' `components` arrays in `commandRegistry.js`, and
+  capability-gate per model inside `MpiPromptBox._refreshOpSlot()` so models without styles
+  never mount them. Krea2's detailer/upscaler have no style rack ⇒ styles appear on `t2i`/`i2i`
+  only.
+
+---
+
+## 10. `Output_prompt` — the workflow owns the saved prompt (MPI-242)
+
+Applies to **any** workflow whose graph rewrites the prompt between the box and the
+text encoder. Krea2 is the first; every later model with the same feature follows this
+shape, and the app-side plumbing already handles it — you add nodes, not code.
+
+**The contract.** A workflow that carries a `PreviewAny` node titled **`Output_prompt`**
+declares: *the string I encoded is the prompt of record.* The app then reads the saved
+prompt from that node instead of the prompt box — always, whether or not any toggle is on.
+
+Without it, the app saves whatever text sat in the prompt box, which is wrong the moment
+the graph expands, rewrites, or decorates the prompt.
+
+**In the workflow:**
+- A `PreviewAny` node (display name *"Preview as Text"*) titled `Output_prompt`.
+- **Tap it upstream of the style concat**, at the point where the prompt is final but
+  before any style trigger is appended. Krea2 taps the enhancer's `MpiIfElse` output
+  (node 241), which is the last node carrying only the prompt.
+  ⇒ The saved prompt has **no trigger phrase**, so *Reuse Prompt* restores the text and
+  leaves the style free to change. Tapping the `StringConcatenate` instead bakes the
+  trigger in and double-appends on the next run.
+- `PreviewAny` is `OUTPUT_NODE = True` and returns `{"ui": {"text": (value,)}}`
+  (`comfy_extras/nodes_preview_any.py`), so the string arrives on the `executed` message
+  as `text: [str]`. It carries **no file dict** — it is not a `/view` URL.
+
+**The prompt enhancer (the reason the node exists).**
+- `Input_Enhance_Prompt` (`MpiIfElse`, `inputs.boolean`) switches between the raw prompt
+  and a `TextGenerate` expansion. Bake it `false`.
+- `TextGenerate` runs the **LM head of the text encoder the workflow already loaded** —
+  no second model, no extra VRAM, no new dep, no image rebuild.
+- ⚠ **Eligibility is a hard capability limit, not a policy choice.** It works iff the
+  loaded CLIP implements `.generate()`. Qwen3-VL (Krea2) ✅, Gemma3/Gemma-4 (LTX-2) ✅,
+  **T5 / umT5 (Chroma, Wan) ✗ — the node raises `AttributeError`, it does not degrade.**
+  Never wire it on a T5 model.
+- ⚠ **The system prompt IS the feature.** Qwen3-VL's default chat template has no system
+  role, so a naked `use_default_template` expansion free-associates and drifts from intent
+  (this is why enhancement was cut once). Escape hatch: a prompt string starting with
+  `<|im_start|>` sets `skip_template=True` and passes through raw, so a real system turn
+  can be built — feed it in via a `Text String` → `StringConcatenate` ahead of
+  `TextGenerate`. Put the faithfulness rules there. Expect to tune the wording.
+- The `image` socket is honoured by Qwen3-VL; `video`/`audio` are **silently swallowed**
+  (they fall into `**kwargs` and die in `SDTokenizer`). Do not wire them.
+
+**In the app — already implemented, nothing to add per model:**
+- `commandExecutor` builds an `outputPromptNodeIds` set (title-scoped, case-insensitive),
+  reads the string with `readComfyOutputText()`, and rides it out on the existing
+  side-outputs bag: `exec.onComplete(urls, { latents, audioUrl, promptText })`.
+- `generationService.exec.onComplete` shadows `positive` with
+  `outputInfo.promptText || _positiveFromBox` — one read path, no branch. All six
+  sidecar/history writes inherit it. A workflow with no such node yields `null` and the
+  prompt-box text is used, exactly as before.
+- **Progress bars.** The enhancer emits its own tqdm bar, but only when the toggle is on,
+  so the static `progressStages` table cannot express it. `stagesFor(file, mode, extraBars)`
+  takes a per-run delta; `commandExecutor` passes `1` when `Input_Enhance_Prompt` is true.
+  Omit this and an enhanced run shows `3/2` — the counter climbs past its own total, which
+  reads as a hang precisely when the run is genuinely slower. An *unrecorded* workflow
+  stays `0`; a delta on top of "unknown" is still unknown.
+- **Prompt-box controls** (`enhancePrompt` toggle) are gated on the op's `components[]`
+  **and** on `capabilities.promptEnhance` (defaults **false** — a model opts in). Add the
+  toggle only to ops whose graph actually has the nodes.
+
+**Traps:**
+- The saved prompt is now the graph's, even with the enhancer **off** (the `MpiIfElse`
+  passes the raw text through). That is intentional — one read path — but it means the node
+  must always be reachable, never bypassed (`mode:4`) or muted (`mode:2`).
+- `readComfyOutputText` returns `null` (never `''`) for an empty capture, because
+  `generationService` falls back on falsy. An empty string would silently blank the prompt.
+- The text must never join the image/gif/video `target` array. It has no file dict; every
+  downstream media consumer would choke on a bare string.
+- Latency is real and user-visible (up to `max_length` autoregressive steps through a 4B
+  model). The toggle's `info` string must name the cost; keep it opt-in.
+
+Guard: `tests/output-prompt-capture.test.cjs`.
+
+---
+
+## 11. One graph, several ops — branch booleans + i2i denoise (Krea2 pattern, MPI-242)
+
+A single `<model>_t2i.json` can serve `t2i`, `i2i` and `poseReference`. Each op selects its
+branch by flipping ONE boolean that is **baked `false`** in the graph. Read this before
+adding i2i (or any second op) to an existing image workflow.
+
+### The mechanism: `CommandDef.injectParams`
+
+Declare the op's constant params in `commandRegistry.js`, keyed by node title:
+
+```js
+i2i:           { …, injectParams: { Input_Is_i2i: true } },
+poseReference: { …, injectParams: { Input_pose_reference: true } },
+t2i:           { …  /* no injectParams — both booleans stay baked false */ },
+```
+
+`commandExecutor._buildParams` merges `COMMANDS[op].injectParams` **before** the user's
+`injectionParams`, so a control can still override. One declarative line per op; no
+per-op branching in the executor.
+
+### THE TRAP THAT ATE TWO DAYS: injection silently skips unmatched titles
+
+`comfyController` matches params to nodes by `_meta.title` (case-insensitive) and
+**drops any param whose title matches no node — no error, no log, no toast.** Two
+production bugs came from this, both invisible:
+
+- **`Input_Is_i2i` was never injected.** It appeared in three source *comments* and in
+  the graph, but no code ever set it. Krea2's `i2i` ran as `t2i`, silently ignoring the
+  input image. Nobody noticed for four sessions.
+- **`Input_Batch` never matched.** `_buildParams` dual-emits `Batch_Size` (tier-1) and
+  `Input_Batch_Size` (tier-2 alias = `Input_` + bare key). A node titled `Input_Batch`
+  matches neither, so **batch N rendered 1 image** — in Krea2 *and* in shipped Chroma.
+
+**The alias is a pure prefix.** `Input_` + the bare key. `Batch_Size` → `Input_Batch_Size`.
+It does NOT abbreviate. Title the node `Input_<BareName>` exactly, or it dies quietly.
+
+Guard: **`tests/inject-params-titles.test.cjs`** asserts every `injectParams` title exists
+in every workflow its op can run. It is the diagnostic the injector refuses to give you.
+
+### i2i needs the denoise slider — and it must be gated
+
+i2i is a latent-space op: without `denoise` the user cannot control how far the result
+departs from the source. The graph exposes it as an `MpiFloat` titled **`Input_denoise`**
+(lowercase `d` is fine — matching is case-insensitive; the bare `Denoise` key's alias
+`Input_Denoise` bridges it).
+
+Wire it **only on i2i**:
+
+```js
+i2i: {
+    injectParams: { Input_Is_i2i: true },
+    components: [ …, 'denoise', 'ratio', 'batch' ],
+    defaults: { denoise: 0.30 },   // match the graph's baked value
+},
+```
+
+**Why not on t2i / poseReference:** in the Krea2 graph `Input_denoise` reaches the sampler
+only through the `Input_Is_i2i` gate (`MpiIfElse`). On the other ops the node is inert, so
+mounting the slider there would be dead UI. **Verify this per graph** — trace the denoise
+node's consumer before deciding. If your graph feeds denoise unconditionally, it belongs on
+every sampling op.
+
+`defaults` is per-op (`commandRegistry.commands[op].defaults`), read by `scope:'perOp'`
+controls. `upscale` uses 0.20, `detail` 0.30, `pid` 0.0 — pick the value your graph bakes.
+
+### Checklist for a shared-graph op
+
+- [ ] Boolean node is baked **`false`** and titled `Input_<Name>` (tier-2 law)
+- [ ] Op declares `injectParams: { Input_<Name>: true }` — the ONLY thing that sets it
+- [ ] `models.js`: add the op to `supportedOps` **and** map `workflows.<op>` to the same file
+- [ ] Media slot declared if the op needs one (`requiresImages`, `mediaInputs`)
+- [ ] i2i (or any latent-space op): add `'denoise'` to `components` + a `defaults.denoise`,
+      **after** tracing that the denoise node is reachable on that branch
+- [ ] `progressStages.js`: keyed by **FILE**, not op — a shared graph needs no new entry.
+      (If a branch adds its own tqdm bar — e.g. a depth preprocessor — it needs a per-op split.)
+- [ ] `js/core/operationRegistry.js`: new op → entry with `appVersionIntroduced` = current
+      APP_VERSION. `operation_registry.json` is generated (`/mpi-version-bump`), never hand-edited
+- [ ] Run `tests/inject-params-titles.test.cjs`
+
+### Known live bug (not yours to fix here)
+
+`MpiPromptBox.setModelList()` re-runs `_pickOpForModel` on every model-list refresh, so a
+workspace switch silently reverts the user's chosen op to the first entry in `supportedOps`
+that matches the current media state (image chip present → `i2i`; no chip → `t2i`).
+Adding ops makes it more visible. Tracked as **MPI-247** — do not "fix" it inside a model card.
+
+---
+
 ## Checklist (copy per model)
 
+- [ ] **READ THIS PLAYBOOK FIRST.** Do not work from a handoff or a model-scoped doc alone — they
+      assume the playbook, they do not replace it.
 - [ ] Decide shape: combined (`dependencies[]`) vs separate (`commonDeps`+`operations{}`); single vs multi-stage
-- [ ] Output capture node titled EXACTLY `Output` (§8) — not `Output_*`; strict-match capture
+- [ ] Output capture titled per the workflow's TIER (§8): tier-1 → `Output`, tier-2 → `Output_Image`. Do not mix or "normalize"
 - [ ] Author + save the workflow template in `comfy_workflows/`
 - [ ] Verify the op-boolean feeds only the MpiIfElse; normalize all loader file paths to bare filenames (§3)
+- [ ] **Any OPTIONAL media input** (a `Load*` on a graph that can run without it)? Bake `placeholder.png` AND confirm `_prepareWorkflowInputs` stages it for this op's `mediaType` (§2). Required inputs need neither
 - [ ] Write/run the generator → runtime files in `comfy_workflows/`
 - [ ] Add `progressStages.js` entry — COUNT tqdm bar restarts live per run mode (§4b); wrong = wrong `N/M` in status bar
 - [ ] Add dep entries (`dependencies.js`), reuse shared deps, `sha256: null`
+- [ ] **Baked LoRAs** (workflow-loaded, not user slots)? Declare as normal deps — `size`, no `type`, per-family `loras/<family>/` subfolder (§4)
+- [ ] **Style LoRA set?** Follow §9 — assert `len(MpiPromptList.options) == number of style LoRAs`, gate controls per-op AND per-model
+- [ ] **Graph rewrites the prompt** (enhancer, or anything between box and encoder)? Follow §10 — add a `PreviewAny` titled `Output_prompt`, tapped UPSTREAM of the style concat. `promptEnhance` requires a CLIP with `.generate()` (Qwen3-VL/Gemma ✅, T5/umT5 CRASHES). The system prompt is the deliverable, not the wiring
 - [ ] Upload new weights to R2 with `--s3-no-check-bucket`; VERIFY with lsf + HTTP HEAD (don't trust exit code)
 - [ ] `/mpic-compute-dep-hashes` → fill all sha256
 - [ ] Add the `ModelDef` (`models.js`); set capabilities, workflows, dependencies, enhanceRecipe
 - [ ] New `type`? Sweep the four consumers (§6)
+- [ ] **One graph serving several ops** (t2i + i2i + poseReference)? Follow §11 — each op flips ONE baked-`false` boolean via `commandRegistry.injectParams`. **Injection SILENTLY SKIPS a title that matches no node** (this hid `Input_Is_i2i` and `Input_Batch` for four sessions). The tier-2 alias is a pure prefix: `Batch_Size` → `Input_Batch_Size`, never an abbreviation. Run `tests/inject-params-titles.test.cjs`
+- [ ] **i2i op?** It needs the `denoise` control + a per-op `defaults.denoise` (§11) — but only after tracing that the denoise node is reachable on the i2i branch. On Krea2 it sits behind the `Input_Is_i2i` gate, so t2i/poseReference must NOT mount it
 - [ ] New OP? Add to BOTH `js/core/operationRegistry.js` + `operation_registry.json` (§8), `appVersionIntroduced` = current APP_VERSION
 - [ ] Runtime in-workflow selector? Add a `PROMPT_BOX_CONTROLS` entry + `commandRegistry` component + `promptControlDefaults` (§8); `nodeTitle` == switch title; MpiAnySwitch needs `select` in the injector + 1-indexed values
 - [ ] Model with no upscale-model/LoRA config? `showSettings: false` on the ModelDef (§8)

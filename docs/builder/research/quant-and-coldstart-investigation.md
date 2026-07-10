@@ -171,6 +171,13 @@ match — older/non-distilled LTX GGUFs exist and are wrong). fp8 is excluded
   (arXiv 2603.29078) **withdrawn by author 2026-04-20**; no ComfyUI path. Skip.
 - **INT8 mixed (Winnougan ~29GB)** — Ampere-targeted, no 5090 benefit, barely
   smaller. Skip.
+  > ⚠ **This verdict is scoped to LTX on Blackwell (RTX 5090), the target of this doc.**
+  > It is NOT a general "int8 is dead" finding. Blackwell has native fp8/mxfp8 tensor
+  > cores, so fp8 already saturates the pipeline and int8 buys nothing. On **Ampere**
+  > (no native fp8), int8 IMMA is the *faster* path — a 3090 bench shows Krea2
+  > `int8_convrot` at **1.92×** `fp8_scaled`. Same fact, opposite conclusion, different
+  > silicon. See [krea2-int8-quant.md](krea2-int8-quant.md) before citing this line to
+  > dismiss an int8 proposal for another model or GPU generation.
 
 ---
 

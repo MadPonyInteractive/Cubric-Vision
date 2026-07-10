@@ -56,6 +56,12 @@ NOT mechanically split these):
 | Topic | Doc |
 |---|---|
 | End-to-end model onboarding procedure (deps, R2, registry, workflow, type sweep) | [add-model-playbook.md](add-model-playbook.md) |
+| Krea2 — hub (variants, dep reuse, hard rules) | [krea2/README.md](krea2/README.md) |
+| Krea2 samplers (settled config, dead theories) | [krea2/samplers.md](krea2/samplers.md) |
+| Krea2 conditioning + control (i2i, NAG, depth ControlNet) | [krea2/conditioning-and-control.md](krea2/conditioning-and-control.md) |
+| Krea2 style LoRAs + trigger contract + Stylization | [krea2/style-loras.md](krea2/style-loras.md) |
+| Krea2 resolution (÷16 rule, 1k/2k tiers) | [krea2/resolution.md](krea2/resolution.md) |
+| Krea2 app injection seam + install layout | [krea2/injection.md](krea2/injection.md) |
 | Builder operational loop | [builder/README.md](builder/README.md) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |
 | Pod image / mpi-ci / version-lock / rebuild | [builder/02-image-and-rebuild.md](builder/02-image-and-rebuild.md) |

@@ -11,8 +11,9 @@
  *   3. Add the control ID to the desired operation's components[] in commandRegistry.js
  */
 
-import { MpiOptionSelector, clampQualityTier } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
+import { MpiOptionSelector, clampQualityTier, defaultQualityTier } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qsa } from '../../../utils/dom.js';
@@ -21,7 +22,7 @@ import { getOpSettings, getSharedSettings, getModelSettings } from '../../../dat
 import { getCommandDefault } from '../../../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../../../data/promptControlDefaults.js';
 import { Events } from '../../../events.js';
-import { getModelRatios, RATIO_MODES } from '../../../utils/ratios.js';
+import { getModelRatios, usesQualityTier } from '../../../utils/ratios.js';
 
 // ── Scope helpers ─────────────────────────────────────────────────────────────
 //
@@ -88,7 +89,7 @@ export const PROMPT_BOX_CONTROLS = {
 
     /**
      * qualityTier — Standalone quality picker for models whose ratio set is
-     * partitioned by quality (RATIO_MODES[modelType] === 'quality', e.g. wan, ltx).
+     * partitioned by quality (usesQualityTier(modelType) — wan, ltx, krea2).
      * Renders as an inline radio row. Persists qualityTier under ratioSelector
      * (same key as `ratio` control) so they share a single source of truth.
      * Emits `ratio:quality-change` so the sibling ratio control can re-render
@@ -110,10 +111,10 @@ export const PROMPT_BOX_CONTROLS = {
             const model = opts.model || {};
             const modelType = model.type ?? 'flux';
             const modelId = model.id;
-            const mode = RATIO_MODES[modelType] ?? 'orientation';
 
-            // Only render for quality-mode models. Leave host empty for others.
-            if (mode !== 'quality') {
+            // Only render for tier-keyed models ('quality' AND 'quality-orientation').
+            // Leave the host empty for orientation-only models.
+            if (!usesQualityTier(modelType)) {
                 this._instance = null;
                 this.value = null;
                 return;
@@ -125,14 +126,22 @@ export const PROMPT_BOX_CONTROLS = {
                 ? getModelSettings(state.currentProject, modelId) : {};
             const sharedBucket = getSharedSettings(state.currentProject || {}, _mediaTypeOf(opts));
             const savedTier = modelBucket.qualityTier
-                ?? sharedBucket.ratioSelector?.qualityTier
-                ?? this.defaultValue;
-            // Clamp to a tier this model actually has. A cross-model carry (LTX
-            // 2k/4k → Wan) clamps to 'very_high' (Wan's max), NOT 'medium' — the
-            // nearest-equivalent quality, so a reused 2K clip doesn't silently
-            // drop to mid. If the clamp changed the value, persist the correction.
-            const initialTier = clampQualityTier(modelType, savedTier);
+                ?? sharedBucket.ratioSelector?.qualityTier;
+            // A SAVED tier is real intent: clamp it to a tier this model has. A
+            // cross-model carry (LTX 2k/4k → Wan) clamps to 'very_high' (Wan's max),
+            // NOT 'medium' — so a reused 2K clip doesn't silently drop to mid.
+            // With NOTHING saved there is no intent to preserve, so open on the
+            // model's cheapest tier rather than clamping the shared 'medium'
+            // placeholder up to Krea2's 2k. If the resolve changed the value, persist it.
+            const initialTier = savedTier != null
+                ? clampQualityTier(modelType, savedTier)
+                : defaultQualityTier(modelType);
             const initialRatio = sharedBucket.ratioSelector?.selectedRatio || '1:1';
+            // Orientation reaches the tier radio so its per-tier resolution hints read
+            // the right table: a 'quality-orientation' model's 2K 16:9 is 1936×1088
+            // landscape, 1088×1936 portrait. Ignored by pure-quality models.
+            const initialOrientation = sharedBucket.ratioSelector?.orientation
+                || PROMPT_CONTROL_DEFAULTS.orientation;
             this.value = initialTier;
 
             this._instance = MpiOptionSelector.mount(el, {
@@ -140,6 +149,7 @@ export const PROMPT_BOX_CONTROLS = {
                 qualityTier: initialTier,
                 modelType,
                 selectedRatio: initialRatio,
+                orientation: initialOrientation,
             });
 
             if (initialTier !== modelBucket.qualityTier) {
@@ -162,12 +172,21 @@ export const PROMPT_BOX_CONTROLS = {
                 if (mid !== modelId) return;
                 this._instance?.el?.setSelectedRatio?.(selectedRatio);
             });
+
+            // ...and when it flips orientation, which swaps the hint dimensions for a
+            // 'quality-orientation' model (2K 16:9 → 1936×1088 vs 1088×1936).
+            this._orientUnsub = Events.on('ratio:orientation-change', ({ modelId: mid, orientation }) => {
+                if (mid !== modelId) return;
+                this._instance?.el?.setOrientation?.(orientation);
+            });
         },
         getValue() { return this.value; },
         getInjectionParams() { return {}; },
         destroy() {
             this._ratioUnsub?.();
             this._ratioUnsub = null;
+            this._orientUnsub?.();
+            this._orientUnsub = null;
             this._instance?.destroy?.();
             this._instance = null;
         },
@@ -199,10 +218,14 @@ export const PROMPT_BOX_CONTROLS = {
             const initialValue = savedRatioSettings.selectedRatio || this.defaultValue;
             const modelBucket = state.currentProject
                 ? getModelSettings(state.currentProject, modelId) : {};
-            const initialQualityTier = clampQualityTier(
-                modelType,
-                modelBucket.qualityTier ?? savedRatioSettings.qualityTier ?? PROMPT_CONTROL_DEFAULTS.qualityTier,
-            );
+            // Same resolve as the qualityTier radio: clamp a SAVED tier, but fall back
+            // to the model's cheapest tier when nothing is saved. Both controls must
+            // agree on a fresh project, or the ratio popup would size for 2k while the
+            // radio reads 1k.
+            const _savedTier = modelBucket.qualityTier ?? savedRatioSettings.qualityTier;
+            const initialQualityTier = _savedTier != null
+                ? clampQualityTier(modelType, _savedTier)
+                : defaultQualityTier(modelType);
 
             // Mount selector with saved state
             this._instance = MpiOptionSelector.mount(el, {
@@ -223,9 +246,12 @@ export const PROMPT_BOX_CONTROLS = {
                 Events.emit('ratio:selection-change', { modelId, selectedRatio: value });
             });
 
-            // Orientation change: queue save via projectService
+            // Orientation change: queue save via projectService, and notify the
+            // sibling quality control — a 'quality-orientation' model's per-tier
+            // hints swap dimensions with orientation.
             this._instance.on('orientation_change', ({ orientation }) => {
                 _emitUpdate(this, opts, 'ratioSelector', { orientation });
+                Events.emit('ratio:orientation-change', { modelId, orientation });
             });
 
             // External quality control (qualityTier entry) drives this ratio
@@ -238,13 +264,9 @@ export const PROMPT_BOX_CONTROLS = {
                 }
             });
 
-            // Initialize cache with resolved dimensions (not hardcoded 1024×1024)
-            const mode = RATIO_MODES[modelType] ?? 'orientation';
-            const initRatios = getModelRatios(
-                modelType,
-                mode === 'orientation' ? initialOrientation : undefined,
-                mode === 'quality' ? initialQualityTier : undefined
-            );
+            // Initialize cache with resolved dimensions (not hardcoded 1024×1024).
+            // Pass BOTH axes — getModelRatios ignores whichever its mode does not use.
+            const initRatios = getModelRatios(modelType, initialOrientation, initialQualityTier);
             const initMatch = initRatios.find(r => r.label === initialValue) || initRatios[0];
             this.value = { label: initMatch.label, w: initMatch.w ?? 1024, h: initMatch.h ?? 1024 };
         },
@@ -934,6 +956,218 @@ export const PROMPT_BOX_CONTROLS = {
         getInjectionParams() {
             const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
             return { Input_Resolution: v };
+        },
+    },
+
+    /**
+     * styleSelect — style-LoRA picker (Krea2 pattern, MPI-242; playbook §9).
+     *
+     * Injects the INDEX (`Input_Style`, MpiInt), never a filename or a trigger
+     * phrase. In the graph, nine MpiMath gates evaluate `b if a == N else 0.0`, so
+     * this one int both selects a LoRA and zeroes the other eight — and the SAME int
+     * drives MpiPromptList.specific_item to pluck the matching trigger. Two lists
+     * that cannot drift, because there is only one knob.
+     *
+     * Labels come from the ModelDef (`styleLoraLabels`), so a future model with a
+     * style rack brings its own set. Index 0 is always the "no style" entry.
+     *
+     * Rendered as an inline MpiDropdown (no popover trigger) stacked directly above
+     * the Stylization slider, reusing the slider's own label classes so the two read
+     * as one pair. `direction: 'up'` because the prompt box sits at the bottom of the
+     * viewport — the sibling model/op dropdowns do the same.
+     *
+     * Changing the style re-renders the Stylization slider's enabled state — at
+     * index 0 the strength is inert (every gate is zeroed), so a live slider there
+     * would be dead UI.
+     */
+    styleSelect: {
+        nodeTitle: 'Input_Style',
+        scope: 'perModel',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.styleSelect,
+        mount(hostEl, opts = {}) {
+            const labels = opts.model?.styleLoraLabels || ['None'];
+            const saved  = _readSaved(this, opts);
+            const savedNum = Number(saved.styleSelect ?? this.defaultValue);
+            const initial = Number.isInteger(savedNum) && savedNum >= 0 && savedNum < labels.length
+                ? savedNum
+                : this.defaultValue;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Style';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const ddHost = document.createElement('div');
+            hostEl.appendChild(ddHost);
+
+            this._instance = MpiDropdown.mount(ddHost, {
+                options: labels.map((label, i) => ({ label, value: String(i) })),
+                value: String(initial),
+                direction: 'up',
+                wrapLabels: true,
+                info: 'Style — applies a built-in style LoRA and its trigger phrase',
+            });
+
+            this._instance.on('change', ({ value }) => {
+                const v = parseInt(value, 10) || 0;
+                this.value = v;
+                // The Stylization slider is a sibling control; it listens for this.
+                Events.emit('promptbox:style-change', { index: v });
+                _emitUpdate(this, opts, 'styleSelect', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = parseInt(this.value ?? this.defaultValue, 10) || 0;
+            return { Input_Style: v };
+        },
+    },
+
+    /**
+     * stylization — strength of the selected style LoRA (`Input_Stylization`,
+     * MpiFloat). Feeds the `b` operand of every MpiMath gate; only the selected
+     * slot reads it. Disabled at styleSelect 0, where all gates are zeroed.
+     *
+     * MpiProgressBar bakes `interactive` at mount and exposes no runtime setter, so
+     * the disabled state is driven by the same class the primitive uses plus a guard
+     * in the change handler. Remounting instead would drop the drag in progress.
+     */
+    stylization: {
+        nodeTitle: 'Input_Stylization',
+        scope: 'perModel',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.stylization,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const savedNum = Number(saved.stylization ?? this.defaultValue);
+            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : this.defaultValue;
+            this.value = initial;
+
+            const styleIdx = Number(saved.styleSelect ?? PROMPT_CONTROL_DEFAULTS.styleSelect) || 0;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const _fmt = (v) => Number(v).toFixed(2);
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Stylization';
+            const valEl = document.createElement('span');
+            valEl.className = 'mpi-prompt-box__slider-val';
+            valEl.textContent = _fmt(initial);
+            lblRow.appendChild(nameEl);
+            lblRow.appendChild(valEl);
+            hostEl.appendChild(lblRow);
+
+            const barHost = document.createElement('div');
+            barHost.className = 'mpi-prompt-box__slider-track';
+            hostEl.appendChild(barHost);
+
+            this._instance = MpiProgressBar.mount(barHost, {
+                min: 0,
+                max: 1,
+                step: 0.01,
+                value: initial,
+                interactive: true,
+                wheel: true,
+                handle: true,
+                variant: 'primary',
+                info: 'Stylization — how strongly the selected style is applied',
+            });
+
+            this._enabled = styleIdx !== 0;
+            const _applyEnabled = (on) => {
+                this._enabled = on;
+                hostEl.classList.toggle('is-disabled', !on);
+                hostEl.style.opacity = on ? '' : '0.45';
+                hostEl.style.pointerEvents = on ? '' : 'none';
+            };
+            _applyEnabled(this._enabled);
+
+            const _renderLabel = (v) => { valEl.textContent = _fmt(v); };
+
+            this._instance.on('input', ({ value }) => {
+                if (!this._enabled) return;
+                _renderLabel(Math.min(1, Math.max(0, Number(value) || 0)));
+            });
+
+            this._instance.on('change', ({ value }) => {
+                if (!this._enabled) return;
+                const v = Math.min(1, Math.max(0, Number(value) || 0));
+                this.value = v;
+                _renderLabel(v);
+                _emitUpdate(this, opts, 'stylization', v);
+            });
+
+            this._unsubStyle = Events.on('promptbox:style-change', ({ index }) => {
+                _applyEnabled(index !== 0);
+            });
+        },
+        destroy() {
+            this._unsubStyle?.();
+            this._unsubStyle = null;
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
+            return { Input_Stylization: v };
+        },
+    },
+
+    /**
+     * enhancePrompt — in-workflow prompt expansion (`Input_Enhance_Prompt`, MpiIfElse).
+     *
+     * ON routes the prompt through a `TextGenerate` node, which runs the LM head of
+     * the text encoder the workflow ALREADY loaded (Qwen3-VL for Krea2) — no second
+     * model, no extra VRAM. It costs an autoregressive pass before sampling, which is
+     * why it is opt-in, why the info string names the cost, and why commandExecutor
+     * adds a progress bar for it (see stagesFor's `extraBars`).
+     *
+     * The prompt box is deliberately NOT rewritten — the user keeps seeing their own
+     * words. What the encoder saw is captured from the graph's `Output_prompt` node
+     * and is what gets saved + reused. See docs/add-model-playbook.md §10.
+     */
+    enhancePrompt: {
+        nodeTitle: 'Input_Enhance_Prompt',
+        scope: 'perModel',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.enhancePrompt,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const initialActive = saved.enhancePrompt === true;
+            this.value = initialActive;
+
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'enhance',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initialActive,
+                info: 'Enhance prompt — expands your prompt before rendering, at the cost of longer generation time',
+            });
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                _emitUpdate(this, opts, 'enhancePrompt', !!active);
+            });
+        },
+        getValue() {
+            return this.value === true;
+        },
+        getInjectionParams() {
+            return { Input_Enhance_Prompt: this.value === true };
         },
     },
 

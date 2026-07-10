@@ -5,30 +5,36 @@ import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qs, qsa, on } from '../../../utils/dom.js';
-import { getModelRatios, RATIO_MODES, qualityTiersFor } from '../../../utils/ratios.js';
+// usesOrientation / usesQualityTier / clampQualityTier live in ratios.js beside
+// RATIO_MODES — the services (generationService, promptReuse) need them too and must
+// not import a UI component. Importing this module from Node pulls MpiButton →
+// icons.js on a browser-absolute path, which fails to resolve.
+// Re-exported so existing importers of this module keep working.
+import { getModelRatios, qualityTiersFor, usesOrientation, usesQualityTier, clampQualityTier, defaultQualityTier } from '../../../utils/ratios.js';
+export { usesOrientation, usesQualityTier, clampQualityTier, defaultQualityTier };
 
 /**
  * Resolve current { value, w, h, orientation, qualityTier } from live props (ratio variant only).
+ *
+ * `orientation` is null ONLY for pure-quality models (wan/wan5b/ltx), which have no
+ * orientation concept. It flows straight into the sidecar via generationService.
  * @param {Object} props
- * @returns {{ value: string, w: number, h: number, orientation: string|null, qualityTier: string }}
+ * @returns {{ value: string, w: number, h: number, orientation: string|null, qualityTier: string|undefined }}
  */
 function resolveCurrentDimensions(props) {
     const modelType   = props.modelType || 'flux';
     const orientation = props.orientation || props.initialOrientation || 'portrait';
-    const qualityTier = props.qualityTier || 'medium';
+    const qualityTier = props.qualityTier;
     const value       = props.value || '1:1';
-    const mode        = RATIO_MODES[modelType] ?? 'orientation';
-    const ratios      = getModelRatios(
-        modelType,
-        mode === 'orientation' ? orientation : undefined,
-        mode === 'quality' ? qualityTier : undefined
-    );
+    // Pass BOTH axes; getModelRatios reads RATIO_MODES and ignores the one its
+    // mode does not use. Withholding an axis breaks 'quality-orientation'.
+    const ratios      = getModelRatios(modelType, orientation, qualityTier);
     const match = ratios.find(r => r.label === value) || ratios[0];
     return {
         value:       match.label,
         w:           match.w ?? 0,
         h:           match.h ?? 0,
-        orientation: mode === 'orientation' ? orientation : null,
+        orientation: usesOrientation(modelType) ? orientation : null,
         qualityTier,
     };
 }
@@ -39,10 +45,9 @@ function _templateRatio(props) {
     const orientation = props.orientation || props.initialOrientation || 'portrait';
     const modelType   = props.modelType || 'flux';
     const value       = props.value || '1:1';
-    const qualityTier = props.qualityTier || 'medium';
+    const qualityTier = props.qualityTier;
     const isActive    = props.showPopup || false;
-    const mode        = RATIO_MODES[modelType] ?? 'orientation';
-    const ratios      = getModelRatios(modelType, mode === 'orientation' ? orientation : undefined, qualityTier);
+    const ratios      = getModelRatios(modelType, orientation, qualityTier);
     const triggerSize = props.size || 'md';
 
     const currentRatio = ratios.find(r => r.label === value) || ratios[0];
@@ -58,16 +63,16 @@ function _templateRatio(props) {
         </div>`;
     }).join('');
 
-    // Quality picker is now a sibling control (variant: 'quality'); only
-    // orientation models render a header here.
-    const isFlat = mode === 'quality' || modelType === 'social';
+    // The quality picker is a sibling control (variant: 'quality'). This header
+    // carries the orientation toggle, so it renders for any model whose ratio set
+    // has an orientation axis — 'orientation' AND 'quality-orientation' (krea2),
+    // but not pure-'quality' (wan/ltx), which has no such axis.
     let headerHtml = '';
-    if (mode === 'orientation') {
-        const orientContainerStyle = isFlat ? 'display: none;' : '';
+    if (usesOrientation(modelType) && modelType !== 'social') {
         headerHtml = `
         <div class="mpi-opt-sel__header">
             ${MpiBadge.template({ label: 'RATIO', variant: 'secondary' })}
-            <div class="mpi-opt-sel__orient-btn" style="${orientContainerStyle}">
+            <div class="mpi-opt-sel__orient-btn">
                 ${MpiButton.template({ icon: orientIcon, size: 'sm', info: `Switch to ${orientation === 'portrait' ? 'landscape' : 'portrait'} orientation` })}
             </div>
         </div>`;
@@ -126,24 +131,13 @@ function _templateNumber(props) {
 // MPI-174 — built-in families there, new models declare ModelDef.qualityTiers.
 const tiersFor = qualityTiersFor;
 
-/**
- * Clamp a persisted quality tier to one valid for `modelType`. Tiers are now
- * per-model (MPI-133), but a cross-model REUSE can still carry a tier the target
- * model lacks (LTX 2k/4k → Wan). Clamp to the nearest-equivalent rather than a
- * mid default: an unknown tier falls to `'very_high'` (the highest shared tier),
- * so a reused 2K/4K clip lands at the target's MAX quality, never silently mid.
- * Returns the tier unchanged when valid.
- */
-export function clampQualityTier(modelType, tier) {
-    return tiersFor(modelType).includes(tier) ? tier : 'very_high';
-}
-
 const QUALITY_LABELS = {
     very_low:  'Very Low',
     low:       'Low',
     medium:    'Medium',
     high:      'High',
     very_high: 'Very High',
+    '1k':      '1K',   // Krea2 (MPI-242) — without this the tier picker renders `undefined`
     '2k':      '2K',
     '4k':      '4K',
 };
@@ -159,12 +153,15 @@ const QUALITY_MOTION_HINT = {
  * Build per-tier info strings for quality radio buttons.
  * Resolution = tier's ratio set, matched by the currently selected ratio label
  * (falls back to first ratio in the tier).
+ *
+ * `orientation` matters for 'quality-orientation' models: at 2K a landscape 16:9
+ * is 1936×1088, its portrait twin 1088×1936. Pure-quality models ignore it.
  */
-function _buildQualityOptions(modelType, selectedRatio) {
+function _buildQualityOptions(modelType, selectedRatio, orientation) {
     return tiersFor(modelType).map(t => {
         let info = QUALITY_LABELS[t];
         if (modelType) {
-            const ratios = getModelRatios(modelType, undefined, t);
+            const ratios = getModelRatios(modelType, orientation, t);
             const match = ratios.find(r => r.label === selectedRatio) || ratios[0];
             if (match?.w && match?.h) {
                 const hint = QUALITY_MOTION_HINT[t] ? ` · ${QUALITY_MOTION_HINT[t]}` : '';
@@ -176,8 +173,8 @@ function _buildQualityOptions(modelType, selectedRatio) {
 }
 
 function _templateQuality(props) {
-    const qualityTier = props.qualityTier || 'medium';
-    const radioOptions = _buildQualityOptions(props.modelType, props.selectedRatio);
+    const qualityTier = props.qualityTier;
+    const radioOptions = _buildQualityOptions(props.modelType, props.selectedRatio, props.orientation);
 
     return `<div class="mpi-opt-sel mpi-opt-sel--quality">
         <span class="mpi-opt-sel__quality-label">Quality</span>
@@ -208,7 +205,7 @@ function _setupQuality(el, props, emit) {
 
     const _syncInfo = () => {
         if (!radioSlot) return;
-        const opts = _buildQualityOptions(props.modelType, props.selectedRatio);
+        const opts = _buildQualityOptions(props.modelType, props.selectedRatio, props.orientation);
         qsa('.mpi-radio-group__btn', radioSlot).forEach(btn => {
             const def = opts.find(o => o.value === btn.dataset.value);
             if (def?.info) btn.setAttribute('data-info', def.info);
@@ -218,6 +215,15 @@ function _setupQuality(el, props, emit) {
     el.setSelectedRatio = (label) => {
         if (!label || props.selectedRatio === label) return;
         props.selectedRatio = label;
+        _syncInfo();
+    };
+
+    // 'quality-orientation' models flip the tier hints with orientation: at 2K a
+    // landscape 16:9 reads 1936×1088, its portrait twin 1088×1936. The sibling
+    // ratio control drives this via the 'ratio:orientation-change' event.
+    el.setOrientation = (orientation) => {
+        if (!orientation || props.orientation === orientation) return;
+        props.orientation = orientation;
         _syncInfo();
     };
 
@@ -400,14 +406,12 @@ function _setupRatio(el, props, emit) {
     el.setQualityTier = (tier) => {
         if (!tier || props.qualityTier === tier) return;
         props.qualityTier = tier;
-        // Reset to first ratio of new quality set if current label invalid.
+        // Reset to first ratio of new quality set if current label invalid. For a
+        // 'quality-orientation' model both tiers carry the same labels, so the
+        // framing survives the tier change and only the pixels move (1:1 → 1024²
+        // at 1k, 1472² at 2k).
         const modelType = props.modelType || 'flux';
-        const mode      = RATIO_MODES[modelType] ?? 'orientation';
-        const ratios    = getModelRatios(
-            modelType,
-            mode === 'orientation' ? (props.orientation || 'portrait') : undefined,
-            mode === 'quality' ? tier : undefined
-        );
+        const ratios    = getModelRatios(modelType, props.orientation || 'portrait', tier);
         if (!ratios.find(r => r.label === props.value)) {
             const next = ratios[0];
             props.value = next?.label || props.value;
@@ -421,7 +425,7 @@ function _setupRatio(el, props, emit) {
                 ratio:       current.ratio ?? (current.w && current.h ? current.w / current.h : null),
                 w:           current.w ?? null,
                 h:           current.h ?? null,
-                orientation: mode === 'orientation' ? props.orientation : null,
+                orientation: usesOrientation(modelType) ? props.orientation : null,
             });
         }
     };
@@ -456,14 +460,9 @@ function _setupRatio(el, props, emit) {
         const orientation = props.orientation || props.initialOrientation || 'portrait';
         const modelType   = props.modelType || 'flux';
         const value       = props.value || '1:1';
-        const qualityTier = props.qualityTier || 'medium';
+        const qualityTier = props.qualityTier;
         const triggerSize = props.size || 'md';
-        const mode        = RATIO_MODES[modelType] ?? 'orientation';
-        const ratios      = getModelRatios(
-            modelType,
-            mode === 'orientation' ? orientation : undefined,
-            mode === 'quality' ? qualityTier : undefined
-        );
+        const ratios      = getModelRatios(modelType, orientation, qualityTier);
 
         grid.innerHTML = ratios.map(r => {
             const isSelected = r.label === value;
@@ -474,10 +473,12 @@ function _setupRatio(el, props, emit) {
             </div>`;
         }).join('');
 
-        const isFlat = mode === 'quality' || modelType === 'social';
-        if (mode === 'orientation' && orientContainer) {
+        // Runtime twin of the header gate in _templateRatio: updateUI() re-renders on
+        // every change, so a binary check here would hide the toggle on first
+        // interaction even when the template drew it.
+        if (usesOrientation(modelType) && modelType !== 'social' && orientContainer) {
             const orientIcon = orientation === 'portrait' ? 'ratio_16_9' : 'ratio_9_16';
-            orientContainer.style.display = isFlat ? 'none' : 'block';
+            orientContainer.style.display = 'block';
             orientContainer.innerHTML = MpiButton.template({ icon: orientIcon, size: 'sm' });
         } else if (orientContainer) {
             orientContainer.style.display = 'none';
@@ -504,10 +505,15 @@ function _setupRatio(el, props, emit) {
             const newOrient     = currentOrient === 'portrait' ? 'landscape' : 'portrait';
             props.orientation   = newOrient;
 
-            const oldRatios  = getModelRatios(props.modelType || 'flux', currentOrient);
+            // Tier MUST ride along: a 'quality-orientation' model resolves against
+            // [tier][orientation], so omitting it would flip a 2k Krea2 ratio back
+            // to the 1k table and write the wrong pixel dimensions.
+            const modelType  = props.modelType || 'flux';
+            const tier       = props.qualityTier;
+            const oldRatios  = getModelRatios(modelType, currentOrient, tier);
             const currentIdx = oldRatios.findIndex(r => r.label === props.value);
-            const newRatios  = getModelRatios(props.modelType || 'flux', newOrient);
-            const newRatio   = newRatios[Math.min(currentIdx, newRatios.length - 1)];
+            const newRatios  = getModelRatios(modelType, newOrient, tier);
+            const newRatio   = newRatios[Math.min(Math.max(currentIdx, 0), newRatios.length - 1)];
             props.value = newRatio.label;
 
             emit('orientation_change', { orientation: props.orientation });
@@ -527,13 +533,8 @@ function _setupRatio(el, props, emit) {
         const label       = item.dataset.label;
         const modelType   = props.modelType || 'flux';
         const orientation = props.orientation || props.initialOrientation || 'portrait';
-        const qualityTier = props.qualityTier || 'medium';
-        const mode        = RATIO_MODES[modelType] ?? 'orientation';
-        const ratios      = getModelRatios(
-            modelType,
-            mode === 'orientation' ? orientation : undefined,
-            mode === 'quality' ? qualityTier : undefined
-        );
+        const qualityTier = props.qualityTier;
+        const ratios      = getModelRatios(modelType, orientation, qualityTier);
         const ratio = ratios.find(r => r.label === label);
         if (!ratio) return;
         props.value = label;
@@ -542,7 +543,7 @@ function _setupRatio(el, props, emit) {
             ratio:       ratio.ratio ?? (ratio.w && ratio.h ? ratio.w / ratio.h : null),
             w:           ratio.w ?? null,
             h:           ratio.h ?? null,
-            orientation: mode === 'orientation' ? props.orientation : null,
+            orientation: usesOrientation(modelType) ? props.orientation : null,
         });
         updateUI();
         closePopup();

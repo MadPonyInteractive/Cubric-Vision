@@ -21,6 +21,8 @@ HANDLERS = [
     ("Wan22_5B_", "wan5b"),  # Wan22_5B_ti2v_template.json — MUST precede Wan22_ (first match wins)
     ("Wan22_",    "wan"),    # Wan22_i2v_template.json, Wan22_t2v_template.json
     ("LTX_",      "ltx"),    # MPI-127: source = LTX_i2v_t2v_template.json (do NOT rename)
+    ("krea2_",    "krea2"),  # MPI-242: krea2_turbo_t2i_template.json — no op split; stamps
+                             # the optional-image placeholder + asserts the style rack.
 ]
 
 

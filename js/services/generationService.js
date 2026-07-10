@@ -19,7 +19,7 @@ import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
 import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
-import { RATIO_MODES } from '../utils/ratios.js';
+import { usesOrientation } from '../utils/ratios.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -630,6 +630,10 @@ async function _deleteSavedItems(items) {
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
     const { operation, model, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
+    // The prompt as the user typed it. Everything on the SUBMIT path must use this
+    // (it is what feeds the graph). Only the SAVE path may substitute what the
+    // encoder actually saw — see the `Output_prompt` note in exec.onComplete.
+    const _positiveFromBox = positive;
 
     // Guard: don't dispatch when a REQUIRED media slot has no asset. The Comfy
     // workflow ships baked-in default filenames on its LoadImage/LoadVideo nodes;
@@ -737,6 +741,22 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
 
     exec.onComplete = async (urls, outputInfo = {}) => {
+        // `Output_prompt` contract (MPI-242): when the workflow carries a node of
+        // that title, the string IT encoded is the prompt of record — not the text
+        // still sitting in the prompt box. The graph may have expanded the prompt
+        // (the enhancer toggle) between the box and the encoder, and the box is
+        // deliberately left showing the user's own words.
+        //
+        // Shadowing `positive` here is the whole integration: all five sidecar/history
+        // writes below already read this binding, so there is exactly one read path
+        // and no "sometimes the box, sometimes the graph" branch to keep in sync.
+        // Workflows without the node yield null → the prompt-box text, unchanged.
+        //
+        // NOTE the tap point is upstream of the style concat, so what lands here has
+        // no style trigger appended — that is what lets Reuse Prompt restore the text
+        // and still leave the style free to change. See docs/add-model-playbook.md §10.
+        const positive = outputInfo.promptText || _positiveFromBox;
+
         if (!urls.length) {
             // Empty output after an explicit Stop is EXPECTED, not a fault: the
             // interrupt produced a terminal with nothing saved. Only warn when the
@@ -806,15 +826,24 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // Without this the sidecar is internally inconsistent and Reuse Prompt
             // replays the stale ratio. Only touch an existing ratioSelector on a
             // ratio-bearing op (Width+Height present); orientation derives from
-            // dims for orientation models, stays null for quality models.
+            // dims for any model with an orientation axis ('orientation' AND
+            // 'quality-orientation'), and stays null only for pure-quality models
+            // (wan/ltx), which have no such concept.
             if (_shared.ratioSelector && width && height) {
                 _shared.ratioSelector = {
                     ..._shared.ratioSelector,
                     selectedRatio: injectionParams.Ratio_Label ?? _shared.ratioSelector.selectedRatio,
-                    orientation: RATIO_MODES[model.type] === 'quality'
-                        ? null
-                        : (width > height ? 'landscape' : 'portrait'),
+                    orientation: usesOrientation(model.type)
+                        ? (width > height ? 'landscape' : 'portrait')
+                        : null,
                 };
+            }
+            // Same debounce race as ratioSelector above: `batch` is a shared control,
+            // so clicking it and generating inside the 300ms window snapshots the
+            // stale count while Batch_Size already carries the new one. The rendered
+            // value wins, or Reuse Prompt replays a batch the run never used.
+            if ('batch' in _shared && Number.isFinite(injectionParams.Batch_Size)) {
+                _shared.batch = injectionParams.Batch_Size;
             }
             const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
             const _model = {};
@@ -824,6 +853,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // bucket so Reuse Prompt replays it to modelSettings[id], and a
             // cross-model reuse clamps it (handled in buildPromptReuseSettings).
             if ('qualityTier' in _ms) _model.qualityTier = _ms.qualityTier;
+            // The style rack + enhancer are perModel too (they live in _MODEL_WIDE_KEYS).
+            // Snapshot them or Reuse Prompt silently drops the style, its strength, and
+            // the enhancer flag — injectionParams carries them, controlState did not.
+            for (const _k of ['styleSelect', 'stylization', 'enhancePrompt']) {
+                if (_k in _ms) _model[_k] = _ms[_k];
+            }
             const controlState = {};
             if (Object.keys(_shared).length) controlState.shared = _shared;
             if (Object.keys(_op).length) controlState.op = _op;

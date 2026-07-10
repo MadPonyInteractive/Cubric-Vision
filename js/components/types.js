@@ -351,7 +351,7 @@
  * @property {string} [operation='t2i']
  * @property {string} [value='']
  * @property {string} [negativeValue='']
- * @property {boolean} [includeNegative=false]
+ * @property {boolean} [includeNegative=false] - Does this SURFACE offer a negative prompt? Necessary but not sufficient: the toggle also requires the active model's `capabilities.negativePrompt !== false` (absent ⇒ supported), re-evaluated on every model change.
  * @property {boolean} [showSettings=true]
  * @property {boolean} [generating=false]
  * @property {Object} [context={}]

@@ -243,6 +243,130 @@ export const DEPS = {
         size: '254MB',
         sha256: 'a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f'
     },
+    // ── Krea2 (MPI-242) ──────────────────────────────────────────────────────
+    // Flux-lineage in ARCHITECTURE ONLY — the conditioning + VAE stack is Qwen.
+    // Reuses `vae-qwen-image` above (zero upload). `vae-flux-ae` is the WRONG dep.
+    // Turbo ships first; Raw (52-step) is phase 2. Quant variants (int8_convrot /
+    // mxfp8 / nvfp4) exist and are native in comfy 0.27 — see
+    // docs/builder/research/krea2-int8-quant.md. We ship fp8_scaled only.
+    'krea2-turbo-transformer': {
+        id: 'krea2-turbo-transformer',
+        name: 'Krea2 Turbo Transformer (fp8_scaled)',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'diffusion_models/krea2_turbo_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/krea2_turbo_fp8_scaled.safetensors',
+        size: '12.24GB',
+        sha256: 'eb4dd8c612cfd10f64f25b057e6e6bbcb5737c94a7372177e456dbf7579502f1',
+    },
+    'krea2-qwen3vl-clip': {
+        id: 'krea2-qwen3vl-clip',
+        name: 'Krea2 Text Encoder (Qwen3-VL-4B fp8_scaled)',
+        origin: 'Comfy-Org/Krea-2',
+        // Qwen3-VL-4B (hidden 2560). NOT qwen_2.5_vl_7b (hidden 3584) — different model.
+        filename: 'text_encoders/qwen3vl_4b_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors',
+        size: '4.88GB',
+        sha256: '54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094',
+    },
+    // Baked LoRAs — loaded by the workflow, not user slots. They travel with the
+    // model (same pattern as LTX's 3 + Wan-5B's 1). Subfoldered under loras/krea-2/;
+    // ComfyUI lists them BACKSLASHED (`krea-2\style\...`) — rides the MPI-229 heal.
+    'krea2-lora-depth-control': {
+        id: 'krea2-lora-depth-control',
+        name: 'Krea2 Depth ControlNet LoRA',
+        origin: 'Patil/Krea-2-depth-controlnet',
+        filename: 'loras/krea-2/control/depth-control-lora.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/control/depth-control-lora.safetensors',
+        size: '822MB',
+        sha256: 'fb80547ed79b47c1e3fea7bb9d36297e3917b2115fab6700ca1501350f9f483c',
+    },
+    // The 9 style LoRAs are MUTUALLY EXCLUSIVE at runtime: an MpiMath gate zeroes 8
+    // of 9, and MpiLoraModel.apply_lora returns early at strength_model==0 (never
+    // loads the file). footprint.js sums all 9 anyway (+3.50GB over-count) — MEASURED
+    // to change no row of the VRAM table (floor is MIN_FLOOR-clamped). Do NOT
+    // special-case footprint.js. Model-only (528 tensors, all `transformer.` prefix,
+    // rank 32 F32) ⇒ loraStrengths: ['model'].
+    'krea2-style-darkbrush': {
+        id: 'krea2-style-darkbrush',
+        name: 'Krea2 Style — Dark Brush',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_darkbrush.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_darkbrush.safetensors',
+        size: '448MB',
+        sha256: 'f47c4316dd93af66e0518c93b582f459571d4925b519133770c73a52cd5db7c6',
+    },
+    'krea2-style-dotmatrix': {
+        id: 'krea2-style-dotmatrix',
+        name: 'Krea2 Style — Dot Matrix',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_dotmatrix.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_dotmatrix.safetensors',
+        size: '448MB',
+        sha256: '805aa30d863347222485b9d3ce81642dbc70a73cebc95ab57219d98b878fceec',
+    },
+    'krea2-style-kidsdrawing': {
+        id: 'krea2-style-kidsdrawing',
+        name: 'Krea2 Style — Kids Drawing',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_kidsdrawing.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_kidsdrawing.safetensors',
+        size: '448MB',
+        sha256: '8c1d45d204aeb4e34a7d9e16a7d473917592ba0048b03f4e03e037e3578ca500',
+    },
+    'krea2-style-neondrip': {
+        id: 'krea2-style-neondrip',
+        name: 'Krea2 Style — Neon Drip',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_neondrip.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_neondrip.safetensors',
+        size: '448MB',
+        sha256: 'a779c14435949eabae9ce0bface4320cad6672ef3547e8489107e3498d65e871',
+    },
+    'krea2-style-rainywindow': {
+        id: 'krea2-style-rainywindow',
+        name: 'Krea2 Style — Rainy Window',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_rainywindow.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_rainywindow.safetensors',
+        size: '448MB',
+        sha256: '7063a6f15ec6112ad3c06d79097b2a30a3ea7d9072821cb36021010d55989fe5',
+    },
+    'krea2-style-retroanime': {
+        id: 'krea2-style-retroanime',
+        name: 'Krea2 Style — Retro Anime',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_retroanime.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_retroanime.safetensors',
+        size: '448MB',
+        sha256: 'ca42107783d9e517c5d62cb9a9db9ab2ba4887d90e9dad97a9d1a7fe6ff14c56',
+    },
+    'krea2-style-softwatercolor': {
+        id: 'krea2-style-softwatercolor',
+        name: 'Krea2 Style — Soft Water Color',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_softwatercolor.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_softwatercolor.safetensors',
+        size: '448MB',
+        sha256: '3805e8655f19fbcac116542685e3f78f3a642e8fbfb857b5352bb32a4b3d445a',
+    },
+    'krea2-style-sunsetblur': {
+        id: 'krea2-style-sunsetblur',
+        name: 'Krea2 Style — Sunset Blur',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_sunsetblur.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_sunsetblur.safetensors',
+        size: '448MB',
+        sha256: '194abdd531ca190d32799f26ab5bab634aa5ba3f07b7a60ffb282657db8bf3a0',
+    },
+    'krea2-style-vintagetarot': {
+        id: 'krea2-style-vintagetarot',
+        name: 'Krea2 Style — Vintage Tarot',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/krea2_vintagetarot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_vintagetarot.safetensors',
+        size: '448MB',
+        sha256: '8cca96c56658fb3ac5269f9ef2245bd07cbf1b7a189f517c8763470bb1385f9f',
+    },
     'pid-gemma': {
         id: 'pid-gemma',
         name: 'PiD Gemma text encoder',
@@ -574,6 +698,57 @@ export const DEPS = {
         installRequirements: true,
         pipPins: ['opencv-python==5.0.0.93', 'numpy==2.5.1'],
         size: '15MB',
+    },
+    // Krea2 depth-ControlNet loader/encoder/apply (MPI-242). Code-only — the repo is
+    // just `__init__.py` + `nodes.py`, NO requirements.txt ⇒ installRequirements:false
+    // ⇒ volume-installed on the Pod at connect, NO image rebuild.
+    // NOTE: its three node CLASSES must exist for EVERY Krea2 t2i run, not just
+    // pose-reference — ComfyUI validates the whole graph before the MpiIfElse picks a
+    // branch. This dep is mandatory, not optional.
+    'ComfyUI-Krea2-ControlNet': {
+        id: 'ComfyUI-Krea2-ControlNet',
+        name: 'ComfyUI Krea2 ControlNet',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-Krea2-ControlNet',
+        url: lockUrl('ComfyUI-Krea2-ControlNet'),
+        installRequirements: false,
+        size: '52KB',
+    },
+    // Preprocessors (DepthAnythingV2Preprocessor via AIO_Preprocessor) for the Krea2
+    // depth ControlNet (MPI-242). HAS a requirements.txt ⇒ installRequirements:true
+    // ⇒ BAKED into the Pod image (needs POD_IMAGE_VERSION bump + rebuild).
+    //
+    // ⚠ FIRST baked node whose requirements.txt lists bare `torch` + `torchvision`
+    // (no version constraint). The node does NOT need a different torch — our
+    // 2.12.0+cu130 satisfies it. The danger is OUR flag: the default installer runs
+    // `pip install -r requirements.txt --upgrade`, and `--upgrade` on an unconstrained
+    // name resolves from PyPI, which has no `+cu130` wheels. Empirically verified:
+    //   pip install --dry-run --upgrade torch      → "Would install torch-2.13.0"  ✗
+    //   pip install --dry-run -r requirements.txt  → "torch ... (2.12.0+cu130)" satisfied ✓
+    // Losing +cu130 destroys the ~10x cold fault-in fix (MPI-187).
+    //
+    // So: override the install with a NON-upgrade pip run. `installRequirementsCommand`
+    // replaces the default pip path entirely and runs inside the node folder.
+    // (pipPins can NOT fix this — `pip install torch==2.12.0+cu130` has no
+    // --index-url here and those wheels aren't on PyPI, so the pin would FAIL and
+    // abort the whole node install.) The Dockerfile solves the same hazard for
+    // ComfyUI's own unpinned `torch` by re-pinning the cu130 trio afterwards.
+    //
+    // Remaining unpinned shared libs are corrected by pipPins AFTER the install.
+    // Also pulls mediapipe (absent today), fvcore, omegaconf, onnxruntime-gpu.
+    'comfyui_controlnet_aux': {
+        id: 'comfyui_controlnet_aux',
+        name: 'ComfyUI ControlNet Aux (preprocessors)',
+        type: 'custom_nodes',
+        filename: 'comfyui_controlnet_aux',
+        url: lockUrl('comfyui_controlnet_aux'),
+        installRequirements: true,
+        installRequirementsCommand: 'python -m pip install -r requirements.txt --no-warn-script-location',
+        pipPins: [
+            'numpy==2.5.1', 'opencv-python==5.0.0.93', 'pillow==12.3.0',
+            'scipy==1.18.0', 'scikit-image==0.26.0', 'einops==0.8.2',
+        ],
+        size: '42.7MB',
     },
     'face-yolov8n': {
         id: 'face-yolov8n',

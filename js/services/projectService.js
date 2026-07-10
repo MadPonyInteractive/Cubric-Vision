@@ -64,7 +64,13 @@ const _sharedQueues = new Map();
 
 const _QUEUE_DEBOUNCE_MS = 300;
 
-const _MODEL_WIDE_KEYS = new Set(['loras', 'upscaleModel', 'qualityTier']);
+// Keys a `scope: 'perModel'` control may write without an opName (they land in
+// modelSettings[modelId][key]). A perModel control whose key is missing here has
+// its write SILENTLY DROPPED with a warning — see the guard on 'settings:model:update'.
+const _MODEL_WIDE_KEYS = new Set([
+    'loras', 'upscaleModel', 'qualityTier',
+    'styleSelect', 'stylization', 'enhancePrompt',
+]);
 
 function _enqueueModelUpdate(modelId, opName, key, value) {
     if (!_modelQueues.has(modelId)) {

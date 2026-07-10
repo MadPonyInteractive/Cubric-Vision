@@ -44,6 +44,14 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {Object}          [defaults]     - Per-control default override map, keyed by control id.
  *                                              Controls with scope:'perOp' look here first, then fall
  *                                              back to their own `defaultValue`. e.g. { denoise: 0.30 }
+ * @property {Object}          [injectParams] - Constant workflow params this op ALWAYS injects, keyed by
+ *                                              node title. For ops that share one graph and select a
+ *                                              branch with a baked-false boolean (Krea2's t2i / i2i /
+ *                                              poseReference all run krea2_turbo_t2i.json). Merged in
+ *                                              commandExecutor._buildParams BEFORE the user's control
+ *                                              params, so a control can still override. Titles follow
+ *                                              the tier-2 naming law and are matched case-insensitively;
+ *                                              an unmatched title is silently skipped by the injector.
  * @property {string}          [progressLabel] - Present-participle verb shown in the status bar while
  *                                              this op is running (e.g. 'Upscaling', 'Detailing').
  *                                              Defaults to 'Generating' when omitted. NEW OPS should
@@ -71,7 +79,16 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'batch'],
+        // styleSelect/stylization/enhancePrompt are ALSO capability-gated per model
+        // (MpiPromptBox._refreshOpSlot) — listing them here only says "this op's graph
+        // has the nodes", not "every model shows them". Krea2's detailer/upscaler
+        // graphs carry no style rack and no enhancer, so those ops omit all three.
+        // qualityTier is gated the same way, on usesQualityTier(model.type): only a
+        // tier-keyed model (Krea2) mounts it; SDXL/Chroma/Flux never see it.
+        // Array order IS mount order (MpiPromptBox._refreshOpSlot appends in sequence):
+        // the full-width tier block leads, the enhancer rides the bottom row beside
+        // ratio + batch, so Krea2's panel matches LTX/Wan/SDXL.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'enhancePrompt'],
     },
     i2i: {
         label: 'Image to Image',
@@ -81,7 +98,33 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        components: ['ratio', 'batch'],
+        // i2i shares the t2i graph (Input_Is_i2i flips the latent source), so it has
+        // the same style rack + enhancer nodes. Capability-gated per model as above.
+        // The boolean is baked FALSE in the graph and nothing else sets it, so without
+        // this the op silently runs as t2i and ignores the input image.
+        injectParams: { Input_Is_i2i: true },
+        // denoise (`Input_denoise`, MpiFloat node 228) reaches the sampler ONLY through
+        // the Input_Is_i2i gate (MpiIfElse 230), so it is live here and inert on t2i /
+        // poseReference. Default matches the graph's baked 0.3. The bare `Denoise` key's
+        // tier-2 alias `Input_Denoise` matches the node case-insensitively.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'enhancePrompt'],
+        defaults: { denoise: 0.30 },
+    },
+    // Depth-ControlNet pose transfer. Third op on the SAME krea2_turbo_t2i.json graph:
+    // Input_Image → AIO_Preprocessor → Krea2ControlImageEncode → Krea2ControlApply,
+    // selected by the Input_pose_reference MpiIfElse. Composes with Input_Is_i2i
+    // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
+    poseReference: {
+        label: 'Pose Reference',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: true,
+        injectParams: { Input_pose_reference: true },
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'enhancePrompt'],
     },
     upscale: {
         label: 'Upscale',
