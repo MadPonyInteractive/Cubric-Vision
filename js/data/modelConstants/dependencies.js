@@ -295,6 +295,18 @@ export const DEPS = {
         size: '822MB',
         sha256: 'fb80547ed79b47c1e3fea7bb9d36297e3917b2115fab6700ca1501350f9f483c',
     },
+    // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
+    // 12-float projector nudge. Dep of BOTH models (it's negligible); the generator bakes
+    // strength 1.0 on SFW (the fp8_scaled weight is filtered) and 0.0 on NSFW (self-unfiltered).
+    'krea2-lora-filterbypass': {
+        id: 'krea2-lora-filterbypass',
+        name: 'Krea2 Filter Bypass LoRA',
+        origin: 'Krea-2 filter bypass',
+        filename: 'loras/krea-2/extra/krea2filterbypass3.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2filterbypass3.safetensors',
+        size: '160B',
+        sha256: 'ec5901a2d0b8f4e4e1e7e62fe4567566f0837799f7a413b03a06f72f47934dda',
+    },
     // The 9 style LoRAs are MUTUALLY EXCLUSIVE at runtime: an MpiMath gate zeroes 8
     // of 9, and MpiLoraModel.apply_lora returns early at strength_model==0 (never
     // loads the file). footprint.js sums all 9 anyway (+3.50GB over-count) — MEASURED

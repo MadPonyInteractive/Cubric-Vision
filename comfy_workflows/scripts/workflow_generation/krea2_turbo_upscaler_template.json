@@ -93,19 +93,6 @@
       "title": "Mpi Grid Dimensions"
     }
   },
-  "1640": {
-    "inputs": {
-      "value": [
-        "1594",
-        0
-      ],
-      "exponent": 1.8
-    },
-    "class_type": "MpiExpoFloat",
-    "_meta": {
-      "title": "Mpi Expo Float"
-    }
-  },
   "1655": {
     "inputs": {
       "resize_type": "scale to multiple",
@@ -267,7 +254,7 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "1687",
+        "1693",
         0
       ]
     },
@@ -303,7 +290,7 @@
       "sampler_name": "euler",
       "scheduler": "beta",
       "denoise": [
-        "1640",
+        "1594",
         0
       ],
       "mode_type": "Linear",
@@ -395,6 +382,20 @@
     "class_type": "ConditioningZeroOut",
     "_meta": {
       "title": "ConditioningZeroOut"
+    }
+  },
+  "1693": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
+      "strength_model": 0,
+      "model": [
+        "1687",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Bypass_Filter_Lora"
     }
   }
 }

@@ -166,7 +166,7 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "1689",
+        "1694",
         0
       ]
     },
@@ -271,6 +271,20 @@
     "class_type": "ConditioningZeroOut",
     "_meta": {
       "title": "ConditioningZeroOut"
+    }
+  },
+  "1694": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
+      "strength_model": 0,
+      "model": [
+        "1689",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Bypass_Filter_Lora"
     }
   }
 }

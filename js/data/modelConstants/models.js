@@ -241,6 +241,7 @@ export const MODELS = [
             'krea2-qwen3vl-clip',
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
+            'krea2-lora-filterbypass',   // always-on bypass node; strength baked per variant (SFW 1.0 / NSFW 0.0)
             'krea2-style-darkbrush',
             'krea2-style-dotmatrix',
             'krea2-style-kidsdrawing',
@@ -311,6 +312,7 @@ export const MODELS = [
             'krea2-qwen3vl-clip',
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
+            'krea2-lora-filterbypass',   // always-on bypass node; strength baked per variant (SFW 1.0 / NSFW 0.0)
             'krea2-style-darkbrush',
             'krea2-style-dotmatrix',
             'krea2-style-kidsdrawing',

@@ -49,10 +49,18 @@ UNET_LOADER_TITLE = "Load Diffusion Model"
 # The two content variants. filename suffix -> diffusion weight baked into UNETLoader.
 # The weight filenames are the loader-relative (diffusion_models/) names; they MUST match
 # the dep `filename` tails in dependencies.js and the on-disk / R2 locations (playbook §3).
+#
+# `bypass` = the strength baked into the always-on `Input_Bypass_Filter_Lora` node
+# (present on t2i only). The SFW fp8_scaled weight ships the model's built-in content
+# filter, so the bypass LoRA must be ACTIVE (1.0) to match the NSFW model's output. The
+# NSFW int8_convrot weight already unfilters itself, so the bypass is redundant there (0.0).
+# The LoRA is a dep of BOTH models (it's tiny) — only its baked strength differs.
 VARIANTS = {
-    "sfw":  "krea2_turbo_fp8_scaled.safetensors",
-    "nsfw": "lustify-v10-krea-turbo-int8_convrot.safetensors",
+    "sfw":  {"weight": "krea2_turbo_fp8_scaled.safetensors",              "bypass": 1.0},
+    "nsfw": {"weight": "lustify-v10-krea-turbo-int8_convrot.safetensors", "bypass": 0.0},
 }
+
+BYPASS_LORA_TITLE = "Input_Bypass_Filter_Lora"
 
 # The ONLY optional media input: t2i can run with no image at all.
 # i2i / pose-reference inject a real image over this before submit.
@@ -80,6 +88,20 @@ def _bake_weight(workflow: dict, weight: str) -> None:
     node["inputs"]["unet_name"] = weight
     if before != weight:
         print(f"  [WEIGHT] {before!r} -> {weight!r}")
+
+
+def _bake_bypass_strength(workflow: dict, strength: float) -> None:
+    """Force the always-on content-filter-bypass LoRA's strength per variant (SFW 1.0,
+    NSFW 0.0). Present on t2i only — a graph without the node (detailer/upscaler) just
+    has no filter to bypass, so this is a no-op there. Forced, never trusted from the
+    exported template (same rule as the diffusion weight)."""
+    node = _find_by_title(workflow, BYPASS_LORA_TITLE)
+    if node is None:
+        return
+    before = node["inputs"].get("strength_model")
+    node["inputs"]["strength_model"] = strength
+    if before != strength:
+        print(f"  [BYPASS] {BYPASS_LORA_TITLE}.strength_model: {before!r} -> {strength}")
 
 
 def _stamp_placeholder(workflow: dict) -> None:
@@ -144,16 +166,17 @@ def _assert_style_rack(workflow: dict) -> int:
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. Emit one SFW + one NSFW runtime file for this template,
-    differing only in the baked diffusion weight."""
+    """Orchestrator entry. Emit one SFW + one NSFW runtime file for this template.
+    They differ in the baked diffusion weight and the content-filter-bypass strength."""
     # krea2_turbo_t2i_template.json -> krea2_turbo_t2i
     base = source_path.name[: -len("_template.json")]
     print(f"Template: {source_path.name}")
 
     out_paths: list[Path] = []
-    for suffix, weight in VARIANTS.items():
+    for suffix, spec in VARIANTS.items():
         workflow = json.loads(source_path.read_text(encoding="utf-8"))
-        _bake_weight(workflow, weight)
+        _bake_weight(workflow, spec["weight"])
+        _bake_bypass_strength(workflow, spec["bypass"])
         _stamp_placeholder(workflow)
         n_styles = _assert_style_rack(workflow)
 
