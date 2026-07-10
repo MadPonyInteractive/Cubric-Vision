@@ -447,7 +447,20 @@ export function cancelPendingCueJob(queueJobId) {
 export function cancelRunningCueJob(queueJobId) {
     if (!queueJobId) return false;
     const entry = activeGenerations.list().find(e => e.queueJobId === queueJobId && e.status === 'running');
-    if (!entry) return false;
+    if (!entry) {
+        // The generation already died (e.g. ComfyUI rejected the prompt): its
+        // `exec.onError` ran `activeGenerations.end()`, deleting the registry entry.
+        // The queue panel still renders RUNNING off `_lanes[lane].active`, so the
+        // user sees a live STOP whose registry lookup finds nothing and no-ops.
+        // Nothing is left to interrupt — drain the orphaned lane so the card clears
+        // and the next pending job can promote.
+        const orphanLane = _lanes.remote.active?.queueJobId === queueJobId ? 'remote'
+            : _lanes.local.active?.queueJobId === queueJobId ? 'local'
+            : null;
+        if (!orphanLane) return false;
+        _onLaneDrain(orphanLane);
+        return true;
+    }
 
     // Which lane holds this intent? Resolved from the dispatched intent, not the
     // registry (the intent carries the lane; MPI-74 P6 keeps the OTHER lane clear).
