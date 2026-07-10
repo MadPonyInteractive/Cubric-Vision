@@ -7,7 +7,15 @@
   "active_tasks": [],
   "active_file_claims": [],
   "pending_file_states": [],
-  "open_messages": [],
+  "open_messages": [
+    {
+      "id": "f38327ba-7826-4490-a2fe-3b760590be94",
+      "path": ".agents/mpi-kanban/state/messages/f38327ba-7826-4490-a2fe-3b760590be94.json",
+      "to_task": "MPI-242",
+      "status": "open",
+      "created_at": "2026-07-10T19:55:00Z"
+    }
+  ],
   "active_handoffs": [
     {
       "id": "c57162cd-17cd-40da-86c6-ee53b9a7183e",
