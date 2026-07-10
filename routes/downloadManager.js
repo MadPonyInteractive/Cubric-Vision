@@ -43,11 +43,28 @@ const remoteModels = require('./remoteModels');
 const _require = createRequire(__filename);
 let _extractZip = null;
 
+// Extract a custom-node archive (GitHub /archive/ or Comfy Registry zip).
+// Fast path: native `tar` (bsdtar on Windows/macOS = libarchive, reads zip) —
+// ~2.7x faster than pure-JS extract-zip on Windows (the villain was extract-zip's
+// single-file JS write loop, not decompression), and streams one entry at a time
+// in a separate process = constant RAM regardless of file count. GNU tar on Linux
+// can't read zip, so ANY tar failure falls back to extract-zip (Linux keeps today's
+// exact behaviour). Remote/Pod nodes are image-resident and never reach this path.
+// See MPI-248 for measurements + the bite-back watchlist.
 async function _extractZipArchive(zipPath, extractDir) {
+    const dir = path.resolve(extractDir);
+    try {
+        const { execFile } = _require('child_process');
+        const { promisify } = _require('util');
+        await promisify(execFile)('tar', ['-xf', zipPath, '-C', dir], { windowsHide: true });
+        return;
+    } catch (err) {
+        logger.warn('download', `native tar extract failed (${err.message}) — falling back to extract-zip`);
+    }
     if (!_extractZip) {
         _extractZip = _require('extract-zip');
     }
-    await _extractZip(zipPath, { dir: path.resolve(extractDir) });
+    await _extractZip(zipPath, { dir });
 }
 
 const ENGINE_ROOT = getEngineRoot();
