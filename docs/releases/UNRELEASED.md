@@ -18,3 +18,4 @@
 - Reuse Prompt now restores the style, stylization, quality tier and batch, not just the prompt text.
 - New projects open Krea 2 on the 1K quality tier instead of 2K.
 - Auto-mask (the Detect button in the Mask tool) no longer fails on Windows with a model-path error.
+- First-time engine setup no longer leaves some model components uninstalled when one of them hits a snag mid-install, and no longer leaves behind duplicate download files.
