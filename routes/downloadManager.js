@@ -67,6 +67,21 @@ async function _extractZipArchive(zipPath, extractDir) {
     await _extractZip(zipPath, { dir });
 }
 
+// MPI-243: is a custom-node folder actually EXTRACTED, or just a shell created by
+// a `targetPath` weight that lands under it (e.g. RIFE writes
+// comfyui-frame-interpolation/ckpts/rife/rife47.pth before the node itself
+// extracts)? A real node ships top-level FILES (__init__.py, install.py, ...); a
+// weight-only shell holds nothing but subdirs. True = at least one top-level file.
+async function _nodeFolderHasFiles(dir) {
+    let entries;
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+        return false; // absent or unreadable → treat as not extracted
+    }
+    return entries.some(e => e.isFile());
+}
+
 const ENGINE_ROOT = getEngineRoot();
 
 // ── Engine-aware dep filter (server-side defense) ─────────────────────────────
@@ -1538,16 +1553,26 @@ async function _runCustomNodeInstall(modelJob) {
         const extractDir = path.dirname(zipPath); // custom_nodes/
         const targetDir = path.join(extractDir, dep.filename); // dep.filename is the source of truth for target name
 
-        // If the extracted folder already exists (installed by engine install or a
-        // prior run), skip ONLY extraction — but still fall through to the
-        // requirements step below. A node folder can land without its pip deps (a
-        // prior install where requirements.txt failed/was interrupted, or the node
-        // was extracted by a different path that never ran pip); folder-present is
-        // NOT proof the deps are installed. pip with --upgrade is idempotent (a
-        // no-op when already satisfied), so re-running it is cheap + self-healing.
-        // This is the general cure for the recurring "node present, dep missing"
-        // class (e.g. ComfyUI-GGUF folder on disk but `gguf` pkg absent).
-        const alreadyExtracted = await fs.pathExists(targetDir);
+        // If the extracted node ALREADY has its own files, skip ONLY extraction —
+        // but still fall through to the requirements step below. A node folder can
+        // land without its pip deps (a prior install where requirements.txt
+        // failed/was interrupted, or the node was extracted by a different path
+        // that never ran pip); folder-present is NOT proof the deps are installed.
+        // pip with --upgrade is idempotent (a no-op when already satisfied), so
+        // re-running it is cheap + self-healing. This is the general cure for the
+        // recurring "node present, dep missing" class (e.g. ComfyUI-GGUF folder on
+        // disk but `gguf` pkg absent).
+        //
+        // MPI-243: `pathExists(targetDir)` alone is a FALSE POSITIVE. A `targetPath`
+        // weight (e.g. RIFE's ckpts/rife/rife47.pth, which resolves UNDER the node
+        // folder) downloads first and creates `comfyui-frame-interpolation/` with
+        // only a `ckpts/` subdir — no node files. The old check then "skipped
+        // extraction" and ran `python install.py` in a folder that has no
+        // install.py → Errno 2, "UW deps installation failed", user must Retry.
+        // A real node always ships top-level FILES (__init__.py, install.py). So
+        // "already extracted" means: the folder holds at least one top-level file,
+        // not just weight subdirs.
+        const alreadyExtracted = await _nodeFolderHasFiles(targetDir);
         if (alreadyExtracted) {
             logger.info('download', `Custom node already extracted: ${targetDir}, skipping extraction but verifying requirements`);
         }
@@ -1610,10 +1635,22 @@ async function _runCustomNodeInstall(modelJob) {
 
             // Rename 'owner-repo-main' → 'owner-repo' (dep.filename)
             try {
-                if (await fs.pathExists(targetDir)) {
-                    // Target already exists — remove the incorrectly-named duplicate
+                if (await _nodeFolderHasFiles(targetDir)) {
+                    // A fully-extracted node is already there — the freshly-extracted
+                    // copy is a duplicate; drop it.
                     await fs.remove(extractedMainDir);
-                    logger.warn('download', `Target ${targetDir} already exists, removed duplicate: ${extractedMainDir}`);
+                    logger.warn('download', `Target ${targetDir} already extracted, removed duplicate: ${extractedMainDir}`);
+                } else if (await fs.pathExists(targetDir)) {
+                    // MPI-243: targetDir exists but holds NO node files — it's the
+                    // weight-shell a `targetPath` dep created (e.g. RIFE's ckpts/
+                    // landed here before the node extracted). MERGE the node's files
+                    // into it instead of deleting the node (the old `remove` branch
+                    // dropped the real node and left the empty shell → `install.py`
+                    // missing). `overwrite` lets node files win; the existing weight
+                    // subdir is preserved.
+                    await fs.copy(extractedMainDir, targetDir, { overwrite: true });
+                    await fs.remove(extractedMainDir);
+                    logger.info('download', `Merged extracted node into weight-shell ${targetDir}`);
                 } else {
                     await fs.move(extractedMainDir, targetDir);
                     logger.info('download', `Renamed ${extractedMainDir} → ${targetDir}`);
