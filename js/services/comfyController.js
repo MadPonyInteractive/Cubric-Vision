@@ -1194,6 +1194,14 @@ function createEngine({ engine, alwaysLocal }) {
         // would BREAK local. (MPI-141 remote; MPI-198 local Linux/macOS)
         const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
         const _healToSlash = _needsPathHeal(this._alwaysLocal);
+        // MPI-246: some nodes build their own enum with hardcoded '/' regardless of
+        // OS — Impact Pack's UltralyticsDetectorProvider lists 'bbox/face_yolov8n.pt'
+        // with a forward slash on Windows too. The Windows-local '/'→'\\' heal below
+        // corrupts that into 'bbox\\face_yolov8n.pt' → value_not_in_list. Exclude
+        // model_name for these node types (harmless in the '\\'→'/' direction too,
+        // their value never has backslashes). folder_paths-backed loaders
+        // (UpscaleModelLoader, SAMLoader, etc.) still get the OS-separator heal.
+        const SLASH_ONLY_NODE_TYPES = new Set(['UltralyticsDetectorProvider']);
         // Windows-local: the inverse. A user LoRA name persisted during a Pod
         // (Linux) session carries '/', but this engine's ComfyUI lists with '\\'
         // → value_not_in_list on reuse. Flip '/'→'\\' so the separator matches the
@@ -1201,6 +1209,7 @@ function createEngine({ engine, alwaysLocal }) {
         for (const node of Object.values(workflow)) {
             if (!node || !node.inputs) continue;
             for (const k of PATH_INPUTS) {
+                if (k === 'model_name' && SLASH_ONLY_NODE_TYPES.has(node.class_type)) continue;
                 const v = node.inputs[k];
                 if (typeof v !== 'string') continue;
                 if (_healToSlash) {
