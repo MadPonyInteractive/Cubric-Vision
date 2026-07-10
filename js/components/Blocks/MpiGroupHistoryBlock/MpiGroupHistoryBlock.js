@@ -36,7 +36,7 @@ import { qs, gid } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
-import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
+import { resolveActiveModel, setSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
 import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
@@ -200,9 +200,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _firstAvailable = _opOptions().find(o => !o.disabled);
         const _firstFrameOp = activeModel?.supportedOps?.find(op => op.startsWith('i2v') || op.startsWith('v2v'));
-        let activeOperation = _hasPromptOps()
-            ? (_firstAvailable?.value ?? 'upscale')
-            : (_firstFrameOp || (isVideo ? 't2v' : 'generate'));
+        // MPI-247: prefer the user's remembered op for this model so navigating
+        // Gallery<->History (which remounts the block) doesn't snap the op back
+        // to the first available. Only honour it if it's actually available in
+        // this history context; otherwise fall back to the first available op.
+        const _rememberedOp = getSelectedOp(activeModelId);
+        const _rememberedAvailable = _rememberedOp && _opOptions().some(o => o.value === _rememberedOp && !o.disabled);
+        let activeOperation = _rememberedAvailable
+            ? _rememberedOp
+            : (_hasPromptOps()
+                ? (_firstAvailable?.value ?? 'upscale')
+                : (_firstFrameOp || (isVideo ? 't2v' : 'generate')));
         let _preferredOperation = activeOperation;
         let _isProgrammaticOperationSync = false;
         let _currentIdx = _group.selectedIndex ?? 0;
@@ -733,7 +741,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         function _setPromptOperation(operation, { remember = false } = {}) {
             activeOperation = operation;
-            if (remember) _preferredOperation = operation;
+            if (remember) {
+                _preferredOperation = operation;
+                setSelectedOp(activeModelId, operation); // MPI-247: survive remount
+            }
             if (!_pb?.el) return;
             _isProgrammaticOperationSync = true;
             try {
@@ -831,9 +842,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _refreshOpOptions();
                 _syncPromptToolDisabled();
             }));
-            _unsubs.push(_pb.on('operation-change', ({ operation }) => {
+            _unsubs.push(_pb.on('operation-change', ({ operation, programmatic }) => {
                 activeOperation = operation;
-                if (!_isProgrammaticOperationSync) _preferredOperation = operation;
+                // User-driven pick only: update the preferred op AND remember it
+                // per model (MPI-247), so it survives a remount. Guard on BOTH the
+                // block's own programmatic-sync flag and the PromptBox's own
+                // programmatic re-pick (model switch / media-context).
+                if (!_isProgrammaticOperationSync && !programmatic) {
+                    _preferredOperation = operation;
+                    setSelectedOp(activeModelId, operation);
+                }
             }));
             _unsubs.push(_pb.on('media-change', () => {
                 // PromptBox media count drives op availability in history

@@ -50,6 +50,35 @@ export function setSelectedModelId(mediaType, modelId, opts = {}) {
 }
 
 /**
+ * Read the user's last chosen operation for a model. Session-only memory
+ * (state.s_selectedOpByModel, not persisted) so navigation and model switches
+ * don't snap the op back to i2i. Returns null when the user hasn't picked one.
+ * (MPI-247)
+ * @param {string|null} modelId
+ * @returns {string|null}
+ */
+export function getSelectedOp(modelId) {
+    if (!modelId) return null;
+    return state.s_selectedOpByModel?.[modelId] ?? null;
+}
+
+/**
+ * Remember the user's chosen operation for a model. Top-level replace so the
+ * Proxy fires state:changed. Call ONLY for user-driven op picks — programmatic
+ * re-picks (PromptBox.setModel resolving an op for the media context) must be
+ * guarded out, or they poison the memory. (MPI-247)
+ * @param {string|null} modelId
+ * @param {string|null} op
+ */
+export function setSelectedOp(modelId, op) {
+    if (!modelId || !op) return;
+    const current = state.s_selectedOpByModel || {};
+    if (current[modelId] !== op) {
+        state.s_selectedOpByModel = { ...current, [modelId]: op };
+    }
+}
+
+/**
  * Resolves the active model for a given mediaType, using the persisted
  * per-mediaType selection with fallback to first installed model of that type.
  *

@@ -27,7 +27,7 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
-import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
+import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
@@ -1023,7 +1023,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Default op tracks active model's mediaType. t2i for image, t2v for video.
         // PromptBox will re-pick a valid op for context on its own; this just
         // keeps Block-side bookkeeping consistent with the initial model.
-        let activeOperation = activeModel?.mediaType === 'video' ? 't2v' : 't2i';
+        // MPI-247: seed from the user's remembered op for this model first, so
+        // navigating away and back doesn't snap the op back to t2i/i2i.
+        let activeOperation = getSelectedOp(activeModelId)
+            ?? (activeModel?.mediaType === 'video' ? 't2v' : 't2i');
         if (activeModel && !activeModel.supportedOps?.includes(activeOperation)) {
             activeOperation = activeModel.supportedOps?.[0] ?? activeOperation;
         }
@@ -1185,6 +1188,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 // duration. Without this the live PromptBox lags until next nav.
                 _pb.el.refreshControls?.();
             }
+            // MPI-247: re-assert the reused op LAST. clearMedia/injectMedia above
+            // fire _emitMediaChange, which auto-switches the op when media state
+            // transiently mismatches the op's input slots (e.g. clearMedia wipes
+            // the chip while op=poseReference → box falls back to a text-only op).
+            // The reused op is authoritative, so set it once more after media +
+            // settings have settled.
+            if (targetModel.supportedOps?.includes(targetOperation) && activeOperation !== targetOperation) {
+                activeOperation = targetOperation;
+                _pb.el.setOperation?.(targetOperation);
+            }
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
             _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
@@ -1212,8 +1225,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 refreshRadial({ imageCount, videoCount, modelId: model.id });
             });
 
-            pb.on('operation-change', ({ operation }) => {
+            pb.on('operation-change', ({ operation, programmatic }) => {
                 activeOperation = operation;
+                // MPI-247: remember per model, but only for user-driven picks —
+                // a programmatic re-pick (model switch / media-context) must not
+                // overwrite what the user last chose.
+                if (!programmatic) setSelectedOp(activeModelId, operation);
             });
 
             pb.on('settings', () => {

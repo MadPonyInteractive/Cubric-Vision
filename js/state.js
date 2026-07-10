@@ -55,6 +55,16 @@ const _state = {
                                // to install). Separate axis from the op draft. Survives
                                // restart; mirrored to localStorage below.
 
+    s_selectedOpByModel: {},   // MPI-247: { [modelId]: opKey } — the user's last
+                               // chosen operation per model. Session-only (NOT
+                               // persisted to localStorage): a fresh app start
+                               // defaults to the model's natural op. Seeds
+                               // activeOperation on Gallery mount + model-switch so
+                               // navigation and model changes don't snap the op
+                               // back to i2i. Written via setSelectedOp() in
+                               // js/utils/modelHelpers.js, only on user-driven op
+                               // picks (programmatic PromptBox re-picks are guarded).
+
     // ── Installed model list (populated after syncModelInstalled) ──────────────
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
                                // Updated by the 'models:checked' event from modelRegistry.

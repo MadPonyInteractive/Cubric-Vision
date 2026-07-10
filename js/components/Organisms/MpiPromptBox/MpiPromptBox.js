@@ -263,14 +263,14 @@ export const MpiPromptBox = ComponentFactory.create({
             if (hasMedia && curIsTextOnly) {
                 const fallback = _pickFallbackOp();
                 if (fallback) {
-                    el.setOperation(fallback);
+                    el.setOperation(fallback, { programmatic: true });
                 } else {
                     _refreshOpDropdown();
                 }
             } else if (!hasMedia && curCmd && !curIsTextOnly) {
                 const textOp = _pickTextOnlyOp();
                 if (textOp) {
-                    el.setOperation(textOp);
+                    el.setOperation(textOp, { programmatic: true });
                 } else {
                     _refreshOpDropdown();
                 }
@@ -402,12 +402,16 @@ export const MpiPromptBox = ComponentFactory.create({
             _emitMediaChange();
         };
 
-        el.setOperation = (key) => {
+        // MPI-247: `programmatic` distinguishes an op the box RE-DERIVED for the
+        // user (model switch, media-context re-pick) from an op the USER chose.
+        // Consumers persist per-model op memory only for user picks — a
+        // programmatic re-pick must not overwrite what the user last selected.
+        el.setOperation = (key, { programmatic = false } = {}) => {
             activeOperation = key;
             _refreshOpDropdown();
             _refreshOpSlot();
             _renderBadge();
-            emit('operation-change', { operation: key });
+            emit('operation-change', { operation: key, programmatic });
         };
 
         el.updateContext = (ctx) => {
@@ -496,7 +500,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 );
             }
             if (picked && picked !== activeOperation) {
-                el.setOperation(picked);
+                el.setOperation(picked, { programmatic: true });
             } else {
                 _refreshOpDropdown();
                 _refreshOpSlot();
@@ -542,7 +546,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 );
             }
             if (nextOp !== activeOperation) {
-                el.setOperation(nextOp);
+                el.setOperation(nextOp, { programmatic: true });
             } else {
                 _refreshOpDropdown();
                 _refreshOpSlot();
