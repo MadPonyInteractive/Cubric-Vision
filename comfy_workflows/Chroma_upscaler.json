@@ -93,19 +93,6 @@
       "title": "Mpi Grid Dimensions"
     }
   },
-  "1640": {
-    "inputs": {
-      "value": [
-        "1594",
-        0
-      ],
-      "exponent": 1.8
-    },
-    "class_type": "MpiExpoFloat",
-    "_meta": {
-      "title": "Mpi Expo Float"
-    }
-  },
   "1655": {
     "inputs": {
       "resize_type": "scale to multiple",
@@ -136,7 +123,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Upscale_Factor"
+      "title": "Input_Upscale_Factor"
     }
   },
   "1669": {
@@ -397,7 +384,7 @@
       "sampler_name": "res_multistep",
       "scheduler": "bong_tangent",
       "denoise": [
-        "1640",
+        "1594",
         0
       ],
       "mode_type": "Linear",
