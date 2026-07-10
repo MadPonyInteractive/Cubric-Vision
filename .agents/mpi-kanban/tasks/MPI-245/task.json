@@ -7,11 +7,13 @@
   "maturity": "complete",
   "status": "accepted",
   "created_at": "2026-07-10T15:00:00Z",
-  "updated_at": "2026-07-10T15:00:00Z",
+  "updated_at": "2026-07-10T15:20:00Z",
   "links": {
+    "brief": null,
     "plan": null,
     "checklist": null,
     "validation": null,
+    "files": null,
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": null
