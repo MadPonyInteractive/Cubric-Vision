@@ -494,6 +494,14 @@ class ResumableDownloader {
             }).catch(() => {});
             return;
         }
+        // Not resumable but a file may still sit at localPath: a stale COMPLETE
+        // download whose marker was already cleared (e.g. a prior batch that
+        // downloaded the zip but aborted before extraction — MPI-243). NDH would
+        // see the existing destination and append " (1)" to the filename, leaking
+        // an orphaned duplicate (RES4LYF (1).zip et al.). Installed deps are marked
+        // complete upstream and never reach download(), so any file here is stale —
+        // scrub it so start() writes a clean single copy.
+        await fs.remove(this.localPath).catch(() => {});
         await markDownloadInProgress(this.localPath, {
             depId: this.depJob.id,
             url: this.depJob.url,
@@ -1600,13 +1608,22 @@ async function _runCustomNodeInstall(modelJob) {
 
         // Install requirements: custom command or pip. ALWAYS runs (even when the
         // folder was already present) — idempotent, the self-heal for missing deps.
+        // MPI-243: a single dep's requirements step must NOT abort the whole batch.
+        // Previously a `throw err` here unwound the entire for-loop, so when
+        // comfyui-frame-interpolation's `python install.py` hit a transient error
+        // (Errno 2 — the parallel install raced its own extraction), every LATER
+        // dep (Impact-Subpack, RES4LYF) was left un-installed and the user had to
+        // Retry. Treat a reqs failure like an extraction failure: mark anyFailure,
+        // skip the rest of THIS dep, keep going. The failed dep has no commit
+        // marker stamped (below), so repair-deps re-installs just it next boot.
         if (dep.installRequirementsCommand) {
             try {
                 await runCustomCommand(dep.installRequirementsCommand, targetDir);
                 logger.info('download', `Custom install command succeeded for ${dep.id}`);
             } catch (err) {
-                logger.error('download', `Custom install command FAILED for ${dep.id}: ${err.message}`);
-                throw err;
+                logger.error('download', `Custom install command FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
+                anyFailure = true;
+                continue;
             }
         } else {
             const reqPath = path.join(targetDir, 'requirements.txt');
@@ -1615,8 +1632,9 @@ async function _runCustomNodeInstall(modelJob) {
                     await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
                     logger.info('download', `pip requirements installed for ${dep.id}`);
                 } catch (err) {
-                    logger.error('download', `pip install FAILED for ${dep.id}: ${err.message}`);
-                    throw err;
+                    logger.error('download', `pip install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
+                    anyFailure = true;
+                    continue;
                 }
             }
         }
@@ -1631,8 +1649,9 @@ async function _runCustomNodeInstall(modelJob) {
                 await runPipCommand(['install', ...dep.pipPins, '--no-warn-script-location']);
                 logger.info('download', `pip pins installed for ${dep.id}: ${dep.pipPins.join(', ')}`);
             } catch (err) {
-                logger.error('download', `pip pin install FAILED for ${dep.id}: ${err.message}`);
-                throw err;
+                logger.error('download', `pip pin install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
+                anyFailure = true;
+                continue;
             }
         }
 
