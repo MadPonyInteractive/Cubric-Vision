@@ -13,6 +13,9 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 // Faithful reduction of the loop's control flow: each dep runs a reqs step that
 // may reject; a rejection must NOT abort the remaining deps.
@@ -62,4 +65,46 @@ test('all-success batch installs everything', async () => {
     const { anyFailure, installed } = await runBatch(deps, async () => {});
     assert.equal(anyFailure, false);
     assert.deepEqual(installed, ['a', 'b']);
+});
+
+// MPI-243 root cause: a `targetPath` weight (RIFE ckpts/rife/rife47.pth) creates
+// the node folder as a subdir-only SHELL before the node extracts. The old
+// `pathExists(targetDir)` "already extracted" check was a false positive → it
+// skipped extraction → `python install.py` ran in a folder with no install.py
+// → Errno 2 → "UW deps installation failed". Fix keys on top-level FILES.
+// Mirrors _nodeFolderHasFiles in routes/downloadManager.js.
+async function nodeFolderHasFiles(dir) {
+    let entries;
+    try {
+        entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    } catch {
+        return false;
+    }
+    return entries.some(e => e.isFile());
+}
+
+test('weight-shell folder is NOT counted as an extracted node', async () => {
+    const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mpi243-'));
+    try {
+        const node = path.join(tmp, 'comfyui-frame-interpolation');
+        // Reproduce what a targetPath weight leaves: the node dir with ONLY a
+        // ckpts/ weight subtree, no node files.
+        await fs.promises.mkdir(path.join(node, 'ckpts', 'rife'), { recursive: true });
+        await fs.promises.writeFile(path.join(node, 'ckpts', 'rife', 'rife47.pth'), 'x');
+
+        assert.equal(await nodeFolderHasFiles(node), false,
+            'weight-shell (subdirs only) must NOT read as already-extracted');
+
+        // Now the node's own files land — it IS extracted.
+        await fs.promises.writeFile(path.join(node, 'install.py'), '# node');
+        await fs.promises.writeFile(path.join(node, '__init__.py'), '');
+        assert.equal(await nodeFolderHasFiles(node), true,
+            'a real node has top-level files');
+    } finally {
+        await fs.promises.rm(tmp, { recursive: true, force: true });
+    }
+});
+
+test('absent folder reads as not extracted', async () => {
+    assert.equal(await nodeFolderHasFiles(path.join(os.tmpdir(), 'mpi243-nope-' + process.pid)), false);
 });
