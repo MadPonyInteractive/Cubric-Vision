@@ -520,9 +520,15 @@ export const MpiPromptBox = ComponentFactory.create({
                     nextOp = _pickOpForModel(next) ?? next.supportedOps?.[0] ?? activeOperation;
                     emit('model-change', { model: next });
                 }
-            } else if (model) {
-                nextOp = _pickOpForModel(model) ?? activeOperation;
             }
+            // MPI-247: model unchanged = a refresh, NOT a model switch. Do NOT
+            // re-derive the op — _pickOpForModel rejects the current op on a
+            // media-chip mismatch and falls back to supportedOps declaration
+            // order, silently reverting the user's deliberate choice on every
+            // Gallery<->History navigation. Keep activeOperation as long as the
+            // model still declares it (the L528 guard handles genuinely-invalid
+            // ops from a mixed image/video list). Re-picking only happens on an
+            // actual model change (setModel / model dropped from list above).
 
             // Guard: activeOperation may be invalid for current model (e.g. mixed image/video lists)
             if (model && !model.supportedOps?.includes(nextOp)) {

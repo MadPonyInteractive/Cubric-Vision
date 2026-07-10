@@ -1,0 +1,1 @@
+{"at":"2026-07-10T16:20:00Z","event":"task.created","actor":"agent","note":"Split from MPI-247 symptom (b). History-workspace op revert. Distinct mechanism from (a); under-specified, needs repro. Trace attached in description."}
