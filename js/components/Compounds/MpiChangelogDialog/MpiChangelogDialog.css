@@ -87,26 +87,49 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.9rem;
 }
 
 .mpi-changelog__item {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
     padding-left: 1rem;
     font-size: var(--t-md);
     color: var(--ink-1);
-    line-height: 1.55;
+    line-height: 1.6;
 }
 
 .mpi-changelog__item::before {
     content: '';
     position: absolute;
     left: 0.1rem;
-    top: 0.62em;
+    top: 0.7em;
     width: 4px;
     height: 4px;
     border-radius: 50%;
     background: var(--ink-4);
+}
+
+/* Bold lead phrase gets its own line; body sits softer beneath it */
+.mpi-changelog__lead {
+    font-weight: 700;
+    color: var(--ink-1);
+}
+
+.mpi-changelog__desc {
+    color: var(--ink-2);
+}
+
+/* Inline `code` from the minimal markdown formatter */
+.mpi-changelog__code {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.9em;
+    padding: 0.05em 0.3em;
+    border-radius: var(--r-1);
+    background: var(--surface-2);
+    color: var(--ink-1);
 }
 
 /* Actions */
