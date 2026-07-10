@@ -9,6 +9,7 @@
 ## whatIsNew
 
 - **Krea 2 Turbo** — a new high-quality image model with a distinctive photographic look. Ships nine built-in style LoRAs, an in-prompt enhancer, 1K/2K output, and a depth-guided **Pose Reference** operation that transfers a subject's pose from a reference image.
+- **Krea 2 Turbo NSFW** — Lustify Krea, an uncensored Krea 2 variant by Coyotte (creator of the Lustify SDXL model). Same photographic look, style LoRAs and Pose Reference as Krea 2 Turbo, as a separate installable model. Runs fastest on NVIDIA RTX (20-series and newer).
 - **Image to Image on every image model** — the Image to Image operation is now available on all image models (the SDXL family and Chroma), not just Krea 2. Feed it an input image and a prompt to reshape the image toward your description; the Denoise slider controls how much it changes.
 
 ## fixes
