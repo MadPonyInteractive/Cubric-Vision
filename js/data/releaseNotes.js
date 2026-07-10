@@ -38,6 +38,18 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.1.1': {
+    version: '1.1.1',
+    whatIsNew: [],
+    fixes: [
+      'When a generation uses a LoRA that is not in your folders, it now tells you exactly which one is missing and how to add it — instead of failing with a crash-report dialog and leaving the queue stuck on a card whose Stop button did nothing. Add the LoRA (or pick another) and generation runs.',
+      'Auto-mask (the Detect button in the Mask tool) no longer fails on Windows with a model-path error.',
+      'First-time engine setup no longer leaves some model components uninstalled when one of them hits a snag mid-install, and no longer leaves behind duplicate download files.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
   '1.1.0': {
     version: '1.1.0',
     importantChanges: [
