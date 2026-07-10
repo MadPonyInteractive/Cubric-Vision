@@ -83,7 +83,8 @@ export function stagesFor(workflowFile, mode = 'single', extraBars = 0) {
     // duplicating a row per variant.
     const base = workflowFile
         .replace(/_stage2\.json$/i, '.json')
-        .replace(/_(?:fp8|mxfp8)\.json$/i, '.json');
+        .replace(/_(?:fp8|mxfp8)\.json$/i, '.json')
+        .replace(/_(?:sfw|nsfw)\.json$/i, '.json');
     const entry = PROGRESS_STAGES[base];
     const recorded = entry ? (entry[mode] || 0) : 0;
     return recorded === 0 ? 0 : recorded + Math.max(0, extraBars | 0);

@@ -248,7 +248,10 @@ export const DEPS = {
     // Reuses `vae-qwen-image` above (zero upload). `vae-flux-ae` is the WRONG dep.
     // Turbo ships first; Raw (52-step) is phase 2. Quant variants (int8_convrot /
     // mxfp8 / nvfp4) exist and are native in comfy 0.27 — see
-    // docs/builder/research/krea2-int8-quant.md. We ship fp8_scaled only.
+    // docs/builder/research/krea2-int8-quant.md. We ship the SFW fp8_scaled transformer
+    // and the NSFW int8_convrot transformer (Coyote's Lustify v10 KREA-Turbo) as two
+    // INDEPENDENT models — a user can install BOTH (unlike LTX's mutually-exclusive arch
+    // variants). Each is its own ModelDef; the two share every other dep.
     'krea2-turbo-transformer': {
         id: 'krea2-turbo-transformer',
         name: 'Krea2 Turbo Transformer (fp8_scaled)',
@@ -257,6 +260,18 @@ export const DEPS = {
         url: 'https://models.cubric.studio/vision/models/diffusion_models/krea2_turbo_fp8_scaled.safetensors',
         size: '12.24GB',
         sha256: 'eb4dd8c612cfd10f64f25b057e6e6bbcb5737c94a7372177e456dbf7579502f1',
+    },
+    // NSFW variant — Lustify v10 KREA-Turbo, int8_convrot quant. INT8 tensor-core path
+    // is native in our ComfyUI (0.27). Runs on any NVIDIA RTX (Turing+); see the NSFW
+    // ModelDef description for the end-user GPU note. Same size class as the SFW weight.
+    'krea2-turbo-transformer-nsfw': {
+        id: 'krea2-turbo-transformer-nsfw',
+        name: 'Krea2 Turbo Transformer NSFW (int8_convrot)',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'diffusion_models/lustify-v10-krea-turbo-int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/lustify-v10-krea-turbo-int8_convrot.safetensors',
+        size: '12.25GB',
+        sha256: '0505412ed2ac568286c4bf43f8ace93f9f5a6dd7a607f47f1912a68767e6900d',
     },
     'krea2-qwen3vl-clip': {
         id: 'krea2-qwen3vl-clip',

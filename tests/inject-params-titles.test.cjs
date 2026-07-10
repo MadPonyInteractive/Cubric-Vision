@@ -84,8 +84,12 @@ test('the Krea2 shared graph carries both branch booleans', () => {
     // Pins the specific regression: t2i / i2i / poseReference all run one file and
     // select a branch with a baked-false boolean. Lose a node (or its title) and the
     // op silently degrades to plain t2i.
-    const have = titlesOf('krea2_turbo_t2i.json');
-    for (const title of ['input_is_i2i', 'input_pose_reference', 'input_batch_size']) {
-        assert.ok(have.has(title), `krea2_turbo_t2i.json must carry a node titled "${title}"`);
+    // SFW + NSFW ship the same t2i graph (only the diffusion weight differs), so both
+    // runtime files must carry the branch booleans.
+    for (const file of ['krea2_turbo_t2i_sfw.json', 'krea2_turbo_t2i_nsfw.json']) {
+        const have = titlesOf(file);
+        for (const title of ['input_is_i2i', 'input_pose_reference', 'input_batch_size']) {
+            assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+        }
     }
 });

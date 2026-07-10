@@ -182,8 +182,10 @@ export const MODELS = [
         ],
     },
     {
-        // Krea2 Turbo (MPI-242). Flux-lineage in ARCHITECTURE ONLY — conditioning +
-        // VAE stack is Qwen. Full notes: docs/krea2/.
+        // Krea2 Turbo — SFW (MPI-242). Flux-lineage in ARCHITECTURE ONLY — conditioning +
+        // VAE stack is Qwen. Full notes: docs/krea2/. The NSFW twin (krea2-turbo-nsfw)
+        // ships as a SEPARATE card below: same graphs, only the diffusion weight differs,
+        // and a user can install BOTH (NOT mutually-exclusive like LTX's arch variants).
         //
         // SINGLE-STAGE despite a two-pass sampler: both ClownsharKSampler_Beta passes
         // live in ONE workflow file with a direct latent hand-off. `capabilities.
@@ -203,6 +205,7 @@ export const MODELS = [
         name: 'Krea 2 Turbo',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
+        image: 'krea2-turbo-sfw.webp',
         tier: 2,
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
@@ -221,11 +224,11 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships nine built-in style LoRAs and a depth-guided pose reference. Renders at up to 2K.',
         workflows: {
-            t2i: 'krea2_turbo_t2i.json',
-            i2i: 'krea2_turbo_t2i.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_turbo_t2i.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            upscale: 'krea2_turbo_upscaler.json',
-            detail: 'krea2_turbo_detailer.json',
+            t2i: 'krea2_turbo_t2i_sfw.json',
+            i2i: 'krea2_turbo_t2i_sfw.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_turbo_t2i_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            upscale: 'krea2_turbo_upscaler_sfw.json',
+            detail: 'krea2_turbo_detailer_sfw.json',
         },
         // Krea2 is keyed by BOTH tier and orientation (RATIO_MODES.krea2 ===
         // 'quality-orientation'), so `1:1` means 1024² at 1k and 1472² at 2k. The
@@ -235,6 +238,76 @@ export const MODELS = [
         qualityTiers: ['1k', '2k'],
         dependencies: [
             'krea2-turbo-transformer',
+            'krea2-qwen3vl-clip',
+            'vae-qwen-image',            // shared — already on R2, zero upload
+            'krea2-lora-depth-control',
+            'krea2-style-darkbrush',
+            'krea2-style-dotmatrix',
+            'krea2-style-kidsdrawing',
+            'krea2-style-neondrip',
+            'krea2-style-rainywindow',
+            'krea2-style-retroanime',
+            'krea2-style-softwatercolor',
+            'krea2-style-sunsetblur',
+            'krea2-style-vintagetarot',
+            '4x-NMKD-Siax',
+            'RES4LYF',                   // ClownsharKSampler_Beta (both stages)
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',           // ImageResizeKJv2, ResizeImageMaskNode
+            'ComfyUI-Impact-Pack',       // MaskDetailerPipe, To/FromBasicPipe
+            'ComfyUI-UltimateSDUpscale',
+            // Both are MANDATORY even for a plain t2i run: ComfyUI validates every
+            // node class before MpiIfElse picks a branch.
+            'ComfyUI-Krea2-ControlNet',
+            'comfyui_controlnet_aux',
+        ],
+    },
+    {
+        // Krea2 Turbo — NSFW (MPI-242). "Lustify Krea" — the famous Lustify model by
+        // Coyotte, ported to Krea 2. A SEPARATE installable model from the SFW card
+        // above (a user can have BOTH), sharing every graph, node, style LoRA, VAE and
+        // text encoder — ONLY the diffusion weight differs. The runtime files are the
+        // _nsfw twins emitted by generate_krea2.py (int8_convrot weight baked in).
+        //
+        // WEIGHT DTYPE: int8_convrot. INT8 tensor-core math is native in our ComfyUI
+        // (0.27), so no build change — but the SPEED path is NVIDIA RTX only (Turing+
+        // tensor cores). Older/non-tensor-core and non-NVIDIA GPUs fall back to a slow
+        // path or won't run it; the SFW fp8_scaled card stays the broad-compat option.
+        // See the `description` GPU note for the end user, and docs/krea2/.
+        //
+        // Same shape rationale as the SFW card: single-stage two-pass sampler, one graph
+        // for t2i + i2i + pose-reference (Input_Is_i2i / Input_pose_reference booleans),
+        // cfg 1.0 ⇒ negativePrompt:false, nine style LoRAs.
+        id: 'krea2-turbo-nsfw',
+        sizeTier: 'balanced',
+        modelFamily: 'Krea-2',
+        name: 'Krea 2 Turbo NSFW',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'krea2-turbo-nsfw.webp',
+        tier: 2,
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'krea2',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
+        capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true },
+        styleLoraLabels: [
+            'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
+            'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+        ],
+        gen_speed: 'fast',
+        description: 'This spicy image generator is Lustify Krea — the famous Lustify model by Coyotte, built on Krea 2. It keeps the distinctive photographic look with nine built-in style LoRAs and a depth-guided pose reference, and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported — use the standard Krea 2 Turbo model instead.',
+        workflows: {
+            t2i: 'krea2_turbo_t2i_nsfw.json',
+            i2i: 'krea2_turbo_t2i_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_turbo_t2i_nsfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            upscale: 'krea2_turbo_upscaler_nsfw.json',
+            detail: 'krea2_turbo_detailer_nsfw.json',
+        },
+        qualityTiers: ['1k', '2k'],
+        dependencies: [
+            'krea2-turbo-transformer-nsfw',   // ONLY difference from the SFW card's deps
             'krea2-qwen3vl-clip',
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
