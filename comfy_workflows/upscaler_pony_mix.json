@@ -235,7 +235,7 @@
       "sampler_name": "lcm",
       "scheduler": "simple",
       "denoise": [
-        "1640",
+        "1594",
         0
       ],
       "mode_type": "Linear",
@@ -313,19 +313,6 @@
     "class_type": "MpiGridDimensions",
     "_meta": {
       "title": "Mpi Grid Dimensions"
-    }
-  },
-  "1640": {
-    "inputs": {
-      "value": [
-        "1594",
-        0
-      ],
-      "exponent": 1.8
-    },
-    "class_type": "MpiExpoFloat",
-    "_meta": {
-      "title": "Mpi Expo Float"
     }
   },
   "1655": {
