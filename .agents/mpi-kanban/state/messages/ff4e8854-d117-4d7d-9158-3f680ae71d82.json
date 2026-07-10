@@ -1,0 +1,44 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "ff4e8854-d117-4d7d-9158-3f680ae71d82",
+  "status": "open",
+  "created_at": "2026-07-10T16:40:00Z",
+  "updated_at": "2026-07-10T16:40:00Z",
+  "from": {
+    "session": "MPI-246 auto-mask path-heal session",
+    "role": "implementer"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-243"
+  },
+  "subject": "PORT TO MASTER: MPI-246 auto-mask fix (Ultralytics path-heal). Already fixed in dev 1.2.0; master 1.1.0 still broken for Pro subscribers — bump to 1.1.1.",
+  "body": "## Why this lands on your plate\n\nYou're addressing the 1.1.0-release defects on master. This is one of them: **auto-mask is broken on the Windows-local engine in the released 1.1.0 build.** Pro/Patreon subscribers on 1.1.0 cannot use Mask -> Detect. The user wants master patched and bumped to **1.1.1**.\n\nThe fix is already committed on dev branch **1.2.0** (commit `aa958869`). It has NOT been ported to master. I verified master's `comfyController.js` still carries the unpatched heal block. Carry the SAME fix to master.\n\n---\n\n## The bug\n\nAuto-mask (Mask tool -> Detect) fails on Windows-local with:\n\n```\nUltralyticsDetectorProvider 1587: Value not in list: model_name: 'bbox\\face_yolov8n.pt' not in ['bbox/face_yolov8n.pt', ...]\n```\n\n**Root cause:** `comfyController.runWorkflow` heals path separators over a blanket `PATH_INPUTS` list that includes `model_name`. MPI-229 added a Windows-local INVERSE heal (`/` -> `\\`) so a LoRA name persisted during a Linux Pod session matches the Windows loader enum. Correct for `folder_paths`-backed loaders (they list with the OS separator). WRONG for `UltralyticsDetectorProvider`: Impact Pack builds its `model_name` list itself and ALWAYS uses forward slashes on every OS. So the Windows `/`->`\\` heal corrupts `bbox/face_yolov8n.pt` -> `bbox\\face_yolov8n.pt` -> value_not_in_list.\n\nVerified live via /object_info on a Windows-local box:\n- LoraLoader.lora_name -> 'CHROMA\\\\Amira-...safetensors' (backslash, folder_paths)\n- UltralyticsDetectorProvider.model_name -> 'bbox/face_yolov8n.pt' (forward slash, self-listed)\n\n**Scope:** Windows-local ONLY. Linux/mac-local + remote use the `\\`->`/` branch, which leaves an already-forward-slash value untouched. Confirmed both directions.\n\n**NOT a Pod-image change** — pure app-side JS. Does not affect the MPI-244 rebuild and the rebuild does not affect it.\n\n---\n\n## The fix (exact edit)\n\nIn `js/services/comfyController.js`, in the PATH_INPUTS heal loop (on master ~L1164-1180, right after `const _healToSlash = _needsPathHeal(this._alwaysLocal);`):\n\n1. Add a slash-only-node exclusion set before the loop:\n\n```js\n// MPI-246: some nodes build their own enum with hardcoded '/' regardless of\n// OS -- Impact Pack's UltralyticsDetectorProvider lists 'bbox/face_yolov8n.pt'\n// with a forward slash on Windows too. The Windows-local '/'->'\\\\' heal below\n// corrupts that into 'bbox\\\\face_yolov8n.pt' -> value_not_in_list. Exclude\n// model_name for these node types (harmless in the '\\\\'->'/' direction too,\n// their value never has backslashes). folder_paths-backed loaders\n// (UpscaleModelLoader, SAMLoader, etc.) still get the OS-separator heal.\nconst SLASH_ONLY_NODE_TYPES = new Set(['UltralyticsDetectorProvider']);\n```\n\n2. As the FIRST line inside `for (const k of PATH_INPUTS) {`, add:\n\n```js\nif (k === 'model_name' && SLASH_ONLY_NODE_TYPES.has(node.class_type)) continue;\n```\n\nThat's the whole fix (9 lines). `class_type` is the API-prompt node field. Do NOT delete `model_name` from PATH_INPUTS — UpscaleModelLoader's `model_name` DOES need the OS-separator heal; keying on class_type is the correct scope.\n\n### Standalone self-check (passes on my branch)\n- Windows-local ('/'->'\\\\'): UltralyticsDetectorProvider.model_name 'bbox/face_yolov8n.pt' stays UNCHANGED; UpscaleModelLoader.model_name 'sub/4x.pth' -> 'sub\\\\4x.pth'; LoraLoader.lora_name still heals.\n- Linux/remote ('\\\\'->'/'): Ultralytics value untouched (already '/'); lora still heals.\n\n---\n\n## What the user wants you to do with it (patch flow)\n\nApply the fix on **master**, then run the **mpi-apply-patch** flow: bump 3rd digit 1.1.0 -> **1.1.1** (appVersion.js + package.json + package-lock.json), releaseNotes.js block + archival docs/releases md, fold the relevant UNRELEASED item, copy-review gate, rebuild via CI (ref=master), refresh the EXISTING minor Cloudflare link (no new link, no GC), then carry the same fix onto the current dev branch WITHOUT bumping it. All live ops (push/build/R2) STOP for user authorization.\n\nOn dev branch 1.2.0 the fix is already in (aa958869) so the 'carry to dev' step is DONE for 1.2.0 — just confirm and add the UNRELEASED note if missing. I did NOT run any patch/bump step; master is untouched (I only read it).\n\nCross-ref: MPI-198 (same heal block, opposite direction) already has a note that this exclusion is orthogonal and does not regress its Linux/mac baked-LoRA fix."
+  ,
+  "related": {
+    "task_card": "MPI-243",
+    "task": ".agents/mpi-kanban/tasks/MPI-243/",
+    "files": [
+      "js/services/comfyController.js"
+    ],
+    "commits": [
+      "aa958869"
+    ],
+    "cards": ["MPI-246", "MPI-229", "MPI-198", "MPI-244"]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "provenance": {
+    "fixed_in": "dev branch 1.2.0, commit aa958869",
+    "needs_fix_in": "master 1.1.0 -> patch to 1.1.1",
+    "verified_by": "read master:js/services/comfyController.js at 2026-07-10 -- heal block still unpatched"
+  },
+  "recent_events": [
+    {
+      "at": "2026-07-10T16:40:00Z",
+      "event": "created"
+    }
+  ]
+}
