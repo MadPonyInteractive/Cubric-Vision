@@ -79,6 +79,29 @@ function _needsPathHeal(alwaysLocal) {
     return _serverPlatform !== '' && _serverPlatform !== 'win32';
 }
 
+/**
+ * Pull the offending `lora_name` out of a LOCAL ComfyUI 400 body's `node_errors`.
+ * Shape (ComfyUI execution.py):
+ *   node_errors: { "<nodeId>": { errors: [ { type: 'value_not_in_list',
+ *     extra_info: { input_name: 'lora_name', received_value: 'sdxl\\x.safetensors' } } ] } }
+ * `received_value` is the clean filename — preferred over parsing the `details`
+ * string, which is '' whenever any other output node still validated.
+ * @param {object|null|undefined} nodeErrors
+ * @returns {string|null} the received lora_name, or null when no such error
+ */
+function _findNodeErrorLora(nodeErrors) {
+    if (!nodeErrors || typeof nodeErrors !== 'object') return null;
+    for (const node of Object.values(nodeErrors)) {
+        for (const e of (node?.errors || [])) {
+            if (e?.type !== 'value_not_in_list') continue;
+            if (e?.extra_info?.input_name !== 'lora_name') continue;
+            const got = e.extra_info.received_value;
+            if (typeof got === 'string' && got) return got;
+        }
+    }
+    return null;
+}
+
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176): this controller
 // resolves httpBase per-instance (remote or local pinned), so it binds httpBase.
 function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
@@ -316,8 +339,16 @@ function createEngine({ engine, alwaysLocal }) {
                 state.comfyNeedsRestart = false;
             }
 
-            // Already running and ready — skip startup indicator to avoid flash.
-            if (status.running && status.ready) return { ready: true, remoteComfyRestarted: false };
+            // Already running and ready — skip the startup indicator to avoid a
+            // flash, but STILL emit `comfy:ready`. Consumers (shell.js → loadAssets)
+            // hang the asset-list load off this event, and on a cold app start with
+            // ComfyUI already up this is the ONLY path taken — a silent return left
+            // `state.availableLoras` empty, which fails the missing-LoRA guard open
+            // (_findMissingModel treats an empty list as "engine not ready").
+            if (status.running && status.ready) {
+                this._emitLifecycle('comfy:ready');
+                return { ready: true, remoteComfyRestarted: false };
+            }
 
             // background: a boot auto-start brings the engine up silently — no
             // blocking "Starting ComfyUI Engine…" overlay. Manual generation still
@@ -1305,11 +1336,23 @@ function createEngine({ engine, alwaysLocal }) {
                     let errCode = null;
                     let errMsg = 'ComfyUI Error';
                     let comfyBody = null;
+                    let nodeErrorLora = null;
                     try {
                         const errData = await req.json();
-                        errCode = errData?.error || null;
+                        // The wrapper's 503 shape puts a STRING in `error`; ComfyUI's own
+                        // 400 puts an OBJECT there ({type,message,details}). Only take the
+                        // string form as a code, or `errCode` becomes an object and every
+                        // `errCode === '...'` check below silently fails.
+                        errCode = typeof errData?.error === 'string' ? errData.error : null;
                         errMsg = errData?.message || errData?.error?.message || errMsg;
                         comfyBody = errData?.detail?.comfy_body || null;
+                        // LOCAL ComfyUI rejects a bad enum with 400 {error, node_errors}
+                        // (server.py). The offending filename lives ONLY in
+                        // node_errors[id].errors[].extra_info.received_value — the
+                        // top-level `error.details` is '' whenever some other output
+                        // still validated. Reading it here is what lets the missing-LoRA
+                        // case below resolve on the local engine, not just remote.
+                        nodeErrorLora = _findNodeErrorLora(errData?.node_errors);
                     } catch (_) { /* non-JSON proxy error body — keep the defaults */ }
                     // The detailed ComfyUI body (when present) is the part that names
                     // the real cause — log it and fold it into the surfaced message.
@@ -1328,10 +1371,21 @@ function createEngine({ engine, alwaysLocal }) {
                     // value_not_in_list on lora_name. After the basename-rewrite
                     // above the only remaining cause is a not-uploaded LoRA — a
                     // user-actionable warning toast, not the bug-reporter dialog.
+                    //
+                    // Two carriers for the SAME ComfyUI rejection, one per engine:
+                    //  - remote: the wrapper folds ComfyUI's text into `detail.comfy_body`
+                    //    → scrape the name out of the message.
+                    //  - local:  ComfyUI answers directly with `node_errors` → read the
+                    //    structured `received_value` (no regex, no '' details trap).
+                    // Missing the local carrier is what sent a bare 400 to the
+                    // bug-reporter dialog instead of the missing-LoRA toast.
                     const loraMiss = /value not in list:\s*lora_name:\s*'([^']+)'/i.exec(comfyBody || errMsg);
-                    if (loraMiss) {
-                        err.code = 'lora_missing_remote';
-                        err.loraName = loraMiss[1].split(/[\\/]/).pop();
+                    const missingLora = nodeErrorLora || (loraMiss ? loraMiss[1] : null);
+                    if (missingLora) {
+                        // `node_errors` only ever comes from a direct ComfyUI reply (local);
+                        // `comfy_body` only ever comes from the Pod wrapper (remote).
+                        err.code = nodeErrorLora ? 'lora_missing_local' : 'lora_missing_remote';
+                        err.loraName = String(missingLora).split(/[\\/]/).pop();
                     }
                     throw err;
                 }

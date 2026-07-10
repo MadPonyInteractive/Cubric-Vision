@@ -1734,6 +1734,22 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // The LOCAL twin of the block above: ComfyUI rejected `lora_name` because
+            // the file is gone from the configured folders (e.g. the user removed the
+            // folder that held it). The pre-dispatch `_findMissingModel` guard normally
+            // catches this, but it fails OPEN when `state.availableLoras` is empty, so
+            // this is the backstop. Same class of user-actionable error → same toast,
+            // never the bug-reporter dialog.
+            if (err?.code === 'lora_missing_local') {
+                const name = err.loraName || 'A selected LoRA';
+                clientLogger.warn('comfy', `Local LoRA missing from model folders: ${name}`);
+                Events.emit('ui:warning', {
+                    message: `"${name}" was not found in your LoRA/upscale folders. `
+                        + 'Add it in Settings → External Connections (drag-drop), or pick another in Model Settings.',
+                });
+                exec.onError?.(err);
+                return;
+            }
             // MPI-227: a reused input asset was deleted (manual Cleanup wiped the
             // content-addressed store, or the source is otherwise gone). Expected +
             // user-actionable, so a warning toast — NOT the bug-reporter dialog
