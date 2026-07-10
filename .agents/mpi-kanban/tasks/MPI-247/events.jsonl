@@ -1,0 +1,2 @@
+{"at":"2026-07-10T15:20:00Z","event":"task.created","actor":"agent","note":"Root-caused by simulating _pickOpForModel against the real commandRegistry during the MPI-242 user-ux pass. Pre-existing; affects every image model."}
+{"at":"2026-07-10T15:26:00Z","event":"task.note","actor":"agent","note":"Scope split: Gallery revert PROVEN; History-workspace revert NOT investigated (own gating). May need its own card."}
