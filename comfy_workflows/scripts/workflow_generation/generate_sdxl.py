@@ -44,12 +44,47 @@ CHECKPOINT_TITLE = "Checkpoint"
 SCRIPTS_DIR = Path(__file__).parent
 WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 
+# The t2i graph now serves t2i + i2i (one graph, Input_Is_i2i flips the latent
+# source — same pattern as krea2/chroma). Two things a raw export can't be trusted
+# to carry, so we force them here on every runtime (guarded — no-ops on the
+# upscaler/detailer graphs which have no Input_Is_i2i and overwrite Input_Image at
+# submit anyway):
+OPTIONAL_IMAGE_TITLE = "Input_Image"
+PLACEHOLDER = "placeholder.png"        # staged by routes/comfy.js WORKFLOW_INPUT_DEFAULTS
+IS_I2I_TITLE = "Input_Is_i2i"
+
 
 def _find_by_title(workflow: dict, title: str) -> dict | None:
     for node in workflow.values():
         if isinstance(node, dict) and node.get("_meta", {}).get("title") == title:
             return node
     return None
+
+
+def _stamp_placeholder(workflow: dict) -> None:
+    """Reset the optional LoadImage to the staged placeholder so a plain t2i (which
+    injects nothing into it) passes ComfyUI's graph validation. No-op if absent."""
+    node = _find_by_title(workflow, OPTIONAL_IMAGE_TITLE)
+    if node is None:
+        return
+    before = node["inputs"].get("image")
+    node["inputs"]["image"] = PLACEHOLDER
+    if before != PLACEHOLDER:
+        print(f"  [STAMP] {OPTIONAL_IMAGE_TITLE}: {before!r} -> {PLACEHOLDER!r}")
+
+
+def _force_t2i_default(workflow: dict) -> None:
+    """Force the t2i/i2i switch boolean to false. The i2i op injects true at submit;
+    a plain t2i injects nothing and depends on this baked false. A template exported
+    during an i2i test bakes true, which would make every t2i run as i2i. No-op on
+    graphs without the node (upscaler/detailer)."""
+    node = _find_by_title(workflow, IS_I2I_TITLE)
+    if node is None:
+        return
+    before = node["inputs"].get("boolean")
+    node["inputs"]["boolean"] = False
+    if before is not False:
+        print(f"  [I2I]   {IS_I2I_TITLE}.boolean: {before!r} -> False")
 
 
 def _generate_one(template_path: Path, output_name: str, ckpt_name: str, out_dir: Path) -> Path | None:
@@ -59,6 +94,8 @@ def _generate_one(template_path: Path, output_name: str, ckpt_name: str, out_dir
         print(f"  [WARN] No '{CHECKPOINT_TITLE}' node in {template_path.name} — skipping {output_name}")
         return None
     node["inputs"]["ckpt_name"] = ckpt_name
+    _stamp_placeholder(workflow)
+    _force_t2i_default(workflow)
     out_path = out_dir / output_name
     out_path.write_text(json.dumps(workflow, indent=2), encoding="utf-8")
     print(f"  [OK]   {output_name}")

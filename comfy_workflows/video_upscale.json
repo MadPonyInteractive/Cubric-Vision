@@ -38,7 +38,7 @@
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
-      "title": "Upscale_Model"
+      "title": "Input_Upscale_Model"
     }
   },
   "609": {
@@ -86,7 +86,7 @@
     },
     "class_type": "VHS_LoadVideoPath",
     "_meta": {
-      "title": "Input_Video"
+      "title": "video"
     }
   },
   "739": {
@@ -95,7 +95,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Upscale_Factor"
+      "title": "Input_Upscale_Factor"
     }
   },
   "742": {
@@ -141,69 +141,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Upscale_Using_Model"
-    }
-  },
-  "749": {
-    "inputs": {
-      "fps": [
-        "743",
-        0
-      ],
-      "images": [
-        "720",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "750": {
-    "inputs": {
-      "filename_prefix": "audio/interpolate",
-      "quality": "V0",
-      "audioUI": "",
-      "audio": [
-        "752",
-        1
-      ]
-    },
-    "class_type": "SaveAudioMP3",
-    "_meta": {
-      "title": "Output_Audio"
-    }
-  },
-  "751": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "749",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Video"
-    }
-  },
-  "752": {
-    "inputs": {
-      "boolean": [
-        "753",
-        0
-      ],
-      "input": [
-        "723",
-        2
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Has Audio"
+      "title": "Input_Upscale_Using_Model"
     }
   },
   "753": {
@@ -238,6 +176,27 @@
     "class_type": "MpiUpscaleModelScale",
     "_meta": {
       "title": "Mpi Upscale Model Scale"
+    }
+  },
+  "756": {
+    "inputs": {
+      "fps": [
+        "743",
+        0
+      ],
+      "filename_prefix": "MpiVideo",
+      "use_audio": [
+        "753",
+        0
+      ],
+      "images": [
+        "720",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
     }
   }
 }

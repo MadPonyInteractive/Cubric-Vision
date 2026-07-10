@@ -38,7 +38,7 @@
     },
     "class_type": "ImageFlip",
     "_meta": {
-      "title": "ImageFlip"
+      "title": "Input_Flip_Image"
     }
   },
   "4": {
@@ -51,15 +51,12 @@
     },
     "class_type": "ImageRotate",
     "_meta": {
-      "title": "Image Rotate"
+      "title": "Input_Rotate_Image"
     }
   },
   "5": {
     "inputs": {
-      "boolean": [
-        "6",
-        0
-      ],
+      "boolean": false,
       "true": [
         "3",
         0
@@ -71,16 +68,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "6": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Flip"
+      "title": "Input_Flip"
     }
   },
   "7": {
@@ -92,7 +80,7 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Output"
+      "title": "Output_image"
     }
   }
 }

@@ -36,11 +36,12 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-01.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This image generator uses the famous Juggernaut XL model as its base. It can create different styles but is best suited for realistic images.',
         workflows: {
             t2i: 't2i_sdxl_realistic.json',
+            i2i: 't2i_sdxl_realistic.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_sdxl_realistic.json',
             detail: 'detailer_sdxl_realistic.json',
         },
@@ -60,11 +61,12 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-05.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This spicy image generator uses one of the best NSFW models available for SDXL, the famous Lustify model by Coyotte.',
         workflows: {
             t2i: 't2i_sdxl_nsfw.json',
+            i2i: 't2i_sdxl_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_sdxl_nsfw.json',
             detail: 'detailer_sdxl_nsfw.json',
         },
@@ -84,11 +86,12 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
             t2i: 't2i_ill_anime_beauty.json',
+            i2i: 't2i_ill_anime_beauty.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_ill_anime_beauty.json',
             detail: 'detailer_ill_anime_beauty.json',
         },
@@ -108,11 +111,12 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
         workflows: {
             t2i: 't2i_ill_anime.json',
+            i2i: 't2i_ill_anime.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_ill_anime.json',
             detail: 'detailer_ill_anime.json',
         },
@@ -132,11 +136,12 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This image generator uses the AnimerJei V3 PONY model. It is a stylized model that can create different animation styles.',
         workflows: {
             t2i: 't2i_pony_mix.json',
+            i2i: 't2i_pony_mix.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_pony_mix.json',
             detail: 'detailer_pony_mix.json',
         },
@@ -162,12 +167,13 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'chroma-flash-01.webp',
         type: 'chroma',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
         description: 'Chroma is a high-detail Flux-family image generator. This Flash build produces images in a single step for fast, uncensored results.',
         workflows: {
             t2i: 'Chroma_t2i.json',
+            i2i: 'Chroma_t2i.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'Chroma_upscaler.json',
             detail: 'Chroma_detailer.json',
         },

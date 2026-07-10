@@ -49,12 +49,12 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Output"
+      "title": "Output_image"
     }
   },
   "1557": {
     "inputs": {
-      "image": "Woman_seated_rooftop_edge_dangling_60a001b9ff.jpeg"
+      "image": "placeholder.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -67,7 +67,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Denoise"
+      "title": "Input_Denoise"
     }
   },
   "1595": {
@@ -86,7 +86,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_1"
+      "title": "Input_Lora_1"
     }
   },
   "1597": {
@@ -105,7 +105,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_2"
+      "title": "Input_Lora_2"
     }
   },
   "1598": {
@@ -124,7 +124,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_3"
+      "title": "Input_Lora_3"
     }
   },
   "1599": {
@@ -143,7 +143,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_4"
+      "title": "Input_Lora_4"
     }
   },
   "1600": {
@@ -162,7 +162,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_5"
+      "title": "Input_Lora_5"
     }
   },
   "1601": {
@@ -181,7 +181,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_6"
+      "title": "Input_Lora_6"
     }
   },
   "1603": {
@@ -190,7 +190,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
+      "title": "Input_Seed"
     }
   },
   "1604": {
@@ -217,7 +217,7 @@
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
-      "title": "Auto_Grid"
+      "title": "Input_Auto_Grid"
     }
   },
   "1615": {
@@ -336,7 +336,7 @@
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
-      "title": "Upscale_Model"
+      "title": "Input_Upscale_Model"
     }
   },
   "1657": {
@@ -345,7 +345,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Upscale_Factor"
+      "title": "Input_Upscale_Factor"
     }
   },
   "1658": {
@@ -354,7 +354,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "1659": {
@@ -363,7 +363,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
     }
   }
 }

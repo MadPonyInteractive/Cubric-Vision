@@ -37,16 +37,16 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Output"
+      "title": "Output_image"
     }
   },
   "1472": {
     "inputs": {
-      "value": "lifestyle photography, a stylish contemporary creator\u2019s image library displayed as a massive full-bleed gallery wall, curated digital artworks and photography prints covering the entire wall surface, modern creative studio aesthetic, immersive visual storytelling atmosphere, softly glowing display panels and framed prints, subtle texture and layered composition, standing in quiet admiration of the gallery wall, wide interior composition, inside a modern creative studio filled with artistic displays and ambient decor, warm mauve studio lighting with cyan and pink accent lights, eye level, shot on Sony A7 III with voigtlander nocturn 50mm lens, in the style of Tim Walker\n"
+      "value": "two women talking to each other naked at the beach\n"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
     }
   },
   "1473": {
@@ -55,7 +55,7 @@
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "1476": {
@@ -96,7 +96,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Width"
+      "title": "Input_Width"
     }
   },
   "1521": {
@@ -105,7 +105,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Height"
+      "title": "Input_Height"
     }
   },
   "1523": {
@@ -114,7 +114,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Batch_Size"
+      "title": "Input_Batch_Size"
     }
   },
   "1533": {
@@ -127,7 +127,10 @@
       "cfg": 1.5,
       "sampler_name": "lcm",
       "scheduler": "simple",
-      "denoise": 1,
+      "denoise": [
+        "1566",
+        0
+      ],
       "model": [
         "1558",
         0
@@ -141,7 +144,7 @@
         0
       ],
       "latent_image": [
-        "1455",
+        "1564",
         0
       ]
     },
@@ -156,7 +159,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
+      "title": "Input_Seed"
     }
   },
   "1535": {
@@ -175,7 +178,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_1"
+      "title": "Input_Lora_1"
     }
   },
   "1536": {
@@ -194,7 +197,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_2"
+      "title": "Input_Lora_2"
     }
   },
   "1537": {
@@ -213,7 +216,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_3"
+      "title": "Input_Lora_3"
     }
   },
   "1538": {
@@ -232,7 +235,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_4"
+      "title": "Input_Lora_4"
     }
   },
   "1539": {
@@ -251,7 +254,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_5"
+      "title": "Input_Lora_5"
     }
   },
   "1540": {
@@ -270,7 +273,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_6"
+      "title": "Input_Lora_6"
     }
   },
   "1541": {
@@ -347,7 +350,7 @@
     },
     "class_type": "StringConcatenate",
     "_meta": {
-      "title": "Concatenate"
+      "title": "Concatenate Text"
     }
   },
   "1551": {
@@ -386,6 +389,118 @@
     "class_type": "NAGuidance",
     "_meta": {
       "title": "Normalized Attention Guidance"
+    }
+  },
+  "1564": {
+    "inputs": {
+      "boolean": [
+        "1567",
+        0
+      ],
+      "true": [
+        "1565",
+        0
+      ],
+      "false": [
+        "1455",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "i2i"
+    }
+  },
+  "1565": {
+    "inputs": {
+      "pixels": [
+        "1570",
+        0
+      ],
+      "vae": [
+        "1462",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1566": {
+    "inputs": {
+      "boolean": [
+        "1567",
+        0
+      ],
+      "true": [
+        "1568",
+        0
+      ],
+      "false": [
+        "1569",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "i2i"
+    }
+  },
+  "1567": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Is_i2i"
+    }
+  },
+  "1568": {
+    "inputs": {
+      "float": 0.3
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_denoise"
+    }
+  },
+  "1569": {
+    "inputs": {
+      "float": 1
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "dummy"
+    }
+  },
+  "1570": {
+    "inputs": {
+      "width": 512,
+      "height": 768,
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "1571",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "1571": {
+    "inputs": {
+      "image": "placeholder.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "502": {
     "inputs": {
-      "image": "2ab007fbae95623ec422df548eebcdd5.jpg"
+      "image": "Mask_test_00001_ (1).png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -17,7 +17,7 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Output"
+      "title": "Output_image"
     }
   },
   "1571": {
@@ -125,7 +125,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Box"
+      "title": "Input_Box"
     }
   },
   "1593": {
@@ -143,13 +143,25 @@
     },
     "class_type": "ImpactSEGSPicker",
     "_meta": {
-      "title": "Selected_Masks_Input"
+      "title": "Input_Selected_Masks_Input"
+    }
+  },
+  "1596": {
+    "inputs": {
+      "segs": [
+        "1593",
+        0
+      ]
+    },
+    "class_type": "SegsToCombinedMask",
+    "_meta": {
+      "title": "SEGS to MASK (combined)"
     }
   },
   "1627": {
     "inputs": {
       "mask": [
-        "1629",
+        "1596",
         0
       ]
     },
@@ -158,76 +170,16 @@
       "title": "Convert Mask to Image"
     }
   },
-  "1629": {
-    "inputs": {
-      "segs": [
-        "1593",
-        0
-      ]
-    },
-    "class_type": "ImpactSEGSToMaskList",
-    "_meta": {
-      "title": "SEGS to Mask List"
-    }
-  },
-  "1632": {
-    "inputs": {
-      "boolean": [
-        "1635",
-        1
-      ],
-      "input": [
-        "1637",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
-  "1635": {
-    "inputs": {
-      "list_input": [
-        "1571",
-        0
-      ]
-    },
-    "class_type": "MpiListCount",
-    "_meta": {
-      "title": "Mpi List Count"
-    }
-  },
-  "1637": {
-    "inputs": {
-      "boolean": [
-        "1635",
-        1
-      ],
-      "true": [
-        "1571",
-        0
-      ],
-      "false": [
-        "502",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "1638": {
+  "1628": {
     "inputs": {
       "images": [
-        "1632",
-        1
+        "1571",
+        0
       ]
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Detected"
+      "title": "Output_Detected"
     }
   }
 }

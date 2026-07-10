@@ -29,7 +29,7 @@
     },
     "class_type": "ImageFlip",
     "_meta": {
-      "title": "ImageFlip"
+      "title": "Input_Flip_Image"
     }
   },
   "4": {
@@ -42,15 +42,12 @@
     },
     "class_type": "ImageRotate",
     "_meta": {
-      "title": "Image Rotate"
+      "title": "Input_Rotate_Image"
     }
   },
   "5": {
     "inputs": {
-      "boolean": [
-        "6",
-        0
-      ],
+      "boolean": false,
       "true": [
         "3",
         0
@@ -62,16 +59,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "6": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Flip"
+      "title": "Input_Flip"
     }
   },
   "9": {
@@ -90,7 +78,7 @@
     },
     "class_type": "VHS_LoadVideoPath",
     "_meta": {
-      "title": "Input_Video"
+      "title": "Video"
     }
   },
   "11": {
@@ -114,36 +102,6 @@
       "title": "Input_Video"
     }
   },
-  "13": {
-    "inputs": {
-      "filename_prefix": "audio/interpolate",
-      "quality": "V0",
-      "audioUI": "",
-      "audio": [
-        "17",
-        1
-      ]
-    },
-    "class_type": "SaveAudioMP3",
-    "_meta": {
-      "title": "Output_Audio"
-    }
-  },
-  "14": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "16",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
-    "_meta": {
-      "title": "Output_Video"
-    }
-  },
   "15": {
     "inputs": {
       "video_path": [
@@ -156,36 +114,29 @@
       "title": "Mpi Has Audio"
     }
   },
-  "16": {
+  "18": {
     "inputs": {
       "fps": [
         "11",
         0
       ],
-      "images": [
-        "4",
-        0
-      ]
-    },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "17": {
-    "inputs": {
-      "boolean": [
+      "filename_prefix": "MpiVideo",
+      "use_audio": [
         "15",
         0
       ],
-      "input": [
+      "images": [
+        "4",
+        0
+      ],
+      "audio": [
         "9",
         2
       ]
     },
-    "class_type": "MpiIfElseInverted",
+    "class_type": "MpiSaveVideo",
     "_meta": {
-      "title": "Has Audio"
+      "title": "Output_Video"
     }
   }
 }

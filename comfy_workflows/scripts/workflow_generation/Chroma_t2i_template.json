@@ -394,7 +394,7 @@
   },
   "2610": {
     "inputs": {
-      "image": "placeholder.png"
+      "image": "mpi_input_image.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -423,7 +423,7 @@
   },
   "2612": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {

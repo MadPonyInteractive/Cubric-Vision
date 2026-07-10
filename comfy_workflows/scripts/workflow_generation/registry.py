@@ -23,6 +23,8 @@ HANDLERS = [
     ("LTX_",      "ltx"),    # MPI-127: source = LTX_i2v_t2v_template.json (do NOT rename)
     ("krea2_",    "krea2"),  # MPI-242: krea2_turbo_t2i_template.json — no op split; stamps
                              # the optional-image placeholder + asserts the style rack.
+    ("Chroma_",   "chroma"), # MPI-252: Chroma_t2i_template.json — i2i shares the t2i graph;
+                             # stamps the optional-image placeholder so plain t2i validates.
 ]
 
 
