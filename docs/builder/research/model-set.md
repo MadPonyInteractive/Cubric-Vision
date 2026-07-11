@@ -32,6 +32,12 @@ NerdyRodent FINAL set, post-A/B:
 > bf16/GGUF). Minor quality trade, accepted. The A/B ranking below stands for the
 > variants tested THEN, but the Q4-GGUF-as-balanced conclusion did not survive
 > real-Pod validation.
+>
+> **CLOSED WON'T-DO (2026-07-02):** the "per-VRAM-tier Gemma variant" idea is
+> CANCELLED — `fp4_mixed` is the answer for ALL tiers (low, balanced, high),
+> shared across every engine. `sizeTier` selects the transformer, never a
+> per-tier Gemma. Do NOT re-propose a per-tier Gemma without new evidence that
+> fp4 quality is inadequate on a specific tier.
 
 **Quality ranking (user testing, DEFINITIVE — non-monotonic):** `Q4 GGUF ≈ fp8 > BF16 > fp4`.
 - fp8 = sweet spot; Q4 GGUF equals fp8 quality (MPI-162, live A/B, 4060 Ti).

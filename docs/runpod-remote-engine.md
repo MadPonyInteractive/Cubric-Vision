@@ -173,7 +173,13 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   filters the file list BEFORE it reaches the wrapper; the wrapper's own `HOT_STORE_MIN_BYTES`
   (env `CUBRIC_HOT_STORE_MIN_BYTES`, default 15 GB) is a looser Pod-side floor that never rejects
   what the app already selected. Bumping the app constant is sufficient; the wrapper floor is a
-  no-rebuild R2 push if you ever want them aligned (see below).
+  no-rebuild R2 push if you ever want them aligned (see below). **Judge staging on the WARM
+  number, never the first touch (MPI-200).** The first staged gen pays the one-time volume→disk
+  copy and looks *slower* than unstaged (24GB mxfp8: 30s first-staged vs 20s volume-served); the
+  warm repeat then ran 1m04s total = fast. A briefly-shipped threshold raise (15→26, commit
+  10ec822) to skip staging was reverted same session (2db240a) once the warm number was checked.
+  Rule for any cache/stage/memoize: confirm first-touch (fill cost) vs warm-repeat (read cost)
+  before concluding a tier is net-negative — get at least one warm number first.
 - **`wrapper.py` + `start.sh` are R2-floated, NOT baked (MPI-156).** Editing either is **NOT**
   an image rebuild. `bootstrap.sh` (the image CMD) curls both fresh from R2
   (`https://pod.cubric.studio/vision/stable/`) at every Pod boot; the baked copies are fallback

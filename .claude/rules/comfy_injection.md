@@ -89,6 +89,12 @@ These use the same LoRA object shape as flat slots, and the controller writes
 
 > When adding new params: use a capitalized title (e.g. `"Input_Video"`) and add it here.
 
+### LoRA slot injection — bypass, choke point, clip-knob trap
+
+- **Single choke point (MPI-223):** the `{lora_name, strength_model, strength_clip}` object for every `Input_Lora_*` slot is assembled in exactly ONE place — `commandExecutor.js` `_loraSlotParam` — **upstream of the local/remote engine split**. Any per-slot LoRA logic (bypass, normalization, defaults) belongs there so both engines get it. Don't add slot logic downstream of the split.
+- **Bypass mechanic (MPI-223):** the per-slot bypass toggle injects `strength_model=0, strength_clip=0` (it does NOT remove the node or reload the model — that would OOM; see [[feedback_lora_ab_use_strength_not_bypass]]). A slot whose file is absent is **silently skipped**, not blocked.
+- **`loraStrengths` clip-knob trap (MPI-224):** a model's `loraStrengths` array controls which strength inputs the PromptBox exposes AND injects. LTX shipped with `['model']`, which silently pinned `strength_clip=1.0` even though the node has a live `strength_clip` input; fixed to `['model','clip']`. **Chroma/Wan still declare `['model']` and were NOT audited** (user-scoped). If a "clip knob missing / clip strength stuck" bug surfaces on those models, audit their `loraStrengths` against the actual node graph first.
+
 ## Standalone Workflow Injectors
 
 Most params are injected by `comfyController.runWorkflow()` from the title-keyed

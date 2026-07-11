@@ -46,8 +46,8 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 
 - **Purpose:** Identifies which ComfyUI portable engine is bundled with this release.
 - **Format:** Semantic versioning matching upstream tags (e.g., `0.18.0` for ComfyUI).
-- **Where:** Stored in `dev_configs/system_dependencies.json` (single source of truth).
-- **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json`.
+- **Where:** Stored in `dev_configs/system_dependencies.json` (drives the local-engine download URL). **Tracked in a SECOND file too:** `dev_configs/node_lock.json` `comfyui.core.tag` is the node/Pod pin (read by `js/data/modelConstants/dependencies.js` for app node URLs AND by the mpi-ci Pod image build). These two CAN DESYNC — on the 1.1.0 promote `system_dependencies.json` said `0.26.0` while `node_lock.json` said `v0.27.0` (local engine would have pulled 0.26 while nodes targeted 0.27).
+- **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json` **AND** verify it matches `node_lock.json`'s `comfyui.core.tag` — grep BOTH at every bump, do not trust one file alone.
 - **Access:** `routes/platformEngine.js` reads this value at startup and exports `COMFY_VERSION` for use by `engine.js` and download manager.
 - **Validation:** On app boot, `_bootApp()` calls `GET /engine/version-check` which compares installed engine version against `COMFY_VERSION` from `platformEngine.js`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
 

@@ -230,6 +230,13 @@ These came out of the cold-start lane and stand on their own. Ranked by leverage
    bf16 lever.** Fire a throwaway LTX gen on connect, interrupt at stage-1 step-1
    SSE → faults the 40GB in invisibly → user's first real gen starts warm. MUST be
    the LTX workflow itself (SDXL warm-up already proven useless — different VBAR).
+   > **ABANDONED (2026-07-02) — do NOT reopen.** Not going to be attempted. The
+   > cold-tax fix shipped a different way: the **Q8-GGUF transformer (MPI-168)** on
+   > the balanced-LTX Pod path, live-proven on RTX 5090. GGUF's RAM-caching makes the
+   > cold tax a one-time-per-boot event with no fire-and-interrupt warm-up needed.
+   > Node-58 (`MpiClearVram`) removal was also DISPROVEN live — bypassing it ran
+   > SLOWER, so the node stays. Reopen warm-on-connect only with new evidence that
+   > GGUF is insufficient.
    Open risk: does aimdo evict on interrupt before the real gen queues? (issue
    #13139 "models always unloaded" suggests it might.) Quick live test settles it.
 
