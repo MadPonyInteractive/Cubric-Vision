@@ -864,6 +864,18 @@ function _depHasActiveDownloadConsumer(depId) {
     return false;
 }
 
+// True if a model OTHER than excludeModelId is actively downloading/installing this
+// dep right now — the real "don't stop the downloader" test for cancel (MPI-258 Bug
+// B). refCount can't be trusted here (it leaks up on successful installs).
+function _otherActiveModelUsesDep(depId, excludeModelId) {
+    for (const modelJob of _modelJobs.values()) {
+        if (modelJob.modelId === excludeModelId) continue;
+        if (modelJob.status !== 'downloading' && modelJob.status !== 'queued' && modelJob.status !== 'installing') continue;
+        if (modelJob.deps.some(d => d.id === depId)) return true;
+    }
+    return false;
+}
+
 // ── Remote (RunPod wrapper) install driver ──────────────────────────────────
 //
 // In remote mode the wrapper streams installs onto the Pod volume. We reuse the
@@ -1684,16 +1696,23 @@ async function _runCustomNodeInstall(modelJob) {
 router.post('/comfy/models/download/cancel', async (req, res) => {
     const { modelId } = req.body;
     const job = _modelJobs.get(modelId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
+    // Cancel is idempotent: a job the backend already lost (restart mid-install, a
+    // double Cancel press, an already-completed download) is not an error — nothing
+    // to stop. Return 200 so the client isn't spammed with 404s in the console.
+    // (MPI-258 Bug B)
+    if (!job) { _broadcast('download:cancelled', { modelId }); return res.json({ success: true, alreadyGone: true }); }
 
     for (const dep of job.deps) {
-        dep.refCount -= 1;
-        // MPI-97 — the refCount gate is load-bearing for shared-dep cancel: when a
-        // dep is shared with ANOTHER active model (it ATTACHED at start, so
-        // refCount >= 2), cancelling THIS model must only decrement, never
-        // wrapper-cancel or delete the dep out from under the model still using it.
-        // Do NOT collapse this `refCount <= 0` guard.
-        if (dep.refCount <= 0) {
+        dep.refCount = Math.max(0, dep.refCount - 1);
+        // MPI-97 — cancelling THIS model must not stop a dep another ACTIVE model is
+        // still downloading. Gate on live consumers, NOT refCount: refCount leaks
+        // upward because a successful download never decrements it (only
+        // uninstall/rollback/cancel do — see the shared-dep guard note ~line 173), so
+        // a second install of the same model stacked refCount to 2 and cancel then
+        // saw refCount 1 > 0, skipped dl.cancel(), deleted _modelJobs, and left the
+        // download streaming invisibly while every re-press 404'd. (MPI-258 Bug B)
+        // _otherActiveModelUsesDep excludes THIS model (still in _modelJobs here).
+        if (!_otherActiveModelUsesDep(dep.id, modelId)) {
             // Remote install in flight on the Pod — cancel via the wrapper.
             if (_remoteDepIds.has(dep.id)) {
                 _remoteDepIds.delete(dep.id);
@@ -1919,9 +1938,20 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
         try {
             if (await fs.pathExists(localPath)) {
-                await _trash(localPath);
+                // Try Recycle Bin first (undo-safety). But model weights are large
+                // (6-25GB) and Windows refuses to recycle a file bigger than the
+                // drive's Recycle Bin quota — windows-trash.exe exits 255 and the
+                // file survives. Since uninstall exists to FREE disk space, parking a
+                // 25GB weight in the bin wouldn't free it anyway: fall back to a
+                // permanent delete so uninstall never silently no-ops. (MPI-258)
+                try {
+                    await _trash(localPath);
+                    logger.info('download', `uninstall: moved to trash ${localPath}`);
+                } catch (trashErr) {
+                    await fs.remove(localPath);
+                    logger.warn('download', `uninstall: trash failed (${trashErr.message}) — permanently deleted ${localPath}`);
+                }
                 await cleanEmptyDirs(localPath, dep.type === 'custom_nodes' ? defaultCustomNodesRoot : managedModelsRoot);
-                logger.info('download', `uninstall: moved to trash ${localPath}`);
             }
             await clearDownloadMarker(localPath).catch(() => {});
             removed.push({ depId: dep.id, depName: dep.name || dep.id });

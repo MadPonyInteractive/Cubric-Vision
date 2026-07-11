@@ -613,11 +613,14 @@ export const MpiModelManager = ComponentFactory.create({
                 total += _parseSizeToBytes(dep.size);
             }
             const allInstalled = installedDeps === deps.length;
-            // Only a REAL partial (some of this model's own bytes already on disk)
-            // draws a bar. downloaded===0 → nothing started → show the Install chip,
-            // not an ugly 0% bar (MPI-258 Bug A). Shared other-model files were already
-            // excluded above, so downloaded here is strictly this model's own progress.
-            if (total > 0 && downloaded > 0 && !allInstalled) {
+            // MPI-258 Bug C — a byte FLOOR before a bar draws. A model that only has a
+            // shared library asset on disk (Wan 5B borrows Wan 2.2's ~500MB CLIP/VAE;
+            // the anime packs share a 65MB upscaler owned by no installed model) read a
+            // phantom 1-3% partial on a pack the user never touched. Requiring ≥1GB of
+            // this model's OWN deps on disk means only a real, started download of its
+            // unique weight shows a bar — a handful of shared support files never does.
+            const PARTIAL_FLOOR_BYTES = 1024 ** 3; // 1 GB
+            if (total > 0 && downloaded >= PARTIAL_FLOOR_BYTES && !allInstalled) {
                 return {
                     hasPartialProgress: true,
                     progress: Math.min(downloaded / total, 0.99),
@@ -1208,7 +1211,16 @@ export const MpiModelManager = ComponentFactory.create({
 
         _unsubs.push(Events.on('download:installing', ({ modelId }) => { _patchTile(modelId); }));
 
-        _unsubs.push(Events.on('download:cancelled', () => { awaitReSync(); }));
+        // MPI-258 Bug B — patch the cancelled model's OWN tile + detail back to Install
+        // immediately. awaitReSync()'s renderList() short-circuits when the installed set
+        // is unchanged (a cancel never installs anything), so the tile kept its frozen
+        // progress bar at the cancel-% and the footer stayed Cancel. _patchTile rebuilds
+        // that one tile from _modelState (now idle → Install chip). Still re-sync after,
+        // for any shared-dep bytes that did land.
+        _unsubs.push(Events.on('download:cancelled', ({ modelId } = {}) => {
+            if (modelId) _patchTile(modelId);
+            awaitReSync();
+        }));
         _unsubs.push(Events.on('download:complete', async () => { awaitReSync(); }));
 
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {

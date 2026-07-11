@@ -27,6 +27,15 @@ function _isOutOfSpaceError(error) {
 const downloadService = {
     _eventSource: null,
 
+    // MPI-258 Bug B — modelIds cancelled in the last few seconds. The SSE 'open'
+    // reconnect re-fetches /status and re-injects any client job the backend list
+    // lacks (orphanedActive, MPI-241). A just-cancelled job the backend already
+    // deleted has no backend counterpart, so it was resurrected on the next SSE
+    // tick — the phantom "downloading" bar kept climbing and Cancel appeared dead
+    // (re-presses 404 'Job not found'). This set suppresses resurrection of a
+    // freshly-cancelled model for a short window.
+    _recentlyCancelled: new Map(),
+
     // MPI-184 — serial install queue. The app used to POST every install
     // immediately, so clicking Install on 3 models fired 3 concurrent
     // /download/start requests. On a small CPU download-Pod that spawns N
@@ -166,20 +175,40 @@ const downloadService = {
         // back — the card would never revert from QUEUED to Install. Emit the event
         // locally in that case so the UI updates. (The listener is idempotent; a live
         // download still gets its cancel via the backend SSE round-trip below.)
-        const queuedJob = state.downloadJobs.find(j => j.modelId === modelId && j.status === 'queued');
-        // MPI-258: a job the backend doesn't know about (404 'Job not found') — e.g. a
-        // server restart mid-install wiped _modelJobs but the renderer still shows the
-        // stale job. Treat it like the queued case: clear locally + emit so the card
-        // reverts to Install instead of a stuck phantom. Without resume (Bug 2) a
-        // restart-orphaned install cannot be recovered, so a clean revert is the right UX.
-        const res = await fetch('/comfy/models/download/cancel', {
+        // MPI-258 Bug B — no live client job for this model = nothing to cancel. A
+        // second Cancel press (or a click on an already-settled card) otherwise POSTed
+        // /cancel for a job the backend already deleted → 404 spam in the console and a
+        // pointless round-trip. Clear + emit locally (idempotent) and return without a
+        // fetch. The FIRST real cancel below still hits the backend.
+        const activeJob = state.downloadJobs.find(j => j.modelId === modelId);
+        if (!activeJob) {
+            this._recentlyCancelled.set(modelId, Date.now());
+            setTimeout(() => this._recentlyCancelled.delete(modelId), 8000);
+            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
+            Events.emit('download:cancelled', { modelId });
+            if (!state.downloadJobs.length) state.downloadQueueActive = false;
+            return;
+        }
+        // MPI-258 Bug B — block orphanedActive from resurrecting this job on the
+        // next SSE 'open' tick (which races /status ahead of the backend deleting
+        // the job). Set the guard BEFORE the fetch so a fast reconnect is covered.
+        this._recentlyCancelled.set(modelId, Date.now());
+        setTimeout(() => this._recentlyCancelled.delete(modelId), 8000);
+
+        // A still-queued job (serial install queue, POST not fired) is unknown to the
+        // backend; its /cancel is a harmless idempotent no-op (backend returns 200).
+        await fetch('/comfy/models/download/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId }),
-        });
-        const orphaned = res.status === 404;
+        }).catch(() => {});
+        // Clear the job + fire the local event UNCONDITIONALLY. Previously this only
+        // ran for the queued/404 cases and otherwise relied on the backend's
+        // download:cancelled SSE — but if that tick dropped (or lost the race to an
+        // orphanedActive re-inject), the phantom job survived and Cancel looked dead.
+        // The listener is idempotent, so a live 200 that ALSO sends the SSE is fine.
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
-        if (queuedJob || orphaned) Events.emit('download:cancelled', { modelId });
+        Events.emit('download:cancelled', { modelId });
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
 
@@ -253,8 +282,13 @@ const downloadService = {
                         // backend hasn't caught up to; the backend copy wins for shared ids.
                         const backendIds = new Set(jobs.map(j => j.modelId));
                         const ACTIVE = ['downloading', 'queued', 'paused', 'installing'];
+                        // MPI-258 Bug B — never resurrect a just-cancelled job. The
+                        // backend deleted it; without this guard the /status race
+                        // re-injected the phantom and Cancel looked dead.
                         const orphanedActive = state.downloadJobs.filter(
-                            j => !backendIds.has(j.modelId) && ACTIVE.includes(j.status));
+                            j => !backendIds.has(j.modelId)
+                                && ACTIVE.includes(j.status)
+                                && !this._recentlyCancelled.has(j.modelId));
                         state.downloadJobs = [...jobs, ...orphanedActive];
                         state.downloadQueueActive = state.downloadJobs.some(
                             j => j.status === 'downloading' || j.status === 'installing');
