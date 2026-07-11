@@ -572,13 +572,40 @@ export const MpiModelManager = ComponentFactory.create({
             refreshBtn.el.removeAttribute('loading');
         }
 
+        // Deps owned by an ALREADY-INSTALLED other model (MPI-258 Bug A). A small
+        // shared file on disk only because another installed model needs it (e.g. the
+        // 4x-NMKD upscaler, shared VAEs, LTX Gemma) must NOT read as partial progress
+        // for a model the user hasn't started — else an idle upscaler shows "4%" and a
+        // never-touched pack shows "1%". Union the full dep universe of every OTHER
+        // installed model; those ids are excluded from BOTH sides of this model's
+        // partial ratio, so the bar reflects only THIS model's own unique download.
+        function _sharedOwnedDepIds(excludeModelId) {
+            const owned = new Set();
+            for (const m of MODELS) {
+                if (m.id === excludeModelId || m.installed !== true) continue;
+                for (const id of resolveFullUniverse(m)) owned.add(id);
+            }
+            return owned;
+        }
+
         // ── Partial-progress measured against the DRAFT deps ─────────────────
         // The bar tracks how much of what the user will install is already on disk,
         // so a deliberately-omitted op never reads as partial. (MPI-122)
         function _computePartial(model) {
             const depStatus = getModelDepStatus(model.id);
             if (!depStatus) return { hasPartialProgress: false };
-            const deps = _draftDepIds(model).map(id => DEPS[id]).filter(Boolean);
+            const owned = _sharedOwnedDepIds(model.id);
+            // Exclude deps owned by an installed other-model (MPI-258 Bug A): they are
+            // on disk regardless of this model, so they are neither "downloaded for
+            // this model" nor part of its remaining work. Also exclude custom_nodes —
+            // they are work-not-bytes (a 70MB shared node like ComfyUI-LTXVideo stays
+            // on disk after uninstall and would otherwise read as a phantom partial),
+            // the same rule the active-download bar already applies (_byteRatioExcludingNodes, MPI-231).
+            const deps = _draftDepIds(model)
+                .filter(id => !owned.has(id))
+                .map(id => DEPS[id]).filter(Boolean)
+                .filter(dep => dep.type !== 'custom_nodes');
+            if (deps.length === 0) return { hasPartialProgress: false };
             let installedDeps = 0, downloaded = 0, total = 0;
             for (const dep of deps) {
                 const st = depStatus.get(dep.id);
@@ -587,10 +614,14 @@ export const MpiModelManager = ComponentFactory.create({
                 total += _parseSizeToBytes(dep.size);
             }
             const allInstalled = installedDeps === deps.length;
-            if (total > 0 && !allInstalled) {
+            // Only a REAL partial (some of this model's own bytes already on disk)
+            // draws a bar. downloaded===0 → nothing started → show the Install chip,
+            // not an ugly 0% bar (MPI-258 Bug A). Shared other-model files were already
+            // excluded above, so downloaded here is strictly this model's own progress.
+            if (total > 0 && downloaded > 0 && !allInstalled) {
                 return {
                     hasPartialProgress: true,
-                    progress: Math.min(total > 0 ? downloaded / total : 0, 0.99),
+                    progress: Math.min(downloaded / total, 0.99),
                     downloadedBytes: downloaded,
                     totalBytes: total,
                 };

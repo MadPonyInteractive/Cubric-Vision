@@ -126,8 +126,10 @@ function _withEngineExtraDeps(modelId, dependencies, engine) {
 // REMOTE path (`_remoteSharedDepIds`, which checks the Pod volume) but the local path was
 // never given the fix: uninstalling LTX-2.3 high trashed the Gemma + VAEs + LoRAs that the
 // balanced tier shares. Here we stat the LOCAL disk (same custom-root + default-root +
-// recursive-search + completeness logic as /comfy/models/check) to learn which OTHER model's
-// deps are actually complete on disk, and protect those. Returns depId → [modelName, …].
+// recursive-search + completeness logic as /comfy/models/check) to learn which OTHER model
+// is WHOLE-MODEL installed (every dep complete on disk), and protect that model's deps —
+// plus any dep with a live in-flight install job. Returns depId → [modelName, …].
+// MPI-258 replaced the earlier per-dep on-disk test (see the loop below for why).
 async function _localSharedDepsMap(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
     const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
@@ -148,17 +150,36 @@ async function _localSharedDepsMap(excludeModelId) {
     const results = await comfyRoutes.localModelsCheck(checkModels);
     for (const { model, depIds } of others) {
         const entry = results[model.id];
-        // A dep is protected iff another model still has that specific dep complete
-        // on disk — a per-dep check (not whole-model `installed`) so a PARTIALLY
-        // installed sibling still protects the shared files it DOES have. This is
-        // stricter than the remote whole-model gate on purpose: it must not delete a
-        // file another model is physically using, even mid-install.
-        if (!entry || !Array.isArray(entry.deps)) continue;
-        const onDisk = new Set(entry.deps.filter(d => d.installed === true).map(d => d.id));
+        // A dep is protected iff another model is ACTUALLY INSTALLED (whole-model:
+        // every one of its deps complete on disk) and needs this dep — mirroring the
+        // remote gate (_remoteSharedDepIds `entry.installed === true`).
+        //
+        // MPI-258: the old per-dep "file complete on disk" test was circular for a
+        // TIER FAMILY. LTX-2.3 High + Balanced share every non-transformer dep
+        // (Gemma/VAE/LoRAs, ~19GB). Uninstall High → those files were kept "because
+        // Balanced has them on disk"; later uninstall Balanced → kept "because High
+        // has them on disk" — each tier protected the SAME shared copy while NEITHER
+        // was installed (both transformers absent). The cluster became undeletable,
+        // stranding ~19GB. Gating on whole-model `installed` breaks the cycle: an
+        // absent-transformer sibling is not installed → protects nothing.
+        if (!entry || entry.installed !== true) continue;
         for (const depId of depIds) {
-            if (!onDisk.has(depId)) continue;
             if (!map.has(depId)) map.set(depId, new Set());
             map.get(depId).add(model.name);
+        }
+    }
+    // Mid-install protection (was the reason for the old per-dep test): a dep that is
+    // ACTIVELY downloading/queued for another model right now must never be trashed.
+    // MPI-258 NOTE: gate on depJob.status, NOT refCount. refCount is "how many model
+    // jobs reference this dep" and stays >0 after an install COMPLETES (it's only
+    // decremented on uninstall/disk-full rollback), so a refCount test protected
+    // every just-installed dep and made uninstall a no-op ("removed 0, kept 9"). Only
+    // an in-flight status ('downloading'/'queued') means a live download is using the
+    // file; 'complete'/'idle'/'failed' must not protect it.
+    for (const [depId, depJob] of _depJobs) {
+        if (depJob && (depJob.status === 'downloading' || depJob.status === 'queued')) {
+            if (!map.has(depId)) map.set(depId, new Set());
+            map.get(depId).add('(installing)');
         }
     }
     return map;
