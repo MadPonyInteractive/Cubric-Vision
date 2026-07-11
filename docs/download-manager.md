@@ -21,7 +21,7 @@ The backend uses `node-downloader-helper` under the hood. NDH writes directly to
 Singleton that owns the frontend download queue.
 
 - `start(modelId, dependencies)`: Enqueue a model for download via backend SSE.
-- `pause(modelId)` / `resume(modelId)` / `cancel(modelId)`: Control an active download.
+- `cancel(modelId)`: stop an active download (cancel-only — `pause`/`resume` were removed, MPI-258 Bug 2). Idempotent client-side: a second press or a settled card skips the POST; a `_recentlyCancelled` guard blocks the MPI-241 SSE-open re-inject from resurrecting the phantom.
 - `uninstall(modelId, dependencies)`: Remove model files via backend.
 
 > **Operation-selectable models (MPI-122).** `dependencies` here is ALWAYS a
@@ -73,34 +73,38 @@ were deleted would show a green INSTALLED and hide the loss.
 **SSE-open clobber (MPI-241) — don't reintroduce.** `start()` opens the SSE stream *and* creates the client `downloading` job in the SAME tick, so on the FIRST install after a reload the `open` handler's `/status` fetch races ahead of the backend registering it and returns only OLD `complete` jobs. Overwriting `state.downloadJobs` with that snapshot wiped the live job → the Model Library footer reverted Cancel→**Install** mid-download (bar kept climbing; only the state was wrong). Later installs never hit it — `_ensureSSE()` no-ops once open, hence "only the first time". Contract: keep any **active** client job (`downloading`/`queued`/`paused`/`installing`) whose `modelId` the backend snapshot omits; backend wins for shared ids. Footer hardening: a lingering terminal `complete` job still counts as *busy* (holds Cancel/progress, never flashes Install), and `anyInstalled` is checked BEFORE busy so Uninstall wins on re-sync. No "Finishing…" label — `Verifying…` is the only end-phase text. Guard: `tests/model-footer-settling.test.cjs`.
 
 ## Backend — `routes/downloadManager.js`
-Non-blocking download router using `node-downloader-helper` with pause/resume support.
+Non-blocking download router using `node-downloader-helper`. **Downloads are CANCEL-ONLY (no pause/resume)** — resume was removed (MPI-258 Bug 2, commit c7313dff): NDH `resumeFromFile` sends `Range: bytes=<n>-` on an append-mode file; when R2/Cloudflare answers 200 (full body) not 206 it appends the WHOLE file onto the partial → SHA256 mismatch (hit live on the 25GB LTX transformer). A cancelled/interrupted install restarts clean.
 
 **Endpoints:**
 - `POST /comfy/models/download/start` — enqueue a model's dependencies
-- `POST /comfy/models/download/pause` / `resume` / `cancel`
+- `POST /comfy/models/download/cancel` — stop + scrub a model's active/queued download. **Idempotent**: an unknown job returns 200 (+ `download:cancelled` broadcast), NOT 404 (MPI-258).
 - `GET /comfy/downloads/status` — full queue snapshot
 - `GET /comfy/downloads/active` — active model downloads plus engine-download flag for Electron quit warnings
 - `GET /comfy/downloads/stream` — SSE broadcast channel
 - `POST /comfy/models/uninstall` — uninstall a model
-- `POST /engine/pause` / `engine/resume` — pause/resume active engine downloads
 
-**ResumableDownloader class** (`routes/downloadManager.js`):
-A wrapper around `node-downloader-helper` that adds SHA256 verification and SSE progress broadcasting.
-- `_downloader`: `DownloaderHelper` instance with `{ resume: true }`
-- `.download()`: starts fresh or, on a fresh app instance, resumes from a final-filename partial only when `<file>.cubricdl` exists
-- `.abort()`: pauses and retains instance for later resume
-- `.resume()`: in-session resume uses the same instance via `getResumeState()` + `resumeFromFile()`
-- On completion: verifies `sha256Expected` against downloaded file, clears `<file>.cubricdl`, then marks dep `complete`
-- On SHA256 mismatch: deletes the file, clears the marker, and marks dep `failed`
+> The `/download/pause`, `/download/resume`, `/engine/pause`, `/engine/resume` routes and the `_pausedDownloaders` map were DELETED in c7313dff. Do not reintroduce them.
+
+**ResumableDownloader class** (`routes/downloadManager.js` — name is historical; it no longer resumes):
+A plain single-stream `node-downloader-helper` wrapper: start, cancel (clean `stop()` + remove), SHA256 verify, SSE progress broadcast.
+- `.download()`: always scrubs any stale/partial file at `localPath` first, then starts one clean stream (no `resumeIfFileExists`, no resume option). 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
+- `.cancel()`: `_downloader.stop()` + the caller removes the partial + marker.
+- On completion: verifies `sha256Expected`, clears `<file>.cubricdl`, marks dep `complete`.
+- On SHA256 mismatch: deletes the file, clears the marker, marks dep `failed`.
 
 **Job storage:**
 - `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, refCount, sha256)
 - `_modelJobs Map<modelId, DownloadJob>` — model-level aggregate job (totalBytes, downloadedBytes, speed, progress, deps[])
 - `_activeDownloaders Map<depId, ResumableDownloader>` — actively downloading
-- `_pausedDownloaders Map<depId, ResumableDownloader>` — paused but kept for resume
 - `_sseClients Set<res>` — SSE subscribers
 
-**RefCount:** Each `depId` can be shared across multiple model jobs. `refCount` tracks how many model jobs reference it. A dep is only cancelled/aborted when `refCount` reaches 0.
+**RefCount:** Each `depId` can be shared across multiple model jobs. `refCount` tracks how many model jobs reference it. **TRAP (MPI-258): refCount LEAKS upward — a successful download NEVER decrements it** (only uninstall / disk-full rollback / cancel do). So after an install completes the dep sits at refCount ≥1, and a *second* install of the same model stacks it to 2. Do NOT gate any "is this dep still needed" decision on `refCount === 0`:
+- **Shared-dep uninstall protection** already learned this (see the `_localSharedDepsMap` note above) — it gates on live `depJob.status` (`downloading`/`queued`), never refCount.
+- **Cancel** (`/comfy/models/download/cancel`) learned it the hard way: gating "stop the downloader" on `refCount <= 0` meant a refCount-2 dep was never stopped — cancel deleted `_modelJobs` but left NDH streaming invisibly and every re-press 404'd. It now gates on `_otherActiveModelUsesDep(depId, thisModelId)` (another ACTIVE model job references the dep), not refCount. Unknown-job cancel returns an **idempotent 200** (+ `download:cancelled` broadcast), never 404.
+
+**Uninstall on Windows — Recycle Bin has a QUOTA (MPI-258).** `windows-trash.exe` exits **255** (uninstall silently no-ops, `removed:0`, misleading "all files shared" toast) when a weight exceeds the drive's *Recycle Bin* budget — this is the bin cap, NOT disk free space (a 6.9GB file failed with 37GB free on the drive). Since uninstall exists to free space (parking a 25GB weight in the bin wouldn't free it anyway), the uninstall loop tries `_trash` first, then falls back to permanent `fs.remove` on any trash failure. Small files still go to the bin (undo-safety); only over-quota weights hit the fallback.
+
+**Idle partial bar — 1GB floor (MPI-258).** `MpiModelManager._computePartial` draws a partial bar only when ≥1GB of a model's OWN deps are on disk. Below that, only shared support files are present (Wan 5B borrows Wan 2.2's CLIP/VAE; anime packs share a 65MB upscaler owned by no installed model) which read as a phantom 1-3% on a never-touched pack — the floor suppresses those. This is separate from `_sharedOwnedDepIds` (excludes deps owned by an *installed* other-model, MPI-258 Bug A).
 
 **Custom-node install — "already extracted" is FILES, not folder-exists (MPI-243).** A `targetPath` weight (e.g. RIFE's `ckpts/rife/rife47.pth` resolves UNDER `custom_nodes/comfyui-frame-interpolation/`) downloads BEFORE the node extracts, creating the node dir as a subdir-only **shell**. `_runCustomNodeInstall` keys "already extracted" on `_nodeFolderHasFiles(targetDir)` (folder holds a top-level FILE — real nodes ship `__init__.py`/`install.py`), NOT `pathExists`. `pathExists` false-positived → skipped extraction → `python install.py` in an install.py-less folder → Errno 2, "UW deps installation failed / Press Retry". The rename block MERGES the extracted node into a weight-shell (`fs.copy` overwrite + remove source), preserving `ckpts/`, instead of deleting the node as a "duplicate". Order-independent. Two support fixes same card: stale-zip scrub in `download()` (no NDH ` (1)` dups) + a per-dep reqs failure sets `anyFailure + continue` (one node's install hiccup no longer aborts the batch). Guard: `tests/node-install-batch-resilience.test.cjs`. [[project_targetpath_weight_shell_trap]]
 
@@ -118,8 +122,6 @@ In `js/state.js`:
 | `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
 | `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see ui-gotchas § Model Library flash). |
 | `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error |
-| `download:paused` | Backend→SSE→Frontend | User paused or pause/resume cycle |
-| `download:resumed` | Backend→SSE→Frontend | User resumed |
 | `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
 | `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |
 | `download:installing` | Backend→SSE→Frontend | Custom node `requirements.txt` pip install in progress |
