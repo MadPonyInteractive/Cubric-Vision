@@ -1331,7 +1331,22 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // trust `installed`: anything not present is installed via the wrapper
         // (per-model custom_nodes now install onto the volume — Design B+).
         const alreadyInstalled = !!(statusResults[dep.id] && statusResults[dep.id].installed);
-        if (alreadyInstalled && dep.type === 'custom_nodes') {
+        // MPI-244: a BAKED (image-resident) custom_node lives in the Pod IMAGE at
+        // /opt/ComfyUI/custom_nodes, NOT on the /workspace volume. Its pip
+        // requirements already ran at image-build time. The `requirements_only`
+        // self-heal below `cd`s into the volume node folder to re-run pip -r — but
+        // a baked node has NO volume folder, so the wrapper dies with
+        // "[Errno 2] No such file or directory: '/workspace/.../comfyui_controlnet_aux'"
+        // and the whole model install fails with a Download-Failed dialog. Baked
+        // nodes are already present + already have their deps: settle complete,
+        // never send them to the wrapper. (comfyui_controlnet_aux is the first baked
+        // node a model DECLARES as a dep — LTX/Impact/etc. are implicit engine deps,
+        // never in a model's `deps`, so this path was never hit before Krea2.)
+        if (alreadyInstalled && dep.type === 'custom_nodes' && remoteModels._isImageResident(dep)) {
+            depJob.status = 'complete';
+            depJob.downloadedBytes = _parseSizeToBytes(dep.size);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
+        } else if (alreadyInstalled && dep.type === 'custom_nodes') {
             // A custom_node folder present on the volume does NOT prove its pip
             // requirements ran (a prior install may have landed the folder but
             // failed/skipped requirements.txt — e.g. ComfyUI-GGUF present but the

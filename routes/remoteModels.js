@@ -173,7 +173,16 @@ function _universalNodeFilenames() {
     let km;
     while ((km = keyRe.exec(src)) !== null) starts.push(km.index);
     for (let i = 0; i < starts.length; i++) {
-      const block = src.slice(starts[i], starts[i + 1] ?? src.length);
+      let block = src.slice(starts[i], starts[i + 1] ?? src.length);
+      // MPI-244: cut the block at its OWN closing `},` (4-space indent). Without
+      // this, the block bleeds into the NEXT dep's leading comments, and a comment
+      // that merely MENTIONS "installRequirements:true" (e.g. controlnet_aux's
+      // "⇒ installRequirements:true ⇒ BAKED" doc) falsely flags the PRECEDING
+      // code-only node (ComfyUI-Krea2-ControlNet, installRequirements:false) as
+      // baked → the app skips its volume install → the node is MISSING on the Pod
+      // → Krea2 gen fails ComfyUI node validation.
+      const close = block.search(/^\s{4}\},/m);
+      if (close !== -1) block = block.slice(0, close);
       if (!/type:\s*'custom_nodes'/.test(block)) continue;
       if (!/installRequirements:\s*true/.test(block)) continue;
       const fn = block.match(/filename:\s*'([^']+)'/);
@@ -675,4 +684,5 @@ module.exports = {
   remoteUploadModel,
   remoteCancelInstall,
   openInstallEventStream,
+  _isImageResident,
 };
