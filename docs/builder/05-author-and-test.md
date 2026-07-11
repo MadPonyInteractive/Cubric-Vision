@@ -59,12 +59,12 @@ per-step cost). When authoring an LTX-class video workflow:
   in the app card, that header mismatch is the first suspect.
 
 Full detail (why each dead end is dead, the SOI fix, multi-frame looping):
-[research/ltx-workflow-authoring.md](research/ltx-workflow-authoring.md) § "Live latent previews".
+[../models/ltx/workflow-authoring.md](../models/ltx/workflow-authoring.md) § "Live latent previews".
 
 ## Strength defaults — don't blind-hunt
 
 LoRAs default to **0.5**, sweep 0.3–0.7 (the distilled-LoRA law). See
-[research/lora-strength-law.md](research/lora-strength-law.md). Watch total stacked
+[../models/ltx/lora-strength-law.md](../models/ltx/lora-strength-law.md). Watch total stacked
 LoRA strength < ~1.5 or quality degrades.
 
 ## Save what you learn
@@ -101,5 +101,5 @@ To fold a live LoRA chain (e.g. SoftEnhance → Abliterated → Detailer) into a
 reusable `.safetensors` — the "make it ours" pattern — do NOT use CheckpointSave or the
 native merge nodes (both are dead on LTX). Extract the combined delta with KJNodes
 `LoraExtractKJ`, then union the model+clip halves. Full LIVE-PROVEN recipe + the four
-dead ends: [research/lora-merge-ltx.md](research/lora-merge-ltx.md). Script:
+dead ends: [../models/ltx/lora-merge.md](../models/ltx/lora-merge.md). Script:
 [comfy_workflows/scripts/merge-loras/](../../comfy_workflows/scripts/merge-loras/).

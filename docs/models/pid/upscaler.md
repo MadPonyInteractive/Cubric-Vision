@@ -263,7 +263,7 @@ choice. Content guide: portraits/fine-detail→SDXL, color-critical/smooth→Flu
 rounder→Qwen, sharp alt→SD3. (Rejected Option A = 4 separate entries → pollutes models page.)
 
 User is building the WORKFLOW TEMPLATE with the internal 4-path selector. Agent advances the
-NON-workflow wiring per docs/add-model-playbook.md in the meantime.
+NON-workflow wiring per docs/playbooks/add-model/ in the meantime.
 
 **Install footprint (1024 tiers, measured 2026-07-03):** 4× checkpoints 2.72 GB ea = 10.9 GB
 + 4× VAEs (ae/sdxl 335M, sd3 168M, qwen 254M) = 1.09 GB + shared Gemma bf16 4.87 GB =

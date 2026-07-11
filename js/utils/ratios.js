@@ -134,7 +134,7 @@ export const WAN_5B_RATIOS = {
 // improves with size (in-distribution sizes give the best audio). 2K/4K are
 // detail-focused native tiers, NOT an upscale pass. (17:9 cinema — 2048x1088,
 // 4096x2176 — is a documented Lightricks option but not in our ratio set; see
-// docs/builder/research/ltx-2.3-tiers.md.)
+// docs/models/ltx/tiers.md.)
 export const LTX_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
@@ -186,7 +186,7 @@ export const LTX_RATIOS = {
 // keeps it that way.
 //
 // ALL values are /16-clean — an off-multiple edge silently circular-pads
-// (comfy/ldm/krea2/model.py:239). See docs/krea2/resolution.md.
+// (comfy/ldm/krea2/model.py:239). See docs/models/krea2/resolution.md.
 export const KREA2_RATIOS = {
     '1k': FLUX_RATIOS,
     '2k': {

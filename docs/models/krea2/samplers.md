@@ -1,6 +1,6 @@
 # Krea2 — samplers
 
-> Part of [docs/krea2/](README.md). Model overview + variants table live in the hub.
+> Part of [docs/models/krea2/](README.md). Model overview + variants table live in the hub.
 
 ## Sampler settings — SETTLED (live A/B, 2026-07-09/10)
 

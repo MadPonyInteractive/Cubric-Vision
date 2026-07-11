@@ -1,7 +1,7 @@
 # Krea2 — model notes
 
 > **What this is.** The Krea2-specific *what*, split by subject.
-> `docs/add-model-playbook.md` is the generic *how* — read it for procedure.
+> `docs/playbooks/add-model/` is the generic *how* — read it for procedure.
 > Read the file for the topic you're on; don't read all of it.
 >
 > Tracking card: MPI-242. Deep research: `.agents/mpi-kanban/tasks/MPI-242/research/`.

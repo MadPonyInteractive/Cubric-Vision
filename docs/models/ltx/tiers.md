@@ -39,7 +39,7 @@ So the real rule is: **the 2-stage pipeline grid is effectively /64, NOT /32.**
 
 (If the multi-stage `floor(/2)` stage is ever dropped — the single-stage distilled
 path — the constraint is /32 with no halving. See
-[ltx-workflow-authoring.md](ltx-workflow-authoring.md).)
+[workflow-authoring.md](workflow-authoring.md).)
 
 **Frame count** is a separate rule: divisible by **8 + 1** (65, 97, 121, 161, …).
 
@@ -109,13 +109,13 @@ that re-denoises for spatial detail only — it does NOT re-plan motion. Consequ
 ControlNet Union 2.3 with LTX-2.3 = **SOFT control**. `strength_model` is a dead knob
 — tighten via AddGuide params instead. TIER is the big lever: low (448px) starves
 pose-lock; medium (640px) gives good dance adherence. See also workflow-deconstruction
-notes in [ltx-workflow-authoring.md](ltx-workflow-authoring.md).
+notes in [workflow-authoring.md](workflow-authoring.md).
 
 ## NAG (negative prompts at CFG=1)
 
 The distilled model runs at CFG=1 → **negative prompts are ignored by default.** KJNodes
 `LTX2 NAG` node is required to make negatives fire. Full wiring + dependency-cycle trap:
-[research/black-bars-and-nag.md](black-bars-and-nag.md). NAG does NOT fix t2v black bars.
+[black-bars-and-nag.md](black-bars-and-nag.md). NAG does NOT fix t2v black bars.
 
 ## Open items
 

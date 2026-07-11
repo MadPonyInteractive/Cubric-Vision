@@ -24,13 +24,14 @@ here, it now lives in its proper home:
 | Download manager / NDH resumable | [download-manager.md](download-manager.md) |
 | Generation / prompt / sidecar | [comfy.md](comfy.md) · [data.md](data.md) · [project-integrity.md](project-integrity.md) |
 | UI / component contracts (18 entries) | [ui-gotchas.md](ui-gotchas.md) |
-| LTX-2.3 tiers / stage roles | [builder/research/ltx-2.3-tiers.md](builder/research/ltx-2.3-tiers.md) |
-| LTX black-bars + NAG | [builder/research/black-bars-and-nag.md](builder/research/black-bars-and-nag.md) |
-| LTX workflow authoring mechanics | [builder/research/ltx-workflow-authoring.md](builder/research/ltx-workflow-authoring.md) |
-| Gemma precision / VRAM tiers / LoRAs | [builder/research/model-set.md](builder/research/model-set.md) |
+| Per-model research (LTX/Wan/Krea2/PiD) | [models/README.md](models/README.md) |
+| LTX-2.3 tiers / stage roles | [models/ltx/tiers.md](models/ltx/tiers.md) |
+| LTX black-bars + NAG | [models/ltx/black-bars-and-nag.md](models/ltx/black-bars-and-nag.md) |
+| LTX workflow authoring mechanics | [models/ltx/workflow-authoring.md](models/ltx/workflow-authoring.md) |
+| Gemma precision / VRAM tiers / LoRAs | [models/ltx/model-set.md](models/ltx/model-set.md) |
 | Pod perf (aimdo cold-fault) | [builder/research/pod-perf-investigation.md](builder/research/pod-perf-investigation.md) |
-| Audio input / voice-ID | [builder/research/audio-input.md](builder/research/audio-input.md) |
-| LoRA-stack merge | [builder/research/lora-merge-ltx.md](builder/research/lora-merge-ltx.md) |
+| Audio input / voice-ID | [models/ltx/audio-input.md](models/ltx/audio-input.md) |
+| LoRA-stack merge | [models/ltx/lora-merge.md](models/ltx/lora-merge.md) |
 | Pod image / mpi-ci / version-lock | [builder/02-image-and-rebuild.md](builder/02-image-and-rebuild.md) |
 | ComfyUI portable env | [builder/01-environments.md](builder/01-environments.md) |
 | Workflow gen + node-naming + SaveVideo | [builder/05-author-and-test.md](builder/05-author-and-test.md) |

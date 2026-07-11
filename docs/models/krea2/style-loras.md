@@ -1,6 +1,6 @@
 # Krea2 — style LoRAs
 
-> Part of [docs/krea2/](README.md). The app-side injection seam is in [injection.md](injection.md).
+> Part of [docs/models/krea2/](README.md). The app-side injection seam is in [injection.md](injection.md).
 
 **9 style LoRAs.** All 469 MB, from `Comfy-Org/Krea-2/loras/`.
 

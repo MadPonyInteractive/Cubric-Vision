@@ -86,8 +86,8 @@ If you are adding models to the registry, managing downloads, or dealing with th
 ### Add a New Model (end-to-end)
 If you are wiring a NEW model into the app (deps + R2 upload + models.js + workflow split + type sweep):
 **->** **RUN THE SKILL:** `/mpi-add-model` — it enforces the procedure and pre-flights every trap.
-**->** **MUST READ (the skill's step 0, non-negotiable):** `docs/add-model-playbook.md` — the single procedure, with every known trap (workflow template→runtime split, loader-path normalization, the `--s3-no-check-bucket` R2 403, the `model.type` consumer sweep, tier-1 `Output` vs tier-2 `Output_Image` capture titles, optional-vs-required media inputs + `placeholder.png` staging, baked-LoRA deps, the style-LoRA system). Models are NOT version-bumped.
-**->** A handoff or a model-scoped doc (`docs/krea2/`, `docs/builder/research/*`) **assumes** the playbook — it does not replace it. Read both.
+**->** **MUST READ (the skill's step 0, non-negotiable):** the `docs/playbooks/add-model/` playbook (README hub + section files `01`–`06`) — the single procedure, with every known trap (workflow template→runtime split, loader-path normalization, the `--s3-no-check-bucket` R2 403, the `model.type` consumer sweep, the single `Output_Image`/`Output_Video`/`Output_Preview` capture-title law, optional-vs-required media inputs + `placeholder.png` staging, baked-LoRA deps, the style-LoRA system). Models are NOT version-bumped.
+**->** A handoff or a model-scoped research doc (`docs/models/<model>/`) **assumes** the playbook — it does not replace it. Read both.
 
 ### App Versioning System
 If you need to understand how APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, or the operation registry work:
@@ -176,7 +176,7 @@ Skills manage a human-in-the-loop execution system:
 | `/mpi-end` | mpi-end | Session close-out — sync, commit touched files, close validated work |
 | `/mpi-component-audit` | mpi-component-audit | ESLint audit of js/components/ — report violations, no fixes |
 | `/mpi-brief-rule` | mpi-brief-rule | Inject rule briefing into sub-agent prompt at dispatch time |
-| `/mpi-add-model` | mpi-add-model | Wire a NEW model end-to-end; enforces `docs/add-model-playbook.md` |
+| `/mpi-add-model` | mpi-add-model | Wire a NEW model end-to-end; enforces the `docs/playbooks/add-model/` playbook |
 
 **Core principle:** Parallel sub-agents only in planning. Execution is always sequential, one to-do at a time, with mandatory brief gate before any code is written.
 

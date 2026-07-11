@@ -64,7 +64,7 @@ custom-node commits (MPI-117 lock), NOT torch/CUDA.
 
 | Topic | Canonical file | Repo |
 |---|---|---|
-| LTX-2.3 resolution tiers + timing | [research/ltx-2.3-tiers.md](research/ltx-2.3-tiers.md) | Cubric-Vision |
+| LTX-2.3 resolution tiers + timing | [../models/ltx/tiers.md](../models/ltx/tiers.md) | Cubric-Vision |
 | LTX-2.3 integration spec + LoRA test log (§0b) | `.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md` | Cubric-Vision |
 | Builder image internals + deploy + script-authoring | `cubric-vision-builder/README.md` | mpi-ci |
 | Build/push either image (skill) | `.claude/commands/build-pod-image.md` | Cubric-Vision |

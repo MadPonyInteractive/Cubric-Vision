@@ -1,6 +1,6 @@
 # Krea2 — conditioning & control
 
-> Part of [docs/krea2/](README.md).
+> Part of [docs/models/krea2/](README.md).
 
 ## Krea2 cannot edit images. It re-composes them.
 

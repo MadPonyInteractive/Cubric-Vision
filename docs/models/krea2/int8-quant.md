@@ -2,7 +2,7 @@
 
 > Status: **candidates, not adopted.** We ship `fp8_scaled` only.
 > Raised 2026-07-10 during MPI-242 (Krea2 onboarding). Companion:
-> [quant-and-coldstart-investigation.md](quant-and-coldstart-investigation.md).
+> [quant-and-coldstart-investigation.md](../../builder/research/quant-and-coldstart-investigation.md).
 
 ## The full quant matrix (live from the HF API, 2026-07-10)
 
@@ -35,12 +35,12 @@ that killed GGUF (MPI-190).
 convolution-rotation weight reordering, engaging the INT8 IMMA pipeline that fp8 cannot
 use on pre-Blackwell silicon).
 
-Source: community benchmark (see `docs/krea2/resolution.md` § VRAM/RAM). **We have not
+Source: community benchmark (see `resolution.md` § VRAM/RAM). **We have not
 reproduced it.** No 4090 timing exists anywhere; no 3090 quality A/B exists either.
 
 ## Why this does NOT contradict "INT8 → skip" in the LTX investigation
 
-[quant-and-coldstart-investigation.md](quant-and-coldstart-investigation.md) § "Dead / skip"
+[quant-and-coldstart-investigation.md](../../builder/research/quant-and-coldstart-investigation.md) § "Dead / skip"
 says:
 
 > **INT8 mixed (Winnougan ~29GB)** — Ampere-targeted, no 5090 benefit, barely smaller. Skip.
@@ -109,7 +109,7 @@ and `fp8_scaled` everywhere else, or simply `fp8_scaled` throughout.
 
 ⚠ **`nvfp4` (7.15 GB) is the only variant that fits 8 GB VRAM resident** — but it is
 Blackwell-only, so it cannot rescue the 8 GB Ampere/Ada users who most need it. See
-`docs/krea2/resolution.md` § VRAM.
+`resolution.md` § VRAM.
 
 ## What must be settled before adopting
 

@@ -107,7 +107,7 @@ ABOVE the app overlay via `--app-overlay-z` (`.mpi-slide-over--queue { z-index: 
 
 ## Adding an app (checklist)
 
-1. **Register the universal op** in 4 files (see `docs/add-model-playbook.md` §11 for the title laws):
+1. **Register the universal op** in 4 files (see `docs/playbooks/add-model/04-ops-and-controls.md` §11 for the title laws):
    `commandRegistry.js` (`universal:true`, mediaType, mediaInputs with `Input_*` titles),
    `universal_workflows.js`, `operationRegistry.js`, and `operation_registry.json`
    (**hand-maintained superset — never regenerate from JS, it strips the `universal` flags**).

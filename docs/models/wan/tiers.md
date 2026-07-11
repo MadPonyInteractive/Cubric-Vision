@@ -2,7 +2,7 @@
 
 > Authoring/tuning research for the Wan 2.2 workflows. The app consumes only the
 > *result* (`WAN_RATIOS` + `WAN_5B_RATIOS` in `js/utils/ratios.js`); the *why*
-> lives here. Sibling of [ltx-2.3-tiers.md](ltx-2.3-tiers.md).
+> lives here. Sibling of [../ltx/tiers.md](../ltx/tiers.md).
 
 ## The size rule — /16 (both variants), no half-clean constraint
 

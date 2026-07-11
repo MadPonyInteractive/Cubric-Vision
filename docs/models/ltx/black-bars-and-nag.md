@@ -1,7 +1,7 @@
 # LTX-2.3 t2v Black Bars + NAG for Negatives
 
 > Concluded 2026-07-01 (live-proven, RTX 4060 Ti). Two independent findings from the same
-> session. See also the `/64 rule` footnote in [ltx-2.3-tiers.md](ltx-2.3-tiers.md).
+> session. See also the `/64 rule` footnote in [tiers.md](tiers.md).
 
 ---
 
@@ -21,7 +21,7 @@ words) the model spontaneously frames sub-canvas and fills the margin black.
 dimension produced bars on one run and clean on another (in-app vs browser); the variable
 was seed/composition, not the number. A full session of divisibility theories was falsified
 by this A/B. (**Note:** /64 is still a REAL pipeline constraint — see
-[ltx-2.3-tiers.md § /64 rule](ltx-2.3-tiers.md#the-64-size-rule) — but it is NOT the
+[tiers.md § /64 rule](tiers.md#the-64-size-rule) — but it is NOT the
 cause of black bars.)
 
 **i2v does NOT bar** — the start frame pins composition edge-to-edge, leaving no black

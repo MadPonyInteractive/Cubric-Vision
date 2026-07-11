@@ -189,7 +189,7 @@ export const MODELS = [
     },
     {
         // Krea2 Turbo — SFW (MPI-242). Flux-lineage in ARCHITECTURE ONLY — conditioning +
-        // VAE stack is Qwen. Full notes: docs/krea2/. The NSFW twin (krea2-turbo-nsfw)
+        // VAE stack is Qwen. Full notes: docs/models/krea2/. The NSFW twin (krea2-turbo-nsfw)
         // ships as a SEPARATE card below: same graphs, only the diffusion weight differs,
         // and a user can install BOTH (NOT mutually-exclusive like LTX's arch variants).
         //
@@ -241,7 +241,7 @@ export const MODELS = [
         // 'quality-orientation'), so `1:1` means 1024² at 1k and 1472² at 2k. The
         // TABLE lives in js/utils/ratios.js as KREA2_RATIOS, beside FLUX/SDXL/WAN/LTX —
         // that file answers "what resolutions does model X offer?" for every model.
-        // Only the tier LIST is declared here. See docs/krea2/resolution.md.
+        // Only the tier LIST is declared here. See docs/models/krea2/resolution.md.
         qualityTiers: ['1k', '2k'],
         dependencies: [
             'krea2-turbo-transformer',
@@ -282,7 +282,7 @@ export const MODELS = [
         // (0.27), so no build change — but the SPEED path is NVIDIA RTX only (Turing+
         // tensor cores). Older/non-tensor-core and non-NVIDIA GPUs fall back to a slow
         // path or won't run it; the SFW fp8_scaled card stays the broad-compat option.
-        // See the `description` GPU note for the end user, and docs/krea2/.
+        // See the `description` GPU note for the end user, and docs/models/krea2/.
         //
         // Same shape rationale as the SFW card: single-stage two-pass sampler, one graph
         // for t2i + i2i + pose-reference (Input_Is_i2i / Input_pose_reference booleans),
@@ -348,7 +348,7 @@ export const MODELS = [
         // NVIDIA PiD generative upscaler — one model, 4 VAE-locked paths picked at
         // runtime via the pidVariant control (Input_Type switch). Prompt-box driven
         // (needs an image + optional prompt). Only op = `pid`. Research + decisions:
-        // docs/builder/research/pid-upscaler.md.
+        // docs/models/pid/upscaler.md.
         id: 'nvidia-pid',
         sizeTier: 'low',
         name: 'NVIDIA PiD Upscaler',

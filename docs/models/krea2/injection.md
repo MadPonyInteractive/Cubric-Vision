@@ -1,6 +1,6 @@
 # Krea2 — app injection seam
 
-> Part of [docs/krea2/](README.md). The style table itself is in [style-loras.md](style-loras.md).
+> Part of [docs/models/krea2/](README.md). The style table itself is in [style-loras.md](style-loras.md).
 
 ## Style system — SHIPPED DESIGN (read the graph, not the old proposal)
 

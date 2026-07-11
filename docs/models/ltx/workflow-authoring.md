@@ -2,7 +2,7 @@
 
 > Template-wiring research for the LTX-2.3 workflow. Applies when editing
 > `LTX_i2v_t2v_template.json` or authoring a new LTX-class workflow.
-> See [05-author-and-test.md](../05-author-and-test.md) for the cooperative loop.
+> See [05-author-and-test.md](../../builder/05-author-and-test.md) for the cooperative loop.
 
 ---
 
@@ -102,14 +102,14 @@ official ManualSigmas.** Nothing to import from their JSON for the distilled pat
 downscale, the x2 spatial upscaler (`LTXVLatentUpsampler` + `ltx-2.3-spatial-upscaler-x2-1.1`),
 the `MpiClearVram` re-fault seam, and the second sampling pass. On a card that holds the working
 set resident, that removes the biggest per-gen tax (stage-2 re-stages the model through the
-memlock-fail path — see [pod-perf-investigation.md](pod-perf-investigation.md)). Cost: gens at
+memlock-fail path — see [pod-perf-investigation.md](../../builder/research/pod-perf-investigation.md)). Cost: gens at
 full res in one pass = bigger latent = more VRAM (the big card has it), and loses stage-2's
 hi-res-fix detail pass.
 
 **To build the distilled single-stage path:** stop dividing input res by 2
 (`ImageResizeKJv2`/`LTXVPreprocess` + `EmptyLTXVLatentVideo` → target res), skip the
 `LoadLatent` stage-2 handoff + `LTXVLatentUpsampler` + second `MpiClearVram`, single output,
-keep `LTXVScheduler`. Note the `/64` size rule in [ltx-2.3-tiers.md](ltx-2.3-tiers.md) assumes
+keep `LTXVScheduler`. Note the `/64` size rule in [tiers.md](tiers.md) assumes
 the ÷2 stage — revisit it for a single-stage path.
 
 **OPEN / NOT yet measured:** total wall-clock + VRAM peak + quality A/B (single-stage vs
@@ -146,7 +146,7 @@ the i2v A/B on the same start frame (mall / phone / red-sleeve portrait).
   This is the reason two-stage exists.
 
 **Two-stage (÷2 stage-1 → x2 upscale → refine):**
-- Motion is BETTER because **low-res stage-1 = more dynamic motion** (see ltx-2.3-tiers.md:
+- Motion is BETTER because **low-res stage-1 = more dynamic motion** (see tiers.md:
   "motion peaks at low ~448, decays as res climbs"). The ÷2 base is a **motion feature**, not
   just a VRAM trick.
 - Fits 24GB, scales to LONG clips (users report 30s on a 5090 — only possible multi-stage;

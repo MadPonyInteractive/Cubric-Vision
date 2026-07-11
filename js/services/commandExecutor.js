@@ -485,7 +485,7 @@ async function _findModelNotLocal(modelId, operation = null) {
 // network volume onto the Pod's fast container disk before generating. 20GB (binary,
 // to match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3). Selects only
 // the LTX 41GB transformer today; the 9.45GB TE and <=13.55GB Wan files stay on the
-// volume. See docs/add-model-playbook.md (>=20GB PING-USER gate) + docs/runpod-*.
+// volume. See docs/playbooks/add-model/02-dependencies-r2.md (>=20GB PING-USER gate) + docs/runpod-*.
 const HOT_STORE_MIN_GB = 20;
 
 /**
@@ -1320,7 +1320,7 @@ export function runCommand(payload) {
         // the node titled `Output_prompt` is the contract. Case-insensitive, matching
         // every other title lookup here.
         //
-        // GENERAL CONTRACT, not a Krea2 special case — see docs/add-model-playbook.md §10.
+        // GENERAL CONTRACT, not a Krea2 special case — see docs/playbooks/add-model/05-prompt-and-styles.md §10.
         const outputPromptNodeIds = new Set(
             Object.keys(workflow).filter(id =>
                 workflow[id]._meta?.title?.toLowerCase() === 'output_prompt'

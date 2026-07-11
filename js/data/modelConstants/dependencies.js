@@ -167,7 +167,7 @@ export const DEPS = {
     // ── NVIDIA PiD upscaler (MPI-182) ──────────────────────────────────────────
     // One model, 4 VAE-locked checkpoints selected at runtime via Input_Type.
     // Compat = VAE latent space, not model name. gemma_2_2b_it_elm is SHARED by
-    // all 4 paths (dedup automatic). Full research: docs/builder/research/pid-upscaler.md.
+    // all 4 paths (dedup automatic). Full research: docs/models/pid/upscaler.md.
     'pid-flux1': {
         id: 'pid-flux1',
         name: 'PiD Flux1 (1024→4096)',
@@ -248,7 +248,7 @@ export const DEPS = {
     // Reuses `vae-qwen-image` above (zero upload). `vae-flux-ae` is the WRONG dep.
     // Turbo ships first; Raw (52-step) is phase 2. Quant variants (int8_convrot /
     // mxfp8 / nvfp4) exist and are native in comfy 0.27 — see
-    // docs/builder/research/krea2-int8-quant.md. We ship the SFW fp8_scaled transformer
+    // docs/models/krea2/int8-quant.md. We ship the SFW fp8_scaled transformer
     // and the NSFW int8_convrot transformer (Coyote's Lustify v10 KREA-Turbo) as two
     // INDEPENDENT models — a user can install BOTH (unlike LTX's mutually-exclusive arch
     // variants). Each is its own ModelDef; the two share every other dep.

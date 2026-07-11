@@ -839,7 +839,7 @@ export const PROMPT_BOX_CONTROLS = {
      * pidVariant — NVIDIA PiD path/VAE selector (used by the `pid` op only).
      * Injects a 1-indexed int into the "Input_Type" MpiAnySwitch node:
      * 1=flux, 2=sd3, 3=qwen, 4=sdxl. Each path is a distinct look (see
-     * docs/builder/research/pid-upscaler.md): sdxl=sharp/punchy, flux=faithful
+     * docs/models/pid/upscaler.md): sdxl=sharp/punchy, flux=faithful
      * color, sd3=sharp, qwen=natural all-rounder. Persists per-op.
      */
     pidVariant: {
@@ -1138,7 +1138,7 @@ export const PROMPT_BOX_CONTROLS = {
      *
      * The prompt box is deliberately NOT rewritten — the user keeps seeing their own
      * words. What the encoder saw is captured from the graph's `Output_prompt` node
-     * and is what gets saved + reused. See docs/add-model-playbook.md §10.
+     * and is what gets saved + reused. See docs/playbooks/add-model/05-prompt-and-styles.md §10.
      */
     enhancePrompt: {
         nodeTitle: 'Input_Enhance_Prompt',

@@ -760,7 +760,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         //
         // NOTE the tap point is upstream of the style concat, so what lands here has
         // no style trigger appended — that is what lets Reuse Prompt restore the text
-        // and still leave the style free to change. See docs/add-model-playbook.md §10.
+        // and still leave the style free to change. See docs/playbooks/add-model/05-prompt-and-styles.md §10.
         const positive = outputInfo.promptText || _positiveFromBox;
 
         if (!urls.length) {

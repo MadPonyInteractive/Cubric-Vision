@@ -1,6 +1,6 @@
 # Krea2 — resolution
 
-> Part of [docs/krea2/](README.md).
+> Part of [docs/models/krea2/](README.md).
 
 ## Use `FLUX_RATIOS` values, delete the `ResolutionSelector`
 
@@ -144,7 +144,7 @@ anywhere. **AMD ROCm is broken** — kernel crash at step 1.
 
 ⇒ int8 is a **live perf candidate**, not adopted. Full analysis, the six adoption gates, and why
 it does *not* contradict the LTX "INT8 → skip" verdict:
-[`docs/builder/research/krea2-int8-quant.md`](../builder/research/krea2-int8-quant.md).
+[`int8-quant.md`](int8-quant.md).
 
 **No first-party hardware requirements exist.** krea-ai's GitHub, the HF model card, the ComfyUI
 docs tutorial, and krea.ai's technical report all publish *zero* VRAM specs. Anyone citing an

@@ -13,12 +13,13 @@ agents kept dumping subsystem knowledge into it with nothing routing back out.
 
 **Exempt from the 200-line rule** (append-only evidence / coherent single-subject contracts — do
 NOT mechanically split these):
-- `builder/research/pod-perf-investigation.md`, `builder/research/audio-input.md` — research lab notebooks (evidence logs)
+- `builder/research/pod-perf-investigation.md` — research lab notebook (evidence log)
 - `builder/research/quant-and-coldstart-investigation.md` — evidence log (quantisation + cold-start investigation)
 - `releases/build-experience-log.md` — build evidence log
 - `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md` — coherent single-subject contracts, near/over the line by design
 - `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
-- `add-model-playbook.md` — end-to-end procedure with mandatory step ordering; splitting would break the procedure
+- `models/ltx/audio-input.md` — research lab notebook (evidence log)
+- `playbooks/add-model/` — end-to-end procedure split into a README hub + numbered section files; the README carries the mandatory step ordering
 
 ## Map — where knowledge lives
 
@@ -56,13 +57,8 @@ NOT mechanically split these):
 ### Builder Pod / model onboarding
 | Topic | Doc |
 |---|---|
-| End-to-end model onboarding procedure (deps, R2, registry, workflow, type sweep) | [add-model-playbook.md](add-model-playbook.md) |
-| Krea2 — hub (variants, dep reuse, hard rules) | [krea2/README.md](krea2/README.md) |
-| Krea2 samplers (settled config, dead theories) | [krea2/samplers.md](krea2/samplers.md) |
-| Krea2 conditioning + control (i2i, NAG, depth ControlNet) | [krea2/conditioning-and-control.md](krea2/conditioning-and-control.md) |
-| Krea2 style LoRAs + trigger contract + Stylization | [krea2/style-loras.md](krea2/style-loras.md) |
-| Krea2 resolution (÷16 rule, 1k/2k tiers) | [krea2/resolution.md](krea2/resolution.md) |
-| Krea2 app injection seam + install layout | [krea2/injection.md](krea2/injection.md) |
+| **End-to-end model onboarding procedure** (deps, R2, registry, workflow, type sweep) — README hub + section files | [playbooks/add-model/README.md](playbooks/add-model/README.md) |
+| **Per-model research** (LTX, Wan, Krea2, PiD) — authoring, tuning, measured data | [models/README.md](models/README.md) |
 | Builder operational loop | [builder/README.md](builder/README.md) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |
 | Pod image / mpi-ci / version-lock / rebuild | [builder/02-image-and-rebuild.md](builder/02-image-and-rebuild.md) |
@@ -71,23 +67,22 @@ NOT mechanically split these):
 | Author + test workflows (gen system, node-naming, SaveVideo) | [builder/05-author-and-test.md](builder/05-author-and-test.md) |
 | Teardown | [builder/06-teardown.md](builder/06-teardown.md) |
 
-### Builder research (concluded findings — read before re-testing)
+### Model research (concluded findings — read before re-testing)
+Per-model authoring/tuning/measured data lives under `docs/models/<model>/` —
+index: [models/README.md](models/README.md).
+| Model | Home |
+|---|---|
+| LTX-2.3 (tiers, workflow authoring, model-set, LoRA strength/merge, prompt contract, audio, black-bars, strategy) | [models/ltx/](models/ltx/) |
+| Wan 2.2 (tiers, two-stage sigmas) | [models/wan/](models/wan/) |
+| Krea2 (samplers, conditioning, styles, resolution, injection, preview, int8-quant) | [models/krea2/](models/krea2/) |
+| PiD upscaler | [models/pid/](models/pid/) |
+
+### Builder/infra research (Pod-tied, not per-model)
 | Topic | Doc |
 |---|---|
 | Research index | [builder/research/README.md](builder/research/README.md) |
-| LTX-2.3 tiers / stage roles / ControlNet | [builder/research/ltx-2.3-tiers.md](builder/research/ltx-2.3-tiers.md) |
-| Wan 2.2 tiers (14B + 5B) / /16 grid | [builder/research/wan-2.2-tiers.md](builder/research/wan-2.2-tiers.md) |
-| LTX black-bars + NAG (CFG=1) | [builder/research/black-bars-and-nag.md](builder/research/black-bars-and-nag.md) |
-| LTX workflow authoring mechanics | [builder/research/ltx-workflow-authoring.md](builder/research/ltx-workflow-authoring.md) |
-| Model set / Gemma precision / VRAM tiers / LoRAs | [builder/research/model-set.md](builder/research/model-set.md) |
-| LoRA strength law | [builder/research/lora-strength-law.md](builder/research/lora-strength-law.md) |
-| LoRA-stack merge | [builder/research/lora-merge-ltx.md](builder/research/lora-merge-ltx.md) |
-| Prompt contract | [builder/research/prompt-contract.md](builder/research/prompt-contract.md) |
-| Audio input / voice-ID | [builder/research/audio-input.md](builder/research/audio-input.md) |
 | Pod perf (aimdo cold-fault) — evidence log | [builder/research/pod-perf-investigation.md](builder/research/pod-perf-investigation.md) |
 | Quant + coldstart investigation | [builder/research/quant-and-coldstart-investigation.md](builder/research/quant-and-coldstart-investigation.md) |
-| Tested LoRAs / versions | [builder/research/tested-loras-versions.md](builder/research/tested-loras-versions.md) |
-| Strategy | [builder/research/strategy.md](builder/research/strategy.md) |
 
 ### Build / release / distribution
 | Topic | Doc |
