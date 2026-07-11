@@ -30,6 +30,7 @@ import { getModelsByType, isModelUsable } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
+import { generationStore } from '../../../services/generationStore.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -266,7 +267,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const RESIZE_QUEUE_DISABLED_REASON = 'Resize is disabled while Cue has running or queued jobs';
 
         function _syncQueueBlockedTools() {
-            const cueBusy = (state.generationQueueCount || 0) > 0;
+            // Count only REAL user Cue jobs, not tool-internal preview runs. The resize
+            // tool fires its own `previewOnly` resize gen on mount; counting it here made
+            // the gate disable resize and self-revert to crop the instant you selected it
+            // (MPI-253). Preview jobs are tagged display.previewKind='preview'.
+            const snap = generationStore.getSnapshot();
+            const isReal = (j) => j?.display?.previewKind !== 'preview';
+            const cueBusy = snap.running.some(isReal) || snap.pending.some(isReal);
             historyTools.el.setDisabled?.({
                 resize: {
                     disabled: cueBusy,

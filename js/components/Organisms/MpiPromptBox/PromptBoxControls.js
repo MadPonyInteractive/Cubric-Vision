@@ -489,7 +489,7 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     batch: {
-        nodeTitle: 'Batch_Size',
+        nodeTitle: 'Input_Batch_Size',
         scope: 'shared',
         defaultValue: String(PROMPT_CONTROL_DEFAULTS.batch),
         mount(hostEl, opts = {}) {
@@ -519,8 +519,8 @@ export const PROMPT_BOX_CONTROLS = {
         getInjectionParams() {
             const live = this._instance?.el?.getValue?.();
             const v = parseInt(live ?? this.value ?? this.defaultValue, 10) || 1;
-            // Workflow node titled "Batch_Size" (MpiInt, inputs.int).
-            return { Batch_Size: v };
+            // Workflow node titled "Input_Batch_Size" (MpiInt, inputs.int).
+            return { Input_Batch_Size: v };
         },
     },
 
@@ -531,7 +531,7 @@ export const PROMPT_BOX_CONTROLS = {
      * modelSettings[modelId].duration.
      */
     duration: {
-        nodeTitle: 'Duration',
+        nodeTitle: 'Input_Duration',
         scope: 'shared',
         defaultValue: PROMPT_CONTROL_DEFAULTS.duration,
         mount(hostEl, opts = {}) {
@@ -589,7 +589,7 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const v = Math.min(30, Math.max(1, Math.round(Number(this.value ?? this.defaultValue) || this.defaultValue)));
-            return { Duration: v };
+            return { Input_Duration: v };
         },
     },
 
@@ -600,7 +600,7 @@ export const PROMPT_BOX_CONTROLS = {
      * modelSettings[modelId].motionIntensity.
      */
     motionIntensity: {
-        nodeTitle: 'Motion_Intensity',
+        nodeTitle: 'Input_Motion_Intensity',
         scope: 'shared',
         defaultValue: PROMPT_CONTROL_DEFAULTS.motionIntensity,
         mount(hostEl, opts = {}) {
@@ -660,7 +660,7 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
-            return { Motion_Intensity: v };
+            return { Input_Motion_Intensity: v };
         },
     },
 
@@ -670,7 +670,7 @@ export const PROMPT_BOX_CONTROLS = {
      * modelSettings[modelId].useGrid.
      */
     useGrid: {
-        nodeTitle: 'Auto_Grid',
+        nodeTitle: 'Input_Auto_Grid',
         scope: 'perOp',
         defaultValue: PROMPT_CONTROL_DEFAULTS.useGrid,
         mount(hostEl, opts = {}) {
@@ -698,7 +698,7 @@ export const PROMPT_BOX_CONTROLS = {
             return this.value === true;
         },
         getInjectionParams() {
-            return { Auto_Grid: this.value === true };
+            return { Input_Auto_Grid: this.value === true };
         },
     },
 
@@ -708,7 +708,7 @@ export const PROMPT_BOX_CONTROLS = {
      * modelSettings[modelId].upscaleFactor.
      */
     upscaleFactor: {
-        nodeTitle: 'Upscale_Factor',
+        nodeTitle: 'Input_Upscale_Factor',
         scope: 'perOp',
         defaultValue: PROMPT_CONTROL_DEFAULTS.upscaleFactor,
         mount(hostEl, opts = {}) {
@@ -759,7 +759,7 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
-            return { Upscale_Factor: v };
+            return { Input_Upscale_Factor: v };
         },
     },
 
@@ -770,7 +770,7 @@ export const PROMPT_BOX_CONTROLS = {
      * modelSettings[modelId].operations[opName].denoise.
      */
     denoise: {
-        nodeTitle: 'Denoise',
+        nodeTitle: 'Input_Denoise',
         scope: 'perOp',
         defaultValue: PROMPT_CONTROL_DEFAULTS.denoise, // fallback only; per-op override via commandRegistry.commands[op].defaults
         mount(hostEl, opts = {}) {

@@ -7,7 +7,6 @@
  * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default Cubric Prompt enhancer-recipe key
  * @property {string}   [enhanceRecipe] - Explicit Cubric Prompt enhancer-recipe id, overriding `type` when they diverge (MPI-5)
  * @property {'image'|'video'} mediaType
- * @property {number}   [tier]       - Workflow node-title generation: 1 = legacy bare titles, 2 = Input_ / Output_ prefixed titles. Video models are tier 2. (NOT the size tier — see sizeTier.)
  * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
  * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
  * @property {{multiStage?:boolean, audio?:boolean, negativePrompt?:boolean, styleLoras?:boolean, promptEnhance?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot; styleLoras shows the style dropdown + Stylization slider; promptEnhance shows the enhance toggle. Absent → false. EXCEPTION: negativePrompt defaults to TRUE when absent (a model supports negatives unless it opts out) — set `negativePrompt: false` for distilled cfg-1.0 models (Krea2-Turbo) where the negative prompt has no effect and NAG cannot rescue it. Hides the prompt box's positive/negative toggle; the stored negativePrompt value is still persisted. `promptEnhance` requires a text encoder whose CLIP implements `.generate()` (Qwen3-VL, Gemma) — T5/umT5 models (Chroma, Wan) CRASH on the TextGenerate node, so never set it there.
@@ -212,7 +211,6 @@ export const MODELS = [
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
         image: 'krea2-turbo-sfw.webp',
-        tier: 2,
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
@@ -292,7 +290,6 @@ export const MODELS = [
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
         image: 'krea2-turbo-nsfw.webp',
-        tier: 2,
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
@@ -379,7 +376,6 @@ export const MODELS = [
         name: 'Wan 2.2 Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 2,
         // branchingContinue: per-stage LoRAs vary the stage-2 result, so WAN
         // previews expose Continue (branch a new card) + Finish. LTX omits it
         // (no per-stage LoRA variance → Finish-only). See commandRegistry
@@ -436,7 +432,6 @@ export const MODELS = [
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 2,
         // MPI-128: dual-latent (video+audio) stage-2 staging wired, so the
         // previewStage toggle + preview→Finish are unlocked. multiStage:true shows
         // the toggle on the shared _ms ops. NO branchingContinue → Finish-only
@@ -504,7 +499,6 @@ export const MODELS = [
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 2,
         capabilities: { multiStage: true, audio: true },
         video: 'ltx23_balanced_preview.mp4',
         type: 'ltx',
@@ -557,7 +551,6 @@ export const MODELS = [
         name: 'Wan 2.2 5B',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 1,
         // Wan 2.2 TI2V-5B: one small transformer serves BOTH t2v + i2v (combined,
         // LTX-shape). SINGLE-STAGE (no ×2 upscaler stage) → multiStage:false, so no
         // previewStage/Continue. audio:false (no audio). NO branchingContinue →

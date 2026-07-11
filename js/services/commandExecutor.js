@@ -566,9 +566,9 @@ function _buildParams(payload) {
     const resolvedSeed = seed ?? ComfyUIController.generateRandomSeed();
 
     const params = {
-        Positive: positive || '',
-        Negative: negative || '',
-        Seed:     resolvedSeed,
+        Input_Positive: positive || '',
+        Input_Negative: negative || '',
+        Input_Seed:     resolvedSeed,
     };
 
     // Constant params the OP always injects (commandRegistry.injectParams) — the
@@ -593,10 +593,7 @@ function _buildParams(payload) {
         // by /comfy/stage-preview-latent. Default applies when no explicit
         // loadLatentName is supplied (every stage-1 run).
         const _latentName = payload.loadLatentName || 'ComfyUI_00001_.latent';
-        params['LoadLatent'] = _latentName;             // tier-1 (legacy)
-        // Tier-2 video-latent title (MPI-127). The generic Input_ alias can't
-        // derive this (LoadLatent -> Input_Video_Latent is a rename, not a
-        // prefix), so emit it explicitly. WAN + LTX stage-1 both load the single
+        // Video-latent load node (MPI-127). WAN + LTX stage-1 both load the single
         // engine-input latent here; stage-2 swaps in the staged preview latent.
         params['Input_Video_Latent'] = _latentName;
         // Dual-latent stage-2 (LTX, MPI-128). LTX saves TWO latents (video + audio)
@@ -722,21 +719,19 @@ function _buildParams(payload) {
         }
     }
 
-    // ── Tier-2 alias pass (MPI-127) ───────────────────────────────────────────
-    // The fleet is mixed: image workflows use bare tier-1 titles (Positive, Seed,
-    // Width…); the video workflows (WAN/LTX) were re-authored to tier-2 (Input_*).
-    // Every param key built above is the bare/legacy name. Emit an Input_-prefixed
-    // ALIAS for each so a tier-2 node consumes the alias and a tier-1 node consumes
-    // the bare key. Injection matches by node title and silently skips params with
-    // no matching node (comfyController filters to existing titles), so the unused
-    // half is a harmless no-op in either workflow. No per-key code, no model flag.
-    // ponytail: dual-emit alias, not a tier migration — cheaper than renaming every
-    // shared control's output key and re-authoring all image workflows. Drop the
-    // bare half once every workflow is tier-2.
+    // ── Input_ canonicalization pass (MPI-127 / MPI-252) ──────────────────────
+    // The whole workflow fleet is now Input_*/Output_* titled (tier-1 deprecated).
+    // A few params are still built with the bare control name (Preview_Only,
+    // Use_End_Image, Upscale_Model, Lora_N, and any control returning a bare key).
+    // Injection matches node title exactly and silently skips a param whose title
+    // has no node, so rename each bare key to its Input_ form and drop the bare
+    // half — there is no tier-1 node left to consume it. Keys already prefixed
+    // (Input_*/Output_*) pass through untouched.
     for (const key of Object.keys(params)) {
         if (key.startsWith('Input_') || key.startsWith('Output_')) continue;
         const aliased = `Input_${key}`;
         if (!(aliased in params)) params[aliased] = params[key];
+        delete params[key];
     }
 
     return params;
@@ -795,12 +790,12 @@ export function runAutoMask(payload) {
         // Identify "Detected" and "Output" node ids by title
         const detectedNodeIds = new Set(
             Object.keys(workflow).filter(id =>
-                workflow[id]._meta?.title?.toLowerCase() === 'detected'
+                workflow[id]._meta?.title?.toLowerCase() === 'output_detected'
             )
         );
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id =>
-                workflow[id]._meta?.title?.toLowerCase() === 'output'
+                workflow[id]._meta?.title?.toLowerCase() === 'output_image'
             )
         );
 
@@ -810,10 +805,10 @@ export function runAutoMask(payload) {
             : '';
 
         const params = {
-            Input_Image:           payload.imageUrl,
-            sams:                  payload.detectorModel,
-            Box:                   payload.useBox === true,
-            Selected_Masks_Input:  picksStr,
+            Input_Image:                 payload.imageUrl,
+            sams:                        payload.detectorModel,
+            Input_Box:                   payload.useBox === true,
+            Input_Selected_Masks_Input:  picksStr,
         };
 
         let _detectedFired = false;
@@ -1063,6 +1058,11 @@ export function runCommand(payload) {
             genId: payload.genId ?? null,
             engine,
             scope: payload.scope || (payload.historyMode ? 'groupHistory' : 'gallery'),
+            // Tool-internal preview runs (resize/upscale thumbnail previews) register
+            // in the store for lifecycle/cancel, but they are NOT user Cue jobs — mark
+            // them so queue-busy gates (e.g. the resize tool's own gate) can exclude
+            // them and not self-revert on their own preview. (MPI-253)
+            display: payload.previewOnly === true ? { previewKind: 'preview' } : undefined,
             interruptCb: () => {
                 try { _closeSSE(); } catch (_) { /* SSE already closed */ }
                 const _eng = getEngine(payload.forceLocal === true);
@@ -1237,10 +1237,16 @@ export function runCommand(payload) {
                 try {
                     injector(workflow, workingPayload.injectionParams || {});
                     // Standalone injector params are already written into the
-                    // workflow. Remove them so the generic title injector below
-                    // cannot re-match names like `flip` against a `Flip` node.
+                    // workflow. Remove them — BOTH the bare key AND its Input_ alias
+                    // (added by the canonicalization pass) — so the generic title
+                    // injector below cannot re-match them. Without the alias delete,
+                    // `flip` → `Input_flip` survives and the generic loop injects the
+                    // raw 'x'/'y' string into the MpiIfElse node titled `Input_Flip`,
+                    // setting its `boolean` to false (val !== 'true') and silently
+                    // overwriting the injector's correct boolean=true. Flip then no-ops.
                     Object.keys(workingPayload.injectionParams || {}).forEach(key => {
                         delete params[key];
+                        delete params[`Input_${key}`];
                     });
                     clientLogger.info('commandExecutor', `Applied injector "${opDef.injector}"`);
                 } catch (err) {
@@ -1271,27 +1277,21 @@ export function runCommand(payload) {
         }
         if (await _abortedBail(tempTrimInputPaths)) return;
 
-        // Build a set of node ids whose _meta.title === "output" (case-insensitive)
-        // — or "preview" when this is a preview-only run on a multi-stage workflow.
-        // Only images/gifs/videos from these nodes are treated as final results.
-        // Split video/audio output (B3): video workflows replace the single
-        // "Output" VHS_VideoCombine (nvenc-broken on Blackwell) with a
-        // "Output_Video" SaveVideo + an optional "Output_Audio" SaveAudio node.
-        // Treat "Output_Video" as an output node too so the SAME capture path
-        // works for every video workflow; the audio node is tracked separately
-        // and muxed server-side at save time (video is master). Preview-only
-        // multi-stage runs still capture the "Preview" node — or "Output_Preview"
-        // for tier-2 workflows (Input_*/Output_* naming, e.g. LTX-2.3, MPI-127),
-        // which title their preview SaveVideo "Output_Preview" not bare "Preview".
+        // Build the set of capture node ids by Output_* title (case-insensitive).
+        // The fleet titles its final-result save nodes self-descriptively:
+        //   image  → "Output_Image"
+        //   video  → "Output_Video" SaveVideo (audio embedded; nvenc-broken VHS
+        //            retired on Blackwell). A separate "Output_Audio" SaveAudio may
+        //            still exist on older split graphs — tracked below and muxed
+        //            server-side at save time (video is master).
+        // Preview-only runs on a multi-stage workflow capture "Output_Preview".
+        // The bare "output"/"preview" base string is kept only as a defensive
+        // fallback; no shipping workflow titles a capture node without the Output_
+        // prefix anymore (tier-1 deprecated, MPI-252).
         const _captureTitle = workingPayload.previewOnly === true && commandIsMultiStage(workingPayload.operation)
             ? 'preview'
             : 'output';
         const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : 'output_preview';
-        // Tier-2 IMAGE capture alias: a fully tier-2 image workflow titles its
-        // capture node `Output_Image` (self-describing, like video's `Output_Video`)
-        // instead of the bare tier-1 `Output`. Accept it on the SAME image capture
-        // path so tier-2 image workflows (e.g. NVIDIA PiD, MPI-182) need no bare-title
-        // exception. Only aliases the non-preview image capture.
         const _imageOutputTitle = _captureTitle === 'output' ? 'output_image' : null;
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id => {

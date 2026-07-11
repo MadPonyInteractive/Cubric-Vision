@@ -9,9 +9,9 @@
 'use strict';
 
 const RESIZE_TITLE = 'resize image v2';
-const FLIP_TITLE = 'imageflip';
-const ROTATE_TITLE = 'image rotate';
-const FLIP_ENABLED_TITLE = 'flip';
+const FLIP_TITLE = 'input_flip_image';
+const ROTATE_TITLE = 'input_rotate_image';
+const FLIP_ENABLED_TITLE = 'input_flip';
 
 const DEFAULTS = Object.freeze({
     width: 512,
