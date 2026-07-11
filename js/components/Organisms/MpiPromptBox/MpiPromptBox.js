@@ -242,12 +242,17 @@ export const MpiPromptBox = ComponentFactory.create({
             return nextItems;
         }
 
-        function _removeItem(id) {
+        function _removeItem(id, { silent = false } = {}) {
             const idx = _mediaItems.findIndex(m => m.id === id);
             if (idx === -1) return;
             const item = _mediaItems.splice(idx, 1)[0];
             if (item.source === 'file') URL.revokeObjectURL(item.url);
-            _emitMediaChange();
+            // silent: caller (a replace inside _tryAddMedia) will emit once after
+            // the new item lands. Emitting mid-replace flickers media to zero,
+            // which flips the op to text-only, which then re-derives to i2i on the
+            // next emit — dropping a replacement image onto upscale/inpaint lost
+            // the op. The final _emitMediaChange is the only one that should run.
+            if (!silent) _emitMediaChange();
         }
 
         function _emitMediaChange() {
@@ -302,14 +307,14 @@ export const MpiPromptBox = ComponentFactory.create({
             // regardless of capacity).
             if (role) {
                 const sameRole = _mediaItems.find(m => m.role === role && m.mediaType === mediaType);
-                if (sameRole) _removeItem(sameRole.id);
+                if (sameRole) _removeItem(sameRole.id, { silent: true });
             }
 
             const afterRoleDrop = _mediaItems.filter(m => m.mediaType === mediaType);
             if (maxCount === 1) {
-                afterRoleDrop.forEach(item => _removeItem(item.id));
+                afterRoleDrop.forEach(item => _removeItem(item.id, { silent: true }));
             } else if (afterRoleDrop.length >= maxCount) {
-                _removeItem(afterRoleDrop[0].id);
+                _removeItem(afterRoleDrop[0].id, { silent: true });
             }
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
