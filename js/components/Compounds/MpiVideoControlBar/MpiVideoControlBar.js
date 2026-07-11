@@ -377,6 +377,16 @@ export const MpiVideoControlBar = ComponentFactory.create({
                     // frameStep already handles range-aware wrapping).
                     _handleRangeBoundary(time);
                 }),
+                // Native EOF with a sub-range: video.loop is forced off, so the
+                // clip dead-stops at the real end before timeupdate can wrap it.
+                // Emulate the loop here when the out-point sits at (or near) the
+                // clip end.
+                addCb(surfaceInstance, 'ended', () => {
+                    if (_loopIntent && _isSubRange()) {
+                        _surface.seek(_in);
+                        _surface._play();
+                    }
+                }),
                 addCb(surfaceInstance, 'loadedmetadata', ({ duration }) => {
                     _duration = duration || 0;
                     trim?.el.setDuration(_duration);

@@ -43,7 +43,9 @@ export const RELEASE_NOTES = {
     whatIsNew: [
       'In development — changelog entries are added here as features land.',
     ],
-    fixes: [],
+    fixes: [
+      'LOOPING A TRIMMED CLIP NO LONGER STOPS AT THE END — When a video had a trim in-point and its out-point at the very end of the clip, enabling loop would play once and stop instead of looping. It now wraps back to the in-point and keeps playing.',
+    ],
     breakingChanges: [],
     importantChanges: [],
     engineNotes: [],
