@@ -30,6 +30,12 @@ style-LoRA + shared-graph + `Output_prompt` sections.
 Model-specific research (LTX tiers, Krea2 samplers, PiD facts) lives in
 `docs/models/<model>/`, NOT here — this playbook is the model-agnostic *how*.
 
+The **cross-cutting workflow machinery** (the MpiNodes pack, the injector target list,
+the template→runtime generator + tier-selector patterns) is shared with the app system
+and lives in [../../workflow-authoring/README.md](../../workflow-authoring/README.md).
+This playbook links into it; read it when you're authoring the graph itself or adding a
+new injectable node/control.
+
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
 Before any app wiring, build and prove the ComfyUI graph in the standalone local

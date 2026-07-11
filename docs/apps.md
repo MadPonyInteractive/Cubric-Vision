@@ -107,6 +107,12 @@ ABOVE the app overlay via `--app-overlay-z` (`.mpi-slide-over--queue { z-index: 
 
 ## Adding an app (checklist)
 
+> **The workflow machinery is shared** — the MpiNodes pack, the injector target list,
+> the `Input_*`/`Output_*` title law, and the template→runtime generator/tier patterns
+> are all model/app-agnostic and live in
+> [workflow-authoring/README.md](workflow-authoring/README.md). Read it for step 2 below;
+> this checklist only covers the app-specific glue.
+
 1. **Register the universal op** in 4 files (see `docs/playbooks/add-model/04-ops-and-controls.md` §11 for the title laws):
    `commandRegistry.js` (`universal:true`, mediaType, mediaInputs with `Input_*` titles),
    `universal_workflows.js`, `operationRegistry.js`, and `operation_registry.json`
