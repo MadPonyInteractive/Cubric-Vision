@@ -444,35 +444,25 @@ A prompt-box-driven model that adds a NEW op + a runtime switch inside ONE workf
 an output-size selector, both `MpiAnySwitch` picked at submit time. Lessons that cost real
 debugging:
 
-- **Image output CAPTURE node title is decided by the workflow's TIER — they are not
-  interchangeable.** `tier` (`models.js` `@property [tier]`) is the node-title generation:
-  **1 = legacy bare titles**, **2 = `Input_`/`Output_` prefixed**.
+- **Image output CAPTURE node title is `Output_Image` (single naming law — MPI-252).**
+  The old two-tier system (a `tier` field on `models.js`, bare vs `Input_`/`Output_`) is GONE:
+  tier-1 dropped, the `tier` field removed, the whole fleet converted.
 
-  | tier | capture title | models |
-  |---|---|---|
-  | 1 | `Output` | SDXL family, Pony, Illustrious (18 workflows) |
-  | 2 | `Output_Image` | Chroma, NVIDIA PiD, **Krea2** (7 workflows) |
-
-  Both are matched by `commandExecutor.js:1249-1253`: `_captureTitle = 'output'` plus the
-  tier-2 alias `_imageOutputTitle = 'output_image'` (added MPI-182 for PiD, mirroring video's
-  `Output_Video`). Matching is **case-insensitive** (`.toLowerCase()`), so `Output_image` also
-  resolves — Chroma's detailer/upscaler use that spelling.
-
-  **Use the title that matches your workflow's tier, and stay consistent within a model.**
-  A tier-2 workflow (`Input_*` node naming) titles its capture `Output_Image`; a tier-1
-  workflow titles it bare `Output`. Do NOT mix, and do NOT "normalize" an existing workflow
-  from one to the other.
-  - Preview capture is the parallel split: a multi-stage `previewOnly` run captures
-    `Preview` (tier-1) / `Output_Preview` (tier-2) instead.
+  **Image capture title is `Output_Image` (single law — MPI-252).** The whole fleet was
+  converted; there is no more tier-1 bare `Output` on an image workflow. Matched by
+  `commandExecutor.js` `_imageOutputTitle = 'output_image'`, **case-insensitive** so
+  `Output_image` also resolves (Chroma's detailer/upscaler use that spelling). The bare
+  `'output'` base string survives in the matcher only as a defensive fallback — no shipping
+  image workflow relies on it.
+  - Preview capture (multi-stage `previewOnly` runs) titles its node `Output_Preview`.
   - Set the title IN ComfyUI and re-export — do NOT hand-edit the workflow JSON (a manual
     edit is silently lost on the next re-export → the bug returns).
   - Use `PreviewImage`, not `SaveImage` — all Cubric image workflows use PreviewImage, type
     `temp`; the app builds a `/view?...type=temp` URL fine.
-
-  > ⚠ **This section previously claimed the capture node "MUST be titled exactly `Output`" and
-  > that `Output_Image` is "recognized NOWHERE", producing "Generation completed but no output
-  > returned."** That was STALE (pre-MPI-182) and would lead an agent to "fix" a working tier-2
-  > workflow. Corrected 2026-07-10 against `commandExecutor.js:1249-1253` and the live set.
+  - **TRAP (MPI-217):** the match is on the EXACT lowercased title. A typo (`Ouptput_Image`)
+    matches nothing → the run completes with no error, reporting "Generation completed but no
+    output returned." If a workflow generates fine (`Prompt executed in N seconds`) but the app
+    captures nothing, check the capture node's title first.
 - **Injecting an `MpiAnySwitch` needs `'select'` in the injector target list.** The switch's
   selector input is `select` (int). `comfyController.js` `_inject` targets did NOT include it
   until MPI-182 — injection matched the node by title but wrote nothing → the dropdown
@@ -482,10 +472,11 @@ debugging:
 - **A runtime in-workflow selector = a `PROMPT_BOX_CONTROLS` entry + a `commandRegistry`
   component.** Clone the `upscaleFactor` control (an `MpiRadioGroup` whose
   `getInjectionParams()` returns `{ <Node_Title>: value }`). Add the control id to the op's
-  `components` array and a default to `promptControlDefaults.js`. The control's `nodeTitle`
-  must equal the switch node's `_meta.title`. Values already `Input_`-prefixed skip the
-  tier-2 alias (they inject as-is); a bare title (e.g. `Denoise`) gets an `Input_Denoise`
-  alias for free — so an app slider can drive a differently-named workflow field.
+  `components` array and a default to `promptControlDefaults.js`. The control's
+  `getInjectionParams()` return key must equal the switch node's `_meta.title` (an `Input_*`
+  title). `_buildParams` renames any bare control key to its `Input_` form before injection
+  (MPI-252), but author the control to return the `Input_*` key directly — the node title is
+  the contract.
 - **Image gating is FREE** — an image-required op declares `requiresImages: 1` +
   `mediaInputs:[{ key:'inputImage', title:'Input_Image', required:true }]` (clone `upscale`).
   That inherits the block-Run-if-no-image toast (`generationService.js`) + auto-op-switch. No
@@ -662,12 +653,14 @@ production bugs came from this, both invisible:
 - **`Input_Is_i2i` was never injected.** It appeared in three source *comments* and in
   the graph, but no code ever set it. Krea2's `i2i` ran as `t2i`, silently ignoring the
   input image. Nobody noticed for four sessions.
-- **`Input_Batch` never matched.** `_buildParams` dual-emits `Batch_Size` (tier-1) and
-  `Input_Batch_Size` (tier-2 alias = `Input_` + bare key). A node titled `Input_Batch`
-  matches neither, so **batch N rendered 1 image** — in Krea2 *and* in shipped Chroma.
+- **`Input_Batch` never matched.** The `batch` control emits `Input_Batch_Size`. A node
+  titled `Input_Batch` matches nothing, so **batch N rendered 1 image** — in Krea2 *and* in
+  shipped Chroma.
 
-**The alias is a pure prefix.** `Input_` + the bare key. `Batch_Size` → `Input_Batch_Size`.
-It does NOT abbreviate. Title the node `Input_<BareName>` exactly, or it dies quietly.
+**The injection key is `Input_<Name>` — exact.** `_buildParams` renames a bare control key to
+its `Input_` form (`Batch_Size` → `Input_Batch_Size`) and does NOT abbreviate. Title the node
+`Input_<Name>` to match, or it dies quietly. Params objects built OUTSIDE `_buildParams`
+(`runAutoMask`) get no rename — they must use `Input_*` keys directly (MPI-253).
 
 Guard: **`tests/inject-params-titles.test.cjs`** asserts every `injectParams` title exists
 in every workflow its op can run. It is the diagnostic the injector refuses to give you.
@@ -676,8 +669,8 @@ in every workflow its op can run. It is the diagnostic the injector refuses to g
 
 i2i is a latent-space op: without `denoise` the user cannot control how far the result
 departs from the source. The graph exposes it as an `MpiFloat` titled **`Input_denoise`**
-(lowercase `d` is fine — matching is case-insensitive; the bare `Denoise` key's alias
-`Input_Denoise` bridges it).
+(lowercase `d` is fine — matching is case-insensitive; the `denoise` control emits
+`Input_Denoise`).
 
 Wire it **only on i2i**:
 
@@ -700,7 +693,7 @@ controls. `upscale` uses 0.20, `detail` 0.30, `pid` 0.0 — pick the value your 
 
 ### Checklist for a shared-graph op
 
-- [ ] Boolean node is baked **`false`** and titled `Input_<Name>` (tier-2 law)
+- [ ] Boolean node is baked **`false`** and titled `Input_<Name>` (naming law)
 - [ ] Op declares `injectParams: { Input_<Name>: true }` — the ONLY thing that sets it
 - [ ] `models.js`: add the op to `supportedOps` **and** map `workflows.<op>` to the same file
 - [ ] Media slot declared if the op needs one (`requiresImages`, `mediaInputs`)
@@ -726,7 +719,7 @@ Adding ops makes it more visible. Tracked as **MPI-247** — do not "fix" it ins
 - [ ] **READ THIS PLAYBOOK FIRST.** Do not work from a handoff or a model-scoped doc alone — they
       assume the playbook, they do not replace it.
 - [ ] Decide shape: combined (`dependencies[]`) vs separate (`commonDeps`+`operations{}`); single vs multi-stage
-- [ ] Output capture titled per the workflow's TIER (§8): tier-1 → `Output`, tier-2 → `Output_Image`. Do not mix or "normalize"
+- [ ] Output capture titled `Output_Image` (image) / `Output_Video` (video) / `Output_Preview` (multi-stage preview) — §8. Single naming law (MPI-252); no bare `Output`
 - [ ] Author + save the workflow template in `comfy_workflows/`
 - [ ] Verify the op-boolean feeds only the MpiIfElse; normalize all loader file paths to bare filenames (§3)
 - [ ] **Any OPTIONAL media input** (a `Load*` on a graph that can run without it)? Bake `placeholder.png` AND confirm `_prepareWorkflowInputs` stages it for this op's `mediaType` (§2). Required inputs need neither
@@ -740,7 +733,7 @@ Adding ops makes it more visible. Tracked as **MPI-247** — do not "fix" it ins
 - [ ] `/mpic-compute-dep-hashes` → fill all sha256
 - [ ] Add the `ModelDef` (`models.js`); set capabilities, workflows, dependencies, enhanceRecipe
 - [ ] New `type`? Sweep the four consumers (§6)
-- [ ] **One graph serving several ops** (t2i + i2i + poseReference)? Follow §11 — each op flips ONE baked-`false` boolean via `commandRegistry.injectParams`. **Injection SILENTLY SKIPS a title that matches no node** (this hid `Input_Is_i2i` and `Input_Batch` for four sessions). The tier-2 alias is a pure prefix: `Batch_Size` → `Input_Batch_Size`, never an abbreviation. Run `tests/inject-params-titles.test.cjs`
+- [ ] **One graph serving several ops** (t2i + i2i + poseReference)? Follow §11 — each op flips ONE baked-`false` boolean via `commandRegistry.injectParams`. **Injection SILENTLY SKIPS a title that matches no node** (this hid `Input_Is_i2i` and `Input_Batch` for four sessions). The injection key is `Input_<Name>` — exact, never abbreviated (`Batch_Size` → `Input_Batch_Size`). Run `tests/inject-params-titles.test.cjs`
 - [ ] **i2i op?** It needs the `denoise` control + a per-op `defaults.denoise` (§11) — but only after tracing that the denoise node is reachable on the i2i branch. On Krea2 it sits behind the `Input_Is_i2i` gate, so t2i/poseReference must NOT mount it
 - [ ] New OP? Add to BOTH `js/core/operationRegistry.js` + `operation_registry.json` (§8), `appVersionIntroduced` = current APP_VERSION
 - [ ] Runtime in-workflow selector? Add a `PROMPT_BOX_CONTROLS` entry + `commandRegistry` component + `promptControlDefaults` (§8); `nodeTitle` == switch title; MpiAnySwitch needs `select` in the injector + 1-indexed values

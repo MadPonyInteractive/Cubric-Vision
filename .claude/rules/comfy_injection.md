@@ -7,21 +7,21 @@
 
 **Title-based injection:** Target nodes exclusively by `_meta.title` (case-insensitive). Never hardcode node IDs. Use `filter` not `find` when locating nodes — multiple nodes can share a title.
 
-**Node naming law (two-tier) — MPI-116.** Agent-relevant node titles follow two tiers:
-- **Tier 1 — legacy reserved vocabulary (unchanged):** the documented Standard Node Title Map titles (`Positive`, `Negative`, `Seed`, `Width`, `Height`, `Lora_1`…`Lora_6`, `Duration`, `Steps`, `Checkpoint`, `Output`, `Preview`, `Detected`, etc.). These keep their existing bare titles. Known title → look it up in the Standard Node Title Map below.
-- **Tier 2 — all NEW workflows authored from now on:** every node the app reads from or writes into MUST be titled with an `Input_*` prefix (app injects INTO it) or `Output_*` prefix (app reads FROM it). This makes a new workflow self-describing: an agent reads the API JSON and infers direction + role from the prefix with no per-workflow dictation. A genuinely new `inputs.*` field type still needs a one-line note from the user (the prefix gives direction, not which field to write).
+**Node naming law (single, MPI-116 + MPI-252).** Every node the app reads from or writes into MUST be titled with an `Input_*` prefix (app injects INTO it) or `Output_*` prefix (app reads FROM it). This makes a workflow self-describing: an agent reads the API JSON and infers direction + role from the prefix with no per-workflow dictation. A genuinely new `inputs.*` field type still needs a one-line note from the user (the prefix gives direction, not which field to write). **Tier-1 (the old bare vocabulary — `Positive`, `Seed`, `Width`, `Output`, `Preview`, `Detected`, `Box`, …) is DEPRECATED (MPI-252):** the whole workflow fleet was converted, so every app-touched node is now `Input_*`/`Output_*`. The Standard Node Title Map below lists the canonical `Input_*`/`Output_*` titles. Workflow-internal helper nodes that the app never touches (e.g. a link-fed `Positive` CLIP node inside an upscaler, or `sams` on the auto-mask graph) keep their own titles — the law is only about nodes the app injects into or captures from.
 
-**Tier-2 dual-emit alias (MPI-127).** `commandExecutor._buildParams` emits EVERY bare param key (`Positive`, `Seed`, `Width`, `Duration`, `Lora_*`, …) AND an `Input_`-prefixed alias of it (`Input_Positive`, `Input_Seed`, …) in the same params object. Injection silently skips any key with no matching node title, so a tier-1 (bare-title) workflow consumes the bare keys and ignores the aliases, while a tier-2 (`Input_*`-title) workflow consumes the aliases. One code path serves a MIXED fleet — image workflows are tier-1, video workflows (WAN + LTX) are tier-2 — with no per-model `tier` branch. Exception: `LoadLatent → Input_Video_Latent` is a RENAME (not a prefix), so it is emitted explicitly, not derived. When adding a tier-2 title, you do NOT need a separate injection branch — the alias already covers it; just title the node `Input_<BareName>`.
+**Input_ canonicalization (rename, not dual-emit — MPI-127 + MPI-252).** `commandExecutor._buildParams` builds params under bare control names then runs a pass that RENAMES every bare key to its `Input_` form and DELETES the bare key (keys already `Input_*`/`Output_*` pass through). There is no longer a tier-1 node to consume a bare key, so only the `Input_*` form is emitted. Injection matches node title EXACTLY and silently skips a param with no matching node (see silent-skip trap), so a title mismatch fails silently. When adding a new title you do NOT need a separate injection branch — title the node `Input_<Name>` and the control return `Input_<Name>` and it flows.
 
-**Enforce the law when handed new nodes.** When the user supplies a NEW ComfyUI workflow / new injection nodes whose titles are NOT in the Tier-1 reserved vocabulary AND are not prefixed `Input_*` / `Output_*`, do NOT silently invent a contract. Tell the user the node-naming law requires the `Input_*` / `Output_*` prefix on new agent-relevant nodes, name the offending node titles, and ask them to re-title in their edit-version workflow and re-export the API JSON. (Tier-1 reserved titles are exempt — never flag `Positive`, `Seed`, `Lora_N`, `Output`, etc.)
+**Standalone injectors own their params fully (MPI-253).** When a tool op declares `injector: '<name>'` (resize/resizeVideo), `commandExecutor` runs the injector, then deletes BOTH the bare key AND its `Input_` alias from the params map so the generic title-injector cannot re-match them. Two traps this closes: (1) an alias like `Input_flip` outliving the injector would hit the `Input_Flip` MpiIfElse `boolean` and set it `(val==='true')`=false, clobbering the injector's correct value; (2) a params object built OUTSIDE `_buildParams` (e.g. `runAutoMask`) never gets the canonicalization pass, so it MUST use `Input_*` keys directly to match the tier-2 nodes (`Input_Box`, `Input_Selected_Masks_Input`). See [[project_tier2_conversion_silent_skip_traps]].
+
+**Enforce the law when handed new nodes.** When the user supplies a NEW ComfyUI workflow / new injection nodes whose app-touched titles are NOT prefixed `Input_*` / `Output_*`, do NOT silently invent a contract. Tell the user the node-naming law requires the `Input_*` / `Output_*` prefix on agent-relevant nodes, name the offending node titles, and ask them to re-title in their edit-version workflow and re-export the API JSON.
 
 **Never edit workflow JSON. EVER.** Files under `comfy_workflows/` are owned by the user — strict read-only for agents. Do not add, rename, rewire, or change baked default values in any node there. If a new injection target is required, document the contract (title + expected `inputs.*` field) in this file and in `.claude/rules/component-comfy.md`, then ask the user to author the node in the ComfyUI graph editor and re-export the API JSON. The same rule applies even when the change looks trivial (e.g. flipping a baked default value). Agents only write injection params on the frontend side.
 
 **Never call ComfyUI directly** from UI components. All workflow calls go through `ComfyUIController.runWorkflow(...)` in `js/services/comfyController.js`.
 
-**Required capture node:** Every workflow must have a node titled `"Output"` (case-insensitive). This is the canonical result node. Video Helper Suite nodes may emit final videos under `output.gifs`; inspect the filename/format because that payload can still be an MP4.
+**Required capture node:** Every workflow must have a capture node — images title `Output_Image`, video `Output_Video`, preview `Output_Preview` (case-insensitive). This is the canonical result node. Video Helper Suite nodes may emit final videos under `output.gifs`; inspect the filename/format because that payload can still be an MP4. (The bare `"output"`/`"preview"` base string is kept in the matcher as a defensive fallback only; no shipping workflow titles a capture node without the `Output_` prefix — MPI-252.)
 
-**Cache-hit dedupe (seedless workflows only):** `commandExecutor` watches ComfyUI's `execution_cached` WS event. If every node in `outputNodeIds` was served from cache AND the workflow has **no node titled `"Seed"`**, `exec.cacheHit` is set and `generationService.onComplete` skips creating a new history entry / gallery card and shows a toast `"No changes, skipping..."`. Replace mode (`config.replaceItemId`) bypasses dedupe. **Convention:** every seeded workflow must include a node titled exactly `"Seed"` (case-insensitive) — its presence disables the dedupe path, so seeded re-runs always produce a new entry. Universal/utility workflows (e.g. Upscale) lack a `"Seed"` node, which is what allows their idempotent re-runs to dedupe.
+**Cache-hit dedupe (seedless workflows only):** `commandExecutor` watches ComfyUI's `execution_cached` WS event. If every node in `outputNodeIds` was served from cache AND the workflow has **no node titled `"Input_Seed"`**, `exec.cacheHit` is set and `generationService.onComplete` skips creating a new history entry / gallery card and shows a toast `"No changes, skipping..."`. Replace mode (`config.replaceItemId`) bypasses dedupe. **Convention:** every seeded workflow must include a node titled exactly `"Input_Seed"` (case-insensitive) — its presence disables the dedupe path, so seeded re-runs always produce a new entry. Universal/utility workflows (e.g. Upscale) lack an `"Input_Seed"` node, which is what allows their idempotent re-runs to dedupe.
 
 **Upload images/masks:** Pass Data URIs, blob URLs, http URLs, or local paths to `Input_Image` / `Input_Mask` — the controller uploads automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching.
 
@@ -31,7 +31,7 @@
 
 **Trimmed video media inputs:** When a video `mediaItem` has `trim: { in, out }`, `commandExecutor` prepares a temporary trimmed MP4 through `/api/video/trim-input` before title-based injection. Comfy still receives the normal `"Input_Video"` path, but it points at the temporary clip, not the full source. The route treats `out` as the last included frame, resets timestamps to zero, and the executor cleans the temp file after completion/error.
 
-**Standard title map:** `"Positive"`/`"Negative"` → `inputs.value`, `"Seed"` → `inputs.int`, `"Checkpoint"` → `inputs.ckpt_name`, `"Lora_1"`…`"Lora_6"` → `{ lora_name, strength_model, strength_clip }`, `"Input_Image"`/`"Input_Mask"` → auto-uploaded. Full table in `docs/comfy.md`.
+**Standard title map:** `"Input_Positive"`/`"Input_Negative"` → `inputs.value`, `"Input_Seed"` → `inputs.int`, `"Checkpoint"` → `inputs.ckpt_name`, `"Input_Lora_1"`…`"Input_Lora_6"` → `{ lora_name, strength_model, strength_clip }`, `"Input_Image"`/`"Input_Mask"` → auto-uploaded. Full table in `docs/comfy.md`.
 
 See `docs/comfy.md` for the full injection pattern and example.
 
@@ -44,19 +44,19 @@ These use the same LoRA object shape as flat slots, and the controller writes
 
 | Title | Input field | Notes |
 | :--- | :--- | :--- |
-| `"Positive"` | `inputs.value` | Positive prompt |
-| `"Negative"` | `inputs.value` | Negative prompt |
-| `"Seed"` | `inputs.int` / `inputs.value` | Falls back to `noise_seed` on any KSampler |
-| `"Width"` / `"Height"` | `inputs.value` | Render dimensions |
-| `"Checkpoint"` / `"Model"` | `inputs.ckpt_name` / `unet_name` / `model_name` | Primary checkpoint |
+| `"Input_Positive"` | `inputs.value` | Positive prompt (was bare `Positive` pre-MPI-252) |
+| `"Input_Negative"` | `inputs.value` | Negative prompt |
+| `"Input_Seed"` | `inputs.int` / `inputs.value` | Falls back to `noise_seed` on any KSampler |
+| `"Input_Width"` / `"Input_Height"` | `inputs.value` | Render dimensions |
+| `"Checkpoint"` / `"Model"` | `inputs.ckpt_name` / `unet_name` / `model_name` | Primary checkpoint (workflow-internal loader, not a bare-title deprecation target) |
 | `"Checkpoint_Refiner"` | `inputs.ckpt_name` | Refiner checkpoint |
-| `"Lora_1"` … `"Lora_6"` | `inputs.lora_name`, `strength_model`, `strength_clip` | User LoRA slots — system LoRAs are baked in, not injected |
-| `"Lora_High_1"` ... `"Lora_High_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN high-noise LoRA slots. Generated from `model.loraStages[].injectionPrefix` |
-| `"Lora_Low_1"` ... `"Lora_Low_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN low-noise LoRA slots. Workflow node titles must be unique (`Lora_Low_1` ... `Lora_Low_6`) |
-| `"Use_Refiner"` | `inputs.boolean` / `inputs.value` | MpiBoolean uses `inputs.boolean` |
-| `"Batch_Size"` | `inputs.int` | `MpiInt` node driving Empty Latent via link. Value from `MpiBatchSelector` (1–4). Workflow returns N images → N gallery cards (one per URL). |
-| `"Duration"` | `inputs.int` | `MpiInt` node — video length in seconds (1–30, step 1). Injected by PromptBox `duration` control on `t2v`, `i2v`, `t2v_ms`, `i2v_ms`. |
-| `"Motion_Intensity"` | `inputs.float` | `MpiFloat` node — motion strength (0.0–1.0, step 0.01). Injected by PromptBox `motionIntensity` control on `i2v`, `i2v_ms`. |
+| `"Input_Lora_1"` … `"Input_Lora_6"` | `inputs.lora_name`, `strength_model`, `strength_clip` | User LoRA slots — system LoRAs are baked in, not injected |
+| `"Input_Lora_High_1"` ... `"Input_Lora_High_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN high-noise LoRA slots. Generated from `model.loraStages[].injectionPrefix` |
+| `"Input_Lora_Low_1"` ... `"Input_Lora_Low_6"` | `inputs.lora_name`, `strength` / `strength_model` | WAN low-noise LoRA slots. Workflow node titles must be unique |
+| `"Input_Use_Refiner"` | `inputs.boolean` / `inputs.value` | MpiBoolean uses `inputs.boolean` |
+| `"Input_Batch_Size"` | `inputs.int` | `MpiInt` node driving Empty Latent via link. Value from PromptBox `batch` control (1–4). Workflow returns N images → N gallery cards (one per URL). |
+| `"Input_Duration"` | `inputs.int` | `MpiInt` node — video length in seconds (1–30, step 1). Injected by PromptBox `duration` control on `t2v`, `i2v`, `t2v_ms`, `i2v_ms`. |
+| `"Input_Motion_Intensity"` | `inputs.float` | `MpiFloat` node — motion strength (0.0–1.0, step 0.01). Injected by PromptBox `motionIntensity` control on `i2v`, `i2v_ms`. |
 | `"Input_Image"` | `inputs.image` | Auto-uploaded by controller |
 | `"Input_Mask"` | `inputs.mask` | Auto-uploaded by controller |
 | `"Input_Start_Frame"` / `"Input_End_Frame"` | `inputs.image` | **(Tier-2 video frame slots — MPI-127.)** Start/end-frame image slots for `i2v` / `i2v_ms`, declared in `commandRegistry.mediaInputs`. Auto-uploaded. Replaced the legacy bare `Start_Frame` / `End_Frame` titles when WAN + LTX moved to tier-2 (both models share these titles now). `Input_End_Frame` is optional (gated by `Input_Use_End_Image`). |
@@ -65,28 +65,27 @@ These use the same LoRA object shape as flat slots, and the controller writes
 | `"Input_Use_Input_Audio"` | `inputs.boolean` | **(LTX-2.3 audio mode — MPI-127.)** `MpiSimpleBoolean` gate. `true` → use the input audio directly. Set by `audioMode` when audio present and mode = Original. Mutually exclusive with `Input_Use_Reference_Audio`. |
 | `"Input_Use_Transition"` | `inputs.boolean` | **(LTX-2.3 — MPI-127.)** `MpiBoolean`. The i2v motion/lipsync enabler (`[[project-ltx-transition-lora-enables-lipsync]]`). Forced `true` by the `audioMode` control whenever audio is present (either mode). |
 | `"Input_Use_Audio"` | `inputs.boolean` | **(LTX-2.3 — MPI-127.)** Master audio enable, baked `true` in the workflow. App does not currently inject this; listed so its title is reserved + recognized. |
-| `"Denoise"` | `inputs.float` | Denoising strength. `MpiFloat` node injected by `denoise` PromptBoxControl on `upscale` (default 0.20) and `detail` (default 0.30). Per-op defaults declared via `commands[op].defaults.denoise` in `commandRegistry.js`; persisted under `modelSettings[modelId].operations[opName].denoise` so each op holds independent state. **(MPI-182)** The PiD `pid` op reuses this SAME control (default 0.0) → the workflow's degrade_sigma node is titled `Input_Denoise` (`MpiFloat`); the bare `Denoise` key's tier-2 alias `Input_Denoise` bridges it. So the app "denoise" slider drives PiD's degrade_sigma with no new control. |
+| `"Input_Denoise"` | `inputs.float` | Denoising strength. `MpiFloat` node injected by `denoise` PromptBoxControl on `upscale` (default 0.20), `detail` (default 0.30), and PiD `pid` (default 0.0 → the workflow's degrade_sigma node, MPI-182). Per-op defaults via `commands[op].defaults.denoise` in `commandRegistry.js`; persisted under `modelSettings[modelId].operations[opName].denoise`. |
 | `"Input_Type"` | `inputs.select` | **(PiD 4-path VAE selector — MPI-182.)** `MpiAnySwitch`, **1-INDEXED** (`select` starts at 1). Injected by the `pidVariant` PromptBoxControl on the `pid` op: 1=flux, 2=sd3, 3=qwen, 4=sdxl. NOTE: `select` was ADDED to the `comfyController._inject` target list for MPI-182 (MpiAnySwitch was previously un-injectable). |
 | `"Input_Resolution"` | `inputs.select` | **(PiD output-size selector — MPI-182.)** `MpiAnySwitch`, **1-INDEXED**. Injected by the `pidResolution` PromptBoxControl on the `pid` op: 1=1K, 2=2K, 3=4K (native passthrough). |
-| `"Steps"` | `inputs.steps` / `inputs.value` | Sampling steps |
-| `"Upscale_Model"` | `inputs.upscale_model` | Upscale model filename |
-| `"Upscale_Factor"` | `inputs.float` / `inputs.value` | 1.0 – 4.0 |
-| `"Upscale_Using_Model"` | `inputs.boolean` | MpiBoolean (MpiIfElse) gate on `image_upscale.json` / `video_upscale.json`. `true` → workflow routes through `Upscale_Model` + `ImageUpscaleWithModel` branch. `false` → bypasses model, runs plain `ImageScaleBy` lanczos. Injected by `MpiToolOptionsUpscale` based on dropdown selection (`None` = `false`). |
-| `"Interp_Multiplier"` | `inputs.float` | Frame multiplier for RIFE VFI (2, 3, 4) |
-| `"Auto_Grid"` | `inputs.boolean` | Use a grid toggles |
-| `"Grid_H"` / `"Grid_V"` | `inputs.int` / `inputs.value` | Grid splits |
-| `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model |
-| `"Box"` | `inputs.boolean` | Box (true) vs segment (false) |
-| `"Selected_Masks_Input"` | `inputs.text` / `picks` | Comma-separated mask indices |
-| `"Preview_Only"` | `inputs.boolean` | **Required on multi-stage base workflows** (ops with `_ms` suffix). Boolean toggle: `true` halts the workflow at the preview stage. Defensive-strip in `comfyController` removes the param when no matching node exists (the `_stage2.json` sibling workflow intentionally lacks this node). See "Multi-stage video workflows" below. |
-| `"LoadLatent"` | `inputs.latent` | **Required on every multi-stage workflow** (base + `_stage2`). Filename basename of the latent in the active ComfyUI `input/` folder. Always injected by `commandExecutor`: stage-1 runs receive the default `ComfyUI_00001_.latent`; stage-2 runs receive the per-preview `<previewUuid>.latent` staged by `POST /comfy/stage-preview-latent`. |
-| `"Output"` | read-only | **Required** — final output node for result capture. Nodes without this title are ignored; capture `images`, VHS `gifs`, and native `SaveVideo` `videos` payloads. |
-| `"Output_Image"` | read-only | **(Tier-2 IMAGE capture title — MPI-182.)** The tier-2-named equivalent of bare `"Output"` for a fully tier-2 IMAGE workflow (self-describing, like video's `Output_Video`). Captured on the SAME non-preview image path — `commandExecutor.js` (~L979) aliases `_imageOutputTitle = 'output_image'` alongside `_captureTitle='output'`, so a `PreviewImage` titled `Output_Image` is captured with no bare-title exception. A tier-2 image workflow (e.g. NVIDIA PiD, Chroma) may use `Output_Image`; tier-1 image workflows keep bare `Output`. Both work. **TRAP (MPI-217):** the match is on the EXACT lowercased title — a typo in the capture-node title (e.g. `Ouptput_Image`) matches nothing → the run completes with no error and reports `Generation completed but no output returned`. If a newly-authored workflow generates fine (log shows `Prompt executed in N seconds`) but the app captures nothing, check the capture node's title first. |
-| `"Output_Video"` | read-only | **(Video pipeline — MPI-64 2026-06-14, B3.)** Native `SaveVideo` node that writes the VIDEO (no audio) into a `video/` SUBFOLDER under ComfyUI `output/` (e.g. `output/video/<op>_00001_.mp4`). Captured exactly like `"Output"` — `commandExecutor`/`comfyController` `_collectComfyOutputUrls` read its `videos[]` payload (file dicts → `/view` URLs). Treated as an output node alongside `"Output"` so the SAME capture path serves every video workflow. Replaces the single `"Output"` `VHS_VideoCombine` (whose `nvenc_h264` encode fails on the Blackwell Pod). Pairs with optional `"Output_Audio"`; the two are MUXED server-side at save time (video master, stream-copy) in `routes/projects.js` `/project/save-generation` via `services/ffmpegMux.js`. |
+| `"Input_Steps"` | `inputs.steps` / `inputs.value` | Sampling steps |
+| `"Input_Upscale_Model"` | `inputs.upscale_model` | Upscale model filename |
+| `"Input_Upscale_Factor"` | `inputs.float` / `inputs.value` | 1.0 – 4.0 |
+| `"Input_Upscale_Using_Model"` | `inputs.boolean` | MpiBoolean (MpiIfElse) gate on `image_upscale.json` / `video_upscale.json`. `true` → routes through `Input_Upscale_Model` + `ImageUpscaleWithModel`. `false` → bypasses model, plain `ImageScaleBy` lanczos. Injected by `MpiToolOptionsUpscale` (`None` = `false`). |
+| `"Input_Interp_Multiplier"` | `inputs.float` | Frame multiplier for RIFE VFI (2, 3, 4) |
+| `"Input_Auto_Grid"` | `inputs.boolean` | Use-grid toggle (upscale) |
+| `"Input_Grid_H"` / `"Input_Grid_V"` | `inputs.int` / `inputs.value` | Grid splits |
+| `"sams"` | `inputs.ckpt_name` / `model_name` | SAM / detection model — workflow-internal node on `img_auto_mask.json`, keeps its own title (app injects it directly in `runAutoMask`, not via the naming law). |
+| `"Input_Box"` | `inputs.boolean` | Box (true) vs segment (false). `MpiIfElse` on `img_auto_mask.json`. Injected directly by `runAutoMask` (MPI-253 — was bare `Box`). |
+| `"Input_Selected_Masks_Input"` | `inputs.text` / `picks` | Comma-separated mask indices. `ImpactSEGSPicker` on `img_auto_mask.json`. Injected directly by `runAutoMask` (MPI-253 — was bare `Selected_Masks_Input`). |
+| `"Input_Preview_Only"` | `inputs.boolean` | **Required on multi-stage base workflows** (ops with `_ms` suffix). `true` halts at the preview stage. Defensive-strip in `comfyController` removes the param when no matching node exists (the `_stage2.json` sibling lacks it). See "Multi-stage video workflows". |
+| `"Input_Video_Latent"` | `inputs.latent` | **Required on every multi-stage workflow** (base + `_stage2`). `LoadLatent` node; filename basename in the active ComfyUI `input/` folder. Always injected by `commandExecutor`: stage-1 receives `ComfyUI_00001_.latent`; stage-2 receives the per-preview `<previewUuid>.latent` staged by `POST /comfy/stage-preview-latent`. (Was bare `LoadLatent` pre-MPI-252 — that key is dead; no runtime titles a node `LoadLatent`.) |
+| `"Output_Image"` | read-only | Image capture node (`PreviewImage`/`SaveImage`), self-describing like `Output_Video`. Captured on the non-preview image path — `commandExecutor.js` matches `_imageOutputTitle = 'output_image'`. **TRAP (MPI-217):** matched on the EXACT lowercased title — a typo (e.g. `Ouptput_Image`) matches nothing → run completes with no error and reports `Generation completed but no output returned`. If a workflow generates fine (`Prompt executed in N seconds`) but the app captures nothing, check the capture node's title first. |
+| `"Output_Video"` | read-only | **(Video pipeline — MPI-64, B3.)** Native `SaveVideo` node that writes the VIDEO into a `video/` SUBFOLDER under ComfyUI `output/`. Captured via `_collectComfyOutputUrls` reading its `videos[]` payload. Replaces the old `VHS_VideoCombine` (whose `nvenc_h264` encode fails on the Blackwell Pod). The 3 video utility workflows (resize_video/video_upscale/video_interpolate) now emit ONE `MpiSaveVideo` titled `Output_Video` with audio embedded (MPI-252); model video workflows still pair it with an optional `"Output_Audio"`, MUXED server-side (video master) in `routes/projects.js` via `services/ffmpegMux.js`. |
 | `"Output_Audio"` | read-only | **(Video pipeline — MPI-64 2026-06-14, B3.)** Native `SaveAudioMP3`/`SaveAudio` node that writes audio into an `audio/` SUBFOLDER under ComfyUI `output/` (e.g. `output/audio/<op>_00001_.mp3`). Captured by `commandExecutor` `_collectComfyAudioUrl` from the node's `audio[]` payload (first entry → `/view` URL), threaded through `onComplete({audioUrl})` → `saveGeneration({audioViewUrl})` → the save route, which downloads it and muxes it into the video. **Present ONLY when the source had audio** — the workflow gates the audio with an `MpiHasAudio` (ffmpeg stream-probe on the input path) → `MpiIfElse`, because saving EMPTY audio throws and fails the run the same way `SaveVideo` does. When absent, the save keeps the silent video. NOTE: ComfyUI increments each save node's `_00001_` counter INDEPENDENTLY, so the video and audio sequence numbers do NOT match — pairing is by the SAME prompt's `executed` payloads (the two capture nodes), never by filename counter. |
-| `"Preview"` | read-only | **(Tier-1 legacy capture title.)** **Required on multi-stage video workflows** — the node whose payload carries the preview clip when `Preview_Only=true`. **(MPI-64 2026-06-15, B3.)** Now a native `CreateVideo`→`SaveVideo` titled `Preview` (was a `VHS_VideoCombine`, whose `nvenc_h264` encode fails on the Blackwell Pod the same as the final output did) → its payload arrives under `videos[]`, captured by the SAME `_collectComfyOutputUrls` path (reads `images`+`gifs`+`videos`) — no app change. No `Output_Audio` on preview (throwaway clip, audio only on the final `Output_Video`). `commandExecutor.js` switches its capture-title filter from `"output"` → `"preview"` for preview-only runs; without the exact title, the executed message is silently dropped and the run reports "no output returned". |
-| `"Output_Preview"` | read-only | **(Tier-2 preview capture title — LTX-2.3 / MPI-127.)** The tier-2-named equivalent of `"Preview"`: a `SaveVideo` titled `Output_Preview` carrying the preview clip on `Input_Preview_Only=true` runs. Tier-2 workflows pair `Output_Video` (final) + `Output_Preview` (preview) by prefix instead of the legacy bare `Output`/`Preview`. **App wired (MPI-127):** `commandExecutor.js` (~line 906) maps the preview-only capture title to `'output_preview'`, so tier-2 preview-only runs capture correctly; tier-1 video previews still match `"preview"`, and finals still match `"output"`/`"output_video"`. | |
-| `"Detected"` | read-only | **Required** — auto-masking preview output node |
+| `"Output_Preview"` | read-only | **Required on multi-stage video workflows** — a `SaveVideo` carrying the preview clip on `Input_Preview_Only=true` runs. `commandExecutor.js` maps the preview-only capture title to `'output_preview'` (finals match `'output_video'`). No `Output_Audio` on preview (throwaway clip; audio only on the final `Output_Video`). (Was bare `Preview` pre-MPI-252 — the base `'preview'` string survives only as a defensive fallback.) |
+| `"Output_Detected"` | read-only | Auto-mask DETECT preview node — the per-segment thumbnails. `img_auto_mask.json` (was bare `Detected` pre-MPI-252). |
+| `"Output_image"` | read-only | Auto-mask per-pick MASK output on `img_auto_mask.json` — the ordered mask images captured after a pick. Note the lowercase `image` matches the actual node title on that workflow. (Was bare `Output` pre-MPI-252.) |
 
 > When adding new params: use a capitalized title (e.g. `"Input_Video"`) and add it here.
 
@@ -105,8 +104,12 @@ standard title map.
 - Current injector: `resize` (`resize` and `resizeVideo` ops). It writes:
   `"Resize Image v2"` inputs `width`, `height`, `upscale_method`,
   `keep_proportion`, `pad_color`, `crop_position`, `divisible_by`, `device`;
-  `"ImageFlip"` input `flip_method`; `"Image Rotate"` input `rotation`; and
-  `"Flip"` input `boolean`.
+  `"Input_Flip_Image"` (ImageFlip) input `flip_method`; `"Input_Rotate_Image"`
+  (ImageRotate) input `rotation`; and `"Input_Flip"` (MpiIfElse) input `boolean`
+  (the enable gate: true routes through the flip node). After the injector runs,
+  `commandExecutor` deletes both the bare and `Input_` forms of every injector
+  param from the generic params map so the title-injector can't re-match them
+  (MPI-253).
 - Universal video tool trim prep is not a workflow injector; it happens before
   `_buildParams()` so all video operations with declared media slots can receive
   the temporary clipped input path.
@@ -118,24 +121,24 @@ Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a lo
 **Multi-stage is per-MODEL, not per-op (MPI-127).** The `_ms` op keys (`t2v_ms`/`i2v_ms`) are SHARED across WAN and LTX. Whether a model actually exposes the preview/stage-2 flow is gated by `model.capabilities.multiStage`: both WAN and LTX = `true` (show the `previewStage` toggle, run the two-file flow below). LTX was single-stage in MPI-127 (`multiStage:false`) because preview→stage-2 needs DUAL-latent staging (video + audio); **MPI-128 wired that and flipped LTX to `multiStage:true`** (see dual-latent note under "LoadLatent injection contract"). So "an `_ms` op = multi-stage" is only true when the active model declares `multiStage`. A model with `multiStage:false` would use only the stage-1 file (no stage-2). Separately, `capabilities.branchingContinue` gates the Continue (branch) button: WAN = `true` (per-stage LoRAs vary stage-2); LTX omits it → **Finish-only** (refined LTX workflow locks stage-2 to stage-1, prompt has no effect on the continuation). See `commandAllowsBranchingContinue(key, model)` in `commandRegistry.js`.
 
 **Two-file convention:**
-- `<name>.json` — stage-1 (preview) workflow. Contains `SaveLatent`, `Preview_Only`, `Preview` and `Output` capture nodes, full sampler chain.
+- `<name>.json` — stage-1 (preview) workflow. Contains the SaveLatent node(s), `Input_Preview_Only`, `Output_Preview` and `Output_Video` capture nodes, full sampler chain.
 - `<name>_stage2.json` — stage-2 workflow. **Authored by saving the API JSON with the stage-1 KSampler node toggled to Bypass mode in the ComfyUI graph editor.** ComfyUI's "Save (API)" export then deletes the bypassed node and rewires every consumer to the bypassed node's upstream feeder slot (Comfy's standard splice behavior). The result is a stage-2-only graph where `LoadLatent` feeds directly into the low-noise sampler. **NOTE: WAN/LTX stage-2 siblings are now GENERATED from the stage-1 API export by `comfy_workflows/scripts/workflow_generation/` (see its `README.md`) — the bypass+re-export is mechanical (title-keyed on `Stage1_Bypass` + `Is_Continue`), not hand-authored.**
 
 `resolveWorkflowFile(model, op, engine, {stage2})` (in `modelConstants/resolveModelDeps.js`, called from `commandExecutor.runCommand`) returns `<name>.json` normally; when `stage2 === true` it swaps the basename to `<name>_stage2.json`, then appends the engine's `workflowSuffix` (e.g. `_gguf` on a Pod → `<name>_stage2_gguf.json`). (MPI-165)
 
-**Authoring contract** (titles below are the TIER-1 names; tier-2 video workflows use the `Input_*`/`Output_*` equivalents — `Input_Preview_Only`, `Output_Preview`, `Output_Video`, `Input_Video_Latent` — see the title map + dual-emit alias note above):
+**Authoring contract** (all titles are `Input_*`/`Output_*` — the whole video fleet is post-MPI-252):
 
 Stage-1 base file MUST contain:
-- A `MpiBoolean` node titled `"Preview_Only"` (tier-2: `"Input_Preview_Only"`) whose `inputs.boolean` gates the preview/final branch.
-- A `LoadLatent` node titled `"LoadLatent"` (tier-2: `"Input_Video_Latent"`) (kept for ComfyUI validation; never reached by stage-1's data flow).
-- A `SaveLatent` node titled `"SaveLatent"` (tier-2: `"Output_Video_Latent"`) that emits the stage-1 latent on preview runs. **LTX saves TWO** (MPI-128) — a video `SaveLatent` titled `"Output_Video_Latent"` (prefix `ltx_video_latent`) and an audio one titled `"Output_Audio_Latent"` (prefix `ltx_audio_latent`). The app tells them apart by SaveLatent node TITLE (`_collectComfyLatents` tags role: title containing "audio" → audio, else video; legacy bare `"SaveLatent"` → video, so WAN single-latent is unaffected).
-- A capture node titled exactly `"Preview"` (tier-2: `"Output_Preview"`) whose payload is the preview clip.
-- A capture node titled exactly `"Output"` (tier-2: `"Output_Video"`) whose payload is the full-run final clip.
+- A `MpiBoolean` node titled `"Input_Preview_Only"` whose `inputs.boolean` gates the preview/final branch.
+- A `LoadLatent` node titled `"Input_Video_Latent"` (kept for ComfyUI validation; never reached by stage-1's data flow).
+- A `SaveLatent` node titled `"Output_Video_Latent"` that emits the stage-1 latent on preview runs. **LTX saves TWO** (MPI-128) — a video `SaveLatent` titled `"Output_Video_Latent"` (prefix `ltx_video_latent`) and an audio one titled `"Output_Audio_Latent"` (prefix `ltx_audio_latent`). The app tells them apart by SaveLatent node TITLE (`_collectComfyLatents` tags role: title containing "audio" → audio, else video).
+- A capture node titled `"Output_Preview"` whose payload is the preview clip.
+- A capture node titled `"Output_Video"` whose payload is the full-run final clip.
 
 Stage-2 sibling file (`_stage2.json`) MUST contain:
-- A `LoadLatent` node titled `"LoadLatent"` whose `inputs.latent` is the per-preview filename injected at runtime.
-- A capture node titled exactly `"Output"`.
-- NO `Preview_Only` node, NO `SaveLatent`, NO stage-1 sampler (these vanish when the base file is exported with stage-1 KSampler bypassed).
+- A `LoadLatent` node titled `"Input_Video_Latent"` whose `inputs.latent` is the per-preview filename injected at runtime.
+- A capture node titled `"Output_Video"`.
+- NO `Input_Preview_Only` node, NO `SaveLatent`, NO stage-1 sampler (these vanish when the base file is exported with stage-1 KSampler bypassed).
 
 The `Is_Continue` boolean node is **no longer used by WAN** — WAN branch selection happens via the file swap, not an injected boolean. **LTX differs (MPI-127):** LTX's stage-2 is GENERATED no-splice — `Input_Is_Continue` drives an `MpiIfElse` that selects the loaded `Input_Video_Latent`/`Input_Audio_Latent` over the live stage-1 latent, so the generator derives the stage-2 file by flipping that one boolean (no node deletion/rewire). The app still does NOT inject `Is_Continue` at runtime for either model — the stage-2 FILE is pre-stamped. (Live as of MPI-128: LTX preview→Finish reuses both staged latents; this path is exercised, no longer moot.)
 
@@ -183,11 +186,11 @@ For Group History actions, always resolve the source image/video from the select
 ## Example
 ```javascript
 const params = {
-    "Positive": "A landscape",
-    "Seed": 45678,
-    "Upscale_Model": "4x_NMKD-Siax_200k.pth",
-    "Lora_1": { lora_name: "my_lora.safetensors", strength_model: 0.8, strength_clip: 0.8 },
-    "Lora_High_1": { lora_name: "wan 2.2\\foo_HIGH.safetensors", strength_model: 0.8, strength_clip: 1.0 },
+    "Input_Positive": "A landscape",
+    "Input_Seed": 45678,
+    "Input_Upscale_Model": "4x_NMKD-Siax_200k.pth",
+    "Input_Lora_1": { lora_name: "my_lora.safetensors", strength_model: 0.8, strength_clip: 0.8 },
+    "Input_Lora_High_1": { lora_name: "wan 2.2\\foo_HIGH.safetensors", strength_model: 0.8, strength_clip: 1.0 },
     "Input_Image": "data:image/png;base64,..."
 };
 const result = await ComfyUIController.runWorkflow('sdxl_t2i', params, onProgress);
