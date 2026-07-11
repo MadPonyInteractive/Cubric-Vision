@@ -72,6 +72,13 @@ toast + `return null`.
 
 These are genuinely cross-cutting — they belong to no single subsystem.
 
+### MPI coordination messages — ASCII only, no emoji
+
+`.agents/mpi-kanban/state/messages/*.json` bodies must be plain ASCII. On Windows, Python's
+default stdout/file codec is cp1252, which throws `UnicodeDecodeError`/`UnicodeEncodeError` on
+emoji when an agent reads or re-emits a message. An emoji in a message body silently breaks the
+`mpi-message` read path. Keep bodies ASCII; put personality in the chat, not the JSON.
+
 ### backend logger arity
 
 `routes/logger.js` public API: `logger.info(category, message)` — 2 args; `logger.warn(category, message)` — 2 args (3rd argument is SILENTLY DROPPED, not formatted, not logged); `logger.error(category, message, err)` — 3 args (`err.stack` appended). To attach structured detail to a `warn`/`info`, fold it into the message string yourself (e.g. `JSON.stringify(detail)`).
