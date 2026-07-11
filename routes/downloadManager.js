@@ -1451,6 +1451,19 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     res.json({ success: true, jobId: modelId });
 
     _ensureRemoteEventStream();
+    // MPI-253: a `requirementsOnly` dep (an already-present custom_node whose pip
+    // is re-run idempotently) is near-instant when its deps are already satisfied —
+    // the wrapper returns 202 `started` (NOT `already_installed`, so the .then()
+    // below can't settle it) and emits `models:install-complete` within ~1-2s,
+    // often BEFORE _ensureRemoteEventStream() above has attached. That completion
+    // fires into a not-yet-subscribed stream → lost → the dep hangs `downloading`
+    // → the model sticks at 100% forever (the Krea2 re-install hang). The existing
+    // stall-close backstop (_reconcileOutstandingRemoteDeps) only runs on SSE
+    // CLOSE/STALL, which a fast op never triggers. So arm a one-shot reconcile
+    // against volume truth shortly after dispatch: it settles any dep whose
+    // fast-complete SSE was missed, and is a harmless no-op if the event landed
+    // (it only touches deps still in _remoteDepIds).
+    const hasFastRequirementsOnly = toInstall.some(d => d.requirementsOnly);
     for (const dep of toInstall) {
         const depJob = _depJobs.get(dep.id);
         if (depJob) depJob.status = 'downloading';
@@ -1483,6 +1496,19 @@ async function _startRemoteDownload(modelId, dependencies, res) {
                 _checkModelJobsComplete();
                 _teardownRemoteEventStreamIfIdle();
             });
+    }
+
+    // MPI-253: settle the fast-`requirements_only` SSE race (see the comment above).
+    // 3s is comfortably past a satisfied-deps pip no-op (~1-2s) yet still snappy.
+    // Reconcile reads real volume state and settles any dep whose completion event
+    // was lost; if the SSE already settled it (dep gone from _remoteDepIds), this
+    // no-ops. Guarded so a genuine long install isn't force-checked mid-download —
+    // reconcile only marks deps the wrapper reports installed:true, never rushes one.
+    if (hasFastRequirementsOnly) {
+        setTimeout(() => {
+            _reconcileOutstandingRemoteDeps().catch((err) =>
+                logger.warn('download', `requirements_only reconcile failed: ${err.message}`));
+        }, 3000);
     }
 }
 
