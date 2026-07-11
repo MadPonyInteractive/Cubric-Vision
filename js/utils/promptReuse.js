@@ -212,7 +212,8 @@ export function itemHasReusablePrompt(item = {}) {
         item.negativePrompt ||
         item.modelId ||
         source.modelId ||
-        item.frozenParams
+        item.frozenParams ||
+        item.appId          // App cards (MPI-256): Reuse reopens the App, no modelId/prompt needed
     );
 }
 

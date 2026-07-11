@@ -13,6 +13,7 @@ import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
 import { APP_VERSION } from '../core/appVersion.js';
+import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
@@ -74,6 +75,8 @@ export function initProjectUI() {
   if (navSlot) {
     const defs = [
       { label: 'Models',   handler: () => Events.emit('models:open') },
+      // Apps (App Library) — dev-gated until ≥4 apps exist (MPI-256).
+      ...(APP_CONFIG.dev_mode ? [{ label: 'Apps', handler: () => Events.emit('apps:open') }] : []),
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
       { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },

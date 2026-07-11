@@ -1,0 +1,287 @@
+import { ComponentFactory } from '../../../factory.js';
+import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
+import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { Events } from '../../../../events.js';
+import { state } from '../../../../state.js';
+import { listApps, appAvailability } from '../../../../data/appsRegistry.js';
+import { getModelById, getModelDependencies } from '../../../../data/modelRegistry.js';
+import { downloadService } from '../../../../services/downloadService.js';
+import { PAGE_GALLERY } from '../../../../router.js';
+import { qs, ce, on } from '../../../../utils/dom.js';
+import { renderIcon } from '/js/utils/icons.js';
+
+/**
+ * MpiAppLibrary — the App Library overlay (MPI-256).
+ *
+ * A dev-gated clone of the Model Library skeleton (MpiModelManager), stripped to
+ * app scope: a contact-sheet grid of app tiles (preview + title + an availability
+ * badge derived from `appAvailability`) with a right-drawer detail panel carrying
+ * the description, the required-models install state, and ONE footer button —
+ * all-installed → Open (emits `app:open`), missing models → Install (drives each
+ * missing model's own dependency download, exactly the Model Library's `_install`).
+ *
+ * Apps have NO disk-presence concept of their own: availability is read-only over
+ * `state.s_installedModelIds`. So there are no ops/arch toggles, no VRAM table, no
+ * media/size filters, no pod-disk bar, and no re-sync/refresh machinery — the whole
+ * install state derives from the installed-model set, which the shared model
+ * download flow already keeps current. `download:*` events therefore only re-derive
+ * badges in place (_patchTile), never a full re-render (MPI-235 discipline).
+ *
+ * `canOpen = (state.currentPage === PAGE_GALLERY)`: apps land as gallery cards in
+ * the current project, so Open is only meaningful inside a project's Gallery. On
+ * Landing the Open button is disabled and a click surfaces a `ui:info` toast.
+ *
+ * Lifecycle: el.open() shows the overlay + renders; the overlay X / Escape /
+ * ui:close-all-popups hides it. el.destroy() tears everything down.
+ */
+export const MpiAppLibrary = ComponentFactory.create({
+    name: 'MpiAppLibrary',
+    css: ['js/components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.css'],
+
+    template: () => `
+        <div class="mpi-app-library">
+            <div class="mpi-app-library__head">
+                <h1 class="mpi-app-library__title">Apps</h1>
+                <p class="mpi-app-library__sub" id="app-lib-sub"></p>
+            </div>
+            <div class="mpi-app-library__body" id="app-body-slot"></div>
+
+            <div class="mpi-app-library__scrim" id="app-detail-scrim"></div>
+            <aside class="mpi-detail" id="app-detail-panel">
+                <div class="mpi-detail__head">
+                    <h2 class="mpi-detail__head-title">App</h2>
+                    <button class="mpi-detail__close" id="app-detail-close" type="button" aria-label="Close">${renderIcon('close', 'md')}</button>
+                </div>
+                <div class="mpi-detail__body" id="app-detail-body"></div>
+                <div class="mpi-detail__actions" id="app-detail-actions"></div>
+            </aside>
+        </div>`,
+
+    setup: (el) => {
+        const bodySlot = qs('#app-body-slot', el);
+        const subEl = qs('#app-lib-sub', el);
+        const scrim = qs('#app-detail-scrim', el);
+        const detailPanel = qs('#app-detail-panel', el);
+        const detailBody = qs('#app-detail-body', el);
+        const detailActions = qs('#app-detail-actions', el);
+
+        const _unsubs = [];
+
+        // Per-appId TILE tracking so download:* events can re-derive a single tile's
+        // badge in place instead of re-rendering the whole grid (MPI-235).
+        //   Map<appId, { tile, badgeEl }>
+        const _tileInstances = new Map();
+        // Footer MpiButton instances in the OPEN detail panel — torn down on
+        // close/reopen (they own their own DOM listeners).
+        let _detailBtns = [];
+        // The app whose detail panel is open (null = closed).
+        let _activeDetail = null;
+
+        // ── Self-hosted overlay (body mode covers status bar — fine for a picker,
+        // same as the Model Library). shell.js mounts this once + calls el.open(). ──
+        const overlay = MpiOverlay.mount(document.createElement('div'), {
+            closable: true, mountTarget: 'body',
+        });
+        overlay.el.appendToContainer(el);
+        overlay.on('close', () => { _closeDetail(); });
+
+        // ── Availability badge (chip) for a tile / section sort ──────────────
+        function _badgeHtml(app) {
+            const { available } = appAvailability(app);
+            return available
+                ? `<span class="mpi-tile__chip mpi-tile__chip--installed">Ready</span>`
+                : `<span class="mpi-tile__chip mpi-tile__chip--available">Get models</span>`;
+        }
+
+        // ── Lean tile: preview thumb + title + availability badge. Click → detail. ──
+        function _buildTile(app) {
+            const tile = ce('button', { className: 'mpi-tile mpi-tile--image', type: 'button' });
+
+            const thumb = ce('div', { className: 'mpi-tile__thumb' });
+            if (app.preview) {
+                const img = ce('img', {
+                    src: `comfy_workflows/display/${app.preview}`,
+                    className: 'mpi-tile__thumb-media',
+                    loading: 'lazy',
+                });
+                _unsubs.push(on(img, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); img.remove(); }));
+                thumb.appendChild(img);
+            } else {
+                thumb.classList.add('mpi-tile__thumb--placeholder');
+            }
+            tile.appendChild(thumb);
+
+            const badgeEl = ce('div', { className: 'mpi-tile__state' });
+            badgeEl.innerHTML = _badgeHtml(app);
+            const body = ce('div', { className: 'mpi-tile__body' });
+            const nameCol = ce('div');
+            nameCol.appendChild(ce('div', { className: 'mpi-tile__name', textContent: app.title }));
+            body.appendChild(nameCol);
+            body.appendChild(badgeEl);
+            tile.appendChild(body);
+
+            _unsubs.push(on(tile, 'click', () => openDetail(app)));
+            _tileInstances.set(app.id, { tile, badgeEl });
+            return tile;
+        }
+
+        // ── Detail drawer ─────────────────────────────────────────────────────
+        function _destroyDetailBtns() {
+            _detailBtns.forEach(inst => inst?.el?.destroy?.());
+            _detailBtns = [];
+        }
+
+        // Install every missing required model (each drives its own dep download —
+        // the shared model install flow; exactly the Model Library's _install). The
+        // App Library owns no dep resolution of its own: getModelDependencies()
+        // resolves each model's full universe → downloadService.start(id, deps).
+        function _installMissing(missing) {
+            for (const modelId of missing) {
+                const deps = getModelDependencies(modelId);
+                if (deps.length) downloadService.start(modelId, deps);
+            }
+        }
+
+        function _modelRowHtml(modelId) {
+            const model = getModelById(modelId);
+            const name = model?.name || modelId;
+            const installed = (state.s_installedModelIds || []).includes(modelId);
+            const chip = installed
+                ? `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`
+                : `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
+            return `<li class="mpi-detail__model-row"><span>${name}</span>${chip}</li>`;
+        }
+
+        function openDetail(app) {
+            _destroyDetailBtns();
+            _activeDetail = app;
+            const { available, missing } = appAvailability(app);
+
+            detailBody.innerHTML = `
+                <div class="mpi-detail__thumb mpi-detail__thumb--image mpi-detail__thumb--placeholder" id="app-detail-thumb"></div>
+                <div class="mpi-detail__titlerow">
+                    <div><div class="mpi-detail__name">${app.title}</div></div>
+                </div>
+                ${app.description ? `<p class="mpi-detail__desc">${app.description}</p>` : ''}
+                <div class="mpi-detail__field">
+                    <span class="mpi-detail__field-label">Required models</span>
+                    <ul class="mpi-detail__models">
+                        ${(app.requiredModels || []).map(_modelRowHtml).join('')}
+                    </ul>
+                </div>`;
+
+            const thumb = qs('#app-detail-thumb', detailBody);
+            if (app.preview) {
+                const img = ce('img', { src: `comfy_workflows/display/${app.preview}`, className: 'mpi-detail__thumb-media' });
+                _unsubs.push(on(img, 'load', () => {
+                    if (img.naturalWidth && img.naturalHeight) thumb.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+                }));
+                _unsubs.push(on(img, 'error', () => { img.remove(); thumb.classList.add('mpi-detail__thumb--placeholder'); }));
+                thumb.classList.remove('mpi-detail__thumb--placeholder');
+                thumb.appendChild(img);
+            }
+
+            // Footer: all-installed → Open (Gallery-only), else → Install.
+            detailActions.innerHTML = '';
+            if (available) {
+                const canOpen = state.currentPage === PAGE_GALLERY;
+                const open = MpiButton.mount(ce('div'), {
+                    text: 'Open', variant: 'primary', size: 'md', disabled: !canOpen,
+                });
+                open.on('click', () => {
+                    if (!canOpen) {
+                        Events.emit('ui:info', { message: 'Open apps from the Gallery, inside a project.' });
+                        return;
+                    }
+                    el.close();
+                    Events.emit('app:open', { appId: app.id });
+                });
+                detailActions.appendChild(open.el); _detailBtns.push(open);
+            } else {
+                const install = MpiButton.mount(ce('div'), { text: 'Install models', variant: 'primary', size: 'md' });
+                install.on('click', () => { _installMissing(missing); });
+                detailActions.appendChild(install.el); _detailBtns.push(install);
+            }
+
+            scrim.classList.add('is-open');
+            detailPanel.classList.add('is-open');
+        }
+
+        function _closeDetail() {
+            scrim.classList.remove('is-open');
+            detailPanel.classList.remove('is-open');
+            _activeDetail = null;
+            _destroyDetailBtns();
+        }
+        _unsubs.push(on(scrim, 'click', _closeDetail));
+        _unsubs.push(on(qs('#app-detail-close', el), 'click', _closeDetail));
+        _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
+
+        // ── Render the contact sheet ────────────────────────────────────────
+        function _destroyAllTiles() { _tileInstances.clear(); }
+
+        function renderList() {
+            _destroyAllTiles();
+            bodySlot.innerHTML = '';
+
+            const apps = listApps();
+            const readyN = apps.filter(a => appAvailability(a).available).length;
+            subEl.textContent = apps.length
+                ? `${readyN} ready · ${apps.length - readyN} need models`
+                : 'No apps yet.';
+
+            if (!apps.length) {
+                bodySlot.appendChild(ce('div', {
+                    className: 'mpi-app-library__empty',
+                    textContent: 'No apps available yet.',
+                }));
+                return;
+            }
+
+            const sheet = ce('div', { className: 'mpi-app-library__sheet' });
+            apps.forEach(app => sheet.appendChild(_buildTile(app)));
+            bodySlot.appendChild(sheet);
+        }
+
+        // ── Re-derive a single app's badge (+ its open detail footer) in place ──
+        // Availability is a pure function of the installed set, so any install-state
+        // change just recomputes badges — never a full grid rebuild (MPI-235).
+        function _patchTile(appId) {
+            const app = listApps().find(a => a.id === appId);
+            if (!app) return;
+            const ref = _tileInstances.get(appId);
+            if (ref) ref.badgeEl.innerHTML = _badgeHtml(app);
+            if (_activeDetail && _activeDetail.id === appId) openDetail(app);
+        }
+
+        // A model finishing/leaving install changes s_installedModelIds → re-derive
+        // every tile whose required set includes it. Cheap: iterate the tiny app list.
+        function _patchAllAffected() {
+            for (const app of listApps()) _patchTile(app.id);
+        }
+
+        _unsubs.push(Events.on('state:changed', ({ key }) => {
+            if (key === 's_installedModelIds') _patchAllAffected();
+        }));
+        // Live install badges on the required-models rows in the open detail panel.
+        // Only the open panel repaints; the grid badges follow s_installedModelIds
+        // (above) once the model actually flips installed.
+        _unsubs.push(Events.on('download:complete', () => { if (_activeDetail) openDetail(_activeDetail); }));
+        _unsubs.push(Events.on('download:started', () => { if (_activeDetail) openDetail(_activeDetail); }));
+        _unsubs.push(Events.on('download:cancelled', () => { if (_activeDetail) openDetail(_activeDetail); }));
+
+        // ── Open / close the Library overlay ──────────────────────────────────
+        el.open = () => { overlay.el.show(); renderList(); };
+        el.close = () => { overlay.el.hide(); };
+        el.onOpen = el.open;
+
+        renderList();
+
+        el.destroy = () => {
+            _unsubs.forEach(fn => fn());
+            _destroyAllTiles();
+            _destroyDetailBtns();
+            overlay?.el?.destroy?.();
+        };
+    },
+});

@@ -370,6 +370,17 @@ export const commands = {
         universal: true,
         injector: 'resize',
     },
+    appImageRegen: {
+        label: 'App: Image Regen',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: true,
+        universal: true,   // first Apps op (MPI-256) — App_sdxl_regen.json, i2i baked true.
+    },
 
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.

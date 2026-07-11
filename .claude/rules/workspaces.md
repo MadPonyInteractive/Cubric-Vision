@@ -11,6 +11,6 @@
 
 **PromptBox mount:** Mount `MpiPromptBox` Organism directly into `#prompt-box-mount` (`gid('prompt-box-mount')`). Block keeps the handle in `_pb`; call `_pb?.destroy?.()` before remount AND in Block `el.destroy`. Slot is shell-owned (declared in `index.html`), persists across workspace switches. No `PromptBoxService` — Block mounts direct.
 
-**Zero-model gate:** Empty/new project auto-opens the Model Library overlay via `models:open`. PromptBox mounts only when `s_installedModelIds.length > 0` (keyed off `state:changed`, NOT a `models:closed` event). `resolveActiveModel(mediaType)` returns `null` at zero-install — workspace must re-resolve in the `s_installedModelIds` watcher.
+**Zero-model gate:** Empty/new project + zero models → a one-shot MpiOkCancel "Go to Projects" dialog (the old `models:open` auto-open was removed — it caused a re-open flicker loop). A project WITH existing media + zero models → read-only browse, no prompt. PromptBox mounts only when `s_installedModelIds.length > 0` (keyed off `state:changed`, NOT a `models:closed` event). `resolveActiveModel(mediaType)` returns `null` at zero-install — workspace must re-resolve in the `s_installedModelIds` watcher.
 
 **Dev Components Gallery:** `js/pages/components.js` — hidden, gated by `test_styles: true` in `dev_configs/app_config.js`. Ask before adding components.

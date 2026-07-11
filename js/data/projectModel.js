@@ -79,6 +79,8 @@ export function createImageItem(overrides = {}) {
         generationSettings: null,
         name:             null,
         uploaded:         false,
+        appId:            null,   // App provenance (MPI-256); set by App gens only
+        appInputs:        null,
         pixelDimensions:  { w: 0, h: 0 },
         generationMs:     null,
         ...overrides,
@@ -105,6 +107,8 @@ export function createVideoItem(overrides = {}) {
         generationSettings: null,
         name:             null,
         uploaded:         false,
+        appId:            null,   // App provenance (MPI-256); set by App gens only
+        appInputs:        null,
         pixelDimensions:  { w: 0, h: 0 },
         generationMs:     null,
         duration:         0,
@@ -134,6 +138,8 @@ export function createAudioItem(overrides = {}) {
         generationSettings: null,
         name:             null,
         uploaded:         false,
+        appId:            null,   // App provenance (MPI-256); set by App gens only
+        appInputs:        null,
         pixelDimensions:  { w: 0, h: 0 },
         generationMs:     null,
         duration:         0,

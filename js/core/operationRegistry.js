@@ -34,6 +34,7 @@ export const OPERATION_REGISTRY = {
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resize:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resizeVideo:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    appImageRegen: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
 };
 
 /**

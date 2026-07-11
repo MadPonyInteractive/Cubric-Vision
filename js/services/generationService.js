@@ -19,6 +19,7 @@ import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
 import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
+import { getAppById } from '../data/appsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
@@ -177,11 +178,15 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
     const model = config.model || {};
     const command = getCommand(config.operation);
     const ratio = injectionParams.Ratio_Label || injectionParams.ratioLabel || config.ratioLabel || '';
+    // App gens (config.appId) show the App's title in the Cue, not the generic
+    // "Universal workflow" fallback that model:{id:null} would otherwise pick.
+    const appTitle = config.appId ? (getAppById(config.appId)?.title || null) : null;
     return {
         promptExcerpt: _promptExcerpt(config.positive),
         negativeExcerpt: _promptExcerpt(config.negative),
         modelId: model.id ?? null,
-        modelName: model.displayName || model.name || model.label || model.id || (command?.universal ? 'Universal workflow' : 'Unknown model'),
+        modelName: model.displayName || model.name || model.label || model.id || appTitle || (command?.universal ? 'Universal workflow' : 'Unknown model'),
+        appTitle,
         operation: config.operation || '',
         ratio,
         width,
@@ -223,6 +228,7 @@ function _queueSnapshotItem(job, status) {
         negativeExcerpt: job.display?.negativeExcerpt || '',
         modelId: job.display?.modelId ?? job.config?.model?.id ?? null,
         modelName: job.display?.modelName || job.config?.model?.name || job.config?.model?.id || 'Unknown model',
+        appTitle: job.display?.appTitle || null,
         operation: job.display?.operation || job.config?.operation || '',
         ratio: job.display?.ratio
             || job.config?.injectionParams?.Ratio_Label
@@ -976,6 +982,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         loraSnapshot: _previewLoraSnapshot,
                         previewAssets: _previewAssets,
                         replaceItemId: (_replaceItemId && i === 0) ? _replaceItemId : undefined,
+                        // App provenance (MPI-256) — additive, top-level. Present only for
+                        // App gens; null for normal PromptBox gens. Lets Reuse reopen the App
+                        // with its inputs restored (survives restart — sidecar > session).
+                        appId: config.appId ?? null,
+                        appInputs: config.appInputs ?? null,
                     });
                     if (data.success) {
                         savedData = data;
@@ -1005,6 +1016,13 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 // Server returns aggregated generationMs on preview→final replace
                 // (prev stage + this stage). Prefer it over the local timer.
                 generationMs: savedData?.generationMs ?? elapsedMs,
+                // App provenance (MPI-256) on the LIVE in-memory item too — not just
+                // the sidecar (line ~988). Without this, Reuse on a JUST-generated app
+                // card reads appId:undefined (the reconciler only hydrates appId from
+                // the sidecar on RELOAD), so live reuse fell through to the PromptBox
+                // instead of reopening the App. Reload worked; the fresh session didn't.
+                appId: config.appId ?? null,
+                appInputs: config.appInputs ?? null,
             };
             if (isVideo) {
                 Object.assign(baseProps, {

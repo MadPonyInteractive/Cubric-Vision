@@ -80,6 +80,23 @@ test('every injectParams title exists in the workflows its op runs', () => {
     );
 });
 
+test('the first App workflow carries its inject + capture titles (MPI-256)', () => {
+    // Universal-op workflows (universal_workflows.js) are NOT covered by the generic
+    // per-model sweep above (that only walks models.js `workflows:{}` blocks). The App
+    // op runs App_sdxl_regen.json via model:{id:null}; pin the titles the injector +
+    // capture depend on. Input_Is_i2i must be present (and baked true — the app is
+    // always image-in) or the graph silently degrades to txt2img.
+    const file = 'App_sdxl_regen.json';
+    const have = titlesOf(file);
+    for (const title of ['input_image', 'input_positive', 'input_negative', 'output_image', 'input_is_i2i']) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    // Assert i2i is baked true (app is image-in→image-out, never txt2img).
+    const wf = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+    const i2iNode = Object.values(wf).find(n => (n._meta?.title || '').toLowerCase() === 'input_is_i2i');
+    assert.strictEqual(i2iNode?.inputs?.boolean, true, 'Input_Is_i2i must be baked true in the App workflow');
+});
+
 test('the Krea2 shared graph carries both branch booleans', () => {
     // Pins the specific regression: t2i / i2i / poseReference all run one file and
     // select a branch with a baked-false boolean. Lose a node (or its title) and the

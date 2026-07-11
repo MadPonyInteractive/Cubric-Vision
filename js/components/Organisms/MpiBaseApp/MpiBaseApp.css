@@ -1,0 +1,134 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiBaseApp — shared App frame (MPI-256, Phase 4)
+
+   Mounts a `main-area` MpiOverlay (covers #tool-container + prompt box,
+   spares the status bar). Header + source-image slot + per-app content
+   slot + Run/status footer. Per-app components render into #app-content.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-base-app {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-1, oklch(0.24 0.018 350));
+    color: var(--ink-1);
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    overflow: hidden;
+}
+
+.mpi-base-app__head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    padding: var(--s-4) var(--s-5);
+    border-bottom: 1px solid var(--line);
+}
+.mpi-base-app__back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    background: none;
+    border: 0;
+    color: var(--ink-3);
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color var(--t-base) var(--ease);
+}
+.mpi-base-app__back:hover { color: var(--ink-1); }
+.mpi-base-app__back .mpi-icon { width: 12px; height: 12px; }
+.mpi-base-app__title {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+.mpi-base-app__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+}
+
+.mpi-base-app__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-base-app__label {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+
+/* Upload slot — click-to-choose; shows the chosen image once uploaded. */
+.mpi-base-app__drop {
+    display: block;
+    border: 1px dashed var(--ink-4);
+    background: var(--surface-2, oklch(0.28 0.02 350));
+    cursor: pointer;
+    aspect-ratio: 4 / 3;
+    max-width: 420px;
+    overflow: hidden;
+    transition: border-color var(--t-base) var(--ease);
+}
+.mpi-base-app__drop:hover { border-color: var(--ink-2); }
+.mpi-base-app__drop-inner {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--ink-4);
+    font-size: var(--t-sm);
+}
+.mpi-base-app__drop-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.mpi-base-app__content { display: flex; flex-direction: column; gap: var(--s-4); }
+
+/* Result pane — shows the produced image in-app (also lands as a gallery card). */
+.mpi-base-app__result {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-base-app__result[hidden] { display: none; }
+.mpi-base-app__result-media {
+    max-width: 420px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+}
+.mpi-base-app__result-media img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.mpi-base-app__foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: var(--s-4) var(--s-5);
+    border-top: 1px solid var(--line);
+}
+.mpi-base-app__status {
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+}
+.mpi-base-app__run { flex: none; min-width: 120px; }
+.mpi-base-app__run > * { width: 100%; }

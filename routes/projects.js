@@ -1343,6 +1343,8 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       true,
+            appId:          null,   // App provenance parity (MPI-256) — imports are never App gens
+            appInputs:      null,
             pixelDimensions: { w: req.body.width || 0, h: req.body.height || 0 },
             generationMs:   null,
         };
@@ -1608,7 +1610,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, appId = null, appInputs = null } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1785,6 +1787,11 @@ router.post('/project/save-generation', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,
+            // App provenance (MPI-256) — additive, top-level. null for normal PromptBox
+            // gens; the App's id + input snapshot for App gens, so Reuse can reopen the
+            // App with inputs restored (survives restart — sidecar is the source).
+            appId,
+            appInputs,
             pixelDimensions: resolvedDims ?? { w: 0, h: 0 },
             // Preview→final replace sums the previous stage's elapsed time into
             // the final sidecar so history shows aggregate generation time.
@@ -2117,6 +2124,8 @@ router.post('/project/crop-media', async (req, res) => {
             createdAt: new Date().toISOString(),
             name: null,
             uploaded: false,
+            appId: null,   // App provenance parity (MPI-256) — crops are never App gens
+            appInputs: null,
             pixelDimensions: { w: Math.round(w), h: Math.round(h) },
             generationMs: null,
             cropRect: { x, y, w, h },

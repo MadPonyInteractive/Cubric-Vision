@@ -32,6 +32,7 @@ import { getAvailableCommands, getCommandMediaInputs } from '../../../data/comma
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
 import { generationStore } from '../../../services/generationStore.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { openAppFromReuse } from '../../../services/appService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -946,6 +947,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         }
 
         async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
+            // App cards (MPI-256): Reuse reopens the App with saved inputs restored,
+            // NOT the PromptBox. Branch FIRST — above the cross-mediaType reject guard
+            // (an app result whose mediaType differs from the reused model would bail
+            // there before reaching the app branch).
+            if (openAppFromReuse(payload.item)) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 

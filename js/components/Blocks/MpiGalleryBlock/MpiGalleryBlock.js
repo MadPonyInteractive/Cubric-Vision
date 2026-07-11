@@ -23,6 +23,7 @@ import { MpiAddToProject } from '../../Compounds/MpiAddToProject/MpiAddToProject
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
+import { openAppFromReuse } from '../../../services/appService.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
@@ -1088,6 +1089,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
         }
 
         async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
+            // App cards (MPI-256): Reuse reopens the App with its saved inputs
+            // restored, NOT the PromptBox. Branch FIRST — above the _pb guard and the
+            // cross-mediaType reject — an app result whose mediaType differs from the
+            // reused model would otherwise bail before reaching here.
+            if (openAppFromReuse(payload.item)) return;
             if (!_pb?.el) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;

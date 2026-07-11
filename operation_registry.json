@@ -32,6 +32,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.0.0"
   },
+  "poseReference": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0"
+  },
   "t2v": {
     "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1"
@@ -80,6 +84,11 @@
   "resizeVideo": {
     "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1",
+    "universal": true
+  },
+  "appImageRegen": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0",
     "universal": true
   }
 }

@@ -143,6 +143,8 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 - `MpiChangelogDialog` props: none   slot: `document.createElement('div')` — "What's New" overlay. Shown once per `APP_VERSION` by `_maybeShowChangelog()` in `_bootApp`, AFTER engine/deps gates + dev-state restore, BEFORE optional Comfy auto-start. Skipped when `Storage.getLastSeenChangelogVersion() === APP_VERSION` or `getReleaseNotes(APP_VERSION)` has no content. Content set via `el.open({ version, stage, notes })`; internally mounts `MpiButton` (Done) + `MpiIcon` (per-section). Reads notes from `js/data/releaseNotes.js`. NOT an updater.
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
 - `MpiModelManager` (the **Model Library** overlay)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `models:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + an in-overlay right-drawer detail panel. Shell calls `el.open()` each time (MPI-215). Reserved slide-over stays for Settings/Hotkeys/Queue only.
+- `MpiAppLibrary` (the **App Library** overlay, MPI-256)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `apps:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + a right-drawer detail panel (reuses the GLOBAL `.mpi-detail`/`.mpi-tile` selectors from MpiModelManager.css). Shell calls `el.open()` each time. **Dev-gated** — the only emitters of `apps:open` (Gallery radial + Landing nav) are `APP_CONFIG.dev_mode`-gated.
+- `MpiBaseApp` (the **App** overlay frame, MPI-256)   props: `{ app: AppDef, uiComponent: Blueprint|null }`   slot: `document.createElement('div')` — mounted by shell on `app:open {appId}` (resolves the descriptor + maps `uiComponent` NAME → blueprint; destroys any prior active app first). Self-hosts an `MpiOverlay(mountTarget:'main-area')`; mounts the per-app `uiComponent` (e.g. `MpiAppImageRegen`) into its content slot. `el.open()` shows it; Back-to-Library = `el.close()` + `apps:open`.
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
 - `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.
@@ -191,7 +193,6 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 - `MpiButton` (run/stop)   props: `{ icon:'play', iconActive:'stop', info, size:'md', variant:'primary', toggleable:true, active:isGenerating }`   slot: fresh div appended to `#bottom-right-slot`
 - `MpiDropdown` (op dropdown)   props: `{ options: availableOps, value: activeOperation, info:'Current model operation - Also accessible by holding Tab', direction:'up' }`   slot: `#op-dropdown-slot` — refreshed on every model/context change
 - `PromptBoxControl components` (e.g. `qualityTier`, `ratio`, `batch`, `duration`, `motionIntensity`, `previewStage`)   props: `{ model }`   slot: `#settings-op-slot` (inside the settings popup, not the bottom bar) — one control per operation's `components[]` array; cleared and remounted on operation change. `qualityTier` is a no-op for orientation-mode models (renders nothing) and only mounts UI for `RATIO_MODES[model.type] === 'quality'`. The mount loop wraps each `ctrl.mount()` in try/catch + `clientLogger.error` so a single failing control no longer blocks subsequent controls in the same op.
-- `MpiButton` (download manager)   props: `{ icon:'download', variant:'ghost', size:'sm', info:'Open Download Manager' }`   slot: fresh div appended to `#bottom-left-slot` — always rendered; on click emits `Events.emit('models:open', {})`
 
 ---
 
@@ -199,6 +200,21 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 - `MpiOverlay`   props: `{ closable: true }`   slot: `document.createElement('div')`
 - `MpiCanvas`   props: none (lazy, created on first `open()` call)   slot: `#canvas-wrap`
+
+---
+
+## MpiAppLibrary.js (internal mounts, MPI-256)
+
+- `MpiOverlay`   props: `{ closable: true, mountTarget: 'body' }`   slot: `document.createElement('div')`
+- `MpiButton` (detail footer Open/Install)   props: `{ text:'Open'|'Install models', variant:'primary', size:'md', disabled?: !canOpen }`   slot: `#app-detail-actions` — rebuilt on each `openDetail()`. Open (all models installed) emits `app:open {appId}`; Install drives each missing model's `downloadService.start`.
+
+---
+
+## MpiBaseApp.js (internal mounts, MPI-256)
+
+- `MpiOverlay`   props: `{ closable: true, mountTarget: 'main-area' }`   slot: `document.createElement('div')`
+- `<per-app uiComponent>` (e.g. `MpiAppImageRegen`)   props: `{ initialInputs }`   slot: `#app-content` — the per-app controls; must expose `el.getInputs()`. BaseApp merges its return with the uploaded source image at Run.
+- `MpiButton` (Run)   props: `{ text:'Run', variant:'primary', size:'md' }`   slot: `#app-run-slot`
 
 ---
 

@@ -71,7 +71,7 @@ REMOUNT: On fresh mount, `_renderRunCluster` reconciles `isGenerating` against B
 Owns the Gallery workspace. Mounts MpiGalleryGrid, MpiMediaDropOverlay, and handles generation lifecycle. No MpiSelectionBar.
 GRID HANDLER: `grid 'add-to-project'` — `listProjects()` (excludes `state.currentProject.id`; toast if none), builds `cards[]` from each group's `getSelectedItem`, mounts `MpiAddToProject` (dropdown) on demand; on confirm POSTs `/project-media/:targetId/add-from-cards` `{ folderPath, cards }` and emits `ui:success`. Copy, not move — source untouched.
 LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox operation
-         `state:changed` (`s_installedModelIds`) — mounts/unmounts PromptBox based on installed model count; emits `models:open` if no image models (zero-model gate)
+         `state:changed` (`s_installedModelIds`) — mounts/unmounts PromptBox based on installed model count. Zero-model + empty project → shows a one-shot MpiOkCancel "Go to Projects" dialog (NOT a `models:open` auto-emit — that was removed to kill a re-open flicker loop). Zero-model + existing media → read-only browse, no prompt.
          `media:imported` `{ url, filename, itemId, mediaType }` — creates ItemGroup from OS-dropped file; registered unconditionally (not gated by PromptBox presence)
          `generation:started` `{ id, scope, tempId, placeholderGroup, extraTempIds, extraPlaceholders, replaceItemId }` — seeds `_myGenIds`; in Queue mode only the first running generation's placeholders are visible. Block uses `replaceItemId` to flip queued-Continue cards from "Queued…" → "Generating final…"
          `generation:preview` `{ id, url }` — updates preview only for the first running visible placeholder set
@@ -81,7 +81,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
 EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
-         `models:open` — when zero image models installed
+         `app:open` `{ appId }` (MPI-256) — via `openAppFromReuse(payload.item)` at the TOP of `_applyPromptReuse`: Reuse on an app card (sidecar `appId`) reopens the App with `appInputs` restored instead of filling the PromptBox. Deferred one tick past the reuse popup's `ui:close-all-popups`. Missing model → `apps:open` + `ui:warning` instead.
          `gallery:item-updated` `{ groupId, item, group }` — fired by `generationService` after a `replaceItemId` run mutates an existing history slot (preview → final). Block listens and refreshes the matching card via `grid.el.refreshGroup(group)`; clears any continuing-state flag.
          `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
          `grid.on('rename')` handler: `({ group }) => updateGroup(group)` — persists `group.customName` (same path as `grid.on('favourite')`). customName lives inline in `project.json` `itemGroups[]`; `persistGroups()` must whitelist the key (it is not spread).
@@ -107,6 +107,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled`    `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
+         `app:open` `{ appId }` (MPI-256) — via `openAppFromReuse(payload.item)` at the TOP of `_applyPromptReuse` (above the cross-mediaType reject): Reuse on an app card reopens the App with `appInputs` restored. Same helper/behavior as the Gallery block.
 NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          On mount: rehydrates from `activeGenerations.listFor('groupHistory', _group.id)` — canvas shows cached preview immediately
          `destroy()` unsubscribes all events but does NOT cancel exec — generation continues across navigation

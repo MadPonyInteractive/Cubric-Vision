@@ -1,9 +1,11 @@
 /* ═══════════════════════════════════════════════════════════════
    MpiOverlay — Page Overlay Primitive
 
-   Two mount modes:
+   Three mount modes:
      .mpi-overlay--tool — injected into #tool-container (sidebar/titlebar visible)
      .mpi-overlay--body — injected into document.body with backdrop (full viewport)
+     .mpi-overlay--main — injected into .main-area (covers tool-container + prompt-box,
+                          leaves #shell-info-bar live; publishes --app-overlay-z)
 ═══════════════════════════════════════════════════════════════ */
 
 /* ── Stash: hidden container for background DOM ─────────────── */
@@ -50,6 +52,16 @@
 .mpi-overlay--body {
     inset: var(--titlebar-h) 0 0 0;
     z-index: 10010; /* fallback; JS overrides via inline style */
+}
+
+/* ── Main-area mode — covers tool-container + prompt-box, spares status bar ── */
+/* position:absolute inside .main-area (position:relative). Bottom inset =
+   --statusbar-h so #shell-info-bar stays visible + interactive below. */
+.mpi-overlay--main {
+    position: absolute;
+    inset: 0 0 var(--statusbar-h, 32px) 0;
+    z-index: 10010; /* fallback; JS overrides via inline style + publishes --app-overlay-z */
+    background: var(--surface-0);
 }
 
 @keyframes mpi-overlay-fadein {

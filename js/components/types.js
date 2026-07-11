@@ -648,6 +648,67 @@
  */
 
 /**
+ * @typedef {Object} MpiAppLibraryProps (Compound — js/components/Compounds/LandingPages/MpiAppLibrary)
+ *
+ * Takes no props. The App Library (MPI-256, dev-gated): a clone of the Model
+ * Library skeleton stripped to app scope. Self-hosts a full-page MpiOverlay(body)
+ * as a dark contact sheet of app tiles (preview + title + availability badge from
+ * appAvailability, read-only over s_installedModelIds), with a right-drawer detail
+ * panel carrying the description, the required-models install state, and ONE footer
+ * button — all-installed → Open (emits `app:open`, Gallery-only), missing → Install
+ * (drives each missing model's own dependency download). No ops/arch toggles, VRAM
+ * table, filters, or re-sync — availability derives entirely from the installed set,
+ * so download:* events only re-derive badges in place (never a full re-render).
+ *
+ * Opened via: Events.emit('apps:open') → shell mounts it once and calls el.open().
+ * Emits: `app:open` {appId} when Open is clicked in the Gallery.
+ *
+ * Instance methods (on instance.el):
+ *   open()    — shows the overlay + renders the app grid (alias: onOpen).
+ *   close()   — hides the overlay.
+ *   destroy() — tears down subscriptions, tiles, detail buttons, and the overlay.
+ */
+
+/**
+ * @typedef {Object} MpiBaseAppProps (Organism — js/components/Organisms/MpiBaseApp)
+ * @property {import('../data/appsRegistry.js').AppDef} app - The app descriptor.
+ * @property {Object|null} [uiComponent] - The per-app controls blueprint (mounted
+ *   into the content slot; must expose el.getInputs()). Null for a frame-only app.
+ * @property {Object} [initialInputs] - Optional seed inputs (overridden by
+ *   state.s_appInputs[app.id] when present).
+ *
+ * The shared App frame (MPI-256, Phase 4). COMPOSITION: mounts a `main-area`
+ * MpiOverlay (covers #tool-container + prompt box, spares #shell-info-bar), renders
+ * header (title + Back-to-Library) + a source-image upload slot + a content slot the
+ * uiComponent fills + a Run button + a status line. Run merges the uploaded image
+ * mediaItem with the uiComponent's getInputs() → submitAppGeneration(app, inputs);
+ * results land as normal gallery cards. Seeds/writes state.s_appInputs[app.id]
+ * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
+ * el.close() then Events.emit('apps:open').
+ *
+ * Mounted via: Events.emit('app:open', {appId}) → shell resolves the descriptor +
+ * uiComponent and mounts one instance (destroying any prior active app).
+ *
+ * Instance methods (on instance.el):
+ *   open()/close() — show/hide the overlay (alias onOpen).
+ *   destroy()      — tears down subs, the per-app component, and the overlay.
+ */
+
+/**
+ * @typedef {Object} MpiAppImageRegenProps (Organism — js/components/Organisms/MpiAppImageRegen)
+ * @property {Object} [initialInputs] - Seed inputs ({positive}) from a prior run.
+ *
+ * The first App's controls (image-in → image-out regen): a single positive-prompt
+ * textarea rendered into MpiBaseApp's content slot. Exposes el.getInputs() →
+ * {positive}, which BaseApp merges with the uploaded image before Run. Controls
+ * only — the frame, upload, Run, and result come from MpiBaseApp.
+ *
+ * Instance methods (on instance.el):
+ *   getInputs() — returns {positive} (trimmed prompt text).
+ *   destroy()   — removes the input listener.
+ */
+
+/**
  * @typedef {Object} MpiCheckboxProps (Primitive — js/components/Primitives/MpiCheckbox)
  * @property {boolean} [checked=false]   - Initial checked state.
  * @property {string}  [label='']        - Optional label text; omit for a standalone checkbox.

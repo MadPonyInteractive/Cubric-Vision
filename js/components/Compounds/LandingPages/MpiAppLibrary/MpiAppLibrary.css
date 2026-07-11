@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiAppLibrary — App Library (MPI-256)
+
+   A dev-gated clone of the Model Library skeleton (MpiModelManager),
+   stripped to app scope: a contact-sheet grid of app tiles + a
+   right-drawer detail panel with required-models install state and one
+   Open/Install footer button.
+
+   Reuses the GLOBAL .mpi-tile and .mpi-detail selectors defined by
+   MpiModelManager.css (both stylesheets are always preloaded) — this
+   file only carries the .mpi-app-library shell + the overlay full-bleed
+   override + the required-models list.
+═══════════════════════════════════════════════════════════════ */
+
+/* Full-bleed override of the shared MpiOverlay chrome — twin of the
+   Model Library's (:has() scoped so no other overlay is affected). */
+.mpi-overlay--body:has(.mpi-app-library) {
+    padding: 0;
+    align-items: stretch;
+}
+.mpi-overlay--body:has(.mpi-app-library) .mpi-overlay__container {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+}
+/* Overlay X above the grid+scrim (z-30) but below the detail drawer (z-40). */
+.mpi-overlay--body:has(.mpi-app-library) .mpi-overlay__close {
+    z-index: 35;
+}
+
+.mpi-app-library {
+    /* Same dark ground as the Model Library so the two picker overlays match. */
+    --lib-bg: oklch(0.26 0.020 350);
+    --lib-panel: oklch(0.23 0.020 350);
+    --lib-canvas: oklch(0.28 0.020 350);
+
+    position: relative;
+    height: 100%;
+    background: var(--lib-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    color: var(--ink-1);
+}
+
+.mpi-app-library__head {
+    padding: var(--s-5) var(--s-6) var(--s-4);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+}
+.mpi-app-library__title {
+    font-size: var(--t-xl, 32px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0 0 var(--s-2);
+}
+.mpi-app-library__sub {
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    margin: 0;
+}
+
+.mpi-app-library__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-5) var(--s-6) var(--s-6);
+}
+.mpi-app-library__body::-webkit-scrollbar { width: 10px; }
+.mpi-app-library__body::-webkit-scrollbar-thumb { background: var(--line); }
+.mpi-app-library__body::-webkit-scrollbar-track { background: transparent; }
+
+.mpi-app-library__sheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--s-4);
+    align-items: start;
+}
+
+.mpi-app-library__empty {
+    padding: var(--s-6) 0;
+    color: var(--ink-4);
+    font-size: var(--t-sm);
+    text-align: center;
+}
+
+/* Required-models list in the detail drawer */
+.mpi-detail__models {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-detail__model-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+}

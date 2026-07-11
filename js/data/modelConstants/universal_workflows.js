@@ -31,4 +31,7 @@ export const UNIVERSAL_WORKFLOWS = {
     resizeVideo: {
         workflow: 'resize_video.json',
     },
+    appImageRegen: {
+        workflow: 'App_sdxl_regen.json',
+    },
 };

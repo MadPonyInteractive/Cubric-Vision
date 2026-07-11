@@ -69,6 +69,12 @@ const _state = {
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
                                // Updated by the 'models:checked' event from modelRegistry.
 
+    // ── App inputs (session-only, MPI-256) ─────────────────────────────────────
+    s_appInputs: {},            // { [appId]: Object } — per-App last-collected inputs, so an
+                               // App overlay restores its controls on close→reopen. Session-only,
+                               // NOT persisted (across-restart restore comes from the sidecar, not
+                               // here). ALWAYS top-level replace: state.s_appInputs = { ...state.s_appInputs, [id]: {...} }.
+
     // ── Download Manager ───────────────────────────────────────────────────────
     downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery
     downloadQueueActive: false, // true when any download is in progress

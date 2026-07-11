@@ -277,9 +277,13 @@ export const MpiQueuePanel = ComponentFactory.create({
             const ratio = _ratioLabel(job);
             const dimensions = _dimensionsLabel(job);
             const meta = ce('div', { className: 'mpi-queue-panel__meta' });
+            // App gens (job.appTitle) show just the App name — the underlying
+            // universal op ("APPIMAGEREGEN") is an implementation detail, not a model.
             meta.appendChild(ce('span', {
                 className: 'mpi-queue-panel__meta-line mpi-queue-panel__meta-line--primary',
-                textContent: [job.modelName, _formatOperation(job.operation)].filter(Boolean).join(' / '),
+                textContent: job.appTitle
+                    ? job.appTitle
+                    : [job.modelName, _formatOperation(job.operation)].filter(Boolean).join(' / '),
             }));
             const sizeLabel = ratio && dimensions ? `${ratio} \u00b7 ${dimensions}` : ratio || dimensions;
             if (sizeLabel) {

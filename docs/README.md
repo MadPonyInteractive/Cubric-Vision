@@ -37,6 +37,7 @@ NOT mechanically split these):
 | Utilities (dom, icons, ratios, seed) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | UI & component contracts (18 gotchas) | [ui-gotchas.md](ui-gotchas.md) |
+| Apps (App Library + App overlays, MPI-256) | [apps.md](apps.md) |
 
 ### ComfyUI / generation
 | Topic | Doc |

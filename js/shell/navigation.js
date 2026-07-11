@@ -272,7 +272,10 @@ Events.on('state:changed', ({ key, value }) => {
  */
 function _syncRadial(page) {
     const extraItems = APP_CONFIG.dev_mode
-        ? [{ action: 'components', label: 'Components', icon: 'grid' }]
+        ? [
+            { action: 'components', label: 'Components', icon: 'grid' },
+            { action: 'apps', label: 'Apps', icon: 'layers' }, // App Library (MPI-256), dev-gated
+          ]
         : [];
 
     if (!_radialInstance) {
@@ -287,6 +290,10 @@ function _syncRadial(page) {
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {
                 _loadComponentsGallery();
+                return;
+            }
+            if (action === 'apps') {
+                Events.emit('apps:open'); // App Library overlay (MPI-256, dev-gated)
                 return;
             }
             Events.emit('workspace:set-operation', { operation: action });

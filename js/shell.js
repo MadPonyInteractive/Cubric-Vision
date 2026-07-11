@@ -22,6 +22,10 @@ import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiSta
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/MpiChangelogDialog.js';
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
+import { MpiAppLibrary } from './components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.js';
+import { MpiBaseApp } from './components/Organisms/MpiBaseApp/MpiBaseApp.js';
+import { MpiAppImageRegen } from './components/Organisms/MpiAppImageRegen/MpiAppImageRegen.js';
+import { getAppById } from './data/appsRegistry.js';
 import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { getModelsByType } from './data/modelRegistry.js';
 import { APP_VERSION } from './core/appVersion.js';
@@ -348,6 +352,34 @@ async function _bootApp() {
   Events.on('models:open', () => {
     if (!_modelLibrary) _modelLibrary = MpiModelManager.mount(document.createElement('div'));
     _modelLibrary.el.open();
+  });
+
+  // App Library — same lazy-singleton pattern as the Model Library (MPI-256).
+  // Dev-gated: the only emitters of apps:open (Gallery radial + Landing nav) are
+  // themselves APP_CONFIG.dev_mode-gated, so a staged build never opens it.
+  let _appLibrary = null;
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('apps:open', () => {
+    if (!_appLibrary) _appLibrary = MpiAppLibrary.mount(document.createElement('div'));
+    _appLibrary.el.open();
+  });
+
+  // app:open {appId} — the App Library's Open button. Mount MpiBaseApp with the
+  // resolved descriptor + its per-app controls component (name → blueprint map;
+  // the descriptor's uiComponent is a string so the registry stays import-free).
+  // One live App at a time — destroy the prior instance before mounting the next.
+  const _appComponents = { MpiAppImageRegen };
+  let _activeApp = null;
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('app:open', ({ appId }) => {
+    const app = getAppById(appId);
+    if (!app) return;
+    if (_activeApp) { _activeApp.el.destroy(); _activeApp = null; }
+    _activeApp = MpiBaseApp.mount(document.createElement('div'), {
+      app,
+      uiComponent: _appComponents[app.uiComponent] || null,
+    });
+    _activeApp.el.open();
   });
 
   // ComfyUI Auto-start (optional). Local boot only here — when auto-connecting to a

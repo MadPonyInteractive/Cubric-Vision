@@ -176,6 +176,8 @@ async function _constructSyntheticItem(id, folderPath) {
         createdAt: new Date().toISOString(),
         name: null,
         uploaded: true,
+        appId: null,   // App provenance parity (MPI-256) — synthetic/imported items are never App gens
+        appInputs: null,
         pixelDimensions: hit.resolution
             ? _parseResolution(hit.resolution)
             : (isVideo ? { w: 0, h: 0 } : { w: 0, h: 0 }),
