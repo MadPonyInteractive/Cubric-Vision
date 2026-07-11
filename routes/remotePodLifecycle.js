@@ -131,7 +131,15 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // .mpi_node_commit; wrapper 0.2.33 + manifest schema v2 with nodes[]). Skipped
 // v0.13.0 to avoid overwriting the MPI-191 experiment tag. Built on the same
 // proven 2.10+cu130 cold stack (torch unchanged). See MPI-222 changelog.
-const POD_IMAGE_VERSION = 'v0.14.0';
+// MPI-244: v0.15.0 = bake comfyui_controlnet_aux (Krea2's baked CN dep —
+// installRequirements:true; the code-only ComfyUI-Krea2-ControlNet is
+// installRequirements:false = volume-installed, no bake). Krea2 t2i cannot run
+// on the REMOTE engine without these node classes (ComfyUI validates every node
+// before MpiIfElse branches). Torch trap resolved: controlnet_aux lists bare
+// torch/torchvision but our 2.12.0+cu130 satisfies it; the Dockerfile re-pins the
+// cu130 trio after node requirements resolve (never let PyPI's +cu13x-less wheel
+// win). Built on the same cu130 stack (torch unchanged). See MPI-244.
+const POD_IMAGE_VERSION = 'v0.15.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
@@ -152,7 +160,11 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // present + pullable on GHCR). The GPU pin bumped to v0.14.0 but this CPU pin was
 // missed — CPU pods kept pulling the old v0.11.0 image (new wrapper via R2 stable,
 // but the image-baked start-cpu.sh + bake logic were stale). Bumped to match.
-const POD_IMAGE_VERSION_CPU = 'v0.14.0';
+// v0.15.0-cpu (MPI-244): rebuilt in the same CI dispatch as the GPU image (both
+// legs run from the synced node_lock.json). controlnet_aux is a GPU-only baked
+// node; the cpu image gains nothing from it, but it is rebuilt from the same tree
+// so keep the tags in lockstep to avoid the v0.10.3-cpu 404 trap above.
+const POD_IMAGE_VERSION_CPU = 'v0.15.0';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
