@@ -112,9 +112,8 @@ export const MpiModelManager = ComponentFactory.create({
         // ── Live search query (name / dropdownMeta) ───────────────────────────
         let _searchQuery = '';
 
-        // Tracks whether the app is connected to a cloud (RunPod) engine. Remote
-        // downloads have no pause/resume API, so cards hide the Pause button when
-        // this is true. Kept in sync via the remote:connection event. (MPI-140)
+        // Tracks whether the app is connected to a cloud (RunPod) engine. Kept in
+        // sync via the remote:connection event. (MPI-140)
         let _isRemote = false;
 
         // ── Size-tier UI (MPI-168) ───────────────────────────────────────────
@@ -989,16 +988,17 @@ export const MpiModelManager = ComponentFactory.create({
                 });
                 detailActions.appendChild(primary.el); _detailActionBtns.push(primary);
             } else if (st.isBusy) {
-                if (st.downloadState === 'downloading' && !_isRemote) {
-                    const pause = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
-                    pause.on('click', () => downloadService.pause(model.id));
-                    detailActions.appendChild(pause.el); _detailActionBtns.push(pause);
-                } else if (st.downloadState === 'paused') {
-                    const resume = MpiButton.mount(ce('div'), { text: 'Resume', variant: 'primary', size: 'md' });
-                    resume.on('click', () => downloadService.resume(model.id));
-                    detailActions.appendChild(resume.el); _detailActionBtns.push(resume);
-                }
-                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                // Cancel only — Pause/Resume removed (MPI-258 Bug 2). Resume was for the
+                // old parallel-download model; installs are sequential now (MPI-184), so
+                // pause lost its purpose. It also corrupted large files: NDH resumes with
+                // `Range: bytes=<n>-` on a file opened in append mode; when R2/Cloudflare
+                // answers 200 (full body) instead of 206, NDH appends the WHOLE file onto
+                // the partial → SHA256 mismatch (observed live on the 25GB LTX transformer).
+                // Cancel does a clean stop() (removeOnStop) — no resume, no corruption.
+                // secondary (not ghost): ghost has no border/bg and was near-invisible
+                // unhovered against the dark detail panel — Cancel needs a visible resting
+                // affordance now that it's the only busy action. (MPI-258)
+                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'md' });
                 cancel.on('click', () => downloadService.cancel(model.id));
                 detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
             } else {
@@ -1206,8 +1206,6 @@ export const MpiModelManager = ComponentFactory.create({
         // renderList() on download:complete.
         _unsubs.push(Events.on('download:started', ({ modelId }) => { _patchTile(modelId); }));
 
-        _unsubs.push(Events.on('download:paused', ({ modelId }) => { _patchTile(modelId); }));
-        _unsubs.push(Events.on('download:resumed', ({ modelId }) => { _patchTile(modelId); }));
         _unsubs.push(Events.on('download:installing', ({ modelId }) => { _patchTile(modelId); }));
 
         _unsubs.push(Events.on('download:cancelled', () => { awaitReSync(); }));

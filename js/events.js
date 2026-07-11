@@ -125,8 +125,6 @@ export const Events = new EventBus();
  * 'download:progress'     { modelId: string, progress: number, speed: string, downloadedBytes: number, totalBytes: number } — download progress update
  * 'download:complete'     { modelId: string }                      — download succeeded
  * 'download:failed'       { modelId: string, error: string }       — download failed
- * 'download:paused'       { modelId: string }                      — download paused by user
- * 'download:resumed'      { modelId: string }                      — download resumed by user
  * 'download:cancelled'    { modelId: string }                      — download cancelled by user
  * 'download:uninstalled'  { modelId: string }                      — model files uninstalled
  * 'download:installing'   { modelId: string }                      — custom node install in progress

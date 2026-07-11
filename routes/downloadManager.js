@@ -1,13 +1,14 @@
 /**
- * routes/downloadManager.js — Non-blocking download manager with resume support.
+ * routes/downloadManager.js — Non-blocking, single-stream download manager.
  *
  * Endpoints:
  *   POST /comfy/models/download/start   — enqueue a model's deps
- *   POST /comfy/models/download/pause
- *   POST /comfy/models/download/resume
- *   POST /comfy/models/download/cancel
+ *   POST /comfy/models/download/cancel  — clean stop + remove partial (no resume)
  *   GET  /comfy/downloads/status         — full queue snapshot
  *   GET  /comfy/downloads/stream         — SSE stream
+ *
+ * Downloads do NOT resume (MPI-258 Bug 2): NDH resume appended a full 200 response
+ * onto a partial → SHA256 corruption. A cancelled/interrupted download restarts clean.
  */
 
 'use strict';
@@ -35,7 +36,6 @@ const {
     isCompleteOnDisk,
     markDownloadInProgress,
     clearDownloadMarker,
-    getPartialDownloadState,
 } = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
 const remoteModels = require('./remoteModels');
@@ -245,7 +245,6 @@ function _isInsidePath(root, target) {
 const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
 const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
-const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
 // 3 parallel deps. Was 1 (commit 47e924a) only because parallel HF/Xet streams
 // fought over throttled bandwidth and made each other worse. Now that all MPI
 // weights are on R2 (free egress, no wave-throttle, MPI-129), parallel pulls no
@@ -253,11 +252,6 @@ const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, 
 // faster. Kept modest — a single R2 stream already saturates a typical link, so
 // 3 overlaps small deps with large ones without thrashing. (MPI-140)
 const LOCAL_DOWNLOAD_CONCURRENCY = 3;
-const SLOW_RECONNECT_MIN_BEST_BPS = 5 * 1024 * 1024;
-const SLOW_RECONNECT_MIN_BPS = 512 * 1024;
-const SLOW_RECONNECT_RATIO = 0.15;
-const SLOW_RECONNECT_AFTER_MS = 45000;
-const SLOW_RECONNECT_COOLDOWN_MS = 120000;
 
 function _createDepJob(dep) {
     return {
@@ -335,6 +329,10 @@ function _createModelJob(modelId, deps) {
 }
 
 // ── ResumableDownloader (node-downloader-helper wrapper) ─────────────────────
+// NB: "Resumable" is historical — resume was removed (MPI-258 Bug 2, the 200-vs-206
+// append corruption). This is now a plain single-stream NDH wrapper: start, cancel
+// (clean stop + remove), no pause/resume. Kept the class name to avoid churning every
+// call site. NDH itself stays — it downloads every engine + model file.
 
 class ResumableDownloader {
     constructor(depJob, localPath) {
@@ -343,10 +341,6 @@ class ResumableDownloader {
         this._downloader = null;
         this.onProgress = null;
         this._eventsBound = false;
-        this._bestSpeed = 0;
-        this._slowSince = 0;
-        this._lastSlowReconnectAt = 0;
-        this._slowReconnectInFlight = false;
     }
 
     _bindEvents() {
@@ -359,7 +353,6 @@ class ResumableDownloader {
             this.depJob.downloadedBytes = stats.downloaded;
             this.depJob.totalBytes = stats.total;
             this.depJob.speed = _formatSpeed(speed);
-            this._maybeRecoverSlowStream(speed, stats.downloaded, stats.total);
             if (this.onProgress) {
                 this.onProgress(stats.downloaded, stats.total, this.depJob.speed);
             }
@@ -438,23 +431,11 @@ class ResumableDownloader {
         const fileName = path.basename(this.localPath);
         const destDir = path.dirname(this.localPath);
 
-        // DO NOT add `resumeIfFileExists`/`override` here. They route start()
-        // through an async getTotalSize()→resumeFromFile() chain, so this.__request
-        // is not yet set when pause()/abort() runs immediately after start() — the
-        // abort misses and the stream keeps downloading after a Pause. In-session
-        // pause/resume relies on the synchronous start() path below.
-        //   - In-session resume uses the SAME instance via resume() (getResumeState
-        //     + resumeFromFile), which is independent of these constructor options.
-        //   - The cross-restart "(1)" duplication that resumeIfFileExists/override
-        //     would have addressed is instead handled by explicitly scrubbing stale
-        //     archives/.part/dups BEFORE download (see _clearStaleWindowsEngineArtifacts
-        //     in routes/engine.js). That keeps the fragile pause path untouched.
-        // `resume` is not a real node-downloader-helper option (silently ignored),
-        // but it is left as a harmless marker of intent; do not "fix" it to
-        // resumeIfFileExists — that reintroduces the pause race.
+        // DO NOT add `resumeIfFileExists`/`override`. download() scrubs any stale/partial
+        // file before start() so NDH always writes one clean copy (no " (1)" dup). We do
+        // NOT resume partials at all (MPI-258 Bug 2), so no resume option belongs here.
         this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
             fileName: fileName,
-            resume: true,
             // NDH default timeout is -1 (no socket timeout) → a black-hole route
             // (DNS resolves but the server never responds) hangs at 0% forever.
             // 30s socket timeout makes a stalled connection emit 'error' instead
@@ -466,94 +447,16 @@ class ResumableDownloader {
         this._bindEvents();
     }
 
-    _maybeRecoverSlowStream(speed, downloaded, total) {
-        // DISABLED (MPI-129): the pause()→resumeFromFile() recover path races the
-        // live NDH socket — old socket pushes bytes into a WriteStream resume has
-        // already ended → ERR_STREAM_WRITE_AFTER_END, an UNHANDLED 'error' that
-        // crashes the whole server (observed 2026-06-25 on ltx23-gemma-clip, HF
-        // throttled to 101 KB/s, bogus best=6554 MB/s baseline). Net value was
-        // negative: zero saves, one server-kill. HF/Xet wave-throttling self-
-        // recovers on its own, so riding it out beats reconnecting. The real fix
-        // is the R2 migration (this card); remove this method + the _bestSpeed/
-        // _slowSince/_slowReconnect* fields + SLOW_RECONNECT_* consts once the
-        // last HF URL is gone. No-op until then.
-        return;
-        if (!this._downloader || this.depJob.status !== 'downloading') return;
-        if (this._slowReconnectInFlight) return;
-        if (!downloaded || (total && downloaded >= total)) return;
-
-        const now = Date.now();
-        if (speed > this._bestSpeed) this._bestSpeed = speed;
-
-        const hadHealthySpeed = this._bestSpeed >= SLOW_RECONNECT_MIN_BEST_BPS;
-        const isVerySlow = speed > 0
-            && speed < SLOW_RECONNECT_MIN_BPS
-            && speed < this._bestSpeed * SLOW_RECONNECT_RATIO;
-
-        if (!hadHealthySpeed || !isVerySlow) {
-            this._slowSince = 0;
-            return;
-        }
-
-        if (!this._slowSince) {
-            this._slowSince = now;
-            return;
-        }
-
-        const slowForMs = now - this._slowSince;
-        const sinceReconnectMs = now - this._lastSlowReconnectAt;
-        if (slowForMs < SLOW_RECONNECT_AFTER_MS || sinceReconnectMs < SLOW_RECONNECT_COOLDOWN_MS) return;
-
-        this._recoverSlowStream(speed).catch(err => {
-            logger.warn('download', `slow-stream reconnect failed for ${this.depJob.id}: ${err.message}`);
-        });
-    }
-
-    async _recoverSlowStream(speed) {
-        if (!this._downloader || this._slowReconnectInFlight) return;
-        this._slowReconnectInFlight = true;
-        this._lastSlowReconnectAt = Date.now();
-        this._slowSince = 0;
-
-        try {
-            const state = this._downloader.getResumeState();
-            logger.warn('download', `slow-stream reconnect for ${this.depJob.id}: current=${_formatSpeed(speed)}, best=${_formatSpeed(this._bestSpeed)}`);
-            await this._downloader.pause().catch(() => false);
-            if (this.depJob.status !== 'downloading') return;
-            this._downloader.resumeFromFile(state.filePath, {
-                downloaded: state.downloaded,
-                total: state.total,
-                fileName: state.fileName,
-            }).catch(err => logger.warn('download', `slow-stream resume failed for ${this.depJob.id}: ${err.message}`));
-        } finally {
-            this._bestSpeed = 0;
-            this._slowReconnectInFlight = false;
-        }
-    }
-
     async download() {
         await this._ensureDownloader();
-        const partial = await getPartialDownloadState(this.localPath);
-        if (partial.resumable) {
-            await markDownloadInProgress(this.localPath, {
-                depId: this.depJob.id,
-                url: this.depJob.url,
-                resumedAt: new Date().toISOString(),
-            });
-            this.depJob.downloadedBytes = partial.downloaded;
-            this._downloader.resumeFromFile(partial.filePath, {
-                downloaded: partial.downloaded,
-                fileName: partial.fileName,
-            }).catch(() => {});
-            return;
-        }
-        // Not resumable but a file may still sit at localPath: a stale COMPLETE
-        // download whose marker was already cleared (e.g. a prior batch that
-        // downloaded the zip but aborted before extraction — MPI-243). NDH would
-        // see the existing destination and append " (1)" to the filename, leaking
-        // an orphaned duplicate (RES4LYF (1).zip et al.). Installed deps are marked
-        // complete upstream and never reach download(), so any file here is stale —
-        // scrub it so start() writes a clean single copy.
+        // MPI-258 Bug 2: NEVER resume a leftover .part. NDH resumes with
+        // `Range: bytes=<n>-` on a file opened in append mode; when R2/Cloudflare
+        // answers 200 (full body) instead of 206, it appends the WHOLE file onto the
+        // partial → SHA256 mismatch (observed live on the 25GB LTX transformer). A
+        // stale/partial file at localPath is always scrubbed for a clean single-stream
+        // start. (Also covers the MPI-243 " (1)" duplicate: a stale COMPLETE file whose
+        // marker was already cleared — installed deps are marked complete upstream and
+        // never reach download(), so any file here is stale.)
         await fs.remove(this.localPath).catch(() => {});
         await markDownloadInProgress(this.localPath, {
             depId: this.depJob.id,
@@ -562,28 +465,10 @@ class ResumableDownloader {
         this._downloader.start();
     }
 
-    abort() {
-        if (this._downloader) {
-            setImmediate(() => {
-                this._downloader.pause().catch(() => {});
-            });
-        }
-    }
-
     async cancel() {
         if (this._downloader) {
             await this._downloader.stop().catch(() => false);
         }
-    }
-
-    resume() {
-        if (!this._downloader) return;
-        const state = this._downloader.getResumeState();
-        this._downloader.resumeFromFile(state.filePath, {
-            downloaded: state.downloaded,
-            total: state.total,
-            fileName: state.fileName,
-        }).catch(() => {});
     }
 }
 
@@ -909,19 +794,6 @@ async function _startPendingDeps() {
     let started = 0;
     for (const depJob of pending) {
         if (started >= slots) break;
-        // Resume a paused downloader (same instance — node-downloader-helper picks up from .part file)
-        if (_pausedDownloaders.has(depJob.id)) {
-            const downloader = _pausedDownloaders.get(depJob.id);
-            _pausedDownloaders.delete(depJob.id);
-            _activeDownloaders.set(depJob.id, downloader);
-            depJob.status = 'downloading';
-            // Re-wire progress in case the same dep is shared across model jobs
-            _wireProgress(depJob, downloader);
-            downloader.resume();
-            started += 1;
-            continue;
-        }
-
         if (_activeDownloaders.has(depJob.id)) {
             continue;
         }
@@ -1804,51 +1676,10 @@ async function _runCustomNodeInstall(modelJob) {
     _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });
 }
 
-// ── Pause / Resume / Cancel ───────────────────────────────────────────────────
-
-router.post('/comfy/models/download/pause', (req, res) => {
-    const { modelId } = req.body;
-    const job = _modelJobs.get(modelId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    // Remote installs stream on the Pod and have no resumable .part — pause is
-    // not supported; the install keeps running rather than break the button.
-    if (remoteModels.isRemoteActive()) {
-        return res.json({ success: true, remoteUnsupported: 'pause' });
-    }
-    job.status = 'paused';
-    job.deps.forEach(d => {
-        if (d.status === 'downloading') {
-            const dl = _activeDownloaders.get(d.id);
-            if (dl) {
-                dl.abort();
-                _activeDownloaders.delete(d.id);
-                // Keep the instance so resume can call .download() on the same object
-                _pausedDownloaders.set(d.id, dl);
-            }
-            d.status = 'paused';
-        }
-    });
-    _recalculateModelJobProgress(job);
-    _broadcast('download:paused', _downloadJobEventPayload(job));
-    _startPendingDeps();
-    res.json({ success: true });
-});
-
-router.post('/comfy/models/download/resume', (req, res) => {
-    const { modelId } = req.body;
-    const job = _modelJobs.get(modelId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    if (remoteModels.isRemoteActive()) {
-        return res.json({ success: true, remoteUnsupported: 'resume' });
-    }
-    job.status = 'downloading';
-    _resetModelSpeed(job);
-    job.deps.forEach(d => { if (d.status === 'paused') d.status = 'queued'; });
-    _recalculateModelJobProgress(job);
-    _broadcast('download:resumed', _downloadJobEventPayload(job));
-    _startPendingDeps();
-    res.json({ success: true });
-});
+// ── Cancel ────────────────────────────────────────────────────────────────────
+// Pause/Resume removed (MPI-258 Bug 2): NDH resume appended a full 200 response onto
+// a partial → SHA256 corruption. Cancel does a clean stop() + remove; a fresh install
+// re-downloads single-stream. Installs are queued (MPI-184) so pause had little value.
 
 router.post('/comfy/models/download/cancel', async (req, res) => {
     const { modelId } = req.body;
@@ -1876,11 +1707,10 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
                 // re-derives a clean readout. Best-effort — never hard-fail cancel.
                 await remoteModels.remoteUninstallDep(dep).catch(() => {});
             }
-            const dl = _activeDownloaders.get(dep.id) || _pausedDownloaders.get(dep.id);
+            const dl = _activeDownloaders.get(dep.id);
             if (dl) {
                 await dl.cancel();
                 _activeDownloaders.delete(dep.id);
-                _pausedDownloaders.delete(dep.id);
             }
             if (dep.localPath) clearDownloadMarker(dep.localPath).catch(() => {});
             dep.status = 'cancelled';
@@ -2117,11 +1947,7 @@ function cancelAllDownloads() {
     for (const [, downloader] of _activeDownloaders) {
         downloader.cancel().catch(() => {});
     }
-    for (const [, downloader] of _pausedDownloaders) {
-        downloader.cancel().catch(() => {});
-    }
     _activeDownloaders.clear();
-    _pausedDownloaders.clear();
     for (const [, job] of _modelJobs) {
         job.deps.forEach(d => { d.status = 'cancelled'; });
         job.status = 'cancelled';
@@ -2348,23 +2174,9 @@ function clearEngineDownload() {
     _activeEngineDownloadId = null;
 }
 
-router.post('/engine/pause', (req, res) => {
-    if (!_activeEngineDownloader) {
-        return res.status(404).json({ error: 'No active engine download to pause' });
-    }
-    _activeEngineDownloader.abort();
-    logger.info('engine', `Engine download paused: ${_activeEngineDownloadId}`);
-    res.json({ success: true });
-});
-
-router.post('/engine/resume', (req, res) => {
-    if (!_activeEngineDownloader) {
-        return res.status(404).json({ error: 'No paused engine download to resume' });
-    }
-    _activeEngineDownloader.resume();
-    logger.info('engine', `Engine download resumed: ${_activeEngineDownloadId}`);
-    res.json({ success: true });
-});
+// /engine/pause + /engine/resume removed (MPI-258 Bug 2): resume corrupted large
+// files (NDH 200-vs-206 append) and had no frontend caller. Engine download is
+// cancel-only via the existing cancel path.
 
 module.exports = {
     router,

@@ -157,29 +157,8 @@ const downloadService = {
         return true; // POST accepted — serialize the next install behind this one
     },
 
-    async pause(modelId) {
-        const res = await fetch('/comfy/models/download/pause', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelId }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ error: 'Failed to pause download' }));
-            Events.emit('ui:error', { title: 'Pause Failed', message: err.error });
-        }
-    },
-
-    async resume(modelId) {
-        const res = await fetch('/comfy/models/download/resume', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelId }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ error: 'Failed to resume download' }));
-            Events.emit('ui:error', { title: 'Resume Failed', message: err.error });
-        }
-    },
+    // pause()/resume() removed (MPI-258 Bug 2): NDH resume corrupted large files.
+    // Downloads are cancel-only; an interrupted install restarts clean.
 
     async cancel(modelId) {
         // MPI-184: a still-queued job (serial install queue, POST not fired) is unknown
@@ -188,13 +167,19 @@ const downloadService = {
         // locally in that case so the UI updates. (The listener is idempotent; a live
         // download still gets its cancel via the backend SSE round-trip below.)
         const queuedJob = state.downloadJobs.find(j => j.modelId === modelId && j.status === 'queued');
-        await fetch('/comfy/models/download/cancel', {
+        // MPI-258: a job the backend doesn't know about (404 'Job not found') — e.g. a
+        // server restart mid-install wiped _modelJobs but the renderer still shows the
+        // stale job. Treat it like the queued case: clear locally + emit so the card
+        // reverts to Install instead of a stuck phantom. Without resume (Bug 2) a
+        // restart-orphaned install cannot be recovered, so a clean revert is the right UX.
+        const res = await fetch('/comfy/models/download/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId }),
         });
+        const orphaned = res.status === 404;
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
-        if (queuedJob) Events.emit('download:cancelled', { modelId });
+        if (queuedJob || orphaned) Events.emit('download:cancelled', { modelId });
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
 
@@ -499,34 +484,8 @@ const downloadService = {
             reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after uninstall failed:', err));
         });
 
-        this._eventSource.addEventListener('download:paused', (e) => {
-            const data = JSON.parse(e.data);
-            const job = state.downloadJobs.find(j => j.modelId === data.modelId);
-            if (job) {
-                job.status = 'paused';
-                if (typeof data.downloadedBytes === 'number') job.downloadedBytes = data.downloadedBytes;
-                if (typeof data.totalBytes === 'number') job.totalBytes = data.totalBytes;
-                if (typeof data.progress === 'number') job.progress = data.progress;
-                if (typeof data.speed === 'string') job.speed = data.speed;
-                state.downloadJobs = [...state.downloadJobs];
-            }
-            Events.emit('download:paused', data);
-        });
-
-        this._eventSource.addEventListener('download:resumed', (e) => {
-            const data = JSON.parse(e.data);
-            _speedSamples.delete(data.modelId);
-            const job = state.downloadJobs.find(j => j.modelId === data.modelId);
-            if (job) {
-                job.status = 'downloading';
-                if (typeof data.downloadedBytes === 'number') job.downloadedBytes = data.downloadedBytes;
-                if (typeof data.totalBytes === 'number') job.totalBytes = data.totalBytes;
-                if (typeof data.progress === 'number') job.progress = data.progress;
-                if (typeof data.speed === 'string') job.speed = data.speed;
-                state.downloadJobs = [...state.downloadJobs];
-            }
-            Events.emit('download:resumed', data);
-        });
+        // download:paused / download:resumed listeners removed (MPI-258 Bug 2) —
+        // the backend no longer emits them; downloads are cancel-only.
 
         this._eventSource.addEventListener('download:installing', (e) => {
             const data = JSON.parse(e.data);
