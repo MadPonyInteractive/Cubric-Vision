@@ -7,7 +7,8 @@
 .mpi-modal-backdrop {
     position: fixed;
     inset: var(--titlebar-h) 0 0 0;
-    background: oklch(0.16 0.02 350 / 0.7);
+    background: oklch(0.04 0 0 / 0.94);
+    backdrop-filter: blur(4px);
     z-index: 10009; /* fallback; JS overrides via inline style */
 }
 
