@@ -1004,6 +1004,29 @@ function _startRemoteStallWatchdog() {
     _remoteStallTimer = setInterval(() => {
         if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
         if (_remoteReconnectTimer) return; // a reconnect already in flight
+
+        // MPI-255: LOST-COMPLETION backstop, independent of the 90s stall gate.
+        // A dep whose bytes are 100% in (downloadedBytes >= totalBytes > 0) but whose
+        // status is still 'downloading' has a MISSED terminal SSE — the wrapper fired
+        // models:install-complete into a not-yet-attached / dropped stream, so it never
+        // settled and the model hangs at 100% forever. This hits any fast-settling dep
+        // (a `requirements_only` node pip no-op, OR a weight whose final tick was lost),
+        // NOT just stalls — and waiting the full 90s stall window to notice is the
+        // user-visible "tanking at 100%" hang. Reconcile against volume truth NOW, on
+        // the normal 15s poll. Reconcile only settles deps the wrapper reports
+        // installed:true, so an in-flight download is never force-completed.
+        let allBytesInButUnsettled = false;
+        for (const depId of _remoteDepIds) {
+            const dj = _depJobs.get(depId);
+            if (dj && dj.status === 'downloading' && dj.totalBytes > 0
+                && (dj.downloadedBytes || 0) >= dj.totalBytes) { allBytesInButUnsettled = true; break; }
+        }
+        if (allBytesInButUnsettled) {
+            _reconcileOutstandingRemoteDeps().catch((err) =>
+                logger.warn('download', `lost-completion reconcile failed: ${err.message}`));
+            return; // volume-truth reconcile settles it; skip the stall/abort path this poll
+        }
+
         if (Date.now() - _remoteLastTickAt < _REMOTE_STALL_MS) return;
         logger.warn('download', `remote install silent for ${Math.round((Date.now() - _remoteLastTickAt) / 1000)}s with ${_remoteDepIds.size} dep(s) outstanding — treating as stalled`);
         _markRemoteTick(); // don't re-fire every poll while recovery runs
@@ -1451,19 +1474,6 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     res.json({ success: true, jobId: modelId });
 
     _ensureRemoteEventStream();
-    // MPI-253: a `requirementsOnly` dep (an already-present custom_node whose pip
-    // is re-run idempotently) is near-instant when its deps are already satisfied —
-    // the wrapper returns 202 `started` (NOT `already_installed`, so the .then()
-    // below can't settle it) and emits `models:install-complete` within ~1-2s,
-    // often BEFORE _ensureRemoteEventStream() above has attached. That completion
-    // fires into a not-yet-subscribed stream → lost → the dep hangs `downloading`
-    // → the model sticks at 100% forever (the Krea2 re-install hang). The existing
-    // stall-close backstop (_reconcileOutstandingRemoteDeps) only runs on SSE
-    // CLOSE/STALL, which a fast op never triggers. So arm a one-shot reconcile
-    // against volume truth shortly after dispatch: it settles any dep whose
-    // fast-complete SSE was missed, and is a harmless no-op if the event landed
-    // (it only touches deps still in _remoteDepIds).
-    const hasFastRequirementsOnly = toInstall.some(d => d.requirementsOnly);
     for (const dep of toInstall) {
         const depJob = _depJobs.get(dep.id);
         if (depJob) depJob.status = 'downloading';
@@ -1496,19 +1506,6 @@ async function _startRemoteDownload(modelId, dependencies, res) {
                 _checkModelJobsComplete();
                 _teardownRemoteEventStreamIfIdle();
             });
-    }
-
-    // MPI-253: settle the fast-`requirements_only` SSE race (see the comment above).
-    // 3s is comfortably past a satisfied-deps pip no-op (~1-2s) yet still snappy.
-    // Reconcile reads real volume state and settles any dep whose completion event
-    // was lost; if the SSE already settled it (dep gone from _remoteDepIds), this
-    // no-ops. Guarded so a genuine long install isn't force-checked mid-download —
-    // reconcile only marks deps the wrapper reports installed:true, never rushes one.
-    if (hasFastRequirementsOnly) {
-        setTimeout(() => {
-            _reconcileOutstandingRemoteDeps().catch((err) =>
-                logger.warn('download', `requirements_only reconcile failed: ${err.message}`));
-        }, 3000);
     }
 }
 
