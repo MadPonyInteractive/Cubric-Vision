@@ -1,0 +1,130 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "9c6d9123-adc1-413e-a721-5ca6b73856a9",
+  "generated_at": "2026-07-11T13:18:48Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-256 Artistic tier — Foundations batch + Phase 2 (run-path plumbing) shipped; Phase 3 (App Library overlay) is next",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Implement MPI-256: Artistic tier — App Library + Apps (Higgsfield-style outcome apps). Dev-gated App Library overlay + App overlays that run outcome workflows through the existing generation queue and land as gallery cards. Investigation + design + large plan already done; execute the plan SEQUENTIALLY on Opus (user explicitly rejected Haiku sub-agents — this plan is trap-dense and must not fail).",
+    "status": "in_progress",
+    "summary": "Foundations batch (4/4) + Phase 2 run-path plumbing (4/4) COMPLETE and all live-verified on real Electron. The whole run seam is proven: an app-style universal gen (model:{id:null}) runs SDXL i2i and lands as a normal gallery card, with appId+appInputs persisted to the .meta sidecar (survives restart). Next is Phase 3: the MpiAppLibrary overlay UI (the first large phase — a new Organism)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-256/plan.md",
+    "completed": [
+      "Foundations: MpiOverlay 'main-area' mount mode (3 traps + fixed a pre-existing z-index bug: inline z was set inside _doShow which runs during Overlays.request() BEFORE _zIndex is assigned; moved z-apply + --app-overlay-z publish to el.show() post-request)",
+      "Foundations: queue slide-over z above app overlay (z-index: calc(var(--app-overlay-z,90)+10) on .mpi-slide-over--queue in Compounds/MpiSlideOver.css)",
+      "Foundations: apps registry — single self-contained js/data/appsRegistry.js (APPS empty, listApps/getAppById/appAvailability), read-only over s_installedModelIds, NO install-sync",
+      "Foundations: state.s_appInputs key (session-only, not persisted, top-level replace) + component-state.md row (user-approved)",
+      "Phase 2: appImageRegen universal op registered 4 files (commandRegistry.js [in js/data/ NOT js/core/], universal_workflows.js [js/data/modelConstants/], operationRegistry.js, operation_registry.json [hand-superset, all 6 pre-existing universal flags preserved]) + comfy_workflows/App_sdxl_regen.json (from sdxl-nsfw graph, Input_Is_i2i baked true) + inject-params-titles.test.cjs case (3/3 green). Seam LIVE-verified: gen lands as gallery card.",
+      "Phase 2: submitAppGeneration(app,inputs) in js/services/appService.js — model pre-flight guard + config builder (model:{id:null}, no getNextGeneration), guard live-verified",
+      "Phase 2: run-clean VERIFIED no-change-needed (commandExecutor.js:680 gates LoRA injection on truthy modelId; app gens pass null → block unreachable)",
+      "Phase 2: sidecar appId+appInputs 4-site plumb + parity sites, LIVE-verified on disk after app restart (appId:'testApp', appInputs full snapshot persisted)"
+    ],
+    "pending": [
+      "Phase 3: MpiAppLibrary component (Compound/Organism, clones MpiModelManager skeleton) — body-mode MpiOverlay, card grid + availability badges, inline detail slide-over (info + required-models install state + Open/Install button). Register CSS in preloadStyles.js + props in types.js. USER-UX verify.",
+      "Phase 3: entry points + shell wiring — apps:open handler in shell.js (mirror models:open), dev-gated Gallery header button + Landing action, both APP_CONFIG.dev_mode-gated. USER-UX verify.",
+      "Phase 4: MpiBaseApp organism (composition not inheritance) + first app end-to-end + handoff. USER-UX verify (THE loop).",
+      "Phase 5: reuse routing — appId branch at TOP of _applyPromptReuse in both blocks (Gallery ~:1090, History ~:948 — search by name, line drift). USER-UX verify.",
+      "Phase 6: docs/apps.md + rule-file updates (ASK USER FIRST — Documentation Drift rule)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-256",
+    "title": "Artistic tier — App Library + Apps (Higgsfield-style outcome apps)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-256/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-256/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-256/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md fully updated: all Foundations + Phase 2 items checked with what-shipped notes + real file-path corrections (plan's js/core/commandRegistry.js is actually js/data/; universal_workflows in js/data/modelConstants/)",
+      "events.jsonl updated with Foundations-complete + Phase-2-item-1 + Phase-2-complete events",
+      "component-state.md s_appInputs row added (user-approved)"
+    ],
+    "pending": [
+      "NOTHING COMMITTED YET — all Foundations + Phase 2 code is uncommitted on branch 1.2.0. Commit at a natural stop or session end (user chose 'commit later'). Shared-tree hygiene applies: commit by explicit pathspec, never git add -A.",
+      "operation_registry.json hand-sync must be reconciled at next /mpi-version-bump (do NOT regenerate from JS — strips universal flags)",
+      "Phase 6 rule-file edits (component-mounts/events/state rows for MpiAppLibrary+MpiBaseApp; stale-doc fixes) need explicit user approval"
+    ]
+  },
+  "next_action": {
+    "description": "Start Phase 3: build the MpiAppLibrary component. Read plan.md Phase 3 first (it has the full spec + traps), and research/A-model-library-clone.md (the MpiModelManager clone target). Clone the Model Library overlay skeleton: body-mode MpiOverlay, card grid with availability badges from appAvailability(), inline detail slide-over with required-models install state + Open/Install footer button. Honor: never full-re-render on hot download:* events (use _patchTile-style updates), canOpen = (page===PAGE_GALLERY). Register CSS in preloadStyles.js + props in types.js. Verify USER-UX (npm start / real Electron). Continue sequential-on-Opus — do NOT dispatch Haiku sub-agents (user requirement).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Execution is SEQUENTIAL on Opus, not parallel Haiku sub-agents — user requirement (plan is trap-dense, must not fail). This overrides the plan's 'Foundations suitable for mpi-execute-parallel' note.",
+      "First app = SDXL i2i regen. User picked sdxl-realistic but it's NOT installed; re-pointed to sdxl-nsfw (installed, identical graph t2i_sdxl_nsfw.json). App descriptor's requiredModels will be ['sdxl-nsfw'] for now.",
+      "Apps declare requiredModels (MODEL ids), NEVER deps — zero dep duplication. appAvailability checks requiredModels ⊆ s_installedModelIds; Install button drives the model's own dep set. (User explicitly confirmed this design.)",
+      "appsRegistry = single self-contained file (not the appConstants/ two-file split) — app count is tiny.",
+      "Run-clean is by construction: commandExecutor.js:680 gates all LoRA/upscale injection on `if (payload.modelId)`; app gens pass model:{id:null} so it's unreachable. No explicit skip needed."
+    ],
+    "constraints": [
+      "Routes do NOT hot-reload (user owns :3000). Backend route edits (routes/projects.js) only take effect after an app restart — factor this into any route-touching verify.",
+      "Browser-dev (127.0.0.1:3000 in a browser) does NOT run real generations — generation path needs real Electron. Verify gens by asking the user to run a console snippet in the Electron app, then read results/sidecars off disk.",
+      "The ComfyUI currently answering on :8188 is the user's G:/comfyui (0.27, same models + extras), NOT the app's bundled engine. Harmless for app-layer seam tests (engine-agnostic); explains 'port 8188 in use' log noise.",
+      "MpiOverlay z-index fix: inline z + --app-overlay-z are now set in el.show() AFTER Overlays.request() returns (not in _doShow, which runs during request before _zIndex exists). Any further overlay z work must respect this ordering.",
+      "operation_registry.json is a hand-maintained superset — never regenerate from operationRegistry.js (would strip the 6 `universal` flags).",
+      "Sidecar item shape now carries appId+appInputs everywhere (factories, routes, reconciler). Pre-fix sidecars lack the field → reader defaults null on reload, no crash."
+    ],
+    "files_modified": [
+      "js/components/Primitives/MpiOverlay/MpiOverlay.js",
+      "js/components/Primitives/MpiOverlay/MpiOverlay.css",
+      "js/components/Compounds/MpiSlideOver/MpiSlideOver.css",
+      "js/data/appsRegistry.js",
+      "js/state.js",
+      ".claude/rules/component-state.md",
+      "js/data/commandRegistry.js",
+      "js/data/modelConstants/universal_workflows.js",
+      "js/core/operationRegistry.js",
+      "operation_registry.json",
+      "comfy_workflows/App_sdxl_regen.json",
+      "tests/inject-params-titles.test.cjs",
+      "js/services/appService.js",
+      "js/services/generationService.js",
+      "js/services/projectService.js",
+      "routes/projects.js",
+      "js/data/projectModel.js",
+      "js/managers/projectReconciler.js",
+      ".agents/mpi-kanban/tasks/MPI-256/plan.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-256/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-256/research/A-model-library-clone.md",
+      ".agents/mpi-kanban/tasks/MPI-256/research/SYNTHESIS.md",
+      ".agents/mpi-kanban/tasks/MPI-256/design.md",
+      "js/data/appsRegistry.js",
+      "js/services/appService.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["components", "dos_and_donts", "state", "events", "downloads"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/downloads.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-11T13:18:48Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-256 (Artistic tier — App Library + Apps) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/9c6d9123-adc1-413e-a721-5ca6b73856a9.json and use mpi-continue. Foundations batch + Phase 2 (run-path plumbing) are COMPLETE and live-verified on real Electron — the full seam works (an app universal gen with model:{id:null} runs SDXL i2i, lands as a gallery card, and persists appId+appInputs to the .meta sidecar). NOTHING IS COMMITTED yet (branch 1.2.0, commit at session end by explicit pathspec). CRITICAL: execute SEQUENTIALLY on Opus, do NOT dispatch Haiku sub-agents — the user requires this because the plan is trap-dense and must not fail. The next action is Phase 3: build the MpiAppLibrary overlay component (clone the MpiModelManager skeleton — see research/A-model-library-clone.md and plan.md Phase 3). First app is SDXL i2i regen re-pointed to sdxl-nsfw (sdxl-realistic isn't installed). Key gotchas: routes don't hot-reload (route edits need an app restart); browser-dev can't run real gens (verify via Electron console snippets); the running :8188 engine is the user's G:/comfyui not the bundled one (harmless); never full-re-render on hot download:* events. Read plan.md and the research/ files before touching code."
+}
