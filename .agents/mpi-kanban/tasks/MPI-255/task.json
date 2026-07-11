@@ -3,11 +3,11 @@
   "id": "MPI-255",
   "title": "Stall watchdog false-fires during sha256 'verifying' phase (remote big-weight install)",
   "description": "Flagged by the getsize-progress peer agent. The MPI-136 silent-stall watchdog (_REMOTE_STALL_MS=90000, routes/downloadManager.js) does NOT relax during the sha256 'verifying' phase. On a big weight over the network volume a LEGIT hash can exceed 90s of SSE silence -> watchdog false-fires 'treating as stalled / SSE closed (silent-stall) - recovering' -> SSE thrash even on a healthy install. STRONGLY SUSPECTED to be the mechanism behind MPI-254 (the wrapper finalize stall): the 90s watchdog may abort the sha256 of the first 12GB weight mid-hash so the .part is never promoted. Fix options: (a) widen/relax _REMOTE_STALL_MS while phase==='verifying'; (b) stamp a keep-alive tick on the install-verifying event and gate the watchdog on it. Watchdog-family, distinct from the peer's getsize(.part) numerator fix (wrapper 0.2.35, shipped). If (a)/(b) fixes MPI-254 too, close both together. NOTE: earlier in this session this bug was mis-carded onto MPI-253 (a collision with an existing done card, since restored) - this card is its correct home.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "pending",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-11T08:35:00Z",
-  "updated_at": "2026-07-11T09:30:00Z",
+  "updated_at": "2026-07-11T10:15:00Z",
   "links": {
     "events": "events.jsonl"
   },
