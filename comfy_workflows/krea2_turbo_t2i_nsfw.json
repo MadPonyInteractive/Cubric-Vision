@@ -215,7 +215,7 @@
   },
   "85": {
     "inputs": {
-      "int": 0
+      "int": 10
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -232,7 +232,7 @@
         "109",
         0
       ],
-      "cleanup": 0,
+      "cleanup": "",
       "seed": [
         "80",
         1
@@ -446,7 +446,7 @@
   },
   "112": {
     "inputs": {
-      "string": "A nude woman laying on her bed in a Mediterranean bedroom."
+      "string": "A realistic, front-view portrait of a solo male character resembling a dark, sinister version of Batman. He wears a black cowl with prominent bat-like ears, adorned with a spiked silver crown. His face is smeared with blood, and he stares directly at the viewer with a wide, menacing grin that exposes sharp, pointed teeth. He is dressed in black leather-like clothing with a high-collared cape secured by heavy metal chains draped across his chest. The background is a stark, blood-splattered red."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -1082,15 +1082,6 @@
     "class_type": "MpiLoraModel",
     "_meta": {
       "title": "Input_Bypass_Filter_Lora"
-    }
-  },
-  "246": {
-    "inputs": {
-      "string": "A realistic, front-view portrait of a solo male character resembling a dark, sinister version of Batman. He wears a black cowl with prominent bat-like ears, adorned with a spiked silver crown. His face is smeared with blood, and he stares directly at the viewer with a wide, menacing grin that exposes sharp, pointed teeth. He is dressed in black leather-like clothing with a high-collared cape secured by heavy metal chains draped across his chest. The background is a stark, blood-splattered red."
-    },
-    "class_type": "MpiText",
-    "_meta": {
-      "title": "Input_Positive"
     }
   },
   "250": {
