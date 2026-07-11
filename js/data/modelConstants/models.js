@@ -9,6 +9,7 @@
  * @property {'image'|'video'} mediaType
  * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
  * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
+ * @property {boolean}  [featured]   - Editorial spotlight flag for the Model Library ("hot / new / best right now"). Featured models sort FIRST within their sub-grid (stable) and carry a gold sparkle star badge. Purely a curation signal — set as many as you like, add/remove freely; no cap, no resolver effect. Consumed only by MpiModelManager (sort + `.mpi-tile__featured` badge).
  * @property {{multiStage?:boolean, audio?:boolean, negativePrompt?:boolean, styleLoras?:boolean, promptEnhance?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot; styleLoras shows the style dropdown + Stylization slider; promptEnhance shows the enhance toggle. Absent → false. EXCEPTION: negativePrompt defaults to TRUE when absent (a model supports negatives unless it opts out) — set `negativePrompt: false` for distilled cfg-1.0 models (Krea2-Turbo) where the negative prompt has no effect and NAG cannot rescue it. Hides the prompt box's positive/negative toggle; the stored negativePrompt value is still persisted. `promptEnhance` requires a text encoder whose CLIP implements `.generate()` (Qwen3-VL, Gemma) — T5/umT5 models (Chroma, Wan) CRASH on the TextGenerate node, so never set it there.
  * @property {string[]} [styleLoraLabels] - Style-LoRA display names, index-aligned with the workflow's MpiMath gates and MpiPromptList trigger lines. Index 0 must be the no-style entry (every gate zeroed); its label is free text. Required when `capabilities.styleLoras` is true.
  * @property {Record<string, Array<{label:string,w:number,h:number,icon:string}>>} [ratios] - Per-type ratio table (MPI-174), keyed by quality tier (quality-mode models) or 'portrait'/'landscape' (orientation-mode). First model declaring it for a NEW `type` wins; existing types (flux/sdxl/wan/wan5b/ltx) keep their built-in tables in js/utils/ratios.js — do not redeclare them here.
@@ -206,6 +207,7 @@ export const MODELS = [
         // (ConditioningZeroOut supplies the uncond) ⇒ capabilities.negativePrompt:false.
         id: 'krea2-turbo',
         sizeTier: 'balanced',
+        featured: true,
         modelFamily: 'Krea-2',
         name: 'Krea 2 Turbo',
         dropdownMeta: 'PHOTO',
@@ -224,9 +226,10 @@ export const MODELS = [
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+            'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships nine built-in style LoRAs and a depth-guided pose reference. Renders at up to 2K.',
+        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships ten built-in style LoRAs and a depth-guided pose reference. Renders at up to 2K.',
         workflows: {
             t2i: 'krea2_turbo_t2i_sfw.json',
             i2i: 'krea2_turbo_t2i_sfw.json',   // same graph; Input_Is_i2i flips the latent source
@@ -255,6 +258,7 @@ export const MODELS = [
             'krea2-style-softwatercolor',
             'krea2-style-sunsetblur',
             'krea2-style-vintagetarot',
+            'krea2-style-midjourney',
             '4x-NMKD-Siax',
             'RES4LYF',                   // ClownsharKSampler_Beta (both stages)
             'ComfyUI-MpiNodes',
@@ -285,6 +289,7 @@ export const MODELS = [
         // cfg 1.0 ⇒ negativePrompt:false, nine style LoRAs.
         id: 'krea2-turbo-nsfw',
         sizeTier: 'balanced',
+        featured: true,
         modelFamily: 'Krea-2',
         name: 'Krea 2 Turbo NSFW',
         dropdownMeta: 'PHOTO',
@@ -299,9 +304,10 @@ export const MODELS = [
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+            'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'This spicy image generator is Lustify Krea — the famous Lustify model by Coyotte, built on Krea 2. It keeps the distinctive photographic look with nine built-in style LoRAs and a depth-guided pose reference, and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported — use the standard Krea 2 Turbo model instead.',
+        description: 'This spicy image generator is Lustify Krea — the famous Lustify model by Coyotte, built on Krea 2. It keeps the distinctive photographic look with ten built-in style LoRAs and a depth-guided pose reference, and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported — use the standard Krea 2 Turbo model instead.',
         workflows: {
             t2i: 'krea2_turbo_t2i_nsfw.json',
             i2i: 'krea2_turbo_t2i_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
@@ -325,6 +331,7 @@ export const MODELS = [
             'krea2-style-softwatercolor',
             'krea2-style-sunsetblur',
             'krea2-style-vintagetarot',
+            'krea2-style-midjourney',
             '4x-NMKD-Siax',
             'RES4LYF',                   // ClownsharKSampler_Beta (both stages)
             'ComfyUI-MpiNodes',
@@ -428,6 +435,7 @@ export const MODELS = [
         // modelFamily), per the sizeTier contract "one tier per card". The L/B/H badge
         // + dropdown letter surface only when 2+ tiers of LTX-2.3 are installed.
         sizeTier: 'high',
+        featured: true,
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
@@ -495,6 +503,7 @@ export const MODELS = [
         // the two cluster under one L/B/H badge.
         id: 'ltx-23-balanced',
         sizeTier: 'balanced',
+        featured: true,
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',

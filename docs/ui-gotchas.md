@@ -31,6 +31,12 @@ Rule of thumb when adding ANY new per-gen UI/state: if two gens (or a Stopped ge
 
 ## Components
 
+### Featured models — editorial "hot / new / best" spotlight (2026-07-11)
+
+The Model Library has a curation flag: set `featured: true` on any `ModelDef` in `js/data/modelConstants/models.js` and it (a) sorts FIRST within its media sub-grid and (b) gets a gold sparkle star badge (top-right of the tile thumb). Purpose is editorial — surface what's hot / new / considered best right now. No cap, add/remove freely; it's a static per-model flag with no runtime state, so it's deliberately NOT in the render signature (nothing to churn).
+
+Wiring, all in `MpiModelManager`: sort is a stable `.sort()` in `_mediaBlock` (`(b.featured?1:0)-(a.featured?1:0)` — modern V8 sort is stable, so non-featured keep declared order); badge is built in `_buildTile` next to the `justInstalled` heat dot using the existing `sparkle` icon; CSS `.mpi-tile__featured` (top-right, `--accent-warn` gold, so it never collides with the top-left heat dot). Currently featured: `krea2-turbo`, `krea2-turbo-nsfw`, `ltx-23`, `ltx-23-balanced`. To change the spotlight, just flip the flag on the model defs — no other file needs touching.
+
 ### hero-stats "MODELS X / Y" counts USABLE models, not fully-installed (Notes 2026-06-29)
 
 The bottom-left landing hero stat counts a model as installed when its **base OR at least one operation** is on disk — NOT only when ALL ops are present. Bug found: Wan 2.2 with only **text-to-video** installed (i2v absent) showed "MODELS 2 / 7" while the model-manager list + pickers already showed Wan as installed → the count and the list disagreed. Fix (`js/data/modelRegistry.js`, `syncModelInstalled`): `installedModelIds` now filters on `isModelUsable(id)` (which for op-keyed models is `deriveInstalledOps(...).fullyInstalled` = `installedOps.length > 0`, i.e. ≥1 op) instead of the raw all-deps-present `result.installed` flag. The `_modelDepStatusCache` is populated in the same function just above the filter, so `isModelUsable` resolves correctly. **Rule: usable = installed for display/count purposes — keep the hero count, the manager list, and the pickers all gated on `isModelUsable`, never on `model.installed` (which is all-ops-present and wrongly excludes a deliberate partial install).**

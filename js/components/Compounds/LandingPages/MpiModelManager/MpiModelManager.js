@@ -726,6 +726,12 @@ export const MpiModelManager = ComponentFactory.create({
             // Recently-installed heat dot (MPI-215) — the model's `justInstalled`
             // transient flag rides absolute on the thumb so it never shifts the tile.
             if (model.justInstalled) thumb.appendChild(ce('div', { className: 'mpi-tile__new' }));
+            // Featured star badge (rides absolute on the thumb, like the heat dot).
+            if (model.featured) {
+                const star = ce('div', { className: 'mpi-tile__featured', title: 'Featured' });
+                star.innerHTML = renderIcon('sparkle', 'sm');
+                thumb.appendChild(star);
+            }
             tile.appendChild(thumb);
 
             const tier = model.sizeTier || 'balanced';
@@ -1035,7 +1041,10 @@ export const MpiModelManager = ComponentFactory.create({
         // Renders a media sub-header (icon + count) then a contact-sheet grid of
         // lean tiles — all one aspect ratio so rows align (no ragged holes).
         function _mediaBlock(list, media) {
-            const items = list.filter(m => m.mediaType === media);
+            // Featured models sort first within each sub-grid (stable — Array.sort in
+            // modern V8 is stable, so non-featured keep their declared order).
+            const items = list.filter(m => m.mediaType === media)
+                .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
             if (!items.length) return;
             const head = ce('div', {
                 className: `mpi-model-library__media-head${media === 'video' ? ' mpi-model-library__media-head--video' : ''}`,
