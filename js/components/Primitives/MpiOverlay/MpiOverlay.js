@@ -181,8 +181,13 @@ export const MpiOverlay = ComponentFactory.create({
             closeBtn.addEventListener('click', () => el.hide());
         }
 
-        // Global close signal — only react when shown
-        const _unsub = Events.on('ui:close-all-popups', () => {
+        // Global close signal — only react when shown. EXCEPT when fired by an
+        // overlay/modal opening on top of us (MpiOkCancel / showError / engine
+        // dialogs): a child pop-up must not take the full-page overlay down with
+        // it (MPI-79 pattern, mirrors MpiSlideOver). Escape and Overlays.reset()
+        // fire this bare → the overlay still closes on those.
+        const _unsub = Events.on('ui:close-all-popups', (payload) => {
+            if (payload?.reason === 'overlay-open') return;
             if (_isShown) el.hide();
         });
 
