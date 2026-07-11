@@ -79,6 +79,10 @@ If you need to understand the app's pages, workflow states, or the dev component
 If you are sending tasks to ComfyUI, compiling JSON workflows, or dealing with images/masks in graphs:
 **->** **MUST READ:** `.claude/rules/comfy_injection.md`
 
+### Authoring a Workflow / Adding an Injectable Node or Control (model OR app)
+If you are authoring a ComfyUI workflow template, wiring a new prompt-box control or `MpiInt→MpiAnySwitch` tier/sampler selector, adding a new **MpiNode** (our own pack), or building a template→runtime generator — for a model OR an app:
+**->** **READ:** `docs/workflow-authoring/README.md` — the model/app-agnostic contract (MpiNodes pack pointer, injector target list + title law, generator/tier-selector patterns). Append what you learn there (it's built to grow).
+
 ### ComfyUI Engine & Backend
 If you are adding models to the registry, managing downloads, or dealing with the python server:
 **->** **MUST READ:** `.claude/rules/comfy_engine.md`
