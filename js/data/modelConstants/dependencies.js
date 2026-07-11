@@ -394,6 +394,15 @@ export const DEPS = {
         size: '448MB',
         sha256: '8cca96c56658fb3ac5269f9ef2245bd07cbf1b7a189f517c8763470bb1385f9f',
     },
+    'krea2-style-midjourney': {
+        id: 'krea2-style-midjourney',
+        name: 'Krea2 Style — MidJourney',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'loras/krea-2/style/KREA_MIDJ_1.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/KREA_MIDJ_1.safetensors',
+        size: '218MB',
+        sha256: 'ad4a9f0b4d61ba77c5783b51fe3a2b637f8245144c1ce5e6a3fcd8225fd7df8a',
+    },
     'pid-gemma': {
         id: 'pid-gemma',
         name: 'PiD Gemma text encoder',

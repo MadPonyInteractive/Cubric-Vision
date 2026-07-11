@@ -196,7 +196,7 @@
     "inputs": {
       "title": "styles",
       "prefix": ", ",
-      "options": "monochrome ink wash style\nmonochrome stippling style\nnaive expressive sketch style\ntextured abstract style\nrainy window style\npurple retro anime style\nart deco watercolor style\nethereal motion blur style\nvintage tarot style",
+      "options": "monochrome ink wash style\nmonochrome stippling style\nnaive expressive sketch style\ntextured abstract style\nrainy window style\npurple retro anime style\nart deco watercolor style\nethereal motion blur style\nvintage tarot style\nMidJourney style",
       "suffix": ".",
       "blocks": "",
       "amount": 0,
@@ -232,7 +232,7 @@
         "109",
         0
       ],
-      "cleanup": "",
+      "cleanup": 0,
       "seed": [
         "80",
         1
@@ -698,7 +698,7 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "107",
+        "250",
         0
       ]
     },
@@ -816,7 +816,7 @@
   },
   "201": {
     "inputs": {
-      "image": "mpi_input_image.png"
+      "image": "ComfyUI_temp_duvbo_00001_.png"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -1091,6 +1091,40 @@
     "class_type": "MpiText",
     "_meta": {
       "title": "Input_Positive"
+    }
+  },
+  "250": {
+    "inputs": {
+      "lora_name": "krea-2\\style\\KREA_MIDJ_1.safetensors",
+      "strength_model": [
+        "251",
+        0
+      ],
+      "model": [
+        "107",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_style_lora_10"
+    }
+  },
+  "251": {
+    "inputs": {
+      "math_expression": "b if a == 10 else 0.0   ",
+      "a": [
+        "85",
+        0
+      ],
+      "b": [
+        "235",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
     }
   }
 }

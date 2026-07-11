@@ -307,7 +307,7 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'This spicy image generator is Lustify Krea — the famous Lustify model by Coyotte, built on Krea 2. It keeps the distinctive photographic look with ten built-in style LoRAs and a depth-guided pose reference, and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported — use the standard Krea 2 Turbo model instead.',
+        description: 'This spicy image generator uses the Lustify Krea model weights by Coyotte, built on Krea 2. It keeps the distinctive photographic look and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported.',
         workflows: {
             t2i: 'krea2_turbo_t2i_nsfw.json',
             i2i: 'krea2_turbo_t2i_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
