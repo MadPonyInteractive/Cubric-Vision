@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-249",
-  "title": "Verify a portable build on Linux + macOS (local engine) \u2014 deferred, batch across the next few releases",
-  "description": "The 1.1.1 Windows build was user-verified live (clean install, 11 nodes no Retry, gen/mask/upscale/Chroma/PiD/SDXL). The LINUX and macOS portable builds are BUILT each release (CI produces all 3 OS) but are NOT run-tested \u2014 no Linux/mac desktop is on hand, and a real test costs money + ~a full day. Per feedback_runpod_not_local_engine_proof a RunPod run does NOT verify the local engine on Linux/mac. DEFERRED intentionally: batch this across the next ~4-5 releases rather than every patch. WHAT TO TEST when a session picks this up: extract the CubricVision-linux-x64-vX.Y.Z.tar.gz and CubricVision-macos-arm64-vX.Y.Z.zip on a real Linux/mac desktop, let the LOCAL engine provision (uv/comfy-cli path, NOT the Windows prebuilt-archive path \u2014 routes/engine.js _provisionUvEngine), install the 11 UW nodes, then generate on the LOCAL engine with at least one model per family. Cross-ref MPI-243 (the Windows verify that spawned this) + MPI-198 (backslash loader-path heal needs a Linux/mac LOCAL-engine + subfoldered LoRA to close, same platform gap).",
+  "title": "Verify a portable build on Linux + macOS (local engine) — deferred, batch across the next few releases",
+  "description": "The 1.1.1 Windows build was user-verified live (clean install, 11 nodes no Retry, gen/mask/upscale/Chroma/PiD/SDXL). The LINUX and macOS portable builds are BUILT each release (CI produces all 3 OS) but are NOT run-tested — no Linux/mac desktop is on hand, and a real test costs money + ~a full day. Per feedback_runpod_not_local_engine_proof a RunPod run does NOT verify the local engine on Linux/mac. DEFERRED intentionally: batch this across the next ~4-5 releases rather than every patch. WHAT TO TEST when a session picks this up: extract the CubricVision-linux-x64-vX.Y.Z.tar.gz and CubricVision-macos-arm64-vX.Y.Z.zip on a real Linux/mac desktop, let the LOCAL engine provision (uv/comfy-cli path, NOT the Windows prebuilt-archive path — routes/engine.js _provisionUvEngine), install the 11 UW nodes, then generate on the LOCAL engine with at least one model per family. Cross-ref MPI-243 (the Windows verify that spawned this) + MPI-198 (backslash loader-path heal needs a Linux/mac LOCAL-engine + subfoldered LoRA to close, same platform gap).",
   "column": "todo",
   "maturity": "planned",
   "status": "pending",
   "created_at": "2026-07-10T19:40:00Z",
-  "updated_at": "2026-07-10T19:40:00Z",
+  "updated_at": "2026-07-11T00:08:46.412Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

@@ -1,0 +1,1 @@
+{"at":"2026-07-11T08:54:24Z","event":"task.created","column":"todo","actor":"download-progress-investigation","note":"Found during aria2 RPC progress-fix investigation. Watchdog false-fires on >90s silent sha256 verify of big weights over the network volume. App-side, separate from the getsize progress bug and the Krea2 node-settle hang (MPI-244)."}

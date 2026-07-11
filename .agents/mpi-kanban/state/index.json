@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-07-10T23:40:00Z",
+  "updated_at": "2026-07-11T08:50:44Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -14,6 +14,20 @@
       "to_task": "MPI-242",
       "status": "acknowledged",
       "created_at": "2026-07-10T19:55:00Z"
+    },
+    {
+      "id": "e5099500-9604-4624-bdb9-b8f574e4d964",
+      "path": ".agents/mpi-kanban/state/messages/e5099500-9604-4624-bdb9-b8f574e4d964.json",
+      "to_session": "krea2-custom-nodes-install",
+      "status": "open",
+      "created_at": "2026-07-11T08:15:57Z"
+    },
+    {
+      "id": "f6e0b91a-e5e9-4a27-895c-4c67ad7be6ff",
+      "path": ".agents/mpi-kanban/state/messages/f6e0b91a-e5e9-4a27-895c-4c67ad7be6ff.json",
+      "to_session": "krea2-custom-nodes-install",
+      "status": "open",
+      "created_at": "2026-07-11T08:50:44Z"
     }
   ],
   "active_handoffs": [
