@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-253",
+  "title": "History-workspace tool bugs surfaced by tier-2 conversion (resize revert + flip clobber + auto-mask silent-skip)",
+  "description": "Four bugs found smoke-testing MPI-252 (tier-1 deprecation), all in the History IMAGE workspace. All FIXED; user-verified in-app: image tools (resize/flip/manual-mask/auto-mask), i2i on SDXL + Chroma, all video-workspace tools, upscale. Committed b07a30cc.\n\n(1) RESIZE SELF-REVERT: clicking Resize flashed then snapped back to Crop. ROOT = the resize tool mounts MpiToolOptionsResize which fires its OWN previewOnly resize gen; that registered in generationStore → generationQueueCount>0 → `_syncQueueBlockedTools` saw cueBusy and disabled+reverted resize→crop on its own preview. FIX = tag previewOnly jobs `display.previewKind='preview'` at generationStore.register (commandExecutor), and `_syncQueueBlockedTools` now derives cueBusy from the store snapshot filtered to non-preview running/pending jobs (MpiGroupHistoryBlock).\n\n(2) FLIP NO-OP: flip did nothing on the real run. ROOT = the Input_ canonicalization alias pass creates `Input_flip` from `flip`; the resize injector wrote the correct MpiIfElse boolean=true directly, but the post-injector param-cleanup deleted only the BARE `flip` key, leaving `Input_flip='x'`. The generic title-injector then matched `Input_flip` to the MpiIfElse node titled `Input_Flip` and set its boolean = (val==='true') = FALSE, clobbering the injector. FIX = after the injector runs, delete BOTH `key` and `Input_${key}` from params (commandExecutor). Pixel-proven: boolean=true output IS the horizontal flip of boolean=false.\n\n(3) AUTO-MASK SILENT-SKIP: DETECT showed face thumbnails but selecting a pick never painted the canvas mask. ROOT = the auto-mask params object (built directly in runAutoMask, NOT via _buildParams, so no alias pass) still used bare `Box` / `Selected_Masks_Input`, but the tier-2 conversion renamed those nodes to `Input_Box` (MpiIfElse) / `Input_Selected_Masks_Input` (ImpactSEGSPicker). The generic injector silently dropped the unmatched keys (MPI-242 silent-skip) → picks never reached the picker. FIX = rename the params keys to `Input_Box` / `Input_Selected_Masks_Input` (commandExecutor). Also this session: mask capture matcher switched to `output_detected`/`output_image` (the renamed capture nodes).\n\n(4) MASKMANAGER NULL-CTX (secondary, was masking #1's throw): `setManualFromDataURL`/`setSubtractFromDataURL` threw on `clearRect` of a null ctx when the canvas was destroyed mid-decode (tool swap). FIX = bail on null ctx before touching it (MaskManager), mirroring the `_recomposite` guard.\n\nCommon thread of #2/#3: a params object outside `_buildParams`, or an alias that outlives its injector, hitting a tier-2 node title after MPI-252's conversion.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-10T23:11:37Z",
+  "updated_at": "2026-07-11T00:20:00Z",
+  "links": {
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "bug",
+    "canvas",
+    "mask",
+    "history-workspace",
+    "resize",
+    "race"
+  ],
+  "priority": "medium"
+}
