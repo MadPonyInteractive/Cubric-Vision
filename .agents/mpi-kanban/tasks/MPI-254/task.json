@@ -1,15 +1,16 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-254",
-  "title": "Remote install hangs at 100% — wrapper finalize stall (.part never promoted)",
+  "title": "Remote install hangs at 100% \u2014 wrapper finalize stall (.part never promoted)",
   "description": "Surfaced live during MPI-244 testing (Krea2 transformer). The app bar reaches 100% but the model never flips INSTALLED and hangs forever. INVESTIGATION (this session, evidence-backed): the /comfy/models/check wrapper view showed krea2-turbo-transformer installed=false, partialBytes==full expected size (13141730784), FROZEN across polls; wrapper /health comfy_ready=false, download_mode=true STUCK. So the .part is fully written (all bytes) but NEVER renamed to the final .safetensors and never sha-verified -> wrapper honestly reports installed=false forever. The completion never HAPPENED (not lost) - the finalize step (rename + sha256 + emit models:install-complete + clear download_mode) is stuck. This is wrapper.py's finalize path = the getsize-progress peer agent's lane (Pod c5576m26kwecc6, wrapper 0.2.35). LEADING SUSPECT: MPI-253's watchdog false-firing mid-sha on the first big 12GB weight, aborting the finalize. RELATED (NOT this bug): the app-side lost-SSE reconcile shipped as a0abef8b (settles a dep whose terminal SSE was lost on an ALREADY-finalized file) - correct for its case, cannot cure a stall where no final file exists. Handed to peer with full evidence (messages under state/messages/). BLOCKED on wrapper.py finalize investigation.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "pending",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-11T08:35:00Z",
-  "updated_at": "2026-07-11T09:30:00Z",
+  "updated_at": "2026-07-11T09:40:29Z",
   "links": {
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "tags": [
     "download",
