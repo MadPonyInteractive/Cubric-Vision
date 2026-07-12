@@ -1328,12 +1328,18 @@ export function runCommand(payload) {
         );
 
         // Cache-hit dedupe only fires for workflows that do NOT inject a fresh
-        // seed. Convention: every seeded workflow has a node titled exactly
-        // "Seed" (case-insensitive). Universal workflows like Upscale have no
-        // such node and benefit from dedupe.
-        const _hasSeedNode = Object.values(workflow).some(node =>
-            node?._meta?.title?.toLowerCase() === 'seed'
-        );
+        // seed. Convention: a seeded workflow has an MpiInt titled `Input_Seed`
+        // (the MPI-116 naming law — `_buildParams` injects a random seed into it
+        // every run). Universal workflows like Upscale have no such node and
+        // benefit from dedupe. NOTE: the old match was `=== 'seed'`, which no
+        // shipping workflow uses (all use `Input_Seed`) — it was dead fleet-wide
+        // and only stayed harmless because a fresh seed usually dodges ComfyUI's
+        // cache anyway. Boogu-Edit's frozen-seed high tier exposed it (MPI-257).
+        // Bare `seed` kept as a defensive fallback for any legacy/hand graph.
+        const _hasSeedNode = Object.values(workflow).some(node => {
+            const t = node?._meta?.title?.toLowerCase();
+            return t === 'input_seed' || t === 'seed';
+        });
 
         // Map nodeId → class_type for loader detection
         const saveLatentNodeIds = new Set(

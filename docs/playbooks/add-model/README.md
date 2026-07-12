@@ -113,8 +113,9 @@ Two structural forks decide everything downstream:
 - [ ] **Baked LoRAs** (workflow-loaded, not user slots)? Declare as normal deps — `size`, no `type`, per-family `loras/<family>/` subfolder — [02](02-dependencies-r2.md)
 - [ ] **Style LoRA set?** Follow [05 §9](05-prompt-and-styles.md) — assert `len(MpiPromptList.options) == number of style LoRAs`, gate controls per-op AND per-model
 - [ ] **Graph rewrites the prompt** (enhancer, or anything between box and encoder)? Follow [05 §10](05-prompt-and-styles.md) — add a `PreviewAny` titled `Output_prompt`, tapped UPSTREAM of the style concat. `promptEnhance` requires a CLIP with `.generate()` (Qwen3-VL/Gemma ✅, T5/umT5 CRASHES). The system prompt is the deliverable, not the wiring
-- [ ] Upload new weights to R2 with `--s3-no-check-bucket`; VERIFY with lsf + HTTP HEAD (don't trust exit code) — [02](02-dependencies-r2.md)
-- [ ] `/mpic-compute-dep-hashes` → fill all sha256
+- [ ] `/mpic-compute-dep-hashes` → fill all sha256 — hashes from the LOCAL copy under
+      `G:\CubricModels`, so this does NOT wait for the upload; run it in parallel — [02](02-dependencies-r2.md)
+- [ ] Upload new weights to R2 with `--s3-no-check-bucket`; VERIFY with lsf + HTTP HEAD (don't trust exit code) — [02](02-dependencies-r2.md). Upload is ship-prep (end-user download), NOT test-prep — the app tests locally before it finishes
 - [ ] Add the `ModelDef` (`models.js`); set capabilities, workflows, dependencies, enhanceRecipe — [03](03-model-registry.md)
 - [ ] New `type`? Sweep the consumers — [03](03-model-registry.md)
 - [ ] **One graph serving several ops** (t2i + i2i + poseReference)? Follow [04](04-ops-and-controls.md) — each op flips ONE baked-`false` boolean via `commandRegistry.injectParams`. **Injection SILENTLY SKIPS a title that matches no node** (this hid `Input_Is_i2i` and `Input_Batch` for four sessions). The injection key is `Input_<Name>` — exact, never abbreviated (`Batch_Size` → `Input_Batch_Size`). Run `tests/inject-params-titles.test.cjs`

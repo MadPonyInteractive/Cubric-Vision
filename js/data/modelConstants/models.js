@@ -375,6 +375,102 @@ export const MODELS = [
             'comfyui-kjnodes',
         ],
     },
+    // ── Boogu-Image-Edit (MPI-257) ─────────────────────────────────────────
+    // Unified 10B instruction image-edit (Apache-2.0). ONE graph, three quality
+    // TIERS shipped as three sibling cards (shared modelFamily + name; the L/B/H
+    // badge disambiguates). Each card installs only its tier's transformer; the
+    // runtime file (generate_boogu.py) bakes the tier's UNETLoader weight + the
+    // Input_Tier int that selects that tier's sampler chain. See
+    // docs/playbooks/add-model/03-model-registry.md § "Multi-tier models".
+    //
+    // Op = the existing `edit` (image+prompt → whole-image edit, dims from source,
+    // no ratio picker). `type: 'boogu'` is new → only consumer is `enhanceRecipe ??
+    // type` (set below). No ratios/qualityTiers: edit has no size selector, like PiD.
+    // User LoRA rack (Input_Lora_1..6) is live → settings gear shown, model-only.
+    // High/Balanced run cfg 4/3.5 (negatives fire); Low is turbo cfg 1 (negatives
+    // ignored, negativePrompt:false).
+    {
+        id: 'boogu-edit-high',
+        sizeTier: 'high',
+        modelFamily: 'Boogu-Image-Edit',
+        name: 'Boogu Image Edit',
+        dropdownMeta: 'EDIT',
+        mediaType: 'image',
+        image: 'boogu-edit-high.webp',
+        type: 'boogu',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'boogu' recipe; keep 'boogu' out of the sweep
+        supportedOps: ['edit'],
+        loraStrengths: ['model'],
+        capabilities: { multiStage: false, audio: false, negativePrompt: true },
+        gen_speed: 'slow',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The High tier uses the full bf16 weights at 30 steps for the best quality; needs the most VRAM.',
+        workflows: {
+            edit: 'boogu_edit_high.json',
+        },
+        dependencies: [
+            'boogu-edit-transformer-high',
+            'boogu-qwen3vl-8b-clip',
+            'vae-flux-ae',            // shared — already on R2, zero upload
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',        // ResizeImageMaskNode
+            'ComfyUI-Impact-Pack',    // To/FromBasicPipe
+        ],
+    },
+    {
+        id: 'boogu-edit-balanced',
+        sizeTier: 'balanced',
+        modelFamily: 'Boogu-Image-Edit',
+        name: 'Boogu Image Edit',
+        dropdownMeta: 'EDIT',
+        mediaType: 'image',
+        image: 'boogu-edit-balanced.webp',
+        type: 'boogu',
+        enhanceRecipe: 'flux',
+        supportedOps: ['edit'],
+        loraStrengths: ['model'],
+        capabilities: { multiStage: false, audio: false, negativePrompt: true },
+        gen_speed: 'balanced',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The Balanced tier uses fp8-scaled weights at 25 steps — near-High quality at lower VRAM.',
+        workflows: {
+            edit: 'boogu_edit_balanced.json',
+        },
+        dependencies: [
+            'boogu-edit-transformer-balanced',
+            'boogu-qwen3vl-8b-clip',
+            'vae-flux-ae',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+            'ComfyUI-Impact-Pack',
+        ],
+    },
+    {
+        id: 'boogu-edit-low',
+        sizeTier: 'low',
+        modelFamily: 'Boogu-Image-Edit',
+        name: 'Boogu Image Edit',
+        dropdownMeta: 'EDIT',
+        mediaType: 'image',
+        image: 'boogu-edit-low.webp',
+        type: 'boogu',
+        enhanceRecipe: 'flux',
+        supportedOps: ['edit'],
+        loraStrengths: ['model'],
+        // Turbo (int8_convrot) distilled at cfg 1.0 ⇒ negatives are a no-op → negativePrompt:false.
+        capabilities: { multiStage: false, audio: false, negativePrompt: false },
+        gen_speed: 'fast',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The Low tier uses a distilled turbo (int8) weight at 8 steps — fastest, lowest VRAM. Fastest on NVIDIA RTX (Turing+); older or non-NVIDIA GPUs may be slow.',
+        workflows: {
+            edit: 'boogu_edit_low.json',
+        },
+        dependencies: [
+            'boogu-edit-transformer-low',
+            'boogu-qwen3vl-8b-clip',
+            'vae-flux-ae',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+            'ComfyUI-Impact-Pack',
+        ],
+    },
     // ── Video Models ───────────────────────────────────────────────────
     {
         id: 'wan-22',

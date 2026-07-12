@@ -39,6 +39,45 @@ Key fields, with the 5B choices:
   Get the dep `size` strings right and the hover trade-table is correct. `sizeTier`
   is only a badge.
 
+## Multi-tier models — N sibling cards, one per tier (LTX-2.3 / Boogu-Edit pattern)
+
+A model that ships the **same graph** at several quality/size points (a fast small
+weight, a heavy production weight) is **NOT** one card with a picker. It is **N separate
+`ModelDef` cards**, one per tier, that the UI clusters by a shared `modelFamily`:
+
+- Each card has its own `id` (`ltx-23` + `ltx-23-balanced`; `boogu-edit-high` +
+  `-balanced` + `-low`), its own `sizeTier` (`'high'`/`'balanced'`/`'low'` — the L/B/H
+  badge), and its **own `dependencies`** (each installs only its tier's weight).
+- **Same `name` + same `modelFamily`** across the siblings. `modelFamily` drives the
+  "show the L/B/H badge only when 2+ tiers of the family are installed" clustering. The
+  `name` shown to the user is identical (`'Boogu Image Edit'`) — the badge disambiguates.
+- The user installs the tier(s) they want as independent models; a low-VRAM machine
+  installs only `low`, a workstation installs `high`. Nothing forces all three.
+
+**Do NOT confuse this with the `variants.arch` axis** ([../../workflow-authoring/variant-injection.md](../../workflow-authoring/variant-injection.md)).
+That is ONE card whose weight is auto-picked **by the user's GPU** (Blackwell vs Ada) —
+the user never chooses. Sibling tier-cards are a **user-facing quality choice** across
+separate cards. A model can even use both (LTX `balanced` is a tier-card that ALSO carries
+an `arch` axis). Rule of thumb: **different silicon → `variants.arch`; different
+quality/size the user picks → sibling cards.**
+
+### When the tiers share ONE template with a baked tier-selector (Boogu-Edit, MPI-257)
+
+Boogu-Edit's three tiers differ by **weight AND sampler settings** (cfg/steps/scheduler),
+but the author built them into ONE graph: a single `UNETLoader` plus three sampler chains
+feeding an `MpiAnySwitch` that reads an `Input_Tier` `MpiInt`. The generator emits one
+runtime file per tier by baking **two** values (look up both by `_meta.title`, never id):
+
+1. `UNETLoader.unet_name` → the tier's diffusion weight, and
+2. `Input_Tier.int` → `1`/`2`/`3` → the switch selects that tier's sampler chain.
+
+The app never injects `Input_Tier` (it is not a control) — it is **frozen per file** by
+the generator. Each runtime file then maps to its sibling card's `workflows`. See
+`generate_boogu.py` (a ~90-line clone of `generate_sdxl.py` + the tier-int bake) and
+[01-workflow-split.md](01-workflow-split.md). The tier→(weight, sampler) map lives in the
+model doc, not here — the bench graph is the source of truth for cfg/steps per tier, so
+**re-read the switch wiring, don't trust a prior note**.
+
 ## New `model.type` → sweep the consumers (trap)
 
 Most UI is gated on `capabilities.*` or `loraStages` (type-agnostic, safe).

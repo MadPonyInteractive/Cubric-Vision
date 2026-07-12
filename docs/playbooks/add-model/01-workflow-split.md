@@ -17,6 +17,16 @@ export the `_template.json` and start the app-wiring steps.
 - **Two-stage test flow:** prove it here FIRST; then test in the in-app ENGINE
   ComfyUI (the one Cubric Vision drives). A workflow graduates to app wiring only
   after it passes on the local folder. The engine run is the second gate, not the first.
+- **The engine already points at `G:\CubricModels` via `extra_model_paths.yaml`**
+  (`comfyui:` block, `base_path: G:/CubricModels`). Weights placed there are visible to
+  the app engine **immediately** — no download, no symlink. The standard workflow: drop
+  the weights in `G:\CubricModels\<type>\` FIRST (author's habit), and the app is
+  test-ready **before** the R2 upload or the sha256 fills. So you can run a full in-app
+  gen per op while the upload is still in flight. R2 upload + hashes are **ship-prep**
+  (so end-users can download), not **test-prep**. A `sha256: null` dep does NOT block a
+  local test: `downloadManager` sets `sha256Expected: dep.sha256 || null` and **skips the
+  verify step when it is null** (install-status keys on local file existence, not R2). So:
+  wire → test locally now → upload + fill hashes in parallel → re-verify before ship.
 - When exporting the template, remember the media-input `input/` trap (below) — the
   exported JSON carries whatever test file was open.
 

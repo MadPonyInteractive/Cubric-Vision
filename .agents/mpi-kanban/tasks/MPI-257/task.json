@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-257",
+  "title": "Add Boogu-Image (Boogu-Image-0.1, 10B) — T2I + image-edit",
+  "description": "Wire Boogu-Image-0.1 (https://github.com/boogu-project/Boogu-Image) into Cubric Vision. Unified 10B image gen+edit, Apache-2.0. Native ComfyUI support (comfy_extras/nodes_boogu.py, TextEncodeBooguEdit; NOT the legacy ComfyUI-Boogu custom node — pure-graph, no baked Pod node needed). Text encoder = qwen3vl_8b_fp8_scaled (NEW upload); VAE = flux ae.safetensors (REUSE existing R2 dep). NOT a version bump.\\n\\n=== EDIT RESEARCH CONCLUDED 2026-07-11 (~30-run live A/B, see research/edit-tuning-and-tier-decision.md — the source of truth) ===\\nSHIP EDIT AS 3 TIERS: low=boogu_image_edit_turbo_int8_convrot (11.37GB, 8-step — NOT 4, 4 is broken), balanced=boogu_image_edit_fp8_scaled (10.31GB, 25-step, gate-safe), high=boogu_image_edit_bf16 (20.59GB, 25-step, production; hot-store FLOOR is 15GB so bf16 gets the FAST disk path, ships clean remote). Rejected: turbo@4step, turbo-LoRA-on-full-weight (whole-image degrade). Resolution LAW: dims MUST be /16 (VAE8 x patch2), round UP via Mpi Round To Multiple, ~1.0MP max (>1MP drifts anatomy). Sampler: euler-or-dpmpp_2m / simple-or-sgm_uniform, ModelSamplingAuraFlow shift 3.16 (model-baked, NOT node default 1.73). Text edit = works reliably (official feature). Multi-image (image_1/image_2 = separate ref latents, NOT stitched — don't pre-montage in app) = half-works despite '1-ref-only' card, orthogonal to tier, decide whether to expose. NO ControlNet exists for Boogu yet. Faces = app-side upscale (out of scope; that's App-system/MPI-256). Competitive lane: wins fast+clean SINGLE-image edit (beats Qwen/FluxKline); Qwen wins multi-ref + ControlNet — complementary.\\n\\n=== FUTURE SESSIONS ===\\n(A) Test T2I tier (Base + T2I turbo hotfix LoRA @ 4-step; different from edit). (B) Author workflow (Input_*/Output_* tier-2, capture=Output_Image, never hand-edit JSON) + run /mpi-add-model per docs/add-model-playbook.md. User has weights local at G:/CubricModels; R2 upload source = local.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-11T11:05:00Z",
+  "updated_at": "2026-07-12T16:10:00Z",
+  "labels": [
+    "add-model",
+    "boogu",
+    "image",
+    "image-edit",
+    "r2-upload"
+  ],
+  "links": {
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}

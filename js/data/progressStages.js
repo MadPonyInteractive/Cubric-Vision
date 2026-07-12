@@ -56,6 +56,14 @@ export const PROGRESS_STAGES = Object.freeze({
     // depth preprocessor surfaces its own tqdm bar, this needs a per-op split.
     // Its detailer/upscaler get NO entry, per the convention above.
     'krea2_turbo_t2i.json':      Object.freeze({ single: 2 }),
+    // Boogu-Image-Edit (MPI-257) — one graph per tier, ONE SamplerCustom pass (the
+    // MpiAnySwitch selects the tier's chain; only that chain runs). 2 bars = model-load
+    // + sampler, same shape as SDXL t2i / Krea2. PROVISIONAL — count live per tier
+    // (turbo=8-step, fp8/bf16=25/30-step) and correct if a tier surfaces a different
+    // bar count. Keyed per-file (one entry per tier).
+    'boogu_edit_high.json':      Object.freeze({ single: 2 }),
+    'boogu_edit_balanced.json':  Object.freeze({ single: 2 }),
+    'boogu_edit_low.json':       Object.freeze({ single: 2 }),
 });
 
 /**

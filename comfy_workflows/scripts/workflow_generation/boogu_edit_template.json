@@ -1,0 +1,633 @@
+{
+  "46": {
+    "inputs": {
+      "image": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "49": {
+    "inputs": {
+      "resize_type": "scale total pixels",
+      "resize_type.megapixels": 1,
+      "scale_method": "lanczos",
+      "input": [
+        "155",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "55": {
+    "inputs": {
+      "unet_name": "boogu_image_edit_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "56": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "58": {
+    "inputs": {
+      "shift": 3.16,
+      "model": [
+        "163",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "59": {
+    "inputs": {
+      "clip_name": "qwen3vl_8b_fp8_scaled.safetensors",
+      "type": "boogu",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "60": {
+    "inputs": {
+      "samples": [
+        "62",
+        0
+      ],
+      "vae": [
+        "163",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "61": {
+    "inputs": {
+      "prompt": [
+        "179",
+        0
+      ],
+      "negative_prompt": [
+        "186",
+        0
+      ],
+      "clip": [
+        "59",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "images.image_1": [
+        "155",
+        0
+      ]
+    },
+    "class_type": "TextEncodeBooguEdit",
+    "_meta": {
+      "title": "TextEncodeBooguEdit"
+    }
+  },
+  "62": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": [
+        "133",
+        0
+      ],
+      "cfg": 4,
+      "model": [
+        "163",
+        0
+      ],
+      "positive": [
+        "163",
+        3
+      ],
+      "negative": [
+        "163",
+        4
+      ],
+      "sampler": [
+        "63",
+        0
+      ],
+      "sigmas": [
+        "64",
+        0
+      ],
+      "latent_image": [
+        "143",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "63": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "64": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 30,
+      "denoise": 1,
+      "model": [
+        "58",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "77": {
+    "inputs": {
+      "model": [
+        "178",
+        0
+      ],
+      "clip": [
+        "59",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "positive": [
+        "61",
+        0
+      ],
+      "negative": [
+        "61",
+        1
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "79": {
+    "inputs": {
+      "samples": [
+        "108",
+        0
+      ],
+      "vae": [
+        "106",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "91": {
+    "inputs": {
+      "samples": [
+        "101",
+        0
+      ],
+      "vae": [
+        "95",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "95": {
+    "inputs": {
+      "basic_pipe": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "99": {
+    "inputs": {
+      "sampler_name": "lcm"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "100": {
+    "inputs": {
+      "scheduler": "sgm_uniform",
+      "steps": 8,
+      "denoise": 1,
+      "model": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "101": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": [
+        "133",
+        0
+      ],
+      "cfg": 1,
+      "model": [
+        "95",
+        0
+      ],
+      "positive": [
+        "95",
+        3
+      ],
+      "negative": [
+        "95",
+        4
+      ],
+      "sampler": [
+        "99",
+        0
+      ],
+      "sigmas": [
+        "100",
+        0
+      ],
+      "latent_image": [
+        "143",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "106": {
+    "inputs": {
+      "basic_pipe": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "107": {
+    "inputs": {
+      "sampler_name": "dpmpp_2m"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "108": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": [
+        "133",
+        0
+      ],
+      "cfg": 3.5,
+      "model": [
+        "109",
+        0
+      ],
+      "positive": [
+        "106",
+        3
+      ],
+      "negative": [
+        "106",
+        4
+      ],
+      "sampler": [
+        "107",
+        0
+      ],
+      "sigmas": [
+        "110",
+        0
+      ],
+      "latent_image": [
+        "143",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "109": {
+    "inputs": {
+      "shift": 3.16,
+      "model": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "110": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 25,
+      "denoise": 1,
+      "model": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "131": {
+    "inputs": {
+      "value": [
+        "46",
+        0
+      ],
+      "multiple_of": 16,
+      "round": true
+    },
+    "class_type": "MpiRoundToMultiple",
+    "_meta": {
+      "title": "Mpi Round To Multiple"
+    }
+  },
+  "132": {
+    "inputs": {
+      "value": [
+        "46",
+        1
+      ],
+      "multiple_of": 16,
+      "round": true
+    },
+    "class_type": "MpiRoundToMultiple",
+    "_meta": {
+      "title": "Mpi Round To Multiple"
+    }
+  },
+  "133": {
+    "inputs": {
+      "int": 891976866874162
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "143": {
+    "inputs": {
+      "width": [
+        "131",
+        0
+      ],
+      "height": [
+        "132",
+        0
+      ],
+      "batch_size": [
+        "149",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "149": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Batch_Size"
+    }
+  },
+  "155": {
+    "inputs": {
+      "image": "2a27e369-9d77-4fd5-9e5b-2b03805fd427-2677367733.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "163": {
+    "inputs": {
+      "basic_pipe": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "168": {
+    "inputs": {
+      "select": [
+        "169",
+        0
+      ],
+      "any_1": [
+        "60",
+        0
+      ],
+      "any_2": [
+        "79",
+        0
+      ],
+      "any_3": [
+        "91",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "169": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "172": {
+    "inputs": {
+      "images": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "173": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "176",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "174": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "173",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "175": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "174",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "176": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "177": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "55",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "178": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "175",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "179": {
+    "inputs": {
+      "string": "Add King Kong climbing up the Eiffel Tower"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "186": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  }
+}

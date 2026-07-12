@@ -137,9 +137,17 @@ R2 deletes need explicit user approval (capability rule).
 
 ### Fill hashes
 
-After upload verifies, run `/mpic-compute-dep-hashes` (→ `python scripts/computeDepHashes.py`)
-to replace every `sha256: null` with the real hash. Do NOT leave nulls — the
-download manager needs them for integrity checks.
+Run `/mpic-compute-dep-hashes` (→ `python scripts/computeDepHashes.py`) to replace every
+`sha256: null` with the real hash. Do NOT leave nulls — the download manager needs them
+for the end-user integrity check.
+
+**Hashes do NOT wait for the R2 upload.** For R2-hosted deps (`models.cubric.studio` URL),
+the script hashes the **LOCAL master copy** under `CUBRIC_MODELS_ROOT` (default
+`g:/cubricmodels`), because R2's ETag is multipart-MD5 and useless for sha256. So the moment
+the weights are in `G:\CubricModels\<type>\` — which is *before* any upload, since that is
+where they start — you can fill every hash. Do it **in parallel** with (or before) the upload;
+the upload is only what lets end-users download the file, it has nothing to do with computing
+the hash. (HF-hosted deps hash from the remote ETag/stream instead — also no local upload.)
 
 ## Status-bar stage count (`progressStages.js`)
 

@@ -403,6 +403,52 @@ export const DEPS = {
         size: '218MB',
         sha256: 'ad4a9f0b4d61ba77c5783b51fe3a2b637f8245144c1ce5e6a3fcd8225fd7df8a',
     },
+    // ── Boogu-Image-Edit (MPI-257) ────────────────────────────────────────────
+    // Unified 10B image edit, Apache-2.0. Native ComfyUI (comfy_extras/nodes_boogu.py
+    // — TextEncodeBooguEdit, no baked node). Three quality TIERS ship as three sibling
+    // ModelDefs (modelFamily 'Boogu-Image-Edit'), one transformer each; same graph,
+    // Input_Tier baked per file. CLIP = Qwen3-VL-8B (distinct from krea2's 4B),
+    // VAE = shared vae-flux-ae (zero upload). bf16 is 19.17 binary GB — UNDER the 20GB
+    // hot-store gate, stays on the volume.
+    'boogu-edit-transformer-high': {
+        id: 'boogu-edit-transformer-high',
+        name: 'Boogu Image Edit Transformer (bf16, High)',
+        origin: 'Boogu/Boogu-Image-0.1-Edit',
+        filename: 'diffusion_models/boogu_image_edit_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_bf16.safetensors',
+        size: '20.59GB',
+        sha256: '6374c9d1f4faa17d0204df6d20f777ed348bc1ac22f778e46ac79d554c67e3b1',
+    },
+    'boogu-edit-transformer-balanced': {
+        id: 'boogu-edit-transformer-balanced',
+        name: 'Boogu Image Edit Transformer (fp8_scaled, Balanced)',
+        origin: 'Boogu/Boogu-Image-0.1-Edit-fp8',
+        filename: 'diffusion_models/boogu_image_edit_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_fp8_scaled.safetensors',
+        size: '10.31GB',
+        sha256: '1b9da944fdde5fdee4bbae874da68682bf9787e59fc90a473664547e342f8575',
+    },
+    'boogu-edit-transformer-low': {
+        id: 'boogu-edit-transformer-low',
+        name: 'Boogu Image Edit Transformer (turbo int8_convrot, Low)',
+        origin: 'Boogu/Boogu-Image-0.1-Edit-Turbo',
+        filename: 'diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors',
+        size: '11.37GB',
+        sha256: 'c242eca52f1388102e1fd8644945875a09ea3e85f5e944c42114c6a72328e440',
+    },
+    // Qwen3-VL-8B fp8_scaled (hidden 4096) — Boogu's text encoder, `type: 'boogu'` in
+    // the CLIPLoader. Distinct weight from krea2-qwen3vl-clip (4B). Shared by all three
+    // Boogu tiers.
+    'boogu-qwen3vl-8b-clip': {
+        id: 'boogu-qwen3vl-8b-clip',
+        name: 'Boogu Text Encoder (Qwen3-VL-8B fp8_scaled)',
+        origin: 'Boogu/Boogu-Image-0.1-Edit',
+        filename: 'text_encoders/qwen3vl_8b_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_8b_fp8_scaled.safetensors',
+        size: '10.59GB',
+        sha256: '4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd',
+    },
     'pid-gemma': {
         id: 'pid-gemma',
         name: 'PiD Gemma text encoder',

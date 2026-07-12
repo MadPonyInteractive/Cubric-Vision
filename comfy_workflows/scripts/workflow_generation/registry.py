@@ -25,6 +25,8 @@ HANDLERS = [
                              # the optional-image placeholder + asserts the style rack.
     ("Chroma_",   "chroma"), # MPI-252: Chroma_t2i_template.json — i2i shares the t2i graph;
                              # stamps the optional-image placeholder so plain t2i validates.
+    ("boogu_",    "boogu"),  # MPI-257: boogu_edit_template.json — ONE graph → 3 per-tier
+                             # files; bakes UNETLoader weight + Input_Tier int (no op split).
 ]
 
 
