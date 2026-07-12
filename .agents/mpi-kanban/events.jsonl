@@ -1230,3 +1230,6 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-232", "type": "task.moved", "at": "2026-07-12T18:30:00Z", "actor": "claude", "from": "done", "to": "archived", "summary": "Archived completed card to docs/archive/mpi-kanban/tasks/ during board cleanup."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-233", "type": "task.moved", "at": "2026-07-12T18:30:00Z", "actor": "claude", "from": "done", "to": "archived", "summary": "Archived completed card to docs/archive/mpi-kanban/tasks/ during board cleanup."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-237", "type": "task.moved", "at": "2026-07-12T18:30:00Z", "actor": "claude", "from": "done", "to": "archived", "summary": "Archived completed card to docs/archive/mpi-kanban/tasks/ during board cleanup."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-269", "type": "task.created", "at": "2026-07-12T20:20:00Z", "actor": "claude", "summary": "Unified latent-preview bus (local+remote), engine-tagged \u2014 standalone card for a separate session; surfaced by MPI-259 app-pane latent bugs."}
+{"schema":"mpi-kanban/event/v1","at":"2026-07-12T22:15:00Z","actor":"claude","event":"task.moved","data":{"id":"MPI-270","from":"todo","to":"doing"}}
+{"schema":"mpi-kanban/event/v1","at":"2026-07-12T23:40:00Z","actor":"claude","event":"task.moved","data":{"id":"MPI-270","from":"doing","to":"done"}}
