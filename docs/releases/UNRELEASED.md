@@ -19,6 +19,7 @@
 - **Boogu Image Edit** — a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. Ships in two quality tiers (High / Balanced) you install separately: High for the best quality with the full-precision weights, Balanced for a fast, lower-VRAM edit that stays consistent across GPUs.
 - **Gallery view remembers your layout** — the gallery card-size slider and info-mode (card badges) toggle now persist across app restarts.
 - **Meet the mascot** — while a card is generating, our mascot now keeps you company: it hovers in the center while it waits, then tucks into the corner once the preview starts coming in.
+- **Export GIF** — a new History tool (under Export, video only) that turns your clip into an animated GIF. Pick the frame rate, output size (fixed width or height, aspect kept), and loop count, hit Generate preview to see the result and its file size, then Export to save it anywhere.
 
 ## fixes
 
