@@ -27,7 +27,7 @@ import { openAppFromReuse } from '../../../services/appService.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
-import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
+import { extractFilenameFromPath, extractAbsPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
@@ -924,6 +924,38 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 return sel ? [sel] : [];
             });
             downloadMediaFiles(state.currentProject, items);
+        });
+
+        // ── Open in file system ──────────────────────────────────────────────────
+        // Single card → reveal + select the media file. Multiple → just open the
+        // Media folder (no portable multi-file select across OSes).
+        grid.on('reveal', async ({ groups: g }) => {
+            if (!g?.length) return;
+            try {
+                if (g.length === 1) {
+                    const item = getSelectedItem(g[0]);
+                    if (!item?.filePath) return;
+                    const absPath = extractAbsPath(item.filePath) || item.filePath; // filePath may be a /project-file?path= URL or a raw path
+                    const res = await fetch('/reveal-item', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ itemPath: absPath }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                } else {
+                    const folderPath = state.currentProject?.folderPath;
+                    if (!folderPath) return;
+                    const res = await fetch('/open-folder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folderPath: `${folderPath}/Media` }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                }
+            } catch (err) {
+                clientLogger.warn('MpiGalleryBlock', 'reveal item failed', err);
+                Events.emit('ui:error', { title: 'Open in file system', message: 'Could not open the file location.' });
+            }
         });
 
         // ── Delete ──────────────────────────────────────────────────────────────

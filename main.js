@@ -630,6 +630,19 @@ app.on('ready', () => {
       return;
     }
 
+    if (msg && typeof msg === 'object' && msg.type === 'reveal-item') {
+      try {
+        const itemPath = typeof msg.itemPath === 'string' ? path.resolve(msg.itemPath) : '';
+        if (!itemPath) throw new Error('Invalid item path');
+        shell.showItemInFolder(itemPath); // selects the file in the OS file browser (win/mac/linux)
+        serverProcess.send?.({ type: 'reveal-item-result', id: msg.id, ok: true });
+      } catch (err) {
+        logger.error('system', 'reveal-item bridge error', err);
+        serverProcess.send?.({ type: 'reveal-item-result', id: msg.id, ok: false, error: err.message });
+      }
+      return;
+    }
+
     if (msg === 'server-ready') {
       console.log('[main] Server signaled ready.');
       onReady();

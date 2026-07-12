@@ -73,6 +73,45 @@ function openFolderViaPlatform(folderPath) {
     });
 }
 
+function revealItemViaMainProcess(itemPath) {
+    return new Promise((resolve, reject) => {
+        if (!process.send) {
+            reject(new Error('Electron main process bridge unavailable'));
+            return;
+        }
+        const id = `reveal-item-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const timeout = setTimeout(() => {
+            process.removeListener('message', onMessage);
+            reject(new Error('Timed out waiting for Electron reveal-item bridge'));
+        }, 10000);
+        function onMessage(message) {
+            if (!message || message.type !== 'reveal-item-result' || message.id !== id) return;
+            clearTimeout(timeout);
+            process.removeListener('message', onMessage);
+            if (message.ok) resolve();
+            else reject(new Error(message.error || 'Failed to reveal item'));
+        }
+        process.on('message', onMessage);
+        process.send({ type: 'reveal-item', id, itemPath });
+    });
+}
+
+function revealItemViaPlatform(itemPath) {
+    return new Promise((resolve, reject) => {
+        // Select the file where the OS supports it; Linux has no portable select flag → open parent.
+        const opener = process.platform === 'win32'
+            ? { command: 'explorer.exe', args: [`/select,${itemPath}`] }
+            : process.platform === 'darwin'
+                ? { command: 'open', args: ['-R', itemPath] }
+                : { command: 'xdg-open', args: [path.dirname(itemPath)] };
+        // ponytail: explorer.exe returns exit 1 even on success — ignore its error, trust others.
+        execFile(opener.command, opener.args, { windowsHide: true }, (err) => {
+            if (err && process.platform !== 'win32') reject(err);
+            else resolve();
+        });
+    });
+}
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 router.get('/system/stats', async (req, res) => {
@@ -157,6 +196,23 @@ router.post('/open-folder', async (req, res) => {
     } catch (err) {
         logger.error('system', 'Failed to open folder', err);
         res.status(500).send('Failed to open folder');
+    }
+});
+
+router.post('/reveal-item', async (req, res) => {
+    const { itemPath } = req.body;
+    if (!itemPath) return res.status(400).send('No path provided');
+    try {
+        const normalizedPath = path.resolve(itemPath);
+        if (process.send) {
+            await revealItemViaMainProcess(normalizedPath);
+        } else {
+            await revealItemViaPlatform(normalizedPath);
+        }
+        res.send('Item revealed');
+    } catch (err) {
+        logger.error('system', 'Failed to reveal item', err);
+        res.status(500).send('Failed to reveal item');
     }
 });
 

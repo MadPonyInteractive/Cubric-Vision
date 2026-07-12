@@ -1098,6 +1098,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         { key: 'compare',    icon: 'compare',  label: 'Compare',    disabled: compareDisabled },
                         { key: 'combine',    icon: 'merge',     label: 'Combine',    disabled: combineDisabled },
                         { key: 'add-to-project', icon: 'folder', label: 'Add to project' },
+                        { key: 'reveal',     icon: 'folder',    label: 'Open in file system' },
                         { key: 'rename',     icon: 'edit',      label: 'Rename',     disabled: targetIds.length !== 1 },
                         { key: 'card-notes', icon: 'text',      label: 'Card notes', disabled: targetIds.length !== 1 },
                         { key: 'download',   icon: 'download',  label: 'Download' },
@@ -1110,6 +1111,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         if (key === 'compare')    emit('compare',  { groups: selected });
                         if (key === 'combine')    emit('combine',  { groups: selected });
                         if (key === 'add-to-project') emit('add-to-project', { groups: selected });
+                        if (key === 'reveal')     emit('reveal', { groups: selected });
                         if (key === 'rename')     _startRename();
                         if (key === 'card-notes') emit('card-notes', { group });
                         if (key === 'download')   emit('download', { groups: selected });
