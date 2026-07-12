@@ -154,18 +154,42 @@ export const MpiReusePromptDialog = ComponentFactory.create({
         });
         actionsSlot.appendChild(cancelBtn.el);
 
-        const okBtn = MpiButton.mount(document.createElement('div'), {
-            text: 'Apply',
-            variant: 'primary',
-            size: 'md',
-        });
-        const _confirm = () => {
-            emit('apply', { includes: { ...includes }, source });
+        // Emit apply with the chosen destination. dest: 'promptbox' honors the
+        // checkboxes; 'app' reopens the App card (checkboxes ignored downstream).
+        const _apply = (dest) => {
+            emit('apply', { includes: { ...includes }, source, dest });
             el.hide();
         };
-        okBtn.on('click', _confirm);
-        modal.on('confirm', _confirm);
-        actionsSlot.appendChild(okBtn.el);
+
+        if (props.isAppCard === true) {
+            // App cards (MPI-263): two same-color Apply buttons — no destination
+            // selector, one click each.
+            const toPromptBtn = MpiButton.mount(document.createElement('div'), {
+                text: 'Prompt Box',
+                variant: 'primary',
+                size: 'md',
+            });
+            toPromptBtn.on('click', () => _apply('promptbox'));
+            actionsSlot.appendChild(toPromptBtn.el);
+
+            const toAppBtn = MpiButton.mount(document.createElement('div'), {
+                text: 'App',
+                variant: 'primary',
+                size: 'md',
+            });
+            toAppBtn.on('click', () => _apply('app'));
+            modal.on('confirm', () => _apply('app'));
+            actionsSlot.appendChild(toAppBtn.el);
+        } else {
+            const okBtn = MpiButton.mount(document.createElement('div'), {
+                text: 'Apply',
+                variant: 'primary',
+                size: 'md',
+            });
+            okBtn.on('click', () => _apply('promptbox'));
+            modal.on('confirm', () => _apply('promptbox'));
+            actionsSlot.appendChild(okBtn.el);
+        }
 
         el.destroy = () => {
             modal.el.hide?.();

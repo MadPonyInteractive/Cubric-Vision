@@ -930,6 +930,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const dialog = MpiReusePromptDialog.mount(document.createElement('div'), {
                     includes: options,
                     showSource: false,
+                    // App cards (MPI-263) split Apply into "to Prompt Box" vs "to App".
+                    isAppCard: !!payload.item?.appId,
                     // Single-source dialog (no Original/Current toggle) → the
                     // dialog defaults source to 'original'; gate each Use … toggle on
                     // whether THIS payload carries that input (MPI-212/227).
@@ -937,23 +939,25 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     videoAvailability: { original: payloadHasReusableVideos(payload) },
                     audioAvailability: { original: payloadHasReusableAudio(payload) },
                 });
-                dialog.on('apply', async ({ includes }) => {
-                    await _applyPromptReuse(payload, _reuseIncludes(includes));
+                dialog.on('apply', async ({ includes, dest }) => {
+                    await _applyPromptReuse(payload, _reuseIncludes(includes), dest);
                     dialog.destroy?.();
                 });
                 dialog.on('cancel', () => dialog.destroy?.());
                 dialog.el.show?.();
                 return;
             }
-            _applyPromptReuse(payload, _reuseIncludes(options));
+            // No-dialog fast path (ask=false): app cards reopen the App as before.
+            _applyPromptReuse(payload, _reuseIncludes(options), 'app');
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }, dest = 'app') {
             // App cards (MPI-256): Reuse reopens the App with saved inputs restored,
             // NOT the PromptBox. Branch FIRST — above the cross-mediaType reject guard
             // (an app result whose mediaType differs from the reused model would bail
-            // there before reaching the app branch).
-            if (openAppFromReuse(payload.item)) return;
+            // there before reaching the app branch). MPI-263: only when the user chose
+            // "Apply to App" (dest==='app'); "Apply to Prompt Box" falls through to inject.
+            if (dest === 'app' && openAppFromReuse(payload.item)) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 

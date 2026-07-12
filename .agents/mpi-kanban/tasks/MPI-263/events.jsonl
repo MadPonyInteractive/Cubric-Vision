@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-263","at":"2026-07-12T03:20:00.000Z","actor":"claude","summary":"Created MPI-263 — split Reuse Prompt Apply into Prompt Box vs App for app cards."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-263","at":"2026-07-12T03:20:00.000Z","actor":"claude","from":"todo","to":"doing","summary":"Moved MPI-263 from To do to Doing (starting implementation)."}

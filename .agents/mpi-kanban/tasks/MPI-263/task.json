@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-263",
+  "title": "Reuse Prompt from app card: split Apply into Prompt Box vs App",
+  "description": "Reuse Prompt on an app-generated card always reopens the app (openAppFromReuse fires unconditionally, ignores all 6 checkboxes). User wants to also inject prompt/images into the Prompt Box. Fix: on app cards, replace single Apply with two same-color buttons — 'Apply to Prompt Box' (honors checkboxes, skips openApp) and 'Apply to App' (current behavior). Non-app cards keep single Apply. One event carrying dest.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "pending",
+  "created_at": "2026-07-12T03:20:00.000Z",
+  "updated_at": "2026-07-12T03:20:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

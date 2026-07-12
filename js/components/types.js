@@ -947,6 +947,7 @@
  * @property {{original?:boolean,current?:boolean}} [imageAvailability] - Per-source: does the source carry a reusable input image? false greys "Use Images" (MPI-212)
  * @property {{original?:boolean,current?:boolean}} [videoAvailability] - Per-source: reusable input video? false greys "Use Video" (MPI-227)
  * @property {{original?:boolean,current?:boolean}} [audioAvailability] - Per-source: reusable input audio? false greys "Use Audio" (MPI-227)
+ * @property {boolean} [isAppCard=false] - App-generated card: split Apply into "Apply to Prompt Box" + "Apply to App" (MPI-263)
  *
  * Instance methods (on instance.el):
  *   show()    - open the modal
@@ -954,8 +955,8 @@
  *   destroy() - release modal listeners
  *
  * Emits:
- *   'apply'  { includes, source } - user confirmed reuse choices
- *   'cancel' {}                   - user cancelled
+ *   'apply'  { includes, source, dest } - user confirmed reuse. dest: 'promptbox' honors checkboxes; 'app' reopens the App card (MPI-263)
+ *   'cancel' {}                         - user cancelled
  */
 
 /**
