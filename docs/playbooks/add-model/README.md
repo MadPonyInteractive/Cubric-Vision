@@ -126,3 +126,31 @@ Two structural forks decide everything downstream:
 - [ ] Shared VAE/encoder deps? RESOURCE-named ids (`vae-*`), not model-scoped — [04](04-ops-and-controls.md)
 - [ ] Verify: parse cross-ref, loader paths, upload HEAD, app launch — [06](06-verify.md)
 - [ ] NO app version bump (adding a model/op ≠ version bump)
+
+## Removing or re-tiering a model (reverse the add)
+
+Dropping a model/tier (or swapping a weight) touches the SAME surfaces in reverse.
+Miss one and you ship a dangling ref or a stale card. Order (MPI-266 dropped Boogu's
+fp8_scaled Balanced tier, collapsed 3→2):
+
+1. **Generator + template** — remove the tier's row from `MODEL_VARIANTS`; edit the
+   template (user-owned, never hand-edit JSON) to drop that tier's loader/sampler chain.
+   Renumber remaining `Input_Tier` values if the count changed; keep the generator's baked
+   tier ints in sync.
+2. **Regen + delete stale runtime JSON** — rerun the generator, then `git rm` the runtime
+   file(s) no longer produced. Confirm `ls` shows only the surviving tiers.
+3. **dependencies.js** — delete the dropped weight's dep entry. If a surviving tier is
+   re-slotted, rename its dep id to match the new tier.
+4. **models.js** — delete the dropped `ModelDef`; re-slot a promoted tier (`id`, `sizeTier`,
+   `image`, `gen_speed`, `workflows`, `dependencies`, capabilities like `negativePrompt`).
+5. **progressStages.js** — drop the removed file's key; re-key a renamed file.
+6. **display webp** — the card `image` must show the SURVIVING tier's weight output, not the
+   dropped one. Overwrite/rename the webp; `git rm` the orphan.
+7. **Consumer sweep** — grep the old dep id / filename / tier id across `js/`,
+   `operation_registry.json`, docs. Zero orphans.
+8. **R2 delete (approval gate)** — remove the dropped weight from R2 (`rclone deletefile
+   --s3-no-check-bucket`); verify HEAD 404. Weight is re-uploadable from `G:\CubricModels`.
+9. **Changelog** — if the model's UNRELEASED entry named the dropped tier, UPDATE that entry
+   (don't add a new one). A stale "three tiers" note ships silently otherwise.
+
+No version bump (still a model change).

@@ -16,7 +16,7 @@
 - **Crop ratios + Divisible by** — the Crop tool now offers a Ratio / Free choice with a full ratio set including cinema formats (2:1, 1.85:1, 21:9, 2.39:1), plus a "Divisible by" control (default 16) that snaps crop output to clean multiples. Resize also defaults to 16.
 - **Clear mask from any tool** — right-click the image viewer to open a context menu with a "Clear mask" entry, so you can wipe the painted mask without opening the Mask tool first.
 - **History tool rail tooltips** — hover any tool icon in the History workspace to see its name as a tooltip; the rail icons are also slightly larger for a cleaner layout.
-- **Boogu Image Edit** — a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. Ships in three quality tiers (High / Balanced / Low) you install separately: High for the best quality, Low for the fastest.
+- **Boogu Image Edit** — a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. Ships in two quality tiers (High / Balanced) you install separately: High for the best quality with the full-precision weights, Balanced for a fast, lower-VRAM edit that stays consistent across GPUs.
 - **Gallery view remembers your layout** — the gallery card-size slider and info-mode (card badges) toggle now persist across app restarts.
 - **Meet the mascot** — while a card is generating, our mascot now keeps you company: it hovers in the center while it waits, then tucks into the corner once the preview starts coming in.
 
