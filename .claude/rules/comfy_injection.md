@@ -72,6 +72,8 @@ These use the same LoRA object shape as flat slots, and the controller writes
 | `"Input_Upscale_Model"` | `inputs.upscale_model` | Upscale model filename |
 | `"Input_Upscale_Factor"` | `inputs.float` / `inputs.value` | 1.0 – 4.0 |
 | `"Input_Upscale_Using_Model"` | `inputs.boolean` | MpiBoolean (MpiIfElse) gate on `image_upscale.json` / `video_upscale.json`. `true` → routes through `Input_Upscale_Model` + `ImageUpscaleWithModel`. `false` → bypasses model, plain `ImageScaleBy` lanczos. Injected by `MpiToolOptionsUpscale` (`None` = `false`). |
+| `"Input_Bg_Use_Color"` | `inputs.boolean` | **(Remove Background — MPI-260.)** `MpiIfElse` gate on `remove_background.json`. `false` → transparent RGBA (`JoinImageWithAlpha`); `true` → composite subject over a solid color (`ImageCompositeMasked` over `EmptyImage`). Injected by `MpiToolOptionsRemoveBg`. |
+| `"Input_Bg_Color"` | `inputs.color` | **(Remove Background — MPI-260.)** `EmptyImage.color`, an INT `0xRRGGBB` (NOT hex string). `_handleApply` converts the picker hex → int. NOTE: `color` was ADDED to the `comfyController._inject` target field list for MPI-260 (a number field, coerced via `parseFloat`). |
 | `"Input_Interp_Multiplier"` | `inputs.float` | Frame multiplier for RIFE VFI (2, 3, 4) |
 | `"Input_Auto_Grid"` | `inputs.boolean` | Use-grid toggle (upscale) |
 | `"Input_Grid_H"` / `"Input_Grid_V"` | `inputs.int` / `inputs.value` | Grid splits |
