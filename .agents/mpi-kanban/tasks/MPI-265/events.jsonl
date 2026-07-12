@@ -4,3 +4,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"checklist.updated","at":"2026-07-12T13:40:00Z","actor":"claude","summary":"Derived 4 checklist items from compact plan."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"validation.updated","at":"2026-07-12T14:05:00Z","actor":"claude","summary":"User-verified in running app."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"task.moved","at":"2026-07-12T14:05:00Z","actor":"claude","from":"doing","to":"done","summary":"Mascot generating states verified + complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"validation.updated","at":"2026-07-12T15:10:00Z","actor":"claude","summary":"Follow-up: happy-at-end dropped (card rebuild); happy stays on toast. Changelog entry added."}
