@@ -142,6 +142,37 @@ export const MpiAppLibrary = ComponentFactory.create({
             }
         }
 
+        // Cancel EVERY in-flight required-model install for this app (Cancel-all).
+        function _cancelInstall(app) {
+            for (const modelId of (app.requiredModels || [])) {
+                if ((state.downloadJobs || []).some(j => j.modelId === modelId)) {
+                    downloadService.cancel(modelId);
+                }
+            }
+        }
+
+        // Aggregate install state across an app's requiredModels. Installs are SERIAL
+        // (downloadService serializes the queue), so N models each own 1/N of the bar:
+        // installed → 1, the live download → job.progress, queued/not-started → 0.
+        // `installing` = at least one model has a live download job. Returns overall 0–1.
+        //   { installing, progress }
+        function _installProgress(app) {
+            const ids = app.requiredModels || [];
+            if (!ids.length) return { installing: false, progress: 0 };
+            const installed = state.s_installedModelIds || [];
+            const jobs = state.downloadJobs || [];
+            let sum = 0, installing = false;
+            for (const id of ids) {
+                if (installed.includes(id)) { sum += 1; continue; }
+                const job = jobs.find(j => j.modelId === id);
+                if (job) {
+                    installing = true;
+                    sum += Math.min(Math.max(job.progress || 0, 0), 1);
+                }
+            }
+            return { installing, progress: sum / ids.length };
+        }
+
         function _modelRowHtml(modelId) {
             const model = getModelById(modelId);
             const name = model?.name || modelId;
@@ -181,9 +212,19 @@ export const MpiAppLibrary = ComponentFactory.create({
                 thumb.appendChild(img);
             }
 
-            // Footer: all-installed → Open (Gallery-only), else → Install.
+            // Footer: installing → aggregated bar + Cancel-all; else all-installed →
+            // Open (Gallery-only); else → Install.
             detailActions.innerHTML = '';
-            if (available) {
+            const prog = _installProgress(app);
+            if (prog.installing) {
+                const pct = Math.min(Math.round(prog.progress * 100), 100);
+                const bar = ce('div', { className: 'mpi-detail__install-prog' });
+                bar.innerHTML = `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
+                detailActions.appendChild(bar);
+                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'md' });
+                cancel.on('click', () => { _cancelInstall(app); });
+                detailActions.appendChild(cancel.el); _detailBtns.push(cancel);
+            } else if (available) {
                 const canOpen = state.currentPage === PAGE_GALLERY;
                 const open = MpiButton.mount(ce('div'), {
                     text: 'Open', variant: 'primary', size: 'md', disabled: !canOpen,
@@ -260,12 +301,30 @@ export const MpiAppLibrary = ComponentFactory.create({
             for (const app of listApps()) _patchTile(app.id);
         }
 
+        // Tick only the aggregated bar width/pct in the open detail — cheap, per-progress
+        // event (no footer rebuild). Full rebuild is reserved for state TRANSITIONS
+        // (start/complete/cancel), which swap the button between Install/Cancel/Open.
+        function _patchProgress(app) {
+            if (!_activeDetail || _activeDetail.id !== app.id) return;
+            const bar = detailActions.querySelector('.mpi-tile__prog-bar span');
+            const pctEl = detailActions.querySelector('.mpi-tile__prog-pct');
+            if (!bar || !pctEl) { openDetail(app); return; } // footer not in bar-mode yet → transition
+            const pct = Math.min(Math.round(_installProgress(app).progress * 100), 100);
+            bar.style.width = `${pct}%`;
+            pctEl.textContent = `${pct}%`;
+        }
+
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 's_installedModelIds') _patchAllAffected();
         }));
-        // Live install badges on the required-models rows in the open detail panel.
-        // Only the open panel repaints; the grid badges follow s_installedModelIds
-        // (above) once the model actually flips installed.
+        // Progress ticks: patch only the bar (fast path). A model whose required set
+        // includes the ticking model repaints; the grid badges follow s_installedModelIds.
+        _unsubs.push(Events.on('download:progress', ({ modelId }) => {
+            if (_activeDetail && (_activeDetail.requiredModels || []).includes(modelId)) _patchProgress(_activeDetail);
+        }));
+        // State transitions rebuild the open panel (footer swaps Install↔Cancel↔Open,
+        // required-models rows repaint). Only the open panel repaints; the grid badges
+        // follow s_installedModelIds once the model actually flips installed.
         _unsubs.push(Events.on('download:complete', () => { if (_activeDetail) openDetail(_activeDetail); }));
         _unsubs.push(Events.on('download:started', () => { if (_activeDetail) openDetail(_activeDetail); }));
         _unsubs.push(Events.on('download:cancelled', () => { if (_activeDetail) openDetail(_activeDetail); }));

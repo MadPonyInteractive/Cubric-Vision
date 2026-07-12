@@ -1,0 +1,239 @@
+{
+  "6": {
+    "inputs": {
+      "video_info": [
+        "8",
+        3
+      ]
+    },
+    "class_type": "VHS_VideoInfoSource",
+    "_meta": {
+      "title": "Video Info (Source) 🎥🅥🅗🅢"
+    }
+  },
+  "7": {
+    "inputs": {
+      "video_path": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "MpiHasAudio",
+    "_meta": {
+      "title": "Mpi Has Audio"
+    }
+  },
+  "8": {
+    "inputs": {
+      "video": [
+        "25",
+        0
+      ],
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "AnimateDiff"
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Load Video (Path) 🎥🅥🅗🅢"
+    }
+  },
+  "9": {
+    "inputs": {
+      "video_info": [
+        "10",
+        3
+      ]
+    },
+    "class_type": "VHS_VideoInfoSource",
+    "_meta": {
+      "title": "Video Info (Source) 🎥🅥🅗🅢"
+    }
+  },
+  "10": {
+    "inputs": {
+      "video": [
+        "26",
+        0
+      ],
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "AnimateDiff"
+    },
+    "class_type": "VHS_LoadVideoPath",
+    "_meta": {
+      "title": "Load Video (Path) 🎥🅥🅗🅢"
+    }
+  },
+  "11": {
+    "inputs": {
+      "fps": [
+        "9",
+        0
+      ],
+      "filename_prefix": "MpiVideo2",
+      "use_audio": true,
+      "images": [
+        "10",
+        0
+      ],
+      "audio": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_video_2"
+    }
+  },
+  "12": {
+    "inputs": {
+      "audio": "ltx_silence.wav",
+      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.7597831938089817"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "Input_audio"
+    }
+  },
+  "15": {
+    "inputs": {
+      "boolean": [
+        "27",
+        1
+      ],
+      "true": [
+        "20",
+        0
+      ],
+      "false": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "16": {
+    "inputs": {
+      "fps": [
+        "6",
+        0
+      ],
+      "filename_prefix": "MpiVideo",
+      "use_audio": [
+        "7",
+        0
+      ],
+      "images": [
+        "15",
+        0
+      ],
+      "audio": [
+        "8",
+        2
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_video"
+    }
+  },
+  "17": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_video"
+    }
+  },
+  "18": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_video_2"
+    }
+  },
+  "20": {
+    "inputs": {
+      "direction": "right",
+      "match_image_size": true,
+      "spacing_width": 0,
+      "spacing_color": "white",
+      "image1": [
+        "8",
+        0
+      ],
+      "image2": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Stitch Images"
+    }
+  },
+  "23": {
+    "inputs": {
+      "any": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "25": {
+    "inputs": {
+      "any": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmpty",
+    "_meta": {
+      "title": "Mpi Any Blocker"
+    }
+  },
+  "26": {
+    "inputs": {
+      "any": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmpty",
+    "_meta": {
+      "title": "Mpi Any Blocker"
+    }
+  },
+  "27": {
+    "inputs": {
+      "any": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  }
+}

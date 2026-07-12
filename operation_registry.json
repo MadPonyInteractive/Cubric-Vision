@@ -71,6 +71,11 @@
     "appVersionIntroduced": "0.0.1",
     "universal": true
   },
+  "removeBackground": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0",
+    "universal": true
+  },
   "autoMaskImg": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1",
@@ -87,6 +92,11 @@
     "universal": true
   },
   "appImageRegen": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0",
+    "universal": true
+  },
+  "appSdxl4k": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.2.0",
     "universal": true

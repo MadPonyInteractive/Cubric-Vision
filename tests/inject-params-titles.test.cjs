@@ -97,6 +97,27 @@ test('the first App workflow carries its inject + capture titles (MPI-256)', () 
     assert.strictEqual(i2iNode?.inputs?.boolean, true, 'Input_Is_i2i must be baked true in the App workflow');
 });
 
+test('the second App workflow (SDXL 4K) carries its polymorphic I/O titles (MPI-259)', () => {
+    // appSdxl4k runs App_sdxl_4k.json via model:{id:null}. Re-exported as the polymorphic
+    // I/O test app: prompt/seed + the full media-input matrix (numbered/lowercase slots)
+    // + MULTIPLE same-type capture nodes. Pins the exact titles the app injects into and
+    // captures from. Numbered/lowercase names are deliberate — the injector matches them
+    // case-insensitively (commandExecutor _buildParams + comfyController media-kind sweep).
+    const file = 'App_sdxl_4k.json';
+    const have = titlesOf(file);
+    // Always-injected + declared input slots (multi-IMAGE variant: up to 2 images).
+    for (const title of [
+        'input_positive', 'input_negative', 'input_seed',
+        'input_image', 'input_image_2',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    // Multi-output: several same-type capture nodes (MPI-259 prefix-match capture).
+    for (const title of ['output_image', 'output_image_2', 'output_image_3']) {
+        assert.ok(have.has(title), `${file} must carry a capture node titled "${title}"`);
+    }
+});
+
 test('the Krea2 shared graph carries both branch booleans', () => {
     // Pins the specific regression: t2i / i2i / poseReference all run one file and
     // select a branch with a baked-false boolean. Lose a node (or its title) and the

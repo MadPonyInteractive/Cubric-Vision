@@ -51,15 +51,113 @@ machinery here (do not cargo-cult it from modelRegistry).
   operation,      // universal-op key (commandRegistry.js)
   workflow,       // ComfyUI workflow filename (universal_workflows.js)
   uiComponent,    // per-app component NAME (string; shell maps name → blueprint)
-  mediaType,      // 'image' | 'video'
-  inputSchema,    // what the uiComponent collects → injected into the workflow
+  mediaType,      // 'image' | 'video' — the OUTPUT type (always present; see below)
+  inputSchema,    // what the uiComponent collects → injected into the workflow (may be empty of media)
 }
 ```
+
+## Flexible inputs (MPI-259)
+
+**Apps are input-agnostic.** An app may take an image, a video, an audio clip, several of
+those, a text prompt, a gizmo (mask paint, a slider panel, anything), or **nothing at all** —
+just a Run button. There is no hard "source image" requirement. `MpiBaseApp` is a generic HOST:
+
+- It renders the **source-media upload slot ONLY when `inputSchema` declares `mediaItems`**
+  (`'mediaItems' in app.inputSchema`, `_appNeedsMedia` in MpiBaseApp). A media-free app (t2i,
+  gizmo, mask-paint) shows no upload slot, and Run does not block on an uploaded item.
+- All other controls come from the app's **uiComponent** (mounted into BaseApp's content slot),
+  which exposes `el.getInputs()` → whatever fields the app collects. BaseApp merges those with any
+  uploaded media and hands the lot to `submitAppGeneration`.
+- `_buildParams` always injects `Input_Positive` / `Input_Negative` / `Input_Seed` from the config;
+  an app that wants none simply omits a prompt control and bakes those nodes' values in the workflow
+  (or leaves them empty). Media slots come from the op's `mediaInputs` — an empty array injects none.
+
+**The one constant is OUTPUT.** Every app produces **≥1 image or video** (possibly N — multi-output
+is a plan-D follow-up). `mediaType` on the AppDef is the output type and is always required. Output
+flows through the existing generation queue and lands as gallery card(s), so BaseApp needs no output
+config.
+
+### Polymorphic media slots (MPI-259)
+
+`inputSchema.media` is an array of media-slot GROUPS; BaseApp renders each generically:
+
+```js
+inputSchema: {
+  positive: 'string',
+  media: [
+    { type: 'image', mode: 'upto', max: 2, roles: ['image1', 'image2'] },
+  ],
+}
+```
+
+- `type`: `'image' | 'video' | 'audio'`. `mode: 'upto'` = dynamic-until-cap (an empty drop zone
+  "Drop up to N…" appears until `max` slots are filled; `'fixed'` is treated as `'upto'` for now).
+  `max` = cap. `roles` (length === max) = the role key assigned to the i-th filled item BY POSITION
+  (models reference by index; roles re-assign on removal). Each `role` must match a `key` in the op's
+  `mediaInputs` so the injector maps the item to its `Input_*` node.
+- Each drop zone accepts DROP or click-to-browse (multi-select); over-cap files are dropped +
+  `clientLogger.warn`. Filled slots are numbered, show a thumb (image) / filename (video/audio) +
+  a remove button. No `media` key → no upload UI (media-free app). Media is NEVER a Run blocker in v1.
+- Empty optional slots inject nothing for that title → the workflow's own gating node self-blocks that
+  branch (see "Self-gating outputs" below). Audio empties keep the LoadAudio placeholder; image/video
+  empties leave an empty path so the path-reading node's `ExecutionBlocker` fires.
+- **Image slots use `MpiLoadImageFromPath`** (an MpiNode), NOT the old input-dir `LoadImage`. It reads a
+  filesystem PATH from its `string` input. So `_inject` writes the resolved path into `.string`, and the
+  injector routes any image param whose target node `class_type === 'MpiLoadImageFromPath'` through the
+  media PATH-RESOLVE branch (`_resolveMediaPath` locally, `_uploadRemoteMedia` → Pod-absolute path on
+  remote) — the same branch video/audio use — NOT the input-dir upload-name branch. This is class-based:
+  legacy `LoadImage` workflows keep the upload-name path until migrated; migrating a node to
+  `MpiLoadImageFromPath` auto-flips it with no injector change.
+- `_inject` writes the right widget per node class (MpiLoadImageFromPath→`.string`, LoadAudio→`.audio`,
+  MpiString-video→`.value`); media-kind is forced by title PATTERN (`/^input_(video|audio|image)(_N)?$/i`)
+  so lowercase/numbered slots resolve + upload on remote.
+
+### Self-gating outputs (MPI-259)
+
+Apps do **no app-side output gating**. Every media type self-gates INSIDE the workflow, so the capture
+path simply keeps what the run actually emitted (`executed` events) — a gated-off output emits nothing
+→ no card. The MpiNodes that do it:
+
+| Node | Gates | How |
+|---|---|---|
+| `MpiLoadImageFromPath` | image | empty/missing path → `ExecutionBlocker` → its `Output_Image*` branch never runs |
+| `MpiBlockIfEmpty` | any | passes a value through, blocks downstream if it is empty |
+| `MpiAnyChecker` | any | passes value + a `has_value` boolean to drive `MpiIfElse` |
+| `MpiHasAudio` | audio | boolean: does the loaded media carry an audio track |
+| `MpiIfElse` | video (+ any) | boolean branch — no `Input_video_2` path → `Output_video_2` never runs |
+
+So App_sdxl_4k's three `Output_Image*` nodes: `Output_Image` always runs, `Output_Image_2` / `Output_Image_3`
+run only when their `Input_Image` / `Input_Image_2` path is present. No `outputSchema.when` needed.
+
+### Multi-output (MPI-259)
+
+A multi-output app captures every `Output_<Type>*` node's result as its own gallery card (capture
+filter is prefix-match: `Output_Image` / `Output_Image_2` / `Output_video_2` all qualify). **The kept
+count is only known at completion.** Outputs self-gate on input presence (see "Self-gating outputs"), so
+the app declares NO fixed count — `submitAppGeneration` allocates exactly ONE "Generating…" placeholder
+(the engine emits one live latent at a time, so one in-progress card is all that's honest), and the
+capture-what-ran path lands the real 1..N cards on `generation:complete`. The in-app result pane shows
+ALL that landed. One mediaType per app (no mixed image+video in a single run).
+
+To extend inputs (a new gizmo): add it to the app's uiComponent and declare it in `inputSchema`.
 
 `appAvailability(app)` → `{ available, missing[] }`: available = every `requiredModels` id ∈
 `state.s_installedModelIds`. The Install button drives each missing model's OWN dep download
 (`getModelDependencies(id)` → `downloadService.start(id, deps)`) — apps declare **models, never deps**
 (zero dep duplication).
+
+### Install progress (MPI-259)
+
+The detail footer has three states: **Install models** (missing, idle) → **aggregated % bar + Cancel**
+(installing) → **Open** (all installed). The bar is a single aggregate across ALL `requiredModels`:
+installs are SERIAL (downloadService serializes the queue), so N models each own **1/N** of the bar —
+installed → 1, the one live download → its `job.progress`, queued → 0; overall = mean
+(`_installProgress` in MpiAppLibrary). **Cancel = cancel-all** (`_cancelInstall` cancels every
+in-flight required model). The bar ticks on `download:progress` via a light `_patchProgress` (updates
+width/pct only, no footer rebuild); state transitions (`download:started`/`complete`/`cancelled`)
+rebuild the footer so the button swaps Install↔Cancel↔Open. It reuses the Model Library's
+`.mpi-tile__prog` bar (MM.css, always preloaded); the App footer stacks column-wise so the bar is a
+full-width row above Cancel.
 
 ## Run path — `js/services/appService.js`
 
@@ -139,6 +237,7 @@ ABOVE the app overlay via `--app-overlay-z` (`.mpi-slide-over--queue { z-index: 
 - `js/services/appService.js` — `submitAppGeneration`, `openAppFromReuse`
 - `js/components/Compounds/LandingPages/MpiAppLibrary/` — the picker overlay
 - `js/components/Organisms/MpiBaseApp/` — the App frame
-- `js/components/Organisms/MpiAppImageRegen/` — the first app's controls
-- `comfy_workflows/App_sdxl_regen.json` — the first app's workflow
+- `js/components/Organisms/MpiAppImageRegen/` — the first app's controls (reused by the 2nd app)
+- `comfy_workflows/App_sdxl_regen.json` — the first app's workflow (image-in → image-out)
+- `comfy_workflows/App_sdxl_4k.json` — the 2nd app's workflow (t2i, multi-model, media-free; MPI-259)
 - `state.s_appInputs` — session-only per-app input snapshot (`.claude/rules/component-state.md`)

@@ -1293,12 +1293,23 @@ export function runCommand(payload) {
             : 'output';
         const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : 'output_preview';
         const _imageOutputTitle = _captureTitle === 'output' ? 'output_image' : null;
+        // MPI-259 (Apps multi-output): a workflow may carry SEVERAL same-type capture
+        // nodes — Output_Image, Output_Image_2, Output_Image_3 (or Output_video,
+        // Output_video_2) — each producing its own card. Match by PREFIX so the
+        // numbered siblings qualify, not just the exact base title. Preview-stage
+        // (`output_preview`) and the audio side-channel (`output_audio`, handled
+        // separately below) stay EXACT so they are never swept into the image/video set.
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id => {
-                const t = workflow[id]._meta?.title?.toLowerCase();
-                return t === _captureTitle
-                    || (_videoOutputTitle && t === _videoOutputTitle)
-                    || (_imageOutputTitle && t === _imageOutputTitle);
+                const t = workflow[id]._meta?.title?.toLowerCase() || '';
+                if (_captureTitle === 'preview') {
+                    return t === 'preview' || t === 'output_preview';
+                }
+                // Non-preview run: 'output' base + any Output_Image* / Output_video*.
+                if (t === 'output_audio') return false; // audio has its own set
+                return t === 'output'
+                    || t === 'output_image' || t.startsWith('output_image_')
+                    || t === 'output_video' || t.startsWith('output_video_');
             })
         );
         const outputAudioNodeIds = new Set(

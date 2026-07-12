@@ -1241,8 +1241,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const firstGroup = groups[0];
             // Single emit — handler reads state.currentProject.itemGroups (already
             // contains all N groups via addGroup) and rebuilds grid with them.
-            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery' });
-            callbacks.onComplete?.({ item: firstItem, group: firstGroup });
+            // `items`/`groups` (all N) are additive for multi-output consumers (Apps,
+            // MPI-259) that show every result in-place; existing readers use `item`.
+            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, items: builtItems, groups, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery' });
+            callbacks.onComplete?.({ item: firstItem, group: firstGroup, items: builtItems });
         }
 
         Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });

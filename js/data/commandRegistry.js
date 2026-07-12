@@ -335,6 +335,17 @@ export const commands = {
         promptRequired: false,
         universal: true,
     },
+    removeBackground: {
+        label: 'Remove Background',
+        progressLabel: 'Removing background',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+    },
     autoMaskImg: {
         label: 'Auto Masking',
         progressLabel: 'Masking',
@@ -380,6 +391,23 @@ export const commands = {
         ],
         promptRequired: true,
         universal: true,   // first Apps op (MPI-256) — App_sdxl_regen.json, i2i baked true.
+    },
+    appSdxl4k: {
+        label: 'App: SDXL 4K',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 0,          // all image inputs optional — runs t2i with none (MPI-259).
+        // Up to 2 optional image slots → Input_Image / Input_Image_2 (MpiLoadImageFromPath
+        // nodes — take a filesystem PATH in their `string` input; empty path self-gates its
+        // Output_Image* branch via ExecutionBlocker, no card). role keys match the app's
+        // inputSchema. Injector routes these class='MpiLoadImageFromPath' slots through the
+        // media path-resolve branch (local path / Pod-uploaded path), not an upload-name.
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+        ],
+        promptRequired: true,
+        universal: true,            // 2nd Apps op — App_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
     },
 
     // ── Future Stubs ──────────────────────────────────────────────────────────

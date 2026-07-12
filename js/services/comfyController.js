@@ -1020,31 +1020,55 @@ function createEngine({ engine, alwaysLocal }) {
             else if (nodes.some(node => node?.inputs && 'image' in node.inputs)) mediaParamKinds[key] = 'image';
         }
         if (params.Image && !mediaParamKinds.Image) mediaParamKinds.Image = 'image';
-        if (params.Input_Image && !mediaParamKinds.Input_Image) mediaParamKinds.Input_Image = 'image';
         if (params.Mask && !mediaParamKinds.Mask) mediaParamKinds.Mask = 'mask';
         if (params.Input_Mask && !mediaParamKinds.Input_Mask) mediaParamKinds.Input_Mask = 'mask';
-        // `Input_Video`/`Input_Audio` may now target an `MpiString` fan-out node
-        // (string field, no `video`/`audio` input) instead of the VHS loader
-        // directly — the split video/audio workflows feed one injected path into
-        // both VHS and `MpiHasAudio` via a String node (B3). The field-based
-        // detection above misses that, so the raw `/project-file?path=` URL would
-        // reach VHS unresolved ("video is not a valid path"). Force the media kind
-        // by title so `_resolveMediaPath` (and remote upload) still runs.
-        if (params.Input_Video && !mediaParamKinds.Input_Video) mediaParamKinds.Input_Video = 'video';
-        if (params.Input_Audio && !mediaParamKinds.Input_Audio) mediaParamKinds.Input_Audio = 'audio';
+        // Media inputs may target an `MpiString` fan-out node (string field, no
+        // `video`/`audio` input) instead of the VHS loader directly — the split
+        // video/audio workflows feed one injected path into both VHS and `MpiHasAudio`
+        // via a String node (B3). The field-based detection above misses that, so the
+        // raw `/project-file?path=` URL would reach VHS unresolved ("video is not a
+        // valid path"). Force the media kind by TITLE PATTERN so `_resolveMediaPath`
+        // (and remote upload) still runs. Apps (MPI-259) title numbered/lowercase slots
+        // — `Input_Image_2`, `Input_video`, `Input_video_2`, `Input_audio` — so match
+        // the whole `Input_<Type>(_N)?` family case-insensitively, not exact names.
+        for (const key of Object.keys(params)) {
+            if (mediaParamKinds[key]) continue;
+            if (/^input_video(?:_\d+)?$/i.test(key)) mediaParamKinds[key] = 'video';
+            else if (/^input_audio(?:_\d+)?$/i.test(key)) mediaParamKinds[key] = 'audio';
+            else if (/^input_image(?:_\d+)?$/i.test(key)) mediaParamKinds[key] = 'image';
+        }
+
+        // Route image params by TARGET NODE CLASS (MPI-259). The new
+        // `MpiLoadImageFromPath` node reads a real filesystem PATH from its `string`
+        // input (`os.path.isfile`; empty → ExecutionBlocker self-gates the branch) —
+        // NOT a ComfyUI input-dir upload name. So a param that lands on that node must
+        // take the video/audio PATH-RESOLVE branch (`_resolveMediaPath` + remote
+        // upload-as-Pod-path), not the `_uploadImage` upload-name branch below. Detect
+        // it and flip the kind to `imagepath`. The legacy input-dir `LoadImage` keeps
+        // `image`. This is class-based, so migrating other workflows to the new node
+        // later auto-flips them with no injector change.
+        for (const key of Object.keys(params)) {
+            if (mediaParamKinds[key] !== 'image') continue;
+            const targetsPathNode = Object.values(workflow).some(node =>
+                (node?._meta?.title || '').toLowerCase() === key.toLowerCase() &&
+                node?.class_type === 'MpiLoadImageFromPath'
+            );
+            if (targetsPathNode) mediaParamKinds[key] = 'imagepath';
+        }
 
         for (const [paramKey, mediaKind] of Object.entries(mediaParamKinds)) {
             let val = params[paramKey];
             if (!val) continue;
 
-            if (mediaKind === 'video' || mediaKind === 'audio') {
+            if (mediaKind === 'video' || mediaKind === 'audio' || mediaKind === 'imagepath') {
                 if (typeof val === 'string') {
                     const localPath = this._resolveMediaPath(val);
                     // Remote engine: the resolved path is local to this machine and
-                    // invisible to the Pod. Upload the file to the Pod volume input
-                    // dir via Express → wrapper and inject the bare filename, which
-                    // VHS LoadVideo/LoadAudio nodes resolve against the input dir. A
-                    // local-pinned engine keeps the local path.
+                    // invisible to the Pod. Upload the file and inject the Pod-absolute
+                    // path returned by `_uploadRemoteMedia`, which the path-reading
+                    // nodes resolve directly — VHS LoadVideo/LoadAudio and (MPI-259)
+                    // `MpiLoadImageFromPath` (its `os.path.isfile` check runs on the
+                    // Pod). A local-pinned engine keeps the local path.
                     params[paramKey] = (!this._alwaysLocal && remoteEngineClient.isRemote())
                         ? await this._uploadRemoteMedia(localPath)
                         : localPath;

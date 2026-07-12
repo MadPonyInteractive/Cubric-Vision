@@ -22,6 +22,9 @@ export const UNIVERSAL_WORKFLOWS = {
     imageUpscale: {
         workflow: 'image_upscale.json',
     },
+    removeBackground: {
+        workflow: 'remove_background.json',
+    },
     autoMaskImg: {
         workflow: 'img_auto_mask.json',
     },
@@ -33,5 +36,8 @@ export const UNIVERSAL_WORKFLOWS = {
     },
     appImageRegen: {
         workflow: 'App_sdxl_regen.json',
+    },
+    appSdxl4k: {
+        workflow: 'App_sdxl_4k.json',
     },
 };

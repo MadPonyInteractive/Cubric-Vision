@@ -47,6 +47,34 @@ export const APPS = [
         mediaType: 'image',
         inputSchema: { positive: 'string', mediaItems: 'image[1]' },
     },
+    // Second app (MPI-259): multi-model test app. Text-to-image (NO source image),
+    // exercises the multi-model install flow (sdxl-nsfw + nvidia-pid) + the flexible
+    // input seam (no media slot). Reuses MpiAppImageRegen (positive-prompt only).
+    {
+        id: 'sdxl-4k',
+        title: 'SDXL 4K',
+        preview: 'chroma-flash-01.webp',
+        description: 'Multi-image test app. Takes up to two source images and a prompt, and can produce up to three 4K SDXL outputs — exercises the multi-model install flow, polymorphic media inputs, and multi-output.',
+        requiredModels: ['sdxl-nsfw', 'nvidia-pid'],
+        operation: 'appSdxl4k',
+        workflow: 'App_sdxl_4k.json',
+        uiComponent: 'MpiAppImageRegen',
+        mediaType: 'image',
+        // Polymorphic inputs (MPI-259). `media` = declared media slots; BaseApp renders
+        // an upload zone per declared type. `mode:'upto'` = dynamic-until-cap (numbered,
+        // an empty zone appears until `max` slots are filled). `role` matches the op's
+        // mediaInputs key so the injector maps each item to its Input_* node.
+        inputSchema: {
+            positive: 'string',
+            media: [
+                { type: 'image', mode: 'upto', max: 2, roles: ['image1', 'image2'] },
+            ],
+        },
+        // Multi-output: up to 3 image capture nodes (Output_Image / _2 / _3), each
+        // self-gated in the workflow by input presence. The KEPT count is only known
+        // at completion (capture-what-ran) — no fixed count is declared here; the run
+        // shows ONE "Generating…" card and lands the real 1..N cards on complete.
+    },
 ];
 
 /** @returns {AppDef[]} All app descriptors. */

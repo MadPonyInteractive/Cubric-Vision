@@ -103,3 +103,15 @@
     font-size: var(--t-sm);
     color: var(--ink-2);
 }
+
+/* Aggregated install progress bar in the detail footer (MPI-259). Reuses the
+   Model Library's .mpi-tile__prog bar. The App footer stacks (column) so the bar
+   is a full-width row ABOVE the Cancel button (MM.css sets the actions row to
+   flex-row + children flex:1, which would squeeze bar and button side-by-side). */
+#app-detail-panel .mpi-detail__actions {
+    flex-direction: column;
+    align-items: stretch;
+}
+.mpi-detail__install-prog {
+    width: 100%;
+}

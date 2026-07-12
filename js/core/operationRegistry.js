@@ -31,10 +31,12 @@ export const OPERATION_REGISTRY = {
     interpolate:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     videoUpscale: { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     imageUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    removeBackground: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resize:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resizeVideo:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     appImageRegen: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
+    appSdxl4k: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
 };
 
 /**
