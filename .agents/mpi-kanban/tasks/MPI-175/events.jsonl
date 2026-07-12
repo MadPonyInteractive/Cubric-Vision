@@ -1,3 +1,0 @@
-{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-07-02T15:00:00Z","actor":"claude","id":"MPI-175","title":"Split routes/remoteProxy.js into pod-lifecycle + proxy-forward modules"}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T18:00:00Z","actor":"claude","id":"MPI-175","from":"todo","to":"doing","reason":"Split started (3-file state/lifecycle/forward)."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T18:30:00Z","actor":"claude","id":"MPI-175","from":"doing","to":"done","reason":"Split shipped: state/lifecycle/forward modules; app boots, 25 routes mounted, guards fire. Live remote cycle not tested (needs paid Pod)."}

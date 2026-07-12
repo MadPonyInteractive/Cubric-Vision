@@ -1,3 +1,0 @@
-{"schema":"mpi-kanban/event/v1","id":"MPI-223","type":"task.created","at":"2026-07-08T09:20:00Z","actor":"claude","column":"todo","summary":"Card + plan created in todo. Investigation done: inject builder = commandExecutor _buildParams (staged ~630 + flat ~646); missing-block = _findMissingModel; icon = existing negative glyph; MpiDropdown+MpiInput both support disabled."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-223","type":"task.moved","at":"2026-07-08T09:35:00Z","actor":"claude","from":"todo","to":"doing","summary":"Starting implementation."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-223","type":"task.moved","at":"2026-07-08T10:05:00Z","actor":"claude","from":"doing","to":"done","summary":"Closed. Live-verified by user via screenshots + real generations."}

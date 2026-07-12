@@ -1,0 +1,4 @@
+{"ts":"2026-07-01T13:00:00Z","event":"task.created","column":"todo"}
+{"ts":"2026-07-01T13:00:00Z","event":"task.moved","from":"todo","to":"doing"}
+{"ts":"2026-07-01T13:00:00Z","event":"task.moved","from":"doing","to":"done"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-171", "type": "task.moved", "at": "2026-07-12T18:30:00Z", "actor": "claude", "from": "done", "to": "archived", "summary": "Archived completed card during board cleanup."}

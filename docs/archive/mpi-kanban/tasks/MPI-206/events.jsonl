@@ -1,0 +1,4 @@
+{"at":"2026-07-06T12:30:00Z","event":"task.created","id":"MPI-206","column":"doing","maturity":"validating","actor":"claude"}
+{"at":"2026-07-06T12:30:00Z","event":"validation.updated","id":"MPI-206","note":"fix shipped (shell.js re-sync on every connect); needs live 4090->5090 swap verify","actor":"claude"}
+{"at":"2026-07-06T14:15:00Z","event":"task.moved","id":"MPI-206","from":"doing","to":"done","maturity":"complete","actor":"claude"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-206", "type": "task.moved", "at": "2026-07-12T18:30:00Z", "actor": "claude", "from": "done", "to": "archived", "summary": "Archived completed card during board cleanup."}
