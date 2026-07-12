@@ -139,7 +139,9 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // torch/torchvision but our 2.12.0+cu130 satisfies it; the Dockerfile re-pins the
 // cu130 trio after node requirements resolve (never let PyPI's +cu13x-less wheel
 // win). Built on the same cu130 stack (torch unchanged). See MPI-244.
-const POD_IMAGE_VERSION = 'v0.15.0';
+// v0.16.0 (MPI-260): bake background_removal/birefnet.safetensors (444MB, from R2)
+// for the native RemoveBackground node (requires ComfyUI >=0.27.0, already locked).
+const POD_IMAGE_VERSION = 'v0.16.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
@@ -164,7 +166,10 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // legs run from the synced node_lock.json). controlnet_aux is a GPU-only baked
 // node; the cpu image gains nothing from it, but it is rebuilt from the same tree
 // so keep the tags in lockstep to avoid the v0.10.3-cpu 404 trap above.
-const POD_IMAGE_VERSION_CPU = 'v0.15.0';
+// v0.16.0-cpu (MPI-260): rebuilt in the same CI dispatch as the GPU image. birefnet
+// is a GPU-only baked weight; the cpu image gains nothing but is rebuilt from the same
+// tree — keep the tags in lockstep (v0.10.3-cpu 404 trap).
+const POD_IMAGE_VERSION_CPU = 'v0.16.0';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
@@ -173,7 +178,10 @@ const POD_IMAGE_VERSION_CPU = 'v0.15.0';
 // wrapper writes .mpi_node_commit + records commit on volume node install and reads
 // baked markers at startup, so the app can detect node-commit drift. Ships in the
 // v0.14.0 image (baked into it, not R2-float, since the schema/nodes[] is new).
-const WRAPPER_VERSION = '0.2.33';
+// 0.2.36 (MPI-254): aria2 shut-down-on-completion so finalize runs (remote install
+// 100%-hang fix) + true download-progress numerator. Baked in the v0.16.0 image; the
+// app pin lagged at 0.2.33 through v0.15.0 — corrected here.
+const WRAPPER_VERSION = '0.2.36';
 const CONTAINER_DISK_GB = 50;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
