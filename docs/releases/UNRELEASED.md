@@ -30,3 +30,4 @@
 - In the Resize tool, the padding-color picker now appears only for the solid **pad** fit mode, where it actually applies — it no longer shows for the edge-fill modes (pad edge, pad edge pixel, pillarbox blur), which ignore it. New resizes also default **Divisible by** to 16.
 - After deleting one or more history entries, the remaining entry is now correctly selected and active, and whatever tool you had open (Crop, Mask, etc.) stays live — previously the active tool would drop out and you had to re-select the entry to get it back.
 - Reuse Prompt on an app-generated result now offers two choices — **Prompt Box** (drop the prompt and images straight into the prompt box, honoring the Use checkboxes) or **App** (reopen the app with its saved inputs) — instead of always reopening the app.
+- The remote-engine connection progress no longer flickers or appears stuck at 0% while connecting to a RunPod GPU — the percentage now climbs smoothly to ready.
