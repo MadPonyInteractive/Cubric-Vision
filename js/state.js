@@ -83,8 +83,11 @@ const _state = {
 
     // ── Gallery organization ───────────────────────────────────────────────────
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'audios'|'previews'|'favorites'
-    galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
-    gallerySizeLevel: 3,             // 1–4; survives gallery navigation within session
+    galleryShowInfo: Storage.getGalleryShowInfo(),
+                                     // Show/hide model badges and type badges on gallery cards.
+                                     // Cross-session; mirrored to localStorage by subscriber below.
+    gallerySizeLevel: Storage.getGallerySizeLevel(),
+                                     // 1–4; cross-session, mirrored to localStorage below.
 
     // ── Project stats (asset count + bytes on disk) ────────────────────────────
     projectStats: { count: 0, bytes: 0 },   // Whole-project totals; refreshed on media add/delete
@@ -231,6 +234,8 @@ Events.on('state:changed', ({ key, value }) => {
     else if (key === 'promptExpanded') Storage.setPromptExpanded(value);
     else if (key === 'promptReuseOptions') Storage.setPromptReuseOptions(value);
     else if (key === 'promptReuseSource') Storage.setPromptReuseSource(value);
+    else if (key === 'galleryShowInfo') Storage.setGalleryShowInfo(value);
+    else if (key === 'gallerySizeLevel') Storage.setGallerySizeLevel(value);
     else if (key === 'notificationPrefs') Storage.setNotificationPrefs(value);
     else if (key === 'runpodConfig') Storage.setRunpodConfig(value);
 });

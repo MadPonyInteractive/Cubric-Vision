@@ -38,6 +38,10 @@ export const STORAGE_KEYS = {
   // OS notification prefs (per-type opt-out)
   NOTIFICATION_PREFS:  'mpi_notification_prefs',
 
+  // Gallery UI (card size level + info-mode toggle)
+  GALLERY_SIZE_LEVEL:  'mpi_gallery_size_level',
+  GALLERY_SHOW_INFO:   'mpi_gallery_show_info',
+
   // PromptBox UI
   PROMPT_EXPANDED:     'mpi_prompt_expanded',
 

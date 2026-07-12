@@ -189,6 +189,13 @@ export const Storage = {
   getNotificationPrefs: () => normalizeNotificationPrefs(get(STORAGE_KEYS.NOTIFICATION_PREFS, DEFAULT_NOTIFICATION_PREFS)),
   setNotificationPrefs: (v) => set(STORAGE_KEYS.NOTIFICATION_PREFS, normalizeNotificationPrefs(v)),
 
+  // Gallery card-size level (1–4) + info-mode toggle — cross-session.
+  getGallerySizeLevel: () => Math.min(4, Math.max(1, get(STORAGE_KEYS.GALLERY_SIZE_LEVEL, 3))),
+  setGallerySizeLevel: (v) => set(STORAGE_KEYS.GALLERY_SIZE_LEVEL, v),
+
+  getGalleryShowInfo:  () => get(STORAGE_KEYS.GALLERY_SHOW_INFO, false),
+  setGalleryShowInfo:  (v) => set(STORAGE_KEYS.GALLERY_SHOW_INFO, !!v),
+
   getPromptExpanded:   () => get(STORAGE_KEYS.PROMPT_EXPANDED, true),
   setPromptExpanded:   (v) => set(STORAGE_KEYS.PROMPT_EXPANDED, !!v),
 
