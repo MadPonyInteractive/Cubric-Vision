@@ -106,6 +106,16 @@ export const ICONS = {
     'ratio_8_5': '<rect x="2" y="6.5" width="20" height="11" rx="2"/>',
     'ratio_9_16': '<rect x="7" y="2" width="10" height="20" rx="2"/>',
     'ratio_16_9': '<rect x="2" y="7" width="20" height="10" rx="2"/>',
+    // Cinema ratios (MPI-261). Landscape = wide rect (16:9 convention),
+    // portrait = the transpose (tall rect), like ratio_16_9 vs ratio_9_16.
+    'ratio_2_1': '<rect x="2" y="7" width="20" height="10" rx="2"/>',
+    'ratio_185_1': '<rect x="2" y="6.5" width="20" height="11" rx="2"/>',
+    'ratio_21_9': '<rect x="1.5" y="7.5" width="21" height="9" rx="2"/>',
+    'ratio_2_39': '<rect x="2" y="7.8" width="20" height="8.4" rx="2"/>',
+    'ratio_1_2': '<rect x="7" y="2" width="10" height="20" rx="2"/>',
+    'ratio_1_185': '<rect x="6.5" y="2" width="11" height="20" rx="2"/>',
+    'ratio_9_21': '<rect x="7.5" y="1.5" width="9" height="21" rx="2"/>',
+    'ratio_1_239': '<rect x="7.8" y="2" width="8.4" height="20" rx="2"/>',
     'gallery': '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
     'refresh_stroke': '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
 };

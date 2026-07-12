@@ -20,7 +20,7 @@ const DEFAULTS = Object.freeze({
     keep_proportion: 'crop',
     pad_color: Object.freeze({ r: 0, g: 0, b: 0 }),
     crop_position: 'center',
-    divisible_by: 1,
+    divisible_by: 16,
     flip: 'none',
     rotation: 'none',
 });

@@ -7,6 +7,10 @@
  *   folderPath:  string  (project folder path),
  *   sourcePath:  string  (absolute file path OR /project-file?path=... URL),
  *   cropRect:    { x, y, width, height } — normalized 0..1 relative to source frame,
+ *   absoluteCropPx: { x, y, w, h } — optional, absolute pixel rect already rounded
+ *                   by the caller (MPI-261 divisible-by). When present it is used
+ *                   directly and the normalized→even-snap path is skipped (the
+ *                   caller's multiples of 16 are already even for libx264).
  *   outFileName: string  (optional, default "video_crop_<timestamp>.mp4"),
  *   groupId:     string  (optional — for caller context, echoed back),
  *   itemId:      string  (optional — source item id, echoed back),
@@ -47,7 +51,7 @@ function _resolveInput(raw) {
 router.post('/api/video/crop', async (req, res) => {
     let outputPath = '';
     try {
-        const { folderPath, sourcePath, cropRect, outFileName, groupId, itemId, trimIn, trimOut } = req.body || {};
+        const { folderPath, sourcePath, cropRect, absoluteCropPx, outFileName, groupId, itemId, trimIn, trimOut } = req.body || {};
         if (!folderPath || !sourcePath || !cropRect) {
             return res.status(400).json({ success: false, error: 'folderPath, sourcePath, cropRect required' });
         }
@@ -67,12 +71,25 @@ router.post('/api/video/crop', async (req, res) => {
             return res.status(500).json({ success: false, error: 'could not probe source dimensions' });
         }
 
-        // 2. Map normalized rect → pixel rect, snap to even numbers (libx264 req.)
-        const snapEven = n => Math.max(2, Math.floor(n / 2) * 2);
-        const cropW = snapEven(width  * srcMeta.width);
-        const cropH = snapEven(height * srcMeta.height);
-        const cropX = Math.max(0, Math.floor(x * srcMeta.width));
-        const cropY = Math.max(0, Math.floor(y * srcMeta.height));
+        // 2. Determine the pixel crop rect. If the caller supplied an
+        // already-rounded absolute rect (MPI-261 divisible-by), use it directly
+        // and clamp to the source — its multiples of 16 are already even, so no
+        // snapEven. Otherwise map the normalized rect and snap to even (libx264).
+        let cropW, cropH, cropX, cropY;
+        const absOk = absoluteCropPx
+            && [absoluteCropPx.x, absoluteCropPx.y, absoluteCropPx.w, absoluteCropPx.h].every(n => Number.isFinite(n));
+        if (absOk) {
+            cropX = Math.max(0, Math.min(Math.floor(absoluteCropPx.x), srcMeta.width  - 2));
+            cropY = Math.max(0, Math.min(Math.floor(absoluteCropPx.y), srcMeta.height - 2));
+            cropW = Math.max(2, Math.min(Math.floor(absoluteCropPx.w), srcMeta.width  - cropX));
+            cropH = Math.max(2, Math.min(Math.floor(absoluteCropPx.h), srcMeta.height - cropY));
+        } else {
+            const snapEven = n => Math.max(2, Math.floor(n / 2) * 2);
+            cropW = snapEven(width  * srcMeta.width);
+            cropH = snapEven(height * srcMeta.height);
+            cropX = Math.max(0, Math.floor(x * srcMeta.width));
+            cropY = Math.max(0, Math.floor(y * srcMeta.height));
+        }
 
         // 3. Prepare output path — sequenced "video_crop_NNN.mp4" like image crop
         const mediaDir = path.join(folderPath, 'Media');

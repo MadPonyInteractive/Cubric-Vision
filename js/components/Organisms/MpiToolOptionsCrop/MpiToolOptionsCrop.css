@@ -37,6 +37,15 @@
     width: 100%;
 }
 
+.mpi-tool-options-crop__divisible {
+    display: flex;
+    justify-content: center;
+}
+
+.mpi-tool-options-crop__divisible > * {
+    width: 100%;
+}
+
 .mpi-tool-options-crop__actions {
     display: flex;
     flex-wrap: wrap;

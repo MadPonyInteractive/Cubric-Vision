@@ -208,6 +208,39 @@ export const KREA2_RATIOS = {
 };
 
 
+// Crop tool (MPI-261). PURE aspect — no pixel resolutions. The user drags a
+// ratio-locked crop box and whatever pixels are selected become the output, so
+// there is no fixed w/h here, only the aspect float + an icon. Merges the union
+// of the existing image ratios (1:1, 3:4/4:3, 4:5/5:4, 5:8/8:5, 9:16/16:9) with
+// four cinema ratios (2:1, 1.85:1, 21:9, 2.39:1). Portrait entries are ratio<=1,
+// landscape entries are the transpose (ratio>=1); 1:1 is orientation-free and
+// leads both lists (featured). The two lists are index-mirrors so the crop UI's
+// orientation flip maps selection by index, same as the other tables.
+export const CROP_RATIOS = {
+    portrait: [
+        { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" },
+        { label: "3:4", ratio: 3 / 4, icon: "rect_3_4" },
+        { label: "4:5", ratio: 4 / 5, icon: "rect_4_5" },
+        { label: "5:8", ratio: 5 / 8, icon: "rect_5_8" },
+        { label: "9:16", ratio: 9 / 16, icon: "rect_9_16" },
+        { label: "1:2", ratio: 1 / 2, icon: "rect_1_2" },
+        { label: "1:1.85", ratio: 1 / 1.85, icon: "rect_1_185" },
+        { label: "9:21", ratio: 9 / 21, icon: "rect_9_21" },
+        { label: "1:2.39", ratio: 1 / 2.39, icon: "rect_1_239" }
+    ],
+    landscape: [
+        { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" },
+        { label: "4:3", ratio: 4 / 3, icon: "rect_4_3" },
+        { label: "5:4", ratio: 5 / 4, icon: "rect_5_4" },
+        { label: "8:5", ratio: 8 / 5, icon: "rect_8_5" },
+        { label: "16:9", ratio: 16 / 9, icon: "rect_16_9" },
+        { label: "2:1", ratio: 2 / 1, icon: "rect_2_1" },
+        { label: "1.85:1", ratio: 1.85 / 1, icon: "rect_185_1" },
+        { label: "21:9", ratio: 21 / 9, icon: "rect_21_9" },
+        { label: "2.39:1", ratio: 2.39 / 1, icon: "rect_2_39" }
+    ]
+};
+
 // Ratios for social media image and video
 export const SOCIAL_RATIOS = [
     { label: "1:1", ratio: 1 / 1, icon: "rect_1_1" },
@@ -228,7 +261,7 @@ function deepFreeze(o) {
     }
     return o;
 }
-[FLUX_RATIOS, SDXL_RATIOS, WAN_RATIOS, WAN_5B_RATIOS, LTX_RATIOS, KREA2_RATIOS, SOCIAL_RATIOS]
+[FLUX_RATIOS, SDXL_RATIOS, WAN_RATIOS, WAN_5B_RATIOS, LTX_RATIOS, KREA2_RATIOS, SOCIAL_RATIOS, CROP_RATIOS]
     .forEach(deepFreeze);
 
 // ── UI Mode Mapping ────────────────────────────────────────────────────────

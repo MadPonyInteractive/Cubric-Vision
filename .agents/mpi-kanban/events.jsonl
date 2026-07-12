@@ -1133,3 +1133,4 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-262", "at": "2026-07-12T02:50:01.000Z", "actor": "claude", "summary": "Created MPI-262 (Resize pad-color + divisible-by-16 default)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-261","type":"checklist.updated","at":"2026-07-12T03:05:00Z","actor":"claude","summary":"MPI-261 Phase 3+4 done (apply rounding image+video, Resize default 16, tests green). Awaiting in-app crop check."}
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-262", "at": "2026-07-12T03:15:00.000Z", "actor": "claude", "summary": "Moved MPI-262 todo->done: pad-color gated to solid 'pad' mode only; divisible_by default 16."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-261","at":"2026-07-12T03:15:00Z","actor":"claude","from":"doing","to":"done","summary":"Moved MPI-261 from Doing to Done (crop Ratio/Free + divisible round-up shipped, user-verified)."}

@@ -36,7 +36,8 @@ import { hasMaskContent } from '../../../utils/maskUtils.js';
 import { runAutoMask } from '../../../services/commandExecutor.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { state } from '../../../state.js';
-import { createImageItem } from '../../../data/projectModel.js';
+import { createImageItem, getToolSettings } from '../../../data/projectModel.js';
+import { roundToDivisible } from '../../../utils/cropRounding.js';
 import { qs } from '../../../utils/dom.js';
 import { maskTempStore } from '../../../services/maskTempStore.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -662,6 +663,16 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const rect = canvas.getCropRect();
             if (!rect || !_currentItem?.filePath || !state.currentProject?.folderPath) return;
 
+            // Round the selected output pixels to a multiple of the crop tool's
+            // "Divisible by" setting (MPI-261). Bound each dim by the source span
+            // from the crop origin so x+w never exceeds the source — the server's
+            // Sharp .extract throws on an out-of-bounds rect.
+            const n = getToolSettings(state.currentProject || {}, 'crop', { divisible_by: 16 }).divisible_by;
+            const srcW = canvas.img?.naturalWidth  || (rect.x + rect.w);
+            const srcH = canvas.img?.naturalHeight || (rect.y + rect.h);
+            const w = roundToDivisible(rect.w, n, srcW - rect.x);
+            const h = roundToDivisible(rect.h, n, srcH - rect.y);
+
             StatusBar.progress.start('Cropping...');
 
             const itemId = crypto.randomUUID();
@@ -674,7 +685,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                         folderPath: state.currentProject.folderPath,
                         itemId,
                         sourceFilePath: _resolveUrl(_currentItem.filePath),
-                        x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                        x: rect.x, y: rect.y, w, h,
                     }),
                 });
                 if (!res.ok) throw new Error(`crop-media ${res.status}`);
@@ -687,7 +698,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     filePath: `/project-file?path=${encodeURIComponent(data.filePath)}`,
                     operation: 'crop',
                     displayName: data.displayName || data.filename.replace(/\.[^.]+$/, ''),
-                    pixelDimensions: data.pixelDimensions || { w: rect.w, h: rect.h },
+                    pixelDimensions: data.pixelDimensions || { w, h },
                 });
 
                 emit('crop-applied', { item: newItem });

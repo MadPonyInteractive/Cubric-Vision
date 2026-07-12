@@ -48,7 +48,9 @@ import {
     createImageItem,
     createVideoItem,
     createItemGroup,
+    getToolSettings,
 } from '../../../data/projectModel.js';
+import { roundToDivisible } from '../../../utils/cropRounding.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
@@ -1283,6 +1285,26 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     groupId: _group.id,
                     itemId:  currentItem?.id,
                 };
+
+                // Round the selected output pixels to a multiple of the crop
+                // tool's "Divisible by" setting (MPI-261). The video crop rect is
+                // NORMALIZED 0..1 — convert to abs px against the source dims,
+                // round W/H (bounded by the source span from the origin), and send
+                // absoluteCropPx so the server uses it directly and skips its own
+                // even-snap (multiples of 16 are already even).
+                const srcDims = currentItem?.pixelDimensions;
+                const n = getToolSettings(project, 'crop', { divisible_by: 16 }).divisible_by;
+                if (srcDims?.w && srcDims?.h) {
+                    const px = {
+                        x: Math.max(0, Math.floor(rect.x * srcDims.w)),
+                        y: Math.max(0, Math.floor(rect.y * srcDims.h)),
+                    };
+                    const selW = rect.w * srcDims.w;
+                    const selH = rect.h * srcDims.h;
+                    px.w = roundToDivisible(selW, n, srcDims.w - px.x);
+                    px.h = roundToDivisible(selH, n, srcDims.h - px.y);
+                    cropBody.absoluteCropPx = px;
+                }
                 const trim = currentItem?.trim;
                 if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
                     cropBody.trimIn  = +trim.in;
