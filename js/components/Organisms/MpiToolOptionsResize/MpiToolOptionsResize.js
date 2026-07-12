@@ -35,7 +35,10 @@ import { getModelRatios } from '../../../utils/ratios.js';
 const UPSCALE_METHODS = ['nearest', 'exact', 'bilinear', 'area', 'bicubic', 'lanczos', 'nvidia_rtx_vsr'];
 const KEEP_PROPORTIONS = ['stretch', 'resize', 'pad', 'pad_edge', 'pad_edge_pixel', 'crop', 'pillarbox_blur', 'total_pixels'];
 const CROP_POSITIONS = ['center', 'top', 'bottom', 'left', 'right'];
-const PAD_COLOR_MODES = new Set(['pad', 'pad_edge', 'pad_edge_pixel', 'pillarbox_blur']);
+// ImageResizeKJv2 only PAINTS pad_color for the solid 'pad' mode. The edge
+// modes (pad_edge, pad_edge_pixel, pillarbox_blur) replicate/blur edge pixels
+// and ignore pad_color, so the picker must not show for them.
+const PAD_COLOR_MODES = new Set(['pad']);
 
 const FAMILY_VALUES = new Set(['sdxl', 'flux', 'free']);
 const ORIENTATION_VALUES = new Set(['portrait', 'landscape']);
@@ -54,7 +57,7 @@ const DEFAULTS = Object.freeze({
     keep_proportion: 'crop',
     pad_color: { r: 0, g: 0, b: 0 },
     crop_position: 'center',
-    divisible_by: 1,
+    divisible_by: 16,
     flip: 'none',
     rotation: 'none',
 });
