@@ -17,8 +17,8 @@ User launched the app (local Ada engine) and confirmed:
   (only remaining `fp8_scaled` = the qwen3vl text encoder, correct/shared).
 - R2: `boogu_image_edit_fp8_scaled.safetensors` deleted → HTTP HEAD 404; int8 + bf16 → 200.
 
-## Not covered (residual risk)
-- No live A/B on a Blackwell rig for THIS session's int8 tier specifically. Research
-  (research/blackwell-fp8-dark-research.md) establishes int8_convrot avoids the fp8
-  scale-factor path that darkens on sm_120; if a Blackwell run ever shows int8 dark
-  (unexpected), fall back to bf16-only + GGUF-Q8 (new card).
+## Blackwell-verified (residual risk closed)
+- User A/B'd all three weights on the Blackwell rig (RTX PRO 4500): int8_convrot Balanced
+  is NOT dark there — the fp8-scale-factor darkening is confined to fp8_scaled, exactly as
+  research/blackwell-fp8-dark-research.md predicted. The drop-fp8 decision is proven on the
+  arch that failed. No fallback needed.
