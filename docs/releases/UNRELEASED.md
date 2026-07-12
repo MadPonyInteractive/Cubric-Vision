@@ -20,6 +20,7 @@
 - **Gallery view remembers your layout** — the gallery card-size slider and info-mode (card badges) toggle now persist across app restarts.
 - **Meet the mascot** — while a card is generating, our mascot now keeps you company: it hovers in the center while it waits, then tucks into the corner once the preview starts coming in.
 - **Export GIF** — a new History tool (under Export, video only) that turns your clip into an animated GIF. Pick the frame rate, output size (fixed width or height, aspect kept), and loop count, hit Generate preview to see the result and its file size, then Export to save it anywhere.
+- **Floating latents when minimized** — minimize the app mid-generation and a small always-on-top window shows your live latents, side by side for multiple generations. Close it with the X or click a preview to jump back to the app. It remembers where you put it and how big you made it. Turn it off in Settings.
 
 ## fixes
 
