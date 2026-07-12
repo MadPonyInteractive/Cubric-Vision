@@ -114,7 +114,7 @@ The value goes into the selector node's **widget input key**, not a made-up name
 
 ## Media-input placeholder (every handler)
 
-Any template with a `LoadImage`/`LoadAudio`/`LoadLatent` node must stamp a staged
-placeholder (`placeholder.png` / `ltx_silence.wav`) in each runtime file, or ComfyUI
-rejects the graph at prompt time. Full rule + the app-side staging half:
-[../playbooks/add-model/01-workflow-split.md](../playbooks/add-model/01-workflow-split.md).
+Any template with an *optional* `LoadImage`/`LoadAudio`/`LoadLatent` node must stamp a
+staged placeholder (`placeholder.png` / `ltx_silence.wav`) in each runtime file, or
+ComfyUI rejects the graph at prompt time. Full contract (required-vs-optional, the
+staging gate, the guard test): [media-inputs.md](media-inputs.md).

@@ -65,55 +65,20 @@ runtime files, one per boolean value.
   machinery you don't need. (ponytail: only add stage-2/gguf branches if the model
   actually has them.)
 
-### Media-input nodes need a placeholder — GENERAL rule, not LTX-specific
+### Media-input nodes need a placeholder
 
-ANY workflow with a `LoadImage`/`LoadAudio`/`LoadLatent` node (frame, audio, latent)
-must have a real default file staged in the engine `input/`, or ComfyUI rejects the
-graph at prompt time (`Invalid image file` / `Value not in list`) — even for nodes
-whose output is gated off (t2v never uses the frame). Two halves:
+Any `LoadImage`/`LoadAudio`/`LoadLatent` node on a graph that can run with **no** media
+supplied (an *optional* input) must bake a generic placeholder (`placeholder.png` /
+`ltx_silence.wav`) **and** have it staged, or ComfyUI rejects the graph at prompt time.
+**Required** inputs (`requiresImages ≥ 1`) need neither — the injector overwrites the
+widget.
 
-1. **Bake a valid placeholder in the template.** Stamp every
-   `Input_Start_Frame`/`Input_End_Frame` → **`placeholder.png`** (generic, shared
-   across models — do NOT invent a per-model `<model>_placeholder.png`; that's the
-   LTX-specific mistake this replaced). Audio nodes → `ltx_silence.wav`. The
-   exported template carries whatever test file was open when saved — it won't
-   exist on the engine and WILL reject. The handler's stamp step does this.
-2. **Stage the placeholder at submit time.** `routes/comfy.js`
-   `WORKFLOW_INPUT_DEFAULTS` lists the repo-owned defaults; `_prepareWorkflowInputs`
-   (`commandExecutor.js`) copies them into the engine `input/` before submit.
-   **TRAP:** that staging used to gate on `commandIsMultiStage` (LTX/Wan `_ms`
-   only), so single-stage `t2v`/`i2v` (5B) never staged → `Invalid image file`.
-   Fixed to gate on `mediaType === 'video'`. The RIGHT rule is broader still —
-   stage whenever the workflow has ANY media-input node, regardless of op type or
-   media type. If you add a non-video model with media nodes, widen this gate
-   (or make it inspect the workflow's Load* nodes) rather than adding another
-   op-type special-case.
-
-**Only OPTIONAL media inputs need any of this.** The distinction:
-
-| the op's media input | what the injector does | placeholder needed? |
-|---|---|---|
-| **required** (`requiresImages ≥ 1`, `mediaInputs[].required: true`) — upscale, detail, i2i | overwrites the `LoadImage` widget before submit | **No.** The baked value is never read. `Chroma_detailer.json` bakes `ComfyUI_temp_iacob_00003_.png` and has shipped for months. |
-| **optional** — a `LoadImage` on a graph that can run with no image | injects **nothing**; ComfyUI validates the **baked** filename | **Yes.** Bake `placeholder.png` **and** stage it. |
-
-Optional-input graphs shipped today: `LTX_t2v*` (`Input_Start_Frame`, `Input_End_Frame`),
-`Wan5B_t2v` (`Input_Start_Frame`) — all bake `placeholder.png`. `Chroma_t2i` has no
-`LoadImage` at all.
-
-⚠ **Krea2 is the first IMAGE model with an optional `LoadImage`** (its t2i graph serves
-t2i + i2i + pose-reference from one file, so plain t2i runs with no image). It needs BOTH
-halves. The `mediaType === 'video'` gate at `commandExecutor.js` was widened for it — the
-staging now fires whenever the workflow carries ANY `Load*` node (MPI-242).
-
-> **A hand-exported workflow has nothing to stamp the placeholder — give it a handler.**
-> LTX/Wan never hit this bug because their generators re-stamp on every build
-> (`generate_ltx.py`, `generate_wan5b.py::_stamp_placeholders`). Krea2 originally shipped
-> its runtime JSON by hand, so its t2i baked a local scratch filename that existed on no
-> other machine. Fixed by `generate_krea2.py` + a `krea2_` rule in `registry.py`: the
-> template keeps whatever the export carried, the runtime file is stamped. Even a model
-> that needs **no op split** wants a handler when it has an optional media input.
-> Guard: `tests/optional-media-placeholder.test.cjs` derives the optional-media set from
-> the registry (`workflows` × `requiresImages: 0`) and fails on any unstaged baked name.
+This is a **cross-cutting rule** (models + apps), so the full contract — the
+required-vs-optional table, the too-narrow staging gate, the hand-export trap, and the
+guard test — lives in **[../../workflow-authoring/media-inputs.md](../../workflow-authoring/media-inputs.md)**.
+Read it before shipping any workflow with a media node. Model-onboarding note: even a
+model that needs **no op split** wants a generator handler when it has an optional media
+input, so the placeholder is re-stamped rather than frozen from the last export.
 
 Verify the op-boolean node feeds ONLY the MpiIfElse gate (nothing else changes
 between t2v/i2v) before trusting a single-boolean split:

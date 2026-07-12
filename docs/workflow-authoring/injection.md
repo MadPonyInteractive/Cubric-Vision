@@ -53,8 +53,7 @@ gets `val === true || val === 'true'`, everything else is written as-is.
 - **Media params carry a KIND.** `Input_Image`→image, `Input_Mask`→mask,
   `Input_Video`→video, `Input_Audio`→audio (`mediaParamKinds`, ~line 1023). `Input_Video`
   /`Input_Audio` may target an `MpiString` fan-out node. Optional media inputs still need
-  a baked placeholder — see
-  [../playbooks/add-model/01-workflow-split.md](../playbooks/add-model/01-workflow-split.md).
+  a baked placeholder — see [media-inputs.md](media-inputs.md).
 - **Preview toggle dual-emits.** `Preview_Only` / `Input_Preview_Only` are both emitted
   (MPI-127 alias) so tier-agnostic graphs match either.
 

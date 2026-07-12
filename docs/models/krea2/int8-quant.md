@@ -62,7 +62,10 @@ a reason to revisit LTX int8 on Blackwell.
 
 ## The implementation path already exists
 
-This is a **runtime-VARIANT axis** (MPI-200), and the machinery is shipped and proven:
+This is a **runtime-VARIANT axis** (MPI-200). The agnostic mechanism (both shapes, the
+`UNETLoader` injection, the traps) lives in
+[`docs/workflow-authoring/variant-injection.md`](../../workflow-authoring/variant-injection.md)
+— this section is the Krea2-specific application of it. The machinery is shipped and proven:
 
 - `js/data/modelConstants/gpuArch.js` returns `'blackwell' | 'modern' | 'legacy'`
   (`modern` = Ada / Ampere / Turing / RTX A-series).
