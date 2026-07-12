@@ -3,15 +3,23 @@
   "id": "MPI-259",
   "title": "Apps v2 — install/multi-model flows, UI design pass, 2nd app",
   "description": "Follow-ups after MPI-256 (App Library + Apps v1 shipped, dev-gated). Test + build the paths v1 deferred: install-an-app flow (App Library Install button end-to-end), an app whose required model is NOT installed (badge + install routing), apps declaring MULTIPLE required models, a dedicated App overlay UI design pass, a 2nd app to exercise app-to-app reuse routing, and the remaining pending-ux (staged-build hides both entry points; full reuse matrix on real cards). Dev-gate lifts at >=4 apps.",
-  "column": "todo",
-  "maturity": "idea",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
+  "activeSessionTitle": "Apps v2 — flexible input seam + app_SDXL_4K (2nd app, multi-model)",
   "created_at": "2026-07-11T20:20:00Z",
-  "updated_at": "2026-07-11T20:20:00Z",
-  "labels": ["feature", "ui", "apps", "follow-up", "dev-gated"],
+  "updated_at": "2026-07-12T05:04:19.000Z",
+  "labels": [
+    "feature",
+    "ui",
+    "apps",
+    "follow-up",
+    "dev-gated"
+  ],
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
+    "checklist": "checklist.md",
     "events": "events.jsonl",
     "research": "research/"
   }
