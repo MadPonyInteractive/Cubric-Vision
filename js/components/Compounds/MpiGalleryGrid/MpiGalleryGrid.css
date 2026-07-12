@@ -393,15 +393,6 @@
     animation-name: mpi-card-mascot-float-corner;
 }
 
-/* Done: big centered happy pop. */
-.mpi-group-card--mascot-done .mpi-group-card__mascot {
-    animation: mpi-card-mascot-pop var(--t-slow, 0.35s) var(--ease, ease) 1;
-}
-
-.mpi-group-card--mascot-hidden .mpi-group-card__mascot {
-    opacity: 0;
-}
-
 @keyframes mpi-card-mascot-float {
     0%, 100% { transform: translate(-50%, -50%); }
     50%      { transform: translate(-50%, calc(-50% - 6px)); }
@@ -410,12 +401,6 @@
 @keyframes mpi-card-mascot-float-corner {
     0%, 100% { transform: translateY(0); }
     50%      { transform: translateY(-4px); }
-}
-
-@keyframes mpi-card-mascot-pop {
-    0%   { transform: translate(-50%, -50%) scale(0.5); }
-    60%  { transform: translate(-50%, -50%) scale(1.08); }
-    100% { transform: translate(-50%, -50%) scale(1); }
 }
 
 /* ── Select checkbox ─────────────────────────────────────────────────────── */

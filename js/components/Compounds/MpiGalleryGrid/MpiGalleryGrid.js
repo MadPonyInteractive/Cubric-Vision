@@ -1134,13 +1134,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // A pointer-events:none <img> overlaid on the generating card. Pure
             // decoration: reads/mutates no state, sits above the spinner/preview.
             // States (mutually-exclusive card classes): idle (big centered, replaces
-            // the spinner) → cooking (small, bottom-right) once a preview lands →
-            // done (big centered happy pop, then fades). idle↔greet face swaps on a
-            // self-rearming timer at a random 4–8s cadence while not done.
+            // the spinner) → cooking (small, bottom-right) once a preview lands.
+            // idle↔greet face swaps on a self-rearming timer at a random 4–8s cadence.
+            // (No done/happy state on the card — the finished-generation happy mascot
+            //  lives on the success toast instead; the card rebuilds on complete.)
             const MASCOT_SRC = {
                 idle:  'assets/mascot/idle.png',
                 greet: 'assets/mascot/greet.png',
-                happy: 'assets/mascot/happy.png',
             };
             let _mascotFlipTimer = null;
             let _mascotFace = 'idle';   // current idle/greet face while flipping
@@ -1157,29 +1157,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }, 4000 + Math.random() * 4000);
             }
             function _setMascotState(state) {
-                // state: 'idle' | 'cooking' | 'done' | null (clear/hide)
+                // state: 'idle' | 'cooking' | null (clear/hide)
                 cardEl.classList.remove(
                     'mpi-group-card--mascot-idle',
                     'mpi-group-card--mascot-cooking',
-                    'mpi-group-card--mascot-done',
-                    'mpi-group-card--mascot-hidden',
                 );
                 if (!state) {
                     _stopMascotFlip();
                     mascot.removeAttribute('src');
                     _mascotFace = 'idle';
                     _mascotCooking = false;
-                    return;
-                }
-                if (state === 'done') {
-                    _stopMascotFlip();
-                    mascot.src = MASCOT_SRC.happy;
-                    cardEl.classList.add('mpi-group-card--mascot-done');
-                    // Fade out after the happy beat, then clear.
-                    setTimeout(() => {
-                        cardEl.classList.add('mpi-group-card--mascot-hidden');
-                        setTimeout(() => _setMascotState(null), 400);
-                    }, 1200);
                     return;
                 }
                 // idle / cooking: same floating face, different size + position (CSS).
@@ -1242,7 +1229,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.remove('mpi-group-card--generating');
                 preview.classList.remove('mpi-group-card__preview--visible');
                 _clearPreviewImage();
-                _setMascotState('done'); // happy pop → fade → self-clear
+                _setMascotState(null);
                 _render();
             };
 

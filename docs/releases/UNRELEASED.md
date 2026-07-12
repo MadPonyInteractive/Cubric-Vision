@@ -18,6 +18,7 @@
 - **History tool rail tooltips** — hover any tool icon in the History workspace to see its name as a tooltip; the rail icons are also slightly larger for a cleaner layout.
 - **Boogu Image Edit** — a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. Ships in three quality tiers (High / Balanced / Low) you install separately: High for the best quality, Low for the fastest.
 - **Gallery view remembers your layout** — the gallery card-size slider and info-mode (card badges) toggle now persist across app restarts.
+- **Meet the mascot** — while a card is generating, our mascot now keeps you company: it hovers in the center while it waits, then tucks into the corner once the preview starts coming in.
 
 ## fixes
 
