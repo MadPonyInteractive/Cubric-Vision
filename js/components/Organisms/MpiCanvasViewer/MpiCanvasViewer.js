@@ -38,7 +38,8 @@ import { StatusBar } from '../../../shell/statusBar.js';
 import { state } from '../../../state.js';
 import { createImageItem, getToolSettings } from '../../../data/projectModel.js';
 import { roundToDivisible } from '../../../utils/cropRounding.js';
-import { qs } from '../../../utils/dom.js';
+import { qs, on } from '../../../utils/dom.js';
+import { Events } from '../../../events.js';
 import { maskTempStore } from '../../../services/maskTempStore.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 
@@ -917,7 +918,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Clear the entire painted mask and emit 'mask-clear'. */
         el.clearMask = () => {
-            canvas.clearMask();
+            if (_previewInst) {
+                // Canvas torn down for prompt-tool preview — clear the cached
+                // composite + overlay instead of touching the dead MpiCanvas.
+                _previewMaskCache = null;
+                _previewInst.el.clearMask?.();
+            } else {
+                canvas.clearMask();
+            }
             _hasMask = false;
             _clearAutoPickEntry(_currentItem, true);
             _autoMaskPicks.clear();
@@ -1123,10 +1131,18 @@ export const MpiCanvasViewer = ComponentFactory.create({
         };
 
         // ── Lifecycle: destroy ───────────────────────────────────────────────
+        // Right-click anywhere on the viewer surfaces a context menu (built by
+        // the owning block). Mirrors MpiVideoViewer's 'video-viewer:context-menu'.
+        const _offCtx = on(el, 'contextmenu', (e) => {
+            e.preventDefault();
+            Events.emit('image-viewer:context-menu', { x: e.clientX, y: e.clientY });
+        });
+
         // Block calls viewer.el.destroy?.() on workspace teardown. Without this
         // the inner MpiCanvas + its 3 image-px canvases leak GPU texture backing
         // (~100MB per 4K image), causing VRAM stacking on every workspace re-open.
         el.destroy = async () => {
+            _offCtx?.();
             if (_currentItem) {
                 if (!_previewInst) {
                     try {

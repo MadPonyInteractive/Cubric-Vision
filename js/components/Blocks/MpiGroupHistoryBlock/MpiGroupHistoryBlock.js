@@ -2132,6 +2132,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     },
                 });
             }));
+        } else {
+            // ── Image-viewer context menu ───────────────────────────────────
+            // Clear Mask is reachable from any tool (no need to open the Mask
+            // tool). Disabled when no mask is painted.
+            _unsubs.push(Events.on('image-viewer:context-menu', ({ x, y }) => {
+                const noMask = !viewer.el.hasMask?.();
+                MpiContextMenu.show({
+                    x, y,
+                    items: [
+                        { key: 'clear-mask', icon: 'trash', label: 'Clear mask', disabled: noMask, info: noMask ? 'No mask to clear' : 'Remove the painted mask' },
+                    ],
+                    onSelect: (key) => {
+                        if (key === 'clear-mask') viewer.el.clearMask?.();
+                    },
+                });
+            }));
         }
 
         // ── Cleanup ───────────────────────────────────────────────────────────
