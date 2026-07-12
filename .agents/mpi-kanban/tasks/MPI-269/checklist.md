@@ -19,7 +19,14 @@
 - [x] Bus listener records last-good latent per gen (survives multi-second frame gaps), cleared on end()
 - [x] Unresolved promptId → dropped, never falls back to active gen
 - [x] Legacy `generation:preview` path UNTOUCHED (additive) — consumers migrate later
-- [x] PROVEN in isolated in-document debug viewer: clean latents SDXL→PiD, marker skipped, last latent held, engine+generationId resolved
+- [x] BOTH onmessage closures (reuse-path + fresh-path) honor the null-skip. BUG CAUGHT IN REVIEW: first fix updated only one closure (quote-style differed) → fresh-path wrapped null into a blob → broken frame on seq jump 9→11. User's skepticism surfaced it; now both fixed.
+- [x] USER-VERIFIED (in-app SDXL-4K): latents resume cleanly across SDXL→PiD transition, marker skipped, no broken image, last latent held. (4K final-image flash is pre-existing, out of scope.)
+
+## Docs ✅
+- [x] docs/preview-bus.md written (event contract, gate, last-latent hold, per-document/IPC gotcha, both-closure note) + routed in docs/README.md
+
+## Follow-up cards ✅
+- [x] MPI-270 (todo) — OS floating latent window when minimized, settings-gated; consumer of this bus
 
 ## P4 — Migrate consumers (NEXT SESSION, separate)
 - [ ] Gallery card + MpiBaseApp pane subscribe `preview:frame`, use `getLastPreview(genId)` on mount/repaint
