@@ -1135,8 +1135,15 @@ function _initRemoteConnectionFeed() {
       // bar on "connecting" (not local · offline) regardless of whether Settings is
       // open. _emitRemoteConnection with an explicit phase always emits and sets the
       // shared _remotePhase, so a late-mounted PromptBox also picks it up.
+      // Suppress the RE-emit once the phase is already 'connecting': the boot poll
+      // owns the live connect % (remote:connect-progress), and re-broadcasting
+      // 'connecting' every 5s made heroStats re-seed the GPU slot to 0%, fighting
+      // the climbing %. Only emit on the transition INTO connecting; while it holds,
+      // the state/_remotePhase are already correct for any late-mounted subscriber.
       if (connecting) {
-        _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+        if (_remotePhase !== 'connecting') {
+          _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+        }
         _last = false;
         return;
       }

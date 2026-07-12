@@ -200,7 +200,17 @@ function _renderEngine({ connected, gpuName, vramGb, ramGb, uptimeSeconds, price
         // MPI-87: while connecting, the GPU slot shows a live elapsed-based connect %
         // (seeded at 0% here; updated by remote:connect-progress). The footer label
         // already says "connecting", so the slot is just the bare number.
-        if (gpu) gpu.textContent = phase === 'connecting' ? '0%' : '';
+        // A repeated phase:'connecting' emit (the 5s feed tick re-broadcasts it) must
+        // NOT reset a % the boot poll has already climbed — only seed 0% when the slot
+        // isn't already showing a live percentage. Otherwise the number oscillated
+        // climb→0→climb→0 every feed tick (looked stuck at 0%).
+        if (gpu) {
+            if (phase === 'connecting') {
+                if (!/^\d+%$/.test(gpu.textContent.trim())) gpu.textContent = '0%';
+            } else {
+                gpu.textContent = '';
+            }
+        }
         return;
     }
     if (phase === 'disconnected') {
