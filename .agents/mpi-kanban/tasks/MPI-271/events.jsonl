@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","at":"2026-07-12T21:50:00Z","actor":"claude","event":"task.created","data":{"title":"Migrate preview consumers to preview:frame bus (MPI-269 P4/P5)","column":"todo","from":"MPI-269 bus shipped; consumer migration split out as its own card"}}
