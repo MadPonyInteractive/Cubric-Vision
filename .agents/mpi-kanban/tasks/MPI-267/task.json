@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-267",
+  "title": "Generation/download completion notification silent when window focused",
+  "description": "BUG (regression, introduced 1.2.0): no completion feedback when the app window is focused. notificationService.js listens for generation:complete / download:complete and only ever forwarded an OS notification, which main.js suppresses via mainWindow.isFocused() (main.js:713). A code comment promised an in-app toast for the focused case, but that toast was never wired — so focused = silent for both generations and downloads.\n\nROOT CAUSE: the OS-notification refactor dropped the focused-toast path; the notificationPrefs checkbox was also being treated as a master mute rather than an OS-notification-only toggle.\n\nFIX (js/shell/notificationService.js): split completion feedback on document.hasFocus(). The pref toggles OS notifications ONLY, never mutes feedback. Truth table: pref ON + unfocused -> OS notification; pref ON + focused -> in-app StatusBar toast; pref OFF (any focus) -> in-app toast, never OS. init no longer early-returns when ipcRenderer is absent, so browser mode gets the toast too. UW-install skip and per-kind prefs preserved.\n\nNo version bump (internal fix). No changelog entry (bug introduced this version, never shipped). USER-VERIFIED.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-12T18:00:00Z",
+  "updated_at": "2026-07-12T18:00:00Z",
+  "labels": [
+    "bug",
+    "regression",
+    "notifications",
+    "ui"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  }
+}
