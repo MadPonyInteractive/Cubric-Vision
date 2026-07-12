@@ -35,3 +35,4 @@
 - After deleting one or more history entries, the remaining entry is now correctly selected and active, and whatever tool you had open (Crop, Mask, etc.) stays live — previously the active tool would drop out and you had to re-select the entry to get it back.
 - Reuse Prompt on an app-generated result now offers two choices — **Prompt Box** (drop the prompt and images straight into the prompt box, honoring the Use checkboxes) or **App** (reopen the app with its saved inputs) — instead of always reopening the app.
 - The remote-engine connection progress no longer flickers, appears stuck at 0%, or resets to 0% when you switch to the Gallery and back while connecting to a RunPod GPU — the percentage now climbs smoothly to ready.
+- Selecting multiple gallery cards is no longer cancelled when a running generation finishes — your selection (and select mode) now survives the gallery refresh.
