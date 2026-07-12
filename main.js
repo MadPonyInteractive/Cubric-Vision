@@ -6,6 +6,7 @@ const { fork } = require('child_process');
 const logger = require('./routes/logger');
 const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
 const secretsStore = require('./main/secretsStore');
+const floatLatent = require('./main/floatLatentWindow.cjs');
 
 const APP_CONFIG = loadAppConfig();
 
@@ -457,11 +458,33 @@ function createWindow() {
     menu.popup(mainWindow, params.x, params.y);
   });
 
+  // MPI-270 — OS floating latent window. On minimize, ask the renderer whether
+  // to show (setting on + a gen running); it replies via 'float-latent:show-state'.
+  // On restore/focus, tear it down and clear the per-cycle dismiss flag.
+  mainWindow.on('minimize', () => {
+    if (floatDismissed) return;
+    mainWindow.webContents.send('float-latent:query-show');
+  });
+  const teardownFloat = () => {
+    floatDismissed = false;
+    if (floatLatent.isOpen()) {
+      floatLatent.close();
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('float-latent:closed');
+    }
+  };
+  mainWindow.on('restore', teardownFloat);
+  mainWindow.on('focus', teardownFloat);
+
   mainWindow.on('closed', () => {
     saveWindowState();
+    floatLatent.close();
     mainWindow = null;
   });
 }
+
+// MPI-270 — set when the user X's the float window; suppresses it until the next
+// restore/focus (i.e. the current minimize cycle).
+let floatDismissed = false;
 
 // Start the Express server
 function resolveMainPortableRoot() {
@@ -672,6 +695,42 @@ app.on('ready', () => {
 
   ipcMain.on('window-minimize', () => {
     if (mainWindow) mainWindow.minimize();
+  });
+
+  // ── MPI-270 float latent window ─────────────────────────────────────────────
+  // Renderer's reply to 'float-latent:query-show'. Tiles/frames stream via the
+  // handlers below once open; the renderer seeds the first tiles itself.
+  ipcMain.on('float-latent:show-state', (_e, { show } = {}) => {
+    // no-op: renderer sends add-tile/frame directly when show is true. Kept so
+    // future gating (e.g. logging) has a hook.
+  });
+  ipcMain.on('float-latent:add-tile', (_e, { genId, title } = {}) => {
+    if (mainWindow && genId) floatLatent.addTile(mainWindow, genId, title);
+  });
+  ipcMain.on('float-latent:frame', (_e, { genId, dataUrl, seq } = {}) => {
+    if (genId) floatLatent.frame(genId, dataUrl, seq);
+  });
+  ipcMain.on('float-latent:tile-remove', (_e, { genId } = {}) => {
+    if (genId) {
+      floatLatent.removeTile(genId);
+      // removeTile closes the window when the last tile goes — tell the renderer.
+      if (!floatLatent.isOpen() && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('float-latent:closed');
+      }
+    }
+  });
+  ipcMain.on('float-latent:dismiss', () => {
+    floatDismissed = true;
+    floatLatent.close();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('float-latent:closed');
+  });
+  ipcMain.on('float-latent:restore', () => {
+    floatLatent.close();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      mainWindow.webContents.send('float-latent:closed');
+    }
   });
 
   ipcMain.on('window-maximize', () => {

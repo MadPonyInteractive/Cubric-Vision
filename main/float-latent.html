@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Latents</title>
+<style>
+  /* Colors mirror the app's mauve surface family (styles/01_base.css, hue 350).
+     This is a standalone OS window with no link to the app stylesheet, so the
+     oklch values are copied literally — keep in sync with --surface-* tokens. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: oklch(0.46 0.022 350); color: oklch(0.98 0.008 80);
+    overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header {
+    height: 22px; flex: 0 0 auto; display: flex; align-items: center;
+    background: oklch(0.34 0.022 350); border-bottom: 1px solid oklch(0.72 0.018 350 / 0.16);
+    -webkit-app-region: drag; user-select: none; padding-left: 8px;
+  }
+  header .label { font-size: 11px; opacity: .7; flex: 1; }
+  header .x {
+    -webkit-app-region: no-drag; width: 28px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: .6; font-size: 14px;
+  }
+  header .x:hover { opacity: 1; background: oklch(0.55 0.024 350); }
+  #tiles { flex: 1 1 auto; display: flex; min-height: 0; }
+  .tile {
+    flex: 1 1 0; min-width: 0; position: relative; cursor: pointer;
+    display: flex; flex-direction: column; border-right: 1px solid oklch(0.34 0.022 350);
+  }
+  .tile:last-child { border-right: none; }
+  .tile img {
+    flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain;
+    background: oklch(0.28 0.020 350); display: block;
+  }
+  .tile .cap {
+    flex: 0 0 auto; font-size: 10px; text-align: center; padding: 2px 4px;
+    background: oklch(0.34 0.022 350); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; opacity: .8;
+  }
+  .tile .empty {
+    flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; opacity: .4; background: oklch(0.28 0.020 350);
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="label">Latents</span>
+    <div class="x" id="closeBtn" title="Close">&#10005;</div>
+  </header>
+  <div id="tiles"></div>
+<script>
+  const { ipcRenderer } = require('electron');
+  const tilesEl = document.getElementById('tiles');
+  const tiles = new Map(); // genId -> { el, img, seq }
+
+  function makeTile(genId, title) {
+    const el = document.createElement('div');
+    el.className = 'tile';
+    el.title = 'Open app';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'waiting…';
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = title || '';
+    el.appendChild(empty);
+    el.appendChild(cap);
+    el.addEventListener('click', () => ipcRenderer.send('float-latent:restore'));
+    tilesEl.appendChild(el);
+    tiles.set(genId, { el, img: null, empty, cap, seq: -1 });
+  }
+
+  ipcRenderer.on('float-latent:add-tile', (_e, { genId, title }) => {
+    if (!tiles.has(genId)) makeTile(genId, title);
+    else if (title) tiles.get(genId).cap.textContent = title;
+  });
+
+  ipcRenderer.on('float-latent:frame', (_e, { genId, dataUrl, seq }) => {
+    const t = tiles.get(genId);
+    if (!t || !dataUrl) return;
+    if (typeof seq === 'number' && seq <= t.seq) return; // drop stale
+    t.seq = typeof seq === 'number' ? seq : t.seq;
+    if (!t.img) {
+      t.img = document.createElement('img');
+      t.el.insertBefore(t.img, t.el.firstChild);
+      if (t.empty) { t.empty.remove(); t.empty = null; }
+    }
+    t.img.src = dataUrl;
+  });
+
+  ipcRenderer.on('float-latent:remove-tile', (_e, { genId }) => {
+    const t = tiles.get(genId);
+    if (t) { t.el.remove(); tiles.delete(genId); }
+  });
+
+  document.getElementById('closeBtn').addEventListener('click', () => {
+    ipcRenderer.send('float-latent:dismiss');
+  });
+</script>
+</body>
+</html>

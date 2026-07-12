@@ -156,6 +156,10 @@ const _state = {
                                      // Both default true. Read by notificationService at event time;
                                      // does NOT affect in-app toasts. Mirrored by subscriber below.
 
+    floatLatentWindow: Storage.getFloatLatentWindow(),
+                                     // MPI-270: opt-in OS floating latent window when minimized.
+                                     // Default true. Read by floatLatentBridge. Mirrored below.
+
     // ── RunPod remote engine (cross-session, localStorage-mirrored) ───────────
     runpodConfig: Storage.getRunpodConfig(),
                                      // { enabled, podId, datacenter, gpuType, volumeId, wasConnected } —
@@ -237,5 +241,6 @@ Events.on('state:changed', ({ key, value }) => {
     else if (key === 'galleryShowInfo') Storage.setGalleryShowInfo(value);
     else if (key === 'gallerySizeLevel') Storage.setGallerySizeLevel(value);
     else if (key === 'notificationPrefs') Storage.setNotificationPrefs(value);
+    else if (key === 'floatLatentWindow') Storage.setFloatLatentWindow(value);
     else if (key === 'runpodConfig') Storage.setRunpodConfig(value);
 });

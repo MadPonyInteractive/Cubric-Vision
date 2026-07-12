@@ -189,6 +189,9 @@ export const Storage = {
   getNotificationPrefs: () => normalizeNotificationPrefs(get(STORAGE_KEYS.NOTIFICATION_PREFS, DEFAULT_NOTIFICATION_PREFS)),
   setNotificationPrefs: (v) => set(STORAGE_KEYS.NOTIFICATION_PREFS, normalizeNotificationPrefs(v)),
 
+  getFloatLatentWindow: () => get(STORAGE_KEYS.FLOAT_LATENT_WINDOW, true),
+  setFloatLatentWindow: (v) => set(STORAGE_KEYS.FLOAT_LATENT_WINDOW, !!v),
+
   // Gallery card-size level (1–4) + info-mode toggle — cross-session.
   getGallerySizeLevel: () => Math.min(4, Math.max(1, get(STORAGE_KEYS.GALLERY_SIZE_LEVEL, 3))),
   setGallerySizeLevel: (v) => set(STORAGE_KEYS.GALLERY_SIZE_LEVEL, v),

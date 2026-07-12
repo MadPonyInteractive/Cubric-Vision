@@ -56,6 +56,11 @@ export const MpiSettings = ComponentFactory.create({
                         <span class="mpi-settings__hint">Show an OS notification when these finish (only while the app is in the background). In-app messages are unaffected.</span>
                     </div>
                     <div class="mpi-settings__form-group">
+                        <label class="mpi-settings__field-label">Floating Latent Preview</label>
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsFloatLatentSlot"></div>
+                        <span class="mpi-settings__hint">When the app is minimized during a generation, show a small always-on-top window with the live latents. Close it with the X (returns next time you minimize) or click a preview to reopen the app.</span>
+                    </div>
+                    <div class="mpi-settings__form-group">
                         <label class="mpi-settings__field-label">Pixel Rendering</label>
                         <div id="mpiSettingsPixelModeSlot"></div>
                         <span class="mpi-settings__hint">Auto shows smooth at fit-to-screen and individual pixels when zoomed past 300%. Pixel-perfect always shows pixels; Smooth never does.</span>
@@ -178,6 +183,16 @@ export const MpiSettings = ComponentFactory.create({
                     checked: state.notificationPrefs?.downloads !== false,
                     label: 'Download complete',
                 }).on('change', ({ checked }) => _saveNotifyPref('downloads', checked));
+            }
+
+            // ── MPI-270: floating latent window when minimized (default ON) ──
+            const floatLatentSlot = qs('#mpiSettingsFloatLatentSlot', root);
+            if (floatLatentSlot) {
+                floatLatentSlot.innerHTML = '';
+                MpiCheckbox.mount(floatLatentSlot, {
+                    checked: state.floatLatentWindow === true,
+                    label: 'Show floating latents when minimized',
+                }).on('change', ({ checked }) => { state.floatLatentWindow = checked === true; });
             }
 
             // ── Pixel rendering mode ─────────────────────────────────────────
