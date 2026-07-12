@@ -16,7 +16,13 @@ Worked example throughout: **Wan 2.2 TI2V-5B** (MPI-172) — a combined-op,
 single-stage, low-tier video model. Krea2 (MPI-242) is the worked example for the
 style-LoRA + shared-graph + `Output_prompt` sections.
 
-## Sections (§-numbers = the legacy anchors code comments still cite)
+## Sections — read on demand, not all at once
+
+> **Read THIS hub in full; open a section file only when you reach its step.** The table
+> routes each topic to its file. Reading all six up front wastes context — a model with no
+> style rack never needs `05`, a combined-op model never needs the separate-op notes.
+
+(§-numbers = the legacy anchors code comments still cite.)
 
 | File | Covers | Legacy § |
 |---|---|---|

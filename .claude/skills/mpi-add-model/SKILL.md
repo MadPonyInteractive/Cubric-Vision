@@ -12,16 +12,21 @@ user-invocable: true
 
 ## STEP 0 — MANDATORY, BEFORE ANY OTHER TOOL CALL
 
-Read the **`docs/playbooks/add-model/`** playbook — the `README.md` hub in full,
-then every section file (`01`–`06`). Not a grep of one section — the whole
-playbook. Then state, in one line each:
+Read the **`docs/playbooks/add-model/README.md`** hub in full — ONLY the hub, not the
+section files yet. The hub carries the shape decision, the trap table, the hard rules,
+the master checklist, and a routing table (§ → section file). Then state, in one line each:
 
 1. The model's **shape** (README § 0): combined `dependencies[]` vs separate
    `commonDeps` + `operations{}`; single- vs multi-stage.
 2. Whether a **new `model.type`** is introduced (⇒ `03-model-registry.md` consumer sweep).
 3. Whether a **new op** is introduced (⇒ two registry mirrors, `04-ops-and-controls.md`).
 
-If you cannot answer all three from the playbook + the workflow JSON, stop and ask.
+If you cannot answer all three from the hub + the workflow JSON, stop and ask.
+
+**Then read section files ON DEMAND — do NOT slurp all six up front.** The hub's routing
+table tells you which section each checklist step lives in. Open a section when you reach
+its step (authoring the graph → `01`; deps/R2 → `02`; etc.). Reading `05-prompt-and-styles`
+for a model with no style rack is wasted context. Read what the model in front of you needs.
 
 **Do not skip Step 0 because the user pasted a handoff.** The handoff assumes the
 playbook. Every trap below was hit by an agent who had a detailed handoff and had
@@ -49,7 +54,9 @@ they said, say so and re-check — do not silently pick one.
 ## STEP 2 — Work the playbook checklist
 
 Follow the playbook README § "Checklist (copy per model)" verbatim, in order. The
-section files it points at are the reference. Do not improvise an order.
+README's **§ → section-file routing table** is the canonical index — open a section
+file the moment you reach a step that needs it, and only that section. Do not improvise
+an order, and do not pre-read sections you haven't reached.
 
 ## The traps that actually bite (all are IN the playbook — this is a pre-flight)
 
