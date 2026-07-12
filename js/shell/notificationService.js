@@ -1,11 +1,13 @@
 /**
- * notificationService.js — Bridges generation/download lifecycle events to OS notifications.
+ * notificationService.js — Bridges generation/download lifecycle events to notifications.
  *
- * Listens for `generation:complete` and `download:complete` and forwards a minimal payload
- * to the main process via IPC. Main gates delivery on `!mainWindow.isFocused()`, so this
- * module fires unconditionally; the in-app toast handles the focused case.
+ * Listens for `generation:complete` and `download:complete`. The `notificationPrefs`
+ * checkbox toggles OS notifications only — completion feedback always surfaces. When the
+ * pref is ON and the window is unfocused, an OS notification fires (main also gates on
+ * isFocused()). In every other case (pref OFF, or window focused) an in-app StatusBar
+ * toast fires instead — split via `document.hasFocus()` so the two never both deliver.
  *
- * Browser mode: no-op (ipcRenderer unavailable).
+ * Browser mode: no ipcRenderer, so the in-app toast always fires.
  */
 
 'use strict';
@@ -14,6 +16,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { getModelById } from '../data/modelRegistry.js';
+import { StatusBar } from './statusBar.js';
 
 let ipcRenderer = null;
 try {
@@ -40,36 +43,48 @@ function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
  * Initialize the notification bridge. Idempotent.
  */
 export function initNotificationService() {
-    if (!ipcRenderer || _unsubs.length) return;
+    if (_unsubs.length) return;
 
+    // The pref toggles OS notifications only — never mutes completion feedback.
+    // OS-eligible (pref on) + unfocused → OS notification. Otherwise (pref off,
+    // OR focused) → in-app toast. Main also gates the OS send on isFocused(), so
+    // the two paths never both deliver.
     _unsubs.push(Events.on('generation:complete', ({ item, group } = {}) => {
         try {
-            if (state.notificationPrefs?.generation === false) return; // user opted out
             const op = group?.operation || item?.operation || 'Generation';
-            ipcRenderer.send('notify-generation-complete', {
-                title: 'Generation complete',
-                subtitle: 'Cubric Studio',
-                body: `${op} finished.`,
-            });
+            const osEligible = state.notificationPrefs?.generation !== false;
+            if (osEligible && ipcRenderer && !document.hasFocus()) {
+                ipcRenderer.send('notify-generation-complete', {
+                    title: 'Generation complete',
+                    subtitle: 'Cubric Studio',
+                    body: `${op} finished.`,
+                });
+                return;
+            }
+            StatusBar.notify(`${op} finished.`, 'success');
         } catch (err) {
-            clientLogger.error('notificationService', 'failed to send IPC:', err);
+            clientLogger.error('notificationService', 'failed to notify:', err);
         }
     }));
 
     _unsubs.push(Events.on('download:complete', (data = {}) => {
         try {
-            if (state.notificationPrefs?.downloads === false) return; // user opted out
-            // UW installs surface through engine UI — skip OS notification
+            // UW installs surface through engine UI — no completion notification
             if (!data.modelId || data.modelId === '__universal_workflow__') return;
             const model = getModelById(data.modelId);
             const modelName = model?.name || data.modelId;
-            ipcRenderer.send('notify-download-complete', {
-                title: 'Download complete',
-                subtitle: 'Cubric Studio',
-                body: `${modelName} installed.`,
-            });
+            const osEligible = state.notificationPrefs?.downloads !== false;
+            if (osEligible && ipcRenderer && !document.hasFocus()) {
+                ipcRenderer.send('notify-download-complete', {
+                    title: 'Download complete',
+                    subtitle: 'Cubric Studio',
+                    body: `${modelName} installed.`,
+                });
+                return;
+            }
+            StatusBar.notify(`${modelName} installed.`, 'success');
         } catch (err) {
-            clientLogger.error('notificationService', 'failed to send IPC:', err);
+            clientLogger.error('notificationService', 'failed to notify:', err);
         }
     }));
 }
