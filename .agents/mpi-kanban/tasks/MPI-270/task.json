@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-270",
+  "title": "OS floating latent window when app minimized (settings-gated)",
+  "description": "When the app is minimized, show a small always-on-top OS window that displays live latents from the current generation. User opts in/out via a setting. Pure consumer of the MPI-269 preview:frame bus. KEY CONSTRAINT: a separate BrowserWindow has its own JS context = its own empty Events bus, so it cannot subscribe to preview:frame directly — the main renderer must forward frames over IPC, and a blob: URL will NOT resolve across documents (send raw bytes or a data URL). See docs/preview-bus.md and tasks/MPI-269/handoffs/bus-contract.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-12T21:40:00Z",
+  "updated_at": "2026-07-12T21:40:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

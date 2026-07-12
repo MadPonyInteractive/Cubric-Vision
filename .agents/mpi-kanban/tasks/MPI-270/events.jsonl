@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","at":"2026-07-12T21:40:00Z","actor":"claude","event":"task.created","data":{"title":"OS floating latent window when app minimized (settings-gated)","column":"todo","from":"user idea sparked by MPI-269 debug viewer; consumer of preview:frame bus"}}

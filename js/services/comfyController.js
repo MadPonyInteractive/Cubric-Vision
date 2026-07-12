@@ -28,18 +28,32 @@ import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputU
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
-// Binary preview frames carry a header before the JPEG payload. Core ComfyUI uses
-// an 8-byte header ([event_type, image_type]); KJNodes' LTX2 preview override
-// (LTX latent previews, MPI-166) uses VideoHelperSuite's 28-byte VHS header. A
-// fixed slice(8) corrupts the VHS frames. Find the JPEG SOI marker (FF D8) and
-// slice from there so any header length works; fall back to 8 if not found.
+// Binary WS frames carry a 4-byte big-endian event-type header. Only event type 1
+// (PREVIEW_IMAGE) is an image; ComfyUI also sends OTHER binary event types on the
+// same socket — e.g. type 3, a ~93-byte stage/progress marker emitted when a second
+// model initializes in a multi-sampler workflow (MPI-269). That marker's bytes can
+// coincidentally contain an `FF D8` pair, so an SOI-only scan false-matches it and
+// yields a broken <img>. Gate on the event type FIRST, then locate the JPEG payload
+// by its SOI marker (core ComfyUI = 8-byte header; KJNodes' LTX2/VHS override =
+// 28-byte header — MPI-166 — so the offset varies). Returns the JPEG bytes, or
+// `null` for any non-image frame so the caller skips it and the last latent stays.
 function _stripPreviewHeader(buf) {
     const b = new Uint8Array(buf);
-    const max = Math.min(b.length - 1, 64); // SOI is within the header, scan a bounded prefix
-    for (let i = 0; i < max; i++) {
-        if (b[i] === 0xff && b[i + 1] === 0xd8) return buf.slice(i);
-    }
-    return buf.slice(8);
+    // Event type = first 4 bytes, big-endian. Anything but 1 is not a preview image.
+    const eventType = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+    const max = Math.min(b.length - 1, 64); // header + SOI live within a bounded prefix
+    let soi = -1;
+    for (let i = 0; i < max; i++) if (b[i] === 0xff && b[i + 1] === 0xd8) { soi = i; break; }
+    // A frame is a real preview image if EITHER it declares event type 1
+    // (PREVIEW_IMAGE — core ComfyUI, SDXL/PiD/Krea/etc.) OR it carries a JPEG SOI
+    // with a plausible image payload (covers nonstandard headers like KJNodes' VHS
+    // override without hard-coding its event type — MPI-166). A non-image binary
+    // event (e.g. the type-3, 93-byte stage marker) has no SOI and is tiny → skip,
+    // so the caller keeps the last latent instead of painting a broken <img>.
+    const looksLikeImage = soi >= 0 && b.length > 1024;
+    if (eventType !== 1 && !looksLikeImage) return null;
+    if (soi < 0) return null; // type 1 but no JPEG payload found — nothing to paint
+    return buf.slice(soi);
 }
 
 // MPI-73: the remote engine is mid-transition (connecting/disconnecting). During
@@ -156,6 +170,13 @@ function createEngine({ engine, alwaysLocal }) {
 
     /** @type {string|null} Last prompt_id reported as actively executing. Used for binary previews. */
     _activePromptId: null,
+
+    /** @type {'local'|'remote'} Which engine this socket is currently bound to. Resolved at `connect()` from the wsUrl choice and stamped onto every binary preview frame (MPI-269). */
+    _engine: 'local',
+
+    /** @type {Map<string, number>} Monotonic preview-frame counter keyed by promptId — lets a consumer drop a late frame when a newer one already painted (MPI-269). */
+    // ponytail: never pruned; one small int per prompt UUID, negligible over a session. Prune per-prompt if a run ever generates enough to matter.
+    _previewSeq: new Map(),
 
     /** @type {Map<string, (err: Error) => void>} Reject hooks mirroring `_promptListeners`, used to settle a pending generation if the WS drops out-of-band (e.g. a remote container OOM-kill — B4). */
     _promptRejectors: new Map(),
@@ -639,14 +660,38 @@ function createEngine({ engine, alwaysLocal }) {
         // `preview` (binary frame) and `VHS_latentpreview` (video preview window
         // boundary, MPI-167) carry no prompt_id — route them to the active prompt.
         if (msg instanceof ArrayBuffer || (msg && (msg.type === 'preview' || msg.type === 'VHS_latentpreview'))) {
-            const listener = this._activePromptId ? this._promptListeners.get(this._activePromptId) : null;
+            const pid = this._activePromptId;
+            // MPI-269: stamp server-truth attribution onto the frame so consumers can
+            // route by (engine, promptId) instead of guessing the active generation.
+            if (msg && msg.type === 'preview' && pid) {
+                const seq = (this._previewSeq.get(pid) || 0) + 1;
+                this._previewSeq.set(pid, seq);
+                msg.engine = this._engine;
+                msg.promptId = pid;
+                msg.seq = seq;
+                // MPI-269: the unified, engine-tagged preview bus. Any surface subscribes
+                // here — no per-consumer plumbing. `generationId` is resolved downstream
+                // (activeGenerations owns the promptId→regId map). Emitted for BOTH the
+                // local ComfyUI WS and the remote Pod proxy WSS (engine distinguishes).
+                Events.emit('preview:frame', {
+                    engine: msg.engine,
+                    promptId: msg.promptId,
+                    seq: msg.seq,
+                    url: msg.url,
+                });
+            }
+            const listener = pid ? this._promptListeners.get(pid) : null;
             listener?.(msg);
             return;
         }
 
         const promptId = msg?.data?.prompt_id || msg?.prompt_id || null;
         if (promptId) {
-            if (msg.type === 'executing' && msg.data?.node !== null) {
+            // Track the prompt the server says is running so binary previews (which
+            // carry no prompt_id) attribute to it. `execution_start` fires BEFORE the
+            // first `executing` — without it, an early frame of a new gen would route
+            // to the previous gen's listener (MPI-269 cross-gen race #1).
+            if (msg.type === 'execution_start' || (msg.type === 'executing' && msg.data?.node !== null)) {
                 this._activePromptId = promptId;
             }
             const listener = this._promptListeners.get(promptId);
@@ -676,8 +721,9 @@ function createEngine({ engine, alwaysLocal }) {
         if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
-                    const blob = new Blob([_stripPreviewHeader(event.data)], { type: 'image/jpeg' });
-                    const url = URL.createObjectURL(blob);
+                    const jpeg = _stripPreviewHeader(event.data);
+                    if (!jpeg) return; // non-image frame (stage marker) — keep prior latent (MPI-269)
+                    const url = URL.createObjectURL(new Blob([jpeg], { type: 'image/jpeg' }));
                     this._routeMessage({ type: 'preview', url });
                 } else {
                     const msg = JSON.parse(event.data);
@@ -699,14 +745,18 @@ function createEngine({ engine, alwaysLocal }) {
         // A local-pinned engine ALWAYS uses the local preview WS, even while remote-
         // connected, so its previews + completion events come from local ComfyUI.
         // The remote engine uses the proxy WS when connected, else local.
-        const wsUrl = (!this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId))
-            || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
+        const remoteWsUrl = !this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId);
+        const wsUrl = remoteWsUrl || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
+        // MPI-269: a frame's engine = which URL this socket bound to. Local-pinned
+        // instances and the local fallback are 'local'; the proxy WSS is 'remote'.
+        this._engine = remoteWsUrl ? 'remote' : 'local';
         this._ws = new WebSocket(wsUrl);
         this._ws.binaryType = "arraybuffer";
         this._ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
-                const blob = new Blob([_stripPreviewHeader(event.data)], { type: 'image/jpeg' });
-                const url = URL.createObjectURL(blob);
+                const jpeg = _stripPreviewHeader(event.data);
+                if (!jpeg) return; // non-image frame (stage marker) — keep prior latent (MPI-269)
+                const url = URL.createObjectURL(new Blob([jpeg], { type: 'image/jpeg' }));
                 this._routeMessage({ type: 'preview', url });
             } else {
                 const msg = JSON.parse(event.data);
