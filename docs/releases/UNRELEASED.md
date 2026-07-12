@@ -13,6 +13,7 @@
 - **Image to Image on every image model** — the Image to Image operation is now available on all image models. Feed it an input image and a prompt to reshape the image toward your description; the Denoise slider controls how much it changes.
 - **Open in file system** — right-click any gallery card (or multiple) and choose the new "Open in file system" option to reveal the media file in your file browser.
 - **Crop ratios + Divisible by** — the Crop tool now offers a Ratio / Free choice with a full ratio set including cinema formats (2:1, 1.85:1, 21:9, 2.39:1), plus a "Divisible by" control (default 16) that snaps crop output to clean multiples. Resize also defaults to 16.
+- **Clear mask from any tool** — right-click the image viewer to open a context menu with a "Clear mask" entry, so you can wipe the painted mask without opening the Mask tool first.
 
 ## fixes
 
