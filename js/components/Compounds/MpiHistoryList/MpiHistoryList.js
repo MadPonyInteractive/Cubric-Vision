@@ -392,6 +392,11 @@ export const MpiHistoryList = ComponentFactory.create({
             _history = _history.filter((_, i) => !idxSet.has(i));
             _selectedIdx = Math.max(0, Math.min(newSelectedIdx, _history.length - 1));
             _anchor = _selectedIdx;
+            // Multi-select delete leaves _selection/_selectMode stale; drop them
+            // so the list returns to single-active-entry state (the surviving
+            // entry is highlighted --active by _applyCardStates in the rebuild).
+            _selectMode = false;
+            _selection.clear();
             _buildHistoryCards();
         };
 

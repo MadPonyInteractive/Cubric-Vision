@@ -1396,8 +1396,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     trim:       item.trim,
                 });
             } else {
-                // Viewer's loadEntry restores active tool mode internally.
+                // Viewer's loadEntry restores active tool mode internally, but a
+                // prior multi-select delete may have exited it — re-arm from the
+                // tool source-of-truth if the canvas mode is stale.
                 await viewer.el.loadEntry?.(item, idx);
+                const _tool = historyTools.el.getActiveMode?.();
+                if (_tool === 'crop' || _tool === 'mask') viewer.el.enterMode?.(_tool);
                 viewer.el.setMaskHidden?.(false);
             }
             _currentIdx = idx;
@@ -1704,7 +1708,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const cur = _group.history[_currentIdx];
             if (cur) {
                 if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24, trim: cur.trim });
-                else         viewer.el.loadEntry?.(cur, _currentIdx);
+                else {
+                    await viewer.el.loadEntry?.(cur, _currentIdx);
+                    // Multi-select for delete exited the viewer's tool mode (see
+                    // 'selection-changed'), so loadEntry had nothing to restore.
+                    // Re-arm the still-active canvas tool (crop/mask) — its options
+                    // panel is still mounted and won't re-enter on its own. Defer a
+                    // frame so it lands after any late canvas mode reset from the
+                    // image reload (which would otherwise clobber the fresh mode).
+                    const _tool = historyTools.el.getActiveMode?.();
+                    if (_tool === 'crop' || _tool === 'mask') {
+                        requestAnimationFrame(() => viewer.el.enterMode?.(_tool));
+                    }
+                }
             }
 
             if (!isVideo) {
