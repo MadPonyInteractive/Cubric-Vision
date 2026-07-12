@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-260","at":"2026-07-11T18:31:51.598Z","actor":"vscode","summary":"Created MPI-260."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-260","at":"2026-07-12T00:20:35.221Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-260 from To do to To do."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-260", "at": "2026-07-12T00:53:29.000Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Moved MPI-260 from To do to Doing (bg-removal eval done; rembg+BiRefNet picked)."}

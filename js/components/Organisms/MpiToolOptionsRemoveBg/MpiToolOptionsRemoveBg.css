@@ -1,0 +1,41 @@
+.mpi-tool-options-remove-bg {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-2);
+    align-items: stretch;
+}
+
+.mpi-tool-options-remove-bg__desc {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.mpi-tool-options-remove-bg__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    align-items: center;
+}
+
+/* [hidden] must beat the flex display above (attribute alone loses to display:flex). */
+.mpi-tool-options-remove-bg__section[hidden] {
+    display: none;
+}
+
+.mpi-tool-options-remove-bg__section-label {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.mpi-tool-options-remove-bg__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    justify-content: center;
+}

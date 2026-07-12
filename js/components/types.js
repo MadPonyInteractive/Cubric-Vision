@@ -74,6 +74,12 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsRemoveBgProps (Organism — js/components/Organisms/MpiToolOptionsRemoveBg)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ * Emits: 'apply' { bgMode: 'transparent'|'color', color: '#rrggbb' }
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsInterpolateProps (Organism — js/components/Organisms/MpiToolOptionsInterpolate)
  * @property {Object} viewer - MpiVideoViewer instance
  * Emits: 'apply' { multiplier: number }

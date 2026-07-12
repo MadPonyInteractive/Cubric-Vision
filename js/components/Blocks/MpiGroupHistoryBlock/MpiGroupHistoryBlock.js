@@ -17,6 +17,7 @@ import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js
 import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.js';
 import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
+import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
 import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
 import { MpiToolOptionsPrompt } from '../../Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js';
@@ -73,6 +74,7 @@ const TOOL_OPTIONS_REGISTRY = {
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
+    removeBackground: MpiToolOptionsRemoveBg,
     interpolate:  MpiToolOptionsInterpolate,
     resize:       MpiToolOptionsResize,
     resizeVideo:  MpiToolOptionsResize,
@@ -425,6 +427,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (mode === 'imageUpscale') return _runImageTool('imageUpscale', injectionParams);
                 return _runVideoTool('videoUpscale', injectionParams);
             }
+            if (mode === 'removeBackground') {
+                const useColor = payload.bgMode === 'color';
+                const injectionParams = { Input_Bg_Use_Color: useColor };
+                if (useColor) {
+                    // EmptyImage.color is an int 0xRRGGBB; convert the picker hex (default black).
+                    injectionParams.Input_Bg_Color = parseInt(String(payload.color || '').replace('#', ''), 16) || 0;
+                }
+                return _runImageTool('removeBackground', injectionParams);
+            }
             if (mode === 'interpolate') {
                 return _runVideoTool('interpolate', { Interp_Multiplier: payload.multiplier ?? 2 });
             }
@@ -436,6 +447,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const TOOL_LABELS = {
             prompt: 'Prompt', crop: 'Crop', mask: 'Mask',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
+            removeBackground: 'Remove Background',
             interpolate: 'Interpolate',
             resize: 'Resize', resizeVideo: 'Resize',
         };

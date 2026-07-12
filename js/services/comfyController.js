@@ -1142,7 +1142,7 @@ function createEngine({ engine, alwaysLocal }) {
             const node = workflow[nodeId];
             if (!node || !node.inputs) return;
             const targets = [
-                'value', 'text', 'int', 'float', 'boolean', 'string',
+                'value', 'text', 'int', 'float', 'boolean', 'string', 'color',
                 'ckpt_name', 'model_name', 'unet_name', 'image', 'mask', 'picks',
                 'lora_name', 'strength_model', 'strength_clip',
                 'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent', 'select'
