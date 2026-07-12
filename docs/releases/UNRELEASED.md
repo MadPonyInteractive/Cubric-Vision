@@ -26,3 +26,4 @@
 - Your chosen operation (Upscale, Pose Reference, etc.) is no longer reset back to Image to Image when you switch between the Gallery and History, change models, or reuse a prompt.
 - In image models, the Upscale operation's denoise parameter sensitivity was changed to match ComfyUI.
 - In the Resize tool, the padding-color picker now appears only for the solid **pad** fit mode, where it actually applies — it no longer shows for the edge-fill modes (pad edge, pad edge pixel, pillarbox blur), which ignore it. New resizes also default **Divisible by** to 16.
+- After deleting one or more history entries, the remaining entry is now correctly selected and active, and whatever tool you had open (Crop, Mask, etc.) stays live — previously the active tool would drop out and you had to re-select the entry to get it back.
