@@ -1674,7 +1674,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         el.setGroups = (groups) => {
             _groups = groups || [];
-            _selectedIds.clear();
+            // ponytail: keep selection across refreshes (e.g. a generation
+            // finishing mid-select) — only drop ids whose group is gone.
+            if (_selectedIds.size) {
+                const live = new Set(_groups.map(g => g.id));
+                for (const id of _selectedIds) if (!live.has(id)) _selectedIds.delete(id);
+                if (_selectedIds.size === 0) _exitSelectionMode();
+                if (_anchorId && !live.has(_anchorId)) _anchorId = null;
+            }
             _rerenderJustified('setGroups');
         };
 
