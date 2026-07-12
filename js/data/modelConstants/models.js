@@ -416,6 +416,10 @@ export const MODELS = [
             'ComfyUI-Impact-Pack',    // To/FromBasicPipe
         ],
     },
+    // Balanced = turbo int8_convrot (promoted from 'low'). fp8_scaled Balanced tier DROPPED
+    // — dark/underexposed on Blackwell (sm_120), MPI-266. int8_convrot is Blackwell-safe,
+    // faster, and higher quality than fp8_scaled on all NVIDIA (ComfyUI dev consensus). Still
+    // a cfg-1 turbo (8-step) ⇒ negatives are a no-op → negativePrompt:false (unchanged).
     {
         id: 'boogu-edit-balanced',
         sizeTier: 'balanced',
@@ -428,42 +432,14 @@ export const MODELS = [
         enhanceRecipe: 'flux',
         supportedOps: ['edit'],
         loraStrengths: ['model'],
-        capabilities: { multiStage: false, audio: false, negativePrompt: true },
+        capabilities: { multiStage: false, audio: false, negativePrompt: false },
         gen_speed: 'balanced',
-        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The Balanced tier uses fp8-scaled weights at 25 steps — near-High quality at lower VRAM.',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The Balanced tier uses a distilled turbo (int8) weight at 8 steps — fast, lower VRAM, and consistent across NVIDIA GPUs. Fastest on NVIDIA RTX (Turing+); older or non-NVIDIA GPUs may be slow.',
         workflows: {
             edit: 'boogu_edit_balanced.json',
         },
         dependencies: [
             'boogu-edit-transformer-balanced',
-            'boogu-qwen3vl-8b-clip',
-            'vae-flux-ae',
-            'ComfyUI-MpiNodes',
-            'comfyui-kjnodes',
-            'ComfyUI-Impact-Pack',
-        ],
-    },
-    {
-        id: 'boogu-edit-low',
-        sizeTier: 'low',
-        modelFamily: 'Boogu-Image-Edit',
-        name: 'Boogu Image Edit',
-        dropdownMeta: 'EDIT',
-        mediaType: 'image',
-        image: 'boogu-edit-low.webp',
-        type: 'boogu',
-        enhanceRecipe: 'flux',
-        supportedOps: ['edit'],
-        loraStrengths: ['model'],
-        // Turbo (int8_convrot) distilled at cfg 1.0 ⇒ negatives are a no-op → negativePrompt:false.
-        capabilities: { multiStage: false, audio: false, negativePrompt: false },
-        gen_speed: 'fast',
-        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The Low tier uses a distilled turbo (int8) weight at 8 steps — fastest, lowest VRAM. Fastest on NVIDIA RTX (Turing+); older or non-NVIDIA GPUs may be slow.',
-        workflows: {
-            edit: 'boogu_edit_low.json',
-        },
-        dependencies: [
-            'boogu-edit-transformer-low',
             'boogu-qwen3vl-8b-clip',
             'vae-flux-ae',
             'ComfyUI-MpiNodes',

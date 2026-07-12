@@ -28,7 +28,7 @@
   },
   "55": {
     "inputs": {
-      "unet_name": "boogu_image_edit_bf16.safetensors",
+      "unet_name": "boogu_image_edit_turbo_int8_convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -203,22 +203,6 @@
       "title": "ToBasicPipe"
     }
   },
-  "79": {
-    "inputs": {
-      "samples": [
-        "108",
-        0
-      ],
-      "vae": [
-        "106",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
   "91": {
     "inputs": {
       "samples": [
@@ -307,93 +291,6 @@
     "class_type": "SamplerCustom",
     "_meta": {
       "title": "SamplerCustom"
-    }
-  },
-  "106": {
-    "inputs": {
-      "basic_pipe": [
-        "77",
-        0
-      ]
-    },
-    "class_type": "FromBasicPipe",
-    "_meta": {
-      "title": "FromBasicPipe"
-    }
-  },
-  "107": {
-    "inputs": {
-      "sampler_name": "dpmpp_2m"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "108": {
-    "inputs": {
-      "add_noise": true,
-      "noise_seed": [
-        "133",
-        0
-      ],
-      "cfg": 3.5,
-      "model": [
-        "109",
-        0
-      ],
-      "positive": [
-        "106",
-        3
-      ],
-      "negative": [
-        "106",
-        4
-      ],
-      "sampler": [
-        "107",
-        0
-      ],
-      "sigmas": [
-        "110",
-        0
-      ],
-      "latent_image": [
-        "143",
-        0
-      ]
-    },
-    "class_type": "SamplerCustom",
-    "_meta": {
-      "title": "SamplerCustom"
-    }
-  },
-  "109": {
-    "inputs": {
-      "shift": 3.16,
-      "model": [
-        "106",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingAuraFlow",
-    "_meta": {
-      "title": "ModelSamplingAuraFlow"
-    }
-  },
-  "110": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 25,
-      "denoise": 1,
-      "model": [
-        "106",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
     }
   },
   "131": {
@@ -494,10 +391,6 @@
         0
       ],
       "any_2": [
-        "79",
-        0
-      ],
-      "any_3": [
         "91",
         0
       ]

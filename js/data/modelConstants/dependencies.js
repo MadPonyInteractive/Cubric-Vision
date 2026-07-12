@@ -419,18 +419,11 @@ export const DEPS = {
         size: '20.59GB',
         sha256: '6374c9d1f4faa17d0204df6d20f777ed348bc1ac22f778e46ac79d554c67e3b1',
     },
+    // Balanced = turbo int8_convrot (was 'low'). fp8_scaled dropped — dark on Blackwell
+    // (sm_120), MPI-266. int8 is Blackwell-safe + faster + higher quality on all NVIDIA.
     'boogu-edit-transformer-balanced': {
         id: 'boogu-edit-transformer-balanced',
-        name: 'Boogu Image Edit Transformer (fp8_scaled, Balanced)',
-        origin: 'Boogu/Boogu-Image-0.1-Edit-fp8',
-        filename: 'diffusion_models/boogu_image_edit_fp8_scaled.safetensors',
-        url: 'https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_fp8_scaled.safetensors',
-        size: '10.31GB',
-        sha256: '1b9da944fdde5fdee4bbae874da68682bf9787e59fc90a473664547e342f8575',
-    },
-    'boogu-edit-transformer-low': {
-        id: 'boogu-edit-transformer-low',
-        name: 'Boogu Image Edit Transformer (turbo int8_convrot, Low)',
+        name: 'Boogu Image Edit Transformer (turbo int8_convrot, Balanced)',
         origin: 'Boogu/Boogu-Image-0.1-Edit-Turbo',
         filename: 'diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors',

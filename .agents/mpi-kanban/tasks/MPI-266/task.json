@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-266",
+  "title": "Boogu Image Edit — drop fp8_scaled Balanced tier (dark on Blackwell); collapse to bf16 High + int8_convrot Balanced",
+  "description": "BUG: Boogu Image Edit Balanced tier (boogu_image_edit_fp8_scaled) renders heavily underexposed/dark on RTX PRO 4500 (Blackwell / sm_120); fine on RTX 4060 Ti (Ada). Live-seen: yellow-dress edit on a 4500 came out dark vs the same edit on Ada.\\n\\n=== ROOT CAUSE (research 2026-07-12, ~50 sources, see research/blackwell-fp8-dark-research.md) ===\\nNOT the UNETLoader weight_dtype widget. The shipped graph uses weight_dtype='default', which on an fp8_scaled file = ComfyUI's manual_cast path (weights fp8, compute upcast to bf16) — already the SAFE path. Changing the widget to fp8_e4m3fn is a no-op (same manual_cast). fp8_e4m3fn_fast is the one that glitches on Blackwell, and we don't use it. The dark output is fp8_scaled per-tensor scale-factor mis-application on sm_120 (a multiplicative magnitude bug compounding per layer → systematic underexposure; Qwen-Image-Edit shows the same on RTX 5090 — ComfyUI #9190/#11255/#11865). Contributing env risk: Blackwell needs torch cu130 + sm_120a; cu128 mis-routes fp8. We refuse to depend on per-rig launch flags/env (bit us before).\\n\\n=== DECISION (user) ===\\nDrop fp8_scaled entirely — do NOT swap to a weight_dtype value, do NOT depend on flags. ComfyUI devs (Kijai) now say int8_convrot is 'much better, faster and better quality on all Nvidia GPUs'; quality rank bf16 > GGUF-Q8 > int8_convrot > mxfp8 > fp8_scaled. Collapse Boogu Edit from 3 tiers to 2: HIGH = bf16 (unchanged), BALANCED = the current turbo int8_convrot weight re-slotted from 'low' to 'balanced' (keeps its turbo sampler chain: 8-step, cfg1, negativePrompt:false). Remove the fp8_scaled tier + its R2 weight.\\n\\n=== SCOPE (reverse add-model, per docs/playbooks/add-model) ===\\n(1) template boogu_edit_template.json — user updates (drop fp8 Tier-2 UNETLoader+sampler chain). (2) generator generate_boogu.py MODEL_VARIANTS — drop balanced row; int8 row output → boogu_edit_balanced.json (or keep filename, re-slot card). (3) regen runtime JSONs; delete boogu_edit_low.json OR boogu_edit_balanced.json per naming choice. (4) dependencies.js — delete boogu-edit-transformer-balanced (fp8); rename boogu-edit-transformer-low → -balanced (int8) OR keep id, re-point card. (5) models.js — delete boogu-edit-balanced fp8 card; re-slot int8 card sizeTier 'low'→'balanced', name/desc, gen_speed. (6) progressStages.js — drop dropped-JSON key. (7) R2 DELETE boogu_image_edit_fp8_scaled.safetensors (user approval gate). (8) tests: inject-params-titles.test.cjs + boogu parse cross-ref. (9) MEMORY + research doc + card MPI-257 hook.\\n\\nNo version bump (model change). VERIFY: local Ada engine (bf16 + int8 both edit clean) + ideally a Blackwell run confirming int8 is NOT dark.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-12T17:30:00Z",
+  "updated_at": "2026-07-12T18:50:00Z",
+  "labels": [
+    "bug",
+    "boogu",
+    "image-edit",
+    "blackwell",
+    "fp8",
+    "r2-delete",
+    "add-model"
+  ],
+  "links": {
+    "plan": "plan.md",
+    "validation": "validation.md",
+    "research": "research/",
+    "events": "events.jsonl"
+  }
+}

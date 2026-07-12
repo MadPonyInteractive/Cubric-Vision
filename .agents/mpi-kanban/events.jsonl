@@ -1147,3 +1147,8 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"validation.updated","at":"2026-07-12T14:05:00Z","actor":"claude","summary":"User-verified in running app."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"task.moved","at":"2026-07-12T14:05:00Z","actor":"claude","from":"doing","to":"done","summary":"Mascot generating states verified + complete."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"validation.updated","at":"2026-07-12T15:10:00Z","actor":"claude","summary":"Follow-up: happy-at-end dropped (card rebuild); happy stays on toast. Changelog entry added."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-266","type":"task.created","at":"2026-07-12T17:30:00Z","actor":"claude","summary":"Boogu Edit fp8_scaled dark on Blackwell — card+plan to drop fp8, collapse to bf16 High + int8_convrot Balanced."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-266","type":"task.moved","at":"2026-07-12T17:45:00Z","actor":"claude","summary":"MPI-266 todo->doing."}
+{"at":"2026-07-12T18:00:02Z","event":"task.moved","actor":"claude","task":"MPI-267","note":"todo -> doing -> done. Focused-window completion notification regression fixed (notificationService document.hasFocus() split). USER-VERIFIED."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-268","type":"task.created","at":"2026-07-12T15:24:24Z","actor":"claude","summary":"GIF export tool (video history) — created directly in doing for implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-266","type":"task.moved","at":"2026-07-12T18:50:00Z","actor":"claude","from":"doing","to":"done","summary":"Boogu fp8-dark fix complete + user-verified. fp8_scaled dropped, R2 weight deleted, 2-tier collapse."}

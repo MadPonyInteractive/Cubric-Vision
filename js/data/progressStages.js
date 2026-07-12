@@ -57,13 +57,12 @@ export const PROGRESS_STAGES = Object.freeze({
     // Its detailer/upscaler get NO entry, per the convention above.
     'krea2_turbo_t2i.json':      Object.freeze({ single: 2 }),
     // Boogu-Image-Edit (MPI-257) — one graph per tier, ONE SamplerCustom pass (the
-    // MpiAnySwitch selects the tier's chain; only that chain runs). 2 bars = model-load
-    // + sampler, same shape as SDXL t2i / Krea2. PROVISIONAL — count live per tier
-    // (turbo=8-step, fp8/bf16=25/30-step) and correct if a tier surfaces a different
-    // bar count. Keyed per-file (one entry per tier).
-    'boogu_edit_high.json':      Object.freeze({ single: 2 }),
-    'boogu_edit_balanced.json':  Object.freeze({ single: 2 }),
-    'boogu_edit_low.json':       Object.freeze({ single: 2 }),
+    // MpiAnySwitch selects the tier's chain; only that chain runs). Live-confirmed 1 bar
+    // (sampler only; no separate model-load bar surfaces, same as PiD) — MPI-266 fixed the
+    // provisional 2. Keyed per-file. fp8 Balanced dropped (dark on Blackwell); Balanced is
+    // now the int8_convrot turbo weight.
+    'boogu_edit_high.json':      Object.freeze({ single: 1 }),
+    'boogu_edit_balanced.json':  Object.freeze({ single: 1 }),
 });
 
 /**

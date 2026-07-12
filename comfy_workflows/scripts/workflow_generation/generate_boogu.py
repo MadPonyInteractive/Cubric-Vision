@@ -12,10 +12,11 @@ reading `Input_Tier` (an MpiInt). Each tier is produced by baking TWO values:
 
 Tier map (per the workflow's Input_Tier wiring — the live bench is the source of truth):
   Tier 1 = HIGH     (bf16,               euler   cfg4   30-step simple      +AuraFlow 3.16)
-  Tier 2 = BALANCED (fp8_scaled,         dpmpp_2m cfg3.5 25-step simple     +AuraFlow 3.16)
-  Tier 3 = LOW      (turbo_int8_convrot, lcm     cfg1    8-step sgm_uniform)
+  Tier 2 = BALANCED (turbo_int8_convrot, lcm     cfg1    8-step sgm_uniform)
+  [REMOVED] the old fp8_scaled tier — dark/underexposed on Blackwell (sm_120), MPI-266.
+  Template collapsed from 3 chains to 2 (bf16=1, int8=2).
 
-Ships as three sibling ModelDefs (modelFamily 'Boogu-Image-Edit', one sizeTier each).
+Ships as two sibling ModelDefs (modelFamily 'Boogu-Image-Edit', one sizeTier each).
 Input_Image is REQUIRED (an edit needs a source) → no placeholder stamping.
 
 Standalone:  python generate_boogu.py
@@ -33,8 +34,9 @@ from pathlib import Path
 MODEL_VARIANTS = {
     "boogu_edit_template.json": [
         ("boogu_edit_high.json",     1, "boogu_image_edit_bf16.safetensors"),
-        ("boogu_edit_balanced.json", 2, "boogu_image_edit_fp8_scaled.safetensors"),
-        ("boogu_edit_low.json",      3, "boogu_image_edit_turbo_int8_convrot.safetensors"),
+        # Balanced = the turbo int8_convrot weight (was "low"). fp8_scaled dropped (dark on
+        # Blackwell/sm_120 — MPI-266). Template collapsed to TWO tiers: bf16=1, int8=2.
+        ("boogu_edit_balanced.json", 2, "boogu_image_edit_turbo_int8_convrot.safetensors"),
     ],
 }
 # ─── END CONFIG ───────────────────────────────────────────────────────────────
