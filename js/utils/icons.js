@@ -90,6 +90,10 @@ export const ICONS = {
     'flipX_stroke': '<path d="M12 3v18"/><path d="M8 7H3v10h5"/><path d="M16 7h5v10h-5"/><path d="M8 12H3"/><path d="M16 12h5"/>',
     'flipY_stroke': '<path d="M3 12h18"/><path d="M7 8V3h10v5"/><path d="M7 16v5h10v-5"/><path d="M12 8V3"/><path d="M12 16v5"/>',
     'resize_stroke': '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 9l6 6"/><path d="M9 9h4"/><path d="M9 9v4"/><path d="M15 15h-4"/><path d="M15 15v-4"/>',
+    // Film/video frame with a centered play triangle → "export animated clip".
+    // Stroke-only (fill="none"); fills the 24×24 grid like sibling rail icons
+    // (x3 y3 w18 h18) so it doesn't render visually smaller.
+    'to_gif_stroke': '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18"/><path d="M7 3v5M17 3v5"/><path d="M10 11l5 3-5 3v-6z"/>',
 
     // ── Prompt mode (from toolUtils.js) ──────────────────────────────────────
     // 'check' already covers ICON_POSITIVE. Adding negative/prohibited:

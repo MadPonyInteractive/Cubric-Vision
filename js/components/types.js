@@ -101,6 +101,18 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsGifProps (Organism — js/components/Organisms/MpiToolOptionsGif)
+ * @property {Object} viewer - MpiVideoViewer instance (registry-uniform signature; unused directly)
+ *
+ * Video-only GIF EXPORT (not a history op). Persists project.toolSettings.exportGif:
+ * { fps, sizePreset, loop }. Parent injects the encoder via el.setEncoder(fn)
+ * (fn(params) → Promise<{ url, byteSize, fileName }> via POST /api/video/gif) and
+ * reads el.getExportParams(). "Generate preview" encodes a real GIF → inline
+ * animated preview + real file-size badge. Emits: 'apply' { url?, fileName? } —
+ * parent saves via native Save-As (<a download>); empty payload = encode on demand.
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsPromptProps (Organism — js/components/Organisms/MpiToolOptionsPrompt)
  * @property {Object} promptBox - Live MpiPromptBox instance handle (mount return)
  * @property {Object} project - Current project { id, folderPath } for thumb drop uploads

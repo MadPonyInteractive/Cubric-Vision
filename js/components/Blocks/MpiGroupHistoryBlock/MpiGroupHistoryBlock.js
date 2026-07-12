@@ -20,6 +20,7 @@ import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/Mpi
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
 import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
+import { MpiToolOptionsGif } from '../../Organisms/MpiToolOptionsGif/MpiToolOptionsGif.js';
 import { MpiToolOptionsPrompt } from '../../Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
@@ -78,6 +79,7 @@ const TOOL_OPTIONS_REGISTRY = {
     interpolate:  MpiToolOptionsInterpolate,
     resize:       MpiToolOptionsResize,
     resizeVideo:  MpiToolOptionsResize,
+    exportGif:    MpiToolOptionsGif,
 };
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
@@ -400,6 +402,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             _options = Compound.mount(slot, { viewer, kind: modeKind, currentItem: _group.history[_currentIdx] || null });
 
+            // GIF export owns no source resolution — inject the encoder so its
+            // preview/export call hits /api/video/gif with the current item +
+            // active trim range resolved here.
+            if (mode === 'exportGif') _options.el.setEncoder?.(_encodeGif);
+
             // Options compounds emit 'apply'; mediator routes to _handleApply.
             _options.on?.('apply', (payload) => _handleApply(mode, payload));
         }
@@ -442,6 +449,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (mode === 'resize' || mode === 'resizeVideo') {
                 return _handleResizeApply(mode, payload || {});
             }
+            if (mode === 'exportGif') {
+                return _handleGifExport(payload || {});
+            }
         }
 
         const TOOL_LABELS = {
@@ -450,6 +460,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',
             resize: 'Resize', resizeVideo: 'Resize',
+            exportGif: 'Export GIF',
         };
 
         // Video viewer top-right chip strip: [op] · [mm:ss] · [Nfps].
@@ -1397,6 +1408,56 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             } catch (err) {
                 clientLogger.warn('MpiGroupHistoryBlock', 'video reverse failed', err);
                 _showToast('Video reverse failed: ' + err.message, 'error');
+            }
+        }
+
+        // ── GIF export (video only) ──────────────────────────────────────────
+        // Encoder injected into MpiToolOptionsGif. Resolves the current source +
+        // active trim, POSTs /api/video/gif, returns the temp GIF url/size for
+        // preview. Pure export — no history, no sidecar.
+        async function _encodeGif(params = {}) {
+            const currentItem = _group.history[_currentIdx];
+            const sourcePath = currentItem?.filePath;
+            if (!sourcePath) { _showToast('No source video', 'error'); return null; }
+
+            const body = {
+                sourcePath,
+                fps: params.fps,
+                sizePreset: params.sizePreset,
+                loop: params.loop,
+            };
+            const trim = _activeVideoTrim(currentItem);
+            if (trim) { body.trimIn = trim.in; body.trimOut = trim.out; }
+
+            const res = await fetch('/api/video/gif', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+            return { url: data.url, byteSize: data.byteSize, fileName: data.fileName };
+        }
+
+        async function _handleGifExport(payload = {}) {
+            try {
+                // Reuse a fresh preview encode when present; else encode now.
+                let out = payload;
+                if (!out?.url) {
+                    const params = _options?.el?.getExportParams?.() || {};
+                    out = await _encodeGif(params);
+                }
+                if (!out?.url) return;
+                // Native Save-As via <a download> (docs/utils.md § mediaActions).
+                const a = document.createElement('a');
+                a.href = out.url;
+                a.download = out.fileName || 'clip.gif';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'GIF export failed', err);
+                _showToast('GIF export failed: ' + err.message, 'error');
             }
         }
 

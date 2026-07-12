@@ -35,7 +35,7 @@ NOT mechanically split these):
 | Versioning (APP/SCHEMA/COMFY, op registry) | [versioning.md](versioning.md) |
 | Shell services (overlays, hotkeys, statusbar) | [shell.md](shell.md) |
 | Events / EventBus | [events.md](events.md) |
-| Utilities (dom, icons, ratios, seed) | [utils.md](utils.md) |
+| Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | UI & component contracts (18 gotchas) | [ui-gotchas.md](ui-gotchas.md) |
 | Apps (App Library + App overlays, MPI-256) | [apps.md](apps.md) |

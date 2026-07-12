@@ -97,6 +97,13 @@ const VIDEO_TOOLS = [
             { mode: 'interpolate',  icon: 'interpolate_stroke', info: 'Interpolate' },
         ],
     },
+    {
+        mode: 'export',
+        label: 'Export',
+        group: [
+            { mode: 'exportGif', icon: 'to_gif_stroke', info: 'Export GIF' },
+        ],
+    },
 ];
 
 const TOOL_LISTS = { image: IMAGE_TOOLS, video: VIDEO_TOOLS };
