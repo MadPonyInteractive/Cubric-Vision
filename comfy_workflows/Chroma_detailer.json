@@ -11,15 +11,6 @@
       "title": "Output_image"
     }
   },
-  "1557": {
-    "inputs": {
-      "image": "ComfyUI_temp_iacob_00003_.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1594": {
     "inputs": {
       "float": 0.3
@@ -298,12 +289,12 @@
       "bbox_fill": false,
       "contour_fill": true,
       "image": [
-        "1557",
+        "1689",
         0
       ],
       "mask": [
-        "1688",
-        0
+        "1692",
+        1
       ],
       "basic_pipe": [
         "1679",
@@ -315,12 +306,22 @@
       "title": "MaskDetailer (Chroma)"
     }
   },
-  "1688": {
+  "1689": {
     "inputs": {
-      "image": "MAsk_00001_.png",
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1692": {
+    "inputs": {
+      "string": "",
       "channel": "red"
     },
-    "class_type": "LoadImageMask",
+    "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Mask"
     }

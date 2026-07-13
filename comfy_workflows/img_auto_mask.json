@@ -1,13 +1,4 @@
 {
-  "502": {
-    "inputs": {
-      "image": "Mask_test_00001_ (1).png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1559": {
     "inputs": {
       "images": [
@@ -29,7 +20,7 @@
         0
       ],
       "fallback_image_opt": [
-        "502",
+        "1630",
         0
       ]
     },
@@ -63,7 +54,7 @@
         0
       ],
       "image": [
-        "502",
+        "1630",
         0
       ],
       "sam_model_opt": [
@@ -102,7 +93,7 @@
         0
       ],
       "image": [
-        "502",
+        "1630",
         0
       ]
     },
@@ -137,7 +128,7 @@
         0
       ],
       "fallback_image_opt": [
-        "502",
+        "1630",
         0
       ]
     },
@@ -180,6 +171,16 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Output_Detected"
+    }
+  },
+  "1630": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

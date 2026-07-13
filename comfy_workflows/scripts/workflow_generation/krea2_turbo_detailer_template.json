@@ -11,15 +11,6 @@
       "title": "Output_image"
     }
   },
-  "1557": {
-    "inputs": {
-      "image": "clipspace/clipspace-painted-masked-1783661221204.png [input]"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1594": {
     "inputs": {
       "float": 0.3
@@ -204,12 +195,12 @@
       "bbox_fill": false,
       "contour_fill": true,
       "image": [
-        "1557",
+        "1696",
         0
       ],
       "mask": [
-        "1688",
-        0
+        "1695",
+        1
       ],
       "basic_pipe": [
         "1679",
@@ -219,16 +210,6 @@
     "class_type": "MaskDetailerPipe",
     "_meta": {
       "title": "MaskDetailer (Chroma)"
-    }
-  },
-  "1688": {
-    "inputs": {
-      "image": "clipspace/clipspace-painted-masked-1783661147036.png [input]",
-      "channel": "red"
-    },
-    "class_type": "LoadImageMask",
-    "_meta": {
-      "title": "Input_Mask"
     }
   },
   "1689": {
@@ -285,6 +266,26 @@
     "class_type": "MpiLoraModel",
     "_meta": {
       "title": "Input_Bypass_Filter_Lora"
+    }
+  },
+  "1695": {
+    "inputs": {
+      "string": "",
+      "channel": "red"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "1696": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

@@ -1,23 +1,11 @@
 {
-  "46": {
-    "inputs": {
-      "image": [
-        "49",
-        0
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Image Size"
-    }
-  },
   "49": {
     "inputs": {
       "resize_type": "scale total pixels",
       "resize_type.megapixels": 1,
       "scale_method": "lanczos",
       "input": [
-        "155",
+        "190",
         0
       ]
     },
@@ -104,7 +92,7 @@
         0
       ],
       "images.image_1": [
-        "155",
+        "190",
         0
       ]
     },
@@ -293,34 +281,6 @@
       "title": "SamplerCustom"
     }
   },
-  "131": {
-    "inputs": {
-      "value": [
-        "46",
-        0
-      ],
-      "multiple_of": 16,
-      "round": true
-    },
-    "class_type": "MpiRoundToMultiple",
-    "_meta": {
-      "title": "Mpi Round To Multiple"
-    }
-  },
-  "132": {
-    "inputs": {
-      "value": [
-        "46",
-        1
-      ],
-      "multiple_of": 16,
-      "round": true
-    },
-    "class_type": "MpiRoundToMultiple",
-    "_meta": {
-      "title": "Mpi Round To Multiple"
-    }
-  },
   "133": {
     "inputs": {
       "int": 891976866874162
@@ -333,12 +293,12 @@
   "143": {
     "inputs": {
       "width": [
-        "131",
-        0
+        "191",
+        1
       ],
       "height": [
-        "132",
-        0
+        "191",
+        2
       ],
       "batch_size": [
         "149",
@@ -357,15 +317,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Batch_Size"
-    }
-  },
-  "155": {
-    "inputs": {
-      "image": "2a27e369-9d77-4fd5-9e5b-2b03805fd427-2677367733.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
     }
   },
   "163": {
@@ -521,6 +472,31 @@
     "class_type": "MpiText",
     "_meta": {
       "title": "Input_Negative"
+    }
+  },
+  "190": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "191": {
+    "inputs": {
+      "width": 0,
+      "height": 0,
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
     }
   }
 }

@@ -17,7 +17,7 @@
       "torch_compile": false,
       "batch_size": 1,
       "frames": [
-        "749",
+        "762",
         0
       ]
     },
@@ -42,8 +42,8 @@
     "inputs": {
       "math_expression": "a*b",
       "a": [
-        "725",
-        0
+        "762",
+        2
       ],
       "b": [
         "733",
@@ -53,18 +53,6 @@
     "class_type": "MpiMath",
     "_meta": {
       "title": "Mpi Math"
-    }
-  },
-  "725": {
-    "inputs": {
-      "video_info": [
-        "749",
-        3
-      ]
-    },
-    "class_type": "VHS_VideoInfoSource",
-    "_meta": {
-      "title": "Video Info (Source) 🎥🅥🅗🅢"
     }
   },
   "733": {
@@ -80,8 +68,8 @@
     "inputs": {
       "round": true,
       "input": [
-        "725",
-        0
+        "762",
+        2
       ]
     },
     "class_type": "MpiConvert",
@@ -93,53 +81,13 @@
     "inputs": {
       "round": true,
       "input": [
-        "733",
-        0
+        "762",
+        2
       ]
     },
     "class_type": "MpiConvert",
     "_meta": {
       "title": "Mpi Convert"
-    }
-  },
-  "746": {
-    "inputs": {
-      "video_path": [
-        "747",
-        0
-      ]
-    },
-    "class_type": "MpiHasAudio",
-    "_meta": {
-      "title": "Mpi Has Audio"
-    }
-  },
-  "747": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_Video"
-    }
-  },
-  "749": {
-    "inputs": {
-      "video": [
-        "747",
-        0
-      ],
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 0,
-      "select_every_nth": 1,
-      "format": "AnimateDiff"
-    },
-    "class_type": "VHS_LoadVideoPath",
-    "_meta": {
-      "title": "Load Video (Path) 🎥🅥🅗🅢"
     }
   },
   "761": {
@@ -150,21 +98,30 @@
       ],
       "filename_prefix": "MpiVideo",
       "use_audio": [
-        "746",
-        0
+        "762",
+        7
       ],
       "images": [
         "720",
         0
       ],
       "audio": [
-        "749",
-        2
+        "762",
+        1
       ]
     },
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
+    }
+  },
+  "762": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Input_Video"
     }
   }
 }

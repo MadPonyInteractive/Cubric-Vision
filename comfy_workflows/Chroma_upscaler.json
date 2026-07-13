@@ -11,15 +11,6 @@
       "title": "Output_image"
     }
   },
-  "1557": {
-    "inputs": {
-      "image": "ComfyUI_temp_iacob_00003_.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1594": {
     "inputs": {
       "float": 0.4
@@ -99,7 +90,7 @@
       "resize_type.multiple": 16,
       "scale_method": "lanczos",
       "input": [
-        "1557",
+        "1687",
         0
       ]
     },
@@ -434,6 +425,15 @@
     "class_type": "UltimateSDUpscale",
     "_meta": {
       "title": "Upscaling with Chroma..."
+    }
+  },
+  "1687": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

@@ -31,13 +31,13 @@
   },
   "6": {
     "inputs": {
-      "text": [
-        "9",
-        0
-      ],
       "clip": [
         "269",
         1
+      ],
+      "text": [
+        "9",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -47,13 +47,13 @@
   },
   "7": {
     "inputs": {
-      "text": [
-        "8",
-        0
-      ],
       "clip": [
         "269",
         1
+      ],
+      "text": [
+        "8",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -212,12 +212,12 @@
   },
   "45": {
     "inputs": {
-      "boolean": [
-        "73",
-        0
-      ],
       "input": [
         "338",
+        0
+      ],
+      "boolean": [
+        "73",
         0
       ]
     },
@@ -261,13 +261,13 @@
   },
   "49": {
     "inputs": {
-      "boolean": [
-        "50",
-        0
-      ],
       "input": [
         "52",
         1
+      ],
+      "boolean": [
+        "50",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -294,16 +294,16 @@
   },
   "51": {
     "inputs": {
-      "boolean": [
-        "71",
-        0
-      ],
       "true": [
         "67",
         0
       ],
       "false": [
         "338",
+        0
+      ],
+      "boolean": [
+        "71",
         0
       ]
     },
@@ -314,12 +314,12 @@
   },
   "52": {
     "inputs": {
-      "boolean": [
-        "73",
-        0
-      ],
       "input": [
         "51",
+        0
+      ],
+      "boolean": [
+        "73",
         0
       ]
     },
@@ -330,13 +330,13 @@
   },
   "53": {
     "inputs": {
-      "boolean": [
-        "50",
-        0
-      ],
       "input": [
         "55",
         1
+      ],
+      "boolean": [
+        "50",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -359,12 +359,12 @@
   },
   "55": {
     "inputs": {
-      "boolean": [
-        "73",
-        0
-      ],
       "input": [
         "56",
+        0
+      ],
+      "boolean": [
+        "73",
         0
       ]
     },
@@ -375,10 +375,6 @@
   },
   "56": {
     "inputs": {
-      "boolean": [
-        "71",
-        0
-      ],
       "true": [
         "69",
         0
@@ -386,6 +382,10 @@
       "false": [
         "68",
         1
+      ],
+      "boolean": [
+        "71",
+        0
       ]
     },
     "class_type": "MpiIfElse",
@@ -522,11 +522,11 @@
   },
   "76": {
     "inputs": {
+      "fps": 24,
       "seconds": [
         "75",
         0
-      ],
-      "fps": 24
+      ]
     },
     "class_type": "MpiWanSeconds",
     "_meta": {
@@ -540,32 +540,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Seed"
-    }
-  },
-  "87": {
-    "inputs": {
-      "width": [
-        "92",
-        1
-      ],
-      "height": [
-        "92",
-        2
-      ],
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "91",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
     }
   },
   "88": {
@@ -584,50 +558,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Height"
-    }
-  },
-  "90": {
-    "inputs": {
-      "image": "placeholder.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Start_Frame"
-    }
-  },
-  "91": {
-    "inputs": {
-      "image": "placeholder.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_End_Frame"
-    }
-  },
-  "92": {
-    "inputs": {
-      "width": [
-        "88",
-        0
-      ],
-      "height": [
-        "89",
-        0
-      ],
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "90",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
     }
   },
   "117": {
@@ -720,6 +650,7 @@
   },
   "143": {
     "inputs": {
+      "batch_size": 1,
       "width": [
         "155",
         0
@@ -731,8 +662,7 @@
       "length": [
         "76",
         0
-      ],
-      "batch_size": 1
+      ]
     },
     "class_type": "EmptyLTXVLatentVideo",
     "_meta": {
@@ -741,6 +671,11 @@
   },
   "144": {
     "inputs": {
+      "batch_size": 1,
+      "audio_vae": [
+        "2",
+        0
+      ],
       "frames_number": [
         "76",
         0
@@ -748,11 +683,6 @@
       "frame_rate": [
         "152",
         1
-      ],
-      "batch_size": 1,
-      "audio_vae": [
-        "2",
-        0
       ]
     },
     "class_type": "LTXVEmptyLatentAudio",
@@ -802,7 +732,7 @@
     "inputs": {
       "img_compression": 18,
       "image": [
-        "92",
+        "475",
         0
       ]
     },
@@ -906,7 +836,7 @@
     "inputs": {
       "img_compression": 18,
       "image": [
-        "87",
+        "476",
         0
       ]
     },
@@ -927,13 +857,13 @@
   "191": {
     "inputs": {
       "lora_name": "ltx-2.3\\ltx2.3-transition.safetensors",
-      "strength_model": [
-        "192",
-        2
-      ],
       "model": [
         "426",
         0
+      ],
+      "strength_model": [
+        "192",
+        2
       ]
     },
     "class_type": "MpiLoraModel",
@@ -950,20 +880,10 @@
       "title": "Input_Use_Transition"
     }
   },
-  "197": {
-    "inputs": {
-      "audio": "ltx_silence.wav",
-      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.27231218896763665"
-    },
-    "class_type": "LoadAudio",
-    "_meta": {
-      "title": "Input_Audio_File"
-    }
-  },
   "198": {
     "inputs": {
       "audio": [
-        "197",
+        "477",
         0
       ],
       "audio_vae": [
@@ -1050,16 +970,16 @@
   },
   "204": {
     "inputs": {
-      "boolean": [
-        "203",
-        0
-      ],
       "true": [
         "200",
         0
       ],
       "false": [
         "144",
+        0
+      ],
+      "boolean": [
+        "203",
         0
       ]
     },
@@ -1070,10 +990,6 @@
   },
   "212": {
     "inputs": {
-      "frame_rate": [
-        "76",
-        2
-      ],
       "positive": [
         "6",
         0
@@ -1081,6 +997,10 @@
       "negative": [
         "7",
         0
+      ],
+      "frame_rate": [
+        "76",
+        2
       ]
     },
     "class_type": "LTXVConditioning",
@@ -1106,13 +1026,13 @@
   },
   "220": {
     "inputs": {
-      "boolean": [
-        "190",
-        0
-      ],
       "input": [
         "224",
         1
+      ],
+      "boolean": [
+        "190",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -1122,13 +1042,13 @@
   },
   "224": {
     "inputs": {
-      "boolean": [
-        "73",
-        0
-      ],
       "input": [
         "68",
         1
+      ],
+      "boolean": [
+        "73",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -1284,7 +1204,7 @@
         1
       ],
       "reference_audio": [
-        "197",
+        "477",
         0
       ],
       "audio_vae": [
@@ -1385,16 +1305,16 @@
   },
   "315": {
     "inputs": {
-      "boolean": [
-        "314",
-        0
-      ],
       "true": [
         "143",
         0
       ],
       "false": [
         "316",
+        0
+      ],
+      "boolean": [
+        "314",
         0
       ]
     },
@@ -1405,16 +1325,16 @@
   },
   "316": {
     "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
       "true": [
         "322",
         2
       ],
       "false": [
         "146",
+        0
+      ],
+      "boolean": [
+        "313",
         0
       ]
     },
@@ -1425,16 +1345,16 @@
   },
   "317": {
     "inputs": {
-      "boolean": [
-        "314",
-        0
-      ],
       "true": [
         "123",
         0
       ],
       "false": [
         "318",
+        0
+      ],
+      "boolean": [
+        "314",
         0
       ]
     },
@@ -1445,16 +1365,16 @@
   },
   "318": {
     "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
       "true": [
         "324",
         2
       ],
       "false": [
         "168",
+        0
+      ],
+      "boolean": [
+        "313",
         0
       ]
     },
@@ -1606,16 +1526,16 @@
   },
   "327": {
     "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
       "true": [
         "326",
         0
       ],
       "false": [
         "32",
+        0
+      ],
+      "boolean": [
+        "313",
         0
       ]
     },
@@ -1626,16 +1546,16 @@
   },
   "328": {
     "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
       "true": [
         "330",
         0
       ],
       "false": [
         "296",
+        0
+      ],
+      "boolean": [
+        "313",
         0
       ]
     },
@@ -1707,10 +1627,6 @@
   },
   "338": {
     "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
       "true": [
         "334",
         2
@@ -1718,6 +1634,10 @@
       "false": [
         "46",
         2
+      ],
+      "boolean": [
+        "313",
+        0
       ]
     },
     "class_type": "MpiIfElse",
@@ -1727,16 +1647,16 @@
   },
   "349": {
     "inputs": {
-      "boolean": [
-        "313",
-        0
-      ],
       "true": [
         "335",
         2
       ],
       "false": [
         "38",
+        0
+      ],
+      "boolean": [
+        "313",
         0
       ]
     },
@@ -1818,7 +1738,7 @@
     },
     "class_type": "DualCLIPLoader",
     "_meta": {
-      "title": "DualCLIPLoader"
+      "title": "Load CLIP (Dual)"
     }
   },
   "426": {
@@ -1869,21 +1789,21 @@
   },
   "457": {
     "inputs": {
-      "fps": [
-        "76",
-        2
-      ],
       "filename_prefix": "MpiVideo",
-      "use_audio": [
-        "190",
-        0
-      ],
       "images": [
         "215",
         0
       ],
       "audio": [
         "117",
+        0
+      ],
+      "fps": [
+        "76",
+        2
+      ],
+      "use_audio": [
+        "190",
         0
       ]
     },
@@ -1894,15 +1814,7 @@
   },
   "470": {
     "inputs": {
-      "fps": [
-        "76",
-        2
-      ],
       "filename_prefix": "MpiVideo",
-      "use_audio": [
-        "190",
-        0
-      ],
       "images": [
         "65",
         0
@@ -1910,11 +1822,92 @@
       "audio": [
         "231",
         0
+      ],
+      "fps": [
+        "76",
+        2
+      ],
+      "use_audio": [
+        "190",
+        0
       ]
     },
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Preview"
+    }
+  },
+  "473": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_End_Frame"
+    }
+  },
+  "474": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Start_Frame"
+    }
+  },
+  "475": {
+    "inputs": {
+      "divisible_by": 32,
+      "position": "center",
+      "image": [
+        "474",
+        0
+      ],
+      "width": [
+        "88",
+        0
+      ],
+      "height": [
+        "89",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "476": {
+    "inputs": {
+      "divisible_by": 32,
+      "position": "center",
+      "image": [
+        "473",
+        0
+      ],
+      "width": [
+        "475",
+        1
+      ],
+      "height": [
+        "475",
+        2
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "477": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio_File"
     }
   }
 }

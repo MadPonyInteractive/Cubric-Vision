@@ -7,7 +7,7 @@
         0
       ],
       "image": [
-        "723",
+        "757",
         0
       ]
     },
@@ -23,7 +23,7 @@
         0
       ],
       "image": [
-        "723",
+        "757",
         0
       ]
     },
@@ -70,25 +70,6 @@
       "title": "Mpi Clear Vram"
     }
   },
-  "723": {
-    "inputs": {
-      "video": [
-        "754",
-        0
-      ],
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 0,
-      "select_every_nth": 1,
-      "format": "AnimateDiff"
-    },
-    "class_type": "VHS_LoadVideoPath",
-    "_meta": {
-      "title": "video"
-    }
-  },
   "739": {
     "inputs": {
       "float": 2
@@ -115,18 +96,6 @@
       "title": "Mpi Math"
     }
   },
-  "743": {
-    "inputs": {
-      "video_info": [
-        "723",
-        3
-      ]
-    },
-    "class_type": "VHS_VideoInfoSource",
-    "_meta": {
-      "title": "Video Info (Source) 🎥🅥🅗🅢"
-    }
-  },
   "748": {
     "inputs": {
       "boolean": false,
@@ -142,27 +111,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Input_Upscale_Using_Model"
-    }
-  },
-  "753": {
-    "inputs": {
-      "video_path": [
-        "754",
-        0
-      ]
-    },
-    "class_type": "MpiHasAudio",
-    "_meta": {
-      "title": "Mpi Has Audio"
-    }
-  },
-  "754": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_Video"
     }
   },
   "755": {
@@ -181,22 +129,35 @@
   "756": {
     "inputs": {
       "fps": [
-        "743",
-        0
+        "757",
+        2
       ],
       "filename_prefix": "MpiVideo",
       "use_audio": [
-        "753",
-        0
+        "757",
+        7
       ],
       "images": [
         "720",
         0
+      ],
+      "audio": [
+        "757",
+        1
       ]
     },
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
+    }
+  },
+  "757": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Input_Video"
     }
   }
 }

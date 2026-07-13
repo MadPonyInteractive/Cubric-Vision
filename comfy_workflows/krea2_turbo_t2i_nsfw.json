@@ -805,22 +805,13 @@
       "preprocessor": "DepthAnythingV2Preprocessor",
       "resolution": 512,
       "image": [
-        "201",
+        "256",
         0
       ]
     },
     "class_type": "AIO_Preprocessor",
     "_meta": {
       "title": "AIO Aux Preprocessor"
-    }
-  },
-  "201": {
-    "inputs": {
-      "image": "placeholder.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
     }
   },
   "203": {
@@ -900,7 +891,7 @@
   "217": {
     "inputs": {
       "pixels": [
-        "220",
+        "254",
         0
       ],
       "vae": [
@@ -931,32 +922,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "i2i"
-    }
-  },
-  "220": {
-    "inputs": {
-      "width": [
-        "75",
-        0
-      ],
-      "height": [
-        "74",
-        0
-      ],
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 16,
-      "device": "cpu",
-      "image": [
-        "201",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
     }
   },
   "228": {
@@ -1116,6 +1081,39 @@
     "class_type": "MpiMath",
     "_meta": {
       "title": "Mpi Math"
+    }
+  },
+  "254": {
+    "inputs": {
+      "width": [
+        "75",
+        0
+      ],
+      "height": [
+        "74",
+        0
+      ],
+      "divisible_by": 1,
+      "position": "center",
+      "image": [
+        "256",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "256": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "image": "placeholder.png"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

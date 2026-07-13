@@ -11,15 +11,6 @@
       "title": "Output_image"
     }
   },
-  "1557": {
-    "inputs": {
-      "image": "placeholder.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1594": {
     "inputs": {
       "float": 0.5
@@ -99,7 +90,7 @@
       "resize_type.multiple": 16,
       "scale_method": "lanczos",
       "input": [
-        "1557",
+        "1695",
         0
       ]
     },
@@ -396,6 +387,17 @@
     "class_type": "MpiLoraModel",
     "_meta": {
       "title": "Input_Bypass_Filter_Lora"
+    }
+  },
+  "1695": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "image": "placeholder.png"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

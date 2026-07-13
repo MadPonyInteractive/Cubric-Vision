@@ -129,41 +129,6 @@
       "title": "Load LoRA"
     }
   },
-  "65": {
-    "inputs": {
-      "width": [
-        "107",
-        0
-      ],
-      "height": [
-        "108",
-        0
-      ],
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "66",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
-  "66": {
-    "inputs": {
-      "image": "ComfyUI_temp_otlff_00001_.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Start_Frame"
-    }
-  },
   "83": {
     "inputs": {
       "add_noise": true,
@@ -287,7 +252,7 @@
         0
       ],
       "start_image": [
-        "65",
+        "128",
         0
       ]
     },
@@ -504,6 +469,38 @@
     "class_type": "MpiLoraModelClip",
     "_meta": {
       "title": "Input_Lora_1"
+    }
+  },
+  "127": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Start_Frame"
+    }
+  },
+  "128": {
+    "inputs": {
+      "width": [
+        "107",
+        0
+      ],
+      "height": [
+        "108",
+        0
+      ],
+      "divisible_by": 32,
+      "position": "center",
+      "image": [
+        "127",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
     }
   }
 }

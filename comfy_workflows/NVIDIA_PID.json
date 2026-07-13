@@ -173,7 +173,7 @@
   "1578": {
     "inputs": {
       "pixels": [
-        "1582",
+        "1624",
         0
       ],
       "vae": [
@@ -205,41 +205,6 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Output_Image"
-    }
-  },
-  "1582": {
-    "inputs": {
-      "width": [
-        "1609",
-        0
-      ],
-      "height": [
-        "1609",
-        1
-      ],
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 16,
-      "device": "cpu",
-      "image": [
-        "1583",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
-  "1583": {
-    "inputs": {
-      "image": "imageUpscale_001.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
     }
   },
   "1587": {
@@ -310,7 +275,7 @@
   "1590": {
     "inputs": {
       "pixels": [
-        "1582",
+        "1624",
         0
       ],
       "vae": [
@@ -416,7 +381,7 @@
   "1596": {
     "inputs": {
       "pixels": [
-        "1582",
+        "1624",
         0
       ],
       "vae": [
@@ -522,7 +487,7 @@
   "1602": {
     "inputs": {
       "pixels": [
-        "1582",
+        "1624",
         0
       ],
       "vae": [
@@ -608,7 +573,7 @@
       "size": 1024,
       "side": true,
       "image": [
-        "1583",
+        "1626",
         0
       ]
     },
@@ -715,13 +680,45 @@
       "size": 4096,
       "side": true,
       "image": [
-        "1582",
+        "1624",
         0
       ]
     },
     "class_type": "MpiScaledDimensions",
     "_meta": {
       "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1624": {
+    "inputs": {
+      "width": [
+        "1609",
+        0
+      ],
+      "height": [
+        "1609",
+        1
+      ],
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "1626",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

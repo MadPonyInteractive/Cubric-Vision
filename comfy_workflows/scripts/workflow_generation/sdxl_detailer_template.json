@@ -68,15 +68,6 @@
       "title": "Negative"
     }
   },
-  "502": {
-    "inputs": {
-      "image": "t2i_007.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1534": {
     "inputs": {
       "guide_size": 512,
@@ -109,12 +100,12 @@
       "bbox_fill": false,
       "contour_fill": true,
       "image": [
-        "502",
+        "1641",
         0
       ],
       "mask": [
-        "1626",
-        0
+        "1640",
+        1
       ],
       "basic_pipe": [
         "27",
@@ -163,16 +154,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Seed"
-    }
-  },
-  "1626": {
-    "inputs": {
-      "image": "MAsk_00001_.png",
-      "channel": "red"
-    },
-    "class_type": "LoadImageMask",
-    "_meta": {
-      "title": "Input_Mask"
     }
   },
   "1627": {
@@ -305,6 +286,26 @@
     "class_type": "MpiText",
     "_meta": {
       "title": "Input_Negative"
+    }
+  },
+  "1640": {
+    "inputs": {
+      "string": "",
+      "channel": "red"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "1641": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

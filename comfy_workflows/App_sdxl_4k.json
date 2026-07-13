@@ -415,129 +415,6 @@
       "title": "ConditioningZeroOut"
     }
   },
-  "1575": {
-    "inputs": {
-      "pixels": [
-        "1613",
-        0
-      ],
-      "vae": [
-        "1586",
-        0
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "1576": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 4,
-      "denoise": 1,
-      "model": [
-        "1585",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
-  "1577": {
-    "inputs": {
-      "pixels": [
-        "1613",
-        0
-      ],
-      "vae": [
-        "1589",
-        0
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "1578": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 4,
-      "denoise": 1,
-      "model": [
-        "1588",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
-  "1579": {
-    "inputs": {
-      "latent_format": "qwenimage",
-      "degrade_sigma": [
-        "1616",
-        0
-      ],
-      "positive": [
-        "1573",
-        0
-      ],
-      "latent": [
-        "1580",
-        0
-      ]
-    },
-    "class_type": "PiDConditioning",
-    "_meta": {
-      "title": "PiD Conditioning"
-    }
-  },
-  "1580": {
-    "inputs": {
-      "pixels": [
-        "1613",
-        0
-      ],
-      "vae": [
-        "1581",
-        0
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "1581": {
-    "inputs": {
-      "vae_name": "qwen_image_vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
-  },
-  "1582": {
-    "inputs": {
-      "scheduler": "simple",
-      "steps": 4,
-      "denoise": 1,
-      "model": [
-        "1591",
-        0
-      ]
-    },
-    "class_type": "BasicScheduler",
-    "_meta": {
-      "title": "BasicScheduler"
-    }
-  },
   "1583": {
     "inputs": {
       "pixels": [
@@ -567,96 +444,6 @@
     "class_type": "BasicScheduler",
     "_meta": {
       "title": "BasicScheduler"
-    }
-  },
-  "1585": {
-    "inputs": {
-      "unet_name": "pid_flux1_1024_to_4096_4step_bf16.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Diffusion Model"
-    }
-  },
-  "1586": {
-    "inputs": {
-      "vae_name": "ae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
-  },
-  "1587": {
-    "inputs": {
-      "latent_format": "flux",
-      "degrade_sigma": [
-        "1616",
-        0
-      ],
-      "positive": [
-        "1573",
-        0
-      ],
-      "latent": [
-        "1575",
-        0
-      ]
-    },
-    "class_type": "PiDConditioning",
-    "_meta": {
-      "title": "PiD Conditioning"
-    }
-  },
-  "1588": {
-    "inputs": {
-      "unet_name": "pid_sd3_1024_to_4096_4step_bf16.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Diffusion Model"
-    }
-  },
-  "1589": {
-    "inputs": {
-      "vae_name": "sd3_vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
-  },
-  "1590": {
-    "inputs": {
-      "latent_format": "sd3",
-      "degrade_sigma": [
-        "1616",
-        0
-      ],
-      "positive": [
-        "1573",
-        0
-      ],
-      "latent": [
-        "1577",
-        0
-      ]
-    },
-    "class_type": "PiDConditioning",
-    "_meta": {
-      "title": "PiD Conditioning"
-    }
-  },
-  "1591": {
-    "inputs": {
-      "unet_name": "pid_qwenimage_1024_to_4096_4step_bf16.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Diffusion Model"
     }
   },
   "1592": {
@@ -697,111 +484,6 @@
     "class_type": "PiDConditioning",
     "_meta": {
       "title": "PiD Conditioning"
-    }
-  },
-  "1595": {
-    "inputs": {
-      "add_noise": true,
-      "noise_seed": 3,
-      "cfg": 1,
-      "model": [
-        "1585",
-        0
-      ],
-      "positive": [
-        "1587",
-        0
-      ],
-      "negative": [
-        "1574",
-        0
-      ],
-      "sampler": [
-        "1600",
-        0
-      ],
-      "sigmas": [
-        "1576",
-        0
-      ],
-      "latent_image": [
-        "1614",
-        0
-      ]
-    },
-    "class_type": "SamplerCustom",
-    "_meta": {
-      "title": "SamplerCustom"
-    }
-  },
-  "1596": {
-    "inputs": {
-      "add_noise": true,
-      "noise_seed": 3,
-      "cfg": 1,
-      "model": [
-        "1588",
-        0
-      ],
-      "positive": [
-        "1590",
-        0
-      ],
-      "negative": [
-        "1574",
-        0
-      ],
-      "sampler": [
-        "1600",
-        0
-      ],
-      "sigmas": [
-        "1578",
-        0
-      ],
-      "latent_image": [
-        "1614",
-        0
-      ]
-    },
-    "class_type": "SamplerCustom",
-    "_meta": {
-      "title": "SamplerCustom"
-    }
-  },
-  "1597": {
-    "inputs": {
-      "add_noise": true,
-      "noise_seed": 3,
-      "cfg": 1,
-      "model": [
-        "1591",
-        0
-      ],
-      "positive": [
-        "1579",
-        0
-      ],
-      "negative": [
-        "1574",
-        0
-      ],
-      "sampler": [
-        "1600",
-        0
-      ],
-      "sigmas": [
-        "1582",
-        0
-      ],
-      "latent_image": [
-        "1614",
-        0
-      ]
-    },
-    "class_type": "SamplerCustom",
-    "_meta": {
-      "title": "SamplerCustom"
     }
   },
   "1598": {
@@ -857,31 +539,6 @@
       "title": "KSamplerSelect"
     }
   },
-  "1602": {
-    "inputs": {
-      "select": 4,
-      "any_1": [
-        "1595",
-        0
-      ],
-      "any_2": [
-        "1596",
-        0
-      ],
-      "any_3": [
-        "1597",
-        0
-      ],
-      "any_4": [
-        "1598",
-        0
-      ]
-    },
-    "class_type": "MpiAnySwitch",
-    "_meta": {
-      "title": "Input_Type"
-    }
-  },
   "1603": {
     "inputs": {
       "size": 1024,
@@ -899,7 +556,7 @@
   "1604": {
     "inputs": {
       "samples": [
-        "1602",
+        "1598",
         0
       ],
       "vae": [
@@ -912,109 +569,16 @@
       "title": "VAE Decode"
     }
   },
-  "1605": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "width": [
-        "1606",
-        0
-      ],
-      "height": [
-        "1606",
-        1
-      ],
-      "crop": "disabled",
-      "image": [
-        "1604",
-        0
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Upscale Image"
-    }
-  },
-  "1606": {
-    "inputs": {
-      "size": 1024,
-      "side": true,
-      "image": [
-        "1604",
-        0
-      ]
-    },
-    "class_type": "MpiScaledDimensions",
-    "_meta": {
-      "title": "Mpi Scaled Dimensions"
-    }
-  },
-  "1607": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "width": [
-        "1612",
-        0
-      ],
-      "height": [
-        "1612",
-        1
-      ],
-      "crop": "disabled",
-      "image": [
-        "1604",
-        0
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Upscale Image"
-    }
-  },
   "1608": {
     "inputs": {
       "images": [
-        "1610",
+        "1604",
         0
       ]
     },
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Output_Image"
-    }
-  },
-  "1610": {
-    "inputs": {
-      "select": 3,
-      "any_1": [
-        "1605",
-        0
-      ],
-      "any_2": [
-        "1607",
-        0
-      ],
-      "any_3": [
-        "1604",
-        0
-      ]
-    },
-    "class_type": "MpiAnySwitch",
-    "_meta": {
-      "title": "Input_Resolution"
-    }
-  },
-  "1612": {
-    "inputs": {
-      "size": 2048,
-      "side": true,
-      "image": [
-        "1604",
-        0
-      ]
-    },
-    "class_type": "MpiScaledDimensions",
-    "_meta": {
-      "title": "Mpi Scaled Dimensions"
     }
   },
   "1613": {

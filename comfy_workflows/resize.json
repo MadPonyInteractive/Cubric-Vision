@@ -10,22 +10,13 @@
       "divisible_by": 2,
       "device": "cpu",
       "image": [
-        "2",
+        "9",
         0
       ]
     },
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
-    }
-  },
-  "2": {
-    "inputs": {
-      "image": "205c4fec-a39b-4569-8e79-14a4c8dc9e92.thumb.jpg"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
     }
   },
   "3": {
@@ -81,6 +72,16 @@
     "class_type": "PreviewImage",
     "_meta": {
       "title": "Output_image"
+    }
+  },
+  "9": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

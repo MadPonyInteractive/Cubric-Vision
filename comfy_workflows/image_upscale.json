@@ -7,7 +7,7 @@
         0
       ],
       "image": [
-        "749",
+        "758",
         0
       ]
     },
@@ -23,7 +23,7 @@
         0
       ],
       "image": [
-        "749",
+        "758",
         0
       ]
     },
@@ -96,15 +96,6 @@
       "title": "Output_image"
     }
   },
-  "749": {
-    "inputs": {
-      "image": "mpi_input_image.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "750": {
     "inputs": {
       "boolean": true,
@@ -133,6 +124,16 @@
     "class_type": "MpiUpscaleModelScale",
     "_meta": {
       "title": "Mpi Upscale Model Scale"
+    }
+  },
+  "758": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

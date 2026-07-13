@@ -64,17 +64,17 @@
   },
   "9": {
     "inputs": {
-      "video": [
-        "12",
-        0
-      ],
       "force_rate": 0,
       "custom_width": 0,
       "custom_height": 0,
       "frame_load_cap": 0,
       "skip_first_frames": 0,
       "select_every_nth": 1,
-      "format": "AnimateDiff"
+      "format": "AnimateDiff",
+      "video": [
+        "12",
+        0
+      ]
     },
     "class_type": "VHS_LoadVideoPath",
     "_meta": {
@@ -116,15 +116,7 @@
   },
   "18": {
     "inputs": {
-      "fps": [
-        "11",
-        0
-      ],
       "filename_prefix": "MpiVideo",
-      "use_audio": [
-        "15",
-        0
-      ],
       "images": [
         "4",
         0
@@ -132,6 +124,14 @@
       "audio": [
         "9",
         2
+      ],
+      "fps": [
+        "11",
+        0
+      ],
+      "use_audio": [
+        "15",
+        0
       ]
     },
     "class_type": "MpiSaveVideo",
