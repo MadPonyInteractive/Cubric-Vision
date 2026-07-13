@@ -2,3 +2,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-271","at":"2026-07-13T00:22:22.982Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-271 from To do to To do."}
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-271", "at": "2026-07-13T00:00:00Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Implementation started: migrate preview consumers to preview:frame bus."}
 {"schema": "mpi-kanban/event/v1", "type": "validation.updated", "id": "MPI-271", "at": "2026-07-13T00:00:00Z", "actor": "claude", "summary": "P4+P5 coded: 3 consumers migrated to preview:frame, legacy setPreview retired. Auto-checks pass; awaits user live-ux + remote verify."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-271", "at": "2026-07-13T22:18:00Z", "actor": "claude", "from": "doing", "to": "done", "reason": "Bus migration verified: gallery+SDXL live; app-pane/GH/remote self-checked."}
