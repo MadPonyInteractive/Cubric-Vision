@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-275",
+  "title": "Background ensureServerRunning tears down remote mode mid-boot — Pod ready but app stuck 'connecting' forever",
+  "description": "REPRO (live, unrelated to MPI-274): user pressed Connect (RTX PRO 4500 Blackwell, Pod nr92sen818emxl created 19:19:51). ~38s into the boot the app fell to 'connecting 0%' and STAYED there ~2-3min while the RunPod console showed the Pod fully READY (ports 8188/8889 green). No reload — MPI-274 fixes NOT loaded, so this is a distinct pre-existing bug.\n\nLOG SMOKING GUN: 19:20:29.033 '[runpod] Remote mode disabled' then 19:20:29.045 '[comfy] Remote engine not connected — falling back to the local engine.' — 38s after create, while the wrapper was still 404 (booting). Something POSTed /remote/mode {active:false} MID-BOOT and killed the connect.\n\nROOT CAUSE: comfyController._ensureRemoteReady (js/services/comfyController.js:422). It probes /remote/comfy/status 3x/2.1s; if check.ready stays false it falls through (line ~528) to the 'No Pod connected' local-fallback branch, which POSTs /remote/mode {active:false} + emits remote:connection {connected:false, phase:null}. But a BOOTING Pod is ready:false too — indistinguishable here from a dead/absent Pod. So a background ensureServerRunning({background:true}) call landing DURING the boot window (a models/check / warm-up, NOT a user gen — the log line right before is a remote models/check) tears down the live connect. The upstream transition guard (ensureServerRunning:288, refuses while _remoteTransition==='connecting') was bypassed this run — _remoteTransition wasn't 'connecting' in this module instance (event missed/raced, or reconciled by the refresh() at :273 which runs BEFORE the guard). The comment at :434 ('Connecting Pods are gated upstream') is therefore false for this path.\n\nAFTER teardown: /remote/comfy/status early-returns running:false (mode inactive). The Settings-panel renderer poll (_pollEngineReady) keeps looping and the hero still shows 'connecting' (its phase was set by the Settings Connect, never resolved), but the backend will NEVER go ready because remote mode is OFF and nothing re-enables it — hence 'connecting' forever until the user Disconnects/reloads.\n\nFIX (defensive net at the teardown site — closes the whole class regardless of how the upstream guard is bypassed): in _ensureRemoteReady, before falling to the local-fallback teardown, check `check.connecting`. If the backend reports connecting:true (a boot/resume is in flight), the Pod is NOT gone — do NOT POST {active:false}, do NOT emit local. Throw the same soft 'still connecting — give it a moment' ui:info notice the wsOk path already uses (line ~519), ending this dispatch WITHOUT tearing down the connect. The boot poll then reaches ready normally. Must still fall to local on a genuine persistent not-ready with connecting:false (real OOM/disconnect/delete — preserve MPI-85/MPI-107 behaviour). connecting is already in the status payload (predates MPI-274; MPI-274 added connectElapsedMs alongside it).\n\nSEPARATE from MPI-274 (that = connect % display owner; this = remote-mode teardown mid-boot). Independent fix, can ship without a reload dependency on 274. NOT yet live-verified.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "in-progress",
+  "created_at": "2026-07-13T19:32:00Z",
+  "updated_at": "2026-07-13T19:40:00Z",
+  "attention": {
+    "state": "needs-user",
+    "reason": "Fix shipped (comfyController._ensureRemoteReady now refuses on check.connecting instead of tearing down remote mode). Branch-decision self-check PASS. NOT live-verified: needs a fresh RunPod Connect that stays 'connecting' cleanly through boot (no premature 'Remote mode disabled' in app.log at ~30-60s), then flips to remote·online when the Pod is ready. Requires app restart to load (renderer JS, no hot-reload).",
+    "updated_at": "2026-07-13T19:40:00Z"
+  },
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "runpod",
+    "remote-engine",
+    "comfy-controller",
+    "connect-teardown"
+  ],
+  "priority": "high"
+}

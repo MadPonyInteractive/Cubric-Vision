@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-275","at":"2026-07-13T19:32:00Z","actor":"claude","note":"background ensureServerRunning tears down remote mode mid-boot; Pod ready but app stuck connecting. Opened in doing."}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-275","at":"2026-07-13T19:40:00Z","actor":"claude","note":"Fix shipped: _ensureRemoteReady refuses on check.connecting (no mid-boot teardown). Syntax OK; branch-decision self-check PASS. Awaits user restart+live connect verify."}
