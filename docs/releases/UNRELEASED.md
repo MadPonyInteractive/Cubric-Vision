@@ -22,6 +22,7 @@
 - **Export GIF** — a new History tool (under Export, video only) that turns your clip into an animated GIF. Pick the frame rate, output size (fixed width or height, aspect kept), and loop count, hit Generate preview to see the result and its file size, then Export to save it anywhere.
 - **Floating latents when minimized** — minimize the app mid-generation and a small always-on-top window shows your live latents, side by side for multiple generations. Close it with the X or click a preview to jump back to the app. It remembers where you put it and how big you made it. Turn it off in Settings.
 - **Reuse Prompt, refreshed** — the Reuse Prompt dialog is now a cleaner toggle list: each part (prompt, settings, model, images…) is a full-width switch with a clear on / off state, and an All / None shortcut to set them in one click.
+- **Notification sound** — a sound now plays when something finishes that you weren't watching for — a generation completes, a model finishes installing, the engine restarts. A whole batch plays the sound once, at the start, not per item; notifications you triggered yourself (Connect, Install, Cue) stay silent. Toggle it in Settings under Notifications.
 
 ## fixes
 
