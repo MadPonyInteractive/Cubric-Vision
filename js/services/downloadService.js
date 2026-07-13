@@ -363,18 +363,9 @@ const downloadService = {
 
             // UW installs are surfaced through engine UI — skip toast
             const isUW = !data.modelId || data.modelId === '__universal_workflow__';
-            if (!isUW) {
-                const model = getModelById(data.modelId);
-                const modelName = model?.name || data.modelId;
-                const toastWrap = ce('div');
-                document.body.appendChild(toastWrap);
-                const toastInstance = MpiToast.mount(toastWrap, {
-                    message: `${modelName} installed.`,
-                    variant: 'success',
-                    duration: 4000,
-                });
-                toastInstance.on('close', () => toastWrap.remove());
-            }
+            // Primary "installed." toast is fired by notificationService on the
+            // re-emitted download:complete below (focus-aware: OS notif when
+            // unfocused, toast when focused). No inline toast here — it double-fired.
 
             // Reseed ComfyUI's model filename cache so newly downloaded weights are
             // immediately visible without a restart (MPI-121). Pure file-add into an
