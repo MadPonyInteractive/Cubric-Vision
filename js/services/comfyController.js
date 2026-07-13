@@ -525,6 +525,25 @@ function createEngine({ engine, alwaysLocal }) {
             return { ready: true, remoteComfyRestarted };
         }
 
+        // MPI-275: a Pod that's still BOOTING reports ready:false — identical here to
+        // a dead/absent Pod. Without this guard a background ensureServerRunning (a
+        // models/check or warm-up) landing in the boot window fell straight through to
+        // the teardown below, POSTing /remote/mode {active:false} and killing the live
+        // connect — the Pod then reached ready with remote mode OFF, so the hero was
+        // stuck on 'connecting' forever. The upstream transition guard
+        // (ensureServerRunning:288) can be bypassed by a raced/missed phase event, so
+        // this is the defensive net AT the teardown site: if the backend reports a
+        // connect in flight (`connecting:true`), the Pod is NOT gone — refuse this
+        // dispatch with the same soft notice the wsOk path uses and leave remote mode
+        // intact so the boot poll can finish. Only a genuine persistent not-ready
+        // (connecting:false — real OOM/disconnect/delete) falls to local below,
+        // preserving MPI-85/MPI-107.
+        if (check.connecting) {
+            const connMsg = 'Still connecting to the remote engine — give it a moment, then try again. (Settings → RunPod shows the connection status.)';
+            if (!background) this._emitLifecycle('comfy:error', { message: connMsg });
+            else Events.emit('ui:info', { message: connMsg });
+            throw new Error(connMsg);
+        }
         // No Pod connected (auto-connect-off boot, or a mid-session disconnect/OOM).
         // MPI-85: the LOCAL engine is still available — fall back to it instead of
         // throwing the bug-reporter error and locking the user out. Drop the stale
