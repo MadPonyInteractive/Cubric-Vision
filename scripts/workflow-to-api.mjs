@@ -104,7 +104,13 @@ function emitWidgets(def, vals, out, linkedNames, prefix = '', vi = 0) {
     // A widget converted to an input socket keeps its positional value but the
     // link supplies the real value — consume the slot, don't emit (link loop wins).
     if (!linkedNames.has(fullName)) out[fullName] = wrap(vals[vi]);
-    vi += opts.control_after_generate ? 2 : 1;                // skip control companion value
+    // The frontend appends a control_after_generate combo to any INT widget named
+    // seed/noise_seed (addValueControlWidgets), even when /object_info omits the
+    // flag — that phantom value ("fixed"/"randomize") sits in widgets_values and
+    // must be skipped, else every later widget shifts by one.
+    const hasControl = opts.control_after_generate
+      || (type === 'INT' && (name === 'seed' || name === 'noise_seed'));
+    vi += hasControl ? 2 : 1;                                 // skip control companion value
   }
   return vi;
 }

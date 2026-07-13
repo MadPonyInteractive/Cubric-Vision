@@ -157,8 +157,8 @@
       "steps": 8,
       "steps_to_run": -1,
       "cfg": 1,
-      "sampler_mode": "fixed",
-      "bongmath": "standard",
+      "sampler_mode": "standard",
+      "bongmath": true,
       "model": [
         "1129",
         0

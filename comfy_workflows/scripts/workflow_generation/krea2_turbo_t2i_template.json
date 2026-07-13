@@ -56,9 +56,8 @@
       "sampling_mode.min_p": 0.05,
       "sampling_mode.repetition_penalty": 1.05,
       "sampling_mode.seed": 0,
-      "sampling_mode.presence_penalty": 0,
-      "thinking": false,
-      "use_default_template": true,
+      "sampling_mode.presence_penalty": false,
+      "thinking": true,
       "clip": [
         "69",
         0
@@ -101,8 +100,8 @@
       "steps": 6,
       "steps_to_run": -1,
       "cfg": 1,
-      "sampler_mode": "fixed",
-      "bongmath": "standard",
+      "sampler_mode": "standard",
+      "bongmath": true,
       "model": [
         "77",
         0
@@ -202,7 +201,7 @@
       "amount": 0,
       "random": false,
       "seed": 0,
-      "probability": "fixed",
+      "probability": 1,
       "specific_item": [
         "85",
         0
@@ -772,8 +771,8 @@
       "steps_to_run": -1,
       "denoise": 0.35,
       "cfg": 1,
-      "sampler_mode": "fixed",
-      "bongmath": "standard",
+      "sampler_mode": "standard",
+      "bongmath": true,
       "model": [
         "77",
         0
