@@ -414,7 +414,7 @@
   "1565": {
     "inputs": {
       "pixels": [
-        "1570",
+        "1574",
         0
       ],
       "vae": [
@@ -474,33 +474,36 @@
       "title": "dummy"
     }
   },
-  "1570": {
+  "1573": {
     "inputs": {
-      "width": 512,
-      "height": 768,
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
+      "string": "",
+      "channel": "alpha"
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1574": {
+    "inputs": {
+      "width": [
+        "1520",
+        0
+      ],
+      "height": [
+        "1521",
+        0
+      ],
       "divisible_by": 16,
-      "device": "cpu",
+      "position": "center",
       "image": [
-        "1571",
+        "1573",
         0
       ]
     },
-    "class_type": "ImageResizeKJv2",
+    "class_type": "MpiCrop",
     "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
-  "1571": {
-    "inputs": {
-      "image": "placeholder.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
+      "title": "Mpi Crop"
     }
   }
 }

@@ -451,8 +451,7 @@
   },
   "2617": {
     "inputs": {
-      "string": "",
-      "image": "placeholder.png"
+      "string": ""
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

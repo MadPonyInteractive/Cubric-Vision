@@ -1108,8 +1108,7 @@
   "256": {
     "inputs": {
       "string": "",
-      "channel": "alpha",
-      "image": "placeholder.png"
+      "channel": "alpha"
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

@@ -38,36 +38,8 @@ SLOT_TO_INPUT = {
     "SamplerCustom": {0: "model", 1: "positive"},
 }
 
-# Media-input placeholders. i2v bakes whatever test image was loaded in the graph
-# into its LoadImage nodes; that filename won't exist on other machines/engines, so
-# ComfyUI rejects the prompt ("Invalid image file"). The app injects real media over
-# these at gen time (routes/comfy.js WORKFLOW_INPUT_DEFAULTS) — the baked value is
-# only a stand-in that must be a file that always exists. Reset each to the staged
-# placeholder. Stamp by _meta.title, never id. Titles absent (t2v has no LoadImage)
-# are skipped, not an error — this handler serves both t2v and i2v.
-# title -> (filename_input_key, placeholder_filename)
-MEDIA_PLACEHOLDERS = {
-    "Input_Start_Frame": ("image", "placeholder.png"),
-    "Input_End_Frame":   ("image", "placeholder.png"),
-}
-
-
-def _stamp_placeholders(wf: dict) -> None:
-    stamped = 0
-    for title, (key, filename) in MEDIA_PLACEHOLDERS.items():
-        nid = _find_node_id_by_title(wf, title)
-        if nid is None:
-            continue  # t2v has no media inputs — legitimately absent
-        inputs = wf[nid].get("inputs", {})
-        if key not in inputs:
-            raise SystemExit(
-                f"[FAIL] Media node {title!r} has no {key!r} input "
-                f"(has {sorted(inputs)}); cannot stamp the placeholder."
-            )
-        inputs[key] = filename
-        stamped += 1
-    if stamped:
-        print(f"  [media] stamped {stamped} placeholder input(s)")
+# MPI-272: media inputs migrated to path-into-string MpiLoadImageFromPath nodes
+# that self-gate on an empty `string` — no placeholder staging or stamping needed.
 
 # Titles that MUST survive into stage-2 (sanity gate on the derived file).
 # Each entry is a set of acceptable alternatives (any one present passes).
@@ -164,8 +136,6 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
     """Orchestrator entry. source = stage-1 API export. Writes stage-1 + stage-2."""
     name = source_path.stem.removesuffix("_template")  # Wan22_i2v_template -> Wan22_i2v
     stage1 = json.loads(source_path.read_text(encoding="utf-8"))
-
-    _stamp_placeholders(stage1)
 
     stage1_out = out_dir / f"{name}.json"
     stage1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")

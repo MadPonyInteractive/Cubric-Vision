@@ -10,18 +10,17 @@ boolean decides whether t2i accidentally runs as i2i. So the template routes thr
 this handler to reset both to their safe t2i defaults.
 
 Chroma is a SINGLE variant (no SFW/NSFW split, no style rack, no bypass LoRA — unlike
-krea2), so this handler is just the placeholder/boolean reset. One template → one file:
+krea2), so this handler is just the boolean reset. One template → one file:
   Chroma_t2i_template.json -> Chroma_t2i.json   (serves t2i + i2i)
 
-Two things a hand-export cannot be trusted to carry:
+One thing a hand-export cannot be trusted to carry:
 
-  1. STAMP the optional image input to the staged placeholder. `Input_Image` runs with
-     no image on a plain t2i (the injector fills it only for i2i), so ComfyUI validates
-     the BAKED filename — a raw export carries whatever test image was open.
+  FORCE `Input_Is_i2i` to false. It is the RUNTIME t2i/i2i switch: the i2i op injects
+  true, t2i injects nothing and relies on the baked false. A template exported mid-i2i
+  test bakes true — which would make every plain t2i silently run as i2i.
 
-  2. FORCE `Input_Is_i2i` to false. It is the RUNTIME t2i/i2i switch: the i2i op injects
-     true, t2i injects nothing and relies on the baked false. A template exported mid-i2i
-     test bakes true — which would make every plain t2i silently run as i2i.
+  (MPI-272: the optional image input is now a self-gating MpiLoadImageFromPath — no
+  placeholder stamp needed; a plain t2i just leaves the `string` empty.)
 
 Orchestrated: build(source_path, out_dir) — routed by the `Chroma_` prefix (registry.py).
 Standalone:  python generate_chroma.py
@@ -35,8 +34,8 @@ from pathlib import Path
 SCRIPTS_DIR = Path(__file__).parent
 WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 
-OPTIONAL_IMAGE_TITLE = "Input_Image"
-PLACEHOLDER = "placeholder.png"        # staged by routes/comfy.js WORKFLOW_INPUT_DEFAULTS
+# MPI-272: optional image input migrated to a self-gating MpiLoadImageFromPath —
+# no placeholder stamp needed. Only the runtime t2i/i2i boolean still needs forcing.
 IS_I2I_TITLE = "Input_Is_i2i"
 
 
@@ -45,18 +44,6 @@ def _find_by_title(workflow: dict, title: str) -> dict | None:
         if isinstance(node, dict) and node.get("_meta", {}).get("title") == title:
             return node
     return None
-
-
-def _stamp_placeholder(workflow: dict) -> None:
-    """Reset the optional LoadImage to the staged placeholder, so a plain t2i (which
-    injects nothing into it) passes ComfyUI's graph validation."""
-    node = _find_by_title(workflow, OPTIONAL_IMAGE_TITLE)
-    if node is None:
-        raise SystemExit(f"[FAIL] No LoadImage titled '{OPTIONAL_IMAGE_TITLE}' — graph changed?")
-    before = node["inputs"].get("image")
-    node["inputs"]["image"] = PLACEHOLDER
-    if before != PLACEHOLDER:
-        print(f"  [STAMP] {OPTIONAL_IMAGE_TITLE}: {before!r} -> {PLACEHOLDER!r}")
 
 
 def _force_t2i_default(workflow: dict) -> None:
@@ -77,7 +64,6 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
     base = source_path.name[: -len("_template.json")]  # Chroma_t2i_template.json -> Chroma_t2i
     print(f"Template: {source_path.name}")
     workflow = json.loads(source_path.read_text(encoding="utf-8"))
-    _stamp_placeholder(workflow)
     _force_t2i_default(workflow)
     out_path = out_dir / f"{base}.json"
     out_path.write_text(json.dumps(workflow, indent=2), encoding="utf-8")

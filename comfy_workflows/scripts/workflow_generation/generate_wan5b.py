@@ -23,8 +23,7 @@ WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 TEMPLATE_NAME = "Wan22_5B_ti2v_template.json"
 
 T2V_GATE_TITLE = "Input_Text_to_video"     # MpiSimpleBoolean
-FRAME_TITLES = ("Input_Start_Frame", "Input_End_Frame")   # LoadImage nodes
-PLACEHOLDER = "placeholder.png"            # generic frame fallback (staged by routes/comfy.js)
+# MPI-272: frame inputs are self-gating MpiLoadImageFromPath nodes — no placeholder stamp.
 
 # (output_name, Input_Text_to_video value)
 OUTPUTS = (
@@ -40,19 +39,8 @@ def _find_by_title(workflow: dict, title: str) -> dict | None:
     return None
 
 
-def _stamp_placeholders(workflow: dict) -> None:
-    """Reset each frame LoadImage node to the staged placeholder, so the graph
-    validates when no image is supplied (t2v never uses a frame; the app injects a
-    real image over the placeholder for i2v). Without this the template carries
-    whatever test image was open when it was exported and fails at prompt time."""
-    for title in FRAME_TITLES:
-        node = _find_by_title(workflow, title)
-        if node is not None:
-            node["inputs"]["image"] = PLACEHOLDER
-
-
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. Stamp the t2v boolean + placeholders → two runtime files."""
+    """Orchestrator entry. Stamp the t2v boolean → two runtime files."""
     template = json.loads(source_path.read_text(encoding="utf-8"))
     gate = _find_by_title(template, T2V_GATE_TITLE)
     if gate is None:
@@ -64,7 +52,6 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
     for output_name, is_t2v in OUTPUTS:
         wf = copy.deepcopy(template)
         _find_by_title(wf, T2V_GATE_TITLE)["inputs"]["boolean"] = is_t2v
-        _stamp_placeholders(wf)
         out_path = out_dir / output_name
         out_path.write_text(json.dumps(wf, indent=2), encoding="utf-8")
         print(f"  [OK]   {output_name} ({T2V_GATE_TITLE}={is_t2v})")

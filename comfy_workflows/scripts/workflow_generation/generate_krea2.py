@@ -13,16 +13,13 @@ The three source templates all route here (registry `krea2_` prefix):
   krea2_turbo_detailer_template.json -> _sfw / _nsfw
   krea2_turbo_upscaler_template.json -> _sfw / _nsfw
 
-Per output this handler does the two things a hand-export cannot be trusted to carry:
+Per output this handler bakes the one thing a hand-export cannot be trusted to carry:
 
-  1. BAKE the variant's diffusion weight into the UNETLoader (titled `Load Diffusion
-     Model`). This is the ONLY difference between the two runtime files.
+  BAKE the variant's diffusion weight into the UNETLoader (titled `Load Diffusion
+  Model`). This is the ONLY difference between the two runtime files.
 
-  2. STAMP the optional media input. `Input_Image` on the t2i graph can run with NO
-     image (plain t2i injects nothing), so ComfyUI validates the BAKED filename. A raw
-     export carries whatever test image was open. Reset it to the staged placeholder.
-     (Harmless on the detailer/upscaler graphs, where Input_Image is required and gets
-     overwritten at submit — a required input's baked value is never read.)
+  (MPI-272: the optional Input_Image is now a self-gating MpiLoadImageFromPath — a
+  plain t2i leaves its `string` empty; no placeholder stamp needed.)
 
   3. ASSERT the style rack is coherent (t2i only; detailer/upscaler have no rack, so the
      assert is a no-op there). Selecting style N drives BOTH the LoRA (via an MpiMath
@@ -62,10 +59,8 @@ VARIANTS = {
 
 BYPASS_LORA_TITLE = "Input_Bypass_Filter_Lora"
 
-# The ONLY optional media input: t2i can run with no image at all.
-# i2i / pose-reference inject a real image over this before submit.
-OPTIONAL_IMAGE_TITLE = "Input_Image"
-PLACEHOLDER = "placeholder.png"        # staged by routes/comfy.js WORKFLOW_INPUT_DEFAULTS
+# MPI-272: the optional Input_Image is now a self-gating MpiLoadImageFromPath —
+# a plain t2i just leaves its `string` empty; no placeholder stamp needed.
 
 STYLE_SLOT_RE = re.compile(r"^Input_style_lora_(\d+)$")
 GATE_RE = re.compile(r"b\s+if\s+a\s*==\s*(\d+)\s+else")
@@ -102,20 +97,6 @@ def _bake_bypass_strength(workflow: dict, strength: float) -> None:
     node["inputs"]["strength_model"] = strength
     if before != strength:
         print(f"  [BYPASS] {BYPASS_LORA_TITLE}.strength_model: {before!r} -> {strength}")
-
-
-def _stamp_placeholder(workflow: dict) -> None:
-    """Reset the optional LoadImage to the staged placeholder, so a plain t2i (which
-    injects nothing into it) passes ComfyUI's graph validation. Skips graphs that have no
-    such node (required-input graphs overwrite theirs at submit — stamping is harmless but
-    not needed; a graph with no LoadImage at all just has nothing to stamp)."""
-    node = _find_by_title(workflow, OPTIONAL_IMAGE_TITLE)
-    if node is None:
-        return
-    before = node["inputs"].get("image")
-    node["inputs"]["image"] = PLACEHOLDER
-    if before != PLACEHOLDER:
-        print(f"  [STAMP] {OPTIONAL_IMAGE_TITLE}: {before!r} -> {PLACEHOLDER!r}")
 
 
 def _assert_style_rack(workflow: dict) -> int:
@@ -177,7 +158,6 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
         workflow = json.loads(source_path.read_text(encoding="utf-8"))
         _bake_weight(workflow, spec["weight"])
         _bake_bypass_strength(workflow, spec["bypass"])
-        _stamp_placeholder(workflow)
         n_styles = _assert_style_rack(workflow)
 
         out_path = out_dir / f"{base}_{suffix}.json"
