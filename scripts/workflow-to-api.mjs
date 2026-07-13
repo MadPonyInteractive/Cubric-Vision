@@ -251,6 +251,14 @@ async function main() {
   const srcDir = path.resolve(REPO_ROOT, args[0] || 'comfy_workflows/raw');
   const outDir = path.resolve(REPO_ROOT, args[1] || 'comfy_workflows');
   if (!existsSync(srcDir)) throw new Error(`Source dir not found: ${srcDir}`);
+  // raw/ holds the user's ONLY editable LiteGraph sources — never a write target.
+  // A mis-routed outDir here would silently overwrite them with API JSON the user
+  // cannot re-edit. Refuse outright.
+  const RAW_DIR = path.resolve(REPO_ROOT, 'comfy_workflows/raw');
+  const relToRaw = path.relative(RAW_DIR, outDir);
+  if (!relToRaw.startsWith('..')) {  // '' (== raw) or a subdir of raw → refuse
+    throw new Error(`REFUSING to write into raw/ (user-owned LiteGraph source): ${outDir}`);
+  }
   await fs.mkdir(outDir, { recursive: true });
 
   const files = (await fs.readdir(srcDir)).filter((f) => f.endsWith('.json'));

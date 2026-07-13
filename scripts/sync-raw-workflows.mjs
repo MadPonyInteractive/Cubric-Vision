@@ -39,8 +39,19 @@ const FORCE = argv.includes('--all');
 const NO_COMMIT = argv.includes('--no-commit');
 
 const isTemplate = (name) => /_template\.json$/i.test(name);
+
+// raw/ is the user's SOURCE OF TRUTH — the only editable LiteGraph copies. No
+// script may ever write there; a mis-export the user has to re-do is unrecoverable.
+// Assert every output lands OUTSIDE raw/, so a future routing bug can't clobber it.
+function assertNotInRaw(outPath) {
+  const inRaw = !path.relative(RAW_DIR, outPath).startsWith('..');
+  if (inRaw) {
+    throw new Error(`REFUSING to write inside raw/ (user-owned source): ${rel(outPath)}`);
+  }
+  return outPath;
+}
 const outPathFor = (name) =>
-  isTemplate(name) ? path.join(GEN_DIR, name) : path.join(WORKFLOWS_DIR, name);
+  assertNotInRaw(isTemplate(name) ? path.join(GEN_DIR, name) : path.join(WORKFLOWS_DIR, name));
 
 function mtime(p) {
   try { return statSync(p).mtimeMs; } catch { return -Infinity; }
