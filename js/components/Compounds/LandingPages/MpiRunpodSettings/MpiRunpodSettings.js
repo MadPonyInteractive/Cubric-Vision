@@ -115,6 +115,9 @@ export const MpiRunpodSettings = ComponentFactory.create({
         let _podDiskBar = null;         // MPI-237: shared Pod disk-usage bar (volume OR ephemeral)
         let _engineBusy = false;        // true while a start/stop is in flight
         let _connectAbort = false;      // MPI-86: set by Cancel to break the in-flight connect poll
+        let _destroyAborted = false;    // MPI-278: set by destroy() (panel close) — the connect is
+                                        // NOT cancelled (Pod left booting, shell feed owns it), so the
+                                        // finally must NOT emit local · offline and strand the connect.
         // MPI-110: the auto-retry wait LOOP lives in the shell (survives navigating
         // away from Settings); the panel reads `state.remoteWaitGpu` to know if one
         // is active. `_isWaiting()` is the single source of truth here.
@@ -701,7 +704,13 @@ export const MpiRunpodSettings = ComponentFactory.create({
                 // MPI-73: if the connect did NOT fully succeed (refused, timed out,
                 // WS never handshook, threw), clear the transient 'connecting' phase
                 // back to local · offline so the hero/status bar don't stay stuck.
-                if (!_connectSucceeded) {
+                // MPI-278: BUT not when the panel was just CLOSED mid-connect. destroy()
+                // sets _connectAbort to stop this poll while deliberately LEAVING the Pod
+                // booting (shell feed owns the live connect). Emitting local here strands
+                // that connect — the hero flashed 'local · offline' then recovered on the
+                // next 5s feed tick. A real Cancel (_cancelConnect) deletes the Pod and
+                // emits local itself, so it is unaffected by this guard.
+                if (!_connectSucceeded && !_destroyAborted) {
                     Events.emit('remote:connection', { connected: false, gpuName: null, vramGb: null, ramGb: null, phase: null });
                 }
                 // MPI-110: sniped mid-create with auto-retry on → re-enter the
@@ -1697,6 +1706,8 @@ export const MpiRunpodSettings = ComponentFactory.create({
             // (backend _starting tracks it; the idle watchdog backstops) — destroy is
             // not a Cancel, so it must not delete a Pod the user may still want.
             _connectAbort = true;
+            _destroyAborted = true; // MPI-278: panel close ≠ connect failure — don't let the
+                                    // _connectEngine finally emit local · offline (shell owns the connect).
             _engineConnectInst?.destroy?.();
             _engineConnectInst = null;
         };
