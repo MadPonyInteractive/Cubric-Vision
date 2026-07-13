@@ -9,6 +9,8 @@ import { Storage } from '../../../core/storage.js';
  * @param {string} message - Notification text
  * @param {'info'|'success'|'warning'|'danger'} [variant='info'] - Visual style
  * @param {number} [duration=3000] - Lifespan in ms (set to 0 for persistent)
+ * @param {boolean} [sound=false] - Play the notification chime (once per burst).
+ *        Reserve for async "something finished" toasts, NOT user-triggered feedback.
  */
 
 // Max toasts shown at once. Everything else waits its turn inside the same
@@ -162,9 +164,12 @@ export const MpiToast = ComponentFactory.create({
         el._dismissFn = dismiss;
 
         const container = _getStackContainer();
-        // Burst-start chime: fire before this toast joins the stack, only when
-        // the stack was empty. Follow-up toasts in the same burst stay silent.
-        if (_totalCount() === 0) _playToastSound();
+        // Burst-start chime: only toasts that OPT IN (props.sound) ever ring —
+        // user-triggered feedback toasts (Connect, a keypress, click warnings)
+        // pass nothing and stay silent. Ring once at the start of a burst: fire
+        // before this toast joins the stack, only when the stack was empty.
+        // Follow-up toasts in the same burst stay silent regardless.
+        if (props.sound && _totalCount() === 0) _playToastSound();
         const isVisible = _visibleCount() < MAX_VISIBLE_TOASTS;
 
         // Mount into the shared stack either way — queued toasts are hidden via

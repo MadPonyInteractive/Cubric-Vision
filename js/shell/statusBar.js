@@ -501,11 +501,13 @@ export const StatusBar = {
      * Fire a standalone toast without a progress job.
      * @param {string} message
      * @param {'success'|'info'|'warning'|'danger'} [variant='info']
+     * @param {number} [duration=6000]
+     * @param {{sound?: boolean}} [opts] - sound: play the chime (async-completion toasts only).
      */
-    notify(message, variant = 'info', duration = 6000) {
+    notify(message, variant = 'info', duration = 6000, opts = {}) {
         const wrapper = document.createElement('div');
         document.body.appendChild(wrapper);
-        const t = MpiToast.mount(wrapper, { message, variant, duration });
+        const t = MpiToast.mount(wrapper, { message, variant, duration, sound: opts.sound === true });
         t.on('close', () => { t.destroy(); wrapper.remove(); });
     },
 
