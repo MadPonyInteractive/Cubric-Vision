@@ -1085,6 +1085,17 @@ function _initRemoteConnectionFeed() {
       if (!connected && !connecting && s && s.ready && !s.noGpu && s.comfyReady === false) {
         connecting = true;
       }
+      // MPI-274: own the live connect % from the app-lifetime feed. The % used to be
+      // driven only by the ephemeral MpiRunpodSettings poll (setTimeout — throttled
+      // when the app backgrounds, torn down on nav), so blurring/navigating mid-connect
+      // stranded the % then dropped the hero to local·offline. The backend now stamps
+      // connect-start and returns `connectElapsedMs`; emit the same elapsed→% here so a
+      // backgrounded/unmounted panel can no longer strand it. heroStats caches the % and
+      // ignores this while not in the 'connecting' phase. Old wrappers omit the field →
+      // no emit (unchanged behaviour, never worse).
+      if (connecting && s && Number.isFinite(s.connectElapsedMs)) {
+        Events.emit('remote:connect-progress', { pct: _connectPct(s.connectElapsedMs) });
+      }
     } catch (_) {
       connected = false;
     }

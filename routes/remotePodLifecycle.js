@@ -258,6 +258,20 @@ let _connecting = false;
 // Pod). The status route self-clears it when /health goes ready or the podId drifts.
 let _starting = false;
 
+// MPI-274: connect-start timestamp. The live connect % used to be owned by the
+// ephemeral MpiRunpodSettings poll (setTimeout, throttled on blur / torn down on
+// nav), so backgrounding or navigating away mid-connect stranded the % at its last
+// value then dropped to local·offline. Stamp when the boot-spanning `_starting`
+// flag goes true so the app-lifetime shell feed tick can compute + own the % from
+// /remote/comfy/status. Null when not booting. All `_starting` writes go through
+// `_setStarting` so the stamp can never drift from the flag.
+let _connectStartMs = null;
+function _setStarting(v) {
+  if (v && !_starting) _connectStartMs = Date.now();
+  else if (!v) _connectStartMs = null;
+  _starting = v;
+}
+
 // --- mode routes ----------------------------------------------------------------
 
 router.get('/remote/mode', (req, res) => {
@@ -402,7 +416,7 @@ function _isPodDead(podStatus, connecting, absent) {
 function _selfHealIfPodDead(podStatus, connecting) {
   if (!_isPodDead(podStatus, connecting, _lastPodAbsent)) return false;
   logger.warn('runpod', `remote Pod ${_mode.podId} is ${_lastPodAbsent ? 'gone (404)' : podStatus} while connected — self-healing to local`);
-  _starting = false;
+  _setStarting(false);
   setRemoteMode({ active: false, noGpu: false });
   if (_startedPodId && _lastPodAbsent) _startedPodId = null;
   return true;
@@ -414,7 +428,11 @@ router.get('/remote/comfy/status', async (req, res) => {
   // the WHOLE boot (not just the brief route call) — closes the open-Settings-
   // during-boot race that re-enabled Connect mid-boot.
   const inFlight = () => _connecting || _starting;
-  if (!_mode.active || !_mode.podId) return res.json({ running: false, ready: false, connecting: inFlight() });
+  // MPI-274: elapsed since the boot-spanning connect started, so the app-lifetime
+  // shell feed tick can own the live connect % (survives blur / component unmount).
+  // Null when not booting; old wrappers omit it and the feed degrades gracefully.
+  const connectElapsedMs = () => (_connectStartMs ? Date.now() - _connectStartMs : null);
+  if (!_mode.active || !_mode.podId) return res.json({ running: false, ready: false, connecting: inFlight(), connectElapsedMs: connectElapsedMs() });
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
@@ -431,13 +449,13 @@ router.get('/remote/comfy/status', async (req, res) => {
       if (_selfHealIfPodDead(podStatus, inFlight())) {
         return res.json({ running: false, ready: false, connecting: false, podStatus, dead: true });
       }
-      return res.json({ running: false, ready: false, connecting: inFlight(), podStatus, maintenance: _lastPodMaintenance });
+      return res.json({ running: false, ready: false, connecting: inFlight(), connectElapsedMs: connectElapsedMs(), podStatus, maintenance: _lastPodMaintenance });
     }
     const health = await r.json();
     // Pod is up — the background start finished; clear the spanning flag so the
     // panel flips from "creating…" to ready/Disconnect.
-    if (health.ready) _starting = false;
-    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, wrapperVersion: health.wrapper_version || null, connecting: inFlight(), noGpu: _mode.noGpu });
+    if (health.ready) _setStarting(false);
+    res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, wrapperVersion: health.wrapper_version || null, connecting: inFlight(), connectElapsedMs: connectElapsedMs(), noGpu: _mode.noGpu });
   } catch (_) {
     // expected during Pod cold start / stale-payload window — but also the window
     // where a non-started Pod looks identical. Attach the RunPod Pod status (MPI-96)
@@ -446,7 +464,7 @@ router.get('/remote/comfy/status', async (req, res) => {
     if (_selfHealIfPodDead(podStatus, inFlight())) {
       return res.json({ running: false, ready: false, connecting: false, podStatus, dead: true });
     }
-    res.json({ running: false, ready: false, connecting: inFlight(), podStatus, maintenance: _lastPodMaintenance });
+    res.json({ running: false, ready: false, connecting: inFlight(), connectElapsedMs: connectElapsedMs(), podStatus, maintenance: _lastPodMaintenance });
   }
 });
 
@@ -811,14 +829,14 @@ router.post('/remote/pod/create', async (req, res) => {
     }
     logger.info('runpod', `Pod create kicked off: ${out.podId}`);
     kicked = true;
-    _starting = true; // spans the background boot until status sees ready
+    _setStarting(true); // spans the background boot until status sees ready
     res.json({ starting: true, ready: false, podId: out.podId });
   } catch (err) {
     logger.error('runpod', 'pod create failed', err);
     res.status(502).json({ error: 'pod_create_failed' });
   } finally {
     _connecting = false;
-    if (!kicked) _starting = false; // refused/errored — not actually booting
+    if (!kicked) _setStarting(false); // refused/errored — not actually booting
   }
 });
 
@@ -876,7 +894,7 @@ router.post('/remote/pod/reconnect', async (req, res) => {
     if (startOk) {
       logger.info('runpod', `Pod resume kicked off: ${podId}; renderer will poll for ready`);
       kicked = true;
-      _starting = true; // spans the background resume until status sees ready
+      _setStarting(true); // spans the background resume until status sees ready
       return res.json({ starting: true, ready: false, podId, recreated: false });
     }
     const msg = (started.json && (started.json.error || started.json.message)) || `start ${started.status}`;
@@ -892,21 +910,21 @@ router.post('/remote/pod/reconnect', async (req, res) => {
       return res.status(502).json({ error: 'pod_create_failed', message: out.message, ramFloorMissed: !!out.ramFloorMissed });
     }
     kicked = true;
-    _starting = true;
+    _setStarting(true);
     res.json({ starting: true, ready: false, podId: out.podId, recreated: true });
   } catch (err) {
     logger.error('runpod', 'pod reconnect failed', err);
     res.status(502).json({ error: 'pod_reconnect_failed' });
   } finally {
     _connecting = false;
-    if (!kicked) _starting = false; // unavailable / refused / errored — not booting
+    if (!kicked) _setStarting(false); // unavailable / refused / errored — not booting
   }
 });
 
 // Delete the tracked Pod explicitly (GPU-switch in Settings, or a user-initiated
 // teardown). The volume is unaffected.
 router.post('/remote/pod/delete-active', async (req, res) => {
-  _starting = false; // terminal action — no longer booting
+  _setStarting(false); // terminal action — no longer booting
   // Disconnect/delete → use the LOCAL engine now. Flip remote mode OFF so
   // isRemoteActive() returns false and local _ms input-prep takes the local
   // copy path instead of the (gone) wrapper. See stop-active for the full why.
@@ -926,7 +944,7 @@ router.post('/remote/pod/delete-active', async (req, res) => {
 // effort — the wrapper idle watchdog is the backstop. Token is retained (a warm
 // resume reuses the same podId, so the stored token still matches).
 router.post('/remote/pod/stop-active', async (req, res) => {
-  _starting = false; // terminal action — no longer booting
+  _setStarting(false); // terminal action — no longer booting
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
   // Disconnect means "use the LOCAL engine now". Flip remote mode OFF so
   // isRemoteActive() (= active && podId) returns false — otherwise local _ms
@@ -952,7 +970,7 @@ router.post('/remote/pod/stop-active', async (req, res) => {
 // ON = DELETE the Pod (frees GPU + container disk; the volume persists). main.js
 // calls this on clean quit so it never has to know the pref itself.
 router.post('/remote/pod/teardown', async (req, res) => {
-  _starting = false; // terminal action — no longer booting
+  _setStarting(false); // terminal action — no longer booting
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
   try {
     const key = await getRunPodApiKey();
