@@ -39,6 +39,7 @@ const {
 } = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
 const remoteModels = require('./remoteModels');
+const { createInstallStore } = require('./install/installStore');
 
 const _require = createRequire(__filename);
 let _extractZip = null;
@@ -395,7 +396,7 @@ class FileDownloader {
                 }
                 await _verifySha256(this.localPath, this.depJob.sha256Expected);
                 await clearDownloadMarker(this.localPath);
-                this.depJob.status = 'complete';
+                _setDepStatus(this.depJob, 'complete', 'downloader end');
                 _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
                 _checkModelJobsComplete();
                 _startPendingDeps();
@@ -403,7 +404,7 @@ class FileDownloader {
                 // SHA256 mismatch — clean up and mark failed
                 await fs.remove(this.localPath).catch(() => {});
                 await clearDownloadMarker(this.localPath).catch(() => {});
-                this.depJob.status = 'failed';
+                _setDepStatus(this.depJob, 'failed', 'downloader fail');
                 this.depJob.error = err.message;
                 _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
                 _checkModelJobsComplete();
@@ -415,7 +416,7 @@ class FileDownloader {
         this._downloader.on('error', (err) => {
             _activeDownloaders.delete(this.depJob.id);
             if (this.depJob.status === 'paused' || this.depJob.status === 'cancelled') return;
-            this.depJob.status = 'failed';
+            _setDepStatus(this.depJob, 'failed', 'downloader error');
             this.depJob.error = err.message;
             _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
             _checkModelJobsComplete();
@@ -567,6 +568,68 @@ function _broadcast(event, data) {
     }
 }
 
+// ── installStore SOT (MPI-276 Phase 2b.3) ────────────────────────────────────
+// The store owns lifecycle state + progress + the monotonic snapshot version.
+// SHADOW STAGE: populated alongside _modelJobs/_depJobs and used for the READ
+// paths (status endpoint, snapshot); the maps stay write-authoritative until the
+// write-flip commit. The maps remain the transport carriers (url, localPath,
+// sha256Expected, pipPins, installRequirementsCommand — fields the pure store
+// deliberately omits). `broadcast` is late-bound so it is defined by call time.
+const store = createInstallStore({
+    broadcast: (event, data) => _broadcast(event, data),
+    logger,
+    now: Date.now,
+});
+
+// Runtime→store status translation. The runtime maps use a few strings the pure
+// store doesn't model: a model's terminal success is 'complete' here but 'done' in
+// the store, and 'idle' (disk-full / rejected pre-register) has no store state.
+const _MODEL_STATUS_TO_STORE = {
+    queued: 'queued', downloading: 'downloading', verifying: 'verifying',
+    installing: 'installing', complete: 'done', done: 'done',
+    failed: 'failed', cancelled: 'cancelled',
+    // idle: intentionally absent — the model is never registered in the store on
+    // that path (it 400s before register), so there is nothing to transition.
+};
+const _DEP_STATUS_TO_STORE = {
+    queued: 'queued', downloading: 'downloading', verifying: 'verifying',
+    complete: 'complete', failed: 'failed', cancelled: 'cancelled',
+};
+
+// Write the runtime map field (unchanged behavior) AND drive the store in lockstep
+// (MPI-276 2b.3). SHADOW STAGE: both writes happen; the map is still authoritative.
+// A status with no store equivalent (e.g. 'idle') updates the map only. transition*
+// no-ops safely if the store has no such job yet (register happens at start).
+function _setModelStatus(modelJob, status, reason) {
+    modelJob.status = status;
+    const to = _MODEL_STATUS_TO_STORE[status];
+    if (to && store.modelJob(modelJob.modelId)) store.transitionModel(modelJob.modelId, to, reason);
+}
+function _setDepStatus(depJob, status, reason) {
+    depJob.status = status;
+    const to = _DEP_STATUS_TO_STORE[status];
+    if (to && store.depJob(depJob.id)) store.transitionDep(depJob.id, to, reason);
+}
+
+// Register (or REPLACE) the store record for a runtime modelJob, translating its
+// deps into the store's spec. Called once per start on both engines. The store
+// holds lifecycle+progress+version; the runtime maps keep the transport fields.
+function _registerModelInStore(modelJob, engine) {
+    store.registerModelJob({
+        modelId: modelJob.modelId,
+        engine,
+        deps: modelJob.deps.map(d => ({
+            depId: d.id,
+            type: d.type || 'model',
+            size: d.size || '',
+            seedBytes: d.seedBytes || 0,
+            totalBytes: d.totalBytes || 0,
+            downloadedBytes: d.downloadedBytes || 0,
+            alreadyInstalled: d.status === 'complete',
+        })),
+    });
+}
+
 router.get('/comfy/downloads/stream', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -713,12 +776,12 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
         // Mark installed deps as complete immediately (they contribute to progress but not to active downloads)
         if (isInstalled) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'local already-installed');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
         } else if (depJob.status !== 'queued' && depJob.status !== 'downloading') {
             // Reset any terminal state (complete, failed, cancelled) back to queued.
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'local reset requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
         }
@@ -746,7 +809,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
         const targetDir = customRoot || defaultModelsRoot;
         const freeBytes = await _freeDiskBytes(targetDir);
         if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
-            modelJob.status = 'idle';
+            _setModelStatus(modelJob, 'idle', 'disk-full idle');
             logger.warn('download', `install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} at ${targetDir}`);
             return res.status(400).json({
                 error: `Not enough disk space to install this model. ${_fmtGb(neededBytes)} needed, ${_fmtGb(freeBytes)} free.`,
@@ -754,7 +817,13 @@ router.post('/comfy/models/download/start', async (req, res) => {
         }
     }
 
-    modelJob.status = 'downloading';
+    // Register in the store now that the disk-full gate has passed (MPI-276 2b.3).
+    // registerModelJob REPLACES on a re-POST (kills totalBytes accumulation) and
+    // credits already-installed deps at full size. Done before the status flip so the
+    // transition below lands on a live store job.
+    _registerModelInStore(modelJob, 'local');
+
+    _setModelStatus(modelJob, 'downloading', 'download start');
     _resetModelSpeed(modelJob);
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
 
@@ -800,7 +869,7 @@ async function _startPendingDeps() {
             continue;
         }
 
-        depJob.status = 'downloading';
+        _setDepStatus(depJob, 'downloading', 'local dep start');
         const downloader = new FileDownloader(depJob, depJob.localPath);
         _activeDownloaders.set(depJob.id, downloader);
 
@@ -1027,7 +1096,7 @@ async function _reconcileOutstandingRemoteDeps() {
         if (entry && entry.installed === true) {
             const depJob = _depJobs.get(depId);
             if (depJob) {
-                depJob.status = 'complete';
+                _setDepStatus(depJob, 'complete', 'local complete');
                 depJob.downloadedBytes = depJob.totalBytes || depJob.downloadedBytes;
             }
             _remoteDepIds.delete(depId);
@@ -1153,7 +1222,7 @@ function _onRemoteInstallEvent(evt) {
     } else if (evt.type === 'models:install-complete') {
         depJob.downloadedBytes = Number(data.size_bytes) || depJob.totalBytes || 0;
         depJob.totalBytes = depJob.downloadedBytes;
-        depJob.status = 'complete';
+        _setDepStatus(depJob, 'complete', 'remote complete');
         _remoteDepIds.delete(depId);
         _broadcast('download:complete', { depId, modelId: null });
         // A per-model custom_node landed on the volume; ComfyUI only scans
@@ -1167,9 +1236,9 @@ function _onRemoteInstallEvent(evt) {
     } else if (evt.type === 'models:install-error') {
         _remoteDepIds.delete(depId);
         if (data.error === 'cancelled') {
-            depJob.status = 'cancelled';
+            _setDepStatus(depJob, 'cancelled', 'remote cancelled');
         } else {
-            depJob.status = 'failed';
+            _setDepStatus(depJob, 'failed', 'remote failed');
             depJob.error = data.message || data.error || 'remote install failed';
             _broadcast('download:failed', { depId, error: depJob.error });
         }
@@ -1273,7 +1342,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // node a model DECLARES as a dep — LTX/Impact/etc. are implicit engine deps,
         // never in a model's `deps`, so this path was never hit before Krea2.)
         if (alreadyInstalled && dep.type === 'custom_nodes' && remoteModels._isImageResident(dep)) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'remote baked complete');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
         } else if (alreadyInstalled && dep.type === 'custom_nodes') {
@@ -1286,16 +1355,16 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             // wrapper re-runs (idempotent) pip -r requirements.txt WITHOUT
             // re-downloading or removing the folder. Self-heals the recurring
             // "node present, dep missing" class. Weights (non-node) trust the flag.
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'remote node requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
             toInstall.push({ ...dep, requirementsOnly: true });
         } else if (alreadyInstalled) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'remote already-installed');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
         } else {
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'remote requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
             // MPI-222: a DRIFTED volume node's folder is still present (wrong commit),
@@ -1346,7 +1415,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
       }
       if (freeInfo && Number.isFinite(freeInfo.freeBytes)
           && freeInfo.freeBytes < remoteNeededBytes * 1.05) {
-        modelJob.status = 'idle';
+        _setModelStatus(modelJob, 'idle', 'remote disk-full idle');
         logger.warn('download', `remote install blocked — volume full: need ${_fmtGb(remoteNeededBytes)}, have ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}`);
         return res.status(400).json({
           error: `[Errno 28] No space left on device — ${_fmtGb(remoteNeededBytes)} needed, ${_fmtGb(freeInfo.freeBytes)} free on the Pod volume.`,
@@ -1356,7 +1425,8 @@ async function _startRemoteDownload(modelId, dependencies, res) {
 
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
-    modelJob.status = 'downloading';
+    _registerModelInStore(modelJob, 'remote');
+    _setModelStatus(modelJob, 'downloading', 'remote download start');
     _resetModelSpeed(modelJob);
 
     if (!toInstall.length) {
@@ -1378,7 +1448,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     _ensureRemoteEventStream();
     for (const dep of toInstall) {
         const depJob = _depJobs.get(dep.id);
-        if (depJob) depJob.status = 'downloading';
+        if (depJob) _setDepStatus(depJob, 'downloading', 'remote dep start');
         _remoteDepIds.add(dep.id);
         // Do NOT pass the app's display `size` ("67MB") as size_bytes — it is
         // approximate and the wrapper rejects an exact-correct file on a
@@ -1390,7 +1460,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
                 if (out && out.status === 'already_installed') {
                     const dj = _depJobs.get(dep.id);
                     if (dj) {
-                        dj.status = 'complete';
+                        _setDepStatus(dj, 'complete', 'remote uw dep complete');
                         dj.downloadedBytes = dj.totalBytes || _parseSizeToBytes(dep.size);
                     }
                     _remoteDepIds.delete(dep.id);
@@ -1401,7 +1471,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             })
             .catch((err) => {
                 const dj = _depJobs.get(dep.id);
-                if (dj) { dj.status = 'failed'; dj.error = err.message; }
+                if (dj) { _setDepStatus(dj, 'failed', 'remote uw dep error'); dj.error = err.message; }
                 _remoteDepIds.delete(dep.id);
                 logger.error('download', `remote install trigger failed for ${dep.id}: ${err.message}`);
                 _broadcast('download:failed', { depId: dep.id, error: err.message });
@@ -1440,7 +1510,7 @@ function _checkModelJobsComplete() {
         const allDone = modelJob.deps.every(d => ['complete', 'failed', 'cancelled'].includes(d.status));
 
         if (anyFailed || (allDone && !allComplete)) {
-            modelJob.status = 'failed';
+            _setModelStatus(modelJob, 'failed', 'uw fail');
             // Surface the first failed dep's error so the UI shows a real reason
             // instead of "undefined" (the model-level event carried no error).
             const failedDep = modelJob.deps.find(d => d.status === 'failed' && d.error);
@@ -1450,15 +1520,15 @@ function _checkModelJobsComplete() {
             });
         } else if (allComplete) {
             if (modelJob.installCustomNodes) {
-                modelJob.status = 'installing';
+                _setModelStatus(modelJob, 'installing', 'uw installing');
                 _broadcast('download:installing', { modelId: modelJob.modelId });
                 _runCustomNodeInstall(modelJob).catch(err => {
                     logger.error('download', `_runCustomNodeInstall crashed: ${err.message}`);
-                    modelJob.status = 'failed';
+                    _setModelStatus(modelJob, 'failed', 'uw install fail');
                     _broadcast('download:failed', { modelId: modelJob.modelId });
                 });
             } else {
-                modelJob.status = 'complete';
+                _setModelStatus(modelJob, 'complete', 'uw done');
                 _broadcast('download:complete', { modelId: modelJob.modelId });
             }
         }
@@ -1471,7 +1541,7 @@ async function _runCustomNodeInstall(modelJob) {
     );
     if (!customDeps.length) {
         logger.info('download', `_runCustomNodeInstall: no custom_nodes deps found for model ${modelJob.modelId}`);
-        modelJob.status = 'complete';
+        _setModelStatus(modelJob, 'complete', 'uw done');
         _broadcast('download:complete', { modelId: modelJob.modelId });
         return;
     }
@@ -1661,12 +1731,12 @@ async function _runCustomNodeInstall(modelJob) {
     }
 
     if (anyFailure) {
-        modelJob.status = 'failed';
+        _setModelStatus(modelJob, 'failed', 'local fail');
         _broadcast('download:failed', { modelId: modelJob.modelId, error: 'One or more custom node extractions failed' });
         throw new Error('One or more custom node extractions failed — see logs');
     }
 
-    modelJob.status = 'complete';
+    _setModelStatus(modelJob, 'complete', 'local done');
     _broadcast('download:complete', { modelId: modelJob.modelId });
     // A custom node was installed. The frontend gets `comfy:needs-restart` (→
     // state.comfyNeedsRestart) and the gen gate restarts ComfyUI. But that flag is
@@ -1727,12 +1797,16 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
                 _activeDownloaders.delete(dep.id);
             }
             if (dep.localPath) clearDownloadMarker(dep.localPath).catch(() => {});
-            dep.status = 'cancelled';
+            _setDepStatus(dep, 'cancelled', 'cancel');
             _depJobs.delete(dep.id);
         }
     }
 
     _teardownRemoteEventStreamIfIdle();
+    // Drive the store to the terminal state (it holds the cancelled job on its own
+    // short TTL — the final SOT; the map hard-delete below is the legacy path the
+    // write-flip step removes).
+    if (store.modelJob(modelId)) _setModelStatus(job, 'cancelled', 'user cancel');
     _modelJobs.delete(modelId);
     _broadcast('download:cancelled', { modelId });
     _startPendingDeps();
@@ -1973,11 +2047,12 @@ function cancelAllDownloads() {
     }
     _activeDownloaders.clear();
     for (const [, job] of _modelJobs) {
-        job.deps.forEach(d => { d.status = 'cancelled'; });
-        job.status = 'cancelled';
+        job.deps.forEach(d => { _setDepStatus(d, 'cancelled', 'cancel all'); });
+        _setModelStatus(job, 'cancelled', 'cancel all');
     }
     _modelJobs.clear();
     _depJobs.clear();
+    store.clear();
     _broadcast('download:cancelled', { all: true });
 }
 
@@ -2064,7 +2139,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
 
         // Mark already-installed deps as complete without downloading
         if (isInstalled) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'uw already-installed');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
             logger.info('download', `startUniversalWorkflowInstall: skipping already installed: ${depId} -> ${installedCheckPath}`);
@@ -2073,7 +2148,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             // so _startPendingDeps will re-download. Covers: zip missing after failed
             // extraction (was complete), and previously failed downloads on retry.
             const prevStatus = depJob.status;
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'uw requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
             logger.info('download', `startUniversalWorkflowInstall: resetting ${depId} (was ${prevStatus}) for re-download`);
@@ -2081,6 +2156,10 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
     }
 
     _modelJobs.set(modelJob.modelId, modelJob);
+    _registerModelInStore(modelJob, 'local');
+    // UW job is born 'downloading' (literal above); mirror that onto the fresh
+    // store record, which registers every model as 'queued'.
+    _setModelStatus(modelJob, 'downloading', 'uw install start');
 
     // Log download URLs before starting so we know which URL fails
     for (const depJob of modelJob.deps) {
