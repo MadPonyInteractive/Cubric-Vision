@@ -1,12 +1,12 @@
 {
   "51": {
     "inputs": {
-      "text": [
-        "114",
-        0
-      ],
       "clip": [
         "69",
+        0
+      ],
+      "text": [
+        "114",
         0
       ]
     },
@@ -43,15 +43,11 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Conditioning Zero Out"
     }
   },
   "58": {
     "inputs": {
-      "prompt": [
-        "240",
-        0
-      ],
       "max_length": 512,
       "sampling_mode": "on",
       "sampling_mode.temperature": 0.7,
@@ -65,6 +61,10 @@
       "use_default_template": true,
       "clip": [
         "69",
+        0
+      ],
+      "prompt": [
+        "240",
         0
       ]
     },
@@ -100,17 +100,9 @@
       "scheduler": "beta",
       "steps": 6,
       "steps_to_run": -1,
-      "denoise": [
-        "230",
-        0
-      ],
       "cfg": 1,
-      "seed": [
-        "73",
-        0
-      ],
-      "sampler_mode": "standard",
-      "bongmath": true,
+      "sampler_mode": "fixed",
+      "bongmath": "standard",
       "model": [
         "77",
         0
@@ -125,6 +117,14 @@
       ],
       "latent_image": [
         "219",
+        0
+      ],
+      "denoise": [
+        "230",
+        0
+      ],
+      "seed": [
+        "73",
         0
       ]
     },
@@ -200,13 +200,13 @@
       "suffix": ".",
       "blocks": "",
       "amount": 0,
+      "random": false,
+      "seed": 0,
+      "probability": "fixed",
       "specific_item": [
         "85",
         0
-      ],
-      "random": false,
-      "seed": 0,
-      "probability": 1
+      ]
     },
     "class_type": "MpiPromptList",
     "_meta": {
@@ -224,6 +224,12 @@
   },
   "94": {
     "inputs": {
+      "cleanup": "",
+      "opt_title": "",
+      "prompt_list": [
+        "80",
+        0
+      ],
       "positive": [
         "108",
         0
@@ -232,18 +238,12 @@
         "109",
         0
       ],
-      "cleanup": "",
       "seed": [
         "80",
         1
       ],
       "probability": [
         "111",
-        0
-      ],
-      "opt_title": "",
-      "prompt_list": [
-        "80",
         0
       ]
     },
@@ -267,12 +267,12 @@
   "96": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_darkbrush.safetensors",
-      "strength_model": [
-        "125",
-        0
-      ],
       "model": [
         "245",
+        0
+      ],
+      "strength_model": [
+        "125",
         0
       ]
     },
@@ -284,12 +284,12 @@
   "100": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_dotmatrix.safetensors",
-      "strength_model": [
-        "126",
-        0
-      ],
       "model": [
         "96",
+        0
+      ],
+      "strength_model": [
+        "126",
         0
       ]
     },
@@ -301,12 +301,12 @@
   "101": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_kidsdrawing.safetensors",
-      "strength_model": [
-        "127",
-        0
-      ],
       "model": [
         "100",
+        0
+      ],
+      "strength_model": [
+        "127",
         0
       ]
     },
@@ -318,12 +318,12 @@
   "102": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_neondrip.safetensors",
-      "strength_model": [
-        "128",
-        0
-      ],
       "model": [
         "101",
+        0
+      ],
+      "strength_model": [
+        "128",
         0
       ]
     },
@@ -335,12 +335,12 @@
   "103": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_rainywindow.safetensors",
-      "strength_model": [
-        "129",
-        0
-      ],
       "model": [
         "102",
+        0
+      ],
+      "strength_model": [
+        "129",
         0
       ]
     },
@@ -352,12 +352,12 @@
   "104": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_retroanime.safetensors",
-      "strength_model": [
-        "130",
-        0
-      ],
       "model": [
         "103",
+        0
+      ],
+      "strength_model": [
+        "130",
         0
       ]
     },
@@ -369,12 +369,12 @@
   "105": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_softwatercolor.safetensors",
-      "strength_model": [
-        "131",
-        0
-      ],
       "model": [
         "104",
+        0
+      ],
+      "strength_model": [
+        "131",
         0
       ]
     },
@@ -386,12 +386,12 @@
   "106": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_sunsetblur.safetensors",
-      "strength_model": [
-        "132",
-        0
-      ],
       "model": [
         "105",
+        0
+      ],
+      "strength_model": [
+        "132",
         0
       ]
     },
@@ -403,12 +403,12 @@
   "107": {
     "inputs": {
       "lora_name": "krea-2\\style\\krea2_vintagetarot.safetensors",
-      "strength_model": [
-        "133",
-        0
-      ],
       "model": [
         "106",
+        0
+      ],
+      "strength_model": [
+        "133",
         0
       ]
     },
@@ -455,6 +455,7 @@
   },
   "114": {
     "inputs": {
+      "delimiter": "",
       "string_a": [
         "241",
         0
@@ -462,8 +463,7 @@
       "string_b": [
         "94",
         1
-      ],
-      "delimiter": ""
+      ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
@@ -772,12 +772,8 @@
       "steps_to_run": -1,
       "denoise": 0.35,
       "cfg": 1,
-      "seed": [
-        "73",
-        0
-      ],
-      "sampler_mode": "standard",
-      "bongmath": true,
+      "sampler_mode": "fixed",
+      "bongmath": "standard",
       "model": [
         "77",
         0
@@ -792,6 +788,10 @@
       ],
       "latent_image": [
         "72",
+        0
+      ],
+      "seed": [
+        "73",
         0
       ]
     },
@@ -891,7 +891,7 @@
   "217": {
     "inputs": {
       "pixels": [
-        "254",
+        "257",
         0
       ],
       "vae": [
@@ -906,16 +906,16 @@
   },
   "219": {
     "inputs": {
-      "boolean": [
-        "229",
-        0
-      ],
       "true": [
         "217",
         0
       ],
       "false": [
         "76",
+        0
+      ],
+      "boolean": [
+        "229",
         0
       ]
     },
@@ -944,16 +944,16 @@
   },
   "230": {
     "inputs": {
-      "boolean": [
-        "229",
-        0
-      ],
       "true": [
         "228",
         0
       ],
       "false": [
         "231",
+        0
+      ],
+      "boolean": [
+        "229",
         0
       ]
     },
@@ -982,6 +982,7 @@
   },
   "240": {
     "inputs": {
+      "delimiter": "",
       "string_a": [
         "60",
         0
@@ -989,8 +990,7 @@
       "string_b": [
         "112",
         0
-      ],
-      "delimiter": ""
+      ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
@@ -1052,12 +1052,12 @@
   "250": {
     "inputs": {
       "lora_name": "krea-2\\style\\KREA_MIDJ_1.safetensors",
-      "strength_model": [
-        "251",
-        0
-      ],
       "model": [
         "107",
+        0
+      ],
+      "strength_model": [
+        "251",
         0
       ]
     },
@@ -1083,28 +1083,6 @@
       "title": "Mpi Math"
     }
   },
-  "254": {
-    "inputs": {
-      "width": [
-        "75",
-        0
-      ],
-      "height": [
-        "74",
-        0
-      ],
-      "divisible_by": 1,
-      "position": "center",
-      "image": [
-        "256",
-        0
-      ]
-    },
-    "class_type": "MpiCrop",
-    "_meta": {
-      "title": "Mpi Crop"
-    }
-  },
   "256": {
     "inputs": {
       "string": "",
@@ -1113,6 +1091,32 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "257": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "256",
+        0
+      ],
+      "width": [
+        "75",
+        0
+      ],
+      "height": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
     }
   }
 }
