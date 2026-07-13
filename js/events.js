@@ -176,7 +176,7 @@ export const Events = new EventBus();
  *
  * Generation lifecycle events (emitted by generationService / activeGenerations):
  * 'generation:started'    { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }
- * 'generation:preview'    { id, url }
+ * 'preview:frame'         { engine, promptId, seq, url } — unified latent-preview bus (MPI-269). Resolve via activeGenerations.byPromptId; seed via getLastPreview. See docs/preview-bus.md.
  * 'generation:cancelled'  { id, tempId, extraTempIds }
  * 'generation:complete'   { id, item, group, tempId?, extraTempIds? } — generation succeeded and persisted
  * 'generation-store:changed' { jobs, running, pending, depth } — generationStore snapshot after any job transition (MPI-208; the single source of truth all generation UI derives from)

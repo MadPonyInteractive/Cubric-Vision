@@ -161,11 +161,13 @@ export const MpiBaseApp = ComponentFactory.create({
             resultWrap.hidden = false;
         }
 
-        // Live latents: generation:preview carries the regId → its activeGenerations
-        // entry's tempId. When that matches our running job, show the latent in-app.
-        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
+        // Live latents (MPI-271): subscribe to the unified preview:frame bus, resolve
+        // the frame to its generation by server-truth promptId, and paint when it's
+        // OUR running job (tempId match). Seeding from getLastPreview on run-start
+        // (see _run) keeps the pane showing the current latent through frame gaps.
+        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
             if (!_myTempId || !url) return;
-            const entry = activeGenerations.get(id);
+            const entry = activeGenerations.byPromptId(promptId);
             if (entry?.tempId === _myTempId) _paintResult(url, { label: 'generating' });
         }));
 
@@ -455,6 +457,13 @@ export const MpiBaseApp = ComponentFactory.create({
             if (!res) { _setRunning(false); return; }
             // Track this job's tempId so its live latents paint into the result pane.
             _myTempId = res.tempId || null;
+            // MPI-271: seed from the last-held latent so a pane opened mid-gen (or
+            // during a frame gap) shows the current latent immediately, not blank.
+            if (_myTempId) {
+                const entry = activeGenerations.list().find(e => e.tempId === _myTempId);
+                const last = entry && activeGenerations.getLastPreview(entry.id);
+                if (last?.url) _paintResult(last.url, { label: 'generating' });
+            }
         };
         runBtn.on('click', _run);
 

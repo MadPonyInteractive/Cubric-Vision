@@ -77,11 +77,17 @@ window where an early frame of a new gen was attributed to the previous gen. Bot
   onmessage handler — both must honor the `_stripPreviewHeader` null-skip. (A fix that
   updated only one shipped a broken frame on the fresh path; MPI-269 caught it in review.)
 
-## Legacy path (being retired)
+## Legacy path (retired — MPI-271)
 
-The old `Events.emit('generation:preview', { id, url })` + `exec.onPreview → setPreview`
-path still runs (untouched, additive) so nothing broke in one shot. Consumers migrate to
-`preview:frame` + `getLastPreview`, then the legacy path is retired (MPI-269 P4/P5).
+The old `Events.emit('generation:preview', { id, url })` + `activeGenerations.setPreview`
+path is **gone**. All three consumers (MpiBaseApp app pane, MpiGalleryBlock placeholder
+card, MpiGroupHistoryBlock viewer) subscribe to `preview:frame` + seed from
+`getLastPreview`. The `preview:frame` bus listener in `activeGenerations` is now the
+**sole writer** of `entry.latestPreviewUrl` / `placeholderGroup.latestPreviewUrl`, which the
+non-subscriber reads still poll (queue-panel thumbnail, group-history mount-seed, gallery-grid
+card re-mount). `exec.onPreview` survives only to re-emit `generation-queue:changed` so the
+queue thumbnail refreshes as latents land. `generation:preview-reset` (MPI-167 stage-clip
+drop) is unrelated and stays.
 
 ## Files
 - `js/services/comfyController.js` — ingest, engine tag, attribution, broken-frame gate, `preview:frame` emit.

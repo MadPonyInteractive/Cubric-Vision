@@ -103,7 +103,7 @@ export function submitAppGeneration(appOrId, inputs = {}, callbacks = {}) {
 
     const res = enqueueGeneration(config, callbacks, opts);
     // Return the tempId so the caller (MpiBaseApp) can match this job's live latent
-    // previews (generation:preview carries the regId → activeGenerations entry → tempId).
+    // previews (preview:frame → activeGenerations.byPromptId → entry.tempId; MPI-271).
     return res ? { ...res, tempId } : null;
 }
 

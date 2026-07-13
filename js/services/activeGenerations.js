@@ -84,6 +84,12 @@ Events.on('preview:frame', ({ engine, promptId, seq, url }) => {
     // this whole card exists to kill.
     if (!entry) return;
     _lastPreview.set(entry.id, { engine, promptId, seq, url });
+    // MPI-271: keep latestPreviewUrl current for the non-subscriber reads that
+    // still poll it (queue-panel thumbnail, group-history rehydrate, gallery-grid
+    // card re-mount). The legacy generation:preview emit is gone; this listener is
+    // now the sole writer of latestPreviewUrl.
+    entry.latestPreviewUrl = url;
+    if (entry.placeholderGroup) entry.placeholderGroup.latestPreviewUrl = url;
 });
 
 /** @returns {GenerationEntry|null} */
@@ -106,15 +112,6 @@ function listFor(scope, groupId) {
         if (scope === 'groupHistory') return e.groupId === groupId;
         return true;
     });
-}
-
-/** Cache latest preview URL and emit event. */
-function setPreview(id, url) {
-    const entry = _registry.get(id);
-    if (!entry) return;
-    entry.latestPreviewUrl = url;
-    if (entry.placeholderGroup) entry.placeholderGroup.latestPreviewUrl = url;
-    Events.emit('generation:preview', { id, url });
 }
 
 /** Signal a new preview window (new sampler stage) — the card drops its current
@@ -167,4 +164,4 @@ function cancelAll() {
     for (const id of _registry.keys()) cancel(id);
 }
 
-export const activeGenerations = { start, get, list, listFor, setPreview, resetPreview, setPromptId, byPromptId, getLastPreview, setStatus, end, cancel, cancelAll };
+export const activeGenerations = { start, get, list, listFor, resetPreview, setPromptId, byPromptId, getLastPreview, setStatus, end, cancel, cancelAll };

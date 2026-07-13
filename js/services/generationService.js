@@ -736,10 +736,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         Events.emit('tool:accepted', { tool: 'groupHistory', id: _regId });
     };
 
-    exec.onPreview = (url) => {
-        activeGenerations.setPreview(_regId, url);
+    // MPI-271: live latents now flow through the preview:frame bus, which writes
+    // latestPreviewUrl (activeGenerations). This handler only re-emits the queue
+    // snapshot so the queue-panel thumbnail refreshes as new latents land.
+    exec.onPreview = () => {
         _emitQueueChanged();
-        callbacks.onPreview?.(url);
     };
 
     exec.onPreviewReset = () => {

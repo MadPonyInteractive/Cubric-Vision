@@ -1428,16 +1428,30 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.add(id);
             const currentGroups = _visibleProjectGroups();
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            // MPI-271: seed the freshly-mounted placeholder from any held latent so a
+            // card that mounts mid-gen (or between frames) isn't blank until the next frame.
+            const first = _firstRunningEntry();
+            if (first && first.id === id) {
+                const last = activeGenerations.getLastPreview(id);
+                if (last?.url) _paintPreviewInto(first, last.url);
+            }
         }));
 
-        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
-            if (!_myGenIds.has(id)) return;
-            // Only paint preview for the first-running entry (the one whose
-            // placeholder is actually mounted).
-            const first = _firstRunningEntry();
-            if (!first || first.id !== id) return;
-            const allTempIds = [first.tempId, ...(first.extraTempIds || [])].filter(Boolean);
+        // Paint a latent into the first-running entry's placeholder card(s).
+        const _paintPreviewInto = (entry, url) => {
+            const allTempIds = [entry.tempId, ...(entry.extraTempIds || [])].filter(Boolean);
             for (const t of allTempIds) grid.el.updatePreview(t, url);
+        };
+
+        // Live latents (MPI-271): resolve preview:frame → generation by promptId, and
+        // only paint the first-running entry (whose placeholder is actually mounted).
+        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
+            if (!url) return;
+            const entry = activeGenerations.byPromptId(promptId);
+            if (!entry || !_myGenIds.has(entry.id)) return;
+            const first = _firstRunningEntry();
+            if (!first || first.id !== entry.id) return;
+            _paintPreviewInto(first, url);
         }));
 
         // New preview window (new sampler stage) → drop the card's current clip so

@@ -610,8 +610,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncPbGenerating();
         }));
 
-        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
-            if (!_myGenIds.has(id)) return;
+        // Live latents (MPI-271): resolve preview:frame → generation by promptId.
+        // Mount-time seeding still reads entry.latestPreviewUrl (now bus-fed) above.
+        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
+            if (!url) return;
+            const entry = activeGenerations.byPromptId(promptId);
+            if (!entry || !_myGenIds.has(entry.id)) return;
             // Video workspace: preview latents are static frames, not playable.
             // Leave viewer in its current state so user can queue more ops.
             if (isVideo) return;
