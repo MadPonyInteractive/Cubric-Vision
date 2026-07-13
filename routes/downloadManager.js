@@ -665,7 +665,9 @@ function _serializeModelJob(job) {
 
 router.get('/comfy/downloads/status', (req, res) => {
     const jobs = Array.from(_modelJobs.values()).map(_serializeModelJob);
-    res.json({ success: true, jobs });
+    // G9: monotonic snapshot version from the store. Additive — the FE mirror (Phase
+    // 4) uses it to reject a stale snapshot; today's clients ignore the extra field.
+    res.json({ success: true, version: store.version(), jobs });
 });
 
 router.get('/comfy/downloads/active', (req, res) => {
@@ -832,7 +834,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
     // Register-before-respond (MPI-276 G8): the job is fully in _modelJobs before we
     // reply, and the reply carries its snapshot — the FE mirror renders the card from
     // the response, never racing the SSE stream open (the MPI-241 race class).
-    res.json({ success: true, jobId: modelId, job: _serializeModelJob(modelJob) });
+    res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
 });
 
 // Free bytes available on the filesystem holding `dir`. Returns null on any
@@ -1432,7 +1434,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     if (!toInstall.length) {
         // Everything already present — settle the job state immediately.
         _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
-        res.json({ success: true, jobId: modelId, job: _serializeModelJob(modelJob) });
+        res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
         _checkModelJobsComplete();
         return;
     }
@@ -1443,7 +1445,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
 
     // Respond before kicking off installs (matches the local path's fire-and-forget).
     // Register-before-respond (MPI-276 G8): job snapshot in the body.
-    res.json({ success: true, jobId: modelId, job: _serializeModelJob(modelJob) });
+    res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
 
     _ensureRemoteEventStream();
     for (const dep of toInstall) {
