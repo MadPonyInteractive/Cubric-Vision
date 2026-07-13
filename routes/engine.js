@@ -132,7 +132,6 @@ async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
         status: 'downloading',
         downloadedBytes: 0,
         totalBytes: 0,
-        refCount: 1,
         error: null,
         sha256Expected: null
     };

@@ -170,12 +170,12 @@ async function _localSharedDepsMap(excludeModelId) {
     }
     // Mid-install protection (was the reason for the old per-dep test): a dep that is
     // ACTIVELY downloading/queued for another model right now must never be trashed.
-    // MPI-258 NOTE: gate on depJob.status, NOT refCount. refCount is "how many model
-    // jobs reference this dep" and stays >0 after an install COMPLETES (it's only
-    // decremented on uninstall/disk-full rollback), so a refCount test protected
-    // every just-installed dep and made uninstall a no-op ("removed 0, kept 9"). Only
-    // an in-flight status ('downloading'/'queued') means a live download is using the
-    // file; 'complete'/'idle'/'failed' must not protect it.
+    // MPI-258/276 NOTE: gate on depJob.status. (The old refCount field — "how many
+    // model jobs reference this dep" — stayed >0 after an install COMPLETED, so a
+    // refCount test protected every just-installed dep and made uninstall a no-op
+    // ("removed 0, kept 9"); it was DELETED in MPI-276.) Only an in-flight status
+    // ('downloading'/'queued') means a live download is using the file;
+    // 'complete'/'idle'/'failed' must not protect it.
     for (const [depId, depJob] of _depJobs) {
         if (depJob && (depJob.status === 'downloading' || depJob.status === 'queued')) {
             if (!map.has(depId)) map.set(depId, new Set());
@@ -270,7 +270,6 @@ function _createDepJob(dep) {
         // ("sits at 100%"). seedBytes keeps every dep counted at its best-known
         // size from the moment the job is created.
         seedBytes: _parseSizeToBytes(dep.size),
-        refCount: 0,
         error: null,
         sha256Expected: dep.sha256 || null,
         // MPI-149 — carry the install-enforcement fields through to the runtime depJob.
@@ -579,8 +578,11 @@ router.get('/comfy/downloads/stream', (req, res) => {
 
 // ── Status Endpoint ───────────────────────────────────────────────────────────
 
-router.get('/comfy/downloads/status', (req, res) => {
-    const jobs = Array.from(_modelJobs.values()).map(job => ({
+// Serialize one model job for the wire — the shape the FE mirror consumes from
+// both GET /downloads/status and the register-before-respond /download/start body
+// (MPI-276 G8). Single serializer so the two never drift.
+function _serializeModelJob(job) {
+    return {
         id: job.id,
         modelId: job.modelId,
         status: job.status,
@@ -594,9 +596,12 @@ router.get('/comfy/downloads/status', (req, res) => {
             downloadedBytes: d.downloadedBytes,
             totalBytes: d.totalBytes,
             error: d.error,
-            refCount: d.refCount,
-        }))
-    }));
+        })),
+    };
+}
+
+router.get('/comfy/downloads/status', (req, res) => {
+    const jobs = Array.from(_modelJobs.values()).map(_serializeModelJob);
     res.json({ success: true, jobs });
 });
 
@@ -664,9 +669,11 @@ router.post('/comfy/models/download/start', async (req, res) => {
     const defaultModelsRoot = getDefaultModelsRoot();
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
-    // Pre-sum totalBytes from ALL deps (including already-installed ones)
+    // Pre-sum totalBytes from ALL deps (including already-installed ones).
+    // SET, never += (MPI-276 G12): a re-POST of the same model must not accumulate
+    // the denominator — a second click read the bar at 200% of real size.
     const allDepsSize = localDeps.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    modelJob.totalBytes += allDepsSize;
+    modelJob.totalBytes = allDepsSize;
 
     for (const dep of localDeps) {
         let localPath;
@@ -699,7 +706,6 @@ router.post('/comfy/models/download/start', async (req, res) => {
             depJob.localPath = localPath;
             _depJobs.set(dep.id, depJob);
         }
-        depJob.refCount += 1;
 
         if (!modelJob.deps.find(d => d.id === dep.id)) {
             modelJob.deps.push(depJob);
@@ -740,12 +746,6 @@ router.post('/comfy/models/download/start', async (req, res) => {
         const targetDir = customRoot || defaultModelsRoot;
         const freeBytes = await _freeDiskBytes(targetDir);
         if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
-            // Roll back the refCount bumps this call made so a later retry (after
-            // the user frees space) is not blocked by orphaned references.
-            for (const dep of localDeps) {
-                const depJob = _depJobs.get(dep.id);
-                if (depJob) depJob.refCount = Math.max(0, depJob.refCount - 1);
-            }
             modelJob.status = 'idle';
             logger.warn('download', `install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} at ${targetDir}`);
             return res.status(400).json({
@@ -760,7 +760,10 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
     _startPendingDeps();
 
-    res.json({ success: true, jobId: modelId });
+    // Register-before-respond (MPI-276 G8): the job is fully in _modelJobs before we
+    // reply, and the reply carries its snapshot — the FE mirror renders the card from
+    // the response, never racing the SSE stream open (the MPI-241 race class).
+    res.json({ success: true, jobId: modelId, job: _serializeModelJob(modelJob) });
 });
 
 // Free bytes available on the filesystem holding `dir`. Returns null on any
@@ -784,7 +787,6 @@ function _fmtGb(bytes) {
 async function _startPendingDeps() {
     const pending = Array.from(_depJobs.values()).filter(d =>
         d.status === 'queued'
-        && d.refCount > 0
         && _depHasActiveDownloadConsumer(d.id)
     );
     const slots = Math.max(0, LOCAL_DOWNLOAD_CONCURRENCY - _activeDownloaders.size);
@@ -1208,8 +1210,9 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         logger.warn('download', `remote pre-check failed: ${err.message}`);
     }
 
+    // SET, never += (MPI-276 G12) — a re-POST must not accumulate the denominator.
     const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    modelJob.totalBytes += allDepsSize;
+    modelJob.totalBytes = allDepsSize;
 
     const toInstall = [];
     for (const dep of dependencies) {
@@ -1219,7 +1222,6 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             depJob.totalBytes = _parseSizeToBytes(dep.size);
             _depJobs.set(dep.id, depJob);
         }
-        depJob.refCount += 1;
         if (!modelJob.deps.find(d => d.id === dep.id)) modelJob.deps.push(depJob);
 
         // MPI-97 — shared-dep ATTACH. When this dep is already installing for
@@ -1228,7 +1230,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // must NOT fire a second `/wrapper/models/install` — the wrapper rejects a
         // duplicate ("this model is already downloading") and B's whole install
         // was failing with a Download-Failed + Report-on-GitHub dialog. Instead B
-        // ATTACHES: refCount is already bumped above, the dep stays in B's
+        // ATTACHES: the dep stays in B's
         // modelJob.deps, and the shared install SSE (_onRemoteInstallEvent loops
         // EVERY modelJob owning this dep id) fills B's bar from A's stream. B
         // settles via _checkModelJobsComplete when the shared dep lands. We do not
@@ -1344,12 +1346,6 @@ async function _startRemoteDownload(modelId, dependencies, res) {
       }
       if (freeInfo && Number.isFinite(freeInfo.freeBytes)
           && freeInfo.freeBytes < remoteNeededBytes * 1.05) {
-        // Roll back the refCount bumps this call made so a later retry (after the
-        // user frees space) is not blocked by orphaned references. Mirrors local.
-        for (const dep of dependencies) {
-          const dj = _depJobs.get(dep.id);
-          if (dj) dj.refCount = Math.max(0, dj.refCount - 1);
-        }
         modelJob.status = 'idle';
         logger.warn('download', `remote install blocked — volume full: need ${_fmtGb(remoteNeededBytes)}, have ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}`);
         return res.status(400).json({
@@ -1366,7 +1362,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     if (!toInstall.length) {
         // Everything already present — settle the job state immediately.
         _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
-        res.json({ success: true, jobId: modelId });
+        res.json({ success: true, jobId: modelId, job: _serializeModelJob(modelJob) });
         _checkModelJobsComplete();
         return;
     }
@@ -1376,7 +1372,8 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress, indeterminate: true });
 
     // Respond before kicking off installs (matches the local path's fire-and-forget).
-    res.json({ success: true, jobId: modelId });
+    // Register-before-respond (MPI-276 G8): job snapshot in the body.
+    res.json({ success: true, jobId: modelId, job: _serializeModelJob(modelJob) });
 
     _ensureRemoteEventStream();
     for (const dep of toInstall) {
@@ -1703,15 +1700,13 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
     if (!job) { _broadcast('download:cancelled', { modelId }); return res.json({ success: true, alreadyGone: true }); }
 
     for (const dep of job.deps) {
-        dep.refCount = Math.max(0, dep.refCount - 1);
         // MPI-97 — cancelling THIS model must not stop a dep another ACTIVE model is
-        // still downloading. Gate on live consumers, NOT refCount: refCount leaks
-        // upward because a successful download never decrements it (only
-        // uninstall/rollback/cancel do — see the shared-dep guard note ~line 173), so
-        // a second install of the same model stacked refCount to 2 and cancel then
-        // saw refCount 1 > 0, skipped dl.cancel(), deleted _modelJobs, and left the
-        // download streaming invisibly while every re-press 404'd. (MPI-258 Bug B)
-        // _otherActiveModelUsesDep excludes THIS model (still in _modelJobs here).
+        // still downloading. Gate on live consumers (job status), never a refCount:
+        // refCount leaked upward (a successful download never decremented it) so a
+        // second install of the same model stacked it to 2 and cancel then saw 1 > 0,
+        // skipped dl.cancel(), deleted _modelJobs, and left the download streaming
+        // invisibly while every re-press 404'd. (MPI-258 Bug B; refCount DELETED
+        // MPI-276.) _otherActiveModelUsesDep excludes THIS model (still in _modelJobs).
         if (!_otherActiveModelUsesDep(dep.id, modelId)) {
             // Remote install in flight on the Pod — cancel via the wrapper.
             if (_remoteDepIds.has(dep.id)) {
@@ -1955,11 +1950,10 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             }
             await clearDownloadMarker(localPath).catch(() => {});
             removed.push({ depId: dep.id, depName: dep.name || dep.id });
-            const depJob = _depJobs.get(dep.id);
-            if (depJob) {
-                depJob.refCount -= 1;
-                if (depJob.refCount <= 0) _depJobs.delete(dep.id);
-            }
+            // The shared-dep guard upstream already excluded deps another installed
+            // model needs, so a dep that reaches this delete loop is unshared — drop
+            // its job. A re-install re-creates it. (refCount gate DELETED MPI-276.)
+            _depJobs.delete(dep.id);
         } catch (err) {
             logger.error('download', `uninstall: failed to trash ${localPath}`, err);
         }
@@ -2063,7 +2057,6 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             _depJobs.set(depId, depJob);
         }
         depJob.localPath = localPath;
-        depJob.refCount += 1;
 
         if (!modelJob.deps.find(d => d.id === depId)) {
             modelJob.deps.push(depJob);
