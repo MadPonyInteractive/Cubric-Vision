@@ -1233,3 +1233,4 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-269", "type": "task.created", "at": "2026-07-12T20:20:00Z", "actor": "claude", "summary": "Unified latent-preview bus (local+remote), engine-tagged \u2014 standalone card for a separate session; surfaced by MPI-259 app-pane latent bugs."}
 {"schema":"mpi-kanban/event/v1","at":"2026-07-12T22:15:00Z","actor":"claude","event":"task.moved","data":{"id":"MPI-270","from":"todo","to":"doing"}}
 {"schema":"mpi-kanban/event/v1","at":"2026-07-12T23:40:00Z","actor":"claude","event":"task.moved","data":{"id":"MPI-270","from":"doing","to":"done"}}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-271","at":"2026-07-13T00:22:22.982Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-271 from To do to To do."}

@@ -5,9 +5,9 @@
   "description": "Migrate the live-latent consumers off the legacy generation:preview path onto the MPI-269 preview:frame bus + activeGenerations.getLastPreview(genId): (1) MpiBaseApp app pane (js/components/Organisms/MpiBaseApp/MpiBaseApp.js:166), (2) gallery placeholder card. Seed from getLastPreview on mount/repaint so a pane shows the current latent through frame gaps. Then P5: retire the legacy generation:preview emit + exec.onPreview->setPreview path once both consumers are migrated. MUST verify a REMOTE-connected gen too (feedback_runpod_not_local_engine_proof). Contract: docs/preview-bus.md + tasks/MPI-269/handoffs/bus-contract.md.",
   "column": "todo",
   "maturity": "planned",
-  "status": "active",
+  "status": "pending",
   "created_at": "2026-07-12T21:50:00Z",
-  "updated_at": "2026-07-12T21:50:00Z",
+  "updated_at": "2026-07-13T00:22:22.982Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
