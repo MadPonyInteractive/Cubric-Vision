@@ -18,6 +18,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { activeGenerations } from '../services/activeGenerations.js';
 import { getModelById } from '../data/modelRegistry.js';
+import { resolveMediaUrl } from '../utils/mediaActions.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 let ipcRenderer = null;
@@ -124,15 +125,33 @@ export function initFloatLatentBridge() {
     if (entry) ipcRenderer.send('float-latent:add-tile', { genId: id, title: titleFor(entry) });
   });
 
-  // A gen ended (any terminal signal) → drop its tile. Main closes the window
-  // when the last tile goes.
+  // A gen COMPLETED → keep its tile, freeze it on the final result so the user can
+  // click it to open the app (the whole window restores on click). The window stays
+  // open until the user acts (click/X) or un-minimizes. Image results paint the
+  // returned file; video results keep the last live latent (a video data-URL is too
+  // heavy for a thumbnail tile).
+  // eslint-disable-next-line mpi/require-destroy-on-events
+  Events.on('generation:complete', async ({ id, item }) => {
+    _lastSent.delete(id);
+    _encoding.delete(id);
+    if (!windowOpen) return;
+    const isVideo = item?.type === 'video' || item?.mediaType === 'video';
+    let dataUrl = null;
+    if (item?.filePath && !isVideo) {
+      dataUrl = await blobUrlToDataUrl(resolveMediaUrl(item.filePath));
+    }
+    if (!windowOpen) return; // may have closed mid-encode
+    ipcRenderer.send('float-latent:finalize', { genId: id, dataUrl });
+  });
+
+  // A gen was CANCELLED or ERRORED → nothing to keep, drop the tile. Main closes
+  // the window when the last tile goes.
   const drop = ({ id }) => {
     _lastSent.delete(id);
     _encoding.delete(id);
     if (windowOpen) ipcRenderer.send('float-latent:tile-remove', { genId: id });
   };
   /* eslint-disable mpi/require-destroy-on-events */
-  Events.on('generation:complete', drop);
   Events.on('generation:cancelled', drop);
   Events.on('generation:error', drop);
   /* eslint-enable mpi/require-destroy-on-events */

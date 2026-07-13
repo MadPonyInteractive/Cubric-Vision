@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-279", "at": "2026-07-13T00:00:00Z", "actor": "claude", "column": "doing", "summary": "Float latent window persists on completion, clickable to open app."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-279", "at": "2026-07-13T00:00:00Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Implementation started (created directly in doing)."}

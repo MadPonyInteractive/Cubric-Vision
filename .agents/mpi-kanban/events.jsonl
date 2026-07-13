@@ -1250,3 +1250,5 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-276","type":"task.moved","at":"2026-07-13T21:05:00Z","actor":"claude","summary":"MPI-276 todo → doing (download-system refactor, Phase 1 start)."}
 {"schema": "mpi-kanban/event/v1", "type": "validation.updated", "id": "MPI-271", "at": "2026-07-13T00:00:00Z", "actor": "claude", "summary": "P4+P5 coded: 3 consumers migrated to preview:frame, legacy setPreview retired. Auto-checks pass; awaits user live-ux + remote verify."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-272","from":"doing","to":"done","at":"2026-07-13T22:15:00Z","actor":"claude","reason":"All 5 phases done+verified (P3 live+remote-Pod; P4/P5 this session). Media path->string cleanup complete."}
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-279", "at": "2026-07-13T00:00:00Z", "actor": "claude", "column": "doing", "summary": "Float latent window persists on completion, clickable to open app."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-279", "at": "2026-07-13T00:00:00Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Implementation started (created directly in doing)."}

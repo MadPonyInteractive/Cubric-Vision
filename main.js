@@ -710,6 +710,9 @@ app.on('ready', () => {
   ipcMain.on('float-latent:frame', (_e, { genId, dataUrl, seq } = {}) => {
     if (genId) floatLatent.frame(genId, dataUrl, seq);
   });
+  ipcMain.on('float-latent:finalize', (_e, { genId, dataUrl } = {}) => {
+    if (genId) floatLatent.finalize(genId, dataUrl);
+  });
   ipcMain.on('float-latent:tile-remove', (_e, { genId } = {}) => {
     if (genId) {
       floatLatent.removeTile(genId);

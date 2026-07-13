@@ -29,7 +29,27 @@
     display: flex; flex-direction: column; border-right: 1px solid oklch(0.34 0.022 350);
   }
   .tile:last-child { border-right: none; }
-  .tile img {
+  .tile.done .cap { background: oklch(0.55 0.09 150); color: oklch(0.98 0.008 80); opacity: 1; }
+  .tile.done:hover { outline: 2px solid oklch(0.72 0.09 150); outline-offset: -2px; }
+  /* Centered "finished" cue: happy mascot + Done badge over the frozen latent. */
+  .done-overlay {
+    position: absolute; inset: 0 0 18px 0; /* leave the caption strip visible */
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; pointer-events: none;
+    animation: donePop 260ms cubic-bezier(.2,.9,.3,1.3) both;
+  }
+  /* Transparent mascot — NO background box (the .tile img solid bg must not apply
+     here). A double drop-shadow alone separates it from busy latents. */
+  .done-overlay img { flex: 0 0 auto; width: 56%; max-width: 92px; height: auto;
+    background: none;
+    filter: drop-shadow(0 2px 3px oklch(0 0 0 / 0.85)) drop-shadow(0 0 10px oklch(0 0 0 / 0.55)); }
+  .done-overlay .badge {
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 3px 12px;
+    border-radius: 999px; background: oklch(0.62 0.12 150); color: oklch(0.99 0.008 150);
+    box-shadow: 0 2px 6px oklch(0 0 0 / 0.4);
+  }
+  @keyframes donePop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+  .tile > img {
     flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain;
     background: oklch(0.28 0.020 350); display: block;
   }
@@ -69,7 +89,7 @@
     el.appendChild(cap);
     el.addEventListener('click', () => ipcRenderer.send('float-latent:restore'));
     tilesEl.appendChild(el);
-    tiles.set(genId, { el, img: null, empty, cap, seq: -1 });
+    tiles.set(genId, { el, img: null, empty, cap, seq: -1, done: false, overlay: null });
   }
 
   ipcRenderer.on('float-latent:add-tile', (_e, { genId, title }) => {
@@ -77,17 +97,53 @@
     else if (title) tiles.get(genId).cap.textContent = title;
   });
 
-  ipcRenderer.on('float-latent:frame', (_e, { genId, dataUrl, seq }) => {
-    const t = tiles.get(genId);
-    if (!t || !dataUrl) return;
-    if (typeof seq === 'number' && seq <= t.seq) return; // drop stale
-    t.seq = typeof seq === 'number' ? seq : t.seq;
+  // ponytail: float window is STILL-only — one <img> swap per frame. LTX latents
+  // (looping clips in the gallery card) show as a single live frame here; that's a
+  // deliberate simplification, not worth the clip-loop + IPC machinery for a minimized
+  // window. Add clip mode only if users actually ask to watch LTX motion while minimized.
+  function ensureImg(t) {
     if (!t.img) {
       t.img = document.createElement('img');
       t.el.insertBefore(t.img, t.el.firstChild);
       if (t.empty) { t.empty.remove(); t.empty = null; }
     }
-    t.img.src = dataUrl;
+    return t.img;
+  }
+
+  ipcRenderer.on('float-latent:frame', (_e, { genId, dataUrl, seq }) => {
+    const t = tiles.get(genId);
+    if (!t || !dataUrl || t.done) return; // ignore late frames once finalized
+    if (typeof seq === 'number' && seq <= t.seq) return; // drop stale
+    t.seq = typeof seq === 'number' ? seq : t.seq;
+    ensureImg(t).src = dataUrl;
+  });
+
+  // Gen finished → freeze the tile on its final result and keep it up so the user
+  // can click to open the app. Paint the returned image if we got one; otherwise
+  // leave the last live latent showing (e.g. video results). The window no longer
+  // closes on completion — only a click / X / app-restore closes it.
+  ipcRenderer.on('float-latent:finalize', (_e, { genId, dataUrl }) => {
+    const t = tiles.get(genId);
+    if (!t) return;
+    t.done = true;
+    if (dataUrl) ensureImg(t).src = dataUrl;
+    t.el.classList.add('done');
+    if (t.cap) t.cap.textContent = 'Click to open';
+    // Centered finished cue: happy mascot + Done badge over the frozen latent.
+    if (!t.overlay) {
+      const ov = document.createElement('div');
+      ov.className = 'done-overlay';
+      const face = document.createElement('img');
+      face.src = '../assets/mascot/happy.png';
+      face.alt = '';
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.textContent = 'Done';
+      ov.appendChild(face);
+      ov.appendChild(badge);
+      t.el.insertBefore(ov, t.cap); // above the caption strip
+      t.overlay = ov;
+    }
   });
 
   ipcRenderer.on('float-latent:remove-tile', (_e, { genId }) => {

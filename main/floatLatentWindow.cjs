@@ -129,6 +129,13 @@ function frame(genId, dataUrl, seq) {
   win.webContents.send('float-latent:frame', { genId, dataUrl, seq });
 }
 
+/** Gen finished → freeze the tile on its final result (dataUrl) if given, else
+ *  leave the last latent showing. The tile stays until the user acts. */
+function finalize(genId, dataUrl) {
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('float-latent:finalize', { genId, dataUrl });
+}
+
 /** Remove a gen's tile. Closes the window when the last tile is gone. */
 function removeTile(genId) {
   tiles = tiles.filter((id) => id !== genId);
@@ -148,4 +155,4 @@ function close() {
   tiles = [];
 }
 
-module.exports = { addTile, frame, removeTile, close, isOpen };
+module.exports = { addTile, frame, finalize, removeTile, close, isOpen };
