@@ -1,6 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
-import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
@@ -40,18 +39,15 @@ export const MpiReusePromptDialog = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-reuse-prompt-dialog" role="dialog" aria-modal="true">
-            <div class="mpi-reuse-prompt-dialog__body">
+            <div class="mpi-reuse-prompt-dialog__head">
                 <h3 class="mpi-reuse-prompt-dialog__title">Reuse Prompt</h3>
-                <div class="mpi-reuse-prompt-dialog__section">
-                    <div class="mpi-reuse-prompt-dialog__label">Use</div>
-                    <div class="mpi-reuse-prompt-dialog__checks" id="reuse-parts-slot"></div>
-                </div>
-                <div class="mpi-reuse-prompt-dialog__section" id="reuse-source-section">
-                    <div class="mpi-reuse-prompt-dialog__label">From</div>
-                    <div id="reuse-source-slot"></div>
-                </div>
             </div>
-            <div class="mpi-reuse-prompt-dialog__actions" id="reuse-actions-slot"></div>
+            <div class="mpi-reuse-prompt-dialog__bar" id="reuse-source-section">
+                <div class="mpi-reuse-prompt-dialog__bulk" id="reuse-bulk-slot"></div>
+                <div id="reuse-source-slot"></div>
+            </div>
+            <div class="mpi-reuse-prompt-dialog__list" id="reuse-parts-slot"></div>
+            <div class="mpi-reuse-prompt-dialog__foot" id="reuse-actions-slot"></div>
         </div>
     `,
 
@@ -68,7 +64,7 @@ export const MpiReusePromptDialog = ComponentFactory.create({
         let source = props.source || state.promptReuseSource;
         source = source === 'current' ? 'current' : 'original';
         const partsSlot = qs('#reuse-parts-slot', el);
-        const sourceSection = qs('#reuse-source-section', el);
+        const bulkSlot = qs('#reuse-bulk-slot', el);
         const sourceSlot = qs('#reuse-source-slot', el);
         const actionsSlot = qs('#reuse-actions-slot', el);
 
@@ -83,47 +79,113 @@ export const MpiReusePromptDialog = ComponentFactory.create({
         for (const { key, availabilityProp } of MEDIA_PARTS) {
             availabilityMaps[key] = props[availabilityProp] || {};
         }
-        const mediaCheckboxes = {};
+        const mediaToggles = {};
+        const allToggles = {};
 
+        const _persistIncludes = () => {
+            state.promptReuseOptions = {
+                ...(state.promptReuseOptions || {}),
+                ask: state.promptReuseOptions?.ask === true,
+                ...includes,
+            };
+        };
+
+        // Per-row ON / OFF / NONE state word (pinned right). NONE = the part isn't
+        // available for this source; otherwise reflects the toggle. Design element,
+        // not just feedback — the row balances label-left / state-right.
+        const stateWords = {};
+        const _isUnavailable = (key) =>
+            key in availabilityMaps && availabilityMaps[key][source] === false;
+        const _syncRowStates = () => {
+            for (const { key } of PARTS) {
+                const span = stateWords[key];
+                if (!span) continue;
+                span.textContent = _isUnavailable(key) ? 'none' : (includes[key] ? 'on' : 'off');
+            }
+        };
+
+        // Each part is a toggleable MpiButton (icon mode). Off shows a hollow circle,
+        // on swaps to a check (iconActive) over the heat fill — check only on the
+        // selected rows. Row wrapper carries the state word + full-width surface + dim.
         PARTS.forEach(({ key, label }) => {
-            const wrap = document.createElement('div');
-            const checkbox = MpiCheckbox.mount(wrap, {
+            const row = document.createElement('div');
+            row.className = 'mpi-reuse-prompt-dialog__row';
+            const toggle = MpiButton.mount(document.createElement('div'), {
+                icon: 'circle',
+                iconActive: 'check',
                 label,
-                checked: includes[key] === true,
-                name: `reuse-${key}`,
+                labelPosition: 'right',
+                active: includes[key] === true,
+                size: 'md',
+                variant: 'secondary',
+                extraClasses: 'mpi-reuse-prompt-dialog__toggle',
             });
-            checkbox.on('change', ({ checked }) => {
-                includes[key] = checked === true;
-                state.promptReuseOptions = {
-                    ...(state.promptReuseOptions || {}),
-                    ask: state.promptReuseOptions?.ask === true,
-                    ...includes,
-                };
+            const stateWord = document.createElement('span');
+            stateWord.className = 'mpi-reuse-prompt-dialog__state';
+            toggle.on('toggle', ({ active }) => {
+                includes[key] = active === true;
+                _persistIncludes();
+                _syncRowStates();
             });
-            partsSlot.appendChild(checkbox.el);
-            if (key in availabilityMaps) mediaCheckboxes[key] = checkbox;
+            row.appendChild(toggle.el);
+            row.appendChild(stateWord);
+            partsSlot.appendChild(row);
+            allToggles[key] = toggle;
+            stateWords[key] = stateWord;
+            if (key in availabilityMaps) mediaToggles[key] = toggle;
         });
 
-        // Disable + uncheck a media toggle when the active source lacks that media.
+        // All / None. Respects the per-source availability gate — a media part with
+        // no input for the active source stays off. Both persist to state.
+        const _setAll = (on) => {
+            PARTS.forEach(({ key }) => {
+                // Skip media parts unavailable for the active source — mirrors the
+                // gate in _syncMediaAvailability so Apply never injects an empty slot.
+                if (on && key in availabilityMaps
+                    && availabilityMaps[key][source] === false) return;
+                includes[key] = on;
+                allToggles[key].el.setActive?.(on);
+            });
+            _persistIncludes();
+            _syncRowStates();
+        };
+        const selectBtn = MpiButton.mount(document.createElement('div'), {
+            text: 'All', variant: 'ghost', size: 'sm',
+        });
+        selectBtn.on('click', () => _setAll(true));
+        bulkSlot.appendChild(selectBtn.el);
+        const clearBtn = MpiButton.mount(document.createElement('div'), {
+            text: 'None', variant: 'ghost', size: 'sm',
+        });
+        clearBtn.on('click', () => _setAll(false));
+        bulkSlot.appendChild(clearBtn.el);
+
+        // Disable + turn off a media toggle when the active source lacks that media.
         // `includes[key]` (the applied value) is forced false so Apply doesn't try to
         // inject nothing. The user's STORED default is left untouched — this is a
         // per-source availability gate, not a preference change.
         const _syncMediaAvailability = () => {
             for (const { key } of MEDIA_PARTS) {
-                const checkbox = mediaCheckboxes[key];
-                if (!checkbox) continue;
+                const toggle = mediaToggles[key];
+                if (!toggle) continue;
                 const has = availabilityMaps[key][source] !== false;
-                checkbox.el.setDisabled?.(!has);
+                toggle.el.setDisabled?.(!has);
+                toggle.el.parentElement?.classList.toggle('mpi-reuse-prompt-dialog__row--off', !has);
                 if (!has) {
                     includes[key] = false;
-                    checkbox.el.setChecked?.(false);
+                    toggle.el.setActive?.(false);
                 }
             }
         };
         _syncMediaAvailability();
+        _syncRowStates();
 
+        // Only the source picker hides when showSource===false — the bulk buttons
+        // share the bar and must stay. Push bulk to the right so it doesn't look
+        // orphaned once the source picker is gone.
         if (props.showSource === false) {
-            sourceSection.style.display = 'none';
+            sourceSlot.style.display = 'none';
+            bulkSlot.style.marginLeft = 'auto';
         } else {
             const sourceRadio = MpiRadioGroup.mount(sourceSlot, {
                 name: 'reuse-source',
@@ -140,6 +202,7 @@ export const MpiReusePromptDialog = ComponentFactory.create({
                 // Availability is per-source (Original may have an input image,
                 // Current may not, or vice-versa) — re-gate all media on switch.
                 _syncMediaAvailability();
+                _syncRowStates();
             });
         }
 

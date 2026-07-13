@@ -1,51 +1,134 @@
 .mpi-reuse-prompt-dialog {
     display: flex;
     flex-direction: column;
-    gap: var(--s-4);
-    padding: var(--s-4);
     background: var(--surface-1);
     border: 1px solid var(--line);
-    border-radius: var(--r-1);
+    border-radius: var(--r-2);
+    overflow: hidden;
 }
 
-.mpi-reuse-prompt-dialog__body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-4);
+.mpi-reuse-prompt-dialog__head {
+    padding: var(--s-4) var(--s-4) var(--s-3);
 }
 
 .mpi-reuse-prompt-dialog__title {
     margin: 0;
     font-size: var(--t-lg);
-    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
     color: var(--ink-1);
 }
 
-.mpi-reuse-prompt-dialog__section {
+/* Control bar — bulk actions (left) + source picker (right). */
+.mpi-reuse-prompt-dialog__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-2) var(--s-4);
+    background: var(--surface-bar);
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.mpi-reuse-prompt-dialog__bulk {
+    display: flex;
+    gap: var(--s-1);
+}
+
+/* Toggle list — one row per part; the MpiButton inside carries the heat on-state. */
+.mpi-reuse-prompt-dialog__list {
     display: flex;
     flex-direction: column;
-    gap: var(--s-2);
+    gap: 2px;
+    padding: var(--s-3) var(--s-4) var(--s-4);
 }
 
-.mpi-reuse-prompt-dialog__label {
-    font-size: var(--t-xs);
-    font-weight: 600;
-    color: var(--ink-3);
+/* Row = the full-width control: the toggle grows to fill it; the row owns the
+   surface, border, and all hover/active feedback so the inner button never draws
+   a second border offset from the row's. */
+.mpi-reuse-prompt-dialog__row {
+    display: flex;
+    align-items: center;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding-right: var(--s-3);
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+/* Off-row hover: lift the surface. */
+.mpi-reuse-prompt-dialog__row:hover:not(.mpi-reuse-prompt-dialog__row--off):not(:has(.is-active)) {
+    background: var(--surface-3);
+    border-color: var(--surface-3);
+}
+/* On-row = heat fill on the whole row (button bg is transparent). */
+.mpi-reuse-prompt-dialog__row:has(.is-active) {
+    background: var(--accent-heat);
+    border-color: var(--accent-heat);
+}
+.mpi-reuse-prompt-dialog__row:has(.is-active):hover {
+    background: var(--accent-heat-hi, oklch(0.80 0.19 355));
+    border-color: var(--accent-heat-hi, oklch(0.80 0.19 355));
+}
+
+/* The toggle button carries the icon + label only; the ROW owns the surface. Strip
+   the button's own bg/border in every state so it never paints a second heat rect
+   behind the label (the primitive's .mpi-ibtn.is-active / .is-pressed rules fill
+   heat — we out-specify them by scoping under the row + matching .mpi-ibtn, and
+   !important guards the press/active transition flicker). */
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn {
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    gap: var(--s-3);
+}
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn,
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn:hover:not(:disabled),
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn.is-pressed,
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn:active,
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn.is-active,
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn.is-active:hover:not(:disabled) {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+/* On-state: the primitive forces the label to --ink-1 (white) when active, which
+   is punishing on the pink; override to dark ink for this dialog (icon inherits
+   currentColor, so this darkens the check too). */
+.mpi-reuse-prompt-dialog__row:has(.is-active) .mpi-ibtn__label,
+.mpi-reuse-prompt-dialog__row .mpi-reuse-prompt-dialog__toggle.mpi-btn.mpi-ibtn.is-active {
+    color: oklch(0.20 0.03 355);
+}
+.mpi-reuse-prompt-dialog__toggle.mpi-btn .mpi-ibtn__label {
+    font-size: var(--t-sm);
+}
+
+/* ON / OFF / NONE state word — pinned right inside the row, recolors with the
+   heat fill on active rows. */
+.mpi-reuse-prompt-dialog__state {
+    flex: none;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    color: var(--ink-4);
+}
+.mpi-reuse-prompt-dialog__row:has(.is-active) .mpi-reuse-prompt-dialog__state {
+    color: oklch(0.20 0.03 355);
 }
 
-.mpi-reuse-prompt-dialog__checks {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--s-2);
+/* Unavailable media part — dimmed, mirrors the old greyed-checkbox affordance. */
+.mpi-reuse-prompt-dialog__row--off {
+    opacity: 0.42;
 }
 
-.mpi-reuse-prompt-dialog__actions {
+/* Footer — actions only. flex-wrap keeps the app-card's two primary buttons tidy. */
+.mpi-reuse-prompt-dialog__foot {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
     gap: var(--s-2);
-    padding-top: var(--s-3);
+    padding: var(--s-3) var(--s-4);
     border-top: 1px solid var(--line);
 }
