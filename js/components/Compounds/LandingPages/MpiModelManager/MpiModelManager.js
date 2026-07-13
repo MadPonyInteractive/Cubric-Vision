@@ -694,9 +694,14 @@ export const MpiModelManager = ComponentFactory.create({
         // media badge + a FIXED-HEIGHT inline state row (chip OR live progress bar).
         // A recently-installed heat dot rides absolute on the thumb. Click → detail.
         function _tileState(st) {
-            // anyInstalled first (MPI-241): once re-sync flips installed, show the chip
-            // even if a terminal 'complete' job still lingers in state.downloadJobs.
-            if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
+            // A LIVE download must win over anyInstalled (MPI-273): an Update on an
+            // already-installed model (add an op/arch to Wan 2.2 Smooth) else downloads
+            // with the "Installed" chip up and no progress bar — bytes stream to disk
+            // with zero UI feedback. Only the TERMINAL-complete lingering job yields.
+            // anyInstalled (MPI-241): once re-sync flips installed, show the chip
+            // even if a terminal 'complete' job still lingers — but NOT while a live
+            // download is running, so the progress branch below wins (MPI-273).
+            if (st.anyInstalled && !st.isActiveDownload) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
             // isBusy holds the progress UI through the whole download AND the brief
             // post-'complete' window before re-sync lands, so the Install chip never
             // flashes back on a fast ephemeral-pod install (MPI-241).
@@ -979,10 +984,17 @@ export const MpiModelManager = ComponentFactory.create({
             qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
 
             // Footer actions — the exact install/update/uninstall wiring from _buildCard.
-            // anyInstalled is checked BEFORE isBusy so a lingering terminal 'complete'
-            // job never keeps Cancel up once re-sync flips installed (MPI-241).
+            // isActiveDownload wins first (MPI-273): a LIVE download on an already-
+            // installed model (Update that adds an op/arch) must show Cancel + the
+            // progress bar, not keep "Update" up while bytes stream to disk unseen.
+            // anyInstalled is checked BEFORE the TERMINAL-lingering isBusy so a spent
+            // 'complete' job never keeps Cancel up once re-sync flips installed (MPI-241).
             detailActions.innerHTML = '';
-            if (st.anyInstalled) {
+            if (st.isActiveDownload) {
+                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'md' });
+                cancel.on('click', () => downloadService.cancel(model.id));
+                detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
+            } else if (st.anyInstalled) {
                 const label = st.draftDiffersFromInstalled ? 'Update' : 'Uninstall';
                 const primary = MpiButton.mount(ce('div'), { text: label, variant: 'secondary', size: 'md' });
                 primary.on('click', () => {
