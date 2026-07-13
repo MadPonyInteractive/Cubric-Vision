@@ -434,7 +434,8 @@ export const MpiRunpodSettings = ComponentFactory.create({
             _setEngineHint(root, warm
                 ? 'Resuming your Pod — a warm resume is fast; if its host is full it recreates fresh.'
                 : 'Creating a fresh Pod on the selected GPU — first boot can take 90–120s.');
-            Events.emit('ui:info', { message: warm ? 'Connecting to your Pod…' : 'Creating a Pod…' });
+            // sound:false — immediate feedback of pressing Connect; a click must not ring.
+            Events.emit('ui:info', { message: warm ? 'Connecting to your Pod…' : 'Creating a Pod…', sound: false });
             let _connectSucceeded = false; // MPI-73: resolves the 'connecting' phase
             let _handoffToWait = false;    // MPI-110: sniped mid-create → re-enter wait loop in finally
             try {
