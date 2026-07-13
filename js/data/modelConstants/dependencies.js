@@ -488,6 +488,23 @@ export const DEPS = {
         sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab',
         engineAsset: true,
     },
+    // Background removal (MPI-260) ------------------------------------------
+    // BiRefNet (MIT) for the History "Remove Background" universal op. Loaded by
+    // ComfyUI's NATIVE LoadBackgroundRemovalModel node (core since v0.27.0), which
+    // scans models/background_removal/. engineAsset → installs with the engine +
+    // image-resident on the Pod. Self-hosted on R2 (models.cubric.studio) so the
+    // Pod bake pulls from R2 not HF (see project_pod_weight_source_r2). Source =
+    // Comfy-Org/BiRefNet (MIT). sha256 verified against the R2 object.
+    'birefnet': {
+        id: 'birefnet',
+        name: 'BiRefNet Background Removal',
+        origin: 'Comfy-Org/BiRefNet',
+        filename: 'background_removal/birefnet.safetensors',
+        url: 'https://models.cubric.studio/vision/models/background_removal/birefnet.safetensors',
+        size: '444MB',
+        sha256: '9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154',
+        engineAsset: true,
+    },
     // LTX-2.3 (MPI-127) ------------------------------------------------------
     // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow
     // scan 2026-06-25), NOT the broader mpi-ci install set (which pulls extra
