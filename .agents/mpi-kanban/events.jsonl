@@ -1234,3 +1234,4 @@
 {"schema":"mpi-kanban/event/v1","at":"2026-07-12T22:15:00Z","actor":"claude","event":"task.moved","data":{"id":"MPI-270","from":"todo","to":"doing"}}
 {"schema":"mpi-kanban/event/v1","at":"2026-07-12T23:40:00Z","actor":"claude","event":"task.moved","data":{"id":"MPI-270","from":"doing","to":"done"}}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-271","at":"2026-07-13T00:22:22.982Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-271 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-272","at":"2026-07-13T03:26:44Z","actor":"claude","summary":"Created MPI-272 (media-load path-into-string cleanup) with large plan."}
