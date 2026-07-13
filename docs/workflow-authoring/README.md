@@ -36,7 +36,7 @@ into the matching file below**, or add a new small file. Rules:
 | [mpi-nodes.md](mpi-nodes.md) | **MpiNodes is our own node pack** (`C:\AI\Mpi\ComfyUi-MpiNodes`, ~60 nodes). What's in it, and that we can add a new node any time we need one. |
 | [injection.md](injection.md) | How the app writes values into a graph: the `Input_*`/`Output_*` title law, the injector target-input list, and the traps (silent title-miss, LoRA objects, media params). |
 | [generator-patterns.md](generator-patterns.md) | Template → runtime files: the orchestrate/registry/handler system, and the **selector→N-files** pattern (boolean split, `input_tier` 1/2/3 → three files). |
-| [media-inputs.md](media-inputs.md) | **Media-input placeholder rule** — any `LoadImage`/`LoadAudio`/`LoadLatent` on an optional input needs `placeholder.png`/`ltx_silence.wav` baked **and** staged. Required-vs-optional, the staging gate, the guard. Agents miss this. |
+| [media-inputs.md](media-inputs.md) | **Media-input path→string contract (MPI-272)** — image/mask/video/audio are path-reading loaders (`MpiLoadImageFromPath`/`MpiLoadAudio`/`MpiLoadVideo`) that self-gate on empty `string`; no placeholder. Only `LoadLatent` still stages a default. Path source law + reuse-404 soft-error. |
 | [variant-injection.md](variant-injection.md) | **Diffusion-model / UNETLoader variant axis** — ship one graph, load a different transformer weight per GPU arch or quality (`variants.arch`, weight-only swap vs `workflowSuffix`). |
 
 ## The one-paragraph model

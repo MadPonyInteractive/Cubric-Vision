@@ -35,8 +35,9 @@ To add a family:
 One template, one `MpiSimpleBoolean` gate feeding an `MpiIfElse`. The handler
 deep-copies the template per output value, stamps the boolean, writes the file.
 Reference: `generate_wan5b.py` (`Input_Text_to_video` → `Wan5B_t2v.json` +
-`Wan5B_i2v.json`). Also stamp any optional media placeholder (`placeholder.png`) so the
-graph validates when no image is supplied.
+`Wan5B_i2v.json`). Media inputs need no placeholder stamp — path→string loaders
+self-gate on empty ([media-inputs.md](media-inputs.md)); only `LoadLatent` nodes
+still need a staged default.
 
 ## Pattern B — tier selector: `MpiInt` → `MpiAnySwitch` (low / balanced / high)
 
@@ -112,9 +113,9 @@ The value goes into the selector node's **widget input key**, not a made-up name
 `MpiString`/`MpiText` → `string`/`text`. (Same set the runtime injector targets —
 [injection.md](injection.md).) Stamp the wrong key and the value is silently ignored.
 
-## Media-input placeholder (every handler)
+## Media inputs — path→string (latents excepted)
 
-Any template with an *optional* `LoadImage`/`LoadAudio`/`LoadLatent` node must stamp a
-staged placeholder (`placeholder.png` / `ltx_silence.wav`) in each runtime file, or
-ComfyUI rejects the graph at prompt time. Full contract (required-vs-optional, the
-staging gate, the guard test): [media-inputs.md](media-inputs.md).
+Image/mask/video/audio inputs are path-reading loaders (`MpiLoadImageFromPath` /
+`MpiLoadAudio` / `MpiLoadVideo`) that self-gate on an empty `string` — no
+placeholder to stamp. The one survivor: any `LoadLatent` node still needs its
+baked latent staged into the engine `input/`. Full contract: [media-inputs.md](media-inputs.md).

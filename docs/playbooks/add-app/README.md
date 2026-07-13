@@ -63,6 +63,15 @@ app-touched input/output nodes are path-reading** (see [02](02-media-io.md)) and
 empty input. The in-app engine run is the second gate — a workflow that works in the browser
 but not the app is an APP-SIDE bug (injection/routing), not a workflow bug (MPI-259 audio).
 
+**Getting the graph into the repo — the raw→API sync (MPI-272 tooling).** Do NOT hand-convert
+the API JSON. Export the LiteGraph graph, drop it in `comfy_workflows/raw/<Name>.json` (a bare
+name → a direct runtime file; a `_template` suffix → a generator source), then run
+`node scripts/sync-raw-workflows.mjs` (add `--all` to reconvert every raw source). It commits
+the raw source, converts via the live `/object_info`, **gates on
+`validate-injection-rules.mjs`** (STOPS + names the node on a violation — fix in the graph and
+re-export, never hand-patch), orchestrates, and leaves the generated files **staged** for
+`/mpi-end`. Requires a running ComfyUI. `raw/` is USER-OWNED — tooling reads it, never writes it.
+
 ## The traps that actually bite (all detailed in the section files)
 
 | trap | where |

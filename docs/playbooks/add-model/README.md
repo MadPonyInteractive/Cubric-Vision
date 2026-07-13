@@ -75,8 +75,7 @@ Two structural forks decide everything downstream:
 | trap | where |
 |---|---|
 | Capture title is `Output_Image` (image) / `Output_Video` (video) / `Output_Preview` (multi-stage preview). Single naming law (MPI-252); no bare `Output` | [04](04-ops-and-controls.md) |
-| **Optional** media input (a `Load*` on a graph that can run without it) needs `placeholder.png` baked **and** staged. **Required** inputs need neither — the injector overwrites the widget | [01](01-workflow-split.md) |
-| `_prepareWorkflowInputs` gates on `mediaType === 'video'` — an image model with an optional `LoadImage` never stages. Widen the gate | [01](01-workflow-split.md) |
+| Media inputs (image/mask/video/audio) are path→string loaders that self-gate on empty — no placeholder (MPI-272). Only `LoadLatent` still stages a baked default | [01](01-workflow-split.md) |
 | **Baked LoRAs are normal deps** (`size`, **no `type`**, `loras/<family>/` subfolder). Not user slots. LTX ships 3, Wan-5B 1 | [02](02-dependencies-r2.md) |
 | `isWeightDep()` counts every LoRA dep toward `totalWeightsGb()` — over-counts mutually-exclusive style LoRAs. **Measure before special-casing** | [02](02-dependencies-r2.md) |
 | VRAM/RAM table is **computed**, never authored. Get the dep `size` strings right and it is correct. `sizeTier` is only a badge | [03](03-model-registry.md) |
@@ -106,7 +105,7 @@ Two structural forks decide everything downstream:
 - [ ] Output capture titled `Output_Image` (image) / `Output_Video` (video) / `Output_Preview` (multi-stage preview) — [04](04-ops-and-controls.md). Single naming law (MPI-252); no bare `Output`
 - [ ] Author + save the workflow template in `comfy_workflows/scripts/workflow_generation/`
 - [ ] Verify the op-boolean feeds only the MpiIfElse; normalize all loader file paths to bare filenames — [01](01-workflow-split.md)
-- [ ] **Any OPTIONAL media input** (a `Load*` on a graph that can run without it)? Bake `placeholder.png` AND confirm `_prepareWorkflowInputs` stages it for this op's `mediaType` — [01](01-workflow-split.md). Required inputs need neither
+- [ ] **Media inputs** are path→string loaders (`MpiLoadImageFromPath`/`MpiLoadAudio`/`MpiLoadVideo`) that self-gate on empty — no placeholder (MPI-272). Any `LoadLatent`? Bake its latent AND confirm `_prepareWorkflowInputs` stages it — [01](01-workflow-split.md)
 - [ ] Write/run the generator → runtime files in `comfy_workflows/`
 - [ ] Add `progressStages.js` entry — COUNT tqdm bar restarts live per run mode — [02](02-dependencies-r2.md); wrong = wrong `N/M` in status bar
 - [ ] Add dep entries (`dependencies.js`), reuse shared deps, `sha256: null`

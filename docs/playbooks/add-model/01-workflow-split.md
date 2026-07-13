@@ -10,6 +10,24 @@ Before any app wiring, build and prove the ComfyUI graph in the standalone local
 ComfyUI — the fast iteration bench. Only once it produces good output there do you
 export the `_template.json` and start the app-wiring steps.
 
+**Getting the graph into the repo — the raw→API sync (MPI-272 tooling).** Do NOT
+hand-convert or hand-edit the API JSON. Export the LiteGraph graph, drop it in
+`comfy_workflows/raw/<Name>_template.json` (the `_template` suffix routes it to a
+generator source; a bare `<Name>.json` becomes a direct runtime file), then run:
+
+```
+node scripts/sync-raw-workflows.mjs        # convert git-changed raw → API → validate → orchestrate
+node scripts/sync-raw-workflows.mjs --all  # reconvert every raw source
+```
+
+It commits the raw source, converts it to API via the live `/object_info`,
+**gates on `validate-injection-rules.mjs`** (STOPS + names the node on a
+title/capture/seed/integrity violation — fix in the ComfyUI graph and re-export,
+never hand-patch the API), runs `orchestrate.py`, and leaves the generated API +
+runtime **staged** for `/mpi-end`. Requires a running ComfyUI (`COMFY_URL`
+overrides `http://127.0.0.1:8188`). `raw/` is USER-OWNED — tooling reads it, never
+writes it.
+
 - **Local live-test workflows folder:** `G:\ComfyUi\ComfyUI\user\default\workflows\`
   (e.g. `NVIDIA_PID_template.json`). This is the primary authoring bench.
 - **Local models dir:** `G:\CubricModels\` (checkpoints → `diffusion_models/`,
@@ -75,20 +93,18 @@ runtime files, one per boolean value.
   machinery you don't need. (ponytail: only add stage-2/gguf branches if the model
   actually has them.)
 
-### Media-input nodes need a placeholder
+### Media inputs are path→string (no placeholder; latents excepted)
 
-Any `LoadImage`/`LoadAudio`/`LoadLatent` node on a graph that can run with **no** media
-supplied (an *optional* input) must bake a generic placeholder (`placeholder.png` /
-`ltx_silence.wav`) **and** have it staged, or ComfyUI rejects the graph at prompt time.
-**Required** inputs (`requiresImages ≥ 1`) need neither — the injector overwrites the
-widget.
+Image/mask/video/audio inputs are path-reading loaders (`MpiLoadImageFromPath` /
+`MpiLoadAudio` / `MpiLoadVideo`) that take a full project-folder path in a `string`
+widget and **self-gate on empty string** — no placeholder file, no staging (MPI-272).
+The one survivor: any `LoadLatent` node still needs its baked latent staged into the
+engine `input/`, or ComfyUI rejects the graph at prompt time.
 
-This is a **cross-cutting rule** (models + apps), so the full contract — the
-required-vs-optional table, the too-narrow staging gate, the hand-export trap, and the
-guard test — lives in **[../../workflow-authoring/media-inputs.md](../../workflow-authoring/media-inputs.md)**.
-Read it before shipping any workflow with a media node. Model-onboarding note: even a
-model that needs **no op split** wants a generator handler when it has an optional media
-input, so the placeholder is re-stamped rather than frozen from the last export.
+This is a **cross-cutting rule** (models + apps), so the full contract — the path
+source law, the reuse-404 soft-error, and the latent survivor — lives in
+**[../../workflow-authoring/media-inputs.md](../../workflow-authoring/media-inputs.md)**.
+Read it before shipping any workflow with a media node.
 
 Verify the op-boolean node feeds ONLY the MpiIfElse gate (nothing else changes
 between t2v/i2v) before trusting a single-boolean split:

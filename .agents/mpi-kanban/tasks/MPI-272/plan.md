@@ -68,7 +68,22 @@ with a dirty-tree guard). Reference from the add-model + add-app playbooks.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Phase 1 (generators)** — committed `bde02016`. All 7 `generate_*.py` no
+  longer stamp `placeholder.png`/`ltx_silence.wav`; `orchestrate.py --all` runs
+  clean (0 STAMP/FAIL); regenerated runtime files now match the migrated templates
+  (the committed runtime in `3cec75ef` was stale/pre-migration — orchestrate healed
+  it: `LoadImage`+`ImageResizeKJv2` → `MpiLoadImageFromPath`+`MpiCrop`). Workflows
+  committed with the user first (`3cec75ef`).
+
+### DRIFT — two runtime workflows still on OLD `LoadImage` (plan assumed all migrated)
+
+`comfy_workflows/App_sdxl_regen.json` (Image Regen app, node 1571) and
+`comfy_workflows/remove_background.json` still carry `LoadImage` + `image:"placeholder.png"`.
+Neither is orchestrated (no template/generator), neither was in the user's ~30-file
+sweep. **Phase 3 removes the `_uploadImage` upload branch these two depend on** — they
+MUST be migrated to `MpiLoadImageFromPath` (via `scripts/workflow-to-api.mjs` from their
+`raw/` source, or hand-edit) BEFORE Phase 3 deletes the branch, or i2i on those two
+breaks. Decision surfaced to user.
 
 ## Remaining Work
 
@@ -89,6 +104,28 @@ clean generated tree, so generators come first — not a parallel batch.
   runs to completion with **zero** `[STAMP]`/`[FAIL]` lines and regenerates every
   runtime file. Spot-check one LTX runtime file: `Input_Start_Frame` is
   `MpiLoadImageFromPath` with an empty `string`, no placeholder.
+
+### Phase 2 — DONE (`2afe11ea`)
+
+`WORKFLOW_INPUT_DEFAULTS` = latents only; `_MEDIA_INPUT_CLASSES` = `LoadLatent` only.
+Grep clean (only the MPI-272 doc-comment mentions the dropped placeholders).
+
+### Phase 3 — CODED, awaiting user live-app verify (NOT committed)
+
+`comfyController.js`: image+mask now flip to `imagepath` when the target is
+`MpiLoadImageFromPath` (a detailer mask is that class with `channel:'mask'`); the
+unified branch runs `_resolveMediaPath` + remote `_uploadRemoteMedia` for image/
+mask/video/audio. Deleted `_uploadImage`. Added `_assertMediaSourceExists` (HEAD on
+`/project-file?path=`; 404 → tagged `input_asset_deleted` soft-error) to preserve the
+reuse-404 WARNING toast — the old branch got it from the upload 404, the path branch
+has no fetch so it needs an explicit existence probe. Injector logic self-checked
+(`/tmp/mpi272_injector_check.mjs`, all pass). `_inject` writes the resolved path into
+the node's `string` field (present) and skips `image`/`mask` (absent on path nodes).
+**USER VERIFY (live app) before commit:** i2i (Input_Image), detailer (Input_Mask,
+channel), reuse-prompt on a gallery card, delete a reused card's `.preview-assets`
+source → reuse → WARNING toast (not crash dialog), one remote-Pod image gen.
+
+---
 
 ## Phase 2: Backend — strip placeholder/silence staging (keep latents)
 
@@ -129,6 +166,22 @@ clean generated tree, so generators come first — not a parallel batch.
   reused card's `.preview-assets` source and re-run reuse → WARNING toast
   "assets no longer exist", not the crash dialog. Remote (Pod) path: one image gen
   on a connected Pod injects the Pod-absolute path.
+
+### Phase 4 — DONE (this session, awaiting /mpi-end commit)
+
+`git rm comfy_workflows/input/placeholder.png` + `ltx_silence.wav` (3 latents kept).
+Docs rewritten to path→string contract: `docs/workflow-authoring/media-inputs.md`
+(full rewrite), `.claude/rules/comfy_injection.md` (validation trap → latents-only),
+`generator-patterns.md`, `injection.md`, `workflow-authoring/README.md`,
+`add-model/README.md` + `01-workflow-split.md`, `docs/models/wan/two-stage-sigmas.md`.
+Grep clean: no live placeholder/silence/STAMP refs outside archive/task/historical.
+
+### Phase 5 — DONE (this session)
+
+`sync-raw-workflows.mjs` referenced in `add-model/01-workflow-split.md` §0a and
+`add-app/README.md` §0a (raw→API→validate→orchestrate→stage; raw/ user-owned).
+Converter verified on LTX + Chroma raw templates (118 / 33 nodes, 0 errors).
+No npm alias added (script conventions don't warrant one — node invocation is clear).
 
 ## Phase 4: Remove dead placeholder assets + doc rewrite
 
@@ -181,7 +234,74 @@ End-to-end done when:
 
 ## Plan Drift
 
-- None yet.
+- **Two straggler workflows** (App_sdxl_regen.json, remove_background.json) were still on
+  old LoadImage — plan assumed all migrated. Migrated to MpiLoadImageFromPath (`72eeeae6`).
+- **krea2 crop fix** was skipped by the first sync (its raw was an accidental API export,
+  older mtime). User re-exported LiteGraph backup; processed `e33ca17e` (MpiCrop→ImageResizeKJv2).
+- **Phase 5 (raw→API tooling) EXPANDED far beyond the plan** into a full pipeline rebuild
+  (user-driven): raw/ is now TRACKED in git (`4d62d586`, 23 sources). `sync-raw-workflows.mjs`
+  rewritten git-driven (not mtime): git-diff raw vs HEAD → commit raw FIRST → convert →
+  **VALIDATE-GATE** → orchestrate → leave generated STAGED for /mpi-end (`5921e30d`). NEW
+  `scripts/validate-injection-rules.mjs` (title-prefix law / capture / seed-convention /
+  integrity) gates every converted API before bake; STOP + name node on violation, never
+  auto-fix. raw/ hard-protected read-only in both converters (`f918c907`).
+- **raw/ is USER-OWNED, read-only to all tooling** — new law. [[feedback_raw_workflows_user_owned]]
+- **NEW BUG FOUND by the validator** (uncarded follow-up): NVIDIA_PID had 4 SamplerCustom with
+  baked noise_seed + no Input_Seed (MPI-257 violation). USER FIXED in ComfyUI (added MpiInt
+  titled Input_Seed → 4 samplers), re-exported. Validated clean. No card yet — consider one if
+  other workflows need the same audit.
+
+## Session state @ 2026-07-13 (context full → handoff)
+
+**COMMITTED (branch 1.2.0):** P1 generators (`bde02016`), stragglers (`72eeeae6`), P2 backend
+staging (`2afe11ea`), reconvert-post-crop (`5bb4d47b`), raw-guards (`f918c907`), krea2 (`e33ca17e`),
+tooling rewrite (`5921e30d`), raw sources tracked (`4d62d586`).
+
+**STAGED, uncommitted (→ /mpi-end):** 20 generated workflow files (API templates + orchestrated
+runtime) from the full sync bootstrap. Do NOT re-run orchestrate on this dirty tree.
+
+**Phase 3 (injector) = COMMITTED + LIVE-VERIFIED (`47bac3b8`).** DONE.
+Final approach EVOLVED past the plan: route media by **TARGET NODE CLASS**, not title guessing.
+Any param whose same-titled node is a path-reading loader (`MpiLoadImageFromPath`, `MpiLoadAudio`,
+`MpiLoadVideo`, `VHS_LoadVideoPath`, `MpiString` fan-out) → `imagepath` kind → `_resolveMediaPath`
++ remote `_uploadRemoteMedia`. The OLD title-pattern sweep (input_image/video/audio only) MISSED
+the video frame slots `Input_Start_Frame`/`Input_End_Frame` → raw URL reached the path node
+unresolved → self-gate → "no output returned". Class-driven routing is title-agnostic (covers
+all current + future slots). Also: `_uploadImage` deleted; `_assertMediaSourceExists` added
+(reuse-404 soft-error). Data-URL staging route `POST /comfy/stage-media-data-url` (auto-mask
+painted mask is a data: URL; path node needs a file). Audio slot title `Input_Audio_File` →
+`Input_audio` (3 registry entries, case-insensitive match). node_lock MpiNodes `2d409b54` →
+`0391e34` (Pod needs path/audio/blocklist nodes). LTX i2v/t2v rebaked off renamed audio node.
+**VERIFIED LIVE:** i2i, detailer+mask (local), t2v + i2v start/end frame (local Wan), reuse,
+**start+end+audio on remote Pod LTX** (the `_uploadRemoteMedia` twin + fresh MpiNodes pin).
+Deleted-asset warning-toast = OTHER AGENT (empty-media/missing-link, triggers on Q).
+
+**TWO BUGS FOUND + FIXED THIS SESSION (converter, not migration):**
+- **Seed-phantom control_after_generate** (`7571fe2e`): the LiteGraph→API converter never skipped
+  the phantom `control_after_generate` value the frontend synthesizes for INT widgets named
+  `seed`/`noise_seed` when `/object_info` omits the flag (RES4LYF ClownsharKSampler_Beta, Impact
+  MaskDetailerPipe, MpiPromptList). Every later widget shifted → `steps:"fixed"`, `sampler_mode:"fixed"`,
+  `probability:"fixed"`, `batch_size:0.2`, `refiner_ratio:10`. Fix matches frontend rule EXACTLY:
+  `control = inputSpec.control_after_generate ?? ['seed','noise_seed'].includes(inputSpec.name)`.
+  Regen krea2/Chroma t2i + all 8 detailers (`582650bc`). Detail → [[tool_litegraph_to_api_converter]].
+- **auto-mask no-detection crash**: user added `MpiBlockIfEmptyList` (guards empty-SEGS IndexError);
+  converted + shipped in `582650bc`.
+
+**Still pending: P4** (git rm `comfy_workflows/input/placeholder.png` + `ltx_silence.wav`; rewrite
+injection-rules docs to path→string contract). **P5 docs** (reference raw→API sync command in
+add-model/add-app playbooks — tooling already built). **/mpi-end** (commit 20 pre-staged generated
+files, if still staged — may have been swept by the release agent; re-check).
+
+**DEFERRED (NOT a MPI-272 regression — user to test):** LTX-2.3 audio gen ran with correct sound
+but **wrong duration** — 1s → ~500ms, 2s → same ~500ms (timing ignored/clamped). Could be
+duration-inject dead (node 75 `Input_Duration`→76 `MpiWanSeconds`→frames), audio-length driving
+video length, OR a LoRA strength. Duration IS wired app-side (PromptBoxControls.js:534 emits
+`{Input_Duration:v}`). **Discriminator test the user will run next Pod connect:** (1) t2v NO audio,
+1s vs 2s — if lengths differ, duration works + audio is the override; if same, duration inject/wiring
+is the bug. (2) audio gen in the BROWSER — if browser is ALSO short → workflow issue (not conversion);
+if browser correct + app wrong → conversion/injection bug. User: "we fixed this during build, can't
+remember how." Trace start points: duration chain 75→76→`LTXVEmptyLatentAudio.frames_number`; audio
+path `LTXVReferenceAudio`(274)/`LTXVEmptyLatentAudio`(144)/`LTXVAudioVAEEncode`(198).
 
 ## Preservation Notes
 

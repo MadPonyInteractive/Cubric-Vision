@@ -78,9 +78,9 @@ actually drifts before tuning — not all prompts show it.
 
 ## Generator note
 
-`generate_wan.py` now stamps `Input_Start_Frame`/`Input_End_Frame` LoadImage
-nodes back to `placeholder.png` (mirrors the LTX handler). The app injects the
-real frame by the **Tier-2 title** `Input_Start_Frame`/`Input_End_Frame` — if a
+`Input_Start_Frame`/`Input_End_Frame` are now `MpiLoadImageFromPath` path→string
+loaders that self-gate on empty — no placeholder stamp (MPI-272). The app injects
+the real frame path by title `Input_Start_Frame`/`Input_End_Frame` — if a
 re-export reverts these to the bare `Start_Frame`/`End_Frame`, injection silently
-misses and the placeholder ships (a "wrong output, ignores input image" bug).
-Titles + `divisible_by: 16` on `ImageResizeKJv2` must survive every re-export.
+misses and the node self-gates to no frame (a "wrong output, ignores input image"
+bug). Titles + `divisible_by: 16` on `MpiCrop` must survive every re-export.
