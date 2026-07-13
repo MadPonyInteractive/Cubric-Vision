@@ -54,6 +54,7 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:model:update` `{ modelId, opName, key, value }` — from PromptBoxControls. `opName` resolved from each control's `scope`: `'shared'` (ratio/orientation/quality, batch, previewStage, duration, motionIntensity) or the active op key (denoise, useGrid, upscaleFactor). Never includes generation mode.
 LISTENS: `workspace:inject-prompts` `{ positive, negative }` — sets textarea values
          `promptbox:generation-end` — clears generating state
+         `assets:cleaned` `{ folderPath }` — project Cleanup wiped the preview-assets store; `clearMedia()`s all staged chips (emitted by projectUI after `/project/cleanup-assets`; also clears `state.promptMedia` there so an unmounted box doesn't restore dead chips)
          `state:changed` — updates Cue button label on `generationQueueCount` change; re-renders Cue/Loop label on `loopArmed` change
          Hotkeys `generation.run` (Ctrl+Enter) cue, `generation.stop` (Ctrl+Alt+Enter) stop, `generation.loop` (Ctrl+L) toggle `state.loopArmed` — all bound in setup
          (NOT `workspace:set-operation` — parent block validates op + calls `el.setOperation()`)
