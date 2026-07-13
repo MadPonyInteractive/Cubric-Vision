@@ -542,7 +542,7 @@
  * @property {string} message - Notification message
  * @property {'info'|'success'|'warning'|'danger'} [variant='info'] - Visual variant
  * @property {number} [duration=3000] - Auto-hide duration in ms
- * @property {boolean} [sound=false] - Play the notification chime (once per burst). Async-completion toasts only.
+ * @property {boolean} [sound=true] - Play the notification chime (once per burst). Pass false for immediate user-action feedback (Connect, Install, Cue).
  */
 
 /**

@@ -502,12 +502,14 @@ export const StatusBar = {
      * @param {string} message
      * @param {'success'|'info'|'warning'|'danger'} [variant='info']
      * @param {number} [duration=6000]
-     * @param {{sound?: boolean}} [opts] - sound: play the chime (async-completion toasts only).
+     * @param {{sound?: boolean}} [opts] - sound: play the chime. Defaults true;
+     *        pass `{ sound: false }` for toasts fired as the IMMEDIATE feedback
+     *        of a user action (Connect, Install, Cue…) so a click never rings.
      */
     notify(message, variant = 'info', duration = 6000, opts = {}) {
         const wrapper = document.createElement('div');
         document.body.appendChild(wrapper);
-        const t = MpiToast.mount(wrapper, { message, variant, duration, sound: opts.sound === true });
+        const t = MpiToast.mount(wrapper, { message, variant, duration, sound: opts.sound !== false });
         t.on('close', () => { t.destroy(); wrapper.remove(); });
     },
 
@@ -579,9 +581,11 @@ export const StatusBar = {
             _queueDepth = Math.max(0, Number(count) || 0);
             _renderJobLabel();
         }));
-        _listenUnsubs.push(Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success')));
-        _listenUnsubs.push(Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning')));
-        _listenUnsubs.push(Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info')));
+        // `sound` defaults on; an emitter passes `sound:false` for a toast that
+        // is the immediate feedback of a user action (Connect, Install, Cue…).
+        _listenUnsubs.push(Events.on('ui:success', ({ message, sound }) => StatusBar.notify(message, 'success', 6000, { sound })));
+        _listenUnsubs.push(Events.on('ui:warning', ({ message, sound }) => StatusBar.notify(message, 'warning', 6000, { sound })));
+        _listenUnsubs.push(Events.on('ui:info',    ({ message, sound }) => StatusBar.notify(message, 'info', 6000, { sound })));
         // MPI-64 4.4: idle label scope tracks the remote engine connection.
         // MPI-73: `phase` ('connecting'|'disconnecting') overrides the steady
         // Local/Remote scope while a transition is in progress.

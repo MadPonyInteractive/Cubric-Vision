@@ -738,7 +738,8 @@ async function _runRemoteBoot(runpod) {
     _announced = true;
     // The Pod is real now → leave the wait state and surface the connecting phase.
     if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
-    StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000);
+    // sound:false — immediate feedback of pressing Connect; a click must not ring.
+    StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000, { sound: false });
     _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
   };
   if (warm) _announceConnecting();

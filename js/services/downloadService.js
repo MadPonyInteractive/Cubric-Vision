@@ -147,7 +147,8 @@ const downloadService = {
             // MPI-120: offline is an expected, actionable state → warning toast,
             // not the GitHub-report error dialog.
             if (err.offline) {
-                Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models." });
+                // sound:false — immediate feedback of pressing Install; a click must not ring.
+                Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models.", sound: false });
             } else if (_isOutOfSpaceError(err.error)) {
                 // Disk-full PRE-FLIGHT reject (local statfs gate OR remote volume
                 // free-space gate) — expected + user-actionable, so the friendly
@@ -155,8 +156,10 @@ const downloadService = {
                 // download:failed handler. [[feedback_error_dialog_vs_toast]]
                 const model = getModelById(modelId);
                 const modelName = model?.name || modelId;
+                // sound:false — immediate feedback of pressing Install; a click must not ring.
                 Events.emit('ui:warning', {
                     message: `Not enough disk space to install ${modelName}. Free up space and try again.`,
+                    sound: false,
                 });
             } else {
                 Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });

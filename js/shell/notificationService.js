@@ -61,7 +61,7 @@ export function initNotificationService() {
                 });
                 return;
             }
-            StatusBar.notify(`${op} finished.`, 'success', 6000, { sound: true });
+            StatusBar.notify(`${op} finished.`, 'success');
         } catch (err) {
             clientLogger.error('notificationService', 'failed to notify:', err);
         }
@@ -82,7 +82,7 @@ export function initNotificationService() {
                 });
                 return;
             }
-            StatusBar.notify(`${modelName} installed.`, 'success', 6000, { sound: true });
+            StatusBar.notify(`${modelName} installed.`, 'success');
         } catch (err) {
             clientLogger.error('notificationService', 'failed to notify:', err);
         }

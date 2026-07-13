@@ -116,7 +116,8 @@ function _findMissingMediaSlot(operation, mediaItems = []) {
 // dispatch so the message reads identically wherever the block lands.
 function _warnMissingMediaSlot(slot) {
     const noun = slot.mediaType === 'video' ? 'video' : slot.mediaType === 'audio' ? 'audio file' : 'image';
-    Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.` });
+    // sound:false — immediate feedback of pressing Cue; a click must not ring.
+    Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.`, sound: false });
 }
 
 function _promptExcerpt(text = '') {
