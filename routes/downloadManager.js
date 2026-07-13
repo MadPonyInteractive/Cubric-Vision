@@ -244,7 +244,7 @@ function _isInsidePath(root, target) {
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
-const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
+const _activeDownloaders = new Map(); // depId → FileDownloader (actively downloading)
 // 3 parallel deps. Was 1 (commit 47e924a) only because parallel HF/Xet streams
 // fought over throttled bandwidth and made each other worse. Now that all MPI
 // weights are on R2 (free egress, no wave-throttle, MPI-129), parallel pulls no
@@ -327,13 +327,13 @@ function _createModelJob(modelId, deps) {
     };
 }
 
-// ── ResumableDownloader (node-downloader-helper wrapper) ─────────────────────
-// NB: "Resumable" is historical — resume was removed (MPI-258 Bug 2, the 200-vs-206
-// append corruption). This is now a plain single-stream NDH wrapper: start, cancel
-// (clean stop + remove), no pause/resume. Kept the class name to avoid churning every
-// call site. NDH itself stays — it downloads every engine + model file.
+// ── FileDownloader (node-downloader-helper wrapper) ──────────────────────────
+// Plain single-stream NDH wrapper: start, cancel (clean stop + remove), no
+// pause/resume — resume was removed (MPI-258 Bug 2, the 200-vs-206 append
+// corruption); the class was renamed from ResumableDownloader to match (MPI-276).
+// NDH itself stays — it downloads every engine + model file.
 
-class ResumableDownloader {
+class FileDownloader {
     constructor(depJob, localPath) {
         this.depJob = depJob;
         this.localPath = localPath;
@@ -801,7 +801,7 @@ async function _startPendingDeps() {
         }
 
         depJob.status = 'downloading';
-        const downloader = new ResumableDownloader(depJob, depJob.localPath);
+        const downloader = new FileDownloader(depJob, depJob.localPath);
         _activeDownloaders.set(depJob.id, downloader);
 
         _wireProgress(depJob, downloader);
@@ -1108,7 +1108,7 @@ function _onRemoteInstallEvent(evt) {
         // re-reads the whole file — seconds on a CPU Pod, no byte progress). Flip the
         // bar to the indeterminate "Verifying…" sweep so the otherwise-silent stall
         // at 100% is explained — matching the LOCAL path (see download:verifying emit
-        // in ResumableDownloader.on('end')). Keeps remote + local consistent.
+        // in FileDownloader.on('end')). Keeps remote + local consistent.
         // (MPI-140; supersedes the MPI-95 park-at-100% determinate choice.)
         const total = Number(data.total) || depJob.totalBytes || 0;
         if (total) depJob.totalBytes = total;
@@ -2205,7 +2205,7 @@ module.exports = {
     router,
     cancelAllDownloads,
     broadcastEngineEvent,
-    ResumableDownloader,
+    FileDownloader,
     registerEngineDownload,
     clearEngineDownload,
     runCustomNodeInstall: _runCustomNodeInstall,

@@ -11,7 +11,7 @@ const {
     clearDownloadMarker,
     getPartialDownloadState,
 } = require('../routes/downloadCompletion');
-const { ResumableDownloader } = require('../routes/downloadManager');
+const { FileDownloader } = require('../routes/downloadManager');
 
 async function withTempDir(fn) {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cubric-download-test-'));
@@ -49,7 +49,7 @@ async function testDownloaderResumesMarkedPartial() {
         await markDownloadInProgress(file, { depId: 'resume-dep' });
 
         const depJob = { id: 'resume-dep', url: 'https://example.invalid/file', downloadedBytes: 0 };
-        const downloader = new ResumableDownloader(depJob, file);
+        const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
             start: () => calls.push({ method: 'start' }),
@@ -73,7 +73,7 @@ async function testDownloaderStartsWhenNoPartialExists() {
     await withTempDir(async (dir) => {
         const file = path.join(dir, 'new.bin');
         const depJob = { id: 'new-dep', url: 'https://example.invalid/file', downloadedBytes: 0 };
-        const downloader = new ResumableDownloader(depJob, file);
+        const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
             start: () => calls.push({ method: 'start' }),
@@ -95,7 +95,7 @@ async function testDownloaderDoesNotResumeUnmarkedExistingFile() {
         const file = path.join(dir, 'existing.bin');
         await fs.writeFile(file, 'complete-or-unknown');
         const depJob = { id: 'existing-dep', url: 'https://example.invalid/file', downloadedBytes: 0 };
-        const downloader = new ResumableDownloader(depJob, file);
+        const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
             start: () => calls.push({ method: 'start' }),
@@ -115,7 +115,7 @@ async function testDownloaderCancelUsesStop() {
     await withTempDir(async (dir) => {
         const file = path.join(dir, 'cancel.bin');
         const depJob = { id: 'cancel-dep', url: 'https://example.invalid/file', downloadedBytes: 0 };
-        const downloader = new ResumableDownloader(depJob, file);
+        const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
             stop: () => {
