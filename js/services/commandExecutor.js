@@ -92,23 +92,23 @@ function _paramIsTrue(params, title) {
     return false;
 }
 
-/** Media-input node classes whose baked filename must resolve in the engine `input/`. */
-const _MEDIA_INPUT_CLASSES = new Set(['LoadImage', 'LoadImageMask', 'LoadAudio', 'LoadLatent']);
+/** Latent-input node classes whose baked filename must resolve in the engine `input/`. */
+const _MEDIA_INPUT_CLASSES = new Set(['LoadLatent']);
 
 async function _prepareWorkflowInputs(payload, workflow) {
-    // A workflow carrying ANY media-input node (LoadImage/LoadAudio/LoadLatent) has a
-    // baked placeholder filename that must exist in the engine `input/`, or ComfyUI
-    // rejects the graph at prompt time — even for nodes whose output is gated off (a
-    // t2v never uses the frame; a plain Krea2 t2i never uses Input_Image).
+    // A workflow carrying a LoadLatent node has a baked latent filename that must
+    // exist in the engine `input/`, or ComfyUI rejects the graph at prompt time —
+    // even for nodes whose output is gated off (a stage-1 run never uses the loaded
+    // latent behind the Is_Continue gate).
     //
-    // This used to gate on `mediaType === 'video'`, which was itself a widening of an
-    // earlier `commandIsMultiStage` gate. Both were op-type proxies for the real
-    // question. Krea2 (MPI-242) is the first IMAGE model whose t2i graph carries an
-    // OPTIONAL LoadImage, so the proxy failed again. Inspect the workflow instead —
-    // that is the rule the add-model playbook §2 asks for.
+    // MPI-272: image/audio inputs no longer need staging — they migrated to
+    // self-gating MpiLoadImageFromPath / MpiLoadAudio path nodes that read a full
+    // path from a `string` widget and gate on empty. LoadLatent has no path-string
+    // variant, so latents are the sole staging survivor. (Only the LTX/WAN _ms
+    // stage-2 graphs carry a LoadLatent; every other graph short-circuits here.)
     //
-    // Staging is ~2.3MB locally (a copy), but on the REMOTE engine it uploads each
-    // default to the Pod, so we must not run it for graphs that have no media node.
+    // Staging is small locally (a copy), but on the REMOTE engine it uploads each
+    // default to the Pod, so we must not run it for graphs that have no latent node.
     if (!workflow || typeof workflow !== 'object') return;
     const hasMediaInput = Object.values(workflow).some(
         node => _MEDIA_INPUT_CLASSES.has(node?.class_type)

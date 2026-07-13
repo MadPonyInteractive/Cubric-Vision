@@ -42,28 +42,23 @@ const remoteModels = require('./remoteModels');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
-// Repo-owned defaults staged into the engine input/ before every _ms submit.
-// ComfyUI validates EVERY LoadLatent/LoadImage node in a workflow even when its
-// output is unreached (e.g. behind an Is_Continue gate), so each model family's
-// load-node baked filenames must have a real file here. The engine input/ is
-// garbage-collected on shutdown (cleanComfyUITempFiles), but prepare runs every
-// submit so the defaults are always re-staged.
+// Repo-owned LATENT defaults staged into the engine input/ before every _ms submit.
+// ComfyUI validates EVERY LoadLatent node in a workflow even when its output is
+// unreached (e.g. behind an Is_Continue gate), so each model family's LoadLatent
+// baked filename must have a real file here. The engine input/ is garbage-collected
+// on shutdown (cleanComfyUITempFiles), but prepare runs every submit so the defaults
+// are always re-staged.
 //   ComfyUI_00001_.latent       — WAN _ms video latent (legacy default)
 //   ltx_video_latent_00001_     — LTX Input_Video_Latent (node 67)
 //   ltx_audio_latent_00001_     — LTX Input_Audio_Latent (node 69)
-//   placeholder.png             — generic Input_Start_Frame/End_Frame fallback (t2v
-//                                 has no real frame; i2v injects over it). Shared by
-//                                 any workflow with LoadImage frame nodes (LTX, Wan 5B).
-//                                 (was ltx_placeholder.png — renamed generic.)
-//   ltx_silence.wav             — LTX Input_Audio_File fallback (a gen with no
-//                                 audio input never injects this node; without a
-//                                 staged default it dies on Invalid audio file)
+// MPI-272: image/audio placeholders (placeholder.png / ltx_silence.wav) are GONE —
+// media inputs migrated to self-gating MpiLoadImageFromPath / MpiLoadAudio path
+// nodes (empty `string` = no media). LoadLatent has no path-string variant, so
+// latents remain the sole staging survivor.
 const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
     'ComfyUI_00001_.latent',
     'ltx_video_latent_00001_.latent',
     'ltx_audio_latent_00001_.latent',
-    'placeholder.png',
-    'ltx_silence.wav',
 ]);
 
 function _broadcastComfyEvent(event, data) {
@@ -226,11 +221,9 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
                 });
             }
             // Remote engine: upload the bundled default to the Pod volume input
-            // dir (idempotent, overwrite) instead of a local copy. Route by
-            // extension — `.latent` via the latent endpoint, image/audio
-            // placeholders (LTX ltx_placeholder.png / ltx_silence.wav) via the
-            // generic media endpoint. Both land in the same Pod input/ dir, but
-            // the latent endpoint may reject non-.latent uploads.
+            // dir (idempotent, overwrite) instead of a local copy. All defaults are
+            // now `.latent` (MPI-272 dropped the image/audio placeholders), so this
+            // always uses the latent endpoint; the media fallback stays for safety.
             if (remoteActive) {
                 const endpoint = filename.endsWith('.latent')
                     ? '/wrapper/upload/latent'
