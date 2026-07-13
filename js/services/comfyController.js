@@ -1058,7 +1058,12 @@ function createEngine({ engine, alwaysLocal }) {
 
         // 2. Handle media inputs by inspecting the matching workflow node input.
         // This keeps future named slots (Input_Image_2, Reference_Video_3, etc.)
-        // from needing another hardcoded map in the controller.
+        // from needing another hardcoded map in the controller. MPI-272: media inputs
+        // are path nodes now (fields `string`/`channel` only), so the `image`/`mask`/
+        // `audio` field sniffs below match nothing on today's graphs — the TITLE-PATTERN
+        // sweep further down does the real routing. The `video` sniff still matches the
+        // one remaining `VHS_LoadVideoPath` (exposes a `video` field). Kept for any
+        // future raw-field node; harmless (they set a kind the title sweep would set too).
         const mediaParamKinds = {};
         for (const key of Object.keys(params)) {
             const nodes = Object.values(workflow).filter(node =>
@@ -1072,105 +1077,76 @@ function createEngine({ engine, alwaysLocal }) {
         if (params.Image && !mediaParamKinds.Image) mediaParamKinds.Image = 'image';
         if (params.Mask && !mediaParamKinds.Mask) mediaParamKinds.Mask = 'mask';
         if (params.Input_Mask && !mediaParamKinds.Input_Mask) mediaParamKinds.Input_Mask = 'mask';
-        // Media inputs may target an `MpiString` fan-out node (string field, no
-        // `video`/`audio` input) instead of the VHS loader directly — the split
-        // video/audio workflows feed one injected path into both VHS and `MpiHasAudio`
-        // via a String node (B3). The field-based detection above misses that, so the
-        // raw `/project-file?path=` URL would reach VHS unresolved ("video is not a
-        // valid path"). Force the media kind by TITLE PATTERN so `_resolveMediaPath`
-        // (and remote upload) still runs. Apps (MPI-259) title numbered/lowercase slots
-        // — `Input_Image_2`, `Input_video`, `Input_video_2`, `Input_audio` — so match
-        // the whole `Input_<Type>(_N)?` family case-insensitively, not exact names.
+        // MPI-272: route by TARGET NODE CLASS, not title guessing. Every media input
+        // is now a path-reading loader — `MpiLoadImageFromPath` (image/mask/start-frame/
+        // end-frame), `MpiLoadAudio`, `VHS_LoadVideoPath` — that reads a real filesystem
+        // PATH from a string field (`os.path.isfile`; empty → ExecutionBlocker self-gates
+        // the branch), NOT a ComfyUI input-dir upload name. So ANY param whose same-titled
+        // node is one of these classes needs `_resolveMediaPath` (+ remote upload),
+        // regardless of the slot's title — this covers `Input_Start_Frame`,
+        // `Input_End_Frame`, `Input_Image(_N)`, `Input_video`, `Input_audio`, detailer
+        // `Input_Mask`, and any future slot the app declares. Title-pattern guessing
+        // (input_image only) missed the video frame slots → the raw URL reached the path
+        // node unresolved → self-gate → "no output returned". `imagepath` is the generic
+        // resolve-this-to-a-path kind (all three classes share the same resolve/upload).
+        // Includes the `MpiString` fan-out (a path feeding VHS + MpiHasAudio via a String
+        // node, titled `Input_video` like the param) and `MpiLoadVideo` (interpolate/
+        // upscale). A generic `MpiString` text node (titled "Mpi String") is never a param
+        // key, so the title-match below excludes it — no false path-resolve on text.
+        const PATH_MEDIA_CLASSES = new Set([
+            'MpiLoadImageFromPath', 'MpiLoadAudio', 'MpiLoadVideo', 'VHS_LoadVideoPath', 'MpiString',
+        ]);
         for (const key of Object.keys(params)) {
-            if (mediaParamKinds[key]) continue;
-            if (/^input_video(?:_\d+)?$/i.test(key)) mediaParamKinds[key] = 'video';
-            else if (/^input_audio(?:_\d+)?$/i.test(key)) mediaParamKinds[key] = 'audio';
-            else if (/^input_image(?:_\d+)?$/i.test(key)) mediaParamKinds[key] = 'image';
-        }
-
-        // Route image params by TARGET NODE CLASS (MPI-259). The new
-        // `MpiLoadImageFromPath` node reads a real filesystem PATH from its `string`
-        // input (`os.path.isfile`; empty → ExecutionBlocker self-gates the branch) —
-        // NOT a ComfyUI input-dir upload name. So a param that lands on that node must
-        // take the video/audio PATH-RESOLVE branch (`_resolveMediaPath` + remote
-        // upload-as-Pod-path), not the `_uploadImage` upload-name branch below. Detect
-        // it and flip the kind to `imagepath`. The legacy input-dir `LoadImage` keeps
-        // `image`. This is class-based, so migrating other workflows to the new node
-        // later auto-flips them with no injector change.
-        for (const key of Object.keys(params)) {
-            if (mediaParamKinds[key] !== 'image') continue;
             const targetsPathNode = Object.values(workflow).some(node =>
                 (node?._meta?.title || '').toLowerCase() === key.toLowerCase() &&
-                node?.class_type === 'MpiLoadImageFromPath'
+                PATH_MEDIA_CLASSES.has(node?.class_type)
             );
             if (targetsPathNode) mediaParamKinds[key] = 'imagepath';
         }
 
         for (const [paramKey, mediaKind] of Object.entries(mediaParamKinds)) {
             let val = params[paramKey];
-            if (!val) continue;
+            if (!val || typeof val !== 'string') continue;
 
-            if (mediaKind === 'video' || mediaKind === 'audio' || mediaKind === 'imagepath') {
-                if (typeof val === 'string') {
-                    const localPath = this._resolveMediaPath(val);
-                    // Remote engine: the resolved path is local to this machine and
-                    // invisible to the Pod. Upload the file and inject the Pod-absolute
-                    // path returned by `_uploadRemoteMedia`, which the path-reading
-                    // nodes resolve directly — VHS LoadVideo/LoadAudio and (MPI-259)
-                    // `MpiLoadImageFromPath` (its `os.path.isfile` check runs on the
-                    // Pod). A local-pinned engine keeps the local path.
-                    params[paramKey] = (!this._alwaysLocal && remoteEngineClient.isRemote())
-                        ? await this._uploadRemoteMedia(localPath)
-                        : localPath;
+            // MPI-272: path nodes read a filesystem path (`os.path.isfile`), but some
+            // inputs arrive as a `data:` URL (the auto-mask editor's painted mask).
+            // Stage it to a real file in the engine input dir and swap in that path so
+            // the resolve/upload/inject flow below treats it like any other path.
+            if (val.startsWith('data:')) {
+                const stageRes = await fetch('/comfy/stage-media-data-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dataUrl: val }),
+                });
+                const stageData = await stageRes.json().catch(() => null);
+                if (!stageRes.ok || !stageData?.success) {
+                    throw new Error(`[ComfyUIController] Media staging failed for ${paramKey}: ${stageData?.error || `HTTP ${stageRes.status}`}`);
                 }
-                continue;
+                val = stageData.path;
+                params[paramKey] = val;
             }
 
-            const staticName = `mpi_${paramKey.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.png`;
-
-            // Normalize local project paths to /project-file URLs
-            if (
-                typeof val === 'string' &&
-                !val.startsWith('data:') &&
-                !val.startsWith('blob:') &&
-                !val.startsWith('http') &&
-                !val.includes('project-file')
-            ) {
-                const cleanPath = val.replace(/\\/g, '/');
-                val = `/project-file?path=${encodeURIComponent(cleanPath)}`;
+            // MPI-272: every media input (image / mask / video / audio) is now a
+            // path-reading node. Resolve the value to a real path and inject that.
+            // A reused card carries a `/project-file?path=` URL whose source asset may
+            // have been deleted (manual Cleanup); the source is only touched lazily at
+            // dispatch, so verify it exists BEFORE injecting an empty-gating path — a
+            // missing source must surface the "assets no longer exist" WARNING TOAST
+            // (input_asset_deleted), not silently self-gate into a wrong-mode run or
+            // die mute on the engine. Shared path → covers local AND remote engines.
+            if (val.includes('project-file')) {
+                await this._assertMediaSourceExists(val, paramKey);
             }
 
-            if (
-                typeof val === 'string' &&
-                (val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http') ||
-                 val.includes('project-file') || val.includes('/project-media/'))
-            ) {
-                try {
-                    const uploadRes = await this._uploadImage(val, staticName);
-                    if (uploadRes && uploadRes.name) {
-                        params[paramKey] = uploadRes.name;
-                    }
-                } catch (e) {
-                    clientLogger.error('comfy', `Asset upload failed for ${paramKey}`, e);
-                    // A deleted input source (e.g. the reused frame's content asset
-                    // was removed by the manual Cleanup command, or the source is
-                    // otherwise gone — the upload is lazy at dispatch, so the
-                    // /project-file source 404s here). Tag it with a code so
-                    // commandExecutor surfaces a WARNING TOAST (user-actionable), not
-                    // the GitHub bug-reporter dialog (MPI-227 downgrade of MPI-225's
-                    // soft-fail). Shared path → covers local AND remote engines.
-                    if (
-                        typeof val === 'string' &&
-                        val.includes('project-file') &&
-                        /HTTP 404/.test(e.message || '')
-                    ) {
-                        const softErr = new Error('Cannot reuse — prompt assets no longer exist. Re-add the input and try again.');
-                        softErr.code = 'input_asset_deleted';
-                        throw softErr;
-                    }
-                    throw e;
-                }
-            }
+            const localPath = this._resolveMediaPath(val);
+            // Remote engine: the resolved path is local to this machine and invisible
+            // to the Pod. Upload the file and inject the Pod-absolute path returned by
+            // `_uploadRemoteMedia`, which the path-reading nodes resolve directly —
+            // VHS LoadVideo/LoadAudio and `MpiLoadImageFromPath` (its `os.path.isfile`
+            // check runs on the Pod). A local-pinned engine keeps the local path.
+            params[paramKey] = (!this._alwaysLocal && remoteEngineClient.isRemote())
+                ? await this._uploadRemoteMedia(localPath)
+                : localPath;
         }
 
         // 2b. Remote engine: auto-upload any selected LoRA/upscale model that is
@@ -1510,39 +1486,33 @@ function createEngine({ engine, alwaysLocal }) {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Uploads an image or mask asset to THIS engine's ComfyUI server.
-     * @param {string} dataUrlOrPath
-     * @param {string} filename
-     * @returns {Promise<object>}
+     * Verify a `/project-file?path=` media source still exists before injecting its
+     * path into a self-gating path node. A reused card's source asset can be deleted
+     * (manual Cleanup); the path node would then silently self-gate (wrong-mode run)
+     * or fail mute on the engine. A HEAD 404 here throws the tagged `input_asset_deleted`
+     * soft-error so commandExecutor shows a WARNING TOAST, not the bug-reporter dialog
+     * (MPI-227 downgrade of MPI-225's soft-fail). Covers local AND remote engines.
+     * @param {string} projectFileUrl  a `/project-file?path=` URL
+     * @param {string} paramKey        the media param (for the log line)
      * @private
      */
-    async _uploadImage(dataUrlOrPath, filename) {
-        let blob;
+    async _assertMediaSourceExists(projectFileUrl, paramKey) {
+        let ok = false;
         try {
-            const res = await fetch(dataUrlOrPath);
-            if (!res.ok) {
+            const res = await fetch(projectFileUrl, { method: 'HEAD' });
+            ok = res.ok;
+            if (!ok && res.status !== 404) {
                 throw new Error(`source returned HTTP ${res.status}`);
             }
-            blob = await res.blob();
-            if (!blob.type.startsWith('image/')) {
-                throw new Error(`source is not an image (${blob.type || 'unknown content type'})`);
-            }
         } catch (e) {
-            throw new Error(`[ComfyUIController] Failed to prepare blob for ${filename}: ${e.message}`);
+            clientLogger.error('comfy', `Media source check failed for ${paramKey}`, e);
+            throw e;
         }
-
-        const formData = new FormData();
-        formData.append('image', blob, filename);
-        formData.append('overwrite', 'true');
-
-        const uploadRes = await fetch(`${this.httpBase()}/upload/image`, {
-            method: 'POST',
-            body: formData
-        });
-        if (!uploadRes.ok) {
-            throw new Error(`[ComfyUIController] Comfy upload failed for ${filename}: HTTP ${uploadRes.status}`);
+        if (!ok) {
+            const softErr = new Error('Cannot reuse — prompt assets no longer exist. Re-add the input and try again.');
+            softErr.code = 'input_asset_deleted';
+            throw softErr;
         }
-        return await uploadRes.json();
     },
 
     /**

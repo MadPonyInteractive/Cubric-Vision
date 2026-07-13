@@ -245,7 +245,7 @@ export const commands = {
         // capabilities.audio (LTX) surface/accept it. WAN filters it out at the
         // slot read points (MpiPromptBox._mediaSlotsForOperation, commandExecutor).
         mediaInputs: [
-            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_audio', required: false },
         ],
         promptRequired: true,
         // audioMode is capability-gated (only models with capabilities.audio mount
@@ -274,7 +274,7 @@ export const commands = {
         mediaInputs: [
             { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
             { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
-            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_audio', required: false },
         ],
         promptRequired: false,
         // audioMode capability-gated (see t2v_ms note); ordered first.

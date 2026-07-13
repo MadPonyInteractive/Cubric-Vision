@@ -1863,7 +1863,7 @@
     },
     "class_type": "MpiLoadAudio",
     "_meta": {
-      "title": "Input_Audio_File"
+      "title": "Input_Audio"
     }
   },
   "480": {

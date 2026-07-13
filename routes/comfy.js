@@ -243,6 +243,40 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
 });
 
 /**
+ * POST /comfy/stage-media-data-url
+ * Body: { dataUrl: string }
+ * Writes a `data:<mime>;base64,<...>` payload to a file in the LOCAL engine
+ * input dir and returns its absolute path. MPI-272: media inputs are now
+ * path-reading nodes (`MpiLoadImageFromPath` — `os.path.isfile`), but some
+ * inputs still arrive as data URLs (the auto-mask editor's painted mask), which
+ * a path node cannot read. Stage it to a real file so the path system can. The
+ * caller injects the returned path; a remote run then uploads it via
+ * `_uploadRemoteMedia` (which needs a local file), so we always write locally.
+ */
+router.post('/comfy/stage-media-data-url', async (req, res) => {
+    try {
+        const { dataUrl } = req.body || {};
+        const match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/s);
+        if (!match) {
+            return res.status(400).json({ success: false, error: 'body.dataUrl must be a base64 data URL' });
+        }
+        const ext = (match[1].split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '') || 'png';
+        // Content-hash the name so identical masks reuse one file and repeat runs
+        // don't leak the input dir. ponytail: crypto.hash, no cleanup job — the
+        // input dir is engine-scratch and small; add a sweep if it ever grows.
+        const hash = require('crypto').createHash('sha256').update(match[2]).digest('hex').slice(0, 16);
+        const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+        await fs.ensureDir(inputDir);
+        const target = path.join(inputDir, `mpi_staged_${hash}.${ext}`);
+        await fs.writeFile(target, Buffer.from(match[2], 'base64'));
+        res.json({ success: true, path: target });
+    } catch (err) {
+        logger.error('comfy', 'stage media data url failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
  * POST /comfy/stage-preview-latent
  * Body: { sourcePath: string, engineInputName: string }
  * Copies a project-owned preview latent into the active ComfyUI input folder so

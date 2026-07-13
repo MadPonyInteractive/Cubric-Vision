@@ -608,7 +608,7 @@ function _buildParams(payload) {
     // explicit item.role wins, then remaining media fills matching mediaType in
     // declared order. This supports future multi-image/video/audio workflows.
     // Audio slot is model-capability-gated (LTX yes, WAN no) — drop it for
-    // models without audio so a WAN run never injects an Input_Audio_File.
+    // models without audio so a WAN run never injects an Input_audio.
     const mediaSlots = filterMediaInputsForModel(
         getCommandMediaInputs(payload.operation),
         getModelById(payload.modelId),

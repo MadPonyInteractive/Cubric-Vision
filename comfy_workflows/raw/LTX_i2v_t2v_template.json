@@ -1,8 +1,8 @@
 {
   "id": "049534f2-e76a-484c-afe0-91f11f5832af",
   "revision": 0,
-  "last_node_id": 481,
-  "last_link_id": 843,
+  "last_node_id": 484,
+  "last_link_id": 847,
   "nodes": [
     {
       "id": 51,
@@ -48,9 +48,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -102,9 +102,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiIfElseInverted",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -151,9 +151,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAEDecode",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "VAEDecode"
+        "ver": "0.25.1"
       },
       "widgets_values": []
     },
@@ -190,9 +190,9 @@
       ],
       "title": "Stage 2 Video Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -228,9 +228,9 @@
       ],
       "title": "Audio VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -266,9 +266,9 @@
       ],
       "title": "Stage 2 Audio Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -302,9 +302,9 @@
       ],
       "title": "Frames",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -341,9 +341,9 @@
       ],
       "title": "Frames",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -379,9 +379,9 @@
       ],
       "title": "FPS",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -417,9 +417,9 @@
       ],
       "title": "Video VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -455,9 +455,9 @@
       ],
       "title": "Audio VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -508,9 +508,9 @@
       ],
       "title": "floor(a/2)",
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiMath"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         "floor(a/2)"
@@ -548,9 +548,9 @@
       ],
       "title": "IMG1 compressed 18",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -592,9 +592,9 @@
       ],
       "title": "Input_Is_Continue",
       "properties": {
+        "Node name for S&R": "MpiBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiBoolean",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -639,9 +639,9 @@
       ],
       "title": "IMG2",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -677,9 +677,9 @@
       ],
       "title": "Stage 1 Audio Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -729,9 +729,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiIfElseInverted",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -786,9 +786,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiIfElseInverted",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -843,9 +843,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -888,9 +888,9 @@
       ],
       "title": "Audio Noise Mask",
       "properties": {
+        "Node name for S&R": "SetLatentNoiseMask",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "SetLatentNoiseMask",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -954,9 +954,9 @@
       ],
       "title": "Audio Mask",
       "properties": {
+        "Node name for S&R": "SolidMask",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "SolidMask",
         "ue_properties": {
           "widget_ue_connectable": {
             "width": true,
@@ -1007,9 +1007,9 @@
       ],
       "title": "Video VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -1059,9 +1059,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiIfElseInverted",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1119,9 +1119,9 @@
       ],
       "title": "if else inv",
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiIfElseInverted"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -1159,9 +1159,9 @@
       ],
       "title": "Audio VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -1177,7 +1177,7 @@
         60
       ],
       "flags": {},
-      "order": 51,
+      "order": 53,
       "mode": 0,
       "inputs": [
         {
@@ -1203,9 +1203,9 @@
       ],
       "title": "Audio Encode",
       "properties": {
+        "Node name for S&R": "LTXVAudioVAEEncode",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVAudioVAEEncode",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -1248,9 +1248,9 @@
       ],
       "title": "Height",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -1266,7 +1266,7 @@
         26
       ],
       "flags": {},
-      "order": 53,
+      "order": 52,
       "mode": 4,
       "inputs": [
         {
@@ -1286,9 +1286,9 @@
       ],
       "title": "Width",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -1351,9 +1351,9 @@
       ],
       "title": "Input_Lora_1",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -1431,9 +1431,9 @@
       ],
       "title": "Input_Lora_4",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -1511,9 +1511,9 @@
       ],
       "title": "Input_Lora_2",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -1591,9 +1591,9 @@
       ],
       "title": "Input_Lora_5",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -1671,9 +1671,9 @@
       ],
       "title": "Input_Lora_3",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -1733,9 +1733,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CFGGuider",
         "cnr_id": "comfy-core",
         "ver": "0.3.64",
-        "Node name for S&R": "CFGGuider",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -1751,65 +1751,6 @@
       },
       "widgets_values": [
         1
-      ],
-      "color": "#223",
-      "bgcolor": "#335"
-    },
-    {
-      "id": 12,
-      "type": "RandomNoise",
-      "pos": [
-        -2331.1519276217196,
-        6453.263843315078
-      ],
-      "size": [
-        260,
-        90
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 62,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "noise_seed",
-          "type": "INT",
-          "widget": {
-            "name": "noise_seed"
-          },
-          "link": 107
-        }
-      ],
-      "outputs": [
-        {
-          "name": "NOISE",
-          "type": "NOISE",
-          "links": [
-            67
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.56",
-        "Node name for S&R": "RandomNoise",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.5.2",
-          "input_ue_unconnectable": {}
-        },
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65
-      },
-      "widgets_values": [
-        80085354,
-        "fixed"
       ],
       "color": "#223",
       "bgcolor": "#335"
@@ -1846,9 +1787,9 @@
       ],
       "title": "Invert Influence",
       "properties": {
+        "Node name for S&R": "MpiNormalizeValue",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
-        "Node name for S&R": "MpiNormalizeValue",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1892,9 +1833,9 @@
       ],
       "title": "Audio_Influence",
       "properties": {
+        "Node name for S&R": "MpiFloat",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
-        "Node name for S&R": "MpiFloat",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1933,9 +1874,9 @@
       ],
       "title": "Input_Use_Input_Audio",
       "properties": {
+        "Node name for S&R": "MpiSimpleBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiSimpleBoolean"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         false
@@ -2008,9 +1949,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVReferenceAudio",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LTXVReferenceAudio"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         1.5,
@@ -2050,9 +1991,9 @@
       ],
       "title": "FPS",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2089,9 +2030,9 @@
       ],
       "title": "FPS",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2125,9 +2066,9 @@
       ],
       "title": "Audio VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2165,9 +2106,9 @@
       ],
       "title": "Video VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2216,9 +2157,9 @@
       ],
       "title": "t2v",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
@@ -2257,9 +2198,9 @@
       ],
       "title": "LTXVPreprocess (End)",
       "properties": {
+        "Node name for S&R": "LTXVPreprocess",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVPreprocess",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -2314,9 +2255,9 @@
       ],
       "title": "Video VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2353,9 +2294,9 @@
       ],
       "title": "Model",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2404,9 +2345,9 @@
       ],
       "title": "FLF",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
@@ -2453,9 +2394,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CFGGuider",
         "cnr_id": "comfy-core",
         "ver": "0.3.71",
-        "Node name for S&R": "CFGGuider",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -2516,9 +2457,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CFGGuider",
         "cnr_id": "comfy-core",
         "ver": "0.3.71",
-        "Node name for S&R": "CFGGuider",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -2579,9 +2520,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CFGGuider",
         "cnr_id": "comfy-core",
         "ver": "0.3.64",
-        "Node name for S&R": "CFGGuider",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -2642,9 +2583,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CFGGuider",
         "cnr_id": "comfy-core",
         "ver": "0.3.64",
-        "Node name for S&R": "CFGGuider",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -2710,9 +2651,9 @@
       ],
       "title": "Original Cond",
       "properties": {
+        "Node name for S&R": "MpiConditioningReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiConditioningReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2748,9 +2689,9 @@
       ],
       "title": "IMG1",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -2788,9 +2729,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVPreprocess",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVPreprocess",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -2888,9 +2829,9 @@
       ],
       "title": "FLF AddGuide First (S1)",
       "properties": {
+        "Node name for S&R": "LTXVAddGuide",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LTXVAddGuide"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         0,
@@ -2926,9 +2867,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "PreviewAny",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "PreviewAny"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         null,
@@ -3016,9 +2957,9 @@
       ],
       "title": "FLF AddGuide Last (S1)",
       "properties": {
+        "Node name for S&R": "LTXVAddGuide",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LTXVAddGuide"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         -1,
@@ -3105,9 +3046,9 @@
       ],
       "title": "FLF AddGuide Last (S2)",
       "properties": {
+        "Node name for S&R": "LTXVAddGuide",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LTXVAddGuide"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         -1,
@@ -3154,9 +3095,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVSeparateAVLatent",
         "cnr_id": "comfy-core",
         "ver": "0.5.1",
-        "Node name for S&R": "LTXVSeparateAVLatent",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -3228,9 +3169,9 @@
       ],
       "title": "LTXVCropGuides FLF",
       "properties": {
+        "Node name for S&R": "LTXVCropGuides",
         "cnr_id": "comfy-core",
         "ver": "0.8.2",
-        "Node name for S&R": "LTXVCropGuides",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -3324,9 +3265,9 @@
       ],
       "title": "FLF AddGuide First (S2)",
       "properties": {
+        "Node name for S&R": "LTXVAddGuide",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LTXVAddGuide"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         0,
@@ -3364,9 +3305,9 @@
       ],
       "title": "Input_Use_End_Image",
       "properties": {
+        "Node name for S&R": "MpiSimpleBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiSimpleBoolean",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -3425,9 +3366,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiIfElseInverted",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -3467,9 +3408,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "PreviewAny",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "PreviewAny"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         null,
@@ -3540,9 +3481,9 @@
       ],
       "title": "FL ImgToVideoKJ (S1)",
       "properties": {
+        "Node name for S&R": "LTXVImgToVideoInplaceKJ",
         "cnr_id": "comfyui-kjnodes",
         "ver": "5edfa4fabc25ae2ab243ec74dea5c2676f9b3395",
-        "Node name for S&R": "LTXVImgToVideoInplaceKJ",
         "ue_properties": {
           "widget_ue_connectable": {
             "num_images.index_2": true
@@ -3621,9 +3562,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVCropGuides",
         "cnr_id": "comfy-core",
         "ver": "0.3.68",
-        "Node name for S&R": "LTXVCropGuides",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -3680,9 +3621,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVSeparateAVLatent",
         "cnr_id": "comfy-core",
         "ver": "0.5.1",
-        "Node name for S&R": "LTXVSeparateAVLatent",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -3753,9 +3694,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVCropGuides",
         "cnr_id": "comfy-core",
         "ver": "0.8.2",
-        "Node name for S&R": "LTXVCropGuides",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -3882,9 +3823,9 @@
       ],
       "title": "Input_Use_Reference_Audio",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         false
@@ -3924,47 +3865,9 @@
       ],
       "title": "Seed",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 100,
-      "type": "MpiReroute",
-      "pos": [
-        -2548.3647983735327,
-        6424.076340188755
-      ],
-      "size": [
-        140,
-        26
-      ],
-      "flags": {},
-      "order": 47,
-      "mode": 4,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 106
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            107
-          ]
-        }
-      ],
-      "title": "Seed",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4014,9 +3917,9 @@
       ],
       "title": "From Stage 1",
       "properties": {
+        "Node name for S&R": "MpiConditioningReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiConditioningReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4052,9 +3955,9 @@
       ],
       "title": "Stage 1 Video Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4090,9 +3993,9 @@
       ],
       "title": "Audio Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4128,9 +4031,9 @@
       ],
       "title": "Video Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4164,9 +4067,9 @@
       ],
       "title": "Stage 1 Video Latent",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4218,9 +4121,9 @@
       ],
       "title": "FLF",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
@@ -4270,9 +4173,9 @@
       ],
       "title": "Original Cond",
       "properties": {
+        "Node name for S&R": "MpiConditioningReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiConditioningReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4320,9 +4223,9 @@
       ],
       "title": "Original Cond",
       "properties": {
+        "Node name for S&R": "MpiConditioningReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiConditioningReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4371,9 +4274,9 @@
       ],
       "title": "FLF",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
@@ -4421,9 +4324,9 @@
       ],
       "title": "LTXVImgToVideoInplace - STG2",
       "properties": {
+        "Node name for S&R": "LTXVImgToVideoInplace",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVImgToVideoInplace",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -4470,9 +4373,9 @@
       ],
       "title": "Input_Video_Latent",
       "properties": {
+        "Node name for S&R": "LoadLatent",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LoadLatent"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         "ltx_video_latent_00001_.latent"
@@ -4509,9 +4412,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VHS_SelectFilename",
         "cnr_id": "comfyui-videohelpersuite",
-        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b",
-        "Node name for S&R": "VHS_SelectFilename"
+        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b"
       },
       "widgets_values": {
         "index": -1
@@ -4548,9 +4451,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VHS_SelectFilename",
         "cnr_id": "comfyui-videohelpersuite",
-        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b",
-        "Node name for S&R": "VHS_SelectFilename"
+        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b"
       },
       "widgets_values": {
         "index": -1
@@ -4589,9 +4492,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiClearVram",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiClearVram",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -4632,9 +4535,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVScheduler",
         "cnr_id": "comfy-core",
         "ver": "0.3.56",
-        "Node name for S&R": "LTXVScheduler",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -4691,9 +4594,9 @@
       ],
       "title": "Model",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4701,8 +4604,8 @@
       "id": 259,
       "type": "MpiReroute",
       "pos": [
-        -2964.4313456722152,
-        4653.175803029596
+        -2896.055276781112,
+        4651.689366749354
       ],
       "size": [
         183.89256178108008,
@@ -4727,9 +4630,9 @@
       ],
       "title": "Model with Lora's",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -4763,9 +4666,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAELoaderKJ",
         "cnr_id": "comfyui-kjnodes",
         "ver": "997a0dcd82f70c26b90e2bc64c389853da89002f",
-        "Node name for S&R": "VAELoaderKJ",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.8",
@@ -4810,9 +4713,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAELoader",
         "cnr_id": "comfy-core",
         "ver": "0.16.2",
-        "Node name for S&R": "VAELoader",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.8",
@@ -4894,9 +4797,9 @@
       ],
       "title": "Clip_Connect",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [],
       "color": "#432",
@@ -4927,9 +4830,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "DualCLIPLoader",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "DualCLIPLoader"
+        "ver": "0.27.0"
       },
       "widgets_values": [
         "gemma_3_12B_it_fp4_mixed.safetensors",
@@ -4966,9 +4869,9 @@
       ],
       "title": "KSampler - STG1",
       "properties": {
+        "Node name for S&R": "KSamplerSelect",
         "cnr_id": "comfy-core",
         "ver": "0.3.56",
-        "Node name for S&R": "KSamplerSelect",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5036,9 +4939,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiConvert",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiConvert"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -5091,9 +4994,9 @@
       ],
       "title": "floor(a/2)",
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiMath"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         "floor(a/2)"
@@ -5151,9 +5054,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "EmptyLTXVLatentVideo",
         "cnr_id": "comfy-core",
         "ver": "0.3.60",
-        "Node name for S&R": "EmptyLTXVLatentVideo",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5206,9 +5109,9 @@
       ],
       "title": "Video VAE",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -5255,9 +5158,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTX2SamplingPreviewOverride",
         "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "LTX2SamplingPreviewOverride"
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2"
       },
       "widgets_values": [
         8
@@ -5289,9 +5192,9 @@
       ],
       "title": "Input_Negative",
       "properties": {
+        "Node name for S&R": "MpiText",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -5345,9 +5248,9 @@
       ],
       "title": "CLIP Text Encode (Negative Prompt)",
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
         "ver": "0.3.45",
-        "Node name for S&R": "CLIPTextEncode",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5392,9 +5295,9 @@
       ],
       "title": "Model_Connect",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [],
       "color": "#323",
@@ -5456,9 +5359,9 @@
       ],
       "title": "LTX Conditioning (fps)",
       "properties": {
+        "Node name for S&R": "LTXVConditioning",
         "cnr_id": "comfy-core",
         "ver": "0.3.56",
-        "Node name for S&R": "LTXVConditioning",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5539,9 +5442,9 @@
       ],
       "title": "Input_Lora_6",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -5556,57 +5459,6 @@
         "None",
         1,
         1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 192,
-      "type": "MpiBoolean",
-      "pos": [
-        -3269.3673151511784,
-        4500.431091303077
-      ],
-      "size": [
-        270,
-        98
-      ],
-      "flags": {},
-      "order": 11,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "links": null
-        },
-        {
-          "name": "int",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            296
-          ]
-        }
-      ],
-      "title": "Input_Use_Transition",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiBoolean",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        false
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -5655,9 +5507,9 @@
       ],
       "title": "CLIP Text Encode (Positive Prompt)",
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
         "ver": "0.3.45",
-        "Node name for S&R": "CLIPTextEncode",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5704,9 +5556,9 @@
       ],
       "title": "Negative Prompt 2 (Audio) (NAG only)",
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
         "ver": "0.3.56",
-        "Node name for S&R": "CLIPTextEncode",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5738,7 +5590,7 @@
         58.98474402005377
       ],
       "flags": {},
-      "order": 12,
+      "order": 11,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5752,9 +5604,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LatentUpscaleModelLoader",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LatentUpscaleModelLoader",
         "models": [
           {
             "name": "ltx-2-spatial-upscaler-x2-1.0.safetensors",
@@ -5824,9 +5676,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVLatentUpsampler",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVLatentUpsampler",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -5889,9 +5741,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTX2_NAG",
         "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "LTX2_NAG"
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2"
       },
       "widgets_values": [
         11,
@@ -5914,7 +5766,7 @@
         140.64568783853247
       ],
       "flags": {},
-      "order": 13,
+      "order": 12,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -5930,8 +5782,8 @@
       "id": 191,
       "type": "MpiLoraModel",
       "pos": [
-        -3269.165103736104,
-        4645.3597234980525
+        -3200.7890348450005,
+        4643.873287217811
       ],
       "size": [
         270,
@@ -5979,9 +5831,9 @@
       ],
       "title": "Transition Lora",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -6035,9 +5887,9 @@
       ],
       "title": "talk3_ID_Lora",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba3280506944b32fd83c59f02797bfe1c9874a50",
-        "Node name for S&R": "MpiLoraModel"
+        "ver": "ba3280506944b32fd83c59f02797bfe1c9874a50"
       },
       "widgets_values": [
         "ltx-2.3\\id-lora-talkvid\\ltx-2.3-id-lora-talkvid-3k.safetensors",
@@ -6056,7 +5908,7 @@
         60
       ],
       "flags": {},
-      "order": 14,
+      "order": 13,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6067,9 +5919,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ManualSigmas",
         "cnr_id": "comfy-core",
         "ver": "0.5.1",
-        "Node name for S&R": "ManualSigmas",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6090,59 +5942,6 @@
       "bgcolor": "#335"
     },
     {
-      "id": 328,
-      "type": "MpiIfElse",
-      "pos": [
-        -1806.276504754879,
-        6079.74009199794
-      ],
-      "size": [
-        270,
-        78
-      ],
-      "flags": {},
-      "order": 112,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "true",
-          "type": "*",
-          "link": 556
-        },
-        {
-          "name": "false",
-          "type": "*",
-          "link": 557
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": 550
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": [
-            558
-          ]
-        }
-      ],
-      "title": "FLF",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
-      },
-      "widgets_values": [
-        true
-      ]
-    },
-    {
       "id": 140,
       "type": "ManualSigmas",
       "pos": [
@@ -6154,7 +5953,7 @@
         60
       ],
       "flags": {},
-      "order": 15,
+      "order": 14,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6168,9 +5967,9 @@
       ],
       "title": "ManualSigmas - Distilled",
       "properties": {
+        "Node name for S&R": "ManualSigmas",
         "cnr_id": "comfy-core",
         "ver": "0.5.1",
-        "Node name for S&R": "ManualSigmas",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6227,9 +6026,9 @@
       ],
       "title": "Use ManualSigmas",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -6247,7 +6046,7 @@
         200
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6261,9 +6060,9 @@
       ],
       "title": "Input_Positive",
       "properties": {
+        "Node name for S&R": "MpiText",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -6308,9 +6107,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVSpatioTemporalTiledVAEDecode",
         "cnr_id": "ComfyUI-LTXVideo",
         "ver": "cd5d371518afb07d6b3641be8012f644f25269fc",
-        "Node name for S&R": "LTXVSpatioTemporalTiledVAEDecode",
         "aux_id": "Lightricks/ComfyUI-LTXVideo",
         "ue_properties": {
           "widget_ue_connectable": {},
@@ -6342,7 +6141,7 @@
         62.426556160899736
       ],
       "flags": {},
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6357,9 +6156,9 @@
       ],
       "title": "Input_Height",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiInt",
         "ue_properties": {
           "widget_ue_connectable": {
             "int": true
@@ -6418,9 +6217,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElseInverted",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiIfElseInverted",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -6468,9 +6267,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiBooleanCompare",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiBooleanCompare"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         "a_true_b_false"
@@ -6488,7 +6287,7 @@
         58
       ],
       "flags": {},
-      "order": 18,
+      "order": 17,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6502,9 +6301,9 @@
       ],
       "title": "Input_Audio_Latent",
       "properties": {
+        "Node name for S&R": "LoadLatent",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "LoadLatent"
+        "ver": "0.25.1"
       },
       "widgets_values": [
         "ltx_audio_latent_00001_.latent"
@@ -6544,9 +6343,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "RandomNoise",
         "cnr_id": "comfy-core",
         "ver": "0.3.75",
-        "Node name for S&R": "RandomNoise",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6612,9 +6411,9 @@
       ],
       "title": "FLF",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
@@ -6632,7 +6431,7 @@
         60
       ],
       "flags": {},
-      "order": 19,
+      "order": 18,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6646,9 +6445,9 @@
       ],
       "title": "KSampler - STG2",
       "properties": {
+        "Node name for S&R": "KSamplerSelect",
         "cnr_id": "comfy-core",
         "ver": "0.3.56",
-        "Node name for S&R": "KSamplerSelect",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6680,7 +6479,7 @@
         60
       ],
       "flags": {},
-      "order": 20,
+      "order": 19,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6693,9 +6492,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ManualSigmas",
         "cnr_id": "comfy-core",
         "ver": "0.5.1",
-        "Node name for S&R": "ManualSigmas",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6751,9 +6550,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVConcatAVLatent",
         "cnr_id": "comfy-core",
         "ver": "0.5.1",
-        "Node name for S&R": "LTXVConcatAVLatent",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6827,9 +6626,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "SamplerCustomAdvanced",
         "cnr_id": "comfy-core",
         "ver": "0.3.75",
-        "Node name for S&R": "SamplerCustomAdvanced",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -6859,7 +6658,7 @@
         62.426556160899736
       ],
       "flags": {},
-      "order": 21,
+      "order": 20,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6873,9 +6672,9 @@
       ],
       "title": "Input_Duration",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiInt",
         "ue_properties": {
           "widget_ue_connectable": {
             "int": true
@@ -6942,9 +6741,9 @@
       ],
       "title": "Duration",
       "properties": {
+        "Node name for S&R": "MpiWanSeconds",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "69e66c80011117e8df02343e8bf40980fc16400c",
-        "Node name for S&R": "MpiWanSeconds",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -6990,9 +6789,9 @@
       ],
       "title": "FPS",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -7053,9 +6852,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VHS_VideoCombine",
         "cnr_id": "comfyui-videohelpersuite",
-        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b",
-        "Node name for S&R": "VHS_VideoCombine"
+        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b"
       },
       "widgets_values": {
         "frame_rate": 8,
@@ -7095,7 +6894,7 @@
         68.32596819981063
       ],
       "flags": {},
-      "order": 22,
+      "order": 21,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7110,9 +6909,9 @@
       ],
       "title": "Input_Seed",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiInt",
         "ue_properties": {
           "widget_ue_connectable": {
             "int": true
@@ -7165,9 +6964,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVAudioVAEDecode",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVAudioVAEDecode",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -7222,9 +7021,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAEDecode",
         "cnr_id": "comfy-core",
-        "ver": "0.25.1",
-        "Node name for S&R": "VAEDecode"
+        "ver": "0.25.1"
       },
       "widgets_values": []
     },
@@ -7275,9 +7074,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVEmptyLatentAudio",
         "cnr_id": "comfy-core",
         "ver": "0.3.68",
-        "Node name for S&R": "LTXVEmptyLatentAudio",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -7344,9 +7143,9 @@
       ],
       "title": "Audio In Select",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -7406,9 +7205,9 @@
       ],
       "title": "Stage1_Bypass",
       "properties": {
+        "Node name for S&R": "LTXVNormalizingSampler",
         "cnr_id": "ComfyUI-LTXVideo",
         "ver": "cd5d371518afb07d6b3641be8012f644f25269fc",
-        "Node name for S&R": "LTXVNormalizingSampler",
         "aux_id": "Lightricks/ComfyUI-LTXVideo",
         "ue_properties": {
           "widget_ue_connectable": {
@@ -7438,7 +7237,7 @@
         88
       ],
       "flags": {},
-      "order": 23,
+      "order": 22,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -7486,9 +7285,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVConcatAVLatent",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVConcatAVLatent",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -7544,9 +7343,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVAudioVAEDecode",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVAudioVAEDecode",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -7597,9 +7396,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiClearVram",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiClearVram",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -7640,9 +7439,9 @@
       ],
       "title": "FPS",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -7658,7 +7457,7 @@
         58
       ],
       "flags": {},
-      "order": 24,
+      "order": 23,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7674,9 +7473,9 @@
       ],
       "title": "Input_Use_Audio",
       "properties": {
+        "Node name for S&R": "MpiSimpleBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiSimpleBoolean"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": [
         true
@@ -7731,9 +7530,9 @@
       "outputs": [],
       "title": "Output_Video",
       "properties": {
+        "Node name for S&R": "MpiSaveVideo",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiSaveVideo"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         24,
@@ -7788,9 +7587,9 @@
       "outputs": [],
       "title": "Output_Preview",
       "properties": {
+        "Node name for S&R": "MpiSaveVideo",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiSaveVideo"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         24,
@@ -7810,7 +7609,7 @@
         98
       ],
       "flags": {},
-      "order": 25,
+      "order": 24,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7838,9 +7637,9 @@
       ],
       "title": "Input_Preview_Only",
       "properties": {
+        "Node name for S&R": "MpiBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiBoolean",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -7865,7 +7664,7 @@
         90
       ],
       "flags": {},
-      "order": 26,
+      "order": 25,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7878,9 +7677,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "UNETLoader",
         "cnr_id": "comfy-core",
         "ver": "0.16.2",
-        "Node name for S&R": "UNETLoader",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.8",
@@ -7952,9 +7751,9 @@
       ],
       "title": "Normal sigmas 346sec",
       "properties": {
+        "Node name for S&R": "VHS_VideoCombine",
         "cnr_id": "comfyui-videohelpersuite",
-        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b",
-        "Node name for S&R": "VHS_VideoCombine"
+        "ver": "4ee72c065db22c9d96c2427954dc69e7b908444b"
       },
       "widgets_values": {
         "frame_rate": 8,
@@ -7994,7 +7793,7 @@
         58
       ],
       "flags": {},
-      "order": 27,
+      "order": 26,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8009,9 +7808,9 @@
       ],
       "title": "Input_Text_to_video",
       "properties": {
+        "Node name for S&R": "MpiSimpleBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiSimpleBoolean",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -8083,9 +7882,9 @@
       ],
       "title": "Merged Loras",
       "properties": {
+        "Node name for S&R": "MpiLoraModelClip",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModelClip",
         "ue_properties": {
           "widget_ue_connectable": {
             "lora_name": true,
@@ -8134,9 +7933,9 @@
       ],
       "title": "IMG1",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -8152,7 +7951,7 @@
         142
       ],
       "flags": {},
-      "order": 28,
+      "order": 27,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8181,9 +7980,9 @@
       ],
       "title": "Input_Start_Frame",
       "properties": {
+        "Node name for S&R": "MpiLoadImageFromPath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         "",
@@ -8233,9 +8032,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "LTXVImgToVideoInplace",
         "cnr_id": "comfy-core",
         "ver": "0.7.0",
-        "Node name for S&R": "LTXVImgToVideoInplace",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.5.2",
@@ -8302,9 +8101,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
@@ -8356,50 +8155,13 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
         true
       ]
-    },
-    {
-      "id": 477,
-      "type": "MpiLoadAudio",
-      "pos": [
-        -6617.254263156626,
-        8615.98008173835
-      ],
-      "size": [
-        445.6697422103489,
-        58
-      ],
-      "flags": {},
-      "order": 29,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "audio",
-          "type": "AUDIO",
-          "links": [
-            834,
-            835
-          ]
-        }
-      ],
-      "title": "Input_Audio_File",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadAudio"
-      },
-      "widgets_values": [
-        ""
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 480,
@@ -8473,9 +8235,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ImageResizeKJv2",
         "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "ImageResizeKJv2"
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2"
       },
       "widgets_values": [
         512,
@@ -8500,7 +8262,7 @@
         62.426556160899736
       ],
       "flags": {},
-      "order": 30,
+      "order": 28,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8515,9 +8277,9 @@
       ],
       "title": "Input_Width",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiInt",
         "ue_properties": {
           "widget_ue_connectable": {
             "int": true
@@ -8544,7 +8306,7 @@
         26
       ],
       "flags": {},
-      "order": 52,
+      "order": 51,
       "mode": 4,
       "inputs": [
         {
@@ -8564,9 +8326,9 @@
       ],
       "title": "Width",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -8602,9 +8364,9 @@
       ],
       "title": "Height",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     },
@@ -8620,7 +8382,7 @@
         142
       ],
       "flags": {},
-      "order": 31,
+      "order": 29,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8649,9 +8411,9 @@
       ],
       "title": "Input_End_Frame",
       "properties": {
+        "Node name for S&R": "MpiLoadImageFromPath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         "",
@@ -8728,9 +8490,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ImageResizeKJv2",
         "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "ImageResizeKJv2"
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2"
       },
       "widgets_values": [
         512,
@@ -8775,9 +8537,247 @@
       ],
       "title": "IMG2",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 477,
+      "type": "MpiLoadAudio",
+      "pos": [
+        -6617.254263156626,
+        8615.98008173835
+      ],
+      "size": [
+        445.6697422103489,
+        58
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            834,
+            835
+          ]
+        }
+      ],
+      "title": "Input_Audio",
+      "properties": {
+        "Node name for S&R": "MpiLoadAudio",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 192,
+      "type": "MpiBoolean",
+      "pos": [
+        -3202.4776825403164,
+        4472.188801978486
+      ],
+      "size": [
+        270,
+        98
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": null
+        },
+        {
+          "name": "int",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            296
+          ]
+        }
+      ],
+      "title": "Input_Use_Transition",
+      "properties": {
+        "Node name for S&R": "MpiBoolean",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 328,
+      "type": "MpiIfElse",
+      "pos": [
+        -1806.276504754879,
+        6079.74009199794
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 112,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 556
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 557
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 550
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            558
+          ]
+        }
+      ],
+      "title": "FLF",
+      "properties": {
+        "Node name for S&R": "MpiIfElse",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 12,
+      "type": "RandomNoise",
+      "pos": [
+        -2331.1519276217196,
+        6453.263843315078
+      ],
+      "size": [
+        260,
+        90
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 62,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "noise_seed",
+          "type": "INT",
+          "widget": {
+            "name": "noise_seed"
+          },
+          "link": 847
+        }
+      ],
+      "outputs": [
+        {
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            67
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RandomNoise",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.56",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        },
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        80085354,
+        "fixed"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 100,
+      "type": "MpiReroute",
+      "pos": [
+        -2533.04825071021,
+        6422.521445197785
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 47,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 106
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            847
+          ]
+        }
+      ],
+      "title": "Seed",
+      "properties": {
+        "Node name for S&R": "MpiReroute",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab"
       },
       "widgets_values": []
     }
@@ -8980,14 +8980,6 @@
       77,
       0,
       100,
-      0,
-      "INT"
-    ],
-    [
-      107,
-      100,
-      0,
-      12,
       0,
       "INT"
     ],
@@ -10918,6 +10910,14 @@
       480,
       3,
       "INT"
+    ],
+    [
+      847,
+      100,
+      0,
+      12,
+      0,
+      "INT"
     ]
   ],
   "groups": [
@@ -11069,10 +11069,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8140274938684094,
+      "scale": 0.6115909044841568,
       "offset": [
-        5286.25312629011,
-        -5789.1326299502325
+        7507.255269488814,
+        -7388.054833113797
       ]
     },
     "frontendVersion": "1.45.20",
