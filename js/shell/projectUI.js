@@ -8,6 +8,7 @@ import { listProjects, createProject, deleteProject, openProject, addProjectByFo
 import { fetchStats } from '../services/projectStatsService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
+import { state } from '../state.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
@@ -280,6 +281,10 @@ function _showCleanupConfirm(project) {
       });
       const data = await res.json().catch(() => ({}));
       if (!data.success) throw new Error(data.error || 'Cleanup failed');
+      // Staged prompt-box chips point at the now-wiped store — drop the persisted
+      // snapshot (prompt box is unmounted here) and any live chips (if mounted).
+      state.promptMedia = {};
+      Events.emit('assets:cleaned', { folderPath: project.folderPath });
       Events.emit('ui:success', { title: 'Cleanup complete', message: `Removed ${data.removed || 0} cached asset${data.removed === 1 ? '' : 's'}.` });
     } catch (err) {
       clientLogger.warn('projectUI', `cleanup-assets failed: ${err.message}`);

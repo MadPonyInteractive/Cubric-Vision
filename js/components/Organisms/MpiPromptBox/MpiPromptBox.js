@@ -669,6 +669,10 @@ export const MpiPromptBox = ComponentFactory.create({
             // to avoid two sources of truth (block-validated vs raw event).
             Events.on('workspace:inject-prompts', _onInjectPrompts),
             Events.on('promptbox:generation-end', () => el.setGenerating(false)),
+            // Manual Cleanup wipes the whole preview-assets store, so every staged
+            // chip sourced from it is now a dead link. Drop live chips + the
+            // persisted snapshot so a later mount doesn't restore broken media.
+            Events.on('assets:cleaned', () => el.clearMedia()),
             // Note: model list management is owned by the parent block (gallery /
             // history workspace). They call el.setModelList() with the appropriate
             // mediaType-scoped or all-installed list. Don't double-update here.

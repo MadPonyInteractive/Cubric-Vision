@@ -32,7 +32,7 @@ import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelected
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
-import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
+import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
@@ -1191,9 +1191,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const resolved = await resolvePromptReuseMediaItems(payload);
                 const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
                 const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
-                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
-                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
-                    StatusBar.notify('No saved frame images were found for this older entry.', 'warning');
+                // resolvePromptReuseMediaItems drops files that no longer exist on
+                // disk (Cleanup wiped them, or the history media was deleted). If a
+                // type the source declared resolved to nothing, the file is gone —
+                // warn instead of silently injecting an empty chip that only fails
+                // at generate time.
+                const _has = (t) => mediaItems.some(m => (m.mediaType || m.type) === t);
+                if ((_wantImages && !_has('image')) || (_wantVideo && !_has('video')) || (_wantAudio && !_has('audio'))) {
+                    StatusBar.notify('Some input media is missing and was not re-added.', 'warning');
                 }
                 // Resolve a reused input file back to its source group's custom
                 // name (if the user renamed that card), so the chip shows the

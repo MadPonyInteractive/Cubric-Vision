@@ -173,7 +173,22 @@ export async function resolvePromptReuseMediaItems(payload = {}) {
     const previewItems = _previewAssetMediaItems(payload.item);
     const existing = Array.isArray(payload.mediaItems) ? payload.mediaItems.filter(Boolean) : [];
     const merged = _mergeReuseMedia(previewItems, existing);
-    return merged;
+    // Drop items whose file no longer exists on disk (e.g. after Cleanup wiped the
+    // preview-assets store, or a history media file was deleted). Without this the
+    // dead url is injected as an empty/broken chip and only fails at generate time.
+    // HEAD each url in parallel; keep only the ones that resolve. Callers compare
+    // the returned count to what the source declared and toast if any were lost.
+    const checks = await Promise.all(merged.map(async (m) => {
+        const url = m.url || m.filePath;
+        if (!url) return false;
+        try {
+            const res = await fetch(url, { method: 'HEAD' });
+            return res.ok;
+        } catch (_) {
+            return false;
+        }
+    }));
+    return merged.filter((_, i) => checks[i]);
 }
 
 // True when a reuse payload actually carries an input image to reuse. A card
