@@ -268,7 +268,7 @@ function _showDeleteConfirm(projectName, onConfirm) {
 function _showCleanupConfirm(project) {
   const dialog = MpiOkCancel.mount(document.createElement('div'), {
     title: 'Cleanup assets',
-    text: `Remove cached reuse assets (start/end frames) for "${project.name}"? This frees disk space. Your generated media and history are kept, but Reuse Prompt will no longer be able to re-add those input frames.`,
+    text: `Remove cached assets used by Reuse Prompt for this project? These are the input images, videos and audio that were fed into your generations. This frees disk space. Your generated media and history are kept, but Reuse Prompt will no longer be able to re-add those inputs.`,
     okLabel: 'Cleanup',
     cancelLabel: 'Cancel',
   });
