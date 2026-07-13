@@ -1,0 +1,966 @@
+{
+  "id": "8aab4aa3-17ff-4189-9e5f-bc8b2532fd37",
+  "revision": 0,
+  "last_node_id": 43,
+  "last_link_id": 77,
+  "nodes": [
+    {
+      "id": 7,
+      "type": "MpiHasAudio",
+      "pos": [
+        9304.445180967083,
+        347.9252244141414
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video_path",
+          "type": "STRING",
+          "widget": {
+            "name": "video_path"
+          },
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "has_audio",
+          "type": "BOOLEAN",
+          "links": [
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiHasAudio"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 23,
+      "type": "MpiAnyChecker",
+      "pos": [
+        8904.942323389807,
+        595.0013191103224
+      ],
+      "size": [
+        153.444921875,
+        46
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 33
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            36
+          ]
+        },
+        {
+          "name": "has_value",
+          "type": "BOOLEAN",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiAnyChecker"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 27,
+      "type": "MpiAnyChecker",
+      "pos": [
+        8890.237776021024,
+        964.345860387306
+      ],
+      "size": [
+        153.444921875,
+        46
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 40
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            38
+          ]
+        },
+        {
+          "name": "has_value",
+          "type": "BOOLEAN",
+          "links": [
+            42
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiAnyChecker"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 25,
+      "type": "MpiBlockIfEmpty",
+      "pos": [
+        9090.231020998934,
+        584.6289560710853
+      ],
+      "size": [
+        177.15468053627993,
+        27.63507990826554
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            55
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiBlockIfEmpty"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 35,
+      "type": "MpiLoadVideo",
+      "pos": [
+        9288.756172222862,
+        504.7460968965655
+      ],
+      "size": [
+        270,
+        178
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 55
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            71,
+            72
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            58
+          ]
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            57
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "duration",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiLoadVideo"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 26,
+      "type": "MpiBlockIfEmpty",
+      "pos": [
+        9064.716027955663,
+        932.3526059991026
+      ],
+      "size": [
+        177.15468053627993,
+        27.63507990826554
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 38
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            59
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiBlockIfEmpty"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "MpiSaveVideo",
+      "pos": [
+        10291.178606458934,
+        960.2966015778817
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 75
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 76
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 60
+        }
+      ],
+      "outputs": [],
+      "title": "Output_video_2",
+      "properties": {
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo2",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 20,
+      "type": "ImageStitch",
+      "pos": [
+        9858.446501888366,
+        599.475081773682
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image1",
+          "type": "IMAGE",
+          "link": 71
+        },
+        {
+          "name": "image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 73
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageStitch"
+      },
+      "widgets_values": [
+        "right",
+        true,
+        0,
+        "white"
+      ]
+    },
+    {
+      "id": 37,
+      "type": "ResizeImageMaskNode",
+      "pos": [
+        10271.057194298028,
+        779.5045421961015
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "IMAGE,MASK",
+          "link": 62
+        }
+      ],
+      "outputs": [
+        {
+          "name": "resized",
+          "type": "*",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ResizeImageMaskNode",
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "scale to multiple",
+        2,
+        "lanczos"
+      ]
+    },
+    {
+      "id": 15,
+      "type": "MpiIfElse",
+      "pos": [
+        10233.085371962945,
+        617.5933545489684
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 18
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 72
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 42
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            62,
+            74
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 16,
+      "type": "MpiSaveVideo",
+      "pos": [
+        10749.76000001444,
+        523.3431323786651
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 74
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 58
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 57
+        },
+        {
+          "name": "use_audio",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_audio"
+          },
+          "link": 24
+        }
+      ],
+      "outputs": [],
+      "title": "Output_video",
+      "properties": {
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 36,
+      "type": "MpiLoadVideo",
+      "pos": [
+        9296.213091694332,
+        845.1156047526903
+      ],
+      "size": [
+        270,
+        178
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 59
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            73,
+            75
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            60
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "duration",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiLoadVideo"
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 31,
+      "type": "Note",
+      "pos": [
+        8572.948831217187,
+        748.8129375034015
+      ],
+      "size": [
+        281.2114466229359,
+        88
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "C:\\Users\\Fabio\\Downloads\\222.mp4"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 42,
+      "type": "Note",
+      "pos": [
+        9841.419669422401,
+        1103.8011162147945
+      ],
+      "size": [
+        281.2114466229359,
+        88
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "C:\\Users\\Fabio\\Downloads\\p_15587601_88.mp3"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 43,
+      "type": "SaveAudio",
+      "pos": [
+        10334.312348272197,
+        1189.2320552667495
+      ],
+      "size": [
+        270,
+        112
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 77
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "audio/ComfyUI"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "MpiString",
+      "pos": [
+        8568.474953287216,
+        592.7572497464699
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "links": [
+            9,
+            33
+          ]
+        }
+      ],
+      "title": "Input_video",
+      "properties": {
+        "Node name for S&R": "MpiString"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 18,
+      "type": "MpiString",
+      "pos": [
+        8586.005242591751,
+        966.0494785203342
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "links": [
+            40
+          ]
+        }
+      ],
+      "title": "Input_video_2",
+      "properties": {
+        "Node name for S&R": "MpiString"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 41,
+      "type": "MpiLoadAudio",
+      "pos": [
+        9836.458803102387,
+        982.7950607598306
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            76,
+            77
+          ]
+        }
+      ],
+      "title": "Input_audio",
+      "properties": {
+        "Node name for S&R": "MpiLoadAudio"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      9,
+      17,
+      0,
+      7,
+      0,
+      "STRING"
+    ],
+    [
+      18,
+      20,
+      0,
+      15,
+      0,
+      "IMAGE"
+    ],
+    [
+      24,
+      7,
+      0,
+      16,
+      3,
+      "BOOLEAN"
+    ],
+    [
+      33,
+      17,
+      0,
+      23,
+      0,
+      "STRING"
+    ],
+    [
+      36,
+      23,
+      0,
+      25,
+      0,
+      "*"
+    ],
+    [
+      38,
+      27,
+      0,
+      26,
+      0,
+      "*"
+    ],
+    [
+      40,
+      18,
+      0,
+      27,
+      0,
+      "STRING"
+    ],
+    [
+      42,
+      27,
+      1,
+      15,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      55,
+      25,
+      0,
+      35,
+      0,
+      "STRING"
+    ],
+    [
+      57,
+      35,
+      2,
+      16,
+      2,
+      "FLOAT"
+    ],
+    [
+      58,
+      35,
+      1,
+      16,
+      1,
+      "AUDIO"
+    ],
+    [
+      59,
+      26,
+      0,
+      36,
+      0,
+      "STRING"
+    ],
+    [
+      60,
+      36,
+      2,
+      11,
+      2,
+      "FLOAT"
+    ],
+    [
+      62,
+      15,
+      0,
+      37,
+      0,
+      "*"
+    ],
+    [
+      71,
+      35,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ],
+    [
+      72,
+      35,
+      0,
+      15,
+      1,
+      "IMAGE"
+    ],
+    [
+      73,
+      36,
+      0,
+      20,
+      1,
+      "IMAGE"
+    ],
+    [
+      74,
+      15,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      75,
+      36,
+      0,
+      11,
+      0,
+      "IMAGE"
+    ],
+    [
+      76,
+      41,
+      0,
+      11,
+      1,
+      "AUDIO"
+    ],
+    [
+      77,
+      41,
+      0,
+      43,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.740024994425819,
+      "offset": [
+        -8437.079132400415,
+        -133.86229629533366
+      ]
+    },
+    "frontendVersion": "1.45.20",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

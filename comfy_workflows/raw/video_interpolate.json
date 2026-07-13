@@ -1,0 +1,603 @@
+{
+  "id": "122d3446-cf21-4713-83a7-e133b0d5c206",
+  "revision": 0,
+  "last_node_id": 764,
+  "last_link_id": 1225,
+  "nodes": [
+    {
+      "id": 720,
+      "type": "MpiClearVram",
+      "pos": [
+        2357.337029837055,
+        728.3009800626197
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 1171
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            1216
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiClearVram",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 735,
+      "type": "MpiConvert",
+      "pos": [
+        1555.8583789390311,
+        954.7200740869637
+      ],
+      "size": [
+        270,
+        118
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "*",
+          "link": 1225
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1159
+          ]
+        },
+        {
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "BOOLEAN",
+          "type": "BOOLEAN",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiConvert",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 724,
+      "type": "MpiMath",
+      "pos": [
+        2084.857776062412,
+        542.1755034916843
+      ],
+      "size": [
+        210,
+        128
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "a",
+          "type": "*",
+          "link": 1223
+        },
+        {
+          "name": "b",
+          "shape": 7,
+          "type": "*",
+          "link": 1155
+        },
+        {
+          "name": "c",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "*",
+          "links": [
+            1219
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiMath",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "a*b"
+      ]
+    },
+    {
+      "id": 349,
+      "type": "RIFE VFI",
+      "pos": [
+        1997.587520167488,
+        725.2467230663298
+      ],
+      "size": [
+        302.91953125,
+        270
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 1220
+        },
+        {
+          "name": "optional_interpolation_states",
+          "shape": 7,
+          "type": "INTERPOLATION_STATES",
+          "link": null
+        },
+        {
+          "name": "clear_cache_after_n_frames",
+          "type": "INT",
+          "widget": {
+            "name": "clear_cache_after_n_frames"
+          },
+          "link": 1157
+        },
+        {
+          "name": "multiplier",
+          "type": "INT",
+          "widget": {
+            "name": "multiplier"
+          },
+          "link": 1159
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1171
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-frame-interpolation",
+        "ver": "1.0.7",
+        "Node name for S&R": "RIFE VFI",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "clear_cache_after_n_frames": true,
+            "multiplier": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "rife47.pth",
+        32,
+        3,
+        false,
+        true,
+        1,
+        "float32",
+        false,
+        1
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 733,
+      "type": "MpiFloat",
+      "pos": [
+        1690.955407444064,
+        557.159273661698
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            1155
+          ]
+        }
+      ],
+      "title": "Input_Interp_Multiplier",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiFloat",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        2
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 734,
+      "type": "MpiConvert",
+      "pos": [
+        1564.751888972109,
+        783.2610759601582
+      ],
+      "size": [
+        270,
+        118
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "*",
+          "link": 1224
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1157
+          ]
+        },
+        {
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "BOOLEAN",
+          "type": "BOOLEAN",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiConvert",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 762,
+      "type": "MpiLoadVideo",
+      "pos": [
+        1181.720739193757,
+        688.86951704358
+      ],
+      "size": [
+        270,
+        198
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            1220
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            1221
+          ]
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            1223,
+            1224,
+            1225
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "duration",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "has_audio",
+          "type": "BOOLEAN",
+          "links": [
+            1222
+          ]
+        }
+      ],
+      "title": "Input_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadVideo"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 761,
+      "type": "MpiSaveVideo",
+      "pos": [
+        2607.604211167805,
+        767.3997348965762
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1216
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 1221
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 1219
+        },
+        {
+          "name": "use_audio",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_audio"
+          },
+          "link": 1222
+        }
+      ],
+      "outputs": [],
+      "title": "Output_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      1155,
+      733,
+      0,
+      724,
+      1,
+      "FLOAT"
+    ],
+    [
+      1157,
+      734,
+      1,
+      349,
+      2,
+      "INT"
+    ],
+    [
+      1159,
+      735,
+      1,
+      349,
+      3,
+      "INT"
+    ],
+    [
+      1171,
+      349,
+      0,
+      720,
+      0,
+      "IMAGE"
+    ],
+    [
+      1216,
+      720,
+      0,
+      761,
+      0,
+      "IMAGE"
+    ],
+    [
+      1219,
+      724,
+      0,
+      761,
+      2,
+      "FLOAT"
+    ],
+    [
+      1220,
+      762,
+      0,
+      349,
+      0,
+      "IMAGE"
+    ],
+    [
+      1221,
+      762,
+      1,
+      761,
+      1,
+      "AUDIO"
+    ],
+    [
+      1222,
+      762,
+      7,
+      761,
+      3,
+      "BOOLEAN"
+    ],
+    [
+      1223,
+      762,
+      2,
+      724,
+      0,
+      "FLOAT"
+    ],
+    [
+      1224,
+      762,
+      2,
+      734,
+      0,
+      "FLOAT"
+    ],
+    [
+      1225,
+      762,
+      2,
+      735,
+      0,
+      "FLOAT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "frontendVersion": "1.45.20",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true,
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "ds": {
+      "scale": 0.9236846128152848,
+      "offset": [
+        -997.2393968548712,
+        -243.76429343802883
+      ]
+    },
+    "workflowRendererVersion": "LG"
+  },
+  "version": 0.4
+}

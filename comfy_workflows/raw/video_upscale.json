@@ -1,0 +1,784 @@
+{
+  "id": "6293c60a-a9e9-48cb-9281-0ddc058309fb",
+  "revision": 0,
+  "last_node_id": 757,
+  "last_link_id": 1197,
+  "nodes": [
+    {
+      "id": 609,
+      "type": "ImageScaleBy",
+      "pos": [
+        2128.349731912034,
+        522.6604153037977
+      ],
+      "size": [
+        210,
+        82
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 959
+        },
+        {
+          "name": "scale_by",
+          "type": "FLOAT",
+          "widget": {
+            "name": "scale_by"
+          },
+          "link": 1169
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1178
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.66",
+        "Node name for S&R": "ImageScaleBy",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "upscale_method": true,
+            "scale_by": true
+          },
+          "version": "7.4.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "lanczos",
+        0.5
+      ]
+    },
+    {
+      "id": 607,
+      "type": "ImageUpscaleWithModel",
+      "pos": [
+        1833.3638492162884,
+        526.7991179093079
+      ],
+      "size": [
+        233.5689453125,
+        46
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 957
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 990
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            959
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.66",
+        "Node name for S&R": "ImageUpscaleWithModel",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.4.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 628,
+      "type": "Reroute",
+      "pos": [
+        1577.3962320306694,
+        673.0560147563575
+      ],
+      "size": [
+        82,
+        26
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 1194
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            989,
+            990
+          ]
+        }
+      ],
+      "properties": {
+        "showOutputText": true,
+        "horizontal": false,
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.4.1",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
+      "id": 400,
+      "type": "ImageScaleBy",
+      "pos": [
+        1947.6190435700628,
+        926.8741468077407
+      ],
+      "size": [
+        338.8988235294096,
+        82
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 989
+        },
+        {
+          "name": "scale_by",
+          "type": "FLOAT",
+          "widget": {
+            "name": "scale_by"
+          },
+          "link": 1167
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1179
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65",
+        "Node name for S&R": "ImageScaleBy",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "upscale_method": true,
+            "scale_by": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "lanczos",
+        2
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 755,
+      "type": "MpiUpscaleModelScale",
+      "pos": [
+        1530.5295525129698,
+        445.6575865198981
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 1190
+        }
+      ],
+      "outputs": [
+        {
+          "name": "scale_int",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "scale_float",
+          "type": "FLOAT",
+          "links": [
+            1189
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiUpscaleModelScale"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 742,
+      "type": "MpiMath",
+      "pos": [
+        1854.9727479585079,
+        654.9055639413118
+      ],
+      "size": [
+        210,
+        128
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "a",
+          "type": "*",
+          "link": 1168
+        },
+        {
+          "name": "b",
+          "shape": 7,
+          "type": "*",
+          "link": 1189
+        },
+        {
+          "name": "c",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "*",
+          "links": [
+            1169
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiMath",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "a/b"
+      ]
+    },
+    {
+      "id": 720,
+      "type": "MpiClearVram",
+      "pos": [
+        2780.5755406621506,
+        688.2289690250138
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 1180
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            1192
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiClearVram",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 756,
+      "type": "MpiSaveVideo",
+      "pos": [
+        3044.7994237909807,
+        682.2403082086626
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1192
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 1196
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 1195
+        },
+        {
+          "name": "use_audio",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_audio"
+          },
+          "link": 1197
+        }
+      ],
+      "outputs": [],
+      "title": "Output_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 748,
+      "type": "MpiIfElse",
+      "pos": [
+        2443.7732322357583,
+        686.8982862376175
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 1178
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 1179
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            1180
+          ]
+        }
+      ],
+      "title": "Input_Upscale_Using_Model",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 608,
+      "type": "UpscaleModelLoader",
+      "pos": [
+        1151.9470801738853,
+        531.9276570547572
+      ],
+      "size": [
+        333.1663356499539,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "links": [
+            957,
+            1190
+          ]
+        }
+      ],
+      "title": "Input_Upscale_Model",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.66",
+        "Node name for S&R": "UpscaleModelLoader",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "model_name": true
+          },
+          "version": "7.4.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "4x_NMKD-Siax_200k.pth"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 757,
+      "type": "MpiLoadVideo",
+      "pos": [
+        1157.204293288779,
+        667.0004244508845
+      ],
+      "size": [
+        270,
+        198
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            1194
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            1196
+          ]
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            1195
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "duration",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "has_audio",
+          "type": "BOOLEAN",
+          "links": [
+            1197
+          ]
+        }
+      ],
+      "title": "Input_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadVideo"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 739,
+      "type": "MpiFloat",
+      "pos": [
+        1451.4251387026582,
+        886.183022287534
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            1167,
+            1168
+          ]
+        }
+      ],
+      "title": "Input_Upscale_Factor",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiFloat",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        2
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      957,
+      608,
+      0,
+      607,
+      0,
+      "UPSCALE_MODEL"
+    ],
+    [
+      959,
+      607,
+      0,
+      609,
+      0,
+      "IMAGE"
+    ],
+    [
+      989,
+      628,
+      0,
+      400,
+      0,
+      "IMAGE"
+    ],
+    [
+      990,
+      628,
+      0,
+      607,
+      1,
+      "IMAGE"
+    ],
+    [
+      1167,
+      739,
+      0,
+      400,
+      1,
+      "FLOAT"
+    ],
+    [
+      1168,
+      739,
+      0,
+      742,
+      0,
+      "FLOAT"
+    ],
+    [
+      1169,
+      742,
+      0,
+      609,
+      1,
+      "FLOAT"
+    ],
+    [
+      1178,
+      609,
+      0,
+      748,
+      0,
+      "IMAGE"
+    ],
+    [
+      1179,
+      400,
+      0,
+      748,
+      1,
+      "IMAGE"
+    ],
+    [
+      1180,
+      748,
+      0,
+      720,
+      0,
+      "*"
+    ],
+    [
+      1189,
+      755,
+      1,
+      742,
+      1,
+      "FLOAT"
+    ],
+    [
+      1190,
+      608,
+      0,
+      755,
+      0,
+      "UPSCALE_MODEL"
+    ],
+    [
+      1192,
+      720,
+      0,
+      756,
+      0,
+      "IMAGE"
+    ],
+    [
+      1194,
+      757,
+      0,
+      628,
+      0,
+      "IMAGE"
+    ],
+    [
+      1195,
+      757,
+      2,
+      756,
+      2,
+      "FLOAT"
+    ],
+    [
+      1196,
+      757,
+      1,
+      756,
+      1,
+      "AUDIO"
+    ],
+    [
+      1197,
+      757,
+      7,
+      756,
+      3,
+      "BOOLEAN"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "frontendVersion": "1.45.20",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true,
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "ds": {
+      "scale": 0.693977920973164,
+      "offset": [
+        -713.3861390050065,
+        13.13648730866409
+      ]
+    },
+    "workflowRendererVersion": "LG"
+  },
+  "version": 0.4
+}
