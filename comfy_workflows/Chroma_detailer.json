@@ -58,12 +58,12 @@
   },
   "1671": {
     "inputs": {
-      "text": [
-        "1673",
-        0
-      ],
       "clip": [
         "1674",
+        0
+      ],
+      "text": [
+        "1673",
         0
       ]
     },
@@ -74,12 +74,12 @@
   },
   "1672": {
     "inputs": {
-      "text": [
-        "1681",
-        0
-      ],
       "clip": [
         "1674",
+        0
+      ],
+      "text": [
+        "1681",
         0
       ]
     },
@@ -108,7 +108,7 @@
     },
     "class_type": "T5TokenizerOptions",
     "_meta": {
-      "title": "T5TokenizerOptions"
+      "title": "T5 Tokenizer Options"
     }
   },
   "1675": {
@@ -266,18 +266,10 @@
       "guide_size_for": true,
       "max_size": 1024,
       "mask_mode": true,
-      "seed": [
-        "1603",
-        0
-      ],
       "steps": 4,
       "cfg": 1,
       "sampler_name": "heun",
       "scheduler": "beta",
-      "denoise": [
-        "1594",
-        0
-      ],
       "feather": 5,
       "crop_factor": 1.8,
       "drop_size": 10,
@@ -298,6 +290,14 @@
       ],
       "basic_pipe": [
         "1679",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "denoise": [
+        "1594",
         0
       ]
     },

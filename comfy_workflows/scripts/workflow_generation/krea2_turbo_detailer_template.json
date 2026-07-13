@@ -31,12 +31,12 @@
   },
   "1671": {
     "inputs": {
-      "text": [
-        "1673",
-        0
-      ],
       "clip": [
         "1690",
+        0
+      ],
+      "text": [
+        "1673",
         0
       ]
     },
@@ -172,18 +172,10 @@
       "guide_size_for": true,
       "max_size": 1024,
       "mask_mode": true,
-      "seed": [
-        "1603",
-        0
-      ],
       "steps": 3,
       "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "beta",
-      "denoise": [
-        "1594",
-        0
-      ],
       "feather": 5,
       "crop_factor": 1.8,
       "drop_size": 10,
@@ -204,6 +196,14 @@
       ],
       "basic_pipe": [
         "1679",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "denoise": [
+        "1594",
         0
       ]
     },
@@ -251,7 +251,7 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Conditioning Zero Out"
     }
   },
   "1694": {

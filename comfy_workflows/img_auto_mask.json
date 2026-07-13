@@ -163,7 +163,7 @@
   "1628": {
     "inputs": {
       "images": [
-        "1571",
+        "1640",
         0
       ]
     },
@@ -174,12 +174,24 @@
   },
   "1630": {
     "inputs": {
-      "string": "",
+      "string": "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\Boogu image edit\\Media\\t2i_002.png",
       "channel": "alpha"
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "1640": {
+    "inputs": {
+      "list_input": [
+        "1571",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmptyList",
+    "_meta": {
+      "title": "Mpi Block If Empty List"
     }
   }
 }
