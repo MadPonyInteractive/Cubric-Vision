@@ -13,10 +13,6 @@
   },
   "11": {
     "inputs": {
-      "fps": [
-        "36",
-        2
-      ],
       "filename_prefix": "MpiVideo2",
       "use_audio": true,
       "images": [
@@ -26,6 +22,10 @@
       "audio": [
         "41",
         0
+      ],
+      "fps": [
+        "36",
+        2
       ]
     },
     "class_type": "MpiSaveVideo",
@@ -35,10 +35,6 @@
   },
   "15": {
     "inputs": {
-      "boolean": [
-        "27",
-        1
-      ],
       "true": [
         "20",
         0
@@ -46,6 +42,10 @@
       "false": [
         "35",
         0
+      ],
+      "boolean": [
+        "27",
+        1
       ]
     },
     "class_type": "MpiIfElse",
@@ -55,15 +55,7 @@
   },
   "16": {
     "inputs": {
-      "fps": [
-        "35",
-        2
-      ],
       "filename_prefix": "MpiVideo",
-      "use_audio": [
-        "7",
-        0
-      ],
       "images": [
         "15",
         0
@@ -71,6 +63,14 @@
       "audio": [
         "35",
         1
+      ],
+      "fps": [
+        "35",
+        2
+      ],
+      "use_audio": [
+        "7",
+        0
       ]
     },
     "class_type": "MpiSaveVideo",
@@ -80,7 +80,7 @@
   },
   "17": {
     "inputs": {
-      "string": "C:\\Users\\Fabio\\Downloads\\222.mp4"
+      "string": ""
     },
     "class_type": "MpiString",
     "_meta": {
@@ -89,7 +89,7 @@
   },
   "18": {
     "inputs": {
-      "string": "C:\\Users\\Fabio\\Downloads\\222.mp4"
+      "string": ""
     },
     "class_type": "MpiString",
     "_meta": {
@@ -116,6 +116,42 @@
       "title": "Stitch Images"
     }
   },
+  "23": {
+    "inputs": {
+      "any": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "25": {
+    "inputs": {
+      "any": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmpty",
+    "_meta": {
+      "title": "Mpi Any Blocker"
+    }
+  },
+  "26": {
+    "inputs": {
+      "any": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmpty",
+    "_meta": {
+      "title": "Mpi Any Blocker"
+    }
+  },
   "27": {
     "inputs": {
       "any": [
@@ -131,7 +167,7 @@
   "35": {
     "inputs": {
       "string": [
-        "17",
+        "25",
         0
       ]
     },
@@ -143,7 +179,7 @@
   "36": {
     "inputs": {
       "string": [
-        "27",
+        "26",
         0
       ]
     },
@@ -152,13 +188,41 @@
       "title": "Mpi Load Video"
     }
   },
+  "37": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 2,
+      "scale_method": "lanczos",
+      "input": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
   "41": {
     "inputs": {
-      "string": "C:\\Users\\Fabio\\Downloads\\p_15587601_88.mp3"
+      "string": ""
     },
     "class_type": "MpiLoadAudio",
     "_meta": {
       "title": "Input_audio"
+    }
+  },
+  "43": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "audio": [
+        "41",
+        0
+      ]
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "Save Audio (FLAC) (DEPRECATED)"
     }
   }
 }

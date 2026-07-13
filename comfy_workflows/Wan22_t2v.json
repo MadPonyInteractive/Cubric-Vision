@@ -81,11 +81,11 @@
   },
   "635": {
     "inputs": {
+      "fps": 16,
       "seconds": [
         "838",
         0
-      ],
-      "fps": 16
+      ]
     },
     "class_type": "MpiWanSeconds",
     "_meta": {
@@ -103,13 +103,13 @@
   },
   "723": {
     "inputs": {
-      "text": [
-        "745",
-        0
-      ],
       "clip": [
         "739",
         1
+      ],
+      "text": [
+        "745",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -158,10 +158,6 @@
   "733": {
     "inputs": {
       "add_noise": false,
-      "noise_seed": [
-        "717",
-        0
-      ],
       "cfg": 1,
       "model": [
         "730",
@@ -185,6 +181,10 @@
       ],
       "latent_image": [
         "775",
+        0
+      ],
+      "noise_seed": [
+        "717",
         0
       ]
     },
@@ -249,10 +249,6 @@
   "740": {
     "inputs": {
       "add_noise": true,
-      "noise_seed": [
-        "717",
-        0
-      ],
       "cfg": 1,
       "model": [
         "738",
@@ -277,6 +273,10 @@
       "latent_image": [
         "823",
         2
+      ],
+      "noise_seed": [
+        "717",
+        0
       ]
     },
     "class_type": "SamplerCustom",
@@ -295,13 +295,13 @@
   },
   "744": {
     "inputs": {
-      "text": [
-        "743",
-        0
-      ],
       "clip": [
         "739",
         1
+      ],
+      "text": [
+        "743",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -311,12 +311,12 @@
   },
   "745": {
     "inputs": {
+      "string_b": "\u8272\u8c03\u8273\u4e3d\uff0c\u8fc7\u66dd\uff0c\u9759\u6001\uff0c\u7ec6\u8282\u6a21\u7cca\u4e0d\u6e05\uff0c\u5b57\u5e55\uff0c\u98ce\u683c\uff0c\u4f5c\u54c1\uff0c\u753b\u4f5c\uff0c\u753b\u9762\uff0c\u9759\u6b62\uff0c\u6574\u4f53\u53d1\u7070\uff0c\u6700\u5dee\u8d28\u91cf\uff0c\u4f4e\u8d28\u91cf\uff0cJPEG\u538b\u7f29\u6b8b\u7559\uff0c\u4e11\u964b\u7684\uff0c\u6b8b\u7f3a\u7684\uff0c\u591a\u4f59\u7684\u624b\u6307\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u624b\u90e8\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u8138\u90e8\uff0c\u7578\u5f62\u7684\uff0c\u6bc1\u5bb9\u7684\uff0c\u5f62\u6001\u7578\u5f62\u7684\u80a2\u4f53\uff0c\u624b\u6307\u878d\u5408\uff0c\u9759\u6b62\u4e0d\u52a8\u7684\u753b\u9762\uff0c\u6742\u4e71\u7684\u80cc\u666f\uff0c\u4e09\u6761\u817f\uff0c\u80cc\u666f\u4eba\u5f88\u591a\uff0c\u5012\u7740\u8d70",
+      "delimiter": "",
       "string_a": [
         "751",
         0
-      ],
-      "string_b": "\u8272\u8c03\u8273\u4e3d\uff0c\u8fc7\u66dd\uff0c\u9759\u6001\uff0c\u7ec6\u8282\u6a21\u7cca\u4e0d\u6e05\uff0c\u5b57\u5e55\uff0c\u98ce\u683c\uff0c\u4f5c\u54c1\uff0c\u753b\u4f5c\uff0c\u753b\u9762\uff0c\u9759\u6b62\uff0c\u6574\u4f53\u53d1\u7070\uff0c\u6700\u5dee\u8d28\u91cf\uff0c\u4f4e\u8d28\u91cf\uff0cJPEG\u538b\u7f29\u6b8b\u7559\uff0c\u4e11\u964b\u7684\uff0c\u6b8b\u7f3a\u7684\uff0c\u591a\u4f59\u7684\u624b\u6307\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u624b\u90e8\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u8138\u90e8\uff0c\u7578\u5f62\u7684\uff0c\u6bc1\u5bb9\u7684\uff0c\u5f62\u6001\u7578\u5f62\u7684\u80a2\u4f53\uff0c\u624b\u6307\u878d\u5408\uff0c\u9759\u6b62\u4e0d\u52a8\u7684\u753b\u9762\uff0c\u6742\u4e71\u7684\u80cc\u666f\uff0c\u4e09\u6761\u817f\uff0c\u80cc\u666f\u4eba\u5f88\u591a\uff0c\u5012\u7740\u8d70",
-      "delimiter": ""
+      ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
@@ -343,13 +343,13 @@
   },
   "768": {
     "inputs": {
-      "boolean": [
-        "752",
-        0
-      ],
       "input": [
         "740",
         1
+      ],
+      "boolean": [
+        "752",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -563,18 +563,6 @@
   },
   "823": {
     "inputs": {
-      "width": [
-        "827",
-        0
-      ],
-      "height": [
-        "828",
-        0
-      ],
-      "length": [
-        "635",
-        0
-      ],
       "batch_size": 1,
       "positive": [
         "744",
@@ -587,6 +575,18 @@
       "vae": [
         "739",
         2
+      ],
+      "width": [
+        "827",
+        0
+      ],
+      "height": [
+        "828",
+        0
+      ],
+      "length": [
+        "635",
+        0
       ]
     },
     "class_type": "WanImageToVideo",
@@ -623,12 +623,12 @@
   },
   "883": {
     "inputs": {
-      "boolean": [
-        "752",
-        0
-      ],
       "input": [
         "888",
+        0
+      ],
+      "boolean": [
+        "752",
         0
       ]
     },
@@ -639,13 +639,13 @@
   },
   "884": {
     "inputs": {
-      "boolean": [
-        "886",
-        0
-      ],
       "input": [
         "883",
         1
+      ],
+      "boolean": [
+        "886",
+        0
       ]
     },
     "class_type": "MpiIfElseInverted",
@@ -694,16 +694,16 @@
   },
   "888": {
     "inputs": {
-      "boolean": [
-        "887",
-        0
-      ],
       "true": [
         "893",
         0
       ],
       "false": [
         "740",
+        0
+      ],
+      "boolean": [
+        "887",
         0
       ]
     },

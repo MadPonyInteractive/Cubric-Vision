@@ -2,7 +2,6 @@
   "1564": {
     "inputs": {
       "add_noise": true,
-      "noise_seed": 3,
       "cfg": 1,
       "model": [
         "1573",
@@ -26,6 +25,10 @@
       ],
       "latent_image": [
         "1569",
+        0
+      ],
+      "noise_seed": [
+        "1628",
         0
       ]
     },
@@ -67,22 +70,22 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Conditioning Zero Out"
     }
   },
   "1568": {
     "inputs": {
       "latent_format": "flux",
-      "degrade_sigma": [
-        "1606",
-        0
-      ],
       "positive": [
         "1572",
         0
       ],
       "latent": [
         "1578",
+        0
+      ],
+      "degrade_sigma": [
+        "1606",
         0
       ]
     },
@@ -93,6 +96,7 @@
   },
   "1569": {
     "inputs": {
+      "batch_size": 1,
       "width": [
         "1623",
         0
@@ -100,8 +104,7 @@
       "height": [
         "1623",
         1
-      ],
-      "batch_size": 1
+      ]
     },
     "class_type": "EmptyChromaRadianceLatentImage",
     "_meta": {
@@ -137,12 +140,12 @@
   },
   "1572": {
     "inputs": {
-      "text": [
-        "1587",
-        0
-      ],
       "clip": [
         "1571",
+        0
+      ],
+      "text": [
+        "1587",
         0
       ]
     },
@@ -219,7 +222,6 @@
   "1588": {
     "inputs": {
       "add_noise": true,
-      "noise_seed": 3,
       "cfg": 1,
       "model": [
         "1592",
@@ -244,6 +246,10 @@
       "latent_image": [
         "1569",
         0
+      ],
+      "noise_seed": [
+        "1628",
+        0
       ]
     },
     "class_type": "SamplerCustom",
@@ -254,16 +260,16 @@
   "1589": {
     "inputs": {
       "latent_format": "sd3",
-      "degrade_sigma": [
-        "1606",
-        0
-      ],
       "positive": [
         "1572",
         0
       ],
       "latent": [
         "1590",
+        0
+      ],
+      "degrade_sigma": [
+        "1606",
         0
       ]
     },
@@ -325,7 +331,6 @@
   "1594": {
     "inputs": {
       "add_noise": true,
-      "noise_seed": 3,
       "cfg": 1,
       "model": [
         "1598",
@@ -350,6 +355,10 @@
       "latent_image": [
         "1569",
         0
+      ],
+      "noise_seed": [
+        "1628",
+        0
       ]
     },
     "class_type": "SamplerCustom",
@@ -360,16 +369,16 @@
   "1595": {
     "inputs": {
       "latent_format": "qwenimage",
-      "degrade_sigma": [
-        "1606",
-        0
-      ],
       "positive": [
         "1572",
         0
       ],
       "latent": [
         "1596",
+        0
+      ],
+      "degrade_sigma": [
+        "1606",
         0
       ]
     },
@@ -431,7 +440,6 @@
   "1600": {
     "inputs": {
       "add_noise": true,
-      "noise_seed": 3,
       "cfg": 1,
       "model": [
         "1604",
@@ -456,6 +464,10 @@
       "latent_image": [
         "1569",
         0
+      ],
+      "noise_seed": [
+        "1628",
+        0
       ]
     },
     "class_type": "SamplerCustom",
@@ -466,16 +478,16 @@
   "1601": {
     "inputs": {
       "latent_format": "sdxl",
-      "degrade_sigma": [
-        "1606",
-        0
-      ],
       "positive": [
         "1572",
         0
       ],
       "latent": [
         "1602",
+        0
+      ],
+      "degrade_sigma": [
+        "1606",
         0
       ]
     },
@@ -585,6 +597,11 @@
   "1613": {
     "inputs": {
       "upscale_method": "lanczos",
+      "crop": "disabled",
+      "image": [
+        "1570",
+        0
+      ],
       "width": [
         "1618",
         0
@@ -592,11 +609,6 @@
       "height": [
         "1618",
         1
-      ],
-      "crop": "disabled",
-      "image": [
-        "1570",
-        0
       ]
     },
     "class_type": "ImageScale",
@@ -628,6 +640,11 @@
   "1616": {
     "inputs": {
       "upscale_method": "lanczos",
+      "crop": "disabled",
+      "image": [
+        "1570",
+        0
+      ],
       "width": [
         "1619",
         0
@@ -635,11 +652,6 @@
       "height": [
         "1619",
         1
-      ],
-      "crop": "disabled",
-      "image": [
-        "1570",
-        0
       ]
     },
     "class_type": "ImageScale",
@@ -691,6 +703,12 @@
   },
   "1624": {
     "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "1626",
+        0
+      ],
       "width": [
         "1609",
         0
@@ -698,12 +716,6 @@
       "height": [
         "1609",
         1
-      ],
-      "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "1626",
-        0
       ]
     },
     "class_type": "MpiCrop",
@@ -719,6 +731,15 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "1628": {
+    "inputs": {
+      "int": 416
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
     }
   }
 }

@@ -2,12 +2,12 @@
   "400": {
     "inputs": {
       "upscale_method": "lanczos",
-      "scale_by": [
-        "739",
-        0
-      ],
       "image": [
         "758",
+        0
+      ],
+      "scale_by": [
+        "739",
         0
       ]
     },
@@ -44,12 +44,12 @@
   "609": {
     "inputs": {
       "upscale_method": "lanczos",
-      "scale_by": [
-        "742",
-        0
-      ],
       "image": [
         "607",
+        0
+      ],
+      "scale_by": [
+        "742",
         0
       ]
     },

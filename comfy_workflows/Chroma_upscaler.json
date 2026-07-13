@@ -58,6 +58,10 @@
   },
   "1639": {
     "inputs": {
+      "image": [
+        "1655",
+        0
+      ],
       "horizontal_split": [
         "1604",
         0
@@ -72,10 +76,6 @@
       ],
       "auto": [
         "1613",
-        0
-      ],
-      "image": [
-        "1655",
         0
       ]
     },
@@ -146,12 +146,12 @@
   },
   "1671": {
     "inputs": {
-      "text": [
-        "1673",
-        0
-      ],
       "clip": [
         "1674",
+        0
+      ],
+      "text": [
+        "1673",
         0
       ]
     },
@@ -162,12 +162,12 @@
   },
   "1672": {
     "inputs": {
-      "text": [
-        "1681",
-        0
-      ],
       "clip": [
         "1674",
+        0
+      ],
+      "text": [
+        "1681",
         0
       ]
     },
@@ -196,7 +196,7 @@
     },
     "class_type": "T5TokenizerOptions",
     "_meta": {
-      "title": "T5TokenizerOptions"
+      "title": "T5 Tokenizer Options"
     }
   },
   "1675": {
@@ -362,41 +362,21 @@
   },
   "1686": {
     "inputs": {
-      "upscale_by": [
-        "1657",
-        0
-      ],
-      "seed": [
-        "1603",
-        0
-      ],
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "res_multistep",
-      "scheduler": "bong_tangent",
-      "denoise": [
-        "1594",
-        0
-      ],
-      "mode_type": "Linear",
-      "tile_width": [
-        "1639",
-        0
-      ],
-      "tile_height": [
-        "1639",
-        1
-      ],
-      "mask_blur": 8,
-      "tile_padding": 32,
-      "seam_fix_mode": "None",
-      "seam_fix_denoise": 0.6,
-      "seam_fix_width": 64,
-      "seam_fix_mask_blur": 8,
-      "seam_fix_padding": 16,
-      "force_uniform_tiles": false,
+      "steps": "fixed",
+      "cfg": 4,
+      "sampler_name": 1,
+      "scheduler": "res_multistep",
+      "mode_type": 0.3,
+      "mask_blur": 1152,
+      "tile_padding": 8,
+      "seam_fix_mode": 32,
+      "seam_fix_denoise": "None",
+      "seam_fix_width": 0.6,
+      "seam_fix_mask_blur": 64,
+      "seam_fix_padding": 8,
+      "force_uniform_tiles": 16,
       "tiled_decode": false,
-      "batch_size": 1,
+      "batch_size": false,
       "image": [
         "1655",
         0
@@ -420,6 +400,26 @@
       "upscale_model": [
         "1656",
         0
+      ],
+      "upscale_by": [
+        "1657",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "denoise": [
+        "1594",
+        0
+      ],
+      "tile_width": [
+        "1639",
+        0
+      ],
+      "tile_height": [
+        "1639",
+        1
       ]
     },
     "class_type": "UltimateSDUpscale",

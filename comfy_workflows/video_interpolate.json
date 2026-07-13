@@ -2,14 +2,6 @@
   "349": {
     "inputs": {
       "ckpt_name": "rife47.pth",
-      "clear_cache_after_n_frames": [
-        "734",
-        1
-      ],
-      "multiplier": [
-        "735",
-        1
-      ],
       "fast_mode": false,
       "ensemble": true,
       "scale_factor": 1,
@@ -19,6 +11,14 @@
       "frames": [
         "762",
         0
+      ],
+      "clear_cache_after_n_frames": [
+        "734",
+        1
+      ],
+      "multiplier": [
+        "735",
+        1
       ]
     },
     "class_type": "RIFE VFI",
@@ -92,15 +92,7 @@
   },
   "761": {
     "inputs": {
-      "fps": [
-        "724",
-        0
-      ],
       "filename_prefix": "MpiVideo",
-      "use_audio": [
-        "762",
-        7
-      ],
       "images": [
         "720",
         0
@@ -108,6 +100,14 @@
       "audio": [
         "762",
         1
+      ],
+      "fps": [
+        "724",
+        0
+      ],
+      "use_audio": [
+        "762",
+        7
       ]
     },
     "class_type": "MpiSaveVideo",

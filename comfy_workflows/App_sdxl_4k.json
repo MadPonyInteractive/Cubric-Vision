@@ -48,13 +48,13 @@
   },
   "1476": {
     "inputs": {
-      "text": [
-        "1545",
-        0
-      ],
       "clip": [
         "1540",
         1
+      ],
+      "text": [
+        "1545",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -64,13 +64,13 @@
   },
   "1481": {
     "inputs": {
-      "text": [
-        "1472",
-        0
-      ],
       "clip": [
         "1540",
         1
+      ],
+      "text": [
+        "1472",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -107,10 +107,6 @@
   },
   "1533": {
     "inputs": {
-      "seed": [
-        "1534",
-        0
-      ],
       "steps": 7,
       "cfg": 1.5,
       "sampler_name": "lcm",
@@ -130,6 +126,10 @@
       ],
       "latent_image": [
         "1455",
+        0
+      ],
+      "seed": [
+        "1534",
         0
       ]
     },
@@ -277,10 +277,6 @@
   },
   "1542": {
     "inputs": {
-      "seed": [
-        "1534",
-        0
-      ],
       "steps": 3,
       "cfg": 1.5,
       "sampler_name": "lcm",
@@ -300,6 +296,10 @@
       ],
       "latent_image": [
         "1541",
+        0
+      ],
+      "seed": [
+        "1534",
         0
       ]
     },
@@ -326,12 +326,12 @@
   },
   "1545": {
     "inputs": {
+      "string_b": "blurry, (lowres:1.2), (worst quality:1.4), (low quality:1.4), (bad anatomy:1.4), bad hands, multiple views, jpeg artifacts",
+      "delimiter": ", ",
       "string_a": [
         "1473",
         0
-      ],
-      "string_b": "blurry, (lowres:1.2), (worst quality:1.4), (low quality:1.4), (bad anatomy:1.4), bad hands, multiple views, jpeg artifacts",
-      "delimiter": ", "
+      ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
@@ -341,18 +341,18 @@
   "1551": {
     "inputs": {
       "resize_type": "scale dimensions",
+      "resize_type.crop": "center",
+      "scale_method": "lanczos",
+      "input": [
+        "1543",
+        0
+      ],
       "resize_type.width": [
         "1520",
         0
       ],
       "resize_type.height": [
         "1521",
-        0
-      ],
-      "resize_type.crop": "center",
-      "scale_method": "lanczos",
-      "input": [
-        "1543",
         0
       ]
     },
@@ -389,12 +389,12 @@
   },
   "1573": {
     "inputs": {
-      "text": [
-        "1472",
-        0
-      ],
       "clip": [
         "1572",
+        0
+      ],
+      "text": [
+        "1472",
         0
       ]
     },
@@ -412,7 +412,7 @@
     },
     "class_type": "ConditioningZeroOut",
     "_meta": {
-      "title": "ConditioningZeroOut"
+      "title": "Conditioning Zero Out"
     }
   },
   "1583": {
@@ -468,16 +468,16 @@
   "1594": {
     "inputs": {
       "latent_format": "sdxl",
-      "degrade_sigma": [
-        "1616",
-        0
-      ],
       "positive": [
         "1573",
         0
       ],
       "latent": [
         "1583",
+        0
+      ],
+      "degrade_sigma": [
+        "1616",
         0
       ]
     },
@@ -583,14 +583,6 @@
   },
   "1613": {
     "inputs": {
-      "width": [
-        "1603",
-        0
-      ],
-      "height": [
-        "1603",
-        1
-      ],
       "upscale_method": "lanczos",
       "keep_proportion": "crop",
       "pad_color": "0, 0, 0",
@@ -600,6 +592,14 @@
       "image": [
         "1551",
         0
+      ],
+      "width": [
+        "1603",
+        0
+      ],
+      "height": [
+        "1603",
+        1
       ]
     },
     "class_type": "ImageResizeKJv2",
@@ -609,6 +609,7 @@
   },
   "1614": {
     "inputs": {
+      "batch_size": 1,
       "width": [
         "1615",
         0
@@ -616,8 +617,7 @@
       "height": [
         "1615",
         1
-      ],
-      "batch_size": 1
+      ]
     },
     "class_type": "EmptyChromaRadianceLatentImage",
     "_meta": {
