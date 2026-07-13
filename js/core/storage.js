@@ -160,6 +160,9 @@ export const Storage = {
   getPlayAudioOnHover: () => get(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, true),
   setPlayAudioOnHover: (v) => set(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, v),
 
+  getToastSound:       () => get(STORAGE_KEYS.TOAST_SOUND, true),
+  setToastSound:       (v) => set(STORAGE_KEYS.TOAST_SOUND, v),
+
   getExtraProjectPaths: () => get(STORAGE_KEYS.EXTRA_PROJECT_PATHS, []),
   setExtraProjectPaths: (v) => set(STORAGE_KEYS.EXTRA_PROJECT_PATHS, v),
 

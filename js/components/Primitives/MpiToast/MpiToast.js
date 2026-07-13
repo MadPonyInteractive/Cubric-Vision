@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { qs, qsa } from '../../../utils/dom.js';
+import { Storage } from '../../../core/storage.js';
 
 /**
  * MpiToast — Brief floating notifications.
@@ -32,6 +33,25 @@ function _getStackContainer() {
     // toast fired while the overlay is open isn't detached + auto-dismissed.
     document.body.appendChild(_stackContainer);
     return _stackContainer;
+}
+
+// Notification chime. Plays ONCE when a toast lands in an empty stack (the
+// start of a burst) and stays silent for every follow-up toast while the burst
+// is live. When the stack fully drains the next toast is again a burst-start,
+// so it plays again — no manual reset needed, the DOM count IS the reset.
+let _chime = null;
+function _playToastSound() {
+    if (!Storage.getToastSound()) return;
+    if (!_chime) _chime = new Audio('assets/sounds/notify.wav');
+    _chime.currentTime = 0;
+    _chime.play().catch(() => {});   // autoplay/user-gesture rejects are harmless
+}
+
+// Total toasts currently in the stack — visible AND queued. Zero means the
+// next toast starts a fresh burst.
+function _totalCount() {
+    if (!_stackContainer) return 0;
+    return qsa(':scope > .mpi-toast', _stackContainer).length;
 }
 
 // Visible = mounted in the stack and not flagged as queued. Queried from the
@@ -142,6 +162,9 @@ export const MpiToast = ComponentFactory.create({
         el._dismissFn = dismiss;
 
         const container = _getStackContainer();
+        // Burst-start chime: fire before this toast joins the stack, only when
+        // the stack was empty. Follow-up toasts in the same burst stay silent.
+        if (_totalCount() === 0) _playToastSound();
         const isVisible = _visibleCount() < MAX_VISIBLE_TOASTS;
 
         // Mount into the shared stack either way — queued toasts are hidden via

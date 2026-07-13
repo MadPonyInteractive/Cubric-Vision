@@ -53,6 +53,7 @@ export const MpiSettings = ComponentFactory.create({
                         <label class="mpi-settings__field-label">Desktop Notifications</label>
                         <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyGenerationSlot"></div>
                         <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyDownloadsSlot"></div>
+                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsToastSoundSlot"></div>
                         <span class="mpi-settings__hint">Show an OS notification when these finish (only while the app is in the background). In-app messages are unaffected.</span>
                     </div>
                     <div class="mpi-settings__form-group">
@@ -183,6 +184,16 @@ export const MpiSettings = ComponentFactory.create({
                     checked: state.notificationPrefs?.downloads !== false,
                     label: 'Download complete',
                 }).on('change', ({ checked }) => _saveNotifyPref('downloads', checked));
+            }
+
+            // ── In-app toast chime (default ON) ──────────────────────────────
+            const toastSoundSlot = qs('#mpiSettingsToastSoundSlot', root);
+            if (toastSoundSlot) {
+                toastSoundSlot.innerHTML = '';
+                MpiCheckbox.mount(toastSoundSlot, {
+                    checked: Storage.getToastSound(),
+                    label: 'Play sound on notification',
+                }).on('change', ({ checked }) => Storage.setToastSound(checked));
             }
 
             // ── MPI-270: floating latent window when minimized (default ON) ──
