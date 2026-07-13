@@ -23,8 +23,10 @@ resources/*
 # Contains a hardcoded HF token — keep local only, do not track
 comfy_workflows/scripts/upload-models/upload.py
 
-# User's personal ComfyUI tool — not used by the app, never committed
+# User's personal ComfyUI tool — not used by the app, never committed (both the
+# raw LiteGraph source and any converted copy)
 comfy_workflows/Model Merger.json
+comfy_workflows/raw/Model Merger.json
 
 # Worktrees
 .worktrees/

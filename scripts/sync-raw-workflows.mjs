@@ -1,27 +1,37 @@
 #!/usr/bin/env node
 /**
- * sync-raw-workflows.mjs — one-shot: convert LiteGraph workflow exports dropped in
- * comfy_workflows/raw/ into API format, run the template generator, and commit.
+ * sync-raw-workflows.mjs — convert the LiteGraph workflow sources the user edited in
+ * comfy_workflows/raw/ into API format, validate them, and bake runtime files.
  *
- * For each raw/*.json changed since its last conversion (mtime):
+ * "What changed" is GIT-DRIVEN (raw/*.json differing from HEAD — modified/staged/
+ * untracked), not mtime: deterministic across checkouts and clones. --all forces all.
+ *
+ * For each changed raw/*.json:
  *   - "<name>_template.json"  -> API at comfy_workflows/scripts/workflow_generation/<name>.json
- *                                (a generator source; orchestrate.py bakes runtime files after)
+ *                                (a generator SOURCE; orchestrate.py bakes runtime files after)
  *   - "<name>.json"           -> API at comfy_workflows/<name>.json (runtime, used directly)
  *
- * If any template was (re)written, runs orchestrate.py to regenerate runtime files.
- * Then commits exactly the workflow files this run touched (by pathspec, never git add -A).
+ * Flow:
+ *   1. git-diff raw/ vs HEAD → changed sources
+ *   2. COMMIT the raw sources (raw only — the record of the user's edit)
+ *   3. convert each changed raw → API
+ *   4. GATE: validate-injection-rules.mjs on every converted API — ANY violation STOPS
+ *      the run (raw is committed; nothing bad gets baked) and tells the user to fix in
+ *      the ComfyUI graph and re-export
+ *   5. orchestrate.py bakes runtime files from changed templates
+ *   6. leave generated API + runtime STAGED (uncommitted) — /mpi-end commits them, so
+ *      a session produces ONE generated-workflow commit, not one per sync
  *
  * Usage:
- *   node scripts/sync-raw-workflows.mjs            # convert changed, generate, commit
- *   node scripts/sync-raw-workflows.mjs --all      # reconvert every raw file
- *   node scripts/sync-raw-workflows.mjs --no-commit # do the work, leave it for review
+ *   node scripts/sync-raw-workflows.mjs          # sync git-changed raw
+ *   node scripts/sync-raw-workflows.mjs --all    # reconvert every raw file
  *
  * Requires a running ComfyUI (widget names via /object_info) — same as workflow-to-api.mjs.
  * COMFY_URL overrides the default http://127.0.0.1:8188.
  */
 
 import fs from 'node:fs/promises';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { execFileSync } from 'node:child_process';
@@ -33,10 +43,10 @@ const RAW_DIR = path.join(REPO_ROOT, 'comfy_workflows', 'raw');
 const WORKFLOWS_DIR = path.join(REPO_ROOT, 'comfy_workflows');
 const GEN_DIR = path.join(WORKFLOWS_DIR, 'scripts', 'workflow_generation');
 const CONVERTER = path.join(SCRIPT_DIR, 'workflow-to-api.mjs');
+const VALIDATOR = path.join(SCRIPT_DIR, 'validate-injection-rules.mjs');
 
 const argv = process.argv.slice(2);
-const FORCE = argv.includes('--all');
-const NO_COMMIT = argv.includes('--no-commit');
+const FORCE = argv.includes('--all');   // reconvert every raw file, not just git-changed
 
 const isTemplate = (name) => /_template\.json$/i.test(name);
 
@@ -53,12 +63,23 @@ function assertNotInRaw(outPath) {
 const outPathFor = (name) =>
   assertNotInRaw(isTemplate(name) ? path.join(GEN_DIR, name) : path.join(WORKFLOWS_DIR, name));
 
-function mtime(p) {
-  try { return statSync(p).mtimeMs; } catch { return -Infinity; }
-}
-
 /** git output paths relative to repo root, forward-slashed (git wants those). */
 function rel(p) { return path.relative(REPO_ROOT, p).split(path.sep).join('/'); }
+
+/** raw/*.json that differ from HEAD (modified, staged, or untracked). This is the
+ *  git-driven "what changed" — deterministic across checkouts/clones, unlike mtime. */
+function gitChangedRaw() {
+  // -uall so untracked files are listed individually (default collapses a wholly-
+  // untracked dir to a single "?? raw/" line). Model Merger.json is gitignored, so
+  // it never appears here.
+  const out = execFileSync('git', ['status', '--porcelain', '-uall', '--', 'comfy_workflows/raw'], {
+    cwd: REPO_ROOT, encoding: 'utf8',
+  });
+  return out.split('\n').filter(Boolean)
+    .map((l) => l.slice(3).trim().replace(/^"|"$/g, ''))       // strip status + quotes
+    .filter((p) => p.startsWith('comfy_workflows/raw/') && p.endsWith('.json'))
+    .map((p) => path.basename(p));
+}
 
 async function main() {
   if (!existsSync(RAW_DIR)) {
@@ -67,44 +88,59 @@ async function main() {
   }
 
   // Guard: orchestrate.py does a GLOBAL template rebuild, which overwrites any
-  // uncommitted runtime files. Refuse to run on a dirty workflow tree so we never
-  // clobber in-progress work. raw/ is untracked scratch — ignore it.
-  const dirty = execFileSync('git', ['status', '--porcelain', '--', 'comfy_workflows'], {
+  // uncommitted GENERATED files (templates in GEN_DIR + runtime in comfy_workflows).
+  // Refuse if any of those are dirty so we never clobber in-progress generated work.
+  // raw/ changes are EXPECTED (that's our input) and are committed below, so ignore
+  // raw/ here.
+  const dirtyGenerated = execFileSync('git', ['status', '--porcelain', '--', 'comfy_workflows'], {
     cwd: REPO_ROOT, encoding: 'utf8',
   })
-    .split('\n')
-    .filter(Boolean)
-    .filter((l) => !l.slice(3).trim().startsWith('comfy_workflows/raw/'));
-  if (dirty.length) {
+    .split('\n').filter(Boolean)
+    .filter((l) => !l.slice(3).trim().replace(/^"|"$/g, '').startsWith('comfy_workflows/raw/'));
+  if (dirtyGenerated.length) {
     console.error(
-      `Refusing: comfy_workflows has ${dirty.length} uncommitted change(s). ` +
+      `Refusing: ${dirtyGenerated.length} uncommitted GENERATED workflow change(s). ` +
       `orchestrate.py rebuilds ALL templates and would overwrite them.\n` +
-      `Commit or stash your workflow changes first, then re-run.\n` +
-      dirty.map((l) => '  ' + l).join('\n')
+      `Commit or stash them first (or run /mpi-end), then re-run.\n` +
+      dirtyGenerated.map((l) => '  ' + l).join('\n')
     );
     process.exit(1);
   }
-  const files = (await fs.readdir(RAW_DIR)).filter((f) => f.endsWith('.json'));
-  if (!files.length) { console.log('raw/ is empty.'); return; }
 
-  const touched = [];        // API output paths written this run
+  // 1. What changed — git-driven, not mtime. --all forces every raw file.
+  let changed;
+  if (FORCE) {
+    const { readdirSync } = await import('node:fs');
+    changed = readdirSync(RAW_DIR).filter((f) => f.endsWith('.json'));
+  } else {
+    changed = gitChangedRaw();
+  }
+  if (!changed.length) { console.log('No raw/ workflows changed vs HEAD — nothing to do.'); return; }
+  console.log(`Changed raw workflow(s): ${changed.join(', ')}`);
+
+  // 2. Commit the RAW sources FIRST — the record of the user's edit. Generated API +
+  //    runtime are NOT committed here (too many commits); /mpi-end closes them.
+  const rawPaths = changed.map((f) => `comfy_workflows/raw/${f}`);
+  const rawMsg =
+    `chore(workflows): raw source edit — ${changed.join(', ')}\n\n` +
+    `LiteGraph source(s). Generated API templates + orchestrated runtime files land ` +
+    `staged (uncommitted); /mpi-end commits them.`;
+  execFileSync('git', ['add', '--', ...rawPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
+  execFileSync('git', ['commit', '-n', '-m', rawMsg, '--only', '--', ...rawPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
+  console.log(`Committed raw source(s): ${changed.join(', ')}`);
+
+  // 3. Convert each changed raw -> API.
+  const touched = [];
   let anyTemplate = false;
-
-  for (const f of files) {
+  for (const f of changed) {
     const src = path.join(RAW_DIR, f);
     const out = outPathFor(f);
-    if (!FORCE && mtime(out) >= mtime(src)) {
-      console.log(`skip  ${f} (output up to date)`);
-      continue;
-    }
-    // Convert via the existing single-file converter (stdout -> file).
     let api;
     try {
       api = execFileSync('node', [CONVERTER, src], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
     } catch (e) {
-      console.error(`FAIL  ${f}: ${(e.stderr || e.message).toString().trim()}`);
-      process.exitCode = 1;
-      continue;
+      console.error(`FAIL  convert ${f}: ${(e.stderr || e.message).toString().trim()}`);
+      process.exit(1);
     }
     await fs.mkdir(path.dirname(out), { recursive: true });
     await fs.writeFile(out, api);
@@ -113,38 +149,39 @@ async function main() {
     console.log(`OK    ${f} -> ${rel(out)}`);
   }
 
-  if (!touched.length) { console.log('\nNothing changed.'); return; }
+  // 4. GATE — validate every converted API against the injection rules BEFORE baking.
+  //    Any violation stops the run (raw is already committed; nothing bad gets baked).
+  console.log('\nValidating injection rules...');
+  try {
+    execFileSync('node', [VALIDATOR, ...touched], { cwd: REPO_ROOT, stdio: 'inherit' });
+  } catch {
+    console.error(
+      `\nSTOP: converted workflow(s) violate the injection rules (see above). Fix the ` +
+      `offending node(s) in the ComfyUI graph editor and re-export to raw/, then re-run. ` +
+      `orchestrate.py was NOT run — no bad runtime was baked. The raw commit stands.`
+    );
+    process.exit(1);
+  }
 
-  // Templates are only generator SOURCES — bake runtime files before committing.
+  // 5. Orchestrate — templates are generator SOURCES; bake their runtime files.
   if (anyTemplate) {
     console.log('\nRunning orchestrate.py (template -> runtime files)...');
     execFileSync('python', ['orchestrate.py'], { cwd: GEN_DIR, stdio: 'inherit' });
   }
 
-  if (NO_COMMIT) {
-    console.log('\n--no-commit: leaving changes for review.');
-    return;
+  // 6. Leave generated API + runtime STAGED (uncommitted) for /mpi-end to commit.
+  const generated = execFileSync('git', ['status', '--porcelain', '--', 'comfy_workflows'], {
+    cwd: REPO_ROOT, encoding: 'utf8',
+  })
+    .split('\n').filter(Boolean)
+    .map((l) => l.slice(3).trim().replace(/^"|"$/g, ''))
+    .filter((p) => p.startsWith('comfy_workflows/') && !p.startsWith('comfy_workflows/raw/'));
+  if (generated.length) {
+    execFileSync('git', ['add', '--', ...generated], { cwd: REPO_ROOT, stdio: 'inherit' });
+    console.log(`\nStaged ${generated.length} generated file(s) (API + runtime) — NOT committed. Run /mpi-end to close them.`);
+  } else {
+    console.log('\nNo generated changes (conversion produced identical output).');
   }
-
-  // Commit exactly the workflow dirs' changes (converted sources + generated runtime).
-  // Scope to the two workflow dirs — never the whole tree (shared repo).
-  const commitPaths = execFileSync(
-    'git', ['status', '--porcelain', '--', 'comfy_workflows'],
-    { cwd: REPO_ROOT, encoding: 'utf8' }
-  )
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => l.slice(3).trim())
-    .filter((p) => !p.startsWith('comfy_workflows/raw/'));  // raw/ stays untracked scratch
-
-  if (!commitPaths.length) { console.log('\nNo committable workflow changes.'); return; }
-
-  const names = [...new Set(commitPaths.map((p) => path.basename(p)))].join(', ');
-  const msg = `chore(workflows): sync ${touched.length} raw workflow(s) to API format\n\n${commitPaths.join('\n')}`;
-  // --only <paths>: commit exactly these files regardless of what else is staged
-  // (shared tree — never sweep a peer's staged work). -n skips lint-staged.
-  execFileSync('git', ['commit', '-n', '-m', msg, '--only', '--', ...commitPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
-  console.log(`\nCommitted: ${names}`);
 }
 
 main().catch((e) => { console.error(e.message); process.exit(1); });
