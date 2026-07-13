@@ -1484,6 +1484,28 @@ router.post('/project-media/:projectId/upload-raw', async (req, res) => {
     }
 });
 
+// MPI-259: place a dropped App input file into the content-addressed preview-assets
+// store (Media/.preview-assets/<sha256><ext>) instead of the visible gallery. Keeps the
+// gallery clean while persisting the file durably so a later Reuse can resolve it (the
+// store is the same one MPI-227 built + the manual Cleanup GCs). Accepts a base64 data
+// URL; dedups by content hash. Returns the /project-file URL of the placed asset.
+router.post('/project-media/:projectId/place-preview-asset', async (req, res) => {
+    try {
+        const { folderPath } = req.query;
+        const { dataUrl, ext } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        if (!dataUrl || !ext) return res.status(400).json({ success: false, error: 'dataUrl and ext required' });
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const safeExt = ext.startsWith('.') ? ext : `.${ext}`;
+        const placed = await placeContentAsset(dataUrl, safeExt, mediaDir, folderPath);
+        res.json({ success: true, ...placed });
+    } catch (err) {
+        logger.error('project', 'place-preview-asset error', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/project-data/:projectId/upload', async (req, res) => {
     try {
         const { folderPath } = req.query;

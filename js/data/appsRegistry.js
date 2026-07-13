@@ -75,6 +75,29 @@ export const APPS = [
         // at completion (capture-what-ran) — no fixed count is declared here; the run
         // shows ONE "Generating…" card and lands the real 1..N cards on complete.
     },
+    // Third app (MPI-259): NO-MODEL video utility. Loads up to two video PATHS + an
+    // optional audio track, stitches the videos side-by-side, carries audio through,
+    // and saves. Exercises the model-free path (requiredModels: []; always available,
+    // no install gate), video media slots, and video output. No prompt / no uiComponent
+    // — MpiBaseApp renders the media slots straight from inputSchema.media.
+    {
+        id: 'video-stitch',
+        title: 'Video Stitch',
+        preview: 'sdxl-real-01.webp',   // reuse an existing model preview for the tile
+        description: 'Stitch up to two videos side-by-side and carry an audio track through. Needs no model — drop your clips and run.',
+        requiredModels: [],
+        operation: 'appVideoStitch',
+        workflow: 'app_video_test.json',
+        mediaType: 'video',
+        // Two video slots (Input_video / Input_video_2) + one audio slot (Input_audio).
+        // roles match the op's mediaInputs keys so the injector maps each item to its node.
+        inputSchema: {
+            media: [
+                { type: 'video', mode: 'upto', max: 2, roles: ['video1', 'video2'] },
+                { type: 'audio', mode: 'upto', max: 1, roles: ['audio1'] },
+            ],
+        },
+    },
 ];
 
 /** @returns {AppDef[]} All app descriptors. */

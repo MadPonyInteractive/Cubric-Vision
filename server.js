@@ -29,6 +29,12 @@ const port = 3000;
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '100mb' }));
+
+// Case-insensitive /comfy_workflows/* resolver — MUST precede express.static so a
+// registry filename whose case differs from disk still resolves on Linux/macOS.
+const { workflowStatic } = require('./routes/workflowStatic');
+app.use(workflowStatic);
+
 app.use(express.static(__dirname));
 
 // ── Route Modules ──────────────────────────────────────────────────────────────

@@ -409,6 +409,29 @@ export const commands = {
         promptRequired: true,
         universal: true,            // 2nd Apps op — App_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
     },
+    appVideoStitch: {
+        label: 'App: Video Stitch',
+        progressLabel: 'Stitching',
+        mediaType: MEDIA_TYPE.VIDEO,
+        requiresImages: 0,          // no image inputs — video utility, NO generation model.
+        // Video utility (app_video_test.json): up to 2 video PATHS (MpiString Input_video /
+        // Input_video_2 — VHS_LoadVideoPath reads the string) stitched side-by-side, plus an
+        // optional audio track. Empty video paths self-gate their branch via MpiAnyChecker/
+        // MpiBlockIfEmpty/MpiIfElse; empty audio keeps the baked LoadAudio placeholder.
+        // Titles are LOWERCASE/numbered to match the authored nodes; the injector matches
+        // case-insensitively and the media-kind sweep pattern-forces input_video*/input_audio*.
+        mediaInputs: [
+            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_video',   required: false },
+            { key: 'video2', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_video_2', required: false },
+            // Audio slot: mediaType is the string 'audio' (MEDIA_TYPE only enumerates
+            // image/video). The app's audio item carries mediaType 'audio' too, so the
+            // role-first match in _buildParams lines up — with VIDEO here it never matched
+            // and Input_audio was never injected (output kept the source's own audio).
+            { key: 'audio1', mediaType: 'audio', title: 'Input_audio', required: false },
+        ],
+        promptRequired: false,      // pure media utility — no prompt.
+        universal: true,            // 3rd Apps op — app_video_test.json, NO model.
+    },
 
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.
@@ -543,7 +566,12 @@ export function getCommandMediaInputs(key) {
  * @returns {Array<{mediaType:string}>}
  */
 export function filterMediaInputsForModel(slots, model = null) {
-    if (model?.capabilities?.audio === true) return slots;
+    // No model = a universal/App op (model.id === null). Its declared slots ARE the
+    // contract — there's no per-model audio capability to gate against, so keep them
+    // all (an App that declares an audio slot must inject it). The capability gate below
+    // only exists to drop LTX's audio slot on WAN, which has no capabilities.audio.
+    if (!model) return slots;
+    if (model.capabilities?.audio === true) return slots;
     return slots.filter(slot => slot.mediaType !== 'audio');
 }
 

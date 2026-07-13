@@ -118,6 +118,21 @@ test('the second App workflow (SDXL 4K) carries its polymorphic I/O titles (MPI-
     }
 });
 
+test('the third App workflow (Video Stitch) carries its media I/O titles (MPI-259)', () => {
+    // appVideoStitch runs app_video_test.json with model:{id:null} and NO required model.
+    // Pins the lowercase/numbered media-input titles + the video capture titles. The
+    // injector matches case-insensitively; the media-kind sweep pattern-forces
+    // input_video*/input_audio* so these resolve + upload on the remote engine.
+    const file = 'app_video_test.json';
+    const have = titlesOf(file);
+    for (const title of ['input_video', 'input_video_2', 'input_audio']) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    for (const title of ['output_video', 'output_video_2']) {
+        assert.ok(have.has(title), `${file} must carry a capture node titled "${title}"`);
+    }
+});
+
 test('the Krea2 shared graph carries both branch booleans', () => {
     // Pins the specific regression: t2i / i2i / poseReference all run one file and
     // select a branch with a baked-false boolean. Lose a node (or its title) and the

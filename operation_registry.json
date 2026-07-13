@@ -100,5 +100,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.2.0",
     "universal": true
+  },
+  "appVideoStitch": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0",
+    "universal": true
   }
 }

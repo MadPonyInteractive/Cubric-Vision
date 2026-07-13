@@ -40,4 +40,7 @@ export const UNIVERSAL_WORKFLOWS = {
     appSdxl4k: {
         workflow: 'App_sdxl_4k.json',
     },
+    appVideoStitch: {
+        workflow: 'app_video_test.json',
+    },
 };

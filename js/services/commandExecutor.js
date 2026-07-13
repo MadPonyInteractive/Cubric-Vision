@@ -1849,6 +1849,19 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // Out-of-memory (system RAM or CUDA/VRAM). User-actionable — the inputs are
+            // too large for the available memory, not a bug to report. Warning toast, not
+            // the GitHub-report dialog. Covers Python MemoryError, torch CUDA OOM, and the
+            // generic "out of memory" / "cannot allocate" phrasings ComfyUI surfaces.
+            if (/\b(memoryerror|out of memory|cannot allocate|outofmemory|cuda out of memory)\b/i.test(err?.message || '')) {
+                clientLogger.warn('comfy', `Out of memory — ${workingPayload.operation} / ${workingPayload.modelId}`);
+                Events.emit('ui:warning', {
+                    message: 'Ran out of memory processing this — the inputs are likely too large. '
+                        + 'Try smaller or shorter media, or free up memory and run again.',
+                });
+                exec.onError?.(err);
+                return;
+            }
             clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });

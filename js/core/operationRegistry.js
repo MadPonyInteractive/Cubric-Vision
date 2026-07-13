@@ -37,6 +37,7 @@ export const OPERATION_REGISTRY = {
     resizeVideo:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     appImageRegen: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
     appSdxl4k: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
+    appVideoStitch: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
 };
 
 /**

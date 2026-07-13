@@ -93,6 +93,12 @@ If you are wiring a NEW model into the app (deps + R2 upload + models.js + workf
 **->** **MUST READ (the skill's step 0, non-negotiable):** the `docs/playbooks/add-model/` playbook (README hub + section files `01`–`06`) — the single procedure, with every known trap (workflow template→runtime split, loader-path normalization, the `--s3-no-check-bucket` R2 403, the `model.type` consumer sweep, the single `Output_Image`/`Output_Video`/`Output_Preview` capture-title law, optional-vs-required media inputs + `placeholder.png` staging, baked-LoRA deps, the style-LoRA system). Models are NOT version-bumped.
 **->** A handoff or a model-scoped research doc (`docs/models/<model>/`) **assumes** the playbook — it does not replace it. Read both.
 
+### Add a New App (outcome app — end-to-end)
+If you are wiring a NEW **App** (a dev-gated App-Library outcome app: descriptor + universal op + workflow + optional uiComponent — NOT a model):
+**->** **RUN THE SKILL:** `/mpi-add-app` — it enforces the procedure and pre-flights every trap.
+**->** **MUST READ (the skill's step 0):** the `docs/playbooks/add-app/` playbook (README hub + section files `01`–`05`) — the single procedure, with every known trap (the op in 4 files, path-reading input nodes + the injector title-pattern routing, the **audio-slot `mediaType:'audio'` + `filterMediaInputsForModel` no-model traps**, self-gating outputs, multi-output capture, `.preview-assets` input storage, reuse `appId`/`appInputs`, the Ctrl+Enter/overlay-z-order/status-bar shell gotchas). No skill yet — follow the playbook directly.
+**->** Worked examples: **Video Stitch** (no-model video utility), **SDXL 4K** (multi-model, polymorphic image I/O, multi-output), **Image Regen** (first app).
+
 ### App Versioning System
 If you need to understand how APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, or the operation registry work:
 **->** **MUST READ:** `.claude/rules/versioning.md`, then `docs/versioning.md`
@@ -181,6 +187,7 @@ Skills manage a human-in-the-loop execution system:
 | `/mpi-component-audit` | mpi-component-audit | ESLint audit of js/components/ — report violations, no fixes |
 | `/mpi-brief-rule` | mpi-brief-rule | Inject rule briefing into sub-agent prompt at dispatch time |
 | `/mpi-add-model` | mpi-add-model | Wire a NEW model end-to-end; enforces the `docs/playbooks/add-model/` playbook |
+| `/mpi-add-app` | mpi-add-app | Wire a NEW App (outcome app) end-to-end; enforces the `docs/playbooks/add-app/` playbook |
 
 **Core principle:** Parallel sub-agents only in planning. Execution is always sequential, one to-do at a time, with mandatory brief gate before any code is written.
 

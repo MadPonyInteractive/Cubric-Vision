@@ -1296,6 +1296,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Run / Stop / Loop hotkeys ──────────────────────────────────────────
         const _triggerRun = () => {
+            // An open App overlay owns Ctrl+Enter → it runs the app, not the PromptBox
+            // behind it. bind() fires all handlers, so bail here when an app is live.
+            if (document.querySelector('.mpi-base-app')) return;
             // MPI-73: the run hotkey bypasses the (now-disabled) Cue button — block
             // it too while the remote engine is connecting/disconnecting.
             if (_remoteTransitioning) return;

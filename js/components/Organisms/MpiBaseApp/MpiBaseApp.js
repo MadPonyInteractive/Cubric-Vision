@@ -4,9 +4,9 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
 import { submitAppGeneration } from '../../../services/appService.js';
-import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
@@ -25,7 +25,7 @@ import { renderIcon } from '/js/utils/icons.js';
  * (schema-driven polymorphic groups); an app with no media declaration shows no upload
  * slot. The one constant is OUTPUT: every app produces ≥1 image or video. Per-app
  * component exposes `el.getInputs()` → fields BaseApp merges with media before Run.
- * See docs/apps.md § "Flexible inputs".
+ * See docs/playbooks/add-app/02-media-io.md.
  *
  * media group schema (inputSchema.media[]):
  *   { type: 'image'|'video'|'audio', mode: 'upto'|'fixed', max: number, roles: string[] }
@@ -306,6 +306,42 @@ export const MpiBaseApp = ComponentFactory.create({
         }
 
         /**
+         * Place one dropped file into the project's content-addressed preview-assets
+         * store and return its /project-file URL (or null on failure). Mirrors the
+         * server's placeContentAsset (dedup by sha256); no gallery card is created.
+         * @param {File} file
+         * @param {string} mediaType  'image'|'video'|'audio'
+         * @param {{folderPath:string,id:string}} project
+         * @returns {Promise<string|null>}
+         */
+        async function _placePreviewAsset(file, mediaType, project) {
+            try {
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const r = new FileReader();
+                    r.onload = () => resolve(/** @type {string} */ (r.result));
+                    r.onerror = reject;
+                    r.readAsDataURL(file);
+                });
+                const ext = '.' + (file.name.split('.').pop()
+                    || (mediaType === 'image' ? 'png' : mediaType === 'video' ? 'mp4' : 'wav'));
+                const res = await fetch(
+                    `/project-media/${project.id}/place-preview-asset?folderPath=${encodeURIComponent(project.folderPath)}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dataUrl, ext }),
+                    },
+                );
+                if (!res.ok) throw new Error(`place failed: ${res.status}`);
+                const data = await res.json();
+                return data?.success ? data.filePath : null;
+            } catch (e) {
+                clientLogger.warn('MpiBaseApp', 'preview-asset place failed', e);
+                return null;
+            }
+        }
+
+        /**
          * Upload one or more files into a media group, up to its cap.
          * @param {{group,items,containerEl}} entry
          * @param {File[]} files
@@ -327,14 +363,18 @@ export const MpiBaseApp = ComponentFactory.create({
 
             statusEl.textContent = 'Uploading…';
             for (const file of files) {
-                const uploaded = await uploadMediaFile(file, group.type, project.folderPath, project.id);
-                if (!uploaded?.filePath) {
-                    Events.emit('ui:warning', { message: `Could not upload ${group.type} file.` });
+                // App inputs go into the content-addressed preview-assets store (MPI-227),
+                // NOT the visible gallery — keeps the gallery clean while persisting the
+                // file durably so a later Reuse can resolve it (the user imports to the
+                // gallery himself if he wants a card). Deduped by content hash server-side.
+                const placedUrl = await _placePreviewAsset(file, group.type, project);
+                if (!placedUrl) {
+                    Events.emit('ui:warning', { message: `Could not add ${group.type} file.` });
                     continue;
                 }
                 const idx = entry.items.length;
                 entry.items.push({
-                    url: uploaded.filePath,
+                    url: placedUrl,
                     mediaType: group.type,
                     source: 'app-upload',
                     role: group.roles[idx],
@@ -365,7 +405,7 @@ export const MpiBaseApp = ComponentFactory.create({
             }
         }
 
-        runBtn.on('click', () => {
+        const _run = () => {
             if (_running) return;
 
             // Collect all filled media items across every group, in group order.
@@ -373,6 +413,18 @@ export const MpiBaseApp = ComponentFactory.create({
 
             const extra = _perApp?.el?.getInputs?.() || {};
             const inputs = { ...(mediaItems.length ? { mediaItems } : {}), ...extra };
+
+            // Empty-run guard: an app that declares media slots but has NONE filled and
+            // no prompt has nothing to run — every branch self-gates → zero outputs →
+            // a silent "no output returned". Warn and bail before enqueue. Media-free
+            // apps (no declared slots) skip this — their Run button is the whole input.
+            const hasPrompt = typeof extra.positive === 'string' && extra.positive.trim() !== '';
+            if (_mediaGroups.length > 0 && mediaItems.length === 0 && !hasPrompt) {
+                Events.emit('ui:warning', {
+                    message: `${app.title} needs at least one input before it can run.`,
+                });
+                return;
+            }
 
             // Persist the input snapshot so Reuse/reopen restores media + controls.
             state.s_appInputs = { ...state.s_appInputs, [app.id]: inputs };
@@ -403,7 +455,13 @@ export const MpiBaseApp = ComponentFactory.create({
             if (!res) { _setRunning(false); return; }
             // Track this job's tempId so its live latents paint into the result pane.
             _myTempId = res.tempId || null;
-        });
+        };
+        runBtn.on('click', _run);
+
+        // Ctrl+Enter runs the OPEN app, not the PromptBox behind it. Both handlers
+        // fire on this hotkey (bind() is all-handlers) — the PromptBox's own
+        // generation.run handler bails while an app overlay is live (see MpiPromptBox).
+        _unsubs.push(Hotkeys.bind('generation.run', _run));
 
         // ── Back to Library = close this overlay, reopen the App Library ────────
         _unsubs.push(on(qs('#app-back', el), 'click', () => {

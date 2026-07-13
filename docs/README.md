@@ -38,7 +38,7 @@ NOT mechanically split these):
 | Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | UI & component contracts (18 gotchas) | [ui-gotchas.md](ui-gotchas.md) |
-| Apps (App Library + App overlays, MPI-256) | [apps.md](apps.md) |
+| Apps (App Library + App overlays; add-an-app procedure) | [playbooks/add-app/README.md](playbooks/add-app/README.md) |
 
 ### ComfyUI / generation
 | Topic | Doc |

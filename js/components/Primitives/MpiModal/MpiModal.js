@@ -85,7 +85,14 @@ export const MpiModal = ComponentFactory.create({
             if (_isShown) return;  // already visible — skip (idempotent)
             _overlayEntry = { show: _doShow, hide: el.hide, id: el };
             const { zIndex } = Overlays.request(_overlayEntry);
-            _zIndex = zIndex;
+            // Floor above the App overlay (main-area MpiOverlay publishes --app-overlay-z
+            // and is its OWN stacking context). Without this a modal opened over an open
+            // app — e.g. the "Generation failed" dialog — rendered its backdrop UNDER the
+            // app overlay. Overlays' own depth z usually clears it, but the floor makes it
+            // deterministic regardless of stack accounting.
+            const appZ = parseInt(getComputedStyle(document.documentElement)
+                .getPropertyValue('--app-overlay-z'), 10);
+            _zIndex = Number.isFinite(appZ) ? Math.max(zIndex, appZ + 20) : zIndex;
             _unregisterEnter = Hotkeys.bind('modal.confirm', _handleEnter);
         };
 

@@ -145,6 +145,11 @@ export const MpiOverlay = ComponentFactory.create({
             // keeps the spared node last, so on restore the flow order is preserved
             // and the sticky status bar stays at the bottom with no CSS band-aid.
             _target.insertBefore(_stash, _target.firstChild);
+            // TRAP 1b: stashing #tool-container removes the flex:1 filler that pushed the
+            // spared #shell-info-bar to the bottom — without it the footer collapses UP to
+            // the top of .main-area (behind the overlay, under the OS titlebar). Pin the bar
+            // to the bottom for the overlay's lifetime (main-area mode only). Removed on hide.
+            if (mountTarget === 'main-area') _target.classList.add('main-area--app-overlay');
             if (_zIndex !== null) el.style.zIndex = _zIndex;
             _target.appendChild(el);
             _isShown = true;
@@ -172,6 +177,9 @@ export const MpiOverlay = ComponentFactory.create({
             if (!_target) { _isHiding = false; return; }
 
             if (el.parentNode === _target) _target.removeChild(el);
+
+            // Undo the TRAP 1b bottom-pin (see _doShow). Safe unconditionally.
+            _target.classList.remove('main-area--app-overlay');
 
             // TRAP 3: drop the published z (removeProperty, NOT set to 0 — 0 would
             // pin the queue below its own baseline). Safe to call unconditionally.

@@ -1,16 +1,4 @@
 {
-  "6": {
-    "inputs": {
-      "video_info": [
-        "8",
-        3
-      ]
-    },
-    "class_type": "VHS_VideoInfoSource",
-    "_meta": {
-      "title": "Video Info (Source) 🎥🅥🅗🅢"
-    }
-  },
   "7": {
     "inputs": {
       "video_path": [
@@ -23,86 +11,26 @@
       "title": "Mpi Has Audio"
     }
   },
-  "8": {
-    "inputs": {
-      "video": [
-        "25",
-        0
-      ],
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 0,
-      "select_every_nth": 1,
-      "format": "AnimateDiff"
-    },
-    "class_type": "VHS_LoadVideoPath",
-    "_meta": {
-      "title": "Load Video (Path) 🎥🅥🅗🅢"
-    }
-  },
-  "9": {
-    "inputs": {
-      "video_info": [
-        "10",
-        3
-      ]
-    },
-    "class_type": "VHS_VideoInfoSource",
-    "_meta": {
-      "title": "Video Info (Source) 🎥🅥🅗🅢"
-    }
-  },
-  "10": {
-    "inputs": {
-      "video": [
-        "26",
-        0
-      ],
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 0,
-      "select_every_nth": 1,
-      "format": "AnimateDiff"
-    },
-    "class_type": "VHS_LoadVideoPath",
-    "_meta": {
-      "title": "Load Video (Path) 🎥🅥🅗🅢"
-    }
-  },
   "11": {
     "inputs": {
       "fps": [
-        "9",
-        0
+        "36",
+        2
       ],
       "filename_prefix": "MpiVideo2",
       "use_audio": true,
       "images": [
-        "10",
+        "36",
         0
       ],
       "audio": [
-        "12",
+        "41",
         0
       ]
     },
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_video_2"
-    }
-  },
-  "12": {
-    "inputs": {
-      "audio": "ltx_silence.wav",
-      "audioUI": "/api/view?filename=ltx_silence.wav&type=input&subfolder=&rand=0.7597831938089817"
-    },
-    "class_type": "LoadAudio",
-    "_meta": {
-      "title": "Input_audio"
     }
   },
   "15": {
@@ -116,7 +44,7 @@
         0
       ],
       "false": [
-        "8",
+        "35",
         0
       ]
     },
@@ -128,8 +56,8 @@
   "16": {
     "inputs": {
       "fps": [
-        "6",
-        0
+        "35",
+        2
       ],
       "filename_prefix": "MpiVideo",
       "use_audio": [
@@ -141,8 +69,8 @@
         0
       ],
       "audio": [
-        "8",
-        2
+        "35",
+        1
       ]
     },
     "class_type": "MpiSaveVideo",
@@ -152,7 +80,7 @@
   },
   "17": {
     "inputs": {
-      "string": ""
+      "string": "C:\\Users\\Fabio\\Downloads\\222.mp4"
     },
     "class_type": "MpiString",
     "_meta": {
@@ -161,7 +89,7 @@
   },
   "18": {
     "inputs": {
-      "string": ""
+      "string": "C:\\Users\\Fabio\\Downloads\\222.mp4"
     },
     "class_type": "MpiString",
     "_meta": {
@@ -175,53 +103,17 @@
       "spacing_width": 0,
       "spacing_color": "white",
       "image1": [
-        "8",
+        "35",
         0
       ],
       "image2": [
-        "10",
+        "36",
         0
       ]
     },
     "class_type": "ImageStitch",
     "_meta": {
       "title": "Stitch Images"
-    }
-  },
-  "23": {
-    "inputs": {
-      "any": [
-        "17",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
-    }
-  },
-  "25": {
-    "inputs": {
-      "any": [
-        "23",
-        0
-      ]
-    },
-    "class_type": "MpiBlockIfEmpty",
-    "_meta": {
-      "title": "Mpi Any Blocker"
-    }
-  },
-  "26": {
-    "inputs": {
-      "any": [
-        "27",
-        0
-      ]
-    },
-    "class_type": "MpiBlockIfEmpty",
-    "_meta": {
-      "title": "Mpi Any Blocker"
     }
   },
   "27": {
@@ -234,6 +126,39 @@
     "class_type": "MpiAnyChecker",
     "_meta": {
       "title": "Mpi Any Checker"
+    }
+  },
+  "35": {
+    "inputs": {
+      "string": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Mpi Load Video"
+    }
+  },
+  "36": {
+    "inputs": {
+      "string": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Mpi Load Video"
+    }
+  },
+  "41": {
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Downloads\\p_15587601_88.mp3"
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_audio"
     }
   }
 }
