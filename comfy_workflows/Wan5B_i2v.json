@@ -1,12 +1,12 @@
 {
   "6": {
     "inputs": {
-      "text": [
-        "110",
-        0
-      ],
       "clip": [
         "38",
+        0
+      ],
+      "text": [
+        "110",
         0
       ]
     },
@@ -17,12 +17,12 @@
   },
   "7": {
     "inputs": {
-      "text": [
-        "111",
-        0
-      ],
       "clip": [
         "38",
+        0
+      ],
+      "text": [
+        "111",
         0
       ]
     },
@@ -92,6 +92,11 @@
   },
   "55": {
     "inputs": {
+      "batch_size": 1,
+      "vae": [
+        "39",
+        0
+      ],
       "width": [
         "107",
         0
@@ -102,11 +107,6 @@
       ],
       "length": [
         "104",
-        0
-      ],
-      "batch_size": 1,
-      "vae": [
-        "39",
         0
       ]
     },
@@ -132,10 +132,6 @@
   "83": {
     "inputs": {
       "add_noise": true,
-      "noise_seed": [
-        "106",
-        0
-      ],
       "cfg": 1,
       "model": [
         "48",
@@ -159,6 +155,10 @@
       ],
       "latent_image": [
         "102",
+        0
+      ],
+      "noise_seed": [
+        "106",
         0
       ]
     },
@@ -214,16 +214,16 @@
   },
   "102": {
     "inputs": {
-      "boolean": [
-        "101",
-        0
-      ],
       "true": [
         "55",
         0
       ],
       "false": [
         "103",
+        0
+      ],
+      "boolean": [
+        "101",
         0
       ]
     },
@@ -234,6 +234,15 @@
   },
   "103": {
     "inputs": {
+      "batch_size": 1,
+      "vae": [
+        "39",
+        0
+      ],
+      "start_image": [
+        "129",
+        0
+      ],
       "width": [
         "107",
         0
@@ -245,15 +254,6 @@
       "length": [
         "104",
         0
-      ],
-      "batch_size": 1,
-      "vae": [
-        "39",
-        0
-      ],
-      "start_image": [
-        "128",
-        0
       ]
     },
     "class_type": "Wan22ImageToVideoLatent",
@@ -263,11 +263,11 @@
   },
   "104": {
     "inputs": {
+      "fps": 16,
       "seconds": [
         "105",
         0
-      ],
-      "fps": 16
+      ]
     },
     "class_type": "MpiWanSeconds",
     "_meta": {
@@ -330,12 +330,12 @@
   },
   "111": {
     "inputs": {
+      "string_b": "\u8272\u8c03\u8273\u4e3d\uff0c\u8fc7\u66dd\uff0c\u9759\u6001\uff0c\u7ec6\u8282\u6a21\u7cca\u4e0d\u6e05\uff0c\u5b57\u5e55\uff0c\u98ce\u683c\uff0c\u4f5c\u54c1\uff0c\u753b\u4f5c\uff0c\u753b\u9762\uff0c\u9759\u6b62\uff0c\u6574\u4f53\u53d1\u7070\uff0c\u6700\u5dee\u8d28\u91cf\uff0c\u4f4e\u8d28\u91cf\uff0cJPEG\u538b\u7f29\u6b8b\u7559\uff0c\u4e11\u964b\u7684\uff0c\u6b8b\u7f3a\u7684\uff0c\u591a\u4f59\u7684\u624b\u6307\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u624b\u90e8\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u8138\u90e8\uff0c\u7578\u5f62\u7684\uff0c\u6bc1\u5bb9\u7684\uff0c\u5f62\u6001\u7578\u5f62\u7684\u80a2\u4f53\uff0c\u624b\u6307\u878d\u5408\uff0c\u9759\u6b62\u4e0d\u52a8\u7684\u753b\u9762\uff0c\u6742\u4e71\u7684\u80cc\u666f\uff0c\u4e09\u6761\u817f\uff0c\u80cc\u666f\u4eba\u5f88\u591a\uff0c\u5012\u7740\u8d70",
+      "delimiter": "",
       "string_a": [
         "109",
         0
-      ],
-      "string_b": "\u8272\u8c03\u8273\u4e3d\uff0c\u8fc7\u66dd\uff0c\u9759\u6001\uff0c\u7ec6\u8282\u6a21\u7cca\u4e0d\u6e05\uff0c\u5b57\u5e55\uff0c\u98ce\u683c\uff0c\u4f5c\u54c1\uff0c\u753b\u4f5c\uff0c\u753b\u9762\uff0c\u9759\u6b62\uff0c\u6574\u4f53\u53d1\u7070\uff0c\u6700\u5dee\u8d28\u91cf\uff0c\u4f4e\u8d28\u91cf\uff0cJPEG\u538b\u7f29\u6b8b\u7559\uff0c\u4e11\u964b\u7684\uff0c\u6b8b\u7f3a\u7684\uff0c\u591a\u4f59\u7684\u624b\u6307\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u624b\u90e8\uff0c\u753b\u5f97\u4e0d\u597d\u7684\u8138\u90e8\uff0c\u7578\u5f62\u7684\uff0c\u6bc1\u5bb9\u7684\uff0c\u5f62\u6001\u7578\u5f62\u7684\u80a2\u4f53\uff0c\u624b\u6307\u878d\u5408\uff0c\u9759\u6b62\u4e0d\u52a8\u7684\u753b\u9762\uff0c\u6742\u4e71\u7684\u80cc\u666f\uff0c\u4e09\u6761\u817f\uff0c\u80cc\u666f\u4eba\u5f88\u591a\uff0c\u5012\u7740\u8d70",
-      "delimiter": ""
+      ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
@@ -481,8 +481,18 @@
       "title": "Input_Start_Frame"
     }
   },
-  "128": {
+  "129": {
     "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "127",
+        0
+      ],
       "width": [
         "107",
         0
@@ -490,17 +500,11 @@
       "height": [
         "108",
         0
-      ],
-      "divisible_by": 32,
-      "position": "center",
-      "image": [
-        "127",
-        0
       ]
     },
-    "class_type": "MpiCrop",
+    "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "Mpi Crop"
+      "title": "Resize Image v2"
     }
   }
 }

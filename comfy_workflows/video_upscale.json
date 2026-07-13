@@ -2,12 +2,12 @@
   "400": {
     "inputs": {
       "upscale_method": "lanczos",
-      "scale_by": [
-        "739",
-        0
-      ],
       "image": [
         "757",
+        0
+      ],
+      "scale_by": [
+        "739",
         0
       ]
     },
@@ -44,12 +44,12 @@
   "609": {
     "inputs": {
       "upscale_method": "lanczos",
-      "scale_by": [
-        "742",
-        0
-      ],
       "image": [
         "607",
+        0
+      ],
+      "scale_by": [
+        "742",
         0
       ]
     },
@@ -128,15 +128,7 @@
   },
   "756": {
     "inputs": {
-      "fps": [
-        "757",
-        2
-      ],
       "filename_prefix": "MpiVideo",
-      "use_audio": [
-        "757",
-        7
-      ],
       "images": [
         "720",
         0
@@ -144,6 +136,14 @@
       "audio": [
         "757",
         1
+      ],
+      "fps": [
+        "757",
+        2
+      ],
+      "use_audio": [
+        "757",
+        7
       ]
     },
     "class_type": "MpiSaveVideo",

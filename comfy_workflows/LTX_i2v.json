@@ -732,7 +732,7 @@
     "inputs": {
       "img_compression": 18,
       "image": [
-        "475",
+        "480",
         0
       ]
     },
@@ -836,7 +836,7 @@
     "inputs": {
       "img_compression": 18,
       "image": [
-        "476",
+        "481",
         0
       ]
     },
@@ -1857,10 +1857,23 @@
       "title": "Input_Start_Frame"
     }
   },
-  "475": {
+  "477": {
     "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio_File"
+    }
+  },
+  "480": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
       "divisible_by": 32,
-      "position": "center",
+      "device": "cpu",
       "image": [
         "474",
         0
@@ -1874,40 +1887,35 @@
         0
       ]
     },
-    "class_type": "MpiCrop",
+    "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "Mpi Crop"
+      "title": "Resize Image v2"
     }
   },
-  "476": {
+  "481": {
     "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
       "divisible_by": 32,
-      "position": "center",
+      "device": "cpu",
       "image": [
         "473",
         0
       ],
       "width": [
-        "475",
+        "480",
         1
       ],
       "height": [
-        "475",
+        "480",
         2
       ]
     },
-    "class_type": "MpiCrop",
+    "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "Mpi Crop"
-    }
-  },
-  "477": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiLoadAudio",
-    "_meta": {
-      "title": "Input_Audio_File"
+      "title": "Resize Image v2"
     }
   }
 }

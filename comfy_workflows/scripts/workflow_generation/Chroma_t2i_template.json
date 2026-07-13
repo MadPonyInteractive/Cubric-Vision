@@ -1,12 +1,12 @@
 {
   "792": {
     "inputs": {
-      "text": [
-        "2594",
-        0
-      ],
       "clip": [
         "1870",
+        0
+      ],
+      "text": [
+        "2594",
         0
       ]
     },
@@ -17,12 +17,12 @@
   },
   "797": {
     "inputs": {
-      "text": [
-        "2595",
-        0
-      ],
       "clip": [
         "1870",
+        0
+      ],
+      "text": [
+        "2595",
         0
       ]
     },
@@ -146,7 +146,7 @@
     },
     "class_type": "T5TokenizerOptions",
     "_meta": {
-      "title": "T5TokenizerOptions"
+      "title": "T5 Tokenizer Options"
     }
   },
   "2248": {
@@ -156,17 +156,9 @@
       "scheduler": "bong_tangent",
       "steps": 8,
       "steps_to_run": -1,
-      "denoise": [
-        "2613",
-        0
-      ],
       "cfg": 1,
-      "seed": [
-        "2605",
-        0
-      ],
-      "sampler_mode": "standard",
-      "bongmath": true,
+      "sampler_mode": "fixed",
+      "bongmath": "standard",
       "model": [
         "1129",
         0
@@ -181,6 +173,14 @@
       ],
       "latent_image": [
         "2611",
+        0
+      ],
+      "denoise": [
+        "2613",
+        0
+      ],
+      "seed": [
+        "2605",
         0
       ]
     },
@@ -368,16 +368,16 @@
   },
   "2611": {
     "inputs": {
-      "boolean": [
-        "2612",
-        0
-      ],
       "true": [
         "2616",
         0
       ],
       "false": [
         "1739",
+        0
+      ],
+      "boolean": [
+        "2612",
         0
       ]
     },
@@ -397,16 +397,16 @@
   },
   "2613": {
     "inputs": {
-      "boolean": [
-        "2612",
-        0
-      ],
       "true": [
         "2614",
         0
       ],
       "false": [
         "2615",
+        0
+      ],
+      "boolean": [
+        "2612",
         0
       ]
     },
@@ -436,7 +436,7 @@
   "2616": {
     "inputs": {
       "pixels": [
-        "2618",
+        "2619",
         0
       ],
       "vae": [
@@ -451,15 +451,26 @@
   },
   "2617": {
     "inputs": {
-      "string": ""
+      "string": "",
+      "channel": "alpha"
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
     }
   },
-  "2618": {
+  "2619": {
     "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "2617",
+        0
+      ],
       "width": [
         "2603",
         0
@@ -467,17 +478,11 @@
       "height": [
         "2604",
         0
-      ],
-      "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "2617",
-        0
       ]
     },
-    "class_type": "MpiCrop",
+    "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "Mpi Crop"
+      "title": "Resize Image v2"
     }
   }
 }

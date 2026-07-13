@@ -38,13 +38,13 @@
   },
   "29": {
     "inputs": {
-      "text": [
-        "1638",
-        0
-      ],
       "clip": [
         "1632",
         1
+      ],
+      "text": [
+        "1638",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -54,13 +54,13 @@
   },
   "30": {
     "inputs": {
-      "text": [
-        "1639",
-        0
-      ],
       "clip": [
         "1632",
         1
+      ],
+      "text": [
+        "1639",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -74,31 +74,19 @@
       "guide_size_for": true,
       "max_size": 1024,
       "mask_mode": true,
-      "seed": [
-        "1582",
-        0
-      ],
-      "steps": [
-        "1562",
-        0
-      ],
-      "cfg": 1.4,
-      "sampler_name": "lcm",
-      "scheduler": "simple",
-      "denoise": [
-        "1561",
-        0
-      ],
-      "feather": 5,
-      "crop_factor": 1.8,
-      "drop_size": 10,
-      "refiner_ratio": 0.2,
-      "batch_size": 1,
+      "cfg": 30,
+      "sampler_name": 1.4,
+      "scheduler": "lcm",
+      "feather": 0.5,
+      "crop_factor": 5,
+      "drop_size": 1.8,
+      "refiner_ratio": 10,
+      "batch_size": 0.2,
       "cycle": 1,
-      "inpaint_model": false,
-      "noise_mask_feather": 20,
-      "bbox_fill": false,
-      "contour_fill": true,
+      "inpaint_model": 1,
+      "noise_mask_feather": false,
+      "bbox_fill": 20,
+      "contour_fill": false,
       "image": [
         "1641",
         0
@@ -109,6 +97,18 @@
       ],
       "basic_pipe": [
         "27",
+        0
+      ],
+      "seed": [
+        "1582",
+        0
+      ],
+      "steps": [
+        "1562",
+        0
+      ],
+      "denoise": [
+        "1561",
         0
       ]
     },
