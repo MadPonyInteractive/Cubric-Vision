@@ -38,22 +38,13 @@ export const MpiRunpodSettings = ComponentFactory.create({
                         </div>
                         <a class="mpi-settings__runpod-referral-link" href="https://runpod.io?ref=slmzn8qv" target="_blank" rel="noopener noreferrer">Create RunPod account</a>
                     </div>
-                    <div class="mpi-settings__form-group">
-                        <div id="mpiSettingsRunpodToggleSlot"></div>
-                        <span class="mpi-settings__hint">Your RunPod account, API key, GPU billing, and storage billing are your responsibility, not Cubric's.</span>
-                        <span class="mpi-settings__hint">Makes the RunPod cloud GPU panel available. Generation runs on your local engine until you Connect. GPU and storage billing happen on your RunPod account.</span>
-                    </div>
-                    <div class="mpi-settings__form-group mpi-settings__runpod-suboption" id="mpiSettingsRunpodAutoConnectGroup">
-                        <div id="mpiSettingsRunpodAutoConnectSlot"></div>
-                        <span class="mpi-settings__hint">Leave this off unless you want a billed Pod to start automatically when the app launches.</span>
-                        <span class="mpi-settings__hint">When enabled, the app connects (and starts billing) a Pod automatically at launch. Off by default — start local, Connect when you want cloud generation.</span>
-                    </div>
-                    <div class="mpi-settings__form-group mpi-settings__runpod-suboption" id="mpiSettingsRunpodAutoRetryGroup">
-                        <div id="mpiSettingsRunpodAutoRetrySlot"></div>
-                        <span class="mpi-settings__hint">Pick the exact GPU you want — even if it's out of stock right now — and Connect keeps checking until it frees, then connects. You can keep working locally while it waits.</span>
-                    </div>
-                    <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
+
+                    <div class="mpi-settings__subgroup">
+                        <span class="mpi-settings__subgroup-title">Account</span>
+                        <span class="mpi-settings__hint">Cubric's remote engine runs on your own RunPod account. Generation stays on your local engine until you Connect — GPU and storage billing happen on your RunPod account, your responsibility, not Cubric's.</span>
+                        <span class="mpi-settings__hint">To unlock the RunPod controls, save a RunPod API key with read + write access in the box below.</span>
                         <div class="mpi-settings__form-group">
+                            <label class="mpi-settings__field-label">RunPod API key</label>
                             <div class="mpi-settings__folder-row">
                                 <div id="mpiSettingsRunpodKeySlot" class="mpi-settings__folder-input"></div>
                                 <div id="mpiSettingsRunpodKeySaveSlot"></div>
@@ -61,25 +52,50 @@ export const MpiRunpodSettings = ComponentFactory.create({
                             </div>
                             <span class="mpi-settings__hint" id="mpiSettingsRunpodKeyStatus"></span>
                         </div>
-                        <div class="mpi-settings__form-group">
-                            <label class="mpi-settings__field-label">Data Center</label>
-                            <div id="mpiSettingsRunpodDcSlot"></div>
-                            <span class="mpi-settings__hint">A network volume is locked to one data center. Switching later means deleting the volume and re-downloading models.</span>
+                    </div>
+
+                    <div class="mpi-settings__plate" id="mpiSettingsRunpodAutoConnectGroup">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Automatically connect on app start</span>
+                            <span class="mpi-settings__plate-desc">When on, the app connects (and starts billing) a Pod at launch. Off by default — start local, Connect when you want cloud generation.</span>
                         </div>
-                        <div class="mpi-settings__form-group">
-                            <label class="mpi-settings__field-label">Network Volume</label>
-                            <div id="mpiSettingsRunpodVolumeSlot"></div>
-                            <span class="mpi-settings__hint">Stopped Pods still leave volume storage billing on your RunPod account until you delete the volume.</span>
-                            <span class="mpi-settings__hint">Stores your models so they survive between Pods — one volume per data center. Connect attaches it to the new Pod.</span>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodAutoConnectSlot"></div>
+                    </div>
+
+                    <div class="mpi-settings__plate" id="mpiSettingsRunpodAutoRetryGroup">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Auto-retry connection</span>
+                            <span class="mpi-settings__plate-desc">Pick a GPU even if it's out of stock — Connect keeps checking until it frees, then connects. You can keep working locally while it waits.</span>
                         </div>
-                        <div class="mpi-settings__form-group">
-                            <label class="mpi-settings__field-label">GPU</label>
-                            <div id="mpiSettingsRunpodGpuSlot"></div>
-                            <span class="mpi-settings__hint">Community Cloud is unsupported for Cubric's remote engine.</span>
-                            <span class="mpi-settings__hint">Secure Cloud only. Stock is a live hint (High / Medium / Low / N/A) — availability drifts; the RunPod console is ground truth.</span>
-                            <div id="mpiSettingsRunpodMinRamSlot"></div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodAutoRetrySlot"></div>
+                    </div>
+
+                    <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
+                        <div class="mpi-settings__subgroup">
+                            <span class="mpi-settings__subgroup-title">Storage</span>
+                            <div class="mpi-settings__form-group">
+                                <label class="mpi-settings__field-label">Data Center</label>
+                                <div id="mpiSettingsRunpodDcSlot"></div>
+                                <span class="mpi-settings__hint">A network volume is locked to one data center. Switching later means deleting the volume and re-downloading models.</span>
+                            </div>
+                            <div class="mpi-settings__form-group">
+                                <label class="mpi-settings__field-label">Network Volume</label>
+                                <div id="mpiSettingsRunpodVolumeSlot"></div>
+                                <span class="mpi-settings__hint">Stores your models so they survive between Pods — one volume per data center. Stopped Pods keep billing volume storage until you delete it.</span>
+                            </div>
                         </div>
-                        <div class="mpi-settings__form-group">
+
+                        <div class="mpi-settings__subgroup">
+                            <span class="mpi-settings__subgroup-title">Machine</span>
+                            <div class="mpi-settings__form-group">
+                                <label class="mpi-settings__field-label">GPU</label>
+                                <div id="mpiSettingsRunpodGpuSlot"></div>
+                                <span class="mpi-settings__hint">Secure Cloud only (Community Cloud unsupported). Stock is a live hint — availability drifts; the RunPod console is ground truth.</span>
+                                <div id="mpiSettingsRunpodMinRamSlot"></div>
+                            </div>
+                        </div>
+
+                        <div class="mpi-settings__subgroup mpi-settings__subgroup--connect">
                             <div class="mpi-settings__runpod-connect-row">
                                 <span class="mpi-settings__runpod-status" id="mpiSettingsRunpodEngineStatus">Remote engine: —</span>
                                 <div id="mpiSettingsRunpodConnectSlot"></div>
@@ -91,9 +107,13 @@ export const MpiRunpodSettings = ComponentFactory.create({
                             <a class="mpi-settings__runpod-console-link" id="mpiSettingsRunpodComfyLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Open ComfyUI (dev)</a>
                             <span class="mpi-settings__hint" id="mpiSettingsRunpodComfyHint" hidden>Dev-only: opens the Pod's raw ComfyUI web UI (no auth). Available once the engine is ready.</span>` : ''}
                         </div>
-                        <div class="mpi-settings__form-group">
-                            <div id="mpiSettingsRunpodDeleteOnQuitSlot"></div>
-                            <span class="mpi-settings__hint">When checked, quitting the app deletes the Pod instead of keeping it warm. Frees GPU and container disk fully; your network volume and its models are kept.</span>
+
+                        <div class="mpi-settings__plate" id="mpiSettingsRunpodDeleteOnQuitPlate">
+                            <div class="mpi-settings__plate-main">
+                                <span class="mpi-settings__plate-label">Delete Pod on quit</span>
+                                <span class="mpi-settings__plate-desc">When on, quitting the app deletes the Pod instead of keeping it warm. Frees GPU and container disk fully; your network volume and models are kept.</span>
+                            </div>
+                            <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodDeleteOnQuitSlot"></div>
                         </div>
                     </div>
                 </div>`,
@@ -1519,38 +1539,34 @@ export const MpiRunpodSettings = ComponentFactory.create({
             dialog.el.show();
         }
 
-        async function _initRunpodSection(root) {
-            const toggleSlot = qs('#mpiSettingsRunpodToggleSlot', root);
+        // The RunPod controls are gated on a saved API key (the Enable toggle was
+        // dropped — a key IS the opt-in). `enabled` here mirrors ONLY "a key is
+        // saved": it shows/hides the body + auto-connect/retry plates and persists
+        // so the drop-recovery guard (shell.js) knows RunPod is in use.
+        //
+        // It does NOT push remote-mode {active:true}. Remote mode = "route
+        // generation to the Pod", which must follow the ACTUAL Pod connection
+        // (Connect turns it on, Disconnect off) — never key presence. Pushing it
+        // active at boot with no Pod made ensureServerRunning fall back to local
+        // and fire the "No Pod connected — running locally" toast on every launch.
+        function _applyEnabled(root, enabled) {
             const body = qs('#mpiSettingsRunpodBody', root);
-            if (!toggleSlot || !body) return;
-
-            const cfg = _runpodCfg();
-            // The auto-connect sub-option (MPI-85) sits between the Enable toggle and
-            // the body; show/hide it with the body so it only appears when enabled.
             const autoConnectGroup = qs('#mpiSettingsRunpodAutoConnectGroup', root);
             const autoRetryGroup = qs('#mpiSettingsRunpodAutoRetryGroup', root);
-            const syncBodyVisibility = (enabled) => {
-                body.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
-                autoConnectGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
-                autoRetryGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
-            };
-            syncBodyVisibility(cfg.enabled);
+            body?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+            autoConnectGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+            autoRetryGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+            if (_runpodCfg().enabled !== enabled) {
+                state.runpodConfig = { ..._runpodCfg(), enabled };
+            }
+            _refreshEngineConnect(root);
+        }
 
-            toggleSlot.innerHTML = '';
-            const toggleInst = MpiCheckbox.mount(toggleSlot, {
-                checked: cfg.enabled,
-                label: 'Enable RunPod remote engine',
-            });
-            toggleInst.on('change', async ({ checked }) => {
-                const next = { ..._runpodCfg(), enabled: checked === true };
-                state.runpodConfig = next;
-                syncBodyVisibility(next.enabled);
-                await _pushRemoteMode(next);
-                _refreshEngineConnect(root);
-                if (next.enabled && !_runpodAvailability && await secretsClient.hasApiKey()) {
-                    _loadRunpodAvailability(root);
-                }
-            });
+        async function _initRunpodSection(root) {
+            const body = qs('#mpiSettingsRunpodBody', root);
+            if (!body) return;
+
+            const cfg = _runpodCfg();
 
             // ── Auto-connect on app start (MPI-85) ───────────────────────────
             // Owns the boot auto-connect lifecycle, decoupled from `enabled`. Default
@@ -1559,12 +1575,15 @@ export const MpiRunpodSettings = ComponentFactory.create({
             const autoConnectSlot = qs('#mpiSettingsRunpodAutoConnectSlot', root);
             if (autoConnectSlot) {
                 autoConnectSlot.innerHTML = '';
+                const acPlate = autoConnectSlot.closest('.mpi-settings__plate');
+                acPlate?.classList.toggle('mpi-settings__plate--on', cfg.autoConnectOnStart === true);
                 const acInst = MpiCheckbox.mount(autoConnectSlot, {
                     checked: cfg.autoConnectOnStart === true,
-                    label: 'Automatically connect on app start',
+                    variant: 'switch',
                 });
                 acInst.on('change', ({ checked }) => {
                     state.runpodConfig = { ..._runpodCfg(), autoConnectOnStart: checked === true };
+                    acPlate?.classList.toggle('mpi-settings__plate--on', checked === true);
                 });
             }
 
@@ -1577,12 +1596,15 @@ export const MpiRunpodSettings = ComponentFactory.create({
             const autoRetrySlot = qs('#mpiSettingsRunpodAutoRetrySlot', root);
             if (autoRetrySlot) {
                 autoRetrySlot.innerHTML = '';
+                const arPlate = autoRetrySlot.closest('.mpi-settings__plate');
+                arPlate?.classList.toggle('mpi-settings__plate--on', cfg.autoRetry === true);
                 const arInst = MpiCheckbox.mount(autoRetrySlot, {
                     checked: cfg.autoRetry === true,
-                    label: 'Auto-retry connection (wait for an out-of-stock GPU)',
+                    variant: 'switch',
                 });
                 arInst.on('change', ({ checked }) => {
                     state.runpodConfig = { ..._runpodCfg(), autoRetry: checked === true };
+                    arPlate?.classList.toggle('mpi-settings__plate--on', checked === true);
                     // Re-list GPUs so out-of-stock cards appear/disappear immediately.
                     _renderRunpodPickers(root);
                 });
@@ -1599,7 +1621,6 @@ export const MpiRunpodSettings = ComponentFactory.create({
 
                 const keyInst = MpiInput.mount(keySlot, {
                     type: 'password',
-                    label: 'RunPod API Key',
                     placeholder: secretsClient.isAvailable() ? 'rpa_...' : 'Desktop app only',
                     disabled: !secretsClient.isAvailable(),
                 });
@@ -1628,6 +1649,8 @@ export const MpiRunpodSettings = ComponentFactory.create({
                                 + 'security enable a desktop keyring.',
                         });
                     }
+                    // A saved key IS the opt-in — unlock the RunPod controls now.
+                    _applyEnabled(root, true);
                     _setRunpodStatus(root, 'Key saved. Validating...');
                     try {
                         const check = await fetch('/runpod/account/validate').then(r => r.json());
@@ -1648,6 +1671,8 @@ export const MpiRunpodSettings = ComponentFactory.create({
                 clearInst.on('click', async () => {
                     await secretsClient.clearApiKey();
                     _runpodAvailability = null;
+                    // No key → lock the RunPod controls back down (remote mode off).
+                    _applyEnabled(root, false);
                     _setRunpodStatus(root, 'No API key saved.');
                     _renderRunpodPickers(root);
                 });
@@ -1665,26 +1690,32 @@ export const MpiRunpodSettings = ComponentFactory.create({
             const deleteOnQuitSlot = qs('#mpiSettingsRunpodDeleteOnQuitSlot', root);
             if (deleteOnQuitSlot) {
                 deleteOnQuitSlot.innerHTML = '';
+                const dqPlate = deleteOnQuitSlot.closest('.mpi-settings__plate');
+                dqPlate?.classList.toggle('mpi-settings__plate--on', cfg.deleteOnQuit === true);
                 const dqInst = MpiCheckbox.mount(deleteOnQuitSlot, {
                     checked: cfg.deleteOnQuit === true,
-                    label: 'Delete Pod on quit',
+                    variant: 'switch',
                 });
                 dqInst.on('change', async ({ checked }) => {
                     const next = { ..._runpodCfg(), deleteOnQuit: checked === true };
                     state.runpodConfig = next;
+                    dqPlate?.classList.toggle('mpi-settings__plate--on', checked === true);
                     await _pushRemoteMode(next);
                 });
             }
 
             // ── Initial status + availability ────────────────────────────────
+            // A saved API key gates the controls (the Enable toggle was removed).
             if (!secretsClient.isAvailable()) {
+                _applyEnabled(root, false);
                 _setRunpodStatus(root, 'RunPod settings require the desktop app.');
                 _renderRunpodPickers(root);
                 return;
             }
             const has = await secretsClient.hasApiKey();
+            _applyEnabled(root, has);
             _setRunpodStatus(root, has ? 'API key is saved.' : 'No API key saved.');
-            if (has && cfg.enabled) _loadRunpodAvailability(root);
+            if (has) _loadRunpodAvailability(root);
             else _renderRunpodPickers(root);
         }
 

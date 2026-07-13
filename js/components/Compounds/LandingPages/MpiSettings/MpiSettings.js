@@ -39,80 +39,122 @@ export const MpiSettings = ComponentFactory.create({
     template: () => `
         <div class="mpi-settings">
             <div class="mpi-settings__content">
-                <div class="mpi-settings__section">
+                <section class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">App Behavior</h3>
-                    <div class="mpi-settings__form-group">
-                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsAutoStartSlot"></div>
-                        <span class="mpi-settings__hint">If enabled, the generation engine will start as soon as the app opens.</span>
+                    <div class="mpi-settings__plate" id="mpiSettingsAutoStartPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Auto-start ComfyUI on launch</span>
+                            <span class="mpi-settings__plate-desc">Start the generation engine as soon as the app opens.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsAutoStartSlot"></div>
                     </div>
-                    <div class="mpi-settings__form-group">
-                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsPlayAudioOnHoverSlot"></div>
-                        <span class="mpi-settings__hint">Hovering a video or audio card in the gallery plays its sound. Turn off for silent hover.</span>
+                    <div class="mpi-settings__plate" id="mpiSettingsPlayAudioOnHoverPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Play audio on hover</span>
+                            <span class="mpi-settings__plate-desc">Hovering a video or audio card in the gallery plays its sound.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsPlayAudioOnHoverSlot"></div>
                     </div>
-                    <div class="mpi-settings__form-group">
-                        <label class="mpi-settings__field-label">Desktop Notifications</label>
-                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyGenerationSlot"></div>
-                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsNotifyDownloadsSlot"></div>
-                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsToastSoundSlot"></div>
-                        <span class="mpi-settings__hint">Show an OS notification when these finish (only while the app is in the background). In-app messages are unaffected.</span>
-                    </div>
-                    <div class="mpi-settings__form-group">
-                        <label class="mpi-settings__field-label">Floating Latent Preview</label>
-                        <div class="mpi-settings__checkbox-slot" id="mpiSettingsFloatLatentSlot"></div>
-                        <span class="mpi-settings__hint">When the app is minimized during a generation, show a small always-on-top window with the live latents. Close it with the X (returns next time you minimize) or click a preview to reopen the app.</span>
-                    </div>
-                    <div class="mpi-settings__form-group">
-                        <label class="mpi-settings__field-label">Pixel Rendering</label>
-                        <div id="mpiSettingsPixelModeSlot"></div>
-                        <span class="mpi-settings__hint">Auto shows smooth at fit-to-screen and individual pixels when zoomed past 300%. Pixel-perfect always shows pixels; Smooth never does.</span>
-                    </div>
-                    <div class="mpi-settings__form-group">
-                        <label class="mpi-settings__field-label">Reuse Prompt</label>
-                        <div class="mpi-settings__reuse-grid" id="mpiSettingsReusePartsSlot"></div>
-                        <div id="mpiSettingsReuseAskSlot"></div>
-                        <span class="mpi-settings__hint">Choose what gets copied when Reuse Prompt is clicked.</span>
-                    </div>
-                    <div class="mpi-settings__form-group">
-                        <label class="mpi-settings__field-label">Gallery Reuse Source</label>
-                        <div id="mpiSettingsReuseSourceSlot"></div>
-                        <span class="mpi-settings__hint">Original uses the first reusable generation in a card. Current uses the selected gallery entry.</span>
-                    </div>
-                </div>
+                </section>
 
-                <div class="mpi-settings__section">
+                <section class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">Desktop Notifications</h3>
+                    <div class="mpi-settings__plate" id="mpiSettingsNotifyGenerationPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Generation complete</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsNotifyGenerationSlot"></div>
+                    </div>
+                    <div class="mpi-settings__plate" id="mpiSettingsNotifyDownloadsPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Download complete</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsNotifyDownloadsSlot"></div>
+                    </div>
+                    <div class="mpi-settings__plate" id="mpiSettingsToastSoundPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Play sound on notification</span>
+                            <span class="mpi-settings__plate-desc">Fires only while the app is in the background. In-app messages are unaffected.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsToastSoundSlot"></div>
+                    </div>
+                </section>
+
+                <section class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">Display</h3>
+                    <div class="mpi-settings__plate" id="mpiSettingsFloatLatentPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Floating latents when minimized</span>
+                            <span class="mpi-settings__plate-desc">Show a small always-on-top window with the live latents while the app is minimized. Close it with the X, or click a preview to reopen the app.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsFloatLatentSlot"></div>
+                    </div>
+                    <div class="mpi-settings__plate mpi-settings__plate--stack">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Pixel rendering</span>
+                            <span class="mpi-settings__plate-desc">Auto shows individual pixels past 300% zoom. Pixel-perfect always shows pixels; Smooth never does.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsPixelModeSlot"></div>
+                    </div>
+                </section>
+
+                <section class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">Reuse Prompt</h3>
+                    <div class="mpi-settings__plate mpi-settings__plate--stack">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Copied on reuse</span>
+                            <span class="mpi-settings__plate-desc">Choose what carries over when Reuse Prompt is clicked.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl mpi-settings__reuse-grid" id="mpiSettingsReusePartsSlot"></div>
+                    </div>
+                    <div class="mpi-settings__plate" id="mpiSettingsReuseAskPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Ask each time</span>
+                            <span class="mpi-settings__plate-desc">Prompt for what to reuse on every click.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsReuseAskSlot"></div>
+                    </div>
+                    <div class="mpi-settings__plate mpi-settings__plate--stack">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Gallery reuse source</span>
+                            <span class="mpi-settings__plate-desc">Original uses the first reusable generation in a card. Current uses the selected gallery entry.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsReuseSourceSlot"></div>
+                    </div>
+                </section>
+
+                <section class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">External Connections</h3>
-                    <div class="mpi-settings__form-group">
-                        <div class="mpi-settings__folder-row">
-                            <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
-                            <div id="mpiSettingsBrowseBtnSlot"></div>
-                        </div>
-                        <span class="mpi-settings__hint">Optional: path to an external ComfyUI models folder.</span>
-                    </div>
-                    <div class="mpi-settings__form-group">
-                        <label class="mpi-settings__field-label">Additional Model Folders</label>
-                        <div class="mpi-settings__extra-folders">
-                            <div class="mpi-settings__extra-folder-group">
-                                <div class="mpi-settings__extra-folder-head">
-                                    <span class="mpi-settings__extra-folder-title">LoRAs</span>
-                                    <div id="mpiSettingsAddLoraFolderSlot"></div>
-                                </div>
-                                <div id="mpiSettingsLoraPrimarySlot"></div>
-                                <div class="mpi-settings__extra-folder-list" id="mpiSettingsLoraFoldersSlot"></div>
-                                <div class="mpi-settings__drop-zones" id="mpiSettingsLoraDropSlot"></div>
+                    <div class="mpi-settings__subgroup">
+                        <span class="mpi-settings__subgroup-title">ComfyUI Models Path</span>
+                        <div class="mpi-settings__form-group">
+                            <div class="mpi-settings__folder-row">
+                                <div id="mpiSettingsComfyRootPathSlot" class="mpi-settings__folder-input"></div>
+                                <div id="mpiSettingsBrowseBtnSlot"></div>
                             </div>
-                            <div class="mpi-settings__extra-folder-group">
-                                <div class="mpi-settings__extra-folder-head">
-                                    <span class="mpi-settings__extra-folder-title">Upscale Models</span>
-                                    <div id="mpiSettingsAddUpscaleFolderSlot"></div>
-                                </div>
-                                <div id="mpiSettingsUpscalePrimarySlot"></div>
-                                <div class="mpi-settings__extra-folder-list" id="mpiSettingsUpscaleFoldersSlot"></div>
-                                <div class="mpi-settings__drop-zones" id="mpiSettingsUpscaleDropSlot"></div>
-                            </div>
+                            <span class="mpi-settings__hint">Optional: point Cubric at an existing external ComfyUI models folder. Leave blank to use the internal engine.</span>
                         </div>
-                        <span class="mpi-settings__hint">Extras are read-only additive folders. Cubric only installs, updates, and removes files from the primary managed folders.</span>
                     </div>
-                </div>
+                    <div class="mpi-settings__subgroup">
+                        <div class="mpi-settings__extra-folder-head">
+                            <span class="mpi-settings__subgroup-title">LoRA folders</span>
+                            <div id="mpiSettingsAddLoraFolderSlot"></div>
+                        </div>
+                        <div id="mpiSettingsLoraPrimarySlot"></div>
+                        <div class="mpi-settings__extra-folder-list" id="mpiSettingsLoraFoldersSlot"></div>
+                        <div class="mpi-settings__drop-zones" id="mpiSettingsLoraDropSlot"></div>
+                    </div>
+                    <div class="mpi-settings__subgroup">
+                        <div class="mpi-settings__extra-folder-head">
+                            <span class="mpi-settings__subgroup-title">Upscale-model folders</span>
+                            <div id="mpiSettingsAddUpscaleFolderSlot"></div>
+                        </div>
+                        <div id="mpiSettingsUpscalePrimarySlot"></div>
+                        <div class="mpi-settings__extra-folder-list" id="mpiSettingsUpscaleFoldersSlot"></div>
+                        <div class="mpi-settings__drop-zones" id="mpiSettingsUpscaleDropSlot"></div>
+                    </div>
+                    <span class="mpi-settings__hint">Extra folders are read-only and additive — Cubric reads models from them but only installs, updates, and removes files in the primary managed folder (the first row in each group).</span>
+                </section>
 
                 <div id="mpiSettingsRunpodMount"></div>
             </div>
@@ -141,70 +183,48 @@ export const MpiSettings = ComponentFactory.create({
         // Called by MpiSlideOver each time panel opens — re-init fields with fresh values.
         el.onOpen = () => { _initFields(el); _runpodInst?.el?.onOpen?.(); };
 
-        function _initFields(root) {
-            // ── Auto-start checkbox ──────────────────────────────────────────
-            const autoStartSlot = qs('#mpiSettingsAutoStartSlot', root);
-            if (autoStartSlot) {
-                autoStartSlot.innerHTML = '';
-                const autoStartInst = MpiCheckbox.mount(autoStartSlot, {
-                    checked: Storage.getAutoStartComfy(),
-                    label: 'Auto-start ComfyUI on Launch',
-                });
-                autoStartInst.on('change', ({ checked }) =>
-                    Storage.setAutoStartComfy(checked));
-            }
+        /**
+         * Mount a right-aligned toggle switch into a plate's ctrl slot and keep
+         * the plate's --on heat outline in sync with the switch state. The plate
+         * is the slot's closest .mpi-settings__plate ancestor. Returns the inst.
+         */
+        function _mountSwitchPlate(slotId, checked, onChange) {
+            const slot = qs(slotId, el);
+            if (!slot) return null;
+            slot.innerHTML = '';
+            const plate = slot.closest('.mpi-settings__plate');
+            const syncOn = (v) => plate?.classList.toggle('mpi-settings__plate--on', v === true);
+            const inst = MpiCheckbox.mount(slot, { checked: checked === true, variant: 'switch' });
+            syncOn(checked === true);
+            inst.on('change', ({ checked: v }) => { syncOn(v); onChange(v); });
+            return inst;
+        }
 
-            // ── Play audio on hover checkbox ─────────────────────────────────
-            const hoverAudioSlot = qs('#mpiSettingsPlayAudioOnHoverSlot', root);
-            if (hoverAudioSlot) {
-                hoverAudioSlot.innerHTML = '';
-                MpiCheckbox.mount(hoverAudioSlot, {
-                    checked: Storage.getPlayAudioOnHover(),
-                    label: 'Play audio on hover',
-                }).on('change', ({ checked }) =>
-                    Storage.setPlayAudioOnHover(checked));
-            }
+        function _initFields(root) {
+            // ── Auto-start toggle ────────────────────────────────────────────
+            _mountSwitchPlate('#mpiSettingsAutoStartSlot', Storage.getAutoStartComfy(),
+                (v) => Storage.setAutoStartComfy(v));
+
+            // ── Play audio on hover toggle ───────────────────────────────────
+            _mountSwitchPlate('#mpiSettingsPlayAudioOnHoverSlot', Storage.getPlayAudioOnHover(),
+                (v) => Storage.setPlayAudioOnHover(v));
 
             // ── Desktop notification prefs (per-type OS opt-out) ─────────────
-            const notifyGenSlot = qs('#mpiSettingsNotifyGenerationSlot', root);
-            const notifyDlSlot = qs('#mpiSettingsNotifyDownloadsSlot', root);
             const _saveNotifyPref = (key, checked) => {
                 state.notificationPrefs = { ...state.notificationPrefs, [key]: checked === true };
             };
-            if (notifyGenSlot) {
-                notifyGenSlot.innerHTML = '';
-                MpiCheckbox.mount(notifyGenSlot, {
-                    checked: state.notificationPrefs?.generation !== false,
-                    label: 'Generation complete',
-                }).on('change', ({ checked }) => _saveNotifyPref('generation', checked));
-            }
-            if (notifyDlSlot) {
-                notifyDlSlot.innerHTML = '';
-                MpiCheckbox.mount(notifyDlSlot, {
-                    checked: state.notificationPrefs?.downloads !== false,
-                    label: 'Download complete',
-                }).on('change', ({ checked }) => _saveNotifyPref('downloads', checked));
-            }
+            _mountSwitchPlate('#mpiSettingsNotifyGenerationSlot', state.notificationPrefs?.generation !== false,
+                (v) => _saveNotifyPref('generation', v));
+            _mountSwitchPlate('#mpiSettingsNotifyDownloadsSlot', state.notificationPrefs?.downloads !== false,
+                (v) => _saveNotifyPref('downloads', v));
 
             // ── In-app toast chime (default ON) ──────────────────────────────
-            const toastSoundSlot = qs('#mpiSettingsToastSoundSlot', root);
-            if (toastSoundSlot) {
-                toastSoundSlot.innerHTML = '';
-                MpiCheckbox.mount(toastSoundSlot, {
-                    checked: Storage.getToastSound(),
-                    label: 'Play sound on notification',
-                }).on('change', ({ checked }) => Storage.setToastSound(checked));
-            }
+            _mountSwitchPlate('#mpiSettingsToastSoundSlot', Storage.getToastSound(),
+                (v) => Storage.setToastSound(v));
 
             // ── MPI-270: floating latent window when minimized (default ON) ──
-            const floatLatentSlot = qs('#mpiSettingsFloatLatentSlot', root);
-            if (floatLatentSlot) {
-                floatLatentSlot.innerHTML = '';
-                MpiCheckbox.mount(floatLatentSlot, {
-                    checked: state.floatLatentWindow === true,
-                    label: 'Show floating latents when minimized',
-                }).on('change', ({ checked }) => { state.floatLatentWindow = checked === true; });
-            }
+            _mountSwitchPlate('#mpiSettingsFloatLatentSlot', state.floatLatentWindow === true,
+                (v) => { state.floatLatentWindow = v === true; });
 
             // ── Pixel rendering mode ─────────────────────────────────────────
             const pixelModeSlot = qs('#mpiSettingsPixelModeSlot', root);
@@ -241,12 +261,14 @@ export const MpiSettings = ComponentFactory.create({
                 };
                 const partChecks = new Map();
                 let askCheck = null;
+                const askPlate = reuseAskSlot.closest('.mpi-settings__plate');
                 const syncChecks = () => {
                     for (const { key } of REUSE_PARTS) {
                         partChecks.get(key)?.el?.setChecked?.(options[key] === true);
                         partChecks.get(key)?.el?.setDisabled?.(options.ask === true);
                     }
                     askCheck?.el?.setChecked?.(options.ask === true);
+                    askPlate?.classList.toggle('mpi-settings__plate--on', options.ask === true);
                 };
                 _syncReuseControls = (next = {}) => {
                     options.ask = next.ask === true;
@@ -281,7 +303,7 @@ export const MpiSettings = ComponentFactory.create({
 
                 askCheck = MpiCheckbox.mount(reuseAskSlot, {
                     checked: options.ask === true,
-                    label: 'Ask each time',
+                    variant: 'switch',
                     name: 'reuse-setting-ask',
                 });
                 askCheck.on('change', ({ checked }) => {
@@ -324,7 +346,6 @@ export const MpiSettings = ComponentFactory.create({
                 }
 
                 const pathInst = MpiInput.mount(pathSlot, {
-                    label: 'ComfyUI Models Path',
                     placeholder: 'Default (internal engine)',
                     value: saved,
                 });

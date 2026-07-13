@@ -53,7 +53,11 @@ The trap this fixes: the op was NEVER persisted, so every block remount (Gallery
 
 ### MpiInput size='sm' width cap
 
-`MpiInput size='sm'` sets `.mpi-input--sm .mpi-input__field { width: 6ch }` on the `<input>` element directly, not the wrapper. Setting width on `.mpi-input` does nothing. To widen: target the field with equal-or-higher specificity (e.g. `.mpi-model-settings__lora-strengths .mpi-input--sm .mpi-input__field { width: 8ch }`). 8ch clears `-1.00`; 7ch still clips. Overlay renders 0-size on the landing page — don't measure through the overlay. CSS cache trap: edit + reload full page before measuring, not just re-mount.
+`MpiInput size='sm'` sets `.mpi-input--sm .mpi-input__field { width: 6ch }` on the `<input>` element directly, not the wrapper. Setting width on `.mpi-input` does nothing. To widen: target the field with equal-or-higher specificity (e.g. `.mpi-model-settings__lora-strengths .mpi-input--sm .mpi-input__field { width: 8ch }`). 8ch clears `-1.00`; 7ch still clips. Overlay renders 0-size on the landing page — don't measure through the overlay. CSS cache trap: edit + reload full page before measuring, not just re-mount. Inline-row trap: to put a unit label next to a small input (`Min System RAM [ 0 ] GB`), give the input's HOST `width: auto` — a fixed host width (e.g. 90px) reserves dead space so the unit floats far right, because the `--sm` field is only ~6ch.
+
+### hint / label line-height — set `display:block`, not just line-height (Settings redesign 2026-07-13)
+
+`.mpi-settings__hint` is a `<span>` with no `display` set → it stays `inline` and takes `body { line-height: 1.6 }`'s line-box metrics, NOT the `.mpi-settings__hint { line-height: 1.5 }` rule, when the hint is injected by a DIFFERENT component's sheet than the one defining the class (a `ce()`-built hint in `MpiRunpodSettings` vs the rule in `MpiSettings.css` — sheet load order lets `body` win). Symptom: one hint has visibly looser leading than its siblings; overriding `line-height` (even inline `line-height:0`) does NOTHING because an inline span's used leading follows the block container. FIX: `display: block` on the span (breaks it off the body's inline line-box) + the `line-height` you want, scoped in the RENDERING component's own sheet. Burned ~an hour chasing this as a line-height bug when it was a `display` bug.
 
 ### MpiCanvasViewer spinner flags
 

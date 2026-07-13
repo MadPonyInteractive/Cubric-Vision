@@ -17,20 +17,26 @@
     display: none;
 }
 
-/* Auto-connect sub-option — indented under the Enable toggle (MPI-85). */
-.mpi-settings__runpod-suboption {
-    padding-left: var(--s-4);
-    border-left: 2px solid var(--line);
+/* .mpi-settings__subgroup / __subgroup-title are defined in MpiSettings.css
+   (the base sheet, always loaded) — shared by External Connections + here. */
+
+/* The Connect sub-group has no title (it's the terminal action), so pull its
+   status row tight to the top. */
+.mpi-settings__subgroup--connect {
+    gap: var(--s-2);
 }
 
 .mpi-settings__hint--warn {
     color: var(--accent-warn);
 }
 
+/* Promo box — always stacks (copy over button). The panel is only ~42vw, so a
+   side-by-side row cramps the copy into a sliver at every real panel width; a
+   stacked promo reads fine and never squeezes. */
 .mpi-settings__runpod-referral {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
     gap: var(--s-3);
     background: var(--surface-2);
     border: 1px solid var(--line);
@@ -81,18 +87,6 @@
     outline: none;
 }
 
-@media (max-width: 680px) {
-    .mpi-settings__runpod-referral {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .mpi-settings__runpod-referral-link {
-        text-align: center;
-        white-space: normal;
-    }
-}
-
 /* Console link: subtle inline text link under the connect row (jump to the
    live Pod or the Pods list on RunPod). */
 .mpi-settings__runpod-console-link {
@@ -130,17 +124,32 @@
     display: flex;
     align-items: center;
     gap: var(--s-2);
+    font-size: var(--t-sm);
+    line-height: 1.5;
 }
 .mpi-settings__minram-label {
     flex-shrink: 0;
 }
+/* Hug the field (MpiInput --sm is ~6ch wide) so the GB unit sits right beside
+   it — a fixed host width would leave dead space between the box and "GB". */
 .mpi-settings__minram-input {
-    width: 90px;
+    width: auto;
     flex-shrink: 0;
+    display: flex;
 }
 .mpi-settings__minram-unit {
     flex-shrink: 0;
     color: var(--ink-3);
+}
+/* The floor hint is created via ce() as a sibling of the row. `body` sets
+   line-height:1.6 and, depending on sheet load order, can beat the shared
+   .mpi-settings__hint 1.5 rule for hints rendered by THIS component — so pin it
+   here, at higher specificity, scoped to the RunPod body. display:block keeps
+   the inline span from taking the body's line metrics. */
+.mpi-settings__runpod-body span.mpi-settings__hint,
+.mpi-settings__minram-row + .mpi-settings__hint {
+    display: block;
+    line-height: 1.5;
 }
 
 .mpi-settings__volume-create,
