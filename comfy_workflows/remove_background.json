@@ -1,9 +1,10 @@
 {
   "1": {
     "inputs": {
-      "image": "mpi_input_image.png"
+      "string": "",
+      "channel": "alpha"
     },
-    "class_type": "LoadImage",
+    "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
     }

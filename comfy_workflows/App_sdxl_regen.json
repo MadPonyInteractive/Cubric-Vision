@@ -496,9 +496,10 @@
   },
   "1571": {
     "inputs": {
-      "image": "placeholder.png"
+      "string": "",
+      "channel": "alpha"
     },
-    "class_type": "LoadImage",
+    "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
     }
