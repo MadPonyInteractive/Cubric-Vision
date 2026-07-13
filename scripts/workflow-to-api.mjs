@@ -186,7 +186,7 @@ function convert(workflow, objectInfo) {
     if (VIRTUAL_NODES.has(node.type)) continue;             // UI-only, never in prompt
     const def = objectInfo[node.type];
     if (!def) {
-      throw new Error(`Unknown node type "${node.type}" (id ${node.id}) — not in this engine's /object_info. Install the custom node, or it was renamed.`);
+      throw new Error(`Unknown node type "${node.type}" (id ${node.id}) — not in this engine's /object_info. Install the custom node, or it was renamed.\n  Find which pack ships it: node scripts/resolve-comfy-node.mjs ${node.type}`);
     }
 
     const inputs = {};
