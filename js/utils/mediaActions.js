@@ -105,8 +105,9 @@ export async function deleteMediaFiles(project, items) {
         const filename = extractFilenameFromPath(item.filePath);
         if (!filename) continue;
         try {
+            const idParam = item.id ? `&itemId=${encodeURIComponent(item.id)}` : '';
             await fetch(
-                `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}`,
+                `/project-media/${project.id}/${encodeURIComponent(filename)}?folderPath=${encodeURIComponent(project.folderPath)}${idParam}`,
                 { method: 'DELETE' }
             );
         } catch (err) {

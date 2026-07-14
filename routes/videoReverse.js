@@ -108,7 +108,9 @@ router.post('/api/video/reverse', async (req, res) => {
         const newId = uuidv4();
         const metaDir = path.join(mediaDir, '.meta');
         await fs.ensureDir(metaDir);
-        const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}`;
+        // Cache-bust on mtime so a re-run overwriting a reused name plays fresh bytes.
+        const _mtime = (await fs.stat(outputPath).catch(() => null))?.mtimeMs || 0;
+        const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}&v=${Math.round(_mtime)}`;
         const sidecar = {
             id:         newId,
             type:       'video',

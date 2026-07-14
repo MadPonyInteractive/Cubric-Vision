@@ -114,7 +114,8 @@ router.post('/api/video/gif', async (req, res) => {
         await execFileP(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024 });
 
         const stat = await fs.stat(outputPath);
-        const url = `/project-file?path=${encodeURIComponent(outputPath)}`;
+        // Cache-bust on mtime so a re-run overwriting a reused name plays fresh bytes.
+        const url = `/project-file?path=${encodeURIComponent(outputPath)}&v=${Math.round(stat.mtimeMs)}`;
         res.json({ success: true, url, byteSize: stat.size, fileName });
     } catch (err) {
         logger.error('project', 'video-gif failed', err);

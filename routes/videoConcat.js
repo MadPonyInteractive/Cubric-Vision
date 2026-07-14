@@ -105,7 +105,11 @@ function _makeProgressEmitter(jobId) {
 async function _writeOutputSidecar({ mediaDir, metaDir, outputPath, finalName, operation, extraFields = {} }) {
     const outMeta = await probeVideo(outputPath) || {};
     const newId   = uuidv4();
-    const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}`;
+    // Cache-bust on the output's mtime: a re-run that overwrites a reused
+    // filename (e.g. combined_001.mp4 after an in-app delete) gets a fresh URL,
+    // so Chromium can't replay stale cached bytes for the same /project-file path.
+    const _mtime = (await fs.stat(outputPath).catch(() => null))?.mtimeMs || 0;
+    const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}&v=${Math.round(_mtime)}`;
     const sidecar = {
         id:         newId,
         type:       'video',

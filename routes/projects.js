@@ -183,6 +183,17 @@ function projectFileUrl(filePath) {
     return `/project-file?path=${encodeURIComponent(filePath)}`;
 }
 
+// Cache-busted variant for FRESHLY-WRITTEN output files. A run that overwrites a
+// reused sequenced name (crop_001, combined_001, etc.) at the same path would
+// otherwise share the previous run's cached bytes in Chromium's <video>/<img>
+// cache. Appending the output's mtime gives each write a fresh URL. Read-side
+// callers (reconciler, thumbnails, latents) keep plain projectFileUrl.
+function projectFileUrlBusted(filePath) {
+    let mtime = 0;
+    try { mtime = Math.round(fs.statSync(filePath).mtimeMs); } catch (_) { /* file just written; best-effort */ }
+    return `/project-file?path=${encodeURIComponent(filePath)}&v=${mtime}`;
+}
+
 function relativeProjectPath(projectRoot, filePath) {
     return path.relative(projectRoot, filePath).replace(/\\/g, '/');
 }
@@ -1333,7 +1344,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const metaContent = {
             id,
             type:           mediaType === 'video' ? 'video' : mediaType === 'audio' ? 'audio' : 'image',
-            filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
+            filePath:       projectFileUrlBusted(filePath),
             operation:      req.body.operation || 'imported',
             displayName:    finalFileName.replace(/\.[^.]+$/, ''),
             prompt:         promptContext || '',
@@ -1798,7 +1809,7 @@ router.post('/project/save-generation', async (req, res) => {
         const metaContent = {
             id,
             type: isVideo ? 'video' : 'image',
-            filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
+            filePath: projectFileUrlBusted(filePath),
             operation,
             displayName:    filename.replace(/\.[^.]+$/, ''),
             prompt:         meta.prompt        || '',
@@ -2136,7 +2147,7 @@ router.post('/project/crop-media', async (req, res) => {
         const metaContent = {
             id,
             type: 'image',
-            filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
+            filePath: projectFileUrlBusted(filePath),
             operation: 'crop',
             displayName: filename.replace(/\.[^.]+$/, ''),
             prompt: '',
