@@ -89,7 +89,16 @@ export const MpiTrimBar = ComponentFactory.create({
 
         function _snap(t) {
             if (_fps <= 0) return t;
-            return Math.round(t * _fps) / _fps;
+            const snapped = Math.round(t * _fps) / _fps;
+            // Duration is rarely an exact frame multiple (e.g. 20 frames but
+            // container dur 0.834 ≠ 20/24). Snapping the last frame lands one
+            // tick short of _duration, so the out handle can never sit at the
+            // true end and full-range playback/native-loop can't re-engage.
+            // Stick to the exact ends when within half a frame.
+            const fs = 1 / _fps;
+            if (Math.abs(snapped - _duration) < fs * 0.5 || t >= _duration) return _duration;
+            if (snapped < fs * 0.5) return 0;
+            return snapped;
         }
 
         function _pctOf(t) {

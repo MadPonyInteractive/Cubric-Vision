@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-283","type":"task.created","at":"2026-07-14T00:00:00Z","actor":"claude","summary":"Frame-accurate video player: research (4 angles) confirmed <video>.currentTime unfixable (audio-clock + PTS truncation). Adopt mediabunny hybrid."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-283","type":"task.moved","at":"2026-07-14T00:01:00Z","actor":"claude","from":"todo","to":"doing","summary":"Planned; implementation queued."}

@@ -45,3 +45,4 @@
 - Selecting multiple gallery cards is no longer cancelled when a running generation finishes — your selection (and select mode) now survives the gallery refresh.
 - Re-running a video or image operation that reuses a filename (Combine, Crop, Reverse, Export GIF, and others) no longer plays back a previous — sometimes already-deleted — result; the app now always shows the freshly-generated media.
 - The Uninstall dialog no longer shows an "Also delete model files from disk" checkbox that did nothing when unchecked (the model stayed installed with no way to reinstall). Uninstalling a model now always removes its weights, while files shared with other installed models are still kept.
+- Combining two videos no longer produces a clip with a broken frame rate that could freeze the player on one frame or make the playhead stick; combined videos now have a clean, constant frame rate.

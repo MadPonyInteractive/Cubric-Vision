@@ -183,7 +183,10 @@ router.post('/combine-videos', async (req, res) => {
 
         _broadcast('concat:progress', { jobId, ratio: 0 });
         const onProgress = _makeProgressEmitter(jobId);
-        const result = await concatVideos(inputs, outputPath, { onProgress });
+        // forceReencode: demuxer `-c copy` concat drifts PTS on short generated
+        // clips → non-integer output fps that breaks frame-accurate playback.
+        // Re-encode via the filter path for guaranteed CFR output.
+        const result = await concatVideos(inputs, outputPath, { onProgress, forceReencode: true });
 
         const sidecar = await _writeOutputSidecar({
             mediaDir, metaDir, outputPath, finalName, operation: 'combine',
