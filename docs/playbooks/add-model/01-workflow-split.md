@@ -28,6 +28,20 @@ runtime **staged** for `/mpi-end`. Requires a running ComfyUI (`COMFY_URL`
 overrides `http://127.0.0.1:8188`). `raw/` is USER-OWNED — tooling reads it, never
 writes it.
 
+> **Converter-staleness trap (2026-07-14).** The generated API templates
+> (`scripts/workflow_generation/*_template.json`) are checked in — they do NOT
+> re-derive themselves on a plain sync of an *unchanged* raw. When
+> `workflow-to-api.mjs` itself is fixed (e.g. the `control_after_generate` phantom-
+> widget skip), every previously-converted template is silently stale until re-synced,
+> and the fix does NOT reach them. A stale `UltimateSDUpscale`/`KSampler` template
+> ships an **off-by-one `widgets_values`** → ComfyUI rejects at prompt time with a
+> cluster like `steps: invalid literal for int(): 'fixed'`, `mask_blur bigger than
+> max of 64`, `sampler_name: 1 not in (list)`. **After ANY converter change, run
+> `node scripts/sync-raw-workflows.mjs --all`** to re-derive every API template + rebake
+> runtimes on a clean tree, then commit. (Symptom-only fix per file: convert that raw →
+> its `*_template.json`, run its `generate_*.py`.) Sweep to prove zero remaining:
+> validate every runtime's widget values against live `/object_info`.
+
 - **Local live-test workflows folder:** `G:\ComfyUi\ComfyUI\user\default\workflows\`
   (e.g. `NVIDIA_PID_template.json`). This is the primary authoring bench.
 - **Local models dir:** `G:\CubricModels\` (checkpoints → `diffusion_models/`,
