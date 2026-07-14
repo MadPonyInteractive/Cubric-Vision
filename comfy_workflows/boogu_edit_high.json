@@ -476,7 +476,8 @@
   },
   "190": {
     "inputs": {
-      "string": ""
+      "string": "",
+      "channel": "alpha"
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
