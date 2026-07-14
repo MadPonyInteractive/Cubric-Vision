@@ -236,6 +236,7 @@ export const MpiHistoryList = ComponentFactory.create({
                     { key: 'download',       icon: 'download', label: 'Download' },
                     ...(_isVideo ? [] : [{ key: 'download-mask', icon: 'download', label: 'Download mask', disabled: downloadMaskDisabled }]),
                     { key: 'add-to-gallery', icon: 'plus',     label: 'Add to gallery', disabled: addToGalleryDisabled },
+                    { key: 'reveal',         icon: 'folder',   label: 'Open in file system' },
                     { key: 'delete',         icon: 'trash',    label: 'Delete',         danger: true },
                 );
                 MpiContextMenu.show({
@@ -255,6 +256,8 @@ export const MpiHistoryList = ComponentFactory.create({
                             emit('download-mask', { index: targetIdxs[0] });
                         } else if (key === 'add-to-gallery') {
                             emit('add-to-gallery', { index: targetIdxs[0] });
+                        } else if (key === 'reveal') {
+                            emit('reveal', { indices: targetIdxs });
                         }
                     },
                 });

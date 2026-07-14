@@ -955,6 +955,7 @@
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
  *   'download-selected' { indices }                     — download selected entries
  *   'download-mask'     { index }                       — download single entry mask
+ *   'reveal'            { indices }                       — open entry/Media folder in file system
  *   'reuse'             { item, positive, negative, modelId, operation, injectionParams, mediaItems } - reuse prompt button clicked
  */
 

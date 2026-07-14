@@ -39,7 +39,7 @@ import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
-import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
+import { extractFilenameFromPath, extractAbsPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
 import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
@@ -1610,6 +1610,38 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!item?.filePath) { _showToast('No source media', 'error'); return; }
             historyList.el.exitSelectMode();
             await _addItemToGallery(item, isVideo ? 'video' : 'image');
+        });
+
+        // Single entry → reveal + select the media file. Multiple → open the Media folder
+        // (no portable multi-file select across OSes). Mirrors MpiGalleryBlock.
+        historyList.on('reveal', async ({ indices }) => {
+            if (!indices?.length) return;
+            try {
+                if (indices.length === 1) {
+                    const item = _group.history[indices[0]];
+                    if (!item?.filePath) return;
+                    const absPath = extractAbsPath(item.filePath) || item.filePath;
+                    const res = await fetch('/reveal-item', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ itemPath: absPath }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                } else {
+                    const folderPath = state.currentProject?.folderPath;
+                    if (!folderPath) return;
+                    const res = await fetch('/open-folder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folderPath: `${folderPath}/Media` }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                }
+                historyList.el.exitSelectMode();
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'reveal item failed', err);
+                Events.emit('ui:error', { title: 'Open in file system', message: 'Could not open the file location.' });
+            }
         });
 
         historyList.on('download-selected', ({ indices }) => {
