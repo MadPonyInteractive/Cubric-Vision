@@ -102,7 +102,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 
 **Key fields:**
 - **`id`** — UUID matching the entry in `project.json` history. This is the primary key.
-- **`filePath`** — Server-relative URL to the actual image/video file. NOT a simple filename — it's a `/project-file?path=...` query string.
+- **`filePath`** — Server-relative URL to the actual image/video file. NOT a simple filename — it's a `/project-file?path=...` query string. Output writes that reuse a sequenced name (combine, crop, reverse, gif, upload, save-generation) build the URL via `projectFileUrlBusted()` in `routes/projects.js`, which appends `&v=<mtimeMs>`. Without it, re-running an op that overwrites the same path (e.g. `combined_001.mp4` after an in-app delete) makes Chromium's `<video>`/`<img>` cache replay the previous run's bytes — the "app plays a result I already deleted" ghost. The `/project-file` route ignores `&v`; it's purely a cache key. Read-side callers (reconciler, thumbnails, latents) keep the plain URL.
 - **`type`** — `'image'` or `'video'`.
 - **`operation`** — Which operation created this item (e.g., `'t2i'`, `'upscale'`, `'autoMaskImg'`, `'interpolate'`, `'videoUpscale'`, `'snapshot'`, `'crop'`). Reserved for the operation key — never overwritten with a filename or human label.
 - **`displayName`** — Human-readable label derived from the saved filename stem (e.g., `'t2i_001'`, `'upscale_002'`, `'crop_001'`). Source of truth for `MpiHistoryList` card labels and gallery group names. Distinct from `operation` so the same item displays identically before and after project reload.
