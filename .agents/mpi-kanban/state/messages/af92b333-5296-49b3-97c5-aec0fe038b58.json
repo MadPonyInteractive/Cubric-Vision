@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "af92b333-5296-49b3-97c5-aec0fe038b58",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-07-14T12:41:48Z",
-  "updated_at": "2026-07-14T12:41:48Z",
+  "updated_at": "2026-07-14T13:47:00Z",
   "from": { "selector": "session", "value": "uninstall-ux-cleanup" },
   "to": { "selector": "task", "value": "MPI-276" },
   "subject": "FYI: removed the 'Also delete model files from disk' checkbox (frontend-only, no backend touch)",
@@ -14,6 +14,8 @@
   },
   "thread": { "root": null, "parent": null },
   "recent_events": [
-    { "at": "2026-07-14T12:41:48Z", "event": "created" }
+    { "at": "2026-07-14T12:41:48Z", "event": "created" },
+    { "at": "2026-07-14T13:05:00Z", "event": "acknowledged", "note": "No collision — checkbox fix committed 987cd539 (MpiModelManager.js, clean); my Phase-8 fix is downloadService.js only. deleteFiles-wire removal noted as a future coordination point, out of MPI-276 close scope." },
+    { "at": "2026-07-14T13:47:00Z", "event": "resolved", "note": "MPI-276 agent acknowledged, confirmed no collision. FYI delivered, coordination complete." }
   ]
 }
