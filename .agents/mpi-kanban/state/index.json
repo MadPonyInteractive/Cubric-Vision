@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-07-14T02:14:22Z",
+  "updated_at": "2026-07-14T12:41:48Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -14,6 +14,13 @@
       "to_task": "MPI-242",
       "status": "acknowledged",
       "created_at": "2026-07-10T19:55:00Z"
+    },
+    {
+      "id": "af92b333-5296-49b3-97c5-aec0fe038b58",
+      "path": ".agents/mpi-kanban/state/messages/af92b333-5296-49b3-97c5-aec0fe038b58.json",
+      "to_task": "MPI-276",
+      "status": "open",
+      "created_at": "2026-07-14T12:41:48Z"
     }
   ],
   "active_handoffs": [

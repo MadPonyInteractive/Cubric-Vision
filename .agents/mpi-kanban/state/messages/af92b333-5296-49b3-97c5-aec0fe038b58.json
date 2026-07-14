@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "af92b333-5296-49b3-97c5-aec0fe038b58",
+  "status": "open",
+  "created_at": "2026-07-14T12:41:48Z",
+  "updated_at": "2026-07-14T12:41:48Z",
+  "from": { "selector": "session", "value": "uninstall-ux-cleanup" },
+  "to": { "selector": "task", "value": "MPI-276" },
+  "subject": "FYI: removed the 'Also delete model files from disk' checkbox (frontend-only, no backend touch)",
+  "body": "Heads-up while you verify the download/install/uninstall refactor.\n\nWHAT I CHANGED (frontend only): js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js\n  1. Dropped the `checkbox` prop from the Uninstall MpiOkCancel dialog config (was 'Also delete model files from disk', checked:true).\n  2. The dialog's on('ok') handler now calls pending.run(true) unconditionally instead of passing checkboxChecked.\n\nWHY: install-state is derived by statting disk (syncModelInstalled -> /comfy/models/check). So 'keep files' (deleteFiles=false) was a no-op UX: files stayed on disk, resync re-flagged the model INSTALLED, card never left the Installed section, no install button. User confirmed this dead state on SDXL. Decision: always delete, remove the toggle from UI.\n\nWHAT I DID NOT TOUCH: routes/downloadManager.js and the whole backend uninstall path are UNCHANGED. The `deleteFiles` request param is still accepted server-side; it now always receives true. All your guards (universal / shared-dep / outside-managed-root / pip) are untouched. The two _showConfirm callbacks (_confirmWholeUninstall ~L479, op-remove ~L552) keep their `async (deleteFiles) =>` signature and still forward the value to downloadService.uninstall(); they just always get true now.\n\nNo backend/deleteFiles-wire removal was done on purpose so it can't collide with your refactor. If you later want deleteFiles gone from the wire entirely, that's a coordination point with this change. User verified the UI live (checkbox gone, uninstall works).",
+  "related": {
+    "task_card": "MPI-276",
+    "files": ["js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js"]
+  },
+  "thread": { "root": null, "parent": null },
+  "recent_events": [
+    { "at": "2026-07-14T12:41:48Z", "event": "created" }
+  ]
+}

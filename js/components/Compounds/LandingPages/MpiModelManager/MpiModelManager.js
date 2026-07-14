@@ -243,13 +243,16 @@ export const MpiModelManager = ComponentFactory.create({
             text:        'Delete these files?\n• Files shared with other installed models will be kept.',
             okLabel:     'Uninstall',
             cancelLabel: 'Cancel',
-            checkbox:    { label: 'Also delete model files from disk', checked: true },
         });
-        _confirmDialog.on('ok', async ({ checkboxChecked }) => {
+        _confirmDialog.on('ok', async () => {
             const pending = _pendingConfirm;
             _pendingConfirm = null;
             if (!pending) return;
-            await pending.run(checkboxChecked);
+            // Uninstall always deletes the model's own weights (universal + shared +
+            // outside-root deps are protected server-side). The old "keep files"
+            // checkbox was a no-op — install-state is derived by statting disk, so
+            // kept files just re-flagged the model INSTALLED. Removed; always true.
+            await pending.run(true);
             await reSyncInstalledModels();
         });
         _confirmDialog.on('cancel', () => { _pendingConfirm = null; });
