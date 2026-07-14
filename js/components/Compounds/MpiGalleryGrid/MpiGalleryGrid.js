@@ -1135,12 +1135,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // decoration: reads/mutates no state, sits above the spinner/preview.
             // States (mutually-exclusive card classes): idle (big centered, replaces
             // the spinner) → cooking (small, bottom-right) once a preview lands.
-            // idle↔greet face swaps on a self-rearming timer at a random 4–8s cadence.
+            // idle↔greet face swaps on a self-rearming timer at a random 4–8s cadence;
+            // cooking drops the flip and shows the single waiting face.
             // (No done/happy state on the card — the finished-generation happy mascot
             //  lives on the success toast instead; the card rebuilds on complete.)
             const MASCOT_SRC = {
-                idle:  'assets/mascot/idle.png',
-                greet: 'assets/mascot/greet.png',
+                idle:    'assets/mascot/idle.png',
+                greet:   'assets/mascot/greet.png',
+                waiting: 'assets/mascot/waiting.png',
             };
             let _mascotFlipTimer = null;
             let _mascotFace = 'idle';   // current idle/greet face while flipping
@@ -1169,10 +1171,16 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _mascotCooking = false;
                     return;
                 }
-                // idle / cooking: same floating face, different size + position (CSS).
+                cardEl.classList.add(`mpi-group-card--mascot-${state}`);
+                if (state === 'cooking') {
+                    // Latents incoming → single waiting face, no idle/greet flip.
+                    _stopMascotFlip();
+                    mascot.src = MASCOT_SRC.waiting;
+                    return;
+                }
+                // idle: big centered, flips idle↔greet on the self-rearming timer.
                 _mascotFace = _mascotFace === 'greet' ? 'greet' : 'idle';
                 mascot.src = MASCOT_SRC[_mascotFace];
-                cardEl.classList.add(`mpi-group-card--mascot-${state}`);
                 _scheduleMascotFlip();
             }
 

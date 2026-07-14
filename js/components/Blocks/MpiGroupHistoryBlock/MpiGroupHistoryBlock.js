@@ -315,7 +315,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _mascotEl = document.createElement('img');
         _mascotEl.className = 'mascot-peek';
         _mascotEl.id = 'mascot-peek';
-        _mascotEl.src = 'assets/mascot/idle.png';
+        _mascotEl.src = 'assets/mascot/waiting.png';
         _mascotEl.alt = '';
         centreSlot.appendChild(_mascotEl);
 
@@ -528,7 +528,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _setGenerating = (flag) => {
             viewer.el.setGenerating?.(flag);
-            if (flag) _mascotShow('assets/mascot/idle.png');
+            if (flag) _mascotShow('assets/mascot/waiting.png');
             // hide handled per-event below
         };
 
@@ -650,11 +650,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _myGenIds.delete(id);
             _stoppedPendingComplete.delete(id);
             viewer.el.setGenerating?.(false);
-            // Tool-only transforms (resize) skip the mascot — model ops only.
-            if (item?.operation !== 'resize' && item?.operation !== 'resizeVideo') {
-                _mascotShow('assets/mascot/happy.png');
-                _mascotHide(2000);
-            }
+            // Result paint overlaps the mascot on complete, so no happy flash here —
+            // just hide the waiting peek.
+            _mascotHide(0);
             _canvasHasMask = false;
             _refreshOpOptions();
             const _wasReplace = _group.history?.some(entry => entry.id === item.id);
