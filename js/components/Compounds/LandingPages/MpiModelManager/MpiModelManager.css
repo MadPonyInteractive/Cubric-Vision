@@ -291,6 +291,28 @@
     box-shadow: 0 0 0 1px oklch(1 0 0 / 0.08);
 }
 
+/* Queued-install waiting mascot (MPI-284) — floats on the thumb while a job
+   sits queued; mirrors the history-viewer .mascot-peek treatment. */
+.mpi-tile__mascot {
+    position: absolute;
+    z-index: 3;
+    bottom: var(--s-2);
+    right: var(--s-2);
+    width: 54px;
+    height: 54px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-base) var(--ease);
+}
+.mpi-tile__mascot--visible {
+    opacity: 0.9;
+    animation: mpi-tile-mascot-float 4s var(--ease) infinite;
+}
+@keyframes mpi-tile-mascot-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+
 .mpi-tile__body {
     padding: var(--s-3);
     display: flex;

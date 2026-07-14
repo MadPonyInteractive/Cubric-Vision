@@ -787,6 +787,13 @@ export const MpiModelManager = ComponentFactory.create({
                 star.innerHTML = renderIcon('sparkle', 'sm');
                 thumb.appendChild(star);
             }
+            // Queued-install waiting mascot (MPI-284) — rides absolute on the thumb
+            // like the heat dot; hidden until the job sits 'queued', removed the
+            // moment it starts downloading (see _patchTile). Reuses the shared
+            // waiting.png peek asset — no new asset.
+            const mascot = ce('img', { className: 'mpi-tile__mascot', src: 'assets/mascot/waiting.png', alt: '' });
+            if (st.downloadState === 'queued') mascot.classList.add('mpi-tile__mascot--visible');
+            thumb.appendChild(mascot);
             tile.appendChild(thumb);
 
             const tier = model.sizeTier || 'balanced';
@@ -809,7 +816,7 @@ export const MpiModelManager = ComponentFactory.create({
             tile.appendChild(body);
 
             _unsubs.push(on(tile, 'click', () => openDetail(model)));
-            _tileInstances.set(model.id, { tile, stateEl });
+            _tileInstances.set(model.id, { tile, stateEl, mascot });
             return tile;
         }
 
@@ -1217,7 +1224,13 @@ export const MpiModelManager = ComponentFactory.create({
         function _patchTile(modelId, { rebuildDetail = true } = {}) {
             const tileRef = _tileInstances.get(modelId);
             const model = MODELS.find(m => m.id === modelId);
-            if (tileRef && model) tileRef.stateEl.innerHTML = _tileState(_modelState(model));
+            if (tileRef && model) {
+                const st = _modelState(model);
+                tileRef.stateEl.innerHTML = _tileState(st);
+                // MPI-284: waiting mascot only while queued — drop it once the
+                // job starts downloading (or any other transition).
+                if (tileRef.mascot) tileRef.mascot.classList.toggle('mpi-tile__mascot--visible', st.downloadState === 'queued');
+            }
             // Only rebuild the open slide-over on real STATE transitions (pause /
             // resume / install-phase) — those flip the footer buttons. A byte-level
             // progress tick changes nothing visible in the panel, so rebuilding it
