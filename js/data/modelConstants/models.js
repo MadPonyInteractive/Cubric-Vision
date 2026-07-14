@@ -170,7 +170,7 @@ export const MODELS = [
         supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
-        description: 'Chroma is a high-detail Flux-family image generator. This Flash build produces images in a single step for fast, uncensored results.',
+        description: 'Chroma is a high-detail Flux-family image generator. It can produce some really hardcore high quality NSFW but can sometimes struggle with hands.',
         workflows: {
             t2i: 'Chroma_t2i.json',
             i2i: 'Chroma_t2i.json',   // same graph; Input_Is_i2i flips the latent source
@@ -403,7 +403,7 @@ export const MODELS = [
         loraStrengths: ['model'],
         capabilities: { multiStage: false, audio: false, negativePrompt: true },
         gen_speed: 'slow',
-        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The High tier uses the full bf16 weights at 30 steps for the best quality; needs the most VRAM.',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor. Describe the change you want and it edits the image while preserving the rest. The High tier uses the full bf16 weights at 30 steps for the best quality; needs the most VRAM.',
         workflows: {
             edit: 'boogu_edit_high.json',
         },
@@ -434,7 +434,7 @@ export const MODELS = [
         loraStrengths: ['model'],
         capabilities: { multiStage: false, audio: false, negativePrompt: false },
         gen_speed: 'balanced',
-        description: 'Boogu Image Edit is a unified 10B instruction image editor (Apache-2.0). Describe the change you want and it edits the whole image while preserving the rest. The Balanced tier uses a distilled turbo (int8) weight at 8 steps — fast, lower VRAM, and consistent across NVIDIA GPUs. Fastest on NVIDIA RTX (Turing+); older or non-NVIDIA GPUs may be slow.',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor. Describe the change you want and it edits the whole image while preserving the rest. The Balanced tier uses a distilled turbo (int8) weight at 8 steps — fast, lower VRAM, and consistent across NVIDIA GPUs. Fastest on NVIDIA RTX (Turing+); older or non-NVIDIA GPUs may be slow. Its understanding is not as deep as the High tier, but it is still a capable image editor.',
         workflows: {
             edit: 'boogu_edit_balanced.json',
         },
@@ -476,7 +476,7 @@ export const MODELS = [
         ],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
-        description: 'This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation. It can generate videos from text or images. Completely uncensored and with a spicy tendency. It creates videos at 16 fps, so it is advisable to interpolate them later.',
+        description: "This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation in it's text to video version and any style in image to video. It's fast and completely uncensored. It creates videos at 16 fps, so it is advisable to interpolate them later.",
         workflows: {
             t2v_ms: 'Wan22_t2v.json',
             i2v_ms: 'Wan22_i2v.json',
