@@ -17,12 +17,65 @@ js/services/downloadService.js  ←→  REST/POST  →  routes/downloadManager.j
 
 The backend uses `node-downloader-helper` under the hood. NDH writes directly to the final filename, so Cubric creates `<file>.cubricdl` sidecars while managed downloads are in progress. Installed-state checks require `exists && no sidecar`, which prevents a killed partial model from being treated as installed.
 
-## Frontend — `js/services/downloadService.js`
-Singleton that owns the frontend download queue.
+## The install store — the SOT (MPI-276)
 
-- `start(modelId, dependencies)`: Enqueue a model for download via backend SSE.
-- `cancel(modelId)`: stop an active download (cancel-only — `pause`/`resume` were removed, MPI-258 Bug 2). Idempotent client-side: a second press or a settled card skips the POST; a `_recentlyCancelled` guard blocks the MPI-241 SSE-open re-inject from resurrecting the phantom.
+`routes/install/installStore.js` is the single source of truth for the
+install/download lifecycle (the MPI-208 `generationStore` medicine, applied to
+downloads). Pure — no fs/express/NDH, all I/O injected — so it is unit-tested
+(`tests/install-store.test.cjs`). It holds `ModelJob`/`DepJob` records with an
+explicit **legal-transition table**: `transition(job, to, reason)` REJECTS +
+logs illegal moves (e.g. `cancelled→done`), so a wedged or resurrected job is
+impossible by construction. A monotonic `version` bumps on every mutation.
+
+- **No `refCount` anywhere (G5).** The field was DELETED in MPI-276 — it leaked
+  upward (a successful install never decremented it) and lied. "Is this dep
+  still needed / in-flight" is answered from job STATUS: `store.activeModelsForDep(depId)`
+  (non-terminal model jobs referencing the dep). **Never reintroduce refCount;
+  never gate on `refCount === 0`.** [[feedback_refcount_leaks_never_gate_on_zero]]
+- **Snapshot protocol (G9).** `store.snapshot()` = `{version, jobs[]}`. Broadcast
+  as `download:snapshot` on SSE connect + after every reconcile pass. The FE
+  REPLACES `state.downloadJobs` wholesale, version-gated (deltas apply only if
+  `version ≥` last seen).
+- **Prune (G10).** `done` jobs stay (card stays busy — no Install-flash, MPI-241)
+  until a resync confirms install, then prune (belt: 120s TTL). `failed`/`cancelled`
+  prune on a 30s TTL.
+
+**Reconciler — `routes/install/reconciler.js` (G11).** One pass, both engines,
+driven from disk/volume truth (`localModelsCheck` / wrapper `/models/status`):
+settles wedged deps (all bytes in + truth says installed → force terminal via
+legal transitions), FAILS orphans (no progress, nothing on disk, >60s grace),
+NEVER resurrects terminals, then prunes + broadcasts the snapshot. Runs on SSE
+connect, a 15s poll while any job is non-terminal, and after uninstall. Tests:
+`tests/install-reconciler.test.cjs`.
+
+> **Shadow-SOT caveat (as of MPI-276 Phase 4).** The store drives the
+> `download:snapshot` BROADCAST (the FE mirror consumes it, progress-complete via
+> `store.syncProgress`). The PULL endpoints (`/downloads/status`, `/active`,
+> `_serializeModelJob`) are still MAP-backed, and the runtime maps
+> (`_modelJobs`/`_depJobs`) stay write-authoritative + carry transport detail
+> (url/localPath/sha256/pipPins). The old remote stall-watchdog still reads the
+> maps. The full read-flip (delete map status-writes, flip pull reads onto
+> `store.snapshot()`, retire the watchdog into the reconciler) is a DEFERRED
+> future slice, done with the G6 adapter split.
+
+## Frontend — `js/services/downloadService.js`
+Singleton that owns the frontend download mirror (MPI-276: a mirror of the
+store snapshot, not an independent queue).
+
+- `start(modelId, dependencies)`: creates an optimistic client-only **`pending`**
+  job ("Starting…", indeterminate) then POSTs. `pending` is a CLIENT-ONLY state
+  (G2) — never in the backend store. `_armPendingRevert` arms a 10s timer: if no
+  backend ack lands, it drops the job + emits `download:cancelled` + a
+  `ui:warning` TOAST ("Install didn't start — try again"). Register-before-respond
+  (G8) means `POST /download/start` returns the job snapshot, which `_firePost`
+  adopts (→ `downloading`, clears the revert). [[feedback_error_dialog_vs_toast]]
+- `cancel(modelId)`: stop an active download (cancel-only — `pause`/`resume` were removed, MPI-258 Bug 2). Idempotent client-side: a second press or a settled card skips the POST.
 - `uninstall(modelId, dependencies)`: Remove model files via backend.
+
+> **MPI-276 deleted the MPI-241 patch cluster.** Register-before-respond (G8)
+> structurally kills the SSE-open race, so the `/status`-fetch merge heuristic,
+> `orphanedActive` re-injection, and the `_recentlyCancelled` guard are GONE. The
+> snapshot replaces `state.downloadJobs` wholesale; do NOT reintroduce a merge.
 
 > **Operation-selectable models (MPI-122).** `dependencies` here is ALWAYS a
 > resolved, flat dep array. For operation-keyed models (e.g. Wan 2.2) the
@@ -49,9 +102,12 @@ store, never the dead flag:
   `comfy.js`'s exported `localModelsCheck` (same custom-root + default-root +
   recursive-search + completeness logic as `/comfy/models/check`). Computed once
   before the delete loop; fail-safe **aborts** (`500 shared-dep-check-failed`) if
-  the check throws. A dep is protected iff another model still has that specific
-  dep **complete on disk** (per-dep, so a partially-installed sibling still
-  protects the shared files it has).
+  the check throws. A dep is protected iff another model is **whole-model
+  installed** (every one of its deps complete on disk) and needs it — MPI-258
+  replaced the earlier per-dep test, which was circular for a tier family (High
+  + Balanced each protecting the same shared copy while neither transformer was
+  installed → the cluster became undeletable). Plus any dep held by a live
+  in-flight job (`_inFlightDepIds`, store SOT — MPI-276).
 
 The old local `_findOtherModelsUsingDep` filtered on `m.installed` → always `[]`
 → uninstalling one LTX-2.3 tier deleted the Gemma/VAE/LoRAs the other tier
@@ -66,41 +122,66 @@ arch-variant model (LTX-2.3 balanced) is installed only when its common deps are
 ALSO on disk (`MpiModelManager._commonDepsOnDisk`), else a card whose shared deps
 were deleted would show a green INSTALLED and hide the loss.
 
-- SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call.
+- SSE stream at `/comfy/downloads/stream` is auto-connected on first `start()` call. On connect the backend runs a reconcile pass then broadcasts `download:snapshot`; the FE resets its version floor (no `/status` fetch — MPI-276 deleted it).
 - Emits Events for all download state transitions (`download:started`, `download:progress`, etc.).
-- On reconnect (SSE `open`), fetches `/comfy/downloads/status` to recover state and **MERGES** it into `state.downloadJobs` — it must NOT overwrite.
+- On `download:snapshot`, REPLACES `state.downloadJobs` wholesale (version-gated); transport detail (speed/phase/indeterminate/error) rides delta events and is carried forward onto the job; the client-only `pending` job is preserved.
 
-**SSE-open clobber (MPI-241) — don't reintroduce.** `start()` opens the SSE stream *and* creates the client `downloading` job in the SAME tick, so on the FIRST install after a reload the `open` handler's `/status` fetch races ahead of the backend registering it and returns only OLD `complete` jobs. Overwriting `state.downloadJobs` with that snapshot wiped the live job → the Model Library footer reverted Cancel→**Install** mid-download (bar kept climbing; only the state was wrong). Later installs never hit it — `_ensureSSE()` no-ops once open, hence "only the first time". Contract: keep any **active** client job (`downloading`/`queued`/`paused`/`installing`) whose `modelId` the backend snapshot omits; backend wins for shared ids. Footer hardening: a lingering terminal `complete` job still counts as *busy* (holds Cancel/progress, never flashes Install), and `anyInstalled` is checked BEFORE busy so Uninstall wins on re-sync. No "Finishing…" label — `Verifying…` is the only end-phase text. Guard: `tests/model-footer-settling.test.cjs`.
+**Footer no-Install-flash contract (MPI-241, preserved by MPI-276).** A lingering terminal `done`→`complete` job still counts as *busy* (holds Cancel/progress, never flashes Install) until the post-complete resync prunes it; `anyInstalled` is checked BEFORE busy so Uninstall wins on re-sync. The busy set (G14) = `{pending, queued, downloading, verifying, installing, done-awaiting-resync}`; `verifying` is a `phase`, not a model status; `done` maps to `complete` in the snapshot listener. No "Finishing…" label — `Verifying…` is the only end-phase text. Guard: `tests/model-footer-settling.test.cjs`.
 
 ## Backend — `routes/downloadManager.js`
 Non-blocking download router using `node-downloader-helper`. **Downloads are CANCEL-ONLY (no pause/resume)** — resume was removed (MPI-258 Bug 2, commit c7313dff): NDH `resumeFromFile` sends `Range: bytes=<n>-` on an append-mode file; when R2/Cloudflare answers 200 (full body) not 206 it appends the WHOLE file onto the partial → SHA256 mismatch (hit live on the 25GB LTX transformer). A cancelled/interrupted install restarts clean.
 
 **Endpoints:**
-- `POST /comfy/models/download/start` — enqueue a model's dependencies
+- `POST /comfy/models/download/start` — register the model job in the store BEFORE responding (register-before-respond, G8); the response body carries the `job` snapshot + store `version`.
 - `POST /comfy/models/download/cancel` — stop + scrub a model's active/queued download. **Idempotent**: an unknown job returns 200 (+ `download:cancelled` broadcast), NOT 404 (MPI-258).
-- `GET /comfy/downloads/status` — full queue snapshot
+- `GET /comfy/downloads/status` — full queue snapshot (still map-backed; carries `version`).
 - `GET /comfy/downloads/active` — active model downloads plus engine-download flag for Electron quit warnings
-- `GET /comfy/downloads/stream` — SSE broadcast channel
-- `POST /comfy/models/uninstall` — uninstall a model
+- `GET /comfy/downloads/stream` — SSE broadcast channel; on connect: reconcile pass → `download:snapshot`.
+- `POST /comfy/models/uninstall` — uninstall a model (engine-filtered, store-guarded — see below).
 
 > The `/download/pause`, `/download/resume`, `/engine/pause`, `/engine/resume` routes and the `_pausedDownloaders` map were DELETED in c7313dff. Do not reintroduce them.
 
-**ResumableDownloader class** (`routes/downloadManager.js` — name is historical; it no longer resumes):
+**FileDownloader class** (`routes/downloadManager.js`; renamed from `ResumableDownloader` in MPI-276 — it never resumed):
 A plain single-stream `node-downloader-helper` wrapper: start, cancel (clean `stop()` + remove), SHA256 verify, SSE progress broadcast.
 - `.download()`: always scrubs any stale/partial file at `localPath` first, then starts one clean stream (no `resumeIfFileExists`, no resume option). 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
 - `.cancel()`: `_downloader.stop()` + the caller removes the partial + marker.
 - On completion: verifies `sha256Expected`, clears `<file>.cubricdl`, marks dep `complete`.
 - On SHA256 mismatch: deletes the file, clears the marker, marks dep `failed`.
 
-**Job storage:**
-- `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, refCount, sha256)
+### Uninstall pipeline (G13, MPI-276)
+
+One engine-parameterized pipeline in `POST /comfy/models/uninstall`:
+
+1. **Server-side engine filter (MPI-276).** The route re-resolves the model's
+   engine-correct universe with `_filterDepsForEngine(modelId, wireDeps, engine)`
+   and keeps only deps in it — it no longer trusts the wire dep array (a stale
+   client / direct API call could ask to delete the wrong engine's files).
+2. **Shared-dep guard** (whole-model-installed rule, below) + **in-flight
+   protection on BOTH engines** via `_inFlightDepIds` (store SOT — remote
+   previously had none).
+3. **Delete via the engine path** (local trash→remove, remote wrapper delete).
+4. **Post-uninstall reconcile pass** + snapshot broadcast.
+
+**Custom-node FOLDER deletion (MPI-276).** Install extracts a node to
+`custom_nodes/<dep.filename>/` and removes the zip. The old uninstall re-derived
+`custom_nodes/<name>.zip` — the long-gone zip — so the delete no-op'd yet the
+loop still pushed the dep to `removed[]` and logged a lie. `_customNodeUninstallPath`
+now targets the extracted FOLDER, and `removed[]` gets an entry ONLY when a path
+actually existed and was deleted; a kept/missing path lands in `keptModelFiles`
+(`reason:'already-absent'`) with an honest log line. Guard:
+`tests/uninstall-guards.test.cjs`.
+
+**Job storage (runtime maps — write-authoritative, transport carriers):**
+- `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, sha256, pipPins). **No `refCount` field — DELETED MPI-276.**
 - `_modelJobs Map<modelId, DownloadJob>` — model-level aggregate job (totalBytes, downloadedBytes, speed, progress, deps[])
-- `_activeDownloaders Map<depId, ResumableDownloader>` — actively downloading
+- `_activeDownloaders Map<depId, FileDownloader>` — actively downloading
 - `_sseClients Set<res>` — SSE subscribers
 
-**RefCount:** Each `depId` can be shared across multiple model jobs. `refCount` tracks how many model jobs reference it. **TRAP (MPI-258): refCount LEAKS upward — a successful download NEVER decrements it** (only uninstall / disk-full rollback / cancel do). So after an install completes the dep sits at refCount ≥1, and a *second* install of the same model stacks it to 2. Do NOT gate any "is this dep still needed" decision on `refCount === 0`:
-- **Shared-dep uninstall protection** already learned this (see the `_localSharedDepsMap` note above) — it gates on live `depJob.status` (`downloading`/`queued`), never refCount.
-- **Cancel** (`/comfy/models/download/cancel`) learned it the hard way: gating "stop the downloader" on `refCount <= 0` meant a refCount-2 dep was never stopped — cancel deleted `_modelJobs` but left NDH streaming invisibly and every re-press 404'd. It now gates on `_otherActiveModelUsesDep(depId, thisModelId)` (another ACTIVE model job references the dep), not refCount. Unknown-job cancel returns an **idempotent 200** (+ `download:cancelled` broadcast), never 404.
+Every runtime status write goes through `_setModelStatus`/`_setDepStatus`, which set the map field AND drive the store's legal transition (a runtime→store string map; model `complete`→`done`). Live progress is mirrored to the store via `_syncStoreProgress` so the snapshot broadcast carries real bytes.
+
+**RefCount was DELETED (MPI-276) — never reintroduce it.** It tracked "how many model jobs reference this dep" but LEAKED upward (a successful download never decremented it, only uninstall/rollback/cancel did), so it sat ≥1 after any install and lied. Liveness is now a STORE query:
+- **Shared-dep uninstall protection** gates on `store`-derived in-flight (`_inFlightDepIds` = deps held by a non-terminal model job other than the one being uninstalled), not a refCount and not the old `_depJobs.status` map read.
+- **Cancel** gates on `_otherActiveModelUsesDep` (another ACTIVE model job references the dep). Unknown-job cancel returns an **idempotent 200** (+ `download:cancelled` broadcast), never 404.
 
 **Uninstall on Windows — Recycle Bin has a QUOTA (MPI-258).** `windows-trash.exe` exits **255** (uninstall silently no-ops, `removed:0`, misleading "all files shared" toast) when a weight exceeds the drive's *Recycle Bin* budget — this is the bin cap, NOT disk free space (a 6.9GB file failed with 37GB free on the drive). Since uninstall exists to free space (parking a 25GB weight in the bin wouldn't free it anyway), the uninstall loop tries `_trash` first, then falls back to permanent `fs.remove` on any trash failure. Small files still go to the bin (undo-safety); only over-quota weights hit the fallback.
 
@@ -130,9 +211,9 @@ In `js/state.js`:
 ## ComfyUI Auto-Restart
 When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js` stops ComfyUI, starts it again with `{ isUserRestart: true }`, and polls until ready before any generation proceeds.
 
-## NDH Resumable Download Gotchas
+## NDH Download Gotchas
 
-`node-downloader-helper` v2.1.11 key traps: writes straight to final filename (no `.part` suffix). `resume:true` is NOT a real NDH option (silently ignored) — the real flag is `resumeIfFileExists` but it makes `pause()` fail; leave `resume:true` (harmless, keeps `start()` synchronous so pause works). `pause()` mid-chunk can throw `ERR_STREAM_WRITE_AFTER_END` — defer via `setImmediate`. `models/check` uses bare `fs.pathExists` — partial-at-final-path reads as installed (false positive). MPI-54: implemented `<file>.cubricdl` sidecar marker + `isCompleteOnDisk()` + `routes/downloadCompletion.js` to fix this.
+`node-downloader-helper` v2.1.11 key traps: writes straight to final filename (no `.part` suffix), so a killed partial sits at the final path. Downloads are cancel-only (no pause/resume — MPI-258 B2); `.download()` scrubs any stale partial then starts one clean stream (no `resumeIfFileExists`). `models/check` uses bare `fs.pathExists` — partial-at-final-path reads as installed (false positive). MPI-54: `<file>.cubricdl` sidecar marker + `isCompleteOnDisk()` + `routes/downloadCompletion.js` fix this.
 
 **custom_nodes progress = indeterminate, never a byte ratio (MPI-231).** A GitHub `/archive/` zip is served with NO Content-Length → `stats.total`=0 → the denominator falls back to the tiny registry `seedBytes` (~15MB) while the numerator counts real streamed bytes; the following pip requirements phase has no honest up-front total either. A determinate bar overshoots (RES4LYF read `203 MB / 15 MB`). Fix: `_byteRatioExcludingNodes()` drops `type==='custom_nodes'` from BOTH sides on local (`_wireProgress`) + remote (`_onRemoteInstallEvent`); node ticks broadcast `indeterminate:true, phase:'preparing'`. Weights keep their real ratio (they send Content-Length). `MpiEngineInstall.setProgress` honors the flag (guarded by `!engineHasBytes`) → loading sweep + "Preparing dependencies…". The ComfyUI engine archive download/update is untouched — it uses the `engine:downloading` path with a real total, never this one.
 

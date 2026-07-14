@@ -16,7 +16,7 @@ NOT mechanically split these):
 - `builder/research/pod-perf-investigation.md` — research lab notebook (evidence log)
 - `builder/research/quant-and-coldstart-investigation.md` — evidence log (quantisation + cold-start investigation)
 - `releases/build-experience-log.md` — build evidence log
-- `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md` — coherent single-subject contracts, near/over the line by design
+- `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md`, `download-manager.md` — coherent single-subject contracts, near/over the line by design (download-manager: the full install/download/uninstall lifecycle + store/reconciler/snapshot, MPI-276)
 - `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
 - `models/ltx/audio-input.md` — research lab notebook (evidence log)
 - `playbooks/add-model/` — end-to-end procedure split into a README hub + numbered section files; the README carries the mandatory step ordering
