@@ -337,9 +337,38 @@ export const MpiPromptBox = ComponentFactory.create({
                     el.classList.remove('mpi-prompt-box--drag-over');
             }));
 
-            _unsubs.push(on(el, 'drop', async (e) => {
-                el.classList.remove('mpi-prompt-box--drag-over');
+            // A gallery card carries `application/mpi-media`. The moment such a
+            // drag starts anywhere in the window, arm the box (solid drop state)
+            // so the user sees the target ready before the cursor reaches it —
+            // mirrors MpiGalleryBlock's inverted file-drag guard. External file
+            // drags (`Files`, no media type) never arm here, so the two-zone
+            // (gallery + prompt) behaviour is unchanged for them.
+            const _isMediaDrag = (e) =>
+                e.dataTransfer?.types?.includes('application/mpi-media');
+            _unsubs.push(on(window, 'dragenter', (e) => {
+                if (_isMediaDrag(e)) el.classList.add('mpi-prompt-box--drag-armed');
+            }));
+            // A card drag is only "valid" over elements that preventDefault on
+            // dragover. The gallery does that for FILE drags only, so a card
+            // dragged over it shows the forbidden cursor and the browser
+            // auto-scrolls hunting for a valid target. Since the box is armed
+            // for the whole drag, make the WHOLE window the drop target for a
+            // media drag: preventDefault everywhere (valid cursor, no scroll)
+            // and route the drop to the box — drop anywhere = attach to prompt.
+            _unsubs.push(on(window, 'dragover', (e) => {
+                if (_isMediaDrag(e)) e.preventDefault();
+            }));
+            const _disarm = () => el.classList.remove('mpi-prompt-box--drag-armed');
+            _unsubs.push(on(window, 'dragend', _disarm));
+            _unsubs.push(on(window, 'drop', (e) => {
+                if (!_isMediaDrag(e) || el.contains(e.target)) return; // el's own handler covers on-box drops
+                e.preventDefault();
+                _disarm();
+                _handleMediaDrop(e);
+            }));
 
+            /** Add a dragged gallery card / file to the prompt box. */
+            async function _handleMediaDrop(e) {
                 const appData = e.dataTransfer.getData('application/mpi-media');
                 if (appData) {
                     try {
@@ -380,6 +409,12 @@ export const MpiPromptBox = ComponentFactory.create({
                         mediaType,
                     });
                 }
+            }
+
+            _unsubs.push(on(el, 'drop', (e) => {
+                el.classList.remove('mpi-prompt-box--drag-over');
+                _disarm();
+                _handleMediaDrop(e);
             }));
         }
 
