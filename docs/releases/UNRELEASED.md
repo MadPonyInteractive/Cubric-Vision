@@ -46,3 +46,5 @@
 - Re-running a video or image operation that reuses a filename (Combine, Crop, Reverse, Export GIF, and others) no longer plays back a previous — sometimes already-deleted — result; the app now always shows the freshly-generated media.
 - The Uninstall dialog no longer shows an "Also delete model files from disk" checkbox that did nothing when unchecked (the model stayed installed with no way to reinstall). Uninstalling a model now always removes its weights, while files shared with other installed models are still kept.
 - Combining two videos no longer produces a clip with a broken frame rate that could freeze the player on one frame or make the playhead stick; combined videos now have a clean, constant frame rate.
+- Installing a second model while another is downloading now reliably queues it and starts it in turn, instead of the second one occasionally reverting to Install and never downloading.
+- Running out of disk space when installing a model now shows a clear "not enough space" notice instead of the crash-report dialog.
