@@ -1,0 +1,118 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "43f449c7-6a94-4d88-9405-c082960472a3",
+  "generated_at": "2026-07-14T02:14:22Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-276 Phases 3-7 shipped + committed + wrapper 0.2.37 R2-live — resume at Phase 8 (user-ux validation matrix)",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Kill the download/install/uninstall subsystem's 5 root diseases with an installStore SOT + engine adapters + reconciler + snapshot protocol + FE mirror + unified uninstall + Pod wrapper fixes (MPI-276).",
+    "status": "in_progress",
+    "summary": "Phases 1-7 are ALL shipped AND committed this session. Wrapper 0.2.37 is live on R2. Only Phase 8 (user-ux validation matrix) remains — it needs the user at the live app (port 3000) to judge cards; the agent cannot self-verify it. After the user validates, move the card doing->done and run mpi-end."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+    "completed": [
+      "Investigation + Socratic Gate G1-G20",
+      "Phase 1: installStore.js + computeProgress.js + 34 tests (0d4f0301)",
+      "Phase 2a: refCount DELETED + totalBytes SET + register-before-respond (5bbf08f2)",
+      "Phase 2b.1: ResumableDownloader->FileDownloader (0ae5fa07)",
+      "Phase 2b.3: installStore shadow SOT + G9 version (749ce170 + 3e4fa02b)",
+      "Phase 3: reconciler.js (G11) — committed 384dd7d8",
+      "Phase 4 (4a-4d): FE snapshot mirror + pending UX + progress mirror — committed 384dd7d8",
+      "Phase 5: uninstall unification (G13) — engine filter + store in-flight both engines + custom-node FOLDER delete + honest removed[] + tests/uninstall-guards.test.cjs (10) — committed 384dd7d8",
+      "Phase 6: wrapper 0.2.37 (hot-store evict on delete + pipPins parity) — app 10767266 (remoteModels.js pip_pins), mpi-ci aba74a9 (wrapper + test_hot_store_evict.py). R2-SHIPPED via publish-runtime.sh stable (live manifest 0.2.37, curl-verified).",
+      "Phase 7: docs rewrite (download-manager.md store/reconciler/snapshot + rules/downloads.md + runpod-troubleshooting.md) — committed 4aa0c85f"
+    ],
+    "pending": [
+      "Phase 8 (Verify mode: user-ux): full validation matrix in plan.md — automated rail (lint + all tests), cold-boot phantom check, local small-pack install, swallowed-request drill (10s revert+toast), cancel mid-download, uninstall matrix (shared-dep survive, tier-family both-delete MPI-258 B1, custom-node folder), reload mid-download (snapshot restore), remote pass (Pod install+uninstall, hot-store evict in wrapper log, pipPins in wrapper log), user verdict on churn feel. Port 3000 is user-owned — coordinate restarts.",
+      "Pod restart to load wrapper 0.2.37: only if a Pod is running NOW (a fresh connect boot-fetches it). During the Phase 8 remote pass the user connects a Pod → it auto-fetches 0.2.37; verify via GET /wrapper/health / status version field.",
+      "At card close (mpi-end): move MPI-276 doing->done (validation represented + user-approved), append 'refCount DELETED in MPI-276' to memory feedback_refcount_leaks_never_gate_on_zero, drop MPI-276 from the in-flight memory list, note MPI-123-local closure if the cancel-display check passes.",
+      "DEFERRED full read-flip (future slice, with G6 adapter split): mirror-then-delete map status-writes, flip pull endpoints (/downloads/status, /active, _serializeModelJob) onto store.snapshot(), retire _startRemoteStallWatchdog/_reconcileOutstandingRemoteDeps into the reconciler. NOT part of MPI-276 close."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-276",
+    "title": "Download/install/uninstall system refactor - installStore SOT + engine adapters + reconciler",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-276/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-276/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md fully current: Phases 1-7 all marked [x] with Plan Drift entries for 3, 4a-4d, 5, 6, 6b, 7. Verify mode line intact (Phase 8 user-ux, 1-7 auto).",
+      "All Phase 3-7 work COMMITTED this session (384dd7d8 P3-5, 10767266 P6 app, aba74a9 mpi-ci wrapper, 4aa0c85f P7 docs). Nothing MPI-276 uncommitted on the working tree.",
+      "Both event logs + task.json updated through Phase 7."
+    ],
+    "pending": [
+      "Memory updates deferred to mpi-end/card-close (listed in plan.pending): refCount-deleted note + drop from in-flight + MPI-123-local closure.",
+      "docs/gotchas.md cross-cutting entries referencing download refCount/pause — sweep at close if any remain (Phase 7 covered download-manager.md + rules + runpod-troubleshooting.md; gotchas.md not swept this session).",
+      "Prune the resume-dead download-completion.test.cjs (pre-existing resumeFromFile assertion fails on the cancel-only transport) when the resume-dead tests are cleaned up.",
+      "Deferred node bug (MPI-272, user fixing): LTX MpiSaveVideo truncates video to audio length."
+    ]
+  },
+  "next_action": {
+    "description": "Run Phase 8 — the user-ux validation matrix in plan.md (bottom of Remaining Work). This is Verify mode: user-ux, so the agent runs the AUTOMATED rail first (npm run lint + every tests/*.test.cjs, record each in validation.md) then WALKS THE USER through the live matrix at port 3000 (user-owned — coordinate restarts, never kill their app): cold-boot phantom check, small-pack local install (pending->progress within 10s, no Install-flash, pruned after resync), swallowed-request drill (server stopped mid-session -> 10s revert + warning toast), cancel mid-download (.cubricdl scrubbed, idempotent second press), uninstall matrix (shared-dep sibling survives, tier-family BOTH tiers delete = MPI-258 B1, custom-node folder actually removed, truthful log counts), reload mid-download (snapshot restores live bar), remote pass (user connects a Pod -> it boot-fetches wrapper 0.2.37; install+uninstall a small dep; confirm hot-store evict + pipPins in the wrapper log; no local state mutated by remote events). The user gives the final verdict on phantom-free churn feel. On pass: create validation.md, move MPI-276 doing->done, run mpi-end for memory/close-out.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 5 shipped WITHOUT the G6 adapter split (deferred) — the three uninstall bug kills (engine filter, store in-flight both engines, custom-node FOLDER delete + honest removed[]) live inline in the downloadManager.js route; they don't need the adapter split. _customNodeUninstallPath + _filterDepsForEngine exported for tests (precedent: _byteRatioExcludingNodes).",
+      "Phase 6 hot-store evict: new _hot_evict_key (single-key sibling of _hot_evict_for) called under _hot_lock in /wrapper/models/delete after the volume delete. pipPins parity: _install_node_requirements now runs pip install <pins> AFTER requirements (both custom-command AND requirements.txt paths — refactored return->if/else so pins always run last), threaded via rec['pip_pins'] from body.pip_pins; app remoteModels.js sends body.pip_pins=dep.pipPins (snake_case wire convention).",
+      "Phase 6 ship: publish-runtime.sh stable pushes to R2 (NOT an image rebuild — R2-float contract). Live manifest reports 0.2.37, live wrapper.py has _hot_evict_key (curl-verified). The HTTP-000s in the script's own URL-verify loop were flaky curl on this box; the manifest fetch on the SAME URL succeeded, proving the endpoint serves the new files.",
+      "Phase 6 wrapper is a SEPARATE repo commit (git -C c:/AI/Mpi/mpi-ci, branch main, aba74a9) — did NOT push (push is user-authorized). App-repo Phase 6 change is remoteModels.js (commit 10767266).",
+      "Phase 7 doc length: download-manager.md grew past 200 lines (coherent single-subject install/download/uninstall lifecycle contract). Added it to the README ≤200-line EXEMPT list rather than splitting a subsystem mid-refactor (same justification as runpod-remote-engine.md et al already exempt).",
+      "Full read-flip stays DEFERRED (not an MPI-276 close blocker): the store drives the download:snapshot BROADCAST (FE mirror consumes it, progress-complete via syncProgress); PULL endpoints stay map-backed; old remote stall-watchdog still reads the maps and is the live remote-stall belt. Retires with the G6 adapter split in a future slice."
+    ],
+    "constraints": [
+      "Phase 8 is user-ux — the agent MUST NOT self-approve card cards. It runs the automated rail, then the user judges the live UI. Port 3000 is user-owned; never kill their app; coordinate restarts.",
+      "refCount is DELETED (G5) — liveness is store.activeModelsForDep / _inFlightDepIds. Never reintroduce refCount, never gate on refCount===0.",
+      "Shared tree: NEVER git add . / -A — commit by explicit pathspec, git commit -n. MpiSettings*/MpiCheckbox* peer-dirty (untouched all session). Unrelated dirty tree (.impeccable/, DESIGN.md, PRODUCT.md, MPI-272/273/277 kanban, comfy_workflows) is NOT MPI-276 — leave it.",
+      "G4 preserve-verbatim still holds for any Phase 8 fix: NDH cancel-only (never pause/resume), .cubricdl, sha256 verify, whole-model-installed shared-dep guard, universal/pip keep, trash->fs.remove fallback, all wrapper endpoint signatures + SSE event names.",
+      "Pod restart for 0.2.37: only an already-running Pod needs POST /wrapper/restart-comfy; a fresh connect boot-fetches it. The app holds the Pod URL+token at connect — the agent has no live-Pod handle from a cold session."
+    ],
+    "files_modified": [
+      "routes/install/reconciler.js (Phase 3, committed 384dd7d8)",
+      "routes/install/installStore.js (syncProgress, committed 384dd7d8)",
+      "routes/downloadManager.js (P3 reconciler wire + P4 progress mirror + P5 uninstall G13: _filterDepsForEngine on entry, _inFlightDepIds, _customNodeUninstallPath, honest removed[], 2 new exports — committed 384dd7d8)",
+      "js/services/downloadService.js (P4 snapshot consumer + pending UX, committed 384dd7d8)",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js (P4 pending busy-set, committed 384dd7d8)",
+      "tests/install-store.test.cjs, tests/install-reconciler.test.cjs (new), tests/model-footer-settling.test.cjs, tests/uninstall-guards.test.cjs (new) — committed 384dd7d8",
+      "routes/remoteModels.js (P6 body.pip_pins — committed 10767266)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (P6 hot-store evict + pipPins + 0.2.37 — committed aba74a9 in mpi-ci)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/test_hot_store_evict.py (new — committed aba74a9 in mpi-ci)",
+      "docs/download-manager.md, docs/README.md, docs/runpod-troubleshooting.md, .claude/rules/downloads.md (P7 — committed 4aa0c85f)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "routes/downloadManager.js",
+      "routes/install/reconciler.js",
+      "tests/uninstall-guards.test.cjs"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-14T02:14:22Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-276 (download/install/uninstall refactor) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/43f449c7-6a94-4d88-9405-c082960472a3.json and then run mpi-continue. Phases 1-7 are ALL shipped AND committed this session: 384dd7d8 (Phase 3 reconciler + Phase 4 FE snapshot mirror/pending UX + Phase 5 uninstall unification G13), 10767266 (Phase 6 app-side remoteModels.js sends pip_pins), aba74a9 in the SEPARATE mpi-ci repo (wrapper 0.2.37: hot-store evict on delete + pipPins parity + test_hot_store_evict.py), and 4aa0c85f (Phase 7 docs rewrite: download-manager.md store/reconciler/snapshot, rules/downloads.md, runpod-troubleshooting.md). Wrapper 0.2.37 is LIVE on R2 (publish-runtime.sh stable, curl-verified). refCount is DELETED — liveness is store.activeModelsForDep / _inFlightDepIds; never reintroduce it. The ONLY thing left is Phase 8, the user-ux validation matrix (bottom of plan.md): this is Verify mode user-ux, so you run the automated rail first (npm run lint + every tests/*.test.cjs, log each in validation.md) then walk the USER through the live matrix at port 3000 (user-owned — coordinate restarts, never kill their app): cold-boot phantom check, small-pack local install (pending->progress in 10s, no Install-flash, pruned after resync), swallowed-request drill (10s revert + warning toast), cancel mid-download, uninstall matrix (shared-dep sibling survives, tier-family BOTH tiers delete = MPI-258 B1, custom-node folder removed, truthful log counts), reload mid-download (snapshot restores the live bar), remote pass (user connects a Pod -> it boot-fetches wrapper 0.2.37; install+uninstall a small dep; confirm the hot-store evict + pipPins appear in the wrapper log; no local state mutated by remote events). The user gives the final phantom-free-churn verdict. On pass: write validation.md, move MPI-276 doing->done, run mpi-end (which also appends 'refCount DELETED in MPI-276' to memory feedback_refcount_leaks_never_gate_on_zero and drops MPI-276 from the in-flight list). Shared tree: never git add . — commit by explicit pathspec; MpiSettings*/MpiCheckbox* are peer-dirty, do not touch. The full read-flip (map-status-write deletion + pull endpoints onto store.snapshot + retire the remote stall-watchdog) stays DEFERRED to a future slice with the G6 adapter split — it is NOT an MPI-276 close blocker."
+}
