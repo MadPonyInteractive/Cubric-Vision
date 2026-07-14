@@ -362,6 +362,11 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
     const pinnedCommit = getPinnedNodeCommit(dep.id);
     if (pinnedCommit) body.commit = pinnedCommit;
     if (dep.installRequirementsCommand) body.install_command = dep.installRequirementsCommand;
+    // MPI-276: pass known-good pip pins (e.g. kornia==0.8.2 for LTXVideo) so the
+    // wrapper forces them AFTER requirements — parity with the local install path
+    // (downloadManager _runCustomNodeInstall). Without this a remote node's
+    // unpinned requirement could float to a version that breaks its import.
+    if (Array.isArray(dep.pipPins) && dep.pipPins.length) body.pip_pins = dep.pipPins;
     // requirements_only: the node folder is already on the volume, just (re-)run
     // its requirements.txt idempotently — do NOT re-download or remove the folder.
     // Self-heals a node that landed without its pip deps. (set by downloadManager
