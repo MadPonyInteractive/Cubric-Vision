@@ -25,7 +25,9 @@ function _isOutOfSpaceError(error) {
     return s.includes('errno 122')
         || s.includes('disk quota exceeded')
         || s.includes('errno 28')
-        || s.includes('no space left on device');
+        || s.includes('no space left on device')
+        // pre-flight statfs gate (downloadManager.js) — friendly message, no errno
+        || s.includes('not enough disk space');
 }
 
 const downloadService = {
@@ -152,7 +154,6 @@ const downloadService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId, dependencies }),
         });
-
         if (!res.ok) {
             this._clearPendingRevert(modelId);
             const err = await res.json().catch(() => ({ error: 'Failed to start download' }));
@@ -349,13 +350,30 @@ const downloadService = {
                 };
             });
             const snapshotIds = new Set(jobs.map(j => j.modelId));
-            // Keep a client-only 'pending' job (optimistic click, G2) the backend
-            // hasn't registered yet — its POST is still in flight.
+            // Keep a client-owned ACTIVE job the backend snapshot hasn't caught up to
+            // yet: 'pending' (optimistic click, G2, POST still in flight), 'downloading'
+            // (_firePost flips pending→downloading before the POST, so a snapshot
+            // broadcast in that gap would otherwise DROP the live job → the SSE
+            // download:started echo then finds it undefined and stomps the open detail
+            // footer back to Install mid-download), OR 'queued' (a 2nd+ install waiting
+            // its turn in the serial chain — no POST fired yet, so it is legitimately
+            // absent from the backend snapshot; without this it gets wiped, _firePost
+            // later finds no job and skips the POST, and the tile reverts to Install
+            // while _inFlight still counts it → the queued install silently vanishes).
+            // MPI-276 Phase 8.
             const clientPending = state.downloadJobs.filter(
-                j => j.status === 'pending' && !snapshotIds.has(j.modelId));
+                j => (j.status === 'pending' || j.status === 'downloading' || j.status === 'queued')
+                    && !snapshotIds.has(j.modelId));
             state.downloadJobs = [...jobs, ...clientPending];
             state.downloadQueueActive = state.downloadJobs.some(
-                j => j.status === 'downloading' || j.status === 'installing' || j.status === 'pending');
+                j => j.status === 'downloading' || j.status === 'installing' || j.status === 'pending' || j.status === 'queued');
+            // Signal consumers to repaint from the fresh snapshot. On a renderer reload
+            // mid-download the grid mounts with empty state.downloadJobs and renders the
+            // card as Install; this SSE-connect snapshot is what restores the live bar,
+            // but a bare state.downloadJobs mutation only fires state:changed (which
+            // MpiModelManager filters to s_installedModelIds). Without this event the
+            // reloaded grid never repaints the recovered job. MPI-276 Phase 8.
+            Events.emit('download:snapshot', { jobs: state.downloadJobs });
         });
 
         // Backend broadcasts download:started with correct progress from pre-installed deps.
@@ -372,7 +390,11 @@ const downloadService = {
                 job.indeterminate = !!data.indeterminate;
                 state.downloadJobs = [...state.downloadJobs];
             }
-            Events.emit('download:started', data);
+            // Only re-emit when the FE actually holds the job. A started echo for a
+            // model with no live FE job (snapshot/started ordering gap) would drive
+            // MpiModelManager._patchTile→openDetail to read an undefined job and stomp
+            // the footer back to Install mid-download. MPI-276 Phase 8.
+            if (job) Events.emit('download:started', data);
         });
 
         this._eventSource.addEventListener('download:progress', (e) => {

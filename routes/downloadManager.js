@@ -134,9 +134,11 @@ function _withEngineExtraDeps(modelId, dependencies, engine) {
 // MPI-258 replaced the earlier per-dep on-disk test (see the loop below for why).
 async function _localSharedDepsMap(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
-    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const { resolveFullUniverse, deriveInstalledOps, resolveDeps } = _require('../js/data/modelConstants/resolveModelDeps.js');
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const comfyRoutes = _require('./comfy.js');
+    // Stat against the FULL universe so per-op completeness can be derived below —
+    // deriveInstalledOps needs the disk status of every op's deps, not just one op's.
     const others = MODELS
         .filter(m => m.id !== excludeModelId)
         .map(m => ({ model: m, depIds: resolveFullUniverse(m) }))
@@ -150,22 +152,27 @@ async function _localSharedDepsMap(excludeModelId) {
     }));
     const map = new Map(); // depId → Set<modelName>
     const results = await comfyRoutes.localModelsCheck(checkModels);
-    for (const { model, depIds } of others) {
+    for (const { model } of others) {
         const entry = results[model.id];
-        // A dep is protected iff another model is ACTUALLY INSTALLED (whole-model:
-        // every one of its deps complete on disk) and needs this dep — mirroring the
-        // remote gate (_remoteSharedDepIds `entry.installed === true`).
+        if (!entry) continue;
+        // MPI-276: protect the deps of the OPS this model actually has on disk, not
+        // the whole universe. The old gate (`entry.installed !== true`) required
+        // EVERY op complete, so an op-partial install (e.g. Wan 2.2 Smooth with only
+        // I2V installed) counted as "not installed" and protected NOTHING — a sibling
+        // uninstall then trashed the shared clip/VAE both models need, cascading the
+        // op-partial model out too. deriveInstalledOps gives fullyInstalled (common +
+        // ≥1 op complete) and the installed-op list; we protect commonDeps + those
+        // ops' deps only.
         //
-        // MPI-258: the old per-dep "file complete on disk" test was circular for a
-        // TIER FAMILY. LTX-2.3 High + Balanced share every non-transformer dep
-        // (Gemma/VAE/LoRAs, ~19GB). Uninstall High → those files were kept "because
-        // Balanced has them on disk"; later uninstall Balanced → kept "because High
-        // has them on disk" — each tier protected the SAME shared copy while NEITHER
-        // was installed (both transformers absent). The cluster became undeletable,
-        // stranding ~19GB. Gating on whole-model `installed` breaks the cycle: an
-        // absent-transformer sibling is not installed → protects nothing.
-        if (!entry || entry.installed !== true) continue;
-        for (const depId of depIds) {
+        // MPI-258 tier-cycle stays broken: a tier whose transformer is absent has no
+        // complete op → fullyInstalled false → protects nothing → still deletable.
+        const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
+        const { installedOps, fullyInstalled } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'local');
+        if (!fullyInstalled) continue;
+        // null engine → union of both engine sets (never delete a weight the remote
+        // engine also needs), matching the pre-MPI-276 protection stance.
+        const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
+        for (const depId of protectedDeps) {
             if (!map.has(depId)) map.set(depId, new Set());
             map.get(depId).add(model.name);
         }
@@ -208,7 +215,7 @@ function _inFlightDepIds(excludeModelId) {
 // ids that ARE still needed by another volume-installed model (must be kept).
 async function _remoteSharedDepIds(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
-    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const { resolveFullUniverse, deriveInstalledOps, resolveDeps } = _require('../js/data/modelConstants/resolveModelDeps.js');
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     // Full dep universe per model (commonDeps + every op) so op-specific + common
     // deps of another volume-installed model are kept, not the gone flat list. (MPI-122)
@@ -229,12 +236,20 @@ async function _remoteSharedDepIds(excludeModelId) {
     try {
         const out = await remoteModels.remoteModelsCheck(checkModels);
         const results = (out && out.results) || {};
-        for (const { model, depIds } of others) {
+        for (const { model } of others) {
             const entry = results[model.id];
-            // Only an INSTALLED (complete-on-volume) other model protects its deps.
-            if (entry && entry.installed === true) {
-                for (const depId of depIds) keep.add(depId);
-            }
+            if (!entry) continue;
+            // MPI-276: protect the deps of the OPS this model has on the volume, not
+            // the whole universe. Old gate (`installed === true`) required EVERY op
+            // complete, so an op-partial volume install protected nothing and a
+            // sibling uninstall trashed the shared clip/VAE both need. Mirrors the
+            // local guard; MPI-258 tier-cycle stays broken (absent-transformer tier
+            // has no complete op → fullyInstalled false → protects nothing).
+            const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
+            const { installedOps, fullyInstalled } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'remote');
+            if (!fullyInstalled) continue;
+            const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
+            for (const depId of protectedDeps) keep.add(depId);
         }
     } catch (err) {
         // Fail SAFE: if we cannot confirm volume state, keep nothing extra here —

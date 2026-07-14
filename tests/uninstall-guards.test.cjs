@@ -106,6 +106,60 @@ test('tier family: neither sibling installed → shared deps deletable (no circu
     assert.deepEqual(r.removed.sort(), ['gemma', 'high-xf', 'lora', 'vae'], 'all deletable');
 });
 
+// ── 2b. op-partial sibling protects its shared deps (MPI-276) ─────────────────
+// The whole-universe gate (`entry.installed === true`) counted an op-partial
+// install as NOT installed, so it protected NOTHING and a sibling uninstall
+// trashed the shared clip/VAE both models need. The fix protects the deps of the
+// OPS actually on disk (commonDeps ride along). Exercises the REAL helpers the
+// guard now calls: deriveInstalledOps + resolveDeps.
+test('op-partial sibling (only some ops installed) still protects its shared deps', () => {
+    const { deriveInstalledOps, resolveDeps, resolveFullUniverse } =
+        require('../js/data/modelConstants/resolveModelDeps.js');
+    const { MODELS } = require('../js/data/modelConstants/models.js');
+
+    // A real selectable (op-grouped) model with ≥1 shared common dep. Wan 2.2
+    // Smooth (op-grouped: t2v_ms/i2v_ms, commonDeps incl. the umt5 clip).
+    const model = MODELS.find(m =>
+        m.operations && Object.keys(m.operations).length >= 2 &&
+        Array.isArray(m.commonDeps) && m.commonDeps.length > 0 &&
+        Array.isArray(m.supportedOps) && m.supportedOps.length >= 2);
+    assert.ok(model, 'have an op-grouped model with common deps');
+
+    const ops = Object.keys(model.operations).filter(o => (model.supportedOps || []).includes(o));
+    assert.ok(ops.length >= 2, 'model exposes ≥2 selectable ops');
+    const installedOp = ops[0];
+    const absentOp = ops[1];
+
+    // Disk state: commonDeps + ONLY installedOp's deps present; absentOp's deps missing.
+    const present = new Set(resolveDeps(model, [installedOp], null, 'local'));
+    const depStatus = id => present.has(id);
+
+    const { installedOps, fullyInstalled } = deriveInstalledOps(model, depStatus, 'local');
+    assert.equal(fullyInstalled, true, 'op-partial install is fullyInstalled (common + ≥1 op)');
+    assert.ok(installedOps.includes(installedOp), 'the installed op is detected');
+    assert.ok(!installedOps.includes(absentOp), 'the absent op is NOT detected');
+
+    // The guard protects resolveDeps(model, installedOps) — commonDeps must be in it.
+    const protectedDeps = resolveDeps(model, installedOps, null, null);
+    for (const cd of model.commonDeps) {
+        assert.ok(protectedDeps.includes(cd),
+            `shared common dep ${cd} protected by an op-partial sibling`);
+    }
+    // The absent op's own weights are NOT protected (correctly reapable).
+    const absentOnly = resolveDeps(model, [absentOp], null, 'local')
+        .filter(id => !present.has(id) && !model.commonDeps.includes(id));
+    for (const id of absentOnly) {
+        assert.ok(!protectedDeps.includes(id),
+            `absent-op weight ${id} is not falsely protected`);
+    }
+    // Sanity: a model with ZERO ops on disk protects nothing (MPI-258 cycle stays broken).
+    const noneStatus = () => false;
+    const none = deriveInstalledOps(model, noneStatus, 'local');
+    assert.equal(none.fullyInstalled, false, 'no ops on disk → protects nothing');
+
+    void resolveFullUniverse; // universe still statted by the guard to derive per-op state
+});
+
 // ── 3. universal keep ─────────────────────────────────────────────────────────
 
 test('universal workflow deps are always kept', () => {

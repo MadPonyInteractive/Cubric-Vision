@@ -561,8 +561,10 @@ export const MpiModelManager = ComponentFactory.create({
         }
 
         // ── Re-sync wrapper ────────────────────────────────────────────────
-        async function awaitReSync() {
-            refreshBtn.el.setAttribute('loading', 'true');
+        // quiet=true suppresses the refresh-button spinner — used by the missed-terminal
+        // backstop poll below so a background re-sync doesn't flash the spinner.
+        async function awaitReSync({ quiet = false } = {}) {
+            if (!quiet) refreshBtn.el.setAttribute('loading', 'true');
             // MPI-179: sync the engine mirror BEFORE resolving dep universes.
             // On a No-GPU download Pod nothing runs the ComfyUIController
             // connect that normally refreshes it, so isRemote() read a stale
@@ -720,6 +722,13 @@ export const MpiModelManager = ComponentFactory.create({
                 // until the backend acks (or reverts after 10s).
                 if (st.downloadState === 'pending') {
                     return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Starting…</span></div>`;
+                }
+                // Serial-queue wait (MPI-184): a job POSTed but held behind an active
+                // install sits at 'queued' with 0 bytes. Show an indeterminate "Queued…"
+                // so it reads as waiting, not a stuck 0% bar. Mascot waiting-peek on the
+                // card thumb is the MPI-284 follow-up.
+                if (st.downloadState === 'queued') {
+                    return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Queued…</span></div>`;
                 }
                 const pct = Math.min(Math.round((st.job?.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
@@ -1227,6 +1236,38 @@ export const MpiModelManager = ComponentFactory.create({
         // in downloadService.start() + the backend SSE echo — so a full rebuild also ran
         // twice.) A section move (available → installed) is handled by the sig-guarded
         // renderList() on download:complete.
+        // download:snapshot — the store's authoritative feed (G9), broadcast on every
+        // SSE connect. On a renderer reload mid-download the grid mounts before SSE
+        // reconnects, so it renders active cards as Install; this snapshot restores the
+        // live job in state.downloadJobs, and the sig-guarded renderList() repaints the
+        // recovered progress bar (the download never stopped server-side). Sig-guarded
+        // so an idle snapshot (no job change) is a no-op. MPI-276 Phase 8.
+        _unsubs.push(Events.on('download:snapshot', () => { renderList(); }));
+
+        // Missed-terminal backstop (MPI-276 Phase 8). Correctness must not ride on SSE
+        // delivery: if a terminal download:complete lands in an SSE-reconnect gap (e.g.
+        // a renderer reload right as the download finishes), the card sticks at 99% with
+        // no event to flip it — only a manual refresh recovered it. While the Library
+        // holds any active job, quiet-resync against disk truth every 5s so a lost
+        // terminal self-corrects. Self-idles the moment no job is active (no forever
+        // poll). Reuses awaitReSync — the exact recovery the refresh button does.
+        let _backstopTimer = null;
+        function _pumpBackstop() {
+            const active = state.downloadJobs.some(
+                j => ['downloading', 'installing', 'pending', 'queued'].includes(j.status));
+            if (active && !_backstopTimer) {
+                _backstopTimer = setInterval(() => {
+                    const stillActive = state.downloadJobs.some(
+                        j => ['downloading', 'installing', 'pending', 'queued'].includes(j.status));
+                    if (!stillActive) { clearInterval(_backstopTimer); _backstopTimer = null; return; }
+                    awaitReSync({ quiet: true });
+                }, 5000);
+            }
+        }
+        _unsubs.push(() => { if (_backstopTimer) { clearInterval(_backstopTimer); _backstopTimer = null; } });
+        _unsubs.push(Events.on('download:started', () => { _pumpBackstop(); }));
+        _unsubs.push(Events.on('download:snapshot', () => { _pumpBackstop(); }));
+
         _unsubs.push(Events.on('download:started', ({ modelId }) => { _patchTile(modelId); }));
 
         _unsubs.push(Events.on('download:installing', ({ modelId }) => { _patchTile(modelId); }));
@@ -1246,10 +1287,17 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
             const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
             const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
+            // "shared" wording is only honest when ANOTHER MODEL still needs a dep
+            // (keptShared carries sharedWith). keptUniversal/keptPipInstalls are
+            // engine-owned files (VAE, custom nodes, pip env) shared with no model —
+            // saying "shared files kept" there falsely implies a sibling model.
+            const keptForModel = keptShared.length + keptModelFiles.length;
             if (removed.length > 0 && keptTotal === 0) {
                 Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
-            } else if (removed.length > 0) {
+            } else if (removed.length > 0 && keptForModel > 0) {
                 Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} updated (some shared files kept).` });
+            } else if (removed.length > 0) {
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
             } else if (keptModelFiles.length > 0) {
                 Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.` });
             } else {
