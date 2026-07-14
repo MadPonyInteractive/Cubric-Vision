@@ -33,6 +33,19 @@ new uploads.
 | 5 | [injection.md](injection.md) | the app injection seam (style system), local install layout, prompt-enhancement cut. |
 | 6 | [preview-taesd.md](preview-taesd.md) | why the latent preview is mediocre (missing `lighttaew2_1`, `Latent2RGB` fallback) and why we **must NOT** install the decoder — ComfyUI #13366 corrupts real generations. |
 
+## To test — Krea2 as an EDITOR (unstarted)
+
+Krea2 Turbo currently **re-composes, cannot edit** (see conditioning-and-control.md).
+These upstream resources claim a real instruct-edit path — worth testing to turn Krea2
+into an editor model:
+
+- https://huggingface.co/conradlocke/krea2-identity-edit — identity-edit weights
+- https://github.com/lbouaraba/comfyui-krea2edit — ComfyUI edit nodes
+
+**Fallback plan:** if **Turbo** looks bad driving these edit nodes (distilled cfg 1.0 may
+starve the edit conditioning), test **Raw** (52-step, phase 2) — the extra steps + working
+cfg may be what the edit path needs. This is the first concrete reason to build Raw.
+
 ## Hard rules (apply every session)
 
 - **Dimensions must be ÷16, not ÷8.** Off-multiple does not crash — it silently
@@ -54,3 +67,5 @@ new uploads.
 - https://www.stablediffusiontutorials.com/2026/06/krea2-lora-models.html — trigger-at-end
 - https://docs.comfy.org/tutorials/image/krea/krea-2 — **stale 4-LoRA table**
 - https://github.com/ClownsharkBatwing/RES4LYF · https://github.com/Auryg/Krea-2-Two-Stage-Sampler
+- https://huggingface.co/conradlocke/krea2-identity-edit — **edit-variant test** (see "To test — Krea2 as an EDITOR")
+- https://github.com/lbouaraba/comfyui-krea2edit — **edit nodes test**

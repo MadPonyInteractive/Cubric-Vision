@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-282","type":"task.created","at":"2026-07-14T00:00:00Z","actor":"claude","summary":"Krea2-as-editor test spike. Main goal: instruct-edit via conradlocke/krea2-identity-edit + lbouaraba/comfyui-krea2edit. Fallback: test Krea2 Raw if Turbo cfg 1.0 starves edit conditioning. First concrete reason to build Raw."}
