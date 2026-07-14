@@ -3,15 +3,15 @@
   "id": "MPI-274",
   "title": "Connect % stranded on blur/nav — connect progress owned by ephemeral Settings component, not the app-lifetime feed",
   "description": "REPRO (live, 4th session on the connecting-phase family): user pressed Connect (manual, Settings → RunPod, RTX PRO 4500 Blackwell). Connect % climbed 20%→~60%, then the app lost focus (user switched away). On return, the hero showed 'CONNECTING · OFFLINE 0%' then fell to 'local · offline 0%' — the connect % reset to 0 and the connecting phase was lost. Backend Pod (jlz3eoz2tsn69x) was still booting fine (log 18:53:12 create → 404 wrapper-booting churn 18:54–18:55, then the renderer-side driver went silent). NOT the same as the three DONE cards: MPI-238 (no connecting stage on comfy-reload), MPI-239 (untracked Pod DEATH self-heal), MPI-240 (Disconnect race). All three hardened the shell.js feed tick / boot poll. This one is the manual-connect % source dying.\n\nROOT CAUSE: the live connect % is owned by `_pollEngineReady` INSIDE the MpiRunpodSettings component (js/components/Compounds/LandingPages/MpiRunpodSettings/MpiRunpodSettings.js:344). It drives `remote:connect-progress` via `setTimeout` (:391). Two failure modes, both land on the symptom: (1) Chromium hard-throttles background `setTimeout` when the renderer backgrounds → % freezes → on refocus the shell.js feed tick repaints from /remote/comfy/status but heroStats `_lastConnectPct` was reset (js/shell/heroStats.js:216/225), so the GPU slot shows 0% and a phase blip drops to local·offline. (2) Navigating away UNMOUNTS the Settings component → its poll is torn down (:1694 breaks _pollEngineReady) → the connect % has NO owner at all. The backend keeps `_starting=true` (spans the whole boot) so `/remote/comfy/status` still reports connecting:true, but nothing renderer-side is emitting the live %. Two near-duplicate poll loops exist (_pollEngineReady in the component, _pollRemoteReady in shell.js) and the component one is mounted on an unmountable panel.\n\nFIX (backend-owned progress; app-lifetime owner): stamp a connect-start timestamp backend-side where `_connecting`/`_starting` are first set (routes/remotePodLifecycle.js), clear it when ready/terminal, and return `connectElapsedMs` (or a computed `connectPct`) from GET /remote/comfy/status. Then the shell.js feed tick (already an app-lifetime self-scheduling poll that survives navigation, js/shell.js ~1199 `run`) emits `remote:connect-progress` from that elapsed value whenever connecting:true. heroStats already consumes remote:connect-progress + caches _lastConnectPct, so the % survives blur/nav/component-unmount. The component/boot _pollEngineReady % becomes a redundant cosmetic (leave or thin later) — the connect can no longer be stranded by a backgrounded or unmounted panel. Keep the elapsed→% mapping identical to _connectPct (240000ms → 0-99, 100 on ready) so nothing else shifts.\n\nCONSTRAINTS: Chromium background-timer throttling is the real environment — do NOT rely on a renderer setTimeout as the sole progress heartbeat. Must not regress MPI-238/239/240 (comfy-reload connecting gate, Pod-death self-heal, Disconnect race). Old wrappers with no connectElapsedMs field must degrade gracefully (feed falls back to seeding 0% then holding, same as today, never worse). noGpu/__cpu__ download Pods have no connect % concept — unaffected.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "in-progress",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-13T20:05:00Z",
-  "updated_at": "2026-07-13T20:20:00Z",
+  "updated_at": "2026-07-14T00:35:00Z",
   "attention": {
-    "state": "needs-user",
-    "reason": "Code shipped + logic/route self-verified (stamp-sync + pct map PASS; /remote/comfy/status returns connectElapsedMs). NOT live-verified: needs a real RunPod connect where the user switches focus mid-connect (blur) and returns — the % must keep climbing / not drop to local·offline. Only the user can drive the blur repro.",
-    "updated_at": "2026-07-13T20:20:00Z"
+    "state": "none",
+    "reason": "LIVE-VERIFIED 2026-07-14: connect % survives blur/nav via backend connectElapsedMs + app-lifetime shell feed. Shipped 17b835a5.",
+    "updated_at": "2026-07-14T00:35:00Z"
   },
   "links": {
     "plan": null,
