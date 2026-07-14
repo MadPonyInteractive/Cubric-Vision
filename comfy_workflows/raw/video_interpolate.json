@@ -1,8 +1,8 @@
 {
   "id": "122d3446-cf21-4713-83a7-e133b0d5c206",
   "revision": 0,
-  "last_node_id": 764,
-  "last_link_id": 1225,
+  "last_node_id": 765,
+  "last_link_id": 1227,
   "nodes": [
     {
       "id": 720,
@@ -36,9 +36,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiClearVram",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiClearVram",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -46,65 +46,6 @@
         }
       },
       "widgets_values": []
-    },
-    {
-      "id": 735,
-      "type": "MpiConvert",
-      "pos": [
-        1555.8583789390311,
-        954.7200740869637
-      ],
-      "size": [
-        270,
-        118
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "input",
-          "type": "*",
-          "link": 1225
-        }
-      ],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": null
-        },
-        {
-          "name": "INT",
-          "type": "INT",
-          "links": [
-            1159
-          ]
-        },
-        {
-          "name": "FLOAT",
-          "type": "FLOAT",
-          "links": null
-        },
-        {
-          "name": "BOOLEAN",
-          "type": "BOOLEAN",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
-        "Node name for S&R": "MpiConvert",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        true
-      ]
     },
     {
       "id": 724,
@@ -118,7 +59,7 @@
         128
       ],
       "flags": {},
-      "order": 2,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -149,9 +90,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
-        "Node name for S&R": "MpiMath",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -217,9 +158,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "RIFE VFI",
         "cnr_id": "comfyui-frame-interpolation",
         "ver": "1.0.7",
-        "Node name for S&R": "RIFE VFI",
         "ue_properties": {
           "widget_ue_connectable": {
             "clear_cache_after_n_frames": true,
@@ -247,8 +188,8 @@
       "id": 733,
       "type": "MpiFloat",
       "pos": [
-        1690.955407444064,
-        557.159273661698
+        1422.4654958885146,
+        569.0681003839205
       ],
       "size": [
         270,
@@ -263,15 +204,16 @@
           "name": "float",
           "type": "FLOAT",
           "links": [
-            1155
+            1155,
+            1227
           ]
         }
       ],
       "title": "Input_Interp_Multiplier",
       "properties": {
+        "Node name for S&R": "MpiFloat",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
-        "Node name for S&R": "MpiFloat",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -288,15 +230,17 @@
       "id": 734,
       "type": "MpiConvert",
       "pos": [
-        1564.751888972109,
-        783.2610759601582
+        1755.293116527665,
+        824.4006591823807
       ],
       "size": [
         270,
         118
       ],
-      "flags": {},
-      "order": 3,
+      "flags": {
+        "collapsed": true
+      },
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
@@ -330,9 +274,70 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiConvert",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 735,
+      "type": "MpiConvert",
+      "pos": [
+        1757.225812605695,
+        904.9195259758526
+      ],
+      "size": [
+        270,
+        118
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "*",
+          "link": 1227
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1159
+          ]
+        },
+        {
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "BOOLEAN",
+          "type": "BOOLEAN",
+          "links": null
+        }
+      ],
+      "properties": {
         "Node name for S&R": "MpiConvert",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -347,8 +352,8 @@
       "id": 762,
       "type": "MpiLoadVideo",
       "pos": [
-        1181.720739193757,
-        688.86951704358
+        1423.1451354715325,
+        686.7042758213577
       ],
       "size": [
         270,
@@ -378,8 +383,7 @@
           "type": "FLOAT",
           "links": [
             1223,
-            1224,
-            1225
+            1224
           ]
         },
         {
@@ -412,12 +416,12 @@
       ],
       "title": "Input_Video",
       "properties": {
+        "Node name for S&R": "MpiLoadVideo",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadVideo"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
-        ""
+        "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\Boogu image edit\\Media\\i2v_ms_019.mp4"
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -426,12 +430,12 @@
       "id": 761,
       "type": "MpiSaveVideo",
       "pos": [
-        2607.604211167805,
-        767.3997348965762
+        2603.2737287233626,
+        730.590634118799
       ],
       "size": [
         270,
-        126
+        150
       ],
       "flags": {},
       "order": 7,
@@ -469,14 +473,15 @@
       "outputs": [],
       "title": "Output_Video",
       "properties": {
+        "Node name for S&R": "MpiSaveVideo",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiSaveVideo"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         24,
         "MpiVideo",
-        true
+        true,
+        false
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -572,9 +577,9 @@
       "FLOAT"
     ],
     [
-      1225,
-      762,
-      2,
+      1227,
+      733,
+      0,
       735,
       0,
       "FLOAT"
@@ -593,8 +598,8 @@
     "ds": {
       "scale": 0.9236846128152848,
       "offset": [
-        -997.2393968548712,
-        -243.76429343802883
+        -1111.9971816326465,
+        -285.98649727136154
       ]
     },
     "workflowRendererVersion": "LG"
