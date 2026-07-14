@@ -104,6 +104,22 @@ Community Cloud is unsupported (unstable/limited for this use case).
   window; `_starting` spans the **whole background boot/resume**. `GET /remote/comfy/status`
   reports `connecting = _connecting || _starting`, so Connect stays disabled for the entire
   boot → no pressable-mid-connect window → no duplicate create.
+- **Connect-phase ownership (MPI-274/275/278):** the live connect % + `connecting` phase
+  must be owned by an **app-lifetime** source, never an ephemeral component. The backend
+  stamps connect-start and returns `connectElapsedMs` (cleared with `_starting` via
+  `_setStarting`); the shell.js feed tick (survives nav) emits `remote:connect-progress`
+  from it, and heroStats caches `_lastConnectPct`. Traps that stranded a live connect,
+  all fixed: (1) the old renderer `setTimeout` poll in `MpiRunpodSettings` froze on
+  background-tab throttle / died on panel unmount → % owner gone (274). (2) A background
+  `ensureServerRunning` (models-check/warm-up) read a **booting** Pod's `ready:false` as
+  "gone" and POSTed `/remote/mode {active:false}`, killing the connect → Pod reached ready
+  with mode OFF, stuck on "connecting" forever; `comfyController._ensureRemoteReady` now
+  refuses on `check.connecting` before the local-fallback teardown (275). (3)
+  `MpiRunpodSettings.destroy()` (panel close) breaks its poll → `_connectEngine`'s `finally`
+  emitted `phase:null` = local·offline flash even though the Pod was left booting; a
+  `_destroyAborted` flag now skips that reset (panel-close ≠ Cancel/failure) (278). **Rule:
+  panel-close/nav/blur ≠ connect-failed — only a real Cancel (deletes the Pod) or a
+  persistent `connecting:false` not-ready may resolve the phase to local.**
 
 ### Billing semantics
 - **RUNNING** bills GPU per-second → never leave running across quit.
