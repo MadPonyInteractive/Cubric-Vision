@@ -4,7 +4,8 @@
  * Mounted by MpiGroupHistoryBlock mediator into #right-top-slot when the
  * active tool = 'prompt' AND the workspace is video AND the active model
  * supports I2V. Renders two frame thumb slots (Start / End) + a swap button
- * between them and two action buttons (Extend / Create new) below.
+ * between them, then a "Continue video" section header + two action buttons
+ * (Extend / New shot) below.
  *
  * Thumbnails mirror PromptBox `_mediaItems` via the `media-change` event.
  * Drop on a thumb uploads via the shared upload helper and role-tags the
@@ -47,6 +48,7 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
                     <div class="mpi-tool-options-prompt__thumb" id="thumb-end"></div>
                 </div>
             </div>
+            <div class="mpi-tool-options-prompt__section-header">Continue video</div>
             <div class="mpi-tool-options-prompt__actions" id="actions-slot"></div>
         </div>
     `,
@@ -206,7 +208,7 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
         _children.push(extendBtn);
 
         const createBtn = MpiButton.mount(document.createElement('div'), {
-            label: 'Create new', icon: 'plus', variant: 'primary', size: 'sm',
+            label: 'New shot', icon: 'plus', variant: 'primary', size: 'sm',
             info: 'Create video from last frame',
         });
         actionsEl.appendChild(createBtn.el);

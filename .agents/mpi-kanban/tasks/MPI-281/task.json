@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-281",
+  "title": "Fix video continuation",
+  "description": "History Video: decouple Extend/New-shot from empty frame-section gating (they self-capture last frame; kill Select.../text-op-jump/end-frame-focus-jump). Add CONTINUE VIDEO section header; rename buttons to Extend / New shot. Fix-now only — continuation migrates to a dedicated Extend App later (removed from History then). Punted to App: resolution-snap, 4-8 frame smooth-extend, omni multi-input, audio, model-pin.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "Fix video continuation implementation",
+  "created_at": "2026-07-14T00:00:00Z",
+  "updated_at": "2026-07-14T19:35:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

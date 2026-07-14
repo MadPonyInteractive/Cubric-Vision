@@ -151,6 +151,16 @@
     border-color: var(--accent-heat);
 }
 
+.mpi-tool-options-prompt__section-header {
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0;
+    padding-top: var(--s-2);
+    border-top: 1px solid var(--line);
+    text-align: center;
+}
+
 .mpi-tool-options-prompt__actions {
     display: flex;
     flex-wrap: wrap;

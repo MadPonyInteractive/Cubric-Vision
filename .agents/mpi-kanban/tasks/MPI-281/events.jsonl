@@ -1,0 +1,9 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"task.created","at":"2026-07-14T00:00:00Z","actor":"claude","summary":"Captured from brainstorm: fix History Video continuation (decouple gating + CONTINUE VIDEO header + Extend/New shot); migrate to Extend App later."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"task.updated","at":"2026-07-14T00:05:00Z","actor":"claude","summary":"Compact plan attached; maturity planned. Fix empty-box op collapse (filterNoInputOps vs text-op auto-switch) + CONTINUE VIDEO header + rename Create new -> New shot."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"task.moved","at":"2026-07-14T00:10:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"checklist.updated","at":"2026-07-14T00:10:00Z","actor":"claude","summary":"Derived 2 checklist items from compact plan."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"checklist.updated","at":"2026-07-14T00:20:00Z","actor":"claude","summary":"Both checklist items complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"validation.updated","at":"2026-07-14T00:20:00Z","actor":"claude","summary":"Impl done + self-verified (lint clean, filterNoInputOps scope confirmed). Awaiting user-ux check in app."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"task.updated","at":"2026-07-14T00:20:00Z","actor":"claude","summary":"maturity -> validating (user-ux)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"validation.updated","at":"2026-07-14T19:35:00Z","actor":"claude","summary":"USER-VERIFIED: Wan + LTX both pin I2V (no Select...); Extend + New shot run; frames work; header/labels render. Probes stripped, lint 0 errors."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-281","type":"task.moved","at":"2026-07-14T19:35:00Z","actor":"claude","from":"doing","to":"done","summary":"Complete + user-verified."}

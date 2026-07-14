@@ -272,7 +272,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 } else {
                     _refreshOpDropdown();
                 }
-            } else if (!hasMedia && curCmd && !curIsTextOnly) {
+            } else if (!hasMedia && curCmd && !curIsTextOnly && !_context.filterNoInputOps) {
+                // MPI-281: when text-only ops are hidden (History video-continuation
+                // mode), an empty media box must NOT switch to a text op — the op
+                // dropdown filters it away and the trigger renders "Select...". The
+                // Extend / New shot buttons run I2V with a self-captured last frame,
+                // so keep the media op (e.g. I2V) pinned even with an empty box.
                 const textOp = _pickTextOnlyOp();
                 if (textOp) {
                     el.setOperation(textOp, { programmatic: true });
@@ -505,6 +510,18 @@ export const MpiPromptBox = ComponentFactory.create({
             if (ready) return ready.key;
             const fit = ranked.find(c => matches(c));
             if (fit) return fit.key;
+            // MPI-281: when text-only ops are hidden (History video-continuation
+            // mode), the final fallback must not land on a text op — the dropdown
+            // filters it away and the trigger renders "Select...". Prefer the first
+            // media op the model supports; the Extend / New shot buttons run I2V
+            // with a self-captured last frame regardless of box emptiness.
+            if (_context.filterNoInputOps) {
+                const mediaOp = supported.find(k => {
+                    const c = byKey.get(k);
+                    return c && ((c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
+                });
+                if (mediaOp) return mediaOp;
+            }
             return supported[0];
         }
 
