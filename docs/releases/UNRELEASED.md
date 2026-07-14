@@ -48,3 +48,4 @@
 - Combining two videos no longer produces a clip with a broken frame rate that could freeze the player on one frame or make the playhead stick; combined videos now have a clean, constant frame rate.
 - Installing a second model while another is downloading now reliably queues it and starts it in turn, instead of the second one occasionally reverting to Install and never downloading.
 - Running out of disk space when installing a model now shows a clear "not enough space" notice instead of the crash-report dialog.
+- In the History workspace's video Continue section, the operation no longer gets stuck on "Select..." when the start/end frames are empty — Extend and New shot always run their generation (they capture the last frame of the clip themselves). The frame slots are now clearly separated under their own "Continue video" heading, and "Create new" is renamed "New shot".
