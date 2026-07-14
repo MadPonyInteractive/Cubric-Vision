@@ -638,7 +638,7 @@ export const MpiModelManager = ComponentFactory.create({
             const job = state.downloadJobs.find(j => j.modelId === model.id);
             const downloadState = job ? job.status : 'idle';
             // 'queued' (MPI-184 serial install queue) counts as active.
-            const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
+            const isActiveDownload = ['pending', 'downloading', 'paused', 'installing', 'queued'].includes(downloadState);
             // A terminal 'complete' job lingers in state.downloadJobs until the async
             // reSyncInstalledModels() (fired on download:complete) flips model.installed.
             // In that window the footer/tile computed NOT active + NOT installed → the
@@ -712,6 +712,11 @@ export const MpiModelManager = ComponentFactory.create({
                 // install (most deps on-disk + one real download over-counting).
                 if (st.job?.phase === 'verifying') {
                     return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Verifying…</span></div>`;
+                }
+                // MPI-276 G2: optimistic 'pending' click — indeterminate "Starting…"
+                // until the backend acks (or reverts after 10s).
+                if (st.downloadState === 'pending') {
+                    return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Starting…</span></div>`;
                 }
                 const pct = Math.min(Math.round((st.job?.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;

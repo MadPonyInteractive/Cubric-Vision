@@ -14,7 +14,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const ACTIVE = new Set(['downloading', 'paused', 'installing', 'queued']);
+const ACTIVE = new Set(['pending', 'downloading', 'paused', 'installing', 'queued']);
 
 // Pure re-implementation of the footer decision (kept in lock-step with
 // _modelState + the openDetail footer if/else chain: anyInstalled → busy → install).
@@ -30,6 +30,11 @@ function footerButton({ job, anyInstalled, draftDiffersFromInstalled }) {
 test('active download → Cancel', () => {
   assert.equal(footerButton({ job: { status: 'downloading' }, anyInstalled: false }), 'Cancel');
   assert.equal(footerButton({ job: { status: 'queued' }, anyInstalled: false }), 'Cancel');
+});
+
+test('optimistic pending click → Cancel (G2)', () => {
+  // A 'pending' job (Starting…) counts as busy so the footer shows Cancel, not Install.
+  assert.equal(footerButton({ job: { status: 'pending' }, anyInstalled: false }), 'Cancel');
 });
 
 test('ephemeral-pod race: complete job, install not yet re-synced → holds Cancel, NOT Install', () => {
@@ -54,46 +59,60 @@ test('fresh not-installed model, no job → Install', () => {
   assert.equal(footerButton({ job: undefined, anyInstalled: false }), 'Install');
 });
 
-// ── The ROOT cause (MPI-241): SSE 'open' status-fetch clobbered a live client job ──
-// start() calls _ensureSSE() + creates the 'downloading' job in the SAME tick. The SSE
-// 'open' handler then fetches /comfy/downloads/status and used to OVERWRITE
-// state.downloadJobs with the backend list — which, on the first install after a reload,
-// contained only OLD complete jobs (the fresh install not yet registered backend-side).
-// That wiped the just-created job → footer reverted Cancel → Install. Fix: merge — keep
-// any ACTIVE client job the backend list doesn't yet include.
+// ── MPI-276 G9: the snapshot protocol REPLACED the SSE-open merge heuristic ──
+// The old fix merged a live client job into the backend /status list to survive the
+// reconnect race (start() created the job in the same tick the status-fetch raced
+// ahead of backend registration). Register-before-respond (G8) kills that race
+// structurally — the backend registers the job before /download/start returns — so
+// the FE no longer merges: a download:snapshot REPLACES state.downloadJobs wholesale,
+// version-gated. These tests pin the new snapshot-apply contract (lock-step with the
+// download:snapshot listener in downloadService).
 
-const ACTIVE_STATUSES = ['downloading', 'queued', 'paused', 'installing'];
-
-// Pure re-implementation of the SSE-open merge (lock-step with downloadService 'open').
-function mergeOnSseOpen(clientJobs, backendJobs) {
-  const backendIds = new Set(backendJobs.map(j => j.modelId));
-  const orphanedActive = clientJobs.filter(
-    j => !backendIds.has(j.modelId) && ACTIVE_STATUSES.includes(j.status));
-  return [...backendJobs, ...orphanedActive];
+// Pure re-implementation of the snapshot-apply: store 'done' → FE 'complete',
+// version-gate drops a stale snapshot, a client-only 'pending' job the backend has
+// not registered yet is preserved. Returns { jobs, version } (version unchanged if
+// the snapshot was stale).
+function applySnapshot(clientJobs, snapshot, lastVersion) {
+  if (typeof snapshot.version === 'number' && snapshot.version < lastVersion) {
+    return { jobs: clientJobs, version: lastVersion }; // stale — dropped
+  }
+  const version = typeof snapshot.version === 'number' ? snapshot.version : lastVersion;
+  const jobs = (snapshot.jobs || []).map(j => ({
+    ...j,
+    status: j.status === 'done' ? 'complete' : j.status,
+  }));
+  const ids = new Set(jobs.map(j => j.modelId));
+  const clientPending = clientJobs.filter(j => j.status === 'pending' && !ids.has(j.modelId));
+  return { jobs: [...jobs, ...clientPending], version };
 }
 
-test('SSE open: fresh downloading job survives a backend list of only old complete jobs', () => {
-  const client = [{ modelId: 'pony-mix', status: 'downloading' }];
-  const backend = [
-    { modelId: 'sdxl-realistic', status: 'complete' },
-    { modelId: 'ill-anime', status: 'complete' },
-  ];
-  const merged = mergeOnSseOpen(client, backend);
-  assert.ok(merged.find(j => j.modelId === 'pony-mix' && j.status === 'downloading'),
-    'the live pony-mix download must survive the reconnect status-fetch');
-  assert.equal(merged.length, 3);
+test('snapshot REPLACES the client list wholesale (store done → complete)', () => {
+  const client = [{ modelId: 'stale-ghost', status: 'downloading' }];
+  const snap = { version: 5, jobs: [{ modelId: 'pony-mix', status: 'done' }] };
+  const { jobs, version } = applySnapshot(client, snap, -1);
+  assert.deepEqual(jobs, [{ modelId: 'pony-mix', status: 'complete' }]);
+  assert.equal(version, 5); // phantom ghost gone, no merge
 });
 
-test('SSE open: backend copy WINS for a shared id (no duplicate, no stale client status)', () => {
-  const client = [{ modelId: 'pony-mix', status: 'downloading' }];
-  const backend = [{ modelId: 'pony-mix', status: 'installing' }];
-  const merged = mergeOnSseOpen(client, backend);
-  assert.deepEqual(merged, [{ modelId: 'pony-mix', status: 'installing' }]);
+test('a stale snapshot (lower version than applied) is dropped', () => {
+  const client = [{ modelId: 'pony-mix', status: 'installing' }];
+  const snap = { version: 3, jobs: [{ modelId: 'pony-mix', status: 'downloading' }] };
+  const { jobs, version } = applySnapshot(client, snap, 7);
+  assert.deepEqual(jobs, client); // unchanged — snapshot ignored
+  assert.equal(version, 7);
 });
 
-test('SSE open: a terminal client job the backend dropped is NOT resurrected', () => {
-  // Only ACTIVE client jobs are preserved; a stale complete/failed one is discarded.
-  const client = [{ modelId: 'old', status: 'complete' }, { modelId: 'dead', status: 'failed' }];
-  const backend = [{ modelId: 'sdxl', status: 'complete' }];
-  assert.deepEqual(mergeOnSseOpen(client, backend), [{ modelId: 'sdxl', status: 'complete' }]);
+test('a client-only pending job the snapshot lacks is preserved (G2 optimistic click)', () => {
+  const client = [{ modelId: 'just-clicked', status: 'pending' }];
+  const snap = { version: 1, jobs: [{ modelId: 'other', status: 'downloading' }] };
+  const { jobs } = applySnapshot(client, snap, -1);
+  assert.ok(jobs.find(j => j.modelId === 'just-clicked' && j.status === 'pending'));
+  assert.equal(jobs.length, 2);
+});
+
+test('a snapshot that now includes the formerly-pending job drops the client duplicate', () => {
+  const client = [{ modelId: 'just-clicked', status: 'pending' }];
+  const snap = { version: 2, jobs: [{ modelId: 'just-clicked', status: 'downloading' }] };
+  const { jobs } = applySnapshot(client, snap, -1);
+  assert.deepEqual(jobs, [{ modelId: 'just-clicked', status: 'downloading' }]);
 });

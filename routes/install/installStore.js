@@ -278,6 +278,36 @@ function createInstallStore({ broadcast, logger, now } = {}) {
         return pruned;
     }
 
+    /**
+     * Mirror live progress/bytes from the transport layer onto the store job so
+     * snapshot() (and the broadcast, G9) reflect real download progress, not just
+     * lifecycle. Status is owned by transition*(); this touches ONLY the numeric
+     * progress fields (no state-machine bump semantics). Per-dep bytes are matched
+     * by id. Bumps the version so a snapshot broadcast carries the fresh numbers.
+     *
+     * @param {string} modelId
+     * @param {object} p - { progress?, totalBytes?, downloadedBytes?,
+     *                       deps?: [{ id, downloadedBytes?, totalBytes? }] }
+     */
+    function syncProgress(modelId, p = {}) {
+        const job = _modelJobs.get(modelId);
+        if (!job) return false;
+        if (typeof p.progress === 'number') job.progress = p.progress;
+        if (typeof p.totalBytes === 'number') job.totalBytes = p.totalBytes;
+        if (typeof p.downloadedBytes === 'number') job.downloadedBytes = p.downloadedBytes;
+        if (typeof p.speed === 'string') job.speed = p.speed;
+        if (Array.isArray(p.deps)) {
+            for (const pd of p.deps) {
+                const dep = _depJobs.get(pd.id);
+                if (!dep) continue;
+                if (typeof pd.downloadedBytes === 'number') dep.downloadedBytes = pd.downloadedBytes;
+                if (typeof pd.totalBytes === 'number') dep.totalBytes = pd.totalBytes;
+            }
+        }
+        _bump();
+        return true;
+    }
+
     /** Hard reset — cancelAllDownloads() teardown. */
     function clear() {
         _modelJobs.clear();
@@ -294,6 +324,7 @@ function createInstallStore({ broadcast, logger, now } = {}) {
         registerModelJob,
         transitionModel,
         transitionDep,
+        syncProgress,
         pruneTerminal,
         clear,
         // read

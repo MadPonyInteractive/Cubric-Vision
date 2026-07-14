@@ -68,6 +68,31 @@ test('already-installed dep registers complete + credited at full size', () => {
     assert.equal(d.totalBytes, 1024 ** 3);
 });
 
+test('syncProgress mirrors model + dep bytes and bumps version (4c)', () => {
+    const { store } = makeStore();
+    registerBasic(store);
+    const v0 = store.version();
+    const ok = store.syncProgress('ill-anime', {
+        progress: 0.5, totalBytes: 100, downloadedBytes: 50, speed: '10 MB/s',
+        deps: [{ id: 'base.safetensors', downloadedBytes: 40, totalBytes: 80 }],
+    });
+    assert.equal(ok, true);
+    const j = store.modelJob('ill-anime');
+    assert.equal(j.progress, 0.5);
+    assert.equal(j.downloadedBytes, 50);
+    assert.equal(j.speed, '10 MB/s');
+    assert.equal(store.depJob('base.safetensors').downloadedBytes, 40);
+    assert.equal(store.depJob('base.safetensors').totalBytes, 80);
+    assert.ok(store.version() > v0, 'version bumped so a snapshot broadcast carries fresh numbers');
+    // reflected in snapshot
+    assert.equal(store.snapshot().jobs.find(x => x.id === 'ill-anime').progress, 0.5);
+});
+
+test('syncProgress on an unknown model is a no-op returning false', () => {
+    const { store } = makeStore();
+    assert.equal(store.syncProgress('nope', { progress: 1 }), false);
+});
+
 test('installCustomNodes flag set when a node dep present', () => {
     const { store } = makeStore();
     const job = store.registerModelJob({

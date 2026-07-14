@@ -16,6 +16,10 @@ import { clientLogger } from './clientLogger.js';
 // text so it can be surfaced as a friendly toast, not the GitHub error dialog.
 // Covers the RunPod network-volume quota ([Errno 122] Disk quota exceeded) and a
 // plain full disk ([Errno 28] No space left on device), plus their worded forms.
+// MPI-276 G2 — how long an optimistic 'pending' click waits for a backend ack
+// before it reverts the card to Install + a warning toast.
+const PENDING_ACK_MS = 10_000;
+
 function _isOutOfSpaceError(error) {
     const s = String(error || '').toLowerCase();
     return s.includes('errno 122')
@@ -27,14 +31,17 @@ function _isOutOfSpaceError(error) {
 const downloadService = {
     _eventSource: null,
 
-    // MPI-258 Bug B — modelIds cancelled in the last few seconds. The SSE 'open'
-    // reconnect re-fetches /status and re-injects any client job the backend list
-    // lacks (orphanedActive, MPI-241). A just-cancelled job the backend already
-    // deleted has no backend counterpart, so it was resurrected on the next SSE
-    // tick — the phantom "downloading" bar kept climbing and Cancel appeared dead
-    // (re-presses 404 'Job not found'). This set suppresses resurrection of a
-    // freshly-cancelled model for a short window.
-    _recentlyCancelled: new Map(),
+    // MPI-276 G9 — the snapshot protocol makes correctness ride on a monotonic
+    // version, not on SSE-delivery luck. The backend broadcasts download:snapshot
+    // {version, jobs[]} on every SSE connect and after every reconcile pass; each
+    // delta event also carries the version it was emitted at. The FE replaces
+    // state.downloadJobs wholesale from a snapshot and applies a delta only when its
+    // version is >= the last snapshot seen. A stale snapshot (lower version than one
+    // already applied) is dropped. This retires the MPI-241 merge heuristic,
+    // orphanedActive re-injection, and the _recentlyCancelled resurrection guard:
+    // register-before-respond (G8) means the backend registers the job before
+    // /download/start returns, so the SSE-open race those guards patched cannot form.
+    _snapshotVersion: -1,
 
     // MPI-184 — serial install queue. The app used to POST every install
     // immediately, so clicking Install on 3 models fired 3 concurrent
@@ -67,9 +74,17 @@ const downloadService = {
         const willQueue = this._inFlight > 0;
         this._inFlight += 1;
         const job = _createJob(modelId, dependencies);
-        job.status = willQueue ? 'queued' : 'downloading';
+        // MPI-276 G2: optimistic client-only 'pending' state — "Starting…",
+        // indeterminate — until the backend acks. A queued install (something ahead
+        // in the serial chain) shows 'queued' directly; a lone install shows
+        // 'pending' until _firePost swaps it for the register-before-respond job
+        // snapshot. If no ack lands within PENDING_ACK_MS, _armPendingRevert reverts
+        // the card to Install + a warning toast (the swallowed-request drill).
+        job.status = willQueue ? 'queued' : 'pending';
+        job.indeterminate = true;
         state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
         state.downloadQueueActive = true;
+        if (job.status === 'pending') this._armPendingRevert(modelId);
         Events.emit('download:started', { modelId, job });
 
         // Chain the POST behind the previous install and release the next as soon as
@@ -127,8 +142,8 @@ const downloadService = {
         const job = state.downloadJobs.find(j => j.modelId === modelId);
         if (!job) return false;
 
-        // This job's turn — leave 'queued', become 'downloading' so the card swaps
-        // the Queued badge for the live progress bar + Pause/Cancel.
+        // This job's turn — leave 'queued'/'pending', become 'downloading' so the
+        // card swaps the badge for the live progress bar + Cancel.
         job.status = 'downloading';
         state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? job : j);
 
@@ -139,6 +154,7 @@ const downloadService = {
         });
 
         if (!res.ok) {
+            this._clearPendingRevert(modelId);
             const err = await res.json().catch(() => ({ error: 'Failed to start download' }));
             job.status = 'failed';
             job.error = err.error;
@@ -166,7 +182,43 @@ const downloadService = {
             }
             return false; // already emitted download:failed — no terminal wait needed
         }
+        // POST accepted (register-before-respond, G8): the backend registered the
+        // full job before responding, and the body carries its snapshot. Adopt it so
+        // the card reflects true backend progress (already-installed deps credited),
+        // and clear the pending-revert timer — the install is real now.
+        this._clearPendingRevert(modelId);
+        const body = await res.json().catch(() => null);
+        if (body && body.job) {
+            const cur = state.downloadJobs.find(j => j.modelId === modelId);
+            if (cur) {
+                const merged = { ...cur, ...body.job, status: 'downloading', indeterminate: false };
+                state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? merged : j);
+            }
+        }
         return true; // POST accepted — serialize the next install behind this one
+    },
+
+    // MPI-276 G2 — optimistic-pending revert. If the backend never acks a 'pending'
+    // install within the window (server down / request swallowed), revert the card to
+    // Install and surface a warning toast (never the GitHub-error dialog — this is an
+    // expected, user-actionable state). Cleared the moment _firePost gets a response.
+    _pendingTimers: new Map(),
+    _armPendingRevert(modelId) {
+        this._clearPendingRevert(modelId);
+        const t = setTimeout(() => {
+            this._pendingTimers.delete(modelId);
+            const job = state.downloadJobs.find(j => j.modelId === modelId);
+            if (!job || job.status !== 'pending') return; // acked/settled — nothing to revert
+            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
+            if (!state.downloadJobs.length) state.downloadQueueActive = false;
+            Events.emit('download:cancelled', { modelId }); // card falls back to Install
+            Events.emit('ui:warning', { message: "Install didn't start — try again." });
+        }, PENDING_ACK_MS);
+        this._pendingTimers.set(modelId, t);
+    },
+    _clearPendingRevert(modelId) {
+        const t = this._pendingTimers.get(modelId);
+        if (t) { clearTimeout(t); this._pendingTimers.delete(modelId); }
     },
 
     // pause()/resume() removed (MPI-258 Bug 2): NDH resume corrupted large files.
@@ -182,21 +234,19 @@ const downloadService = {
         // second Cancel press (or a click on an already-settled card) otherwise POSTed
         // /cancel for a job the backend already deleted → 404 spam in the console and a
         // pointless round-trip. Clear + emit locally (idempotent) and return without a
-        // fetch. The FIRST real cancel below still hits the backend.
+        // fetch. The FIRST real cancel below still hits the backend. (MPI-276: the
+        // _recentlyCancelled resurrection guard is gone — the snapshot is authoritative,
+        // so a cancelled job can't be re-injected by a status-fetch race.)
+        this._clearPendingRevert(modelId); // MPI-276 G2 — cancelling kills any pending timer
         const activeJob = state.downloadJobs.find(j => j.modelId === modelId);
-        if (!activeJob) {
-            this._recentlyCancelled.set(modelId, Date.now());
-            setTimeout(() => this._recentlyCancelled.delete(modelId), 8000);
+        if (!activeJob || activeJob.status === 'pending') {
+            // No live job, OR a still-optimistic 'pending' job the backend never
+            // registered — nothing on the backend to cancel. Clear + emit locally.
             state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
             Events.emit('download:cancelled', { modelId });
             if (!state.downloadJobs.length) state.downloadQueueActive = false;
             return;
         }
-        // MPI-258 Bug B — block orphanedActive from resurrecting this job on the
-        // next SSE 'open' tick (which races /status ahead of the backend deleting
-        // the job). Set the guard BEFORE the fetch so a fast reconnect is covered.
-        this._recentlyCancelled.set(modelId, Date.now());
-        setTimeout(() => this._recentlyCancelled.delete(modelId), 8000);
 
         // A still-queued job (serial install queue, POST not fired) is unknown to the
         // backend; its /cancel is a harmless idempotent no-op (backend returns 200).
@@ -257,53 +307,55 @@ const downloadService = {
         if (this._eventSource) this._eventSource.close();
         this._eventSource = new EventSource('/comfy/downloads/stream');
 
-        this._eventSource.addEventListener('open', async () => {
-            // Re-sync state from backend on reconnect to recover from dropped events
-            try {
-                const res = await fetch('/comfy/downloads/status');
-                if (res.ok) {
-                    const { jobs } = await res.json();
-                    if (jobs && jobs.length) {
-                        // Recalculate progress from dep data in case stored value is stale (bug fix)
-                        for (const job of jobs) {
-                            if (job.deps && job.totalBytes > 0) {
-                                const depBytes = job.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
-                                if (depBytes > job.downloadedBytes) {
-                                    job.downloadedBytes = depBytes;
-                                    job.progress = depBytes / job.totalBytes;
-                                }
-                            }
-                        }
-                        // MPI-241: PRESERVE a live client-side job the backend list does
-                        // not yet include. start() calls _ensureSSE() and creates the job
-                        // in the SAME tick; the SSE 'open' status-fetch that follows can
-                        // race ahead of the backend registering that install, returning a
-                        // list of only OLD (complete) jobs. Blindly overwriting wiped the
-                        // just-created 'downloading' job → the detail footer reverted from
-                        // Cancel to Install (worst on the first install after a reload,
-                        // before SSE was ever open). Keep any active client job the
-                        // backend hasn't caught up to; the backend copy wins for shared ids.
-                        const backendIds = new Set(jobs.map(j => j.modelId));
-                        const ACTIVE = ['downloading', 'queued', 'paused', 'installing'];
-                        // MPI-258 Bug B — never resurrect a just-cancelled job. The
-                        // backend deleted it; without this guard the /status race
-                        // re-injected the phantom and Cancel looked dead.
-                        const orphanedActive = state.downloadJobs.filter(
-                            j => !backendIds.has(j.modelId)
-                                && ACTIVE.includes(j.status)
-                                && !this._recentlyCancelled.has(j.modelId));
-                        state.downloadJobs = [...jobs, ...orphanedActive];
-                        state.downloadQueueActive = state.downloadJobs.some(
-                            j => j.status === 'downloading' || j.status === 'installing');
-                    }
-                }
-            } catch (e) { /* non-critical */ }
+        this._eventSource.addEventListener('open', () => {
+            // MPI-276 G9: the backend broadcasts a download:snapshot on every SSE
+            // connect (after a reconcile pass). Reset the version floor so that
+            // connect-snapshot — the authoritative post-reconnect truth — is always
+            // accepted, even if its version is lower than one seen on a prior
+            // connection (a server restart resets the counter). No status-fetch, no
+            // merge: the snapshot listener replaces state.downloadJobs wholesale.
+            this._snapshotVersion = -1;
         });
 
         this._eventSource.addEventListener('error', () => {
             this._eventSource.close();
             this._eventSource = null;
             setTimeout(() => this._connectSSE(), 3000);
+        });
+
+        // MPI-276 G9 — the authoritative state feed. Replaces state.downloadJobs
+        // wholesale from the store snapshot. The store models a model's terminal
+        // success as 'done'; the FE vocabulary is 'complete' (its busy/footer logic
+        // keys on it), so translate here. Transport-only detail the pure store omits
+        // (speed, phase, indeterminate, error) rides the delta events; carry those
+        // forward from the matching client job so a snapshot doesn't blank a live
+        // speed/Preparing… label mid-download. A client-only 'pending' job (G2, added
+        // in 4b) the backend hasn't registered yet is preserved.
+        this._eventSource.addEventListener('download:snapshot', (e) => {
+            const data = JSON.parse(e.data);
+            if (typeof data.version === 'number' && data.version < this._snapshotVersion) return; // stale
+            this._snapshotVersion = typeof data.version === 'number' ? data.version : this._snapshotVersion;
+            const prevById = new Map(state.downloadJobs.map(j => [j.modelId, j]));
+            const jobs = (data.jobs || []).map(j => {
+                const prev = prevById.get(j.modelId);
+                return {
+                    ...j,
+                    status: j.status === 'done' ? 'complete' : j.status,
+                    // preserve delta-carried detail the snapshot doesn't include
+                    speed: j.speed || (prev && prev.speed) || '',
+                    phase: prev && prev.phase,
+                    indeterminate: prev ? prev.indeterminate : false,
+                    error: prev && prev.error,
+                };
+            });
+            const snapshotIds = new Set(jobs.map(j => j.modelId));
+            // Keep a client-only 'pending' job (optimistic click, G2) the backend
+            // hasn't registered yet — its POST is still in flight.
+            const clientPending = state.downloadJobs.filter(
+                j => j.status === 'pending' && !snapshotIds.has(j.modelId));
+            state.downloadJobs = [...jobs, ...clientPending];
+            state.downloadQueueActive = state.downloadJobs.some(
+                j => j.status === 'downloading' || j.status === 'installing' || j.status === 'pending');
         });
 
         // Backend broadcasts download:started with correct progress from pre-installed deps.

@@ -40,6 +40,7 @@ const {
 const { DownloaderHelper } = require('node-downloader-helper');
 const remoteModels = require('./remoteModels');
 const { createInstallStore } = require('./install/installStore');
+const { createReconciler } = require('./install/reconciler');
 
 const _require = createRequire(__filename);
 let _extractZip = null;
@@ -171,19 +172,29 @@ async function _localSharedDepsMap(excludeModelId) {
     }
     // Mid-install protection (was the reason for the old per-dep test): a dep that is
     // ACTIVELY downloading/queued for another model right now must never be trashed.
-    // MPI-258/276 NOTE: gate on depJob.status. (The old refCount field — "how many
-    // model jobs reference this dep" — stayed >0 after an install COMPLETED, so a
-    // refCount test protected every just-installed dep and made uninstall a no-op
-    // ("removed 0, kept 9"); it was DELETED in MPI-276.) Only an in-flight status
-    // ('downloading'/'queued') means a live download is using the file;
-    // 'complete'/'idle'/'failed' must not protect it.
-    for (const [depId, depJob] of _depJobs) {
-        if (depJob && (depJob.status === 'downloading' || depJob.status === 'queued')) {
-            if (!map.has(depId)) map.set(depId, new Set());
-            map.get(depId).add('(installing)');
-        }
+    // MPI-276: the refCount lie is gone — liveness is now a STORE query. A dep is
+    // in-flight iff some NON-TERMINAL model job still references it
+    // (store.activeModelsForDep). That replaces the old `_depJobs.status` map read
+    // (which lingered as 'complete'/'idle' and could mis-protect). We exclude the
+    // model being uninstalled so its own just-cancelled job never self-protects.
+    for (const depId of _inFlightDepIds(excludeModelId)) {
+        if (!map.has(depId)) map.set(depId, new Set());
+        map.get(depId).add('(installing)');
     }
     return map;
+}
+
+// Dep ids held by a live (non-terminal) model job OTHER than excludeModelId.
+// The store is the SOT for "is this dep still being installed right now" (G5:
+// refCount deleted). Used by BOTH engine uninstall guards.
+function _inFlightDepIds(excludeModelId) {
+    const out = new Set();
+    for (const job of store.allModelJobs()) {
+        if (job.modelId === excludeModelId) continue;
+        if (store.MODEL_TERMINAL.has(job.status)) continue;
+        for (const d of job.deps) out.add(d.id);
+    }
+    return out;
 }
 
 // Remote variant of the shared-dep guard. `_findOtherModelsUsingDep` trusts the
@@ -234,12 +245,28 @@ async function _remoteSharedDepIds(excludeModelId) {
         logger.warn('download', `remote shared-dep check failed: ${err.message}`);
         throw err;
     }
+    // MPI-276: remote uninstall previously had NO in-flight protection — a dep
+    // actively installing for another model on the volume could be trashed mid-
+    // download. Mirror the local guard: keep any dep a live (non-terminal) model
+    // job still references. Store is the SOT (refCount deleted, G5).
+    for (const depId of _inFlightDepIds(excludeModelId)) keep.add(depId);
     return keep;
 }
 
 function _isInsidePath(root, target) {
     const relative = path.relative(path.resolve(root), path.resolve(target));
     return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+// Uninstall path derivation (MPI-276). For a custom_nodes dep the install path
+// extracts to the FOLDER `custom_nodes/<dep.filename>/` and the zip is removed
+// right after (see _runCustomNodeInstall: targetDir = extractDir/dep.filename,
+// fs.remove(zipPath)). The old uninstall re-derived `custom_nodes/<name>.zip` —
+// the long-gone zip — so the delete no-op'd yet the loop still reported the dep
+// in removed[] and logged a lie. Target the extracted folder instead. Weight
+// deps are unchanged (resolved by the caller against the models roots).
+function _customNodeUninstallPath(dep, customNodesRoot) {
+    return path.join(customNodesRoot, dep.filename);
 }
 
 // ── Job Storage ────────────────────────────────────────────────────────────────
@@ -609,6 +636,25 @@ function _setDepStatus(depJob, status, reason) {
     depJob.status = status;
     const to = _DEP_STATUS_TO_STORE[status];
     if (to && store.depJob(depJob.id)) store.transitionDep(depJob.id, to, reason);
+    // Stamp last-activity on the store model job so the reconciler's orphan-fail
+    // gate (G11) measures staleness from real progress, not registration alone.
+    const sj = store.modelJob(depJob.modelId);
+    if (sj) sj.lastTickAt = Date.now();
+}
+
+// Mirror a map modelJob's freshly-recomputed progress/bytes into the store (4c) so
+// snapshot()/the download:snapshot broadcast reflect live progress, not just
+// lifecycle. Called right after each map-side progress recompute. Status stays owned
+// by _setModelStatus/_setDepStatus; this touches numbers only.
+function _syncStoreProgress(modelJob) {
+    if (!store.modelJob(modelJob.modelId)) return;
+    store.syncProgress(modelJob.modelId, {
+        progress: modelJob.progress,
+        totalBytes: modelJob.totalBytes,
+        downloadedBytes: modelJob.downloadedBytes,
+        speed: modelJob.speed,
+        deps: modelJob.deps.map(d => ({ id: d.id, downloadedBytes: d.downloadedBytes, totalBytes: d.totalBytes })),
+    });
 }
 
 // Register (or REPLACE) the store record for a runtime modelJob, translating its
@@ -628,7 +674,61 @@ function _registerModelInStore(modelJob, engine) {
             alreadyInstalled: d.status === 'complete',
         })),
     });
+    // Stamp the grace-window anchor for the reconciler's orphan-fail gate (G11).
+    const sj = store.modelJob(modelJob.modelId);
+    if (sj) { sj.registeredAt = Date.now(); sj.lastTickAt = Date.now(); }
+    reconciler.start(); // idempotent; self-idles when no jobs are active
 }
+
+// ── Reconciler SOT-driver (MPI-276 Phase 3, G11) ─────────────────────────────
+// Polls disk/volume truth while the store has active jobs, settles wedged jobs
+// (missed-terminal SSE), fails orphans, prunes terminal jobs, broadcasts the
+// snapshot. Generalises the remote-only recovery to BOTH engines. Disk truth is
+// injected so the module stays pure/testable.
+
+// Resolve installed-truth for a batch of the store's active model jobs. Groups
+// by engine: local jobs → localModelsCheck (disk), remote jobs → remoteModelsCheck
+// (volume). Returns Map<depId, boolean>. Any dep whose model can't be checked is
+// simply absent from the map (treated as not-yet-installed — never a false settle).
+async function _reconcilerCheckInstalled(jobs) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const comfyRoutes = _require('./comfy.js');
+    const truth = new Map();
+
+    const toCheckModel = (job) => ({
+        id: job.modelId,
+        deps: job.deps.map(d => {
+            const def = DEPS[d.id] || {};
+            return { id: d.id, type: def.type, filename: def.filename };
+        }),
+    });
+    const absorb = (results) => {
+        if (!results) return;
+        for (const modelId of Object.keys(results)) {
+            const deps = (results[modelId] && results[modelId].deps) || [];
+            for (const d of deps) if (d && d.id) truth.set(d.id, d.installed === true);
+        }
+    };
+
+    const localJobs = jobs.filter(j => j.engine !== 'remote');
+    const remoteJobs = jobs.filter(j => j.engine === 'remote');
+
+    if (localJobs.length) {
+        absorb(await comfyRoutes.localModelsCheck(localJobs.map(toCheckModel)));
+    }
+    if (remoteJobs.length && remoteModels.isRemoteActive()) {
+        const out = await remoteModels.remoteModelsCheck(remoteJobs.map(toCheckModel));
+        absorb(out && out.results);
+    }
+    return truth;
+}
+
+const reconciler = createReconciler({
+    store,
+    checkInstalled: _reconcilerCheckInstalled,
+    now: Date.now,
+    logger,
+});
 
 router.get('/comfy/downloads/stream', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -637,6 +737,14 @@ router.get('/comfy/downloads/stream', (req, res) => {
     res.flushHeaders();
     _sseClients.add(res);
     req.on('close', () => { _sseClients.delete(res); });
+    // G11: reconcile against truth, then hand the fresh client the current
+    // snapshot so it rebuilds state.downloadJobs wholesale (kills cold-boot
+    // phantom cards). Runs only when jobs are live; otherwise emits an empty
+    // snapshot so the FE clears any stale bars. Errors are non-fatal.
+    (store.hasActiveJobs()
+        ? reconciler.reconcileOnce().catch((err) => logger.warn('download', `SSE-connect reconcile failed: ${err.message}`))
+        : Promise.resolve()
+    ).finally(() => store.broadcastSnapshot());
 });
 
 // ── Status Endpoint ───────────────────────────────────────────────────────────
@@ -644,6 +752,15 @@ router.get('/comfy/downloads/stream', (req, res) => {
 // Serialize one model job for the wire — the shape the FE mirror consumes from
 // both GET /downloads/status and the register-before-respond /download/start body
 // (MPI-276 G8). Single serializer so the two never drift.
+//
+// MPI-276 4c NOTE: sourced from the runtime MAP job, NOT store.snapshot(). Live
+// progress/bytes are recomputed onto the map job at ~15 tick sites and are NOT yet
+// mirrored into the store (the store tracks lifecycle+status, mirrored in lockstep;
+// progress-mirror is the remaining gap). So a pull-read off store.snapshot() would
+// report 0% mid-download. The store-sourced SOT path is the `download:snapshot`
+// BROADCAST (reconciler, P3) + the FE snapshot consumer (4a); this pull endpoint
+// stays map-backed until progress is mirrored. Map `status` vocabulary is already
+// correct ('complete'); the FE mirror handles both it and the store's 'done'.
 function _serializeModelJob(job) {
     return {
         id: job.id,
@@ -665,8 +782,8 @@ function _serializeModelJob(job) {
 
 router.get('/comfy/downloads/status', (req, res) => {
     const jobs = Array.from(_modelJobs.values()).map(_serializeModelJob);
-    // G9: monotonic snapshot version from the store. Additive — the FE mirror (Phase
-    // 4) uses it to reject a stale snapshot; today's clients ignore the extra field.
+    // G9: monotonic snapshot version from the store (the FE version-gates deltas
+    // against it). Jobs stay map-sourced for live progress (see _serializeModelJob).
     res.json({ success: true, version: store.version(), jobs });
 });
 
@@ -915,6 +1032,7 @@ function _wireProgress(depJob, downloader) {
             // than a static 0 MB / 0 MB.
             const indeterminate = isNodeTick || modelJob.totalBytes <= 0;
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId: depJob.id,
@@ -1160,6 +1278,7 @@ function _onRemoteInstallEvent(evt) {
             modelJob.downloadedBytes = ratio.downloaded;
             const nodeIndeterminate = isNodeTick || modelJob.totalBytes <= 0;
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId,
@@ -1210,6 +1329,7 @@ function _onRemoteInstallEvent(evt) {
                 modelJob.downloadedBytes = modelJob.totalBytes;
                 modelJob.progress = 1;
             }
+            _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId,
@@ -1818,10 +1938,19 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
 // ── Uninstall ─────────────────────────────────────────────────────────────────
 
 router.post('/comfy/models/uninstall', async (req, res) => {
-    const { modelId, dependencies, deleteFiles = true } = req.body;
-    if (!modelId || !Array.isArray(dependencies)) {
+    const { modelId, dependencies: wireDeps, deleteFiles = true } = req.body;
+    if (!modelId || !Array.isArray(wireDeps)) {
         return res.status(400).json({ error: 'modelId + dependencies required' });
     }
+
+    // MPI-276 G13: uninstall previously trusted the wire dep array verbatim, so a
+    // stale client / direct API call could ask to delete the WRONG engine's files
+    // (remote-resolved deps against local disk, or vice-versa). Re-resolve the
+    // engine-correct universe server-side and keep only deps that belong to it.
+    // Unknown model passes through unchanged (same _filterDepsForEngine contract as
+    // install). Wire the filtered set through the rest of the route as `dependencies`.
+    const _engine = remoteModels.isRemoteActive() ? 'remote' : 'local';
+    const dependencies = _filterDepsForEngine(modelId, wireDeps, _engine);
 
     // Remote mode: the model files live on the Pod volume, NOT local disk. The
     // local trash path below would destroy the user's LOCAL models and leave the
@@ -1956,8 +2085,8 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             const { localPath: lp } = await resolveComfyPath(dep, customRoot, {});
             localPath = lp;
         } else if (dep.type === 'custom_nodes') {
-            const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
-            localPath = path.join(defaultCustomNodesRoot, zipName);
+            // MPI-276: the extracted node FOLDER, not the long-gone install zip.
+            localPath = _customNodeUninstallPath(dep, defaultCustomNodesRoot);
         } else if (customRoot) {
             const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
             localPath = lp;
@@ -2008,7 +2137,12 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         }
 
         try {
-            if (await fs.pathExists(localPath)) {
+            // MPI-276: only report a dep in removed[] when a delete ACTUALLY ran.
+            // The custom-node zip-path bug meant the old loop hit a non-existent
+            // path, deleted nothing, yet still pushed to removed[] and logged a lie.
+            // A missing path now lands in keptModelFiles(reason:'already-absent').
+            const existed = await fs.pathExists(localPath);
+            if (existed) {
                 // Try Recycle Bin first (undo-safety). But model weights are large
                 // (6-25GB) and Windows refuses to recycle a file bigger than the
                 // drive's Recycle Bin quota — windows-trash.exe exits 255 and the
@@ -2025,7 +2159,12 @@ router.post('/comfy/models/uninstall', async (req, res) => {
                 await cleanEmptyDirs(localPath, dep.type === 'custom_nodes' ? defaultCustomNodesRoot : managedModelsRoot);
             }
             await clearDownloadMarker(localPath).catch(() => {});
-            removed.push({ depId: dep.id, depName: dep.name || dep.id });
+            if (existed) {
+                removed.push({ depId: dep.id, depName: dep.name || dep.id });
+            } else {
+                keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id, reason: 'already-absent' });
+                logger.info('download', `uninstall: ${dep.id} already absent at ${localPath} — nothing removed`);
+            }
             // The shared-dep guard upstream already excluded deps another installed
             // model needs, so a dep that reaches this delete loop is unshared — drop
             // its job. A re-install re-creates it. (refCount gate DELETED MPI-276.)
@@ -2038,6 +2177,10 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     logger.info('download', `uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
     _modelJobs.delete(modelId);
     _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
+    // G11: reconcile against post-delete disk truth (settles/prunes anything the
+    // removal touched) and refresh the snapshot. Non-fatal — the uninstall itself
+    // already succeeded.
+    reconciler.reconcileOnce().catch((err) => logger.warn('download', `post-uninstall reconcile failed: ${err.message}`));
     res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
 });
 
@@ -2055,6 +2198,7 @@ function cancelAllDownloads() {
     _modelJobs.clear();
     _depJobs.clear();
     store.clear();
+    reconciler.stop();
     _broadcast('download:cancelled', { all: true });
 }
 
@@ -2293,4 +2437,6 @@ module.exports = {
     startUniversalWorkflowInstall,
     finishCustomNodeInstall,
     _byteRatioExcludingNodes, // MPI-231 — exported for unit test
+    _customNodeUninstallPath, // MPI-276 — exported for unit test
+    _filterDepsForEngine, // MPI-276 — exported for unit test
 };
