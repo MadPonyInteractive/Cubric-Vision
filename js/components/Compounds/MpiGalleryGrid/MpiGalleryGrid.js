@@ -546,6 +546,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         img.classList.remove('mpi-group-card__preview-img--loaded');
                         spinner.style.display = '';
                     }
+                    // MPI-277: mark this URL failed so the L525 guard short-circuits
+                    // every future call with it. A revoked preview blob (gen ended,
+                    // blob revoked on next tick) would otherwise be re-requested on
+                    // each 8fps clip tick AND each install-churn re-render
+                    // (setGenerating(group.latestPreviewUrl) with the stale URL) →
+                    // hundreds of ERR_FILE_NOT_FOUND. Only latch a dead blob: real
+                    // file URLs may transiently 404 and should stay retryable.
+                    if (url.startsWith('blob:')) img.dataset.previewSrc = url;
                 };
                 next.src = url;
                 if (next.complete && next.naturalWidth > 0) {
