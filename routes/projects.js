@@ -180,19 +180,22 @@ function updateItemMeta(metaPath, updater) {
 }
 
 // ── Monotonic sequence allocator ─────────────────────────────────────────────
-// Sequenced media names (i2v_ms_001.mp4, combined_001.mp4, crop_001.mp4…) used
-// to be numbered by scanning existing files for the max NNN and adding 1. That
-// re-mints deleted numbers: delete i2v_ms_001.mp4 and the next i2v gen reuses
-// `001`, which then (a) `-y`-overwrites a re-created file at that path, or (b)
-// gets deleted-by-filename while another history entry still points at it —
-// both orphan a card (missing media → gallery 404). Fix: persist a per-prefix
-// high-water mark in Media/.meta/.seq.json and hand out max(diskMax, mark)+1,
-// so a number is NEVER reused within a project even after deletes. Serialized
-// through the same per-path queue as sidecar writes.
-async function nextSequence(mediaDir, prefix, ext = 'mp4') {
-    const seqPath = path.join(mediaDir, '.meta', '.seq.json');
-    // Scan disk for the current max NNN for this prefix (covers pre-existing
-    // projects that never had a .seq.json, and any out-of-band file adds).
+// Sequenced media names (i2v_ms_001.mp4, combined_001.mp4, crop_001.mp4…) must
+// NEVER reuse a number, even after the file is deleted — a reused name lets a
+// new gen overwrite an existing card's file, or a delete-by-filename strip a
+// still-referenced entry (both → blank card + gallery 404).
+//
+// The counter is a per-prefix monotonic value in project.json under
+// `sequenceCounters` (e.g. { edit: 7, t2i: 2, upscale: 10 }). It is the SINGLE
+// source of truth: it is bumped and persisted atomically inside the same
+// project.json write queue, and disk is never consulted after the first seed —
+// so deleting media can't roll it back. Legacy projects (files already on disk,
+// no counter yet) seed the counter from the current disk-max ONCE on first use,
+// then stop scanning. This is deliberately NOT stored in Media/.meta/ (a
+// GC-swept directory); project.json is app-owned and never GC'd.
+async function nextSequence(folderPath, mediaDir, prefix, ext = 'mp4') {
+    // One-time legacy seed: max NNN already on disk for this prefix. Only used
+    // when the project has no counter for this prefix yet.
     let diskMax = 0;
     try {
         const entries = await fs.readdir(mediaDir);
@@ -204,10 +207,14 @@ async function nextSequence(mediaDir, prefix, ext = 'mp4') {
     } catch (_) { /* mediaDir missing → diskMax 0 */ }
 
     let chosen = diskMax + 1;
-    await updateItemMeta(seqPath, marks => {
-        const prev = Number.isFinite(marks?.[prefix]) ? marks[prefix] : 0;
-        chosen = Math.max(diskMax, prev) + 1;
-        return { ...marks, [prefix]: chosen };
+    const jsonPath = path.join(folderPath, 'project.json');
+    await updateProjectJson(jsonPath, project => {
+        const counters = { ...(project.sequenceCounters || {}) };
+        const prev = Number.isFinite(counters[prefix]) ? counters[prefix] : null;
+        // prev present → pure SoT (ignore disk). Absent → seed from disk-max once.
+        chosen = (prev === null ? diskMax : Math.max(prev, diskMax)) + 1;
+        counters[prefix] = chosen;
+        return { ...project, sequenceCounters: counters };
     });
     const seq = String(chosen).padStart(3, '0');
     return `${prefix}_${seq}.${ext}`;
@@ -1369,7 +1376,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             const stem = path.basename(finalFileName, path.extname(finalFileName));
             // Strip trailing _NNN sequence to get the bare prefix (e.g. imported_001 → imported)
             const prefix = stem.replace(/_\d+$/, '') || 'imported';
-            finalFileName = await nextSequence(mediaDir, prefix, ext);
+            finalFileName = await nextSequence(folderPath, mediaDir, prefix, ext);
         }
 
         const base64Content = base64Data.replace(/^data:[^;]+;base64,/, '');
@@ -1741,7 +1748,7 @@ router.post('/project/save-generation', async (req, res) => {
         const prefix = operation.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 24);
 
         // Monotonic sequence: never reuse a deleted number (see nextSequence).
-        const filename = await nextSequence(mediaDir, prefix, ext);
+        const filename = await nextSequence(normalizedFolderPath, mediaDir, prefix, ext);
         const filePath = path.join(mediaDir, filename);
 
         // Download from ComfyUI server-side
@@ -1916,11 +1923,6 @@ router.post('/project/save-generation', async (req, res) => {
 
             for (const sc of entries) {
                 if (!sc.endsWith('.json')) continue;
-                // Skip bookkeeping dotfiles (e.g. .seq.json, the monotonic
-                // sequence marker) — they are NOT item sidecars and have no
-                // media file, so the orphan-GC below would wrongly delete them
-                // and re-open the filename-reuse bug nextSequence exists to fix.
-                if (sc.startsWith('.')) continue;
                 const baseName = sc.slice(0, -5); // strip .json
 
                 // Skip the meta file we just created
@@ -2150,7 +2152,7 @@ router.post('/project/crop-media', async (req, res) => {
         const ext = path.extname(inputPath).slice(1).toLowerCase() || 'png';
 
         // Sequenced filename using 'crop' prefix (monotonic, see nextSequence)
-        const filename = await nextSequence(mediaDir, 'crop', ext);
+        const filename = await nextSequence(folderPath, mediaDir, 'crop', ext);
         const filePath = path.join(mediaDir, filename);
 
         // Sharp crop

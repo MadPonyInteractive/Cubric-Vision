@@ -78,7 +78,7 @@ router.post('/api/video/reverse', async (req, res) => {
         if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
             finalName = outFileName;
         } else {
-            finalName = await nextSequence(mediaDir, 'video_reverse', 'mp4');
+            finalName = await nextSequence(folderPath, mediaDir, 'video_reverse', 'mp4');
         }
         outputPath = path.join(mediaDir, finalName);
 

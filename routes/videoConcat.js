@@ -79,8 +79,8 @@ async function _resolveItemPath(metaDir, itemId) {
 
 // Delegates to the monotonic allocator in routes/projects.js so combined_/
 // extended_ names never reuse a deleted number (avoids the overwrite/orphan bug).
-async function _nextSequencedName(mediaDir, prefix, ext = 'mp4') {
-    return nextSequence(mediaDir, prefix, ext);
+async function _nextSequencedName(folderPath, mediaDir, prefix, ext = 'mp4') {
+    return nextSequence(folderPath, mediaDir, prefix, ext);
 }
 
 function _makeProgressEmitter(jobId) {
@@ -169,7 +169,7 @@ router.post('/combine-videos', async (req, res) => {
             inputs.push(abs);
         }
 
-        const finalName = await _nextSequencedName(mediaDir, 'combined', 'mp4');
+        const finalName = await _nextSequencedName(folderPath, mediaDir, 'combined', 'mp4');
         outputPath = path.join(mediaDir, finalName);
 
         _broadcast('concat:progress', { jobId, ratio: 0 });
@@ -262,7 +262,7 @@ router.post('/extend-video', async (req, res) => {
             return res.status(404).json({ success: false, error: `generated file missing: ${resolvedGenPath}` });
         }
 
-        const finalName = await _nextSequencedName(mediaDir, 'extended', 'mp4');
+        const finalName = await _nextSequencedName(folderPath, mediaDir, 'extended', 'mp4');
         outputPath = path.join(mediaDir, finalName);
 
         _broadcast('concat:progress', { jobId, ratio: 0 });

@@ -100,7 +100,7 @@ router.post('/api/video/crop', async (req, res) => {
         if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
             finalName = outFileName;
         } else {
-            finalName = await nextSequence(mediaDir, 'video_crop', 'mp4');
+            finalName = await nextSequence(folderPath, mediaDir, 'video_crop', 'mp4');
         }
         outputPath = path.join(mediaDir, finalName);
 
