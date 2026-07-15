@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-286","at":"2026-07-14T22:18:24.400Z","actor":"vscode","summary":"Created MPI-286."}
+{"at":"2026-07-15T12:00:00.000Z","event":"task.moved","from":"todo","to":"doing","note":"Pick up: per-thumb spinner + cap-3 serial thumbnail reveal on Landing"}
+{"at":"2026-07-15T12:30:00.000Z","event":"task.moved","from":"doing","to":"done","note":"User-verified: projects load faster. cap-3 thumb-reveal queue + per-thumb spinner + open-lock shipped."}
