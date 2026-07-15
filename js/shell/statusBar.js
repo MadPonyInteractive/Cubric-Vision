@@ -57,22 +57,6 @@ let _completionToken = 0;
 let _activeGenId = null;
 const _listenUnsubs = [];
 
-// Completion-toast coalescing (ALWAYS on, focused or not). A per-gen "finished"
-// toast is noise — a queue of N gens fired N toasts (and on a minimized run they
-// piled up frozen and flooded on restore). Instead COUNT completions and surface
-// ONE summary — "N generations finished." — when the queue fully drains. The OS
-// background-notification path (notificationService, pref-gated) is independent.
-let _doneCount = 0;
-function _flushDoneToasts() {
-    if (_doneCount <= 0) return;
-    const n = _doneCount;
-    _doneCount = 0;
-    StatusBar.notify(
-        n === 1 ? 'Generation finished.' : `${n} generations finished.`,
-        'success',
-    );
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function _fmtTime(sec) {
@@ -453,11 +437,11 @@ export const StatusBar = {
             if (_jobTime) _jobTime.textContent = _fmtTime(totalElapsed);
             _fill.classList.add('shell-info__fill--flash');
 
-            // No per-gen toast here. Completion feedback is COALESCED: every finished
-            // gen is counted (via notificationService → notifyCompletion) and one
-            // summary toast fires when the queue drains. The old per-gen toast rang
-            // once per item; a queue of N spammed N toasts. `toastMessage`/`silent`
-            // are retained for the fill/idle animation and timing only.
+            // No per-gen toast here. Completion feedback is COALESCED by
+            // notificationService: it counts every finished gen and fires ONE
+            // notification (OS or in-app) when the whole queue drains. The old
+            // per-gen toast rang once per item; a queue of N spammed N toasts.
+            // `toastMessage`/`silent` are retained for the fill/idle timing only.
             void toastMessage; void silent;
 
             setTimeout(() => {
@@ -511,15 +495,6 @@ export const StatusBar = {
         document.body.appendChild(wrapper);
         const t = MpiToast.mount(wrapper, { message, variant, duration, sound: opts.sound !== false });
         t.on('close', () => { t.destroy(); wrapper.remove(); });
-    },
-
-    /**
-     * Count one finished generation toward the coalesced completion toast. The
-     * single summary — "N generations finished." — fires when the queue drains
-     * (see the generation-store:changed handler in listen()). Focused or not.
-     */
-    notifyCompletion() {
-        _doneCount++;
     },
 
     /**
@@ -609,9 +584,6 @@ export const StatusBar = {
         // got wrong. The tool:* listeners above still paint the visual detail.
         _listenUnsubs.push(Events.on('generation-store:changed', (snapshot) => {
             _reconcileFromStore(snapshot);
-            // Queue fully drained → fire the single coalesced completion summary.
-            // depth = running + pending; 0 means nothing left, so the batch is done.
-            if ((snapshot?.depth ?? 0) === 0) _flushDoneToasts();
         }));
     },
 };
