@@ -71,6 +71,12 @@ export const MpiSettings = ComponentFactory.create({
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsNotifyDownloadsSlot"></div>
                     </div>
+                    <div class="mpi-settings__plate" id="mpiSettingsNotifyConnectionPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Pod connected</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsNotifyConnectionSlot"></div>
+                    </div>
                     <div class="mpi-settings__plate" id="mpiSettingsToastSoundPlate">
                         <div class="mpi-settings__plate-main">
                             <span class="mpi-settings__plate-label">Play sound on notification</span>
@@ -217,6 +223,8 @@ export const MpiSettings = ComponentFactory.create({
                 (v) => _saveNotifyPref('generation', v));
             _mountSwitchPlate('#mpiSettingsNotifyDownloadsSlot', state.notificationPrefs?.downloads !== false,
                 (v) => _saveNotifyPref('downloads', v));
+            _mountSwitchPlate('#mpiSettingsNotifyConnectionSlot', state.notificationPrefs?.connection !== false,
+                (v) => _saveNotifyPref('connection', v));
 
             // ── In-app toast chime (default ON) ──────────────────────────────
             _mountSwitchPlate('#mpiSettingsToastSoundSlot', Storage.getToastSound(),

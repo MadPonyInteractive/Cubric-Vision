@@ -28,13 +28,15 @@ function normalizePromptReuseSource(value) {
 export const DEFAULT_NOTIFICATION_PREFS = Object.freeze({
   generation: true,
   downloads: true,
+  connection: true,
 });
 
-// Both default ON — preserves the prior always-notify behavior on a fresh/corrupt store.
+// All default ON — preserves the prior always-notify behavior on a fresh/corrupt store.
 function normalizeNotificationPrefs(value = {}) {
   return {
     generation: value?.generation !== false,
     downloads: value?.downloads !== false,
+    connection: value?.connection !== false,
   };
 }
 

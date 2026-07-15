@@ -823,6 +823,16 @@ app.on('ready', () => {
     }, 'Download complete');
   });
 
+  ipcMain.on('notify-connection-complete', (event, payload = {}) => {
+    showOsNotification({
+      title: payload.title || 'Pod connected',
+      subtitle: payload.subtitle || 'Cubric Studio',
+      body: payload.body || '',
+      urgency: payload.urgency,
+      timeoutType: payload.timeoutType,
+    }, 'Pod connected');
+  });
+
   // TODO: replace platform branches with screen.setCursorScreenPoint({x,y})
   // once Electron exposes it (not available as of Electron 41).
   ipcMain.on('warp-cursor', (event, x, y) => {

@@ -67,6 +67,32 @@ export function initNotificationService() {
         }
     }));
 
+    // `remote:connection` fires on every feed tick while connected — latch on the
+    // rising edge (disconnected → connected, phase cleared) so we notify once.
+    let _wasRemoteConnected = false;
+    _unsubs.push(Events.on('remote:connection', ({ connected = false, phase = null, gpuName = null } = {}) => {
+        try {
+            const nowConnected = connected === true && !phase;
+            if (nowConnected && !_wasRemoteConnected) {
+                _wasRemoteConnected = true;
+                const osEligible = state.notificationPrefs?.connection !== false;
+                if (osEligible && ipcRenderer && !document.hasFocus()) {
+                    ipcRenderer.send('notify-connection-complete', {
+                        title: 'Pod connected',
+                        subtitle: 'Cubric Studio',
+                        body: gpuName ? `${gpuName} ready.` : 'Remote engine ready.',
+                    });
+                    return;
+                }
+                StatusBar.notify(gpuName ? `${gpuName} connected.` : 'Remote engine connected.', 'success');
+            } else if (!connected) {
+                _wasRemoteConnected = false;
+            }
+        } catch (err) {
+            clientLogger.error('notificationService', 'failed to notify:', err);
+        }
+    }));
+
     _unsubs.push(Events.on('download:complete', (data = {}) => {
         try {
             // UW installs surface through engine UI — no completion notification
