@@ -1935,17 +1935,16 @@ router.post('/project/save-generation', async (req, res) => {
                 let mediaPath = null;
                 let thumbPath = null;
 
-                // Try to read the meta file to get the actual media file path
+                // Try to read the meta file to get the actual media file path.
+                // Use pathFromProjectFileUrl (stops at `&`) NOT a greedy
+                // `path=(.+)$`: freshly-written outputs carry a `&v=<mtime>`
+                // cache-bust suffix, and the greedy match folded that into the
+                // path → pathExists() false → the GC wrongly deleted a live
+                // sidecar (missing sidecar → gallery 404, card vanishes on reload).
                 try {
                     const metaContent = await fs.readJson(metaFilePath);
-                    if (metaContent.filePath) {
-                        const match = metaContent.filePath.match(/path=(.+)$/);
-                        if (match) mediaPath = decodeURIComponent(match[1]);
-                    }
-                    if (metaContent.thumbPath) {
-                        const m = metaContent.thumbPath.match(/path=(.+)$/);
-                        if (m) thumbPath = decodeURIComponent(m[1]);
-                    }
+                    if (metaContent.filePath) mediaPath = pathFromProjectFileUrl(metaContent.filePath);
+                    if (metaContent.thumbPath) thumbPath = pathFromProjectFileUrl(metaContent.thumbPath);
                 } catch (_) {
                     // If we can't read the meta file, treat it as orphaned
                 }
