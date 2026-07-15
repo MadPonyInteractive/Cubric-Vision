@@ -8,6 +8,7 @@
 
 ## whatIsNew
 
+- **Reverse video or audio separately** — the video Reverse action is now three: reverse both together, reverse just the video (audio plays forward), or reverse just the audio (video plays forward).
 - **Remove Background** — a new History tool (under Enhance) that cuts the background from any image using BiRefNet. Output a transparent PNG, or fill the background with a color of your choice.
 - **Krea 2 Turbo** — a new high-quality image model with a distinctive photographic look. Ships nine built-in style LoRAs, an in-prompt enhancer, 1K/2K output, and a depth-guided **Pose Reference** operation that transfers a subject's pose from a reference image.
 - **Krea 2 Turbo NSFW** — Lustify Krea, an uncensored Krea 2 variant by Coyotte (creator of the Lustify SDXL model). Same photographic look, style LoRAs and Pose Reference as Krea 2 Turbo, as a separate installable model. Runs fastest on NVIDIA RTX (20-series and newer).
