@@ -38,6 +38,7 @@ NOT mechanically split these):
 | Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | UI & component contracts (18 gotchas) | [ui-gotchas.md](ui-gotchas.md) |
+| **Video player** (frame-accurate hybrid: `<video>` plays / mediabunny canvas owns paused-step; color matrix rule; frame-index coordinate law; sub-range loop) | [video-player.md](video-player.md) |
 | Apps (App Library + App overlays; add-an-app procedure) | [playbooks/add-app/README.md](playbooks/add-app/README.md) |
 
 ### ComfyUI / generation

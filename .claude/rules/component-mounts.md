@@ -243,7 +243,7 @@ its media-drop overlay sticks open. Browser dev mode (no `webUtils`) ignores dro
 
 ## MpiVideoSurface.js (Compound — js/components/Compounds/MpiVideoSurface — bare surface)
 
-Owns the bare `<video>` element + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics. Frame-step works in integer frame space (`round(t * fps)`) — float comparisons at range edges drift by a frame.
+Owns the bare `<video>` element + a sibling **exact-frame canvas overlay** (`.mpi-video-surface__frame`, `data-frame="true"` shows it) + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics. Frame-step works in integer frame space (`round(t * effFps)`) — float comparisons at range edges drift by a frame. **Frame-accurate step/scrub (MPI-283):** `frameStep` decodes the exact frame via `js/services/frameSink.js` (mediabunny/WebCodecs), paints the canvas overlay, THEN moves `video.currentTime`; falls back to a native `+0.25·fs` seek when the sink can't decode (`canDecode` gate → null). `_effectiveFps` = `frameCount/duration` when both known (true PTS spacing), else declared `fps`. See `docs/video-player.md`.
 
 **Instance API (on `el`):** `_setSrc`, `_play`, `_pause`, `seek(seconds)`, `frameStep(direction, range?)` (`range = { rangeIn, rangeOut, loop }` — when present, wraps at range edges; `loop` is required when caller has disabled native `video.loop` for range emulation), `getVideoElement`, `_setFps`, `_setFrameCount`, `getFps`, `getFrameCount`, `_setVolume`, `_setMuted`, `destroy`. Emits component-local `play/pause/ended/timeupdate/loadedmetadata/volumechange`.
 
@@ -261,7 +261,9 @@ Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + (
 
 - `MpiButton` (play, frame-back, frame-forward, frames-toggle, loop, mute, fullscreen) — slots `[data-mount="play|frame-back|frame-forward|frames-toggle|loop|mute|fullscreen"]`
 - `MpiProgressBar` (volume) — slot `[data-mount="volume"]`
-- `MpiTrimBar` — slot `[data-mount="trim"]` (only when `showTrim`; props: `{ duration: 0, fps, value: 0, inPoint: 0, outPoint: 0 }`; updated via `setDuration`/`setRangeQuiet` on surface `loadedmetadata`)
+- `MpiTrimBar` — slot `[data-mount="trim"]` (only when `showTrim`; props: `{ duration: 0, fps, value: 0, inPoint: 0, outPoint: 0 }`; updated via `setDuration`/`setRangeQuiet`/`setFrameCount` on surface `loadedmetadata`)
+
+**Frame-index coordinate law (MPI-283):** `setFrameCount(n)` is pushed into the trim bar so playhead/handles map in integer-frame space. `_displayTime(currentTime)` snaps to the exact frame's TRUE time (`idx/effFps`) — it does NOT apply the `idx/lastIdx·dur` normalization (that lives only in `MpiTrimBar._pctOf`); applying it in both places shifts the echoed playhead one frame off the drop position. See `docs/video-player.md`.
 
 **Instance API (on `el`):** `attachSurface(instance)`, `detachSurface()`, `setRange(Quiet)`, `getRange`, `getValue`, `setVolume`, `setMuted`, `setFrameCount`, `setFps`, `setPendingTrim(in, out)` (one-shot for next `loadedmetadata`; no-op when `showTrim: false`), `destroy`. Emits `loop-change`, `range-change`.
 
@@ -269,7 +271,7 @@ Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + (
 
 ## MpiTrimBar.js (Compound — js/components/Compounds/MpiTrimBar — two-handle trim seek bar)
 
-Self-contained 28px track + two trim handles (in/out, ±8px overflow w/ 10×3 caps) + 2px playhead w/ triangle arrow + 12% heat selection fill. Stage tokens only. No internal sub-component mounts. Pointer drag coalesces on RAF; commits on `pointerup`. Track click drags playhead from cursor.
+Self-contained 28px track + two trim handles (in/out, ±8px overflow w/ 10×3 caps) + 2px playhead w/ triangle arrow + 12% heat selection fill. Stage tokens only. No internal sub-component mounts. Pointer drag coalesces on RAF; commits on `pointerup`. Track click drags playhead from cursor. **Frame-index mapping (MPI-283):** optional `frameCount` prop + `setFrameCount(n)`; when set, `_snap`/`_pctOf`/`_eventToSeconds` map in integer-frame space (`effFps = frameCount/duration`, position `idx/(frameCount-1)` so frame 0→0% / last→100%) to MATCH `MpiVideoControlBar._displayTime` — this is what removes the playhead drop-then-echo jump. Falls back to `time/duration` when `frameCount` is unset.
 
 **Instance API (on `el`):** `setDuration`, `setFps`, `setValue(Quiet)`, `setRange(Quiet)`, `getValue`, `getRange`, `destroy`. Emits component-local `seek`, `in-change`, `out-change`, `range-change`.
 

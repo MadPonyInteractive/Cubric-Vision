@@ -36,6 +36,7 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { qs, on } from '../../../utils/dom.js';
+import { frameSink } from '../../../services/frameSink.js';
 
 export const MpiVideoSurface = ComponentFactory.create({
     name: 'MpiVideoSurface',
@@ -49,23 +50,41 @@ export const MpiVideoSurface = ComponentFactory.create({
         const muted    = props.muted ? 'muted' : '';
 
         return `
-            <div class="mpi-video-surface" data-playing="false">
+            <div class="mpi-video-surface" data-playing="false" data-frame="false">
                 <video class="mpi-video-surface__video"
                     ${src ? `src="${src}"` : ''}
                     ${poster ? `poster="${poster}"` : ''}
                     ${autoplay} ${loop} ${muted}
                     playsinline>
                 </video>
+                <canvas class="mpi-video-surface__frame" aria-hidden="true"></canvas>
             </div>
         `;
     },
 
     setup: (el, props, emit) => {
-        const video = qs('.mpi-video-surface__video', el);
+        const video  = qs('.mpi-video-surface__video', el);
+        const canvas = qs('.mpi-video-surface__frame', el);
         const _unsubs = [];
 
         let _fps = +props.fps > 0 ? +props.fps : 24;
         let _frameCount = null;
+        let _src = props.src || '';
+
+        // ── Frame overlay (MPI-283) ───────────────────────────────────────
+        // Paint an EXACT decoded frame (mediabunny) on the canvas for
+        // paused/frame-step display — <video>.currentTime is not frame-accurate
+        // by spec. Show the canvas over the video only while stepping; the
+        // native <video> owns PLAY. If the sink can't decode this clip on this
+        // platform, we keep the native seek fallback (never worse than before).
+        const _showFrameCanvas = (frameCanvas) => {
+            const ctx = canvas.getContext('2d');
+            canvas.width  = frameCanvas.width;
+            canvas.height = frameCanvas.height;
+            ctx.drawImage(frameCanvas, 0, 0);
+            el.setAttribute('data-frame', 'true');
+        };
+        const _hideFrameCanvas = () => { el.setAttribute('data-frame', 'false'); };
 
         if (typeof props.volume === 'number') {
             video.volume = Math.max(0, Math.min(1, props.volume));
@@ -85,7 +104,7 @@ export const MpiVideoSurface = ComponentFactory.create({
         }));
 
         // ── Native event → component-local re-emit ────────────────────────
-        const _onPlay   = () => { _syncPlayState(); emit('play',  { time: video.currentTime || 0 }); };
+        const _onPlay   = () => { _hideFrameCanvas(); _syncPlayState(); emit('play',  { time: video.currentTime || 0 }); };
         const _onPause  = () => { _syncPlayState(); emit('pause', { time: video.currentTime || 0 }); };
         const _onEnded  = () =>                        emit('ended', { time: video.currentTime || 0 });
         const _onTime   = () => emit('timeupdate', { time: video.currentTime || 0, duration: video.duration || 0 });
@@ -105,6 +124,9 @@ export const MpiVideoSurface = ComponentFactory.create({
 
         el._setSrc = (url) => {
             if (!url) return;
+            if (_src && _src !== url) frameSink.dispose(_src);
+            _src = url;
+            _hideFrameCanvas();
             video.src = url;
             video.load();
         };
@@ -131,7 +153,32 @@ export const MpiVideoSurface = ComponentFactory.create({
         // indexing to collide on repeated frames or fall short of the last
         // frame. Falls back to declared _fps until duration is loaded.
         const _effectiveFps = () => {
+            const dur = video.duration;
+            if (_frameCount && Number.isFinite(dur) && dur > 0) return _frameCount / dur;
             return _fps;
+        };
+
+        el.getEffectiveFps = () => _effectiveFps();
+
+        // Exact integer index of the clip's last frame — same law frameStep uses:
+        // for the full clip prefer probed frameCount-1 (avoids a synthetic
+        // one-past-last on short clips); for a trim, round(out * effFps). MPI-287.
+        el.lastFrameIndex = (trimOut = null) => {
+            const dur = video.duration;
+            const eff = _effectiveFps();
+            if (!Number.isFinite(dur) || dur <= 0 || !Number.isFinite(eff) || eff <= 0) return null;
+            const hasTrim = Number.isFinite(+trimOut) && +trimOut > 0 && +trimOut < dur - 1e-6;
+            if (hasTrim) return Math.max(0, Math.round(+trimOut * eff));
+            return _frameCount ? _frameCount - 1 : Math.max(0, Math.round(dur * eff) - 1);
+        };
+
+        // Frame-accurate decode of a single frame to a canvas via the shared sink
+        // (same exact-decode path the scrub overlay uses). Returns null when the
+        // clip can't be decoded on this platform — caller falls back to native
+        // <video> capture. MPI-287.
+        el.captureFrameCanvas = async (frameIndex) => {
+            if (!_src || !Number.isFinite(frameIndex)) return null;
+            return frameSink.getFrameCanvas(_src, frameIndex, _effectiveFps());
         };
 
         el._setVolume = (v) => {
@@ -168,7 +215,7 @@ export const MpiVideoSurface = ComponentFactory.create({
         // Step semantics work in INTEGER frame space to avoid float
         // off-by-ones at range edges. Range timestamps are half-open
         // `[lo, hi)` — visible frames are `floor(lo*fps) … floor(hi*fps)-1`.
-        el.frameStep = (direction, range = null) => {
+        el.frameStep = async (direction, range = null) => {
             const dur = video.duration;
             if (!Number.isFinite(dur) || dur <= 0) return;
             const dir = direction < 0 ? -1 : 1;
@@ -212,13 +259,26 @@ export const MpiVideoSurface = ComponentFactory.create({
                 }
             }
 
-            // Bias by a quarter-frame toward the target so the seek lands
-            // PAST the frame boundary even when float math (or NTSC-style
-            // 29.97 timebase) leaves `nextFrame * fs` slightly before the
-            // actual PTS of the intended frame. Chromium picks the frame
-            // whose PTS <= currentTime, so without the bias a step can
-            // re-land on the previous frame (visible as "repeated frames").
-            video.currentTime = nextFrame * fs + 0.25 * fs;
+            // Paint the EXACT decoded frame on the canvas FIRST, THEN move the
+            // native currentTime. Order matters: the canvas overlay owns the
+            // visible pixels while stepping, and seeking the <video> underneath
+            // makes it briefly render its own (drifted) seek target. If we seek
+            // before the canvas is up, that native repaint flashes through — the
+            // "interpolated flash / play-then-jump-back" glitch on scrub. With
+            // the canvas already covering, moving currentTime for audio/PLAY
+            // sync is invisible.
+            const frameCanvas = _src
+                ? await frameSink.getFrameCanvas(_src, nextFrame, eff)
+                : null;
+            if (frameCanvas) {
+                _showFrameCanvas(frameCanvas);
+                video.currentTime = nextFrame * fs;
+            } else {
+                // Undecodable on this platform (or no src): fall back to the old
+                // quarter-frame-bias seek so stepping is no worse than before.
+                _hideFrameCanvas();
+                video.currentTime = nextFrame * fs + 0.25 * fs;
+            }
         };
 
         // ── Cleanup ───────────────────────────────────────────────────────
@@ -229,6 +289,7 @@ export const MpiVideoSurface = ComponentFactory.create({
             }
             // Stop + unload media
             try { video.pause(); video.removeAttribute('src'); video.load(); } catch (_) { /* noop */ }
+            if (_src) { try { frameSink.dispose(_src); } catch (_) { /* noop */ } }
         };
 
         _syncPlayState();
