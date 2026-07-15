@@ -1,8 +1,8 @@
 {
   "id": "5f6b99a1-e771-48bb-b643-01a722606ce4",
   "revision": 0,
-  "last_node_id": 933,
-  "last_link_id": 1461,
+  "last_node_id": 934,
+  "last_link_id": 1464,
   "nodes": [
     {
       "id": 535,
@@ -2913,87 +2913,6 @@
       ]
     },
     {
-      "id": 774,
-      "type": "MpiClearVram",
-      "pos": [
-        5750.29153240027,
-        852.544065586573
-      ],
-      "size": [
-        186.9140625,
-        26
-      ],
-      "flags": {},
-      "order": 57,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "passthrough",
-          "shape": 7,
-          "type": "*",
-          "link": 1450
-        }
-      ],
-      "outputs": [
-        {
-          "name": "passthrough",
-          "type": "*",
-          "links": [
-            1460
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MpiClearVram",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 932,
-      "type": "MpiSaveVideo",
-      "pos": [
-        6001.866095858753,
-        845.4350822714722
-      ],
-      "size": [
-        270,
-        126
-      ],
-      "flags": {},
-      "order": 58,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 1460
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": null
-        }
-      ],
-      "outputs": [],
-      "title": "Output_Video",
-      "properties": {
-        "Node name for S&R": "MpiSaveVideo"
-      },
-      "widgets_values": [
-        16,
-        "MpiVideo",
-        false
-      ]
-    },
-    {
       "id": 776,
       "type": "MpiClearVram",
       "pos": [
@@ -3045,7 +2964,7 @@
       ],
       "size": [
         270,
-        126
+        150
       ],
       "flags": {},
       "order": 55,
@@ -3071,6 +2990,134 @@
       "widgets_values": [
         16,
         "MpiVideo",
+        false,
+        false
+      ]
+    },
+    {
+      "id": 774,
+      "type": "MpiClearVram",
+      "pos": [
+        5750.29153240027,
+        852.544065586573
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 57,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 1450
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            1462
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiClearVram",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 934,
+      "type": "MpiListRange",
+      "pos": [
+        6064.851279551181,
+        850.2608408737083
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 58,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "list_input",
+          "type": "*",
+          "link": 1462
+        }
+      ],
+      "outputs": [
+        {
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            1464
+          ]
+        },
+        {
+          "name": "count",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Remove first Frame (!repeat)",
+      "properties": {
+        "Node name for S&R": "MpiListRange"
+      },
+      "widgets_values": [
+        1,
+        -1
+      ]
+    },
+    {
+      "id": 932,
+      "type": "MpiSaveVideo",
+      "pos": [
+        6409.188930788927,
+        847.7234128047878
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 59,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1464
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [],
+      "title": "Output_Video",
+      "properties": {
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        16,
+        "MpiVideo",
+        false,
         false
       ]
     }
@@ -3645,18 +3692,26 @@
       "SIGMAS"
     ],
     [
-      1460,
-      774,
-      0,
-      932,
-      0,
-      "IMAGE"
-    ],
-    [
       1461,
       776,
       0,
       933,
+      0,
+      "IMAGE"
+    ],
+    [
+      1462,
+      774,
+      0,
+      934,
+      0,
+      "*"
+    ],
+    [
+      1464,
+      934,
+      0,
+      932,
       0,
       "IMAGE"
     ]
@@ -3677,7 +3732,7 @@
   ],
   "config": {},
   "extra": {
-    "frontendVersion": "1.45.19",
+    "frontendVersion": "1.45.20",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
@@ -3685,10 +3740,10 @@
     "ue_links": [],
     "links_added_by_ue": [],
     "ds": {
-      "scale": 0.6115909044841578,
+      "scale": 1.3109994191500203,
       "offset": [
-        -2326.165922906523,
-        -244.65807696917435
+        -5421.067622845056,
+        -555.828978920435
       ]
     },
     "workflowRendererVersion": "LG",
