@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-290","at":"2026-07-15T16:46:08.743Z","actor":"vscode","summary":"Created MPI-290."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-290","at":"2026-07-15T16:46:11.559Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-290 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-290","at":"2026-07-15T16:46:13.999Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-290 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-290","at":"2026-07-15T20:03:12.772Z","actor":"vscode","summary":"Deleted MPI-290."}

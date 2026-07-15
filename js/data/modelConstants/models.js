@@ -218,7 +218,7 @@ export const MODELS = [
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
         supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
-        capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true },
+        capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true, batch: false },
         // Style-LoRA labels, INDEX-ALIGNED with the workflow's nine MpiMath gates and
         // its MpiPromptList trigger lines (index 0 = no style, so entry N here selects
         // slot N there). Declared on the ModelDef rather than hardcoded in the control,
@@ -300,7 +300,7 @@ export const MODELS = [
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
         supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
-        capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true },
+        capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true, batch: false },
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',

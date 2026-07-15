@@ -1058,6 +1058,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 // Without this, an orientation model (SDXL) would render Wan's tiers.
                 if (componentId === 'qualityTier' && !usesQualityTier(model?.type)) continue;
 
+                // Batch picker is model-gated. Defaults TRUE (every model batches
+                // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
+                // its two-pass sampler graph has no Input_Batch_Size node, so a
+                // batch>1 request is a dead injection — hide the control.
+                if (componentId === 'batch' && model?.capabilities?.batch === false) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);

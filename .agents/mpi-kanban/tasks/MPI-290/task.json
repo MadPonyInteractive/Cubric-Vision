@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-290",
+  "title": "Batching does not seem to be working.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "deleted",
+  "created_at": "2026-07-15T16:46:08.743Z",
+  "updated_at": "2026-07-15T20:03:12.772Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

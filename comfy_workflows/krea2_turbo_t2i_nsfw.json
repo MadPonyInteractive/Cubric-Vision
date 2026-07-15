@@ -161,16 +161,13 @@
   },
   "76": {
     "inputs": {
+      "batch_size": 1,
       "width": [
         "75",
         0
       ],
       "height": [
         "74",
-        0
-      ],
-      "batch_size": [
-        "243",
         0
       ]
     },
@@ -223,7 +220,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": "",
+      "cleanup": 0,
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -1023,15 +1020,6 @@
     "class_type": "PreviewAny",
     "_meta": {
       "title": "Output_prompt"
-    }
-  },
-  "243": {
-    "inputs": {
-      "int": 1
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Batch_Size"
     }
   },
   "245": {
