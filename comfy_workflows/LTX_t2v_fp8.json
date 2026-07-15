@@ -1790,8 +1790,9 @@
   "457": {
     "inputs": {
       "filename_prefix": "MpiVideo",
+      "truncate_to_audio": false,
       "images": [
-        "215",
+        "485",
         0
       ],
       "audio": [
@@ -1815,6 +1816,7 @@
   "470": {
     "inputs": {
       "filename_prefix": "MpiVideo",
+      "truncate_to_audio": false,
       "images": [
         "65",
         0
@@ -1916,6 +1918,20 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
+    }
+  },
+  "485": {
+    "inputs": {
+      "start": 1,
+      "end": -1,
+      "list_input": [
+        "215",
+        0
+      ]
+    },
+    "class_type": "MpiListRange",
+    "_meta": {
+      "title": "Remove first Frame (!repeat)"
     }
   }
 }
