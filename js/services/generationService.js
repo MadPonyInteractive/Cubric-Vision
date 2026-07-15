@@ -174,7 +174,7 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
     const height = Number(injectionParams.Height || injectionParams.height || opts.placeholderGroup?.height || 0) || 0;
     const batchCount = Math.max(
         1,
-        Number(injectionParams.Batch_Size || injectionParams.batchSize || opts.batchCount || ((opts.extraTempIds?.length || 0) + 1)) || 1
+        Number(injectionParams.Input_Batch_Size || injectionParams.Batch_Size || injectionParams.batchSize || opts.batchCount || ((opts.extraTempIds?.length || 0) + 1)) || 1
     );
     const model = config.model || {};
     const command = getCommand(config.operation);
@@ -215,6 +215,7 @@ function _queueSnapshotItem(job, status) {
         1,
         Number(
             job.display?.batchCount
+            || job.config?.injectionParams?.Input_Batch_Size
             || job.config?.injectionParams?.Batch_Size
             || job.config?.injectionParams?.batchSize
             || ((job.opts?.extraTempIds?.length || 0) + 1)
@@ -850,8 +851,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // so clicking it and generating inside the 300ms window snapshots the
             // stale count while Batch_Size already carries the new one. The rendered
             // value wins, or Reuse Prompt replays a batch the run never used.
-            if ('batch' in _shared && Number.isFinite(injectionParams.Batch_Size)) {
-                _shared.batch = injectionParams.Batch_Size;
+            const _batchInj = injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size;
+            if ('batch' in _shared && Number.isFinite(_batchInj)) {
+                _shared.batch = _batchInj;
             }
             const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
             const _model = {};

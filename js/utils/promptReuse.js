@@ -385,7 +385,7 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
         };
     }
 
-    const batch = _number(params.Batch_Size ?? params.batchSize);
+    const batch = _number(params.Input_Batch_Size ?? params.Batch_Size ?? params.batchSize);
     if (batch != null) sharedUpdates.batch = Math.min(4, Math.max(1, Math.round(batch)));
     else if (_hasComponent(components, 'batch')) sharedUpdates.batch = PROMPT_CONTROL_DEFAULTS.batch;
 

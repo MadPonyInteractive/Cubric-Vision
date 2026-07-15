@@ -1293,7 +1293,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
 
             const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image', mediaItems = []) => {
-                const batchCount = Math.max(1, Number(injectionParams.Batch_Size) || 1);
+                const batchCount = Math.max(1, Number(injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size) || 1);
                 const tempIds = Array.from({ length: batchCount }, () => crypto.randomUUID());
                 const tempId = tempIds[0];
                 const startFrame = (mediaItems || []).find(item => item?.mediaType === 'image' && item?.role === 'startFrame')
