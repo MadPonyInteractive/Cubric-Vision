@@ -612,10 +612,6 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     return { frozenParams: nextFrozenParams, previewAssets: result };
 }
 
-function _isI2VOperation(operation) {
-    return String(operation || '').startsWith('i2v');
-}
-
 function _snapshotRoleForMediaItem(item, index, usedRoles) {
     if (item?.role === 'startFrame' || item?.role === 'endFrame') return item.role;
     if (index === 0 && !usedRoles.has('startFrame')) return 'startFrame';
@@ -623,8 +619,14 @@ function _snapshotRoleForMediaItem(item, index, usedRoles) {
     return null;
 }
 
+// Snapshot the INPUT image(s) of any image-input op (i2i, edit, i2v, …) into the
+// content-addressed store so Reuse Prompt can resurface them (MPI-227 wired only
+// i2v; i2i/edit had image inputs but never snapshotted → "Use Images" reuse was
+// dead for every image-edit card). Gate is the presence of image mediaItems, not
+// the op name: t2i/t2v have no image input → imageItems empty → bail below. Only
+// generationSettings.mediaItems (the inputs) are read, never the output.
 async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, itemId, operation, generationSettings }) {
-    if (!_isI2VOperation(operation) || !generationSettings || typeof generationSettings !== 'object') {
+    if (!generationSettings || typeof generationSettings !== 'object') {
         return { generationSettings, previewAssets: null };
     }
 
