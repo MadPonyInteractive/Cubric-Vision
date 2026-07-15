@@ -28,6 +28,7 @@
 - **Drag a card anywhere** — gallery cards are now proper drags: pull one out to another application to export it, or just click-drag it a couple of inches and let go — it drops straight into the prompt box, no careful aiming at the box required.
 - **RunPod unlocks with your API key** — the separate "Enable RunPod remote engine" switch is gone. Saving a RunPod API key now reveals the remote-engine controls directly, so there's one less toggle to find. The Account section explains up front that generation stays local until you Connect and that GPU and storage billing happen on your own RunPod account.
 - **Frame-accurate video playback** — stepping, scrubbing, and trimming a clip now land on the exact frame every time. The player shows the true decoded frame when paused or stepping — no more stuck playhead, off-by-one steps, or the playhead jumping when you drop it — with colors that match the video, and sub-range loops that play back cleanly.
+- **Pod connected notification** — when a RunPod GPU finishes connecting while you're looking elsewhere, a desktop notification tells you the pod is ready. Toggle it in Settings under Desktop Notifications (on by default).
 
 ## fixes
 
