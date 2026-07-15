@@ -80,7 +80,7 @@ export const MpiSettings = ComponentFactory.create({
                     <div class="mpi-settings__plate" id="mpiSettingsToastSoundPlate">
                         <div class="mpi-settings__plate-main">
                             <span class="mpi-settings__plate-label">Play sound on notification</span>
-                            <span class="mpi-settings__plate-desc">Fires only while the app is not focused. In-app messages are always silent.</span>
+                            <span class="mpi-settings__plate-desc">Fires only while the app is in the background. In-app messages are unaffected.</span>
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsToastSoundSlot"></div>
                     </div>

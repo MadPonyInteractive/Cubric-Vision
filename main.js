@@ -782,9 +782,7 @@ app.on('ready', () => {
       title: payload.title || 'Cubric Studio',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
-      // "Play sound on notification" setting: gate the OS chime. Defaults to
-      // sound ON when the flag is absent (payload.sound === undefined).
-      silent: payload.sound === false,
+      silent: false,
       urgency: payload.urgency || 'normal',
       timeoutType: payload.timeoutType || 'default',
     };
@@ -813,7 +811,6 @@ app.on('ready', () => {
       title: payload.title || 'Generation complete',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
-      sound: payload.sound,
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Generation complete');
@@ -824,7 +821,6 @@ app.on('ready', () => {
       title: payload.title || 'Download complete',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
-      sound: payload.sound,
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Download complete');
@@ -835,7 +831,6 @@ app.on('ready', () => {
       title: payload.title || 'Pod connected',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
-      sound: payload.sound,
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Pod connected');
