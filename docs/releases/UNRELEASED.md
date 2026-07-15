@@ -26,6 +26,7 @@
 - **Settings, redesigned** — the Settings panel got a full visual pass: every option is now a clean row with its control on the right and a plain-language description on the left, grouped into clearly-titled sections. On/off options are proper toggle switches that light up when active, and the RunPod, model-folder, and notification areas all read as one consistent system instead of a wall of checkboxes.
 - **Drag a card anywhere** — gallery cards are now proper drags: pull one out to another application to export it, or just click-drag it a couple of inches and let go — it drops straight into the prompt box, no careful aiming at the box required.
 - **RunPod unlocks with your API key** — the separate "Enable RunPod remote engine" switch is gone. Saving a RunPod API key now reveals the remote-engine controls directly, so there's one less toggle to find. The Account section explains up front that generation stays local until you Connect and that GPU and storage billing happen on your own RunPod account.
+- **Frame-accurate video playback** — stepping, scrubbing, and trimming a clip now land on the exact frame every time. The player shows the true decoded frame when paused or stepping — no more stuck playhead, off-by-one steps, or the playhead jumping when you drop it — with colors that match the video, and sub-range loops that play back cleanly.
 
 ## fixes
 
