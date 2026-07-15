@@ -1389,18 +1389,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
-        async function _handleReverseVideo() {
+        // mode: 'both' (video+audio) | 'video' | 'audio'
+        async function _handleReverseVideo(mode = 'both') {
             const project = state.currentProject;
             if (!project?.folderPath || !project?.id) return;
             const currentItem = _group.history[_currentIdx];
             const sourcePath = currentItem?.filePath;
             if (!sourcePath) { _showToast('No source video', 'error'); return; }
 
-            _showToast('Reversing video…', 'info');
+            const noun = mode === 'video' ? 'video' : mode === 'audio' ? 'audio' : 'video & audio';
+            _showToast(`Reversing ${noun}…`, 'info');
             try {
                 const body = {
                     folderPath: project.folderPath,
                     sourcePath,
+                    mode,
                     groupId: _group.id,
                     itemId:  currentItem?.id,
                 };
@@ -1429,10 +1432,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     hasAudio:   data.item.hasAudio,
                     trim:       data.item.trim,
                 });
-                _showToast('Reversed video saved', 'success');
+                _showToast(`Reversed ${noun} saved`, 'success');
             } catch (err) {
                 clientLogger.warn('MpiGroupHistoryBlock', 'video reverse failed', err);
-                _showToast('Video reverse failed: ' + err.message, 'error');
+                _showToast(`Reverse ${noun} failed: ` + err.message, 'error');
             }
         }
 
@@ -2257,19 +2260,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(Events.on('video-viewer:context-menu', ({ x, y }) => {
                 const disabled = !_anyInstalledModelHasI2V();
                 const reason = disabled ? 'No installed video model supports I2V' : '';
+                const noAudio = !_group.history[_currentIdx]?.hasAudio;
                 MpiContextMenu.show({
                     x, y,
                     items: [
                         { key: 'snapshot',  icon: 'camera',       label: 'Create snapshot',    info: 'Save current frame as image' },
                         { key: 'set-start', icon: 'frameBack',    label: 'Set as start frame', disabled, info: reason },
                         { key: 'set-end',   icon: 'frameForward', label: 'Set as end frame',   disabled, info: reason },
-                        { key: 'reverse',   icon: 'reverse',      label: 'Reverse video' },
+                        { key: 'reverse-both',  icon: 'reverse', label: 'Reverse video & audio' },
+                        { key: 'reverse-video', icon: 'reverse', label: 'Reverse video' },
+                        { key: 'reverse-audio', icon: 'reverse', label: 'Reverse audio', disabled: noAudio, info: noAudio ? 'Source has no audio' : '' },
                     ],
                     onSelect: (key) => {
                         if (key === 'snapshot') _handleCropSnapshot();
                         else if (key === 'set-start') _setFrameFromVideo('startFrame');
                         else if (key === 'set-end') _setFrameFromVideo('endFrame');
-                        else if (key === 'reverse') _handleReverseVideo();
+                        else if (key === 'reverse-both')  _handleReverseVideo('both');
+                        else if (key === 'reverse-video') _handleReverseVideo('video');
+                        else if (key === 'reverse-audio') _handleReverseVideo('audio');
                     },
                 });
             }));
