@@ -734,10 +734,23 @@ function createEngine({ engine, alwaysLocal }) {
     },
 
     connect() {
-        // Reuse a live socket (this engine owns exactly one; it always points at
-        // this engine's target, so no wrong-engine check is needed — that was the
-        // single-socket `_wsForceLocal` hack, dead now that sockets are per-engine).
-        if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
+        // Intended target for THIS connect: remote proxy WS when the remote engine
+        // is active and a wsUrl resolves, else the local socket. A local-pinned
+        // engine is always local. Computed up-front so the reuse branch can tell
+        // whether the live socket still points at the right engine.
+        const _intendedEngine = (!this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId)) ? 'remote' : 'local';
+
+        // Reuse a live socket ONLY if it is bound to the intended engine. A stale
+        // socket from the OTHER engine can exist: the remote instance opens a
+        // LOCAL-fallback socket during auto-start boot (before remote mode goes
+        // active), which reaches OPEN with `_engine==='local'`. Once remote is up,
+        // an engine-blind reuse would keep that local socket forever — its `onopen`
+        // already fired, so `_wsReady` never re-flips and `isWsReady()` stays false,
+        // wedging every remote generation on the "Still connecting" guard. Only reuse
+        // when the bound engine matches; otherwise fall through and re-open below.
+        if (this._ws
+            && this._engine === _intendedEngine
+            && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
                     const jpeg = _stripPreviewHeader(event.data);
