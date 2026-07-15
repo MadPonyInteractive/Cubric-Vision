@@ -890,8 +890,9 @@
       "fps": 16,
       "filename_prefix": "MpiVideo",
       "use_audio": false,
+      "truncate_to_audio": false,
       "images": [
-        "774",
+        "880",
         0
       ]
     },
@@ -905,6 +906,7 @@
       "fps": 16,
       "filename_prefix": "MpiVideo",
       "use_audio": false,
+      "truncate_to_audio": false,
       "images": [
         "776",
         0
@@ -985,6 +987,20 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
+    }
+  },
+  "880": {
+    "inputs": {
+      "start": 1,
+      "end": -1,
+      "list_input": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "MpiListRange",
+    "_meta": {
+      "title": "Remove first Frame (!repeat)"
     }
   }
 }
