@@ -1478,7 +1478,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // media op via _emitMediaChange. Reuse Prompt clears+replaces these after
         // mount, so it always wins over a restore.
         {
-            const _mediaSlot = state.promptMedia?.[_wsKey];
+            const _mediaSlot = state.promptMedia?.[_wsKey] || {};
             const _saved = _matchesSlot(_mediaSlot) ? (_mediaSlot.items || []) : [];
             if (_saved.length) {
                 _restoringMedia = true;
