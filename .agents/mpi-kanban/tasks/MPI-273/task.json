@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-273",
+  "title": "Semantic phase labels",
+  "description": "DROPPED. Semantic phase labels from MpiLogger [MPI_PHASE] stdout markers didn't surface well vs renamed nodes. Future: read rgthree's node-title progress signal instead. All code reverted; no workflow changes shipped. See validation.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-13T15:49:14Z",
+  "updated_at": "2026-07-13T15:56:00Z",
+  "activeSessionTitle": "Semantic phase labels",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

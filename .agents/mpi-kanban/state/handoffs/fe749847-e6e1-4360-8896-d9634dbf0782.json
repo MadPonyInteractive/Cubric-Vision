@@ -1,0 +1,127 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "fe749847-e6e1-4360-8896-d9634dbf0782",
+  "generated_at": "2026-07-13T14:08:57Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-272 media-load path-into-string cleanup — Phases 1/2 shipped, raw→API pipeline rebuilt + validator gate, Phase 3 injector coded awaiting live-ux test",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Continue MPI-272: migrate app off the OLD media-load system (placeholder.png/ltx_silence.wav staging + _uploadImage upload branch + generator STAMP steps) onto the path-into-string system the workflows already use. Full removal EXCEPT latents.",
+    "status": "in_progress",
+    "summary": "Phases 1 (generators), 2 (backend staging), stragglers, krea2, and reconverts all COMMITTED. The raw→API tooling (Phase 5) grew into a full git-driven pipeline rebuild with an injection-rules validator gate — committed, raw/ now tracked. Phase 3 (the risky injector rewrite) is CODED but NOT committed and awaits the user's live-app UX test. 20 generated workflow files are staged (uncommitted) for /mpi-end."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-272/plan.md",
+    "completed": [
+      "Phase 1: generators — dropped placeholder/silence STAMP from all 7 generate_*.py (bde02016)",
+      "Stragglers: App_sdxl_regen.json + remove_background.json migrated LoadImage→MpiLoadImageFromPath (72eeeae6)",
+      "Phase 2: backend — WORKFLOW_INPUT_DEFAULTS + _MEDIA_INPUT_CLASSES narrowed to latents only (2afe11ea)",
+      "krea2 t2i crop fix processed (MpiCrop→ImageResizeKJv2) (e33ca17e)",
+      "raw/ read-only guards in both converters (f918c907)",
+      "Phase 5 tooling: git-driven sync-raw-workflows.mjs + validate-injection-rules.mjs gate (5921e30d)",
+      "raw/ sources tracked in git — 23 files (4d62d586)"
+    ],
+    "pending": [
+      "Phase 3: injector rewrite CODED not committed — USER LIVE-UX TEST then commit",
+      "Phase 4: git rm comfy_workflows/input/placeholder.png + ltx_silence.wav; rewrite injection-rules docs (path→string contract)",
+      "Phase 5 docs: reference the raw→API sync command in add-model + add-app playbooks (tooling already built)",
+      "/mpi-end: commit the 20 staged generated workflow files"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-272",
+    "title": "Media-load system migration — path-into-string cleanup (kill placeholder/silence, keep latents)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-272/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-272/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-272/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "commit Phase 3 after the user confirms the live-ux test passes",
+    "implement Phase 4 and Phase 5-docs"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md updated: Plan Drift + full Session state @ 2026-07-13 block (commits, staged state, Phase 3 resume point)",
+      "Memory feedback_raw_workflows_user_owned.md written + indexed in MEMORY.md (raw/ is user-owned, read-only to tooling)",
+      "MEMORY.md compacted under limit"
+    ],
+    "pending": [
+      "After Phase 3 commits: write a feedback memory 'media injection is now path→string only; nodes self-gate; latents are the sole staging survivor'",
+      "Consider a new kanban card for the NVIDIA_PID seed bug the validator caught (user already fixed the raw workflow; the card would track whether other workflows need the same Input_Seed audit)",
+      "/mpi-end must commit the 20 staged generated workflow files (API templates + orchestrated runtime)"
+    ]
+  },
+  "next_action": {
+    "description": "Resume at Phase 3. The injector rewrite in js/services/comfyController.js is coded but NOT committed. Ask the user to exercise it in the LIVE app: i2i (Input_Image), detailer (Input_Mask, mask channel), t2v-with-no-start-frame, reuse-prompt on a real gallery card, then delete a reused card's .preview-assets source and re-run reuse (expect a WARNING toast 'assets no longer exist', NOT the crash dialog), and one image gen on a connected remote Pod. When the user confirms all pass, commit Phase 3. Then do Phase 4 (git rm placeholder.png + ltx_silence.wav, rewrite injection docs) and Phase 5 docs (reference the raw→API sync command in the add-model/add-app playbooks). Do NOT re-run orchestrate.py — the tree has 20 staged generated files; /mpi-end will commit them.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "raw/ is now TRACKED in git and is the source of truth for 'what changed' (git-diff, not mtime). raw/ is USER-OWNED and read-only to ALL tooling — both converters hard-refuse writing into raw/.",
+      "sync-raw-workflows.mjs commits the RAW sources FIRST (record of the user's edit), then converts→validates→orchestrates, and leaves generated API+runtime STAGED for /mpi-end (one generated-workflow commit per session, not per sync).",
+      "A new validator (scripts/validate-injection-rules.mjs) gates every converted API before bake against the injection rules (title-prefix law, capture node, seed convention MPI-257, dangling/unknown-node). ANY violation STOPS the run and names the node — the user fixes in ComfyUI and re-exports; agents NEVER edit workflow JSON.",
+      "Title-law check only flags a deprecated bare title when NO Input_<name>/Output_<name> sibling exists (else the bare node is a legitimate workflow-internal helper, e.g. MpiWanSeconds 'Duration' fed by an 'Input_Duration' MpiInt).",
+      "Phase 3 injector: image+mask now flip to 'imagepath' when the target node is MpiLoadImageFromPath, routing through the path-resolve branch (_resolveMediaPath + _uploadRemoteMedia) instead of the deleted _uploadImage upload-name branch. The reuse-404 soft-error is preserved via a NEW _assertMediaSourceExists (HEAD probe on /project-file?path=; 404 → tagged input_asset_deleted)."
+    ],
+    "constraints": [
+      "NEVER write/move/convert-in-place/git-checkout anything under comfy_workflows/raw/ — user's only editable LiteGraph sources; overwriting with API JSON is unrecoverable. See feedback_raw_workflows_user_owned.",
+      "Do NOT re-run orchestrate.py on the current dirty tree — it global-rebuilds and would clobber the 20 staged generated files. See feedback_orchestrate_global_rebuild_hazard.",
+      "Agents NEVER edit workflow JSON under comfy_workflows/ (injection rule). Contract changes → tell the user to re-title/re-author in the ComfyUI graph and re-export.",
+      "Phase 3 touches the local/remote engine twin — the user must verify BOTH the local path-inject AND the Pod _uploadRemoteMedia path. See feedback_check_both_engine_paths.",
+      "comfyController.js routes are NOT hot-reloaded and the user owns port 3000/8188 — do not restart their app or engine to test.",
+      "The validator needs a running ComfyUI (/object_info on 8188). Engine was up (200) this session.",
+      "comfy_workflows/Model Merger.json + raw/Model Merger.json are the user's personal tool — gitignored, never processed/committed."
+    ],
+    "files_modified": [
+      "comfy_workflows/scripts/workflow_generation/generate_ltx.py",
+      "comfy_workflows/scripts/workflow_generation/generate_wan.py",
+      "comfy_workflows/scripts/workflow_generation/generate_wan5b.py",
+      "comfy_workflows/scripts/workflow_generation/generate_chroma.py",
+      "comfy_workflows/scripts/workflow_generation/generate_sdxl.py",
+      "comfy_workflows/scripts/workflow_generation/generate_krea2.py",
+      "routes/comfy.js",
+      "js/services/commandExecutor.js",
+      "js/services/comfyController.js",
+      "scripts/sync-raw-workflows.mjs",
+      "scripts/workflow-to-api.mjs",
+      "scripts/validate-injection-rules.mjs",
+      ".gitignore",
+      ".agents/mpi-kanban/tasks/MPI-272/plan.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-272/plan.md",
+      "js/services/comfyController.js",
+      ".claude/rules/comfy_injection.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["comfy-injection", "media-injection", "workflow-tooling"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-13T14:08:57Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/fe749847-e6e1-4360-8896-d9634dbf0782.json and use mpi-continue to resume MPI-272 (media-load path-into-string cleanup, branch 1.2.0). Phases 1 and 2 are committed. The raw→API pipeline was rebuilt this session: raw/ is now tracked in git, sync-raw-workflows.mjs is git-driven (commit raw first → convert → validate-gate → orchestrate → stage generated for /mpi-end), and a new scripts/validate-injection-rules.mjs gates every converted API against the injection rules. 20 generated workflow files are STAGED but uncommitted (do NOT re-run orchestrate.py). The resume point is Phase 3: the injector rewrite in js/services/comfyController.js (image+mask → 'imagepath' path-resolve branch, deleted _uploadImage, added _assertMediaSourceExists for the reuse-404 warning toast) is CODED but NOT committed. Ask the user to test it in the LIVE app — i2i, detailer with a mask, t2v with no start frame, reuse-prompt on a gallery card, delete a reused card's .preview-assets source then reuse (expect a WARNING toast, not the crash dialog), and one remote-Pod image gen — then commit Phase 3. Never edit workflow JSON or write into comfy_workflows/raw/. After Phase 3, do Phase 4 (git rm placeholder.png + ltx_silence.wav, rewrite injection docs) and Phase 5 docs (reference the raw→API sync command in the add-model/add-app playbooks)."
+}

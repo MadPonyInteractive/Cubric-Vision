@@ -1,0 +1,125 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a08b7d2a-6398-4828-bc2c-600a84f4027b",
+  "generated_at": "2026-07-13T16:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-272 Phase 3 SHIPPED — class-driven media routing + data-URL staging + converter seed-phantom fix + LTX remote-Pod audio verified; resume at Phase 4",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Continue MPI-272: migrate the app off the OLD media-load system (placeholder.png/ltx_silence.wav staging + _uploadImage upload branch) onto the path-into-string system. Full removal EXCEPT latents.",
+    "status": "in_progress",
+    "summary": "Phase 3 (the risky injector rewrite) is COMMITTED (47bac3b8) and live-verified across the full media matrix including remote Pod. Two converter bugs found + fixed this session (seed-phantom widget shift 7571fe2e; auto-mask no-detection crash 582650bc). Left: Phase 4 (rm placeholder/silence + doc rewrite), Phase 5 docs, /mpi-end commit of pre-staged generated files. One DEFERRED non-regression: LTX-2.3 duration/timing bug the user will discriminate via browser + t2v-no-audio tests."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-272/plan.md",
+    "completed": [
+      "Phase 1 generators (bde02016), stragglers (72eeeae6), Phase 2 backend staging (2afe11ea)",
+      "Tooling rewrite: git-driven sync + validate-injection-rules gate (5921e30d); raw/ tracked (4d62d586); raw read-only guards (f918c907)",
+      "Converter seed-phantom control_after_generate fix + krea2/Chroma t2i regen (7571fe2e)",
+      "8 detailers + auto-mask (MpiBlockIfEmptyList) regen (582650bc)",
+      "Phase 3 injector: class-driven media path routing + data-URL staging route + _assertMediaSourceExists + audio rename Input_Audio_File->Input_audio + node_lock MpiNodes bump 2d409b54->0391e34 + LTX rebake (47bac3b8)",
+      "Phase 3 LIVE-VERIFIED: i2i, detailer+mask (local), t2v + i2v start/end frame (local Wan), reuse, start+end+audio on REMOTE POD LTX"
+    ],
+    "pending": [
+      "Phase 4: git rm comfy_workflows/input/placeholder.png + ltx_silence.wav; rewrite injection-rules docs (path->string contract). KEEP latents (sole staging survivor).",
+      "Phase 5 docs: reference the raw->API sync command (sync-raw-workflows.mjs) in add-model + add-app playbooks (tooling already built)",
+      "/mpi-end: commit any still-staged generated workflow files (re-check — release agent may have swept them)",
+      "DEFERRED (not MPI-272): LTX duration/timing bug — user runs discriminator tests next Pod connect",
+      "Deleted-asset reuse WARNING toast: OTHER AGENT is handling (empty-media/missing-link, triggers on Q) — do NOT duplicate"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-272",
+    "title": "Media-load system migration — path-into-string cleanup (kill placeholder/silence, keep latents)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-272/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-272/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-272/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement Phase 4 (git rm placeholder.png + ltx_silence.wav, rewrite injection docs)",
+    "implement Phase 5 docs (playbook references)",
+    "commit Phase 4/5 by explicit pathspec"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md updated: Phase 3 marked DONE with the class-driven-routing pivot, both converter bugs, audio rename, node_lock bump, and the DEFERRED LTX timing bug + discriminator plan",
+      "Memory tool_litegraph_to_api_converter.md updated: seed-phantom control_after_generate law (frontend rule verbatim) + data-URL staging note"
+    ],
+    "pending": [
+      "Consider a feedback memory: 'media injection is now path->string only via class-driven routing (path-loader node class, not title); nodes self-gate on empty string; latents are the sole staging survivor' — write once Phase 4 ships",
+      "Phase 4 doc rewrite: injection contract -> .claude/rules/comfy_injection.md; add a latent-staging-survivor note to docs/comfy.md so a future agent doesn't 'finish the cleanup' by killing latents",
+      "NVIDIA_PID Input_Seed audit (validator-found, user fixed the raw) — consider a card if other workflows need the same seed audit"
+    ]
+  },
+  "next_action": {
+    "description": "Resume at Phase 4. Phase 3 is COMMITTED (47bac3b8) and fully live-verified (incl. remote Pod). Do Phase 4: git rm comfy_workflows/input/placeholder.png + comfy_workflows/input/ltx_silence.wav (media migration is proven, the placeholders are dead), then rewrite the injection-rules docs to the path->string contract (media inputs are path-reading loader nodes with a string field; empty string self-gates via ExecutionBlocker; latents are the SOLE staging survivor — do NOT remove latents). Then Phase 5 docs: reference scripts/sync-raw-workflows.mjs (the git-driven raw->API sync) in docs/playbooks/add-model/ and add-app/. Verify the 20 pre-staged generated files before /mpi-end (the release agent moved the tree — re-check what is staged). NEVER write into comfy_workflows/raw/ (user-owned). Do NOT re-run orchestrate.py on a dirty tree. The LTX duration/timing bug is DEFERRED to the user (browser + t2v-no-audio discriminator) — not a MPI-272 regression, do not chase it unless the user brings back results.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 3 injector routes media by TARGET NODE CLASS (MpiLoadImageFromPath/MpiLoadAudio/MpiLoadVideo/VHS_LoadVideoPath/MpiString fan-out), NOT by title pattern. The old input_image/video/audio title sweep missed the video frame slots (Input_Start_Frame/Input_End_Frame). Class-driven is title-agnostic and covers all current + future slots.",
+      "Data-URL media (auto-mask painted mask, params.Input_Mask = maskDataUrl) is staged to a hashed file in the engine input dir via POST /comfy/stage-media-data-url, then flows through the normal resolve/upload/inject path. Path nodes (os.path.isfile) cannot read a data: URL.",
+      "Audio slot title unified to Input_audio (was Input_Audio_File in 2 ops). Injector title match is case-insensitive (.toLowerCase() both sides), so the node titled Input_Audio still matches — no need to force case anywhere.",
+      "Pod MpiNodes comes from a GitHub clone pinned by commit in dev_configs/node_lock.json — NOT R2, NOT start.sh, NOT the app release. Bumped 2d409b54 -> 0391e34; Pod reinstalls the volume node on next connect (MPI-222).",
+      "Converter seed-phantom fix matches the ComfyUI frontend rule EXACTLY (useIntWidget.ts + docs/WIDGET_SERIALIZATION.md): control = inputSpec.control_after_generate ?? ['seed','noise_seed'].includes(inputSpec.name). 158 engine nodes set the flag; only flag-less seed nodes (RES4LYF/Impact/MpiNodes) needed the name fallback."
+    ],
+    "constraints": [
+      "NEVER write/move/convert-in-place/git-checkout anything under comfy_workflows/raw/ — user's only editable LiteGraph sources. See feedback_raw_workflows_user_owned.",
+      "Do NOT re-run orchestrate.py on a dirty tree — global rebuild clobbers uncommitted generated files. Hash-gated per-template, but only safe on a clean tree or after re-converting only the intended templates. See feedback_orchestrate_global_rebuild_hazard.",
+      "Agents NEVER edit workflow JSON under comfy_workflows/ — contract changes go through the user re-titling/re-authoring in ComfyUI + re-export.",
+      "Shared tree, concurrent agents (a release agent + a deleted-asset-toast agent are/were active). Commit ONLY by explicit pathspec (git commit --only <paths>), never git add -A. js/shell.js + js/shell/heroStats.js are NOT this task's files — leave them. See feedback_shared_tree_commit_hygiene + feedback_concurrent_sessions_same_file.",
+      "The reuse-404 soft-error (_assertMediaSourceExists) is load-bearing — MPI-227/225 history. Losing it regresses reuse UX to the bug-reporter dialog.",
+      "Case-insensitivity already handled everywhere (injector, validator, capture law all .toLowerCase()). Do NOT add a case-linter — user confirmed no value in nagging about case that already works.",
+      "The LTX duration bug is NOT a MPI-272 regression and is DEFERRED to the user's browser/t2v-no-audio discriminator. Do not debug it proactively."
+    ],
+    "files_modified": [
+      "js/services/comfyController.js",
+      "routes/comfy.js",
+      "js/data/commandRegistry.js",
+      "js/services/commandExecutor.js",
+      "dev_configs/node_lock.json",
+      "scripts/workflow-to-api.mjs",
+      "comfy_workflows/scripts/workflow_generation/LTX_i2v_t2v_template.json",
+      "comfy_workflows/scripts/workflow_generation/krea2_turbo_detailer_template.json",
+      "comfy_workflows/scripts/workflow_generation/sdxl_detailer_template.json",
+      "comfy_workflows/scripts/workflow_generation/krea2_turbo_t2i_template.json",
+      "comfy_workflows/scripts/workflow_generation/Chroma_t2i_template.json",
+      "comfy_workflows/ (regenerated runtime: LTX i2v/t2v x bf16/fp8/mxfp8 x stage1/2, krea2/Chroma t2i, 8 detailers, img_auto_mask)",
+      ".agents/mpi-kanban/tasks/MPI-272/plan.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-272/plan.md",
+      ".claude/rules/comfy_injection.md",
+      "routes/comfy.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["comfy-injection", "media-injection", "workflow-tooling"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-13T16:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/a08b7d2a-6398-4828-bc2c-600a84f4027b.json and use mpi-continue to resume MPI-272 (media-load path-into-string cleanup, branch 1.2.0). Phase 3 is DONE and committed (47bac3b8): the injector now routes media by TARGET NODE CLASS (path-reading loaders) not title guessing, plus a data-URL staging route, _assertMediaSourceExists reuse-404 soft-error, audio slot rename Input_Audio_File->Input_audio, and a node_lock MpiNodes bump. It was live-verified across i2i, detailer+mask, t2v, i2v with start+end frame, reuse, AND start+end+audio on a remote Pod. Two converter bugs were also fixed this session (seed-phantom widget shift 7571fe2e; auto-mask no-detection crash 582650bc). Resume at Phase 4: git rm comfy_workflows/input/placeholder.png + ltx_silence.wav (KEEP latents), then rewrite the injection-rules docs to the path->string contract. Then Phase 5 docs: reference scripts/sync-raw-workflows.mjs in the add-model/add-app playbooks. Re-check the pre-staged generated files before /mpi-end (a release agent moved the tree). NEVER write into comfy_workflows/raw/ (user-owned) and do NOT re-run orchestrate.py on a dirty tree. NOTE: the LTX-2.3 duration/timing bug (1s and 2s both produced ~500ms) is DEFERRED to the user's own browser + t2v-no-audio discriminator test — it is NOT a MPI-272 regression, so do not debug it unless the user returns with results. The deleted-asset warning-toast is being handled by ANOTHER agent — do not duplicate it."
+}

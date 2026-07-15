@@ -1,0 +1,106 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "555b46e7-1160-4253-b4e5-b1944b45211a",
+  "generated_at": "2026-07-14T14:20:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-276 Phase 8 (user-ux validation) in progress — rail PASS, rows 2/4/6 PASS, 3 FE bug fixes shipped UNCOMMITTED; resume at rows 1,3,5,7,8 then commit + close",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Run Phase 8 — the user-ux validation matrix. Automated rail first, then walk the user through the live matrix at port 3000. On pass: write validation.md, move MPI-276 to done, run mpi-end.",
+    "status": "in_progress",
+    "summary": "Automated rail PASSED. Live matrix caught 3 real FE bugs (all fixed this session, UNCOMMITTED): detail-footer stomp on immediate reinstall, reload snapshot didn't repaint grid, missed-terminal-at-completion left card stuck at 99%. Rows 2/4/6 PASS. Remaining live rows: 1 (cold-boot phantom), 3 (swallowed-request — needs server stop or network off; user can't do either right now), 5 (uninstall matrix), 7 (remote Pod pass, wrapper 0.2.37), 8 (churn verdict). After remaining rows pass: COMMIT the 2 dirty FE files, move card doing->done, run mpi-end."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+    "completed": [
+      "Phases 1-7 shipped + committed prior sessions (384dd7d8 P3-5, 10767266 P6 app, aba74a9 mpi-ci wrapper 0.2.37, 4aa0c85f P7 docs).",
+      "Phase 8 automated rail: npm run lint (0 errors, 18 pre-existing warnings) + all MPI-276 test suites green (install-store 25, install-progress 11, install-reconciler 12, uninstall-guards 10, model-footer-settling, node-*, node-drift). 6 test fails are ALL pre-existing dead/stale owned by MPI-242/244/90 + the known cancel-only resume-dead test — zero MPI-276 regressions. Logged in validation.md.",
+      "Row 2 (local install) PASS after fixing the detail-footer stomp.",
+      "Row 4 (cancel mid-download) PASS — partial .safetensors + .cubricdl scrubbed from G:/CubricModels/checkpoints, backend job dropped, card->Install, 2nd cancel idempotent (no 404). Closes MPI-123-local.",
+      "Row 6 (reload mid-download) PASS (restore) after fixing snapshot-repaint + missed-terminal backstop."
+    ],
+    "pending": [
+      "Row 1: cold-boot phantom check — needs a fresh app start (costs a restart; do near the end / with user). Verify zero progress bars on jobless cards + GET /comfy/downloads/status shows jobs:[].",
+      "Row 3: swallowed-request drill — server stopped mid-session OR network off, click Install -> ~10s revert + ui:warning toast. USER CANNOT unplug internet (another agent session running) and cannot stop the server easily. Options: I kill only the :3000 server PID (risky if one process tree), or defer row 3 to when the user can drop network. NOT YET RUN.",
+      "Row 5: uninstall matrix — shared-dep sibling survives, tier-family BOTH tiers delete (MPI-258 B1), custom-node folder removed, truthful log. NOTE: peer session removed the 'Also delete model files' checkbox (commit 987cd539) — uninstall now ALWAYS deletes files. Verify disk on G:/CubricModels + engine/.../custom_nodes.",
+      "Row 7: remote Pod pass — user connects a Pod (boot-fetches wrapper 0.2.37); install+uninstall small dep; confirm hot-store evict + pipPins in wrapper log; no local state mutated by remote events.",
+      "Row 8: user verdict on phantom-free churn feel.",
+      "AT CLOSE: COMMIT the 2 UNCOMMITTED FE files (downloadService.js + MpiModelManager.js) by explicit pathspec (shared-tree hygiene — NEVER git add .). Then move MPI-276 doing->done, run mpi-end (appends 'refCount DELETED in MPI-276' to memory feedback_refcount_leaks_never_gate_on_zero, drops MPI-276 from in-flight, notes MPI-123-local closure)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-276",
+    "title": "Download/install/uninstall system refactor - installStore SOT + engine adapters + reconciler",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-276/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-276/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-276/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "validation.md fully current: automated rail results + rows 2/4/6 PASS + all 3 Phase-8 fixes documented (root cause + fix + verify each).",
+      "Peer message af92b333 (uninstall-checkbox removal FYI) acknowledged + resolved; index.json + message file updated. No collision (peer=MpiModelManager.js checkbox region committed 987cd539; my edits are downloadService.js + separate MpiModelManager.js regions)."
+    ],
+    "pending": [
+      "COMMIT the 2 dirty FE files at close (not committed mid-validation).",
+      "Memory updates deferred to mpi-end: refCount-deleted note + drop MPI-276 from in-flight + MPI-123-local closure (cancel display check PASSED in row 4).",
+      "Uncarded follow-up now PARTLY addressed: the 'periodic syncModelInstalled poll while active' backstop was implemented (MpiModelManager _pumpBackstop). The remote WS-missed-100% -> _startHistoryPoll backstop is the SAME class — consider whether the new FE backstop covers remote too (it polls awaitReSync which refreshes remote mirror, so likely yes)."
+    ]
+  },
+  "next_action": {
+    "description": "Continue Phase 8 live matrix at port 3000 (user-owned — never kill their app; coordinate). Remaining rows: 1 cold-boot phantom (needs fresh start), 3 swallowed-request (user must drop network OR agent kills only :3000 server PID — user couldn't do either last session), 5 uninstall matrix (checkbox now always-delete per peer 987cd539), 7 remote Pod pass (wrapper 0.2.37 evict+pipPins), 8 churn verdict. On all-pass: commit the 2 UNCOMMITTED FE files (downloadService.js + MpiModelManager.js) by explicit pathspec, move MPI-276 doing->done, run mpi-end.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "3 FE bugs found+fixed live this session, ALL in js/services/downloadService.js + js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js, ALL UNCOMMITTED. (1) Detail-footer STOMP on uninstall->immediate-reinstall: download:started fires twice (client + SSE echo); a download:snapshot in the gap dropped the optimistically-'downloading' client job (snapshot only preserved 'pending'), so the SSE started-echo found job=undefined and openDetail painted Install. Fix: snapshot preserves 'pending'+'downloading' client jobs absent from snapshot; SSE started-echo re-emits Events only when the FE holds the job. (2) Reload didn't repaint grid: download:snapshot SSE handler mutated state.downloadJobs but emitted no Events signal, and MpiModelManager had no listener (state:changed filtered to s_installedModelIds). Fix: snapshot handler emits Events.emit('download:snapshot'); MpiModelManager listens -> sig-guarded renderList(). (3) Missed-terminal at 99%: download completed during the reload SSE-reconnect gap, terminal download:complete lost, card stuck 99% until manual refresh; reconciler idles once store job is terminal. Fix: MpiModelManager _pumpBackstop — while any active job, 5s quiet awaitReSync({quiet:true}) self-corrects against disk truth, self-idles when none. awaitReSync gained a quiet flag to suppress the refresh spinner.",
+      "REAL USERS CANNOT RELOAD THE APP (Ctrl+R blocked; user reloaded via DevTools location.reload for the test). So the reload-at-completion race is dev-only; the _pumpBackstop belt still earns its place for ANY SSE gap (network blip / sleep) but is not a common-path bug. This reframes row 6 severity.",
+      "6 failing tests are pre-existing (git log proves last-touched by MPI-242/244/90) + download-completion.test.cjs is the known cancel-only resumeFromFile dead test — NONE are MPI-276 regressions. Do not 'fix' them under MPI-276; download-completion resume-dead prune is a separate deferred cleanup.",
+      "Peer session uninstall-ux-cleanup committed 987cd539: removed the dead 'Also delete model files from disk' checkbox; uninstall now ALWAYS passes deleteFiles=true. Backend deleteFiles wire untouched (still accepts the param). Affects row 5 (no keep-files option). Message resolved."
+    ],
+    "constraints": [
+      "Phase 8 is user-ux — agent MUST NOT self-approve cards. Run automated checks, user judges live UI. Port 3000 user-owned; never kill their app; coordinate restarts.",
+      "Shared tree: NEVER git add . / -A. Commit the 2 FE files by explicit pathspec, git commit -n. Unrelated dirty tree (.impeccable/, DESIGN.md, PRODUCT.md, other kanban, comfy_workflows) is NOT MPI-276 — leave it. Peer may hold unstaged hunks in MpiModelManager.js — stage by content anchor if so (feedback_shared_tree_commit_hygiene).",
+      "refCount is DELETED (G5). Liveness = store status / _inFlightDepIds. Never reintroduce.",
+      "G4 preserve-verbatim: NDH cancel-only (never pause/resume), .cubricdl, sha256 verify, shared-dep whole-model guard, wrapper endpoint signatures + SSE event names.",
+      "The 3 fixes are FE-only (no backend/route/signature change). downloadService.js snapshot listener + started-echo guard; MpiModelManager download:snapshot listener + _pumpBackstop + awaitReSync quiet flag.",
+      "Row 3 blocker: user can't drop network (concurrent agent session) and reload is blocked for real users. To run row 3 either the user frees network briefly, or the agent stops ONLY the :3000 server process (verify it's separable from Electron first)."
+    ],
+    "files_modified": [
+      "js/services/downloadService.js (UNCOMMITTED — snapshot preserves pending+downloading client jobs; started-echo re-emits only when job present; snapshot handler emits download:snapshot Events)",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js (UNCOMMITTED — download:snapshot listener -> renderList; _pumpBackstop missed-terminal poll; awaitReSync quiet flag)",
+      ".agents/mpi-kanban/tasks/MPI-276/validation.md (rail results + rows 2/4/6 + 3 fixes)",
+      ".agents/mpi-kanban/state/messages/af92b333-...json + index.json (peer message acknowledged->resolved)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-276/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "js/services/downloadService.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-14T14:20:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-276 Phase 8 (user-ux validation matrix) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/555b46e7-1160-4253-b4e5-b1944b45211a.json then run mpi-continue. The automated rail PASSED (lint 0 errors; all MPI-276 test suites green; the 6 failing tests are pre-existing dead/stale owned by other cards, NOT regressions). Three FE bugs were found live and fixed this session, ALL UNCOMMITTED in js/services/downloadService.js + js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js: (1) detail-footer stomped to Install on uninstall->immediate-reinstall (snapshot dropped the optimistic 'downloading' client job; fixed by preserving pending+downloading client jobs and guarding the SSE started-echo), (2) reload mid-download didn't repaint the grid (snapshot mutated state silently; fixed by emitting a download:snapshot Events signal + a MpiModelManager listener), (3) a completed download whose terminal SSE event was lost in the reload reconnect gap stuck the card at 99% (fixed by a _pumpBackstop 5s quiet awaitReSync while any job is active). Rows 2 (local install), 4 (cancel), 6 (reload restore) PASS. REMAINING live rows: 1 cold-boot phantom (needs a fresh app start), 3 swallowed-request drill (needs network-off or the :3000 server stopped — the user could NOT do either last session and real users can't reload the app, so coordinate), 5 uninstall matrix (note: a peer commit 987cd539 removed the 'Also delete model files' checkbox so uninstall now always deletes files), 7 remote Pod pass (user connects a Pod that boot-fetches wrapper 0.2.37; confirm hot-store evict + pipPins in the wrapper log; no local state mutated by remote events), 8 the user's phantom-free churn verdict. Port 3000 is user-owned — never kill their app; coordinate restarts. On all-pass: COMMIT the 2 dirty FE files by EXPLICIT PATHSPEC (never git add .; git commit -n), move MPI-276 doing->done, run mpi-end (which appends 'refCount DELETED in MPI-276' to memory, drops MPI-276 from the in-flight list, notes MPI-123-local closure). validation.md already logs the rail + rows 2/4/6 + all 3 fixes."
+}

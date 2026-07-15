@@ -1,0 +1,109 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "90da2b66-227c-48d0-b032-881e588e0a4e",
+  "generated_at": "2026-07-14T23:37:08Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-283 frame-accurate video player (mediabunny hybrid) — steps 1-4 + color fix",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Frame-accurate video player via mediabunny (hybrid): native <video> for PLAY, mediabunny WebCodecs exact-frame canvas overlay for paused/frame-step/trim. Must work on Mac/Linux/Windows with 100% certainty.",
+    "status": "in_progress",
+    "summary": "Steps 1-4 done + user-verified (frame-step exact, sub-range loop, color match). A significant COLOR bug was found and fixed (WebCodecs mis-converts YUV matrix vs <video>). Remaining: step 5 (TrimBar), step 6 (cleanup+docs), plus 3 user-noted follow-ups and 1 follow-up card."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-283/plan.md",
+    "completed": [
+      "1. mediabunny@1.50.8 dep + smoke (canDecode, 20/20 distinct exact frames)",
+      "2. js/services/frameSink.js (VideoSampleSink + MANUAL YUV->RGB color-matched to <video>; canDecode gate + native fallback)",
+      "3. MpiVideoSurface canvas overlay + frameSink-backed frameStep (frame-step exact, USER-VERIFIED; overlay-size fix; scrub-back-glitch reorder fix pending re-eyeball)",
+      "4. MpiVideoControlBar sub-range loop freeze fix (time-based boundary + re-play on wrap; deleted _effectiveFps; in!=0 pin fix). Auto-passed; user eyeball pending"
+    ],
+    "pending": [
+      "5. MpiTrimBar — playhead/in/out map to exact frame timestamps; keep _snap end-stick; ALSO fix Wan last-frame-unreachable (frame 33 shows in scrub but can't step to it)",
+      "6. Cleanup + docs — remove dead seek-math; video-player subsystem doc (audio-clock/PTS root cause + hybrid contract + color matrix rule); ASK before .claude/rules edit",
+      "FOLLOW-UP CARD: apply the same BT.601/709 matrix fix to the extend-from-last-frame EXTRACTION path (that recolor caused the transition color drift the user saw)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-283",
+    "title": "Frame-accurate video player via mediabunny (hybrid)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-283/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-283/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-283/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-283/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-283/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "checklist.md fully updated with per-step results + color reference + open findings",
+      "events.jsonl records every fix + verification",
+      "plan.md has Cross-platform guarantee section (canDecode gate) + color notes"
+    ],
+    "pending": [
+      "Step 6 will write the video-player subsystem doc (docs/) — audio-clock/PTS root cause, hybrid contract, and the color matrix rule (height>=720->BT.709 else BT.601 limited; WebCodecs mis-reports colorSpace.matrix, don't trust it)",
+      "Create the extend-from-last-frame extraction color follow-up card",
+      "Doc-drift: MpiVideoSurface gained a canvas overlay + frameSink dep; MpiVideoControlBar loop logic changed — ASK user before updating .claude/rules component maps (CLAUDE.md doc-drift rule)"
+    ]
+  },
+  "next_action": {
+    "description": "Get user eyeball on the still-pending visual items first (in!=0 sub-range loop after the pin fix; scrub-back glitch after the paint-before-seek reorder). Then implement step 5 (MpiTrimBar exact-frame mapping + fix Wan last-frame-unreachable). Then step 6 (cleanup + docs). Then create the extend-from-last-frame color follow-up card.",
+    "command": "mpi-continue MPI-283"
+  },
+  "context": {
+    "key_decisions": [
+      "Cross-platform guarantee is by CONSTRUCTION: every sink gated on track.canDecode(); false/error -> return null -> caller keeps native <video>. Never worse than today on Mac/Linux/Windows. Proven live (bogus url -> null, no throw).",
+      "MpiSaveVideo left UNTOUCHED (user decision) — it's already libx264/yuv420p software h264 (GPU-agnostic), the Mac-safe path. Crop-export (our ffmpeg) confirmed color-clean vs source in DaVinci.",
+      "COLOR: WebCodecs canvas decode mis-converts YUV->RGB (mis-tags matrix as bt709 even for BT.601 SD content, renders vivid; crbug 40539111/343011434). copyTo/drawImage/createImageBitmap ALL give the same mis-converted pixels (empirically disproven the research's copyTo fix). ONLY exact fix = manual YUV(I420)->RGB from raw planes. Matrix by height: >=720 BT.709, else BT.601, limited range (matches libx264 tag + Chromium <video>). Verified pixel-near-perfect vs <video> (SD resid 0.12, HD resid 0.59). DaVinci/<video>/our-ffmpeg-export = color truth.",
+      "Frame-step: keep integer frame math, drop the 0.25*fs currentTime bias; canvas owns visible pixels while stepping; set video.currentTime AFTER painting canvas (for audio/PLAY sync + to avoid native seek flashing).",
+      "Sub-range loop: drive boundary off native time vs out-point directly (half-frame lead), NOT reverse-engineered frame index (that rounding froze it). Only the out-point matters during playback (time moves forward); play-start in-seek handled by _seekRangeStartIfNeeded."
+    ],
+    "constraints": [
+      "frameSink imports mediabunny via '/node_modules/mediabunny/dist/bundles/mediabunny.mjs' (express.static(__dirname) serves it; runtime dep; portable build copies node_modules). Pure JS, no per-OS binary.",
+      "Media serves via /project-file?path= (same-origin, range 206). UrlSource works directly, no BlobSource needed.",
+      "frameSink only hand-converts I420/I420A (our libx264 output). Other formats -> return null -> native fallback.",
+      "Color cost is PER-DISPLAYED-FRAME only (paused/step), so clip length is irrelevant (30s / 3-min combines fine). Resolution-dependent per-pixel loop, one frame at a time.",
+      "TEST HARNESS: drive live app at http://127.0.0.1:3000 via Playwright chromium (installed). WebCodecs needs Chromium/Electron, NOT bare node. Chromium 147 WebCodecs is a superset of Electron 41's ~140. IMPORTANT: write test scripts with the Write tool, NOT bash heredoc — heredoc collapses \\\\ in Windows paths (C:\\\\Users -> C:Users) and silently 404s.",
+      "LTX frame0==frame1 = NON-BUG (DaVinci-confirmed content, Wan/LTX 48+1 pad). User may drop frame0 in workflow. No player change.",
+      "Wan last-frame (frame 33 @16fps 33-frame clip): shows in scrub bar but can't STEP to it. User says minor. REVISIT step 5 — likely lastFrame=_frameCount-1 vs round(hiSec*eff) boundary math; verify frame count vs DaVinci."
+    ],
+    "files_modified": [
+      "package.json",
+      "package-lock.json",
+      "js/services/frameSink.js",
+      "js/components/Compounds/MpiVideoSurface/MpiVideoSurface.js",
+      "js/components/Compounds/MpiVideoSurface/MpiVideoSurface.css",
+      "js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-283/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-283/plan.md",
+      "js/services/frameSink.js",
+      "js/components/Compounds/MpiVideoSurface/MpiVideoSurface.js",
+      "js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js",
+      "js/components/Compounds/MpiTrimBar/MpiTrimBar.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["Components & UI", "ComfyUI workflow (MpiSaveVideo/libx264 color context)"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-14T23:37:08Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-283 'Frame-accurate video player via mediabunny (hybrid)' on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/90da2b66-227c-48d0-b032-881e588e0a4e.json and .agents/mpi-kanban/tasks/MPI-283/checklist.md, then run mpi-continue MPI-283. Steps 1-4 are done and user-verified: frame-accurate stepping via a mediabunny WebCodecs canvas overlay (js/services/frameSink.js) over the native <video>, sub-range loop fixes in MpiVideoControlBar, and a MAJOR color fix — WebCodecs mis-converts the YUV->RGB matrix (renders vivid vs the correct <video>/DaVinci), fixed by manual YUV(I420)->RGB in frameSink choosing BT.709 for height>=720 else BT.601 (limited range). Cross-platform is guaranteed by construction (every sink gated on track.canDecode(); null -> native <video> fallback). All testing is done by driving the live app at http://127.0.0.1:3000 via Playwright chromium (write scripts with the Write tool, never bash heredoc — it mangles Windows backslash paths). NEXT: first get the user's eyeball on the two still-pending visual fixes (in!=0 sub-range loop after the playhead-pin fix; scrub-back interpolated-flash after the paint-before-seek reorder). Then do step 5 (MpiTrimBar exact-frame mapping + investigate Wan's unreachable last frame) and step 6 (remove dead seek-math + write a video-player subsystem doc capturing the audio-clock/PTS root cause + the color matrix rule; ASK before editing .claude/rules). Also create a follow-up card to apply the same BT.601/709 matrix fix to the extend-from-last-frame EXTRACTION path (that recolor is what drifted transition colors). Nothing is committed yet — commit is mpi-end's job."
+}

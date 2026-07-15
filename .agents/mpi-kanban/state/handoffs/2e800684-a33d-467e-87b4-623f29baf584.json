@@ -1,0 +1,126 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "2e800684-a33d-467e-87b4-623f29baf584",
+  "generated_at": "2026-07-14T00:35:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-276 Phase 3 (reconciler) + Phase 4 (FE mirror 4a-4d) shipped — resume at Phase 5 (uninstall unification)",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Kill the download/install/uninstall subsystem's 5 root diseases with an installStore SOT + engine adapters + reconciler + snapshot protocol + FE mirror + unified uninstall + Pod wrapper fixes (MPI-276).",
+    "status": "in_progress",
+    "summary": "Phases 1, 2a, 2b.1, 2b.3, 3, 4 (4a-4d) all shipped. NOT committed this session — Phase 3 + Phase 4 changes are uncommitted on the working tree. installStore is a verified shadow SOT; reconciler (G11) drives it from disk/volume truth; the FE now consumes the store-sourced download:snapshot with pending UX + progress mirrored into the store. Resume at Phase 5 (uninstall unification — folder-delete bug)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+    "completed": [
+      "Investigation + Socratic Gate G1-G20",
+      "Phase 1: installStore.js + computeProgress.js + 34 tests (0d4f0301)",
+      "Phase 2a: refCount DELETED + totalBytes SET + register-before-respond (5bbf08f2)",
+      "Phase 2b.1: ResumableDownloader->FileDownloader (0ae5fa07)",
+      "Phase 2b.3: installStore shadow SOT + G9 version (749ce170 + 3e4fa02b)",
+      "Phase 3: reconciler.js (G11) + wired into downloadManager (SSE-connect/15s poll/post-uninstall) — NOT committed",
+      "Phase 4a: FE consumes download:snapshot (version-gated replace); deleted MPI-241 merge + orphanedActive + _recentlyCancelled — NOT committed",
+      "Phase 4b: pending UX G2 (optimistic pending, Starting label, 10s revert+toast, _firePost adopts response job) — NOT committed",
+      "Phase 4c: store.syncProgress + _syncStoreProgress at 3 tick sites (fixes 0%-progress snapshot); pull endpoints kept map-backed — NOT committed",
+      "Phase 4d: busy-set satisfied by 4b's pending add — NOT committed"
+    ],
+    "pending": [
+      "Phase 5: uninstall unification (G13) — server-side engine filter on uninstall dep array, in-flight protection from store status BOTH engines, custom-node FOLDER deletion fix (targets custom_nodes/<name>/ not the long-gone zip; honest logging), post-uninstall reconcile pass (already added in P3). New test tests/uninstall-guards.test.cjs.",
+      "Phase 6: Pod wrapper 0.2.36->0.2.37 (hot-store evict on delete + pipPins parity) — SEPARATE repo git -C c:/AI/Mpi/mpi-ci/cubric-vision-pod; ship via ./publish-runtime.sh stable (NOT image rebuild) + Pod restart",
+      "Phase 7: docs/download-manager.md rewrite (store/adapters/reconciler/snapshot; refCount->deleted note) + .claude/rules/downloads.md briefing update",
+      "Phase 8: user-ux verification matrix (Verify mode: user-ux — user judges cards live; port 3000 user-owned, coordinate restarts)",
+      "DEFERRED full read-flip (future slice, with G6 adapter split): mirror-then-delete map status-writes, flip pull endpoints onto store.snapshot(), retire _startRemoteStallWatchdog/_reconcileOutstandingRemoteDeps into the reconciler"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-276",
+    "title": "Download/install/uninstall system refactor - installStore SOT + engine adapters + reconciler",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-276/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-276/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift updated with the full Phase 3 + Phase 4 (4a-4d) state incl. the 4c progress-mirror root-finding and the deferred-full-read-flip note",
+      "plan.md Phase 3 checkbox + Parallel Batch FE-mirror checkbox marked done",
+      "Both event logs appended task.updated for Phase 3 and Phase 4",
+      "task.json updated_at bumped"
+    ],
+    "pending": [
+      "NOTHING IS COMMITTED — Phase 3 + Phase 4 are uncommitted. Next session (or mpi-end) must commit by explicit pathspec (shared-tree hygiene, NEVER git add .). Files listed in files_modified.",
+      "At card close: append 'refCount DELETED in MPI-276' to memory feedback_refcount_leaks_never_gate_on_zero",
+      "docs/download-manager.md refCount/SOT rewrite is Phase 7",
+      "Prune the resume-dead download-completion.test.cjs when the resume-dead tests are cleaned up",
+      "Deferred node bug (from MPI-272, user fixing): LTX MpiSaveVideo truncates video to audio length"
+    ]
+  },
+  "next_action": {
+    "description": "Start Phase 5: uninstall unification (G13) in routes/downloadManager.js + (eventual) adapters. Server-side engine filter on the uninstall dep array (uninstall currently trusts the wire — fix). Add in-flight protection from STORE status on BOTH engines (remote currently lacks it) — use store.activeModelsForDep(depId).length to protect a dep with a live job. Fix the custom-node FOLDER deletion bug: install stores localPath=ZIP, uninstall re-derives the ZIP path (custom_nodes/<name>.zip) which is long gone, so the delete no-ops AND the log lies (a kept/missing path lands in removed[]). Target the node FOLDER custom_nodes/<name>/ instead; a kept/missing path must NOT be reported as removed. Keep universal-keep + pip-keep + shared-dep guard (whole-model-installed rule) + trash->fs.remove fallback verbatim (G4). The post-uninstall reconcile pass is already wired (Phase 3). Write tests/uninstall-guards.test.cjs: whole-model-installed rule, tier-family circularity (MPI-258 B1 shape), universal keep, pip-keep, in-flight protection both engines, engine-filter rejects cross-engine dep arrays, custom-node folder actually removed in a temp-dir fixture. Read plan.md Plan Drift (bottom) first for the full Phase 3/4 state.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Phase 4 run SEQUENTIAL not as the planned parallel batch (user call): the 2b.3 reshape folded read-flip + map-write deletion + G6 adapter split into P4, and those touch downloadManager.js which BOTH batch tasks own -> disjoint-ownership broken. Carved into 4a (FE snapshot consumer) / 4b (pending UX) / 4c (progress mirror + partial read-flip) / 4d (busy-set, satisfied by 4b).",
+      "4c ROOT FINDING: the store snapshot was lifecycle-only — progress/bytes are written to the MAP jobs at ~15 tick sites and were NEVER mirrored to the store. A store-sourced read/broadcast would report 0% mid-download and break 4a's FE snapshot consumer. Fix: new store.syncProgress(modelId,{...}) (numbers only, bumps version) + _syncStoreProgress(modelJob) called at the 3 LIVE tick recompute sites (local, remote, remote-verifying). The 2 register-adjacent recomputes are captured by register.",
+      "4c DECISION: pull endpoints (/downloads/status, /downloads/active, _serializeModelJob) KEPT MAP-BACKED. Deleting the map status-writes needs a ~15-site internal-reader sweep (completion checks, remote SSE handlers, cancel, uninstall all read _modelJobs/.status) + adapter ownership (G6 split) — beyond a slice. The store-sourced SOT path is the download:snapshot BROADCAST (reconciler P3) + the FE consumer (4a), now progress-complete. Full read-flip DEFERRED.",
+      "4a: register-before-respond (G8) structurally kills the MPI-241 SSE-open race, so the merge heuristic + orphanedActive re-injection + _recentlyCancelled guard were DELETED. The snapshot REPLACES state.downloadJobs wholesale, version-gated; store 'done'->FE 'complete'; transport detail (speed/phase/indeterminate/error) rides delta events and is carried forward onto the job.",
+      "4b: 'pending' is a CLIENT-ONLY state (never in the backend store, G2/G7). _armPendingRevert(modelId) arms a 10s timer; if still pending it drops the job + emits download:cancelled (card->Install) + ui:warning toast (NOT ui:error dialog — expected/actionable). _firePost success consumes the response body.job snapshot (register-before-respond).",
+      "Reconciler (P3) never resurrects terminals; settles wedged deps (all-bytes-in missed-terminal OR truth installed:true) via legal store transitions; fails orphans (no progress + no disk + 60s grace); prunes via store.pruneTerminal(confirmedInstalled). 15s poll gated on store.hasActiveJobs(), unref, re-entrancy-guarded. checkInstalled routes local->localModelsCheck, remote->remoteModelsCheck.",
+      "Old remote stall-watchdog (_startRemoteStallWatchdog/_reconcileOutstandingRemoteDeps) LEFT IN PLACE — it drives the runtime maps which still own the internal mechanics; retires with the map-status deletion at the full read-flip, not now."
+    ],
+    "constraints": [
+      "NOTHING COMMITTED this session (Phase 3 + Phase 4 uncommitted). Shared tree: NEVER git add . / -A — commit by explicit pathspec. downloadManager.js + kanban files edited by peers mid-task; MpiSettings*/MpiCheckbox* are peer-dirty (do NOT touch). Content-anchor edits, re-read on stale-Edit, re-grep after.",
+      "G6: public exports keep name+signature (cancelAllDownloads, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall, runCustomNodeInstall, broadcastEngineEvent, FileDownloader). engine.js:17 + shutdown depend on them.",
+      "G4 preserve verbatim: NDH cancel-only transport (NEVER pause/resume), .cubricdl, sha256 verify, path resolvers, _filterDepsForEngine/_withEngineExtraDeps, _localSharedDepsMap/_remoteSharedDepIds whole-model-installed rule, disk-full pre-flight, _extractZipArchive, _nodeFolderHasFiles (MPI-243), all wrapper endpoint signatures, all existing SSE event NAMES.",
+      "For Phase 5 in-flight protection: refCount is DELETED — use store.activeModelsForDep(depId).length (the refCount replacement) plus the shared-dep whole-model-installed guard. Never gate on a refCount==0.",
+      "Store prune: pruneTerminal evicts DONE immediately only when modelId in confirmedInstalled; failed/cancelled on FAILED_TTL_MS (30s), done on DONE_TTL_MS (120s) belt. No public single-model force-delete — reconciler drives eviction.",
+      "Port 3000 user-owned — never kill their app. Module/route tests: load module or mount router alone on :3999 from repo root, curl, revert. Not /tmp.",
+      "Pod wrapper (Phase 6) is a SEPARATE repo commit: git -C c:/AI/Mpi/mpi-ci."
+    ],
+    "files_modified": [
+      "routes/install/reconciler.js (NEW)",
+      "tests/install-reconciler.test.cjs (NEW)",
+      "routes/install/installStore.js (added syncProgress)",
+      "routes/downloadManager.js (reconciler wire + _syncStoreProgress at 3 tick sites + require)",
+      "js/services/downloadService.js (snapshot consumer + pending UX; deleted merge/orphanedActive/_recentlyCancelled)",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js (pending in isActiveDownload + Starting label)",
+      "tests/model-footer-settling.test.cjs (merge-half -> snapshot-apply contract + pending tests)",
+      "tests/install-store.test.cjs (syncProgress tests)",
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-276/task.json",
+      ".agents/mpi-kanban/tasks/MPI-276/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "routes/downloadManager.js",
+      "routes/install/installStore.js",
+      "routes/install/reconciler.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-14T00:35:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-276 (download/install/uninstall refactor) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/2e800684-a33d-467e-87b4-623f29baf584.json and then run mpi-continue. Phases 1, 2a, 2b.1, 2b.3, 3, and 4 (4a-4d) are all shipped but NOT committed this session — Phase 3 + Phase 4 are uncommitted on the working tree (commit by explicit pathspec at close, never git add .). installStore is a verified shadow SOT; routes/install/reconciler.js (Phase 3, G11) drives it from disk/volume truth (settles wedged/missed-terminal deps, fails orphans after a 60s grace, prunes terminals, broadcasts download:snapshot) and is wired into downloadManager.js at SSE-connect, a 15s active poll, and post-uninstall. Phase 4 made the FE consume that store-sourced download:snapshot: js/services/downloadService.js now version-gate-replaces state.downloadJobs wholesale (deleting the MPI-241 merge heuristic + orphanedActive + _recentlyCancelled, which register-before-respond G8 makes obsolete), adds the G2 pending UX (optimistic 'pending' job, 'Starting…' label, a 10s revert-to-Install + ui:warning toast, and _firePost adopting the register-before-respond response job). Phase 4c added store.syncProgress + _syncStoreProgress at the 3 live tick sites because the store snapshot was previously 0%-progress (progress was only ever written to the runtime maps); the pull endpoints (/downloads/status, /downloads/active) were deliberately KEPT map-backed — deleting the map status-writes needs a ~15-site internal-reader sweep + the G6 adapter split, so the full read-flip (delete map writes, flip pull reads onto store.snapshot, retire the old remote stall-watchdog into the reconciler) is DEFERRED to a future slice. Your next action is Phase 5: uninstall unification (G13) — server-side engine filter on the uninstall dep array, in-flight protection via store.activeModelsForDep (refCount is deleted), and the custom-node FOLDER-deletion bug fix (uninstall re-derives the long-gone ZIP path so the delete no-ops and the log falsely reports it removed; target custom_nodes/<name>/ and log honestly), plus a new tests/uninstall-guards.test.cjs. Keep the G4 preserve-verbatim list (NDH cancel-only, whole-model-installed shared-dep guard, universal/pip keep, trash->fs.remove fallback). Read the plan.md Plan Drift section (bottom) first. Shared tree: never git add . — content-anchor edits, re-grep after; MpiSettings*/MpiCheckbox* are peer-dirty, do not touch."
+}
