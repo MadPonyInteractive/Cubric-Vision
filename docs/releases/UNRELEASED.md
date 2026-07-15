@@ -50,3 +50,4 @@
 - Running out of disk space when installing a model now shows a clear "not enough space" notice instead of the crash-report dialog.
 - In the History workspace's video Continue section, the operation no longer gets stuck on "Select..." when the start/end frames are empty — Extend and New shot always run their generation (they capture the last frame of the clip themselves). The frame slots are now clearly separated under their own "Continue video" heading, and "Create new" is renamed "New shot".
 - The project list on the start screen no longer stalls when you have several large projects — each project's thumbnail now loads with its own spinner, a few at a time (newest first), so the list appears instantly instead of freezing while every thumbnail loads at once.
+- The video player's Home/End keys now jump to the first/last frame — previously bound to 0/1, which didn't match other video app conventions.
