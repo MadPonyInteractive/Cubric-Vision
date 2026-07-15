@@ -1916,6 +1916,11 @@ router.post('/project/save-generation', async (req, res) => {
 
             for (const sc of entries) {
                 if (!sc.endsWith('.json')) continue;
+                // Skip bookkeeping dotfiles (e.g. .seq.json, the monotonic
+                // sequence marker) — they are NOT item sidecars and have no
+                // media file, so the orphan-GC below would wrongly delete them
+                // and re-open the filename-reuse bug nextSequence exists to fix.
+                if (sc.startsWith('.')) continue;
                 const baseName = sc.slice(0, -5); // strip .json
 
                 // Skip the meta file we just created
