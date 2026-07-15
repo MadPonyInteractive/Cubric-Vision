@@ -278,6 +278,10 @@ export async function openProject(project) {
     }
 
     state.currentProject = reconciled;
+    // MPI-247 memory is per working-session-on-a-project. Opening a different
+    // project must not carry a prior project's last op (e.g. i2i) into a fresh
+    // Gallery mount with an empty prompt — reset to natural per-model defaults.
+    state.s_selectedOpByModel = {};
 
     const extras = Storage.getExtraProjectPaths();
     const parentDir = reconciled.folderPath.split(/[\\/]/).slice(0, -1).join('/');
