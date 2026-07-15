@@ -30,6 +30,9 @@ const _unsubs = [];
 // Finished-gen counter for the coalesced completion notification (flushed when
 // state.generationQueueCount reaches 0). See the generation:complete handler.
 let _doneCount = 0;
+// Single pending flush timer — replaced (never stacked) on each count→0 so a
+// leftover timer from a previous batch can't fire against a new one.
+let _flushTimer = null;
 
 function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
     if (!ipcRenderer) return false;
@@ -62,14 +65,20 @@ export function initNotificationService() {
     // chime once). Main also gates the OS send on isFocused(), so no double.
     _unsubs.push(Events.on('generation:complete', () => { _doneCount++; }));
     _unsubs.push(Events.onState('generationQueueCount', (count) => {
-        if ((Number(count) || 0) !== 0) return;   // queue not empty yet
+        const depth = Number(count) || 0;
+        // Queue refilled (a new item running/pending) → the previous drain is no
+        // longer the end of the batch. Cancel any pending flush; the new batch will
+        // flush when IT drains. This also stops a slow pending flush from a finished
+        // cue firing "as the next cue starts".
+        if (depth !== 0) { if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; } return; }
         if (_doneCount <= 0) return;               // nothing finished to report
-        // Defer to the next tick: the last item's `generation:complete` and the
-        // queue-count reaching 0 fire from decoupled paths in either order, so a
-        // synchronous flush here can miss the final increment. On the next tick the
-        // count is settled and every completion is counted. Re-check the count is
-        // still 0 (a fast re-cue could have refilled the queue meanwhile).
-        setTimeout(() => {
+        if (_flushTimer) return;                   // a flush is already scheduled
+        // Defer ~a frame: the last item's `generation:complete` and the count
+        // reaching 0 fire from decoupled paths in either order, and pressing Cue
+        // again briefly re-derives the count; wait so the count settles, then
+        // re-check it's STILL 0 before firing. Single timer — never stacked.
+        _flushTimer = setTimeout(() => {
+            _flushTimer = null;
             if ((Number(state.generationQueueCount) || 0) !== 0) return;
             if (_doneCount <= 0) return;
             const n = _doneCount;
@@ -89,7 +98,7 @@ export function initNotificationService() {
             } catch (err) {
                 clientLogger.error('notificationService', 'failed to notify:', err);
             }
-        }, 0);
+        }, 150);
     }));
 
     // `remote:connection` fires on every feed tick while connected — latch on the
@@ -144,6 +153,8 @@ export function initNotificationService() {
  * Tear down the listeners. Primarily for hot-reload / tests.
  */
 export function destroyNotificationService() {
+    if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; }
+    _doneCount = 0;
     while (_unsubs.length) { _unsubs.pop()(); }
 }
 
