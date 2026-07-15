@@ -1316,3 +1316,7 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-287","type":"task.moved","at":"2026-07-15T01:30:00Z","actor":"claude","from":"doing","to":"done","summary":"User-verified: frame-accurate last-frame capture wired (sink + native fallback). T2V->I2V color shift out of scope. Committed 4e896a31."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-288","at":"2026-07-15T10:35:09.141Z","actor":"vscode","summary":"Created MPI-288."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-289","at":"2026-07-15T10:35:20.675Z","actor":"vscode","summary":"Created MPI-289."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-290","at":"2026-07-15T16:46:08.743Z","actor":"vscode","summary":"Created MPI-290."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-290","at":"2026-07-15T16:46:11.559Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-290 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-290","at":"2026-07-15T16:46:13.999Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-290 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-290","at":"2026-07-15T20:03:12.772Z","actor":"vscode","summary":"Deleted MPI-290."}
