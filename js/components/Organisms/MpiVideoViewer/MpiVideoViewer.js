@@ -389,6 +389,23 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         el.getSourceElement = () => _videoElement;
 
+        // Frame-accurate last-frame grab for continuation (Extend / New shot /
+        // set-end). Routes through the surface's exact-decode sink so the captured
+        // frame is the real last frame, not a drifted native-seek target
+        // (<video>.currentTime is not frame-accurate by spec). Returns { blob }
+        // on success, or null when the clip can't be decoded — caller falls back
+        // to captureSnapshot. MPI-287.
+        el.captureLastFrameAccurate = async ({ trimOut = null } = {}) => {
+            const surface = _surfaceInstance?.el;
+            if (!surface?.lastFrameIndex || !surface?.captureFrameCanvas) return null;
+            const idx = surface.lastFrameIndex(trimOut);
+            if (!Number.isFinite(idx)) return null;
+            const canvas = await surface.captureFrameCanvas(idx);
+            if (!canvas) return null;
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 1.0));
+            return blob ? { blob } : null;
+        };
+
         el.enterUpscaleMode    = () => el.setAttribute('data-mode', 'upscale');
         el.exitUpscaleMode     = () => el.setAttribute('data-mode', 'idle');
         el.enterInterpolateMode = () => el.setAttribute('data-mode', 'interpolate');

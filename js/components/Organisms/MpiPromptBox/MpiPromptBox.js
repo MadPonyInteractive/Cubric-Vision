@@ -503,7 +503,17 @@ export const MpiPromptBox = ComponentFactory.create({
             };
 
             const currentCmd = byKey.get(activeOperation);
-            if (supported.includes(activeOperation) && matches(currentCmd)) return activeOperation;
+            // MPI-281 follow-up: in History video-continuation mode (text-only ops
+            // hidden), a text-only current op (e.g. t2v_ms carried in by a reused
+            // card) `matches()` an empty box and would be kept here — before the
+            // media-op fallback below ever runs. Reject it so the box lands on the
+            // model's i2v op; Extend/New-shot inject a self-captured start frame and
+            // must run I2V, never T2V (which has no image loader → validation fail).
+            const curIsTextOnly = currentCmd
+                && (currentCmd.requiresImages ?? 0) === 0
+                && (currentCmd.requiresVideo ?? 0) === 0;
+            const keepCurrent = !(_context.filterNoInputOps && curIsTextOnly);
+            if (keepCurrent && supported.includes(activeOperation) && matches(currentCmd)) return activeOperation;
 
             const ranked = supported.map(k => byKey.get(k)).filter(Boolean);
             const ready = ranked.find(c => matches(c) && c.available);

@@ -774,6 +774,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
         let _pb = null;
 
+        // Extend / New shot always inject a self-captured start frame, so a
+        // continuation MUST run the model's image-to-video op — never a text op
+        // carried in by a reused card (t2v_ms has no image loader → the injected
+        // frame goes nowhere → "Prompt outputs failed validation"). Maps to the
+        // model's first i2v* op; falls back to the given op if none exists.
+        function _continuationOp(op) {
+            const i2v = activeModel?.supportedOps?.find(k => k.startsWith('i2v'));
+            return i2v || op;
+        }
+
         function _setPromptOperation(operation, { remember = false } = {}) {
             activeOperation = operation;
             if (remember) {
@@ -1022,9 +1032,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // wrong op and image inject is falsely rejected ("media type not
             // supported"). Falls back to activeOperation when the payload op is
             // not supported by the target model.
-            const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+            let targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
                 ? payload.operation
                 : activeOperation;
+            // MPI-281 follow-up: History video is a continuation surface — it only
+            // serves i2v (Extend/New shot self-capture a start frame). A reused card
+            // whose op is text-only (t2v_ms) is filtered out of the op dropdown here,
+            // so restoring it renders "Select...". Remap a text-only reused op to the
+            // model's i2v op so the panel reads a real, runnable operation.
+            if (isVideo && !_opOptions().some(o => o.value === targetOperation)) {
+                targetOperation = _continuationOp(targetOperation);
+            }
 
             if (use.model) _pb.el.setModel?.(targetModel);
             _setPromptOperation(targetOperation, { remember: true });
@@ -2170,7 +2188,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     const vid = viewer.el.getSourceElement?.();
                     const lastTime = hasTrim ? +trim.out
                         : (Number.isFinite(vid?.duration) && vid.duration > 0 ? Math.max(0, vid.duration - 1e-3) : null);
-                    const { blob } = await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
+                    // MPI-287: grab the EXACT last frame via the frame-accurate
+                    // decode sink; native captureSnapshot seeks <video>.currentTime
+                    // which is not frame-accurate and can seed a drifted frame.
+                    // Fall back to native capture when the clip can't be decoded.
+                    const accurate = await viewer.el.captureLastFrameAccurate?.({ trimOut: hasTrim ? +trim.out : null });
+                    const { blob } = accurate || await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
                     if (blob) {
                         const file = new File([blob], 'frame-startFrame.png', { type: 'image/png' });
                         const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
@@ -2200,7 +2223,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const trim = currentItem?.trim;
                 const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
                 const mediaItems = await _captureLastFrameMedia(payload, hasTrim, trim);
-                _runGenerate({ ...payload, mediaItems, historyMode: true });
+                const operation = _continuationOp(payload.operation);
+                _runGenerate({ ...payload, operation, mediaItems, historyMode: true });
             }));
             _unsubs.push(Events.on('prompt-box-tools:extend', async () => {
                 if (!_pb?.el) return;
@@ -2217,6 +2241,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
                 const extendCfg = {
                     ...payload,
+                    operation: _continuationOp(payload.operation),
                     mediaItems: extendMedia,
                     historyMode: true,
                     extend: true,
