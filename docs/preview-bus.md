@@ -73,6 +73,17 @@ window where an early frame of a new gen was attributed to the previous gen. Bot
 - **Both-engine rule.** `engine` distinguishes local vs remote and the bus emits for both,
   but a local-only test does **not** verify remote — remote previews arrive over the
   renderer-direct WSS proxy. Verify a remote-connected gen too.
+- **Route a multi-engine consumer by `engine`, NOT `byPromptId`.** The two engines are
+  independent ComfyUI instances with **independent `promptId` spaces** — a local and a
+  remote promptId can collide, so `byPromptId(promptId)` may return the wrong engine's gen.
+  A consumer that shows local + remote side by side (the OS float window,
+  `floatLatentBridge.js`) keys tiles by **engine lane** (`local`/`remote`) taken straight
+  off the frame's `engine` tag. It does NOT derive lane from a promptId or genId lookup.
+  It also can't resolve lane at `generation:started` — the store job registers only after
+  an `await` inside `runCommand`, so the store is empty then. So the **first frame** owns
+  tile creation: by then the store is populated and `generationStore.activeGenId(lane)`
+  gives the correct gen (title/ownership). Per-lane "batch done" uses
+  `generationStore.laneDepth(lane, excludeGenId)`.
 - **Two onmessage closures.** `comfyController.connect()` has a reuse-path and a fresh-path
   onmessage handler — both must honor the `_stripPreviewHeader` null-skip. (A fix that
   updated only one shipped a broken frame on the fresh path; MPI-269 caught it in review.)

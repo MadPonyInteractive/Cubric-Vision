@@ -22,7 +22,9 @@ const MARGIN = 16; // gap from the screen edge on first open
 const BOUNDS_FILE = path.join(app.getPath('userData'), 'float-latent-bounds.json');
 
 let win = null;
-/** genIds currently shown, in insertion order — drives width. @type {string[]} */
+/** Engine lanes currently shown ('local'/'remote'), in insertion order — drives
+ *  width. One tile per lane: a sequential queue on one engine reuses its single
+ *  lane tile item-to-item, so the window never churns. @type {string[]} */
 let tiles = [];
 /** last user-chosen bounds {x,y,width,height} or null. */
 let savedBounds = loadBounds();
@@ -98,51 +100,72 @@ function ensureWindow(mainWindow) {
 }
 
 /** Resize to the tile count, keeping the right edge fixed (grow leftward).
- *  `grow` = only widen; else also shrink back down. A user who has widened the
- *  window well past what the tiles need (e.g. maximized on another screen) is
- *  left alone — tiles just flex to fill it. */
-function applyWidth(grow) {
-  if (!win || win.isDestroyed()) return;
-  const b = win.getBounds();
-  const need = targetWidth();
-  const userWidened = b.width > need + TILE_W / 2; // slack beyond a tile → user's choice
-  if (userWidened) return;
-  if ((grow && b.width < need) || (!grow && b.width !== need)) {
-    const right = b.x + b.width; // keep the right edge fixed
-    win.setBounds({ x: right - need, y: b.y, width: need, height: b.height });
-  }
+ *  A user who has widened the window well past what the tiles need (e.g.
+ *  maximized on another screen) is left alone — tiles just flex to fill it.
+ *
+ *  Debounced to the next tick: over a queue, item N's completion (removeTile)
+ *  and item N+1's start (addTile) land in the same turn. Resizing eagerly on
+ *  each would flash a 2-tile-wide window before shrinking back. Coalescing to
+ *  one resize reads the settled tile count, so the window width never churns. */
+let _resizePending = false;
+function applyWidth() {
+  if (_resizePending) return;
+  _resizePending = true;
+  setImmediate(() => {
+    _resizePending = false;
+    if (!win || win.isDestroyed()) return;
+    const b = win.getBounds();
+    const need = targetWidth();
+    const userWidened = b.width > need + TILE_W / 2; // slack beyond a tile → user's choice
+    if (userWidened) return;
+    if (b.width !== need) {
+      const right = b.x + b.width; // keep the right edge fixed
+      win.setBounds({ x: right - need, y: b.y, width: need, height: b.height });
+    }
+  });
 }
 
-/** Add a tile for a gen (idempotent). Grows the window. */
-function addTile(mainWindow, genId, title) {
+/** Claim a lane's tile for a gen. If the lane already has a tile (queue advancing
+ *  on the same engine), reuse it in place — reset to waiting, new title, no new
+ *  tile, no resize. A new lane grows the window by one tile. */
+function addTile(mainWindow, lane, genId, title) {
   ensureWindow(mainWindow);
-  if (!tiles.includes(genId)) {
-    tiles.push(genId);
-    applyWidth(true);
+  if (!tiles.includes(lane)) {
+    tiles.push(lane);
+    applyWidth();
   }
-  win.webContents.send('float-latent:add-tile', { genId, title });
+  win.webContents.send('float-latent:add-tile', { lane, genId, title });
 }
 
-/** Paint a frame into a gen's tile. */
-function frame(genId, dataUrl, seq) {
+/** Freeze a lane's tile on its result mid-queue (no Done badge). The next queued
+ *  item reuses the same tile. No resize — the slot is held for the successor.
+ *  genId guards ownership (renderer ignores it if the lane already advanced). */
+function spendTile(lane, genId, dataUrl) {
   if (!win || win.isDestroyed()) return;
-  win.webContents.send('float-latent:frame', { genId, dataUrl, seq });
+  win.webContents.send('float-latent:spend', { lane, genId, dataUrl });
 }
 
-/** Gen finished → freeze the tile on its final result (dataUrl) if given, else
- *  leave the last latent showing. The tile stays until the user acts. */
-function finalize(genId, dataUrl) {
+/** Paint a frame into a lane's tile. */
+function frame(lane, genId, dataUrl, seq) {
   if (!win || win.isDestroyed()) return;
-  win.webContents.send('float-latent:finalize', { genId, dataUrl });
+  win.webContents.send('float-latent:frame', { lane, genId, dataUrl, seq });
 }
 
-/** Remove a gen's tile. Closes the window when the last tile is gone. */
-function removeTile(genId) {
-  tiles = tiles.filter((id) => id !== genId);
+/** Lane's final gen done → freeze on its result + Done cue. Tile stays until the
+ *  user acts (click/X/restore). */
+function finalize(lane, genId, dataUrl) {
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('float-latent:finalize', { lane, genId, dataUrl });
+}
+
+/** Remove a lane's tile. Closes the window when the last tile is gone. genId
+ *  guards ownership — a stale remove for an already-advanced lane is a no-op. */
+function removeTile(lane, genId) {
+  tiles = tiles.filter((l) => l !== lane);
   if (!win || win.isDestroyed()) return;
   if (tiles.length === 0) { close(); return; }
-  win.webContents.send('float-latent:remove-tile', { genId });
-  applyWidth(false); // shrink back, right edge pinned
+  win.webContents.send('float-latent:remove-tile', { lane, genId });
+  applyWidth(); // coalesced resize; right edge pinned
 }
 
 function isOpen() {
@@ -155,4 +178,4 @@ function close() {
   tiles = [];
 }
 
-module.exports = { addTile, frame, finalize, removeTile, close, isOpen };
+module.exports = { addTile, frame, finalize, spendTile, removeTile, close, isOpen };

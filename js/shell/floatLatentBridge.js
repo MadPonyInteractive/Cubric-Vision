@@ -17,6 +17,7 @@
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { activeGenerations } from '../services/activeGenerations.js';
+import { generationStore } from '../services/generationStore.js';
 import { getModelById } from '../data/modelRegistry.js';
 import { resolveMediaUrl } from '../utils/mediaActions.js';
 import { clientLogger } from '../services/clientLogger.js';
@@ -47,6 +48,24 @@ function runningGens() {
   return activeGenerations.list().filter((e) => e.status === 'running');
 }
 
+// The float window has two FIXED lanes: 'local' and 'remote', one tile each,
+// and a gen's lane = its engine and NEVER changes. Frames route by their own
+// engine tag (see preview:frame). started/complete/cancel carry no engine tag,
+// so resolve from the store job by genId (store.genId === the activeGenerations
+// id, set at dispatch — an exact match) and cache it. `generation:started`
+// seeds the cache while the store job is live, so a later `complete` still
+// resolves after the job is gone.
+const _laneOf = new Map(); // genId -> 'local' | 'remote'
+
+/** Lane for a gen with no engine tag (started/complete/cancel) — store lookup. */
+function laneFor(genId) {
+  if (_laneOf.has(genId)) return _laneOf.get(genId);
+  const job = generationStore.list().find((j) => j.genId === genId);
+  const lane = job?.lane === 'remote' ? 'remote' : 'local';
+  _laneOf.set(genId, lane);
+  return lane;
+}
+
 /** blob: URL → data URL (per-document blobs don't cross the IPC boundary). */
 async function blobUrlToDataUrl(url) {
   if (!url) return null;
@@ -63,11 +82,15 @@ async function blobUrlToDataUrl(url) {
 /** Open the window with a tile per running gen, seeded from the last held latent. */
 async function openTiles() {
   for (const entry of runningGens()) {
-    ipcRenderer.send('float-latent:add-tile', { genId: entry.id, title: titleFor(entry) });
     const last = activeGenerations.getLastPreview(entry.id);
+    // Seed the cache from the engine-tagged held latent when we have it (exact),
+    // else fall back to the store lookup.
+    const lane = last?.engine ? (last.engine === 'remote' ? 'remote' : 'local') : laneFor(entry.id);
+    _laneOf.set(entry.id, lane);
+    ipcRenderer.send('float-latent:add-tile', { lane, genId: entry.id, title: titleFor(entry) });
     if (last?.url) {
       const dataUrl = await blobUrlToDataUrl(last.url);
-      if (dataUrl) ipcRenderer.send('float-latent:frame', { genId: entry.id, dataUrl, seq: last.seq });
+      if (dataUrl) ipcRenderer.send('float-latent:frame', { lane, dataUrl, seq: last.seq });
     }
   }
 }
@@ -98,32 +121,36 @@ export function initFloatLatentBridge() {
   // as activeGenerations.js's bus listener. No cleanup array needed.
   // Live frames — forward only while the window is open.
   // eslint-disable-next-line mpi/require-destroy-on-events
-  Events.on('preview:frame', async ({ promptId, seq, url }) => {
+  Events.on('preview:frame', async ({ engine, seq, url }) => {
     if (!windowOpen) return;
-    const entry = activeGenerations.byPromptId(promptId);
-    if (!entry) return;
-    const genId = entry.id;
-    // Throttle: skip if we forwarded one for this gen too recently, or if a
-    // prior frame is still encoding (newest-wins, never queue). The float window
-    // still holds the last good latent via its own last-painted frame.
+    // Route STRICTLY by the engine tag → lane. The engine tag is the ONLY reliable
+    // lane source: the two engines have independent promptId spaces (byPromptId can
+    // collide) AND the store job isn't registered yet at generation:started time
+    // (an await gap), so neither a promptId lookup nor a started-time store lookup
+    // can be trusted. The lane IS the engine. The frame also OWNS tile creation and
+    // labelling: the store is populated by the time frames flow, so we resolve this
+    // lane's active gen (title + ownership) from it here — correct by construction.
+    const lane = engine === 'remote' ? 'remote' : 'local';
+    const genId = generationStore.activeGenId(lane);
+    if (genId) _laneOf.set(genId, lane); // seed for complete/cancel (no engine tag there)
     const now = Date.now();
-    if (_encoding.has(genId)) return;
-    if (now - (_lastSent.get(genId) || 0) < FRAME_MIN_MS) return;
-    _encoding.add(genId);
+    if (_encoding.has(lane)) return;
+    if (now - (_lastSent.get(lane) || 0) < FRAME_MIN_MS) return;
+    _encoding.add(lane);
     let dataUrl = null;
-    try { dataUrl = await blobUrlToDataUrl(url); } finally { _encoding.delete(genId); }
+    try { dataUrl = await blobUrlToDataUrl(url); } finally { _encoding.delete(lane); }
     if (!dataUrl || !windowOpen) return; // window may have closed mid-encode
-    _lastSent.set(genId, Date.now());
-    ipcRenderer.send('float-latent:frame', { genId, dataUrl, seq });
+    _lastSent.set(lane, Date.now());
+    const title = genId ? titleFor(activeGenerations.get(genId) || {}) : '';
+    // add-tile is idempotent: creates the lane tile (with title/owner) if absent,
+    // or relabels+takes ownership if the queue advanced on this lane.
+    ipcRenderer.send('float-latent:add-tile', { lane, genId, title });
+    ipcRenderer.send('float-latent:frame', { lane, genId, dataUrl, seq });
   });
 
-  // A gen started while the window is open → add its tile.
-  // eslint-disable-next-line mpi/require-destroy-on-events
-  Events.on('generation:started', ({ id }) => {
-    if (!windowOpen) return;
-    const entry = activeGenerations.get(id);
-    if (entry) ipcRenderer.send('float-latent:add-tile', { genId: id, title: titleFor(entry) });
-  });
+  // NOTE: no add-tile on generation:started. The lane can't be resolved reliably
+  // there (store job not yet registered), so the first preview:frame — which
+  // carries the authoritative engine tag — creates and labels the tile instead.
 
   // A gen COMPLETED → keep its tile, freeze it on the final result so the user can
   // click it to open the app (the whole window restores on click). The window stays
@@ -132,24 +159,39 @@ export function initFloatLatentBridge() {
   // heavy for a thumbnail tile).
   // eslint-disable-next-line mpi/require-destroy-on-events
   Events.on('generation:complete', async ({ id, item }) => {
-    _lastSent.delete(id);
-    _encoding.delete(id);
+    const lane = laneFor(id);
+    _lastSent.delete(lane); // throttle/encode maps are lane-keyed (see preview:frame)
+    _encoding.delete(lane);
+    _laneOf.delete(id);
     if (!windowOpen) return;
+    // PER-LANE completion: the mascot "Done" cue fires when THIS lane's batch is
+    // empty — independent of the other lane. Local finishing while remote runs must
+    // still show Done on the local tile (not wait for remote). Exclude this gen so
+    // the check is order-proof w.r.t. the store releasing its lane. More work on
+    // THIS lane → spend (freeze, no badge) so the next queued item reuses the tile.
+    const moreWork = generationStore.laneDepth(lane, id) > 0;
     const isVideo = item?.type === 'video' || item?.mediaType === 'video';
     let dataUrl = null;
     if (item?.filePath && !isVideo) {
       dataUrl = await blobUrlToDataUrl(resolveMediaUrl(item.filePath));
     }
     if (!windowOpen) return; // may have closed mid-encode
-    ipcRenderer.send('float-latent:finalize', { genId: id, dataUrl });
+    // Guard by genId: a sequential queue promotes the next item BEFORE this one's
+    // complete fires, so the lane tile may already belong to the successor. The
+    // renderer ignores spend/finalize whose genId no longer owns the tile — else a
+    // late item-N spend would freeze over item-(N+1)'s live frames.
+    const channel = moreWork ? 'float-latent:spend' : 'float-latent:finalize';
+    ipcRenderer.send(channel, { lane, genId: id, dataUrl });
   });
 
-  // A gen was CANCELLED or ERRORED → nothing to keep, drop the tile. Main closes
-  // the window when the last tile goes.
+  // A gen was CANCELLED or ERRORED → drop its lane's tile. Main closes the window
+  // when the last tile goes.
   const drop = ({ id }) => {
-    _lastSent.delete(id);
-    _encoding.delete(id);
-    if (windowOpen) ipcRenderer.send('float-latent:tile-remove', { genId: id });
+    const lane = laneFor(id);
+    _lastSent.delete(lane);
+    _encoding.delete(lane);
+    _laneOf.delete(id);
+    if (windowOpen) ipcRenderer.send('float-latent:tile-remove', { lane, genId: id });
   };
   /* eslint-disable mpi/require-destroy-on-events */
   Events.on('generation:cancelled', drop);

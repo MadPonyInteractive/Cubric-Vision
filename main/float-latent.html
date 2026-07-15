@@ -73,9 +73,9 @@
 <script>
   const { ipcRenderer } = require('electron');
   const tilesEl = document.getElementById('tiles');
-  const tiles = new Map(); // genId -> { el, img, seq }
+  const tiles = new Map(); // lane ('local'/'remote') -> { el, img, empty, cap, seq, done, overlay, owner }
 
-  function makeTile(genId, title) {
+  function makeTile(lane, genId, title) {
     const el = document.createElement('div');
     el.className = 'tile';
     el.title = 'Open app';
@@ -89,12 +89,38 @@
     el.appendChild(cap);
     el.addEventListener('click', () => ipcRenderer.send('float-latent:restore'));
     tilesEl.appendChild(el);
-    tiles.set(genId, { el, img: null, empty, cap, seq: -1, done: false, overlay: null });
+    tiles.set(lane, { el, img: null, empty, cap, seq: -1, done: false, overlay: null, owner: genId });
   }
 
-  ipcRenderer.on('float-latent:add-tile', (_e, { genId, title }) => {
-    if (!tiles.has(genId)) makeTile(genId, title);
-    else if (title) tiles.get(genId).cap.textContent = title;
+  // Reset an existing tile back to a live "waiting" state — used when the next
+  // queued item on the same lane reuses this tile. Clears the frozen frame, any
+  // Done overlay, and the seq gate so fresh frames paint again. Takes ownership
+  // for the new gen so a late spend/finalize from the previous item is ignored.
+  function resetTile(t, genId, title) {
+    t.owner = genId;
+    t.done = false;
+    t.seq = -1;
+    if (t.overlay) { t.overlay.remove(); t.overlay = null; }
+    t.el.classList.remove('done');
+    if (t.img) { t.img.remove(); t.img = null; }
+    if (!t.empty) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'waiting…';
+      t.el.insertBefore(empty, t.cap);
+      t.empty = empty;
+    }
+    if (title) t.cap.textContent = title;
+  }
+
+  // Idempotent: add-tile arrives on every frame (the frame owns tile creation).
+  // Create the lane tile if absent; reset it ONLY when the owner gen changes (queue
+  // advanced on this lane); otherwise no-op so live frames aren't wiped.
+  ipcRenderer.on('float-latent:add-tile', (_e, { lane, genId, title }) => {
+    const t = tiles.get(lane);
+    if (!t) { makeTile(lane, genId, title); return; }
+    if (genId && t.owner && genId !== t.owner) resetTile(t, genId, title);
+    else if (title && t.cap.textContent !== title) t.cap.textContent = title;
   });
 
   // ponytail: float window is STILL-only — one <img> swap per frame. LTX latents
@@ -110,9 +136,10 @@
     return t.img;
   }
 
-  ipcRenderer.on('float-latent:frame', (_e, { genId, dataUrl, seq }) => {
-    const t = tiles.get(genId);
+  ipcRenderer.on('float-latent:frame', (_e, { lane, genId, dataUrl, seq }) => {
+    const t = tiles.get(lane);
     if (!t || !dataUrl || t.done) return; // ignore late frames once finalized
+    if (genId && t.owner && genId !== t.owner) return; // stale frame from prev item
     if (typeof seq === 'number' && seq <= t.seq) return; // drop stale
     t.seq = typeof seq === 'number' ? seq : t.seq;
     ensureImg(t).src = dataUrl;
@@ -122,9 +149,10 @@
   // can click to open the app. Paint the returned image if we got one; otherwise
   // leave the last live latent showing (e.g. video results). The window no longer
   // closes on completion — only a click / X / app-restore closes it.
-  ipcRenderer.on('float-latent:finalize', (_e, { genId, dataUrl }) => {
-    const t = tiles.get(genId);
+  ipcRenderer.on('float-latent:finalize', (_e, { lane, genId, dataUrl }) => {
+    const t = tiles.get(lane);
     if (!t) return;
+    if (genId && t.owner && genId !== t.owner) return; // lane already advanced
     t.done = true;
     if (dataUrl) ensureImg(t).src = dataUrl;
     t.el.classList.add('done');
@@ -146,9 +174,22 @@
     }
   });
 
-  ipcRenderer.on('float-latent:remove-tile', (_e, { genId }) => {
-    const t = tiles.get(genId);
-    if (t) { t.el.remove(); tiles.delete(genId); }
+  // Gen finished mid-queue → freeze on its result, ignore late frames, but show
+  // NO Done cue (more work coming). The tile is reused by the next queue item,
+  // which resets it via add-tile. Paints the final image if we got one.
+  ipcRenderer.on('float-latent:spend', (_e, { lane, genId, dataUrl }) => {
+    const t = tiles.get(lane);
+    if (!t) return;
+    if (genId && t.owner && genId !== t.owner) return; // lane already advanced to next item
+    t.done = true; // gate late frames; no overlay/caption change
+    if (dataUrl) ensureImg(t).src = dataUrl;
+  });
+
+  ipcRenderer.on('float-latent:remove-tile', (_e, { lane, genId }) => {
+    const t = tiles.get(lane);
+    if (!t) return;
+    if (genId && t.owner && genId !== t.owner) return; // stale remove from prev item
+    t.el.remove(); tiles.delete(lane);
   });
 
   document.getElementById('closeBtn').addEventListener('click', () => {

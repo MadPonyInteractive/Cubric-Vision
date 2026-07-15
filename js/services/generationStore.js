@@ -483,10 +483,31 @@ export function createGenerationStore({ emit, logger } = {}) {
             .map(_snapshot);
     }
 
+    /** @returns {string|null} genId of the job currently ACTIVE on a lane. */
+    function activeGenId(lane) {
+        const jobId = _laneState[lane]?.activeJobId;
+        return jobId ? (_jobs.get(jobId)?.genId ?? null) : null;
+    }
+
     /** @returns {number} count of running + pending jobs */
     function queueDepth() {
         const running = LANES.filter(l => _laneState[l].activeJobId !== null).length;
         return running + _pending.length;
+    }
+
+    /** @returns {number} running + pending jobs on ONE lane ('local'|'remote'),
+     *  optionally EXCLUDING a genId. Excluding the just-completed gen makes the
+     *  "is this lane's batch finished?" check independent of whether the store has
+     *  released that job's lane yet at generation:complete time. */
+    function laneDepth(lane, excludeGenId = null) {
+        let n = 0;
+        const active = _laneState[lane]?.activeJobId;
+        if (active && _jobs.get(active)?.genId !== excludeGenId) n++;
+        for (const id of _pending) {
+            const j = _jobs.get(id);
+            if (j && _laneOf(j) === lane && j.genId !== excludeGenId) n++;
+        }
+        return n;
     }
 
     /** @returns {object} full store snapshot (same shape as broadcast payload) */
@@ -531,7 +552,9 @@ export function createGenerationStore({ emit, logger } = {}) {
         list,
         byId,
         byScope,
+        activeGenId,
         queueDepth,
+        laneDepth,
         getSnapshot,
         getSignal,
         // Test helper

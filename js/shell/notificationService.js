@@ -17,6 +17,7 @@ import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { getModelById } from '../data/modelRegistry.js';
 import { StatusBar } from './statusBar.js';
+import { Storage } from '../core/storage.js';
 
 let ipcRenderer = null;
 try {
@@ -58,10 +59,14 @@ export function initNotificationService() {
                     title: 'Generation complete',
                     subtitle: 'Cubric Studio',
                     body: `${op} finished.`,
+                    sound: Storage.getToastSound(), // "Play sound on notification" — OS chime only
                 });
                 return;
             }
-            StatusBar.notify(`${op} finished.`, 'success');
+            // Focused (or pref OFF, or browser mode): in-app feedback. Always
+            // COALESCED — count this gen; one summary toast fires when the queue
+            // drains (StatusBar owns the count + flush). No per-gen toast, no chime.
+            StatusBar.notifyCompletion();
         } catch (err) {
             clientLogger.error('notificationService', 'failed to notify:', err);
         }
@@ -81,6 +86,7 @@ export function initNotificationService() {
                         title: 'Pod connected',
                         subtitle: 'Cubric Studio',
                         body: gpuName ? `${gpuName} ready.` : 'Remote engine ready.',
+                        sound: Storage.getToastSound(),
                     });
                     return;
                 }
@@ -105,6 +111,7 @@ export function initNotificationService() {
                     title: 'Download complete',
                     subtitle: 'Cubric Studio',
                     body: `${modelName} installed.`,
+                    sound: Storage.getToastSound(),
                 });
                 return;
             }

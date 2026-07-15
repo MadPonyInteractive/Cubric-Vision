@@ -704,18 +704,21 @@ app.on('ready', () => {
     // no-op: renderer sends add-tile/frame directly when show is true. Kept so
     // future gating (e.g. logging) has a hook.
   });
-  ipcMain.on('float-latent:add-tile', (_e, { genId, title } = {}) => {
-    if (mainWindow && genId) floatLatent.addTile(mainWindow, genId, title);
+  ipcMain.on('float-latent:add-tile', (_e, { lane, genId, title } = {}) => {
+    if (mainWindow && lane) floatLatent.addTile(mainWindow, lane, genId, title);
   });
-  ipcMain.on('float-latent:frame', (_e, { genId, dataUrl, seq } = {}) => {
-    if (genId) floatLatent.frame(genId, dataUrl, seq);
+  ipcMain.on('float-latent:frame', (_e, { lane, genId, dataUrl, seq } = {}) => {
+    if (lane) floatLatent.frame(lane, genId, dataUrl, seq);
   });
-  ipcMain.on('float-latent:finalize', (_e, { genId, dataUrl } = {}) => {
-    if (genId) floatLatent.finalize(genId, dataUrl);
+  ipcMain.on('float-latent:finalize', (_e, { lane, genId, dataUrl } = {}) => {
+    if (lane) floatLatent.finalize(lane, genId, dataUrl);
   });
-  ipcMain.on('float-latent:tile-remove', (_e, { genId } = {}) => {
-    if (genId) {
-      floatLatent.removeTile(genId);
+  ipcMain.on('float-latent:spend', (_e, { lane, genId, dataUrl } = {}) => {
+    if (lane) floatLatent.spendTile(lane, genId, dataUrl);
+  });
+  ipcMain.on('float-latent:tile-remove', (_e, { lane, genId } = {}) => {
+    if (lane) {
+      floatLatent.removeTile(lane, genId);
       // removeTile closes the window when the last tile goes — tell the renderer.
       if (!floatLatent.isOpen() && mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('float-latent:closed');
@@ -779,7 +782,9 @@ app.on('ready', () => {
       title: payload.title || 'Cubric Studio',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
-      silent: false,
+      // "Play sound on notification" setting: gate the OS chime. Defaults to
+      // sound ON when the flag is absent (payload.sound === undefined).
+      silent: payload.sound === false,
       urgency: payload.urgency || 'normal',
       timeoutType: payload.timeoutType || 'default',
     };
@@ -808,6 +813,7 @@ app.on('ready', () => {
       title: payload.title || 'Generation complete',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
+      sound: payload.sound,
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Generation complete');
@@ -818,6 +824,7 @@ app.on('ready', () => {
       title: payload.title || 'Download complete',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
+      sound: payload.sound,
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Download complete');
@@ -828,6 +835,7 @@ app.on('ready', () => {
       title: payload.title || 'Pod connected',
       subtitle: payload.subtitle || 'Cubric Studio',
       body: payload.body || '',
+      sound: payload.sound,
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Pod connected');
