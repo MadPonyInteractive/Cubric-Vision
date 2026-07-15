@@ -34,6 +34,7 @@ const logger = require('./logger');
 const { ffmpegPath } = require('../services/ffmpegBinary');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { nextSequence } = require('./projects');
 
 const execFileP = promisify(execFile);
 
@@ -99,15 +100,7 @@ router.post('/api/video/crop', async (req, res) => {
         if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
             finalName = outFileName;
         } else {
-            const existing = await fs.readdir(mediaDir);
-            const re = /^video_crop_(\d+)\./i;
-            let maxNum = 0;
-            for (const f of existing) {
-                const m = f.match(re);
-                if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
-            }
-            const seq = String(maxNum + 1).padStart(3, '0');
-            finalName = `video_crop_${seq}.mp4`;
+            finalName = await nextSequence(mediaDir, 'video_crop', 'mp4');
         }
         outputPath = path.join(mediaDir, finalName);
 

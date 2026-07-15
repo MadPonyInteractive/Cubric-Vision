@@ -28,7 +28,7 @@ const logger = require('./logger');
 const { concatVideos } = require('../services/videoConcat');
 const { probeVideo }   = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
-const { materializeGenerationFrameSnapshots } = require('./projects');
+const { materializeGenerationFrameSnapshots, nextSequence } = require('./projects');
 
 // ── SSE channel ──────────────────────────────────────────────────────────────
 const _clients = new Set();
@@ -77,19 +77,10 @@ async function _resolveItemPath(metaDir, itemId) {
     return { abs, sidecar };
 }
 
+// Delegates to the monotonic allocator in routes/projects.js so combined_/
+// extended_ names never reuse a deleted number (avoids the overwrite/orphan bug).
 async function _nextSequencedName(mediaDir, prefix, ext = 'mp4') {
-    const entries = await fs.readdir(mediaDir);
-    const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
-    let maxNum = 0;
-    for (const f of entries) {
-        const m = f.match(re);
-        if (m) {
-            const n = parseInt(m[1], 10);
-            if (n > maxNum) maxNum = n;
-        }
-    }
-    const seq = String(maxNum + 1).padStart(3, '0');
-    return `${prefix}_${seq}.${ext}`;
+    return nextSequence(mediaDir, prefix, ext);
 }
 
 function _makeProgressEmitter(jobId) {

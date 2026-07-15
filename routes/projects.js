@@ -179,6 +179,40 @@ function updateItemMeta(metaPath, updater) {
     return next;
 }
 
+// ── Monotonic sequence allocator ─────────────────────────────────────────────
+// Sequenced media names (i2v_ms_001.mp4, combined_001.mp4, crop_001.mp4…) used
+// to be numbered by scanning existing files for the max NNN and adding 1. That
+// re-mints deleted numbers: delete i2v_ms_001.mp4 and the next i2v gen reuses
+// `001`, which then (a) `-y`-overwrites a re-created file at that path, or (b)
+// gets deleted-by-filename while another history entry still points at it —
+// both orphan a card (missing media → gallery 404). Fix: persist a per-prefix
+// high-water mark in Media/.meta/.seq.json and hand out max(diskMax, mark)+1,
+// so a number is NEVER reused within a project even after deletes. Serialized
+// through the same per-path queue as sidecar writes.
+async function nextSequence(mediaDir, prefix, ext = 'mp4') {
+    const seqPath = path.join(mediaDir, '.meta', '.seq.json');
+    // Scan disk for the current max NNN for this prefix (covers pre-existing
+    // projects that never had a .seq.json, and any out-of-band file adds).
+    let diskMax = 0;
+    try {
+        const entries = await fs.readdir(mediaDir);
+        const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
+        for (const f of entries) {
+            const m = f.match(re);
+            if (m) { const n = parseInt(m[1], 10); if (n > diskMax) diskMax = n; }
+        }
+    } catch (_) { /* mediaDir missing → diskMax 0 */ }
+
+    let chosen = diskMax + 1;
+    await updateItemMeta(seqPath, marks => {
+        const prev = Number.isFinite(marks?.[prefix]) ? marks[prefix] : 0;
+        chosen = Math.max(diskMax, prev) + 1;
+        return { ...marks, [prefix]: chosen };
+    });
+    const seq = String(chosen).padStart(3, '0');
+    return `${prefix}_${seq}.${ext}`;
+}
+
 function projectFileUrl(filePath) {
     return `/project-file?path=${encodeURIComponent(filePath)}`;
 }
@@ -1010,6 +1044,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
 
         const mediaDir = path.join(folderPath, 'Media');
         const filePath = path.join(mediaDir, filename);
+        let sidecarFilePath = null; // itemId's own filePath, for the delete guard below
 
         // Delete the UUID-based .meta/<uuid>.json if itemId is provided.
         // Also remove any companion video first-frame thumb referenced by the
@@ -1024,6 +1059,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             if (await fs.pathExists(uuidMetaPath)) {
                 try {
                     const sidecar = await fs.readJson(uuidMetaPath);
+                    sidecarFilePath = sidecar?.filePath || null;
                     if (sidecar?.thumbPath) {
                         const m = sidecar.thumbPath.match(/path=(.+)$/);
                         if (m) thumbAbsPath = decodeURIComponent(m[1]);
@@ -1062,9 +1098,25 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             // Cleanup command wipes the flat store.
         }
 
+        // Guard: only unlink the on-disk file when it still belongs to THIS
+        // item. Sequenced names (i2v_ms_001.mp4, combined_001.mp4…) get re-minted
+        // after a delete, so a later item can own the same filename while an
+        // earlier history entry still references it. Deleting by filename alone
+        // then orphans that other entry (missing sidecar → gallery 404). If the
+        // itemId's sidecar was still present above we captured its filePath;
+        // when it points elsewhere, skip the file unlink and only clean meta.
+        let ownsFile = true;
+        if (itemId && sidecarFilePath) {
+            const owned = pathFromProjectFileUrl(sidecarFilePath);
+            if (owned && path.normalize(owned) !== path.normalize(filePath)) {
+                ownsFile = false;
+                logger.warn('project', `delete: itemId ${itemId} sidecar points at ${path.basename(owned)}, not ${filename} — skipping file unlink to avoid orphaning another entry`);
+            }
+        }
+
         // Delete the legacy filename-based .meta/ sidecar
         const legacyMetaPath = filePath + '.json';
-        if (await fs.pathExists(filePath)) {
+        if (ownsFile && await fs.pathExists(filePath)) {
             await fs.remove(filePath);
             if (await fs.pathExists(legacyMetaPath)) await fs.remove(legacyMetaPath);
             res.json({ success: true, message: 'Permanently deleted' });
@@ -1317,18 +1369,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             const stem = path.basename(finalFileName, path.extname(finalFileName));
             // Strip trailing _NNN sequence to get the bare prefix (e.g. imported_001 → imported)
             const prefix = stem.replace(/_\d+$/, '') || 'imported';
-            const entries = await fs.readdir(mediaDir);
-            let maxNum = 0;
-            const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
-            entries.forEach(e => {
-                const m = e.match(re);
-                if (m) {
-                    const num = parseInt(m[1], 10);
-                    if (num > maxNum) maxNum = num;
-                }
-            });
-            const nextNum = (maxNum + 1).toString().padStart(3, '0');
-            finalFileName = `${prefix}_${nextNum}.${ext}`;
+            finalFileName = await nextSequence(mediaDir, prefix, ext);
         }
 
         const base64Content = base64Data.replace(/^data:[^;]+;base64,/, '');
@@ -1699,19 +1740,8 @@ router.post('/project/save-generation', async (req, res) => {
         // Sanitise operation key to a safe filename prefix (max 24 chars)
         const prefix = operation.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 24);
 
-        // Find the next available sequence number by scanning existing files
-        const existing = await fs.readdir(mediaDir);
-        let maxNum = 0;
-        const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
-        for (const f of existing) {
-            const m = f.match(re);
-            if (m) {
-                const n = parseInt(m[1], 10);
-                if (n > maxNum) maxNum = n;
-            }
-        }
-        const seq      = String(maxNum + 1).padStart(3, '0');
-        const filename = `${prefix}_${seq}.${ext}`;
+        // Monotonic sequence: never reuse a deleted number (see nextSequence).
+        const filename = await nextSequence(mediaDir, prefix, ext);
         const filePath = path.join(mediaDir, filename);
 
         // Download from ComfyUI server-side
@@ -2114,16 +2144,8 @@ router.post('/project/crop-media', async (req, res) => {
         // Derive extension from source
         const ext = path.extname(inputPath).slice(1).toLowerCase() || 'png';
 
-        // Sequenced filename using 'crop' prefix
-        const existing = await fs.readdir(mediaDir);
-        let maxNum = 0;
-        const re = /^crop_(\d+)\./i;
-        for (const f of existing) {
-            const m = f.match(re);
-            if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
-        }
-        const seq      = String(maxNum + 1).padStart(3, '0');
-        const filename = `crop_${seq}.${ext}`;
+        // Sequenced filename using 'crop' prefix (monotonic, see nextSequence)
+        const filename = await nextSequence(mediaDir, 'crop', ext);
         const filePath = path.join(mediaDir, filename);
 
         // Sharp crop
@@ -2505,6 +2527,7 @@ router.get('/project-stats/:projectId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.nextSequence = nextSequence;
 module.exports.materializeGenerationFrameSnapshots = materializeGenerationFrameSnapshots;
 module.exports.placeContentAsset = placeContentAsset;
 module.exports.computeFileSha256 = computeFileSha256;

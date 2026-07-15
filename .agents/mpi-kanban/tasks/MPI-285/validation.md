@@ -17,3 +17,16 @@
 
 ## How to smoke
 Load a project with a video-with-audio, right-click viewer → run all three; then a no-audio clip → confirm "Reverse audio" is disabled.
+
+## USER-VERIFIED (live, 1.2.0) — 2026-07-15
+All three modes confirmed working in the running app after full restart
+(routes are NOT hot-reloaded; first run tested stale server → same both-stream
+output was the symptom, gone after restart).
+
+## Commit status
+- Frontend (MpiGroupHistoryBlock.js) + card: committed `cf2e487f`.
+- Backend (routes/videoReverse.js): DEFERRED — co-owned with a peer session's
+  uncommitted `nextSequence` refactor (projects.js/videoConcat/videoCrop).
+  Committing it alone → broken HEAD (nextSequence export not yet committed).
+  Peer commits it with their batch. Card stays `validating` + attention:required
+  until that lands. Logic itself is user-verified.
