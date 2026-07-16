@@ -268,7 +268,7 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships ten built-in style LoRAs and a depth-guided pose reference. Renders at up to 2K.',
+        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships ten built-in style LoRAs, a depth-guided pose reference, and an Edit operation — give it an image and an instruction and it changes only what you ask; add a second reference image to pull from both. Renders at up to 2K.',
         workflows: {
             t2i: 'krea2_t2i_balanced_sfw.json',
             i2i: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_i2i flips the latent source
@@ -350,7 +350,7 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'This spicy image generator uses the Lustify Krea model weights by Coyotte, built on Krea 2. It keeps the distinctive photographic look and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported.',
+        description: 'This spicy image generator uses the Lustify Krea model weights by Coyotte, built on Krea 2. It keeps the distinctive photographic look, ships ten style LoRAs, a pose reference, and an Edit operation (image + instruction, with an optional second reference image), and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported.',
         workflows: {
             t2i: 'krea2_t2i_balanced_nsfw.json',
             i2i: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
@@ -420,7 +420,7 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'slow',
-        description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. This is the tier that can EDIT: give it an image and an instruction and it changes only what you ask while preserving the rest. Also does the distinctive photographic look, ten style LoRAs, depth-guided pose reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
+        description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the distinctive photographic look, ten style LoRAs, depth-guided pose reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
         workflows: {
             t2i: 'krea2_t2i_high_sfw.json',
             i2i: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_i2i flips the latent source
@@ -483,7 +483,7 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'slow',
-        description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt, and the tier that can EDIT: give it an image and an instruction and it changes only what you ask. Photographic look, ten style LoRAs, pose reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
+        description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the photographic look, ten style LoRAs, pose reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
         workflows: {
             t2i: 'krea2_t2i_high_nsfw.json',
             i2i: 'krea2_t2i_high_nsfw.json',
