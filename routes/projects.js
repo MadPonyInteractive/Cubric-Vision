@@ -100,25 +100,27 @@ async function findRecentProjectThumbnail(mediaDir) {
     const metaDir = path.join(mediaDir, '.meta');
     let sawMetaSidecar = false;
     if (await fs.pathExists(metaDir)) {
-        const metaFiles = await fs.readdir(metaDir);
-        for (const metaFile of metaFiles) {
-            if (!metaFile.endsWith('.json')) continue;
-            sawMetaSidecar = true;
+        const metaFiles = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        sawMetaSidecar = metaFiles.length > 0;
+        // Read every sidecar concurrently — a heavy project has 100+ of them and
+        // serialising readJson+stat over cold disk was the dominant cost.
+        const results = await Promise.all(metaFiles.map(async (metaFile) => {
             try {
                 const meta = await fs.readJson(path.join(metaDir, metaFile));
-                if (RECENT_THUMBNAIL_EXCLUDED_OPERATIONS.has(String(meta.operation || ''))) continue;
+                if (RECENT_THUMBNAIL_EXCLUDED_OPERATIONS.has(String(meta.operation || ''))) return null;
                 const absPath = pathFromProjectFileUrl(meta.filePath);
-                if (!absPath || !(await fs.pathExists(absPath))) continue;
+                if (!absPath || !(await fs.pathExists(absPath))) return null;
                 const ext = path.extname(absPath).toLowerCase().slice(1);
-                if (!RECENT_THUMBNAIL_EXTENSIONS.has(ext)) continue;
+                if (!RECENT_THUMBNAIL_EXTENSIONS.has(ext)) return null;
                 const stats = await fs.stat(absPath);
-                candidates.push({
+                return {
                     path: absPath,
                     ext,
                     timestamp: Date.parse(meta.createdAt || '') || stats.mtimeMs,
-                });
-            } catch (_) { /* skip malformed sidecars */ }
-        }
+                };
+            } catch (_) { return null; /* skip malformed sidecars */ }
+        }));
+        for (const c of results) if (c) candidates.push(c);
     }
 
     if (!candidates.length && !sawMetaSidecar) {
@@ -763,26 +765,32 @@ router.post('/list-projects', async (req, res) => {
         const roots = [defaultRoot, ...externalRoots.filter(r => r !== defaultRootNorm)];
         const projects = [];
 
+        // Scan every project folder concurrently. Each folder's thumbnail scan
+        // reads/stats up to N .meta sidecars; serialising this over 15+ heavy
+        // projects made cold-boot list-projects take seconds (OS file cache
+        // cold — hot reload masked it). Fan out so cold disk I/O overlaps.
+        // ponytail: unbounded Promise.all; add p-limit only if project count
+        // ever gets large enough to exhaust file handles.
         for (const root of roots) {
             if (!(await fs.pathExists(root))) continue;
             const entries = await fs.readdir(root);
             const isDefault = root === defaultRoot;
-            for (const entry of entries) {
+            const scanned = await Promise.all(entries.map(async (entry) => {
                 const jsonPath = path.join(root, entry, 'project.json');
-                if (await fs.pathExists(jsonPath)) {
+                if (!(await fs.pathExists(jsonPath))) return null;
+                try {
+                    const p = await fs.readJson(jsonPath);
+                    const diskFolder = path.join(root, entry).replace(/\\/g, '/');
+                    let recentThumbnail = null;
+                    let recentThumbnailType = null;
                     try {
-                        const p = await fs.readJson(jsonPath);
-                        const diskFolder = path.join(root, entry).replace(/\\/g, '/');
-                        let recentThumbnail = null;
-                        let recentThumbnailType = null;
-                        try {
-                            const mediaDir = path.join(root, entry, 'Media');
-                            ({ recentThumbnail, recentThumbnailType } = await findRecentProjectThumbnail(mediaDir));
-                        } catch (e) { /* silent fail for media scan */ }
-                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail, recentThumbnailType, isDefaultRoot: isDefault });
-                    } catch (_) { /* skip corrupt entries */ }
-                }
-            }
+                        const mediaDir = path.join(root, entry, 'Media');
+                        ({ recentThumbnail, recentThumbnailType } = await findRecentProjectThumbnail(mediaDir));
+                    } catch (e) { /* silent fail for media scan */ }
+                    return { ...p, folderPath: diskFolder, recentThumbnail, recentThumbnailType, isDefaultRoot: isDefault };
+                } catch (_) { return null; /* skip corrupt entries */ }
+            }));
+            for (const s of scanned) if (s) projects.push(s);
         }
 
         projects.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));

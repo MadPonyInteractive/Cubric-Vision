@@ -14,3 +14,7 @@ Files: `js/shell/projectUI.js`, `styles/shell/landing.css`.
 
 ## Result
 User-verified. Goal met (felt-faster, not actually-faster — as scoped).
+
+## Follow-up (2026-07-16) — cold-boot server fix
+Original fix only deferred **browser thumbnail decode**; server `/list-projects` still scanned every project's `.meta` sidecars **serially** (heavy projects 100–163 sidecars: `readJson`+`pathExists`+`stat` each, ~700 total, all sequential). Hot reload masked it (OS file cache warm); cold app launch = "forever" (spinner is pre-grid loader at `projectUI.js:195`, `listProjects()` pending).
+Fix: parallelised both loops in `routes/projects.js` — `findRecentProjectThumbnail` sidecar reads → `Promise.all`; per-project folder scan → `Promise.all`. Behavior identical (18/18 thumbs, same sort/pick). **User-verified cold-boot much faster.**
