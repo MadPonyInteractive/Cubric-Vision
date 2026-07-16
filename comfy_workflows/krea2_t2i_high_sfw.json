@@ -1236,7 +1236,7 @@
         0
       ],
       "image_b": [
-        "399",
+        "405",
         0
       ],
       "prompt": [
@@ -1261,7 +1261,7 @@
         0
       ],
       "image_b": [
-        "399",
+        "405",
         0
       ],
       "prompt": [
@@ -1297,7 +1297,7 @@
   "303": {
     "inputs": {
       "true": [
-        "306",
+        "407",
         0
       ],
       "false": [
@@ -1357,11 +1357,11 @@
   "311": {
     "inputs": {
       "eta": 0.5,
-      "sampler_name": "linear/euler",
+      "sampler_name": "multistep/res_2m",
       "scheduler": "beta",
-      "steps": 40,
+      "steps": 25,
       "steps_to_run": -1,
-      "cfg": 3,
+      "cfg": 2.5,
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
@@ -1398,7 +1398,7 @@
     "inputs": {
       "samples": [
         "311",
-        0
+        1
       ],
       "vae": [
         "77",
@@ -1539,19 +1539,22 @@
   },
   "388": {
     "inputs": {
-      "string": "",
       "channel": "alpha",
-      "block_if_empty": false
+      "block_if_empty": false,
+      "string": [
+        "403",
+        0
+      ]
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
-      "title": "Input_Image_2"
+      "title": "img2"
     }
   },
   "389": {
     "inputs": {
       "pixels": [
-        "399",
+        "405",
         0
       ],
       "vae": [
@@ -1579,7 +1582,48 @@
       "title": "Mpi Scaled Dimensions"
     }
   },
-  "399": {
+  "403": {
+    "inputs": {
+      "any": [
+        "404",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "404": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  },
+  "405": {
+    "inputs": {
+      "true": [
+        "406",
+        0
+      ],
+      "false": [
+        "388",
+        0
+      ],
+      "boolean": [
+        "403",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "406": {
     "inputs": {
       "divisible_by": 16,
       "position": "center",
@@ -1599,6 +1643,42 @@
     "class_type": "MpiCrop",
     "_meta": {
       "title": "Mpi Crop"
+    }
+  },
+  "407": {
+    "inputs": {
+      "true": [
+        "306",
+        0
+      ],
+      "false": [
+        "408",
+        0
+      ],
+      "boolean": [
+        "403",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "408": {
+    "inputs": {
+      "model": [
+        "265",
+        0
+      ],
+      "source_latent": [
+        "274",
+        0
+      ]
+    },
+    "class_type": "Krea2EditModelPatch",
+    "_meta": {
+      "title": "Krea2 Edit (source patch)"
     }
   }
 }
