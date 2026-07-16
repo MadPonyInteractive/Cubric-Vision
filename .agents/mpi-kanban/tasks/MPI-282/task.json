@@ -7,15 +7,20 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-07-14T00:00:00Z",
-  "updated_at": "2026-07-16T01:10:00Z",
+  "updated_at": "2026-07-16T04:45:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
     "checklist": "checklist.md",
-    "validation": "validation.md",
+    "validation": ".agents/mpi-kanban/tasks/MPI-282/validation.md",
     "files": "files.json",
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Local-verified (t2i + masked edit). FINAL gate: RunPod remote-engine verification deferred to 2026-07-17.",
+    "updated_at": "2026-07-16T04:45:00Z"
   }
 }
