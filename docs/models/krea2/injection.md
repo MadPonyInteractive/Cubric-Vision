@@ -183,3 +183,21 @@ app's answer to enhancement.
 
 Bonus: this dissolves the enhancer-vs-style-LoRA tension (expander wants long prompts, style
 LoRAs want short ones).
+
+## Edit op — masked identity-edit (MPI-282)
+
+Edit shares the t2i graph. The app injects `Input_Is_Edit: true` (commandRegistry `edit`
+op `injectParams`, baked FALSE — same contract as `Input_Is_i2i`) to route the identity-edit
+LoRA path. An **optional** `Input_Mask` (MpiString path node, painted in the History workspace
+only) drives a masked crop via `InpaintCropImproved` → sample → `InpaintStitchImproved`; empty
+mask → whole-image edit (the `MpiAnyChecker` on `Input_Mask` gates it). The mask flows through
+the standard MPI-272 path→string pipe (data-URL staged, path injected) — no edit-specific code.
+
+- **Dep:** `comfyui-inpaint-cropandstitch` (`lquesada/ComfyUI-Inpaint-CropAndStitch`,
+  `installRequirements:false`, rides the volume) on ALL 4 cards. `comfyui-krea2edit` too
+  (Turbo cards were missing it — the shared graph references `Krea2Edit*` classes, and ComfyUI
+  validates every node class before `MpiIfElse` picks a branch).
+- **Edit op has NO user controls** (`components: []`). The style-LoRA rack was tried and
+  reverted: style LoRAs and the identity-edit LoRA don't compose (edit degrades). A
+  `Force_1024` crop toggle (`Input_HiRes_Mode`) was also tried and dropped (didn't help
+  enough). Both nodes stay in the graph, baked/scrubbed to safe defaults, just not exposed.

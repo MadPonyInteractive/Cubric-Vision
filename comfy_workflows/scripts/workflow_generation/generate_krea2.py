@@ -2,7 +2,9 @@
 generate_krea2.py — Krea2 handler (t2i / i2i / edit, plus detailer / upscaler).
 
 Krea2 needs NO op split: ONE universal graph serves t2i + i2i + pose-reference + EDIT,
-switched at RUNTIME by injected values (Input_Is_Edit, Input_Image_2 for a 2nd edit ref).
+switched at RUNTIME by injected values. EDIT is mask-based: an optional Input_Mask
+(painted in the History workspace) drives a masked crop; empty → whole-image edit.
+Input_HiRes_Mode (edit only) forces the masked crop to 1024px when a mask is present.
 But it ships across TWO axes → FOUR runtime files per t2i template:
 
   tier    : High (Raw int8, cfg 3, working negatives) | Balanced (Turbo, cfg 1)
@@ -24,8 +26,9 @@ Per output this handler bakes the three things a hand-export cannot be trusted t
   3. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass).
 
   (MPI-272: the optional Input_Image is now a self-gating MpiLoadImageFromPath — a
-  plain t2i leaves its `string` empty; no placeholder stamp needed. Input_Image_2 (edit
-  2nd ref) + Input_Negative are likewise runtime-injected — NOT baked here.)
+  plain t2i leaves its `string` empty; no placeholder stamp needed. Input_Mask (edit
+  crop) + Input_HiRes_Mode + Input_Negative are likewise runtime-injected — NOT baked.
+  Input_Mask's baked widget is force-CLEARED at build so a no-mask edit self-gates.)
 
   3. ASSERT the style rack is coherent (t2i only; detailer/upscaler have no rack, so the
      assert is a no-op there). Selecting style N drives BOTH the LoRA (via an MpiMath
@@ -51,7 +54,7 @@ UNET_LOADER_TITLE = "Load Diffusion Model"
 TIER_TITLE = "Input_Tier"
 
 # Krea2 now ships FOUR runtime files = {tier} × {content}. One universal graph serves
-# t2i / i2i / edit (switched at RUNTIME by Input_Is_Edit + Input_Image_2), and carries
+# t2i / i2i / edit (edit = optional Input_Mask crop, runtime-injected), and carries
 # a High/Balanced sampler-chain switch keyed by Input_Tier. Tiers ship as SEPARATE files
 # (sizeTier "one tier per card" contract, like Boogu) — so each file bakes THREE things:
 #
@@ -131,6 +134,41 @@ def _bake_bypass_strength(workflow: dict, strength: float) -> None:
     node["inputs"]["strength_model"] = strength
     if before != strength:
         print(f"  [BYPASS] {BYPASS_LORA_TITLE}.strength_model: {before!r} -> {strength}")
+
+
+# Every runtime-INJECTED input node → its safe baked default. The app overrides each of
+# these per-run (prompt/seed/image path/style/mode flags); the exported template carries
+# whatever the user last TESTED with, so we scrub them at build. Without this, a leaked
+# test value (a baked seed, a Downloads/ image path, Style 10, Is_Edit true) ships in the
+# runtime file and corrupts a fresh gen. (title, widget_key, safe_value). Mode flags that
+# are already safe-false in the graph are listed too — cheap and self-documenting.
+_INJECTED_INPUT_DEFAULTS = [
+    ("Input_Positive",       "string",  ""),      # MpiText stores the prompt in `string`; app injects it
+    ("Input_Negative",       "string",  ""),      # MpiText negative, app injects
+    ("Input_Seed",           "int",     0),       # random per-gen, NEVER baked (no-seed-UI law)
+    ("Input_Image",          "string",  ""),      # path node, self-gates empty; app injects path
+    ("Input_Mask",           "string",  ""),      # edit crop, self-gates empty
+    ("Input_Style",          "int",     0),       # 0 = No Style; app injects selection
+    ("Input_Is_Edit",        "boolean", False),   # app injects true on the edit op only
+    ("Input_Is_i2i",         "boolean", False),   # app injects true on the i2i op only
+    ("Input_pose_reference", "boolean", False),   # app injects true on the pose op only
+    ("Input_HiRes_Mode",     "boolean", False),   # app injects true when the Hi-Res toggle is on
+    ("Input_enhance_prompt", "boolean", False),   # MpiIfElse gate; app injects on toggle
+]
+
+
+def _sanitize_injected_inputs(workflow: dict) -> None:
+    """Reset every runtime-injected input to its safe default so no leaked test value
+    (baked seed, local image path, Style 10, Is_Edit true) ships in the runtime file.
+    Injected weights (Tier/weight/bypass/LoRAs) are baked by their own helpers, not here."""
+    for title, key, safe in _INJECTED_INPUT_DEFAULTS:
+        node = _find_by_title(workflow, title)
+        if node is None:
+            continue
+        before = node["inputs"].get(key)
+        if before != safe:
+            node["inputs"][key] = safe
+            print(f"  [SCRUB]  {title}.{key}: {before!r} -> {safe!r}")
 
 
 def _bake_tier(workflow: dict, tier: int) -> None:
@@ -220,6 +258,7 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
         if spec["tier"] is not None:
             _bake_tier(workflow, spec["tier"])
         _bake_bypass_strength(workflow, spec["bypass"])
+        _sanitize_injected_inputs(workflow)
         n_styles = _assert_style_rack(workflow)
 
         out_path = out_dir / f"{base}_{suffix}.json"

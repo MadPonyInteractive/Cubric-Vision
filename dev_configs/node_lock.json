@@ -103,6 +103,13 @@
       "commit": "17af88332728c97ab5c7d26296b2cae59c935976",
       "filename": "comfyui-krea2edit",
       "installRequirements": false
+    },
+    "comfyui-inpaint-cropandstitch": {
+      "source": "git-commit",
+      "repo": "lquesada/ComfyUI-Inpaint-CropAndStitch",
+      "commit": "3617559bcb9d15ff60b24c6800701402eb2cd478",
+      "filename": "comfyui-inpaint-cropandstitch",
+      "installRequirements": false
     }
   }
 }

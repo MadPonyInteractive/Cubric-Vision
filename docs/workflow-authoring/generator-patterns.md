@@ -119,3 +119,19 @@ Image/mask/video/audio inputs are path-reading loaders (`MpiLoadImageFromPath` /
 `MpiLoadAudio` / `MpiLoadVideo`) that self-gate on an empty `string` — no
 placeholder to stamp. The one survivor: any `LoadLatent` node still needs its
 baked latent staged into the engine `input/`. Full contract: [media-inputs.md](media-inputs.md).
+
+## Scrub runtime-injected inputs to safe defaults (MPI-282)
+
+The raw template the user exports carries **whatever they last tested with** — a baked seed,
+a `C:\...\Downloads\...png` image path, `Input_Style: 10`, `Input_Is_Edit: true`. Every input
+the app injects at runtime MUST be scrubbed back to its safe default at build, or the leaked
+test value ships in the runtime file and corrupts a fresh gen (a baked image path made a plain
+t2i take the edit branch; a baked seed defeats the no-seed-UI law).
+
+Pattern: a `_sanitize_injected_inputs(workflow)` helper with a `(title, widget_key, safe)`
+list — `Input_Positive`/`Input_Negative` → `string` `''`, `Input_Seed` → `int` `0`,
+`Input_Image`/`Input_Mask` → `string` `''` (self-gate), `Input_Style` → `int` `0`, mode flags
+(`Input_Is_Edit`/`Input_Is_i2i`/…) → `boolean` `false`. Call it in the per-variant build loop,
+alongside the weight/tier/bypass bakes. `_find_by_title` no-ops on absent nodes, so one list
+covers every template. (`generate_krea2.py` is the reference.) Injected WEIGHTS
+(tier/weight/bypass/LoRAs) are baked by their own forced helpers, not scrubbed here.

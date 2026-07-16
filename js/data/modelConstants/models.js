@@ -234,7 +234,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_balanced_sfw.json',
             i2i: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_i2i flips the latent source
             poseReference: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            edit: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_Edit + Input_Image_2 switch to the identity-edit path
+            edit: 'krea2_t2i_balanced_sfw.json',   // same graph; identity-edit LoRA path + optional Input_Mask crop (History workspace)
             upscale: 'krea2_turbo_upscaler_sfw.json',
             detail: 'krea2_turbo_detailer_sfw.json',
         },
@@ -271,6 +271,8 @@ export const MODELS = [
             // node class before MpiIfElse picks a branch.
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
+            'comfyui-krea2edit',              // dual-conditioning edit nodes (edit op, all 4 cards)
+            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
         ],
     },
     {
@@ -314,7 +316,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_balanced_nsfw.json',
             i2i: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
             poseReference: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            edit: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_Edit + Input_Image_2 switch to the identity-edit path
+            edit: 'krea2_t2i_balanced_nsfw.json',   // same graph; identity-edit LoRA path + optional Input_Mask crop (History workspace)
             upscale: 'krea2_turbo_upscaler_nsfw.json',
             detail: 'krea2_turbo_detailer_nsfw.json',
         },
@@ -346,6 +348,8 @@ export const MODELS = [
             // node class before MpiIfElse picks a branch.
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
+            'comfyui-krea2edit',              // dual-conditioning edit nodes (edit op, all 4 cards)
+            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
         ],
     },
     {
@@ -382,7 +386,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_high_sfw.json',
             i2i: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_i2i flips the latent source
             poseReference: 'krea2_t2i_high_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            edit: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_Edit + Input_Image_2 switch to the identity-edit path
+            edit: 'krea2_t2i_high_sfw.json',   // same graph; identity-edit LoRA path + optional Input_Mask crop (History workspace)
             upscale: 'krea2_upscaler_sfw.json',   // Raw-weight upscaler (High tier)
             detail: 'krea2_detailer_sfw.json',    // Raw-weight detailer (High tier)
         },
@@ -413,6 +417,7 @@ export const MODELS = [
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
             'comfyui-krea2edit',         // dual-conditioning edit nodes (Krea2EditModelPatch + GroundedEncode)
+            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
         ],
     },
     {
@@ -475,6 +480,7 @@ export const MODELS = [
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
             'comfyui-krea2edit',
+            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
         ],
     },
     {

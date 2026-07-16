@@ -22,7 +22,7 @@
   },
   "1603": {
     "inputs": {
-      "int": 2
+      "int": 0
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -47,7 +47,7 @@
   },
   "1673": {
     "inputs": {
-      "string": "A beautiful woman with red hair and an emo look, taking a selfie in her bedroom. She's wearing a monokini. The bedroom light is turned off and only a neon light is illuminating part of her body"
+      "string": ""
     },
     "class_type": "MpiText",
     "_meta": {

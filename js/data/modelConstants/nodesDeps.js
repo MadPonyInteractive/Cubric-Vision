@@ -194,6 +194,22 @@ export const nodesDeps = {
         installRequirements: false,
         size: '11KB',
     },
+    // Inpaint Crop & Stitch (MPI-282) — InpaintCropImproved (✂️ Inpaint Crop) crops the
+    // masked region to a fixed working size, InpaintStitchImproved (✂️ Inpaint Stitch)
+    // pastes it back. Drives the Krea2 mask-edit crop path. Pure-python (torch/numpy/
+    // opencv, all already present) — NO requirements.txt ⇒ installRequirements:false
+    // (rides the volume, no Pod rebuild). Dep of ALL 4 Krea2 cards: the shared t2i graph
+    // references both classes, and ComfyUI validates every node class before MpiIfElse
+    // picks a branch — so even a plain t2i run needs them.
+    'comfyui-inpaint-cropandstitch': {
+        id: 'comfyui-inpaint-cropandstitch',
+        name: 'ComfyUI Inpaint Crop and Stitch',
+        type: 'custom_nodes',
+        filename: 'comfyui-inpaint-cropandstitch',
+        url: lockUrl('comfyui-inpaint-cropandstitch'),
+        installRequirements: false,
+        size: '200KB',
+    },
     // Preprocessors (DepthAnythingV2Preprocessor via AIO_Preprocessor) for the Krea2
     // depth ControlNet (MPI-242). HAS a requirements.txt ⇒ installRequirements:true
     // ⇒ BAKED into the Pod image (needs POD_IMAGE_VERSION bump + rebuild).

@@ -153,6 +153,14 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
+        // Edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA path).
+        // Baked FALSE, so without this the op runs as plain t2i and ignores the edit —
+        // same contract as i2i's Input_Is_i2i above.
+        injectParams: { Input_Is_Edit: true },
+        // No controls: the style-LoRA rack fights the edit path (the style LoRAs and the
+        // identity-edit LoRA don't compose — edit degrades), and the Force-1024 crop
+        // (Input_HiRes_Mode) didn't help enough to keep. Style stays baked-off; the edit
+        // follows the source image / masked crop, never a chosen aspect, so no ratio.
         components: [],
     },
     detail: {

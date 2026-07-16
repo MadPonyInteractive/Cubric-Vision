@@ -134,7 +134,7 @@
   },
   "73": {
     "inputs": {
-      "int": 891976866874162
+      "int": 0
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -163,11 +163,11 @@
     "inputs": {
       "batch_size": 1,
       "width": [
-        "75",
+        "377",
         0
       ],
       "height": [
-        "74",
+        "378",
         0
       ]
     },
@@ -211,7 +211,7 @@
   },
   "85": {
     "inputs": {
-      "int": 10
+      "int": 0
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -220,7 +220,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": "",
+      "cleanup": 0,
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -246,18 +246,6 @@
     "class_type": "MpiPromptProcessor",
     "_meta": {
       "title": "Mpi Prompt Processor"
-    }
-  },
-  "95": {
-    "inputs": {
-      "source": [
-        "114",
-        0
-      ]
-    },
-    "class_type": "PreviewAny",
-    "_meta": {
-      "title": "Preview as Text"
     }
   },
   "96": {
@@ -442,7 +430,7 @@
   },
   "112": {
     "inputs": {
-      "string": "A realistic, front-view portrait of a solo male character resembling a dark, sinister version of Batman. He wears a black cowl with prominent bat-like ears, adorned with a spiked silver crown. His face is smeared with blood, and he stares directly at the viewer with a wide, menacing grin that exposes sharp, pointed teeth. He is dressed in black leather-like clothing with a high-collared cape secured by heavy metal chains draped across his chest. The background is a stark, blood-splattered red."
+      "string": ""
     },
     "class_type": "MpiText",
     "_meta": {
@@ -731,18 +719,6 @@
       "title": "High"
     }
   },
-  "150": {
-    "inputs": {
-      "images": [
-        "309",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Output_Image"
-    }
-  },
   "160": {
     "inputs": {
       "samples": [
@@ -887,7 +863,7 @@
   "217": {
     "inputs": {
       "pixels": [
-        "257",
+        "370",
         0
       ],
       "vae": [
@@ -1072,7 +1048,7 @@
   },
   "256": {
     "inputs": {
-      "string": "C:\\Users\\Fabio\\Downloads\\sfw.png",
+      "string": "",
       "channel": "alpha"
     },
     "class_type": "MpiLoadImageFromPath",
@@ -1089,91 +1065,21 @@
       "divisible_by": 16,
       "device": "cpu",
       "image": [
-        "256",
+        "323",
         0
       ],
       "width": [
-        "75",
+        "336",
         0
       ],
       "height": [
-        "74",
+        "337",
         0
       ]
     },
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
-    }
-  },
-  "262": {
-    "inputs": {
-      "model": [
-        "265",
-        0
-      ],
-      "source_latent": [
-        "274",
-        0
-      ],
-      "source_latent_b": [
-        "280",
-        0
-      ]
-    },
-    "class_type": "Krea2EditModelPatch",
-    "_meta": {
-      "title": "Krea2 Edit (source patch)"
-    }
-  },
-  "263": {
-    "inputs": {
-      "grounding_px": 768,
-      "clip": [
-        "69",
-        0
-      ],
-      "image": [
-        "257",
-        0
-      ],
-      "image_b": [
-        "278",
-        0
-      ],
-      "prompt": [
-        "283",
-        0
-      ]
-    },
-    "class_type": "Krea2EditGroundedEncode",
-    "_meta": {
-      "title": "Krea2 Edit (grounded encode)"
-    }
-  },
-  "264": {
-    "inputs": {
-      "grounding_px": 768,
-      "clip": [
-        "69",
-        0
-      ],
-      "image": [
-        "257",
-        0
-      ],
-      "image_b": [
-        "278",
-        0
-      ],
-      "prompt": [
-        "114",
-        0
-      ]
-    },
-    "class_type": "Krea2EditGroundedEncode",
-    "_meta": {
-      "title": "Krea2 Edit (grounded encode)"
     }
   },
   "265": {
@@ -1193,36 +1099,7 @@
   "274": {
     "inputs": {
       "pixels": [
-        "257",
-        0
-      ],
-      "vae": [
-        "56",
-        0
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "278": {
-    "inputs": {
-      "channel": "alpha",
-      "string": [
-        "296",
-        0
-      ]
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "Image"
-    }
-  },
-  "280": {
-    "inputs": {
-      "pixels": [
-        "278",
+        "370",
         0
       ],
       "vae": [
@@ -1329,7 +1206,7 @@
   "294": {
     "inputs": {
       "true": [
-        "297",
+        "300",
         0
       ],
       "false": [
@@ -1346,47 +1223,6 @@
       "title": "pos"
     }
   },
-  "295": {
-    "inputs": {
-      "string": "C:\\Users\\Fabio\\Downloads\\nsfw.png"
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_Image_2"
-    }
-  },
-  "296": {
-    "inputs": {
-      "any": [
-        "295",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
-    }
-  },
-  "297": {
-    "inputs": {
-      "true": [
-        "264",
-        0
-      ],
-      "false": [
-        "300",
-        0
-      ],
-      "boolean": [
-        "296",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "has image 2"
-    }
-  },
   "299": {
     "inputs": {
       "grounding_px": 768,
@@ -1395,7 +1231,7 @@
         0
       ],
       "image": [
-        "257",
+        "370",
         0
       ],
       "prompt": [
@@ -1416,7 +1252,7 @@
         0
       ],
       "image": [
-        "257",
+        "370",
         0
       ],
       "prompt": [
@@ -1429,30 +1265,10 @@
       "title": "Krea2 Edit (grounded encode)"
     }
   },
-  "301": {
-    "inputs": {
-      "true": [
-        "263",
-        0
-      ],
-      "false": [
-        "299",
-        0
-      ],
-      "boolean": [
-        "296",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "has image 2"
-    }
-  },
   "302": {
     "inputs": {
       "true": [
-        "301",
+        "299",
         0
       ],
       "false": [
@@ -1472,7 +1288,7 @@
   "303": {
     "inputs": {
       "true": [
-        "307",
+        "306",
         0
       ],
       "false": [
@@ -1503,26 +1319,6 @@
     "class_type": "Krea2EditModelPatch",
     "_meta": {
       "title": "Krea2 Edit (source patch)"
-    }
-  },
-  "307": {
-    "inputs": {
-      "true": [
-        "262",
-        0
-      ],
-      "false": [
-        "306",
-        0
-      ],
-      "boolean": [
-        "296",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "has image 2"
     }
   },
   "309": {
@@ -1599,6 +1395,365 @@
     "class_type": "VAEDecode",
     "_meta": {
       "title": "VAE Decode"
+    }
+  },
+  "313": {
+    "inputs": {
+      "stitcher": [
+        "314",
+        0
+      ],
+      "inpainted_image": [
+        "309",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "\u2702\ufe0f Inpaint Stitch"
+    }
+  },
+  "314": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 0,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1.2,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "cpu (compatible)",
+      "image": [
+        "256",
+        0
+      ],
+      "mask": [
+        "360",
+        0
+      ],
+      "output_resize_to_target_size": [
+        "366",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "\u2702\ufe0f Inpaint Crop"
+    }
+  },
+  "316": {
+    "inputs": {
+      "any": [
+        "320",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "318": {
+    "inputs": {
+      "channel": "red",
+      "string": [
+        "316",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "mask loader"
+    }
+  },
+  "320": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "323": {
+    "inputs": {
+      "true": [
+        "314",
+        1
+      ],
+      "false": [
+        "256",
+        0
+      ],
+      "boolean": [
+        "316",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "326": {
+    "inputs": {
+      "true": [
+        "361",
+        0
+      ],
+      "false": [
+        "309",
+        0
+      ],
+      "boolean": [
+        "316",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "335": {
+    "inputs": {
+      "image": [
+        "314",
+        1
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "336": {
+    "inputs": {
+      "true": [
+        "335",
+        0
+      ],
+      "false": [
+        "75",
+        0
+      ],
+      "boolean": [
+        "316",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "337": {
+    "inputs": {
+      "true": [
+        "335",
+        1
+      ],
+      "false": [
+        "74",
+        0
+      ],
+      "boolean": [
+        "316",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "339": {
+    "inputs": {
+      "images": [
+        "326",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "360": {
+    "inputs": {
+      "padding": 0,
+      "mask": [
+        "318",
+        1
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Mpi Mask Square Bbox"
+    }
+  },
+  "361": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "seed": 0,
+      "steps": 5,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "denoise": 0.38,
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "313",
+        0
+      ],
+      "mask": [
+        "363",
+        0
+      ],
+      "basic_pipe": [
+        "292",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer (Seam Fix)"
+    }
+  },
+  "363": {
+    "inputs": {
+      "padding": 58,
+      "mask": [
+        "318",
+        1
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Mpi Mask Square Bbox"
+    }
+  },
+  "366": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_HiRes_Mode"
+    }
+  },
+  "367": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "323",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "370": {
+    "inputs": {
+      "true": [
+        "367",
+        0
+      ],
+      "false": [
+        "257",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "372": {
+    "inputs": {
+      "image": [
+        "370",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "377": {
+    "inputs": {
+      "true": [
+        "372",
+        0
+      ],
+      "false": [
+        "75",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "378": {
+    "inputs": {
+      "true": [
+        "372",
+        1
+      ],
+      "false": [
+        "74",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
     }
   }
 }
