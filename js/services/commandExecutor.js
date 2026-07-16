@@ -652,9 +652,15 @@ function _buildParams(payload) {
             if (assigned.has(slot.key)) continue;
             const fallback = mediaItems.find(candidate =>
                 candidate.mediaType === slot.mediaType &&
-                candidate.url
+                candidate.url &&
+                // MPI-292: dedup — never reuse an item already routed to another
+                // slot. Without this, ONE dropped image fills Input_Image AND
+                // (via this fallback) Input_Image_2, so a 1-image edit silently
+                // gets the source duplicated as its 2nd reference.
+                !usedIds.has(candidate.id || candidate.url)
             );
             if (!fallback) continue;
+            usedIds.add(fallback.id || fallback.url);
             assigned.set(slot.key, fallback);
             fallbackAssigned.add(slot.key);
             params[slot.title] = fallback.url;

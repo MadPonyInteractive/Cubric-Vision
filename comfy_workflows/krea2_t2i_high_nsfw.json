@@ -220,7 +220,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": "",
+      "cleanup": 0,
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -1049,7 +1049,8 @@
   "256": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -1234,6 +1235,10 @@
         "370",
         0
       ],
+      "image_b": [
+        "399",
+        0
+      ],
       "prompt": [
         "283",
         0
@@ -1253,6 +1258,10 @@
       ],
       "image": [
         "370",
+        0
+      ],
+      "image_b": [
+        "399",
         0
       ],
       "prompt": [
@@ -1313,6 +1322,10 @@
       ],
       "source_latent": [
         "274",
+        0
+      ],
+      "source_latent_b": [
+        "389",
         0
       ]
     },
@@ -1412,8 +1425,8 @@
   "370": {
     "inputs": {
       "true": [
-        "380",
-        0
+        "392",
+        3
       ],
       "false": [
         "257",
@@ -1522,6 +1535,70 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
+    }
+  },
+  "388": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  },
+  "389": {
+    "inputs": {
+      "pixels": [
+        "399",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "392": {
+    "inputs": {
+      "size": 768,
+      "side": false,
+      "upscale_method": "lanczos",
+      "image": [
+        "380",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "399": {
+    "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "388",
+        0
+      ],
+      "width": [
+        "388",
+        2
+      ],
+      "height": [
+        "388",
+        3
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
     }
   }
 }

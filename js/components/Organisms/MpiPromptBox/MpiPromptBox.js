@@ -301,7 +301,34 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
+        // MPI-292: the op that supports at least `targetCount` items of `mediaType`,
+        // preferring the smallest-capacity op that fits (so a lone image lands on
+        // i2i, not edit). Returns null if no supported op reaches targetCount.
+        function _opForMediaCount(mediaType, targetCount) {
+            if (!model?.supportedOps?.length) return null;
+            return model.supportedOps
+                .map(op => ({ op, max: _maxMediaForOperation(op, mediaType) }))
+                .filter(o => o.max >= targetCount)
+                .sort((a, b) => a.max - b.max)[0]?.op ?? null;
+        }
+
         function _tryAddMedia({ url, file, mediaType, source, role, name }) {
+            // MPI-292: dropping an image while the current op caps this mediaType
+            // below the resulting count up-jumps to the model's larger-capacity op
+            // (e.g. i2i → krea2Edit on the 2nd image) BEFORE the cap below would
+            // otherwise evict the existing chip. Skipped for role-tagged drops
+            // (start/end-frame carry their own slot) and models with no bigger op.
+            if (!role) {
+                const existing = _mediaItems.filter(m => m.mediaType === mediaType).length;
+                const wouldBe = existing + 1;
+                if (wouldBe > _maxMediaForCurrentOperation(mediaType)) {
+                    const biggerOp = _opForMediaCount(mediaType, wouldBe);
+                    if (biggerOp && biggerOp !== activeOperation) {
+                        el.setOperation(biggerOp, { programmatic: true });
+                    }
+                }
+            }
+
             const maxCount = _maxMediaForCurrentOperation(mediaType);
             if (maxCount <= 0) { _showIncompatibleToast(); return; }
 
@@ -319,7 +346,10 @@ export const MpiPromptBox = ComponentFactory.create({
             if (maxCount === 1) {
                 afterRoleDrop.forEach(item => _removeItem(item.id, { silent: true }));
             } else if (afterRoleDrop.length >= maxCount) {
-                _removeItem(afterRoleDrop[0].id, { silent: true });
+                // MPI-292: evict the LAST chip, not the first. Chip 1 is the edit's
+                // base image — a drop at capacity replaces the trailing chip and
+                // leaves the base intact.
+                _removeItem(afterRoleDrop[afterRoleDrop.length - 1].id, { silent: true });
             }
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };

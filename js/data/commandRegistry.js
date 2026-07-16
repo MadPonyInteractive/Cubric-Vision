@@ -165,7 +165,11 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
-            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true  },
+            // 2nd reference image (MPI-292): optional. Empty → Input_Image_2's
+            // MpiLoadImageFromPath self-gates → 1-image edit runs fine. Only this op
+            // declares two image slots, so PromptBox shows the 2nd chip in edit only.
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
         ],
         promptRequired: true,
         // Krea2's edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA
