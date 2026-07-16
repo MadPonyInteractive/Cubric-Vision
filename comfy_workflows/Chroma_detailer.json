@@ -33,27 +33,13 @@
     "inputs": {
       "shift": 1,
       "model": [
-        "1670",
+        "1684",
         0
       ]
     },
     "class_type": "ModelSamplingAuraFlow",
     "_meta": {
       "title": "Flow Shift"
-    }
-  },
-  "1670": {
-    "inputs": {
-      "style_dtype": "float64",
-      "enable": true,
-      "model": [
-        "1684",
-        0
-      ]
-    },
-    "class_type": "ReChromaPatcher",
-    "_meta": {
-      "title": "ReChromaPatcher"
     }
   },
   "1671": {
@@ -309,7 +295,8 @@
   "1689": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -319,7 +306,8 @@
   "1692": {
     "inputs": {
       "string": "",
-      "channel": "red"
+      "channel": "red",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

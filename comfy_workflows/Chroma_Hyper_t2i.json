@@ -33,7 +33,7 @@
   },
   "823": {
     "inputs": {
-      "model_name": "Chroma1-HD-Flash.safetensors",
+      "model_name": "Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
       "weight_dtype": "default",
       "clip_name1_opt": "t5xxl_fp16.safetensors",
       "clip_name2_opt": ".none",
@@ -154,7 +154,7 @@
       "eta": 0.5,
       "sampler_name": "exponential/res_2s",
       "scheduler": "bong_tangent",
-      "steps": 8,
+      "steps": 12,
       "steps_to_run": -1,
       "cfg": 1,
       "sampler_mode": "standard",

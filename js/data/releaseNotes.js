@@ -41,7 +41,8 @@ export const RELEASE_NOTES = {
   '1.2.0': {
     version: '1.2.0',
     whatIsNew: [
-      'In development — changelog entries are added here as features land.',
+      'NEW MODEL: CHROMA HYPER — A faster, lighter Chroma for lower-VRAM machines: the same high-detail Flux-family image generator distilled to run quicker at a smaller download (~9GB vs 17GB). Does text-to-image, image-to-image, upscale and detail, and installs alongside Chroma Flash as its Low-tier sibling.',
+      'CHROMA FLASH IS FASTER AND BETTER — Chroma Flash now runs quicker and produces higher-quality results, with matching improvements to its upscale and detail passes.',
     ],
     fixes: [
       'LOOPING A TRIMMED CLIP NO LONGER STOPS AT THE END — When a video had a trim in-point and its out-point at the very end of the clip, enabling loop would play once and stop instead of looping. It now wraps back to the in-point and keeps playing.',

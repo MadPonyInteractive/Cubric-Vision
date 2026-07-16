@@ -161,6 +161,7 @@ export const MODELS = [
         // MPI-217.
         id: 'chroma-flash',
         sizeTier: 'balanced',
+        modelFamily: 'Chroma',
         name: 'Chroma Flash',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
@@ -179,6 +180,44 @@ export const MODELS = [
         },
         dependencies: [
             'chroma1-hd-flash',
+            't5xxl-fp16',
+            'vae-flux-ae',
+            '4x-NMKD-Siax',
+            'RES4LYF',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        // Chroma (Hyper) — LOW-tier sibling of Chroma Flash. Same op shape, same support
+        // stack (RES4LYF/MpiNodes/UltimateSDUpscale, t5xxl-fp16, vae-flux-ae, Siax); only
+        // the diffusion weight differs (int8 Danrisi mix + Hyper/Turbo distill → faster,
+        // ~9.2GB vs Flash's 17GB). Clustered with Flash via modelFamily:'Chroma'; the L/B
+        // badge disambiguates. Separately installable alongside Flash (NOT mutually
+        // exclusive). Own t2i/upscaler/detailer runtime files (chroma_hyper_* — the
+        // upscaler/detailer keys are lowercase, matching the generated filenames on a
+        // case-sensitive Pod FS).
+        id: 'chroma-hyper',
+        sizeTier: 'low',
+        modelFamily: 'Chroma',
+        name: 'Chroma Hyper',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        defaultUpscale: '4x-NMKD-Siax',
+        image: 'chroma-hyper-01.webp',
+        type: 'chroma',
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
+        loraStrengths: ['model'],
+        gen_speed: 'fast',
+        description: 'A faster, lighter Chroma — the same high-detail Flux-family image generator distilled to run quicker at low VRAM. Great for realistic, hardcore NSFW; hands can still struggle.',
+        workflows: {
+            t2i: 'Chroma_Hyper_t2i.json',
+            i2i: 'Chroma_Hyper_t2i.json',   // same graph; Input_Is_i2i flips the latent source
+            upscale: 'chroma_hyper_upscaler.json',
+            detail: 'Chroma_Hyper_detailer.json',
+        },
+        dependencies: [
+            'chroma1-hd-hyper',
             't5xxl-fp16',
             'vae-flux-ae',
             '4x-NMKD-Siax',

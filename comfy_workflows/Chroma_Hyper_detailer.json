@@ -2,7 +2,7 @@
   "1556": {
     "inputs": {
       "images": [
-        "1686",
+        "1687",
         0
       ]
     },
@@ -13,7 +13,7 @@
   },
   "1594": {
     "inputs": {
-      "float": 0.4
+      "float": 0.6
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -22,99 +22,11 @@
   },
   "1603": {
     "inputs": {
-      "int": 2
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Seed"
-    }
-  },
-  "1604": {
-    "inputs": {
-      "int": 1
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Grid_H"
-    }
-  },
-  "1605": {
-    "inputs": {
-      "int": 1
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Grid_V"
-    }
-  },
-  "1613": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Auto_Grid"
-    }
-  },
-  "1639": {
-    "inputs": {
-      "image": [
-        "1655",
-        0
-      ],
-      "horizontal_split": [
-        "1604",
-        0
-      ],
-      "vertical_split": [
-        "1605",
-        0
-      ],
-      "upscale_factor": [
-        "1657",
-        0
-      ],
-      "auto": [
-        "1613",
-        0
-      ]
-    },
-    "class_type": "MpiGridDimensions",
-    "_meta": {
-      "title": "Mpi Grid Dimensions"
-    }
-  },
-  "1655": {
-    "inputs": {
-      "resize_type": "scale to multiple",
-      "resize_type.multiple": 16,
-      "scale_method": "lanczos",
-      "input": [
-        "1687",
-        0
-      ]
-    },
-    "class_type": "ResizeImageMaskNode",
-    "_meta": {
-      "title": "Resize Image/Mask"
-    }
-  },
-  "1656": {
-    "inputs": {
-      "model_name": "4x_NMKD-Siax_200k.pth"
-    },
-    "class_type": "UpscaleModelLoader",
-    "_meta": {
-      "title": "Input_Upscale_Model"
-    }
-  },
-  "1657": {
-    "inputs": {
-      "float": 1.5
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Input_Upscale_Factor"
     }
   },
   "1669": {
@@ -320,7 +232,7 @@
   },
   "1684": {
     "inputs": {
-      "model_name": "Chroma1-HD-Flash.safetensors",
+      "model_name": "Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
       "weight_dtype": "default",
       "clip_name1_opt": "t5xxl_fp16.safetensors",
       "clip_name2_opt": ".none",
@@ -334,61 +246,36 @@
       "title": "ClownModelLoader"
     }
   },
-  "1685": {
+  "1687": {
     "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "steps": 6,
+      "cfg": 1,
+      "sampler_name": "heun",
+      "scheduler": "beta",
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "1689",
+        0
+      ],
+      "mask": [
+        "1692",
+        1
+      ],
       "basic_pipe": [
         "1679",
-        0
-      ]
-    },
-    "class_type": "FromBasicPipe",
-    "_meta": {
-      "title": "FromBasicPipe"
-    }
-  },
-  "1686": {
-    "inputs": {
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "res_multistep",
-      "scheduler": "bong_tangent",
-      "mode_type": "Linear",
-      "mask_blur": 8,
-      "tile_padding": 32,
-      "seam_fix_mode": "None",
-      "seam_fix_denoise": 0.6,
-      "seam_fix_width": 64,
-      "seam_fix_mask_blur": 8,
-      "seam_fix_padding": 16,
-      "force_uniform_tiles": false,
-      "tiled_decode": false,
-      "batch_size": 1,
-      "image": [
-        "1655",
-        0
-      ],
-      "model": [
-        "1685",
-        0
-      ],
-      "positive": [
-        "1685",
-        3
-      ],
-      "negative": [
-        "1685",
-        4
-      ],
-      "vae": [
-        "1685",
-        2
-      ],
-      "upscale_model": [
-        "1656",
-        0
-      ],
-      "upscale_by": [
-        "1657",
         0
       ],
       "seed": [
@@ -398,22 +285,14 @@
       "denoise": [
         "1594",
         0
-      ],
-      "tile_width": [
-        "1639",
-        0
-      ],
-      "tile_height": [
-        "1639",
-        1
       ]
     },
-    "class_type": "UltimateSDUpscale",
+    "class_type": "MaskDetailerPipe",
     "_meta": {
-      "title": "Upscaling with Chroma..."
+      "title": "MaskDetailer (Chroma)"
     }
   },
-  "1687": {
+  "1689": {
     "inputs": {
       "string": "",
       "channel": "alpha",
@@ -422,6 +301,29 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "1692": {
+    "inputs": {
+      "string": "",
+      "channel": "red",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "1693": {
+    "inputs": {
+      "image_a": [
+        "1556",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
     }
   }
 }

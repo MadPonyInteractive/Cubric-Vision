@@ -320,7 +320,7 @@
   },
   "1684": {
     "inputs": {
-      "model_name": "Chroma1-HD-Flash.safetensors",
+      "model_name": "Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
       "weight_dtype": "default",
       "clip_name1_opt": "t5xxl_fp16.safetensors",
       "clip_name2_opt": ".none",
@@ -348,7 +348,7 @@
   },
   "1686": {
     "inputs": {
-      "steps": 4,
+      "steps": 6,
       "cfg": 1,
       "sampler_name": "res_multistep",
       "scheduler": "bong_tangent",

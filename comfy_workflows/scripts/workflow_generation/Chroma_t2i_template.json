@@ -189,25 +189,11 @@
       "title": "ClownsharKSampler"
     }
   },
-  "2249": {
-    "inputs": {
-      "style_dtype": "float64",
-      "enable": true,
-      "model": [
-        "823",
-        0
-      ]
-    },
-    "class_type": "ReChromaPatcher",
-    "_meta": {
-      "title": "ReChromaPatcher"
-    }
-  },
   "2250": {
     "inputs": {
       "shift": 1,
       "model": [
-        "2249",
+        "823",
         0
       ]
     },
@@ -230,7 +216,7 @@
   },
   "2594": {
     "inputs": {
-      "string": "Two women, naked at the beach, talking to each other. Amateur photo taken on the phone. Candid moment. "
+      "string": "Selfie shot from above off A beautiful redhead with green eyes and wavy long hair lying on a towel at a beach, wearing a bikini, sweaty, sun hitting your skin. Amateur photo taken on the phone. Candid moment. "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -350,7 +336,7 @@
   },
   "2605": {
     "inputs": {
-      "int": 891976866874162
+      "int": 891976866874163
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -388,7 +374,7 @@
   },
   "2612": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -452,7 +438,8 @@
   "2617": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

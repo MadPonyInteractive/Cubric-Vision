@@ -109,6 +109,17 @@ export const modelDeps = {
         size: '17GB',
         sha256: '2c0c7d908d04418a48b453c293237a9826d54472cf0ba76e28697d1309d1021b'
     },
+    // Chroma Hyper — low-tier sibling of Chroma Flash (int8, Danrisi mix + Hyper/Turbo
+    // distill). Same op shape + support stack as Flash; only this diffusion weight differs.
+    'chroma1-hd-hyper': {
+        id: 'chroma1-hd-hyper',
+        name: 'Chroma1-HD-Hyper',
+        origin: 'lodestone-rock/Chroma (HD DanrisiMix Hyper-Flash-Turbo int8)',
+        filename: 'diffusion_models/Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors',
+        size: '9.2GB',
+        sha256: 'fbc7172b2fc9e483832d5781ef5cfe75a432c5de832b42e7fa53b24fb22547dc'
+    },
     // ── NVIDIA PiD upscaler transformers (MPI-182) ─────────────────────────────
     // One model, 4 VAE-locked checkpoints selected at runtime via Input_Type.
     // Compat = VAE latent space, not model name. Their shared gemma text encoder +
