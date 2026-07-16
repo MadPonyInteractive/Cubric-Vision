@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-294",
+  "title": "Better LTX live preview via taehv taeltx2_3 decoder",
+  "description": "Current LTX live latent previews are poor. madebyollin/taehv (github.com/madebyollin/taehv) now ships dedicated LTX-2 / LTX-2.3 tiny-autoencoder decoders: taeltx_2, taeltx2_3, and a taeltx2_3_wide variant (README lists 'wide' as less-blurry output). These are new (surfaced during 2026-07-16 Krea2-preview research). GOAL: live-test whether dropping the taeltx2_3 (and/or _wide) .safetensors into engine models/vae_approx/ gives a materially better LTX preview than our current Latent2RGB/KJNodes path. CAUTION — this is the SAME class of decoder that triggers ComfyUI #13366 (TAESD preview corrupts the real generation latent mid-sampling) for the Wan21/Qwen format used by Krea2. LTX is a DIFFERENT latent format, so #13366 may not apply — but VERIFY no output corruption before trusting it: generate WITH and WITHOUT the decoder present, compare final frames pixel-wise, not just the preview. Related Krea2 constraint (do NOT install lighttaew2_1 for Krea2): docs/models/krea2/preview-taesd.md. Note our LTX preview today is gated LTX-only by VHS event + KJNodes override (see project_ltx_preview_cannot_use_taesd memory): understand that path before swapping. If it works + is corruption-free: track the vae_approx asset as engineAsset:true in dependencies.js (installs with engine on BOTH local + remote engines). Files/refs: js/data/modelConstants/dependencies.js (engineAsset pattern), routes/comfy.js / routes/engine.js (--preview-method taesd global flag), docs/models/krea2/preview-taesd.md (the #13366 landmine writeup).",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-16T19:15:00Z",
+  "updated_at": "2026-07-16T19:15:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}
