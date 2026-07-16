@@ -118,6 +118,25 @@ async function main() {
   if (!changed.length) { console.log('No raw/ workflows changed vs HEAD — nothing to do.'); return; }
   console.log(`Changed raw workflow(s): ${changed.join(', ')}`);
 
+  // 1b. GATE — filenames MUST be all-lowercase. The runtime file (and its GEN template)
+  //     inherit this exact name; models.js `workflows` keys must match byte-for-byte, and
+  //     the Pod FS is case-sensitive. A mixed-case name (Chroma_t2i.json) works on Windows
+  //     but 404s on the Pod if a key is ever "corrected" to a different case (MPI-291).
+  //     Stop BEFORE the raw commit so nothing mixed-case lands. NOTE: fixing this is a
+  //     case-only rename, which collides in git's `add` on core.ignorecase=true — do it in
+  //     two steps: `git mv X x.tmp && git mv x.tmp x`, or rename + `git add -A` the pair.
+  const mixedCase = changed.filter((f) => f !== f.toLowerCase());
+  if (mixedCase.length) {
+    console.error(
+      `\nSTOP: ${mixedCase.length} raw workflow filename(s) are NOT all-lowercase:\n` +
+      mixedCase.map((f) => `  ${f}  ->  ${f.toLowerCase()}`).join('\n') +
+      `\n\nWorkflow filenames must be lowercase (case-sensitive Pod FS; the runtime file + ` +
+      `models.js key inherit this name). Rename in comfy_workflows/raw/ to the lowercase form ` +
+      `above, then re-run. Nothing was committed.`
+    );
+    process.exit(1);
+  }
+
   // 2. Commit the RAW sources FIRST — the record of the user's edit. Generated API +
   //    runtime are NOT committed here (too many commits); /mpi-end closes them.
   const rawPaths = changed.map((f) => `comfy_workflows/raw/${f}`);

@@ -80,6 +80,7 @@ Two structural forks decide everything downstream:
 | `isWeightDep()` counts every LoRA dep toward `totalWeightsGb()` — over-counts mutually-exclusive style LoRAs. **Measure before special-casing** | [02](02-dependencies-r2.md) |
 | VRAM/RAM table is **computed**, never authored. Get the dep `size` strings right and it is correct. `sizeTier` is only a badge | [03](03-model-registry.md) |
 | Loader path == dep `filename` == on-disk path. Subfoldered LoRAs list with **backslashes** | [01](01-workflow-split.md) |
+| Workflow filenames are **all-lowercase** — raw/runtime/template/`registry` prefix/`models.js` key are one name; the Pod FS is case-sensitive so a mixed-case name works on Windows and 404s remotely. `sync-raw-workflows` gates on it | [01](01-workflow-split.md) |
 | R2: `--s3-no-check-bucket` (else 403) + `--bwlimit 3M`. Verify with `lsf` + HTTP HEAD — a wrapping `echo` masks rclone's exit code | [02](02-dependencies-r2.md) |
 | Any single weight file **≥ 20 GB** ⇒ 🛑 **STOP and ask the user** (Pod hot-store + container-disk budget) | [02](02-dependencies-r2.md) |
 | `progressStages.js` bar counts **must be counted live** per run mode. Never guess | [02](02-dependencies-r2.md) |
@@ -105,6 +106,7 @@ Two structural forks decide everything downstream:
 - [ ] Output capture titled `Output_Image` (image) / `Output_Video` (video) / `Output_Preview` (multi-stage preview) — [04](04-ops-and-controls.md). Single naming law (MPI-252); no bare `Output`
 - [ ] Author + save the workflow template in `comfy_workflows/scripts/workflow_generation/`
 - [ ] Verify the op-boolean feeds only the MpiIfElse; normalize all loader file paths to bare filenames — [01](01-workflow-split.md)
+- [ ] **Workflow filenames all-lowercase** (raw + runtime + template + `registry` prefix + `models.js` key agree byte-for-byte) — case-sensitive Pod FS. `sync-raw-workflows` gates on it — [01](01-workflow-split.md)
 - [ ] **Media inputs** are path→string loaders (`MpiLoadImageFromPath`/`MpiLoadAudio`/`MpiLoadVideo`) that self-gate on empty — no placeholder (MPI-272). Any `LoadLatent`? Bake its latent AND confirm `_prepareWorkflowInputs` stages it — [01](01-workflow-split.md)
 - [ ] Write/run the generator → runtime files in `comfy_workflows/`
 - [ ] Add `progressStages.js` entry — COUNT tqdm bar restarts live per run mode — [02](02-dependencies-r2.md); wrong = wrong `N/M` in status bar

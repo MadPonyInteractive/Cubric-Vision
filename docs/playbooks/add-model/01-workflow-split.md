@@ -75,6 +75,19 @@ writes it.
 **The app fetches runtime workflows from `comfy_workflows/<file>` directly**
 (`commandExecutor.js` `fetch('/comfy_workflows/${workflowFile}')`). No startup copy.
 
+> **RULE — workflow filenames are ALL-LOWERCASE (MPI-291).** The raw source, the runtime
+> file, the GEN template, the `registry.py` prefix, and the `models.js` `workflows` value are
+> ONE name that must agree byte-for-byte. The **Pod FS is case-sensitive**: `Chroma_t2i.json`
+> and `chroma_t2i.json` are the same file on Windows but different on the Pod, so a mixed-case
+> name works locally and 404s remotely the moment a key is written in a different case. Name
+> every raw file lowercase from the start (`chroma_hyper_t2i_template.json`, not
+> `Chroma_Hyper_...`). `sync-raw-workflows.mjs` now GATES on this and stops before committing a
+> mixed-case name. **Fixing an already-committed mixed-case name is a case-only rename**, which
+> collides in git's `add` on `core.ignorecase=true`; do it in two steps
+> (`git mv X x.tmp && git mv x.tmp x`) or rename on disk + `git add -A` the old/new pair, then
+> re-run the convert→validate→orchestrate pipeline manually (sync can't do a case-only rename —
+> its own `git add` hits the same alias collision).
+
 ## Template → runtime files (the biggest trap)
 
 **The app cannot switch t2v/i2v at runtime.** The op mode is BAKED into separate
