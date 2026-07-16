@@ -383,6 +383,12 @@ class FileDownloader {
         this._downloader = null;
         this.onProgress = null;
         this._eventsBound = false;
+        // MPI-291 — byte-flow stall watchdog. Last moment a progress tick moved bytes.
+        // Seeded at construction so a downloader that never emits a single tick (dead
+        // socket from the start, distinct from the timeout:30000 no-response case) is
+        // still caught. _watchdogSweep() force-errors any downloader quiet past the window.
+        this._lastByteTs = Date.now();
+        this._lastBytes = -1;
     }
 
     _bindEvents() {
@@ -392,6 +398,12 @@ class FileDownloader {
         // Progress — forwarded to our onProgress callback
         this._downloader.on('progress', (stats) => {
             const speed = stats.speed || 0;
+            // MPI-291 — only a real byte advance resets the stall clock. A repeated
+            // same-total tick with no new bytes must NOT count as liveness.
+            if (stats.downloaded > this._lastBytes) {
+                this._lastBytes = stats.downloaded;
+                this._lastByteTs = Date.now();
+            }
             this.depJob.downloadedBytes = stats.downloaded;
             this.depJob.totalBytes = stats.total;
             this.depJob.speed = _formatSpeed(speed);
@@ -511,6 +523,48 @@ class FileDownloader {
         if (this._downloader) {
             await this._downloader.stop().catch(() => false);
         }
+    }
+
+    // MPI-291 — driven by _watchdogSweep when the socket goes quiet mid-stream past
+    // the stall window. NDH's timeout:30000 promises this but does NOT fire on a
+    // mid-stream quiet socket (v2.1.11). Stop the stream and route into the EXISTING
+    // 'error' → _setDepStatus('failed') → retry/report path — never a raw store poke.
+    async forceStall() {
+        // stop() prevents NDH from emitting its own late 'end'/'error'; then we
+        // synthesize the error so the bound 'error' handler runs the failed path
+        // (_setDepStatus('failed') → retry/report). NDH extends EventEmitter, so emit
+        // always reaches the handler _bindEvents wired.
+        if (!this._downloader) return;
+        await this._downloader.stop().catch(() => false);
+        this._downloader.emit('error', new Error('Download stalled — no data received.'));
+    }
+}
+
+// MPI-291 — byte-flow stall watchdog. Self-idling backstop (mirrors
+// MpiModelManager._pumpBackstop): runs only while a download is active, stops when
+// _activeDownloaders drains. If a downloader hasn't advanced a byte in STALL_MS it's
+// force-errored into the existing failed/retry path. Window is longer than NDH's
+// timeout:30000 so this is a genuine backstop, not a double-fire.
+const STALL_MS = 60_000;
+let _watchdogTimer = null;
+
+function _startStallWatchdog() {
+    if (_watchdogTimer) return;
+    _watchdogTimer = setInterval(_watchdogSweep, 15_000);
+}
+
+function _watchdogSweep() {
+    if (_activeDownloaders.size === 0) {
+        clearInterval(_watchdogTimer);
+        _watchdogTimer = null;
+        return;
+    }
+    const now = Date.now();
+    for (const [depId, dl] of _activeDownloaders) {
+        if (now - dl._lastByteTs < STALL_MS) continue;
+        logger.warn('download', `stall watchdog: ${depId} no byte movement in ${STALL_MS}ms — forcing failure`);
+        dl.forceStall().catch(err =>
+            logger.error('download', `forceStall(${depId}) threw: ${err.message}`));
     }
 }
 
@@ -1006,6 +1060,7 @@ async function _startPendingDeps() {
         _setDepStatus(depJob, 'downloading', 'local dep start');
         const downloader = new FileDownloader(depJob, depJob.localPath);
         _activeDownloaders.set(depJob.id, downloader);
+        _startStallWatchdog(); // MPI-291 — self-idles when _activeDownloaders drains
 
         _wireProgress(depJob, downloader);
         logger.info('download', `Starting download for ${depJob.id} from ${depJob.url}`);

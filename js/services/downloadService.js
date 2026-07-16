@@ -86,6 +86,7 @@ const downloadService = {
         job.indeterminate = true;
         state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
         state.downloadQueueActive = true;
+        this._startLivenessWatchdog(); // MPI-291 — self-idles when no active job
         if (job.status === 'pending') this._armPendingRevert(modelId);
         Events.emit('download:started', { modelId, job });
 
@@ -304,6 +305,32 @@ const downloadService = {
         this._connectSSE();
     },
 
+    // MPI-291 — SSE liveness watchdog. The 'error' handler's 3s reconnect covers a
+    // stream that errors cleanly, but a silently-dropped stream (no error event) left
+    // _eventSource null/CLOSED with no reconnect while a download ran — the grid showed
+    // an orphan frozen bar (live server progress, dead FE stream). This self-idling
+    // backstop (mirrors MpiModelManager._pumpBackstop) verifies the stream is OPEN
+    // while any job is active and reconnects if not. Idles when no active job.
+    _livenessTimer: null,
+    _startLivenessWatchdog() {
+        if (this._livenessTimer) return;
+        this._livenessTimer = setInterval(() => {
+            const active = state.downloadJobs.some(
+                j => j.status === 'downloading' || j.status === 'installing'
+                    || j.status === 'pending' || j.status === 'queued');
+            if (!active) {
+                clearInterval(this._livenessTimer);
+                this._livenessTimer = null;
+                return;
+            }
+            const es = this._eventSource;
+            if (!es || es.readyState === EventSource.CLOSED) {
+                clientLogger.warn('downloadService', 'SSE liveness watchdog: stream dead, reconnecting');
+                this._connectSSE();
+            }
+        }, 5000);
+    },
+
     _connectSSE() {
         if (this._eventSource) this._eventSource.close();
         this._eventSource = new EventSource('/comfy/downloads/stream');
@@ -367,6 +394,7 @@ const downloadService = {
             state.downloadJobs = [...jobs, ...clientPending];
             state.downloadQueueActive = state.downloadJobs.some(
                 j => j.status === 'downloading' || j.status === 'installing' || j.status === 'pending' || j.status === 'queued');
+            if (state.downloadQueueActive) this._startLivenessWatchdog(); // MPI-291 — reload/recover mid-download
             // Signal consumers to repaint from the fresh snapshot. On a renderer reload
             // mid-download the grid mounts with empty state.downloadJobs and renders the
             // card as Install; this SSE-connect snapshot is what restores the live bar,

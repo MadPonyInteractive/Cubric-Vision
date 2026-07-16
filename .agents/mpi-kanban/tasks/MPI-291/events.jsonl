@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-291","at":"2026-07-16T16:38:35.000Z","actor":"vscode","summary":"Created MPI-291."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-291","at":"2026-07-16T17:10:00.000Z","actor":"claude","from":"todo","to":"doing","summary":"Picked up MPI-291 — implementing SSE liveness + byte-flow stall watchdogs."}

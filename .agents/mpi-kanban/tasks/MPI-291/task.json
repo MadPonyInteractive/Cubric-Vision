@@ -1,0 +1,20 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-291",
+    "title": "Stalled download must self-heal + stay visible (SSE liveness + byte-flow watchdog)",
+    "column": "doing",
+    "maturity": "in-progress",
+    "status": "open",
+    "created_at": "2026-07-16T16:38:35.000Z",
+    "updated_at": "2026-07-16T17:10:00.000Z",
+    "links": {
+        "brief": "brief.md",
+        "plan": "plan.md",
+        "checklist": "checklist.md",
+        "validation": "validation.md",
+        "files": "files.json",
+        "events": "events.jsonl",
+        "handoffs": "handoffs/",
+        "research": "research/"
+    }
+}
