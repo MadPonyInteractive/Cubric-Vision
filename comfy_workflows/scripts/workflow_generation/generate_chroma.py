@@ -11,7 +11,7 @@ this handler to reset both to their safe t2i defaults.
 
 Chroma is a SINGLE variant (no SFW/NSFW split, no style rack, no bypass LoRA — unlike
 krea2), so this handler is just the boolean reset. One template → one file:
-  Chroma_t2i_template.json -> Chroma_t2i.json   (serves t2i + i2i)
+  chroma_t2i_template.json -> chroma_t2i.json   (serves t2i + i2i)
 
 One thing a hand-export cannot be trusted to carry:
 
@@ -22,7 +22,7 @@ One thing a hand-export cannot be trusted to carry:
   (MPI-272: the optional image input is now a self-gating MpiLoadImageFromPath — no
   placeholder stamp needed; a plain t2i just leaves the `string` empty.)
 
-Orchestrated: build(source_path, out_dir) — routed by the `Chroma_` prefix (registry.py).
+Orchestrated: build(source_path, out_dir) — routed by the `chroma_` prefix (registry.py).
 Standalone:  python generate_chroma.py
 
 Node lookup is by `_meta.title` (MPI-116 naming law) — never by node id.
@@ -61,7 +61,7 @@ def _force_t2i_default(workflow: dict) -> None:
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
     """Orchestrator entry. Emit the one Chroma runtime file (serves t2i + i2i)."""
-    base = source_path.name[: -len("_template.json")]  # Chroma_t2i_template.json -> Chroma_t2i
+    base = source_path.name[: -len("_template.json")]  # chroma_t2i_template.json -> chroma_t2i
     print(f"Template: {source_path.name}")
     workflow = json.loads(source_path.read_text(encoding="utf-8"))
     _force_t2i_default(workflow)
