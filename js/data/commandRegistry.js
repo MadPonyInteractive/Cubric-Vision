@@ -153,15 +153,30 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        // Edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA path).
-        // Baked FALSE, so without this the op runs as plain t2i and ignores the edit —
-        // same contract as i2i's Input_Is_i2i above.
-        injectParams: { Input_Is_Edit: true },
-        // No controls: the style-LoRA rack fights the edit path (the style LoRAs and the
-        // identity-edit LoRA don't compose — edit degrades), and the Force-1024 crop
-        // (Input_HiRes_Mode) didn't help enough to keep. Style stays baked-off; the edit
-        // follows the source image / masked crop, never a chosen aspect, so no ratio.
+        // Boogu-Image-Edit's op: a whole-image instruction edit that follows the SOURCE
+        // image dimensions (no size picker) and exposes no controls. Krea2's edit is a
+        // separate op (krea2Edit) — it uses OUR provided dims and needs ratio + style.
         components: [],
+    },
+    krea2Edit: {
+        label: 'Edit',
+        info: 'Edit — change the whole image following your prompt',
+        progressLabel: 'Editing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: true,
+        // Krea2's edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA
+        // path; baked FALSE, so this inject flips it on — same contract as i2i's
+        // Input_Is_i2i). Localized/masked edit was removed (inconsistent results) — no
+        // Input_Mask node in the graph anymore. The editor takes OUR provided dimensions
+        // (not the source image size), so it needs ratio + qualityTier. Styles + the style
+        // slider help the edit path, so they stay. No batch: Krea2's second sampler
+        // produces artifacts on batched follow-ups.
+        injectParams: { Input_Is_Edit: true },
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'enhancePrompt'],
     },
     detail: {
         label: 'Detail',

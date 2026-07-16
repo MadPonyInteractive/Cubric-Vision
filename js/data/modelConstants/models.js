@@ -216,7 +216,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true, batch: false },
         // Style-LoRA labels, INDEX-ALIGNED with the workflow's nine MpiMath gates and
@@ -234,7 +234,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_balanced_sfw.json',
             i2i: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_i2i flips the latent source
             poseReference: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            edit: 'krea2_t2i_balanced_sfw.json',   // same graph; identity-edit LoRA path + optional Input_Mask crop (History workspace)
+            krea2Edit: 'krea2_t2i_balanced_sfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
             upscale: 'krea2_turbo_upscaler_sfw.json',
             detail: 'krea2_turbo_detailer_sfw.json',
         },
@@ -302,7 +302,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true, batch: false },
         styleLoraLabels: [
@@ -316,7 +316,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_balanced_nsfw.json',
             i2i: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
             poseReference: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            edit: 'krea2_t2i_balanced_nsfw.json',   // same graph; identity-edit LoRA path + optional Input_Mask crop (History workspace)
+            krea2Edit: 'krea2_t2i_balanced_nsfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
             upscale: 'krea2_turbo_upscaler_nsfw.json',
             detail: 'krea2_turbo_detailer_nsfw.json',
         },
@@ -372,7 +372,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false },
         styleLoraLabels: [
@@ -386,7 +386,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_high_sfw.json',
             i2i: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_i2i flips the latent source
             poseReference: 'krea2_t2i_high_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
-            edit: 'krea2_t2i_high_sfw.json',   // same graph; identity-edit LoRA path + optional Input_Mask crop (History workspace)
+            krea2Edit: 'krea2_t2i_high_sfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
             upscale: 'krea2_upscaler_sfw.json',   // Raw-weight upscaler (High tier)
             detail: 'krea2_detailer_sfw.json',    // Raw-weight detailer (High tier)
         },
@@ -435,7 +435,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],
         capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false },
         styleLoraLabels: [
@@ -449,7 +449,7 @@ export const MODELS = [
             t2i: 'krea2_t2i_high_nsfw.json',
             i2i: 'krea2_t2i_high_nsfw.json',
             poseReference: 'krea2_t2i_high_nsfw.json',
-            edit: 'krea2_t2i_high_nsfw.json',
+            krea2Edit: 'krea2_t2i_high_nsfw.json',
             upscale: 'krea2_upscaler_nsfw.json',   // Raw-weight upscaler (High tier)
             detail: 'krea2_detailer_nsfw.json',    // Raw-weight detailer (High tier)
         },
