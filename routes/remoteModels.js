@@ -162,8 +162,14 @@ function _universalNodeFilenames() {
   _universalNodeNames = new Set();
   try {
     // CJS-friendly read of the ESM dep registry (same pattern as shared.js).
+    // MPI-293: read nodesDeps.js — NOT dependencies.js. dependencies.js merely
+    // SPREADS `...nodesDeps` (it holds no inline custom_nodes block text), so the
+    // per-dep block regex below matched NOTHING there → the universal/baked set was
+    // silently EMPTY → every baked node (comfyui_controlnet_aux et al.) was treated
+    // as non-resident and sent to the wrapper, dying with the Errno-2 requirements
+    // self-heal on a fresh volume. The custom_nodes blocks live in nodesDeps.js.
     const path = require('path');
-    const file = path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'dependencies.js');
+    const file = path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'nodesDeps.js');
     const src = require('fs').readFileSync(file, 'utf8');
     // Split into per-dep blocks at the top-level "  'id': {" keys so the marker
     // checks stay scoped to ONE dep (a whole-file regex leaks across deps). A

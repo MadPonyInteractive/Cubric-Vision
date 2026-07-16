@@ -154,7 +154,18 @@ const client = {
   },
 
   async createPod(apiKey, spec) {
-    return _rest(apiKey, 'POST', '/pods', spec);
+    // MPI-293: RunPod's gateway intermittently answers a create with a transient
+    // 502/503/504 (proxy blip, NOT a real reject/out-of-stock). Surfaced raw, it
+    // aborts the whole connect and can leave a bare Pod. A 4xx (enum lag, stock,
+    // schema) is a real reject and must NOT retry — only gateway 5xx do.
+    // ponytail: fixed 2-retry with short linear backoff; enough for a proxy blip.
+    let r;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      r = await _rest(apiKey, 'POST', '/pods', spec);
+      if (r.ok || r.status < 502 || r.status > 504) return r;
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 2000 * (attempt + 1)));
+    }
+    return r;
   },
   // MPI-159: GraphQL create fallback for GPUs the REST create enum rejects (the
   // REST `gpuTypeIds` enum lags the GraphQL catalogue the picker lists from, so a

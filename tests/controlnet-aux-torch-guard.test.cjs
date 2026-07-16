@@ -15,8 +15,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+// MPI-293: read nodesDeps.js — dependencies.js only SPREADS `...nodesDeps` and holds
+// no inline custom_nodes block text, so this regex found nothing there (assert null).
 const src = fs.readFileSync(
-    path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'dependencies.js'),
+    path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'nodesDeps.js'),
     'utf8',
 );
 

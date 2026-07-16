@@ -254,6 +254,18 @@ finds the weight. Being `engineAsset`, the weight boot-installs + self-heals; on
 it's image-resident (baked inside the node folder, so the wrapper never installs it).
 Guard: `tests/node-drift.test.cjs`.
 
+**Trap (MPI-293) — reading the dep registry as TEXT.** `dependencies.js` is a
+FACADE: it only spreads the four split files (`modelDeps.js`, `assetDeps.js`,
+`loraDeps.js`, `nodesDeps.js`) and holds NO inline block text. Runtime
+`import {DEPS}` consumers are fine (spread resolves at load), but any code that
+regex-scans the *source* of `dependencies.js` finds NOTHING — silently. This
+killed three scanners: `remoteModels.js` `_universalNodeFilenames` (empty baked
+set → every baked node hit the wrapper → `comfyui_controlnet_aux` Errno-2 on a
+fresh volume), `controlnet-aux-torch-guard.test.cjs` (asserted null → dead), and
+`release-health-check.mjs` folder-type scan (MPI-143 map guard passed on
+nothing). Fix: text-scanners must read the split file(s) that hold the blocks
+(`nodesDeps.js` for custom_nodes; glob `*Deps.js` for a folder-type sweep).
+
 ## Remote (RunPod) Disk-Full Pre-Flight
 
 An old comment in `downloadManager.js` (MPI-100 era) claims a truthful remote

@@ -448,7 +448,12 @@ class FileDownloader {
                         });
                     }
                 }
+                const _tHash0 = Date.now(); // MPI-TEMP-TIMING
                 await _verifySha256(this.localPath, this.depJob.sha256Expected);
+                if (this.depJob.sha256Expected) { // MPI-TEMP-TIMING
+                    let _sz = 0; try { _sz = (await fs.stat(this.localPath)).size; } catch {}
+                    logger.info('download', `[MPI-TEMP-TIMING] sha256 ${this.depJob.id}: ${Date.now() - _tHash0}ms for ${(_sz / 1024 / 1024).toFixed(0)}MB`);
+                }
                 await clearDownloadMarker(this.localPath);
                 _setDepStatus(this.depJob, 'complete', 'downloader end');
                 _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
@@ -1533,7 +1538,13 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // never send them to the wrapper. (comfyui_controlnet_aux is the first baked
         // node a model DECLARES as a dep — LTX/Impact/etc. are implicit engine deps,
         // never in a model's `deps`, so this path was never hit before Krea2.)
-        if (alreadyInstalled && dep.type === 'custom_nodes' && remoteModels._isImageResident(dep)) {
+        // MPI-293: the image-resident check must run REGARDLESS of alreadyInstalled.
+        // On a FRESH volume the wrapper scans /workspace and reports a baked node as
+        // NOT installed (it lives in the image at /opt, invisible to the volume scan),
+        // so `alreadyInstalled` is false — but sending it to the wrapper still dies
+        // with the Errno-2 above because there is no volume folder to cd into. A baked
+        // node is present + its pip deps ran at build time: settle complete either way.
+        if (dep.type === 'custom_nodes' && remoteModels._isImageResident(dep)) {
             _setDepStatus(depJob, 'complete', 'remote baked complete');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
