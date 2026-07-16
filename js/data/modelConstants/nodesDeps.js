@@ -181,6 +181,19 @@ export const nodesDeps = {
         installRequirements: false,
         size: '52KB',
     },
+    // Krea2 identity-edit nodes (MPI-282) — Krea2EditModelPatch (in-context source
+    // latent as frame=1 RoPE tokens) + Krea2EditGroundedEncode (Qwen3-VL image-grounded
+    // instruction). Single __init__.py, imports only torch/einops/comfy — NO
+    // requirements.txt ⇒ installRequirements:false (rides the volume, not the Pod bake).
+    'comfyui-krea2edit': {
+        id: 'comfyui-krea2edit',
+        name: 'ComfyUI Krea2 Edit',
+        type: 'custom_nodes',
+        filename: 'comfyui-krea2edit',
+        url: lockUrl('comfyui-krea2edit'),
+        installRequirements: false,
+        size: '11KB',
+    },
     // Preprocessors (DepthAnythingV2Preprocessor via AIO_Preprocessor) for the Krea2
     // depth ControlNet (MPI-242). HAS a requirements.txt ⇒ installRequirements:true
     // ⇒ BAKED into the Pod image (needs POD_IMAGE_VERSION bump + rebuild).

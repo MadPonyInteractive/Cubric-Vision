@@ -216,7 +216,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true, batch: false },
         // Style-LoRA labels, INDEX-ALIGNED with the workflow's nine MpiMath gates and
@@ -231,9 +231,10 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships ten built-in style LoRAs and a depth-guided pose reference. Renders at up to 2K.',
         workflows: {
-            t2i: 'krea2_turbo_t2i_sfw.json',
-            i2i: 'krea2_turbo_t2i_sfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_turbo_t2i_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            t2i: 'krea2_t2i_balanced_sfw.json',
+            i2i: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            edit: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_Edit + Input_Image_2 switch to the identity-edit path
             upscale: 'krea2_turbo_upscaler_sfw.json',
             detail: 'krea2_turbo_detailer_sfw.json',
         },
@@ -248,6 +249,7 @@ export const MODELS = [
             'krea2-qwen3vl-clip',
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
+            'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of all 4 Krea2 cards
             'krea2-lora-filterbypass',   // always-on bypass node; strength baked per variant (SFW 1.0 / NSFW 0.0)
             'krea2-style-darkbrush',
             'krea2-style-dotmatrix',
@@ -298,7 +300,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: { multiStage: false, audio: false, negativePrompt: false, styleLoras: true, promptEnhance: true, batch: false },
         styleLoraLabels: [
@@ -309,9 +311,10 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'This spicy image generator uses the Lustify Krea model weights by Coyotte, built on Krea 2. It keeps the distinctive photographic look and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported.',
         workflows: {
-            t2i: 'krea2_turbo_t2i_nsfw.json',
-            i2i: 'krea2_turbo_t2i_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_turbo_t2i_nsfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            t2i: 'krea2_t2i_balanced_nsfw.json',
+            i2i: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            edit: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_Edit + Input_Image_2 switch to the identity-edit path
             upscale: 'krea2_turbo_upscaler_nsfw.json',
             detail: 'krea2_turbo_detailer_nsfw.json',
         },
@@ -321,6 +324,7 @@ export const MODELS = [
             'krea2-qwen3vl-clip',
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
+            'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of all 4 Krea2 cards
             'krea2-lora-filterbypass',   // always-on bypass node; strength baked per variant (SFW 1.0 / NSFW 0.0)
             'krea2-style-darkbrush',
             'krea2-style-dotmatrix',
@@ -342,6 +346,135 @@ export const MODELS = [
             // node class before MpiIfElse picks a branch.
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
+        ],
+    },
+    {
+        // ── Krea 2 (HIGH tier) — MPI-282 ───────────────────────────────────────────
+        // The HIGH sibling of Krea 2 Turbo (same modelFamily 'Krea-2', sizeTier 'high').
+        // Raw (un-distilled) weight → WORKING cfg + negative prompt, so it drives the
+        // identity-edit LoRA cleanly where Turbo (cfg 1.0) starves it. Same universal
+        // graph as the Balanced card (t2i/i2i/pose/edit switched at runtime), but the
+        // High sampler chain (Input_Tier=1, cfg 3, ~40 steps). SLOW — Raw at 12.9B is a
+        // big-VRAM feature. capabilities.negativePrompt:TRUE (the ONE cap that differs
+        // from the Turbo cards). See docs/models/krea2/README.md "Krea2 as an EDITOR".
+        id: 'krea2',
+        sizeTier: 'high',
+        featured: true,
+        modelFamily: 'Krea-2',
+        name: 'Krea 2',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'krea2-turbo-sfw.webp',
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'krea2',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
+        loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
+        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false },
+        styleLoraLabels: [
+            'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
+            'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+            'MidJourney',
+        ],
+        gen_speed: 'slow',
+        description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. This is the tier that can EDIT: give it an image and an instruction and it changes only what you ask while preserving the rest. Also does the distinctive photographic look, ten style LoRAs, depth-guided pose reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
+        workflows: {
+            t2i: 'krea2_t2i_high_sfw.json',
+            i2i: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_t2i_high_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            edit: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_Edit + Input_Image_2 switch to the identity-edit path
+            upscale: 'krea2_upscaler_sfw.json',   // Raw-weight upscaler (High tier)
+            detail: 'krea2_detailer_sfw.json',    // Raw-weight detailer (High tier)
+        },
+        qualityTiers: ['1k', '2k'],
+        dependencies: [
+            'krea2-raw-transformer',     // ONLY difference from the Balanced SFW card's deps
+            'krea2-qwen3vl-clip',
+            'vae-qwen-image',            // shared — already on R2, zero upload
+            'krea2-lora-depth-control',
+            'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of all 4 Krea2 cards
+            'krea2-lora-filterbypass',   // always-on bypass node; strength baked per variant (SFW 1.0 / NSFW 0.0)
+            'krea2-style-darkbrush',
+            'krea2-style-dotmatrix',
+            'krea2-style-kidsdrawing',
+            'krea2-style-neondrip',
+            'krea2-style-rainywindow',
+            'krea2-style-retroanime',
+            'krea2-style-softwatercolor',
+            'krea2-style-sunsetblur',
+            'krea2-style-vintagetarot',
+            'krea2-style-midjourney',
+            '4x-NMKD-Siax',
+            'RES4LYF',                   // ClownsharKSampler_Beta (both stages)
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',           // ImageResizeKJv2, ResizeImageMaskNode
+            'ComfyUI-Impact-Pack',       // MaskDetailerPipe, To/FromBasicPipe
+            'ComfyUI-UltimateSDUpscale',
+            'ComfyUI-Krea2-ControlNet',
+            'comfyui_controlnet_aux',
+            'comfyui-krea2edit',         // dual-conditioning edit nodes (Krea2EditModelPatch + GroundedEncode)
+        ],
+    },
+    {
+        // ── Krea 2 NSFW (HIGH tier) — MPI-282 ──────────────────────────────────────
+        // High sibling of Krea 2 Turbo NSFW. Lustify-Krea Raw int8 weight. Same rationale
+        // as the SFW High card above — Raw cfg drives the edit LoRA; negativePrompt:true.
+        id: 'krea2-nsfw',
+        sizeTier: 'high',
+        featured: true,
+        modelFamily: 'Krea-2',
+        name: 'Krea 2 NSFW',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'krea2-turbo-nsfw.webp',
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'krea2',
+        enhanceRecipe: 'flux',
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'edit', 'upscale', 'detail'],
+        loraStrengths: ['model'],
+        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false },
+        styleLoraLabels: [
+            'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
+            'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+            'MidJourney',
+        ],
+        gen_speed: 'slow',
+        description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt, and the tier that can EDIT: give it an image and an instruction and it changes only what you ask. Photographic look, ten style LoRAs, pose reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
+        workflows: {
+            t2i: 'krea2_t2i_high_nsfw.json',
+            i2i: 'krea2_t2i_high_nsfw.json',
+            poseReference: 'krea2_t2i_high_nsfw.json',
+            edit: 'krea2_t2i_high_nsfw.json',
+            upscale: 'krea2_upscaler_nsfw.json',   // Raw-weight upscaler (High tier)
+            detail: 'krea2_detailer_nsfw.json',    // Raw-weight detailer (High tier)
+        },
+        qualityTiers: ['1k', '2k'],
+        dependencies: [
+            'krea2-raw-transformer-nsfw',   // ONLY difference from the High SFW card's deps
+            'krea2-qwen3vl-clip',
+            'vae-qwen-image',
+            'krea2-lora-depth-control',
+            'krea2-lora-identity-edit',
+            'krea2-lora-filterbypass',
+            'krea2-style-darkbrush',
+            'krea2-style-dotmatrix',
+            'krea2-style-kidsdrawing',
+            'krea2-style-neondrip',
+            'krea2-style-rainywindow',
+            'krea2-style-retroanime',
+            'krea2-style-softwatercolor',
+            'krea2-style-sunsetblur',
+            'krea2-style-vintagetarot',
+            'krea2-style-midjourney',
+            '4x-NMKD-Siax',
+            'RES4LYF',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+            'ComfyUI-Impact-Pack',
+            'ComfyUI-UltimateSDUpscale',
+            'ComfyUI-Krea2-ControlNet',
+            'comfyui_controlnet_aux',
+            'comfyui-krea2edit',
         ],
     },
     {

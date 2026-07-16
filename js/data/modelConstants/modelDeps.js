@@ -179,6 +179,30 @@ export const modelDeps = {
         size: '12.25GB',
         sha256: '0505412ed2ac568286c4bf43f8ace93f9f5a6dd7a607f47f1912a68767e6900d',
     },
+    // ── Krea2 RAW transformers (MPI-282) — the HIGH edit tier ───────────────────
+    // Raw (un-distilled) Krea2 has a WORKING cfg, so it drives the identity-edit LoRA
+    // (Balanced/Turbo at cfg 1 starves the edit conditioning). Ships as the High tier
+    // of the 4-card Krea2 set; int8_convrot quant (native NVIDIA RTX Turing+). See
+    // docs/models/krea2/README.md "Krea2 as an EDITOR".
+    'krea2-raw-transformer': {
+        id: 'krea2-raw-transformer',
+        name: 'Krea2 Raw Transformer (int8_convrot)',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'diffusion_models/krea2_raw_int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/krea2_raw_int8_convrot.safetensors',
+        size: '13.49GB',
+        sha256: null,
+    },
+    // NSFW variant — Lustify v10 KREA-Raw, int8_convrot quant.
+    'krea2-raw-transformer-nsfw': {
+        id: 'krea2-raw-transformer-nsfw',
+        name: 'Krea2 Raw Transformer NSFW (int8_convrot)',
+        origin: 'Comfy-Org/Krea-2',
+        filename: 'diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors',
+        size: '13.15GB',
+        sha256: null,
+    },
     // ── Boogu-Image-Edit transformers (MPI-257) ────────────────────────────────
     // Unified 10B image edit, Apache-2.0. Native ComfyUI (comfy_extras/nodes_boogu.py
     // — TextEncodeBooguEdit, no baked node). Three quality TIERS ship as three sibling

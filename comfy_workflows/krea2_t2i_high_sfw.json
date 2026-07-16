@@ -17,7 +17,7 @@
   },
   "55": {
     "inputs": {
-      "unet_name": "lustify-v10-krea-turbo-int8_convrot.safetensors",
+      "unet_name": "krea2_raw_int8_convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -74,7 +74,7 @@
   },
   "60": {
     "inputs": {
-      "value": "You are an expert prompt engineer for text-to-image models. Your task is to expand the user's prompt into a highly effective image-generation prompt.\n\nThink step by step about the request before writing the answer:\n- What is the subject and mood?\n- What visual styles, mediums, and lighting options would fit? Consider two or three alternatives and pick the one that best serves the caption.\n- What composition, framing, and grounded details will help the text-to-image model?\n\nThen output a single expanded prompt paragraph.\n\nFollow these rules strictly:\n1. **Faithfulness First:** Preserve all original subjects, actions, colors, and spatial relationships. Do not add new objects, props, characters, or animals unless the user clearly implies them.\n2. **Practical T2I Structure:** Write a prompt that a text-to-image model can parse cleanly. Group subjects with their own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n3. **Style Planning Stays Internal:** Use your internal reasoning to choose style, medium, framing, and lighting. Do not emit planning tags or wrappers in the visible answer body.\n4. **Text Rendering:** If the user requests visible text, quotes, labels, or typography, specify the exact text clearly and wrap requested words in quotes.\n5. **Avoid Over-Specification:** Do not invent highly specific clothing, colors, materials, or scene details unless the input supports them.\n6. **Structure:** Write one cohesive paragraph after the thinking block. No bullets, JSON, or markdown.\n7. **Respect Existing Detail:** If the user's prompt is already detailed, lightly polish and finalize rather than heavily expanding — preserve their phrasing and direction.\n8. **Respect the Human Form:** Treat depictions of people with dignity. Assume clothing covers genitals and intimate anatomy.\n9. **Preserve User Medium:** When the user explicitly requests a medium (e.g. \"photo of\", \"photograph of\", \"illustration of\", \"painting of\", \"sketch of\", \"3D render of\"), honor it. Do not pivot to a different medium to avoid difficulty — match the user's stated intent.\n\nUser's Input:\n\n"
+      "value": "You are an expert prompt engineer for text-to-image models. Your task is to expand the user's prompt into a highly effective image-generation prompt.\n\nThink step by step about the request before writing the answer:\n- What is the subject and mood?\n- What visual styles, mediums, and lighting options would fit? Consider two or three alternatives and pick the one that best serves the caption.\n- What composition, framing, and grounded details will help the text-to-image model?\n\nThen output a single expanded prompt paragraph.\n\nFollow these rules strictly:\n1. **Faithfulness First:** Preserve all original subjects, actions, colors, and spatial relationships. Do not add new objects, props, characters, or animals unless the user clearly implies them.\n2. **Practical T2I Structure:** Write a prompt that a text-to-image model can parse cleanly. Group subjects with their own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n3. **Style Planning Stays Internal:** Use your internal reasoning to choose style, medium, framing, and lighting. Do not emit planning tags or wrappers in the visible answer body.\n4. **Text Rendering:** If the user requests visible text, quotes, labels, or typography, specify the exact text clearly and wrap requested words in quotes.\n5. **Avoid Over-Specification:** Do not invent highly specific clothing, colors, materials, or scene details unless the input supports them.\n6. **Structure:** Write one cohesive paragraph after the thinking block. No bullets, JSON, or markdown.\n7. **Respect Existing Detail:** If the user's prompt is already detailed, lightly polish and finalize rather than heavily expanding \u2014 preserve their phrasing and direction.\n8. **Respect the Human Form:** Treat depictions of people with dignity. Assume clothing covers genitals and intimate anatomy.\n9. **Preserve User Medium:** When the user explicitly requests a medium (e.g. \"photo of\", \"photograph of\", \"illustration of\", \"painting of\", \"sketch of\", \"3D render of\"), honor it. Do not pivot to a different medium to avoid difficulty \u2014 match the user's stated intent.\n\nUser's Input:\n\n"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -179,7 +179,7 @@
   "77": {
     "inputs": {
       "basic_pipe": [
-        "143",
+        "292",
         0
       ]
     },
@@ -220,7 +220,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": 0,
+      "cleanup": "",
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -706,7 +706,7 @@
   "143": {
     "inputs": {
       "model": [
-        "207",
+        "303",
         0
       ],
       "clip": [
@@ -718,23 +718,23 @@
         0
       ],
       "positive": [
-        "51",
+        "294",
         0
       ],
       "negative": [
-        "57",
+        "302",
         0
       ]
     },
     "class_type": "ToBasicPipe",
     "_meta": {
-      "title": "ToBasicPipe"
+      "title": "High"
     }
   },
   "150": {
     "inputs": {
       "images": [
-        "160",
+        "309",
         0
       ]
     },
@@ -1025,7 +1025,7 @@
   "245": {
     "inputs": {
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
-      "strength_model": 0,
+      "strength_model": 1.0,
       "model": [
         "55",
         0
@@ -1072,7 +1072,7 @@
   },
   "256": {
     "inputs": {
-      "string": "",
+      "string": "C:\\Users\\Fabio\\Downloads\\sfw.png",
       "channel": "alpha"
     },
     "class_type": "MpiLoadImageFromPath",
@@ -1104,6 +1104,501 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
+    }
+  },
+  "262": {
+    "inputs": {
+      "model": [
+        "265",
+        0
+      ],
+      "source_latent": [
+        "274",
+        0
+      ],
+      "source_latent_b": [
+        "280",
+        0
+      ]
+    },
+    "class_type": "Krea2EditModelPatch",
+    "_meta": {
+      "title": "Krea2 Edit (source patch)"
+    }
+  },
+  "263": {
+    "inputs": {
+      "grounding_px": 768,
+      "clip": [
+        "69",
+        0
+      ],
+      "image": [
+        "257",
+        0
+      ],
+      "image_b": [
+        "278",
+        0
+      ],
+      "prompt": [
+        "283",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "264": {
+    "inputs": {
+      "grounding_px": 768,
+      "clip": [
+        "69",
+        0
+      ],
+      "image": [
+        "257",
+        0
+      ],
+      "image_b": [
+        "278",
+        0
+      ],
+      "prompt": [
+        "114",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "265": {
+    "inputs": {
+      "lora_name": "krea-2\\edit\\krea2_identity_edit_v1_1_r128.safetensors",
+      "strength_model": 1,
+      "model": [
+        "207",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "274": {
+    "inputs": {
+      "pixels": [
+        "257",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "278": {
+    "inputs": {
+      "channel": "alpha",
+      "string": [
+        "296",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Image"
+    }
+  },
+  "280": {
+    "inputs": {
+      "pixels": [
+        "278",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "282": {
+    "inputs": {
+      "clip": [
+        "69",
+        0
+      ],
+      "text": [
+        "283",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "283": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "285": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Is_Edit"
+    }
+  },
+  "287": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "290": {
+    "inputs": {
+      "model": [
+        "303",
+        0
+      ],
+      "clip": [
+        "69",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "positive": [
+        "294",
+        0
+      ],
+      "negative": [
+        "57",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "Balanced"
+    }
+  },
+  "292": {
+    "inputs": {
+      "any_1": [
+        "143",
+        0
+      ],
+      "any_2": [
+        "290",
+        0
+      ],
+      "select": [
+        "287",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "294": {
+    "inputs": {
+      "true": [
+        "297",
+        0
+      ],
+      "false": [
+        "51",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "295": {
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Downloads\\nsfw.png"
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  },
+  "296": {
+    "inputs": {
+      "any": [
+        "295",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "297": {
+    "inputs": {
+      "true": [
+        "264",
+        0
+      ],
+      "false": [
+        "300",
+        0
+      ],
+      "boolean": [
+        "296",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "has image 2"
+    }
+  },
+  "299": {
+    "inputs": {
+      "grounding_px": 768,
+      "clip": [
+        "69",
+        0
+      ],
+      "image": [
+        "257",
+        0
+      ],
+      "prompt": [
+        "283",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "300": {
+    "inputs": {
+      "grounding_px": 768,
+      "clip": [
+        "69",
+        0
+      ],
+      "image": [
+        "257",
+        0
+      ],
+      "prompt": [
+        "114",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "301": {
+    "inputs": {
+      "true": [
+        "263",
+        0
+      ],
+      "false": [
+        "299",
+        0
+      ],
+      "boolean": [
+        "296",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "has image 2"
+    }
+  },
+  "302": {
+    "inputs": {
+      "true": [
+        "301",
+        0
+      ],
+      "false": [
+        "282",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "neg"
+    }
+  },
+  "303": {
+    "inputs": {
+      "true": [
+        "307",
+        0
+      ],
+      "false": [
+        "207",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "edit"
+    }
+  },
+  "306": {
+    "inputs": {
+      "model": [
+        "265",
+        0
+      ],
+      "source_latent": [
+        "274",
+        0
+      ]
+    },
+    "class_type": "Krea2EditModelPatch",
+    "_meta": {
+      "title": "Krea2 Edit (source patch)"
+    }
+  },
+  "307": {
+    "inputs": {
+      "true": [
+        "262",
+        0
+      ],
+      "false": [
+        "306",
+        0
+      ],
+      "boolean": [
+        "296",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "has image 2"
+    }
+  },
+  "309": {
+    "inputs": {
+      "any_1": [
+        "312",
+        0
+      ],
+      "any_2": [
+        "160",
+        0
+      ],
+      "select": [
+        "287",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "311": {
+    "inputs": {
+      "eta": 0.5,
+      "sampler_name": "linear/euler",
+      "scheduler": "beta",
+      "steps": 40,
+      "steps_to_run": -1,
+      "cfg": 3,
+      "sampler_mode": "standard",
+      "bongmath": true,
+      "model": [
+        "77",
+        0
+      ],
+      "positive": [
+        "77",
+        3
+      ],
+      "negative": [
+        "77",
+        4
+      ],
+      "latent_image": [
+        "219",
+        0
+      ],
+      "denoise": [
+        "230",
+        0
+      ],
+      "seed": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "312": {
+    "inputs": {
+      "samples": [
+        "311",
+        0
+      ],
+      "vae": [
+        "77",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
     }
   }
 }
