@@ -173,10 +173,10 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Chroma is a high-detail Flux-family image generator. It can produce some really hardcore high quality NSFW but can sometimes struggle with hands.',
         workflows: {
-            t2i: 'Chroma_t2i.json',
-            i2i: 'Chroma_t2i.json',   // same graph; Input_Is_i2i flips the latent source
-            upscale: 'Chroma_upscaler.json',
-            detail: 'Chroma_detailer.json',
+            t2i: 'chroma_t2i.json',
+            i2i: 'chroma_t2i.json',   // same graph; Input_Is_i2i flips the latent source
+            upscale: 'chroma_upscaler.json',
+            detail: 'chroma_detailer.json',
         },
         dependencies: [
             'chroma1-hd-flash',
@@ -211,10 +211,10 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'A faster, lighter Chroma — the same high-detail Flux-family image generator distilled to run quicker at low VRAM. Great for realistic, hardcore NSFW; hands can still struggle.',
         workflows: {
-            t2i: 'Chroma_Hyper_t2i.json',
-            i2i: 'Chroma_Hyper_t2i.json',   // same graph; Input_Is_i2i flips the latent source
+            t2i: 'chroma_hyper_t2i.json',
+            i2i: 'chroma_hyper_t2i.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'chroma_hyper_upscaler.json',
-            detail: 'Chroma_Hyper_detailer.json',
+            detail: 'chroma_hyper_detailer.json',
         },
         dependencies: [
             'chroma1-hd-hyper',

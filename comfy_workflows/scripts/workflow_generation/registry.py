@@ -23,8 +23,9 @@ HANDLERS = [
     ("LTX_",      "ltx"),    # MPI-127: source = LTX_i2v_t2v_template.json (do NOT rename)
     ("krea2_",    "krea2"),  # MPI-242: krea2_turbo_t2i_template.json — no op split; stamps
                              # the optional-image placeholder + asserts the style rack.
-    ("Chroma_",   "chroma"), # MPI-252: Chroma_t2i_template.json — i2i shares the t2i graph;
+    ("chroma_",   "chroma"), # MPI-252: chroma_t2i_template.json — i2i shares the t2i graph;
                              # stamps the optional-image placeholder so plain t2i validates.
+                             # Lowercase-normalized (case-sensitive Pod FS) — MPI-291.
     ("boogu_",    "boogu"),  # MPI-257: boogu_edit_template.json — ONE graph → 3 per-tier
                              # files; bakes UNETLoader weight + Input_Tier int (no op split).
 ]

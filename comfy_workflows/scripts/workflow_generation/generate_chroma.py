@@ -73,9 +73,9 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
 
 def main() -> None:
     """Standalone: rebuild every Chroma template alongside this script."""
-    templates = sorted(SCRIPTS_DIR.glob("Chroma_*_template.json"))
+    templates = sorted(SCRIPTS_DIR.glob("chroma_*_template.json"))
     if not templates:
-        print("[SKIP] No Chroma_*_template.json found.")
+        print("[SKIP] No chroma_*_template.json found.")
         return
     for t in templates:
         build(t, WORKFLOWS_DIR)
