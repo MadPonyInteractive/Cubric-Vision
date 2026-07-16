@@ -18,7 +18,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 18,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
@@ -72,7 +72,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 33,
+      "order": 32,
       "mode": 0,
       "inputs": [
         {
@@ -128,7 +128,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 19,
+      "order": 18,
       "mode": 0,
       "inputs": [
         {
@@ -192,7 +192,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 20,
+      "order": 19,
       "mode": 0,
       "inputs": [
         {
@@ -256,7 +256,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
@@ -312,7 +312,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 21,
+      "order": 20,
       "mode": 0,
       "inputs": [
         {
@@ -362,7 +362,7 @@
         122
       ],
       "flags": {},
-      "order": 24,
+      "order": 23,
       "mode": 0,
       "inputs": [
         {
@@ -420,7 +420,7 @@
         122
       ],
       "flags": {},
-      "order": 25,
+      "order": 24,
       "mode": 0,
       "inputs": [
         {
@@ -478,7 +478,7 @@
         122
       ],
       "flags": {},
-      "order": 26,
+      "order": 25,
       "mode": 0,
       "inputs": [
         {
@@ -538,7 +538,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 28,
+      "order": 27,
       "mode": 0,
       "inputs": [
         {
@@ -600,7 +600,7 @@
         122
       ],
       "flags": {},
-      "order": 27,
+      "order": 26,
       "mode": 0,
       "inputs": [
         {
@@ -699,7 +699,7 @@
         122
       ],
       "flags": {},
-      "order": 23,
+      "order": 22,
       "mode": 0,
       "inputs": [
         {
@@ -759,7 +759,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 34,
+      "order": 33,
       "mode": 0,
       "inputs": [
         {
@@ -917,7 +917,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 29,
+      "order": 28,
       "mode": 0,
       "inputs": [
         {
@@ -986,7 +986,7 @@
         46
       ],
       "flags": {},
-      "order": 30,
+      "order": 29,
       "mode": 0,
       "inputs": [
         {
@@ -1030,7 +1030,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 13,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -1099,7 +1099,7 @@
         80.16694118867758
       ],
       "flags": {},
-      "order": 31,
+      "order": 30,
       "mode": 0,
       "inputs": [
         {
@@ -1154,7 +1154,7 @@
         80.16694118867758
       ],
       "flags": {},
-      "order": 14,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
@@ -1323,7 +1323,7 @@
         336
       ],
       "flags": {},
-      "order": 15,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
@@ -1496,7 +1496,7 @@
         96.66666666666667
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 4,
       "inputs": [
         {
@@ -1608,87 +1608,105 @@
       "bgcolor": "#653"
     },
     {
-      "id": 2620,
-      "type": "ClownsharKSampler_Beta",
+      "id": 2596,
+      "type": "MpiLoraModel",
       "pos": [
-        1498.4554167987963,
-        -487.4302647457803
+        -737.4639932968754,
+        -433.0134854981753
       ],
       "size": [
-        227.5390625,
-        671.8098958333334
+        270,
+        122
       ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 11,
-      "mode": 4,
+      "flags": {},
+      "order": 21,
+      "mode": 0,
       "inputs": [
         {
           "name": "model",
-          "shape": 7,
           "type": "MODEL",
-          "link": null
-        },
-        {
-          "name": "positive",
-          "shape": 7,
-          "type": "CONDITIONING",
-          "link": null
-        },
-        {
-          "name": "negative",
-          "shape": 7,
-          "type": "CONDITIONING",
-          "link": null
-        },
-        {
-          "name": "latent_image",
-          "shape": 7,
-          "type": "LATENT",
-          "link": null
-        },
-        {
-          "name": "sigmas",
-          "shape": 7,
-          "type": "SIGMAS",
-          "link": null
-        },
-        {
-          "name": "guides",
-          "shape": 7,
-          "type": "GUIDES",
-          "link": null
-        },
-        {
-          "name": "options",
-          "shape": 7,
-          "type": "OPTIONS",
-          "link": null
+          "link": 5436
         }
       ],
       "outputs": [
         {
-          "name": "output",
-          "type": "LATENT",
-          "slot_index": 0,
-          "links": []
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            5431
+          ]
         },
         {
-          "name": "denoised",
-          "type": "LATENT",
+          "name": "lora_name",
+          "type": "*",
           "links": null
         },
         {
-          "name": "options",
-          "type": "OPTIONS",
+          "name": "strength",
+          "type": "FLOAT",
           "links": null
+        }
+      ],
+      "title": "Input_Lora_1",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 823,
+      "type": "ClownModelLoader",
+      "pos": [
+        -1296.8337293244135,
+        -713.3939293643523
+      ],
+      "size": [
+        304.8787391666669,
+        266
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            5456
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            4216
+          ]
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "links": [
+            2355
+          ]
         }
       ],
       "properties": {
         "cnr_id": "RES4LYF",
-        "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
-        "Node name for S&R": "ClownsharKSampler_Beta",
+        "ver": "7750bf7800b6ad9d670308a09989fc0c04c40cec",
+        "Node name for S&R": "ClownModelLoader",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1696,20 +1714,15 @@
         }
       },
       "widgets_values": [
-        0.5,
-        "exponential/res_2s",
-        "bong_tangent",
-        8,
-        -1,
-        1,
-        1,
-        796,
-        "fixed",
-        "standard",
-        true
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
+        "Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
+        "default",
+        "t5xxl_fp16.safetensors",
+        ".none",
+        ".none",
+        ".none",
+        "chroma",
+        "ae.safetensors"
+      ]
     },
     {
       "id": 2248,
@@ -1725,7 +1738,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 32,
+      "order": 31,
       "mode": 0,
       "inputs": [
         {
@@ -1821,7 +1834,7 @@
         0.5,
         "exponential/res_2s",
         "bong_tangent",
-        8,
+        12,
         -1,
         1,
         1,
@@ -1832,123 +1845,6 @@
       ],
       "color": "#323",
       "bgcolor": "#535"
-    },
-    {
-      "id": 823,
-      "type": "ClownModelLoader",
-      "pos": [
-        -1296.8337293244135,
-        -713.3939293643523
-      ],
-      "size": [
-        304.8787391666669,
-        266
-      ],
-      "flags": {},
-      "order": 12,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            5456
-          ]
-        },
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "links": [
-            4216
-          ]
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "links": [
-            2355
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "RES4LYF",
-        "ver": "7750bf7800b6ad9d670308a09989fc0c04c40cec",
-        "Node name for S&R": "ClownModelLoader",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.1",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        "Chroma1-HD-Flash.safetensors",
-        "default",
-        "t5xxl_fp16.safetensors",
-        ".none",
-        ".none",
-        ".none",
-        "chroma",
-        "ae.safetensors"
-      ]
-    },
-    {
-      "id": 2596,
-      "type": "MpiLoraModel",
-      "pos": [
-        -737.4639932968754,
-        -433.0134854981753
-      ],
-      "size": [
-        270,
-        122
-      ],
-      "flags": {},
-      "order": 22,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 5436
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            5431
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_Lora_1",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "None",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -2335,8 +2231,8 @@
     "ds": {
       "scale": 0.6115909044841655,
       "offset": [
-        549.7830085873021,
-        1110.185448920077
+        629.9019240923129,
+        1074.2136909382355
       ]
     },
     "workflowRendererVersion": "LG"

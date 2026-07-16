@@ -98,52 +98,6 @@
       ]
     },
     {
-      "id": 1670,
-      "type": "ReChromaPatcher",
-      "pos": [
-        8380.286593567576,
-        5825.059524693694
-      ],
-      "size": [
-        210,
-        96.66666666666667
-      ],
-      "flags": {},
-      "order": 12,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 2382
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "slot_index": 0,
-          "links": [
-            2381
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "RES4LYF",
-        "ver": "7750bf7800b6ad9d670308a09989fc0c04c40cec",
-        "Node name for S&R": "ReChromaPatcher",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.1",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        "float64",
-        true
-      ]
-    },
-    {
       "id": 1671,
       "type": "CLIPTextEncode",
       "pos": [
@@ -1627,7 +1581,7 @@
       ],
       "size": [
         276.9849609375,
-        118
+        166
       ],
       "flags": {},
       "order": 11,
@@ -1664,10 +1618,58 @@
         "Node name for S&R": "MpiLoadImageFromPath"
       },
       "widgets_values": [
-        ""
+        "",
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 1670,
+      "type": "ReChromaPatcher",
+      "pos": [
+        8380.286593567576,
+        5825.059524693694
+      ],
+      "size": [
+        210,
+        96.66666666666667
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2382
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            2381
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "RES4LYF",
+        "ver": "7750bf7800b6ad9d670308a09989fc0c04c40cec",
+        "Node name for S&R": "ReChromaPatcher",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "float64",
+        true
+      ]
     }
   ],
   "links": [
@@ -1985,8 +1987,8 @@
     "ds": {
       "scale": 0.5730855330117257,
       "offset": [
-        -7590.2113379040875,
-        -6103.7630906289405
+        -7297.061379786819,
+        -5534.912576663289
       ]
     },
     "frontendVersion": "1.45.20",
