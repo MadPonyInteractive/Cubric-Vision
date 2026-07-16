@@ -81,8 +81,8 @@
     "inputs": {
       "round": true,
       "input": [
-        "762",
-        2
+        "733",
+        0
       ]
     },
     "class_type": "MpiConvert",
@@ -93,6 +93,7 @@
   "761": {
     "inputs": {
       "filename_prefix": "MpiVideo",
+      "truncate_to_audio": false,
       "images": [
         "720",
         0

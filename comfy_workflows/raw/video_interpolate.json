@@ -36,9 +36,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiClearVram",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiClearVram",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -90,9 +90,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiMath",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -158,9 +158,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "RIFE VFI",
         "cnr_id": "comfyui-frame-interpolation",
         "ver": "1.0.7",
+        "Node name for S&R": "RIFE VFI",
         "ue_properties": {
           "widget_ue_connectable": {
             "clear_cache_after_n_frames": true,
@@ -211,9 +211,9 @@
       ],
       "title": "Input_Interp_Multiplier",
       "properties": {
-        "Node name for S&R": "MpiFloat",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiFloat",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -274,9 +274,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiConvert",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiConvert",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -335,9 +335,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiConvert",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiConvert",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -347,6 +347,66 @@
       "widgets_values": [
         true
       ]
+    },
+    {
+      "id": 761,
+      "type": "MpiSaveVideo",
+      "pos": [
+        2603.2737287233626,
+        730.590634118799
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1216
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 1221
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 1219
+        },
+        {
+          "name": "use_audio",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_audio"
+          },
+          "link": 1222
+        }
+      ],
+      "outputs": [],
+      "title": "Output_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo",
+        true,
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     },
     {
       "id": 762,
@@ -416,72 +476,12 @@
       ],
       "title": "Input_Video",
       "properties": {
-        "Node name for S&R": "MpiLoadVideo",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadVideo"
       },
       "widgets_values": [
-        "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\Boogu image edit\\Media\\i2v_ms_019.mp4"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 761,
-      "type": "MpiSaveVideo",
-      "pos": [
-        2603.2737287233626,
-        730.590634118799
-      ],
-      "size": [
-        270,
-        150
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 1216
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 1221
-        },
-        {
-          "name": "fps",
-          "type": "FLOAT",
-          "widget": {
-            "name": "fps"
-          },
-          "link": 1219
-        },
-        {
-          "name": "use_audio",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "use_audio"
-          },
-          "link": 1222
-        }
-      ],
-      "outputs": [],
-      "title": "Output_Video",
-      "properties": {
-        "Node name for S&R": "MpiSaveVideo",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
-      },
-      "widgets_values": [
-        24,
-        "MpiVideo",
-        true,
-        false
+        ""
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -598,8 +598,8 @@
     "ds": {
       "scale": 0.9236846128152848,
       "offset": [
-        -1111.9971816326465,
-        -285.98649727136154
+        -838.0941670215391,
+        -211.28567510469588
       ]
     },
     "workflowRendererVersion": "LG"
