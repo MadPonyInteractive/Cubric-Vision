@@ -117,3 +117,77 @@ baked in; there is nothing to integrate better. **A sampler recipe tuned on a no
 does not transfer to a distilled one.** The single community recipe found (Civitai
 `krea2_simple_v1`: `res_2s`/`beta`/6 → `deis_3m`/`bong_tangent`/2 @ 0.2) lost at **both** stages
 on this bench.
+
+---
+
+## Raw / High tier (52-step, single-stage) — SETTLED (live A/B, 2026-07-16/17)
+
+> This is the **Raw** variant (`lustify-v10-krea-raw-int8_convrot`, SingleStreamDiT), a
+> separate regime from Turbo above. Raw is **NOT step-distilled** — no fixed trajectory — so
+> the Turbo lessons ("distilled ⇒ don't add steps") do **not** transfer here. It has its own
+> floor.
+
+**Ship this.** Single-stage.
+
+| sampler | scheduler | steps | cfg |
+|---|---|---|---|
+| **`euler`** | `beta` | **40** | 3.0 |
+
+**`euler`@40 `beta` is the floor AND the quality winner.** No sampler tested beat it on speed
+*or* quality — anime and photoreal, single- and multi-subject, across seeds. The whole
+step-reduction / faster-sampler hunt concluded: for this model, **making the math shorter is not
+viable.** The realistic win is *perceived* latency (show a recognizable result earlier), not
+*absolute* latency — see [preview-taesd.md](preview-taesd.md).
+
+**The eval-count floor.** `euler`@40 undercooks nothing; `euler`@25 = mush; `euler`@50 =
+overcooked. The window is narrow and 40 is its center — not arbitrary. `beta`@30 and `simple`@30
+**both** undercooked (soft/hazy, less crisp bark/skin/hair) — so the undercook is **eval count,
+not scheduler shape**. Redistributing 30 steps via a hand-crafted sigma curve cannot manufacture
+detail that needs ~40 evals to form; two different schedulers undercooking at 30 proves the model
+needs the compute, not a different curve. (Manual-sigmas + euler was therefore **not** run — the
+two-scheduler @30 undercook already answers it.)
+
+**Every higher-order RES sampler loses.** Consistent, model-level:
+- **Multistep (`res_2m`, `res_3m`) = contrast tax.** `res_2m`@40 = slower (221 vs 211s on the
+  Pod's RTX PRO 4500) + harsher + *less* fine detail than `euler`@40. `res_3m`@30 = 189s (faster)
+  but visibly contrasty; **lowering cfg (3.0 → 2.8) did not fix it** — cfg only shifted composition
+  (dino shape), the crushed-shadow/blown-highlight signature stayed. The contrast showed on anime
+  first but **reproduced on photoreal** (`res_2m`@40 realistic: blown pink cast + skin/anatomy
+  distortion) — it is not an anime-only artifact.
+- **2-stage (`res_2s`) = ~2× compute for no speed win.** `res_2s`@40 = 415s (2× `euler`@40's 211s)
+  because 2 model calls/step. Quality was *arguably* the nicest (best expressions, scared dog) but
+  **not 2× better**, and `res_2s`@20 (≈210s, break-even wall-time) **undercooked**. So it can only
+  ever be a slower *quality* option, never a speedup.
+
+**Hands are NOT a sampler problem.** Broken hands persisted across `euler`/`res_2m`/`res_2s` AND
+across seeds — constant ⇒ upstream of the sampler. **Root cause: the 2-image reference edit path**
+(identity LoRA `krea2_identity_edit_v1_1_r128`). Single-image reference → hands **perfect**,
+including the hardest test (holding a thin pen). No sampler change will fix 2-image-ref hands; that
+is a separate reference-path problem.
+
+**Timing caveat.** All Raw-tier times above are **RTX PRO 4500** (the Pod), not the user's 4060 Ti
+(where the same run is ~597s). Pod = remote code path; treat these as *relative* comparisons at
+4500-speed, never as app/local-engine timings ([[feedback_runpod_not_local_engine_proof]]).
+
+### The app-vs-browser "83s vs 55s" mystery — SOLVED
+
+Not app overhead. It was the **prompt enhancer toggle** (ON in app, OFF in browser) — an
+autoregressive LM pass before sampling. User re-tested with enhancer OFF: app 55s == browser 55s.
+App dispatch overhead is **negligible** (~18–63 ms warm, measured through `commandExecutor.runCommand`
++ `comfyController.runWorkflow`). **Do not chase app plumbing for generation speed** — there is no
+app tax. ("Convert workflow JSON to Python" is also a dead end for speed: those tools import the
+same node classes / run the same torch — they remove ~ms of HTTP/frontend layer, not compute.)
+
+### Raw-tier dead theories — do NOT re-propose (each refuted by a live run)
+
+| theory | killed by |
+|---|---|
+| A faster/higher-order sampler cuts Raw-tier time | every RES sampler lost to `euler`@40 on speed or quality |
+| Fewer euler steps (25–30) with a better scheduler holds quality | `beta`@30 AND `simple`@30 both undercooked — it's eval count, not curve |
+| Manual sigmas (front-load the tail) recover detail at 30 steps | two schedulers undercooking @30 = compute-bound, not curve-bound; a 30-point curve adds no evals |
+| `res_2s` 2-stage quality justifies a "High-Quality" tier | @40 not 2× better, @20 (break-even time) undercooked — pure time cost |
+| Lower cfg tames multistep contrast | cfg 2.8 only moved composition; contrast signature unchanged |
+| Broken hands are a sampler/step artifact | constant across all samplers + seeds; **single-image ref = perfect hands** → 2-image-ref LoRA path |
+| The app adds seconds of injection/pre-gen overhead | enhancer toggle was the entire 83-vs-55s gap; dispatch ~tens of ms |
+| **FBCache** (WaveSpeed block-cache) accelerates Krea2 | hard-fails: `ValueError: No double blocks found for SingleStreamDiT` — Krea2 is single-stream, FBCache needs MMDiT/double blocks |
+| **FSampler** (epsilon-extrapolation skip) accelerates Krea2 | soft-fails: "model type unknown", ran 80 not 40 steps, only 13.8% cut, final image **fried** (nan on last step) |
