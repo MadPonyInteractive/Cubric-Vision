@@ -39,7 +39,7 @@ export const loraDeps = {
         filename: 'loras/krea-2/edit/krea2_identity_edit_v1_1_r128.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/edit/krea2_identity_edit_v1_1_r128.safetensors',
         size: '0.91GB',
-        sha256: null,
+        sha256: '78b403a45024d51c24b618046ec1176c346416951f8f4c6c707d1b337ae1d40f',
     },
     // Baked LoRA — loaded by the workflow, not user slots. Travels with the model.
     // Subfoldered under loras/krea-2/; ComfyUI lists them BACKSLASHED

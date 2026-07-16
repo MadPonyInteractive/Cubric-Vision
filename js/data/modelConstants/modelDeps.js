@@ -191,7 +191,7 @@ export const modelDeps = {
         filename: 'diffusion_models/krea2_raw_int8_convrot.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/krea2_raw_int8_convrot.safetensors',
         size: '13.49GB',
-        sha256: null,
+        sha256: '5585a4a38c4bcfb6fde2d480a4aa6edf7f665721ebde56d30662c35a45f5fa5c',
     },
     // NSFW variant — Lustify v10 KREA-Raw, int8_convrot quant.
     'krea2-raw-transformer-nsfw': {
@@ -201,7 +201,7 @@ export const modelDeps = {
         filename: 'diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors',
         size: '13.15GB',
-        sha256: null,
+        sha256: 'f165d4db2a4c9a8ce67f88851216ec41ee64ed508f0755de9d4dcd03175bc865',
     },
     // ── Boogu-Image-Edit transformers (MPI-257) ────────────────────────────────
     // Unified 10B image edit, Apache-2.0. Native ComfyUI (comfy_extras/nodes_boogu.py
