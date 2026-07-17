@@ -145,7 +145,7 @@ Non-blocking download router using `node-downloader-helper`. **Downloads are CAN
 A plain single-stream `node-downloader-helper` wrapper: start, cancel (clean `stop()` + remove), SHA256 verify, SSE progress broadcast.
 - `.download()`: always scrubs any stale/partial file at `localPath` first, then starts one clean stream (no `resumeIfFileExists`, no resume option). 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
 - `.cancel()`: `_downloader.stop()` + the caller removes the partial + marker.
-- On completion: verifies `sha256Expected`, clears `<file>.cubricdl`, marks dep `complete`.
+- On completion: verifies `sha256Expected` against the digest computed **incrementally while the file streamed in** (MPI-296 — a `Transform` hash-sink `.pipe()`d ahead of the file write, finalized on `end` into `_streamHashHex`), skipping a whole-file re-read that cost ~35s on a 6.6GB weight (34814ms→1ms). Safe **only because downloads never resume** (see above — the pipe sees every byte once, in order); `_verifySha256` keeps a disk re-read fallback for when no streamed digest exists. If resume is ever reintroduced, gate the fast path on `!wasResumed`. Then clears `<file>.cubricdl`, marks dep `complete`.
 - On SHA256 mismatch: deletes the file, clears the marker, marks dep `failed`.
 
 ### Uninstall pipeline (G13, MPI-276)

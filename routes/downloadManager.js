@@ -27,6 +27,7 @@ async function _trash(p) {
     return _trashFn(p);
 }
 const crypto = require('crypto');
+const nodeStream = require('stream'); // MPI-296 — Writable hash-sink for streaming SHA256
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { checkOnline } = require('./netCheck');
@@ -389,11 +390,36 @@ class FileDownloader {
         // still caught. _watchdogSweep() force-errors any downloader quiet past the window.
         this._lastByteTs = Date.now();
         this._lastBytes = -1;
+        // MPI-296 — SHA256 computed incrementally while the file streams in, so the
+        // post-download verify never re-reads the whole file (killed a 35s wall on a
+        // 6.6GB weight). Safe because downloads NEVER resume (MPI-258 Bug 2): the pipe
+        // sees every byte once, in order. Reset on each 'download' (DHL re-emits it on
+        // retry after clearing __pipes). _streamHashHex holds the final digest for
+        // _verifySha256's in-memory fast path; null → fall back to disk re-read.
+        this._streamHash = null;
+        this._streamHashHex = null;
     }
 
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
+
+        // MPI-296 — attach an incremental SHA256 sink to the download stream. DHL pipes
+        // the HTTP response through registered pipes BEFORE the file write, so this sees
+        // the same bytes the file gets. Fires at each stream start (incl. retry, where
+        // DHL clears __pipes and re-emits 'download'), so re-create the hash + re-register.
+        // DHL chains registered pipes IN SERIES ahead of the file write
+        // (response → pipe1 → … → fileStream), so this MUST be a Transform that
+        // forwards every chunk unchanged — a Writable would swallow the bytes and
+        // starve the file stream. Hash on the way through, pass the chunk along.
+        this._downloader.on('download', () => {
+            this._streamHash = crypto.createHash('sha256');
+            this._streamHashHex = null;
+            const hashPass = new nodeStream.Transform({
+                transform: (chunk, _enc, cb) => { this._streamHash.update(chunk); cb(null, chunk); },
+            });
+            this._downloader.pipe(hashPass);
+        });
 
         // Progress — forwarded to our onProgress callback
         this._downloader.on('progress', (stats) => {
@@ -415,6 +441,12 @@ class FileDownloader {
         // Download finished successfully
         this._downloader.on('end', async () => {
             _activeDownloaders.delete(this.depJob.id);
+            // MPI-296 — finalize the incrementally-computed digest so _verifySha256
+            // can compare in-memory instead of re-reading the whole file from disk.
+            if (this._streamHash) {
+                this._streamHashHex = this._streamHash.digest('hex');
+                this._streamHash = null;
+            }
             try {
                 // sha256 re-reads the whole file (~20-60s for 6GB, ~1-2min for Wan's
                 // 14GB) with no byte progress — the bar would sit at a dead 100%. Flip
@@ -448,12 +480,7 @@ class FileDownloader {
                         });
                     }
                 }
-                const _tHash0 = Date.now(); // MPI-TEMP-TIMING
-                await _verifySha256(this.localPath, this.depJob.sha256Expected);
-                if (this.depJob.sha256Expected) { // MPI-TEMP-TIMING
-                    let _sz = 0; try { _sz = (await fs.stat(this.localPath)).size; } catch {}
-                    logger.info('download', `[MPI-TEMP-TIMING] sha256 ${this.depJob.id}: ${Date.now() - _tHash0}ms for ${(_sz / 1024 / 1024).toFixed(0)}MB`);
-                }
+                await _verifySha256(this.localPath, this.depJob.sha256Expected, this._streamHashHex);
                 await clearDownloadMarker(this.localPath);
                 _setDepStatus(this.depJob, 'complete', 'downloader end');
                 _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
@@ -575,8 +602,19 @@ function _watchdogSweep() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function _verifySha256(filePath, expected) {
+// MPI-296 — `precomputed` is the SHA256 computed incrementally while the file
+// streamed in (DownloadManager's pipe sink). When present it's an exact hash of
+// the same bytes written to disk (no resume ever — MPI-258), so compare it in
+// memory and skip re-reading the whole file (killed a 35s wall on a 6.6GB weight).
+// null/absent → fall back to the disk re-read below (repair paths, edge cases).
+async function _verifySha256(filePath, expected, precomputed) {
     if (!expected) return;
+    if (precomputed) {
+        if (precomputed !== expected) {
+            throw new Error(`SHA256 mismatch: expected ${expected}, got ${precomputed}`);
+        }
+        return;
+    }
     return new Promise((resolve, reject) => {
         const hash = crypto.createHash('sha256');
         const stream = fs.createReadStream(filePath);
