@@ -5,8 +5,9 @@
 ## Q1 — divisibility = 32
 
 - VAE 8× spatial (`vae/config.json` `dim_mult:[1,2,4,4]` → 3 halvings → 2³=8) × transformer `patch_size:2` = **16 math floor**.
-- diffusers `calculate_dimensions()` (QwenImageEditPlus pipeline) **enforces 32** — extra ×2, unexplained (RoPE `axes_dims_rope:[16,56,56]`/symmetry margin). Open: huggingface/diffusers#12997.
-- Non-÷32 input ⇒ **ValueError** (no crop/pad). Use 32.
+- diffusers pipeline: non-÷16 = **WARNING + silent crop/pad** to nearest ÷16 (NOT a hard ValueError — corrected). `calculate_dimensions()` rounds its bucket dims to ÷32 (`round(x/32)*32`, conservative). ComfyUI can hard-error separately on attention-reshape shape mismatch (#9421). Open: huggingface/diffusers#12997.
+- Practical: feed ÷32 → dodges crop/pad + bucket drift. Use 32.
+- ComfyUI landmines: black-image=latent norm not applied (#11865); batched VAE encode 1-img bug fixed ca68660; inpaint VAE unsupported (#9605).
 
 ## Q2 — ImageScaleToTotalPixels
 

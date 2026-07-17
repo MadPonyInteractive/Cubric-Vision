@@ -2,14 +2,26 @@
 
 > Settled from MPI-300 research (2026-07-17, config-verified). Raw dump: `research/dimensions.md`.
 
-## Divisibility: dims must be multiples of 32
+## Divisibility: feed dims that are multiples of 32
 
-- Architecture math floor = **16**: VAE 8× spatial downsample (`vae/config.json` `dim_mult:[1,2,4,4]`
-  → 3 halving stages → 2³) × transformer `patch_size: 2`.
-- **diffusers `calculate_dimensions()` enforces 32** (extra ×2 margin — RoPE grid `axes_dims_rope:[16,56,56]`
-  / symmetry; open issue huggingface/diffusers#12997, no official why). 32 is what ships.
-- **Violation ⇒ `ValueError`** — errors, does NOT crop or pad.
-- **Rule: feed the VAE encode width & height both divisible by 32.**
+- **True architecture floor = 16**: VAE 8× spatial downsample (`vae/config.json` `dim_mult:[1,2,4,4]`,
+  `vae_scale_factor = 2^len(temperal_downsample) = 2³ = 8`) × transformer `patch_size: 2`.
+  Packed latent = 16 ch × 2×2 = `in_channels: 64`.
+- **What the pipeline actually does (NOT a hard ValueError — I over-stated this earlier):**
+  - Non-÷16 → the pipeline logs a **WARNING** (`height % (vae_scale_factor*2) != 0`) and **continues**;
+    the image processor **silently crops/pads** to the nearest ÷16 size → possible spatial-mismatch artifacts.
+  - `calculate_dimensions()` **rounds its own bucket dims to ÷32** (`round(x/32)*32`) — conservative margin,
+    used for the 7 fixed aspect-ratio buckets, not a validation gate. Open issue huggingface/diffusers#12997
+    (why 32 not 16 — unanswered).
+  - **ComfyUI can HARD-error separately** on a shape mismatch in the attention reshape for some
+    image/token-length combos (ComfyUI #9421) — a different failure than dim validation.
+- **Rule: feed the VAE ÷32 dims** — avoids the silent crop/pad AND the ÷32 bucket rounding drift.
+
+## Known ComfyUI Qwen-Edit landmines (for wiring phase)
+
+- **Black-image output** = per-channel `latents_mean`/`latents_std` normalization not applied (ComfyUI #11865). Watch on first gens.
+- **Batched VAE encode processed only 1 image** — ComfyUI bug, fixed in commit `ca68660`. Ensure current ComfyUI.
+- **Inpaint VAE encode node unsupported** for `AutoencoderKLQwenImage` (ComfyUI #9605).
 
 ## Normalize input with `ImageScaleToTotalPixels`
 
