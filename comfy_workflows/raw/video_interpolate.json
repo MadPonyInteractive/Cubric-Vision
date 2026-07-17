@@ -481,7 +481,8 @@
         "Node name for S&R": "MpiLoadVideo"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"

@@ -7929,7 +7929,8 @@
       },
       "widgets_values": [
         "",
-        "alpha"
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -8360,7 +8361,8 @@
       },
       "widgets_values": [
         "",
-        "alpha"
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -8518,7 +8520,8 @@
         "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"

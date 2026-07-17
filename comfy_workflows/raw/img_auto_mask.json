@@ -496,7 +496,8 @@
       },
       "widgets_values": [
         "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\Boogu image edit\\Media\\t2i_002.png",
-        "alpha"
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"

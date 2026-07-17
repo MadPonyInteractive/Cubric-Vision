@@ -2510,7 +2510,8 @@
         "Node name for S&R": "MpiLoadImageFromPath"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -2922,7 +2923,8 @@
         "Node name for S&R": "MpiLoadImageFromPath"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"

@@ -1910,7 +1910,8 @@
       },
       "widgets_values": [
         "",
-        "alpha"
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"

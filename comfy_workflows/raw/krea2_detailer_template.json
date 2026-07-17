@@ -777,7 +777,8 @@
       },
       "widgets_values": [
         "",
-        "alpha"
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -829,7 +830,8 @@
       },
       "widgets_values": [
         "",
-        "red"
+        "red",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"

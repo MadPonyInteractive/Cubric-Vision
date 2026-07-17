@@ -770,7 +770,8 @@
         "Node name for S&R": "MpiLoadAudio"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
