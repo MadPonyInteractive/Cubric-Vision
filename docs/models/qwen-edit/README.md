@@ -31,6 +31,7 @@ the Qwen2.5-VL-7B text encoder, and the two Lightning LoRAs are new uploads.
 |---|---|---|
 | 1 | [reference-latents.md](reference-latents.md) | the `FluxKontextMultiReferenceLatentMethod` node — what the 4 `reference_latents_method` values do, why the workflow ships `index_timestep_zero`, and the **color-shift caveat**. |
 | 2 | [tiers-and-loaders.md](tiers-and-loaders.md) | tier→weights table, Lightning LoRA loader (**MODEL-only, str 1.0**), transformer quant matrix + exact bytes, hot-store gate resolution. |
+| 3 | [dimensions.md](dimensions.md) | input dims must be **÷32** (else ValueError); `ImageScaleToTotalPixels` + `resolution_steps=32` snap; what "resolution steps" means. |
 
 (More topic files added as research settles — samplers, resolution, injection, etc.)
 
