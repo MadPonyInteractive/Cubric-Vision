@@ -38,6 +38,7 @@
 - Reuse Prompt now restores the style, stylization, quality tier and batch, not just the prompt text.
 - New projects open Krea 2 on the 1K quality tier instead of 2K.
 - Auto-mask (the Detect button in the Mask tool) no longer fails on Windows with a model-path error.
+- Auto-mask now lets you select multiple detected segments again — picking two or more people/faces/hands no longer clears your whole selection. (Previously only a single pick worked.)
 - First-time engine setup no longer leaves some model components uninstalled when one of them hits a snag mid-install, and no longer leaves behind duplicate download files.
 - Your chosen operation (Upscale, Pose Reference, etc.) is no longer reset back to Image to Image when you switch between the Gallery and History, change models, or reuse a prompt.
 - In image models, the Upscale operation's denoise parameter sensitivity was changed to match ComfyUI.
