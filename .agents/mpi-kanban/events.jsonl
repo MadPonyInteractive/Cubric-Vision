@@ -1332,3 +1332,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"doing","to":"done","at":"2026-07-17T00:05:00Z"}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"done","to":"doing","at":"2026-07-17T00:20:00Z","note":"reopened: real bug was baked-node fresh-volume Errno2, not the pin; awaiting user verify"}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"doing","to":"done","at":"2026-07-17T00:40:00Z","note":"user-verified: install clean, drift-heal fired, nodes loaded, engine ran (gen failure out-of-scope)"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-295","type":"task.created","at":"2026-07-17T00:15:00Z","actor":"claude","summary":"Unify prompt-box media roles — collection model, kill startFrame/endFrame special-casing. krea2Edit 2-image round-trip drops chip 1; reuse loads 1. Root-caused."}
