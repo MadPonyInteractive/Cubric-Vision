@@ -136,22 +136,10 @@
       "title": "Input_Selected_Masks_Input"
     }
   },
-  "1596": {
-    "inputs": {
-      "segs": [
-        "1593",
-        0
-      ]
-    },
-    "class_type": "SegsToCombinedMask",
-    "_meta": {
-      "title": "SEGS to MASK (combined)"
-    }
-  },
   "1627": {
     "inputs": {
       "mask": [
-        "1596",
+        "1641",
         0
       ]
     },
@@ -193,6 +181,18 @@
     "class_type": "MpiBlockIfEmptyList",
     "_meta": {
       "title": "Mpi Block If Empty List"
+    }
+  },
+  "1641": {
+    "inputs": {
+      "segs": [
+        "1593",
+        0
+      ]
+    },
+    "class_type": "ImpactSEGSToMaskList",
+    "_meta": {
+      "title": "SEGS to Mask List"
     }
   }
 }
