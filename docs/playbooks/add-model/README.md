@@ -47,6 +47,24 @@ and lives in [../../workflow-authoring/README.md](../../workflow-authoring/READM
 This playbook links into it; read it when you're authoring the graph itself or adding a
 new injectable node/control.
 
+## Phase 0 — Research & scaffold BEFORE authoring (greenfield models)
+
+This playbook's checklist is the **wiring** phase. It assumes a proven graph and a
+scaffolded research home already exist. For a greenfield model (no `docs/models/<model>/`,
+no proven workflow), do the front-end first — the `/mpi-add-model` skill's **PHASE 0**
+enforces it:
+
+1. **Currency + version-match research.** Confirm the latest generation and that base /
+   text-encoder / VAE / accelerator-LoRA files are the right + MATCHED versions. An
+   older-generation accelerator LoRA on a newer base silently degrades quality.
+2. **Dep-reuse pass.** Grep `assetDeps.js` + `dependencies.js` — VAEs/text encoders are
+   often already hosted. Classify each slot REUSE vs NEW; flag any single file ≥20GB now.
+3. **Scaffold the card** (`doing`/`in-progress`) and the two research homes:
+   `.agents/mpi-kanban/tasks/MPI-<n>/research/` (raw) + `docs/models/<model>/` (settled,
+   mirror `docs/models/krea2/`).
+4. **Author + prove the graph locally** (§0a), then the user saves it to
+   `comfy_workflows/raw/`. Only then start the checklist below.
+
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
 Before any app wiring, build and prove the ComfyUI graph in the standalone local

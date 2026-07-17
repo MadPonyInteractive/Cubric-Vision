@@ -10,7 +10,59 @@ user-invocable: true
 > The `docs/playbooks/add-model/` playbook is the *how* for every model, and it
 > carries traps that cost real debugging. Reading one is not reading the other.
 
-## STEP 0 — MANDATORY, BEFORE ANY OTHER TOOL CALL
+## PHASE 0 — Research & scaffold (front-end)
+
+Adding a model is **research-then-wire**. This is the front-end; STEP 0 → STEP 2 below
+are the wiring half. **Skip PHASE 0 only when `docs/models/<model>/` already exists AND the
+workflow is proven locally** — then jump straight to STEP 0. Otherwise work these here
+first (research steps 1–5 often span several sessions; use a handoff to resume):
+
+1. **Transformer survey — what weights exist.** THE FIRST RESEARCH TASK. Map the full
+   landscape for the main diffusion transformer before picking anything. Answer each:
+   - **Latest generation?** Confirm this is the current release, not a superseded one.
+   - **Raw vs distilled.** Is there a full/raw model AND distilled (turbo / lightning /
+     hyper / lcm) variants? Distilled variants set the low/balanced TIERS — enumerate them
+     and their step counts.
+   - **Quant formats.** fp16/bf16 (full), fp8 (`_scaled`/`e4m3fn`/mixed), **int8**, gguf.
+     Which the app ships is a size↔quality↔VRAM tradeoff per tier. Note byte sizes.
+   - **Full weights available?** For the High/no-accel tier you need the undistilled base.
+   Write the variant×format matrix into the research folder — it IS the tier plan.
+2. **LoRA survey — what LoRAs exist for this model.** Hunt the ecosystem (the model's HF
+   org, lightx2v, Civitai, community repos) for LoRAs in three buckets:
+   - **Accelerator / speed** (lightning / turbo / hyper / lcm) — the ones that set the
+     distilled tiers, version-MATCHED to the base generation (a LoRA from an older gen on a
+     newer base silently degrades — always check).
+   - **Quality / adherence** — LoRAs that improve detail, realism, hands, or prompt
+     adherence. Candidate optional boosts.
+   - **De-censor** — LoRAs that lift content restrictions on a censored base.
+   List each candidate with source URL + version match; the user decides which ship.
+4. **Accelerator-LoRA strength axes.** For each distilled/accelerator LoRA: does it take
+   **model strength only**, or **model AND clip strength**? This picks the loader —
+   model-only → `MpiLoraModel`; model+clip → a model+clip LoRA loader. Getting it wrong
+   half-applies the LoRA silently. Check the LoRA's model card / the upstream workflow.
+5. **Samplers, schedulers, steps, CFG, extra nodes.** Per variant: which sampler +
+   scheduler, step count, CFG, and any **model-specific nodes** (e.g. a reference-latents
+   node, a ModelSampling shift, a CFGNorm). Source the upstream reference workflow, not a
+   guess. **Skippable when already known** — e.g. an already-tuned graph tells you the
+   sampler/scheduler/steps; note "known: <values>" and move on.
+6. **Dep-reuse pass.** Grep `js/data/modelConstants/assetDeps.js` + `dependencies.js` for
+   every weight — VAEs and text encoders are often already hosted (`vae-*` shared ids).
+   Classify each slot: REUSE existing dep vs NEW upload. Flag any single file **≥20GB**
+   (hot-store gate) now, not at upload time.
+7. **Scaffold the card.** Create an MPI card (`doing` / `in-progress`) — read
+   `<mpi-lib>/templates/task.json` for schema, `<mpi-lib>/task-board-ops/mutate.md` for the
+   board+event mutation contract. Note what the model blocks (e.g. a dependent app card).
+8. **Scaffold the research homes** (mirror `docs/models/krea2/`):
+   - `.agents/mpi-kanban/tasks/MPI-<n>/research/` — raw research dumps.
+   - `docs/models/<model>/README.md` — the settled hub (copy Krea2's shape: variant table,
+     dep-reuse note, topics table, hard rules, sources) + one topic file per settled finding.
+9. **Author + prove the graph locally**, then the user saves it to `comfy_workflows/raw/` —
+   see playbook **§0a**. Only a proven, saved graph graduates to wiring.
+
+Dump findings as you go. Wiring's STEP 1 reads the SAVED JSON as truth — research notes
+are context, not a substitute.
+
+## STEP 0 — MANDATORY, BEFORE ANY OTHER TOOL CALL (PHASE 1 — wiring)
 
 Read the **`docs/playbooks/add-model/README.md`** hub in full — ONLY the hub, not the
 section files yet. The hub carries the shape decision, the trap table, the hard rules,

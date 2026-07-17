@@ -1350,3 +1350,4 @@
 {"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-298","at":"2026-07-17T12:40:00Z","actor":"claude","note":"fix invalid maturity done/active -> complete/accepted"}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-299","at":"2026-07-17T13:00:00Z","actor":"claude"}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-297","from":"doing","to":"done","at":"2026-07-17T13:20:00Z","actor":"claude","summary":"krea2 detailer cfg 3->1.5 + Input_Negative wired, runtime synced, user-verified live. Only non-distilled detailer; others left."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-300","at":"2026-07-17T21:10:00Z","actor":"claude","summary":"Qwen Image Edit 2511 model, 3-tier (4/8-step/no-accel). Research phase. Blocks MPI-299 head-swap app."}

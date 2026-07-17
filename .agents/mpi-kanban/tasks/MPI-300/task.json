@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-300",
+  "title": "Model: Qwen Image Edit 2511 — 3-tier (4-step / 8-step / no-accel)",
+  "description": "NEW MODEL. Qwen-Image-Edit-2511 (latest gen, released 2025-12-22; replaces 2509). Instruction-driven image editing. BLOCKS MPI-299 (Head Swap app) which requires this model wired.\n\nSHAPE (research phase — confirm from workflow JSON once user saves canvas):\n- Combined-op, single-stage image model. Flat `dependencies: []`. multiStage: false.\n- THREE TIERS = 3 workflow variants, same base weights, different Lightning LoRA baked per tier:\n  - Low = 4-step Lightning LoRA\n  - Balanced = 8-step Lightning LoRA\n  - High = no accelerator (base steps)\n\nWEIGHTS:\n- Diffusion: qwen_image_edit_2511_fp8mixed (NEW dep, ~fp8 — CHECK size vs >=20GB hot-store gate; NOT yet on G:\\CubricModels — lives in user's standalone ComfyUI).\n- Text encoder: qwen_2.5_vl_7b_fp8_scaled (NEW dep; hidden 3584 — NOT the existing krea2 4B nor boogu 8B. On G: at 9.38GB / 9384670680 bytes).\n- VAE: REUSE existing dep `vae-qwen-image` (qwen_image_vae.safetensors, already on R2, hashed).\n- LoRA Low: Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors (810MB / 849608296 bytes) — DOWNLOADED to C:/AI/Loras/Qwen (2026-07-17).\n- LoRA Balanced: Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors (810MB / 849608296 bytes) — DOWNLOADED to C:/AI/Loras/Qwen (2026-07-17).\n- Lightning LoRAs are BAKED deps (size, no type, loras/qwen/ subfolder), NOT user style slots.\n\nRESEARCH FINDINGS (2026-07-17):\n- USER WAS ON MISMATCHED LoRA: old workflow loaded Sep-2025 (2509-era) `Qwen-Image-Edit-Lightning-8steps-V1.0` on the 2511 base. Fixed by downloading version-matched 2511 Lightning LoRAs.\n- FluxKontextMultiReferenceLatentMethod node (\"Edit Model Reference Method\", [BETA]) sits on pos+neg conditioning. Sets `reference_latents_method` string on conditioning — controls WHERE the reference image latents are positioned for the transformer. 4 methods: offset (spatial, aspect-ratio, default) / index (temporal img_ids) / uxo-uno (spatial stack, USO/UNO subject-driven) / index_timestep_zero (index + refs conditioned at timestep 0, STRONGEST adherence). Workflow ships index_timestep_zero = the 2511-correct default (matches unsloth 2511 GGUF metadata). CAVEAT: index_timestep_zero has a KNOWN color-shift artifact — watch on head-swap skin/lighting; test offset/index if drift appears. Full detail: research/reference-latents-method.md.\n\nGREENFIELD: no qwen workflow/template/raw/models.js ModelDef exists yet.\n\nPHASES:\n1. RESEARCH (current) — dump findings in research/, settled notes in docs/models/qwen-edit/.\n2. AUTHOR workflow locally in ComfyUI, prove on local folder, save to comfy_workflows/raw/.\n3. WIRING — /mpi-add-model enforces docs/playbooks/add-model/ (template split, deps + sha256, R2 upload, ModelDef, progressStages, type-consumer sweep).\n\nMODELS ARE NOT VERSION-BUMPED.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-07-17T21:10:00Z",
+  "updated_at": "2026-07-17T21:10:00Z",
+  "labels": [
+    "model",
+    "qwen",
+    "blocks-MPI-299"
+  ],
+  "links": {
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}
