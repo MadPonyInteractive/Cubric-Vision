@@ -173,7 +173,7 @@
       "max_size": 1024,
       "mask_mode": true,
       "steps": 20,
-      "cfg": 3,
+      "cfg": 1.5,
       "sampler_name": "euler",
       "scheduler": "beta",
       "feather": 5,

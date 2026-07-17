@@ -47,7 +47,7 @@
   },
   "1673": {
     "inputs": {
-      "string": "A beautiful woman with red hair and an emo look, taking a selfie in her bedroom. She's wearing a monokini. The bedroom light is turned off and only a neon light is illuminating part of her body"
+      "string": ""
     },
     "class_type": "MpiText",
     "_meta": {
@@ -173,7 +173,7 @@
       "max_size": 1024,
       "mask_mode": true,
       "steps": 20,
-      "cfg": 3,
+      "cfg": 1.5,
       "sampler_name": "euler",
       "scheduler": "beta",
       "feather": 5,
@@ -214,7 +214,7 @@
   },
   "1689": {
     "inputs": {
-      "unet_name": "krea2_raw_int8_convrot.safetensors",
+      "unet_name": "lustify-v10-krea-raw-int8_convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
