@@ -147,14 +147,23 @@ async function main() {
 
   // 2. Commit the RAW sources FIRST — the record of the user's edit. Generated API +
   //    runtime are NOT committed here (too many commits); /mpi-end closes them.
+  //    --all can be run on an already-committed raw tree (e.g. to re-bake runtime after
+  //    a generator change) — nothing to commit then, so skip the commit rather than error.
   const rawPaths = changed.map((f) => `comfy_workflows/raw/${f}`);
-  const rawMsg =
-    `chore(workflows): raw source edit — ${changed.join(', ')}\n\n` +
-    `LiteGraph source(s). Generated API templates + orchestrated runtime files land ` +
-    `staged (uncommitted); /mpi-end commits them.`;
   execFileSync('git', ['add', '--', ...rawPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
-  execFileSync('git', ['commit', '-n', '-m', rawMsg, '--only', '--', ...rawPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
-  console.log(`Committed raw source(s): ${changed.join(', ')}`);
+  const rawStaged = execFileSync('git', ['diff', '--cached', '--name-only', '--', ...rawPaths],
+    { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
+  if (rawStaged) {
+    const changedNames = rawStaged.split('\n').map((p) => path.basename(p));
+    const rawMsg =
+      `chore(workflows): raw source edit — ${changedNames.join(', ')}\n\n` +
+      `LiteGraph source(s). Generated API templates + orchestrated runtime files land ` +
+      `staged (uncommitted); /mpi-end commits them.`;
+    execFileSync('git', ['commit', '-n', '-m', rawMsg, '--only', '--', ...rawPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
+    console.log(`Committed raw source(s): ${changedNames.join(', ')}`);
+  } else {
+    console.log('Raw already committed — re-baking generated files only.');
+  }
 
   // 3. Convert each changed raw -> API.
   const touched = [];

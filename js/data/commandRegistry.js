@@ -417,7 +417,7 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        universal: true,   // first Apps op (MPI-256) — App_sdxl_regen.json, i2i baked true.
+        universal: true,   // first Apps op (MPI-256) — app_sdxl_regen.json, i2i baked true.
     },
     appSdxl4k: {
         label: 'App: SDXL 4K',
@@ -434,7 +434,7 @@ export const commands = {
             { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
         ],
         promptRequired: true,
-        universal: true,            // 2nd Apps op — App_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
+        universal: true,            // 2nd Apps op — app_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
     },
     appVideoStitch: {
         label: 'App: Video Stitch',

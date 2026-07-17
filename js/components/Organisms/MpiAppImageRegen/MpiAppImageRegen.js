@@ -11,7 +11,7 @@ import { qs, on } from '../../../utils/dom.js';
  * Run time. Seeds from `props.initialInputs` (a prior run's snapshot) so reopen
  * restores the text.
  *
- * The op (appImageRegen / App_sdxl_regen.json) injects `positive` into
+ * The op (appImageRegen / app_sdxl_regen.json) injects `positive` into
  * Input_Positive; the image goes to Input_Image via the op's mediaInputs mapping.
  */
 export const MpiAppImageRegen = ComponentFactory.create({

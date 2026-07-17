@@ -1,0 +1,788 @@
+{
+  "84": {
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "90": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "95": {
+    "inputs": {
+      "unet_name": "Wan_22_t2v_High.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "96": {
+    "inputs": {
+      "unet_name": "Wan_22_t2v_Low.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "487": {
+    "inputs": {
+      "model": [
+        "792",
+        0
+      ],
+      "clip": [
+        "84",
+        0
+      ],
+      "vae": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "MpiToChekPoint",
+    "_meta": {
+      "title": "Mpi To ChekPoint"
+    }
+  },
+  "488": {
+    "inputs": {
+      "model": [
+        "798",
+        0
+      ],
+      "clip": [
+        "84",
+        0
+      ],
+      "vae": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "MpiToChekPoint",
+    "_meta": {
+      "title": "Mpi To ChekPoint"
+    }
+  },
+  "635": {
+    "inputs": {
+      "fps": 16,
+      "seconds": [
+        "838",
+        0
+      ]
+    },
+    "class_type": "MpiWanSeconds",
+    "_meta": {
+      "title": "Mpi Wan Seconds"
+    }
+  },
+  "717": {
+    "inputs": {
+      "int": 9554843544358
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "723": {
+    "inputs": {
+      "clip": [
+        "739",
+        1
+      ],
+      "text": [
+        "745",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "726": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "730": {
+    "inputs": {
+      "shift": 8,
+      "model": [
+        "735",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3"
+    }
+  },
+  "732": {
+    "inputs": {
+      "samples": [
+        "733",
+        0
+      ],
+      "vae": [
+        "735",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Decoding Low Loise..."
+    }
+  },
+  "733": {
+    "inputs": {
+      "add_noise": false,
+      "cfg": 1,
+      "model": [
+        "730",
+        0
+      ],
+      "positive": [
+        "823",
+        0
+      ],
+      "negative": [
+        "823",
+        1
+      ],
+      "sampler": [
+        "726",
+        0
+      ],
+      "sigmas": [
+        "918",
+        0
+      ],
+      "latent_image": [
+        "775",
+        0
+      ],
+      "noise_seed": [
+        "717",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "Generating final step (Low Noise).."
+    }
+  },
+  "735": {
+    "inputs": {
+      "mpi_checkpoint": [
+        "488",
+        0
+      ]
+    },
+    "class_type": "MpiFromCheckpoint",
+    "_meta": {
+      "title": "Mpi From Checkpoint"
+    }
+  },
+  "737": {
+    "inputs": {
+      "samples": [
+        "768",
+        1
+      ],
+      "vae": [
+        "739",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Decoding Motion preview (High Noise)..."
+    }
+  },
+  "738": {
+    "inputs": {
+      "shift": 8,
+      "model": [
+        "739",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3"
+    }
+  },
+  "739": {
+    "inputs": {
+      "mpi_checkpoint": [
+        "487",
+        0
+      ]
+    },
+    "class_type": "MpiFromCheckpoint",
+    "_meta": {
+      "title": "Mpi From Checkpoint"
+    }
+  },
+  "740": {
+    "inputs": {
+      "add_noise": true,
+      "cfg": 1,
+      "model": [
+        "738",
+        0
+      ],
+      "positive": [
+        "823",
+        0
+      ],
+      "negative": [
+        "823",
+        1
+      ],
+      "sampler": [
+        "726",
+        0
+      ],
+      "sigmas": [
+        "905",
+        0
+      ],
+      "latent_image": [
+        "823",
+        2
+      ],
+      "noise_seed": [
+        "717",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "Stage1_Bypass"
+    }
+  },
+  "743": {
+    "inputs": {
+      "string": "Full body shot of a woman running with her dog at a park. ultra realistic, high quality skin texture, 8k, anamorphic lens, cinematic."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "744": {
+    "inputs": {
+      "clip": [
+        "739",
+        1
+      ],
+      "text": [
+        "743",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "745": {
+    "inputs": {
+      "string_b": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "delimiter": "",
+      "string_a": [
+        "751",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "751": {
+    "inputs": {
+      "string": "tattoo, speech, talking, moving lips"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "752": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiBoolean",
+    "_meta": {
+      "title": "Input_Preview_Only"
+    }
+  },
+  "768": {
+    "inputs": {
+      "input": [
+        "740",
+        1
+      ],
+      "boolean": [
+        "752",
+        0
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "774": {
+    "inputs": {
+      "passthrough": [
+        "732",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "775": {
+    "inputs": {
+      "passthrough": [
+        "883",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "776": {
+    "inputs": {
+      "passthrough": [
+        "737",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "779": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_High_1"
+    }
+  },
+  "788": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "790",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_High_3"
+    }
+  },
+  "789": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "791",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_High_5"
+    }
+  },
+  "790": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "779",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_High_2"
+    }
+  },
+  "791": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "788",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_High_4"
+    }
+  },
+  "792": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "789",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_High_6"
+    }
+  },
+  "793": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "96",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Low_1"
+    }
+  },
+  "794": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "793",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Low_1"
+    }
+  },
+  "795": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "794",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Low_1"
+    }
+  },
+  "796": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "795",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Low_1"
+    }
+  },
+  "797": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "796",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Low_1"
+    }
+  },
+  "798": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "797",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Low_1"
+    }
+  },
+  "823": {
+    "inputs": {
+      "batch_size": 1,
+      "positive": [
+        "744",
+        0
+      ],
+      "negative": [
+        "723",
+        0
+      ],
+      "vae": [
+        "739",
+        2
+      ],
+      "width": [
+        "827",
+        0
+      ],
+      "height": [
+        "828",
+        0
+      ],
+      "length": [
+        "635",
+        0
+      ]
+    },
+    "class_type": "WanImageToVideo",
+    "_meta": {
+      "title": "WanImageToVideo"
+    }
+  },
+  "827": {
+    "inputs": {
+      "int": 480
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "828": {
+    "inputs": {
+      "int": 832
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "838": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Duration"
+    }
+  },
+  "883": {
+    "inputs": {
+      "input": [
+        "888",
+        0
+      ],
+      "boolean": [
+        "752",
+        0
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "884": {
+    "inputs": {
+      "input": [
+        "883",
+        1
+      ],
+      "boolean": [
+        "886",
+        0
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "885": {
+    "inputs": {
+      "filename_prefix": "wan22",
+      "samples": [
+        "884",
+        1
+      ]
+    },
+    "class_type": "SaveLatent",
+    "_meta": {
+      "title": "Output_Video_Latent"
+    }
+  },
+  "886": {
+    "inputs": {
+      "mode": "a_true_b_false",
+      "a": [
+        "752",
+        0
+      ],
+      "b": [
+        "887",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "887": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiBoolean",
+    "_meta": {
+      "title": "Input_Is_Continue"
+    }
+  },
+  "888": {
+    "inputs": {
+      "true": [
+        "893",
+        0
+      ],
+      "false": [
+        "740",
+        0
+      ],
+      "boolean": [
+        "887",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "893": {
+    "inputs": {
+      "latent": "ComfyUI_00001_.latent"
+    },
+    "class_type": "LoadLatent",
+    "_meta": {
+      "title": "Input_Video_Latent"
+    }
+  },
+  "905": {
+    "inputs": {
+      "sigmas": "1.0, 0.92, 0.84, 0.77, 0.70"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg1"
+    }
+  },
+  "918": {
+    "inputs": {
+      "sigmas": "0.70, 0.47, 0.24, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas stg2"
+    }
+  },
+  "932": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "truncate_to_audio": false,
+      "images": [
+        "934",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "933": {
+    "inputs": {
+      "fps": 16,
+      "filename_prefix": "MpiVideo",
+      "use_audio": false,
+      "truncate_to_audio": false,
+      "images": [
+        "776",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
+    }
+  },
+  "934": {
+    "inputs": {
+      "start": 1,
+      "end": -1,
+      "list_input": [
+        "774",
+        0
+      ]
+    },
+    "class_type": "MpiListRange",
+    "_meta": {
+      "title": "Remove first Frame (!repeat)"
+    }
+  }
+}

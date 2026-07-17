@@ -42,7 +42,7 @@ export const APPS = [
         description: 'Upload an image and re-imagine it with a prompt. Runs SDXL image-to-image and drops the result into your gallery.',
         requiredModels: ['sdxl-nsfw'],
         operation: 'appImageRegen',
-        workflow: 'App_sdxl_regen.json',
+        workflow: 'app_sdxl_regen.json',
         uiComponent: 'MpiAppImageRegen',
         mediaType: 'image',
         inputSchema: { positive: 'string', mediaItems: 'image[1]' },
@@ -57,7 +57,7 @@ export const APPS = [
         description: 'Multi-image test app. Takes up to two source images and a prompt, and can produce up to three 4K SDXL outputs — exercises the multi-model install flow, polymorphic media inputs, and multi-output.',
         requiredModels: ['sdxl-nsfw', 'nvidia-pid'],
         operation: 'appSdxl4k',
-        workflow: 'App_sdxl_4k.json',
+        workflow: 'app_sdxl_4k.json',
         uiComponent: 'MpiAppImageRegen',
         mediaType: 'image',
         // Polymorphic inputs (MPI-259). `media` = declared media slots; BaseApp renders
