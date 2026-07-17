@@ -2,13 +2,13 @@
 generate_wan5b.py — Wan 2.2 5B (TI2V) handler.
 
 The 5B is single-stage and combined-op: one template
-(Wan22_5B_ti2v_template.json) holds both t2v and i2v, switched by the
+(wan22_5b_ti2v_template.json) holds both t2v and i2v, switched by the
 MpiSimpleBoolean titled 'Input_Text_to_video' (feeds an MpiIfElse). The app cannot
 inject that boolean at runtime (baked at build time, like LTX), so we stamp it into
 two runtime files. No stage-2 / gguf / engine variants exist for 5B.
 
 Orchestrated: build(source_path, out_dir) — called by orchestrate.py after the
-Wan22_5B_ prefix routes here (registry.py; MUST sit before the generic Wan22_ rule).
+wan22_5b_ prefix routes here (registry.py; MUST sit before the generic wan22_ rule).
 Standalone:  python generate_wan5b.py
 
 Node lookup is by `_meta.title` (MPI-116 naming law) — never by node id.
@@ -20,15 +20,15 @@ from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).parent
 WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
-TEMPLATE_NAME = "Wan22_5B_ti2v_template.json"
+TEMPLATE_NAME = "wan22_5b_ti2v_template.json"
 
 T2V_GATE_TITLE = "Input_Text_to_video"     # MpiSimpleBoolean
 # MPI-272: frame inputs are self-gating MpiLoadImageFromPath nodes — no placeholder stamp.
 
 # (output_name, Input_Text_to_video value)
 OUTPUTS = (
-    ("Wan5B_t2v.json", True),
-    ("Wan5B_i2v.json", False),
+    ("wan5b_t2v.json", True),
+    ("wan5b_i2v.json", False),
 )
 
 

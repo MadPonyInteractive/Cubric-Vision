@@ -33,11 +33,11 @@ export const PROGRESS_STAGES = Object.freeze({
     'LTX_t2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
     'LTX_i2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
     // WAN — verified single=2 (one bar per sampler; no separate model-load bar).
-    'Wan22_t2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
-    'Wan22_i2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
+    'wan22_t2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
+    'wan22_i2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     // WAN 2.2 5B — single-stage, ONE sampler pass = 1 bar (verified). Shows "1/1".
-    'Wan5B_t2v.json': Object.freeze({ single: 1 }),
-    'Wan5B_i2v.json': Object.freeze({ single: 1 }),
+    'wan5b_t2v.json': Object.freeze({ single: 1 }),
+    'wan5b_i2v.json': Object.freeze({ single: 1 }),
     // Text-to-image (SDXL family) — single-stage, verified 2 bars (load + sampler).
     // Upscalers/detailers NOT yet counted (UltimateSDUpscale has its own passes).
     't2i_ill_anime.json':        Object.freeze({ single: 2 }),
@@ -47,7 +47,7 @@ export const PROGRESS_STAGES = Object.freeze({
     't2i_sdxl_realistic.json':   Object.freeze({ single: 2 }),
     // NVIDIA PiD upscaler — one 4-step distilled sampler pass = a single tqdm bar
     // (no separate model-load bar surfaces). Live-confirmed 2026-07-03.
-    'NVIDIA_PID.json':           Object.freeze({ single: 1 }),
+    'nvidia_pid.json':           Object.freeze({ single: 1 }),
     // Krea2 Turbo (MPI-242) — single-stage: BOTH ClownsharK sampler passes live in
     // one file with a direct latent hand-off, so there is no `preview`/`stage2` mode.
     // One file serves t2i, i2i AND poseReference (Input_Is_i2i / Input_pose_reference

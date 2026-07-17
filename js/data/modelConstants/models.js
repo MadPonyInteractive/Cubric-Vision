@@ -543,7 +543,7 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'NVIDIA PiD generative 4x image upscaler. This upscaler offers you 4 different models. (Flux/SD3/Qwen/SDXL) Each providing you different results. Like with any other model, you should reuse the prompt that generated the initial image or describe the image for better results. ',
         workflows: {
-            pid: 'NVIDIA_PID.json',
+            pid: 'nvidia_pid.json',
         },
         dependencies: [
             'pid-flux1', 'pid-sdxl', 'pid-sd3', 'pid-qwenimage',
@@ -656,8 +656,8 @@ export const MODELS = [
         gen_speed: 'fast',
         description: "This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation in it's text to video version and any style in image to video. It's fast and completely uncensored. It creates videos at 16 fps, so it is advisable to interpolate them later.",
         workflows: {
-            t2v_ms: 'Wan22_t2v.json',
-            i2v_ms: 'Wan22_i2v.json',
+            t2v_ms: 'wan22_t2v.json',
+            i2v_ms: 'wan22_i2v.json',
         },
         // Always-installed shared payload (VAE, text encoder, shared custom nodes).
         commonDeps: [
@@ -832,8 +832,8 @@ export const MODELS = [
         // Combined transformer: both ops ship together (LTX pattern). generate_wan5b.py
         // bakes Input_Text_to_video from the template into the two runtime files.
         workflows: {
-            t2v: 'Wan5B_t2v.json',
-            i2v: 'Wan5B_i2v.json',
+            t2v: 'wan5b_t2v.json',
+            i2v: 'wan5b_i2v.json',
         },
         // FLAT deps (like LTX) — no per-op install toggle. clip (umt5) is SHARED with
         // the 14B card (already hosted); vae + model + turbo-lora are 5B-specific.
