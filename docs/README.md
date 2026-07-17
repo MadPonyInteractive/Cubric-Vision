@@ -98,5 +98,22 @@ index: [models/README.md](models/README.md).
 | Per-version release notes | `releases/YYYY-MM-DD-v<ver>.md` |
 
 ### Redesign spec (only when touching a new surface / follow-up phase)
-See [redesign/PORTING.md](redesign/PORTING.md) — the Stage baseline is merged; routine work follows
-`styles/01_base.css` + `.claude/rules/components.md`, not these docs.
+Stage redesign is **merged to master** (commit `e9b5eb6`, PORTING.md phases 0–10.2). Routine work
+(component tweaks, bug fixes, restyles) follows `styles/01_base.css` tokens +
+`.claude/rules/components.md` § "Stage design baseline" — do NOT re-read the redesign docs.
+Re-read them **only** for: a new surface with a matching mockup, a follow-up phase (beyond 10.2),
+or a Stage audit. Read order: `PRODUCT.md` → `DESIGN.md` → `PORTING.md` → the matching mockup.
+
+| File | Purpose |
+|---|---|
+| [redesign/PRODUCT.md](redesign/PRODUCT.md) | Persona, register, tone, anti-references — read first |
+| [redesign/DESIGN.md](redesign/DESIGN.md) | OKLCH tokens, type scale, component primitives, motion, banned patterns |
+| [redesign/PORTING.md](redesign/PORTING.md) | Phase-by-phase port plan with file-level mappings |
+| [redesign/RECOLOR.md](redesign/RECOLOR.md) | Photoshop hex-replace recipe for mascot + logo PNGs |
+| `redesign/c-stage/*.html` | Five Stage mockups (`landing`, `gallery`, `editor`, `editor-video`, `popups`) — visual ground truth |
+| `redesign/c-stage/tokens.css` | Stage tokens + primitive selectors — copy values, not class names |
+| `redesign/_base.css` | Mockup base reset — reference only, do not import into the app |
+
+**Spec → code is one-way.** Never edit `docs/redesign/*` to match implementation. Real-app
+deviations get a `// REDESIGN-DEVIATION:` comment at the call site. Do not ship the CSS hue-rotate
+filter for PNGs — recolor mascot/logo PNGs at the source per `RECOLOR.md`.

@@ -1,270 +1,134 @@
 # Master Agent Context Rules
 
-> **AI SYSTEM INSTRUCTION:** This is the master routing file for Cubric Studio. Whenever you begin a task, you MUST check this file and read the corresponding rule files in the `.claude/rules/` directory BEFORE writing any code.
+> **AI SYSTEM INSTRUCTION:** This file ROUTES — it holds no knowledge of its own. Knowledge lives in `docs/` (map: `docs/README.md`) and `.claude/rules/`. Before any task: match it in the Context Router below and READ the target file(s) first. Do not re-document here what a target file already holds.
 
 ## THE CARDINAL RULES
-1. **NEVER assume architectural patterns.** Check the rules below.
-2. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
-3. **DOCUMENTATION DRIFT:** At the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update `.claude/rules/`to reflect these changes?"* 
-**Do NOT update the architectural rule files without explicit permission.** 
+
+1. **NEVER assume architectural patterns.** Route below, read the target, then code.
+2. **The answer is probably already documented.** `docs/README.md` = knowledge map (routes every domain to its subsystem doc); `docs/PROJECT.md` = architecture orientation. Check these BEFORE searching the codebase. `docs/gotchas.md` holds ONLY cross-cutting conventions + temporary/unverified flags — durable knowledge goes to its subsystem doc (≤200 lines each; exemptions in `docs/README.md`). Verify a named file/function/flag still exists before relying on a doc entry.
+3. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
+4. **FIX THE ROOT CAUSE — NEVER SYMPTOM-PATCH.** See THE ROOT-CAUSE RULE below. Non-negotiable.
+5. **DOCUMENTATION DRIFT:** at the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.**
 
 ---
 
-## Critical Rules Snapshot (Applies to ALL agents, always)
+## THE ROOT-CAUSE RULE (every fix, every agent — no exceptions)
 
-> These rules apply unconditionally. No file read required — follow them immediately.
+**Symptom-patching is forbidden.** The path of least resistance — a guard clause, a special case, a try/catch, a timeout at the crash site — is how this repo's worst regressions were born. A fix that silences the symptom without touching the cause is a **false done** and will be rejected.
 
-- **Never hardcode colors.** Use CSS variables from `styles/01_base.css` only.
-- **Never paste raw SVG.** All icons come from `js/utils/icons.js`. Add missing icons there first.
-- **Never use raw \****`document.querySelector`**\*\*.** Use shorthands from `js/utils/dom.js` (`qs`, `qsa`, `gid`).
-- **Never use raw \****`addEventListener`***\* / \****`removeEventListener`**\*\* in components.** Use `on()` / `off()` from `js/utils/dom.js` — both return cleanup/re-add fns. Exception: inside `destroy()`.
-- **Never create global state outside \****`js/state.js`**\*\*.** The `state` object is a Proxy — mutating it auto-fires `state:changed`. Never manually emit that event.
-- **Never use raw \****`window.addEventListener('keydown')`**\*\*.** Use `Hotkeys.bind` / `Hotkeys.unbind` with a registry id from `hotkeyRegistry.js`.
-- **BEM is mandatory.** Format: `.mpi-block__element--modifier`. No exceptions.
-- **All components MUST use \****`ComponentFactory.create()`**\*\*.** Never bypass the factory pattern.
-- **NEVER modify \****`js/components/factory.js`**\*\*.** The factory is locked.
-- **Every new component MUST:** register its `.css` in `js/shell/preloadStyles.js` AND document its props in `js/components/types.js`.
-- **Use \****`Events.on()`***\* / \****`Events.emit()`**\*\* for all cross-component communication.** Always store and call the returned unsubscribe function on cleanup.
-- **Navigation MUST call \****`instance.destroy()`**\*\* before clearing mounted Block.** See `.claude/rules/components.md` section "Observer Lifecycle & Teardown Contract". Never use `innerHTML = ''` alone.
-- **If \****`setup`***\* calls \****`Events.on(...)`***\*, \****`window.addEventListener(...)`***\*, or creates any Observer — MUST define \****`el.destroy()`**\*\* that cleans them up.** Collect unsubscribes in `const _unsubs = []`.
-- **Never mutate \****`state`**\*\* sub-objects directly** (e.g., `state.currentProject.itemGroups[i] = x`). Always replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
-- **Project JSON writes:** server routes that modify `project.json` MUST use `updateProjectJson()` in `routes/projects.js` for per-file queued atomic writes. Do not add direct `fs.writeJson(project.json, ...)` routes.
-- **Frontend logging:** use `js/services/clientLogger.js`. Backend logging: use `routes/logger.js`. Never rely on bare `console.log`.
-- **Kanban writes are pre-authorized.** Edit `.agents/mpi-kanban/board.json` and `.agents/mpi-kanban/tasks/<id>/` freely through MPI workflows - never ask permission to add, move, or update entries.
-- **Kanban cards MUST track their real state — MOVE them.** When you pick up a `todo` card, move it to `doing` (`maturity: in-progress`) BEFORE editing files; when the work ships/commits, move it to `done` (`maturity: complete`, `status: accepted`). A card with real work passes `todo → doing → done` — never leave it parked in `todo` while you ship. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in both event logs. Board is JSON (`todo`/`doing`/`done`) — read `<mpi-lib>/task-board-ops/mutate.md` (the JSON-board doc), NOT the legacy `kanban-ops/` Markdown doc.
+Before ANY fix:
+
+1. **Diagnose to the actual root.** Trace the failure to its origin — not to the first line where a check makes the error disappear. If you cannot explain WHY the bug happens, you have not found it yet.
+2. **Map what's in place first.** Read the subsystem doc (`docs/README.md` routes it) and understand the existing design before changing it. The correct fix usually already has a home — a resolver, a store, a queue — that the buggy code bypassed.
+3. **Sweep the blast radius.** Touching a shared primitive (resolver / filter / store / util) = grep EVERY consumer/call site, classify each, fix all in one pass. Dual-engine code = fix BOTH the local AND remote twins. A one-consumer fix on a shared primitive is a false done.
+4. **Prefer the structural fix — even a section refactor — over a local patch.** If the root fix means refactoring a section of the app: STOP and brief the user first (root cause, consumers affected, proposed refactor, why a patch would be wrong), then proceed on their go. Never quietly ship the band-aid because the refactor felt too big.
+5. **Prove it.** Verify at every affected call site, not just the reported symptom. On version/dependency bumps that break things: research ALL breaking surfaces first, then fix in one coherent pass — never patch one symptom at a time.
+
+Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Split (the "half-wire" bugs), memory `feedback_engine_split_sweep_all_consumers`, `feedback_check_both_engine_paths`, `feedback_research_first_on_version_breaks`.
 
 ---
 
-## Baseline Rule (ALWAYS APPLIES)
+## Critical Rules Snapshot (applies to ALL agents, always — no file read required)
 
-**Before writing any code**, you MUST read `.claude/rules/dos_and_donts.md`. It contains universal CSS, icon, and utility rules that apply to every task regardless of category.
+- **Colors:** CSS variables from `styles/01_base.css` only — never hardcode.
+- **Icons:** `js/utils/icons.js` only — never paste raw SVG; add missing icons there first.
+- **DOM queries:** `qs` / `qsa` / `gid` from `js/utils/dom.js` — never raw `document.querySelector`.
+- **Listeners:** `on()` / `off()` from `js/utils/dom.js` in components — never raw `addEventListener`/`removeEventListener` (exception: inside `destroy()`).
+- **State:** all global state lives in `js/state.js` (a Proxy — mutation auto-fires `state:changed`; never emit it manually). Never mutate sub-objects — replace the top-level key: `state.currentProject = { ...state.currentProject, itemGroups: [...] }`.
+- **Hotkeys:** `Hotkeys.bind` / `Hotkeys.unbind` with a registry id from `hotkeyRegistry.js` — never raw `window.addEventListener('keydown')`.
+- **BEM is mandatory:** `.mpi-block__element--modifier`. No exceptions.
+- **Components:** always `ComponentFactory.create()`; NEVER modify `js/components/factory.js` (locked); every new component registers its `.css` in `js/shell/preloadStyles.js` AND documents its props in `js/components/types.js`.
+- **Cross-component communication:** `Events.on()` / `Events.emit()`; always store and call the returned unsubscribe on cleanup.
+- **Teardown:** navigation MUST call `instance.destroy()` before clearing a mounted Block (never `innerHTML = ''` alone); any `setup` that calls `Events.on(...)`, `window.addEventListener(...)`, or creates an Observer MUST define `el.destroy()` cleaning them up (collect in `const _unsubs = []`). See `.claude/rules/components.md` § Observer Lifecycle & Teardown Contract.
+- **project.json writes:** server routes MUST use `updateProjectJson()` in `routes/projects.js` (per-file queued atomic writes) — never direct `fs.writeJson`.
+- **Logging:** frontend `js/services/clientLogger.js`, backend `routes/logger.js` — never bare `console.log`.
+- **Kanban writes are pre-authorized** — edit `.agents/mpi-kanban/board.json` + `tasks/<id>/` freely; never ask.
+- **Kanban cards MUST track real state — MOVE them:** `todo → doing` BEFORE editing files, `doing → done` when the work ships. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in both event logs. Board is JSON — read `<mpi-lib>/task-board-ops/mutate.md`, NOT the legacy `kanban-ops/` Markdown doc.
 
 ---
 
-## Documentation Lookup
+## Context Router — READ the target BEFORE the matching task
 
-> **Before searching for anything in the codebase,** check `docs/PROJECT.md` first — it is the orientation hub that points to all subsystem docs. Most answers about structure, architecture, and data shapes are already documented there.
+| Task | Read first |
+|---|---|
+| **Any code at all** (baseline — universal CSS/icon/utility rules) | `.claude/rules/dos_and_donts.md` |
+| Components / UI (build, move, style, debug) | `.claude/rules/components.md` |
+| Events & cross-component communication | `.claude/rules/events.md` |
+| Application state | `.claude/rules/state.md` |
+| Workspaces / routing / dev component gallery | `.claude/rules/workspaces.md` |
+| ComfyUI injection (send tasks, compile JSON, images/masks in graphs) | `.claude/rules/comfy_injection.md` |
+| Workflow authoring / injectable nodes & controls / MpiNodes / tier selectors (model OR app) | `docs/workflow-authoring/README.md` — append what you learn there |
+| ComfyUI engine & backend (model registry, downloads, python server) | `.claude/rules/comfy_engine.md` |
+| App versioning (APP/SCHEMA/COMFY, operation registry) | `.claude/rules/versioning.md`, then `docs/versioning.md` |
+| Project data (project.json, `.meta/`, load/reconciliation, history items) | `docs/project-integrity.md` |
+| Download system (resumable downloads, IPC/SSE events) | `.claude/rules/downloads.md` |
+| Component maps: who mounts / event wiring / state keys / comfy injection | `.claude/rules/component-mounts.md` / `component-events.md` / `component-state.md` / `component-comfy.md` |
+| Shell services (Overlays, Hotkeys, StatusBar) | `docs/shell.md` |
+| Stage UI / redesign | `styles/01_base.css` tokens + `.claude/rules/components.md` § "Stage design baseline". Redesign docs ONLY for a new surface / follow-up phase / Stage audit → `docs/README.md` § Redesign spec |
+| Portable builds & distribution | `docs/releases/portable-distribution-contract.md` § "Build Process" (artifact contract in same doc; release copy → `docs/releases/github-release-checklist.md`) |
+| Cloudflare R2 (upload/list/verify weights, builds, pod-runtime files) | `c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` |
+| Builder Pod sessions (spin Pod, install nodes/weights, author + test workflows) + locked research | `docs/builder/README.md` + `docs/builder/research/README.md` (read before re-testing). Image build/install scripts live ONLY in `c:\AI\Mpi\mpi-ci\cubric-vision-builder\` (`git -C`); build/push the image = `build-pod-image` skill |
+| Product Pod runtime (`wrapper/wrapper.py`, `start.sh` in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`) | `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize" + `docs/runpod-remote-engine.md` § 5. **NOT an image rebuild** — R2-floated: edit → `./publish-runtime.sh stable` → restart Pod. Rebuild only for truly-baked layers |
+| Debugging / crashes / python engine issues | Last 50–100 lines of `logs/app.log` (`Read` with offset — NEVER the whole file) |
+| Browser automation | `playwright-cli` skill; app at http://127.0.0.1:3000/ (browser = dev-only, some features broken; Electron desktop = ship target) |
+| Desktop (Electron-only) testing | `npm run test:desktop`; tests in `tests/desktop/*.spec.js`; uses `CUBRIC_E2E_USER_DATA` (real user data untouched); port 3000 must be free first |
 
-> **To find where a fact lives,** read **`docs/README.md`** — the knowledge map. It routes every domain (RunPod/remote engine, LTX-2.3 authoring, Pod/mpi-ci, ComfyUI engine, UI components, generation/prompt/sidecar, downloads, build/release, macOS ops) to its subsystem/research doc. Durable knowledge lives in those docs, NOT in gotchas.md (MPI-170 drained it). Subsystem homes hold the "why it broke last time" knowledge — e.g. RunPod fixed-bug traps → `docs/runpod-troubleshooting.md`, UI → `docs/ui-gotchas.md`, LTX → `docs/builder/research/`. Verify a named file/function/flag still exists before relying on an entry.
+### Procedures — RUN THE SKILL (it enforces the playbook)
 
-> **`docs/gotchas.md` now holds ONLY** cross-cutting conventions (logger arity, kanban shape, commit hygiene, toast-vs-dialog) + temporary/unverified flags (RunPod-branch time-bomb, homeless guards). When you learn something durable, write it to its **subsystem** doc, not gotchas. The **≤200-line-per-doc rule** applies (exemptions in `docs/README.md`).
+| Task | Skill | Playbook (the skill's step 0 — non-negotiable) |
+|---|---|---|
+| Wire a NEW model end-to-end | `/mpi-add-model` | `docs/playbooks/add-model/` (README hub + `01`–`06`) — holds every known trap. Models are NOT version-bumped. A handoff or `docs/models/<model>/` doc ASSUMES the playbook — read both |
+| Wire a NEW App (dev-gated App-Library outcome app — NOT a model) | `/mpi-add-app` | `docs/playbooks/add-app/` (README hub + `01`–`05`). Worked examples: Video Stitch, SDXL 4K, Image Regen |
 
----
-
-## Context Router
-
-If you are asked to perform a task in any of the following categories, you MUST use the `Read` tool to ingest the respective rule file first.
-
-### Components & UI
-If you are building, moving, styling, or debugging a visual component (Primitives, Compounds, Organisms, Blocks):
-**->** **MUST READ:** `.claude/rules/components.md`
-
-### General Logic, DOM, CSS & Utilities
-If you are styling a component, writing generic DOM query logic, or adding icons/ratios:
-**->** **MUST READ:** `.claude/rules/dos_and_donts.md`
-
-### Events & Communication
-If you need components to talk to each other, or if you need to dispatch system signals:
-**->** **MUST READ:** `.claude/rules/events.md`
-
-### Application State
-If you are tracking data that must persist across the application (e.g., current project, selected model):
-**->** **MUST READ:** `.claude/rules/state.md`
-
-### Workspace & Routing Architecture
-If you need to understand the app's pages, workflow states, or the dev component gallery:
-**->** **MUST READ:** `.claude/rules/workspaces.md`
-
-### ComfyUI Workflows & Injection
-If you are sending tasks to ComfyUI, compiling JSON workflows, or dealing with images/masks in graphs:
-**->** **MUST READ:** `.claude/rules/comfy_injection.md`
-
-### Authoring a Workflow / Adding an Injectable Node or Control (model OR app)
-If you are authoring a ComfyUI workflow template, wiring a new prompt-box control or `MpiInt→MpiAnySwitch` tier/sampler selector, adding a new **MpiNode** (our own pack), or building a template→runtime generator — for a model OR an app:
-**->** **READ:** `docs/workflow-authoring/README.md` — the model/app-agnostic contract (MpiNodes pack pointer, injector target list + title law, generator/tier-selector patterns). Append what you learn there (it's built to grow).
-
-### ComfyUI Engine & Backend
-If you are adding models to the registry, managing downloads, or dealing with the python server:
-**->** **MUST READ:** `.claude/rules/comfy_engine.md`
-
-### Add a New Model (end-to-end)
-If you are wiring a NEW model into the app (deps + R2 upload + models.js + workflow split + type sweep):
-**->** **RUN THE SKILL:** `/mpi-add-model` — it enforces the procedure and pre-flights every trap.
-**->** **MUST READ (the skill's step 0, non-negotiable):** the `docs/playbooks/add-model/` playbook (README hub + section files `01`–`06`) — the single procedure, with every known trap (workflow template→runtime split, loader-path normalization, the `--s3-no-check-bucket` R2 403, the `model.type` consumer sweep, the single `Output_Image`/`Output_Video`/`Output_Preview` capture-title law, optional-vs-required media inputs + `placeholder.png` staging, baked-LoRA deps, the style-LoRA system). Models are NOT version-bumped.
-**->** A handoff or a model-scoped research doc (`docs/models/<model>/`) **assumes** the playbook — it does not replace it. Read both.
-
-### Add a New App (outcome app — end-to-end)
-If you are wiring a NEW **App** (a dev-gated App-Library outcome app: descriptor + universal op + workflow + optional uiComponent — NOT a model):
-**->** **RUN THE SKILL:** `/mpi-add-app` — it enforces the procedure and pre-flights every trap.
-**->** **MUST READ (the skill's step 0):** the `docs/playbooks/add-app/` playbook (README hub + section files `01`–`05`) — the single procedure, with every known trap (the op in 4 files, path-reading input nodes + the injector title-pattern routing, the **audio-slot `mediaType:'audio'` + `filterMediaInputsForModel` no-model traps**, self-gating outputs, multi-output capture, `.preview-assets` input storage, reuse `appId`/`appInputs`, the Ctrl+Enter/overlay-z-order/status-bar shell gotchas). No skill yet — follow the playbook directly.
-**->** Worked examples: **Video Stitch** (no-model video utility), **SDXL 4K** (multi-model, polymorphic image I/O, multi-output), **Image Regen** (first app).
-
-### App Versioning System
-If you need to understand how APP_VERSION, SCHEMA_VERSION, COMFY_VERSION, or the operation registry work:
-**->** **MUST READ:** `.claude/rules/versioning.md`, then `docs/versioning.md`
-
-### Project Data & Meta File System
-If you need to understand how project.json, .meta/ files, project load/reconciliation, or history items work:
-**->** **READ:** `docs/project-integrity.md`
-
-### Download System
-If you are working with resumable downloads, IPC/SSE download events, or the download manager:
-**->** **MUST READ:** `.claude/rules/downloads.md`
-
-### Portable Builds & Distribution
-If you need to build, produce, or collect portable release artifacts (CI workflow, `scripts/build-portable.mjs`, output folders, exec-bit/symlink gotchas, the `D:\CubricStudio\Vision\Builds` distribution folder):
-**->** **READ:** `docs/releases/portable-distribution-contract.md` (§ "Build Process"). The same doc holds the artifact contract (names, layout, manifests); `docs/releases/github-release-checklist.md` covers release copy.
-
-### Cloudflare R2 (file hosting)
-If you need to access R2 (upload/list/verify/clean up model weights, builds, or pod-runtime files):
-**->** **READ:** `c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` — buckets, access model, rclone patterns, approval gates.
-
-### Builder Pod — Model Onboarding (cooperative sessions)
-If you are in a cooperative session adding a model/workflow via the **Cubric Vision Builder** RunPod image (spin a Pod, install nodes/weights, author + test a ComfyUI workflow, save tuning research) — or you need locked research (LTX-2.3 tiers, LoRA strength law, prompt contract, model set):
-**->** **READ FIRST:** `docs/builder/README.md` (the operational loop) and `docs/builder/research/README.md` (concluded findings — read before re-testing). This is the home for all builder-Pod workflow + research, and it lives in THIS repo. The **image build + install scripts only** live in the separate `mpi-ci` repo at `c:\AI\Mpi\mpi-ci\cubric-vision-builder\` (Dockerfile, `install_*.sh`, `start-builder.sh`, its `README.md`); edit that repo with `git -C`. To BUILD/PUSH the image itself, use the `build-pod-image` skill.
-
-### Product Pod runtime — `wrapper.py` / `start.sh` (R2-floated, NOT baked)
-If you are editing the **product** Pod's `wrapper.py` or `start.sh` (in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`) — hot-store, install endpoints, disk reporting, boot flow, thresholds like `HOT_STORE_MIN_BYTES`:
-**->** **KNOW THIS:** editing these is **NOT an image rebuild.** `bootstrap.sh` (the image CMD) curls both fresh from R2 (`https://pod.cubric.studio/vision/stable/`) at every Pod boot; baked copies are fallback only. Ship an edit: change the file → `./publish-runtime.sh stable` (rclone push) → restart the Pod (or `POST /wrapper/restart-comfy`). Rebuild only for truly-baked layers (torch, ComfyUI, pip-requirement nodes, `bootstrap.sh` itself). Procedure: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize"; app-side context: `docs/runpod-remote-engine.md` § 5.
-
-### Component Mount Map
-If you need to know who mounts a component, what props it receives, or where it appears in the UI:
-**->** **MUST READ:** `.claude/rules/component-mounts.md`
-
-### Component Event Wiring
-If you need to know what events a component emits or listens to (without building or modifying components):
-**->** **MUST READ:** `.claude/rules/component-events.md`
-
-### Component State Connections
-If you need to know which state keys a component reads or writes:
-**->** **MUST READ:** `.claude/rules/component-state.md`
-
-### Component ComfyUI Injection
-If you need to know what gets injected into ComfyUI workflows, which component injects it, and for which operations:
-**->** **MUST READ:** `.claude/rules/component-comfy.md`
-
-### Shell Services & Managers
-If you are working with shell-level managers (Overlays, Hotkeys, StatusBar):
-**->** **MUST READ:** `docs/shell.md` for service documentation
-
-### Debugging & Errors
-If you are trying to fix a bug, a server crash, or an issue with the python engine:
-**->** **MUST DO:** Read the last 50-100 lines of `logs/app.log` using the `Read` tool with an `offset`. Do NOT parse the entire file. This log is the master terminal output and contains runtime telemetry.
-
-### Browser Automation (playwright-cli)
-If you need to run browser automation or test web interfaces:
-**->** **Use:** `playwright-cli` skill (see `Skill: playwright-cli`) — installed globally (`npm i -g @playwright/cli`); skill at `~/.claude/skills/playwright-cli` (all projects).
-**->** **Important:** App runs on http://127.0.0.1:3000/ (browser is dev-only — some features broken in browser; Electron desktop is the ship target).
-
-### Desktop Automation (Playwright + Electron)
-If a bug may involve Electron-only behavior, desktop shell APIs, window controls, IPC, local app state, or anything that differs from browser dev mode:
-**->** **Use:** `npm run test:desktop` to launch the real Electron app through Playwright.
-**->** **Write tests in:** `tests/desktop/*.spec.js`.
-**->** **Important:** Desktop tests set `CUBRIC_E2E_USER_DATA` so they do not modify the normal Electron user data directory. Keep tests focused on launch/navigation/UI checks unless the task explicitly requires downloads, installs, file deletion, or generation.
-**->** **Port note:** the app server binds to `127.0.0.1:3000`; make sure no other Cubric Studio instance is already using that port before running desktop tests.
-
-### Git and Commits
-Agents MAY commit without asking. Shared tree — commit by explicit pathspec
-(`git commit --only <paths>`), never `git add -A`/`git add .`. Push stays a
-user-authorized live op (do not push unless asked). Docs-repo push block still
-applies (see Multi-Root Workspace § DOCS WEBSITE PUSH BLOCK).
 ---
 
 ## MPI Skills
 
-Skills manage a human-in-the-loop execution system:
+Human-in-the-loop execution system. **Core principle:** parallel sub-agents only in planning; execution is sequential, one to-do at a time, with a mandatory brief gate before any code.
 
-| Command | Skill | Purpose |
-| --- | --- | --- |
-| `/mpi-brainstorm` | mpi-brainstorm | Explore an idea collaboratively, write a spec, ask if you want a plan |
-| `/mpi-create-plan` | mpi-create-plan | Create a compact plan for a well-scoped task |
-| `/mpi-create-large-plan` | mpi-create-large-plan | Investigation-backed large plan with parallel research sub-agents |
-| `/mpi-continue` | mpi-continue | Resume active work, show/read a board card, or update card state |
-| `/mpi-execute-parallel` | mpi-execute-parallel | Parallel batch execution from a large plan |
-| `/mpi-handoff` | mpi-handoff | Generate a structured handoff doc when context is getting large |
-| `/mpi-init` | mpi-init | Initialize MPI workflow for a new project or session |
-| `/mpi-end` | mpi-end | Session close-out — sync, commit touched files, close validated work |
-| `/mpi-component-audit` | mpi-component-audit | ESLint audit of js/components/ — report violations, no fixes |
-| `/mpi-brief-rule` | mpi-brief-rule | Inject rule briefing into sub-agent prompt at dispatch time |
-| `/mpi-add-model` | mpi-add-model | Wire a NEW model end-to-end; enforces the `docs/playbooks/add-model/` playbook |
-| `/mpi-add-app` | mpi-add-app | Wire a NEW App (outcome app) end-to-end; enforces the `docs/playbooks/add-app/` playbook |
-
-**Core principle:** Parallel sub-agents only in planning. Execution is always sequential, one to-do at a time, with mandatory brief gate before any code is written.
+| Command | Purpose |
+| --- | --- |
+| `/mpi-brainstorm` | Explore an idea collaboratively, write a spec |
+| `/mpi-create-plan` | Compact plan for a well-scoped task |
+| `/mpi-create-large-plan` | Investigation-backed large plan with parallel research sub-agents |
+| `/mpi-continue` | Resume active work, show/read a board card, or update card state |
+| `/mpi-execute-parallel` | Parallel batch execution from a large plan |
+| `/mpi-handoff` | Structured handoff doc when context is getting large |
+| `/mpi-init` | Initialize MPI workflow for a new project or session |
+| `/mpi-end` | Session close-out — sync, commit touched files, close validated work |
+| `/mpi-component-audit` | ESLint audit of `js/components/` — report only, no fixes |
+| `/mpi-brief-rule` | Return a rule file's Sub-Agent Briefing for dispatch |
+| `/mpi-add-model` | Wire a NEW model (enforces `docs/playbooks/add-model/`) |
+| `/mpi-add-app` | Wire a NEW App (enforces `docs/playbooks/add-app/`) |
 
 ---
 
-## Sub-Agent Rule Injection Map
+## Sub-Agent Dispatch (MANDATORY before EVERY dispatch)
 
-> **FOR THE MAIN AGENT — MANDATORY BEFORE EVERY SUB-AGENT DISPATCH:**
->
-> Sub-agents start cold with zero CLAUDE.md context. Dispatching without briefing = broken sub-agent.
->
-> **STEP 1 (REQUIRED):** Run `/mpi-brief-rule <name>` for each relevant rule (see table below). This reads the rule file and returns the `## Sub-Agent Briefing` section verbatim.
->
-> **STEP 2 (REQUIRED):** Paste the returned briefing text into the sub-agent's prompt, along with the Critical Rules Snapshot above.
->
-> **No exceptions.** If the rule has no briefing section, paste the Critical Rules Snapshot at minimum.
+Sub-agents start cold with zero CLAUDE.md context. Dispatching without briefing = broken sub-agent.
 
-| Task type | Rule file | Briefing location |
-| --- | --- | --- |
-| Any code at all | *(inline above)* | Critical Rules Snapshot — always include |
-| Components / UI | `.claude/rules/components.md` | `## Sub-Agent Briefing` |
-| DOM / CSS / Utilities | `.claude/rules/dos_and_donts.md` | `## Sub-Agent Briefing` |
-| Events & communication | `.claude/rules/events.md` | `## Sub-Agent Briefing` |
-| Application state | `.claude/rules/state.md` | `## Sub-Agent Briefing` |
-| ComfyUI workflow injection | `.claude/rules/comfy_injection.md` | `## Sub-Agent Briefing` |
-| ComfyUI engine / backend | `.claude/rules/comfy_engine.md` | `## Sub-Agent Briefing` |
-| Workspace / routing | `.claude/rules/workspaces.md` | `## Sub-Agent Briefing` |
-| Debugging | `logs/app.log` (last 100 lines via `Read` with offset) | No briefing section — paste log tail directly |
-| Component mount locations | `.claude/rules/component-mounts.md` | `## Sub-Agent Briefing` |
-| Component event wiring | `.claude/rules/component-events.md` | `## Sub-Agent Briefing` |
-| Component state connections | `.claude/rules/component-state.md` | `## Sub-Agent Briefing` |
-| Component ComfyUI injection | `.claude/rules/component-comfy.md` | `## Sub-Agent Briefing` |
-| App versioning system | `.claude/rules/versioning.md` | `## Sub-Agent Briefing` |
-| Project data model | `docs/project-integrity.md` | No briefing section — provide context inline |
-| Download system | `.claude/rules/downloads.md` | `## Sub-Agent Briefing` |
-| **Stage UI baseline (merged)** | `docs/redesign/PORTING.md` (+ `PRODUCT.md`, `DESIGN.md`, `RECOLOR.md`) | Read these only when touching a *new* surface or doing a follow-up phase. For routine work, the live `styles/01_base.css` and `.claude/rules/components.md` (§ "Stage design baseline") are sufficient. |
+1. **Run `/mpi-brief-rule <name>`** for each rule file the task touches (same routing as the Context Router; it returns that rule's `## Sub-Agent Briefing` verbatim).
+2. **Paste into the sub-agent prompt:** the briefing(s) + the Critical Rules Snapshot + THE ROOT-CAUSE RULE.
 
----
-
-## Stage UI baseline — `docs/redesign/`
-
-Stage redesign **merged to master** (commit `e9b5eb6`, PORTING.md phases 0–10.2). For routine work (component tweaks, bug fixes, restyles) follow `styles/01_base.css` tokens and `.claude/rules/components.md` § "Stage design baseline" directly — do NOT re-read the redesign docs.
-
-Re-read redesign docs **only** for: a new surface with a matching mockup, a follow-up phase (beyond 10.2), or a Stage audit. When you do, read in order: `PRODUCT.md` → `DESIGN.md` → `PORTING.md` → the matching mockup.
-
-| File | Purpose |
-|---|---|
-| `docs/redesign/PRODUCT.md` | Persona, register, tone, anti-references — read first |
-| `docs/redesign/DESIGN.md` | OKLCH tokens, type scale, component primitives, motion, banned patterns |
-| `docs/redesign/PORTING.md` | Phase-by-phase port plan with file-level mappings |
-| `docs/redesign/RECOLOR.md` | Photoshop hex-replace recipe for mascot + logo PNGs |
-| `docs/redesign/c-stage/*.html` | Five Stage mockups (`landing`, `gallery`, `editor`, `editor-video`, `popups`) — visual ground truth |
-| `docs/redesign/c-stage/tokens.css` | Stage tokens + primitive selectors — copy values, not class names |
-| `docs/redesign/_base.css` | Mockup base reset — reference only, do not import into the app |
-
-**Spec → code is one-way.** Never edit `docs/redesign/*` to match implementation. Real-app deviations get a `// REDESIGN-DEVIATION:` comment at the call site. Do not ship the CSS hue-rotate filter for PNGs — recolor mascot/logo PNGs at the source per `RECOLOR.md`.
+**No exceptions.** If a rule has no briefing section, paste the Snapshot at minimum. Special cases: debugging → paste the `logs/app.log` tail directly; `docs/project-integrity.md` has no briefing → provide context inline.
 
 ---
 
 ## Multi-Root Workspace
 
-VS Code workspace contains 4 root folders. Cubric-Vision is **master** (this folder — has `.claude/`, kanban, jsconfig, CLAUDE.md). Other 3 are siblings under `c:\AI\Mpi\`:
-
-| Folder | Purpose | Git |
-|---|---|---|
-| `c:\AI\Mpi\Cubric-Vision` | Main Electron app (master root) | yes |
-| `c:\AI\Mpi\CubricStudio_Redesign` | Reference-only design source for Stage redesign and future ports | no (intentional) |
-| `c:\AI\Mpi\Cubric Studio (Website)` | Public marketing website (single page) — needs new design ported | yes (separate repo) |
-| `c:\AI\Mpi\Cubric Studio (Docs)` | Documentation website — needs new design ported | yes (separate repo) |
+Cubric-Vision is **master** (this folder — has `.claude/`, kanban, jsconfig, CLAUDE.md). VS Code workspace roots (`Cubric-Vision.code-workspace`): this folder + siblings under `c:\AI\Mpi\` — `Cubric-Studio`, `MadPony-Identity`, `mpi-ci`, `Cubric-Prompt`, `Cubric Studio Brand Assets`. Related on-disk siblings NOT in the workspace: `CubricStudio_Redesign` (design playground, intentionally no git), `Cubric Studio (Website)` and `Cubric Studio (Docs)` (separate repos).
 
 ### Rules when working across roots
 
-1. **Master kanban lives here only.** All cross-folder work is tracked in `.agents/mpi-kanban/board.json` with task workspaces under `.agents/mpi-kanban/tasks/<id>/`. Entries pointing at sibling folders MUST include absolute path in body.
-2. **CLAUDE.md and `.claude/rules/` apply to Cubric-Vision only.** Sibling roots don't auto-load this file. When working in a sibling folder, brief sub-agents manually with relevant rules.
-3. **Use absolute paths** in tool calls (`Read`, `Glob`, `Grep`, `Edit`) when targeting sibling folders. Relative paths resolve against Cubric-Vision.
-4. **Sibling git repos are separate.** Never run `git` from Cubric-Vision against sibling paths — `cd` into the sibling first or use `-C <path>`.
-5. **Design source of truth for sibling websites:** `c:\AI\Mpi\CubricStudio_Redesign\` (no git, edit freely as design playground). Apply final design to Website/Docs repos.
-6. **DOCS WEBSITE PUSH BLOCK (hard rule):** Never run `git push` (or any equivalent) in `c:\AI\Mpi\Cubric Studio (Docs)`. Production GitHub Pages currently serves the coming-soon `index.html` from a previous deploy; the local working tree has the full docs shell as `index.html` and the coming-soon page parked as `index-soon.html`. Pushing local `main` would replace the live coming-soon page with the unfinished docs shell. If the user asks to push the docs repo, refuse and explain: the docs site is not ready, work is local-only, and the swap (`index.html` ↔ `index-soon.html`) must happen first. Local dev/test only. This block is lifted only when the user explicitly says the docs site is ready to ship.
+1. **Master kanban lives here only.** Cross-folder work tracked in `.agents/mpi-kanban/`; entries pointing at sibling folders MUST include the absolute path in the body.
+2. **CLAUDE.md + `.claude/rules/` auto-load for Cubric-Vision only.** Working in a sibling = brief sub-agents manually with the relevant rules.
+3. **Absolute paths** in tool calls targeting siblings — relative paths resolve against Cubric-Vision.
+4. **Sibling git repos are separate.** Never run `git` from Cubric-Vision against sibling paths — use `git -C <path>` or `cd` first.
+5. **Design source of truth for the Website/Docs sites:** `c:\AI\Mpi\CubricStudio_Redesign\` (edit freely as playground; apply final design to the Website/Docs repos).
+6. **DOCS WEBSITE PUSH BLOCK (hard rule):** Never run `git push` (or any equivalent) in `c:\AI\Mpi\Cubric Studio (Docs)`. Production GitHub Pages serves the coming-soon `index.html` from a previous deploy; the local tree has the unfinished docs shell as `index.html` (coming-soon parked as `index-soon.html`). Pushing would replace the live coming-soon page with the unfinished shell. If asked to push: refuse, explain, and note the `index.html` ↔ `index-soon.html` swap must happen first. Lifted only when the user explicitly says the docs site is ready to ship.
 
 ---
+
+## Git and Commits
+
+Agents MAY commit without asking. Shared tree — commit by explicit pathspec (`git commit --only <paths>`), never `git add -A`/`git add .` (full co-owned-file recipe: `docs/gotchas.md` § commit hygiene). Push stays a user-authorized live op (do not push unless asked). Docs-repo push block above still applies.
