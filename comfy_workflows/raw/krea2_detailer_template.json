@@ -1,74 +1,9 @@
 {
   "id": "af76adc3-bb19-4f25-92b1-d1984ca6c953",
   "revision": 0,
-  "last_node_id": 1702,
-  "last_link_id": 2453,
+  "last_node_id": 1704,
+  "last_link_id": 2458,
   "nodes": [
-    {
-      "id": 1671,
-      "type": "CLIPTextEncode",
-      "pos": [
-        8400.43968558752,
-        5983.399159432829
-      ],
-      "size": [
-        210,
-        200
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 9,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 2429
-        },
-        {
-          "name": "text",
-          "type": "STRING",
-          "widget": {
-            "name": "text"
-          },
-          "link": 2384
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            2395,
-            2432
-          ]
-        }
-      ],
-      "title": "pos",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.51",
-        "Node name for S&R": "CLIPTextEncode",
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65,
-        "ue_properties": {
-          "widget_ue_connectable": {
-            "text": true
-          },
-          "version": "7.1",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        ""
-      ]
-    },
     {
       "id": 1676,
       "type": "MpiLoraModel",
@@ -81,7 +16,7 @@
         122
       ],
       "flags": {},
-      "order": 14,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
@@ -139,7 +74,7 @@
         122
       ],
       "flags": {},
-      "order": 15,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
@@ -197,7 +132,7 @@
         122
       ],
       "flags": {},
-      "order": 16,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
@@ -255,7 +190,7 @@
         122
       ],
       "flags": {},
-      "order": 17,
+      "order": 18,
       "mode": 0,
       "inputs": [
         {
@@ -313,7 +248,7 @@
         122
       ],
       "flags": {},
-      "order": 13,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
@@ -371,7 +306,7 @@
         122
       ],
       "flags": {},
-      "order": 12,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
@@ -431,7 +366,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 18,
+      "order": 19,
       "mode": 0,
       "inputs": [
         {
@@ -457,7 +392,7 @@
         {
           "name": "negative",
           "type": "CONDITIONING",
-          "link": 2433
+          "link": 2458
         }
       ],
       "outputs": [
@@ -565,45 +500,6 @@
       "bgcolor": "#535"
     },
     {
-      "id": 1692,
-      "type": "ConditioningZeroOut",
-      "pos": [
-        8738.081893395052,
-        6010.837145894276
-      ],
-      "size": [
-        225,
-        26
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 11,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "link": 2432
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            2433
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "ConditioningZeroOut"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 1690,
       "type": "CLIPLoader",
       "pos": [
@@ -624,7 +520,8 @@
           "type": "CLIP",
           "links": [
             2429,
-            2431
+            2431,
+            2454
           ]
         }
       ],
@@ -701,7 +598,7 @@
         122
       ],
       "flags": {},
-      "order": 10,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
@@ -845,7 +742,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 20,
+      "order": 21,
       "mode": 0,
       "inputs": [
         {
@@ -1034,7 +931,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 19,
+      "order": 20,
       "mode": 0,
       "inputs": [
         {
@@ -1158,6 +1055,175 @@
       ],
       "color": "#232",
       "bgcolor": "#353"
+    },
+    {
+      "id": 1704,
+      "type": "CLIPTextEncode",
+      "pos": [
+        8428.43435814201,
+        5948.150474481243
+      ],
+      "size": [
+        210,
+        200
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2454
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 2456
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2458
+          ]
+        }
+      ],
+      "title": "neg",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.51",
+        "Node name for S&R": "CLIPTextEncode",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65,
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "text": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 1671,
+      "type": "CLIPTextEncode",
+      "pos": [
+        8427.839573447747,
+        5891.104800324674
+      ],
+      "size": [
+        210,
+        200
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2429
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 2384
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            2395
+          ]
+        }
+      ],
+      "title": "pos",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.51",
+        "Node name for S&R": "CLIPTextEncode",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65,
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "text": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 1703,
+      "type": "MpiText",
+      "pos": [
+        7589.80444283406,
+        6502.876565254287
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2456
+          ]
+        }
+      ],
+      "title": "Input_Negative",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -1282,22 +1348,6 @@
       "CLIP"
     ],
     [
-      2432,
-      1671,
-      0,
-      1692,
-      0,
-      "CONDITIONING"
-    ],
-    [
-      2433,
-      1692,
-      0,
-      1679,
-      4,
-      "CONDITIONING"
-    ],
-    [
       2438,
       1689,
       0,
@@ -1328,6 +1378,30 @@
       1687,
       1,
       "MASK"
+    ],
+    [
+      2454,
+      1690,
+      0,
+      1704,
+      0,
+      "CLIP"
+    ],
+    [
+      2456,
+      1703,
+      0,
+      1704,
+      1,
+      "STRING"
+    ],
+    [
+      2458,
+      1704,
+      0,
+      1679,
+      4,
+      "CONDITIONING"
     ]
   ],
   "groups": [],
@@ -1337,10 +1411,10 @@
     "links_added_by_ue": [],
     "workflowRendererVersion": "LG",
     "ds": {
-      "scale": 0.473624407447714,
+      "scale": 0.6303940863129075,
       "offset": [
-        -7013.815786711544,
-        -5100.679153461063
+        -6816.888322152041,
+        -5358.764465614038
       ]
     },
     "frontendVersion": "1.45.20",
