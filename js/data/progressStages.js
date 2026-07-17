@@ -30,8 +30,8 @@
 export const PROGRESS_STAGES = Object.freeze({
     // LTX — measured single=3 (load + 7-step + 3-step). preview/stage2 per the
     // registry's two-stage split (first sampler = 2 steps, second = 1).
-    'LTX_t2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
-    'LTX_i2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
+    'ltx_t2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
+    'ltx_i2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
     // WAN — verified single=2 (one bar per sampler; no separate model-load bar).
     'wan22_t2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     'wan22_i2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
@@ -77,7 +77,7 @@ export const PROGRESS_STAGES = Object.freeze({
  * worse than no total. An unrecorded workflow (0) stays unrecorded — a delta on
  * top of "unknown" is still unknown.
  *
- * @param {string} workflowFile  e.g. 'LTX_t2v.json' or 'LTX_t2v_stage2.json'
+ * @param {string} workflowFile  e.g. 'ltx_t2v.json' or 'ltx_t2v_stage2.json'
  * @param {'single'|'preview'|'stage2'} mode
  * @param {number} [extraBars=0]  additional tqdm bars this specific run will emit
  * @returns {number}

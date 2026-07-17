@@ -2,10 +2,10 @@
 generate_ltx.py
 LTX-2.3 handler: from ONE i2v+t2v API export, produce FOUR app workflow files —
 the four mode/stage variants, all bf16 (both engines run the same transformer):
-  LTX_i2v.json         — Input_Text_to_video=false, Input_Is_Continue=false
-  LTX_i2v_stage2.json  — derived: Input_Is_Continue flipped true
-  LTX_t2v.json         — Input_Text_to_video=true,  Input_Is_Continue=false
-  LTX_t2v_stage2.json  — derived: Input_Is_Continue flipped true
+  ltx_i2v.json         — Input_Text_to_video=false, Input_Is_Continue=false
+  ltx_i2v_stage2.json  — derived: Input_Is_Continue flipped true
+  ltx_t2v.json         — Input_Text_to_video=true,  Input_Is_Continue=false
+  ltx_t2v_stage2.json  — derived: Input_Is_Continue flipped true
 
 MPI-190: the bf16/GGUF engine split was REVERTED. cu130 (MPI-187/189) collapsed
 the aimdo cold-fault tax that was the GGUF transformer's only justification, so
@@ -155,7 +155,7 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
 
     written: list[Path] = []
     for vsuffix, (unet_name, weight_dtype) in VARIANTS.items():
-        for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
+        for name, t2v in (("ltx_i2v", False), ("ltx_t2v", True)):
             stage1 = _variant(template, t2v)
             _stamp_transformer(stage1, unet_name, weight_dtype)
             s1_out = out_dir / f"{name}{vsuffix}.json"

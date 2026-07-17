@@ -60,8 +60,15 @@ function assertNotInRaw(outPath) {
   }
   return outPath;
 }
-const outPathFor = (name) =>
-  assertNotInRaw(isTemplate(name) ? path.join(GEN_DIR, name) : path.join(WORKFLOWS_DIR, name));
+// The OUTPUT name is force-lowercased here — the runtime file + its GEN template
+// (and every models.js `workflows` key that points at them) must resolve on a
+// case-sensitive FS (Linux Pod, macOS). raw/ names stay whatever case the user
+// exported; only the generated copies are normalized (MPI-291). Because the GEN
+// template lands lowercase, orchestrate.py's stem-derived runtime names inherit it.
+const outPathFor = (name) => {
+  const lc = name.toLowerCase();
+  return assertNotInRaw(isTemplate(lc) ? path.join(GEN_DIR, lc) : path.join(WORKFLOWS_DIR, lc));
+};
 
 /** git output paths relative to repo root, forward-slashed (git wants those). */
 function rel(p) { return path.relative(REPO_ROOT, p).split(path.sep).join('/'); }
@@ -118,23 +125,24 @@ async function main() {
   if (!changed.length) { console.log('No raw/ workflows changed vs HEAD — nothing to do.'); return; }
   console.log(`Changed raw workflow(s): ${changed.join(', ')}`);
 
-  // 1b. GATE — filenames MUST be all-lowercase. The runtime file (and its GEN template)
-  //     inherit this exact name; models.js `workflows` keys must match byte-for-byte, and
-  //     the Pod FS is case-sensitive. A mixed-case name (Chroma_t2i.json) works on Windows
-  //     but 404s on the Pod if a key is ever "corrected" to a different case (MPI-291).
-  //     Stop BEFORE the raw commit so nothing mixed-case lands. NOTE: fixing this is a
-  //     case-only rename, which collides in git's `add` on core.ignorecase=true — do it in
-  //     two steps: `git mv X x.tmp && git mv x.tmp x`, or rename + `git add -A` the pair.
-  const mixedCase = changed.filter((f) => f !== f.toLowerCase());
-  if (mixedCase.length) {
-    console.error(
-      `\nSTOP: ${mixedCase.length} raw workflow filename(s) are NOT all-lowercase:\n` +
-      mixedCase.map((f) => `  ${f}  ->  ${f.toLowerCase()}`).join('\n') +
-      `\n\nWorkflow filenames must be lowercase (case-sensitive Pod FS; the runtime file + ` +
-      `models.js key inherit this name). Rename in comfy_workflows/raw/ to the lowercase form ` +
-      `above, then re-run. Nothing was committed.`
-    );
-    process.exit(1);
+  // 1b. Filenames are normalized to lowercase on OUTPUT (see outPathFor) — the runtime
+  //     file, its GEN template, and every models.js `workflows` key resolve on a
+  //     case-sensitive FS (Linux Pod, macOS) regardless of the raw export's case (MPI-291).
+  //     No raw rename is asked of the user. Gitignored raw files (e.g. dev utilities like
+  //     "Model Merger.json") are skipped: they ship nothing and would fail the raw commit.
+  if (FORCE) {
+    // check-ignore exits 1 (throws) when NOTHING is ignored — that's the common case, not
+    // an error. Only a match (exit 0) yields output to filter on.
+    let ignoredOut = '';
+    try {
+      ignoredOut = execFileSync('git', ['check-ignore', '--', ...changed.map((f) => `comfy_workflows/raw/${f}`)],
+        { cwd: REPO_ROOT, encoding: 'utf8' });
+    } catch { /* exit 1 = no ignored paths */ }
+    const ignored = new Set(ignoredOut.split('\n').filter(Boolean).map((p) => path.basename(p.trim())));
+    if (ignored.size) {
+      changed = changed.filter((f) => !ignored.has(f));
+      console.log(`Skipping gitignored raw: ${[...ignored].join(', ')}`);
+    }
   }
 
   // 2. Commit the RAW sources FIRST — the record of the user's edit. Generated API +

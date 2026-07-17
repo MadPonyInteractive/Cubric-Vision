@@ -708,8 +708,8 @@ export const MODELS = [
         gen_speed: 'medium',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes.',
         workflows: {
-            t2v_ms: 'LTX_t2v.json',
-            i2v_ms: 'LTX_i2v.json',
+            t2v_ms: 'ltx_t2v.json',
+            i2v_ms: 'ltx_i2v.json',
         },
         // MPI-190: engine split REVERTED, GGUF fully removed. cu130 (MPI-187/189)
         // collapsed the aimdo cold-fault tax that was the GGUF transformer's only
@@ -768,11 +768,11 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes. A faster tier that trades a little quality for speed and lighter VRAM use.',
         // Base filenames — the resolver appends the arch suffix from the `variants`
-        // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding LTX_t2v_mxfp8.json
+        // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding ltx_t2v_mxfp8.json
         // etc. (all emitted by generate_ltx.py).
         workflows: {
-            t2v_ms: 'LTX_t2v.json',
-            i2v_ms: 'LTX_i2v.json',
+            t2v_ms: 'ltx_t2v.json',
+            i2v_ms: 'ltx_i2v.json',
         },
         // Shared deps = the High card's set MINUS the bf16 transformer. The
         // arch-specific transformer comes from the `variants.arch` block: only the
