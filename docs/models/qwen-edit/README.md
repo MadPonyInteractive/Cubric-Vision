@@ -15,8 +15,8 @@ instruction-driven image editing with a Qwen2.5-VL text encoder and the Qwen-Ima
 
 | | |
 |---|---|
-| Tiers | **Low** (4-step Lightning) · **Balanced** (8-step Lightning) · **High** (no accelerator) |
-| Transformer | `qwen_image_edit_2511_fp8mixed` — 🆕 NEW dep (size TBD, check ≥20GB gate) |
+| Tiers | **Low** (4-step Lightning) · **Balanced** (8-step Lightning) · **High** (no accelerator) — details: [tiers-and-loaders.md](tiers-and-loaders.md) |
+| Transformer | Low/Bal: `qwen_image_edit_2511_fp8mixed` (19.13 GiB, **below** gate) · High: `qwen_image_edit_2511_bf16` (38.06 GiB, **≥20GB gate → STOP-and-ask**) — 🆕 NEW deps |
 | Text encoder | `text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors` (9.38GB, hidden 3584) — 🆕 NEW dep. **NOT** the krea2 Qwen3-VL-4B nor boogu Qwen3-VL-8B |
 | VAE | `vae/qwen_image_vae.safetensors` — REUSE existing dep **`vae-qwen-image`** (already on R2, hashed) |
 | Lightning LoRAs | 2511 4-step + 8-step bf16 (810MB each) — BAKED deps, `loras/qwen/` subfolder. Downloaded to `C:/AI/Loras/Qwen` |
@@ -30,6 +30,7 @@ the Qwen2.5-VL-7B text encoder, and the two Lightning LoRAs are new uploads.
 | # | File | When |
 |---|---|---|
 | 1 | [reference-latents.md](reference-latents.md) | the `FluxKontextMultiReferenceLatentMethod` node — what the 4 `reference_latents_method` values do, why the workflow ships `index_timestep_zero`, and the **color-shift caveat**. |
+| 2 | [tiers-and-loaders.md](tiers-and-loaders.md) | tier→weights table, Lightning LoRA loader (**MODEL-only, str 1.0**), transformer quant matrix + exact bytes, hot-store gate resolution. |
 
 (More topic files added as research settles — samplers, resolution, injection, etc.)
 
