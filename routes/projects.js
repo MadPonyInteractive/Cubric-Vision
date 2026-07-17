@@ -566,7 +566,9 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
     if (snapshotRequests.length) {
         for (const request of snapshotRequests) {
-            if (!request?.url || (request.role !== 'startFrame' && request.role !== 'endFrame')) continue;
+            // MPI-295: snapshot ANY declared image input, keyed by its own slot-role
+            // (inputImage/inputImage2/startFrame/endFrame/…), not just frame roles.
+            if (!request?.url || !request.role) continue;
             const ext = snapshotExt(request.url);
             const meta = {
                 role: request.role,
@@ -614,8 +616,15 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     return { frozenParams: nextFrozenParams, previewAssets: result };
 }
 
+// MPI-295: role-agnostic. Persist whatever slot-key role the chip already carries
+// (assigned from the op's mediaInputs slot.key by MpiPromptBox._withAssignedRoles —
+// e.g. krea2Edit's inputImage/inputImage2, i2v's startFrame/endFrame). The generic
+// snapshot plumbing must NOT invent or force startFrame/endFrame by index; that
+// destroyed multi-image edit roles (both chips tagged startFrame/endFrame → restore
+// & reuse collapse). The positional startFrame/endFrame fallback survives ONLY for
+// legacy role-less i2v chips (an untagged first/second image → the i2v frame slots).
 function _snapshotRoleForMediaItem(item, index, usedRoles) {
-    if (item?.role === 'startFrame' || item?.role === 'endFrame') return item.role;
+    if (item?.role) return item.role;
     if (index === 0 && !usedRoles.has('startFrame')) return 'startFrame';
     if (index === 1 && !usedRoles.has('endFrame')) return 'endFrame';
     return null;

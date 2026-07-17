@@ -917,11 +917,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             _previewAssets = {
                 latent: _videoLatent,
                 audioLatent: _audioLatent,
+                // MPI-295: snapshot every declared image input, keyed by its own
+                // slot-role — not just startFrame/endFrame. Untagged image inputs are
+                // skipped (no role → nothing to resurface against on reuse).
                 snapshots: _frozenMediaItems
-                    .filter(item =>
-                        item.mediaType === 'image' &&
-                        (item.role === 'startFrame' || item.role === 'endFrame')
-                    )
+                    .filter(item => item.mediaType === 'image' && item.role)
                     .map(item => ({
                         id: item.id,
                         role: item.role,

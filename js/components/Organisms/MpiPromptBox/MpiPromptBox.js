@@ -1005,8 +1005,21 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!model) return null;
             const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const candidates = cmds.filter(c => (c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
-            const ready = candidates.find(c => c.available);
-            return (ready ?? candidates[0])?.key ?? null;
+            // MPI-295: the fallback op must FIT the media already present, not just be
+            // the first image op. Restoring/injecting 2 images must land on an op with
+            // capacity ≥ 2 (e.g. krea2Edit), never the cap-1 i2i — which would evict
+            // chip 1 on the 2nd inject. Filter to ops whose per-type cap covers the
+            // current counts, preferring the smallest-fitting available op.
+            const imgN = el.imageCount ?? 0;
+            const vidN = el.videoCount ?? 0;
+            const fits = c =>
+                _maxMediaForOperation(c.key, 'image') >= imgN &&
+                _maxMediaForOperation(c.key, 'video') >= vidN;
+            const fitting = candidates.filter(fits)
+                .sort((a, b) => _maxMediaForOperation(a.key, 'image') - _maxMediaForOperation(b.key, 'image'));
+            const pool = fitting.length ? fitting : candidates;
+            const ready = pool.find(c => c.available);
+            return (ready ?? pool[0])?.key ?? null;
         }
 
         function _refreshOpDropdown() {
@@ -1517,6 +1530,29 @@ export const MpiPromptBox = ComponentFactory.create({
             const _mediaSlot = state.promptMedia?.[_wsKey] || {};
             const _saved = _matchesSlot(_mediaSlot) ? (_mediaSlot.items || []) : [];
             if (_saved.length) {
+                // MPI-295: restored chips carry an explicit slot-role (inputImage/
+                // inputImage2/startFrame/…). _tryAddMedia's op up-jump is SKIPPED for
+                // role-tagged drops, so injecting a 2-image edit under a cap-1 op
+                // (i2i) would evict chip 1 before krea2Edit is ever reached. Pick the
+                // op that fits the saved image count ONCE up front, so the cap/role
+                // logic runs under the correct op (e.g. krea2Edit, cap 2).
+                // MPI-295: fit the op to the saved image count BEFORE injecting, so the
+                // FIRST chip already lands under an op with enough capacity (e.g.
+                // krea2Edit cap 2). Compare against the CURRENT op's OWN cap
+                // (_maxMediaForOperation), NOT the model-wide max
+                // (_maxMediaForCurrentOperation) — the latter reports krea2Edit's 2 even
+                // while the active op is t2i (cap 0), so the guard never fired and the
+                // per-chip _emitMediaChange fallback snapped to i2i (cap 1) mid-restore,
+                // evicting chip 1. Video counts get the same treatment.
+                const _savedImages = _saved.filter(m => m.mediaType === 'image').length;
+                const _savedVideos = _saved.filter(m => m.mediaType === 'video').length;
+                if (_savedImages > _maxMediaForOperation(activeOperation, 'image')) {
+                    const _fitOp = _opForMediaCount('image', _savedImages);
+                    if (_fitOp && _fitOp !== activeOperation) el.setOperation(_fitOp, { programmatic: true });
+                } else if (_savedVideos > _maxMediaForOperation(activeOperation, 'video')) {
+                    const _fitOp = _opForMediaCount('video', _savedVideos);
+                    if (_fitOp && _fitOp !== activeOperation) el.setOperation(_fitOp, { programmatic: true });
+                }
                 _restoringMedia = true;
                 try {
                     for (const m of _saved) el.injectMedia({ url: m.url, mediaType: m.mediaType, role: m.role, name: m.name });

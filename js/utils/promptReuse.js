@@ -71,7 +71,11 @@ function _mediaItemsFromPreviewAssets(item = {}) {
         : [];
     return snapshots
         .filter(snap => snap && snap.status !== 'missing' && (snap.filePath || snap.url))
-        .filter(snap => snap.role === 'startFrame' || snap.role === 'endFrame')
+        // MPI-295: resurface EVERY saved image snapshot, keyed by its own slot-role
+        // (inputImage/inputImage2/startFrame/endFrame/…) — not just frame roles. A
+        // 2-image edit card carries two image inputs; the old frame-only filter kept
+        // whatever survived but assumed a max of two frame roles.
+        .filter(snap => (snap.mediaType || 'image') === 'image')
         .map((snap, index) => ({
             id:        snap.id ?? `reuse-preview-asset-${index}`,
             url:       snap.filePath || snap.url,

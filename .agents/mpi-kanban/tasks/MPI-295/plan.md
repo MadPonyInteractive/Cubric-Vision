@@ -65,9 +65,34 @@ It persists whatever role the chip already has (assigned from the op's `mediaInp
 `slot.key`) and never invents `startFrame`/`endFrame`. Those strings survive only as
 i2v's own slot keys — special-cased nowhere in the generic plumbing.
 
-## Phases
+## Plan Drift (2026-07-17, Phase 0 findings)
 
-### Phase 0 — confirm + decide shape (no code)
+- **Reuse symptom is CONDITIONAL, not a role-filter drop.** Ran `buildPromptReusePayload`
+  on the live sidecar → returns **2** media items (both frames pass the L74 filter).
+  So reuse does NOT collapse at payload build. Reuse only loses a chip when the resolved
+  reuse op is **cap-1** (e.g. "Use model" unchecked → `targetOperation` falls back to
+  `activeOperation`=i2i, cap 1 → `_tryAddMedia` evicts the 2nd). With op=krea2Edit,
+  reuse already lands 2. The round-trip is the always-firing bug.
+- **Data-shape: NO new structure.** Prompt-box media is ALREADY an ordered list of dicts —
+  `state.promptMedia[wsKey].items = [{ url, mediaType, role, name, ... }]` (MpiPromptBox
+  L120), sidecar `mediaItems` = same shape. Role is ALREADY assigned from the op's
+  `slot.key` via `_withAssignedRoles`. The "collection model" is a framing; the fix is to
+  stop the generic plumbing from OVERWRITING each dict's `role` tag.
+- **Tag vocabulary (user, 2026-07-17): op slot-keys AS-IS.** Plumbing stays fully
+  agnostic — persists whatever tag the chip carries, never invents/interprets. krea2Edit →
+  `inputImage`/`inputImage2`; i2v → `startFrame`/`endFrame`; future video refs → that op's
+  own slot keys. No unified vocab, no op→tag mapping layer. Each dict may carry extra
+  per-entry keys (`trim`, future `weight`/`maskUrl`).
+- **Migration: fix-at-source + optional light rewrite.** Restore is already role-agnostic
+  (positional fallback in `_withAssignedRoles`), so old mis-tagged sidecars still restore.
+  A one-time sidecar-role rewrite is belt-and-suspenders, not required.
+- **SECOND defect (round-trip eviction) is in `_tryAddMedia` L321**, independent of the
+  role string: the `if (!role)` op-up-jump guard SKIPS the up-jump for role-tagged chips.
+  During restore the chip carries a role → op stays at the default cap-1 op → 2nd chip
+  evicted at L346. Phase 2 must make restore replay under the correct op (or drop/relax
+  the guard for restore).
+
+### Phase 0 — confirm + decide shape (no code) ✅ DONE 2026-07-17
 - [ ] Trace the **reuse** symptom to certainty (round-trip is done). Where exactly does the
       2nd image drop: `_mediaItemsFromPreviewAssets` filter, `_mergeReuseMedia`, or the
       inject loop in `MpiGalleryBlock` (~L1221)?
@@ -79,23 +104,34 @@ i2v's own slot keys — special-cased nowhere in the generic plumbing.
       (b) role-agnostic restore/reuse tolerant of any role (old sidecars still restore).
       Prefer **fix-at-source + light migration**.
 
-### Phase 1 — kill the special-casing (source fix)
-- [ ] `routes/projects.js`: drop the index→frame-role hardcode in `_snapshotRoleForMediaItem`;
-      persist the chip's actual `item.role`. Remove the `role !== 'startFrame' && !== 'endFrame'`
-      gate at L569 (materializePreviewAssets) and any other frame-role gate — snapshot ALL
-      declared image inputs regardless of role.
-- [ ] `promptReuse.js`: `_mediaItemsFromPreviewAssets` — drop the `startFrame/endFrame` role
-      filter; return all image snapshots. Audit `_mergeReuseMedia` for role assumptions.
-- [ ] `generationService.js`: audit the L923 `startFrame/endFrame` filter.
+### Phase 1 — kill the special-casing (source fix) ✅ DONE 2026-07-17
+- [x] `routes/projects.js`: `_snapshotRoleForMediaItem` now `if (item?.role) return item.role`
+      (persist actual slot-key role); positional startFrame/endFrame kept ONLY as legacy
+      role-less fallback. Snapshot gate L569 relaxed to `!request.role` (was frame-only).
+- [x] `promptReuse.js`: `_mediaItemsFromPreviewAssets` frame-role filter → `mediaType==='image'`
+      (resurface ALL image snapshots). `_mergeReuseMedia` = role-agnostic (no change needed).
+- [x] `generationService.js`: L923 frame filter → `item.role` (any tagged image input).
+- Node harness verified 3 cases: new inputImage/inputImage2 preserved; legacy i2v positional
+  fallback intact; old mis-tagged sidecar still reuses 2. `git`-clean, all `node --check` pass.
 
-### Phase 2 — restore/reuse role-agnostic + verify
-- [ ] `MpiPromptBox._withAssignedRoles` / restore loop: make restore replay chips under the
-      **correct op** (set op before injecting) so cap/role logic uses krea2Edit's slots, not
-      the default op's. (The round-trip eviction also stems from restore running under the
-      wrong op cap — verify this is covered by the role fix or needs its own guard.)
-- [ ] Migration (if chosen): rewrite existing sidecar roles.
+### Phase 2 — restore/reuse role-agnostic + verify ✅ DONE 2026-07-17
+- [x] `MpiPromptBox` restore loop (L1516): before injecting, if saved image count > current
+      op cap, `_opForMediaCount('image', N)` → `setOperation` so cap/role logic runs under
+      the fitting op (krea2Edit cap 2). Fixes the round-trip eviction (the `if(!role)`
+      up-jump guard in `_tryAddMedia` is skipped for role-tagged restore chips).
+- [x] `_withAssignedRoles` already role-agnostic (explicit slot-key match + positional
+      fallback) — no change needed.
+- [x] **ROOT SNAP (user-found 2026-07-17):** `_pickFallbackOp` (L1004) picked the FIRST
+      image op (i2i, cap 1) with no regard for chip count. `_emitMediaChange` calls it after
+      the FIRST restored/injected chip → op snaps to i2i → 2nd chip evicted. This overrode
+      the Phase-2 pre-loop op-fit on every return-nav/reuse. FIX: `_pickFallbackOp` now
+      filters to ops whose per-type cap FITS the current image+video counts, smallest-fitting
+      first (2 images → krea2Edit). Node-verified: 1→i2i, 2→krea2Edit, 3→graceful i2i.
+      This is the actual cause of "keeps replacing the same chip / snaps to i2i".
+- [x] Migration: NOT needed. Restore now sets op by count (survives any role string) and
+      reuse tolerates old tags (case C). Old cards self-heal to correct roles on next save.
 
-### Phase 3 — verify (real app, not just tests)
+### Phase 3 — verify (real app, not just tests) ⏳ NEEDS USER (user-ux surface)
 - [ ] Repro the exact "Test Chips" flow: 2-image krea2Edit → round-trip → **both chips**.
 - [ ] Reuse from the 2-image card → **both chips** load; reuse from a 1-image card → 1 chip.
 - [ ] i2v start/end-frame flow still works (no regression on the video path).
