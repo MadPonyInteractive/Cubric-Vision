@@ -360,7 +360,8 @@
   "1661": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

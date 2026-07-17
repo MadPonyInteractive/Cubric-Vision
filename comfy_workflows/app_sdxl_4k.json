@@ -713,7 +713,9 @@
   },
   "1678": {
     "inputs": {
-      "string": ""
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -722,7 +724,9 @@
   },
   "1680": {
     "inputs": {
-      "string": ""
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

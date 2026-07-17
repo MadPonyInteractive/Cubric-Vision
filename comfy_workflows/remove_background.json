@@ -2,7 +2,8 @@
   "1": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -34,18 +35,6 @@
       "title": "Remove Background"
     }
   },
-  "6": {
-    "inputs": {
-      "mask": [
-        "3",
-        0
-      ]
-    },
-    "class_type": "InvertMask",
-    "_meta": {
-      "title": "Invert Mask"
-    }
-  },
   "4": {
     "inputs": {
       "image": [
@@ -60,6 +49,31 @@
     "class_type": "JoinImageWithAlpha",
     "_meta": {
       "title": "Join Image With Alpha"
+    }
+  },
+  "5": {
+    "inputs": {
+      "filename_prefix": "removeBackground",
+      "images": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "mask": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Invert Mask"
     }
   },
   "7": {
@@ -130,19 +144,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Input_Bg_Use_Color"
-    }
-  },
-  "5": {
-    "inputs": {
-      "filename_prefix": "removeBackground",
-      "images": [
-        "10",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Output_Image"
     }
   }
 }

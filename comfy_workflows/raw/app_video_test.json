@@ -233,7 +233,8 @@
         "Node name for S&R": "MpiLoadVideo"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ]
     },
     {
@@ -589,7 +590,8 @@
         "Node name for S&R": "MpiLoadVideo"
       },
       "widgets_values": [
-        ""
+        "",
+        true
       ]
     },
     {

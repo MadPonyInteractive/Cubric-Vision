@@ -1842,7 +1842,8 @@
   "473": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -1852,7 +1853,8 @@
   "474": {
     "inputs": {
       "string": "",
-      "channel": "alpha"
+      "channel": "alpha",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -1861,7 +1863,8 @@
   },
   "477": {
     "inputs": {
-      "string": ""
+      "string": "",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadAudio",
     "_meta": {

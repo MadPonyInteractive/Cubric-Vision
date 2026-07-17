@@ -2511,6 +2511,7 @@
       },
       "widgets_values": [
         "",
+        "alpha",
         true
       ],
       "color": "#432",
@@ -2924,6 +2925,7 @@
       },
       "widgets_values": [
         "",
+        "alpha",
         true
       ],
       "color": "#432",

@@ -153,7 +153,8 @@
   },
   "757": {
     "inputs": {
-      "string": ""
+      "string": "",
+      "block_if_empty": true
     },
     "class_type": "MpiLoadVideo",
     "_meta": {
