@@ -115,7 +115,7 @@
         0
       ],
       "negative": [
-        "1692",
+        "1704",
         0
       ]
     },
@@ -242,18 +242,6 @@
       "title": "Load VAE"
     }
   },
-  "1692": {
-    "inputs": {
-      "conditioning": [
-        "1671",
-        0
-      ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Conditioning Zero Out"
-    }
-  },
   "1694": {
     "inputs": {
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
@@ -288,6 +276,31 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "1703": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "1704": {
+    "inputs": {
+      "clip": [
+        "1690",
+        0
+      ],
+      "text": [
+        "1703",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "neg"
     }
   }
 }
