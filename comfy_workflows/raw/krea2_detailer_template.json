@@ -1,8 +1,8 @@
 {
   "id": "af76adc3-bb19-4f25-92b1-d1984ca6c953",
   "revision": 0,
-  "last_node_id": 1696,
-  "last_link_id": 2441,
+  "last_node_id": 1702,
+  "last_link_id": 2453,
   "nodes": [
     {
       "id": 1671,
@@ -18,7 +18,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 8,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -70,47 +70,6 @@
       ]
     },
     {
-      "id": 1673,
-      "type": "MpiText",
-      "pos": [
-        7593.457039000451,
-        6239.74077962368
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            2384
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "A beautiful woman with red hair and an emo look, taking a selfie in her bedroom. She's wearing a monokini. The bedroom light is turned off and only a neon light is illuminating part of her body"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1676,
       "type": "MpiLoraModel",
       "pos": [
@@ -122,7 +81,7 @@
         122
       ],
       "flags": {},
-      "order": 13,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
@@ -180,7 +139,7 @@
         122
       ],
       "flags": {},
-      "order": 14,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
@@ -238,7 +197,7 @@
         122
       ],
       "flags": {},
-      "order": 15,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
@@ -296,7 +255,7 @@
         122
       ],
       "flags": {},
-      "order": 16,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
@@ -354,7 +313,7 @@
         122
       ],
       "flags": {},
-      "order": 12,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
@@ -412,13 +371,13 @@
         122
       ],
       "flags": {},
-      "order": 11,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 2439
+          "link": 2448
         }
       ],
       "outputs": [
@@ -472,7 +431,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 17,
+      "order": 18,
       "mode": 0,
       "inputs": [
         {
@@ -526,15 +485,15 @@
       "id": 1603,
       "type": "MpiInt",
       "pos": [
-        9334.402939589598,
-        6702.188807963348
+        9756.678474496619,
+        6072.998260951899
       ],
       "size": [
         270,
         58
       ],
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -564,47 +523,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 1594,
-      "type": "MpiFloat",
-      "pos": [
-        9328.844568397733,
-        6822.245011451931
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            2423
-          ]
-        }
-      ],
-      "title": "Input_Denoise",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiFloat",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        0.3
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1691,
       "type": "VAELoader",
       "pos": [
@@ -616,7 +534,7 @@
         120
       ],
       "flags": {},
-      "order": 3,
+      "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -660,7 +578,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 10,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
@@ -697,7 +615,7 @@
         170
       ],
       "flags": {},
-      "order": 4,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -731,15 +649,155 @@
       "bgcolor": "#535"
     },
     {
-      "id": 1696,
-      "type": "MpiLoadImageFromPath",
+      "id": 1673,
+      "type": "MpiText",
       "pos": [
-        9315.597326249874,
-        6284.671303950063
+        7593.457039000451,
+        6239.74077962368
       ],
       "size": [
-        276.9849609375,
-        142
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2384
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1694,
+      "type": "MpiLoraModel",
+      "pos": [
+        8044.640054896143,
+        5543.267328138266
+      ],
+      "size": [
+        398.93750945335853,
+        122
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2438
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2448
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Bypass_Filter_Lora",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "krea-2\\extra\\krea2filterbypass3.safetensors",
+        0
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1594,
+      "type": "MpiFloat",
+      "pos": [
+        9751.120103304755,
+        6193.054464440482
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            2423
+          ]
+        }
+      ],
+      "title": "Input_Denoise",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiFloat",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        0.3
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1689,
+      "type": "UNETLoader",
+      "pos": [
+        7546.902376845738,
+        5545.473898285232
+      ],
+      "size": [
+        450,
+        140
       ],
       "flags": {},
       "order": 5,
@@ -747,10 +805,98 @@
       "inputs": [],
       "outputs": [
         {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2438
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0",
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "krea2_turbo_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "lustify-v10-krea-raw-int8_convrot.safetensors",
+        "default"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 1556,
+      "type": "PreviewImage",
+      "pos": [
+        10476.68733583723,
+        5825.918906287331
+      ],
+      "size": [
+        777.9844797201695,
+        978.7545007605577
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2421
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_image",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "PreviewImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1696,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        9737.872861156895,
+        5655.480756938614
+      ],
+      "size": [
+        276.9849609375,
+        166
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
           "name": "image",
           "type": "IMAGE",
           "links": [
-            2440
+            2452
           ]
         },
         {
@@ -787,15 +933,15 @@
       "id": 1695,
       "type": "MpiLoadImageFromPath",
       "pos": [
-        9315.862559752617,
-        6490.145868020573
+        9738.138094659638,
+        5860.955321009124
       ],
       "size": [
         276.9849609375,
-        142
+        166
       ],
       "flags": {},
-      "order": 6,
+      "order": 7,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -808,7 +954,7 @@
           "name": "mask",
           "type": "MASK",
           "links": [
-            2441
+            2453
           ]
         },
         {
@@ -837,54 +983,49 @@
       "bgcolor": "#653"
     },
     {
-      "id": 1556,
-      "type": "PreviewImage",
+      "id": 1697,
+      "type": "LoadImage",
       "pos": [
-        10054.41180093021,
-        6455.10945329878
+        9388.135873325797,
+        5763.415519207414
       ],
       "size": [
-        777.9844797201695,
-        978.7545007605577
+        282.798828125,
+        314
       ],
       "flags": {},
-      "order": 19,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 2421
-        }
-      ],
+      "order": 8,
+      "mode": 4,
+      "inputs": [],
       "outputs": [
         {
-          "name": "images",
+          "name": "IMAGE",
           "type": "IMAGE",
-          "links": null
+          "links": []
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
         }
       ],
-      "title": "Output_image",
       "properties": {
         "cnr_id": "comfy-core",
-        "ver": "0.17.1",
-        "Node name for S&R": "PreviewImage",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
+        "ver": "0.27.0",
+        "Node name for S&R": "LoadImage",
+        "image": "clipspace/clipspace-painted-masked-1784281685712.png [input]"
       },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
+      "widgets_values": [
+        "clipspace/clipspace-painted-masked-1784281685712.png [input]",
+        "image"
+      ]
     },
     {
       "id": 1687,
       "type": "MaskDetailerPipe",
       "pos": [
-        9686.803245470439,
-        6459.918507396864
+        10109.07878037746,
+        5830.727960385415
       ],
       "size": [
         318.24609375,
@@ -893,18 +1034,18 @@
       "flags": {
         "collapsed": false
       },
-      "order": 18,
+      "order": 19,
       "mode": 0,
       "inputs": [
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 2440
+          "link": 2452
         },
         {
           "name": "mask",
           "type": "MASK",
-          "link": 2441
+          "link": 2453
         },
         {
           "name": "basic_pipe",
@@ -1000,7 +1141,7 @@
         0,
         "fixed",
         20,
-        3,
+        1.5,
         "euler",
         "beta",
         0.5,
@@ -1017,107 +1158,6 @@
       ],
       "color": "#232",
       "bgcolor": "#353"
-    },
-    {
-      "id": 1689,
-      "type": "UNETLoader",
-      "pos": [
-        7546.902376845738,
-        5545.473898285232
-      ],
-      "size": [
-        450,
-        140
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            2438
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "UNETLoader",
-        "models": [
-          {
-            "name": "krea2_turbo_fp8_scaled.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors",
-            "directory": "diffusion_models"
-          }
-        ]
-      },
-      "widgets_values": [
-        "krea2_raw_int8_convrot.safetensors",
-        "default"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
-    },
-    {
-      "id": 1694,
-      "type": "MpiLoraModel",
-      "pos": [
-        8044.640054896143,
-        5543.267328138266
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 9,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 2438
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            2439
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_Bypass_Filter_Lora",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "krea-2\\extra\\krea2filterbypass3.safetensors",
-        0
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -1266,7 +1306,7 @@
       "MODEL"
     ],
     [
-      2439,
+      2448,
       1694,
       0,
       1683,
@@ -1274,7 +1314,7 @@
       "MODEL"
     ],
     [
-      2440,
+      2452,
       1696,
       0,
       1687,
@@ -1282,7 +1322,7 @@
       "IMAGE"
     ],
     [
-      2441,
+      2453,
       1695,
       1,
       1687,
@@ -1297,10 +1337,10 @@
     "links_added_by_ue": [],
     "workflowRendererVersion": "LG",
     "ds": {
-      "scale": 0.8390545288824669,
+      "scale": 0.473624407447714,
       "offset": [
-        -7335.570370171501,
-        -5300.862307313379
+        -7013.815786711544,
+        -5100.679153461063
       ]
     },
     "frontendVersion": "1.45.20",
