@@ -1344,3 +1344,7 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-298","at":"2026-07-17T10:15:54Z","actor":"claude"}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-298","from":"todo","to":"doing","at":"2026-07-17T12:00:00Z","actor":"claude"}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-298","from":"doing","to":"done","at":"2026-07-17T12:30:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-297","from":"todo","to":"doing","at":"2026-07-17T10:40:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-291","at":"2026-07-17T11:00:00.000Z","actor":"claude","from":"doing","to":"done","summary":"Both watchdogs shipped: FE SSE liveness (downloadService.js:315), local byte-flow stall (downloadManager.js:583), remote twin (downloadManager.js:1210). Parked done as maturity complete per user."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-297","at":"2026-07-17T12:40:00Z","actor":"claude","note":"fix invalid maturity in_progress -> in-progress"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-298","at":"2026-07-17T12:40:00Z","actor":"claude","note":"fix invalid maturity done/active -> complete/accepted"}

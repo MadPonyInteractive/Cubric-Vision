@@ -2,13 +2,12 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-297",
   "title": "dev chore: update all non-distilled detailers to CFG 1.5",
-  "description": "CHORE (2026-07-17): MaskDetailer (Impact Pack) gave bad results on KREA2 raw. Root cause = detailer CFG too high. The raw KREA2 gen runs CFG 3, which is correct full-frame, but inside a MaskDetailer's small denoised crop that guidance is way too strong. Landed on ~CFG 1.5 for the KREA2 raw detailer. Tell for future: bad detailer result that is DENOISE-INVARIANT (same bad at 0.1 / 0.2 / 0.4) = suspect CFG-in-crop, not sampler/scheduler/steps/guide_size. See memory project_detailer_cfg_lower_than_gen.\n\nTASK: lower CFG toward ~1.5 on all NON-DISTILLED detailers, but TEST EACH INDIVIDUALLY — the sweet spot is per-model, may be KREA2-only. Do NOT bulk-edit.\n\nAudit (comfy_workflows/raw/*detailer*, 2026-07-17): only krea2_detailer_template.json ships CFG 3 (steps 20, euler/beta). Distilled/turbo already correct — leave: krea2_turbo_detailer (cfg 1), chroma_detailer (cfg 1), chroma_hyper_detailer (cfg 1), sdxl_detailer (cfg 1.4, lcm).\n\nSHIP MECHANIC: raw/ is user-owned — user edits CFG live in LiteGraph + live-save, OR patch raw JSON then sync-raw-workflows to regen runtime. Param change on a template = re-sync runtime files."
-  ,
-  "column": "todo",
-  "maturity": "planned",
+  "description": "CHORE (2026-07-17): MaskDetailer (Impact Pack) gave bad results on KREA2 raw. Root cause = detailer CFG too high. The raw KREA2 gen runs CFG 3, which is correct full-frame, but inside a MaskDetailer's small denoised crop that guidance is way too strong. Landed on ~CFG 1.5 for the KREA2 raw detailer. Tell for future: bad detailer result that is DENOISE-INVARIANT (same bad at 0.1 / 0.2 / 0.4) = suspect CFG-in-crop, not sampler/scheduler/steps/guide_size. See memory project_detailer_cfg_lower_than_gen.\n\nTASK: lower CFG toward ~1.5 on all NON-DISTILLED detailers, but TEST EACH INDIVIDUALLY — the sweet spot is per-model, may be KREA2-only. Do NOT bulk-edit.\n\nAudit (comfy_workflows/raw/*detailer*, 2026-07-17): only krea2_detailer_template.json ships CFG 3 (steps 20, euler/beta). Distilled/turbo already correct — leave: krea2_turbo_detailer (cfg 1), chroma_detailer (cfg 1), chroma_hyper_detailer (cfg 1), sdxl_detailer (cfg 1.4, lcm).\n\nSHIP MECHANIC: raw/ is user-owned — user edits CFG live in LiteGraph + live-save, OR patch raw JSON then sync-raw-workflows to regen runtime. Param change on a template = re-sync runtime files.",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-07-17T10:15:54Z",
-  "updated_at": "2026-07-17T10:15:54Z",
+  "updated_at": "2026-07-17T12:40:00Z",
   "links": {
     "events": "events.jsonl"
   }

@@ -1,1 +1,3 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-297","at":"2026-07-17T10:15:54Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-297","from":"todo","to":"doing","at":"2026-07-17T10:40:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-297","at":"2026-07-17T12:40:00Z","actor":"claude","note":"fix invalid maturity in_progress -> in-progress"}
