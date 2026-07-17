@@ -11,22 +11,15 @@ A prompt-box-driven model that adds a NEW op + a runtime switch inside ONE workf
 an output-size selector, both `MpiAnySwitch` picked at submit time. Lessons that cost real
 debugging:
 
-- **Image output CAPTURE node title is `Output_Image` (single naming law — MPI-252).**
-  The old two-tier system (a `tier` field on `models.js`, bare vs `Input_`/`Output_`) is GONE:
-  tier-1 dropped, the `tier` field removed, the whole fleet converted. Matched by
-  `commandExecutor.js` `_imageOutputTitle = 'output_image'`, **case-insensitive** so
-  `Output_image` also resolves (Chroma's detailer/upscaler use that spelling). The bare
-  `'output'` base string survives in the matcher only as a defensive fallback — no shipping
-  image workflow relies on it.
+- **Output capture titles** (`Output_Image` / `Output_Video` / `Output_Preview`, single
+  naming law MPI-252, case-insensitive, the MPI-217 silent-empty-capture trap) are
+  **[shared] — canonical in [../common/output-capture-titles.md](../common/output-capture-titles.md).**
+  Model-specific notes:
+  - The old two-tier system (a `tier` field on `models.js`, bare vs `Input_`/`Output_`) is
+    GONE: tier-1 dropped, the `tier` field removed, the whole fleet converted.
   - Preview capture (multi-stage `previewOnly` runs) titles its node `Output_Preview`.
-  - Set the title IN ComfyUI and re-export — do NOT hand-edit the workflow JSON (a manual
-    edit is silently lost on the next re-export → the bug returns).
   - Use `PreviewImage`, not `SaveImage` — all Cubric image workflows use PreviewImage, type
     `temp`; the app builds a `/view?...type=temp` URL fine.
-  - **TRAP (MPI-217):** the match is on the EXACT lowercased title. A typo (`Ouptput_Image`)
-    matches nothing → the run completes with no error, reporting "Generation completed but no
-    output returned." If a workflow generates fine (`Prompt executed in N seconds`) but the app
-    captures nothing, check the capture node's title first.
 - **Injecting an `MpiAnySwitch` needs `'select'` in the injector target list.** The switch's
   selector input is `select` (int). `comfyController.js` `_inject` targets did NOT include it
   until MPI-182 — injection matched the node by title but wrote nothing → the dropdown
@@ -48,9 +41,11 @@ debugging:
 - **Hide the model-settings gear** for a model that configures no upscale-model and no LoRAs:
   set `showSettings: false` on the ModelDef (honored in `MpiPromptBox.js` beside
   `props.showSettings`). Prevents an empty/irrelevant settings popup.
-- **A NEW op adds to `operation_registry.json` AND `js/core/operationRegistry.js`** (two
-  mirrors), `appVersionIntroduced` = current `APP_VERSION`. NOT `js/data/operationRegistry.js`
-  (doesn't exist). Adding a model/op is still NOT an app version bump.
+- **A NEW op registers in `js/core/operationRegistry.js` + `operation_registry.json`**
+  (the two-mirror registry — **[shared] canonical in
+  [../common/op-registration.md](../common/op-registration.md)**), `appVersionIntroduced`
+  = current `APP_VERSION`. Adding a model/op is still NOT an app version bump. On the model
+  side `operation_registry.json` is synced via `/mpi-version-bump`, not hand-edited.
 - **Shared VAE/encoder deps get RESOURCE-named ids, not model-scoped.** `vae-flux-ae`,
   `vae-sdxl`, `vae-qwen-image` — because `ae.safetensors` will back Flux/Chroma/Z-Image/+ and
   the Qwen VAE backs Qwen-Image/Edit/+. A model-scoped id (`pid-vae-flux`) forces the next
@@ -83,6 +78,10 @@ t2i:           { …  /* no injectParams — both booleans stay baked false */ }
 per-op branching in the executor.
 
 ### THE TRAP THAT ATE TWO DAYS: injection silently skips unmatched titles
+
+> The rule + the guard convention are **[shared] — canonical in
+> [../common/inject-titles-guard.md](../common/inject-titles-guard.md).** This is the
+> model-side worked backstory.
 
 `comfyController` matches params to nodes by `_meta.title` (case-insensitive) and
 **drops any param whose title matches no node — no error, no log, no toast.** Two

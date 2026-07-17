@@ -6,27 +6,12 @@
 
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
-Before any app wiring, build and prove the ComfyUI graph in the standalone local
-ComfyUI — the fast iteration bench. Only once it produces good output there do you
-export the `_template.json` and start the app-wiring steps.
-
-**Getting the graph into the repo — the raw→API sync (MPI-272 tooling).** Do NOT
-hand-convert or hand-edit the API JSON. Export the LiteGraph graph, drop it in
-`comfy_workflows/raw/<Name>_template.json` (the `_template` suffix routes it to a
-generator source; a bare `<Name>.json` becomes a direct runtime file), then run:
-
-```
-node scripts/sync-raw-workflows.mjs        # convert git-changed raw → API → validate → orchestrate
-node scripts/sync-raw-workflows.mjs --all  # reconvert every raw source
-```
-
-It commits the raw source, converts it to API via the live `/object_info`,
-**gates on `validate-injection-rules.mjs`** (STOPS + names the node on a
-title/capture/seed/integrity violation — fix in the ComfyUI graph and re-export,
-never hand-patch the API), runs `orchestrate.py`, and leaves the generated API +
-runtime **staged** for `/mpi-end`. Requires a running ComfyUI (`COMFY_URL`
-overrides `http://127.0.0.1:8188`). `raw/` is USER-OWNED — tooling reads it, never
-writes it.
+The raw→API sync procedure (author locally first, `sync-raw-workflows.mjs`, the
+`validate-injection-rules.mjs` gate, `raw/` is user-owned, staged output) is
+**[shared] — canonical in [../common/workflow-authoring-entry.md](../common/workflow-authoring-entry.md).**
+For a model, the raw source carries the `_template.json` suffix
+(`comfy_workflows/raw/<Name>_template.json`) so it routes to a generator. The
+model-specific divergences below:
 
 > **Converter-staleness trap (2026-07-14).** The generated API templates
 > (`scripts/workflow_generation/*_template.json`) are checked in — they do NOT
@@ -61,6 +46,26 @@ writes it.
   wire → test locally now → upload + fill hashes in parallel → re-verify before ship.
 - When exporting the template, remember the media-input `input/` trap (below) — the
   exported JSON carries whatever test file was open.
+
+### Detailer / refiner sampler settings ≠ the base-gen settings
+
+A MaskDetailer / FaceDetailer (Impact Pack) node does NOT inherit good behavior from the
+base-gen sampler settings. It crops a small region, denoises it, and stitches it back — a
+different regime. **Do not copy the base-gen `cfg` into a detailer.**
+
+- **`cfg` is the one that bites.** A cfg that is correct full-frame is too strong inside a
+  detailer's small denoised crop (guidance over-pushes the patch). Non-distilled KREA2 raw
+  gen runs `cfg 3`; its MaskDetailer wanted **~1.5**. Per-model — TEST EACH DETAILER
+  INDIVIDUALLY, do not bulk-lower.
+- **Diagnostic tell:** a bad detailer result that is **denoise-invariant** (equally bad at
+  `0.1` / `0.2` / `0.4`) is almost always **cfg-in-crop**, NOT sampler / scheduler / steps /
+  guide_size. Denoise moving the result = a real denoise problem; denoise doing nothing =
+  suspect cfg first.
+- Distilled/turbo/lcm detailers already run `cfg 1–1.4` (correct — leave them). Only the
+  non-distilled (raw) detailers carry a base-gen cfg that is too high.
+- Same edit mechanic as any workflow: `raw/` is user-owned — change cfg live in the ComfyUI
+  graph + live-save, or patch the raw JSON then re-sync. A widget change on a `_template`
+  re-syncs the runtime.
 
 ## Files & where they live
 

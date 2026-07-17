@@ -11,6 +11,11 @@
 > A new model that reuses existing ops (`t2v_ms`/`i2v_ms`) does NOT touch
 > `operationRegistry.js` / `commandRegistry.js` / `operation_registry.json` either —
 > those change only for a NEW operation type.
+>
+> **Cross-cutting reference:** skim [../common/README.md](../common/README.md) first —
+> the hard rules, raw→API sync, op registration, inject-title guard, and output-capture
+> naming law are shared with the add-app playbook and have their canonical detail there.
+> This playbook's inline notes override the shared files where they diverge.
 
 Worked example throughout: **Wan 2.2 TI2V-5B** (MPI-172) — a combined-op,
 single-stage, low-tier video model. Krea2 (MPI-242) is the worked example for the
@@ -90,13 +95,12 @@ Two structural forks decide everything downstream:
 
 ## Hard rules
 
-- **Never hand-edit a workflow JSON.** Titles/values change in ComfyUI, then re-export.
-  A manual edit is silently lost on the next export and the bug returns.
+The two universal hard rules (never hand-edit a workflow JSON; a covered-but-asked
+question is a failure) are canonical in [../common/hard-rules.md](../common/hard-rules.md).
+Model-specific additions:
+
 - **R2 uploads need explicit user approval** before you run them. R2 *deletes* likewise.
 - **Ask the user to save the ComfyUI canvas** before you read any workflow they just edited.
-- If the user tells you something this playbook already covers, that is a **playbook
-  failure or a reading failure** — figure out which, and fix the playbook if it is the
-  former. Do not let the knowledge live only in the conversation.
 
 ## Checklist (copy per model)
 

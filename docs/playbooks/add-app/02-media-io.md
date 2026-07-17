@@ -97,6 +97,10 @@ capture path keeps only what actually ran (`executed` events) — a gated-off ou
 
 ## Multi-output capture
 
+> The base `Output_*` capture naming law (MPI-252) is **[shared] — canonical in
+> [../common/output-capture-titles.md](../common/output-capture-titles.md).** The app
+> divergence — PREFIX match for numbered siblings — is below.
+
 A multi-output app captures every `Output_<Type>*` node's result as its own gallery card.
 The capture filter is **prefix-match**: `Output_Image` / `Output_Image_2` / `Output_video_2` all
 qualify; `output_preview` (multi-stage) and `output_audio` (side-channel) stay EXACT.

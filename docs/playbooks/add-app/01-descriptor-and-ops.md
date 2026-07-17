@@ -5,6 +5,12 @@ The two registrations every app needs: the **op** (in 4 files) and the **descrip
 
 ## The op — register in 4 files
 
+> The two-mirror registry skeleton (`operationRegistry.js` + `operation_registry.json`,
+> `appVersionIntroduced`, no-version-bump) is **[shared] — canonical in
+> [../common/op-registration.md](../common/op-registration.md).** Below is the app-side
+> shape: `universal: true` is mandatory, and `operation_registry.json` is a hand-maintained
+> superset that must NEVER be regenerated.
+
 An app op is a **universal op** (a second producer into the generation queue, exactly like
 the History block's universal tool ops). Register it in all four, in this order:
 
@@ -25,8 +31,9 @@ the History block's universal tool ops). Register it in all four, in this order:
    },
    ```
    - `title` on each `mediaInputs` slot MUST match the workflow node's `_meta.title`
-     EXACTLY (the injector matches case-insensitively but silently skips a title with no
-     node — see [05](05-verify.md), `tests/inject-params-titles.test.cjs`).
+     (the injector matches case-insensitively but **silently skips a title with no node** —
+     the shared silent-skip trap, [../common/inject-titles-guard.md](../common/inject-titles-guard.md);
+     guard in [05](05-verify.md)).
    - **`mediaType` per slot: `MEDIA_TYPE.IMAGE` / `MEDIA_TYPE.VIDEO` / the string `'audio'`.**
      `MEDIA_TYPE` only enumerates image + video — audio is the bare string. Getting this
      wrong is the MPI-259 audio bug: see [02](02-media-io.md).

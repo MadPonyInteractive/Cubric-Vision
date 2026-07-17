@@ -7,7 +7,8 @@ An app is done when ALL of these pass. Read [README](README.md) first.
 - **Inject-title test** — add a case to `tests/inject-params-titles.test.cjs` asserting every
   `Input_*` (declared in the op's `mediaInputs`) and every `Output_*` capture title EXISTS in the
   app's workflow. The injector SILENTLY SKIPS a title with no matching node, so a typo ships as a
-  dead control. Run: `node --test tests/inject-params-titles.test.cjs` → all green.
+  dead control (the shared silent-skip trap — [../common/inject-titles-guard.md](../common/inject-titles-guard.md)).
+  Run: `node --test tests/inject-params-titles.test.cjs` → all green.
 - **`node --check`** every touched JS file.
 - **`operation_registry.json` valid JSON** and carries the new op with `"universal": true`.
 

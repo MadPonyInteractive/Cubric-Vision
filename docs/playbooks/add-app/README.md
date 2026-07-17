@@ -14,6 +14,13 @@
 > **Apps are NOT version-bumped** as such, but a NEW operation IS registered in the op
 > registries (`appVersionIntroduced` = current APP_VERSION). Reusing an existing app op
 > touches no registry.
+>
+> **Cross-cutting reference:** skim [../common/README.md](../common/README.md) first —
+> the hard rules, raw→API sync, op registration, inject-title guard, and output-capture
+> naming law are shared with the add-model playbook and have their canonical detail there.
+> This playbook's inline notes override the shared files where they diverge (notably: app
+> workflows route through a case-insensitive middleware, so the all-lowercase law does NOT
+> apply here).
 
 Worked example throughout: **Video Stitch** (MPI-259) — a NO-MODEL video utility (loads
 up to 2 video paths + an optional audio track, stitches side-by-side, saves). **SDXL 4K**
@@ -58,19 +65,19 @@ Three forks decide everything downstream:
 
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
-Build and prove the ComfyUI graph in standalone local ComfyUI before any app wiring. **All
-app-touched input/output nodes are path-reading** (see [02](02-media-io.md)) and self-gate on
-empty input. The in-app engine run is the second gate — a workflow that works in the browser
-but not the app is an APP-SIDE bug (injection/routing), not a workflow bug (MPI-259 audio).
+The raw→API sync procedure (author locally first, `sync-raw-workflows.mjs`, the
+`validate-injection-rules.mjs` gate, `raw/` is user-owned, staged output) is
+**[shared] — canonical in [../common/workflow-authoring-entry.md](../common/workflow-authoring-entry.md).**
+App-specific notes:
 
-**Getting the graph into the repo — the raw→API sync (MPI-272 tooling).** Do NOT hand-convert
-the API JSON. Export the LiteGraph graph, drop it in `comfy_workflows/raw/<Name>.json` (a bare
-name → a direct runtime file; a `_template` suffix → a generator source), then run
-`node scripts/sync-raw-workflows.mjs` (add `--all` to reconvert every raw source). It commits
-the raw source, converts via the live `/object_info`, **gates on
-`validate-injection-rules.mjs`** (STOPS + names the node on a violation — fix in the graph and
-re-export, never hand-patch), orchestrates, and leaves the generated files **staged** for
-`/mpi-end`. Requires a running ComfyUI. `raw/` is USER-OWNED — tooling reads it, never writes it.
+- Drop the raw graph in `comfy_workflows/raw/<Name>.json` (a **bare** name → a direct
+  runtime file — the app case; a `_template` suffix would route to a generator).
+- Filenames route through a case-insensitive middleware (`routes/workflowStatic.js`), so
+  the all-lowercase model law does NOT apply — keep whatever case the user exported.
+- **All app-touched input/output nodes are path-reading** (see [02](02-media-io.md)) and
+  self-gate on empty input. The in-app engine run is the second gate — a workflow that works
+  in the browser but not the app is an APP-SIDE bug (injection/routing), not a workflow bug
+  (MPI-259 audio).
 
 ## The traps that actually bite (all detailed in the section files)
 
@@ -90,12 +97,12 @@ re-export, never hand-patch), orchestrates, and leaves the generated files **sta
 
 ## Hard rules
 
-- **Never hand-edit a workflow JSON.** Titles/values change in ComfyUI, then re-export.
+The two universal hard rules (never hand-edit a workflow JSON; a covered-but-asked
+question is a failure) are canonical in [../common/hard-rules.md](../common/hard-rules.md).
+App-specific additions:
+
 - **All app-touched input/output nodes are path-reading + self-gating.** Don't reintroduce
   input-dir `LoadImage`/`LoadAudio` — they can't self-gate and need upload-name injection.
-- If the user tells you something this playbook already covers, that is a **playbook failure
-  or a reading failure** — figure out which, and fix the playbook if it's the former. Do not
-  let the knowledge live only in the conversation.
 - Dev-gate (`APP_CONFIG.dev_mode = BUILD_HASH === 'dev'`) stays until **≥4 apps** exist (user
   decision). A staged (non-dev) build hides both entry points automatically.
 
