@@ -17,17 +17,25 @@ top of the base**. → the 3-tier design (same base, LoRA swapped per tier) is c
 - **Strength: `1.0`** (calibrated for full strength).
 - Evidence: comfy.org 2511 workflow listing + community `qwen-image-edit-2511-4steps.json`
   both use `LoraLoaderModelOnly`. High confidence.
-- **OPEN — V1.0 vs V2.0:** user downloaded `-2511-Lightning-{4,8}steps-V1.0-bf16`;
-  community graph references `Qwen-Image-Lightning-4steps-V2.0`. Both transformer-only,
-  same lightx2v repo → loader unchanged. Confirm intended version with user.
+- **Version: V1.0 is the only one that exists** (2026-07-17 enumeration). No V1.1/V2.0 on HF/GitHub;
+  community graph's "V2.0" = mislabel. User's `4steps`+`8steps`-V1.0-bf16 = current + complete.
+- **Fused-fp8 alt:** lightx2v also ships single-file fp8 Lightning checkpoints (~19.1 GiB, no
+  runtime LoRA) — `qwen_image_edit_2511_fp8_e4m3fn_scaled_lightning_{4,8}steps_v1.0`. Candidate for
+  a fused Balanced/Low tier if base-fp8 + bf16-LoRA underperforms. Below hot-store gate.
 
-## Tier → weights
+## Tier → weights (PROVISIONAL — user is test-driving, 2026-07-17)
 
-| Tier | Steps | Transformer | Accelerator LoRA |
+Final mapping decided AFTER the user runs comparison tests across formats. Current lean:
+
+| Tier | Steps | Transformer (leaning) | Accelerator LoRA |
 |---|---|---|---|
-| Low | 4 | `qwen_image_edit_2511_fp8mixed` | 2511-Lightning-4steps-V1.0-bf16 (810MB) |
-| Balanced | 8 | `qwen_image_edit_2511_fp8mixed` | 2511-Lightning-8steps-V1.0-bf16 (810MB) |
-| High | ~40 | **`qwen_image_edit_2511_bf16`** (undistilled) | none |
+| Low | 4 | fp8 (mixed or int8) | 2511-Lightning-4steps-V1.0-bf16 — **may DROP 4-step** |
+| Balanced | 8 | fp8 (mixed or int8) | 2511-Lightning-8steps-V1.0-bf16 |
+| High | ~40 | **`qwen_image_edit_2511_bf16`** (undistilled, 38 GiB, ≥gate) | none |
+
+Weights downloaded to `G:\CubricModels` for testing: full TE `qwen_2.5_vl_7b` (15.45 GiB),
+`_bf16` (38 GiB), `_fp8mixed` (19.13 GiB), `_int8_convrot` (19.10 GiB). Fused-fp8-lightning
+checkpoints NOT downloaded yet (fetch if LoRA-on-fp8 path underperforms).
 
 ## Transformer quant matrix (Comfy-Org repo)
 
