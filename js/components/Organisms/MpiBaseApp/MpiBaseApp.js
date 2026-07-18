@@ -5,7 +5,6 @@ import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
 import { submitAppGeneration } from '../../../services/appService.js';
-import { addGroup } from '../../../services/projectService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -29,7 +28,7 @@ import { getStepKind } from './stepKinds.js';
  *
  *   STEP 0 (implicit)   media slots (left)  │  what this app does (right)
  *   STEPS 1..N          declared middle steps — bounded centred canvas, no divider
- *   LAST STEP (implicit) controls + Generate │ result + Apply
+ *   LAST STEP (implicit) controls + Generate │ result
  *
  * Step 0 and the last step are IMPLICIT — the frame renders them from the app's
  * `inputSchema` and its controls. An app with no middle steps declares `steps: []`
@@ -57,14 +56,13 @@ import { getStepKind } from './stepKinds.js';
  * for free. Hard cap: one row, no nesting/panels/accordions. A gizmo wanting more
  * means the step should SPLIT.
  *
- * ── Hold-until-Apply (MPI-306 Phase 3) ───────────────────────────────────────
- * A result is NOT the project's until the user applies it. submitAppGeneration
- * runs with `deferCommit`, so the completion path builds the item groups but does
- * NOT persist them; they wait in `_pendingGroups` and `_apply` commits them with
- * projectService.addGroup. A re-run supersedes them and closing the app drops
- * them — an unapplied result never enters the project. The MEDIA is on disk
- * either way; orphans are the .preview-assets + Cleanup GC path's job
- * (MPI-277/227), not a new mechanism.
+ * ── Results save themselves ──────────────────────────────────────────────────
+ * A finished result is committed by the run path and the pane simply SAYS SO
+ * ("Saved to your gallery"). Hold-until-Apply was built (MPI-306 Phase 3) and
+ * REMOVED after the UX pass: a commit step the user never wanted to skip is
+ * friction, not safety. Do not reintroduce an Apply button without a concrete
+ * case for NOT saving a result — the machinery is in git (`bcbe161f`), and
+ * `deferCommit` still exists on startGeneration for a caller that needs it.
  *
  * State: seeds from and writes `state.s_appInputs[appId]` (top-level replace) so
  * inputs survive close→reopen AND the Overlays.reset() force-close on navigation.
@@ -226,24 +224,14 @@ export const MpiBaseApp = ComponentFactory.create({
         /**
          * The last completed result, held so it survives step navigation.
          *
-         * `_hasPending` (Apply + "Not saved yet") already outlived a slide rebuild,
-         * but the IMAGE did not — _teardownSlide() drops the DOM and nulls the pane
-         * refs, and nothing kept the items to repaint from. The pane then offered to
-         * Apply a result that was not on screen. Component-scoped ON PURPOSE: it
-         * lives until the app closes and is deliberately not persisted to state, per
-         * "pending results do not survive closing the app".
+         * `_hasPending` (the "Saved to your gallery" note) already outlived a slide
+         * rebuild, but the IMAGE did not — _teardownSlide() drops the DOM and nulls
+         * the pane refs, and nothing kept the items to repaint from, so the pane came
+         * back claiming a save with nothing on screen. Component-scoped ON PURPOSE:
+         * it lives until the app closes and is deliberately not persisted to state.
          * @type {Array<Object>|null}
          */
         let _lastResults = null;
-        /**
-         * The UNCOMMITTED item groups from the last run, held until Apply persists
-         * them (MPI-306). The media + sidecars are already on disk; only the project
-         * record is withheld, so this is the whole of "not saved yet". Same scope as
-         * _lastResults: cleared by a re-run and dropped when the app closes — a
-         * result the user never applied simply never entered the project.
-         * @type {Array<Object>|null}
-         */
-        let _pendingGroups = null;
         /** Last status-line copy, replayed when the run slide is rebuilt. */
         let _statusText = '';
         let _perApp = null;
@@ -254,7 +242,6 @@ export const MpiBaseApp = ComponentFactory.create({
         /** Pan/zoom state for the result pane — the shared MpiCanvas view model. */
         const _resultView = new ViewManager();
         let _statusEl = null;
-        let _applyRow = null;
         let _pendingNote = null;
         let _gaugeEl = null;
 
@@ -675,7 +662,7 @@ export const MpiBaseApp = ComponentFactory.create({
             return work;
         }
 
-        /** LAST STEP — controls + Generate (left) │ result + Apply (right). Divided. */
+        /** LAST STEP — controls + Generate (left) │ result (right). Divided. */
         function _buildRunSlide(unsubs) {
             const split = ce('div', { className: 'mpi-base-app__split' });
 
@@ -706,25 +693,20 @@ export const MpiBaseApp = ComponentFactory.create({
             _resultMediaEl = ce('div', { className: 'mpi-base-app__result-media' });
             frame.appendChild(_resultMediaEl);
             _bindResultView(frame, unsubs);
-            // Empty-state copy that also teaches the commit: an unexplained blank
-            // frame gives the user no reason to expect Apply to matter.
+            // Empty-state copy: an unexplained blank frame reads as broken.
             _resultEmptyEl = ce('div', { className: 'mpi-base-app__result-empty' });
             // The line break needs `white-space: pre-line` on the class (plain
             // textContent newlines collapse like any HTML whitespace). No spaces
             // around the \n, or they render as indentation on the second line.
-            _resultEmptyEl.textContent = 'Your result appears here.\nNothing is saved until you apply it.';
+            _resultEmptyEl.textContent = 'Your result appears here.';
             frame.appendChild(_resultEmptyEl);
             pane.appendChild(frame);
 
-            // Apply is rendered but INERT until Phase 3 wires the run path.
-            _applyRow = ce('div', { className: 'mpi-base-app__result-actions' });
-            _applyRow.hidden = true;
-            const applyHost = ce('div');
-            _applyRow.appendChild(applyHost);
-            pane.appendChild(_applyRow);
-
+            // A finished result is ALREADY in the gallery — this reports that, it is
+            // not an action. Apply was built (MPI-306 Phase 3) and removed after the
+            // UX pass: a commit step the user never wanted to skip is pure friction.
             _pendingNote = ce('span', { className: 'mpi-base-app__pending' });
-            _pendingNote.textContent = 'Not saved yet';
+            _pendingNote.textContent = 'Saved to your gallery';
             _pendingNote.hidden = true;
             pane.appendChild(_pendingNote);
 
@@ -738,9 +720,7 @@ export const MpiBaseApp = ComponentFactory.create({
             _runBtn = MpiButton.mount(runHost, { text: 'Generate', variant: 'primary', size: 'md' });
             _runBtn.on('click', () => { if (_running) _cancel(); else _run(); });
 
-            const applyBtn = MpiButton.mount(applyHost, { text: 'Apply', variant: 'primary', size: 'sm' });
-            applyBtn.on('click', _apply);
-            unsubs.push(() => { _runBtn?.el?.destroy?.(); applyBtn?.el?.destroy?.(); });
+            unsubs.push(() => { _runBtn?.el?.destroy?.(); });
 
             if (props.uiComponent) {
                 _perApp = props.uiComponent.mount(contentSlot, { initialInputs: seeded });
@@ -750,9 +730,9 @@ export const MpiBaseApp = ComponentFactory.create({
             _syncRunUi();
             _paintPending();
             // Replay the last result: navigating away and back rebuilds this slide
-            // from scratch, and without this the pane came back empty while Apply
-            // and "Not saved yet" still showed — offering to commit something the
-            // user could no longer see. remember:false so replaying is not itself
+            // from scratch, and without this the pane came back empty while the
+            // "Saved to your gallery" note still showed — claiming a result the user
+            // could no longer see. remember:false so replaying is not itself
             // recorded as a new result.
             if (_lastResults) _showResults(_lastResults, { remember: false });
             // The status line is rebuilt too, so restore its copy from the last
@@ -771,7 +751,7 @@ export const MpiBaseApp = ComponentFactory.create({
             _slideUnsubs.clear();
             // These live on the run slide only; drop the stale references.
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
-            _applyRow = null; _pendingNote = null; _gaugeEl = null;
+            _pendingNote = null; _gaugeEl = null;
             _resultFrameEl = null;
         }
 
@@ -1004,9 +984,8 @@ export const MpiBaseApp = ComponentFactory.create({
             if (_statusEl) _statusEl.textContent = text;
         }
 
-        /** Show/hide the Apply row + "Not saved yet" note. */
+        /** Show/hide the "Saved to your gallery" note. */
         function _paintPending() {
-            if (_applyRow) _applyRow.hidden = !_hasPending;
             if (_pendingNote) _pendingNote.hidden = !_hasPending;
         }
 
@@ -1085,24 +1064,18 @@ export const MpiBaseApp = ComponentFactory.create({
             // Drop the previous result NOW: navigating away mid-run would otherwise
             // replay the last image over the top of the run in progress.
             _lastResults = null;
-            // A re-run supersedes an unapplied result — dropping the groups is all
-            // "discard" ever meant (the files stay for the Cleanup GC path).
-            _pendingGroups = null;
             _paintPending();
             _setGauge(0);
             _setStatus('Generating…');
             _myTempId = null;
 
             const res = submitAppGeneration(app, inputs, {
-                onComplete: ({ item, items, groups } = {}) => {
+                onComplete: ({ item, items } = {}) => {
                     _setRunning(false);
                     _myTempId = null;
                     _setGauge(100);
-                    // Held, not committed (MPI-306): submitAppGeneration ran with
-                    // deferCommit, so these groups are built but absent from the
-                    // project until _apply persists them.
-                    _pendingGroups = Array.isArray(groups) ? groups : null;
-                    _setStatus('Done — apply it to keep it.');
+                    // Already in the gallery — the run path commits on completion.
+                    _setStatus('Done — saved to your gallery.');
                     _showResults(items || item);
                     _hasPending = true;
                     _paintPending();
@@ -1144,39 +1117,6 @@ export const MpiBaseApp = ComponentFactory.create({
             if (!_running || !_myTempId) return;
             const entry = activeGenerations.list().find(e => e.tempId === _myTempId);
             if (entry) activeGenerations.cancel(entry.id);
-        }
-
-        /**
-         * Apply — commit the pending result to the project + gallery (MPI-306).
-         *
-         * The run finished with deferCommit, so the media is on disk but the project
-         * knows nothing about it. addGroup is the same primitive the normal gallery
-         * completion path uses; this is the ONLY thing that was withheld.
-         *
-         * Clears the pending flag FIRST so a double-click cannot commit twice.
-         */
-        async function _apply() {
-            const groups = _pendingGroups;
-            _pendingGroups = null;
-            _hasPending = false;
-            _paintPending();
-            _syncRunUi();
-            if (!groups?.length) return;
-            try {
-                for (const g of groups) await addGroup(g);
-                _setStatus('Applied — added to your gallery.');
-            } catch (err) {
-                clientLogger.error('MpiBaseApp', 'Failed to apply app result', err);
-                // Put it back: the files are still on disk, so a retry is valid.
-                _pendingGroups = groups;
-                _hasPending = true;
-                _paintPending();
-                _syncRunUi();
-                Events.emit('ui:error', {
-                    title: 'Could not apply',
-                    message: 'The result could not be added to your gallery. Try again.',
-                });
-            }
         }
 
         // Ctrl+Enter runs the OPEN app, not the PromptBox behind it.

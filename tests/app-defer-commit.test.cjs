@@ -1,14 +1,13 @@
 /**
- * app-defer-commit.test.cjs — MPI-306 Phase 3 (hold-until-Apply).
+ * app-defer-commit.test.cjs — MPI-306.
  *
- * An App result must not enter the project until the user applies it. The commit
- * is a single `addGroup` per built group in generationService's gallery branch;
- * `deferCommit` skips exactly that and hands the groups to the caller instead.
+ * Hold-until-Apply was BUILT (bcbe161f) and REMOVED after the UX pass: app
+ * results now commit on completion and the pane just says so. What survives is
+ * the plumbing that outlived the feature and the bug the feature exposed.
  *
- * Asserting the source contract rather than booting the renderer: the branch sits
- * mid-way through a 600-line async completion handler that needs ComfyUI, a live
- * project and the DOM. These checks fail if the guard is removed or the groups
- * stop reaching the caller — which is the regression that matters.
+ * `deferCommit` stays on startGeneration — it is correct, proven, and the only
+ * thing standing between a caller and an uncommitted generation. No caller uses
+ * it today; these tests keep it honest for the one that will.
  */
 
 'use strict';
@@ -27,42 +26,38 @@ test('the gallery addGroup loop is guarded by deferCommit', () => {
         /if \(!opts\.deferCommit\) \{\s*\n\s*for \(const g of groups\) await addGroup\(g\);/,
         'the ONLY project write in the gallery branch must be behind !opts.deferCommit',
     );
-    // Exactly one addGroup call site in the gallery branch — a second, unguarded
-    // one would commit behind the hold.
     assert.strictEqual((src.match(/await addGroup\(/g) || []).length, 1);
 });
 
-test('built groups reach onComplete so Apply can commit them', () => {
+test('built groups reach onComplete so a deferred caller can commit them', () => {
     const src = read('js/services/generationService.js');
     assert.match(src, /callbacks\.onComplete\?\.\(\{ item: firstItem, group: firstGroup, items: builtItems, groups \}\)/);
-    assert.match(src, /deferred: !!opts\.deferCommit/, 'the complete event must declare it did not persist');
+    assert.match(src, /deferred: !!opts\.deferCommit/, 'the complete event must declare whether it persisted');
 });
 
-test('app runs defer and send NO gallery placeholder', () => {
+test('app runs commit on completion and send NO gallery placeholder', () => {
     const src = read('js/services/appService.js');
-    assert.match(src, /deferCommit: true/);
-    assert.ok(!/placeholderGroup/.test(src), 'a placeholder would show a gallery card for an uncommitted run');
+    assert.ok(!/deferCommit/.test(src), 'apps commit on completion — Apply was removed');
+    assert.ok(!/placeholderGroup/.test(src), 'the app pane shows the run; a gallery placeholder is noise');
     assert.ok(!/mkPlaceholder/.test(src), 'orphaned placeholder builder must be gone');
 });
 
-test('Apply commits via addGroup and clears the pending groups first', () => {
+test('the Apply affordance is fully gone from the app frame', () => {
     const src = read('js/components/Organisms/MpiBaseApp/MpiBaseApp.js');
-    assert.match(src, /import \{ addGroup \} from '\.\.\/\.\.\/\.\.\/services\/projectService\.js'/);
-    // Cleared BEFORE the await → a double-click cannot commit the same groups twice.
-    assert.match(
-        src,
-        /const groups = _pendingGroups;\s*\n\s*_pendingGroups = null;/,
-        'Apply must take-and-clear before awaiting',
-    );
-    assert.match(src, /for \(const g of groups\) await addGroup\(g\)/);
-    // A re-run supersedes an unapplied result.
-    assert.match(src, /_pendingGroups = null;[\s\S]{0,200}_paintPending\(\);/);
+    // Orphans left behind by a half-revert would still render or still be declared.
+    assert.ok(!/_pendingGroups/.test(src), '_pendingGroups must be gone');
+    assert.ok(!/_applyRow/.test(src), '_applyRow must be gone');
+    assert.ok(!/function _apply\b/.test(src), '_apply must be gone');
+    assert.ok(!/from '\.\.\/\.\.\/\.\.\/services\/projectService\.js'/.test(src),
+        'the addGroup import was only for Apply');
+    assert.match(src, /Saved to your gallery/, 'the pane must report the save');
 });
 
 test('the gallery repaints when a group is ADDED, not only when a gen completes', () => {
     const src = read('js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js');
-    // Before hold-until-Apply the grid repainted only via generation:complete, which
-    // worked by accident: addGroup ran inside that handler. An Apply commits long
-    // after, so without this listener the card only appears on a workspace remount.
+    // Found via hold-until-Apply: the grid repainted only via generation:complete,
+    // which worked by accident because addGroup ran inside that handler. The
+    // listener outlives the feature that exposed it — any out-of-band commit
+    // (import, undo, a future deferred caller) repaints for free.
     assert.match(src, /Events\.on\('project:group-added'/, 'gallery must listen for project:group-added');
 });

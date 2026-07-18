@@ -77,14 +77,14 @@ export function submitAppGeneration(appOrId, inputs = {}, callbacks = {}) {
     // NO getNextGeneration — arming the loop would re-fire app gens. forceLocal only
     // when the user has explicitly pinned the local engine (mirrors state.engineOverride).
     //
-    // HOLD-UNTIL-APPLY (MPI-306): an app result is NOT the project's until the user
-    // applies it, so there is no gallery placeholder (nothing is pending in the
-    // gallery) and `deferCommit` withholds the addGroup. The app's own result pane
-    // shows progress; MpiBaseApp commits the groups handed to its onComplete.
+    // Results commit on completion (MPI-306 Phase 3 was built, then REMOVED after
+    // the UX pass — an Apply step the user never wanted to skip is friction). Still
+    // NO gallery placeholder: the app's own result pane shows the run, so a second
+    // in-progress card in the gallery behind the overlay is noise. The real card
+    // lands on completion.
     const opts = {
         scope: 'gallery',
         tempId,
-        deferCommit: true,
     };
     if (state.engineOverride === 'local') opts.forceLocal = true;
 

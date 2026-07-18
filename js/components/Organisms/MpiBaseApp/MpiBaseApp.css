@@ -606,21 +606,13 @@
 }
 @keyframes mpi-base-app-sweep { from { top: 0; } to { top: 100%; } }
 
-/* The pane stretches (the frame spans the column), so these centre themselves
-   rather than inheriting full-width stretch. */
-.mpi-base-app__result-actions {
-    display: flex;
-    gap: var(--s-3);
-    justify-content: center;
-    align-self: center;
-}
-.mpi-base-app__result-actions[hidden] { display: none; }
-
-/* The note that makes hold-until-Apply legible: without it a finished image
-   reads as already-in-the-gallery and Apply looks decorative. */
+/* Confirms the result was saved. Muted, not warn-coloured: it reports a normal
+   outcome, and colouring a success like a caution is how a calm pane starts
+   nagging. The pane stretches (the frame spans the column), so it centres
+   itself rather than inheriting full-width stretch. */
 .mpi-base-app__pending {
     font-size: var(--t-2xs);
-    color: var(--accent-warn);
+    color: var(--ink-4);
     letter-spacing: 0.04em;
     align-self: center;
 }
