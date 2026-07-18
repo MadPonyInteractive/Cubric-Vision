@@ -69,7 +69,7 @@ Declare the op's constant params in `commandRegistry.js`, keyed by node title:
 
 ```js
 i2i:           { …, injectParams: { Input_Is_i2i: true } },
-poseReference: { …, injectParams: { Input_pose_reference: true } },
+poseReference: { …, injectParams: { Input_depth_reference: true } },
 t2i:           { …  /* no injectParams — both booleans stay baked false */ },
 ```
 

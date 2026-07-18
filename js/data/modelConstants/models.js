@@ -238,8 +238,8 @@ export const MODELS = [
         // NOT `_ms` (commandRegistry `isMultiStage:false`), and there is no _stage2
         // file. Setting it true would surface a preview toggle with nothing behind it.
         //
-        // ONE t2i graph serves t2i + i2i + pose-reference, switched by two injected
-        // booleans (Input_Is_i2i, Input_pose_reference). They COMPOSE.
+        // ONE t2i graph serves t2i + i2i + depth-reference, switched by two injected
+        // booleans (Input_Is_i2i, Input_depth_reference). They COMPOSE.
         //
         // Krea2-Turbo is distilled at cfg 1.0 ⇒ NO working negative prompt, and NAG is
         // a silent no-op that doubles NFE. The t2i graph has no negative node at all
@@ -268,11 +268,11 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships ten built-in style LoRAs, a depth-guided pose reference, and an Edit operation — give it an image and an instruction and it changes only what you ask; add a second reference image to pull from both. Renders at up to 2K.',
+        description: 'Krea 2 is a high-quality image generator with a distinctive photographic look. Ships ten built-in style LoRAs, a depth reference, and an Edit operation — give it an image and an instruction and it changes only what you ask; add a second reference image to pull from both. Renders at up to 2K. (Identity preservation works best on image 1, And images need to be referenced with natural language. The model does not understand prompt specifying images like "image 1" or "image 2".)',
         workflows: {
             t2i: 'krea2_t2i_balanced_sfw.json',
             i2i: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            poseReference: 'krea2_t2i_balanced_sfw.json',   // same graph; Input_depth_reference selects the depth-ControlNet model
             krea2Edit: 'krea2_t2i_balanced_sfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
             upscale: 'krea2_turbo_upscaler_sfw.json',
             detail: 'krea2_turbo_detailer_sfw.json',
@@ -328,7 +328,7 @@ export const MODELS = [
         // See the `description` GPU note for the end user, and docs/models/krea2/.
         //
         // Same shape rationale as the SFW card: single-stage two-pass sampler, one graph
-        // for t2i + i2i + pose-reference (Input_Is_i2i / Input_pose_reference booleans),
+        // for t2i + i2i + depth-reference (Input_Is_i2i / Input_depth_reference booleans),
         // cfg 1.0 ⇒ negativePrompt:false, nine style LoRAs.
         id: 'krea2-turbo-nsfw',
         sizeTier: 'balanced',
@@ -350,11 +350,11 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'fast',
-        description: 'This spicy image generator uses the Lustify Krea model weights by Coyotte, built on Krea 2. It keeps the distinctive photographic look, ships ten style LoRAs, a pose reference, and an Edit operation (image + instruction, with an optional second reference image), and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported.',
+        description: 'This spicy image generator uses the Lustify Krea model weights by Coyotte, built on Krea 2. It keeps the distinctive photographic look, ships ten style LoRAs, a depth reference, and an Edit operation (image + instruction, with an optional second reference image. Identity preservation works best on image 1, And images need to be referenced with natural language. The model does not understand prompt specifying images like "image 1" or "image 2".), and renders at up to 2K. Uses an int8 (int8_convrot) weight: fastest on NVIDIA RTX cards (RTX 20 series and newer); older or non-NVIDIA GPUs may be slow or unsupported. ',
         workflows: {
             t2i: 'krea2_t2i_balanced_nsfw.json',
             i2i: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            poseReference: 'krea2_t2i_balanced_nsfw.json',   // same graph; Input_depth_reference selects the depth-ControlNet model
             krea2Edit: 'krea2_t2i_balanced_nsfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
             upscale: 'krea2_turbo_upscaler_nsfw.json',
             detail: 'krea2_turbo_detailer_nsfw.json',
@@ -420,11 +420,11 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'slow',
-        description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the distinctive photographic look, ten style LoRAs, depth-guided pose reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
+        description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the distinctive photographic look, ten style LoRAs, depth reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
         workflows: {
             t2i: 'krea2_t2i_high_sfw.json',
             i2i: 'krea2_t2i_high_sfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_t2i_high_sfw.json',   // same graph; Input_pose_reference selects the depth-ControlNet model
+            poseReference: 'krea2_t2i_high_sfw.json',   // same graph; Input_depth_reference selects the depth-ControlNet model
             krea2Edit: 'krea2_t2i_high_sfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
             upscale: 'krea2_upscaler_sfw.json',   // Raw-weight upscaler (High tier)
             detail: 'krea2_detailer_sfw.json',    // Raw-weight detailer (High tier)
@@ -483,7 +483,7 @@ export const MODELS = [
             'MidJourney',
         ],
         gen_speed: 'slow',
-        description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the photographic look, ten style LoRAs, pose reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
+        description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the photographic look, ten style LoRAs, depth reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
         workflows: {
             t2i: 'krea2_t2i_high_nsfw.json',
             i2i: 'krea2_t2i_high_nsfw.json',

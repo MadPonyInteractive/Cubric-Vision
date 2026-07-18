@@ -115,11 +115,11 @@ export const commands = {
     },
     // Depth-ControlNet pose transfer. Third op on the SAME krea2_turbo_t2i.json graph:
     // Input_Image → AIO_Preprocessor → Krea2ControlImageEncode → Krea2ControlApply,
-    // selected by the Input_pose_reference MpiIfElse. Composes with Input_Is_i2i
+    // selected by the Input_depth_reference MpiIfElse. Composes with Input_Is_i2i
     // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
     poseReference: {
-        label: 'Pose Reference',
-        info: 'Pose Reference — copy the pose/composition of an input image',
+        label: 'Depth',
+        info: 'Depth Reference — copy the pose/composition of an input image',
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -127,7 +127,7 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        injectParams: { Input_pose_reference: true },
+        injectParams: { Input_depth_reference: true },
         components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'enhancePrompt'],
     },
     upscale: {

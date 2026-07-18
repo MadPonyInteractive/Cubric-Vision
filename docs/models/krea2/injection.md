@@ -72,7 +72,7 @@ Per the Comfy node-naming law (MPI-116), every injected node must be titled `Inp
 
 ### The full injection surface (read live from the three API-format workflows)
 
-**`krea2_turbo_t2i.json`** — one graph serving **t2i + i2i + pose reference**:
+**`krea2_turbo_t2i.json`** — one graph serving **t2i + i2i + depth reference**:
 
 | title | class | type | notes |
 |---|---|---|---|
@@ -81,10 +81,10 @@ Per the Comfy node-naming law (MPI-116), every injected node must be titled `Inp
 | `Input_Width` / `Input_Height` | `MpiInt` | int | must be **÷16** — see [resolution.md](resolution.md) |
 | `Input_Style` | `MpiInt` | int | `0`–`9`, clamp |
 | `Input_Stylization` | `MpiFloat` | float | default `1.0` |
-| `Input_Image` | `LoadImage` | image | source for i2i **and** pose reference |
+| `Input_Image` | `LoadImage` | image | source for i2i **and** depth reference |
 | `Input_Is_i2i` | `MpiSimpleBoolean` | boolean | `MpiIfElse`: `VAEEncode` vs `EmptyLatentImage`, **and** `Input_denoise` vs a dummy float |
 | `Input_denoise` | `MpiFloat` | float | only consumed when `Input_Is_i2i` |
-| `Input_pose_reference` | `MpiIfElse` | boolean | `Krea2ControlApply` vs passthrough of `Input_Lora_6` |
+| `Input_depth_reference` | `MpiIfElse` | boolean | `Krea2ControlApply` vs passthrough of `Input_Lora_6` |
 | `Input_Lora_1..6` | `MpiLoraModel` | object | the user LoRA rack |
 | `Output_Image` | `PreviewImage` | — | capture |
 
@@ -98,13 +98,13 @@ nowhere to land.
 `EmptyLatentImage`) and the denoise value (`Input_denoise` vs a dummy float). So
 **`Input_denoise` is structurally inert unless `Input_Is_i2i` is `true`.**
 
-| op | `Input_Is_i2i` | `Input_denoise` | `Input_pose_reference` | `Input_Image` |
+| op | `Input_Is_i2i` | `Input_denoise` | `Input_depth_reference` | `Input_Image` |
 |---|---|---|---|---|
 | `t2i` | `false` | — | `false` | — |
 | `i2i` | **`true`** | **inject** | `false` | inject |
-| pose reference | `false` | — | **`true`** | inject |
+| depth reference | `false` | — | **`true`** | inject |
 
-**i2i and pose reference COMPOSE.** `Input_Image` fans out to two independent branches —
+**i2i and depth reference COMPOSE.** `Input_Image` fans out to two independent branches —
 `AIO_Preprocessor` (→ depth → `Krea2ControlImageEncode`) and `ImageResizeKJv2` (→ `VAEEncode`).
 Neither is gated on the other, so both booleans may be `true` at once with one source image.
 

@@ -220,7 +220,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": 0,
+      "cleanup": "",
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -857,7 +857,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Input_pose_reference"
+      "title": "Input_depth_reference"
     }
   },
   "217": {

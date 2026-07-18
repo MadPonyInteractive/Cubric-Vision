@@ -50,9 +50,9 @@ export const PROGRESS_STAGES = Object.freeze({
     'nvidia_pid.json':           Object.freeze({ single: 1 }),
     // Krea2 Turbo (MPI-242) — single-stage: BOTH ClownsharK sampler passes live in
     // one file with a direct latent hand-off, so there is no `preview`/`stage2` mode.
-    // One file serves t2i, i2i AND poseReference (Input_Is_i2i / Input_pose_reference
+    // One file serves t2i, i2i AND poseReference (Input_Is_i2i / Input_depth_reference
     // select the branch), and this table is keyed by FILE, so one key covers all three.
-    // 2 bars = model-load + sampler (user-confirmed 2026-07-10). If the pose branch's
+    // 2 bars = model-load + sampler (user-confirmed 2026-07-10). If the depth branch's
     // depth preprocessor surfaces its own tqdm bar, this needs a per-op split.
     // Its detailer/upscaler get NO entry, per the convention above.
     'krea2_turbo_t2i.json':      Object.freeze({ single: 2 }),
