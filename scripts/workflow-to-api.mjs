@@ -108,8 +108,13 @@ function emitWidgets(def, vals, out, linkedNames, prefix = '', vi = 0) {
     // seed/noise_seed (addValueControlWidgets), even when /object_info omits the
     // flag — that phantom value ("fixed"/"randomize") sits in widgets_values and
     // must be skipped, else every later widget shifts by one.
+    // ...but ONLY at the top level. Inside a dynamic combo's expanded inputs the
+    // frontend does NOT add the control widget, so a nested INT named `seed`
+    // (e.g. TextGenerate's sampling_mode.seed) has no companion value. Applying
+    // the heuristic there eats the next widget's slot and shifts every value
+    // after it by one — silently, since the result is still valid JSON.
     const hasControl = opts.control_after_generate
-      || (type === 'INT' && (name === 'seed' || name === 'noise_seed'));
+      || (!prefix && type === 'INT' && (name === 'seed' || name === 'noise_seed'));
     vi += hasControl ? 2 : 1;                                 // skip control companion value
   }
   return vi;
