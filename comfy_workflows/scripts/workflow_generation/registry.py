@@ -28,6 +28,9 @@ HANDLERS = [
                              # Lowercase-normalized (case-sensitive Pod FS) — MPI-291.
     ("boogu_",    "boogu"),  # MPI-257: boogu_edit_template.json — ONE graph → 3 per-tier
                              # files; bakes UNETLoader weight + Input_Tier int (no op split).
+    ("qwen_edit_", "qwen"),  # MPI-300: qwen_edit_template.json — ONE graph → ONE runtime
+                             # file; SAME int8 transformer every tier, Input_Tier injected at
+                             # runtime by the qwenTier radio (no per-tier file, no tier bake).
 ]
 
 
