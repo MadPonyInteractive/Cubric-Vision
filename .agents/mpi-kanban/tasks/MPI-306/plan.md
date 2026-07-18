@@ -85,10 +85,20 @@ proven end-to-end by generating. User is running that test.
 
 **Verify mode:** `user-ux`.
 
-## Phase 3 — Hold-until-Apply (run-path, NOT UI)
+## Phase 3 — Hold-until-Apply (run-path, NOT UI) — ✅ BUILT 2026-07-18 (`bcbe161f`)
 
 Separate phase deliberately: a UI regression and a data-path regression must not land in the
 same diff.
+
+Shipped as a `deferCommit` opt on `startGeneration` that skips ONLY the `addGroup` persist in
+the gallery branch; the built groups reach `onComplete`, `MpiBaseApp` holds them in
+`_pendingGroups`, and `_apply` commits them with the same `addGroup`. No new commit path, no
+new orphan mechanism. `generation:complete` now carries `deferred`. Pinned by
+`tests/app-defer-commit.test.cjs` (4/4). **Awaiting the user's real-generation check: the
+gallery must stay empty until Apply.**
+
+Note: the "Discard leaves none" clause below predates the Phase-1 decision to drop Discard
+entirely — a re-run supersedes and closing drops, which is what replaced it.
 
 8. **Results stay in-app until Apply** → verify: generating creates NO gallery card; Apply
    commits one; Discard leaves none; closing with an unapplied result prompts.

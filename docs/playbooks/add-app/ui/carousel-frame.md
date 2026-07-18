@@ -5,10 +5,11 @@
 > were plumbing tests, are marked for deprecation, and were never released. Nothing here is
 > a compromise with them.
 >
-> **Status: BUILT** (MPI-306 Phases 1–2, 2026-07-18) — the frame ships as `MpiBaseApp`, with
+> **Status: BUILT** (MPI-306 Phases 1–3, 2026-07-18) — the frame ships as `MpiBaseApp`, with
 > Head Swap as its first real instance. The approved composition is recorded in § The approved
 > composition below, which OVERRIDES this document wherever the two disagree.
-> Phase 3 (hold-until-Apply) is NOT built: Apply renders but is inert.
+> Phase 3 (hold-until-Apply) SHIPPED: `deferCommit` withholds the project write and Apply
+> commits it — see § Results are not real until Apply.
 
 ## The frame
 
@@ -139,13 +140,22 @@ form.
 
 ## Results are not real until Apply
 
-**This is a run-path change, not a UI detail.** Today `submitAppGeneration` enqueues with
-`scope: 'gallery'` + a `placeholderGroup`, so a card appears in the gallery *at enqueue
-time*, before the run even finishes.
+**This is a run-path change, not a UI detail.** It SHIPPED 2026-07-18 (commit `bcbe161f`).
 
-Under this design the last step holds the result **in-app**: the user generates, watches
-latents, cancels or re-generates freely, and only **Apply** commits it to the project +
-gallery.
+The last step holds the result **in-app**: the user generates, watches latents, cancels or
+re-generates freely, and only **Apply** commits it to the project + gallery.
+
+**How it works.** `startGeneration` takes a `deferCommit` opt that skips exactly one thing
+in the gallery completion branch — the `for (const g of groups) await addGroup(g)` persist.
+The groups are still BUILT and are handed to `onComplete` as `groups`, so the caller can
+commit them later; `generation:complete` carries `deferred: true` so no listener mistakes
+the run for persisted. `submitAppGeneration` sets `deferCommit` and sends NO
+`placeholderGroup` (nothing is pending in the gallery when it may never land there).
+`MpiBaseApp` holds them in `_pendingGroups`; `_apply` persists them with the SAME
+`projectService.addGroup` primitive the normal path uses.
+
+**Do not add a second commit path.** Apply is `addGroup`, nothing more. The withheld step
+is the only difference between an app run and a normal gallery run.
 
 Decided:
 

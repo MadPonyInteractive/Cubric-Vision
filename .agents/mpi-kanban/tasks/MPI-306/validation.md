@@ -147,3 +147,57 @@ line not touched).
 - Phase 2 (Head Swap as the frame's proof) and Phase 3 (hold-until-Apply) not started.
 - Step-0 example image is a PLACEHOLDER (`app.preview`, currently `sdxl-real-05.webp`).
   User will supply a real image/video later; swapping the `preview` filename is the edit.
+
+---
+
+## Session 2026-07-18 (later) — tier-injection bug + Phase 3
+
+### The tier bug (found by the user, `331c3ca5`)
+
+User: "hyper and quality took the same time to generate." Correct instinct, and the cause was
+worse than a wrong value — **the tier never reached the graph at all.**
+
+`commandExecutor.js` deleted EVERY `injectionParams` key from the generic param map after
+running a custom injector, assuming an injector consumes everything handed to it.
+`headSwapInjector` handles only `box1`/`box2`; `Input_Tier` rode in the same object and was
+deleted before the generic title injector could write it. Node 95 kept its baked `3`, so
+**Quality and Hyper both ran Hyper** — identical times were the correct symptom.
+
+Fix at the contract, not the call site: `INJECTORS` entries are now `{inject, consumes}` and
+only declared keys are deleted. Swept both injectors — `resize` declares exactly the keys it
+reads, including `flip` (its `Input_flip` alias must still be dropped or the flip node
+no-ops, a bug of the same family already commented there).
+
+- **VALIDATED by the user**: Quality now runs 20 steps (was 4). ComfyUI console `0/20`.
+- Pinned by `tests/injector-consumes.test.cjs` (4/4).
+- Latent for ANY op pairing a custom injector with generic params. Head Swap was the only
+  current victim (resize sends nothing else) — the next such op would have hit it too.
+
+### Phase 3 — hold-until-Apply (`bcbe161f`)
+
+`deferCommit` on `startGeneration` skips exactly one thing in the gallery branch: the
+`for (const g of groups) await addGroup(g)` persist. Groups are still built and reach
+`onComplete`; `MpiBaseApp` holds them in `_pendingGroups`; `_apply` commits with the same
+`addGroup`. `generation:complete` carries `deferred` so no listener claims persistence that
+did not happen. App runs send NO `placeholderGroup`.
+
+Checked:
+- Only `appService` sets `deferCommit` — every other `enqueueGeneration` caller takes the
+  untouched path. Normal gallery + groupHistory runs are byte-identical.
+- The gallery's `generation:complete` handler rebuilds from `_visibleProjectGroups()` (the
+  project) and swaps placeholders by `tempId`. With no `addGroup` and no placeholder, the
+  rebuild is a no-op — no card can appear.
+- Other `generation:complete` listeners are safe: stats refetch reads DISK (files exist), the
+  float-latent bridge only releases its lane.
+- Apply take-and-clears `_pendingGroups` BEFORE awaiting → a double-click cannot commit twice.
+  On failure it restores them and raises `ui:error` (dialog, not toast) — files are still on
+  disk so a retry is valid.
+- `mkPlaceholder` removed (orphaned by this change, not pre-existing dead code).
+- `tests/app-defer-commit.test.cjs` (4/4); 3 existing injection suites still green; eslint clean.
+
+## NOT yet validated (Phase 3)
+- **The actual behaviour, by generating.** Needs: generate → gallery stays EMPTY; Apply →
+  exactly one card; close with an unapplied result → none; `project.json` untouched pre-Apply.
+  Everything above is source/logic-level only ([[feedback_test_user_instinct_first]] — the
+  same trap that produced the false "cannot run" claim; do not call this done on tests alone).
+- Reuse after Apply (expected to work only post-Apply, per the user's decision).
