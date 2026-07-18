@@ -110,7 +110,11 @@ export const APPS = [
         uiComponent: 'MpiAppImageRegen',
         mediaType: 'image',
         // Polymorphic inputs (MPI-259). `media` = declared media slots; BaseApp renders
-        // an upload zone per declared type. `mode:'upto'` = dynamic-until-cap (numbered,
+        // an upload zone per declared type. A group MAY also declare
+        // `labels: ['Original', 'Face Reference']` (index-aligned with roles) — slot
+        // copy is the APP's to name, and the carousel frame shows it above each slot;
+        // without it the frame falls back to a numbered noun (MPI-306).
+        // `mode:'upto'` = dynamic-until-cap (numbered,
         // an empty zone appears until `max` slots are filled). `role` matches the op's
         // mediaInputs key so the injector maps each item to its Input_* node.
         inputSchema: {

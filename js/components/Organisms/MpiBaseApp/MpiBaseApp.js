@@ -89,15 +89,24 @@ function _getSteps(app) {
 }
 
 /**
- * Human label for a media slot: the group's role name if it reads well, else a
- * numbered fallback. Keeps a filled slot identifiable once every slot has an
- * image in it (the slot label survives filling — the image replaces the BOX,
- * not the label).
- * @param {{type:string,roles:string[]}} group
+ * Human label for a media slot.
+ *
+ * An app SHOULD declare `labels: ['Original', 'Face Reference']` on its media
+ * group — a slot's name is app copy, not something the frame can invent. The
+ * fallbacks exist so an app that declares nothing still renders sanely: a
+ * descriptive role reads through, otherwise a numbered noun.
+ *
+ * The label survives filling: the image replaces the BOX, not the label, so the
+ * user can still tell which slot is which once all of them hold an image.
+ *
+ * @param {{type:string,roles:string[],labels?:string[]}} group
  * @param {number} idx
  * @returns {string}
  */
 function _slotLabel(group, idx) {
+    const declared = group.labels?.[idx];
+    if (typeof declared === 'string' && declared.trim()) return declared;
+
     const role = group.roles?.[idx];
     if (typeof role === 'string' && !/^(image|video|audio)\d*$/i.test(role)) {
         return role.replace(/[_-]+/g, ' ');
@@ -197,6 +206,7 @@ export const MpiBaseApp = ComponentFactory.create({
         let _perApp = null;
         let _runBtn = null;
         let _resultMediaEl = null;
+        let _resultEmptyEl = null;
         let _statusEl = null;
         let _applyRow = null;
         let _pendingNote = null;
@@ -629,6 +639,11 @@ export const MpiBaseApp = ComponentFactory.create({
             const frame = ce('div', { className: 'mpi-base-app__result-frame' });
             _resultMediaEl = ce('div', { className: 'mpi-base-app__result-media' });
             frame.appendChild(_resultMediaEl);
+            // Empty-state copy that also teaches the commit: an unexplained blank
+            // frame gives the user no reason to expect Apply to matter.
+            _resultEmptyEl = ce('div', { className: 'mpi-base-app__result-empty' });
+            _resultEmptyEl.textContent = 'Your result appears here. Nothing is saved until you apply it.';
+            frame.appendChild(_resultEmptyEl);
             pane.appendChild(frame);
 
             // Apply is rendered but INERT until Phase 3 wires the run path.
@@ -721,6 +736,11 @@ export const MpiBaseApp = ComponentFactory.create({
         _unsubs.push(on(nextBtn, 'click', () => _goTo(_current + 1)));
 
         // ── Result painting ─────────────────────────────────────────────────────
+        /** Show the empty-state copy only while the pane holds nothing. */
+        function _syncResultEmpty() {
+            if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild;
+        }
+
         /** Paint a single URL (a live latent preview) into the result pane. */
         function _paintResult(url, { blurring = false } = {}) {
             if (!url || !_resultMediaEl) return;
@@ -731,6 +751,7 @@ export const MpiBaseApp = ComponentFactory.create({
             if (blurring) img.classList.add('mpi-base-app__result-latent');
             _resultMediaEl.appendChild(img);
             _resultMediaEl.appendChild(ce('span', { className: 'mpi-base-app__scanline' }));
+            _syncResultEmpty();
         }
 
         /** Paint ALL final results (multi-output apps produce N items — MPI-259). */
@@ -742,7 +763,7 @@ export const MpiBaseApp = ComponentFactory.create({
             // blob: URL is revoked the moment the gen ends. Leaving it in the DOM logs
             // a GET blob:… ERR_FILE_NOT_FOUND.
             _resultMediaEl.innerHTML = '';
-            if (!withPath.length) return;
+            if (!withPath.length) { _syncResultEmpty(); return; }
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
                 const isVideo = it?.type === 'video' || it?.mediaType === 'video';
@@ -750,6 +771,7 @@ export const MpiBaseApp = ComponentFactory.create({
                     ? ce('video', { src: url, controls: true, muted: true, loop: true })
                     : ce('img', { src: url, alt: 'result' }));
             }
+            _syncResultEmpty();
         }
 
         /** Show/hide the Apply row + "Not saved yet" note. */

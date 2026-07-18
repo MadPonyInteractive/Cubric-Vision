@@ -10,6 +10,32 @@
    generous outer margins. The outer thirds stay empty on purpose.
 ═══════════════════════════════════════════════════════════════ */
 
+/* ── Full-bleed override of the shared MpiOverlay chrome ───────────
+   MpiOverlay is built for centred CARD content: it pads its root, centres with
+   align-items:center, and caps .mpi-overlay__container at 600px with no height.
+   The carousel needs the whole area — and real HEIGHT, because .mpi-base-app is
+   height:100% and its stage is flex:1, so an auto-height container collapses the
+   stage to 0 (topbar visible, steps blank).
+
+   Same escape hatch MpiAppLibrary/MpiModelManager already use, scoped via :has()
+   to this frame so MpiOverlay.css (shared) stays untouched. */
+.mpi-overlay--main:has(.mpi-base-app) {
+    padding: 0;
+    gap: 0;
+    align-items: stretch;
+    overflow: hidden;
+}
+.mpi-overlay--main:has(.mpi-base-app) .mpi-overlay__container {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+}
+/* The overlay's own X must sit above the app chrome. */
+.mpi-overlay--main:has(.mpi-base-app) .mpi-overlay__close {
+    z-index: 20;
+}
+
 .mpi-base-app {
     /* --lib-bg is declared LOCALLY here, as it is in MpiAppLibrary.css and
        MpiModelManager.css. Deliberate (2026-07-18): these are overlay-ground
@@ -496,6 +522,21 @@
     gap: var(--s-2);
     position: relative;
 }
+
+/* Empty-state copy — teaches the commit while the pane is blank. */
+.mpi-base-app__result-empty {
+    width: 384px;
+    height: 288px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--s-4);
+    font-size: var(--t-sm);
+    line-height: 1.6;
+    color: var(--ink-4);
+    text-align: center;
+}
+.mpi-base-app__result-empty[hidden] { display: none; }
 .mpi-base-app__result-media img,
 .mpi-base-app__result-media video {
     display: block;
