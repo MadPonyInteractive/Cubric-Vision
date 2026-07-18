@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-07-18T03:55:00Z",
+  "updated_at": "2026-07-18T06:40:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -74,7 +74,14 @@
       "status": "open",
       "created_at": "2026-07-12T02:13:56Z"
     },
-    ".agents/mpi-kanban/state/handoffs/fe749847-e6e1-4360-8896-d9634dbf0782.json",
+    {
+      "id": "fe749847-e6e1-4360-8896-d9634dbf0782",
+      "path": ".agents/mpi-kanban/state/handoffs/fe749847-e6e1-4360-8896-d9634dbf0782.json",
+      "task": "MPI-272",
+      "status": "open",
+      "to_role": "implementer",
+      "created_at": "2026-07-13T14:08:57Z"
+    },
     {
       "id": "a08b7d2a-6398-4828-bc2c-600a84f4027b",
       "path": ".agents/mpi-kanban/state/handoffs/a08b7d2a-6398-4828-bc2c-600a84f4027b.json",
@@ -121,8 +128,22 @@
       "to_role": "implementer",
       "created_at": "2026-07-14T23:37:08Z"
     },
-    ".agents/mpi-kanban/state/handoffs/c84ef9b9-7f50-458a-867e-32301552f42b.json",
-    ".agents/mpi-kanban/state/handoffs/68d9635f-532b-4930-b54d-06619de642e9.json",
+    {
+      "id": "c84ef9b9-7f50-458a-867e-32301552f42b",
+      "path": ".agents/mpi-kanban/state/handoffs/c84ef9b9-7f50-458a-867e-32301552f42b.json",
+      "task": "MPI-282",
+      "status": "open",
+      "to_role": "implementer",
+      "created_at": "2026-07-16T01:15:00Z"
+    },
+    {
+      "id": "68d9635f-532b-4930-b54d-06619de642e9",
+      "path": ".agents/mpi-kanban/state/handoffs/68d9635f-532b-4930-b54d-06619de642e9.json",
+      "task": "MPI-293",
+      "status": "open",
+      "to_role": "orchestrator",
+      "created_at": "2026-07-16T19:40:00Z"
+    },
     {
       "id": "8cf229c5-d2ca-4a68-aaad-fb1cd97a0777",
       "path": ".agents/mpi-kanban/state/handoffs/8cf229c5-d2ca-4a68-aaad-fb1cd97a0777.json",
@@ -138,6 +159,14 @@
       "status": "open",
       "to_role": "implementer",
       "created_at": "2026-07-18T03:55:00Z"
+    },
+    {
+      "id": "93b37dbb-b883-4fcb-a633-0a06373daa2a",
+      "path": ".agents/mpi-kanban/state/handoffs/93b37dbb-b883-4fcb-a633-0a06373daa2a.json",
+      "task": "MPI-300",
+      "status": "open",
+      "to_role": "implementer",
+      "created_at": "2026-07-18T06:40:00Z"
     }
   ]
 }

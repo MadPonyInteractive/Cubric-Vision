@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-299",
+  "title": "App: Head Swap — 2-image head/face swap with head selector",
+  "description": "NEW APP (child of MPI-259 Apps v2). Head Swap: swap a selected head/face in a base image with the head from a reference character image.\n\nSHAPE (provisional, confirm from workflow JSON when authored):\n- Multi-model. requiredModels = TBD (user bringing the head/face-swap model list).\n- Inputs: 2 IMAGE media slots — base image (1..N characters) + reference character image. Both path-reading MpiLoadImageFromPath.\n- Head selector: user picks WHICH head in the base image gets replaced, UX modelled on the History-workspace auto-mask detection selector. OPEN Q: detection runs in-workflow (returns boxes/masks) vs client-side; how the pick feeds the graph (index / bbox / mask). Blocks descriptor+op wiring until answered.\n- Output mediaType: image. Possibly multi-output (per-face) — decide from graph.\n- uiComponent: YES (bespoke head-selector controls) — not media-only.\n- Other params: TBD (user to confirm; may be none beyond the selector).\n\nDESIGN PIVOT (2026-07-17): hair auto-detect ABANDONED. ROOT PROBLEM = hair segm QUALITY is bad on multi-person (produces a bad hair mask), NOT a disambiguation issue. FACE detection works fine per-person and IS selectable. So: detect N faces → user selects one (original head-selector, ALIVE) → HAIR must be handled another way. Leading flow (A): face-select + MANUAL hair/head paint to complete the head mask. Alt (B): fully manual head mask, no detector. Alt (C): face-only swap, hair stays original (loses face+hair goal). Media I/O ≈ 2 image slots + 1 painted MASK slot (path-reading). Reuse History-workspace mask surface (auto-mask + paint) — do NOT build new. AWAIT user pick of A/B/C + where the paint surface lives.\n\nDETECTORS (found 2026-07-17, workflow uses Impact-Pack Simple Detector SEGS). DEMOTED by pivot above (auto-detect can't disambiguate multi-person). Kept as reference / possible optional single-person assist:\n- HAIR segm (demoted from hard requiredModels): hair_yolov8n-seg_60.pt — https://huggingface.co/jags/yolov8_model_segmentation-set/resolve/main/hair_yolov8n-seg_60.pt — ~7,099,392 bytes — SHA256 3112ced2bd21b48ca2a4357c2927b7e423d9ff851bc976de182a6c05f5851da0 — apache-2.0 — loads into SEGM_DETECTOR slot (empty node 883 in graph). Mirror: alexgenovese/ultralytics/segm.\n- ALL-IN-ONE alt (head+hair one class): Anzhc HeadHair seg y8m.pt — https://huggingface.co/Anzhc/Anzhcs_YOLOs/resolve/main/Anzhc%20HeadHair%20seg%20y8m.pt — ~54.9 MB — AGPL-3.0 (copyleft, flag for ship) — segm.\n- NOTE: all YOLO .pt files flagged 'Unsafe' by HF = pickle-format scanner warning; SAME as our already-shipped face/hand/person detectors. Not a new risk.\n- WORKFLOW REQUIRES QWEN (Qwen_Edit) — Qwen model NOT yet in app; user wiring Qwen in a SEPARATE session before this app can run.\n\nBLOCKED ON USER: (1) Qwen model wired (separate session), (2) full workflow JSON saved + dropped in comfy_workflows/raw/, (3) head-selector mechanism (Input_Box boolean picker seen in graph — client vs workflow detection + how pick routes into the graph).\n\nPROCEDURE: /mpi-add-app enforces docs/playbooks/add-app/. Op in 4 files, AppDef in appsRegistry.js, inject-title test, live run + reuse. Dev-gated. This is the 4th app — dev-gate LIFTS at >=4 apps (MPI-259 backlog item F); decide whether the 3 plumbing apps stay before public.\n\nAgent monitors BOTH this card and MPI-259.",
+  "column": "todo",
+  "maturity": "planning",
+  "status": "active",
+  "created_at": "2026-07-17T13:00:00Z",
+  "updated_at": "2026-07-17T13:00:00Z",
+  "labels": [
+    "feature",
+    "apps",
+    "app",
+    "dev-gated"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  }
+}

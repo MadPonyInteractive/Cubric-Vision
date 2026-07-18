@@ -20,6 +20,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.2.0"
   },
+  "qwenEdit": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0"
+  },
   "detail": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"

@@ -1,0 +1,133 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "93b37dbb-b883-4fcb-a633-0a06373daa2a",
+  "generated_at": "2026-07-18T06:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Qwen Image Edit 2511 — PHASE 1 partial: deps + tier radio wired, PAUSED for graph strip + style-picker",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Qwen Edit 2511 to Cubric Vision. Originally 3 tiers (4-step/8-step/no-accel). Blocks the head-swap app (MPI-299).",
+    "status": "in_progress",
+    "summary": "PHASE 1 half-wired. TIER SHAPE CHANGED mid-session: user rejected the 3-card split (same deps = library pollution + triple-install) → ONE ModelDef + a runtime tier RADIO injecting Input_Tier (Quality/Turbo/Hyper). Deps + tier control + runtime workflow committed (f053f841). PAUSED before the op + ModelDef because two things are in flight: user is stripping the workflow (remove bypass + mask nodes) and another agent is converting the style system from a dropdown to a slider+button+image-picker component."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "R2 upload VERIFIED: all 4 core weights (int8 transformer 20,499,083,824 exact, Qwen2.5-VL-7B fp8 TE, 2 Lightning LoRAs) + all 7 style LoRAs on R2. SHA256 all filled → research/deps-manifest.md",
+      "TIER SHAPE DECISION: ONE ModelDef + runtime tier radio (NOT 3 cards). Radio Quality(Input_Tier=1, raw 20-step no LoRA) / Turbo(2, 8-step LoRA) / Hyper(3, 4-step LoRA). Default = Quality. PiD/pidResolution is the precedent.",
+      "Audit agent ran: ZERO other collapse candidates (Chroma/Krea2/Boogu/LTX/Wan all have genuinely different transformer files per tier). No follow-up card needed.",
+      "WORKFLOW BUG found+fixed in canvas: the two Accelerator LoRA loaders fed the WRONG MpiAnySwitch slots — Balanced got 4-step, Low got 8-step (inverted). User was A/B testing crossed pairs. User re-exported corrected.",
+      "generate_qwen.py + registry.py prefix qwen_edit_ → 'qwen' handler (ONE template → ONE runtime file; no tier bake — tier is runtime-injected). Committed 1bf24c23.",
+      "dependencies wired (modelDeps/assetDeps/loraDeps): qwen-edit-transformer (int8, size '19GB' — below 20GiB hot-store gate), qwen-edit-qwen25vl-7b-clip, qwen-edit-lightning-4step/8step (baked, loras/qwen/), 7 qwen-edit-style-* (loras/qwen/styles/), VAE reuses vae-qwen-image. All SHA256 filled.",
+      "qwenTier control (PromptBoxControls.js, clone of pidResolution) + default (promptControlDefaults.js Input_Tier=1) + capability gate (MpiPromptBox.js: mount only if capabilities.tierSelect).",
+      "VALIDATOR RULE DROPPED (validate-injection-rules.mjs): removed the deprecated-bare-title check. Injection contract is now purely prefix-based (app injects ONLY Input_*, reads ONLY Output_*; author colours those yellow), so internal debug titles like 'steps' are the author's to name. Capture/seed/integrity checks kept.",
+      "runtime qwen_edit.json + API template baked + validated + loader-path↔dep cross-check PASSED.",
+      "Committed f053f841 (deps + tier default + workflow + validator) and 1bf24c23 (generator + registry)."
+    ],
+    "pending": [
+      "WAIT (user): strip qwen_edit_template.json — remove bypassed test nodes + the ENTIRE mask section (Input_Mask, InpaintCropImproved, InpaintStitchImproved, MpiMaskSquareBbox, MpiAnyChecker mask gate). KEEP 3 image inputs (Input_Image + Input_Image_2 + Input_Image_3 — guaranteed). Same filename (strip in place). Test-heavy canvas saved separately for APP work (mask belongs to an app, not the model).",
+      "WAIT (style agent): style system changes dropdown → slider + button that pops a NEW image-picker component (MpiStylePicker, each image = a style). qwenEdit's style controls must reference the FINAL picker, not the old styleSelect dropdown.",
+      "AFTER both land: regen qwen_edit.json (orchestrate — commit/clean tree first, global-rebuild hazard).",
+      "Wire NEW op qwenEdit (NOT shared 'edit' — that is Boogu's, components:[] + 1 image slot). Mirror krea2Edit: own mediaInputs (3 image slots, 2nd+3rd optional), own components (qwenTier + final style controls). Register in BOTH js/core/operationRegistry.js AND operation_registry.json (appVersionIntroduced = current APP_VERSION; operation_registry.json synced via /mpi-version-bump, not hand-edited). Run tests/inject-params-titles.test.cjs.",
+      "ONE ModelDef (models.js): type:'qwen' (NEW → consumer sweep), enhanceRecipe:'flux' (keep qwen out of recipe sweep), supportedOps:['qwenEdit'], capabilities styleLoras:true + tierSelect:true, styleLoraLabels (8: 'None' + 7), workflows.qwenEdit:'qwen_edit.json', all deps, sizeTier 'balanced', image webp, showSettings per user-LoRA rack.",
+      "type:'qwen' consumer sweep (grep js/ + operation_registry.json + docs for type checks).",
+      "progressStages.js entry keyed by qwen_edit.json — COUNT tqdm bar restarts LIVE per tier (Quality raw vs Turbo/Hyper LoRA differ).",
+      "Style-count assert: styleLoraLabels length == style-LoRA slots + 1. Graph has Input_style_lora_1..7 → 8 labels.",
+      "Verify: parse cross-ref, loader paths, one qwenEdit gen in the real app (weights already on G:/CubricModels — local test-ready now).",
+      "Unblock MPI-299 (head-swap app) once model wired.",
+      "Commit the co-owned PromptBoxControls.js + MpiPromptBox.js qwenTier edits (currently uncommitted — leave for style agent's commit or recommit at resume, shared-tree hygiene)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-300",
+    "title": "Model: Qwen Image Edit 2511 — one card + runtime tier radio (Quality/Turbo/Hyper)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-300/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-300/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "wire-model"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-300 events.jsonl carries the full trail (shape change, workflow-bug fix, validator rule drop, audit result).",
+      "research/deps-manifest.md has all 11 SHA256 + R2 paths (4 core + 7 style).",
+      "docs/models/qwen-edit/ (README, tiers-and-loaders, dimensions, reference-latents) settled from PHASE 0."
+    ],
+    "pending": [
+      "docs/models/qwen-edit/README.md still says 'Status: RESEARCH phase' + '3 sibling ModelDefs' — UPDATE to the one-card tier-radio shape + 'wired' status after PHASE 1 completes.",
+      "Consider a docs/models/qwen-edit/injection.md (op + tier radio + style rack) once the op is wired."
+    ]
+  },
+  "next_action": {
+    "description": "Confirm the user has re-exported the STRIPPED qwen_edit_template.json (no mask, no bypass, 3 images) AND the style-picker component (MpiStylePicker) has landed. Then: regen qwen_edit.json via orchestrate (clean tree first), wire the NEW qwenEdit op (operationRegistry.js + operation_registry.json), add the ONE ModelDef (type:'qwen', supportedOps:['qwenEdit'], caps styleLoras+tierSelect, 8 styleLoraLabels, all deps), sweep type:'qwen' consumers, add progressStages (count bars live), assert style-label count, and run one qwenEdit gen in the real app. Do NOT version-bump. Do NOT wire a mask op.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "ONE ModelDef + runtime Input_Tier radio, NOT 3 tier cards — same deps across tiers made 3 cards pollute the library + triple-install. Only the accelerator Lightning LoRA changes per tier; the int8 transformer is shared.",
+      "Tier radio labels = Quality / Turbo / Hyper (user chose over High/Balanced/Low because Balanced≈Fast in output). Injects Input_Tier 1/2/3. Default = Quality (1, raw).",
+      "New op qwenEdit (NOT shared 'edit'): Qwen's edit needs styles + tier + 3 images; the shared 'edit' op is Boogu's (components:[], 1 image slot). Krea2 set the precedent with krea2Edit.",
+      "NO mask op for the Qwen MODEL — the mask/InpaintCrop path in the test canvas belongs to a future APP, not this model. User strips it out.",
+      "Validator bare-title rule removed fleet-wide (user decision): the Input_/Output_ prefix contract fully replaces it; internal debug titles are free.",
+      "int8 transformer = 20,499,083,824 B = 19.10 GiB → dep size MUST be '19GB' (below the 20GiB binary hot-store gate; a '20'/'20.5' SI label would round over it)."
+    ],
+    "constraints": [
+      "Models are NOT version-bumped. A NEW op DOES touch operationRegistry.js + operation_registry.json (appVersionIntroduced = current APP_VERSION) but is still not an app version bump.",
+      "Never hand-edit workflow JSON — author in ComfyUI, user saves canvas, re-run sync/orchestrate.",
+      "orchestrate.py = global rebuild hazard — commit/stash the generated tree before running on a dirty comfy_workflows.",
+      "PromptBoxControls.js + MpiPromptBox.js are CO-OWNED with a concurrent style agent — edit by content anchor, never git add the whole file to avoid sweeping their in-progress work. The style agent already added the MpiStylePicker import.",
+      "Shared tree: commit by explicit pathspec; other sessions edit models.js + MPI-291 + MPI-299 concurrently.",
+      "Loader paths bake backslash subfolders (qwen\\...\\) → dep filename must be loras/qwen/... and loras/qwen/styles/... — cross-checked PASS in the current runtime.",
+      "Weights already on G:/CubricModels (engine sees them via extra_model_paths.yaml) → local in-app test is ready NOW; R2 upload is ship-prep, done."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/modelDeps.js",
+      "js/data/modelConstants/assetDeps.js",
+      "js/data/modelConstants/loraDeps.js",
+      "js/data/promptControlDefaults.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js (UNCOMMITTED — qwenTier control, co-owned)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (UNCOMMITTED — tierSelect gate, co-owned)",
+      "scripts/validate-injection-rules.mjs",
+      "comfy_workflows/scripts/workflow_generation/generate_qwen.py",
+      "comfy_workflows/scripts/workflow_generation/registry.py",
+      "comfy_workflows/scripts/workflow_generation/qwen_edit_template.json",
+      "comfy_workflows/qwen_edit.json",
+      ".agents/mpi-kanban/tasks/MPI-300/research/deps-manifest.md",
+      ".agents/mpi-kanban/tasks/MPI-300/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/state/handoffs/93b37dbb-b883-4fcb-a633-0a06373daa2a.json",
+      ".agents/mpi-kanban/tasks/MPI-300/research/deps-manifest.md",
+      "comfy_workflows/qwen_edit.json",
+      "js/data/modelConstants/models.js (Boogu 'edit' + Krea2 'krea2Edit' ModelDefs = the two precedents)",
+      "js/data/commandRegistry.js (edit + krea2Edit ops — clone for qwenEdit)",
+      "docs/playbooks/add-model/04-ops-and-controls.md (new op + runtime selector)",
+      "docs/models/qwen-edit/README.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["docs/models/qwen-edit", "docs/playbooks/add-model", "docs/models/krea2", "docs/models/pid"]
+  },
+  "rules_active": [
+    "docs/playbooks/add-model/README.md",
+    "docs/playbooks/add-model/04-ops-and-controls.md",
+    ".claude/skills/mpi-add-model/SKILL.md",
+    ".claude/rules/comfy_injection.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-18T06:40:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-300 (Qwen Image Edit 2511, 'doing') on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/93b37dbb-b883-4fcb-a633-0a06373daa2a.json + the MPI-300 research files first. SHAPE (locked): ONE ModelDef + a runtime tier RADIO injecting Input_Tier — NOT 3 tier cards (same deps made 3 cards pollute the library). Radio = Quality(1, raw 20-step no LoRA) / Turbo(2, 8-step Lightning LoRA) / Hyper(3, 4-step Lightning LoRA), default Quality. One int8 transformer (qwen-edit-transformer, size '19GB') + Qwen2.5-VL-7B fp8 TE + reused vae-qwen-image for every tier. ALREADY DONE + COMMITTED (f053f841 + 1bf24c23): all deps (transformer, TE, 2 baked Lightning LoRAs loras/qwen/, 7 style LoRAs loras/qwen/styles/) with SHA256 filled + verified on R2; the qwenTier control + default + capability gate; generator + registry; the runtime qwen_edit.json; and the removal of the validator's deprecated-bare-title check (injection is now purely Input_/Output_ prefix-based). The PromptBoxControls.js + MpiPromptBox.js qwenTier edits are UNCOMMITTED and CO-OWNED with a concurrent style agent — do not git-add the whole file. WORK IS PAUSED on two in-flight changes: (1) the user is stripping qwen_edit_template.json to remove the bypassed test nodes + the entire mask section (Input_Mask/InpaintCrop/InpaintStitch/MpiMaskSquareBbox), keeping the 3 image inputs, same filename; (2) another agent is converting the style system from a dropdown to a slider + button + MpiStylePicker image-picker component. WHEN BOTH LAND: regen qwen_edit.json via orchestrate (clean tree first — global-rebuild hazard), wire a NEW op qwenEdit (NOT the shared 'edit' op, which is Boogu's — mirror krea2Edit: 3 image slots, own controls; register in js/core/operationRegistry.js AND operation_registry.json), add ONE ModelDef (type:'qwen' NEW → consumer sweep; supportedOps:['qwenEdit']; capabilities styleLoras:true + tierSelect:true; 8 styleLoraLabels 'None'+7; all deps), add a progressStages entry (COUNT tqdm bars live per tier), assert the style-label count, and run one qwenEdit gen in the real app (weights are already on G:/CubricModels so local test is ready). Do NOT version-bump. Do NOT wire a mask op (mask belongs to a future app). This model BLOCKS MPI-299 (head-swap app). Use mpi-continue."
+}
