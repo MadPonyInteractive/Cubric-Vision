@@ -50,7 +50,12 @@ function _readSaved(ctrl, opts) {
 }
 
 function _resolveDefault(ctrl, controlId, opts) {
-    if (ctrl.scope === 'perOp' && opts.opName) {
+    // A per-op default is about where the STARTING value comes from; `scope` is about
+    // where an edited value is STORED. They are independent, so an op may override the
+    // default of a perModel/shared control too — qwenEdit starts `stylization` at 0.8
+    // (Qwen's style LoRAs overpower the edit at 1.0) while Krea2's ops keep the global
+    // 1.0, with both still storing per model.
+    if (opts.opName) {
         const opDefault = getCommandDefault(opts.opName, controlId);
         if (opDefault !== undefined) return opDefault;
     }
@@ -1119,8 +1124,9 @@ export const PROMPT_BOX_CONTROLS = {
         defaultValue: PROMPT_CONTROL_DEFAULTS.stylization,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);
-            const savedNum = Number(saved.stylization ?? this.defaultValue);
-            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : this.defaultValue;
+            const fallback = _resolveDefault(this, 'stylization', opts);
+            const savedNum = Number(saved.stylization ?? fallback);
+            const initial = Number.isFinite(savedNum) ? Math.min(1, Math.max(0, savedNum)) : fallback;
             this.value = initial;
 
             const styleIdx = Number(saved.styleSelect ?? PROMPT_CONTROL_DEFAULTS.styleSelect) || 0;

@@ -202,6 +202,11 @@ export const commands = {
         // Qwen needs the tier radio + its own style rack. Output follows the SOURCE image
         // dimensions (ImageScaleToTotalPixels off the input), so there is no ratio picker.
         components: ['qwenTier', 'styleSelect', 'stylization'],
+        // Qwen's style LoRAs overpower the edit at full strength — 0.8 is the usable
+        // default. Krea2's ops keep the global 1.0. `stylization` stores per MODEL, but
+        // defaults resolve per OP (_resolveDefault), and qwenEdit is Qwen's alone, so a
+        // per-op default is the per-model default here without new machinery.
+        defaults: { stylization: 0.8 },
     },
     detail: {
         label: 'Detail',

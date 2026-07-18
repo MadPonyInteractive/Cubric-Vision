@@ -937,7 +937,7 @@
   "169": {
     "inputs": {
       "upscale_method": "lanczos",
-      "keep_proportion": "pad_edge",
+      "keep_proportion": "pad_edge_pixel",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
       "divisible_by": 32,
@@ -979,7 +979,7 @@
   "171": {
     "inputs": {
       "upscale_method": "lanczos",
-      "keep_proportion": "pad_edge",
+      "keep_proportion": "pad_edge_pixel",
       "pad_color": "0, 0, 0",
       "crop_position": "center",
       "divisible_by": 32,
