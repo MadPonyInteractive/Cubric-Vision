@@ -713,21 +713,68 @@
  * @property {Object} [initialInputs] - Optional seed inputs (overridden by
  *   state.s_appInputs[app.id] when present).
  *
- * The shared App frame (MPI-256, Phase 4). COMPOSITION: mounts a `main-area`
- * MpiOverlay (covers #tool-container + prompt box, spares #shell-info-bar), renders
- * header (title + Back-to-Library) + a source-image upload slot + a content slot the
- * uiComponent fills + a Run button + a status line. Run merges the uploaded image
- * mediaItem with the uiComponent's getInputs() → submitAppGeneration(app, inputs);
- * results land as normal gallery cards. Seeds/writes state.s_appInputs[app.id]
+ * THE app frame: a STEP CAROUSEL (MPI-306 Phase 1; was a flat form in MPI-256).
+ * COMPOSITION: mounts a `main-area` MpiOverlay (covers #tool-container + prompt
+ * box, spares #shell-info-bar), renders a topbar (Back + app name + a NAVIGATING
+ * step ticker) over a slide stage with arrows outside the content.
+ *
+ * Shape — two zones split by an INSET centre divider on the FIRST and LAST step
+ * only (divided = supplying/reviewing, undivided = working):
+ *   step 0     media slots (from inputSchema.media) │ what this app does
+ *   1..N       declared middle steps — bounded centred canvas, no divider
+ *   last       controls + Generate                  │ result + Apply
+ *
+ * STEPS ARE DATA: an app declares `steps: [{kind, role, title, hint, fields?}]`
+ * (see AppDef/AppStep in js/data/appsRegistry.js) and writes NO layout code.
+ * `kind` keys into STEP_KINDS (MpiBaseApp/stepKinds.js); each kind takes
+ * {media, value, onChange, step} and reports a value. The frame collects
+ * {[role]: value} into `stepValues` and merges it into the Run inputs — it never
+ * learns what a gizmo does. A step is never invalid (every kind defaults), so the
+ * forward arrow is never blocked. Declared `fields` render as ONE frame-owned row
+ * between canvas and hint.
+ *
+ * Run merges media + stepValues + the uiComponent's getInputs() →
+ * submitAppGeneration(app, inputs). Seeds/writes state.s_appInputs[app.id]
  * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
- * el.close() then Events.emit('apps:open').
+ * el.close() then Events.emit('apps:open'). Mid-run navigation is allowed; closing
+ * with an unapplied result does NOT prompt (there is no Discard — see
+ * docs/playbooks/add-app/ui/carousel-frame.md).
+ *
+ * PHASE 3 PENDING: the run path still commits at ENQUEUE time (scope:'gallery'),
+ * so APPLY IS INERT and the result is already in the gallery when it lands. The
+ * affordance + "Not saved yet" note ship with the frame; wiring is a separate diff.
  *
  * Mounted via: Events.emit('app:open', {appId}) → shell resolves the descriptor +
  * uiComponent and mounts one instance (destroying any prior active app).
  *
  * Instance methods (on instance.el):
  *   open()/close() — show/hide the overlay (alias onOpen).
- *   destroy()      — tears down subs, the per-app component, and the overlay.
+ *   destroy()      — tears down subs, the live slide (gizmos + listeners), the
+ *                    per-app component, and the overlay.
+ */
+
+/**
+ * @typedef {Object} MpiStepBoxProps (Organism — js/components/Organisms/MpiStepBox)
+ * @property {Object}   media      - The media item this step operates on ({url, …}).
+ * @property {Object}   step       - The AppStep declaration (uses `ratio` if present).
+ * @property {Object|null} [value] - Restored value ({box:{x,y,w,h}}) or null.
+ * @property {Function} onChange   - (value) => void; called as the box is dragged.
+ *
+ * The `box` STEP KIND (MPI-306) — a bounded image with a draggable/resizable
+ * region box. Reuses js/utils/cropTool.js with `showGrid:false` (a rule-of-thirds
+ * grid is a composition aid; this box marks a subject). Reports
+ * `{box:{x,y,w,h}}` in ABSOLUTE SOURCE PIXELS, top-left anchored — the unit
+ * `Mpi Box` consumes unconverted (docs/playbooks/add-app/ui/box-gizmo.md).
+ * cropTool works normalized; the conversion + EDGE clamp happen here, because
+ * `Mpi Box Crop` returns the intersection and does NOT pad — an off-edge box
+ * would otherwise yield a silently non-square crop.
+ *
+ * Knows nothing about its host app, the workflow, or any injector — that is the
+ * step-kind contract that keeps `steps` data.
+ *
+ * Instance methods (on instance.el):
+ *   getValue() — returns {box:{x,y,w,h}} in source pixels.
+ *   destroy()  — disconnects the ResizeObserver, destroys the crop tool.
  */
 
 /**

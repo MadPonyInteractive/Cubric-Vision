@@ -1,0 +1,51 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiStepBox — the `box` step kind (MPI-306 Phase 1)
+
+   A bounded image with a draggable/resizable region box drawn on an
+   overlay canvas (js/utils/cropTool.js, showGrid:false). Sized by the
+   frame's canvas bounds — this component paints, it does not lay out.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-step-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+/* The stage hugs the image at its own aspect — no letterbox, so the
+   overlay canvas can sit exactly on top of the rendered pixels. */
+.mpi-step-box__stage {
+    position: relative;
+    line-height: 0;
+    border: 1px solid var(--line);
+    background: var(--surface-canvas);
+    touch-action: none;
+}
+
+.mpi-step-box__media {
+    display: block;
+    max-width: 100%;
+    /* Bounded so a tall image cannot push the hint + fields row off-screen.
+       Paired with the frame's own canvas cap. */
+    max-height: 52vh;
+    width: auto;
+    height: auto;
+}
+
+/* Handles and scrim are drawn here; it must not intercept nothing-clicks
+   outside the image, hence exact-size sync in _syncOverlaySize(). */
+.mpi-step-box__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: default;
+}
+
+.mpi-step-box__dims {
+    font-size: var(--t-2xs);
+    color: var(--accent-heat);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    min-height: 14px;
+}

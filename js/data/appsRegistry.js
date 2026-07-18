@@ -34,6 +34,34 @@
  * @property {string}   workflow       - ComfyUI workflow filename (universal_workflows.js)
  * @property {string}   uiComponent    - Per-app Organism component name (controls only; hosted by MpiBaseApp)
  * @property {Object}   inputSchema    - What the uiComponent collects → injected into the workflow
+ * @property {AppStep[]} [steps]       - Declared MIDDLE steps of the app's carousel (MPI-306).
+ *                                       Step 0 (inputs) and the last step (run) are IMPLICIT —
+ *                                       the frame renders them from inputSchema + the app's
+ *                                       controls. Omit or `[]` for a 2-step flow. An app writes
+ *                                       NO layout code: MpiBaseApp renders every declared step.
+ *
+ * @typedef {Object} AppStep
+ * @property {string}  kind    - STEP_KINDS registry key (MpiBaseApp/stepKinds.js), e.g. 'box'.
+ *                               A new gizmo = one component + one registry line.
+ * @property {string}  role    - The MEDIA ROLE this step operates on ('image1', 'image2'…) —
+ *                               the same vocabulary the op's mediaInputs uses, so a box for
+ *                               `image1` reaches `Input_Box` with no new mapping.
+ * @property {string}  title   - Shown above the canvas.
+ * @property {string}  [hint]  - Guidance shown below the canvas (and below any fields row).
+ * @property {string}  [tickerLabel] - Short label for the step ticker; falls back to `title`.
+ * @property {number}  [ratio] - Aspect lock for the gizmo (UI-only; the graph's width/height
+ *                               are independent). Omit for a free box.
+ * @property {AppStepField[]} [fields] - ONE row of controls between canvas and hint, rendered
+ *                               BY THE FRAME so every gizmo's controls match for free. HARD CAP:
+ *                               one row, no nesting/panels/accordions — a gizmo wanting more
+ *                               means the step should SPLIT.
+ *
+ * @typedef {Object} AppStepField
+ * @property {string}  id      - Key the value lands under in the step's `fields` object.
+ * @property {'select'|'button'|'toggle'} type
+ * @property {string}  [label]
+ * @property {Array<{v:string|number, label:string}>} [options] - For `select`.
+ * @property {*}       [default]
  */
 
 'use strict';

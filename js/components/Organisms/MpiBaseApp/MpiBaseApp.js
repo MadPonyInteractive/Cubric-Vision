@@ -10,33 +10,54 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
+import { getStepKind } from './stepKinds.js';
 
 /**
- * MpiBaseApp — the shared App frame (MPI-256, Phase 4).
+ * MpiBaseApp — THE app frame: a step carousel (MPI-306 Phase 1).
  *
  * COMPOSITION, not inheritance (the MpiCompareOverlay/MpiModelManager precedent):
  * setup mounts a `main-area` MpiOverlay (covers #tool-container + #prompt-box-mount,
- * spares the sticky #shell-info-bar so the status bar + queue stay live) and renders
- * the shared chrome — a header (app title + Back-to-Library), an empty content slot the
- * per-app component fills imperatively, a Run button, and a progress/result line.
+ * spares the sticky #shell-info-bar so the status bar + queue stay live).
  *
- * FLEXIBLE INPUTS (MPI-259): BaseApp is a generic HOST, not an image-in tool. The source
- * media slot is rendered ONLY when the app's `inputSchema` declares a `media` array
- * (schema-driven polymorphic groups); an app with no media declaration shows no upload
- * slot. The one constant is OUTPUT: every app produces ≥1 image or video. Per-app
- * component exposes `el.getInputs()` → fields BaseApp merges with media before Run.
- * See docs/playbooks/add-app/02-media-io.md.
+ * ── The shape ────────────────────────────────────────────────────────────────
+ * Two zones split by a centre divider, but ONLY on the first and last step. That
+ * absence is the signal: divided = you are supplying or reviewing; undivided =
+ * you are working. Full design record + rationale:
+ * docs/playbooks/add-app/ui/carousel-frame.md § The approved composition.
  *
- * media group schema (inputSchema.media[]):
- *   { type: 'image'|'video'|'audio', mode: 'upto'|'fixed', max: number, roles: string[] }
- *   roles[i] → assigned to the i-th filled item; models reference by role key.
+ *   STEP 0 (implicit)   media slots (left)  │  what this app does (right)
+ *   STEPS 1..N          declared middle steps — bounded centred canvas, no divider
+ *   LAST STEP (implicit) controls + Generate │ result + Apply
  *
- * Run = submitAppGeneration(app, { mediaItems, ...perAppInputs }). Results land as
- * normal gallery cards (the universal-op queue path), so there's no bespoke result
- * canvas here — Run shows progress, then a "landed in the gallery" note.
+ * Step 0 and the last step are IMPLICIT — the frame renders them from the app's
+ * `inputSchema` and its controls. An app with no middle steps declares `steps: []`
+ * and gets a 2-step flow.
  *
- * State: BaseApp seeds from and writes `state.s_appInputs[appId]` (top-level replace)
- * so inputs survive close→reopen AND the Overlays.reset() force-close on navigation.
+ * ── Steps are DATA ───────────────────────────────────────────────────────────
+ * An app declares `steps: [{ kind, role, title, hint, fields? }]` and writes NO
+ * layout code. `kind` is a key into STEP_KINDS (stepKinds.js); each kind takes
+ * `{ media, value, onChange, step }` and reports a value. The frame collects
+ * `{ [role]: value }` into `stepValues` and merges it into the Run inputs. The
+ * frame never learns what a gizmo does — that is what keeps a new gizmo to one
+ * component + one registry line.
+ *
+ * A step is NEVER invalid: every kind supplies a usable default, so the forward
+ * arrow is never blocked. Required-because-the-flow-walks-you-there, not
+ * required-because-Run-is-gated.
+ *
+ * DECLARED FIELDS: a step may declare `fields: [...]` — ONE row between canvas
+ * and hint, rendered BY THE FRAME (not the gizmo) so every gizmo's controls match
+ * for free. Hard cap: one row, no nesting/panels/accordions. A gizmo wanting more
+ * means the step should SPLIT.
+ *
+ * ── What this phase does NOT do ──────────────────────────────────────────────
+ * The RUN PATH is untouched (Phase 3): submitAppGeneration still commits at
+ * ENQUEUE time with scope:'gallery', so a card appears in the gallery before the
+ * run finishes and APPLY IS INERT. The pane renders "Not saved yet" + Apply so
+ * the shape is right; wiring it is deliberately a separate diff.
+ *
+ * State: seeds from and writes `state.s_appInputs[appId]` (top-level replace) so
+ * inputs survive close→reopen AND the Overlays.reset() force-close on navigation.
  *
  * Props: { app: AppDef, uiComponent: Blueprint|null, initialInputs?: Object }.
  */
@@ -53,17 +74,36 @@ function _getMediaGroups(app) {
 }
 
 /**
- * Build the label for an empty drop zone.
- * @param {string} type  'image'|'video'|'audio'
- * @param {number} remaining  slots still free
+ * The app's declared middle steps, dropping any whose `kind` is not registered
+ * (an unknown kind is an authoring bug — skip it rather than break the flow).
+ * @param {import('../../../data/appsRegistry.js').AppDef} [app]
+ * @returns {Array<Object>}
+ */
+function _getSteps(app) {
+    const steps = Array.isArray(app?.steps) ? app.steps : [];
+    return steps.filter((s) => {
+        if (getStepKind(s?.kind)) return true;
+        clientLogger.warn('MpiBaseApp', `unknown step kind "${s?.kind}" — skipping`);
+        return false;
+    });
+}
+
+/**
+ * Human label for a media slot: the group's role name if it reads well, else a
+ * numbered fallback. Keeps a filled slot identifiable once every slot has an
+ * image in it (the slot label survives filling — the image replaces the BOX,
+ * not the label).
+ * @param {{type:string,roles:string[]}} group
+ * @param {number} idx
  * @returns {string}
  */
-function _dropLabel(type, remaining) {
-    const noun = type === 'image' ? 'image' : type === 'video' ? 'video' : 'audio file';
-    const plural = remaining > 1 ? `${noun}s` : noun;
-    return remaining > 1
-        ? `Drop up to ${remaining} ${plural}, or click to choose`
-        : `Drop 1 ${noun}, or click to choose`;
+function _slotLabel(group, idx) {
+    const role = group.roles?.[idx];
+    if (typeof role === 'string' && !/^(image|video|audio)\d*$/i.test(role)) {
+        return role.replace(/[_-]+/g, ' ');
+    }
+    const noun = group.type === 'image' ? 'Image' : group.type === 'video' ? 'Video' : 'Audio';
+    return `${noun} ${idx + 1}`;
 }
 
 /**
@@ -81,36 +121,27 @@ export const MpiBaseApp = ComponentFactory.create({
     name: 'MpiBaseApp',
     css: ['js/components/Organisms/MpiBaseApp/MpiBaseApp.css'],
 
-    template: (props) => {
-        const mediaGroups = _getMediaGroups(props.app);
-        const mediaHtml = mediaGroups.map((group, gi) => `
-            <div class="mpi-base-app__field">
-                <span class="mpi-base-app__label">Source ${group.type}${group.max > 1 ? 's' : ''}</span>
-                <div class="mpi-base-app__media-group" data-group-index="${gi}" data-type="${group.type}" data-max="${group.max}">
-                    <!-- slots rendered imperatively in setup -->
-                </div>
-            </div>`).join('');
-
-        return `
+    template: (props) => `
         <div class="mpi-base-app">
-            <div class="mpi-base-app__head">
-                <button class="mpi-base-app__back" id="app-back" type="button">${renderIcon('back', 'sm')}<span>Apps</span></button>
-                <h1 class="mpi-base-app__title">${props.app?.title || 'App'}</h1>
-            </div>
-            <div class="mpi-base-app__body">
-                ${mediaHtml}
-                <div class="mpi-base-app__content" id="app-content"></div>
-                <div class="mpi-base-app__result" id="app-result" hidden>
-                    <span class="mpi-base-app__label">Result</span>
-                    <div class="mpi-base-app__result-media" id="app-result-media"></div>
+            <div class="mpi-base-app__topbar">
+                <div class="mpi-base-app__topbar-left">
+                    <button class="mpi-base-app__back" id="app-back" type="button">
+                        ${renderIcon('back', 'sm')}<span>Apps</span>
+                    </button>
+                    <span class="mpi-base-app__topbar-sep"></span>
+                    <span class="mpi-base-app__app-name">${props.app?.title || 'App'}</span>
                 </div>
+                <nav class="mpi-base-app__ticker" id="app-ticker" aria-label="Steps"></nav>
+                <div class="mpi-base-app__topbar-right"></div>
             </div>
-            <div class="mpi-base-app__foot">
-                <div class="mpi-base-app__status" id="app-status"></div>
-                <div class="mpi-base-app__run" id="app-run-slot"></div>
+            <div class="mpi-base-app__stage" id="app-stage">
+                <button class="mpi-base-app__arrow mpi-base-app__arrow--prev" id="app-prev"
+                        type="button" aria-label="Previous step">&#8249;</button>
+                <button class="mpi-base-app__arrow mpi-base-app__arrow--next" id="app-next"
+                        type="button" aria-label="Next step">&#8250;</button>
+                <div class="mpi-base-app__slides" id="app-slides"></div>
             </div>
-        </div>`;
-    },
+        </div>`,
 
     setup: (el, props) => {
         const app = props.app;
@@ -123,188 +154,203 @@ export const MpiBaseApp = ComponentFactory.create({
         overlay.el.appendToContainer(el);
         overlay.on('close', () => { el.close(); });
 
-        const statusEl = qs('#app-status', el);
-        const contentSlot = qs('#app-content', el);
-        const resultWrap = qs('#app-result', el);
-        const resultMedia = qs('#app-result-media', el);
+        const tickerEl = qs('#app-ticker', el);
+        const slidesEl = qs('#app-slides', el);
+        const prevBtn = qs('#app-prev', el);
+        const nextBtn = qs('#app-next', el);
 
-        // The placeholder tempId of the currently-running job, so live latent
-        // previews can be matched to THIS app's gen (not a concurrent gallery gen).
-        let _myTempId = null;
-
-        // Paint a single URL (a live latent preview) into the result pane so the user
-        // never has to leave the App overlay to watch the gen.
-        function _paintResult(url, { label } = {}) {
-            if (!url) return;
-            resultMedia.innerHTML = '';
-            resultMedia.appendChild(ce('img', { src: url, alt: label || 'result' }));
-            resultWrap.hidden = false;
-        }
-        // Paint ALL final results (multi-output apps produce N cards — MPI-259). Each
-        // item is an image/video item; show every one in the in-app pane, not just the
-        // first. Falls back to the single-item shape for older callers.
-        function _showResults(items) {
-            const list = (Array.isArray(items) ? items : [items]).filter(Boolean);
-            const withPath = list.map(it => ({ it, path: it?.filePath || it?.url })).filter(x => x.path);
-            // Always clear first: the pane may still hold a live-latent preview whose
-            // blob: URL is revoked the moment the gen ends. Leaving it in the DOM logs a
-            // GET blob:… ERR_FILE_NOT_FOUND. Clear even when there's nothing to paint.
-            resultMedia.innerHTML = '';
-            if (!withPath.length) { resultWrap.hidden = true; return; }
-            for (const { it, path } of withPath) {
-                const url = resolveMediaUrl(path);
-                const isVideo = it?.type === 'video' || it?.mediaType === 'video';
-                resultMedia.appendChild(isVideo
-                    ? ce('video', { src: url, controls: true, muted: true, loop: true })
-                    : ce('img', { src: url, alt: 'result' }));
-            }
-            resultWrap.hidden = false;
-        }
-
-        // Live latents (MPI-271): subscribe to the unified preview:frame bus, resolve
-        // the frame to its generation by server-truth promptId, and paint when it's
-        // OUR running job (tempId match). Seeding from getLastPreview on run-start
-        // (see _run) keeps the pane showing the current latent through frame gaps.
-        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
-            if (!_myTempId || !url) return;
-            const entry = activeGenerations.byPromptId(promptId);
-            if (entry?.tempId === _myTempId) _paintResult(url, { label: 'generating' });
-        }));
+        const mediaGroupDefs = _getMediaGroups(app);
+        const middleSteps = _getSteps(app);
 
         // Seed from persisted session inputs (survives reopen + navigation reset).
         const seeded = state.s_appInputs?.[app.id] || props.initialInputs || {};
 
-        // ── Polymorphic media groups ─────────────────────────────────────────────
-        // Each group tracks its own array of filled items and renders its own slots.
-        // _mediaGroups[gi] = { group: GroupDef, items: FilledItem[] }
-        // FilledItem = { url, mediaType, source, role }
-
-        const mediaGroupDefs = _getMediaGroups(app);
-
+        // ── Model ───────────────────────────────────────────────────────────────
         /**
-         * One entry per declared media group.
-         * @type {Array<{group:{type:string,mode:string,max:number,roles:string[]}, items:Array, containerEl:Element}>}
+         * One entry per declared media group. Items are the filled slots.
+         * @type {Array<{group:Object, items:Array}>}
          */
-        const _mediaGroups = [];
-
-        mediaGroupDefs.forEach((group, gi) => {
-            const containerEl = qs(`[data-group-index="${gi}"]`, el);
-            if (!containerEl) return;
-
-            const entry = { group, items: [], containerEl };
-            _mediaGroups.push(entry);
-
-            // Seed from saved mediaItems — assign by position within this type group.
+        const _mediaGroups = mediaGroupDefs.map((group) => {
+            const items = [];
             if (Array.isArray(seeded.mediaItems)) {
-                const seededForType = seeded.mediaItems.filter(m => m.mediaType === group.type);
-                for (let i = 0; i < Math.min(seededForType.length, group.max); i++) {
-                    entry.items.push({ ...seededForType[i], role: group.roles[i] });
+                const forType = seeded.mediaItems.filter(m => m.mediaType === group.type);
+                for (let i = 0; i < Math.min(forType.length, group.max); i++) {
+                    items.push({ ...forType[i], role: group.roles[i] });
                 }
             }
-
-            _renderGroup(entry);
+            return { group, items };
         });
 
+        /** Reported step values, keyed by the step's media role. @type {Object} */
+        const _stepValues = { ...(seeded.stepValues || {}) };
+
+        /** Live step-kind instances, keyed by step index — destroyed on rebuild. */
+        const _stepInstances = new Map();
+
+        /** Per-slide listener unsubs, keyed by slide index. */
+        const _slideUnsubs = new Map();
+
+        let _current = 0;
+        let _running = false;
+        let _myTempId = null;
+        let _hasPending = false;
+        let _perApp = null;
+        let _runBtn = null;
+        let _resultMediaEl = null;
+        let _statusEl = null;
+        let _applyRow = null;
+        let _pendingNote = null;
+        let _gaugeEl = null;
+
+        /** Total steps = implicit inputs + declared middle steps + implicit run. */
+        const _stepCount = () => middleSteps.length + 2;
+        const _lastIndex = () => _stepCount() - 1;
+
         /**
-         * Re-render the slot list for a group entry. Idempotent — clears and rebuilds.
-         * @param {{group,items,containerEl}} entry
+         * The media item a middle step operates on, resolved by ROLE — the same
+         * vocabulary the op's mediaInputs uses, so a step needs no new mapping.
+         * @param {string} role
+         * @returns {Object|null}
          */
-        function _renderGroup(entry) {
-            const { group, items, containerEl } = entry;
+        function _mediaForRole(role) {
+            for (const entry of _mediaGroups) {
+                const hit = entry.items.find(it => it.role === role);
+                if (hit) return hit;
+            }
+            return null;
+        }
 
-            // Detach old slot-level unsubs (tracked per group via data attribute).
-            const old = containerEl.__slotUnsubs;
-            if (Array.isArray(old)) old.forEach(fn => fn());
-            containerEl.__slotUnsubs = [];
+        // ── Ticker ──────────────────────────────────────────────────────────────
+        /** Labels: 01 Inputs · 02 <declared title> · … · NN Generate. */
+        function _tickerLabels() {
+            return [
+                'Inputs',
+                ...middleSteps.map((s, i) => s.tickerLabel || s.title || `Step ${i + 1}`),
+                'Generate',
+            ];
+        }
 
-            containerEl.innerHTML = '';
-
-            const remaining = group.max - items.length;
-
-            // ── Filled slots ─────────────────────────────────────────────────────
-            items.forEach((item, idx) => {
-                const slotEl = ce('div', { className: 'mpi-base-app__slot mpi-base-app__slot--filled' });
-
-                // Numbered badge
-                const badge = ce('span', { className: 'mpi-base-app__slot-badge' });
-                badge.textContent = String(idx + 1);
-                slotEl.appendChild(badge);
-
-                // Thumbnail or filename
-                if (group.type === 'image') {
-                    const img = ce('img', { className: 'mpi-base-app__slot-thumb', src: item.url, alt: `source ${idx + 1}` });
-                    slotEl.appendChild(img);
-                } else {
-                    // video / audio — show filename (last segment of the path)
-                    const name = item.url.split(/[/\\]/).pop() || item.url;
-                    const nameEl = ce('span', { className: 'mpi-base-app__slot-name' });
-                    nameEl.textContent = name;
-                    slotEl.appendChild(nameEl);
-                }
-
-                // Remove button
-                const removeBtn = ce('button', {
-                    className: 'mpi-base-app__slot-remove',
-                    type: 'button',
-                    title: 'Remove',
-                });
-                removeBtn.innerHTML = renderIcon('close', 'xs');
-                slotEl.appendChild(removeBtn);
-
-                const removeFn = on(removeBtn, 'click', () => {
-                    entry.items.splice(idx, 1);
-                    // Reassign roles by position after removal.
-                    entry.items.forEach((it, i) => { it.role = group.roles[i]; });
-                    _renderGroup(entry);
-                });
-                containerEl.__slotUnsubs.push(removeFn);
-
-                containerEl.appendChild(slotEl);
+        function _buildTicker() {
+            tickerEl.innerHTML = '';
+            _tickerLabels().forEach((label, i) => {
+                const btn = ce('button', { className: 'mpi-base-app__tick', type: 'button' });
+                const num = ce('span', { className: 'mpi-base-app__tick-num' });
+                num.textContent = String(i + 1).padStart(2, '0');
+                const text = ce('span');
+                text.textContent = label;
+                btn.appendChild(num);
+                btn.appendChild(text);
+                // The ticker NAVIGATES. A row that indicates but refuses clicks reads
+                // as disabled, not informational (carousel-frame.md).
+                _unsubs.push(on(btn, 'click', () => _goTo(i)));
+                tickerEl.appendChild(btn);
             });
+        }
 
-            // ── Empty drop zone (when not at cap) ────────────────────────────────
-            if (remaining > 0) {
-                const label = ce('label', { className: 'mpi-base-app__drop' });
+        function _syncChrome() {
+            const last = _lastIndex();
+            prevBtn.disabled = _current === 0;
+            nextBtn.disabled = _current === last;
+            Array.from(tickerEl.children).forEach((tick, i) => {
+                const st = i === _current ? 'active' : (i < _current ? 'done' : 'todo');
+                tick.setAttribute('data-state', st);
+                tick.setAttribute('aria-current', i === _current ? 'step' : 'false');
+            });
+        }
 
-                // Hidden file input
+        // ── Slot rendering ──────────────────────────────────────────────────────
+        /**
+         * Render one media slot. THE SLOT IS A PLACEHOLDER, NOT A CONTAINER:
+         * empty = bordered box + icon; FILLED = the image IS the box (width/height
+         * auto, no background, border hugging the image at ITS OWN aspect). No
+         * crop, no letterbox padding. This is the rule most likely to be got wrong.
+         *
+         * @param {{group:Object, items:Array}} entry
+         * @param {number} idx  slot index within the group
+         * @param {Function} onDirty  re-render callback
+         * @param {Array<Function>} unsubs  collector for this slide's listeners
+         * @returns {HTMLElement}
+         */
+        function _buildSlot(entry, idx, onDirty, unsubs) {
+            const { group, items } = entry;
+            const item = items[idx] || null;
+
+            const unit = ce('div', { className: 'mpi-base-app__slot-unit' });
+            const labelEl = ce('span', { className: 'mpi-base-app__slot-label' });
+            labelEl.textContent = _slotLabel(group, idx);
+            unit.appendChild(labelEl);
+
+            const slot = ce('div', {
+                className: `mpi-base-app__slot${item ? ' mpi-base-app__slot--filled' : ''}`,
+            });
+            slot.setAttribute('tabindex', '0');
+            slot.setAttribute('role', 'button');
+
+            if (item) {
+                if (group.type === 'image') {
+                    slot.appendChild(ce('img', {
+                        src: resolveMediaUrl(item.url),
+                        alt: _slotLabel(group, idx),
+                    }));
+                } else {
+                    const name = ce('span', { className: 'mpi-base-app__slot-name' });
+                    name.textContent = item.url.split(/[/\\]/).pop() || item.url;
+                    slot.appendChild(name);
+                }
+                const clear = ce('button', {
+                    className: 'mpi-base-app__slot-clear', type: 'button', title: 'Remove',
+                });
+                clear.innerHTML = renderIcon('close', 'xs');
+                unsubs.push(on(clear, 'click', (e) => {
+                    e.stopPropagation();
+                    entry.items.splice(idx, 1);
+                    entry.items.forEach((it, i) => { it.role = group.roles[i]; });
+                    // A removed image invalidates any step bound to that role.
+                    const freedRole = group.roles[entry.items.length];
+                    if (freedRole) delete _stepValues[freedRole];
+                    onDirty();
+                }));
+                slot.appendChild(clear);
+            } else {
+                const icon = ce('span', { className: 'mpi-base-app__slot-icon' });
+                icon.innerHTML = renderIcon('image', 'lg');
+                const hint = ce('span', { className: 'mpi-base-app__slot-hint' });
+                hint.textContent = `Drop ${group.type} here`;
+                slot.appendChild(icon);
+                slot.appendChild(hint);
+
                 const fileInput = ce('input', {
-                    type: 'file',
-                    accept: _acceptFor(group.type),
-                    hidden: true,
-                    multiple: true,
+                    type: 'file', accept: _acceptFor(group.type), hidden: true, multiple: true,
                 });
-                label.appendChild(fileInput);
+                slot.appendChild(fileInput);
 
-                const inner = ce('div', { className: 'mpi-base-app__drop-inner' });
-                const hint = ce('span');
-                hint.textContent = _dropLabel(group.type, remaining);
-                inner.appendChild(hint);
-                label.appendChild(inner);
-                containerEl.appendChild(label);
-
-                // Dragover highlight
-                const dragoverFn = on(label, 'dragover', (e) => {
-                    e.preventDefault();
-                    label.classList.add('mpi-base-app__drop--dragover');
-                });
-                const dragleaveFn = on(label, 'dragleave', () => {
-                    label.classList.remove('mpi-base-app__drop--dragover');
-                });
-                const dropFn = on(label, 'drop', async (e) => {
-                    e.preventDefault();
-                    label.classList.remove('mpi-base-app__drop--dragover');
-                    const files = Array.from(e.dataTransfer?.files || []);
-                    const typed = files.filter(f => f.type.startsWith(group.type + '/'));
-                    await _handleFiles(entry, typed);
-                });
-                const changeFn = on(fileInput, 'change', async () => {
+                unsubs.push(on(slot, 'click', () => fileInput.click()));
+                unsubs.push(on(slot, 'keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+                }));
+                unsubs.push(on(fileInput, 'change', async () => {
                     const files = Array.from(fileInput.files || []);
                     fileInput.value = '';
-                    await _handleFiles(entry, files);
-                });
-
-                containerEl.__slotUnsubs.push(dragoverFn, dragleaveFn, dropFn, changeFn);
+                    await _handleFiles(entry, files, onDirty);
+                }));
+                unsubs.push(on(slot, 'dragover', (e) => {
+                    e.preventDefault();
+                    slot.classList.add('mpi-base-app__slot--dragover');
+                }));
+                unsubs.push(on(slot, 'dragleave', () => {
+                    slot.classList.remove('mpi-base-app__slot--dragover');
+                }));
+                unsubs.push(on(slot, 'drop', async (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('mpi-base-app__slot--dragover');
+                    const files = Array.from(e.dataTransfer?.files || [])
+                        .filter(f => f.type.startsWith(group.type + '/'));
+                    await _handleFiles(entry, files, onDirty);
+                }));
             }
+
+            unit.appendChild(slot);
+            return unit;
         }
 
         /**
@@ -345,15 +391,16 @@ export const MpiBaseApp = ComponentFactory.create({
 
         /**
          * Upload one or more files into a media group, up to its cap.
-         * @param {{group,items,containerEl}} entry
+         * @param {{group,items}} entry
          * @param {File[]} files
+         * @param {Function} onDirty
          */
-        async function _handleFiles(entry, files) {
+        async function _handleFiles(entry, files, onDirty) {
             const { group } = entry;
             const available = group.max - entry.items.length;
             if (files.length === 0) return;
             if (files.length > available) {
-                clientLogger.warn(`MpiBaseApp: dropped ${files.length} ${group.type}(s) but only ${available} slot(s) free — ignoring extras`);
+                clientLogger.warn('MpiBaseApp', `dropped ${files.length} ${group.type}(s) but only ${available} slot(s) free — ignoring extras`);
                 files = files.slice(0, available);
             }
 
@@ -363,12 +410,10 @@ export const MpiBaseApp = ComponentFactory.create({
                 return;
             }
 
-            statusEl.textContent = 'Uploading…';
             for (const file of files) {
                 // App inputs go into the content-addressed preview-assets store (MPI-227),
                 // NOT the visible gallery — keeps the gallery clean while persisting the
-                // file durably so a later Reuse can resolve it (the user imports to the
-                // gallery himself if he wants a card). Deduped by content hash server-side.
+                // file durably so a later Reuse can resolve it. Deduped by content hash.
                 const placedUrl = await _placePreviewAsset(file, group.type, project);
                 if (!placedUrl) {
                     Events.emit('ui:warning', { message: `Could not add ${group.type} file.` });
@@ -381,46 +426,391 @@ export const MpiBaseApp = ComponentFactory.create({
                     source: 'app-upload',
                     role: group.roles[idx],
                 });
-                // Re-render after each file so the slot count updates before next file.
-                _renderGroup(entry);
             }
-            statusEl.textContent = '';
+            onDirty();
         }
 
-        // ── Per-app controls (composition): mount the uiComponent into the slot ──
-        let _perApp = null;
-        if (props.uiComponent) {
-            _perApp = props.uiComponent.mount(contentSlot, { initialInputs: seeded });
+        // ── Declared fields (ONE row, frame-rendered) ───────────────────────────
+        /**
+         * Render a step's declared `fields` as a single row between canvas and hint.
+         * THE FRAME renders this, not the gizmo, so every gizmo's controls match for
+         * free. Values ride in the step's reported value under `fields`.
+         *
+         * Hard cap: one row. No nesting, no panels, no accordions — a gizmo wanting
+         * more is telling you the step should split in two.
+         *
+         * @param {Object} step
+         * @param {Object} value  the step's current reported value
+         * @param {Function} onFieldChange (fieldId, val) => void
+         * @param {Array<Function>} unsubs
+         * @returns {HTMLElement|null}
+         */
+        function _buildFieldsRow(step, value, onFieldChange, unsubs) {
+            const fields = Array.isArray(step.fields) ? step.fields : [];
+            if (!fields.length) return null;
+
+            const row = ce('div', { className: 'mpi-base-app__fields' });
+            fields.forEach((f) => {
+                const wrap = ce('label', { className: 'mpi-base-app__field' });
+                if (f.label && f.type !== 'button') {
+                    const lbl = ce('span', { className: 'mpi-base-app__field-label' });
+                    lbl.textContent = f.label;
+                    wrap.appendChild(lbl);
+                }
+
+                if (f.type === 'select') {
+                    const sel = ce('select', { className: 'mpi-base-app__field-select' });
+                    (f.options || []).forEach((o) => {
+                        const opt = ce('option', { value: String(o.v) });
+                        opt.textContent = o.label ?? String(o.v);
+                        sel.appendChild(opt);
+                    });
+                    const cur = value?.fields?.[f.id] ?? f.default;
+                    if (cur != null) sel.value = String(cur);
+                    unsubs.push(on(sel, 'change', () => onFieldChange(f.id, sel.value)));
+                    wrap.appendChild(sel);
+                } else if (f.type === 'button') {
+                    const btn = ce('button', {
+                        className: 'mpi-base-app__field-button', type: 'button',
+                    });
+                    btn.textContent = f.label || f.id;
+                    unsubs.push(on(btn, 'click', () => onFieldChange(f.id, true)));
+                    wrap.appendChild(btn);
+                } else if (f.type === 'toggle') {
+                    const box = ce('input', { type: 'checkbox', className: 'mpi-base-app__field-toggle' });
+                    box.checked = Boolean(value?.fields?.[f.id] ?? f.default);
+                    unsubs.push(on(box, 'change', () => onFieldChange(f.id, box.checked)));
+                    wrap.appendChild(box);
+                } else {
+                    clientLogger.warn('MpiBaseApp', `unknown field type "${f.type}" — skipping`);
+                    return;
+                }
+                row.appendChild(wrap);
+            });
+            return row;
         }
+
+        // ── Slide builders ──────────────────────────────────────────────────────
+        /** STEP 0 — media slots (left) + what this app does (right). Divided. */
+        function _buildInputsSlide(unsubs) {
+            const split = ce('div', { className: 'mpi-base-app__split' });
+
+            const left = ce('div', { className: 'mpi-base-app__col-left' });
+            if (_mediaGroups.length === 0) {
+                const none = ce('p', { className: 'mpi-base-app__no-inputs' });
+                none.textContent = 'This app needs no input media.';
+                left.appendChild(none);
+            }
+            _mediaGroups.forEach((entry) => {
+                for (let i = 0; i < entry.group.max; i++) {
+                    left.appendChild(_buildSlot(entry, i, () => _renderSlide(), unsubs));
+                }
+            });
+
+            const divider = ce('div', { className: 'mpi-base-app__divider' });
+
+            const right = ce('div', { className: 'mpi-base-app__col-right' });
+            const title = ce('h1', { className: 'mpi-base-app__app-title' });
+            title.textContent = app.title || 'App';
+            right.appendChild(title);
+            if (app.preview) {
+                const frame = ce('div', { className: 'mpi-base-app__example' });
+                // Same path the App Library uses for this descriptor field.
+                frame.appendChild(ce('img', {
+                    src: `comfy_workflows/display/${app.preview}`, alt: '', loading: 'lazy',
+                }));
+                right.appendChild(frame);
+            }
+            const explainer = ce('div', { className: 'mpi-base-app__explainer' });
+            const p = ce('p');
+            p.textContent = app.description || '';
+            explainer.appendChild(p);
+            right.appendChild(explainer);
+
+            split.appendChild(left);
+            split.appendChild(divider);
+            split.appendChild(right);
+            return split;
+        }
+
+        /**
+         * MIDDLE STEP — bounded centred canvas, title above, optional fields row,
+         * guidance below. NO divider, NO annotation column: undivided = working.
+         */
+        function _buildStepSlide(step, stepIdx, unsubs) {
+            const work = ce('div', { className: 'mpi-base-app__work' });
+
+            const title = ce('h2', { className: 'mpi-base-app__work-title' });
+            title.textContent = step.title || '';
+            work.appendChild(title);
+
+            const media = _mediaForRole(step.role);
+            const canvas = ce('div', { className: 'mpi-base-app__canvas' });
+
+            if (!media) {
+                // No media for this role yet — say so plainly and send them back.
+                const empty = ce('p', { className: 'mpi-base-app__canvas-empty' });
+                empty.textContent = 'Add the image for this step on the first step.';
+                canvas.appendChild(empty);
+                work.appendChild(canvas);
+            } else {
+                const Kind = getStepKind(step.kind);
+                const host = ce('div');
+                canvas.appendChild(host);
+                work.appendChild(canvas);
+
+                const inst = Kind.mount(host, {
+                    media,
+                    step,
+                    value: _stepValues[step.role] || null,
+                    onChange: (val) => {
+                        // Preserve frame-owned fields across gizmo reports.
+                        const prev = _stepValues[step.role] || {};
+                        _stepValues[step.role] = { ...prev, ...val };
+                    },
+                });
+                _stepInstances.set(stepIdx, inst);
+            }
+
+            // Fields are FRAME-OWNED and declaration-driven: they render whenever
+            // the step declares them, with or without a live gizmo. Building them
+            // inside the media branch would make a frame-level contract depend on
+            // a gizmo's existence.
+            const fieldsRow = _buildFieldsRow(
+                step,
+                _stepValues[step.role],
+                (fieldId, val) => {
+                    const prev = _stepValues[step.role] || {};
+                    _stepValues[step.role] = {
+                        ...prev,
+                        fields: { ...(prev.fields || {}), [fieldId]: val },
+                    };
+                    // Let the gizmo react if it cares (e.g. a ratio lock).
+                    _stepInstances.get(stepIdx)?.el?.onField?.(fieldId, val);
+                },
+                unsubs,
+            );
+            if (fieldsRow) work.appendChild(fieldsRow);
+
+            if (step.hint) {
+                const hint = ce('p', { className: 'mpi-base-app__work-hint' });
+                hint.textContent = step.hint;
+                work.appendChild(hint);
+            }
+            return work;
+        }
+
+        /** LAST STEP — controls + Generate (left) │ result + Apply (right). Divided. */
+        function _buildRunSlide(unsubs) {
+            const split = ce('div', { className: 'mpi-base-app__split' });
+
+            const left = ce('div', { className: 'mpi-base-app__col-left' });
+            const controls = ce('div', { className: 'mpi-base-app__controls' });
+
+            // Per-app controls (composition) mount here — the app's own knobs.
+            const contentSlot = ce('div', { className: 'mpi-base-app__content' });
+            controls.appendChild(contentSlot);
+
+            const genWrap = ce('div', { className: 'mpi-base-app__gen' });
+            const runHost = ce('div');
+            genWrap.appendChild(runHost);
+            _gaugeEl = ce('div', { className: 'mpi-base-app__gauge' });
+            _gaugeEl.appendChild(ce('span'));
+            genWrap.appendChild(_gaugeEl);
+            _statusEl = ce('div', { className: 'mpi-base-app__status' });
+            genWrap.appendChild(_statusEl);
+            controls.appendChild(genWrap);
+            left.appendChild(controls);
+
+            const divider = ce('div', { className: 'mpi-base-app__divider' });
+
+            const right = ce('div', { className: 'mpi-base-app__col-right' });
+            const pane = ce('div', { className: 'mpi-base-app__result' });
+            const frame = ce('div', { className: 'mpi-base-app__result-frame' });
+            _resultMediaEl = ce('div', { className: 'mpi-base-app__result-media' });
+            frame.appendChild(_resultMediaEl);
+            pane.appendChild(frame);
+
+            // Apply is rendered but INERT until Phase 3 wires the run path.
+            _applyRow = ce('div', { className: 'mpi-base-app__result-actions' });
+            _applyRow.hidden = true;
+            const applyHost = ce('div');
+            _applyRow.appendChild(applyHost);
+            pane.appendChild(_applyRow);
+
+            _pendingNote = ce('span', { className: 'mpi-base-app__pending' });
+            _pendingNote.textContent = 'Not saved yet';
+            _pendingNote.hidden = true;
+            pane.appendChild(_pendingNote);
+
+            right.appendChild(pane);
+
+            split.appendChild(left);
+            split.appendChild(divider);
+            split.appendChild(right);
+
+            // Mount children AFTER the tree exists (mount() replaces innerHTML).
+            _runBtn = MpiButton.mount(runHost, { text: 'Generate', variant: 'primary', size: 'md' });
+            _runBtn.on('click', () => { if (_running) _cancel(); else _run(); });
+
+            const applyBtn = MpiButton.mount(applyHost, { text: 'Apply', variant: 'primary', size: 'sm' });
+            applyBtn.on('click', _apply);
+            unsubs.push(() => { _runBtn?.el?.destroy?.(); applyBtn?.el?.destroy?.(); });
+
+            if (props.uiComponent) {
+                _perApp = props.uiComponent.mount(contentSlot, { initialInputs: seeded });
+                unsubs.push(() => { _perApp?.el?.destroy?.(); _perApp = null; });
+            }
+
+            _syncRunUi();
+            _paintPending();
+            return split;
+        }
+
+        // ── Slide switching ─────────────────────────────────────────────────────
+        /** Tear down the live slide (gizmos + listeners) before building the next. */
+        function _teardownSlide() {
+            _stepInstances.forEach(inst => inst?.el?.destroy?.());
+            _stepInstances.clear();
+            _slideUnsubs.forEach(list => list.forEach(fn => fn?.()));
+            _slideUnsubs.clear();
+            // These live on the run slide only; drop the stale references.
+            _runBtn = null; _resultMediaEl = null; _statusEl = null;
+            _applyRow = null; _pendingNote = null; _gaugeEl = null;
+        }
+
+        /** Build and show the current step. One slide is live at a time. */
+        function _renderSlide() {
+            _teardownSlide();
+            const unsubs = [];
+            _slideUnsubs.set(_current, unsubs);
+
+            const slide = ce('div', { className: 'mpi-base-app__slide' });
+            if (_current === 0) {
+                slide.appendChild(_buildInputsSlide(unsubs));
+            } else if (_current === _lastIndex()) {
+                slide.appendChild(_buildRunSlide(unsubs));
+            } else {
+                const idx = _current - 1;
+                slide.appendChild(_buildStepSlide(middleSteps[idx], idx, unsubs));
+            }
+
+            slidesEl.innerHTML = '';
+            slidesEl.appendChild(slide);
+            // Next frame → the opacity transition actually runs.
+            requestAnimationFrame(() => slide.setAttribute('data-active', 'true'));
+            _syncChrome();
+        }
+
+        /**
+         * Navigate. MID-RUN NAVIGATION IS ALLOWED — the run keeps going; blocking
+         * the arrows during a full-quality run is a cage.
+         * @param {number} i
+         */
+        function _goTo(i) {
+            const next = Math.max(0, Math.min(i, _lastIndex()));
+            if (next === _current) return;
+            _current = next;
+            _renderSlide();
+        }
+
+        // Arrows + the ticker are the navigation. No arrow-key hotkey: it would
+        // need new hotkeyRegistry ids AND would fight the box gizmo's drag on a
+        // middle step. Add it only if the flow proves it wants one.
+        _unsubs.push(on(prevBtn, 'click', () => _goTo(_current - 1)));
+        _unsubs.push(on(nextBtn, 'click', () => _goTo(_current + 1)));
+
+        // ── Result painting ─────────────────────────────────────────────────────
+        /** Paint a single URL (a live latent preview) into the result pane. */
+        function _paintResult(url, { blurring = false } = {}) {
+            if (!url || !_resultMediaEl) return;
+            _resultMediaEl.innerHTML = '';
+            const img = ce('img', { src: url, alt: 'result' });
+            // Live latents de-blur as they form — honest about a half-computed
+            // image, where a spinner over blank space is not.
+            if (blurring) img.classList.add('mpi-base-app__result-latent');
+            _resultMediaEl.appendChild(img);
+            _resultMediaEl.appendChild(ce('span', { className: 'mpi-base-app__scanline' }));
+        }
+
+        /** Paint ALL final results (multi-output apps produce N items — MPI-259). */
+        function _showResults(items) {
+            if (!_resultMediaEl) return;
+            const list = (Array.isArray(items) ? items : [items]).filter(Boolean);
+            const withPath = list.map(it => ({ it, path: it?.filePath || it?.url })).filter(x => x.path);
+            // Always clear first: the pane may still hold a live-latent preview whose
+            // blob: URL is revoked the moment the gen ends. Leaving it in the DOM logs
+            // a GET blob:… ERR_FILE_NOT_FOUND.
+            _resultMediaEl.innerHTML = '';
+            if (!withPath.length) return;
+            for (const { it, path } of withPath) {
+                const url = resolveMediaUrl(path);
+                const isVideo = it?.type === 'video' || it?.mediaType === 'video';
+                _resultMediaEl.appendChild(isVideo
+                    ? ce('video', { src: url, controls: true, muted: true, loop: true })
+                    : ce('img', { src: url, alt: 'result' }));
+            }
+        }
+
+        /** Show/hide the Apply row + "Not saved yet" note. */
+        function _paintPending() {
+            if (_applyRow) _applyRow.hidden = !_hasPending;
+            if (_pendingNote) _pendingNote.hidden = !_hasPending;
+        }
+
+        /**
+         * Generate → Cancel (during a run) → Generate again. THE COPY CHANGE IS THE
+         * STATE SIGNAL — no spinner.
+         */
+        function _syncRunUi() {
+            if (!_runBtn) return;
+            const label = _running ? 'Cancel' : (_hasPending ? 'Generate again' : 'Generate');
+            // MpiButton has no setText — its label is a span in the template.
+            const textEl = qs('.mpi-btn__text', _runBtn.el);
+            if (textEl) textEl.textContent = label;
+            _runBtn.el.classList.toggle('mpi-base-app__run--cancel', _running);
+        }
+
+        function _setGauge(pct) {
+            const bar = _gaugeEl?.firstElementChild;
+            if (bar) bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+        }
+
+        // Live latents (MPI-271): resolve the frame to its generation by server-truth
+        // promptId, and paint when it's OUR running job (tempId match).
+        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
+            if (!_myTempId || !url) return;
+            const entry = activeGenerations.byPromptId(promptId);
+            if (entry?.tempId === _myTempId) _paintResult(url, { blurring: true });
+        }));
 
         // ── Run ─────────────────────────────────────────────────────────────────
-        let _running = false;
-        const runBtn = MpiButton.mount(qs('#app-run-slot', el), { text: 'Run', variant: 'primary', size: 'md' });
-
         function _setRunning(isRunning) {
             _running = isRunning;
-            if (isRunning) {
-                runBtn.el.setAttribute?.('loading', 'true');
-                statusEl.textContent = 'Generating…';
-            } else {
-                runBtn.el.removeAttribute?.('loading');
-            }
+            _syncRunUi();
+        }
+
+        /** Collect the inputs the app will run with. */
+        function _collectInputs() {
+            const mediaItems = _mediaGroups.flatMap(entry => entry.items);
+            const extra = _perApp?.el?.getInputs?.() || {};
+            return {
+                ...(mediaItems.length ? { mediaItems } : {}),
+                ...(Object.keys(_stepValues).length ? { stepValues: { ..._stepValues } } : {}),
+                ...extra,
+            };
         }
 
         const _run = () => {
             if (_running) return;
 
-            // Collect all filled media items across every group, in group order.
-            const mediaItems = _mediaGroups.flatMap(entry => entry.items);
+            const inputs = _collectInputs();
+            const mediaItems = inputs.mediaItems || [];
 
-            const extra = _perApp?.el?.getInputs?.() || {};
-            const inputs = { ...(mediaItems.length ? { mediaItems } : {}), ...extra };
-
-            // Empty-run guard: an app that declares media slots but has NONE filled and
-            // no prompt has nothing to run — every branch self-gates → zero outputs →
-            // a silent "no output returned". Warn and bail before enqueue. Media-free
-            // apps (no declared slots) skip this — their Run button is the whole input.
-            const hasPrompt = typeof extra.positive === 'string' && extra.positive.trim() !== '';
+            // Empty-run guard: an app that declares media slots but has NONE filled
+            // and no prompt has nothing to run — every branch self-gates → zero
+            // outputs → a silent "no output returned". Media-free apps skip this.
+            const hasPrompt = typeof inputs.positive === 'string' && inputs.positive.trim() !== '';
             if (_mediaGroups.length > 0 && mediaItems.length === 0 && !hasPrompt) {
                 Events.emit('ui:warning', {
                     message: `${app.title} needs at least one input before it can run.`,
@@ -432,44 +822,78 @@ export const MpiBaseApp = ComponentFactory.create({
             state.s_appInputs = { ...state.s_appInputs, [app.id]: inputs };
 
             _setRunning(true);
+            _hasPending = false;
+            _paintPending();
+            _setGauge(0);
+            if (_statusEl) _statusEl.textContent = 'Generating…';
             _myTempId = null;
+
             const res = submitAppGeneration(app, inputs, {
                 onComplete: ({ item, items } = {}) => {
                     _setRunning(false);
                     _myTempId = null;
-                    statusEl.textContent = 'Done — added to your gallery.';
+                    _setGauge(100);
+                    // PHASE 3 will hold this in-app until Apply. Today the queue path
+                    // has ALREADY committed it at enqueue time.
+                    if (_statusEl) _statusEl.textContent = 'Done — added to your gallery.';
                     _showResults(items || item);
+                    _hasPending = true;
+                    _paintPending();
+                    _syncRunUi();
                 },
                 onError: () => {
                     _setRunning(false);
                     _myTempId = null;
+                    _setGauge(0);
                     _showResults([]);   // drop the now-revoked live-latent preview
-                    statusEl.textContent = 'Generation failed.';
+                    if (_statusEl) _statusEl.textContent = 'Generation failed.';
                 },
                 onCancel: () => {
                     _setRunning(false);
                     _myTempId = null;
+                    _setGauge(0);
                     _showResults([]);   // drop the now-revoked live-latent preview
-                    statusEl.textContent = 'Cancelled.';
+                    if (_statusEl) _statusEl.textContent = 'Cancelled.';
                 },
             });
             // Guard aborted before enqueue (missing model / no media) → reset immediately.
-            if (!res) { _setRunning(false); return; }
-            // Track this job's tempId so its live latents paint into the result pane.
+            if (!res) { _setRunning(false); if (_statusEl) _statusEl.textContent = ''; return; }
             _myTempId = res.tempId || null;
             // MPI-271: seed from the last-held latent so a pane opened mid-gen (or
             // during a frame gap) shows the current latent immediately, not blank.
             if (_myTempId) {
                 const entry = activeGenerations.list().find(e => e.tempId === _myTempId);
                 const last = entry && activeGenerations.getLastPreview(entry.id);
-                if (last?.url) _paintResult(last.url, { label: 'generating' });
+                if (last?.url) _paintResult(last.url, { blurring: true });
             }
         };
-        runBtn.on('click', _run);
 
-        // Ctrl+Enter runs the OPEN app, not the PromptBox behind it. Both handlers
-        // fire on this hotkey (bind() is all-handlers) — the PromptBox's own
-        // generation.run handler bails while an app overlay is live (see MpiPromptBox).
+        /**
+         * Cancel the in-flight run. No toast — a user action is self-evident.
+         * activeGenerations.cancel() owns the whole path (exec.cancel → end →
+         * generation:cancelled); the submit's onCancel resets this pane.
+         */
+        function _cancel() {
+            if (!_running || !_myTempId) return;
+            const entry = activeGenerations.list().find(e => e.tempId === _myTempId);
+            if (entry) activeGenerations.cancel(entry.id);
+        }
+
+        /**
+         * Apply — commit the pending result to the project + gallery.
+         * INERT UNTIL PHASE 3: the run path still commits at ENQUEUE time
+         * (submitAppGeneration's scope:'gallery' + placeholderGroup), so the result
+         * is already in the gallery by now and there is nothing left to commit.
+         * The affordance ships with the frame; wiring it is a separate diff.
+         */
+        function _apply() {
+            _hasPending = false;
+            _paintPending();
+            _syncRunUi();
+            if (_statusEl) _statusEl.textContent = 'Applied — added to your gallery.';
+        }
+
+        // Ctrl+Enter runs the OPEN app, not the PromptBox behind it.
         _unsubs.push(Hotkeys.bind('generation.run', _run));
 
         // ── Back to Library = close this overlay, reopen the App Library ────────
@@ -479,19 +903,21 @@ export const MpiBaseApp = ComponentFactory.create({
         }));
 
         // ── Open / close ─────────────────────────────────────────────────────────
+        // Closing with an unapplied result does NOT prompt (decided 2026-07-18):
+        // with no Discard, a re-run overwrites and closing drops — nothing unique
+        // is destroyed, so a confirm would guard a non-decision.
         el.open = () => { overlay.el.show(); };
         el.close = () => { overlay.el.hide(); };
         el.onOpen = el.open;
 
         el.destroy = () => {
-            // Clean up per-slot listeners collected inside each group's containerEl.
-            _mediaGroups.forEach(({ containerEl }) => {
-                const slotUnsubs = containerEl.__slotUnsubs;
-                if (Array.isArray(slotUnsubs)) slotUnsubs.forEach(fn => fn());
-            });
-            _unsubs.forEach(fn => fn());
-            _perApp?.el?.destroy?.();
+            _teardownSlide();
+            _unsubs.forEach(fn => fn?.());
             overlay?.el?.destroy?.();
         };
+
+        // ── Boot ────────────────────────────────────────────────────────────────
+        _buildTicker();
+        _renderSlide();
     },
 });

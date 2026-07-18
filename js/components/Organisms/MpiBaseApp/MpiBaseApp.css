@@ -1,223 +1,546 @@
 /* ═══════════════════════════════════════════════════════════════
-   MpiBaseApp — shared App frame (MPI-256, Phase 4 / MPI-259 D1)
+   MpiBaseApp — THE app frame: a step carousel (MPI-306 Phase 1)
 
-   Mounts a `main-area` MpiOverlay (covers #tool-container + prompt box,
-   spares the status bar). Header + polymorphic media groups + per-app
-   content slot + Run/status footer. Per-app components render into
-   #app-content. Media groups: filled slots (thumbnail/badge/remove) +
-   an empty drop zone that shrinks as slots fill (dynamic-until-cap).
+   Approved composition: docs/playbooks/add-app/ui/carousel-frame.md
+   § The approved composition. Two zones split by an INSET centre
+   divider on the first and last step only; middle steps are an
+   undivided, bounded, centred canvas.
+
+   AIR IS STRUCTURAL: content clusters to a centre gravity inside
+   generous outer margins. The outer thirds stay empty on purpose.
 ═══════════════════════════════════════════════════════════════ */
 
 .mpi-base-app {
+    /* --lib-bg is declared LOCALLY here, as it is in MpiAppLibrary.css and
+       MpiModelManager.css. Deliberate (2026-07-18): these are overlay-ground
+       values, not app-wide tokens — promoting them to styles/01_base.css would
+       invite reuse on surfaces that should not have them. Third local copy. */
+    --lib-bg: oklch(0.26 0.020 350);
+
     position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--surface-1, oklch(0.24 0.018 350));
     color: var(--ink-1);
     font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
     overflow: hidden;
+
+    /* Ambient gradient — CENTRE-OUT HORIZONTALLY: brightest along the centre
+       column where the work sits, falling away to the left and right edges.
+       Grounded on --lib-bg so the app frame and the two Libraries read as one
+       family. TUNE THESE STOPS LIVE IN THE APP — the direction is settled, the
+       exact values are not. */
+    background:
+        radial-gradient(ellipse 75% 120% at 50% 50%,
+            oklch(0.29 0.021 350) 0%,
+            var(--lib-bg) 55%,
+            oklch(0.225 0.019 350) 100%);
 }
 
-.mpi-base-app__head {
+/* ── Topbar ─────────────────────────────────────────────────────────────── */
+.mpi-base-app__topbar {
     flex: none;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--s-4);
-    padding: var(--s-4) var(--s-5);
-    border-bottom: 1px solid var(--line);
+    height: 38px;
+    padding: 0 var(--s-4);
+    background: oklch(0.225 0.019 350 / 0.92);
+    border-bottom: 1px solid var(--line-soft, var(--line));
+    position: relative;
+    z-index: 10;
 }
+.mpi-base-app__topbar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+}
+/* Balances the left group so the ticker stays optically centred. */
+.mpi-base-app__topbar-right { width: 96px; }
+
 .mpi-base-app__back {
     display: inline-flex;
     align-items: center;
     gap: var(--s-2);
     background: none;
     border: 0;
-    color: var(--ink-3);
+    color: var(--ink-4);
     font-family: inherit;
     font-size: var(--t-2xs);
     letter-spacing: 0.16em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: color var(--t-base) var(--ease);
+    padding: 0;
+    transition: color var(--t-fast) var(--ease);
 }
 .mpi-base-app__back:hover { color: var(--ink-1); }
 .mpi-base-app__back .mpi-icon { width: 12px; height: 12px; }
-.mpi-base-app__title {
-    font-size: var(--t-lg);
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    margin: 0;
-}
 
-.mpi-base-app__body {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--s-5);
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-5);
+.mpi-base-app__topbar-sep {
+    width: 1px;
+    height: 13px;
+    background: var(--line);
 }
-
-.mpi-base-app__field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-2);
-}
-.mpi-base-app__label {
-    font-size: var(--t-2xs);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-}
-
-/* ── Media group container ──────────────────────────────────────────────── */
-.mpi-base-app__media-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-3);
-    max-width: 420px;
-}
-
-/* ── Shared slot base ───────────────────────────────────────────────────── */
-.mpi-base-app__slot {
-    position: relative;
-    border: 1px solid var(--line);
-    background: var(--surface-2, oklch(0.28 0.02 350));
-    overflow: hidden;
-}
-
-/* ── Filled slot ────────────────────────────────────────────────────────── */
-.mpi-base-app__slot--filled {
-    display: flex;
-    align-items: center;
-    gap: var(--s-3);
-    padding: var(--s-2) var(--s-3);
-    min-height: 56px;
-}
-
-/* Numbered badge */
-.mpi-base-app__slot-badge {
-    flex: none;
-    width: 20px;
-    height: 20px;
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--line);
-    font-size: var(--t-2xs);
-    color: var(--ink-3);
-    background: var(--surface-3, oklch(0.31 0.02 350));
-    font-variant-numeric: tabular-nums;
-}
-
-/* Image thumbnail inside a filled slot */
-.mpi-base-app__slot-thumb {
-    flex: none;
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    display: block;
-}
-
-/* Filename text for video/audio */
-.mpi-base-app__slot-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.mpi-base-app__app-name {
     font-size: var(--t-sm);
     color: var(--ink-2);
+    font-weight: 600;
 }
 
-/* Remove (×) button */
-.mpi-base-app__slot-remove {
-    flex: none;
-    margin-left: auto;
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
+/* ── Step ticker — it NAVIGATES ─────────────────────────────────────────── */
+.mpi-base-app__ticker {
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+}
+.mpi-base-app__tick {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 5px var(--s-3);
+    background: none;
+    border: 0;
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.08em;
+    color: var(--ink-4);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease),
+                background-color var(--t-fast) var(--ease);
+}
+.mpi-base-app__tick:hover {
+    color: var(--ink-2);
+    background: oklch(0.55 0.024 350 / 0.28);
+}
+.mpi-base-app__tick:focus-visible {
+    outline: 1px solid var(--accent-frost);
+    outline-offset: 1px;
+}
+.mpi-base-app__tick-num {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+}
+.mpi-base-app__tick[data-state="done"]   { color: var(--ink-3); }
+.mpi-base-app__tick[data-state="active"] { color: var(--accent-heat); }
+.mpi-base-app__tick[data-state="active"] .mpi-base-app__tick-num { opacity: 1; }
+
+/* ── Stage + slides ─────────────────────────────────────────────────────── */
+.mpi-base-app__stage {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+.mpi-base-app__slides {
+    position: absolute;
+    inset: 0;
+}
+.mpi-base-app__slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    opacity: 0;
+    transition: opacity var(--t-base) var(--ease);
+}
+.mpi-base-app__slide[data-active="true"] { opacity: 1; }
+
+/* Arrows — vertically centred, OUTSIDE the content */
+.mpi-base-app__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: 0;
     color: var(--ink-4);
+    font-family: inherit;
+    font-size: 26px;
+    line-height: 1;
     cursor: pointer;
-    transition: color var(--t-base) var(--ease);
-    padding: 0;
+    z-index: 10;
+    transition: color var(--t-fast) var(--ease);
 }
-.mpi-base-app__slot-remove:hover { color: var(--ink-1); }
-.mpi-base-app__slot-remove .mpi-icon { width: 12px; height: 12px; }
+.mpi-base-app__arrow:hover:not(:disabled) { color: var(--accent-heat); }
+.mpi-base-app__arrow:focus-visible { outline: 1px solid var(--accent-frost); }
+.mpi-base-app__arrow:disabled { opacity: 0; pointer-events: none; }
+.mpi-base-app__arrow--prev { left: var(--s-3); }
+.mpi-base-app__arrow--next { right: var(--s-3); }
 
-/* ── Empty drop zone ────────────────────────────────────────────────────── */
-.mpi-base-app__drop {
-    display: block;
-    border: 1px dashed var(--ink-4);
-    background: var(--surface-2, oklch(0.28 0.02 350));
-    cursor: pointer;
-    aspect-ratio: 4 / 3;
-    max-width: 420px;
-    overflow: hidden;
-    transition: border-color var(--t-base) var(--ease),
-                background var(--t-base) var(--ease);
-}
-.mpi-base-app__drop:hover { border-color: var(--ink-2); }
-.mpi-base-app__drop--dragover {
-    border-color: var(--accent-frost);
-    background: var(--surface-3);
-}
-.mpi-base-app__drop-inner {
+/* ── Split layout (first + last step): air outside, gravity to centre ───── */
+.mpi-base-app__split {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--s-7);
     width: 100%;
-    height: 100%;
+    max-width: 1180px;
+    padding: var(--s-6) var(--s-7);
+}
+
+/* The divider: INSET top and bottom — it never touches the chrome, and it is
+   quiet --line, never an accent. A full-height accent rule is the decorative
+   use of heat that Stage bans. */
+.mpi-base-app__divider {
+    width: 1px;
+    height: 62%;
+    min-height: 240px;
+    background: linear-gradient(to bottom,
+        transparent 0%,
+        var(--line) 12%,
+        var(--line) 88%,
+        transparent 100%);
+}
+
+/* Left column — a vertically-centred GROUP, not a filled column */
+.mpi-base-app__col-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-6);
+    justify-self: center;
+}
+.mpi-base-app__col-right {
+    justify-self: center;
+    max-width: 460px;
+}
+
+/* ── Slots: PLACEHOLDER, not container ──────────────────────────────────── */
+.mpi-base-app__slot-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+}
+.mpi-base-app__slot-label {
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    text-transform: capitalize;
+}
+.mpi-base-app__slot {
+    width: 208px;
+    height: 148px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    border: 1px solid var(--line);
+    background: oklch(0.26 0.018 350 / 0.5);
+    cursor: pointer;
+    transition: border-color var(--t-fast) var(--ease),
+                background-color var(--t-fast) var(--ease);
+}
+.mpi-base-app__slot:hover,
+.mpi-base-app__slot:focus-visible {
+    border-color: var(--ink-4);
+    background: oklch(0.29 0.020 350 / 0.6);
+    outline: none;
+}
+.mpi-base-app__slot--dragover { border-color: var(--accent-heat); }
+.mpi-base-app__slot-icon { color: var(--ink-4); line-height: 0; }
+.mpi-base-app__slot-icon .mpi-icon { width: 34px; height: 34px; }
+.mpi-base-app__slot-hint {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+    letter-spacing: 0.04em;
+}
+
+/* FILLED: THE IMAGE IS THE BOX. Border hugs the image at ITS OWN aspect —
+   no fixed height, no crop, no letterbox padding, no background. This is the
+   rule most likely to be got wrong. */
+.mpi-base-app__slot--filled {
+    width: auto;
+    height: auto;
+    display: block;
+    position: relative;
+    padding: 0;
+    gap: 0;
+    background: none;
+    line-height: 0;
+}
+.mpi-base-app__slot--filled:hover { border-color: var(--ink-4); }
+.mpi-base-app__slot--filled img {
+    display: block;
+    max-width: 208px;
+    max-height: 190px;
+    width: auto;
+    height: auto;
+}
+/* Video/audio have no thumbnail yet (MPI-259 open) — the filename fills the box. */
+.mpi-base-app__slot-name {
+    display: block;
+    max-width: 208px;
+    padding: var(--s-3);
+    font-size: var(--t-sm);
+    line-height: 1.4;
+    color: var(--ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mpi-base-app__slot-clear {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 19px;
+    height: 19px;
     display: grid;
     place-items: center;
-    color: var(--ink-4);
-    font-size: var(--t-sm);
-    padding: var(--s-3);
+    background: oklch(0.24 0.018 350 / 0.82);
+    border: 0;
+    color: var(--ink-2);
+    cursor: pointer;
+    opacity: 0;
+    padding: 0;
+    transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.mpi-base-app__slot--filled:hover .mpi-base-app__slot-clear { opacity: 1; }
+.mpi-base-app__slot-clear:hover { color: var(--accent-heat); }
+.mpi-base-app__slot-clear .mpi-icon { width: 10px; height: 10px; }
+
+/* ── Right pane (step 0) ────────────────────────────────────────────────── */
+.mpi-base-app__app-title {
+    font-size: var(--t-xl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink-1);
     text-align: center;
-    box-sizing: border-box;
+    margin: 0 0 var(--s-5);
+}
+.mpi-base-app__example {
+    border: 1px solid var(--line);
+    line-height: 0;
+    margin-bottom: var(--s-5);
+}
+.mpi-base-app__example img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+/* Prose: block centred, text LEFT-aligned, capped measure. */
+.mpi-base-app__explainer {
+    font-size: var(--t-sm);
+    line-height: 1.65;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0 auto;
+}
+.mpi-base-app__explainer p + p { margin-top: var(--s-3); }
+.mpi-base-app__no-inputs {
+    font-size: var(--t-sm);
+    color: var(--ink-4);
+    text-align: center;
 }
 
-.mpi-base-app__content { display: flex; flex-direction: column; gap: var(--s-4); }
+/* ── Middle steps: bounded, centred canvas. NO divider, NO side column. ─── */
+.mpi-base-app__work {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-4);
+    width: 100%;
+    max-width: 900px;
+    padding: var(--s-5) var(--s-7);
+}
+.mpi-base-app__work-title {
+    font-size: var(--t-lg);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink-1);
+    text-align: center;
+    margin: 0;
+}
+.mpi-base-app__canvas { line-height: 0; }
+.mpi-base-app__canvas-empty {
+    padding: var(--s-6);
+    border: 1px dashed var(--ink-4);
+    font-size: var(--t-sm);
+    line-height: 1.6;
+    color: var(--ink-4);
+    text-align: center;
+}
+.mpi-base-app__work-hint {
+    font-size: var(--t-sm);
+    line-height: 1.6;
+    color: var(--ink-3);
+    text-align: center;
+    max-width: 60ch;
+    margin: 0;
+}
 
-/* Result pane — shows the produced image in-app (also lands as a gallery card). */
-.mpi-base-app__result {
+/* ── Declared fields — ONE row, between canvas and hint ─────────────────── */
+/* The cap is the point. No nesting, no panels, no accordions: a gizmo wanting
+   more than one row means the STEP should split in two. */
+.mpi-base-app__fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-4);
+}
+.mpi-base-app__field {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: var(--t-2xs);
+}
+.mpi-base-app__field-label {
+    color: var(--ink-4);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+.mpi-base-app__field-select {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    color: var(--ink-1);
+    background: oklch(0.26 0.018 350 / 0.6);
+    border: 1px solid var(--line);
+    padding: 4px var(--s-2);
+    cursor: pointer;
+}
+.mpi-base-app__field-button {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: none;
+    border: 1px solid var(--line);
+    padding: 4px var(--s-3);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.mpi-base-app__field-button:hover {
+    color: var(--ink-1);
+    border-color: var(--ink-3);
+}
+.mpi-base-app__field-select:focus-visible,
+.mpi-base-app__field-button:focus-visible,
+.mpi-base-app__field-toggle:focus-visible {
+    outline: 1px solid var(--accent-frost);
+    outline-offset: 1px;
+}
+
+/* ── Last step: controls + result ───────────────────────────────────────── */
+.mpi-base-app__controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+    width: 236px;
+}
+.mpi-base-app__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+}
+.mpi-base-app__gen {
     display: flex;
     flex-direction: column;
     gap: var(--s-2);
 }
-.mpi-base-app__result[hidden] { display: none; }
+.mpi-base-app__gen > div:first-child > * { width: 100%; }
+
+/* Generate → Cancel → Generate again. The COPY is the state signal; the gauge
+   is a 1px frost hairline, not a spinner. */
+.mpi-base-app__run--cancel {
+    background: none;
+    border-color: var(--accent-frost);
+    color: var(--accent-frost);
+}
+.mpi-base-app__gauge {
+    height: 1px;
+    background: var(--line);
+    position: relative;
+}
+.mpi-base-app__gauge > span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    background: var(--accent-frost);
+    transition: width 220ms linear;
+}
+.mpi-base-app__status {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    min-height: 14px;
+}
+
+.mpi-base-app__result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-4);
+}
+.mpi-base-app__result-frame {
+    position: relative;
+    border: 1px solid var(--line);
+    background: var(--surface-canvas);
+    line-height: 0;
+    min-width: 240px;
+    min-height: 180px;
+}
 .mpi-base-app__result-media {
-    max-width: 420px;
     display: flex;
     flex-wrap: wrap;
     gap: var(--s-2);
+    position: relative;
 }
-/* One result → fills the pane; multiple (multi-output app) → wrap to a small grid. */
 .mpi-base-app__result-media img,
 .mpi-base-app__result-media video {
-    width: 100%;
-    height: auto;
     display: block;
-    border: 1px solid var(--line);
+    max-width: 384px;
+    max-height: 42vh;
+    width: auto;
+    height: auto;
 }
-.mpi-base-app__result-media:has(> :nth-child(2)) img,
-.mpi-base-app__result-media:has(> :nth-child(2)) video {
-    width: calc(50% - var(--s-2) / 2);
-}
+/* Multi-output: wrap to a small grid rather than one huge stack. */
+.mpi-base-app__result-media:has(> img + img) img,
+.mpi-base-app__result-media:has(> video + video) video { max-width: 188px; }
 
-.mpi-base-app__foot {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--s-4);
-    padding: var(--s-4) var(--s-5);
-    border-top: 1px solid var(--line);
+/* Live latents: progressive de-blur + a 1px frost scanline — honest about a
+   half-computed image, where a spinner over blank space is not. */
+.mpi-base-app__result-latent {
+    filter: blur(9px);
+    transition: filter var(--t-slow) var(--ease);
 }
-.mpi-base-app__status {
-    font-size: var(--t-sm);
-    color: var(--ink-3);
-    font-variant-numeric: tabular-nums;
+.mpi-base-app__scanline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--accent-frost);
+    opacity: 0.75;
+    animation: mpi-base-app-sweep 1.5s var(--ease) infinite;
+    pointer-events: none;
 }
-.mpi-base-app__run { flex: none; min-width: 120px; }
-.mpi-base-app__run > * { width: 100%; }
+@keyframes mpi-base-app-sweep { from { top: 0; } to { top: 100%; } }
+
+.mpi-base-app__result-actions { display: flex; gap: var(--s-3); }
+.mpi-base-app__result-actions[hidden] { display: none; }
+
+/* The note that makes hold-until-Apply legible: without it a finished image
+   reads as already-in-the-gallery and Apply looks decorative. */
+.mpi-base-app__pending {
+    font-size: var(--t-2xs);
+    color: var(--accent-warn);
+    letter-spacing: 0.04em;
+}
+.mpi-base-app__pending[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .mpi-base-app__slide,
+    .mpi-base-app__result-latent,
+    .mpi-base-app__gauge > span { transition-duration: 1ms; }
+    .mpi-base-app__scanline { display: none; }
+}
