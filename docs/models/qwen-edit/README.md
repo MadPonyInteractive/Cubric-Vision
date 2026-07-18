@@ -15,8 +15,8 @@ instruction-driven image editing with a Qwen2.5-VL text encoder and the Qwen-Ima
 
 | | |
 |---|---|
-| Tiers | **Low** (4-step Lightning) · **Balanced** (8-step Lightning) · **High** (no accelerator) — details: [tiers-and-loaders.md](tiers-and-loaders.md) |
-| Transformer | Low/Bal: `qwen_image_edit_2511_fp8mixed` (19.13 GiB, **below** gate) · High: `qwen_image_edit_2511_bf16` (38.06 GiB, **≥20GB gate → STOP-and-ask**) — 🆕 NEW deps |
+| Tiers | **Low** (4-step Lightning) · **Balanced** (8-step Lightning) · **High** (20-step, no accelerator) — all on ONE transformer. Details + why: [tiers-and-loaders.md](tiers-and-loaders.md) |
+| Transformer | **`qwen_image_edit_2511_int8_convrot`** (ALL tiers; 19.10 GiB, below gate, `size:"19GB"`) — 🆕 NEW dep. fp8mixed + bf16 tested & REJECTED |
 | Text encoder | `text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors` (9.38GB, hidden 3584) — 🆕 NEW dep. **NOT** the krea2 Qwen3-VL-4B nor boogu Qwen3-VL-8B |
 | VAE | `vae/qwen_image_vae.safetensors` — REUSE existing dep **`vae-qwen-image`** (already on R2, hashed) |
 | Lightning LoRAs | 2511 4-step + 8-step bf16 (810MB each) — BAKED deps, `loras/qwen/` subfolder. Downloaded to `C:/AI/Loras/Qwen` |
