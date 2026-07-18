@@ -1,0 +1,153 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7937cb4e-11cc-4567-930c-f1e245bbb2ee",
+  "generated_at": "2026-07-18T21:30:00Z",
+  "from_session": "MPI-306 Phase 2 — Head Swap as the frame's proof, SHIPPED and user-verified; UI polish round done",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "App carousel frame — PHASES 1+2 SHIPPED; Phase 3 (hold-until-Apply) is next",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Design the portable app UI frame (MPI-306), then build it.",
+    "status": "in_progress",
+    "summary": "Phases 1 and 2 are BUILT and USER-VERIFIED. Head Swap RUNS LOCALLY end-to-end — the user generated a real head swap, confirmed Reuse works, and confirmed result persistence works. Five commits this session: b25bea21 (Phase 2), d5ee8601 (the 'cannot run' correction), 9d20e384 (zoom/pan + blur), e2b1780b (addressable slots + drag/pan fixes), f288beae (result persistence), a800ded1 (frame spans the column). Next session runs PHASE 3 — hold-until-Apply, the run-path change."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+    "completed": [
+      "Mock-up phase: three mock-ups, C2 approved as THE design.",
+      "PHASE 1 (steps 1-6): the portable carousel frame. Committed 12a06b51 + 9e6c4cae.",
+      "PHASE 2 (step 7): Head Swap declares two box steps + slot labels + MpiAppHeadSwap tier radio; boxes reach Input_Box / Input_Box_2 as top-left source pixels. Committed b25bea21. USER-VERIFIED by a real local generation.",
+      "UI polish (all user-reported, all committed): zoom/pan on the result pane; latent blur 9px->2px; addressable media slots; drag-ghost + sticky-pan fixes; result persistence across step navigation; result frame spans the column from the divider."
+    ],
+    "pending": [
+      "PHASE 3 — hold-until-Apply (plan step 8). THIS IS THE NEXT ACTION.",
+      "User: head-swap LoRA fp32-vs-fp16 A/B, then R2 upload (NOT authorised). Blocks RunPod + other machines ONLY.",
+      "User: supply the real step-0 example image for Head Swap (still the placeholder `sdxl-real-05.webp`).",
+      "RunPod validation of Head Swap (cannot happen until the LoRA is on R2)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-306",
+    "title": "App carousel frame + hold-until-Apply",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-306/",
+    "links": {
+      "plan": "plan.md",
+      "checklist": null,
+      "validation": "validation.md",
+      "handoffs": "handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "implement Phase 3 of .agents/mpi-kanban/tasks/MPI-306/plan.md",
+    "commit Phase 3 by explicit pathspec"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/add-app/existing-apps/head-swap.md — status table CORRECTED (it runs locally; R2 gates remote + other machines only) + the shipped UI recorded.",
+      "docs/playbooks/add-app/ui/carousel-frame.md — status BUILT; § Steps are DATA now records where role->graph-param mapping lives (the APP, via getInputs({stepValues})).",
+      "js/data/modelConstants/loraDeps.js — comment corrected: 'not uploaded' is not 'not runnable'.",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md — Phase 2 evidence + the correction record.",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md — Phases 1+2 marked shipped."
+    ],
+    "pending": [
+      "A memory entry for the mpi_box contract — now genuinely earned (a real generation proved it end-to-end). Deferred four times; write it.",
+      "A memory entry for the SLOT model: media slots are ADDRESSABLE by index, never a packed list. The packed model silently swapped Head Swap's target and reference. Worth a feedback/project memory.",
+      "UNCARDED: `--lib-bg` is declared locally in MpiAppLibrary.css, MpiModelManager.css and MpiBaseApp.css. Deliberate; card it if a fourth surface wants it.",
+      "UNCARDED: MpiVideoViewer.enterCropMode(initialRect) still un-retested after the cropTool root fix."
+    ]
+  },
+  "next_action": {
+    "description": "Implement PHASE 3 of .agents/mpi-kanban/tasks/MPI-306/plan.md — hold-until-Apply. TODAY: submitAppGeneration enqueues with scope:'gallery' + a placeholderGroup (js/services/appService.js ~104-108), so a gallery card appears at ENQUEUE time, before the run finishes, and Apply is INERT (MpiBaseApp._apply just flips the note + status). Phase 3 makes the result live IN-APP until Apply commits it. Verify: generating creates NO gallery card; Apply commits exactly one; closing with an unapplied result leaves none; the project JSON is genuinely untouched pre-Apply. TWO DECISIONS ARE ALREADY MADE BY THE USER (2026-07-18): (1) Apply stays HIDDEN when there is no result — do NOT render it disabled; (2) Reuse only working AFTER Apply is correct and expected. Files still land on disk regardless — orphans are the existing .preview-assets + Cleanup GC path's job (MPI-277/227), NOT a new mechanism. Pending results live in component state and do NOT survive closing the app (the _lastResults var added this session is exactly that scope). Head Swap RUNS LOCALLY, so Phase 3 CAN and MUST be verified by generating.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "HEAD SWAP RUNS LOCALLY. The long-standing 'the graph 404s on its LoRA' claim was WRONG and is now corrected in the docs. Node 109 loads bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors, present in G:\\CubricModels\\loras\\qwen\\ (1,206,402,600 bytes; an fp16 rank-16 variant is there too). The missing R2 upload blocks RunPod (the Pod pulls from R2) and installs on OTHER machines — never a local run. A LOCAL failure is a REAL bug. Check the disk before declaring an app unrunnable.",
+      "APPLY STAYS HIDDEN with no result (user-decided this session, closing the Phase 1 open question). Do not render it disabled.",
+      "REUSE WORKING ONLY AFTER APPLY is correct and expected (user-confirmed this session).",
+      "MEDIA SLOTS ARE ADDRESSABLE BY INDEX, not a packed list. `items` is SPARSE — a hole is a legal empty slot, and an item's role is its SLOT's role, never its array position. The old packed model put an image dropped on slot 2 into slot 1, which for Head Swap made the reference image the target and ran the swap BACKWARDS, silently. Never splice; never repack.",
+      "The role -> graph-param mapping lives in the APP's controls component, via getInputs({ stepValues }). The frame collects `{[role]: value}` and must never learn what a role means. Head Swap maps image1->box1 (mask) and image2->box2 (crop) in MpiAppHeadSwap.js.",
+      "Box coords pass through UNCONVERTED: MpiStepBox reports absolute top-left SOURCE pixels already clamped; only w/h -> width/height is renamed at the injection site. Never add arithmetic there.",
+      "Tier cost labels are MEASURED RELATIVE ratios (baseline / ~25% / ~13% of time), never absolute seconds.",
+      "The result pane uses the SHARED ViewManager pan/zoom model (as History / MpiVideoViewer / MpiMaskedImagePreview). The view RESETS on every new image deliberately — a latent is often a localized crop while the final is a different resolution.",
+      "Result frame spans the right column from the divider (no left border — the divider IS its edge), height 60vh clamped 320-620px. Height is FIXED, not auto: the zoom viewport needs a stable box.",
+      "Latent blur is 2px (was 9px) + the frost scanline. The scanline lives on the FRAME, not the transformed media layer, or it would zoom with the image."
+    ],
+    "constraints": [
+      "DO NOT re-derive or re-litigate the design — docs/playbooks/add-app/ui/carousel-frame.md § The approved composition is settled and user-approved.",
+      "Phase 3 touches the RUN PATH. A UI regression and a data-path regression must not land in the same diff — this is why it was held back.",
+      "state.s_appInputs[appId] persists INPUTS across close/reopen. Pending RESULTS must NOT be persisted there.",
+      "Standing UI law: ComponentFactory.create (never modify js/components/factory.js), BEM, qs/qsa/gid + on/off from js/utils/dom.js, CSS vars from styles/01_base.css, icons from js/utils/icons.js, Events.on/emit with stored unsubs, a destroy() that cleans everything, register new CSS in js/shell/preloadStyles.js and document props in js/components/types.js.",
+      "State: never mutate sub-objects — replace the top-level key.",
+      "NO SEED UI, EVER. Head Swap is also a FIXED-PROMPT app: the graph has no Input_Positive/Input_Negative, both baked. Never build a prompt box for it.",
+      "Shared tree: commit by explicit pathspec, never `git add -A`. NEW files must be `git add`ed before `git commit --only` will accept them.",
+      "The user's app instance owns port 3000. Do NOT spawn a second one. Drive the RUNNING app.",
+      "Browser-mode automation: #app-shell carries `hide` (display:none) until a project is opened, and a headless profile usually has NO project — every element then measures 0x0. That is NOT a bug; unhide the shell to measure, and always assert REAL widths/heights.",
+      "Playwright: use waitUntil:'domcontentloaded', never 'networkidle' (the app holds SSE/WS open and it times out).",
+      "5 test files fail on this branch PRE-EXISTING (download-completion, optional-media-placeholder, output-prompt-capture, resolve-model-deps, runpod-remote-hardening). Confirm any failure against a stash before blaming your diff. There is no `npm test`; run tests/*.test.cjs individually."
+    ],
+    "files_modified": [
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.css",
+      "js/components/Organisms/MpiAppHeadSwap/MpiAppHeadSwap.js",
+      "js/components/Organisms/MpiAppHeadSwap/MpiAppHeadSwap.css",
+      "js/components/Organisms/MpiStepBox/MpiStepBox.js",
+      "js/components/Organisms/MpiStepBox/MpiStepBox.css",
+      "js/data/appsRegistry.js",
+      "js/data/modelConstants/loraDeps.js",
+      "js/shell.js",
+      "js/shell/preloadStyles.js",
+      "js/components/types.js",
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      "docs/playbooks/add-app/existing-apps/head-swap.md",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md",
+      "js/services/appService.js",
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      "js/services/generationService.js",
+      "docs/project-integrity.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": [
+      "apps / App Library",
+      "app UI/UX portable layer",
+      "generation queue + run path (scope, placeholderGroup)",
+      "project integrity (what writes a gallery card)"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md — THE ROOT-CAUSE RULE",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/state.md",
+    "docs/project-integrity.md",
+    "docs/playbooks/add-app/README.md + ui/carousel-frame.md",
+    "feedback: no seed UI; no toast on user Stop; error dialog vs toast; test the user's instinct first"
+  ],
+  "recent_events": [
+    { "at": "2026-07-18T19:45:00Z", "event": "MPI-306 Phase 2 built + self-verified (commit b25bea21)" },
+    { "at": "2026-07-18T20:10:00Z", "event": "user caught the false 'cannot run' claim; corrected in docs (d5ee8601)" },
+    { "at": "2026-07-18T20:30:00Z", "event": "user ran a REAL local head swap successfully — Phase 2 proven end-to-end" },
+    { "at": "2026-07-18T20:50:00Z", "event": "zoom/pan + blur softening shipped (9d20e384)" },
+    { "at": "2026-07-18T21:05:00Z", "event": "addressable slots + drag-ghost/sticky-pan fixes (e2b1780b)" },
+    { "at": "2026-07-18T21:20:00Z", "event": "result persistence across navigation (f288beae); user confirmed working" },
+    { "at": "2026-07-18T21:28:00Z", "event": "result frame spans the column from the divider (a800ded1)" },
+    { "at": "2026-07-18T21:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/7937cb4e-11cc-4567-930c-f1e245bbb2ee.json, then .agents/mpi-kanban/tasks/MPI-306/plan.md and docs/playbooks/add-app/ui/carousel-frame.md § Results are not real until Apply. MPI-306 Phases 1 and 2 are SHIPPED and USER-VERIFIED: the portable carousel frame is live, Head Swap declares its two box steps + tier radio, and the user has generated a real head swap locally, confirmed Reuse, and confirmed result persistence. The design is SETTLED — do not re-derive it. Build PHASE 3 ONLY: hold-until-Apply. Today submitAppGeneration enqueues with scope:'gallery' + a placeholderGroup (js/services/appService.js ~104-108), so the gallery card appears at ENQUEUE time and Apply is inert; Phase 3 holds the result in-app until Apply commits it. Verify by GENERATING (Head Swap runs locally — the old 'LoRA 404s' claim was wrong and is corrected in the docs): generating must create NO gallery card, Apply must commit exactly one, closing with an unapplied result must leave none, and the project JSON must be untouched pre-Apply. Two decisions are already made and must NOT be reopened: Apply stays HIDDEN when there is no result (not disabled), and Reuse working only after Apply is correct. Files still land on disk regardless — orphans are the existing .preview-assets + Cleanup GC path's job (MPI-277/227), not a new mechanism. Pending results live in component state and must NOT be written to state.s_appInputs. Beware: media slot `items` is SPARSE and indexed BY SLOT (never splice or repack — the packed model silently swapped Head Swap's target and reference), and _lastResults holds the completed result so it survives step navigation. The user's app owns port 3000 — drive it, never spawn a second instance; in browser automation #app-shell is display:none until a project is opened, so unhide it and assert real geometry. 5 test files fail PRE-EXISTING on this branch; confirm against a stash before blaming your diff."
+}
