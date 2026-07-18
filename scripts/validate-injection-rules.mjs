@@ -95,6 +95,49 @@ function checkWorkflow(wf, objectInfo) {
     }
   }
 
+  // 4. Injection reachability — every Input_* node must have a live path to a capture
+  // node. The app injects BY TITLE and never checks the graph, so an Input_* that feeds
+  // nothing (or feeds only a dead branch) accepts the value and silently drops it: the
+  // user picks an image, the model never sees it, and there is no error anywhere.
+  // Bypassed/muted nodes are already stripped by the converter, so a slot that routed
+  // through one arrives here orphaned — which is exactly how qwen_edit's Input_Image_2
+  // died (MPI-300: it fed a bypassed ImageResizeKJv2, caught only by hand-tracing links).
+  const consumersOf = new Map();   // producer id -> [consumer id]
+  for (const [id, node] of nodes) {
+    for (const v of Object.values(node.inputs || {})) {
+      if (!isLink(v)) continue;
+      const src = String(v[0]);
+      if (!consumersOf.has(src)) consumersOf.set(src, []);
+      consumersOf.get(src).push(id);
+    }
+  }
+  // Any Output_* counts as a terminus here, not just the three CAPTURE_TITLES: Apps ship
+  // numbered captures (Output_Image_2/_3) and side outputs (Output_prompt), and a slot that
+  // feeds one of those is genuinely wired. Check 1 above still demands a primary capture.
+  const captureIds = new Set(nodes.filter(([, n]) => /^output_/i.test(titleOf(n))).map(([id]) => id));
+  const reaches = (startId) => {
+    const seen = new Set([startId]);
+    const stack = [startId];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (captureIds.has(cur)) return true;
+      for (const next of consumersOf.get(cur) || []) {
+        if (!seen.has(next)) { seen.add(next); stack.push(next); }
+      }
+    }
+    return false;
+  };
+  for (const [id, node] of nodes) {
+    const title = titleOf(node);
+    if (!/^input_/i.test(title)) continue;
+    if (!reaches(id)) {
+      violations.push(
+        `node ${id} titled "${title}" never reaches a capture node — the app will inject into it ` +
+        `and the value is silently discarded. Reconnect it in the ComfyUI graph (or drop the node) and re-export.`
+      );
+    }
+  }
+
   return violations;
 }
 

@@ -44,8 +44,10 @@ debugging:
 - **A NEW op registers in `js/core/operationRegistry.js` + `operation_registry.json`**
   (the two-mirror registry — **[shared] canonical in
   [../common/op-registration.md](../common/op-registration.md)**), `appVersionIntroduced`
-  = current `APP_VERSION`. Adding a model/op is still NOT an app version bump. On the model
-  side `operation_registry.json` is synced via `/mpi-version-bump`, not hand-edited.
+  = current `APP_VERSION`. Adding a model/op is still NOT an app version bump — which is
+  exactly why you must write the `operation_registry.json` entry BY HAND here: the
+  `/mpi-version-bump` skill is the only other thing that touches that file and it never
+  runs for a model. Finish with `npm run release:check` (it fails on mirror drift).
 - **Shared VAE/encoder deps get RESOURCE-named ids, not model-scoped.** `vae-flux-ae`,
   `vae-sdxl`, `vae-qwen-image` — because `ae.safetensors` will back Flux/Chroma/Z-Image/+ and
   the Qwen VAE backs Qwen-Image/Edit/+. A model-scoped id (`pid-vae-flux`) forces the next
@@ -139,8 +141,11 @@ controls. `upscale` uses 0.20, `detail` 0.30, `pid` 0.0 — pick the value your 
 - [ ] `progressStages.js`: keyed by **FILE**, not op — a shared graph needs no new entry.
       (If a branch adds its own tqdm bar — e.g. a depth preprocessor — it needs a per-op split.)
 - [ ] `js/core/operationRegistry.js`: new op → entry with `appVersionIntroduced` = current
-      APP_VERSION. `operation_registry.json` is generated (`/mpi-version-bump`), never hand-edited
+      APP_VERSION
+- [ ] `operation_registry.json`: the SAME entry, written BY HAND — nothing generates this
+      file and `/mpi-version-bump` never runs for a model. Forgetting it fails the next build
 - [ ] Run `tests/inject-params-titles.test.cjs`
+- [ ] Run `npm run release:check` — the gate that catches a forgotten registry mirror
 
 ### Known live bug (not yours to fix here)
 

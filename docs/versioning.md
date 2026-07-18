@@ -125,9 +125,21 @@ A Python pre-release test suite needs to know which operations exist and their w
 }
 ```
 
-**Synchronization rule:** Every time you add, remove, or deprecate an operation (via the `/mpi-version-bump` skill), both `operationRegistry.js` **and** `operation_registry.json` must be updated together. The version-bump skill handles this automatically.
+**Synchronization rule:** Every time you add, remove, or deprecate an operation, both `operationRegistry.js` **and** `operation_registry.json` must be updated together.
 
-**Important:** Do NOT edit `operation_registry.json` by hand. Use the `/mpi-version-bump` skill or the version-bump skill will eventually fall out of sync.
+**Never REGENERATE this file from the JS registry** — it is a hand-maintained *superset*, and a wholesale regeneration would strip the `universal: true` flags that App ops depend on.
+
+**Who writes the entry:**
+
+| Situation | Who updates the JSON mirror |
+|---|---|
+| Operation added/changed during a version bump | `/mpi-version-bump` (its step 4i — itself a manual edit, not a script) |
+| **New model op** (`/mpi-add-model`) | **You, by hand** — models are never version-bumped, so the bump skill never runs |
+| **New app op** (`/mpi-add-app`) | **You, by hand** — same reason, plus the entry needs `universal: true` |
+
+There is no sync script. "Generated" language elsewhere is historical — treat this file as hand-maintained and **always finish with `npm run release:check`**, which fails on any drift between the two registries (missing entry, extra entry, `latestVersion` or `appVersionIntroduced` mismatch). It is not run automatically.
+
+⚠ MPI-300 shipped `qwenEdit` into `operationRegistry.js` while the JSON mirror went unwritten — the old "do NOT edit by hand" wording read as permission to skip it. The gate caught it, but only because someone thought to run `release:check`.
 
 ---
 
