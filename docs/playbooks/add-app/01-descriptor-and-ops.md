@@ -109,20 +109,14 @@ Install button drives each missing model's OWN dep download (`getModelDependenci
 `downloadService.start(id, deps)`). Apps declare **models, never deps** (zero dep duplication).
 See [04](04-overlay-and-shell.md) for the install-progress UI.
 
-### App-only extra weights — `requiredDeps` (MPI-304, NOT YET BUILT)
+### App-only extra weights — `requiredDeps` (MPI-304, SHIPPED)
 
 > **Read this before adding an app-specific weight to a MODEL's dependency list.** Doing that
-> taxes every user of that model.
+> taxes every user of that model — and is never necessary.
 
 Some apps need a weight no model requires — a baked LoRA, an extra detector, a custom node.
-Today there is no way to express it: `requiredModels` resolves MODEL ids only
-(`appAvailability()` filters `state.s_installedModelIds`), so the only route is folding the
-file into a model's deps, which pushes it onto **everyone** using that model.
-
-The scaling case: Head Swap needs a 1.2GB head-swap LoRA on top of `qwen-edit`; an app taking
-30 style LoRAs would tax all users ~15GB. Not acceptable.
-
-**MPI-304** adds `requiredDeps` — dep ids resolved from `DEPS`, alongside `requiredModels`:
+`requiredModels` resolves MODEL ids only, so declare those as `requiredDeps` — dep ids
+resolved from `DEPS`, alongside `requiredModels`:
 
 ```js
 {
@@ -132,6 +126,9 @@ The scaling case: Head Swap needs a 1.2GB head-swap LoRA on top of `qwen-edit`; 
 ```
 
 Works for LoRAs, support weights AND custom nodes (`nodesDeps` is already merged into `DEPS`).
+The scaling case it exists for: Head Swap needs a 1.2GB LoRA on top of `qwen-edit`; folding
+that into the model would push it onto every Qwen user, and an app taking 30 style LoRAs would
+tax all users ~15GB.
 
 **The entry still lives in the file for its KIND** — `loraDeps.js` for a LoRA, `assetDeps.js`
 for a weight, `nodesDeps.js` for a node pack. Deps are filed by *what they are*, never by who
@@ -140,8 +137,27 @@ further BY KIND (`loraDeps.js` → `loras/krea2.js`, `loras/qwen.js`) — the
 [dependencies.js](../../../js/data/modelConstants/dependencies.js) facade absorbs that with
 zero consumer changes.
 
-Until MPI-304 lands, an app needing an extra weight is **blocked** — do not work around it by
-polluting a model's dep list.
+**How it behaves** (all of this is automatic — a new app only writes the id list):
+
+- **Gating is identical to a missing model.** `appAvailability()` returns `missingDeps`
+  alongside `missing`, and `available` accounts for both. The tile badge reads "Get models",
+  Open stays blocked, and `submitAppGeneration`'s pre-flight aborts — so a missing app dep can
+  never reach ComfyUI as a "lora not found" mid-run.
+- **One extra row** in the slide-over's required list ("Extra dependencies (1.2GB)"),
+  aggregated rather than itemised — the deps are an implementation detail of the app, not a
+  thing the user picked.
+- **Install/cancel/progress** run under the key `app:<id>` (`appDepKey()`), one job for the
+  app's whole dep set, counted as one share of the aggregated install bar.
+- **Disk status** rides the model sync: `syncModelInstalled()` appends an `app:<id>` entry to
+  the SAME `/comfy/models/check` payload (that route is id-agnostic — it stats filenames and
+  never looks at `MODELS`) and hands each app its slice via `setAppDepStatus()`. Apps run no
+  sync of their own. The cache is empty until the first sync, so an unsynced dep reads
+  NOT-installed — it fails **closed**, which is the recoverable direction.
+- **GC protection.** Both uninstall guards (`_localSharedDepsMap` and `_remoteSharedDepIds` in
+  `routes/downloadManager.js`) build their protected set from `MODELS`, so a dep no model
+  requires was invisible to them and any model uninstall would delete it. They now union in
+  `_appRequiredDepIds()` — unconditionally, since an app has no install state of its own to
+  gate on. **If you add another dep-protection path, add the app union there too.**
 
 ## The run path — `submitAppGeneration`
 

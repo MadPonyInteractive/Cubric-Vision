@@ -5,11 +5,15 @@
  * overlay: pick an app → open its overlay → collect inputs → Run → the job enters
  * the EXISTING generation queue and lands as a normal gallery card.
  *
- * Unlike modelRegistry, this registry is READ-ONLY over install state — apps have no
- * disk-presence concept of their own. Availability is derived entirely from
- * `state.s_installedModelIds` (already isModelUsable-filtered, MPI-122). There is
- * deliberately NO install-sync machinery here (no syncModelInstalled, no dep-status
- * cache, no remoteEngineClient) — do not cargo-cult it from modelRegistry.
+ * Unlike modelRegistry, this registry is READ-ONLY over install state — apps own no
+ * install-sync machinery (no syncModelInstalled, no remoteEngineClient); they READ
+ * caches the model sync already populates. Do not cargo-cult the sync side here.
+ *
+ * Availability has TWO inputs (MPI-304):
+ *   - `requiredModels` → `state.s_installedModelIds` (already isModelUsable-filtered, MPI-122)
+ *   - `requiredDeps`   → the per-dep status cache, keyed `app:<id>` (modelRegistry.js)
+ * Both gate the SAME badge and the SAME Run guard — a missing dep blocks exactly like a
+ * missing model, and surfaces as one extra row in the slide-over's required list.
  *
  * App count is tiny (dev-gated until ≥4 apps exist), so the descriptor array lives
  * inline here rather than in a separate appConstants/ file. Split it out only if the
@@ -21,6 +25,11 @@
  * @property {string}   preview        - Preview image filename (card + slide-over)
  * @property {string}   description    - Slide-over copy
  * @property {string[]} requiredModels - MODEL ids (NOT dep ids); drives the availability badge
+ * @property {string[]} [requiredDeps] - DEP ids (dependencies.js facade) this app needs on top
+ *                                       of its models — app-only weights/nodes that no model
+ *                                       requires. Filed in the dep file for their KIND, never
+ *                                       folded into a model's list (that taxes every user of
+ *                                       that model). MPI-304.
  * @property {string}   operation      - Universal-op key (commandRegistry.js)
  * @property {string}   workflow       - ComfyUI workflow filename (universal_workflows.js)
  * @property {string}   uiComponent    - Per-app Organism component name (controls only; hosted by MpiBaseApp)
@@ -30,6 +39,18 @@
 'use strict';
 
 import { state } from '../state.js';
+import { DEPS } from './modelConstants/dependencies.js';
+
+/**
+ * The download-queue / dep-status key for an app's own deps. Namespaced so it can
+ * never collide with a model id, and so every consumer that sees a job id can tell
+ * app-owned deps from model-owned ones. MPI-304.
+ * @param {string} appId
+ * @returns {string}
+ */
+export function appDepKey(appId) {
+    return `app:${appId}`;
+}
 
 /** @type {AppDef[]} */
 export const APPS = [
@@ -113,18 +134,84 @@ export function getAppById(id) {
     return APPS.find(a => a.id === id) || null;
 }
 
+// ── App dep-status cache (populated by syncModelInstalled, modelRegistry.js) ──
+// Map of appId → Map of depId → installed:boolean. Apps run NO sync of their own —
+// the model sync stats their deps in the same /comfy/models/check payload (that route
+// is id-agnostic: it takes {id, deps} and stats filenames, never touching MODELS) and
+// hands the slice back here. Empty until the first sync lands: an app with
+// requiredDeps therefore reads NOT-installed until proven present, which fails
+// CLOSED (a badge that says "get it" is recoverable; a Run that dies inside ComfyUI
+// with "lora not found" is not). MPI-304.
+const _appDepStatusCache = new Map();
+
 /**
- * Availability = every requiredModel id is present in the installed set.
+ * Record a sync's per-dep result for one app. Called by syncModelInstalled only.
+ * @param {string} appId
+ * @param {Map<string, boolean>} depMap - depId → installed
+ */
+export function setAppDepStatus(appId, depMap) {
+    _appDepStatusCache.set(appId, depMap);
+}
+
+/**
+ * @param {string} appId
+ * @returns {Map<string, boolean>|null}
+ */
+export function getAppDepStatus(appId) {
+    return _appDepStatusCache.get(appId) ?? null;
+}
+
+/**
+ * Every app's requiredDeps, resolved to dep objects, keyed by appDepKey(). The
+ * shape /comfy/models/check wants — used by the sync payload AND by the backend
+ * uninstall guards to learn which deps an app still needs. Unknown dep ids are
+ * dropped (filter(Boolean)) exactly as the model resolver does.
+ * @returns {Array<{id: string, appId: string, deps: Object[]}>}
+ */
+export function appDepUniverse() {
+    return APPS
+        .filter(a => (a.requiredDeps || []).length)
+        .map(a => ({
+            id: appDepKey(a.id),
+            appId: a.id,
+            deps: (a.requiredDeps || []).map(depId => DEPS[depId]).filter(Boolean),
+        }));
+}
+
+/**
+ * Resolved dep objects for ONE app's requiredDeps (install-side; the app twin of
+ * getModelDependencies). Feeds downloadService.start(appDepKey(id), deps).
+ * @param {AppDef|string} appOrId
+ * @returns {Object[]}
+ */
+export function getAppDependencies(appOrId) {
+    const app = typeof appOrId === 'string' ? getAppById(appOrId) : appOrId;
+    if (!app) return [];
+    return (app.requiredDeps || []).map(depId => DEPS[depId]).filter(Boolean);
+}
+
+/**
+ * Availability = every requiredModel id installed AND every requiredDep present.
+ *
  * requiredModels are MODEL ids; s_installedModelIds is already partial-aware
  * (populated via isModelUsable, modelRegistry.js) so ≥1-op-installed models count.
+ * requiredDeps are DEP ids (MPI-304) — app-only weights/nodes no model requires;
+ * their disk status comes from the app dep-status cache above. Both gate the same
+ * badge and the same Run guard: the user cannot open an app until it has BOTH.
+ *
+ * `missing` stays MODEL ids only — every existing caller treats it as such
+ * (appService's toast, MpiAppLibrary's _installMissing → getModelDependencies).
+ * Missing deps ride alongside in `missingDeps`; `available` accounts for both.
  *
  * @param {AppDef|string} appOrId
- * @returns {{available: boolean, missing: string[]}}
+ * @returns {{available: boolean, missing: string[], missingDeps: string[]}}
  */
 export function appAvailability(appOrId) {
     const app = typeof appOrId === 'string' ? getAppById(appOrId) : appOrId;
-    if (!app) return { available: false, missing: [] };
+    if (!app) return { available: false, missing: [], missingDeps: [] };
     const installed = state.s_installedModelIds || [];
     const missing = (app.requiredModels || []).filter(id => !installed.includes(id));
-    return { available: missing.length === 0, missing };
+    const depStatus = _appDepStatusCache.get(app.id);
+    const missingDeps = (app.requiredDeps || []).filter(id => depStatus?.get(id) !== true);
+    return { available: missing.length === 0 && missingDeps.length === 0, missing, missingDeps };
 }

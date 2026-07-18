@@ -34,11 +34,18 @@ export function submitAppGeneration(appOrId, inputs = {}, callbacks = {}) {
         return null;
     }
 
-    // Pre-flight MODEL guard — universal ops have none of their own.
-    const { available, missing } = appAvailability(app);
+    // Pre-flight MODEL + DEP guard — universal ops have none of their own. MPI-304:
+    // an app can also require deps no model owns (a baked LoRA, a node pack); those
+    // block exactly like a missing model, so name whichever is actually absent rather
+    // than always saying "models" (with models present and only a dep missing, the old
+    // copy read "needs models installed" while the library showed every model Ready).
+    const { available, missing, missingDeps } = appAvailability(app);
     if (!available) {
+        const what = !missing.length ? 'extra files'
+            : missing.length === 1 && !missingDeps.length ? 'a model'
+                : 'models';
         Events.emit('ui:warning', {
-            message: `${app.title} needs ${missing.length === 1 ? 'a model' : 'models'} installed first — open it in the App Library to install.`,
+            message: `${app.title} needs ${what} installed first — open it in the App Library to install.`,
         });
         return null;
     }

@@ -22,6 +22,9 @@ import { resolveFullUniverse, canonicalModelId, hasOperationGroups, deriveInstal
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
+// MPI-304 — app-only deps are stat'd in the model sync's payload (one route, one
+// pass). One-way import: appsRegistry never imports modelRegistry.
+import { appDepUniverse, setAppDepStatus } from './appsRegistry.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
@@ -117,6 +120,16 @@ export async function syncModelInstalled() {
                 .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
+        // MPI-304 — app-only deps ride the SAME check. /comfy/models/check is
+        // id-agnostic (it takes {id, deps} and stats filenames; it never looks at
+        // MODELS), so an `app:<id>` entry passes through unchanged and no second
+        // endpoint is needed. Apps have no engine-split weights, so there is no
+        // per-engine resolution to do here — the ids are the ids.
+        const appPayload = appDepUniverse().map(({ id, deps }) => ({
+            id,
+            deps: deps.map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
+        }));
+
         // R31: when remote-connected but the override forces LOCAL, hit the
         // force-local endpoint (MPI-74) so we stat the local disk, not the Pod.
         const checkPath = (remoteEngineClient.isRemote() && engine === 'local')
@@ -125,7 +138,7 @@ export async function syncModelInstalled() {
         const res = await fetch(checkPath, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ models: modelPayload }),
+            body: JSON.stringify({ models: modelPayload.concat(appPayload) }),
         });
 
         if (!res.ok) return false;
@@ -166,12 +179,25 @@ export async function syncModelInstalled() {
         }
         _driftedModelIds = [...new Set(drifted)];
 
+        // MPI-304 — hand each app its dep slice. Keyed by appDepKey() in the payload,
+        // unpacked back to the bare appId the availability check reads.
+        for (const { id, appId } of appDepUniverse()) {
+            const entry = results[id];
+            if (!entry) continue;
+            setAppDepStatus(appId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
+        }
+
         // Emit installed model IDs for reactive listeners. Use isModelUsable (≥1
         // op installed) not the raw all-deps-present `result.installed`, so a
         // deliberately partial install (e.g. Wan T2V-only) counts — matching the
         // model-manager list + pickers, which already gate on isModelUsable. The
         // dep-status cache was just populated above, so this resolves correctly.
-        const installedModelIds = Object.keys(results).filter(id => isModelUsable(id));
+        // MPI-304: the results now also carry `app:<id>` entries — drop them here so
+        // an app key can never leak into the installed-MODEL set (which feeds the model
+        // pickers and every s_installedModelIds consumer). Explicit, not relying on
+        // isModelUsable happening to reject an unknown id.
+        const installedModelIds = Object.keys(results)
+            .filter(id => !id.startsWith('app:') && isModelUsable(id));
         Events.emit('models:checked', { installedModelIds, driftedModelIds: _driftedModelIds.slice() });
 
         return true;

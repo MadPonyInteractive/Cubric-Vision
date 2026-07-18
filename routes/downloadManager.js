@@ -189,7 +189,31 @@ async function _localSharedDepsMap(excludeModelId) {
         if (!map.has(depId)) map.set(depId, new Set());
         map.get(depId).add('(installing)');
     }
+    // MPI-304 — an app's own deps belong to no model, so nothing above protects them.
+    for (const depId of _appRequiredDepIds()) {
+        if (!map.has(depId)) map.set(depId, new Set());
+        map.get(depId).add('(app)');
+    }
     return map;
+}
+
+// MPI-304 — dep ids required by an APP. Both uninstall guards below build their
+// protected set from MODELS only, so a dep that no model requires (an app-only LoRA,
+// detector or node pack) is invisible to them and gets trashed by the next model
+// uninstall — the app then silently breaks with a "lora not found" deep in ComfyUI.
+// Apps have no engine-split weights and no per-op resolution, so this is a flat union
+// of every app's requiredDeps, protected for BOTH engines.
+//
+// Protection is unconditional (not gated on "is this app installed"): unlike a model,
+// an app has no install state of its own — its deps ARE its install state, so gating
+// protection on their presence would be circular.
+function _appRequiredDepIds() {
+    const { APPS } = _require('../js/data/appsRegistry.js');
+    const out = new Set();
+    for (const app of APPS) {
+        for (const depId of (app.requiredDeps || [])) out.add(depId);
+    }
+    return out;
 }
 
 // Dep ids held by a live (non-terminal) model job OTHER than excludeModelId.
@@ -266,6 +290,10 @@ async function _remoteSharedDepIds(excludeModelId) {
     // download. Mirror the local guard: keep any dep a live (non-terminal) model
     // job still references. Store is the SOT (refCount deleted, G5).
     for (const depId of _inFlightDepIds(excludeModelId)) keep.add(depId);
+    // MPI-304 — mirror of the local guard: app-only deps belong to no model, so the
+    // MODELS sweep above cannot protect them. Fixed in the SAME pass as the local twin
+    // (CLAUDE.md engine-split rule — a one-engine fix here is a false done).
+    for (const depId of _appRequiredDepIds()) keep.add(depId);
     return keep;
 }
 

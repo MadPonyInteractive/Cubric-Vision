@@ -3,9 +3,10 @@ import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
-import { listApps, appAvailability } from '../../../../data/appsRegistry.js';
+import { listApps, appAvailability, getAppDependencies, appDepKey } from '../../../../data/appsRegistry.js';
 import { getModelById, getModelDependencies } from '../../../../data/modelRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
+import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
 import { qs, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
@@ -131,22 +132,39 @@ export const MpiAppLibrary = ComponentFactory.create({
             _detailBtns = [];
         }
 
+        // Every download-queue key this app installs under: one per required MODEL,
+        // plus ONE for its own app-only deps (MPI-304, keyed `app:<id>` so it can never
+        // collide with a model id). Install/cancel/progress all iterate this same list,
+        // so the app-deps row participates in the aggregated bar exactly like a model.
+        function _installKeys(app) {
+            const keys = (app.requiredModels || []).slice();
+            if ((app.requiredDeps || []).length) keys.push(appDepKey(app.id));
+            return keys;
+        }
+
         // Install every missing required model (each drives its own dep download —
-        // the shared model install flow; exactly the Model Library's _install). The
-        // App Library owns no dep resolution of its own: getModelDependencies()
-        // resolves each model's full universe → downloadService.start(id, deps).
-        function _installMissing(missing) {
+        // the shared model install flow; exactly the Model Library's _install), plus the
+        // app's own deps as ONE more job. The App Library owns no dep resolution of its
+        // own: getModelDependencies() / getAppDependencies() resolve, the service starts.
+        function _installMissing(app, missing) {
             for (const modelId of missing) {
                 const deps = getModelDependencies(modelId);
                 if (deps.length) downloadService.start(modelId, deps);
             }
+            // App-only deps: started under the app key so the shared install/reconcile
+            // machinery treats them as one unit and the guards can attribute them.
+            const { missingDeps } = appAvailability(app);
+            if (missingDeps.length) {
+                const deps = getAppDependencies(app);
+                if (deps.length) downloadService.start(appDepKey(app.id), deps);
+            }
         }
 
-        // Cancel EVERY in-flight required-model install for this app (Cancel-all).
+        // Cancel EVERY in-flight install for this app (Cancel-all) — models AND app deps.
         function _cancelInstall(app) {
-            for (const modelId of (app.requiredModels || [])) {
-                if ((state.downloadJobs || []).some(j => j.modelId === modelId)) {
-                    downloadService.cancel(modelId);
+            for (const key of _installKeys(app)) {
+                if ((state.downloadJobs || []).some(j => j.modelId === key)) {
+                    downloadService.cancel(key);
                 }
             }
         }
@@ -157,13 +175,17 @@ export const MpiAppLibrary = ComponentFactory.create({
         // `installing` = at least one model has a live download job. Returns overall 0–1.
         //   { installing, progress }
         function _installProgress(app) {
-            const ids = app.requiredModels || [];
+            const ids = _installKeys(app);
             if (!ids.length) return { installing: false, progress: 0 };
             const installed = state.s_installedModelIds || [];
             const jobs = state.downloadJobs || [];
+            // The app-deps key is "installed" when no dep is missing — it is not a model,
+            // so it never appears in s_installedModelIds (MPI-304).
+            const depsKey = appDepKey(app.id);
+            const depsDone = !appAvailability(app).missingDeps.length;
             let sum = 0, installing = false;
             for (const id of ids) {
-                if (installed.includes(id)) { sum += 1; continue; }
+                if (id === depsKey ? depsDone : installed.includes(id)) { sum += 1; continue; }
                 const job = jobs.find(j => j.modelId === id);
                 if (job) {
                     installing = true;
@@ -173,14 +195,29 @@ export const MpiAppLibrary = ComponentFactory.create({
             return { installing, progress: sum / ids.length };
         }
 
-        function _modelRowHtml(modelId) {
-            const model = getModelById(modelId);
-            const name = model?.name || modelId;
-            const installed = (state.s_installedModelIds || []).includes(modelId);
+        function _rowHtml(name, installed) {
             const chip = installed
                 ? `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`
                 : `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
             return `<li class="mpi-detail__model-row"><span>${name}</span>${chip}</li>`;
+        }
+
+        function _modelRowHtml(modelId) {
+            const model = getModelById(modelId);
+            return _rowHtml(model?.name || modelId, (state.s_installedModelIds || []).includes(modelId));
+        }
+
+        // MPI-304 — app-only deps appear as ONE extra row in the same required list,
+        // aggregated rather than itemised: they are an implementation detail of the app
+        // (a baked LoRA, a node pack), not a thing the user chose. The size is what they
+        // actually care about, so it rides in the label.
+        function _appDepsRowHtml(app) {
+            const deps = getAppDependencies(app);
+            if (!deps.length) return '';
+            const done = !appAvailability(app).missingDeps.length;
+            const gb = deps.reduce((n, d) => n + sizeToGb(d.size), 0);
+            const label = gb ? `Extra dependencies (${gb.toFixed(1)}GB)` : 'Extra dependencies';
+            return _rowHtml(label, done);
         }
 
         function openDetail(app) {
@@ -198,6 +235,7 @@ export const MpiAppLibrary = ComponentFactory.create({
                     <span class="mpi-detail__field-label">Required models</span>
                     <ul class="mpi-detail__models">
                         ${(app.requiredModels || []).map(_modelRowHtml).join('')}
+                        ${_appDepsRowHtml(app)}
                     </ul>
                 </div>`;
 
@@ -240,7 +278,7 @@ export const MpiAppLibrary = ComponentFactory.create({
                 detailActions.appendChild(open.el); _detailBtns.push(open);
             } else {
                 const install = MpiButton.mount(ce('div'), { text: 'Install models', variant: 'primary', size: 'md' });
-                install.on('click', () => { _installMissing(missing); });
+                install.on('click', () => { _installMissing(app, missing); });
                 detailActions.appendChild(install.el); _detailBtns.push(install);
             }
 
@@ -317,10 +355,17 @@ export const MpiAppLibrary = ComponentFactory.create({
         _unsubs.push(Events.on('state:changed', ({ key }) => {
             if (key === 's_installedModelIds') _patchAllAffected();
         }));
+        // MPI-304 — app-dep status is refreshed by the same sync but is NOT part of
+        // s_installedModelIds, so the listener above never sees it change. models:checked
+        // fires at the end of every sync (after the app dep cache is written), which is
+        // the only signal that an app-deps install flipped an app to Ready.
+        _unsubs.push(Events.on('models:checked', () => { _patchAllAffected(); }));
         // Progress ticks: patch only the bar (fast path). A model whose required set
         // includes the ticking model repaints; the grid badges follow s_installedModelIds.
         _unsubs.push(Events.on('download:progress', ({ modelId }) => {
-            if (_activeDetail && (_activeDetail.requiredModels || []).includes(modelId)) _patchProgress(_activeDetail);
+            // MPI-304: match the app-deps key too, or an app-deps-only install ticks
+            // the queue while the bar sits frozen at 0.
+            if (_activeDetail && _installKeys(_activeDetail).includes(modelId)) _patchProgress(_activeDetail);
         }));
         // State transitions rebuild the open panel (footer swaps Install↔Cancel↔Open,
         // required-models rows repaint). Only the open panel repaints; the grid badges
