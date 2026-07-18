@@ -861,6 +861,83 @@ export function runAutoMask(payload) {
 }
 
 /**
+ * MPI-308 (DEV HARNESS) — caption an image into text via `image_descriptor`.
+ *
+ * Text-only workflow: it returns a caption and ZERO media. That is why this runs
+ * the engine directly instead of going through generationService — that path
+ * treats a zero-media completion as a cancelled generation and discards the text
+ * (generationService.js, the `if (!urls.length)` early return). Wiring a proper
+ * op-level "returns text, not media" contract is the real fix and is still open
+ * on MPI-308; this harness exists only to answer whether caption→upscale is
+ * worth shipping at all, so it deliberately reuses the runAutoMask shape (also
+ * a non-media workflow that reads its result off `executed` messages).
+ *
+ * @param {{ imageUrl: string, forceLocal?: boolean }} payload
+ * @returns {{ onText: ?Function, onError: ?Function, cancel: Function }}
+ */
+export function runImageDescribe(payload) {
+    let _settled = false;
+    const exec = {
+        onText:  null,
+        onError: null,
+        cancel() {
+            if (_settled) return;
+            getEngine(payload.forceLocal === true).interrupt();
+        },
+    };
+
+    (async () => {
+        const workflowFile = getUniversalWorkflow('imageDescribe');
+        if (!workflowFile) {
+            exec.onError?.(new Error('imageDescribe workflow not registered'));
+            return;
+        }
+
+        let workflow;
+        try {
+            const res = await fetch(`/comfy_workflows/${workflowFile}`);
+            if (!res.ok) throw new Error(`Failed to load workflow: ${workflowFile}`);
+            workflow = await res.json();
+        } catch (err) {
+            exec.onError?.(err);
+            return;
+        }
+
+        // Same `Output_prompt` title contract the generation path uses (MPI-242).
+        const textNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id]._meta?.title?.toLowerCase() === 'output_prompt'
+            )
+        );
+
+        let caption = null;
+        const onMessage = (msg) => {
+            if (msg.type !== 'executed') return;
+            if (!textNodeIds.has(msg.data?.node)) return;
+            caption = readComfyOutputText(msg.data?.output) || caption;
+        };
+
+        try {
+            await getEngine(payload.forceLocal === true).runWorkflow(
+                workflow,
+                { Input_Image: payload.imageUrl },
+                onMessage,
+            );
+            _settled = true;
+            if (caption) exec.onText?.(caption);
+            else exec.onError?.(new Error('No caption returned'));
+        } catch (err) {
+            clientLogger.error('comfy', 'image describe workflow failed', err);
+            exec.onError?.(err);
+        } finally {
+            _settled = true;
+        }
+    })();
+
+    return exec;
+}
+
+/**
  * Executes a generative command.
  *
  * Returns an Execution handle synchronously — attach callbacks before the
