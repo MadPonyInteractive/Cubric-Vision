@@ -14,7 +14,27 @@
   - Caveat: base is Qwen-Image gen, not Edit — worked in the edit Detailers graph but confirm adherence when baked.
 - Edit-native anime alt (if V2 underperforms on edit path): **Qwen-Edit Anything to Anime** v2483865 (model 2206073, 869 DL) — civitaiarchive.com/models/2206073
 
-## USER-CURATED picks (Fabio finding manually, running list — 2026-07-18)
+## STYLE REGISTRY — LOCKED (7 styles, from live graph 2026-07-18)
+
+Same style system as Krea2 (`Mpi Math` a==N gate → `Input_style_lora_N` → strength from `Input_Stylization`).
+Controls: `Input_Style` (int index 0–7) + `Input_Stylization` (float strength, **default 0.80**).
+LoRA files live in `loras/qwen/styles/`.
+
+| Idx | Style label | LoRA filename (`qwen/styles/`) | civitai versionId |
+|---|---|---|---|
+| 0 | No Style | — (strength 0 / bypass) | — |
+| 1 | Illustration | `Illustration_style.safetensors` | 2235007 |
+| 2 | Anime 3D | `Qwen-Anime-V2.safetensors` | 2373282 (model 1994924) |
+| 3 | Anime 2D | `animal_style.safetensors` | 2483865 (model 2206073) |
+| 4 | Anime Zankuro | `zankuro-style-v1.safetensors` | 2132600 |
+| 5 | 3D | `style_3d.safetensors` | 2483967 |
+| 6 | Caricature | `qwen-edit-2509-caricature_v1.1.safetensors` | 2427075 (**2509-era, intentional** — works on 2511 base) |
+| 7 | SnapShot | `Amateur_snapshot.safetensors` | 2681332 |
+
+**DROPPED (tested, cut — do NOT wire):** Real→any (2643508), Hand-drawn line (2562484), Anime→realistic (2157828).
+All 7 passed visual test (screenshot grid). Each style LoRA → SHA256 → R2 `vision/models/loras/qwen/styles/` → style-registry entry (Krea2 styles precedent).
+
+## USER-CURATED picks (Fabio finding manually — download links, 2026-07-18)
 
 On disk `C:\AI\loras\QWEN`: `Qwen-Anime-V2` (style, KEEP) + Boreal (**tried — NOT style, it's detail/realism**).
 
