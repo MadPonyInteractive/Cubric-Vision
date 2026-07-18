@@ -171,15 +171,41 @@ export const APPS = [
         requiredDeps: ['qwen-lora-headswap'],
         operation: 'appHeadSwap',
         workflow: 'app_head_swap.json',
-        // uiComponent: pending — the box gizmo + steps carousel (MPI-299 UI phase).
-        // Until it lands MpiBaseApp renders the two media slots with no box control,
-        // so a run uses each box node's baked default.
+        // Controls = the tier radio ONLY. It also owns the box→injectionParams
+        // translation (which role feeds which node is app knowledge, not the
+        // frame's) — see MpiAppHeadSwap.js.
+        uiComponent: 'MpiAppHeadSwap',
         mediaType: 'image',
         inputSchema: {
             media: [
-                { type: 'image', mode: 'upto', max: 2, roles: ['image1', 'image2'] },
+                // `labels` are index-aligned with roles. Slot copy is the APP's to
+                // name — without this the frame falls back to "Image 1 / Image 2",
+                // which says nothing about which image plays which part.
+                {
+                    type: 'image', mode: 'upto', max: 2,
+                    roles: ['image1', 'image2'],
+                    labels: ['Original', 'Face Reference'],
+                },
             ],
         },
+        // The two boxes look identical but MEAN different things, so their copy
+        // carries the whole distinction: step 1 marks WHERE the head goes (mask),
+        // step 2 marks WHICH head to take (crop). ratio 1 because the pipeline
+        // crops a square — a non-square selection would clip the result.
+        steps: [
+            {
+                kind: 'box', role: 'image1', ratio: 1,
+                tickerLabel: 'Target head',
+                title: 'Mark where the new head goes',
+                hint: 'Box the head you want replaced. Include the hair and jaw.',
+            },
+            {
+                kind: 'box', role: 'image2', ratio: 1,
+                tickerLabel: 'Reference head',
+                title: 'Mark which head to take',
+                hint: 'Box the head to use. A close-up portrait works best.',
+            },
+        ],
     },
 ];
 

@@ -5,9 +5,10 @@
 > were plumbing tests, are marked for deprecation, and were never released. Nothing here is
 > a compromise with them.
 >
-> **Status: DESIGN AGREED + MOCK-UP APPROVED, NOT BUILT.** The mock-up phase ran (MPI-306,
-> 2026-07-18); the approved composition is recorded in § The approved composition below, which
-> OVERRIDES this document wherever the two disagree.
+> **Status: BUILT** (MPI-306 Phases 1–2, 2026-07-18) — the frame ships as `MpiBaseApp`, with
+> Head Swap as its first real instance. The approved composition is recorded in § The approved
+> composition below, which OVERRIDES this document wherever the two disagree.
+> Phase 3 (hold-until-Apply) is NOT built: Apply renders but is inert.
 
 ## The frame
 
@@ -88,6 +89,13 @@ Each step kind is one component with one contract: it receives `{ media, value, 
 and reports a value. It never knows which app hosts it, never touches the workflow, never
 talks to an injector. The frame collects `{ [role]: value }` and hands it to the app's param
 builder at Run.
+
+**Where role → graph-param mapping lives (settled MPI-306 Phase 2).** The frame passes the
+collected values to the app's controls component — `getInputs({ stepValues })` — and the APP
+names them for its own graph. Head Swap turns `image1`'s box into `box1` (masks the head being
+replaced) and `image2`'s into `box2` (crops the head being taken). That mapping is app
+knowledge by definition: teaching the frame which role feeds which node would make every
+future app's roles a frame concern, and the frame would stop being portable.
 
 **A new gizmo = one component + one registry line.** No frame change, no per-app layout.
 

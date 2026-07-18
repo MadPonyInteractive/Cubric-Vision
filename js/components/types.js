@@ -709,7 +709,8 @@
  * @typedef {Object} MpiBaseAppProps (Organism — js/components/Organisms/MpiBaseApp)
  * @property {import('../data/appsRegistry.js').AppDef} app - The app descriptor.
  * @property {Object|null} [uiComponent] - The per-app controls blueprint (mounted
- *   into the content slot; must expose el.getInputs()). Null for a frame-only app.
+ *   into the content slot; must expose el.getInputs({stepValues})). Null for a
+ *   frame-only app.
  * @property {Object} [initialInputs] - Optional seed inputs (overridden by
  *   state.s_appInputs[app.id] when present).
  *
@@ -733,8 +734,10 @@
  * forward arrow is never blocked. Declared `fields` render as ONE frame-owned row
  * between canvas and hint.
  *
- * Run merges media + stepValues + the uiComponent's getInputs() →
- * submitAppGeneration(app, inputs). Seeds/writes state.s_appInputs[app.id]
+ * Run merges media + stepValues + the uiComponent's getInputs({stepValues}) →
+ * submitAppGeneration(app, inputs). The step values are PASSED TO the controls
+ * component so the APP can map roles to its own graph params (e.g. Head Swap's
+ * box1/box2) — the frame never learns what a role means. Seeds/writes state.s_appInputs[app.id]
  * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
  * el.close() then Events.emit('apps:open'). Mid-run navigation is allowed; closing
  * with an unapplied result does NOT prompt (there is no Discard — see
@@ -789,6 +792,32 @@
  * Instance methods (on instance.el):
  *   getInputs() — returns {positive} (trimmed prompt text).
  *   destroy()   — removes the input listener.
+ */
+
+/**
+ * @typedef {Object} MpiAppHeadSwapProps (Organism — js/components/Organisms/MpiAppHeadSwap)
+ * @property {Object} [initialInputs] - Seed inputs from a prior run; reads
+ *   injectionParams.Input_Tier to restore the tier.
+ *
+ * Head Swap's controls (MPI-306 Phase 2): a Quality/Turbo/Hyper tier radio →
+ * `Input_Tier` (1/2/3), plus the translation of the frame's role-keyed step
+ * values into this graph's box params. Cost labels are RELATIVE ratios
+ * (baseline / ~25% / ~13% of time), NEVER absolute seconds — a baked ETA is a lie
+ * on every GPU but the one it was measured on (carousel-frame.md).
+ *
+ * NO prompt UI (both prompts are baked in the graph) and NO seed UI, ever.
+ *
+ * WHY THE BOX MAPPING LIVES HERE: the frame collects `{[role]: {box}}` and must
+ * never learn what a role means; image1's box masks the head being replaced
+ * (Input_Box) while image2's crops the head being taken (Input_Box_2). Coords
+ * pass through UNCONVERTED (MpiStepBox already reports clamped top-left source
+ * pixels) — only the w/h → width/height key rename happens.
+ *
+ * Instance methods (on instance.el):
+ *   getInputs({stepValues}) — returns {injectionParams:{Input_Tier, box1?, box2?}};
+ *                             a box is omitted when its step reported none, so the
+ *                             node keeps its baked default.
+ *   destroy()               — destroys the radio group.
  */
 
 /**

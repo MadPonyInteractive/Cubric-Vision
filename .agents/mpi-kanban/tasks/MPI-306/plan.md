@@ -64,12 +64,20 @@ Rework `MpiBaseApp` into the step carousel. Nothing Head-Swap-specific in it.
 
 **Verify mode:** `user-ux` — the whole point is how it feels.
 
-## Phase 2 — Head Swap as the proof
+## Phase 2 — Head Swap as the proof — ✅ BUILT, self-verified 2026-07-18
 
-7. **Head Swap `steps` + `uiComponent`** → verify: the two boxes reach `Input_Box` /
-   `Input_Box_2` with correct source-pixel coords; tier radio uses the MEASURED relative
-   labels (baseline / ~25% / ~13%), never absolute seconds.
+7. **Head Swap `steps` + `uiComponent`** → verified: boxes reach `Input_Box` / `Input_Box_2`
+   as top-left source pixels through the REAL injector + REAL graph (8/8); tier radio ships
+   the MEASURED relative labels. Evidence: `validation.md`.
    - If ANY of this needs a frame change, the frame was wrong — fix the frame, not the app.
+
+**One frame change, and it was the frame's fault:** `getInputs()` took no arguments, so the
+controls component could not see the boxes the frame had collected. The role→node mapping is
+app knowledge and must stay out of the frame, so the frame now passes
+`getInputs({ stepValues })`. `MpiBaseApp` still names no app, role or node.
+
+Still awaiting the user's look-and-feel pass. Head Swap cannot RUN (LoRA 404), so nothing was
+verified by generating.
 
 **Verify mode:** `user-ux`.
 

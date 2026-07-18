@@ -82,6 +82,56 @@ non-decision. The "Not saved yet" note stays: it is what makes Apply legible. Re
 Apply renders but does nothing — the run path still commits at ENQUEUE time. That is
 Phase 3, deliberately a separate diff.
 
+## Phase 2 — Head Swap as the frame's proof (2026-07-18) — BUILT, self-verified
+
+Mostly DATA, as designed. Shipped: `appsRegistry.js` (two `box` steps + `labels` +
+`uiComponent`), `MpiAppHeadSwap/` (new — tier radio + box→param mapping), `shell.js`
+(`_appComponents`), `preloadStyles.js`, `types.js`.
+
+### The ONE frame change — and why the frame was wrong, not the app
+`getInputs()` took no arguments, so a controls component could not see the boxes the frame
+had collected. The mapping itself (which role feeds which node) is app knowledge and must
+NOT move into the frame, so the seam was the frame's: it now passes
+`getInputs({ stepValues })`. That is the acceptance test working as intended — the frame
+was fixed, and `MpiBaseApp` still names no app, role, or node (asserted).
+
+### Automated checks — 8/8 injection + 16/16 declaration + live geometry
+**Injection, through the REAL `headSwapInjector` + REAL `app_head_swap.json`:** image1's box
+lands on `Input_Box` and image2's on `Input_Box_2` as top-left source pixels, unconverted;
+roles not swapped; `Input_Tier` carries the radio value; a step reporting NO box leaves that
+node's baked default untouched (box is optional per image); a single-box run fills `Input_Box`
+only; an off-edge box is re-clamped inside the source; no seed/prompt param is ever emitted.
+
+**Declaration:** uiComponent wired; `labels:['Original','Face Reference']`; exactly two `box`
+steps with roles image1/image2, both `ratio:1`; ticker labels `Target head`/`Reference head`;
+target step ordered before reference; no prompt in `inputSchema`; cost labels are relative
+ratios with no absolute seconds in any shipped string; registered in `_appComponents`,
+`preloadStyles.js` and `types.js`; `MpiBaseApp` CODE names no app/role/box specifics.
+
+**Live, in the user's running app (real geometry, not DOM presence):** root 1600×936, stage
+898 tall, slide 898; ticker reads `01 Inputs · 02 Target head · 03 Reference head ·
+04 Generate`; slot labels render `Original` / `Face Reference`; divider present on first and
+last steps (1×443) and ABSENT on middle steps; tier radio 236×27 with three 77×25 buttons;
+cost label live-updates `baseline` → `~13% of time` on Hyper; zero prompt textareas; zero
+page errors.
+
+> A first geometry run measured everything 0×0. NOT a regression: `#app-shell` carries `hide`
+> (`display:none`) until a project is opened, and the headless profile had no project to open.
+> Confirmed by walking the ancestor chain to the `display:none` owner, then re-measuring with
+> the shell unhidden. Recording it because Phase 1 was bitten by a real 0px stage — the
+> failure mode looks identical and must be diagnosed, never assumed either way.
+
+ESLint clean on every touched file (the one `preloadStyles.js` warning is pre-existing, on a
+line not touched).
+
+### Known-inert / untested
+- Head Swap STILL CANNOT RUN (LoRA 404s pending the fp32-vs-fp16 A/B + R2 upload), so nothing
+  here was verified by generating — by inspection and by injection against the real graph.
+- The box gizmo has still not been driven against a real UPLOADED image inside the flow (no
+  project in the headless profile); the box→node path is proven at the injector, not by hand-
+  dragging in the app.
+- Apply remains inert (Phase 3).
+
 ## NOT yet validated
 - **User check of look and feel** — the whole point (`verify mode: user-ux`). Gradient
   stops are explicitly to be tuned live in the app.

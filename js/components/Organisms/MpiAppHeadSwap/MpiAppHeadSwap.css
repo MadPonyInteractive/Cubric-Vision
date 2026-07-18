@@ -1,0 +1,18 @@
+/* MpiAppHeadSwap — Head Swap controls (tier radio only). MPI-306 Phase 2. */
+
+.mpi-app-head-swap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-app-head-swap__label {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+/* Cost is a RELATIVE ratio, never seconds — quiet, it annotates the choice. */
+.mpi-app-head-swap__cost {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+}

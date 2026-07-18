@@ -1,9 +1,9 @@
 # Head Swap
 
 > Swap a selected head in a base image with the head from a reference character image.
-> Card: **MPI-299** (child of MPI-259 Apps v2). Descriptor is REGISTERED in `appsRegistry.js`;
-> the app **cannot run yet** (see blockers) and its carousel `steps` are not declared — that
-> is MPI-306 Phase 2.
+> Card: **MPI-299** (child of MPI-259 Apps v2). Descriptor is REGISTERED in `appsRegistry.js`
+> and its carousel `steps` + controls **SHIPPED** (MPI-306 Phase 2, 2026-07-18). The app still
+> **cannot run** — see blockers.
 >
 > Portable UI decisions made here live in [../ui/](../ui/), not in this file.
 
@@ -27,7 +27,29 @@ is outstanding, which does not block this app.
   This app's tier switch mirrors it exactly (no new tier work).
 - **Extra dependency:** a head-swap LoRA, app-only. See § Dependency below.
 - **Output:** `mediaType: 'image'`, single output.
-- **uiComponent:** yes — the box gizmo, see [../ui/box-gizmo.md](../ui/box-gizmo.md).
+- **uiComponent:** `MpiAppHeadSwap` — the tier radio ONLY. The boxes are carousel STEPS
+  (frame-rendered `kind:'box'`), not part of the controls; see [../ui/box-gizmo.md](../ui/box-gizmo.md).
+
+### The UI, as shipped (MPI-306 Phase 2)
+
+Four steps, all DATA on the AppDef — no per-app layout code:
+
+| Step | Ticker | What |
+|---|---|---|
+| 0 | Inputs | two slots, labelled `Original` / `Face Reference` (`labels` on the media group) |
+| 1 | Target head | `box` step, role `image1`, `ratio:1` — "Mark where the new head goes" |
+| 2 | Reference head | `box` step, role `image2`, `ratio:1` — "Mark which head to take" |
+| 3 | Generate | tier radio + Generate → result |
+
+**The box→node mapping lives in `MpiAppHeadSwap.getInputs({stepValues})`, not the frame.**
+The frame collects `{[role]: {box}}` and must never learn what a role means; which box masks
+and which crops is app knowledge. Coords pass through **unconverted** — `MpiStepBox` already
+reports clamped top-left source pixels — with only the `w`/`h` → `width`/`height` rename the
+injector's widget names need.
+
+Tier cost labels are the MEASURED relative ratios (`baseline` / `~25% of time` /
+`~13% of time`), never absolute seconds ([../ui/carousel-frame.md](../ui/carousel-frame.md)
+§ Tier cost is RELATIVE).
 
 ### Injection surface (`Input_*` / `Output_*`)
 

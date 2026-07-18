@@ -25,6 +25,7 @@ import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelMan
 import { MpiAppLibrary } from './components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.js';
 import { MpiBaseApp } from './components/Organisms/MpiBaseApp/MpiBaseApp.js';
 import { MpiAppImageRegen } from './components/Organisms/MpiAppImageRegen/MpiAppImageRegen.js';
+import { MpiAppHeadSwap } from './components/Organisms/MpiAppHeadSwap/MpiAppHeadSwap.js';
 import { getAppById } from './data/appsRegistry.js';
 import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { getModelsByType } from './data/modelRegistry.js';
@@ -370,7 +371,7 @@ async function _bootApp() {
   // resolved descriptor + its per-app controls component (name → blueprint map;
   // the descriptor's uiComponent is a string so the registry stays import-free).
   // One live App at a time — destroy the prior instance before mounting the next.
-  const _appComponents = { MpiAppImageRegen };
+  const _appComponents = { MpiAppImageRegen, MpiAppHeadSwap };
   let _activeApp = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('app:open', ({ appId }) => {

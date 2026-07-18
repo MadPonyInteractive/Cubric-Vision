@@ -41,6 +41,11 @@ import { getStepKind } from './stepKinds.js';
  * frame never learns what a gizmo does — that is what keeps a new gizmo to one
  * component + one registry line.
  *
+ * Those step values are also HANDED TO the app's controls component
+ * (`getInputs({ stepValues })`), because turning a role into a graph param is
+ * app knowledge: Head Swap knows image1's box masks and image2's box crops, and
+ * the frame must not.
+ *
  * A step is NEVER invalid: every kind supplies a usable default, so the forward
  * arrow is never blocked. Required-because-the-flow-walks-you-there, not
  * required-because-Run-is-gated.
@@ -815,7 +820,12 @@ export const MpiBaseApp = ComponentFactory.create({
         /** Collect the inputs the app will run with. */
         function _collectInputs() {
             const mediaItems = _mediaGroups.flatMap(entry => entry.items);
-            const extra = _perApp?.el?.getInputs?.() || {};
+            // The controls component is handed the collected step values so it can
+            // translate them into ITS graph's params (Head Swap: box→Input_Box).
+            // That translation is APP knowledge — which role feeds which node is
+            // exactly what the frame must never learn — so the frame passes the
+            // raw role-keyed values through and the app owns the mapping.
+            const extra = _perApp?.el?.getInputs?.({ stepValues: { ..._stepValues } }) || {};
             return {
                 ...(mediaItems.length ? { mediaItems } : {}),
                 ...(Object.keys(_stepValues).length ? { stepValues: { ..._stepValues } } : {}),
