@@ -633,7 +633,7 @@ async function _deleteSavedItems(items) {
  *
  * @param {GenerationConfig} config
  * @param {GenerationCallbacks} callbacks
- * @param {{ existingGroup?: Object, scope?: string, groupId?: string, tempId?: string, placeholderGroup?: Object }} [opts]
+ * @param {{ existingGroup?: Object, scope?: string, groupId?: string, tempId?: string, placeholderGroup?: Object, deferCommit?: boolean }} [opts]
  * @returns {{ cancel: function }}
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
@@ -1239,7 +1239,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 const g = createItemGroup(model.mediaType, { name, width, height });
                 return appendToHistory(g, it);
             });
-            for (const g of groups) await addGroup(g);
+            // HOLD-UNTIL-APPLY (MPI-306): with deferCommit the groups are built but
+            // NOT persisted — the media + sidecars are already on disk, only the
+            // project record is withheld. The caller (MpiBaseApp) holds them and
+            // commits with projectService.addGroup on Apply, or simply drops them.
+            // Orphaned files are the existing .preview-assets + Cleanup GC path's
+            // job (MPI-277/227), not a new mechanism.
+            if (!opts.deferCommit) {
+                for (const g of groups) await addGroup(g);
+            }
             activeGenerations.end(_regId, { revokePreview: false });
             const firstItem = builtItems[0];
             const firstGroup = groups[0];
@@ -1247,8 +1255,14 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // contains all N groups via addGroup) and rebuilds grid with them.
             // `items`/`groups` (all N) are additive for multi-output consumers (Apps,
             // MPI-259) that show every result in-place; existing readers use `item`.
-            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, items: builtItems, groups, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery' });
-            callbacks.onComplete?.({ item: firstItem, group: firstGroup, items: builtItems });
+            // `deferred` tells listeners the media exists but is NOT in the project
+            // yet. Current listeners are safe either way (stats refetch reads disk;
+            // the float-latent bridge only releases its lane), but a future consumer
+            // that writes to the project MUST honour it.
+            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, items: builtItems, groups, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery', deferred: !!opts.deferCommit });
+            // `groups` reaches the caller so a deferCommit consumer can persist them
+            // later; committed runs simply ignore it (they are already in the project).
+            callbacks.onComplete?.({ item: firstItem, group: firstGroup, items: builtItems, groups });
         }
 
         Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });

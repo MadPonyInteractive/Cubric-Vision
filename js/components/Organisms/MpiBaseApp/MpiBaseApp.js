@@ -5,6 +5,7 @@ import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
 import { submitAppGeneration } from '../../../services/appService.js';
+import { addGroup } from '../../../services/projectService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -56,11 +57,14 @@ import { getStepKind } from './stepKinds.js';
  * for free. Hard cap: one row, no nesting/panels/accordions. A gizmo wanting more
  * means the step should SPLIT.
  *
- * ── What this phase does NOT do ──────────────────────────────────────────────
- * The RUN PATH is untouched (Phase 3): submitAppGeneration still commits at
- * ENQUEUE time with scope:'gallery', so a card appears in the gallery before the
- * run finishes and APPLY IS INERT. The pane renders "Not saved yet" + Apply so
- * the shape is right; wiring it is deliberately a separate diff.
+ * ── Hold-until-Apply (MPI-306 Phase 3) ───────────────────────────────────────
+ * A result is NOT the project's until the user applies it. submitAppGeneration
+ * runs with `deferCommit`, so the completion path builds the item groups but does
+ * NOT persist them; they wait in `_pendingGroups` and `_apply` commits them with
+ * projectService.addGroup. A re-run supersedes them and closing the app drops
+ * them — an unapplied result never enters the project. The MEDIA is on disk
+ * either way; orphans are the .preview-assets + Cleanup GC path's job
+ * (MPI-277/227), not a new mechanism.
  *
  * State: seeds from and writes `state.s_appInputs[appId]` (top-level replace) so
  * inputs survive close→reopen AND the Overlays.reset() force-close on navigation.
@@ -231,6 +235,15 @@ export const MpiBaseApp = ComponentFactory.create({
          * @type {Array<Object>|null}
          */
         let _lastResults = null;
+        /**
+         * The UNCOMMITTED item groups from the last run, held until Apply persists
+         * them (MPI-306). The media + sidecars are already on disk; only the project
+         * record is withheld, so this is the whole of "not saved yet". Same scope as
+         * _lastResults: cleared by a re-run and dropped when the app closes — a
+         * result the user never applied simply never entered the project.
+         * @type {Array<Object>|null}
+         */
+        let _pendingGroups = null;
         /** Last status-line copy, replayed when the run slide is rebuilt. */
         let _statusText = '';
         let _perApp = null;
@@ -1072,19 +1085,24 @@ export const MpiBaseApp = ComponentFactory.create({
             // Drop the previous result NOW: navigating away mid-run would otherwise
             // replay the last image over the top of the run in progress.
             _lastResults = null;
+            // A re-run supersedes an unapplied result — dropping the groups is all
+            // "discard" ever meant (the files stay for the Cleanup GC path).
+            _pendingGroups = null;
             _paintPending();
             _setGauge(0);
             _setStatus('Generating…');
             _myTempId = null;
 
             const res = submitAppGeneration(app, inputs, {
-                onComplete: ({ item, items } = {}) => {
+                onComplete: ({ item, items, groups } = {}) => {
                     _setRunning(false);
                     _myTempId = null;
                     _setGauge(100);
-                    // PHASE 3 will hold this in-app until Apply. Today the queue path
-                    // has ALREADY committed it at enqueue time.
-                    _setStatus('Done — added to your gallery.');
+                    // Held, not committed (MPI-306): submitAppGeneration ran with
+                    // deferCommit, so these groups are built but absent from the
+                    // project until _apply persists them.
+                    _pendingGroups = Array.isArray(groups) ? groups : null;
+                    _setStatus('Done — apply it to keep it.');
                     _showResults(items || item);
                     _hasPending = true;
                     _paintPending();
@@ -1129,17 +1147,36 @@ export const MpiBaseApp = ComponentFactory.create({
         }
 
         /**
-         * Apply — commit the pending result to the project + gallery.
-         * INERT UNTIL PHASE 3: the run path still commits at ENQUEUE time
-         * (submitAppGeneration's scope:'gallery' + placeholderGroup), so the result
-         * is already in the gallery by now and there is nothing left to commit.
-         * The affordance ships with the frame; wiring it is a separate diff.
+         * Apply — commit the pending result to the project + gallery (MPI-306).
+         *
+         * The run finished with deferCommit, so the media is on disk but the project
+         * knows nothing about it. addGroup is the same primitive the normal gallery
+         * completion path uses; this is the ONLY thing that was withheld.
+         *
+         * Clears the pending flag FIRST so a double-click cannot commit twice.
          */
-        function _apply() {
+        async function _apply() {
+            const groups = _pendingGroups;
+            _pendingGroups = null;
             _hasPending = false;
             _paintPending();
             _syncRunUi();
-            _setStatus('Applied — added to your gallery.');
+            if (!groups?.length) return;
+            try {
+                for (const g of groups) await addGroup(g);
+                _setStatus('Applied — added to your gallery.');
+            } catch (err) {
+                clientLogger.error('MpiBaseApp', 'Failed to apply app result', err);
+                // Put it back: the files are still on disk, so a retry is valid.
+                _pendingGroups = groups;
+                _hasPending = true;
+                _paintPending();
+                _syncRunUi();
+                Events.emit('ui:error', {
+                    title: 'Could not apply',
+                    message: 'The result could not be added to your gallery. Try again.',
+                });
+            }
         }
 
         // Ctrl+Enter runs the OPEN app, not the PromptBox behind it.

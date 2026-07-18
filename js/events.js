@@ -178,7 +178,7 @@ export const Events = new EventBus();
  * 'generation:started'    { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }
  * 'preview:frame'         { engine, promptId, seq, url } — unified latent-preview bus (MPI-269). Resolve via activeGenerations.byPromptId; seed via getLastPreview. See docs/preview-bus.md.
  * 'generation:cancelled'  { id, tempId, extraTempIds }
- * 'generation:complete'   { id, item, group, tempId?, extraTempIds? } — generation succeeded and persisted
+ * 'generation:complete'   { id, item, group, items?, groups?, tempId?, extraTempIds?, deferred? } — generation succeeded; persisted UNLESS `deferred` (MPI-306 hold-until-Apply: media is on disk, the project record is withheld until the App's Apply commits it)
  * 'generation-store:changed' { jobs, running, pending, depth } — generationStore snapshot after any job transition (MPI-208; the single source of truth all generation UI derives from)
  *
  * Focus mode events (state-driven; subscribe via `Events.onState('focusMode', ...)`):

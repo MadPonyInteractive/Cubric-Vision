@@ -68,43 +68,23 @@ export function submitAppGeneration(appOrId, inputs = {}, callbacks = {}) {
         appInputs: inputs,
     };
 
-    // ONE placeholder "Generating…" card while the job runs — mirrors the PromptBox
-    // gallery path (MpiGalleryBlock mkPlaceholder). A multi-output app's OUTPUT COUNT
-    // is only known when the run finishes: the workflow self-gates outputs by input
-    // presence (empty image slot → its Output_Image branch is ExecutionBlocker'd → no
-    // card), so the app declares no fixed N up front. The engine emits ONE live latent
-    // at a time, so one in-progress card is all we can honestly show; the capture path
-    // then lands the real 1..N cards on generation:complete (MPI-259). The card shows
-    // the source image as an input-preview when one was supplied.
-    const ip = config.injectionParams || {};
-    const srcUrl = mediaItems[0]?.url || mediaItems[0]?.filePath || null;
+    // No gallery placeholder (MPI-306): an app run is not pending in the gallery
+    // because it will not land there unless the user applies it. The app's own
+    // result pane is where the run is visible — live latents reach it by tempId
+    // (preview:frame → activeGenerations.byPromptId, MPI-271).
     const tempId = crypto.randomUUID();
-    const mkPlaceholder = (id, withPreview) => ({
-        id,
-        type: 'image',
-        name: 'Generating...',
-        history: (withPreview && srcUrl) ? [{
-            id: `${id}-input-preview`,
-            type: 'image',
-            filePath: srcUrl,
-            name: 'Generating...',
-            displayName: 'Generating...',
-            operation: app.operation,
-            inputPreview: true,
-            pixelDimensions: { w: 0, h: 0 },
-        }] : [],
-        selectedIndex: 0,
-        width:  Number(ip.Width  || ip.width)  || 1024,
-        height: Number(ip.Height || ip.height) || 1024,
-        isGenerating: true,
-    });
 
     // NO getNextGeneration — arming the loop would re-fire app gens. forceLocal only
     // when the user has explicitly pinned the local engine (mirrors state.engineOverride).
+    //
+    // HOLD-UNTIL-APPLY (MPI-306): an app result is NOT the project's until the user
+    // applies it, so there is no gallery placeholder (nothing is pending in the
+    // gallery) and `deferCommit` withholds the addGroup. The app's own result pane
+    // shows progress; MpiBaseApp commits the groups handed to its onComplete.
     const opts = {
         scope: 'gallery',
         tempId,
-        placeholderGroup: mkPlaceholder(tempId, true),
+        deferCommit: true,
     };
     if (state.engineOverride === 'local') opts.forceLocal = true;
 
