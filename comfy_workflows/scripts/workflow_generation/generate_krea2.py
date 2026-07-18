@@ -151,7 +151,7 @@ _INJECTED_INPUT_DEFAULTS = [
     ("Input_Style",          "int",     0),       # 0 = No Style; app injects selection
     ("Input_Is_Edit",        "boolean", False),   # app injects true on the edit op only
     ("Input_Is_i2i",         "boolean", False),   # app injects true on the i2i op only
-    ("Input_pose_reference", "boolean", False),   # app injects true on the pose op only
+    ("Input_depth_reference", "boolean", False),   # app injects true on the depth op only
     ("Input_HiRes_Mode",     "boolean", False),   # app injects true when the Hi-Res toggle is on
     ("Input_enhance_prompt", "boolean", False),   # MpiIfElse gate; app injects on toggle
 ]
