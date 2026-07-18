@@ -95,6 +95,31 @@ function checkWorkflow(wf, objectInfo) {
     }
   }
 
+  // 3b. Title uniqueness — the app resolves injection slots BY TITLE (models.js
+  // injectionPrefix, e.g. 'Lora_Low' -> Input_Lora_Low_1..6), so two nodes sharing a title
+  // means only one resolves and the rest silently swallow their value. Check 4 below cannot
+  // see this: duplicate-titled nodes are all properly wired, so every one of them reaches a
+  // capture node. This shipped undetected in wan22_i2v, where nodes 793-798 were all titled
+  // Input_Lora_Low_1 and Low LoRA slots 2-6 did nothing. Output_* collides the same way on
+  // read-back (numbered captures Output_Image_2/_3). Only Input_*/Output_* are checked —
+  // ordinary graph nodes reuse titles freely and are none of our business.
+  const byTitle = new Map();
+  for (const [id, node] of nodes) {
+    const title = titleOf(node);
+    if (!/^(input|output)_/i.test(title)) continue;
+    const key = title.toLowerCase();
+    if (!byTitle.has(key)) byTitle.set(key, []);
+    byTitle.get(key).push(id);
+  }
+  for (const [key, ids] of byTitle) {
+    if (ids.length < 2) continue;
+    violations.push(
+      `${ids.length} nodes share the title "${key}" (nodes ${ids.join(', ')}) — the app injects by ` +
+      `title, so only one resolves and the others silently discard their value. Give each a unique ` +
+      `title in the ComfyUI graph (e.g. _1, _2, _3) and re-export.`
+    );
+  }
+
   // 4. Injection reachability — every Input_* node must have a live path to a capture
   // node. The app injects BY TITLE and never checks the graph, so an Input_* that feeds
   // nothing (or feeds only a dead branch) accepts the value and silently drops it: the
