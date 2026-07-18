@@ -4,14 +4,21 @@
   "title": "App carousel frame + hold-until-Apply",
   "description": "THE app UI. Portable step-carousel frame + a run-path change. Head Swap (MPI-299) is app #1 of the real product; the three earlier apps (image-regen, sdxl-4k, video-stitch) were plumbing tests, are marked for DEPRECATION and were never released -- they are NOT compatibility constraints.\n\nDESIGN AGREED, NOT BUILT -- full write-up: docs/playbooks/add-app/ui/carousel-frame.md\n\nFRAME: two zones split by a centre divider, but ONLY on the first and last step -- that absence is the signal (divided = supplying/reviewing, undivided = working). Step 0 = drop boxes (left) + what-the-app-does with examples (right). Middle steps = a BOUNDED, CENTRED canvas, title above, guidance below, no divider. Last step = controls + Generate (left) + result/live latents (right). Arrows vertically centred outside the content; step dots indicate but do NOT navigate; plain slide.\n\nSTEPS ARE DATA: the canvas is a SLOT, not a box gizmo (box now; mask painter, light pointer, mood board later). An app declares steps: [{kind, role, title, hint, ...}] and writes no layout code. `kind` is a registry key (STEP_KINDS = {box: MpiStepBox, ...}) mirroring the injector registry. Each step kind takes {media, value, onChange} and reports a value -- it never knows its host app, never touches the workflow, never talks to an injector. New gizmo = one component + one registry line. A step binds to a MEDIA ROLE (image1/image2), the same vocabulary the op's mediaInputs uses, so image1's box reaches Input_Box with no new mapping. Every step kind supplies a usable default (box defaults to full image) so the forward arrow is NEVER blocked -- required-because-the-flow-walks-you-there, not required-because-Run-is-gated.\n\nRUN-PATH CHANGE (not a UI detail): today submitAppGeneration enqueues with scope:'gallery' + a placeholderGroup, so a card appears in the gallery AT ENQUEUE TIME. Under this design the last step holds the result IN-APP -- generate, watch latents, cancel/re-generate freely -- and only APPLY commits it to the project + gallery. DECIDED: pending results live in app state and do NOT survive closing the app (confirm on close with an unapplied result); no project-level persistence for something uncommitted. Files still land on disk, so 'not in the gallery' means NOT RECORDED IN THE PROJECT -- orphans are the existing .preview-assets + Cleanup GC path's job (MPI-277/227), not a new mechanism. Live previews already work: submitAppGeneration returns tempId which MpiBaseApp matches against preview:frame (MPI-271); what changes is where the COMMITTED output goes.\n\nNEXT: three independent mock-ups via the `impeccable` skill, given the vision + constraints but NOT a prescribed layout -- deliberately full freedom, because mock-ups surface what a written design misses in both directions (more AND less). Then converge, then build. Open items for that pass are listed in carousel-frame.md section 'Open'.\n\nSIDE EFFECT TO DECIDE LATER (do not settle by accident): the dev-gate's '>=4 apps' trigger (MPI-259 item F) was counting the three deprecated test apps. If they RIP, Head Swap is app 1 of 1.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-18T12:15:00Z",
-  "updated_at": "2026-07-18T17:11:00Z",
+  "updated_at": "2026-07-18T22:29:44Z",
   "links": {
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "plan": "plan.md",
     "validation": "validation.md"
-  }
+  },
+  "events": [
+    {
+      "at": "2026-07-18T22:29:44Z",
+      "type": "task.moved",
+      "note": "Phases 1-3 shipped + user-verified (frame, Head Swap proof, hold-until-Apply). Tier-injection bug 331c3ca5 and gallery-repaint fix e0a4576c also verified. Outstanding: real step-0 example image (user), look-and-feel pass (user)."
+    }
+  ]
 }
