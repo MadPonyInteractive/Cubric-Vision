@@ -229,21 +229,17 @@ export const loraDeps = {
     'qwen-lora-headswap': {
         id: 'qwen-lora-headswap',
         name: 'Qwen Edit — Head Swap',
-        // rank 16 / fp16 — 307MB, a QUARTER of the rank-32/fp32 original (1.2GB).
-        // Half that saving is precision, half is RANK: this is a lower-capacity LoRA,
-        // not merely a smaller-precision copy of the same one. If head-swap quality
-        // regresses, suspect rank before precision.
-        // Node 109 of app_head_swap.json names this file — the two MUST match or the
-        // graph 404s. comfy_workflows/raw/app_head_swap.json (user-owned) still names
-        // the fp32 file and needs the same swap in ComfyUI before the next sync.
-        filename: 'loras/qwen/bfs_head_v5_2511_merged_version_rank_16_fp16.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/qwen/bfs_head_v5_2511_merged_version_rank_16_fp16.safetensors',
-        size: '307MB',
-        // null until the R2 upload lands (this file's rule: change the URL → null the
-        // hash). The LOCAL file hashes to
-        // 1315a08947e5d6d7c53ea4fc59f272e0d54efd7f2da35999b7d873a7cf4fa89b — set that
-        // here once it is uploaded AND the uploaded copy is confirmed to match.
-        sha256: null,
+        // rank 32 / fp32, 1.2GB. SETTLED 2026-07-18 — do not re-run this A/B.
+        // The rank-16/fp16 build (307MB, the only smaller one HuggingFace publishes)
+        // LOST in two generations. Note what was NOT tested: that file is a quarter
+        // the size, and only half of that is precision — the other half is RANK. A
+        // rank-32 fp16 (~600MB) would be the real precision-only comparison, but no
+        // such file exists officially and merging one ourselves is not worth it while
+        // this one works. So the finding is "rank-16 fp16 lost", NOT "fp16 lost".
+        filename: 'loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
+        size: '1.2GB',
+        sha256: null, // pending R2 upload — not authorised yet
     },
     'qwen-edit-style-3d': {
         id: 'qwen-edit-style-3d',

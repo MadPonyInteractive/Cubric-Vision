@@ -501,7 +501,7 @@
   },
   "109": {
     "inputs": {
-      "lora_name": "qwen\\bfs_head_v5_2511_merged_version_rank_16_fp16.safetensors",
+      "lora_name": "qwen\\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors",
       "strength_model": 1,
       "model": [
         "99",
