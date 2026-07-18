@@ -237,6 +237,18 @@
     justify-self: center;
     max-width: 460px;
 }
+/* The RUN step's right column is the exception: the result frame spans the whole
+   column from the divider out, so the column must stretch rather than centre a
+   460px block. Scoped by :has() to the pane itself — step 0's explainer column
+   keeps its centred measure.
+   The negative left margin cancels the grid's own gap so the frame starts AT the
+   divider (the divider is its left edge) instead of floating a gap away from it. */
+.mpi-base-app__col-right:has(.mpi-base-app__result) {
+    justify-self: stretch;
+    max-width: none;
+    width: auto;
+    margin-left: calc(var(--s-7) * -1);
+}
 
 /* ── Slots: PLACEHOLDER, not container ──────────────────────────────────── */
 .mpi-base-app__slot-unit {
@@ -505,23 +517,26 @@
 .mpi-base-app__result {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: var(--s-4);
+    width: 100%;
 }
 /* Zoom/pan viewport (the same ViewManager model as History): the frame CLIPS and
-   the media layer is transformed inside it. Fixed height so there is room to zoom
-   into — an auto-height frame would resize under the image as it scaled. */
+   the media layer is transformed inside it.
+   It SPANS THE RIGHT COLUMN, starting at the divider — the divider is its left
+   edge, so it carries no border of its own. A fixed height (not auto) is what
+   gives the zoom something stable to work in; an auto-height frame would resize
+   under the image as it scaled. Apply sits below it. */
 .mpi-base-app__result-frame {
     position: relative;
-    /* A single left rule, not a box. The full border read as a frame around the
-       result; the one edge is enough to seat it against the divider. */
-    border-left: 1px solid var(--line);
     background: var(--surface-canvas);
     line-height: 0;
-    /* The media layer is absolutely positioned, so it contributes NO size — the
-       frame must state its own or it collapses to min-width. */
-    width: 384px;
-    height: 384px;
+    /* The media layer is absolutely positioned and contributes NO size, so the
+       frame must state its own. */
+    width: 100%;
+    height: 60vh;
+    min-height: 320px;
+    max-height: 620px;
     overflow: hidden;
     cursor: grab;
     touch-action: none;
@@ -591,7 +606,14 @@
 }
 @keyframes mpi-base-app-sweep { from { top: 0; } to { top: 100%; } }
 
-.mpi-base-app__result-actions { display: flex; gap: var(--s-3); }
+/* The pane stretches (the frame spans the column), so these centre themselves
+   rather than inheriting full-width stretch. */
+.mpi-base-app__result-actions {
+    display: flex;
+    gap: var(--s-3);
+    justify-content: center;
+    align-self: center;
+}
 .mpi-base-app__result-actions[hidden] { display: none; }
 
 /* The note that makes hold-until-Apply legible: without it a finished image
@@ -600,6 +622,7 @@
     font-size: var(--t-2xs);
     color: var(--accent-warn);
     letter-spacing: 0.04em;
+    align-self: center;
 }
 .mpi-base-app__pending[hidden] { display: none; }
 
