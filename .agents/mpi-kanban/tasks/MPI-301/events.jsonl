@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-301","at":"2026-07-18T00:00:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-301","from":"todo","to":"doing","at":"2026-07-18T00:05:00Z","actor":"claude","summary":"start build: MpiStylePicker component"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-301","from":"doing","to":"done","at":"2026-07-18T00:30:00Z","actor":"claude","summary":"MpiStylePicker built + wired; swapped styleSelect dropdown->picker; harness-verified (11 cards, selection highlight, index-contract change event, panel opens up + closes on pick). validating: needs live Krea2 project confirm in Electron."}

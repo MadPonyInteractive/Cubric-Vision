@@ -2,10 +2,12 @@
 
 > Part of [docs/models/krea2/](README.md). The app-side injection seam is in [injection.md](injection.md).
 
-**9 style LoRAs.** All 469 MB, from `Comfy-Org/Krea-2/loras/`.
+**10 style LoRAs** (picker indices 1–10; index 0 = None). The original nine are 469 MB each,
+from `Comfy-Org/Krea-2/loras/`; MidJourney was added later.
 
 **They are MODEL-ONLY — there is no CLIP side.** Verified by reading the safetensors headers
-of all nine: 528 tensors each, **every key prefixed `transformer.`**, zero text-encoder keys.
+of the original nine: 528 tensors each, **every key prefixed `transformer.`**, zero
+text-encoder keys.
 Rank **32**, dtype **F32** (not rank-64 BF16 — that is the unrelated `krea2_turbo_lora_rank_64_bf16`
 distill LoRA in the same folder).
 
@@ -34,7 +36,7 @@ distill LoRA in the same folder).
 
 `krea2_turbo_lora_rank_64_bf16.safetensors` also lives in that folder. It is **NOT a style
 LoRA** — it is the distillation LoRA applied to Raw to make it behave like Turbo. Keep it out
-of the style dropdown.
+of the style rack (it has no picker card and no label/image entry).
 
 ## The `Stylization` slider
 
@@ -56,19 +58,34 @@ reproducible).
 > "monochrome ink wash style" while the LoRA barely applies it. The user reports it works well.
 > That tension may *be* the good part — but it has never been evaluated as a deliberate design.
 
-## UI labels (`Input_Style` index → dropdown)
+## UI labels + card images (`Input_Style` index → picker)
 
 The app injects the **index**, never the filename. Labels = the stem after `krea2_`, title-cased.
+The picker (`MpiStylePicker`) shows one image card per style; images come from
+`styleLoraImages` on the ModelDef, resolved against `comfy_workflows/display/`.
+All four Krea2 variants share this rack, so they share both arrays.
 
-| idx | label | idx | label | idx | label |
-|---|---|---|---|---|---|
-| **0** | **No Style** | 4 | Neon Drip | 7 | Soft Water Color |
-| 1 | Dark Brush | 5 | Rainy Window | 8 | Sunset Blur |
-| 2 | Dot Matrix | 6 | Retro Anime | 9 | Vintage Tarot |
-| 3 | Kids Drawing | | | | |
+| idx | label | image (`krea2-style-*.webp`) |
+|---|---|---|
+| **0** | **None** (no-style baseline) | `none` |
+| 1 | Dark Brush | `darkbrush` |
+| 2 | Dot Matrix | `dotmatrix` |
+| 3 | Kids Drawing | `kidsdrawing` |
+| 4 | Neon Drip | `neondrip` |
+| 5 | Rainy Window | `rainywindow` |
+| 6 | Retro Anime | `retroanime` |
+| 7 | Soft Water Color | `softwatercolor` |
+| 8 | Sunset Blur | `sunsetblur` |
+| 9 | Vintage Tarot | `vintagetarot` |
+| 10 | MidJourney | `midjourney` |
 
-`0` zeroes all nine LoRA strengths **and** selects no trigger phrase ⇒ the Stylization slider
-should be disabled at index `0`. See [injection.md](injection.md) for the two-scalar mechanism.
+The card images are **all the same prompt** — *"A woman and a man, explorers, running from a
+massive dinosaur In a rain forest"* — one gen per style, so the grid reads as a like-for-like
+comparison. Index 0 is that prompt with the rack **off**: the model's native look.
+Re-shoot the whole set together if you ever change the prompt; a mixed set defeats the point.
+
+`0` zeroes all ten LoRA strengths **and** selects no trigger phrase ⇒ the Stylization slider
+is disabled at index `0`. See [injection.md](injection.md) for the two-scalar mechanism.
 
 ## Prompt contract
 

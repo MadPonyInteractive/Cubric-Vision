@@ -24,10 +24,10 @@ its `lora_name` baked in. Their `strength_model` is *linked*, not a widget — e
 b if a == N else 0.0      # a = Input_Style, b = Input_Stylization, N = this slot's index
 ```
 
-So selecting style 5 drives slot 5 to the slider value and **zeroes the other eight**.
-`Input_Style = 0` zeroes all nine.
+So selecting style 5 drives slot 5 to the slider value and **zeroes the other nine**.
+`Input_Style = 0` zeroes all ten.
 
-**The same int also picks the trigger phrase.** `MpiPromptList` (title `styles`) holds the nine
+**The same int also picks the trigger phrase.** `MpiPromptList` (title `styles`) holds the ten
 phrases newline-joined in `options`, with `specific_item ← Input_Style` (1-indexed, `0` = none),
 `prefix: ", "`, `suffix: "."`. Its output flows through `MpiPromptProcessor` into
 `StringConcatenate.string_b`, with `Input_Positive` (`MpiText`) as `string_a`.

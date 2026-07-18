@@ -1,0 +1,173 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiStylePicker — style-LoRA picker: trigger button + floating image grid.
+
+   Self-contained (does NOT reuse the library .mpi-tile selectors). The grid
+   panel is portalled to document.body, so its rules must not rely on any
+   prompt-box ancestor. Visual language matches the model/app libraries: dark
+   ground, 4:5 thumbs, gradient placeholder, --accent-heat active state.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Trigger (styled like the dropdown trigger it replaces) ─────────────── */
+.mpi-style-picker { display: block; width: 100%; }
+
+.mpi-style-picker__trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    background: var(--surface-bar);        /* same ground as the panel — low contrast */
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    color: var(--ink-1);
+    font-family: inherit;
+    font-size: var(--t-sm);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--t-base) var(--ease), background var(--t-base) var(--ease);
+}
+.mpi-style-picker__trigger:hover { border-color: color-mix(in oklch, var(--accent-heat) 45%, var(--line)); }
+.mpi-style-picker.is-open .mpi-style-picker__trigger { border-color: var(--accent-heat); }
+
+.mpi-style-picker__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mpi-style-picker__chevron {
+    flex: none;
+    width: 8px; height: 8px;
+    border-right: 1.5px solid var(--ink-3);
+    border-bottom: 1.5px solid var(--ink-3);
+    transform: rotate(-135deg);      /* points up — panel opens upward */
+    transition: transform var(--t-base) var(--ease);
+}
+
+/* ── Portalled grid panel ──────────────────────────────────────────────── */
+.mpi-style-picker__panel {
+    position: fixed;
+    z-index: 11000;                    /* same portal layer as MpiDropdown's list */
+    display: none;
+    width: 460px;
+    max-width: calc(100vw - 16px);
+    padding: var(--s-3);
+    background: var(--surface-bar);        /* match the settings popover ground */
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    box-shadow: 0 12px 32px oklch(0 0 0 / 0.45);
+}
+.mpi-style-picker__panel.is-open {
+    display: block;
+    animation: mpi-style-picker-in 180ms var(--ease);
+}
+@keyframes mpi-style-picker-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mpi-style-picker__panel.is-open { animation: none; }
+}
+
+.mpi-style-picker__grid {
+    display: flex;
+    gap: var(--s-3);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: var(--s-2);        /* room for the scrollbar */
+    scrollbar-width: thin;
+    /* Snap so a card is never left half-cropped at the panel edge. */
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+    .mpi-style-picker__grid { scroll-behavior: auto; }
+}
+.mpi-style-picker__grid::-webkit-scrollbar { height: 8px; }
+.mpi-style-picker__grid::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.mpi-style-picker__grid::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Card: title on top, 4:5 thumb below ──────────────────────────────── */
+.mpi-style-picker__card {
+    flex: none;
+    width: 132px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--ink-2);
+    text-align: center;
+}
+
+.mpi-style-picker__card-title {
+    font-size: var(--t-xs);
+    line-height: 1.2;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color var(--t-base) var(--ease);
+}
+.mpi-style-picker__card.is-selected .mpi-style-picker__card-title {
+    color: var(--accent-heat);
+    font-weight: 600;
+}
+
+.mpi-style-picker__thumb {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: var(--r-2);
+    background: oklch(0.28 0.020 350);
+    border: 2px solid transparent;
+    transition: border-color var(--t-base) var(--ease);
+}
+.mpi-style-picker__card:hover .mpi-style-picker__thumb {
+    border-color: color-mix(in oklch, var(--accent-heat) 55%, transparent);
+}
+.mpi-style-picker__card.is-selected .mpi-style-picker__thumb {
+    border-color: var(--accent-heat);
+}
+
+.mpi-style-picker__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: saturate(0.92) brightness(0.92);
+    transition: transform var(--t-slow) var(--ease), filter var(--t-slow) var(--ease);
+}
+.mpi-style-picker__card:hover .mpi-style-picker__img {
+    transform: scale(1.05);
+    filter: saturate(1) brightness(1);
+}
+
+/* Gradient placeholder — mirrors the library tile's no-asset fallback. */
+.mpi-style-picker__thumb--placeholder::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(150deg, oklch(0.44 0.08 350), oklch(0.30 0.05 300));
+}
+/* "None" label sits above the placeholder gradient. */
+.mpi-style-picker__none {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--t-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink-1);
+}

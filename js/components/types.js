@@ -227,6 +227,23 @@
  */
 
 /**
+ * @typedef {Object} MpiStylePickerProps (Primitive — js/components/Primitives/MpiStylePicker)
+ * A trigger button + floating, horizontally-scrolling grid of image cards for
+ * picking a style LoRA. Replaces MpiDropdown for style selection but keeps an
+ * INDEX value contract (emits the selected index int). Card 0 is the "None" card
+ * (falls back to a "None" placeholder card when it has no image; supply one to
+ * show art there too). The grid is portalled to document.body and anchored above
+ * the trigger (the prompt box sits at the viewport bottom).
+ * @property {Array<{label:string, image?:string}>} [styles=[]] - Index-aligned style entries; index 0 = None (uses its image if given, else a placeholder)
+ * @property {number} [value=0] - Selected index
+ * @property {string} [imageBase='comfy_workflows/display/'] - Path prefix for card images
+ * @property {string} [info] - Info Bar description forwarded to the trigger
+ *
+ * Emits:
+ * 'change' { index: number, label: string }
+ */
+
+/**
  * @typedef {Object} MpiTreePickerProps (Primitive — js/components/Primitives/MpiTreePicker)
  * Searchable folder-tree picker for path-shaped option lists (MPI-233). Drop-in
  * alternative to MpiDropdown — value stays the full path string so upstream

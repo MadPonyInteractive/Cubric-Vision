@@ -126,6 +126,7 @@ an order, and do not pre-read sections you haven't reached.
 | `progressStages.js` bar counts **must be counted live** per run mode. Never guess | 02 |
 | Injection **silently skips** a param whose `Input_*` title matches no node (hid `Input_Is_i2i` + `Input_Batch` for 4 sessions) | 04 |
 | Style-LoRA set ⇒ assert `len(MpiPromptList.options) == number of style LoRAs`. A missing trigger line is a silent half-application | 05 |
+| Style rack ⇒ ship `styleLoraImages` (index-aligned with `styleLoraLabels`, index 0 = no-style baseline) — one gen per style from the SAME prompt. Misalignment shows the wrong picture for the style the user gets | 05 |
 | Models are **NOT** version-bumped | README |
 
 ## Hard rules

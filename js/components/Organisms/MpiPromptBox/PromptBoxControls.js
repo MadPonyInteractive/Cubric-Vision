@@ -14,6 +14,7 @@
 import { MpiOptionSelector, clampQualityTier, defaultQualityTier } from '../../Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiStylePicker } from '../../Primitives/MpiStylePicker/MpiStylePicker.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qsa } from '../../../utils/dom.js';
@@ -960,6 +961,68 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
+     * qwenTier — Qwen-Image-Edit speed/quality tier (MPI-300). Injects a 1-indexed
+     * int into the "Input_Tier" MpiInt, which drives the graph's MpiAnySwitch model
+     * path + step-count switch: 1=Quality (raw ~20-step, no accelerator LoRA),
+     * 2=Turbo (8-step Lightning LoRA), 3=Hyper (4-step Lightning LoRA). One int8
+     * transformer for all three — only the accelerator LoRA changes. Persists per-op.
+     */
+    qwenTier: {
+        nodeTitle: 'Input_Tier',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.qwenTier,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'qwenTier', opts);
+            const savedNum = Number(saved.qwenTier ?? fallback);
+            const allowed = [1, 2, 3];
+            const initial = allowed.includes(savedNum) ? savedNum : fallback;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Tier';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: [
+                    { label: 'Quality', value: '1' },
+                    { label: 'Turbo',   value: '2' },
+                    { label: 'Hyper',   value: '3' },
+                ],
+                value: String(initial),
+                name: 'qwenTier',
+                size: 'sm',
+                columns: 3,
+                info: 'Speed vs quality — Quality (raw, best, slowest), Turbo (8-step), Hyper (4-step, fastest)',
+            });
+
+            this._instance.on('select', ({ value }) => {
+                const v = Number(value);
+                if (!allowed.includes(v)) return;
+                this.value = v;
+                _emitUpdate(this, opts, 'qwenTier', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Number(this.value ?? this.defaultValue) || this.defaultValue;
+            return { Input_Tier: v };
+        },
+    },
+
+    /**
      * styleSelect — style-LoRA picker (Krea2 pattern, MPI-242; playbook §9).
      *
      * Injects the INDEX (`Input_Style`, MpiInt), never a filename or a trigger
@@ -969,12 +1032,14 @@ export const PROMPT_BOX_CONTROLS = {
      * that cannot drift, because there is only one knob.
      *
      * Labels come from the ModelDef (`styleLoraLabels`), so a future model with a
-     * style rack brings its own set. Index 0 is always the "no style" entry.
+     * style rack brings its own set. Index 0 is always the "no style" entry. The
+     * card images come from `styleLoraImages` (index-aligned; index 0 = None, no
+     * image) under comfy_workflows/display/ — a missing entry renders a placeholder.
      *
-     * Rendered as an inline MpiDropdown (no popover trigger) stacked directly above
-     * the Stylization slider, reusing the slider's own label classes so the two read
-     * as one pair. `direction: 'up'` because the prompt box sits at the bottom of the
-     * viewport — the sibling model/op dropdowns do the same.
+     * Rendered as an MpiStylePicker: a trigger button showing the selected style's
+     * name, opening a horizontally-scrolling grid of image cards. It replaced the
+     * old inline dropdown (MPI-301) but keeps the SAME value contract — it emits the
+     * selected INDEX, which is injected as `Input_Style`.
      *
      * Changing the style re-renders the Stylization slider's enabled state — at
      * index 0 the strength is inert (every gate is zeroed), so a live slider there
@@ -986,6 +1051,11 @@ export const PROMPT_BOX_CONTROLS = {
         defaultValue: PROMPT_CONTROL_DEFAULTS.styleSelect,
         mount(hostEl, opts = {}) {
             const labels = opts.model?.styleLoraLabels || ['None'];
+            // ponytail: no ModelDef ships styleLoraImages yet — cards render the
+            // placeholder gradient. Add an index-aligned string[] (files under
+            // comfy_workflows/display/, index 0 = None ignored) to a ModelDef when
+            // the style art exists; no code change needed here.
+            const images = opts.model?.styleLoraImages || [];
             const saved  = _readSaved(this, opts);
             const savedNum = Number(saved.styleSelect ?? this.defaultValue);
             const initial = Number.isInteger(savedNum) && savedNum >= 0 && savedNum < labels.length
@@ -1004,19 +1074,17 @@ export const PROMPT_BOX_CONTROLS = {
             lblRow.appendChild(nameEl);
             hostEl.appendChild(lblRow);
 
-            const ddHost = document.createElement('div');
-            hostEl.appendChild(ddHost);
+            const pickerHost = document.createElement('div');
+            hostEl.appendChild(pickerHost);
 
-            this._instance = MpiDropdown.mount(ddHost, {
-                options: labels.map((label, i) => ({ label, value: String(i) })),
-                value: String(initial),
-                direction: 'up',
-                wrapLabels: true,
+            this._instance = MpiStylePicker.mount(pickerHost, {
+                styles: labels.map((label, i) => ({ label, image: images[i] || null })),
+                value: initial,
                 info: 'Style — applies a built-in style LoRA and its trigger phrase',
             });
 
-            this._instance.on('change', ({ value }) => {
-                const v = parseInt(value, 10) || 0;
+            this._instance.on('change', ({ index }) => {
+                const v = Number.isInteger(index) ? index : 0;
                 this.value = v;
                 // The Stylization slider is a sibling control; it listens for this.
                 Events.emit('promptbox:style-change', { index: v });
@@ -1029,6 +1097,10 @@ export const PROMPT_BOX_CONTROLS = {
         getInjectionParams() {
             const v = parseInt(this.value ?? this.defaultValue, 10) || 0;
             return { Input_Style: v };
+        },
+        destroy() {
+            this._instance?.destroy?.();
+            this._instance = null;
         },
     },
 

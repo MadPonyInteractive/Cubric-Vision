@@ -43,11 +43,26 @@ it ships already drifted.
   `Input_Lora_1..6`.
 
 **In the app:**
-- Two `PROMPT_BOX_CONTROLS` entries: a style dropdown (`nodeTitle: 'Input_Style'`, injects the
+- Two `PROMPT_BOX_CONTROLS` entries: `styleSelect` (`nodeTitle: 'Input_Style'`, injects the
   **index**) and a Stylization slider (`nodeTitle: 'Input_Stylization'`, float). Disable the
   slider at index `0`.
-- **Labels** = the filename stem after the model prefix, title-cased
-  (`krea2_softwatercolor` → `Soft Water Color`). Index `0` = `No Style`.
+- **`styleSelect` renders an `MpiStylePicker`** (MPI-301) — a trigger button showing the
+  selected style's name, opening a horizontally-scrolling grid of image cards (title on top,
+  4:5 image below). It replaced an inline dropdown; the **value contract is unchanged** (it
+  emits the selected index, which is injected as `Input_Style`). You add DATA, not code.
+- **Labels** = `styleLoraLabels` on the ModelDef: the filename stem after the model prefix,
+  title-cased (`krea2_softwatercolor` → `Soft Water Color`). Index `0` = the no-style entry.
+- **Card images** = `styleLoraImages` on the ModelDef — an **index-aligned** filename array
+  resolved against `comfy_workflows/display/`. Ship one image per style, all from the SAME
+  prompt so the grid reads as a comparison. **Index 0 is the no-style baseline** (a gen with
+  the style rack off) — it makes "None" show what the model looks like unstyled. The field is
+  optional: a missing entry (or the whole array) renders a placeholder card, so a model can
+  ship styles before its art exists.
+  Convention: name each file after its LoRA dep (`krea2-style-softwatercolor.webp`), WebP,
+  cropped 4:5 (512×640 is plenty — the card is ~132px wide).
+  ⚠ **Index alignment is the whole contract.** `styleLoraLabels[i]`, `styleLoraImages[i]`, the
+  `MpiMath` gate `a == i`, and the `MpiPromptList` trigger line all describe style `i`. An
+  off-by-one here shows the user the wrong picture for the style they get.
 - **Gate the controls on BOTH the op and the model**, exactly like `previewStage`:
   add the control ids to the relevant ops' `components` arrays in `commandRegistry.js`, and
   capability-gate per model inside `MpiPromptBox._refreshOpSlot()` so models without styles
