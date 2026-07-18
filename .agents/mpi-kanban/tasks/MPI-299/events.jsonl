@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-299","at":"2026-07-17T13:00:00Z","actor":"claude"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-299", "type": "task.moved", "at": "2026-07-18T12:30:00Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Board correction: wiring shipped in 5c2a4622 while the card was still in todo (lifecycle violation — implementation must pass through doing). Card is now an umbrella; UI split to MPI-306."}

@@ -15,6 +15,7 @@ overlay / App Library. The procedure for wiring an app is the numbered sections
 
 | File | Covers | Origin |
 |---|---|---|
+| [carousel-frame.md](carousel-frame.md) | **THE app frame** — step carousel, steps-as-data, results-not-real-until-Apply | Head Swap (MPI-299) |
 | [box-gizmo.md](box-gizmo.md) | Ratio-locked box selector over an image; coord contract into the graph | Head Swap (MPI-299) |
 
 ## Baseline rules
@@ -36,6 +37,13 @@ overlay / App Library. The procedure for wiring an app is the numbered sections
 Not yet decided — captured so the next session doesn't start cold:
 
 - **Slot previews.** App input slots currently show a raw path string; want image thumb /
-  `<video>` / `<audio>` player. Open item on MPI-259.
-- **Result-pane polish.** Shape of the in-app result view (single, multi-output, latents).
-- **Where per-app controls sit** relative to slots + Run — no convention locked yet.
+  `<video>` / `<audio>` player. Open item on MPI-259 — and a hard requirement for the
+  carousel's step 0 (dropped media REPLACES the slot's placeholder content) and for any box
+  step (you cannot box what you cannot see).
+- **Result-pane polish.** Shape of the in-app result view (single, multi-output, latents) —
+  now specifically the carousel's last step, where Apply/Discard also live.
+
+Answered by [carousel-frame.md](carousel-frame.md), kept here as pointers:
+
+- **Where per-app controls sit** → the last step's left pane, opposite the result.
+- **Overall app layout** → the carousel frame. Divider on first + last step only.
