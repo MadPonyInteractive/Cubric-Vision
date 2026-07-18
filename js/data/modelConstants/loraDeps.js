@@ -217,15 +217,13 @@ export const loraDeps = {
     // Qwen user for one app (MPI-304). Filed here because it IS a LoRA — deps are filed
     // by KIND, never by owner.
     //
-    // PRECISION IS PROVISIONAL: an fp16 variant (~half the size) is being A/B'd against
-    // this fp32. If fp16 wins, swap filename/url/size/sha256 here AND re-export the
-    // workflow (node 109 LoraLoaderModelOnly names the file) — the two must match or the
-    // graph fails to resolve the LoRA at run time. Nothing else references it.
+    // PRECISION SETTLED (2026-07-18) — see the entry's own comment. Changing it later
+    // means swapping filename/url/size/sha256 here AND re-exporting the workflow (node
+    // 109 LoraLoaderModelOnly names the file); the two must match or the graph fails to
+    // resolve the LoRA at run time. Nothing else references it.
     //
-    // `url` is NOT LIVE YET (sha256 null, upload unauthorised). That blocks REMOTE runs
-    // (the Pod pulls from R2) and installs on OTHER machines — it does NOT block a local
-    // run on a box that already has the file on disk. Do not read "not uploaded" as
-    // "not runnable".
+    // `url` IS LIVE (uploaded + round-trip verified 2026-07-19), so remote runs and
+    // installs on other machines now work.
     'qwen-lora-headswap': {
         id: 'qwen-lora-headswap',
         name: 'Qwen Edit — Head Swap',
@@ -239,7 +237,10 @@ export const loraDeps = {
         filename: 'loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
         size: '1.2GB',
-        sha256: null, // pending R2 upload — not authorised yet
+        // Verified by ROUND TRIP 2026-07-19: downloaded from the URL above and hashed
+        // the served bytes (1,206,402,600 B, identical to local). This field verifies
+        // the DOWNLOAD, so hashing the local file alone would not have earned it.
+        sha256: '0a137e61245781412421f5dee5db4ccac28b6c9952c042d1123a84609107cd10',
     },
     'qwen-edit-style-3d': {
         id: 'qwen-edit-style-3d',

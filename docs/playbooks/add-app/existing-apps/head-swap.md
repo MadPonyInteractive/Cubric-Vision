@@ -8,18 +8,19 @@
 >
 > Portable UI decisions made here live in [../ui/](../ui/), not in this file.
 
-## Status — runs LOCALLY; blocked for distribution (on weights, not on code)
+## Status — SHIPS; weights are live, RunPod verification outstanding
 
-**Locally runnable on this machine.** The graph's node 109 loads
-`qwen\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors`, and that exact file is
-present in `G:\CubricModels\loras\qwen\` (1,206,402,600 bytes). Nothing 404s on the local
-engine, so a local failure is a REAL bug — do not write it off as the missing LoRA.
+**Runs locally AND distributable.** The graph's node 109 loads
+`qwen\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors`, present in
+`G:\CubricModels\loras\qwen\` (1,206,402,600 bytes) and now on R2. A local failure is a
+REAL bug — do not write it off as the missing LoRA.
 
-| Blocker | Owner | Notes |
+| Item | State | Notes |
 |---|---|---|
-| LoRA precision undecided | user | fp32 (1.2GB) vs fp16 (307MB, rank-16) A/B in progress — decides what gets uploaded. Both variants are on disk |
-| R2 upload | user go-ahead | Needs a `models.cubric.studio` URL + SHA256 (`sha256: null` today). **Do NOT upload until precision is settled.** Until it lands: **RunPod/remote 404s** (the Pod pulls weights from R2) and **no other machine can install the app** (the dep's `url` points at an object that does not exist). Neither affects a LOCAL run here |
-| Workflow not synced | user | Graph is DONE in ComfyUI (`app_head_swap`); needs saving + `raw/` drop + sync |
+| LoRA precision | **SETTLED** 2026-07-18 | rank-32 fp32 (1.2GB) kept. The rank-16 fp16 (307MB) LOST in two generations. NOTE: that file is a quarter the size and only HALF the saving is precision — the rest is RANK. A rank-32 fp16 (~600MB) would be the real precision-only test, but HF publishes none. The finding is "rank-16 fp16 lost", NOT "fp16 lost" |
+| R2 upload | **DONE** 2026-07-19 | Live at `models.cubric.studio/vision/models/loras/qwen/`. Round-trip verified: served bytes hash to `0a137e61…07cd10`, matching local exactly; `sha256` set in `loraDeps.js`. rclone writes REQUIRE `--s3-no-check-bucket` (a scoped token 403s on CreateBucket — reads like no-write-access when write is fine) |
+| Workflow synced | **DONE** | `raw/app_head_swap.json` + regenerated runtime, injection rules pass |
+| RunPod verification | **OPEN** | Now unblocked by the upload — never run against the remote engine |
 
 > **Do not repeat this mistake:** MPI-306 Phase 2 was verified "by inspection, not by
 > generating" on the inherited claim that the graph 404s. It does not — locally. The claim
