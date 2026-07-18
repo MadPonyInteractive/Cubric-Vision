@@ -108,7 +108,7 @@ export const MpiStepBox = ComponentFactory.create({
     template: () => `
         <div class="mpi-step-box">
             <div class="mpi-step-box__stage" id="step-box-stage">
-                <img class="mpi-step-box__media" id="step-box-media" alt="" />
+                <img class="mpi-step-box__media" id="step-box-media" alt="" draggable="false" />
                 <canvas class="mpi-step-box__overlay" id="step-box-overlay"></canvas>
             </div>
             <span class="mpi-step-box__dims" id="step-box-dims"></span>

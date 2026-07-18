@@ -182,15 +182,25 @@ export const MpiBaseApp = ComponentFactory.create({
 
         // ── Model ───────────────────────────────────────────────────────────────
         /**
-         * One entry per declared media group. Items are the filled slots.
+         * One entry per declared media group. `items` is SPARSE and indexed BY SLOT
+         * — a hole means that slot is empty, which is legal (the user may fill slot 2
+         * first). Never pack it: an item's role is its slot's role.
          * @type {Array<{group:Object, items:Array}>}
          */
         const _mediaGroups = mediaGroupDefs.map((group) => {
             const items = [];
             if (Array.isArray(seeded.mediaItems)) {
+                // Restore each item to the slot its OWN role names, so a saved run
+                // with only the second slot filled comes back that way. Falls back to
+                // positional order for older snapshots that carry no role.
                 const forType = seeded.mediaItems.filter(m => m.mediaType === group.type);
-                for (let i = 0; i < Math.min(forType.length, group.max); i++) {
-                    items.push({ ...forType[i], role: group.roles[i] });
+                let next = 0;
+                for (const m of forType) {
+                    const byRole = group.roles.indexOf(m.role);
+                    const idx = byRole >= 0 ? byRole : next;
+                    if (idx >= group.max) continue;
+                    items[idx] = { ...m, role: group.roles[idx] };
+                    next = Math.max(next, idx + 1);
                 }
             }
             return { group, items };
@@ -322,10 +332,11 @@ export const MpiBaseApp = ComponentFactory.create({
                 clear.innerHTML = renderIcon('close', 'xs');
                 unsubs.push(on(clear, 'click', (e) => {
                     e.stopPropagation();
-                    entry.items.splice(idx, 1);
-                    entry.items.forEach((it, i) => { it.role = group.roles[i]; });
-                    // A removed image invalidates any step bound to that role.
-                    const freedRole = group.roles[entry.items.length];
+                    // Clear THIS slot only — never splice, or every later image would
+                    // shift up a slot and silently change role (and meaning).
+                    delete entry.items[idx];
+                    const freedRole = group.roles[idx];
+                    // A removed image invalidates the step bound to that role.
                     if (freedRole) delete _stepValues[freedRole];
                     onDirty();
                 }));
@@ -350,7 +361,7 @@ export const MpiBaseApp = ComponentFactory.create({
                 unsubs.push(on(fileInput, 'change', async () => {
                     const files = Array.from(fileInput.files || []);
                     fileInput.value = '';
-                    await _handleFiles(entry, files, onDirty);
+                    await _handleFiles(entry, idx, files, onDirty);
                 }));
                 unsubs.push(on(slot, 'dragover', (e) => {
                     e.preventDefault();
@@ -364,7 +375,7 @@ export const MpiBaseApp = ComponentFactory.create({
                     slot.classList.remove('mpi-base-app__slot--dragover');
                     const files = Array.from(e.dataTransfer?.files || [])
                         .filter(f => f.type.startsWith(group.type + '/'));
-                    await _handleFiles(entry, files, onDirty);
+                    await _handleFiles(entry, idx, files, onDirty);
                 }));
             }
 
@@ -409,18 +420,36 @@ export const MpiBaseApp = ComponentFactory.create({
         }
 
         /**
-         * Upload one or more files into a media group, up to its cap.
+         * Upload one or more files into a media group, starting AT a given slot.
+         *
+         * SLOTS ARE ADDRESSABLE, NOT A PACKED LIST. Dropping into "Face Reference"
+         * while "Original" is empty must fill Face Reference — the user picks the
+         * slot, and whichever image they happened to find first is their business.
+         * Filling by `items.length` (the old behaviour) silently promoted a drop on
+         * slot 2 into slot 1, which for Head Swap meant the reference image became
+         * the target and the swap ran backwards.
+         *
+         * A gap is therefore legal: `items` is sparse, indexed BY SLOT, and each
+         * item's role is its slot's role — never its position in a packed array.
+         *
          * @param {{group,items}} entry
+         * @param {number} startIdx  slot index the user dropped on
          * @param {File[]} files
          * @param {Function} onDirty
          */
-        async function _handleFiles(entry, files, onDirty) {
+        async function _handleFiles(entry, startIdx, files, onDirty) {
             const { group } = entry;
-            const available = group.max - entry.items.length;
             if (files.length === 0) return;
-            if (files.length > available) {
-                clientLogger.warn('MpiBaseApp', `dropped ${files.length} ${group.type}(s) but only ${available} slot(s) free — ignoring extras`);
-                files = files.slice(0, available);
+
+            // Multi-file drop fills THIS slot then any later free ones; it never
+            // walks backwards over slots the user deliberately left empty.
+            const targets = [];
+            for (let i = startIdx; i < group.max && targets.length < files.length; i++) {
+                if (!entry.items[i]) targets.push(i);
+            }
+            if (files.length > targets.length) {
+                clientLogger.warn('MpiBaseApp', `dropped ${files.length} ${group.type}(s) but only ${targets.length} slot(s) free from slot ${startIdx} — ignoring extras`);
+                files = files.slice(0, targets.length);
             }
 
             const project = state.currentProject;
@@ -429,22 +458,22 @@ export const MpiBaseApp = ComponentFactory.create({
                 return;
             }
 
-            for (const file of files) {
+            for (let i = 0; i < files.length; i++) {
                 // App inputs go into the content-addressed preview-assets store (MPI-227),
                 // NOT the visible gallery — keeps the gallery clean while persisting the
                 // file durably so a later Reuse can resolve it. Deduped by content hash.
-                const placedUrl = await _placePreviewAsset(file, group.type, project);
+                const placedUrl = await _placePreviewAsset(files[i], group.type, project);
                 if (!placedUrl) {
                     Events.emit('ui:warning', { message: `Could not add ${group.type} file.` });
                     continue;
                 }
-                const idx = entry.items.length;
-                entry.items.push({
+                const slotIdx = targets[i];
+                entry.items[slotIdx] = {
                     url: placedUrl,
                     mediaType: group.type,
                     source: 'app-upload',
-                    role: group.roles[idx],
-                });
+                    role: group.roles[slotIdx],
+                };
             }
             onDirty();
         }
@@ -817,12 +846,22 @@ export const MpiBaseApp = ComponentFactory.create({
             unsubs.push(on(frame, 'mousedown', (e) => {
                 if (e.button !== 0 && e.button !== 1) return;
                 if (!_resultMediaEl?.firstChild) return;
+                // Suppress the browser's native image drag: without it the pane
+                // hands the user a drag ghost offering to drop the image somewhere
+                // else, which is not a thing this pane does.
+                e.preventDefault();
                 panning = true;
                 startX = e.clientX - _resultView.offsetX;
                 startY = e.clientY - _resultView.offsetY;
                 frame.style.cursor = 'move';
             }));
-            unsubs.push(on(frame, 'mousemove', (e) => {
+            // Belt and braces for the ghost — `draggable` is an attribute the
+            // preventDefault above cannot reach on images added later.
+            unsubs.push(on(frame, 'dragstart', (e) => e.preventDefault()));
+
+            // Also on the window: a pan that leaves the frame should keep tracking
+            // the cursor rather than freezing at the edge.
+            unsubs.push(on(window, 'mousemove', (e) => {
                 if (!panning) return;
                 _resultView.offsetX = e.clientX - startX;
                 _resultView.offsetY = e.clientY - startY;
@@ -830,8 +869,13 @@ export const MpiBaseApp = ComponentFactory.create({
                 _applyResultTransform();
             }));
             const endPan = () => { if (panning) { panning = false; frame.style.cursor = ''; } };
-            unsubs.push(on(frame, 'mouseup', endPan));
-            unsubs.push(on(frame, 'mouseleave', endPan));
+            // Listen on the WINDOW, not the frame: releasing outside the frame
+            // otherwise never ends the pan, so the next mouse-over the pane
+            // resumed dragging and the user had to click to break out of it.
+            // mouseleave is deliberately NOT an end — dragging out and back is
+            // normal panning, and ending there is what made the pane feel sticky.
+            unsubs.push(on(window, 'mouseup', endPan));
+            unsubs.push(on(window, 'blur', endPan));
             // Double-click restores fit — the same escape hatch MpiCanvas gives.
             unsubs.push(on(frame, 'dblclick', _fitResultView));
 
@@ -862,7 +906,7 @@ export const MpiBaseApp = ComponentFactory.create({
         function _paintResult(url, { blurring = false } = {}) {
             if (!url || !_resultMediaEl) return;
             _resultMediaEl.innerHTML = '';
-            const img = ce('img', { src: url, alt: 'result' });
+            const img = ce('img', { src: url, alt: 'result', draggable: false });
             // Live latents carry a light blur — honest about a half-computed image,
             // where a spinner over blank space is not. Kept subtle on purpose: at a
             // heavy radius a late, genuinely detailed latent is hidden behind the
@@ -895,7 +939,7 @@ export const MpiBaseApp = ComponentFactory.create({
                 const isVideo = it?.type === 'video' || it?.mediaType === 'video';
                 const media = isVideo
                     ? ce('video', { src: url, controls: true, muted: true, loop: true })
-                    : ce('img', { src: url, alt: 'result' });
+                    : ce('img', { src: url, alt: 'result', draggable: false });
                 // Fit the FINAL image once it has dimensions — a latent's view never
                 // carries over (different crop, different resolution).
                 _resultMediaEl.appendChild(media);
@@ -944,7 +988,9 @@ export const MpiBaseApp = ComponentFactory.create({
 
         /** Collect the inputs the app will run with. */
         function _collectInputs() {
-            const mediaItems = _mediaGroups.flatMap(entry => entry.items);
+            // filter(Boolean) — `items` is sparse (an empty slot is a hole), and a
+            // hole must never reach the op as an undefined media item.
+            const mediaItems = _mediaGroups.flatMap(entry => entry.items.filter(Boolean));
             // The controls component is handed the collected step values so it can
             // translate them into ITS graph's params (Head Swap: box→Input_Box).
             // That translation is APP knowledge — which role feeds which node is
