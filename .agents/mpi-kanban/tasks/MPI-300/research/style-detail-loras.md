@@ -26,6 +26,11 @@ Style-transfer LoRAs Fabio selected (download URL = `civitai.com/api/download/mo
 | Real→any (drawing/anime) | 2643508 | 2531384 | `real to any` | civitai.com/api/download/models/2643508?fileId=2531384 |
 | Animal style (old anime) | 2483865 | 2372364 | `transform into animal style` | civitai.com/api/download/models/2483865?fileId=2372364 |
 | 3D style | 2483967 | 2372466 | `Convert to 3D style` | civitai.com/api/download/models/2483967?fileId=2372466 |
+| Illustration | 2235007 | 2127908 | `Convert the picture to an illustration style` | civitai.com/api/download/models/2235007?fileId=2127908 |
+| Hand-drawn line | 2562484 | 2450719 | `Hand-drawn Line Style` | civitai.red/api/download/models/2562484?fileId=2450719 (civitai.red) |
+| Anime→realistic | 2157828 | 2051179 | `transform into realistic photography` | civitai.red/api/download/models/2157828?fileId=2051179 (civitai.red) |
+| Amateur snapshot | 2681332 | 2567968 | `amtr snapshot photo` | civitai.red/api/download/models/2681332?fileId=2567968 (civitai.red) |
+| Zankuro style | 2132600 | 2026479 | `Zankuro Style` | civitai.red/api/download/models/2132600?fileId=2026479 (civitai.red) |
 
 > NOTE: versionId 2483865 here = the "Qwen-Edit Anything to Anime" family found earlier (model 2206073) — Fabio's trigger label "animal style (old anime)". Confirm trigger vs sample on the page.
 > MORE COMING — Fabio adding as he browses. NOT yet downloaded/hashed/wired. Each needs: download → SHA256 → R2 upload → style-LoRA registry entry.
