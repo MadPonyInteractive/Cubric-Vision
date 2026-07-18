@@ -46,7 +46,7 @@ export const RELEASE_NOTES = {
     ],
     fixes: [
       'LOOPING A TRIMMED CLIP NO LONGER STOPS AT THE END — When a video had a trim in-point and its out-point at the very end of the clip, enabling loop would play once and stop instead of looping. It now wraps back to the in-point and keeps playing.',
-      'WAN 2.2 IMAGE-TO-VIDEO NOW USES ALL SIX LOW-NOISE LORA SLOTS — Only the first Low Noise LoRA slot was being applied; LoRAs placed in slots 2 through 6 were silently ignored, so their style or motion never reached the result. All six slots now take effect. The High Noise slots were never affected, and text-to-video was never affected.',
+      'WAN 2.2 NOW USES ALL SIX LOW-NOISE LORA SLOTS — In both image-to-video and text-to-video, only the first Low Noise LoRA slot was being applied; LoRAs placed in slots 2 through 6 were silently ignored, so their style or motion never reached the result. All six slots now take effect. The High Noise slots were never affected.',
     ],
     breakingChanges: [],
     importantChanges: [],
