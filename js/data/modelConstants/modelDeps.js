@@ -241,6 +241,23 @@ export const modelDeps = {
         size: '11.37GB',
         sha256: 'c242eca52f1388102e1fd8644945875a09ea3e85f5e944c42114c6a72328e440',
     },
+    // ── Qwen-Image-Edit-2511 transformer (MPI-300) ─────────────────────────────
+    // Instruction image editor, latest gen (2025-12-22). ONE int8 transformer serves
+    // ALL THREE tiers — tiers differ only by which Lightning LoRA the graph's
+    // MpiAnySwitch picks (Input_Tier injected at runtime by the qwenTier radio), so
+    // this ships as ONE ModelDef (not a per-tier card split like Boogu). fp8mixed +
+    // bf16 tested & REJECTED (MPI-300 weight A/B). 20,499,083,824 bytes = 19.10 binary
+    // GiB — UNDER the 20GB hot-store gate; size:'19GB' keeps it there (do NOT write a
+    // 20/20.5 SI label — it would round over the binary gate).
+    'qwen-edit-transformer': {
+        id: 'qwen-edit-transformer',
+        name: 'Qwen Image Edit 2511 Transformer (int8_convrot)',
+        origin: 'Comfy-Org/Qwen-Image-Edit-2511',
+        filename: 'diffusion_models/qwen_image_edit_2511_int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/qwen_image_edit_2511_int8_convrot.safetensors',
+        size: '19GB',
+        sha256: '11b5af5ac601821d73930c84846c9a158e67177356daf927ce1c8d10f3963829',
+    },
     // ── LTX-2.3 transformers (MPI-127) ─────────────────────────────────────────
     // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow scan
     // 2026-06-25). Support weights (video/audio VAE, gemma clip, text projection,

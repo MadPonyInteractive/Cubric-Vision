@@ -15,6 +15,10 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     // PiD output size (Input_Resolution MpiAnySwitch, 1-indexed): 1=1K, 2=2K, 3=4K.
     // Default 3 (4K = native PiD, no downscale) matches the workflow's baked select.
     pidResolution: 3,
+    // Qwen-Edit tier (Input_Tier MpiInt, 1-indexed): 1=Quality (raw ~20-step, no
+    // accelerator), 2=Turbo (8-step Lightning LoRA), 3=Hyper (4-step Lightning LoRA).
+    // Default 1 (Quality) matches the workflow's baked Input_Tier value.
+    qwenTier: 1,
     // LTX audio mode: 'reference' = voice-ID from a reference clip,
     // 'original' = use the input audio directly. Default reference (headline mode).
     audioMode: 'reference',

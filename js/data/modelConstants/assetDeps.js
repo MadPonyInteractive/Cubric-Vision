@@ -107,6 +107,18 @@ export const assetDeps = {
         size: '10.59GB',
         sha256: '4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd',
     },
+    // Qwen-Image-Edit-2511 text encoder (MPI-300). Qwen2.5-VL-7B (hidden 3584) — NOT
+    // the boogu Qwen3-VL-8B nor the krea2 Qwen3-VL-4B. Full-precision TE tested &
+    // REJECTED (hallucinates + stretches anatomy); fp8_scaled is the only good TE.
+    'qwen-edit-qwen25vl-7b-clip': {
+        id: 'qwen-edit-qwen25vl-7b-clip',
+        name: 'Qwen Image Edit Text Encoder (Qwen2.5-VL-7B fp8_scaled)',
+        origin: 'Comfy-Org/Qwen-Image_ComfyUI',
+        filename: 'text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors',
+        size: '8.74GB',
+        sha256: 'cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4',
+    },
     'pid-gemma': {
         id: 'pid-gemma',
         name: 'PiD Gemma text encoder',

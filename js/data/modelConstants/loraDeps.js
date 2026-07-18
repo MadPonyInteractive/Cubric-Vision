@@ -149,6 +149,96 @@ export const loraDeps = {
         size: '218MB',
         sha256: 'ad4a9f0b4d61ba77c5783b51fe3a2b637f8245144c1ce5e6a3fcd8225fd7df8a',
     },
+    // ── Qwen-Image-Edit-2511 LoRAs (MPI-300) ───────────────────────────────────
+    // Two BAKED Lightning accelerator LoRAs (loaded by the graph's two 'Accelerator
+    // LoRA' LoraLoaderModelOnly nodes — MODEL-only, strength 1.0). Both install with
+    // the model; the Input_Tier switch picks which one applies (Turbo=8-step,
+    // Hyper=4-step; Quality tier applies neither). Filename subfolder loras/qwen/ (the
+    // graph bakes qwen\...\ — forward slashes here, path.join normalizes on disk).
+    'qwen-edit-lightning-4step': {
+        id: 'qwen-edit-lightning-4step',
+        name: 'Qwen Image Edit 2511 Lightning 4-step (Hyper)',
+        origin: 'lightx2v/Qwen-Image-Edit-2511-Lightning',
+        filename: 'loras/qwen/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors',
+        size: '810MB',
+        sha256: '22226e8d05d354bb356627d428809f5afd7819399b077238a2b70a82883a904f',
+    },
+    'qwen-edit-lightning-8step': {
+        id: 'qwen-edit-lightning-8step',
+        name: 'Qwen Image Edit 2511 Lightning 8-step (Turbo)',
+        origin: 'lightx2v/Qwen-Image-Edit-2511-Lightning',
+        filename: 'loras/qwen/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors',
+        size: '810MB',
+        sha256: 'a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8',
+    },
+    // Style LoRAs (7) — user-selectable style rack (Krea2 style-system: MpiMath a==N
+    // gate → Input_style_lora_N → Input_Stylization strength, default 0.80). Subfolder
+    // loras/qwen/styles/. Index-aligned with styleLoraLabels on the ModelDef.
+    'qwen-edit-style-illustration': {
+        id: 'qwen-edit-style-illustration',
+        name: 'Qwen Edit Style — Illustration',
+        origin: 'CivArchive/2235007',
+        filename: 'loras/qwen/styles/Illustration_style.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/Illustration_style.safetensors',
+        size: '590MB',
+        sha256: '7b64be03fd3bf0a4aa7465b3942fb4bb68c252d1a514c2047094f9f2df3e58cd',
+    },
+    'qwen-edit-style-anime3d': {
+        id: 'qwen-edit-style-anime3d',
+        name: 'Qwen Edit Style — Anime 3D',
+        origin: 'CivArchive/2373282',
+        filename: 'loras/qwen/styles/Qwen-Anime-V2.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/Qwen-Anime-V2.safetensors',
+        size: '425MB',
+        sha256: '4c4cf33fc51d2f94c7e7d878a2989be3d69a321efd770d54ac42d9b49e23a799',
+    },
+    'qwen-edit-style-anime2d': {
+        id: 'qwen-edit-style-anime2d',
+        name: 'Qwen Edit Style — Anime 2D',
+        origin: 'CivArchive/2483865',
+        filename: 'loras/qwen/styles/animal_style.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/animal_style.safetensors',
+        size: '236MB',
+        sha256: '1d25fdcff7cd2da1a8daafa5ab9dc077d15ff56b9f029ab332b1b4e13d753b03',
+    },
+    'qwen-edit-style-zankuro': {
+        id: 'qwen-edit-style-zankuro',
+        name: 'Qwen Edit Style — Anime Zankuro',
+        origin: 'CivArchive/2132600',
+        filename: 'loras/qwen/styles/zankuro-style-v1.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/zankuro-style-v1.safetensors',
+        size: '236MB',
+        sha256: 'a3580f7af2c11d2c9a8867c32807b13284e7c84dde66fddcb29daef0fbdf1fc2',
+    },
+    'qwen-edit-style-3d': {
+        id: 'qwen-edit-style-3d',
+        name: 'Qwen Edit Style — 3D',
+        origin: 'CivArchive/2483967',
+        filename: 'loras/qwen/styles/style_3d.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/style_3d.safetensors',
+        size: '354MB',
+        sha256: '87cee29c91abe22a657fd958d98d0dbd9fe0a43941bea1fec3aa6be0535ed5bb',
+    },
+    'qwen-edit-style-caricature': {
+        id: 'qwen-edit-style-caricature',
+        name: 'Qwen Edit Style — Caricature',
+        origin: 'CivArchive/2427075',
+        filename: 'loras/qwen/styles/qwen-edit-2509-caricature_v1.1.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/qwen-edit-2509-caricature_v1.1.safetensors',
+        size: '590MB',
+        sha256: '60db309510817bfc86e23b570589b9b3d6aedc626e35632b32f54d2cc5b9cf3d',
+    },
+    'qwen-edit-style-snapshot': {
+        id: 'qwen-edit-style-snapshot',
+        name: 'Qwen Edit Style — SnapShot',
+        origin: 'CivArchive/2681332',
+        filename: 'loras/qwen/styles/Amateur_snapshot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/Amateur_snapshot.safetensors',
+        size: '148MB',
+        sha256: '1590201e0a45305c1fa00deb6ebdf33dbb4df5a9de388283911eb0c5b2c35cb5',
+    },
     // Baked LoRAs — loaded by the workflow (not user slots), travel with the
     // model. First Cubric model whose LoRAs are NOT merged into the base.
     // filename uses forward slashes (path.join normalizes on disk); the workflow
