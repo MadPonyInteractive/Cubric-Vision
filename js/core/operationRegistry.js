@@ -18,6 +18,7 @@ export const OPERATION_REGISTRY = {
     upscale:      { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     edit:         { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     krea2Edit:    { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
+    qwenEdit:     { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
     detail:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     change:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },

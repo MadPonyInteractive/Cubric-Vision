@@ -63,6 +63,14 @@ export const PROGRESS_STAGES = Object.freeze({
     // now the int8_convrot turbo weight.
     'boogu_edit_high.json':      Object.freeze({ single: 1 }),
     'boogu_edit_balanced.json':  Object.freeze({ single: 1 }),
+    // Qwen-Image-Edit 2511 (MPI-300) — ONE graph serves all three tiers (the qwenTier
+    // radio drives Input_Tier → an MpiAnySwitch picking the model path + step count), and
+    // this table is keyed by FILE, so one entry covers Quality/Turbo/Hyper. A single
+    // KSampler runs on every tier — only its step count changes (20/8/4) — and no separate
+    // model-load bar surfaces, same as Boogu/PiD. Confirmed 1 bar on Hyper (two completed
+    // runs, 2026-07-18); Quality swaps the accelerator LoRA for the raw UNET but keeps the
+    // same single sampler, so the count is structural rather than per-tier.
+    'qwen_edit.json':            Object.freeze({ single: 1 }),
 });
 
 /**

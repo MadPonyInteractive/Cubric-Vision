@@ -182,6 +182,27 @@ export const commands = {
         injectParams: { Input_Is_Edit: true },
         components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'enhancePrompt'],
     },
+    qwenEdit: {
+        label: 'Edit',
+        info: 'Edit — change the image following your prompt',
+        progressLabel: 'Editing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        // THREE image slots (MPI-300). Qwen-Image-Edit-2511 takes up to three
+        // references natively (TextEncodeQwenImageEditPlus image1..3). Slots 2 and 3
+        // are optional: an empty path makes Input_Image_2/_3's MpiLoadImageFromPath
+        // self-gate, so a 1- or 2-image edit runs unchanged.
+        mediaInputs: [
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true  },
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+            { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false },
+        ],
+        promptRequired: true,
+        // Its own op, NOT the shared 'edit' (that one is Boogu's: no controls, one image).
+        // Qwen needs the tier radio + its own style rack. Output follows the SOURCE image
+        // dimensions (ImageScaleToTotalPixels off the input), so there is no ratio picker.
+        components: ['qwenTier', 'styleSelect', 'stylization'],
+    },
     detail: {
         label: 'Detail',
         info: 'Detail — refine only the masked area with more detail',

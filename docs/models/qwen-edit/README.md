@@ -7,8 +7,33 @@
 > Tracking card: **MPI-300**. Deep research: `.agents/mpi-kanban/tasks/MPI-300/research/`.
 > Blocks **MPI-299** (Head Swap app), which requires this model wired.
 >
-> **Status: RESEARCH phase.** Greenfield — no workflow/template/ModelDef exists yet.
-> Author + prove the graph locally before any app wiring.
+> **Status: WIRED** (2026-07-18). ONE ModelDef `qwen-edit` + op `qwenEdit`, runtime
+> `comfy_workflows/qwen_edit.json`. Tiers are a RUNTIME RADIO (`qwenTier` → `Input_Tier`),
+> **not** three sibling cards — all three tiers share one int8 transformer, so three cards
+> would pollute the library and install ~20GB three times. See
+> [tiers-and-loaders.md](tiers-and-loaders.md).
+
+## What it is good at (verified 2026-07-18)
+
+**Multi-image composition is the real use case** — pulling a character, face, garment or object
+out of one image and placing it into another, keeping the reference recognisable. That is why
+this model backs **MPI-299** (Head Swap), and why the op declares THREE image slots.
+
+**Single-image instruction editing is weak.** Verified on one scene, Hyper tier:
+
+| Prompt | Result |
+|---|---|
+| "change the woman's shirt to pink" | ✅ exact, composition preserved |
+| "replace the dinosaur with a giant chicken" | ✗ scene essentially unchanged |
+| "without changing the composition add a hat on … the woman and … the man" | ✗ ignored the constraint — reframed to a close-up, faces degraded |
+
+⚠ The chicken case was reproduced **identically in native ComfyUI**, so these are MODEL limits,
+not injection bugs. Don't debug the wiring when a single-image edit underperforms. The ModelDef
+description steers users to Boogu Image Edit / Krea 2 for that work.
+
+Small attribute edits land; larger rewrites get ignored or degrade framing and faces. Worth
+re-testing the failures on **Quality** (tier 1, 20 steps, cfg 2.5) — the above were Hyper
+(4 steps, cfg 1.0), the weakest path.
 
 Qwen-Image-Edit-**2511** is the latest generation (released 2025-12-22, replaces 2509):
 instruction-driven image editing with a Qwen2.5-VL text encoder and the Qwen-Image VAE.
