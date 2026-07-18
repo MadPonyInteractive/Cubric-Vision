@@ -109,6 +109,40 @@ Install button drives each missing model's OWN dep download (`getModelDependenci
 `downloadService.start(id, deps)`). Apps declare **models, never deps** (zero dep duplication).
 See [04](04-overlay-and-shell.md) for the install-progress UI.
 
+### App-only extra weights — `requiredDeps` (MPI-304, NOT YET BUILT)
+
+> **Read this before adding an app-specific weight to a MODEL's dependency list.** Doing that
+> taxes every user of that model.
+
+Some apps need a weight no model requires — a baked LoRA, an extra detector, a custom node.
+Today there is no way to express it: `requiredModels` resolves MODEL ids only
+(`appAvailability()` filters `state.s_installedModelIds`), so the only route is folding the
+file into a model's deps, which pushes it onto **everyone** using that model.
+
+The scaling case: Head Swap needs a 1.2GB head-swap LoRA on top of `qwen-edit`; an app taking
+30 style LoRAs would tax all users ~15GB. Not acceptable.
+
+**MPI-304** adds `requiredDeps` — dep ids resolved from `DEPS`, alongside `requiredModels`:
+
+```js
+{
+  requiredModels: ['qwen-edit'],           // shared model
+  requiredDeps:   ['qwen-lora-headswap'],  // app-only extras
+}
+```
+
+Works for LoRAs, support weights AND custom nodes (`nodesDeps` is already merged into `DEPS`).
+
+**The entry still lives in the file for its KIND** — `loraDeps.js` for a LoRA, `assetDeps.js`
+for a weight, `nodesDeps.js` for a node pack. Deps are filed by *what they are*, never by who
+requires them; ownership is a list of ids, not a file. When a kind-file gets fat, split it
+further BY KIND (`loraDeps.js` → `loras/krea2.js`, `loras/qwen.js`) — the
+[dependencies.js](../../../js/data/modelConstants/dependencies.js) facade absorbs that with
+zero consumer changes.
+
+Until MPI-304 lands, an app needing an extra weight is **blocked** — do not work around it by
+polluting a model's dep list.
+
 ## The run path — `submitAppGeneration`
 
 `js/services/appService.js` `submitAppGeneration(app, inputs, callbacks)`:

@@ -41,6 +41,13 @@ model, image-in→image-out) are the other worked examples.
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseApp` / `MpiAppLibrary`; install progress; Ctrl+Enter runs the open app; overlay z-order + the spared status bar; dev-gate |
 | [05-verify.md](05-verify.md) | Definition of Done — inject test, node --check, live run (video/audio/multi-output), reuse |
 
+Two folders sit alongside the numbered sections:
+
+| Folder | Holds |
+|---|---|
+| [ui/](ui/README.md) | **PORTABLE** app UI/UX — the patterns every app's `uiComponent` follows (box gizmo, baseline rules). Read before any app UI work; promote generalisable decisions INTO it |
+| [existing-apps/](existing-apps/) | **SPECIFIC** — one file per app: its shape, decisions, and dead ends. Read the relevant one before touching that app |
+
 The **cross-cutting workflow machinery** (the MpiNodes pack, the injector target list, the
 `Input_*`/`Output_*` title law) is shared with the model system and lives in
 [../../workflow-authoring/README.md](../../workflow-authoring/README.md). Read it when you
