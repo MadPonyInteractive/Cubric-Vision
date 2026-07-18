@@ -725,10 +725,10 @@
         "Node name for S&R": "MpiPromptProcessor"
       },
       "widgets_values": [
-        0,
-        0,
-        0,
-        0,
+        "",
+        "",
+        "",
+        "",
         "",
         "",
         ""
@@ -1126,46 +1126,6 @@
         "Node name for S&R": "Krea2ControlApply"
       },
       "widgets_values": []
-    },
-    {
-      "id": 204,
-      "type": "Krea2ControlLoRALoader",
-      "pos": [
-        -547.204298261935,
-        3985.576762058849
-      ],
-      "size": [
-        280.4439453125,
-        82
-      ],
-      "flags": {},
-      "order": 119,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 356
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            355
-          ]
-        }
-      ],
-      "properties": {
-        "aux_id": "facok/comfyui-krea2-controlnet",
-        "ver": "79ebfd3bd80d2180b334dd7ce57f3c9ddaa0848f",
-        "Node name for S&R": "Krea2ControlLoRALoader"
-      },
-      "widgets_values": [
-        "krea-2\\control\\depth-control-lora.safetensors",
-        1
-      ]
     },
     {
       "id": 200,
@@ -3005,53 +2965,6 @@
       "widgets_values": [
         "b if a == 1 else 0.0   "
       ]
-    },
-    {
-      "id": 207,
-      "type": "MpiIfElse",
-      "pos": [
-        12.348927759668868,
-        4129.117064484115
-      ],
-      "size": [
-        270,
-        78
-      ],
-      "flags": {},
-      "order": 121,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "true",
-          "type": "*",
-          "link": 362
-        },
-        {
-          "name": "false",
-          "type": "*",
-          "link": 469
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": [
-            582
-          ]
-        }
-      ],
-      "title": "Input_pose_reference",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiIfElse"
-      },
-      "widgets_values": [
-        false
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 253,
@@ -6731,6 +6644,93 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 204,
+      "type": "Krea2ControlLoRALoader",
+      "pos": [
+        -606.0891450989022,
+        3988.622529998692
+      ],
+      "size": [
+        352.52711988878707,
+        82
+      ],
+      "flags": {},
+      "order": 119,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 356
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            355
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "facok/comfyui-krea2-controlnet",
+        "ver": "79ebfd3bd80d2180b334dd7ce57f3c9ddaa0848f",
+        "Node name for S&R": "Krea2ControlLoRALoader"
+      },
+      "widgets_values": [
+        "krea-2\\control\\depth-control-lora.safetensors",
+        1
+      ]
+    },
+    {
+      "id": 207,
+      "type": "MpiIfElse",
+      "pos": [
+        12.348927759668868,
+        4129.117064484115
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 121,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 362
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 469
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            582
+          ]
+        }
+      ],
+      "title": "Input_depth_reference",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -8413,10 +8413,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 1.1918176537727265,
+      "scale": 0.9849732675807643,
       "offset": [
-        212.04095849489713,
-        -2887.616730562203
+        1371.5344499989892,
+        -3585.1734884878824
       ]
     },
     "reroutes": [
