@@ -1764,73 +1764,6 @@
       ]
     },
     {
-      "id": 109,
-      "type": "LoraLoaderModelOnly",
-      "pos": [
-        11532.427487746438,
-        8250.268517676916
-      ],
-      "size": [
-        406.64837191294646,
-        82
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 27,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 152
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            153
-          ]
-        }
-      ],
-      "title": "Head Swap LoRA",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.50",
-        "Node name for S&R": "LoraLoaderModelOnly",
-        "models": [
-          {
-            "name": "Qwen-Image-Lightning-4steps-V1.0.safetensors",
-            "url": "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors",
-            "directory": "loras"
-          }
-        ],
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65,
-        "ue_properties": {
-          "widget_ue_connectable": {
-            "lora_name": true,
-            "strength_model": true
-          },
-          "version": "7.1",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        "qwen\\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors",
-        1
-      ],
-      "color": "#332922",
-      "bgcolor": "#593930"
-    },
-    {
       "id": 100,
       "type": "ModelSamplingAuraFlow",
       "pos": [
@@ -1912,6 +1845,73 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 109,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        11532.427487746438,
+        8250.268517676916
+      ],
+      "size": [
+        406.64837191294646,
+        82
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 27,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 152
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            153
+          ]
+        }
+      ],
+      "title": "Head Swap LoRA",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "models": [
+          {
+            "name": "Qwen-Image-Lightning-4steps-V1.0.safetensors",
+            "url": "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors",
+            "directory": "loras"
+          }
+        ],
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65,
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "lora_name": true,
+            "strength_model": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "qwen\\bfs_head_v5_2511_merged_version_rank_16_fp16.safetensors",
+        1
+      ],
+      "color": "#332922",
+      "bgcolor": "#593930"
     }
   ],
   "links": [
@@ -2309,10 +2309,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.35584102738371726,
+      "scale": 1.228459735736875,
       "offset": [
-        -8911.614776625118,
-        -7616.274598075571
+        -10956.0713407294,
+        -8071.911344904343
       ]
     },
     "reroutes": [
