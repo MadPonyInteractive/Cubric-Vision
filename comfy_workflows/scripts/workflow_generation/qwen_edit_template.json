@@ -73,6 +73,18 @@
       "title": "Load Diffusion Model"
     }
   },
+  "15": {
+    "inputs": {
+      "images": [
+        "34",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image 1"
+    }
+  },
   "16": {
     "inputs": {
       "pixels": [
@@ -87,6 +99,30 @@
     "class_type": "VAEEncode",
     "_meta": {
       "title": "VAE Encode"
+    }
+  },
+  "19": {
+    "inputs": {
+      "images": [
+        "171",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image 3"
+    }
+  },
+  "21": {
+    "inputs": {
+      "images": [
+        "169",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image 2"
     }
   },
   "29": {
@@ -104,11 +140,11 @@
         0
       ],
       "image2": [
-        "106",
+        "169",
         0
       ],
       "image3": [
-        "107",
+        "171",
         0
       ],
       "prompt": [
@@ -190,11 +226,11 @@
         0
       ],
       "image2": [
-        "106",
+        "169",
         0
       ],
       "image3": [
-        "107",
+        "171",
         0
       ],
       "prompt": [
@@ -221,18 +257,6 @@
     "class_type": "VAEDecode",
     "_meta": {
       "title": "VAE Decode"
-    }
-  },
-  "45": {
-    "inputs": {
-      "images": [
-        "37",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
     }
   },
   "65": {
@@ -333,7 +357,7 @@
   },
   "91": {
     "inputs": {
-      "string": "Place the woman from image 2 standing by the bench from image 1 and waving and capture her full body"
+      "string": "Change the background of image 2 to be image 1 and keep the same style Of both images  "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -433,36 +457,6 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image_2"
-    }
-  },
-  "106": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "megapixels": 1,
-      "resolution_steps": 32,
-      "image": [
-        "104",
-        0
-      ]
-    },
-    "class_type": "ImageScaleToTotalPixels",
-    "_meta": {
-      "title": "Scale Image to Total Pixels"
-    }
-  },
-  "107": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "megapixels": 1,
-      "resolution_steps": 32,
-      "image": [
-        "72",
-        0
-      ]
-    },
-    "class_type": "ImageScaleToTotalPixels",
-    "_meta": {
-      "title": "Scale Image to Total Pixels"
     }
   },
   "110": {
@@ -868,7 +862,7 @@
   },
   "149": {
     "inputs": {
-      "cleanup": "",
+      "cleanup": 0,
       "opt_title": "",
       "prompt_list": [
         "144",
@@ -938,6 +932,74 @@
     "class_type": "StringConcatenate",
     "_meta": {
       "title": "Concatenate Text"
+    }
+  },
+  "169": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "pad_edge",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "104",
+        0
+      ],
+      "mask": [
+        "104",
+        1
+      ],
+      "width": [
+        "170",
+        0
+      ],
+      "height": [
+        "170",
+        1
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "170": {
+    "inputs": {
+      "image": [
+        "34",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "171": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "pad_edge",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "72",
+        0
+      ],
+      "width": [
+        "170",
+        0
+      ],
+      "height": [
+        "170",
+        1
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
     }
   }
 }
