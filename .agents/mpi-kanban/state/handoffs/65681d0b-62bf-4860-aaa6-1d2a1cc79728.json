@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "65681d0b-62bf-4860-aaa6-1d2a1cc79728",
+  "generated_at": "2026-07-18T03:55:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Qwen Image Edit 2511 — PHASE 0 weight test-drive COMPLETE, tiers + styles LOCKED, R2 upload in flight",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add a new model, Qwen Edit 2511, to Cubric Vision. Three tiers: Low=4-step Lightning LoRA, Balanced=8-step Lightning LoRA, High=no accelerator. Blocks the head-swap app (MPI-299).",
+    "status": "in_progress",
+    "summary": "PHASE 0 research + weight test-drive DONE. All model decisions LOCKED (int8 transformer + fp8_scaled TE all tiers; 7 style LoRAs). SHA256 computed, deps manifest ready. R2 upload of the 4 core weights is IN FLIGHT (3/4 done; int8 transformer ~23%). No workflow wired yet — user still needs to save the ComfyUI canvas into the repo. PHASE 1 wiring via /mpi-add-model is next."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "LoRA-strength axis SETTLED: Lightning LoRA is MODEL-only (LoraLoaderModelOnly / MpiLoraModel), strength 1.0, transformer-deltas only no CLIP",
+      "Transformer survey: base 2511 is raw/undistilled ~40 steps, accel = separate LoRA (3-tier design correct)",
+      "LoRA version: only V1.0 exists (community 'V2.0' = mislabel); user's 4/8-step V1.0-bf16 = current+complete",
+      "Dimension research: dims must be ÷32 (feed ÷32 via ImageScaleToTotalPixels resolution_steps=32); non-÷16 = warning+silent crop/pad not ValueError; ComfyUI landmines noted (black-image=latent norm #11865, batched VAE-encode fixed ca68660, inpaint VAE unsupported #9605)",
+      "WEIGHT TEST-DRIVE COMPLETE (live A/B, standalone ComfyUI): int8_convrot BEATS fp8mixed (faster + equal quality) and bf16 (no win, +45-87% time, 40-step drifts/over-cooks). Full TE hallucinates+stretches on ALL transformers. WINNER = int8 transformer + fp8_scaled TE for ALL tiers.",
+      "TIER MAP LOCKED (user-confirmed): Low=int8+4step LoRA (64s), Balanced=int8+8step LoRA (103s), High=int8 raw 20-step no-LoRA (386s)",
+      "STYLE REGISTRY LOCKED (7 styles, Krea2 style-system, Input_Stylization default 0.80): 1=Illustration, 2=Anime3D(Qwen-Anime-V2), 3=Anime2D(animal_style), 4=AnimeZankuro, 5=3D, 6=Caricature(2509-era intentional), 7=SnapShot",
+      "SHA256 computed for 4 core weights; deps manifest written (research/deps-manifest.md)",
+      "Weights moved/cleaned on G: — only survivors kept; fp8mixed/bf16/full-TE deleted; 2 dropped style LoRAs (anime_to_real, any_to_real) deleted from styles folder",
+      "R2 upload STARTED (bg, sequential --transfers 1 --bwlimit 3M): 4-step + 8-step LoRAs + fp8_scaled TE = DONE on R2; int8 transformer IN FLIGHT (~23%, ETA ~1h24m as of 03:55)"
+    ],
+    "pending": [
+      "FINISH + VERIFY R2 upload of int8 transformer (bg job 'bjvxddj0w'... actually upload job id in scratchpad/upload-qwen-r2.log; verify with rclone lsf + size 20,499,083,824 when done)",
+      "Upload the 7 STYLE LoRAs to R2 loras/qwen/styles/ (SEPARATE batch — NOT yet uploaded; SHA256 each first). Files in G:/CubricModels/loras/qwen/styles/",
+      "USER ACTION: save the ComfyUI canvas (G:/ComfyUi/ComfyUI/user/default/workflows/Qwen_Edit_template.json) into repo comfy_workflows/raw/qwen_edit_template.json (ALL LOWERCASE — Pod FS 404s mixed-case)",
+      "PHASE 1 wiring via /mpi-add-model: template split, dependencies.js entries (from deps-manifest.md) + SHA256, ModelDef (3 tiers combined-op single-stage), progressStages, type-consumer sweep, style-LoRA registry (Krea2 styles precedent)",
+      "Unblock MPI-299 (head-swap app) once model wired"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-300",
+    "title": "Model: Qwen Image Edit 2511 — 3-tier (4-step / 8-step / no-accel)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-300/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-300/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "upload-r2", "wire-model"],
+  "knowledge_preservation": {
+    "completed": [
+      "All research settled to docs/models/qwen-edit/ (README, tiers-and-loaders.md, dimensions.md, reference-latents.md) + research dumps in .agents/mpi-kanban/tasks/MPI-300/research/ (lora-strength-axis, transformer-survey, dimensions, deps-manifest, style-detail-loras)",
+      "MPI-300 events.jsonl carries the full decision trail (weight A/B verdicts, tier lock, style registry lock)",
+      "Committed: f9457807, eebfd1c0, 3980e7b9, 037cc61e, ddf64000, 7ecdfa06, 21b32327, 82bcb206, cbdd2bd1, 64d88613"
+    ],
+    "pending": [
+      "Style LoRAs need SHA256 + R2 upload manifest (extend research/style-detail-loras.md with hashes once uploaded)",
+      "docs/models/qwen-edit/ should get a final 'wired' status flip after PHASE 1"
+    ]
+  },
+  "next_action": {
+    "description": "Verify the R2 upload of qwen_image_edit_2511_int8_convrot finished (rclone lsf cubric-r2:cubric-models/vision/models/diffusion_models/ + size 20,499,083,824). Then upload the 7 style LoRAs from G:/CubricModels/loras/qwen/styles/ to R2 loras/qwen/styles/ (SHA256 each, sequential --transfers 1 --bwlimit 3M). Wait for user to save the canvas into comfy_workflows/raw/qwen_edit_template.json (lowercase), then run /mpi-add-model for PHASE 1 wiring using research/deps-manifest.md + the locked tier map + 7-style registry.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "int8_convrot transformer for ALL tiers — beat fp8mixed (20% faster, equal quality) and bf16 (no quality win, +45-87% time, 40-step over-cooks lips→teeth). fp8mixed + bf16 DELETED.",
+      "fp8_scaled TE for ALL tiers — full-precision qwen_2.5_vl_7b hallucinates+stretches on every transformer. Full TE DELETED.",
+      "High tier = int8 raw 20-step, NO LoRA (not bf16, not 40-step — base wants Lightning-LoRA path, raw-high drifts).",
+      "Lightning LoRA loader = MODEL-only (LoraLoaderModelOnly), strength 1.0.",
+      "7 style LoRAs, Krea2 style-system (Mpi Math a==N gate → Input_style_lora_N → Input_Stylization strength, default 0.80). 3 candidates dropped after testing.",
+      "int8 = 19.10 GiB → BELOW ≥20 GiB binary hot-store gate; deps.js size string MUST be '19GB' (not '20GB'/'20.5GB' SI label).",
+      "Big weights download via BROWSER not curl/rclone (HF/civitai throttle curl to ~1.7MB/s; browser ~42MB/s). R2 UPLOAD uses rclone sequential --transfers 1 --bwlimit 3M per R2 capability doc."
+    ],
+    "constraints": [
+      "Models are NOT version-bumped.",
+      "R2 uploads/deletes need explicit user approval (given for the 4 core weights; style LoRAs = ask before uploading OR treat as same-batch approved — confirm).",
+      "Never hand-edit workflow JSON — author in ComfyUI, user saves canvas, re-export. Canvas lives at G:/ComfyUi/ComfyUI/user/default/workflows/Qwen_Edit_template.json (user's STANDALONE ComfyUI, NOT the app engine/ portable).",
+      "Standalone ComfyUI reads weights from G:/CubricModels via extra_model_paths.yaml — a file mid-download there shows partial → shape errors if loaded. Don't load until download verified.",
+      "Workflow filenames ALL-LOWERCASE (Pod FS 404s mixed-case). Weight filenames keep upstream case (mixed-case Lightning LoRAs OK on R2).",
+      "Shared tree: commit by explicit pathspec, never git add -A. Other sessions edit models.js + MPI-291 + MPI-299 concurrently.",
+      "Any single weight file ≥20 GiB (binary) ⇒ hot-store gate. int8 is BELOW; no PING-USER.",
+      "Kill agent-spawned test node.exe instances if any (zombie :3000 servers)."
+    ],
+    "files_modified": [
+      "docs/models/qwen-edit/README.md",
+      "docs/models/qwen-edit/tiers-and-loaders.md",
+      "docs/models/qwen-edit/dimensions.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/lora-strength-axis.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/transformer-survey.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/dimensions.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/deps-manifest.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/style-detail-loras.md",
+      ".agents/mpi-kanban/tasks/MPI-300/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-300/research/deps-manifest.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/style-detail-loras.md",
+      "docs/models/qwen-edit/tiers-and-loaders.md",
+      "docs/models/qwen-edit/dimensions.md",
+      "docs/models/qwen-edit/README.md",
+      ".agents/mpi-kanban/tasks/MPI-300/task.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["docs/models/qwen-edit", "docs/playbooks/add-model", "docs/models/krea2"]
+  },
+  "rules_active": [
+    "docs/playbooks/add-model/README.md",
+    ".claude/skills/mpi-add-model/SKILL.md",
+    "docs/models/qwen-edit/README.md",
+    "c:/AI/Mpi/MadPony-Identity/capabilities/cloudflare-r2/README.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-18T03:55:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming work on adding the Qwen Image Edit 2511 model to Cubric Vision (card MPI-300, 'doing'). Read .agents/mpi-kanban/state/handoffs/65681d0b-62bf-4860-aaa6-1d2a1cc79728.json and the MPI-300 research files first. PHASE 0 (research + weight test-drive) is COMPLETE and all decisions are LOCKED: ONE transformer qwen_image_edit_2511_int8_convrot (19.10 GiB, below hot-store gate, deps size:'19GB') + ONE text encoder qwen_2.5_vl_7b_fp8_scaled + VAE reuse (vae-qwen-image) for ALL tiers. Tiers: Low=int8+4-step Lightning LoRA, Balanced=int8+8-step Lightning LoRA, High=int8 raw 20-step NO LoRA. Lightning LoRA loader = MODEL-only, strength 1.0. Input dims must be ÷32 (ImageScaleToTotalPixels resolution_steps=32). 7 style LoRAs use the Krea2 style-system (Input_Stylization default 0.80) — registry in research/style-detail-loras.md. fp8mixed, bf16, and the full-precision TE were all tested and DELETED. SHA256 + R2 paths for the 4 core weights are in research/deps-manifest.md. R2 upload of the 4 core weights was IN FLIGHT at handoff time (3/4 done — both Lightning LoRAs + fp8_scaled TE confirmed on R2; the int8 transformer was ~23%, ETA ~1h24m) — FIRST verify it finished (rclone lsf cubric-r2:cubric-models/vision/models/diffusion_models/ + size 20,499,083,824), then upload the 7 STYLE LoRAs from G:/CubricModels/loras/qwen/styles/ to R2 loras/qwen/styles/ (SHA256 each, sequential --transfers 1 --bwlimit 3M). The workflow is NOT wired yet — the user must first save the ComfyUI canvas (G:/ComfyUi/ComfyUI/user/default/workflows/Qwen_Edit_template.json) into the repo at comfy_workflows/raw/qwen_edit_template.json (ALL LOWERCASE). THEN run /mpi-add-model for PHASE 1 wiring (template split, dependencies.js from deps-manifest.md, ModelDef with the 3 tiers, progressStages, type-consumer sweep, style-LoRA registry). This model BLOCKS MPI-299 (head-swap app). Do NOT version-bump; do NOT hand-edit workflow JSON; commit by explicit pathspec only; R2 uploads need user approval. Use mpi-continue."
+}
