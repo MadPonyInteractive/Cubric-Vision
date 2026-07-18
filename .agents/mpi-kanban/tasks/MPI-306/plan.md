@@ -21,8 +21,11 @@ composition is the spec — do NOT re-derive it. Reference artefact: `mockup-C2.
   (`js/services/appService.js:105-107`). That is Phase 3's target, untouched before then.
 - `js/utils/cropTool.js` is a standalone factory with 8 handles, drag, clamping and ratio-lock
   already correct. The box step REUSES it (add a `showGrid` option; do NOT fork the file).
-- Head Swap CANNOT RUN regardless of this work — the graph 404s on its LoRA until the
-  fp32-vs-fp16 A/B and R2 upload land. UI is buildable and inspectable without it.
+- ~~Head Swap CANNOT RUN regardless of this work — the graph 404s on its LoRA~~ **WRONG
+  (corrected 2026-07-18).** It RUNS on the LOCAL engine: node 109's
+  `bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors` is present in
+  `G:\CubricModels\loras\qwen\`. The R2 upload blocks RunPod/remote and installs on OTHER
+  machines, not a local run here. UI is buildable and inspectable either way.
 
 ## Phase 1 — The frame (portable, app-agnostic) — ✅ BUILT, self-verified 2026-07-18
 
@@ -76,8 +79,9 @@ controls component could not see the boxes the frame had collected. The role→n
 app knowledge and must stay out of the frame, so the frame now passes
 `getInputs({ stepValues })`. `MpiBaseApp` still names no app, role or node.
 
-Still awaiting the user's look-and-feel pass. Head Swap cannot RUN (LoRA 404), so nothing was
-verified by generating.
+Still awaiting the user's look-and-feel pass, AND a real local generation — Head Swap does run
+locally (the "LoRA 404" premise was wrong; see Current State), so the boxes can and should be
+proven end-to-end by generating. User is running that test.
 
 **Verify mode:** `user-ux`.
 

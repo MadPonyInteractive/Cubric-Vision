@@ -220,7 +220,12 @@ export const loraDeps = {
     // PRECISION IS PROVISIONAL: an fp16 variant (~half the size) is being A/B'd against
     // this fp32. If fp16 wins, swap filename/url/size/sha256 here AND re-export the
     // workflow (node 109 LoraLoaderModelOnly names the file) — the two must match or the
-    // graph 404s at run time. Nothing else references it.
+    // graph fails to resolve the LoRA at run time. Nothing else references it.
+    //
+    // `url` is NOT LIVE YET (sha256 null, upload unauthorised). That blocks REMOTE runs
+    // (the Pod pulls from R2) and installs on OTHER machines — it does NOT block a local
+    // run on a box that already has the file on disk. Do not read "not uploaded" as
+    // "not runnable".
     'qwen-lora-headswap': {
         id: 'qwen-lora-headswap',
         name: 'Qwen Edit — Head Swap',

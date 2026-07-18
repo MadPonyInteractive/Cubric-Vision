@@ -2,18 +2,30 @@
 
 > Swap a selected head in a base image with the head from a reference character image.
 > Card: **MPI-299** (child of MPI-259 Apps v2). Descriptor is REGISTERED in `appsRegistry.js`
-> and its carousel `steps` + controls **SHIPPED** (MPI-306 Phase 2, 2026-07-18). The app still
-> **cannot run** — see blockers.
+> and its carousel `steps` + controls **SHIPPED** (MPI-306 Phase 2, 2026-07-18). It **RUNS on
+> the local engine** — the LoRA is already on this machine. It does **not** run on RunPod or on
+> any other machine — see blockers.
 >
 > Portable UI decisions made here live in [../ui/](../ui/), not in this file.
 
-## Status — blocked (on weights, not on code)
+## Status — runs LOCALLY; blocked for distribution (on weights, not on code)
+
+**Locally runnable on this machine.** The graph's node 109 loads
+`qwen\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors`, and that exact file is
+present in `G:\CubricModels\loras\qwen\` (1,206,402,600 bytes). Nothing 404s on the local
+engine, so a local failure is a REAL bug — do not write it off as the missing LoRA.
 
 | Blocker | Owner | Notes |
 |---|---|---|
-| LoRA precision undecided | user | fp32 (1.2GB) vs fp16 A/B in progress — decides what gets uploaded |
-| R2 upload | user go-ahead | LoRA is local-only; needs a `models.cubric.studio` URL + SHA256 before it can be a dep. **Do NOT upload until precision is settled.** Until this lands the graph 404s on the LoRA, so a failed generation is EXPECTED and is not a UI bug |
+| LoRA precision undecided | user | fp32 (1.2GB) vs fp16 (307MB, rank-16) A/B in progress — decides what gets uploaded. Both variants are on disk |
+| R2 upload | user go-ahead | Needs a `models.cubric.studio` URL + SHA256 (`sha256: null` today). **Do NOT upload until precision is settled.** Until it lands: **RunPod/remote 404s** (the Pod pulls weights from R2) and **no other machine can install the app** (the dep's `url` points at an object that does not exist). Neither affects a LOCAL run here |
 | Workflow not synced | user | Graph is DONE in ComfyUI (`app_head_swap`); needs saving + `raw/` drop + sync |
+
+> **Do not repeat this mistake:** MPI-306 Phase 2 was verified "by inspection, not by
+> generating" on the inherited claim that the graph 404s. It does not — locally. The claim
+> conflated *not uploaded to R2* with *not on disk*. One `ls` of the models folder settles it;
+> check the disk before declaring an app unrunnable. See memory
+> `feedback_test_user_instinct_first`.
 
 **MPI-304 is DONE** — `requiredDeps` exists (`appsRegistry.js`), and Head Swap is its first
 consumer (`requiredDeps: ['qwen-lora-headswap']`). No longer a blocker.

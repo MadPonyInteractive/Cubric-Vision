@@ -125,11 +125,18 @@ ESLint clean on every touched file (the one `preloadStyles.js` warning is pre-ex
 line not touched).
 
 ### Known-inert / untested
-- Head Swap STILL CANNOT RUN (LoRA 404s pending the fp32-vs-fp16 A/B + R2 upload), so nothing
-  here was verified by generating — by inspection and by injection against the real graph.
+- **CORRECTION (2026-07-18, user-caught): Head Swap DOES run locally.** Everything above was
+  verified "by inspection, not by generating" on the inherited claim that the graph 404s on its
+  LoRA. That claim was wrong — node 109 loads
+  `bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors`, which is present in
+  `G:\CubricModels\loras\qwen\`. The R2 upload gates **RunPod/remote** and **installs on other
+  machines**, not a local run. I repeated the docs' premise without checking the disk; one `ls`
+  would have settled it ([[feedback_test_user_instinct_first]]).
+- **A real local generation is therefore the outstanding Phase 2 proof** — the box→node path is
+  currently proven at the INJECTOR (real graph, real params), not by a run producing a correct
+  head swap. User is running that test. A local failure is a REAL bug, not the missing LoRA.
 - The box gizmo has still not been driven against a real UPLOADED image inside the flow (no
-  project in the headless profile); the box→node path is proven at the injector, not by hand-
-  dragging in the app.
+  project in the headless profile) — no hand-dragging in the app yet.
 - Apply remains inert (Phase 3).
 
 ## NOT yet validated
