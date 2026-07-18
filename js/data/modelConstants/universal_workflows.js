@@ -43,4 +43,7 @@ export const UNIVERSAL_WORKFLOWS = {
     appVideoStitch: {
         workflow: 'app_video_test.json',
     },
+    appHeadSwap: {
+        workflow: 'app_head_swap.json',
+    },
 };

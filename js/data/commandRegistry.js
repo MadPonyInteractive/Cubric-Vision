@@ -485,6 +485,30 @@ export const commands = {
         promptRequired: false,      // pure media utility — no prompt.
         universal: true,            // 3rd Apps op — app_video_test.json, NO model.
     },
+    appHeadSwap: {
+        label: 'App: Head Swap',
+        progressLabel: 'Swapping',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 0,          // media never a hard requirement at the op layer (the
+                                    // app's own UI walks the user through supplying both).
+        // Two image slots: the TARGET (the body/scene kept) and the SOURCE (the head taken).
+        // MpiLoadImageFromPath nodes — full path into their `string` input, self-gating on
+        // empty. Each slot has an OPTIONAL companion Mpi Box (Input_Box / Input_Box_2,
+        // suffix matches the image slot) carrying the head region in top-left SOURCE pixels;
+        // boxes are injectionParams, not media, so they are not declared here.
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+        ],
+        // Fixed-prompt outcome app: the graph has NO Input_Positive/Input_Negative — both
+        // prompts are BAKED. Do not add a prompt box for this app.
+        promptRequired: false,
+        universal: true,            // 4th Apps op — app_head_swap.json, qwen-edit + app LoRA.
+        // MpiBox carries FOUR widgets (x/y/width/height); the generic title injector
+        // writes a single value into one widget name and would match the node but
+        // silently write nothing. headSwapInjector is the only path a box takes.
+        injector: 'headSwap',
+    },
 
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.

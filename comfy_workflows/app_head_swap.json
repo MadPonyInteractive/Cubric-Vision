@@ -1,0 +1,516 @@
+{
+  "5": {
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "6": {
+    "inputs": {
+      "stitcher": [
+        "21",
+        0
+      ],
+      "inpainted_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Stitch"
+    }
+  },
+  "8": {
+    "inputs": {
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "101",
+        0
+      ],
+      "positive": [
+        "15",
+        0
+      ],
+      "negative": [
+        "16",
+        0
+      ],
+      "latent_image": [
+        "22",
+        0
+      ],
+      "seed": [
+        "92",
+        0
+      ],
+      "steps": [
+        "108",
+        0
+      ],
+      "cfg": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "11": {
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "12": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "13": {
+    "inputs": {
+      "prompt": "head_swap: start with Picture 1 as the base image, keeping its lighting, environment, and background. remove the head from Picture 1 completely and replace it with the head from Picture 2, strictly preserving the hair, eye color, nose structure of Picture 2. copy the direction of the eye, head rotation, micro expressions from Picture 1, high quality, sharp details, 4k",
+      "clip": [
+        "11",
+        0
+      ],
+      "vae": [
+        "12",
+        0
+      ],
+      "image1": [
+        "21",
+        1
+      ],
+      "image2": [
+        "89",
+        0
+      ]
+    },
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "14": {
+    "inputs": {
+      "prompt": "bad quality, noise, blurry, worst quality, low resolution, blur, distortion, unnatural blending, cartoon, illustration, painting",
+      "clip": [
+        "11",
+        0
+      ],
+      "vae": [
+        "12",
+        0
+      ],
+      "image1": [
+        "21",
+        1
+      ],
+      "image2": [
+        "89",
+        0
+      ]
+    },
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "15": {
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {
+      "title": "Edit Model Reference Method"
+    }
+  },
+  "16": {
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "14",
+        0
+      ]
+    },
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {
+      "title": "Edit Model Reference Method"
+    }
+  },
+  "21": {
+    "inputs": {
+      "downscale_algorithm": "lanczos",
+      "upscale_algorithm": "lanczos",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 0,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1.2,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "cpu (compatible)",
+      "image": [
+        "79",
+        0
+      ],
+      "mask": [
+        "91",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Crop"
+    }
+  },
+  "22": {
+    "inputs": {
+      "pixels": [
+        "21",
+        1
+      ],
+      "vae": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "24": {
+    "inputs": {
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "79": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "81": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  },
+  "88": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "x": 1244,
+      "y": 100
+    },
+    "class_type": "MpiBox",
+    "_meta": {
+      "title": "Input_Box_2"
+    }
+  },
+  "89": {
+    "inputs": {
+      "image": [
+        "81",
+        0
+      ],
+      "mpi_box": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "MpiBoxCrop",
+    "_meta": {
+      "title": "Mpi Box Crop"
+    }
+  },
+  "90": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "x": 1244,
+      "y": 100
+    },
+    "class_type": "MpiBox",
+    "_meta": {
+      "title": "Input_Box"
+    }
+  },
+  "91": {
+    "inputs": {
+      "image": [
+        "79",
+        0
+      ],
+      "mpi_box": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "MpiBoxMask",
+    "_meta": {
+      "title": "Mpi Box Mask"
+    }
+  },
+  "92": {
+    "inputs": {
+      "int": 891976866874170
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "93": {
+    "inputs": {
+      "unet_name": "qwen_image_edit_2511_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "95": {
+    "inputs": {
+      "int": 3
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "97": {
+    "inputs": {
+      "lora_name": "qwen\\Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Accelerator LoRA"
+    }
+  },
+  "98": {
+    "inputs": {
+      "lora_name": "qwen\\Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Accelerator LoRA"
+    }
+  },
+  "99": {
+    "inputs": {
+      "any_1": [
+        "93",
+        0
+      ],
+      "any_2": [
+        "98",
+        0
+      ],
+      "any_3": [
+        "97",
+        0
+      ],
+      "select": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "100": {
+    "inputs": {
+      "model": [
+        "109",
+        0
+      ],
+      "shift": [
+        "102",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "101": {
+    "inputs": {
+      "strength": 1,
+      "pre_cfg": false,
+      "model": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "CFGNorm",
+    "_meta": {
+      "title": "CFGNorm"
+    }
+  },
+  "102": {
+    "inputs": {
+      "math_expression": "1.0 if a == 1 else 2.5",
+      "a": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "103": {
+    "inputs": {
+      "int": 8
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Balanced Steps"
+    }
+  },
+  "104": {
+    "inputs": {
+      "int": 4
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Low Steps"
+    }
+  },
+  "106": {
+    "inputs": {
+      "math_expression": "2.5 if a == 1 else 1.0",
+      "a": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "CFG"
+    }
+  },
+  "107": {
+    "inputs": {
+      "int": 20
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "High Steps"
+    }
+  },
+  "108": {
+    "inputs": {
+      "any_1": [
+        "107",
+        0
+      ],
+      "any_2": [
+        "103",
+        0
+      ],
+      "any_3": [
+        "104",
+        0
+      ],
+      "select": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "steps"
+    }
+  },
+  "109": {
+    "inputs": {
+      "lora_name": "qwen\\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors",
+      "strength_model": 1,
+      "model": [
+        "99",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Head Swap LoRA"
+    }
+  }
+}

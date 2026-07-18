@@ -212,6 +212,23 @@ export const loraDeps = {
         size: '236MB',
         sha256: 'a3580f7af2c11d2c9a8867c32807b13284e7c84dde66fddcb29daef0fbdf1fc2',
     },
+    // App-only LoRA (MPI-299 Head Swap) — required by the app via AppDef.requiredDeps,
+    // NOT by the qwen-edit model. Folding it into the model would push 1.2GB onto every
+    // Qwen user for one app (MPI-304). Filed here because it IS a LoRA — deps are filed
+    // by KIND, never by owner.
+    //
+    // PRECISION IS PROVISIONAL: an fp16 variant (~half the size) is being A/B'd against
+    // this fp32. If fp16 wins, swap filename/url/size/sha256 here AND re-export the
+    // workflow (node 109 LoraLoaderModelOnly names the file) — the two must match or the
+    // graph 404s at run time. Nothing else references it.
+    'qwen-lora-headswap': {
+        id: 'qwen-lora-headswap',
+        name: 'Qwen Edit — Head Swap',
+        filename: 'loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
+        size: '1.2GB',
+        sha256: null, // pending R2 upload — not authorised yet (fp32-vs-fp16 A/B open)
+    },
     'qwen-edit-style-3d': {
         id: 'qwen-edit-style-3d',
         name: 'Qwen Edit Style — 3D',

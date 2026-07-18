@@ -113,5 +113,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.2.0",
     "universal": true
+  },
+  "appHeadSwap": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0",
+    "universal": true
   }
 }

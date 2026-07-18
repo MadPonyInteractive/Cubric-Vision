@@ -119,6 +119,36 @@ export const APPS = [
             ],
         },
     },
+    // Fourth app (MPI-299): 2-image head swap. Takes a TARGET image (body/scene kept)
+    // and a SOURCE image (head taken), each with an optional box marking the head
+    // region, and swaps one onto the other.
+    //
+    // First app to use requiredDeps (MPI-304): it needs qwen-edit's weights PLUS a
+    // head-swap LoRA no model requires. That LoRA is declared here, not folded into
+    // qwen-edit — folding it would push 1.2GB onto every Qwen user for one app.
+    //
+    // FIXED-PROMPT app: the graph has NO Input_Positive/Input_Negative (both baked),
+    // so inputSchema declares no `positive` and the op sets promptRequired:false.
+    // Boxes are injectionParams (box1/box2 → headSwapInjector), NOT media slots.
+    {
+        id: 'head-swap',
+        title: 'Head Swap',
+        preview: 'sdxl-real-05.webp',   // placeholder — swap for a head-swap sample
+        description: 'Swap a head from one image onto another. Upload the image you want to keep, the image with the head you want, mark each head, and run.',
+        requiredModels: ['qwen-edit'],
+        requiredDeps: ['qwen-lora-headswap'],
+        operation: 'appHeadSwap',
+        workflow: 'app_head_swap.json',
+        // uiComponent: pending — the box gizmo + steps carousel (MPI-299 UI phase).
+        // Until it lands MpiBaseApp renders the two media slots with no box control,
+        // so a run uses each box node's baked default.
+        mediaType: 'image',
+        inputSchema: {
+            media: [
+                { type: 'image', mode: 'upto', max: 2, roles: ['image1', 'image2'] },
+            ],
+        },
+    },
 ];
 
 /** @returns {AppDef[]} All app descriptors. */
