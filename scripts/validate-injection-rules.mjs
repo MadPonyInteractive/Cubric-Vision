@@ -127,9 +127,19 @@ function checkWorkflow(wf, objectInfo) {
     }
     return false;
   };
+  // A refiner stage runs its sampler with `add_noise: false`, which makes that sampler's
+  // noise_seed a dead input — so an Input_Seed feeding nothing is CORRECT there, not a
+  // dropped injection (MPI-303: wan22_i2v_stage2 was filed as a bug on exactly this and
+  // closed as not-a-bug; stage 2 refines stage 1's latent, all variance comes from
+  // stage 1's seed). Exempt Input_Seed only when no sampler in the graph could consume a
+  // seed at all; any live noise_seed means a real Input_Seed orphan is still a real bug.
+  const anySeedConsumer = nodes.some(([, n]) =>
+    n.inputs && 'noise_seed' in n.inputs && n.inputs.add_noise !== false
+  );
   for (const [id, node] of nodes) {
     const title = titleOf(node);
     if (!/^input_/i.test(title)) continue;
+    if (title.toLowerCase() === 'input_seed' && !anySeedConsumer) continue;
     if (!reaches(id)) {
       violations.push(
         `node ${id} titled "${title}" never reaches a capture node — the app will inject into it ` +

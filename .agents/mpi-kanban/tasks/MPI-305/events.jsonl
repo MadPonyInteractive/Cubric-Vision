@@ -1,0 +1,2 @@
+{"at": "2026-07-18T09:45:00Z", "type": "task.created", "id": "MPI-305", "actor": "claude", "note": "Filed from MPI-303 close-out: check 4 flags wan22_i2v_stage2's Input_Seed as an orphan, but the graph is correct — sampler 733 is add_noise:False so noise_seed is dead. Needs a narrow seed+add_noise exemption, not a weakened check 4."}
+{"at": "2026-07-18T09:45:00Z", "type": "task.moved", "id": "MPI-305", "from": "todo", "to": "doing", "actor": "claude", "note": "Starting implementation immediately."}
