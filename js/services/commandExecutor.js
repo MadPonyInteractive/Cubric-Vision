@@ -1241,16 +1241,22 @@ export function runCommand(payload) {
                 clientLogger.error('commandExecutor', `Missing injector "${opDef.injector}" for op ${workingPayload.operation}`);
             } else {
                 try {
-                    injector(workflow, workingPayload.injectionParams || {});
-                    // Standalone injector params are already written into the
-                    // workflow. Remove them — BOTH the bare key AND its Input_ alias
+                    injector.inject(workflow, workingPayload.injectionParams || {});
+                    // Params the injector CONSUMED are already written into the
+                    // workflow. Remove those — BOTH the bare key AND its Input_ alias
                     // (added by the canonicalization pass) — so the generic title
                     // injector below cannot re-match them. Without the alias delete,
                     // `flip` → `Input_flip` survives and the generic loop injects the
                     // raw 'x'/'y' string into the MpiIfElse node titled `Input_Flip`,
                     // setting its `boolean` to false (val !== 'true') and silently
                     // overwriting the injector's correct boolean=true. Flip then no-ops.
-                    Object.keys(workingPayload.injectionParams || {}).forEach(key => {
+                    //
+                    // Delete only what the injector DECLARES it consumes (MPI-306).
+                    // Clearing every injectionParams key swallowed params the injector
+                    // never touched: Head Swap sends Input_Tier alongside its boxes, and
+                    // it was deleted before the generic injector could write it — so the
+                    // graph kept its baked tier and every tier ran the same.
+                    (injector.consumes || []).forEach(key => {
                         delete params[key];
                         delete params[`Input_${key}`];
                     });

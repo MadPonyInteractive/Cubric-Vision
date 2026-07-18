@@ -27,6 +27,17 @@ const BOX_TITLES = Object.freeze({
     box2: 'input_box_2',
 });
 
+/**
+ * The ONLY params this injector consumes. commandExecutor deletes exactly these
+ * from the generic param map after running us — everything else this op sends
+ * (Input_Tier) must survive to the generic title injector.
+ *
+ * MPI-306: this list did not exist and the executor deleted EVERY injectionParams
+ * key, so Head Swap's Input_Tier was swallowed and node 95 kept its baked 3
+ * (Hyper). Quality and Hyper ran identically because both ran Hyper.
+ */
+export const HEAD_SWAP_CONSUMES = Object.freeze(Object.keys(BOX_TITLES));
+
 function _nodesByTitle(workflow, title) {
     return Object.values(workflow || {}).filter(node =>
         node?._meta?.title?.toLowerCase() === title

@@ -48,6 +48,17 @@ const KEEP_PROPORTIONS = new Set([
 
 const CROP_POSITIONS = new Set(['center', 'top', 'bottom', 'left', 'right']);
 
+/**
+ * The ONLY params this injector consumes — commandExecutor deletes exactly these
+ * from the generic param map afterwards. `flip` MUST stay listed: its Input_flip
+ * alias otherwise reaches the generic injector and overwrites the correct
+ * boolean with false (the long-standing "flip no-ops" bug).
+ */
+export const RESIZE_CONSUMES = Object.freeze([
+    'width', 'height', 'upscale_method', 'keep_proportion', 'pad_color',
+    'crop_position', 'divisible_by', 'flip', 'rotation',
+]);
+
 const FLIP_METHODS = Object.freeze({
     x: 'x-axis: vertically',
     y: 'y-axis: horizontally',
