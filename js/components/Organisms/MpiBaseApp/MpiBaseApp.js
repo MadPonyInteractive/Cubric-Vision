@@ -2,7 +2,8 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { Events } from '../../../events.js';
-import { state } from '../../../state.js';
+import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
+import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
 import { submitAppGeneration } from '../../../services/appService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
@@ -212,6 +213,9 @@ export const MpiBaseApp = ComponentFactory.create({
         let _runBtn = null;
         let _resultMediaEl = null;
         let _resultEmptyEl = null;
+        let _resultFrameEl = null;
+        /** Pan/zoom state for the result pane — the shared MpiCanvas view model. */
+        const _resultView = new ViewManager();
         let _statusEl = null;
         let _applyRow = null;
         let _pendingNote = null;
@@ -642,8 +646,10 @@ export const MpiBaseApp = ComponentFactory.create({
             const right = ce('div', { className: 'mpi-base-app__col-right' });
             const pane = ce('div', { className: 'mpi-base-app__result' });
             const frame = ce('div', { className: 'mpi-base-app__result-frame' });
+            _resultFrameEl = frame;
             _resultMediaEl = ce('div', { className: 'mpi-base-app__result-media' });
             frame.appendChild(_resultMediaEl);
+            _bindResultView(frame, unsubs);
             // Empty-state copy that also teaches the commit: an unexplained blank
             // frame gives the user no reason to expect Apply to matter.
             _resultEmptyEl = ce('div', { className: 'mpi-base-app__result-empty' });
@@ -697,6 +703,7 @@ export const MpiBaseApp = ComponentFactory.create({
             // These live on the run slide only; drop the stale references.
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
             _applyRow = null; _pendingNote = null; _gaugeEl = null;
+            _resultFrameEl = null;
         }
 
         /** Build and show the current step. One slide is live at a time. */
@@ -746,16 +753,127 @@ export const MpiBaseApp = ComponentFactory.create({
             if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild;
         }
 
+        // ── Result zoom / pan ───────────────────────────────────────────────────
+        // NOT a new interaction — the same ViewManager model History, the video
+        // viewer and the masked preview already use, adopted on one more surface so
+        // a result can be evaluated close up.
+        //
+        // THE VIEW RESETS ON EVERY NEW IMAGE, deliberately. A latent here is often a
+        // localized crop while the final is a different resolution, so carrying a
+        // zoom across them would land the user somewhere meaningless.
+
+        /**
+         * Fit once the media has real dimensions. A cached image can be `complete`
+         * before the load handler is attached, in which case `load` never fires and
+         * the image would render unscaled at natural size, overflowing the frame.
+         * @param {HTMLImageElement|HTMLVideoElement} media
+         */
+        function _fitWhenReady(media) {
+            const isVideo = media.tagName === 'VIDEO';
+            const ready = isVideo ? media.readyState >= 1 : (media.complete && media.naturalWidth);
+            if (ready) { _fitResultView(); return; }
+            on(media, isVideo ? 'loadedmetadata' : 'load', _fitResultView);
+        }
+
+        /** Fit the current media to the frame and paint the transform. */
+        function _fitResultView() {
+            const media = _resultMediaEl?.firstElementChild;
+            if (!media || !_resultFrameEl) return;
+            const rect = _resultFrameEl.getBoundingClientRect();
+            const w = media.naturalWidth || media.videoWidth || media.clientWidth;
+            const h = media.naturalHeight || media.videoHeight || media.clientHeight;
+            if (!rect.width || !rect.height || !w || !h) return;
+            _resultView.isManagedView = true;
+            _resultView.refit(rect.width, rect.height, w, h);
+            _applyResultTransform();
+        }
+
+        function _applyResultTransform() {
+            if (!_resultMediaEl) return;
+            _resultMediaEl.style.transform = _resultView.getCSSTransform();
+            _resultMediaEl.dataset.zoomMode =
+                (_resultView.scale || 1) >= AUTO_PIXEL_THRESHOLD ? 'pixel' : 'smooth';
+        }
+
+        /** Wire wheel-zoom-at-cursor, drag-pan and dblclick-to-fit onto the frame. */
+        function _bindResultView(frame, unsubs) {
+            unsubs.push(on(frame, 'wheel', (e) => {
+                if (!_resultMediaEl?.firstChild) return;
+                e.preventDefault();
+                const rect = frame.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const delta = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+                const next = Math.min(_resultView.maxScale,
+                    Math.max(_resultView.minScale, _resultView.scale * delta));
+                _resultView.offsetX = mx - (mx - _resultView.offsetX) * (next / _resultView.scale);
+                _resultView.offsetY = my - (my - _resultView.offsetY) * (next / _resultView.scale);
+                _resultView.scale = next;
+                _resultView.isManagedView = false;
+                _applyResultTransform();
+            }, { passive: false }));
+
+            let panning = false, startX = 0, startY = 0;
+            unsubs.push(on(frame, 'mousedown', (e) => {
+                if (e.button !== 0 && e.button !== 1) return;
+                if (!_resultMediaEl?.firstChild) return;
+                panning = true;
+                startX = e.clientX - _resultView.offsetX;
+                startY = e.clientY - _resultView.offsetY;
+                frame.style.cursor = 'move';
+            }));
+            unsubs.push(on(frame, 'mousemove', (e) => {
+                if (!panning) return;
+                _resultView.offsetX = e.clientX - startX;
+                _resultView.offsetY = e.clientY - startY;
+                _resultView.isManagedView = false;
+                _applyResultTransform();
+            }));
+            const endPan = () => { if (panning) { panning = false; frame.style.cursor = ''; } };
+            unsubs.push(on(frame, 'mouseup', endPan));
+            unsubs.push(on(frame, 'mouseleave', endPan));
+            // Double-click restores fit — the same escape hatch MpiCanvas gives.
+            unsubs.push(on(frame, 'dblclick', _fitResultView));
+
+            const ro = new ResizeObserver(() => {
+                if (_resultView.isManagedView) _fitResultView();
+            });
+            ro.observe(frame);
+            unsubs.push(() => ro.disconnect());
+        }
+
+        /**
+         * Show/hide the sweeping frost line. It sits on the FRAME (outside the
+         * transformed media layer) so zooming does not drag it around.
+         * @param {boolean} show
+         */
+        function _setScanline(show) {
+            if (!_resultFrameEl) return;
+            let line = qs('.mpi-base-app__scanline', _resultFrameEl);
+            if (show && !line) {
+                line = ce('span', { className: 'mpi-base-app__scanline' });
+                _resultFrameEl.appendChild(line);
+            } else if (!show && line) {
+                line.remove();
+            }
+        }
+
         /** Paint a single URL (a live latent preview) into the result pane. */
         function _paintResult(url, { blurring = false } = {}) {
             if (!url || !_resultMediaEl) return;
             _resultMediaEl.innerHTML = '';
             const img = ce('img', { src: url, alt: 'result' });
-            // Live latents de-blur as they form — honest about a half-computed
-            // image, where a spinner over blank space is not.
+            // Live latents carry a light blur — honest about a half-computed image,
+            // where a spinner over blank space is not. Kept subtle on purpose: at a
+            // heavy radius a late, genuinely detailed latent is hidden behind the
+            // same fog as the first noisy one, which is the opposite of informative.
             if (blurring) img.classList.add('mpi-base-app__result-latent');
             _resultMediaEl.appendChild(img);
-            _resultMediaEl.appendChild(ce('span', { className: 'mpi-base-app__scanline' }));
+            _fitWhenReady(img);
+            // The scanline lives on the FRAME, not the transformed media layer —
+            // inside it, the sweep would zoom and pan along with the image instead
+            // of tracking the viewport.
+            _setScanline(true);
             _syncResultEmpty();
         }
 
@@ -768,13 +886,20 @@ export const MpiBaseApp = ComponentFactory.create({
             // blob: URL is revoked the moment the gen ends. Leaving it in the DOM logs
             // a GET blob:… ERR_FILE_NOT_FOUND.
             _resultMediaEl.innerHTML = '';
+            // The run is over — the sweep now lives on the frame, so clearing the
+            // media layer no longer takes it with it.
+            _setScanline(false);
             if (!withPath.length) { _syncResultEmpty(); return; }
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
                 const isVideo = it?.type === 'video' || it?.mediaType === 'video';
-                _resultMediaEl.appendChild(isVideo
+                const media = isVideo
                     ? ce('video', { src: url, controls: true, muted: true, loop: true })
-                    : ce('img', { src: url, alt: 'result' }));
+                    : ce('img', { src: url, alt: 'result' });
+                // Fit the FINAL image once it has dimensions — a latent's view never
+                // carries over (different crop, different resolution).
+                _resultMediaEl.appendChild(media);
+                _fitWhenReady(media);
             }
             _syncResultEmpty();
         }

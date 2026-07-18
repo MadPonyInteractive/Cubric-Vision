@@ -508,25 +508,42 @@
     align-items: center;
     gap: var(--s-4);
 }
+/* Zoom/pan viewport (the same ViewManager model as History): the frame CLIPS and
+   the media layer is transformed inside it. Fixed height so there is room to zoom
+   into — an auto-height frame would resize under the image as it scaled. */
 .mpi-base-app__result-frame {
     position: relative;
     border: 1px solid var(--line);
     background: var(--surface-canvas);
     line-height: 0;
-    min-width: 240px;
-    min-height: 180px;
+    /* The media layer is absolutely positioned, so it contributes NO size — the
+       frame must state its own or it collapses to min-width. */
+    width: 384px;
+    height: 384px;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
 }
+.mpi-base-app__result-frame:active { cursor: grabbing; }
+/* ViewManager emits absolute offsets, so the origin must be the frame's corner. */
 .mpi-base-app__result-media {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
     display: flex;
     flex-wrap: wrap;
     gap: var(--s-2);
-    position: relative;
+    will-change: transform;
 }
+/* Above the auto-pixel threshold, show real pixels rather than smoothed mush. */
+.mpi-base-app__result-media[data-zoom-mode='pixel'] img { image-rendering: pixelated; }
 
-/* Empty-state copy — teaches the commit while the pane is blank. */
+/* Empty-state copy — teaches the commit while the pane is blank. Fills the
+   frame rather than setting its size (the frame owns its height now). */
 .mpi-base-app__result-empty {
-    width: 384px;
-    height: 288px;
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -537,22 +554,24 @@
     text-align: center;
 }
 .mpi-base-app__result-empty[hidden] { display: none; }
+/* NATURAL SIZE — the transform does the scaling. Capping with max-width here
+   would render the image at a size ViewManager's fit maths (which works from
+   naturalWidth/Height) does not know about, so zoom would drift out of step. */
 .mpi-base-app__result-media img,
 .mpi-base-app__result-media video {
     display: block;
-    max-width: 384px;
-    max-height: 42vh;
+    max-width: none;
+    max-height: none;
     width: auto;
     height: auto;
 }
-/* Multi-output: wrap to a small grid rather than one huge stack. */
-.mpi-base-app__result-media:has(> img + img) img,
-.mpi-base-app__result-media:has(> video + video) video { max-width: 188px; }
 
 /* Live latents: progressive de-blur + a 1px frost scanline — honest about a
    half-computed image, where a spinner over blank space is not. */
+/* Light touch on purpose: a heavy radius hides a late, genuinely detailed latent
+   behind the same fog as the first noisy one, which is the opposite of useful. */
 .mpi-base-app__result-latent {
-    filter: blur(9px);
+    filter: blur(2px);
     transition: filter var(--t-slow) var(--ease);
 }
 .mpi-base-app__scanline {
