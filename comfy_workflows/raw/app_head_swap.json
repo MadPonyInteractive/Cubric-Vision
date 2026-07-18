@@ -1907,7 +1907,7 @@
         }
       },
       "widgets_values": [
-        "qwen\\bfs_head_v5_2511_merged_version_rank_16_fp16.safetensors",
+        "qwen\\bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors",
         1
       ],
       "color": "#332922",
