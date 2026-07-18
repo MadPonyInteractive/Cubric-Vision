@@ -15,7 +15,7 @@ import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBox
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
-import { qs, on } from '../../../utils/dom.js';
+import { qs, qsa, on, off } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
@@ -678,8 +678,31 @@ export const MpiPromptBox = ComponentFactory.create({
 
         function _renderStrip(items) {
             if (!_stripEl) return;
+            // FLIP: remember where every chip sits before the re-render so a
+            // reorder animates from its old slot instead of teleporting.
+            const _prevRects = new Map();
+            const existing = qsa('.mpi-prompt-box-media-strip__chip', _stripEl);
+            existing.forEach(c => _prevRects.set(c.dataset.id, c.getBoundingClientRect()));
+
+            // Reorder fast path: same chips, new order. Rebuilding the DOM here
+            // would reload every <img src> mid-drag (flicker) and drop the
+            // dragged node out from under its own pointer handlers — so move the
+            // existing nodes instead and only re-stamp the index badges.
+            const sameSet = existing.length === items.length
+                && items.every(it => _prevRects.has(it.id));
+            if (sameSet) {
+                items.forEach((item, idx) => {
+                    const chip = existing.find(c => c.dataset.id === item.id);
+                    _stripEl.appendChild(chip); // appendChild moves, not clones
+                    const badge = qs('.mpi-prompt-box-media-strip__index', chip);
+                    if (badge) badge.textContent = String(idx + 1);
+                });
+                _playFlip(_prevRects);
+                return;
+            }
+
             _stripEl.innerHTML = '';
-            items.forEach(item => {
+            items.forEach((item, idx) => {
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
                 chip.dataset.id = item.id;
@@ -693,10 +716,17 @@ export const MpiPromptBox = ComponentFactory.create({
                                ${renderIcon('audio', 'sm')}
                                <span class="mpi-prompt-box-media-strip__audio-name" title="${_audioName(item)}">${_audioName(item)}</span>
                            </div>`;
+                // Index badge mirrors the "image N" numbering models like
+                // qwenEdit use in prompts. A lone chip needs no number.
+                const indexHtml = items.length > 1
+                    ? `<span class="mpi-prompt-box-media-strip__index">${idx + 1}</span>`
+                    : '';
                 chip.innerHTML = `
+                    ${indexHtml}
                     ${mediaHtml}
                     <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
                 `;
+                if (items.length > 1) _makeChipReorderable(chip, item.id);
                 // Belt + suspenders: kill any drag that escapes draggable=false
                 // (browsers ignore the attr on some media elements during specific
                 // gesture sequences). Prevents the strip from acting as a source
@@ -708,8 +738,118 @@ export const MpiPromptBox = ComponentFactory.create({
                 });
                 _stripEl.appendChild(chip);
             });
+
+            _playFlip(_prevRects);
+        }
+
+        // FLIP playback: invert each chip to its old position, then release.
+        function _playFlip(prevRects) {
+            qsa('.mpi-prompt-box-media-strip__chip', _stripEl).forEach(chip => {
+                // The chip under the cursor is positioned by the drag itself.
+                if (chip.dataset.id === _draggingId) return;
+                const prev = prevRects.get(chip.dataset.id);
+                if (!prev) return;
+                const next = chip.getBoundingClientRect();
+                const dx = prev.left - next.left;
+                const dy = prev.top - next.top;
+                if (!dx && !dy) return;
+                // Replace any in-flight FLIP instead of stacking a second
+                // animation on top of it (the old one would fight this one).
+                chip.getAnimations().forEach(a => a.cancel());
+                chip.animate(
+                    [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+                    { duration: 200, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+                );
+            });
         }
         _renderStrip([]);
+
+        // ── Chip reorder (pointer-driven) ─────────────────────────────────────
+        // Id of the chip currently under the cursor, or null. Read by the FLIP
+        // pass so it doesn't clobber the drag ghost's transform.
+        let _draggingId = null;
+        // Pointer events, not HTML5 drag: the root el intercepts every drag*
+        // event for file drops, so a native drag here would raise the drop
+        // overlay and re-import the chip as a new item.
+        function _makeChipReorderable(chip, id) {
+            on(chip, 'pointerdown', (e) => {
+                // Left button only; the remove button owns its own clicks.
+                if (e.button !== 0 || e.target.closest('.mpi-prompt-box-media-strip__remove')) return;
+                e.preventDefault();
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+                let dragging = false;
+
+                // Each reorder re-renders the strip, replacing this element — so
+                // always re-resolve the dragged chip by id rather than closing
+                // over a node that may already be detached.
+                const live = () => qs(`.mpi-prompt-box-media-strip__chip[data-id="${id}"]`, _stripEl);
+
+                const onMove = (ev) => {
+                    const cur = live();
+                    if (!cur) return;
+                    if (!dragging) {
+                        // Small threshold so a click-to-remove never starts a drag.
+                        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 4) return;
+                        dragging = true;
+                        _draggingId = id;
+                    }
+                    cur.classList.add('mpi-prompt-box-media-strip__chip--dragging');
+                    // Measure the chip's slot with the ghost offset cleared —
+                    // getBoundingClientRect() reports the TRANSFORMED box, so
+                    // measuring while offset would compound every move.
+                    cur.style.transform = '';
+                    const r = cur.getBoundingClientRect();
+                    cur.style.transform =
+                        `translate(${ev.clientX - (r.left + r.width / 2)}px, ${ev.clientY - (r.top + r.height / 2)}px)`;
+
+                    // Reorder only once the pointer passes a neighbour's MIDPOINT,
+                    // not on mere overlap: overlap holds true across many moves, so
+                    // firing on it re-rendered the strip every pointermove (flicker).
+                    // Crossing the midpoint fires once per actual position change.
+                    const over = qsa('.mpi-prompt-box-media-strip__chip', _stripEl)
+                        .find(n => {
+                            if (n.dataset.id === id) return false;
+                            const b = n.getBoundingClientRect();
+                            if (ev.clientY < b.top || ev.clientY > b.bottom) return false;
+                            const mid = b.left + b.width / 2;
+                            // Neighbour to our right: swap once the pointer is past
+                            // its midpoint going right. To our left: past it going
+                            // left. Short of that the order is already correct.
+                            return b.left > r.left ? ev.clientX > mid : ev.clientX < mid;
+                        });
+                    if (over) _moveMediaItem(id, over.dataset.id);
+                };
+
+                const onUp = () => {
+                    off(document, 'pointermove', onMove);
+                    off(document, 'pointerup', onUp);
+                    _draggingId = null;
+                    const cur = live();
+                    if (cur) {
+                        cur.style.transform = '';
+                        cur.classList.remove('mpi-prompt-box-media-strip__chip--dragging');
+                    }
+                };
+
+                on(document, 'pointermove', onMove);
+                on(document, 'pointerup', onUp);
+            });
+        }
+
+        // Move `id` to the slot `targetId` occupies, shifting the rest along
+        // (insert-reorder, not a swap — a swap can't reach every arrangement).
+        function _moveMediaItem(id, targetId) {
+            const from = _mediaItems.findIndex(m => m.id === id);
+            const to = _mediaItems.findIndex(m => m.id === targetId);
+            if (from === -1 || to === -1 || from === to) return;
+            // Roles follow strip position, so drop the explicit tags the drag
+            // invalidated and let _withAssignedRoles re-derive them by order.
+            _mediaItems.forEach(m => { delete m.role; });
+            _mediaItems.splice(to, 0, _mediaItems.splice(from, 1)[0]);
+            _emitMediaChange();
+        }
 
         // Init-time history-mode class (props.context may carry historyMode at mount)
         if (_context.historyMode === true) el.classList.add('mpi-prompt-box--history-mode');
@@ -1100,6 +1240,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 // the ratio table already states it, and a second source would drift.
                 // Without this, an orientation model (SDXL) would render Wan's tiers.
                 if (componentId === 'qualityTier' && !usesQualityTier(model?.type)) continue;
+
+                // Qwen-Edit tier radio (Input_Tier) mounts only for models that ship a
+                // runtime accelerator-tier switch (Qwen-Image-Edit). Capability-gated so
+                // it never appears on other edit models (Boogu bakes its tier per file).
+                if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
 
                 // Batch picker is model-gated. Defaults TRUE (every model batches
                 // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
