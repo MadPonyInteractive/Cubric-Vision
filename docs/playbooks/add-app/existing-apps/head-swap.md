@@ -1,18 +1,22 @@
 # Head Swap
 
 > Swap a selected head in a base image with the head from a reference character image.
-> Card: **MPI-299** (child of MPI-259 Apps v2). **NOT YET BUILT** — design record only.
+> Card: **MPI-299** (child of MPI-259 Apps v2). Descriptor is REGISTERED in `appsRegistry.js`;
+> the app **cannot run yet** (see blockers) and its carousel `steps` are not declared — that
+> is MPI-306 Phase 2.
 >
 > Portable UI decisions made here live in [../ui/](../ui/), not in this file.
 
-## Status — blocked
+## Status — blocked (on weights, not on code)
 
 | Blocker | Owner | Notes |
 |---|---|---|
-| **MPI-304** — apps can't require deps | agent | `requiredDeps` doesn't exist yet; the head-swap LoRA has nowhere to live that doesn't tax every Qwen user. **Blocks wiring** |
 | LoRA precision undecided | user | fp32 (1.2GB) vs fp16 A/B in progress — decides what gets uploaded |
-| R2 upload | user go-ahead | LoRA is local-only; needs a `models.cubric.studio` URL + SHA256 before it can be a dep. **Do NOT upload until precision is settled** |
+| R2 upload | user go-ahead | LoRA is local-only; needs a `models.cubric.studio` URL + SHA256 before it can be a dep. **Do NOT upload until precision is settled.** Until this lands the graph 404s on the LoRA, so a failed generation is EXPECTED and is not a UI bug |
 | Workflow not synced | user | Graph is DONE in ComfyUI (`app_head_swap`); needs saving + `raw/` drop + sync |
+
+**MPI-304 is DONE** — `requiredDeps` exists (`appsRegistry.js`), and Head Swap is its first
+consumer (`requiredDeps: ['qwen-lora-headswap']`). No longer a blocker.
 
 Qwen itself is **wired, tested and live** (`qwen-edit`, MPI-300) — only RunPod verification
 is outstanding, which does not block this app.
@@ -115,10 +119,13 @@ trips it, including the face/hand/person detectors already shipped. Not a new ri
 
 ## Open questions
 
-- Coord convention the gizmo hands the app (top-left+side vs centre+side) — conversion is in
-  [../ui/box-gizmo.md](../ui/box-gizmo.md), just pick one and stay consistent.
+- ~~Coord convention the gizmo hands the app~~ — **SETTLED** (MPI-306 Phase 1): `MpiStepBox`
+  reports **top-left anchored, absolute source pixels**, clamped to the image, which is what
+  `Mpi Box` consumes unconverted. No conversion anywhere.
 - Whether face detection seeds the initial box, or selection is fully manual in v1.
-- Final `requiredModels` list once Qwen lands.
+  (v1 default is the whole image; a step is never invalid.)
+- ~~Final `requiredModels` list once Qwen lands~~ — **SETTLED**: `['qwen-edit']` +
+  `requiredDeps: ['qwen-lora-headswap']`.
 - Multi-output: does one run ever produce more than one image?
 
 ## Notes
