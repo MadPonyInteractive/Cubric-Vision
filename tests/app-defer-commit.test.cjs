@@ -58,3 +58,11 @@ test('Apply commits via addGroup and clears the pending groups first', () => {
     // A re-run supersedes an unapplied result.
     assert.match(src, /_pendingGroups = null;[\s\S]{0,200}_paintPending\(\);/);
 });
+
+test('the gallery repaints when a group is ADDED, not only when a gen completes', () => {
+    const src = read('js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js');
+    // Before hold-until-Apply the grid repainted only via generation:complete, which
+    // worked by accident: addGroup ran inside that handler. An Apply commits long
+    // after, so without this listener the card only appears on a workspace remount.
+    assert.match(src, /Events\.on\('project:group-added'/, 'gallery must listen for project:group-added');
+});

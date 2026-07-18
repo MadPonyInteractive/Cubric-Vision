@@ -1482,6 +1482,18 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _rebuildAfterEnd(id, tid, extraTempIds);
         }));
 
+        // A group entering the project repaints the grid, WHENEVER it happens.
+        // The gallery used to repaint only via generation:complete, which worked
+        // by accident: addGroup ran inside that handler, so the project was
+        // already updated by the time the rebuild read it. An App's Apply commits
+        // minutes later (MPI-306 hold-until-Apply) and nothing repainted — the
+        // card only appeared after a workspace round-trip remounted the block.
+        // Keyed on the actual event (a group was added), not on a generation
+        // ending, so any future deferred/out-of-band commit repaints for free.
+        _unsubs.push(Events.on('project:group-added', () => {
+            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
+        }));
+
         _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
             const _bridged = _stoppedPendingComplete.delete(id);
             if (!_myGenIds.has(id) && !_bridged) return;
