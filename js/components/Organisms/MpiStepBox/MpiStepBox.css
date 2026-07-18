@@ -15,13 +15,10 @@
 
 /* The stage hugs the image at its own aspect — no letterbox, so the
    overlay canvas can sit exactly on top of the rendered pixels. */
-/* Top/bottom rules only — the vertical edges read as a frame around the work,
-   and the box gizmo itself already draws the region's own edges. */
 .mpi-step-box__stage {
     position: relative;
     line-height: 0;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--surface-canvas);
     touch-action: none;
 }

@@ -513,7 +513,9 @@
    into — an auto-height frame would resize under the image as it scaled. */
 .mpi-base-app__result-frame {
     position: relative;
-    border: 1px solid var(--line);
+    /* A single left rule, not a box. The full border read as a frame around the
+       result; the one edge is enough to seat it against the divider. */
+    border-left: 1px solid var(--line);
     background: var(--surface-canvas);
     line-height: 0;
     /* The media layer is absolutely positioned, so it contributes NO size — the
@@ -552,6 +554,9 @@
     line-height: 1.6;
     color: var(--ink-4);
     text-align: center;
+    /* Honour the \n in the copy while still wrapping long lines. Without this,
+       textContent newlines collapse to a space like any other HTML whitespace. */
+    white-space: pre-line;
 }
 .mpi-base-app__result-empty[hidden] { display: none; }
 /* NATURAL SIZE — the transform does the scaling. Capping with max-width here

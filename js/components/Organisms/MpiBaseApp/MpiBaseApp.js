@@ -219,6 +219,20 @@ export const MpiBaseApp = ComponentFactory.create({
         let _running = false;
         let _myTempId = null;
         let _hasPending = false;
+        /**
+         * The last completed result, held so it survives step navigation.
+         *
+         * `_hasPending` (Apply + "Not saved yet") already outlived a slide rebuild,
+         * but the IMAGE did not — _teardownSlide() drops the DOM and nulls the pane
+         * refs, and nothing kept the items to repaint from. The pane then offered to
+         * Apply a result that was not on screen. Component-scoped ON PURPOSE: it
+         * lives until the app closes and is deliberately not persisted to state, per
+         * "pending results do not survive closing the app".
+         * @type {Array<Object>|null}
+         */
+        let _lastResults = null;
+        /** Last status-line copy, replayed when the run slide is rebuilt. */
+        let _statusText = '';
         let _perApp = null;
         let _runBtn = null;
         let _resultMediaEl = null;
@@ -682,7 +696,10 @@ export const MpiBaseApp = ComponentFactory.create({
             // Empty-state copy that also teaches the commit: an unexplained blank
             // frame gives the user no reason to expect Apply to matter.
             _resultEmptyEl = ce('div', { className: 'mpi-base-app__result-empty' });
-            _resultEmptyEl.textContent = 'Your result appears here. Nothing is saved until you apply it.';
+            // The line break needs `white-space: pre-line` on the class (plain
+            // textContent newlines collapse like any HTML whitespace). No spaces
+            // around the \n, or they render as indentation on the second line.
+            _resultEmptyEl.textContent = 'Your result appears here.\nNothing is saved until you apply it.';
             frame.appendChild(_resultEmptyEl);
             pane.appendChild(frame);
 
@@ -719,6 +736,16 @@ export const MpiBaseApp = ComponentFactory.create({
 
             _syncRunUi();
             _paintPending();
+            // Replay the last result: navigating away and back rebuilds this slide
+            // from scratch, and without this the pane came back empty while Apply
+            // and "Not saved yet" still showed — offering to commit something the
+            // user could no longer see. remember:false so replaying is not itself
+            // recorded as a new result.
+            if (_lastResults) _showResults(_lastResults, { remember: false });
+            // The status line is rebuilt too, so restore its copy from the last
+            // known state rather than re-deriving it (which would turn an
+            // "Applied…" line back into "Done…" on the next navigation).
+            if (_statusEl && _statusText) _statusEl.textContent = _statusText;
             return split;
         }
 
@@ -921,8 +948,15 @@ export const MpiBaseApp = ComponentFactory.create({
             _syncResultEmpty();
         }
 
-        /** Paint ALL final results (multi-output apps produce N items — MPI-259). */
-        function _showResults(items) {
+        /**
+         * Paint ALL final results (multi-output apps produce N items — MPI-259).
+         *
+         * @param {Object|Array<Object>} items
+         * @param {{remember?: boolean}} [opts] remember:false replays what is already
+         *   stored (a slide rebuild) rather than recording a new result.
+         */
+        function _showResults(items, { remember = true } = {}) {
+            if (remember) _lastResults = items == null ? null : items;
             if (!_resultMediaEl) return;
             const list = (Array.isArray(items) ? items : [items]).filter(Boolean);
             const withPath = list.map(it => ({ it, path: it?.filePath || it?.url })).filter(x => x.path);
@@ -946,6 +980,15 @@ export const MpiBaseApp = ComponentFactory.create({
                 _fitWhenReady(media);
             }
             _syncResultEmpty();
+        }
+
+        /**
+         * Set the status line, remembering it so a slide rebuild can replay it.
+         * @param {string} text
+         */
+        function _setStatus(text) {
+            _statusText = text;
+            if (_statusEl) _statusEl.textContent = text;
         }
 
         /** Show/hide the Apply row + "Not saved yet" note. */
@@ -1026,9 +1069,12 @@ export const MpiBaseApp = ComponentFactory.create({
 
             _setRunning(true);
             _hasPending = false;
+            // Drop the previous result NOW: navigating away mid-run would otherwise
+            // replay the last image over the top of the run in progress.
+            _lastResults = null;
             _paintPending();
             _setGauge(0);
-            if (_statusEl) _statusEl.textContent = 'Generating…';
+            _setStatus('Generating…');
             _myTempId = null;
 
             const res = submitAppGeneration(app, inputs, {
@@ -1038,7 +1084,7 @@ export const MpiBaseApp = ComponentFactory.create({
                     _setGauge(100);
                     // PHASE 3 will hold this in-app until Apply. Today the queue path
                     // has ALREADY committed it at enqueue time.
-                    if (_statusEl) _statusEl.textContent = 'Done — added to your gallery.';
+                    _setStatus('Done — added to your gallery.');
                     _showResults(items || item);
                     _hasPending = true;
                     _paintPending();
@@ -1049,18 +1095,18 @@ export const MpiBaseApp = ComponentFactory.create({
                     _myTempId = null;
                     _setGauge(0);
                     _showResults([]);   // drop the now-revoked live-latent preview
-                    if (_statusEl) _statusEl.textContent = 'Generation failed.';
+                    _setStatus('Generation failed.');
                 },
                 onCancel: () => {
                     _setRunning(false);
                     _myTempId = null;
                     _setGauge(0);
                     _showResults([]);   // drop the now-revoked live-latent preview
-                    if (_statusEl) _statusEl.textContent = 'Cancelled.';
+                    _setStatus('Cancelled.');
                 },
             });
             // Guard aborted before enqueue (missing model / no media) → reset immediately.
-            if (!res) { _setRunning(false); if (_statusEl) _statusEl.textContent = ''; return; }
+            if (!res) { _setRunning(false); _setStatus(''); return; }
             _myTempId = res.tempId || null;
             // MPI-271: seed from the last-held latent so a pane opened mid-gen (or
             // during a frame gap) shows the current latent immediately, not blank.
@@ -1093,7 +1139,7 @@ export const MpiBaseApp = ComponentFactory.create({
             _hasPending = false;
             _paintPending();
             _syncRunUi();
-            if (_statusEl) _statusEl.textContent = 'Applied — added to your gallery.';
+            _setStatus('Applied — added to your gallery.');
         }
 
         // Ctrl+Enter runs the OPEN app, not the PromptBox behind it.
