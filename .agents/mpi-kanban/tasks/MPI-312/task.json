@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-312",
+  "title": "Krea2 edit media chips: surface the load-bearing slot roles (scene = 1, subject = 2)",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-19T13:00:00Z",
+  "updated_at": "2026-07-19T13:00:00Z",
+  "description": "The two media chips on a krea2Edit generation are NOT interchangeable, but the UI presents them as if they were. Dropping them in the wrong order silently degrades output quality with no error, no warning, and no visible cue.\n\nTHE CONTRACT (verified in the node source, not inferred):\ncomfyui-krea2edit __init__.py:119 tooltips source_latent_b as: '2nd reference (subject photo) for multi-ref LoRAs -> RoPE frame=2, training-matched order: scene first, subject second'. The upstream model card (conradlocke/krea2-identity-edit) states it harder: 'The scene is always image 1 (source_latent/image), the person is always image 2 (source_latent_b/image_b). Swapping them sharply degrades results.'\n\nUser-confirmed in practice 2026-07-19: scene-in-1 / subject-in-2 produced a correctly composed, identity-preserving edit on both LoRA versions. Every earlier test had put the person in slot 1 with the scene described in prompt text, which is the off-order configuration.\n\nWIRING IS ALREADY CORRECT — THIS IS A LABELLING GAP, NOT A BUG:\nA trace (2026-07-19) confirmed the injection path is sound and needs no change:\n- commandRegistry.js krea2Edit.mediaInputs declares { key: 'inputImage', title: 'Input_Image', required: true } then { key: 'inputImage2', title: 'Input_Image_2', required: false }.\n- _buildParams in js/services/commandExecutor.js iterates slots by slot.key and writes params[slot.title] — addressable, never positional. No packing/splicing/index-remapping anywhere in the path (consistent with memory project_media_slots_addressable_never_packed).\n- Input_Image (node 256) -> image / source_latent = SCENE. Input_Image_2 (node 404) -> image_b / source_latent_b = SUBJECT. Matches the trained order.\n- The MPI-292 dedup guard already stops one image filling both slots.\n\nTHE ACTUAL GAP:\nMpiPromptBox.js renders chips with bare numeric index badges (idx + 1) and no role label. The user sees '1' and '2' with nothing indicating that 1 means scene and 2 means person. First dropped image takes chip 1, second takes chip 2 (_tryAddMedia also auto-jumps the op from i2i to krea2Edit on the second drop). A user who drops the person first and the scene second gets the degraded path and no signal that anything is wrong.\n\nOPEN DESIGN QUESTION (decide before building): whether the labels are op-specific or generic. commandDef.mediaInputs has no user-facing label field today — `title` is the Comfy node title, not UI copy. Adding per-slot display labels is the obvious move but it touches a shared declaration read by every op, so scope the sweep before editing (see THE ROOT-CAUSE RULE on shared primitives).\n\nCANDIDATE APPROACHES (not yet chosen):\n- Per-slot label on mediaInputs (e.g. label: 'Scene' / 'Subject'), rendered on/under the chip. Most explicit; requires the shared-declaration sweep.\n- Tooltip-only on hover. Cheapest, but invisible exactly when it matters (during the drop).\n- Drop-zone hinting: label the empty slot before an image lands in it.\n\nNOT IN SCOPE: reordering, auto-detecting which image is the person, or any change to the injection path — that path is correct and verified.",
+  "links": {
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  },
+  "events": [
+    {
+      "at": "2026-07-19T13:00:00Z",
+      "type": "task.created",
+      "note": "Surfaced while validating krea2 identity-edit v1.2. Slot order is load-bearing per the krea2edit node's own tooltip and the upstream model card, but the UI shows bare numeric badges. Trace confirmed the injection wiring is correct and addressable — this is purely a labelling/affordance gap."
+    }
+  ],
+  "attention": {
+    "state": "none",
+    "reason": "Idea stage. Wiring verified correct; needs a design decision on where the role labels live before any code.",
+    "updated_at": "2026-07-19T13:00:00Z"
+  }
+}
