@@ -31,6 +31,8 @@
 - **Pod connected notification** — when a RunPod GPU finishes connecting while you're looking elsewhere, a desktop notification tells you the pod is ready. Toggle it in Settings under Desktop Notifications (on by default).
 - **Reorder your prompt images** — drag the image chips in the prompt box to change their order, and each one now shows its number. Models that refer to images by position ("place the man from image 2 in the scene from image 1") follow the order you set, so you can rearrange without removing and re-adding chips.
 - **Qwen Image Edit** — a new instruction image editor that takes up to three reference images at once and excels at combining them: place a character, face or garment from one image into another, referring to them by number. Ships seven built-in styles and a per-run speed dial (Quality / Turbo / Hyper).
+- **Copy a mask between History entries** — right-click any History entry with a mask and choose "Copy mask", then right-click another entry and "Paste mask". The mask carries its paint and eraser strokes separately, so you can keep editing it after pasting. Pasting onto an image with a different shape warns you first, since the mask gets stretched to fit.
+- **History cards show aspect ratio** — each History entry now lists its ratio next to the pixel size (`768×1280 · 5:8`), including imported images.
 
 ## fixes
 
