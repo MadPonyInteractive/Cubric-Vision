@@ -83,3 +83,21 @@ If you are writing frontend code, you MUST use the `js/services/clientLogger.js`
 import { clientLogger } from '../services/clientLogger.js';
 clientLogger.error('comfy', 'Description of error', err);
 ```
+
+### Backend logger arity — the 3rd arg is error-only
+
+`routes/logger.js` public API: `logger.info(category, message)` — 2 args; `logger.warn(category, message)` — 2 args (3rd argument is SILENTLY DROPPED, not formatted, not logged); `logger.error(category, message, err)` — 3 args (`err.stack` appended). To attach structured detail to a `warn`/`info`, fold it into the message string yourself (e.g. `JSON.stringify(detail)`). The frontend `clientLogger` has the same trap — its 3rd arg is an ERROR slot; object payloads vanish silently. Interpolate values into the message string.
+
+---
+
+## 🔔 User Feedback Conventions (toast vs dialog)
+
+- **`ui:error` → MpiErrorDialog** (GitHub-report dialog) — reserve for genuine reportable bugs, never expected transient states.
+- **`ui:warning` / `ui:info` / `ui:success` → toast.**
+- **No toast on user-initiated actions** (e.g. Stop) — user actions are self-evident; toasts are for NON-user events only.
+
+---
+
+## 📦 Imports — depth and case sensitivity
+
+Relative import depth varies by how deep a component sits under `js/`. Reference depths to reach `js/` root: `js/components/Compounds/<X>/file.js` → 3 ups; `js/components/Compounds/LandingPages/<X>/file.js` → 4 ups (extra `LandingPages/` segment). Wrong-depth import → boot JS halts → app stuck forever on the landing spinner; server log stays clean (error is browser-side). Case sensitivity (Linux-only): dev box is Windows (case-insensitive); Linux portables are case-sensitive. A relative import whose CASE doesn't match the on-disk filename resolves fine on Windows but 404s on Linux → same spinner failure. SWEEP before any portable/Linux release: walk the whole `js/` import graph and verify EXACT-CASE existence.

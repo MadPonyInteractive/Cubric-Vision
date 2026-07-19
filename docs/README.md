@@ -1,15 +1,16 @@
 # docs/ — index & knowledge map
 
-Where each kind of durable knowledge lives, so agents don't scan every file. For app
-**architecture orientation** start at [PROJECT.md](PROJECT.md). For **non-obvious conventions +
-expiring flags** see [gotchas.md](gotchas.md) (kept small on purpose — see the ≤200-line rule below).
+Where each kind of durable knowledge lives, so agents don't scan every file. **Match your task
+in the map below and read ONLY the target(s).** For app **architecture orientation** start at
+[PROJECT.md](PROJECT.md). Agent behavior rules live in `.claude/rules/`
+([routing index](../.claude/rules/README.md)). Every docs/ subfolder has its own README routing
+file — enter a folder through it.
 
 ## The ≤200-line-per-doc rule (MPI-170)
 
 Docs should not exceed **200 lines**; over that = split into topic files. When you learn something
-durable, write it to its **subsystem** doc (below), NOT into gotchas.md — gotchas is conventions +
-temporary/unverified flags only. It was drained from 646 lines to ~100 in MPI-170 precisely because
-agents kept dumping subsystem knowledge into it with nothing routing back out.
+durable, write it to its **subsystem** doc (below) — there is no catch-all dump file, and none may
+be created. Cross-cutting conventions go in `.claude/rules/dos_and_donts.md`.
 
 **Exempt from the 200-line rule** (append-only evidence / coherent single-subject contracts — do
 NOT mechanically split these):
@@ -27,24 +28,26 @@ NOT mechanically split these):
 | Topic | Doc |
 |---|---|
 | Orientation hub (architecture, invariants) | [PROJECT.md](PROJECT.md) |
-| Conventions + temporary/unverified flags | [gotchas.md](gotchas.md) |
-| Dev setup / commands | [DEVELOPMENT.md](DEVELOPMENT.md) |
+| Dev setup / commands / reading `logs/app.log` | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |
-| Data layer (registries, projectModel) + gen/prompt/sidecar gotchas | [data.md](data.md) |
+| Data layer (registries, projectModel, resolver, persist whitelist, reuse/sidecar) | [data.md](data.md) |
 | Project data model (.meta sidecars, reconciliation) | [project-integrity.md](project-integrity.md) |
 | Versioning (APP/SCHEMA/COMFY, op registry) | [versioning.md](versioning.md) |
 | Shell services (overlays, hotkeys, statusbar) | [shell.md](shell.md) |
 | Events / EventBus | [events.md](events.md) |
 | Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
-| UI & component contracts (19 gotchas) | [ui-gotchas.md](ui-gotchas.md) |
+| **Generation lifecycle** (dispatch guard, progress pipeline, Stop/lanes identity doctrine, queue-drain notifications) | [generation-lifecycle.md](generation-lifecycle.md) |
+| **Gallery** (cards, thumbnails, selection, drag-drop, hover media) | [gallery.md](gallery.md) |
+| **Model Library UI** (usable-vs-installed, featured, install-button gates, tile patching) | [model-library.md](model-library.md) |
+| **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |
 | **Video player** (frame-accurate hybrid: `<video>` plays / mediabunny canvas owns paused-step; color matrix rule; frame-index coordinate law; sub-range loop) | [video-player.md](video-player.md) |
 | Apps (App Library + App overlays; add-an-app procedure) | [playbooks/add-app/README.md](playbooks/add-app/README.md) |
 
 ### ComfyUI / generation
 | Topic | Doc |
 |---|---|
-| ComfyUI integration + engine gotchas | [comfy.md](comfy.md) |
+| ComfyUI integration + engine traps | [comfy.md](comfy.md) |
 | **Latent-preview bus** (`preview:frame`, engine-tagged, broken-frame gate, last-latent hold — subscribe here to show latents anywhere) | [preview-bus.md](preview-bus.md) |
 | **Workflow authoring + injection contract** (MpiNodes pack, injector target list, generator/tier patterns) — model/app-agnostic | [workflow-authoring/README.md](workflow-authoring/README.md) |
 | Models-path / YAML / extra-folders | [models-path.md](models-path.md) |
@@ -60,7 +63,7 @@ NOT mechanically split these):
 ### Builder Pod / model onboarding
 | Topic | Doc |
 |---|---|
-| **End-to-end model onboarding procedure** (deps, R2, registry, workflow, type sweep) — README hub + section files | [playbooks/add-model/README.md](playbooks/add-model/README.md) |
+| **Playbook routing** (add-model, add-app, shared invariants) | [playbooks/README.md](playbooks/README.md) |
 | **Per-model research** (LTX, Wan, Krea2, PiD) — authoring, tuning, measured data | [models/README.md](models/README.md) |
 | Builder operational loop | [builder/README.md](builder/README.md) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |
@@ -69,16 +72,6 @@ NOT mechanically split these):
 | Add models + GC ledger | [builder/04-add-models.md](builder/04-add-models.md) |
 | Author + test workflows (gen system, node-naming, SaveVideo) | [builder/05-author-and-test.md](builder/05-author-and-test.md) |
 | Teardown | [builder/06-teardown.md](builder/06-teardown.md) |
-
-### Model research (concluded findings — read before re-testing)
-Per-model authoring/tuning/measured data lives under `docs/models/<model>/` —
-index: [models/README.md](models/README.md).
-| Model | Home |
-|---|---|
-| LTX-2.3 (tiers, workflow authoring, model-set, LoRA strength/merge, prompt contract, audio, black-bars, strategy) | [models/ltx/](models/ltx/) |
-| Wan 2.2 (tiers, two-stage sigmas) | [models/wan/](models/wan/) |
-| Krea2 (samplers, conditioning, styles, resolution, injection, preview, int8-quant) | [models/krea2/](models/krea2/) |
-| PiD upscaler | [models/pid/](models/pid/) |
 
 ### Builder/infra research (Pod-tied, not per-model)
 | Topic | Doc |
@@ -97,23 +90,10 @@ index: [models/README.md](models/README.md).
 | Build evidence log + macOS fixes | [releases/build-experience-log.md](releases/build-experience-log.md) |
 | Per-version release notes | `releases/YYYY-MM-DD-v<ver>.md` |
 
-### Redesign spec (only when touching a new surface / follow-up phase)
-Stage redesign is **merged to master** (commit `e9b5eb6`, PORTING.md phases 0–10.2). Routine work
-(component tweaks, bug fixes, restyles) follows `styles/01_base.css` tokens +
-`.claude/rules/components.md` § "Stage design baseline" — do NOT re-read the redesign docs.
-Re-read them **only** for: a new surface with a matching mockup, a follow-up phase (beyond 10.2),
-or a Stage audit. Read order: `PRODUCT.md` → `DESIGN.md` → `PORTING.md` → the matching mockup.
+### Redesign spec
+Read **only** for a new surface with a matching mockup, a follow-up phase (beyond 10.2), or a
+Stage audit — routine styling uses `styles/01_base.css` tokens + `.claude/rules/components.md`
+§ "Stage design baseline". Routing + read order: [redesign/README.md](redesign/README.md).
 
-| File | Purpose |
-|---|---|
-| [redesign/PRODUCT.md](redesign/PRODUCT.md) | Persona, register, tone, anti-references — read first |
-| [redesign/DESIGN.md](redesign/DESIGN.md) | OKLCH tokens, type scale, component primitives, motion, banned patterns |
-| [redesign/PORTING.md](redesign/PORTING.md) | Phase-by-phase port plan with file-level mappings |
-| [redesign/RECOLOR.md](redesign/RECOLOR.md) | Photoshop hex-replace recipe for mascot + logo PNGs |
-| `redesign/c-stage/*.html` | Five Stage mockups (`landing`, `gallery`, `editor`, `editor-video`, `popups`) — visual ground truth |
-| `redesign/c-stage/tokens.css` | Stage tokens + primitive selectors — copy values, not class names |
-| `redesign/_base.css` | Mockup base reset — reference only, do not import into the app |
-
-**Spec → code is one-way.** Never edit `docs/redesign/*` to match implementation. Real-app
-deviations get a `// REDESIGN-DEVIATION:` comment at the call site. Do not ship the CSS hue-rotate
-filter for PNGs — recolor mascot/logo PNGs at the source per `RECOLOR.md`.
+### Historical
+[archive/README.md](archive/README.md) — closed tasks and superseded docs; not current knowledge.

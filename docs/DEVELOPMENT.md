@@ -47,6 +47,16 @@ an isolated Electron user-data directory so they do not modify normal app data.
 - `.claude/rules/` - agent-facing architecture rules that also document many
   project invariants for AI-assisted work.
 
+## Reading `logs/app.log` — filter, never read whole (MPI-315)
+
+Every line is `[ts] [LEVEL] [category] …`, so the file is queryable. Use that instead of reading it:
+
+- **Pick the category your bug lives in** and grep for it. `\[download\]` returns ~72 lines out of 3478. `[comfy]` is ComfyUI engine stdout and is usually NOT your bug — skip it unless the engine is the suspect.
+- **Choose the window deliberately.** Tail (last 50–100 lines) for a crash that JUST happened; grep-by-category for anything older. A tail is the wrong window for an hour-old bug — and reading "nothing there" as proof it did not happen is how MPI-310 nearly drew a false conclusion from an evicted log.
+- **Never read `logs/app.log.1`** (rotated overflow) unless the user asks for it.
+- Retention is byte-rotation ONLY (256 KB → `app.log.1`, one generation, overwritten). A startup line-trim used to also run; it was deleted in MPI-315 because it rewrote the file in place and swallowed its own errors. Do not reintroduce it — fix noise at the source instead of deleting evidence.
+- ComfyUI stdout is filtered out of the file but still goes to the **terminal** (`logger.consoleOnly`). For engine detail beyond what the log holds, ask the user for the terminal output. Known gap: ~132 boot-banner lines/boot still reach the file; unexplained, deliberately not chased (see MPI-315).
+
 ## Portable Builds
 
 The source repository workflow at `.github/workflows/build-portable.yml` is a

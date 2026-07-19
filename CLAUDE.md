@@ -5,7 +5,7 @@
 ## THE CARDINAL RULES
 
 1. **NEVER assume architectural patterns.** Route below, read the target, then code.
-2. **The answer is probably already documented.** `docs/README.md` = knowledge map (routes every domain to its subsystem doc); `docs/PROJECT.md` = architecture orientation. Check these BEFORE searching the codebase. `docs/gotchas.md` holds ONLY cross-cutting conventions + temporary/unverified flags — durable knowledge goes to its subsystem doc (≤200 lines each; exemptions in `docs/README.md`). Verify a named file/function/flag still exists before relying on a doc entry.
+2. **The answer is probably already documented.** `docs/README.md` = knowledge map (routes every domain to its subsystem doc); `.claude/rules/README.md` = rules routing index; `docs/PROJECT.md` = architecture orientation. Check these BEFORE searching the codebase. **There is NO catch-all gotchas/dump file and none may be created** — every durable fact lives in its subsystem doc (≤200 lines each; exemptions in `docs/README.md`); cross-cutting conventions live in `.claude/rules/dos_and_donts.md`. Verify a named file/function/flag still exists before relying on a doc entry.
 3. **Use existing utilities and systems.** If a utility or pattern already exists, use it.
 4. **FIX THE ROOT CAUSE — NEVER SYMPTOM-PATCH.** See THE ROOT-CAUSE RULE below. Non-negotiable.
 5. **DOCUMENTATION DRIFT:** at the end of ANY session where code was written, if a new workspace was introduced or component wiring (events, props, state, ComfyUI injection) changed, ask the user: *"Should I update `.claude/rules/` to reflect these changes?"* **Do NOT update the architectural rule files without explicit permission.**
@@ -43,7 +43,7 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 - **project.json writes:** server routes MUST use `updateProjectJson()` in `routes/projects.js` (per-file queued atomic writes) — never direct `fs.writeJson`.
 - **Logging:** frontend `js/services/clientLogger.js`, backend `routes/logger.js` — never bare `console.log`.
 - **Kanban writes are pre-authorized** — edit `.agents/mpi-kanban/board.json` + `tasks/<id>/` freely; never ask.
-- **Kanban cards MUST track real state — MOVE them:** `todo → doing` BEFORE editing files, `doing → done` when the work ships. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in both event logs. Board is JSON — read `<mpi-lib>/task-board-ops/mutate.md`, NOT the legacy `kanban-ops/` Markdown doc.
+- **Kanban cards MUST track real state — MOVE them:** `todo → doing` BEFORE editing files, `doing → done` when the work ships. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in both event logs. Board is JSON — read `<mpi-lib>/task-board-ops/mutate.md` + `.claude/rules/kanban.md`, NOT the legacy `kanban-ops/` Markdown doc.
 
 ---
 
@@ -51,8 +51,11 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 
 | Task | Read first |
 |---|---|
-| **Any code at all** (baseline — universal CSS/icon/utility rules) | `.claude/rules/dos_and_donts.md` |
-| Components / UI (build, move, style, debug) | `.claude/rules/components.md` |
+| **Any code at all** (baseline — universal CSS/icon/utility/logging/import rules) | `.claude/rules/dos_and_donts.md` |
+| Components / UI (build, move, style, debug) | `.claude/rules/components.md`; per-component fine print (PromptBox/Toast/Popup/Input/StylePicker…) → `docs/component-contracts.md` |
+| Generation lifecycle (dispatch, Stop/cancel, lanes, queue drain, progress bar) | `docs/generation-lifecycle.md` |
+| Gallery (cards, thumbnails, selection, drag-drop, hover media) | `docs/gallery.md` |
+| Model Library UI (install-state display, tile patching, featured) | `docs/model-library.md` |
 | Events & cross-component communication | `.claude/rules/events.md` |
 | Application state | `.claude/rules/state.md` |
 | Workspaces / routing / dev component gallery | `.claude/rules/workspaces.md` |
@@ -69,7 +72,9 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 | Cloudflare R2 (upload/list/verify weights, builds, pod-runtime files) | `c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` |
 | Builder Pod sessions (spin Pod, install nodes/weights, author + test workflows) + locked research | `docs/builder/README.md` + `docs/builder/research/README.md` (read before re-testing). Image build/install scripts live ONLY in `c:\AI\Mpi\mpi-ci\cubric-vision-builder\` (`git -C`); build/push the image = `build-pod-image` skill |
 | Product Pod runtime (`wrapper/wrapper.py`, `start.sh` in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`) | `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize" + `docs/runpod-remote-engine.md` § 5. **NOT an image rebuild** — R2-floated: edit → `./publish-runtime.sh stable` → restart Pod. Rebuild only for truly-baked layers |
-| Debugging / crashes / python engine issues | `docs/gotchas.md` § reading logs/app.log — **filter by `[category]`, never read the file whole** |
+| Debugging / crashes / python engine issues | `docs/DEVELOPMENT.md` § Reading `logs/app.log` — **filter by `[category]`, never read the file whole** |
+| Kanban cards / board / agent messages | `.claude/rules/kanban.md` (schema traps, backslash trap, ASCII messages) |
+| Committing (shared tree, co-owned files) | `.claude/rules/git.md` |
 | Browser automation | `playwright-cli` skill; app at http://127.0.0.1:3000/ (browser = dev-only, some features broken; Electron desktop = ship target) |
 | Desktop (Electron-only) testing | `npm run test:desktop`; tests in `tests/desktop/*.spec.js`; uses `CUBRIC_E2E_USER_DATA` (real user data untouched); port 3000 must be free first |
 
@@ -131,4 +136,4 @@ Cubric-Vision is **master** (this folder — has `.claude/`, kanban, jsconfig, C
 
 ## Git and Commits
 
-Agents MAY commit without asking. Shared tree — commit by explicit pathspec (`git commit --only <paths>`), never `git add -A`/`git add .` (full co-owned-file recipe: `docs/gotchas.md` § commit hygiene). Push stays a user-authorized live op (do not push unless asked). Docs-repo push block above still applies.
+Agents MAY commit without asking. Shared tree — commit by explicit pathspec (`git commit --only <paths>`), never `git add -A`/`git add .` (full co-owned-file recipe: `.claude/rules/git.md`). Push stays a user-authorized live op (do not push unless asked). Docs-repo push block above still applies.

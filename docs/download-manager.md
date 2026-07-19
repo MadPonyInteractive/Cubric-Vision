@@ -242,7 +242,7 @@ In `js/state.js`:
 | --- | --- | --- |
 | `download:started` | Backend→SSE→Frontend | Model job enqueued and downloading begins |
 | `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
-| `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see ui-gotchas § Model Library flash). |
+| `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see [model-library.md](model-library.md) § Library flash on install). |
 | `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error |
 | `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
 | `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |

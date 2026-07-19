@@ -5,11 +5,7 @@ The stable architecture contract is [runpod-remote-engine.md](runpod-remote-engi
 this file holds the "why it broke last time" traps + operational side-modes.
 Verify a named file/function/flag still exists before relying on an entry.
 
-<!-- MPI-170 routing target: RunPod troubleshooting gotchas land under this header. -->
-
 ## Fixed-bug traps
-
-<!-- routed from gotchas.md by MPI-170 -->
 
 ### autoretry live-test bugs (all fixed)
 

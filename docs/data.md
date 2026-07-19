@@ -19,7 +19,7 @@ Three core data files. All are plain JS objects — no ORM, no database.
 
 ### resolveModelDeps (`js/data/modelConstants/resolveModelDeps.js`)
 
-Pure, framework-free resolver that collapses any model + op-selection into a stable, deduped flat dep-id list **before** it enters the download lifecycle — the downloader never learns about operations. Loads under both `import` (browser) and `require` (Node tests / backend `createRequire`). Key exports:
+Pure, framework-free resolver that collapses any model + op-selection into a stable, deduped flat dep-id list **before** it enters the download lifecycle — the downloader never learns about operations. **This is the chokepoint — NEVER read `model.dependencies` directly** (MPI-122). Loads under both `import` (browser) and `require` (Node tests / backend `createRequire`). Key exports:
 
 - `resolveDeps(model, selectedOps?, depExists?, engine?)`: common + the selected ops' deps. `selectedOps == null` ⇒ all selectable ops (a fresh full install). `engine = null` ⇒ union of both engine sets (no filter). Throws on an unknown dep id when `depExists` is supplied.
 - `resolveFullUniverse(model)`: common + EVERY selectable op — used for install-status checks and whole-model uninstall so no op payload is orphaned.
@@ -68,6 +68,10 @@ use a staged object instead; WAN stores `{ high: [...], low: [...] }`. LTX uses 
 standard flat LoRA shape.
 
 ## Gotchas
+
+**Group field persist whitelist:** adding a new scalar field to an ItemGroup (e.g. MPI-130 `group.customName`) needs THREE edits: (1) `createItemGroup` factory in `js/data/projectModel.js`; (2) **`persistGroups()` in `js/services/projectService.js`** — the serialize map is an EXPLICIT WHITELIST (`{id, type, name, createdAt, selectedIndex, open, favourite, history}`), NOT a spread. Any key not listed is SILENTLY DROPPED on every save → field never survives reload. (3) Read-back is already safe (`projectReconciler.js` uses spread). Groups live INLINE in `project.json` `itemGroups[]`, NOT in `.meta/<uuid>.json` sidecars. When adding any group-level property, grep `persistGroups` first.
+
+**Notes feature — project.md and card sidecar (MPI-76):** two surfaces. Project notes = `project.md` per project; routes: `POST /project-notes` + `POST /project-notes/save` in `routes/projects.js`; triggered from project picker right-click. Card notes = `notes` field on card sidecar (`Media/.meta/<itemId>.json`); persisted via existing `POST /project-media/:id/update-meta`. Both use `MpiNotesEditor` (textarea + Save/Cancel over MpiModal). `grid.on('card-notes')` cleaned by `grid.destroy()` (not `_unsubs`).
 
 **Media roles are ROLE-AGNOSTIC (MPI-295):** snapshot/restore/reuse plumbing NEVER forces `startFrame`/`endFrame` by index — each media chip keeps its op's own `mediaInputs` slot-key role (`inputImage`/`inputImage2`, `startFrame`/`endFrame`, …). `routes/projects.js _snapshotRoleForMediaItem` persists `item.role` (positional frame-role only as a legacy role-LESS fallback); `promptReuse._mediaItemsFromPreviewAssets` resurfaces ALL image snapshots, not just frame roles. Restore fits the op to the saved image COUNT so a 2-image edit lands on krea2Edit (cap 2), not i2i: `MpiPromptBox._pickFallbackOp` is count-aware, and the restore guard compares the ACTIVE op's own cap (`_maxMediaForOperation`), NOT the model-wide max. Injection already remaps roles to the current op's slots at read time (`_withAssignedRoles` + `commandExecutor._buildParams`), so cross-op reuse (krea2Edit chips → Wan i2v Input_Start_Frame/Input_End_Frame) just works. NO data-shape change — prompt-box media is already an ordered list of `{url, mediaType, role, name, …}` dicts; NO migration (restore fits by count, old sidecars self-heal on next save).
 

@@ -349,7 +349,7 @@ is committed).
 - **Verification snapshot** at MPI-64 close (2026-06-15) is archived in
   troubleshooting; live checklist is owned by MPI-93.
 
-## 11. Arch quick-reference (compressed from gotchas.md MPI-170)
+## 11. Arch quick-reference
 
 **Auto-retry GPU wait** (`js/shell.js` `_startGpuWait`/`_stopGpuWait`): opt-in "Auto-retry" picks an out-of-stock GPU and polls availability (15s) entirely in the shell — survives navigation. `state.remoteWaitGpu` (transient) mirrors the GPU being waited on. During wait: `phase:null`, `active:false`, NO Pod created. `autoRetry` must be in `normalizeRunpodConfig` whitelist or it strips on persist.
 
