@@ -11,10 +11,10 @@
       "MPI-309",
       "MPI-312",
       "MPI-313",
-      "MPI-315",
       "MPI-310"
     ],
     "doing": [
+      "MPI-315",
       "MPI-308",
       "MPI-306",
       "MPI-299",
@@ -93,8 +93,16 @@
       "MPI-283"
     ]
   },
-  "updated_at": "2026-07-19T17:37:06Z",
+  "updated_at": "2026-07-19T22:30:00Z",
   "events": [
+    {
+      "at": "2026-07-19T22:30:00Z",
+      "type": "task.moved",
+      "task": "MPI-315",
+      "from": "todo",
+      "to": "doing",
+      "note": "Picked up. Decision: aggressive source-filter of ComfyUI stdout (user has terminal access for INFO detail), delete destructive startup line-trim, gitignore logs/. Reporter 2000-char slice UNCHANGED (user: expanding it breaks GitHub issue creation, already empirically trimmed). R2-upload idea explicitly parked."
+    },
     {
       "at": "2026-07-19T18:45:00Z",
       "type": "task.created",
