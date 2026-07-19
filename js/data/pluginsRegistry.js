@@ -48,6 +48,48 @@ export const pluginRequiredDepIds = () =>
 /** @param {string} id @returns {PluginDef|undefined} */
 export const getPlugin = (id) => PLUGINS.find(p => p.id === id);
 
+// ── Install state ─────────────────────────────────────────────────────────────
+// Mirrors the app dep-status cache. A plugin has no `installed` flag of its own:
+// its deps ARE its install state, so availability is derived, never stored.
+// Populated by syncModelInstalled() in modelRegistry.js, which rides the same
+// id-agnostic /comfy/models/check the models and apps use.
+
+/** @type {Map<string, Map<string, boolean>>} pluginId → (depId → onDisk) */
+const _pluginDepStatus = new Map();
+
+/** @param {string} pluginId @param {Map<string, boolean>} depMap */
+export const setPluginDepStatus = (pluginId, depMap) =>
+    _pluginDepStatus.set(pluginId, depMap);
+
+/** @param {string} pluginId @returns {Map<string, boolean>|null} */
+export const getPluginDepStatus = (pluginId) =>
+    _pluginDepStatus.get(pluginId) ?? null;
+
+/** The `{id, deps}` slices to fold into the /comfy/models/check payload. */
+export const pluginDepUniverse = () =>
+    PLUGINS.filter(p => (p.requiredDeps || []).length).map(p => ({
+        id: pluginDepKey(p.id),
+        pluginId: p.id,
+        depIds: p.requiredDeps || [],
+    }));
+
+/**
+ * Is every required dep on disk?
+ * Unknown status (no check has run yet) reads as NOT installed — the safe
+ * default: offering Install for something already present is recoverable,
+ * silently running a workflow whose weight is missing is not.
+ *
+ * @param {string|PluginDef} pluginOrId
+ * @returns {{ installed: boolean, missing: string[] }}
+ */
+export function pluginAvailability(pluginOrId) {
+    const plugin = typeof pluginOrId === 'string' ? getPlugin(pluginOrId) : pluginOrId;
+    if (!plugin) return { installed: false, missing: [] };
+    const status = getPluginDepStatus(plugin.id);
+    const missing = (plugin.requiredDeps || []).filter(id => status?.get(id) !== true);
+    return { installed: missing.length === 0, missing };
+}
+
 /** The plugin that owns an op, if any. Lets a context-menu action find its
  *  deps without hardcoding the plugin id at the call site. */
 export const pluginForOperation = (operation) =>

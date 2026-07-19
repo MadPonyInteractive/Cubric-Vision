@@ -25,6 +25,8 @@ import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 // MPI-304 — app-only deps are stat'd in the model sync's payload (one route, one
 // pass). One-way import: appsRegistry never imports modelRegistry.
 import { appDepUniverse, setAppDepStatus } from './appsRegistry.js';
+// MPI-310 — plugins ride the same check for the same reason. Same one-way import rule.
+import { pluginDepUniverse, setPluginDepStatus } from './pluginsRegistry.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
@@ -130,6 +132,14 @@ export async function syncModelInstalled() {
             deps: deps.map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
+        // MPI-310 — plugin deps ride it too, same id-agnostic passthrough as apps.
+        // Like apps, plugins have no engine-split weights, so the ids are the ids.
+        const pluginPayload = pluginDepUniverse().map(({ id, depIds }) => ({
+            id,
+            deps: depIds.map(depId => DEPS[depId]).filter(Boolean)
+                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
+        }));
+
         // R31: when remote-connected but the override forces LOCAL, hit the
         // force-local endpoint (MPI-74) so we stat the local disk, not the Pod.
         const checkPath = (remoteEngineClient.isRemote() && engine === 'local')
@@ -138,7 +148,7 @@ export async function syncModelInstalled() {
         const res = await fetch(checkPath, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ models: modelPayload.concat(appPayload) }),
+            body: JSON.stringify({ models: modelPayload.concat(appPayload, pluginPayload) }),
         });
 
         if (!res.ok) return false;
@@ -187,6 +197,13 @@ export async function syncModelInstalled() {
             setAppDepStatus(appId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
         }
 
+        // MPI-310 — same unpack for plugins.
+        for (const { id, pluginId } of pluginDepUniverse()) {
+            const entry = results[id];
+            if (!entry) continue;
+            setPluginDepStatus(pluginId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
+        }
+
         // Emit installed model IDs for reactive listeners. Use isModelUsable (≥1
         // op installed) not the raw all-deps-present `result.installed`, so a
         // deliberately partial install (e.g. Wan T2V-only) counts — matching the
@@ -197,7 +214,7 @@ export async function syncModelInstalled() {
         // pickers and every s_installedModelIds consumer). Explicit, not relying on
         // isModelUsable happening to reject an unknown id.
         const installedModelIds = Object.keys(results)
-            .filter(id => !id.startsWith('app:') && isModelUsable(id));
+            .filter(id => !id.startsWith('app:') && !id.startsWith('plugin:') && isModelUsable(id));
         Events.emit('models:checked', { installedModelIds, driftedModelIds: _driftedModelIds.slice() });
 
         return true;

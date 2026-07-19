@@ -6,6 +6,7 @@ import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
+import { PLUGINS, pluginDepKey, pluginAvailability } from '../../../../data/pluginsRegistry.js';
 import {
     resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
     expandRequiredOps, dependentsOfOp, archVariantOptions, variantDepsOf, dedupeStable,
@@ -1064,8 +1065,15 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
 
         // ── Teardown of grid tiles ─────────────────────────────────────────────
+        // MPI-310 — MpiButton instances in the plugins row. Unlike tiles (plain DOM,
+        // cleared by the innerHTML wipe) these are components, so they need destroy()
+        // on every rebuild or each render leaks another listener set.
+        const _pluginBtns = [];
+
         function _destroyAllCards() {
             _tileInstances.clear();
+            _pluginBtns.forEach(b => b.destroy?.());
+            _pluginBtns.length = 0;
         }
 
         // ── Render signature (MPI-124) ─────────────────────────────────────
@@ -1104,7 +1112,15 @@ export const MpiModelManager = ComponentFactory.create({
             }).join('||')
                 // MPI-215: filter/search state is part of the visible output — a filter
                 // change with no per-model change must still force a rebuild.
-                + `##media:${[..._mediaActive].sort().join(',')}##size:${[..._filterActive].sort().join(',')}##q:${_searchQuery}`;
+                + `##media:${[..._mediaActive].sort().join(',')}##size:${[..._filterActive].sort().join(',')}##q:${_searchQuery}`
+                // MPI-310 — plugin install + job state. Without this the row never
+                // repaints: the sig is built from MODELS only, so installing a plugin
+                // would leave the button reading "Install" until something unrelated
+                // moved the model list.
+                + '##plugins:' + PLUGINS.map((p) => {
+                    const job = state.downloadJobs.find(j => j.modelId === pluginDepKey(p.id));
+                    return `${p.id}:${pluginAvailability(p).installed ? 1 : 0}:${job ? job.status : 'idle'}`;
+                }).join(',');
         }
 
         // ── Section sub-block (one media type, one aspect ratio) ──────────────
@@ -1135,6 +1151,94 @@ export const MpiModelManager = ComponentFactory.create({
             bodySlot.appendChild(header);
             if (_mediaActive.size === 0 || _mediaActive.has('image')) _mediaBlock(list, 'image');
             if (_mediaActive.size === 0 || _mediaActive.has('video')) _mediaBlock(list, 'video');
+        }
+
+        // ── Plugins section (MPI-310) ─────────────────────────────────────────
+        // Plugins are the third entity (see js/data/pluginsRegistry.js): a capability
+        // something else calls, not a thing you generate with. They render in their own
+        // row, deliberately OUTSIDE the media/size filters and outside the "N available"
+        // count — those describe models, and a captioner has no mediaType or sizeTier to
+        // filter on. Search still applies (a user typing "describe" should find it).
+        //
+        // They live here rather than behind a bespoke install prompt because the Library
+        // already owns install, uninstall, progress, the completion toast and the
+        // unfocused-app OS notification. Anywhere else means reimplementing all five.
+        function _pluginTile(plugin) {
+            const { installed } = pluginAvailability(plugin);
+            const job = state.downloadJobs.find(j => j.modelId === pluginDepKey(plugin.id));
+            const busy = !!job && !['complete', 'failed', 'cancelled'].includes(job.status);
+            const size = (plugin.requiredDeps || [])
+                .map(id => DEPS[id]?.size).filter(Boolean).join(' + ');
+
+            const tile = ce('div', { className: 'mpi-plugin-row' });
+            const info = ce('div', { className: 'mpi-plugin-row__info' });
+            info.innerHTML = `
+                <span class="mpi-plugin-row__icon">${renderIcon('text', 'sm')}</span>
+                <span class="mpi-plugin-row__name">${plugin.title}</span>
+                <span class="mpi-plugin-row__meta">${size}</span>`;
+            tile.appendChild(info);
+
+            const actions = ce('div', { className: 'mpi-plugin-row__actions' });
+            if (busy) {
+                // Progress is already narrated by the status bar + the completion toast;
+                // the row only needs to stop offering a second install.
+                actions.appendChild(ce('span', {
+                    className: 'mpi-plugin-row__state',
+                    textContent: job.status === 'queued' ? 'Queued' : 'Installing…',
+                }));
+            } else if (installed) {
+                const chip = ce('span', { className: 'mpi-plugin-row__state mpi-plugin-row__state--on' });
+                chip.innerHTML = `${renderIcon('check', 'sm')}Installed`;
+                actions.appendChild(chip);
+                const btn = MpiButton.mount(ce('div'), { text: 'Uninstall', variant: 'ghost', size: 'sm' });
+                btn.on('click', () => _uninstallPlugin(plugin));
+                _pluginBtns.push(btn);
+                actions.appendChild(btn.el);
+            } else {
+                const btn = MpiButton.mount(ce('div'), { text: `Install (${size})`, variant: 'primary', size: 'sm' });
+                btn.on('click', () => _installPlugin(plugin));
+                _pluginBtns.push(btn);
+                actions.appendChild(btn.el);
+            }
+            tile.appendChild(actions);
+            return tile;
+        }
+
+        async function _installPlugin(plugin) {
+            const dependencies = (plugin.requiredDeps || []).map(id => DEPS[id]).filter(Boolean);
+            if (!dependencies.length) return;
+            // Keyed by pluginDepKey so the job can never collide with a model id. The
+            // backend passes unknown ids straight through (_filterDepsForEngine), and
+            // the existing download:complete handler gives us the toast / OS notification
+            // for free.
+            await downloadService.start(pluginDepKey(plugin.id), dependencies);
+        }
+
+        function _uninstallPlugin(plugin) {
+            const deps = (plugin.requiredDeps || []).map(id => DEPS[id]).filter(Boolean);
+            if (!deps.length) return;
+            _showConfirm(
+                `Uninstall ${plugin.title}?\n• ${deps.map(d => d.size).filter(Boolean).join(' + ')} will be freed.\n• Files shared with other installed models will be kept.`,
+                async (deleteFiles) => {
+                    // The plugin's own key is what lets the server-side guard release
+                    // this weight — see _pluginRequiredDepIds(excludeUninstallId) in
+                    // routes/downloadManager.js. Passing a model id here would leave
+                    // the weight protected and the uninstall would silently no-op.
+                    await downloadService.uninstall(pluginDepKey(plugin.id), deps, deleteFiles);
+                },
+            );
+        }
+
+        function _pluginSection() {
+            const q = _searchQuery;
+            const list = PLUGINS.filter(p => q === '' || (p.title || '').toLowerCase().includes(q));
+            if (!list.length) return;
+            const header = ce('div', { className: 'mpi-model-library__section' });
+            header.innerHTML = `<span>Plugins</span><span class="mpi-model-library__section-n">${list.length}</span>`;
+            bodySlot.appendChild(header);
+            const wrap = ce('div', { className: 'mpi-plugin-list' });
+            list.forEach(p => wrap.appendChild(_pluginTile(p)));
+            bodySlot.appendChild(wrap);
         }
 
         // ── Render the contact sheet ────────────────────────────────────────
@@ -1175,11 +1279,16 @@ export const MpiModelManager = ComponentFactory.create({
                     className: 'mpi-model-library__empty',
                     textContent: 'No models match — clear filters or search.',
                 }));
+                // MPI-310 — still offer the plugins row: a search like "describe"
+                // matches no MODEL, and returning here would hide the only thing that
+                // DOES match.
+                _pluginSection();
                 return;
             }
 
             _section('Installed', installed);
             _section('Available', available);
+            _pluginSection();
 
             // Keep an open detail panel coherent after a full rebuild (install state
             // moved, engine switched, re-sync landed). Guard: openDetail must not be
