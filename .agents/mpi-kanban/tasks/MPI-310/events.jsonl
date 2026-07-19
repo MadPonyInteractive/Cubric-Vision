@@ -4,3 +4,4 @@
 {"at": "2026-07-19T02:20:00Z", "type": "task.moved", "task": "MPI-310", "note": "todo -> doing. STEP 0 (plugin entity + GC guards + dep entry) built and tested."}
 {"at": "2026-07-19T03:10:00Z", "type": "task.progress", "task": "MPI-310", "note": "All 6 steps shipped across 4 commits; awaiting one real in-app run."}
 {"at": "2026-07-19T13:30:00Z", "type": "task.progress", "task": "MPI-310", "note": "Krea2 consolidated onto the abliterated encoder (stock deleted R2+disk); identity LoRA v1.2. Encoder is now a real shared dep \u2014 step 6 shared-dep uninstall still UNVERIFIED."}
+{"at": "2026-07-19T14:00:00Z", "type": "task.progress", "task": "MPI-310", "note": "Step 6 FAILED destructively: plugin uninstall deleted the 5.24GB shared encoder; Krea 2 Turbo NSFW broken. Handoff written; restart test decides stale-cache vs broken guard."}
