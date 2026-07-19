@@ -6174,54 +6174,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 241,
-      "type": "MpiIfElse",
-      "pos": [
-        -1565.7515784362433,
-        4023.000906416005
-      ],
-      "size": [
-        270,
-        78
-      ],
-      "flags": {},
-      "order": 96,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "true",
-          "type": "*",
-          "link": 913
-        },
-        {
-          "name": "false",
-          "type": "*",
-          "link": 468
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": [
-            451,
-            452
-          ]
-        }
-      ],
-      "title": "Input_enhance_prompt",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiIfElse"
-      },
-      "widgets_values": [
-        true
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 349,
       "type": "GetNode",
       "pos": [
@@ -6875,6 +6827,54 @@
         }
       },
       "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 241,
+      "type": "MpiIfElse",
+      "pos": [
+        -1565.7515784362433,
+        4023.000906416005
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 96,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 913
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 468
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            451,
+            452
+          ]
+        }
+      ],
+      "title": "Input_enhance_prompt",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
       "color": "#432",
       "bgcolor": "#653"
     }
