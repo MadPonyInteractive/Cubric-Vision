@@ -119,12 +119,29 @@ const COMFY_LOG_NOISE = [
     /Using \S+ attention/i,                // "Using pytorch attention in VAE" etc.
 ];
 
-/** True when an INFO-level Comfy line is routine churn not worth persisting. */
-function _isComfyLogNoise(text) {
-    // Strip ANSI colour codes before matching — ComfyUI wraps INFO lines in them,
-    // and they also make the on-disk log unreadable.
-    const clean = text.replace(/\x1b\[[0-9;]*m/g, '');
-    return COMFY_LOG_NOISE.some(re => re.test(clean));
+/** Strip ANSI colour codes — ComfyUI wraps INFO lines in them, and they make
+ *  the on-disk log unreadable. */
+function _stripAnsi(text) { return text.replace(/\x1b\[[0-9;]*m/g, ''); }
+
+/** True when a single INFO-level Comfy LINE is routine churn not worth keeping. */
+function _isComfyLogNoise(line) {
+    return COMFY_LOG_NOISE.some(re => re.test(line));
+}
+
+/**
+ * Split a stdout chunk into lines and drop the noisy ones, returning what should
+ * be persisted (or '' if the whole chunk was noise).
+ *
+ * MUST be per-line: ComfyUI emits multi-line chunks (engine boot arrives as one
+ * ~126-line block of extra_model_paths). Testing the chunk as a whole meant a
+ * single interesting line kept all 126 — which is exactly what shipped in
+ * 6403fe83 and put the boot banner straight back into app.log. (MPI-315)
+ */
+function _filterComfyChunk(text) {
+    return _stripAnsi(text)
+        .split(/\r?\n/)
+        .filter(line => line.trim() && !_isComfyLogNoise(line))
+        .join('\n');
 }
 
 // tqdm progress line, e.g.  "14%|█▍ | 1/7 [00:07<00:43, 7.24s/it, ...]".
@@ -142,9 +159,17 @@ function _handleComfyOutput(level, chunk) {
     // it is only kept out of app.log. Every progress/SSE parser further down
     // receives the raw `text` either way.
     const comfyLevel = _classifyComfyOutput(level, text);
-    const clean = text.replace(/\x1b\[[0-9;]*m/g, '');
-    if (comfyLevel === 'info' && _isComfyLogNoise(text)) {
-        logger.consoleOnly('info', 'comfy', clean);
+    const clean = _stripAnsi(text);
+    if (comfyLevel === 'info') {
+        // Per-line filter. The terminal ALWAYS gets the full chunk exactly once;
+        // the file gets only the lines worth keeping.
+        const keep = _filterComfyChunk(text);
+        if (keep === clean) {
+            logger.info('comfy', clean);              // all signal — normal path
+        } else {
+            logger.consoleOnly('info', 'comfy', clean);          // terminal: everything
+            if (keep) logger.fileOnly('info', 'comfy', keep);    // file: signal only
+        }
     } else {
         logger[comfyLevel]('comfy', clean);
     }
