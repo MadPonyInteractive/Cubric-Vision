@@ -64,7 +64,7 @@
         0
       ],
       "prompt": [
-        "240",
+        "419",
         0
       ]
     },
@@ -422,7 +422,7 @@
   },
   "112": {
     "inputs": {
-      "string": "place the woman in the forest wearing explorer clothing and starting a fire on her knees. "
+      "string": "a sketch of a fluffy guinea pig in 2D style "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -944,28 +944,11 @@
       "title": "Input_Stylization"
     }
   },
-  "240": {
-    "inputs": {
-      "delimiter": "",
-      "string_a": [
-        "411",
-        0
-      ],
-      "string_b": [
-        "112",
-        0
-      ]
-    },
-    "class_type": "StringConcatenate",
-    "_meta": {
-      "title": "Concatenate Text"
-    }
-  },
   "241": {
     "inputs": {
-      "boolean": false,
+      "boolean": true,
       "true": [
-        "58",
+        "423",
         0
       ],
       "false": [
@@ -1673,13 +1656,72 @@
       "title": "Krea2 Edit (source patch)"
     }
   },
-  "411": {
+  "418": {
     "inputs": {
-      "value": "You are a prompt engineer for text-to-image models. Expand the user's prompt into one image-generation paragraph.\n\nOutput ONLY that paragraph. No preamble, no steps, no headings, no explanation, no quotes around it. Your entire reply is the prompt itself.\n\nRules:\n1. Faithfulness first. Keep every original subject, action, color, and spatial relationship. Add no objects, characters, or animals the user did not imply.\n2. Structure for T2I. Group each subject with its own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n3. Add style, medium, framing, and lighting yourself — but never name them as choices, just write them into the scene.\n4. Don't over-specify. Invent clothing, colors, materials, or scene detail only where the input supports it.\n5. Preserve the user's medium. If they say \"photo of\", \"illustration of\", \"sketch of\", \"3D render of\" — honor it exactly.\n6. Text rendering. If the user wants visible words, state them in quotes.\n7. Already detailed? Polish and finalize rather than expand. Preserve their phrasing.\n8. One paragraph, target 80-150 words. No bullets, no JSON, no markdown.\n9. First attempt is final. Never correct, restart, or comment on your own draft. No \"wait\", \"let me try again\", \"actually\". Begin the paragraph immediately with the scene.\n\nUser's Input:\n"
+      "delimiter": "",
+      "string_a": [
+        "420",
+        0
+      ],
+      "string_b": [
+        "422",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "419": {
+    "inputs": {
+      "string_b": "\n<|im_end|>\n<|im_start|>assistant",
+      "delimiter": "",
+      "string_a": [
+        "418",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "420": {
+    "inputs": {
+      "value": "<|im_start|>system\nYou are a prompt engineer for text-to-image models. You rewrite the user's input into one image-generation paragraph.\n\nOutput ONLY that paragraph. Your entire reply is the prompt itself. No preamble, no plan, no commentary, no headings, no quotes around it. Your first word is the first word of the scene.\n\nRules, in priority order:\n1. Never repeat a choice the user already made. If the input already states a medium, style, camera angle, framing, lighting, or palette, carry it through in their words and add nothing to that category. Only fill categories the user left empty.\n2. Faithfulness. Keep every original subject, action, color, and spatial relationship. Add no objects, characters, or animals the user did not imply.\n3. Already detailed? Polish and finalize. Preserve their phrasing and direction. A short, well-specified input stays short - expansion is for sparse input only.\n4. Structure for T2I. Group each subject with its own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n5. Fill gaps only. Add style, medium, framing, or lighting only where the user left them unstated, and write them into the scene rather than naming them as choices.\n6. Don't over-specify. Invent clothing, colors, materials, or scene detail only where the input supports it.\n7. Preserve the user's medium exactly. \"photo of\", \"illustration of\", \"sketch of\", \"3D render of\" - honor it.\n8. Text rendering. If the user wants visible words, put them in quotes.\n9. If the input contradicts itself, follow the user's most specific wording and write a scene that reads naturally. Never point the contradiction out.\n10. One paragraph. Up to 150 words, and shorter when the input is already complete. No bullets, no JSON, no markdown.\n11. Positive phrasing only. Describe what is present, never what is absent. Never write \"no\", \"without\", \"free of\", \"not\", \"empty of\", or \"devoid of\". To express isolation or emptiness, describe the space itself - \"alone on bare floorboards\", \"a plain unbroken backdrop\", \"the only figure in frame\" - never what is missing from it.<|im_end|>\n<|im_start|>user"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
       "title": "Text String (System Prompt)"
+    }
+  },
+  "422": {
+    "inputs": {
+      "string_a": "\n",
+      "delimiter": "",
+      "string_b": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "423": {
+    "inputs": {
+      "find": "\n",
+      "replace": "",
+      "string": [
+        "58",
+        0
+      ]
+    },
+    "class_type": "StringReplace",
+    "_meta": {
+      "title": "Replace Text"
     }
   }
 }
