@@ -84,6 +84,11 @@
     "appVersionIntroduced": "1.2.0",
     "universal": true
   },
+  "imageDescribe": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.2.0",
+    "universal": true
+  },
   "autoMaskImg": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1",

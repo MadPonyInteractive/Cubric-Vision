@@ -623,6 +623,10 @@ async function _deleteSavedItems(items) {
  * @property {function({item, group}):void} [onComplete] — called with final item and group
  * @property {function():void}              [onError]    — called on failure
  * @property {function():void}              [onCancel]   — called on cancel/empty result
+ * @property {function(string):void}        [onText]     — called with the caption from an
+ *                                                         `outputKind: 'text'` op (MPI-310).
+ *                                                         Mutually exclusive with onComplete:
+ *                                                         a text op produces no item/group.
  */
 
 /**
@@ -765,6 +769,34 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         // no style trigger appended — that is what lets Reuse Prompt restore the text
         // and still leave the style free to change. See docs/playbooks/add-model/05-prompt-and-styles.md §10.
         const positive = outputInfo.promptText || _positiveFromBox;
+
+        // MPI-310 — a text op (the captioner) legitimately finishes with zero media:
+        // its whole product is the Output_prompt string read into `positive` above.
+        // This branches on the OP's declared contract, deliberately BEFORE the
+        // empty-array check, for two reasons. Emptiness is ambiguous — a Stopped media
+        // job is empty too, and only the op knows which case this is; and keeping the
+        // branch above leaves the check below owning exactly the job it was written
+        // for, instead of teaching the media path (sidecar writes, history item,
+        // gallery card) to defend against a case that has no media to write.
+        //
+        // The shape mirrors the cache-hit terminal below: end the activity, go idle,
+        // no history item. Callers get the caption through onText.
+        if (getCommand(operation)?.outputKind === 'text') {
+            activeGenerations.end(_regId, { revokePreview: true });
+            // Not a cancellation — but the gallery/history placeholder this job created
+            // must still be torn down, and generation:cancelled is what does that.
+            Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
+            Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });
+            _emitPromptBoxGenerationEndIfIdle();
+            const _text = outputInfo.promptText || null;
+            if (_text) callbacks.onText?.(_text);
+            else {
+                clientLogger.warn('generationService', `${operation} returned no text.`);
+                Events.emit('ui:warning', { message: 'No description was returned.' });
+            }
+            return;
+        }
 
         if (!urls.length) {
             // Empty output after an explicit Stop is EXPECTED, not a fault: the

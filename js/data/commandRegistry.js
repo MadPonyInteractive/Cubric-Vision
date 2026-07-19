@@ -53,6 +53,15 @@ export const MEDIA_TYPE = Object.freeze({
  *                                              params, so a control can still override. Titles follow
  *                                              the tier-2 naming law and are matched case-insensitively;
  *                                              an unmatched title is silently skipped by the injector.
+ * @property {'media'|'text'}  [outputKind]   - What a completed run PRODUCES. Defaults to 'media'.
+ *                                              'text' declares the workflow returns a caption/string via
+ *                                              the Output_prompt contract and saves no file, so the
+ *                                              completion path must not treat its empty output-URL list
+ *                                              as a cancelled run. Declared on the OP rather than
+ *                                              inferred from an empty array because emptiness is
+ *                                              ambiguous — a Stopped media job is also empty, and only
+ *                                              the op knows which case it is. See generationService's
+ *                                              onComplete.
  * @property {string}          [progressLabel] - Present-participle verb shown in the status bar while
  *                                              this op is running (e.g. 'Upscaling', 'Detailing').
  *                                              Defaults to 'Generating' when omitted. NEW OPS should
@@ -386,6 +395,22 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: false,
+        universal: true,
+    },
+    // MPI-310 — the captioner. Produces a caption string via Output_prompt and writes
+    // no file, hence outputKind: 'text'. Owned by the image-describer PLUGIN (see
+    // js/data/pluginsRegistry.js), which owns its encoder weight.
+    imageDescribe: {
+        label: 'Describe Image',
+        info: 'Describe Image — write a detailed prompt from the picture',
+        progressLabel: 'Describing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        outputKind: 'text',
         universal: true,
     },
     removeBackground: {
