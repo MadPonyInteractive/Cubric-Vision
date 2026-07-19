@@ -28,8 +28,10 @@ export const UNIVERSAL_WORKFLOWS = {
     autoMaskImg: {
         workflow: 'img_auto_mask.json',
     },
-    // MPI-308 dev harness — text-only (caption) workflow, no op registration:
-    // run directly via runImageDescribe(), never through the generation queue.
+    // Text-only (caption) workflow: returns a string via Output_prompt and saves no
+    // file, so its op declares `outputKind: 'text'` (MPI-310). Runs through the normal
+    // generation queue like any other op — the MPI-308 note that it bypasses the queue
+    // is obsolete.
     imageDescribe: {
         workflow: 'image_descriptor.json',
     },

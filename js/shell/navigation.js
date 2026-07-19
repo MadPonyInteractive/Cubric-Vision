@@ -23,7 +23,6 @@ import { getModelById } from '../data/modelRegistry.js';
 import { Overlays } from '../managers/overlayManager.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
-import { extractAbsPath } from '../utils/mediaActions.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
 
@@ -270,41 +269,12 @@ Events.on('state:changed', ({ key, value }) => {
  * Remote → wrapper's /proxy/restart-comfy (restarts the Pod's ComfyUI subprocess).
  * Local → stop + start the local ComfyUI process (start is idempotent, spawns fresh).
  */
-/**
- * MPI-308 dev harness — caption the PromptBox's first image chip and write the
- * result back into the positive prompt.
- *
- * Deliberately minimal: no op, no queue card, no progress UI. It exists to answer
- * one question (does caption→upscale beat the user's original thin prompt?) before
- * any of that is worth building. The PromptBox element carries both halves of the
- * contract — getMediaItems() to read the chip, injectPrompts() to write the text —
- * so this reaches the mount directly rather than adding events for a throwaway.
- */
-async function _describeFirstChip() {
-    const pb = gid('prompt-box-mount')?.firstElementChild;
-    const chip = pb?.getMediaItems?.().find(m => m.mediaType === 'image');
-    if (!chip?.url) {
-        Events.emit('ui:warning', { message: 'Attach an image to the prompt box first.' });
-        return;
-    }
-
-    // MpiLoadImageFromPath reads an OS path, not a browser URL — chips staged from
-    // gallery cards carry a /project-file?path=… URL, uploads carry a bare path.
-    const absPath = extractAbsPath(chip.url) || chip.url;
-
-    Events.emit('ui:info', { message: 'Describing image…' });
-    const { runImageDescribe } = await import('../services/commandExecutor.js');
-    const exec = runImageDescribe({ imageUrl: absPath });
-
-    exec.onText = (caption) => {
-        pb.injectPrompts?.({ positive: caption });
-        Events.emit('ui:success', { message: 'Caption written to the prompt box.' });
-    };
-    exec.onError = (err) => {
-        clientLogger.error('navigation', `Describe image failed: ${err.message}`);
-        Events.emit('ui:error', { title: 'Describe failed', message: err.message });
-    };
-}
+// MPI-310 — the MPI-308 `_describeFirstChip` dev harness lived here. It answered the
+// question it existed for (the caption is worth having), so the feature shipped as a
+// real op: right-click a gallery card or history item → "Describe image". The harness
+// is gone rather than kept alongside it — it bypassed both the queue and the plugin
+// install gate, so it would have failed deep inside ComfyUI once the weight became
+// optional. See js/utils/describeAction.js.
 
 async function _restartEngine() {
     const remote = remoteEngineClient.isRemote();
@@ -345,7 +315,6 @@ function _syncRadial(page) {
             { action: 'components', label: 'Components', icon: 'grid' },
             { action: 'apps', label: 'Apps', icon: 'layers' }, // App Library (MPI-256), dev-gated
             { action: 'restart-engine', label: 'Restart Engine', icon: 'refresh' }, // dev-gated: restart ComfyUI only
-            { action: 'describe-image', label: 'Describe Image', icon: 'text' }, // MPI-308 dev harness
           ]
         : [];
 
@@ -369,10 +338,6 @@ function _syncRadial(page) {
             }
             if (action === 'restart-engine') {
                 _restartEngine();
-                return;
-            }
-            if (action === 'describe-image') {
-                _describeFirstChip();
                 return;
             }
             Events.emit('workspace:set-operation', { operation: action });

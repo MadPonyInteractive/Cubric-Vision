@@ -882,9 +882,30 @@ export const MpiPromptBox = ComponentFactory.create({
             return Math.max(0, max - used);
         };
 
+        // Declared here (not beside _refreshNegToggle further down) because
+        // injectPrompts below syncs it, and a `let` in the temporal dead zone would
+        // throw a ReferenceError on any injection that changes mode.
+        let _negBtn = null;
+
         el.injectPrompts = ({ positive, negative }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
+            // MPI-310: injecting ONLY a positive while the box sits in negative mode
+            // used to store the text and leave the negative on screen — the injection
+            // silently vanished from the user's view (it was still in the draft, so it
+            // would reappear later out of nowhere). Switch to the field being written
+            // so an injection is always visible. Only when exactly one side is
+            // injected; a both-sides inject keeps the current mode.
+            const _wantNeg = (negative != null && positive == null);
+            const _wantPos = (positive != null && negative == null);
+            if ((_wantPos && isNegativeMode) || (_wantNeg && !isNegativeMode)) {
+                isNegativeMode = _wantNeg;
+                // Keep the toggle button, placeholder and listeners in sync — the
+                // same three things the toggle's own click handler updates.
+                _negBtn?.el?.setActive?.(isNegativeMode);
+                textareaEl.placeholder = isNegativeMode ? 'Type negative prompt...' : 'Type your prompt...';
+                emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
+            }
             textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
             updateHeight();
             _saveDraft();
@@ -1284,7 +1305,6 @@ export const MpiPromptBox = ComponentFactory.create({
         // Krea2-Turbo is distilled at cfg 1.0 and opts out: its negative prompt has
         // no effect and NAG is a silent no-op that doubles NFE.
         const negSlot = qs('#bottom-neg-slot', el);
-        let _negBtn = null;
 
         function _refreshNegToggle() {
             const show = props.includeNegative === true

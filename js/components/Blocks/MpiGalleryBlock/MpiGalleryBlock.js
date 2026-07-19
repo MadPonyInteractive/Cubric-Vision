@@ -28,6 +28,7 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, extractAbsPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
+import { describeItem } from '../../../utils/describeAction.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
@@ -208,6 +209,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Edits notes on the card's selected history item, persisted into the
         // item sidecar (.meta/<id>.json). grid.on listeners are torn down by
         // grid.destroy() (factory listeners.clear()), so no separate unsub here.
+        // MPI-310 — caption the card's selected image into the prompt box.
+        grid.on('describe', ({ group }) => {
+            if (!group) return;
+            describeItem(getSelectedItem(group), { group, scope: 'gallery' });
+        });
+
         grid.on('card-notes', ({ group }) => {
             const project = state.currentProject;
             const item = getSelectedItem(group);

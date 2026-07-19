@@ -1111,6 +1111,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         { key: 'reveal',     icon: 'folder',    label: 'Open in file system' },
                         { key: 'rename',     icon: 'edit',      label: 'Rename',     disabled: targetIds.length !== 1 },
                         { key: 'card-notes', icon: 'text',      label: 'Card notes', disabled: targetIds.length !== 1 },
+                        // MPI-310 — single image only: the captioner reads one image
+                        // and writes one prompt, so a multi-select has no meaning.
+                        { key: 'describe',   icon: 'chat',      label: 'Describe image',
+                            disabled: targetIds.length !== 1 || _selectedVideoCount > 0 },
                         { key: 'download',   icon: 'download',  label: 'Download' },
                         { key: 'delete',     icon: 'trash',     label: 'Delete',     danger: true },
                     ],
@@ -1124,6 +1128,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         if (key === 'reveal')     emit('reveal', { groups: selected });
                         if (key === 'rename')     _startRename();
                         if (key === 'card-notes') emit('card-notes', { group });
+                        if (key === 'describe')   emit('describe', { group: selected[0] });
                         if (key === 'download')   emit('download', { groups: selected });
                         if (key === 'delete')     emit('delete',   { groups: selected, source: 'context' });
                         if (useSelection) _exitSelectionMode();

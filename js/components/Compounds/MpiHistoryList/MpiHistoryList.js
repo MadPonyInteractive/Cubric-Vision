@@ -252,6 +252,11 @@ export const MpiHistoryList = ComponentFactory.create({
                     ...(!_isVideo && props.hasCopiedMask?.()
                         ? [{ key: 'paste-mask', icon: 'paste', label: 'Paste mask', disabled: pasteMaskDisabled }]
                         : []),
+                    // MPI-310 — image-only, single item: the captioner reads one image
+                    // and writes one prompt. Follows the _isVideo omit pattern above
+                    // rather than shipping a permanently-greyed row on video groups.
+                    ...(_isVideo ? [] : [{ key: 'describe', icon: 'chat', label: 'Describe image',
+                        disabled: targetIdxs.length !== 1 }]),
                     { key: 'add-to-gallery', icon: 'plus',     label: 'Add to gallery', disabled: addToGalleryDisabled },
                     { key: 'reveal',         icon: 'folder',   label: 'Open in file system' },
                     { key: 'delete',         icon: 'trash',    label: 'Delete',         danger: true },
@@ -275,6 +280,8 @@ export const MpiHistoryList = ComponentFactory.create({
                             emit('copy-mask', { index: targetIdxs[0] });
                         } else if (key === 'paste-mask') {
                             emit('paste-mask', { index: targetIdxs[0] });
+                        } else if (key === 'describe') {
+                            emit('describe', { index: targetIdxs[0] });
                         } else if (key === 'add-to-gallery') {
                             emit('add-to-gallery', { index: targetIdxs[0] });
                         } else if (key === 'reveal') {

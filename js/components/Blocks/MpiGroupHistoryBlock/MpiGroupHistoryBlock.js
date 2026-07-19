@@ -40,6 +40,7 @@ import { qs, gid } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
 import { extractFilenameFromPath, extractAbsPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
+import { describeItem } from '../../../utils/describeAction.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
 import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
@@ -1631,6 +1632,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 .filter(Boolean);
             if (itemIds.length < 2) { _showToast('Need ≥2 video items', 'error'); return; }
             await _runCombine(itemIds);
+        });
+
+        // MPI-310 — caption this history item into the prompt box.
+        historyList.on('describe', ({ index }) => {
+            if (typeof index !== 'number') return;
+            describeItem(_group.history[index], { group: _group, scope: 'groupHistory' });
         });
 
         historyList.on('add-to-gallery', async ({ index }) => {
