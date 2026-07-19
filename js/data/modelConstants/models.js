@@ -295,7 +295,7 @@ export const MODELS = [
         qualityTiers: ['1k', '2k'],
         dependencies: [
             'krea2-turbo-transformer',
-            'krea2-qwen3vl-clip',
+            'qwen3vl-abliterated-clip',   // shared with the image-describer plugin
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
             'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of all 4 Krea2 cards
@@ -381,7 +381,7 @@ export const MODELS = [
         qualityTiers: ['1k', '2k'],
         dependencies: [
             'krea2-turbo-transformer-nsfw',   // ONLY difference from the SFW card's deps
-            'krea2-qwen3vl-clip',
+            'qwen3vl-abliterated-clip',   // shared with the image-describer plugin
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
             'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of all 4 Krea2 cards
@@ -460,7 +460,7 @@ export const MODELS = [
         qualityTiers: ['1k', '2k'],
         dependencies: [
             'krea2-raw-transformer',     // ONLY difference from the Balanced SFW card's deps
-            'krea2-qwen3vl-clip',
+            'qwen3vl-abliterated-clip',   // shared with the image-describer plugin
             'vae-qwen-image',            // shared — already on R2, zero upload
             'krea2-lora-depth-control',
             'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of all 4 Krea2 cards
@@ -532,7 +532,7 @@ export const MODELS = [
         qualityTiers: ['1k', '2k'],
         dependencies: [
             'krea2-raw-transformer-nsfw',   // ONLY difference from the High SFW card's deps
-            'krea2-qwen3vl-clip',
+            'qwen3vl-abliterated-clip',   // shared with the image-describer plugin
             'vae-qwen-image',
             'krea2-lora-depth-control',
             'krea2-lora-identity-edit',

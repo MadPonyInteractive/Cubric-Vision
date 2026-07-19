@@ -224,7 +224,7 @@
   },
   "1690": {
     "inputs": {
-      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "clip_name": "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
       "type": "krea2",
       "device": "default"
     },

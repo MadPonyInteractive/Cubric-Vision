@@ -85,6 +85,11 @@ export const assetDeps = {
         sha256: '5bc10fa4adecf99dda132d916e23048cbd56797702c5fa50eb5d2079048a38c3',
     },
     // Text encoders / CLIP -------------------------------------------------
+    // DEAD 2026-07-19 — no model or plugin declares this; the Krea2 cards moved to
+    // qwen3vl-abliterated-clip below, and THE R2 OBJECT IS DELETED, so this url 404s.
+    // Verified safe first: neither shipped tag (v0.0.12, v1.0.1) references it — both
+    // predate Krea2, checked in dependencies.js, the file deps actually lived in then.
+    // Entry kept only as a tombstone against re-adding the split weight; delete freely.
     'krea2-qwen3vl-clip': {
         id: 'krea2-qwen3vl-clip',
         name: 'Krea2 Text Encoder (Qwen3-VL-4B fp8_scaled)',
@@ -95,10 +100,13 @@ export const assetDeps = {
         size: '4.88GB',
         sha256: '54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094',
     },
-    // Abliterated twin of krea2-qwen3vl-clip — same 4B architecture, refusal behaviour
-    // removed. Owned by the image-describer PLUGIN (js/data/pluginsRegistry.js), not by
-    // any model: nothing generates with it, it only captions. The stock encoder above
-    // refuses on some images, which is why the captioner cannot just reuse it.
+    // Abliterated twin of the stock Qwen3-VL-4B — same architecture, refusal behaviour
+    // removed. SHARED: the image-describer PLUGIN (js/data/pluginsRegistry.js) AND all
+    // four Krea2 cards, which moved off the stock encoder 2026-07-19 after an A/B showed
+    // no cost — locked seed, 5/6 constraints honoured by both on an adversarial
+    // instruction-following prompt, and no sanitisation on a disinhibition probe.
+    // NOTE the switch bought simplicity + ~4.88GB, NOT censorship relief: the refusals
+    // seen in-app came from the enhancer LLM downstream of Generate Text, never the CLIP.
     'qwen3vl-abliterated-clip': {
         id: 'qwen3vl-abliterated-clip',
         name: 'Image Describer Encoder (Qwen3-VL-4B abliterated fp8_scaled)',

@@ -50,14 +50,15 @@
     "inputs": {
       "max_length": 512,
       "sampling_mode": "on",
-      "sampling_mode.temperature": 0.7,
+      "sampling_mode.temperature": 0.5,
       "sampling_mode.top_k": 64,
       "sampling_mode.top_p": 0.95,
       "sampling_mode.min_p": 0.05,
       "sampling_mode.repetition_penalty": 1.05,
       "sampling_mode.seed": 0,
-      "sampling_mode.presence_penalty": false,
-      "thinking": true,
+      "sampling_mode.presence_penalty": 0,
+      "thinking": false,
+      "use_default_template": true,
       "clip": [
         "69",
         0
@@ -72,18 +73,9 @@
       "title": "Generate Text"
     }
   },
-  "60": {
-    "inputs": {
-      "value": "You are an expert prompt engineer for text-to-image models. Your task is to expand the user's prompt into a highly effective image-generation prompt.\n\nThink step by step about the request before writing the answer:\n- What is the subject and mood?\n- What visual styles, mediums, and lighting options would fit? Consider two or three alternatives and pick the one that best serves the caption.\n- What composition, framing, and grounded details will help the text-to-image model?\n\nThen output a single expanded prompt paragraph.\n\nFollow these rules strictly:\n1. **Faithfulness First:** Preserve all original subjects, actions, colors, and spatial relationships. Do not add new objects, props, characters, or animals unless the user clearly implies them.\n2. **Practical T2I Structure:** Write a prompt that a text-to-image model can parse cleanly. Group subjects with their own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n3. **Style Planning Stays Internal:** Use your internal reasoning to choose style, medium, framing, and lighting. Do not emit planning tags or wrappers in the visible answer body.\n4. **Text Rendering:** If the user requests visible text, quotes, labels, or typography, specify the exact text clearly and wrap requested words in quotes.\n5. **Avoid Over-Specification:** Do not invent highly specific clothing, colors, materials, or scene details unless the input supports them.\n6. **Structure:** Write one cohesive paragraph after the thinking block. No bullets, JSON, or markdown.\n7. **Respect Existing Detail:** If the user's prompt is already detailed, lightly polish and finalize rather than heavily expanding \u2014 preserve their phrasing and direction.\n8. **Respect the Human Form:** Treat depictions of people with dignity. Assume clothing covers genitals and intimate anatomy.\n9. **Preserve User Medium:** When the user explicitly requests a medium (e.g. \"photo of\", \"photograph of\", \"illustration of\", \"painting of\", \"sketch of\", \"3D render of\"), honor it. Do not pivot to a different medium to avoid difficulty \u2014 match the user's stated intent.\n\nUser's Input:\n\n"
-    },
-    "class_type": "PrimitiveStringMultiline",
-    "_meta": {
-      "title": "Text String (System Prompt)"
-    }
-  },
   "69": {
     "inputs": {
-      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "clip_name": "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
       "type": "krea2",
       "device": "default"
     },
@@ -143,7 +135,7 @@
   },
   "74": {
     "inputs": {
-      "int": 768
+      "int": 1344
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -152,7 +144,7 @@
   },
   "75": {
     "inputs": {
-      "int": 1344
+      "int": 768
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -220,7 +212,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": "",
+      "cleanup": 0,
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -956,7 +948,7 @@
     "inputs": {
       "delimiter": "",
       "string_a": [
-        "60",
+        "411",
         0
       ],
       "string_b": [
@@ -1085,7 +1077,7 @@
   },
   "265": {
     "inputs": {
-      "lora_name": "krea-2\\edit\\krea2_identity_edit_v1_1_r128.safetensors",
+      "lora_name": "krea-2\\edit\\krea2_identity_edit_v1_2_r128.safetensors",
       "strength_model": 1,
       "model": [
         "207",
@@ -1679,6 +1671,15 @@
     "class_type": "Krea2EditModelPatch",
     "_meta": {
       "title": "Krea2 Edit (source patch)"
+    }
+  },
+  "411": {
+    "inputs": {
+      "value": "You are a prompt engineer for text-to-image models. Expand the user's prompt into one image-generation paragraph.\n\nOutput ONLY that paragraph. No preamble, no steps, no headings, no explanation, no quotes around it. Your entire reply is the prompt itself.\n\nRules:\n1. Faithfulness first. Keep every original subject, action, color, and spatial relationship. Add no objects, characters, or animals the user did not imply.\n2. Structure for T2I. Group each subject with its own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n3. Add style, medium, framing, and lighting yourself \u2014 but never name them as choices, just write them into the scene.\n4. Don't over-specify. Invent clothing, colors, materials, or scene detail only where the input supports it.\n5. Preserve the user's medium. If they say \"photo of\", \"illustration of\", \"sketch of\", \"3D render of\" \u2014 honor it exactly.\n6. Text rendering. If the user wants visible words, state them in quotes.\n7. Already detailed? Polish and finalize rather than expand. Preserve their phrasing.\n8. One paragraph, target 80-150 words. No bullets, no JSON, no markdown.\n9. First attempt is final. Never correct, restart, or comment on your own draft. No \"wait\", \"let me try again\", \"actually\". Begin the paragraph immediately with the scene.\n\nUser's Input:\n"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Text String (System Prompt)"
     }
   }
 }

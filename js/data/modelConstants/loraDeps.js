@@ -30,16 +30,19 @@ export const loraDeps = {
     // Identity-edit LoRA (MPI-282) — the instruct-edit path for Krea2. Baked into the
     // edit workflow (dual conditioning: in-context VAE source tokens + Qwen3-VL grounding
     // via the comfyui-krea2edit node pack). A DEP OF ALL FOUR Krea2 cards — the graph is
-    // universal (t2i/i2i/edit switched at runtime), so every tier can invoke edit. v1.1
+    // universal (t2i/i2i/edit switched at runtime), so every tier can invoke edit. v1.2
     // r128 (SVD rank-reduced): near-full quality, best texture + least noise of the set.
+    // v1.2 over v1.1: better edit adherence (v1.1 leaked source garment through) at equal
+    // or better face likeness — A/B'd on scene-in-slot-1 / subject-in-slot-2 (the trained
+    // order per the krea2edit node's own tooltip).
     'krea2-lora-identity-edit': {
         id: 'krea2-lora-identity-edit',
-        name: 'Krea2 Identity Edit LoRA (v1.1 r128)',
+        name: 'Krea2 Identity Edit LoRA (v1.2 r128)',
         origin: 'conradlocke/krea2-identity-edit',
-        filename: 'loras/krea-2/edit/krea2_identity_edit_v1_1_r128.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/krea-2/edit/krea2_identity_edit_v1_1_r128.safetensors',
+        filename: 'loras/krea-2/edit/krea2_identity_edit_v1_2_r128.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/edit/krea2_identity_edit_v1_2_r128.safetensors',
         size: '0.91GB',
-        sha256: '78b403a45024d51c24b618046ec1176c346416951f8f4c6c707d1b337ae1d40f',
+        sha256: 'f53db0bb4b081d638f196865cbc9f055379704fafb788336784fc1ccde18d825',
     },
     // Baked LoRA — loaded by the workflow, not user slots. Travels with the model.
     // Subfoldered under loras/krea-2/; ComfyUI lists them BACKSLASHED
