@@ -1,0 +1,152 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "901a6596-a56b-4b4e-a795-48704bcfc1a1",
+  "generated_at": "2026-07-18T15:20:00Z",
+  "from_session": "MPI-306 mock-up phase — three mock-ups, C2 approved, build plan written",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "App carousel frame — design APPROVED, Phase 1 build not started",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Design the portable app UI frame (MPI-306), then build it.",
+    "status": "on-track",
+    "summary": "Mock-up phase COMPLETE and user-approved. Mock-up C2 IS the design. A 3-phase build plan exists and is agreed. NOTHING IS BUILT — no app UI code was written. The next session runs PHASE 1 ONLY (the portable frame), which is code, not design."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+    "completed": [
+      "Three independent mock-ups via the `impeccable` skill (A workbench / B spine / C surgical). C chosen, revised to C2, approved verbatim: 'This is it. Very good. ... This is the design.'",
+      "Approved composition recorded in docs/playbooks/add-app/ui/carousel-frame.md § The approved composition — it OVERRIDES the older sketch in that file wherever they disagree.",
+      "Tier cost corrected from fabricated seconds to MEASURED relative percentages (user supplied a real A/B: 20-step raw 386s / 8-step 100s / 4-step 51s → baseline / ~25% / ~13%).",
+      "Declared step `fields` contract added to the design (one row under the canvas, frame renders it from a declaration).",
+      "3-phase build plan written and agreed."
+    ],
+    "pending": [
+      "PHASE 1 — the portable frame (steps 1-6 of plan.md). THIS IS THE NEXT ACTION.",
+      "Phase 2 — Head Swap as the frame's proof (step 7).",
+      "Phase 3 — hold-until-Apply run-path change (step 8), deliberately a separate diff.",
+      "User: head-swap LoRA fp32-vs-fp16 A/B, then R2 upload (NOT authorised). Head Swap cannot RUN until this lands — the graph 404s on the LoRA."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-306",
+    "title": "App carousel frame + hold-until-Apply",
+    "column": "doing",
+    "maturity": "in-progress",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-306/",
+    "links": {
+      "plan": "plan.md",
+      "validation": "validation.md",
+      "events": "events.jsonl",
+      "handoffs": "handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "implement Phase 1 of .agents/mpi-kanban/tasks/MPI-306/plan.md",
+    "commit Phase 1 by explicit pathspec"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/add-app/ui/carousel-frame.md — THE design record. § The approved composition holds the exact gradient values, the slot rule, the ticker-navigates reversal, the measured tier percentages, and the settled odds and ends. § Steps are DATA now also holds the declared-`fields` contract.",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md — the 3-phase build plan with per-step verify criteria.",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md — what the mock-up phase produced and verified, and an explicit 'nothing is built' note."
+    ],
+    "pending": [
+      "docs/playbooks/add-app/existing-apps/head-swap.md still says 'NOT YET BUILT — design record only' and lists MPI-304 as a blocker. Both stale — refresh when the UI lands.",
+      "A memory entry for the mpi_box contract once the gizmo actually ships (deferred twice now; still deferred).",
+      "UNCARDED CLEANUP: `--lib-bg: oklch(0.26 0.020 350)` is declared LOCALLY in both MpiAppLibrary.css:34 and MpiModelManager.css:39 rather than globally. The app frame will be the third local copy — this is DELIBERATE (see carousel-frame.md), but worth a card if a fourth surface ever wants it."
+    ]
+  },
+  "next_action": {
+    "description": "Implement PHASE 1 ONLY of .agents/mpi-kanban/tasks/MPI-306/plan.md — the portable, app-agnostic carousel frame. Read docs/playbooks/add-app/ui/carousel-frame.md § The approved composition FIRST; the design is settled and must NOT be re-derived or re-litigated. Open the reference artefact .agents/mpi-kanban/tasks/MPI-306/research/mockup-C2.html to see the approved composition working (it is a throwaway scratchpad file, NOT code to copy wholesale — the real build follows repo conventions: ComponentFactory.create, qs/on from utils/dom, CSS vars, icons.js, BEM). Build the frame generically with NOTHING Head-Swap-specific in it; Head Swap is Phase 2's proof. Do NOT touch the run path (Phase 3) — the frame is built against today's enqueue-time gallery behaviour, which means the last step's Apply/Discard are inert until Phase 3. That is expected, not a bug.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SEQUENCING (user-decided): frame first generically, Head Swap as its proof — NOT Head-Swap-first-then-extract. Building Head Swap first would bake its shape into the frame, the exact trap `steps`-as-data exists to prevent.",
+      "SEQUENCING (user-decided): hold-until-Apply is a SEPARATE phase after the frame, so a UI regression and a data-path regression never land in the same diff.",
+      "The step ticker NAVIGATES. This OVERTURNS the earlier 'step dots indicate but do not navigate' decision. All three mock-ups independently rejected inert dots — a row that indicates but refuses clicks reads as disabled, not informational. Resolution: make it real.",
+      "Middle steps are the bounded centred canvas with title above and hint below — NO annotation column. Mock-up C's 60/40 split was rejected by the user.",
+      "The slot is a PLACEHOLDER, not a container: empty = bordered box + icon; FILLED = the image IS the box (width/height auto, no background, border hugging the image at its own aspect). No crop, no letterbox padding. This is the rule most likely to be got wrong.",
+      "The divider is INSET top and bottom (~62% height, fading at both ends) and is quiet --line, never an accent colour. It never touches the chrome.",
+      "Background is an ambient gradient CENTRE-OUT HORIZONTALLY, grounded on --lib-bg so the app frame and the two Libraries read as one family. Exact stops to be TUNED LIVE IN THE APP, not in a mock-up.",
+      "CSS tokens stay LOCAL to the component (deliberate — see carousel-frame.md); do not promote them to styles/01_base.css.",
+      "Tier cost labels are RELATIVE percentages, never absolute seconds — a hardcoded ETA is a lie on every GPU but the one it was measured on. Progress during a run must come from SERVER TRUTH (steps completed), never a baked per-tier duration.",
+      "A step may declare `fields` (one row between canvas and hint). The FRAME renders the row from the declaration so every gizmo's controls match for free. HARD CAP: one row, no nesting/panels/accordions — a gizmo wanting more means the step should SPLIT.",
+      "Mid-run navigation is ALLOWED (the run keeps going); only CLOSING with an unapplied result prompts to discard."
+    ],
+    "constraints": [
+      "`steps` DOES NOT EXIST IN CODE. It is design only. The AppDef typedef (js/data/appsRegistry.js:22-37) has 9 properties and none is `steps`; the only occurrence of the word in that file is a comment on line 142. Phase 1 INTRODUCES it — it is not a half-finished thing to complete.",
+      "REUSE js/utils/cropTool.js — do NOT fork it. It is a standalone factory `createCropTool({overlayCanvas, targetElement, onChange})` (line 37) with 8 handles, body drag, clamping and ratio-lock already correct. Add a `showGrid` option (default true) so the head-swap box can omit the rule-of-thirds grid, which is drawn around line 446.",
+      "cropTool works in NORMALIZED [0..1]; the graph wants TOP-LEFT SOURCE PIXELS. Multiply by natural dimensions at inject time.",
+      "The box MUST CLAMP to image bounds. Mpi Box Crop returns the intersection and does NOT pad, so an off-edge box silently yields a non-square crop — a distorted head the user blames on the model. Clamp the EDGES before deriving w/h.",
+      "FIXED-PROMPT app: the graph has NO Input_Positive/Input_Negative — both prompts are BAKED. Never design or build a prompt box for Head Swap.",
+      "NO SEED UI, EVER — random seed every generation, never shown or saved.",
+      "Slot previews are a HARD REQUIREMENT (you cannot box what you cannot see) and are still an open MPI-259 item for video/audio; images are settled by the approved composition.",
+      "Standing UI law applies and is NOT restated in the design doc: ComponentFactory.create (never modify js/components/factory.js), BEM .mpi-block__element--modifier, qs/qsa/gid and on/off from js/utils/dom.js, CSS vars from styles/01_base.css, icons from js/utils/icons.js, Events.on/emit with stored unsubscribes, and a destroy() that cleans up everything. Register new CSS in js/shell/preloadStyles.js (MpiBaseApp.css is already listed at line 49) and document props in js/components/types.js.",
+      "State: never mutate sub-objects — replace the top-level key. App inputs live in state.s_appInputs[appId].",
+      "Shared tree: commit by explicit pathspec, never git add -A. A concurrent session owns MPI-288 and created MPI-305 — do not touch either.",
+      "DO NOT upload anything to R2 — still not authorised, pending the fp32-vs-fp16 A/B.",
+      "Head Swap CANNOT RUN regardless of this work (LoRA 404). The frame is buildable and inspectable without it; do not treat a failed generation as a frame bug."
+    ],
+    "files_modified": [
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-306/task.json",
+      ".agents/mpi-kanban/tasks/MPI-306/events.jsonl",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+      "docs/playbooks/add-app/ui/box-gizmo.md",
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      "js/utils/cropTool.js",
+      "js/data/appsRegistry.js",
+      ".claude/rules/components.md",
+      ".agents/mpi-kanban/tasks/MPI-306/research/mockup-C2.html"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": [
+      "apps / App Library",
+      "app UI/UX portable layer",
+      "components + UI law"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md — THE ROOT-CAUSE RULE",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md (the UI build)",
+    "docs/playbooks/add-app/ui/README.md + carousel-frame.md",
+    "feedback: no seed UI; no toast on user Stop; error dialog vs toast"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-18T13:05:00Z",
+      "event": "MPI-306 moved todo -> doing (mock-up phase started)"
+    },
+    {
+      "at": "2026-07-18T14:10:00Z",
+      "event": "mock-up phase complete; C2 approved by user as THE design"
+    },
+    {
+      "at": "2026-07-18T14:45:00Z",
+      "event": "build plan written; tier % corrected to measured 25/13"
+    },
+    {
+      "at": "2026-07-18T15:20:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/901a6596-a56b-4b4e-a795-48704bcfc1a1.json, then read docs/playbooks/add-app/ui/carousel-frame.md § The approved composition and .agents/mpi-kanban/tasks/MPI-306/plan.md. The design is SETTLED and user-approved — do not re-derive or re-litigate it. Build PHASE 1 ONLY: the portable, app-agnostic carousel frame (plan steps 1-6). Nothing Head-Swap-specific goes in the frame; Head Swap is Phase 2's proof. Do not touch the run path — that is Phase 3, deliberately a separate diff, which means the last step's Apply/Discard stay inert for now and that is expected. Key things that are easy to get wrong: a FILLED media slot is the image itself with a border hugging its own aspect (no box chrome, no crop, no letterbox padding); the divider is inset top and bottom and is quiet --line, never an accent; the step ticker NAVIGATES (this overturns the older 'dots do not navigate' rule); the box gizmo REUSES js/utils/cropTool.js via a new showGrid option rather than forking it, and must clamp EDGES to the image before deriving w/h; tier labels are relative percentages (baseline / ~25% / ~13%), never absolute seconds. Head Swap cannot RUN yet (its LoRA 404s pending an unauthorised R2 upload) — do not treat that as a frame bug. Reference artefact showing the approved composition working: .agents/mpi-kanban/tasks/MPI-306/research/mockup-C2.html."
+}

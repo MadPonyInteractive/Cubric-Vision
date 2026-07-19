@@ -1,0 +1,144 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "00e9d0f9-050d-41a1-bb53-e248c1337ced",
+  "generated_at": "2026-07-18T09:15:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Head Swap app design (MPI-299) + app requiredDeps system (MPI-304)",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Find a hair/head detector for a Head Swap app the user was authoring in ComfyUI, then design and record the app so it can be wired.",
+    "status": "blocked",
+    "summary": "Head Swap workflow is AUTHORED and its injection surface is known. All design decisions are settled and committed to docs (8d6e7a80). Wiring is BLOCKED on MPI-304 (apps cannot require deps directly) plus two user-owned items (LoRA precision A/B, R2 upload)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Detector search — no hair-only detector exists in standard repos; hair segm quality fails on multi-person. Auto-detection ABANDONED (recorded so it is not re-walked).",
+      "Region selection settled: manual box, NOT a painted mask (the graph reduces any mask to a rect, so painting is a lie in the UI).",
+      "Box coord contract settled + VERIFIED: user authored MpiNodes 'Mpi Box' (x/y/width/height -> mpi_box type) with consumers Mpi Box Mask / Mpi Box Crop / Mpi From Box.",
+      "Verified x/y = TOP-LEFT absolute source px, and that out-of-bounds CLAMPS to the intersection (no padding).",
+      "Superseded the earlier KJNodes CreateShapeMask direct-inject design (centre-anchored, coupled to third-party widget names).",
+      "Suffix convention locked: one Mpi Box per image, suffix matches the image slot (Input_Box <-> Input_Image, Input_Box_2 <-> Input_Image_2); unsuffixed IS slot 1; a box is optional per image.",
+      "Created docs/playbooks/add-app/ui/ (PORTABLE layer) + existing-apps/ (per-app records) INSIDE the add-app playbook, because docs/apps.md is a pure redirect there and says 'do not add content here'.",
+      "Recorded the full Head Swap injection surface from the authored graph.",
+      "Identified the requiredDeps gap and carded it as MPI-304 with the reasoning against a by-owner appDeps.js split.",
+      "Committed everything: 8d6e7a80."
+    ],
+    "pending": [
+      "MPI-304: add requiredDeps to AppDef (dep ids resolved from DEPS) — UNBLOCKS MPI-299.",
+      "User: decide head-swap LoRA precision (fp32 1.2GB vs fp16 ~half) via A/B.",
+      "User: R2 upload of the winning LoRA (explicitly NOT authorised yet).",
+      "User: save the app_head_swap graph, drop in comfy_workflows/raw/, sync.",
+      "Wire the app via /mpi-add-app against the saved JSON.",
+      "UI: build the box gizmo (must constrain box to image bounds); slot previews (MPI-259 item)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-299",
+    "title": "App: Head Swap — 2-image head/face swap with head selector",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-299/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-299/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement MPI-304",
+    "wire MPI-299 once MPI-304 lands and the workflow is synced"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/add-app/ui/README.md — portable app UI/UX layer: promotion rule, baseline rules, open/brainstorm list",
+      "docs/playbooks/add-app/ui/box-gizmo.md — full mpi_box contract, verified anchor + clamp behaviour, suffix convention, why-not-a-painted-mask",
+      "docs/playbooks/add-app/existing-apps/head-swap.md — app record: shape, injection surface, dependency, hair-detector dead end",
+      "docs/playbooks/add-app/01-descriptor-and-ops.md — requiredDeps section flagging the current 'apps declare models, never deps' law as mid-revision",
+      "docs/playbooks/add-app/README.md — hub table routes to both new folders",
+      "Cards MPI-299 (updated) and MPI-304 (created); board + event logs updated",
+      "Commit 8d6e7a80"
+    ],
+    "pending": [
+      "Backfill existing-apps/ records for image-regen, sdxl-4k, video-stitch (deliberately not done uninvited).",
+      "When MPI-304 lands, update 01-descriptor-and-ops.md to drop the NOT-YET-BUILT framing and state requiredDeps as shipped law.",
+      "Consider a memory entry for the mpi_box contract once the gizmo ships."
+    ]
+  },
+  "next_action": {
+    "description": "Implement MPI-304 (requiredDeps on AppDef) FIRST — it blocks Head Swap. Read the card and docs/playbooks/add-app/01-descriptor-and-ops.md section 'App-only extra weights'. This touches dep resolution = a SHARED PRIMITIVE: grep and classify EVERY consumer (appsRegistry.appAvailability, resolveModelDeps.js, the App Library Install slide-over, installStore/reconciler, footprint.js, GC/cleanup) and fix the LOCAL and REMOTE/Pod engine twins in ONE pass. A single-call-site patch is a false done.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Manual box, not a painted mask — the graph reduces any mask to a rectangle, so asking the user to paint implies precision the pipeline discards.",
+      "Auto hair detection abandoned — no hair-only detector exists in standard repos, and hair segm quality is BAD on multi-person images (not merely ambiguous). Faces detect and select fine; hair does not.",
+      "User authored a first-party mpi_box node system instead of injecting KJNodes CreateShapeMask directly. This gives top-left coords (no conversion, no half-box offset bug), one injection entry per box, and insulation from third-party widget renames.",
+      "Box suffix matches the image slot number; unsuffixed is slot 1; a box is optional per image (injection already skips a title matching no node).",
+      "App docs live INSIDE docs/playbooks/add-app/ (ui/ portable + existing-apps/ specific). NOT a new docs/apps/ folder — docs/apps.md is a pure redirect to the playbook and forbids content.",
+      "requiredDeps on AppDef, NOT a by-owner appDeps.js split file. Deps are filed by KIND (modelDeps/assetDeps/loraDeps/nodesDeps merged by a facade); a head-swap LoRA IS a LoRA. Ownership belongs in a list of ids, not a file. Monolith pressure is handled by splitting FURTHER BY KIND (loraDeps.js -> loras/qwen.js), which the facade absorbs with zero consumer changes.",
+      "The head-swap LoRA must NOT be folded into qwen-edit's deps — it would push 1.2GB onto every Qwen user for one dev-gated app; a 30-LoRA app would tax ~15GB."
+    ],
+    "constraints": [
+      "Mpi Box Crop CLAMPS out-of-bounds to the intersection and does not pad — the gizmo MUST constrain the box to image bounds or the user silently gets a non-square crop (a distorted reference head that reads as a model problem).",
+      "Head Swap has NO Input_Positive/Input_Negative — both prompts are BAKED in the graph. It is a fixed-prompt outcome app.",
+      "qwen-edit is already wired, tested and live (MPI-300); only RunPod verification is outstanding and it does not block this app. Its deps already include the lightning 4step/8step tier accelerators this graph uses.",
+      "DO NOT upload anything to R2 — the user explicitly withheld authorisation pending the fp32-vs-fp16 A/B.",
+      "The workflow also needs the comfyui-inpaint-cropandstitch node pack.",
+      "raw/ is user-owned: scripts READ raw and WRITE comfy_workflows/. Never hand-edit a workflow JSON; re-export from ComfyUI.",
+      "Shared tree: commit by explicit pathspec, never git add -A. board.json/events.jsonl are co-owned by concurrent sessions — re-read fresh before mutating (next_id moved 299->304 mid-session).",
+      "Dev-gate lifts at >=4 apps; Head Swap is the 4th. Decide whether the three plumbing apps stay before that becomes public."
+    ],
+    "files_modified": [
+      "docs/playbooks/add-app/ui/README.md",
+      "docs/playbooks/add-app/ui/box-gizmo.md",
+      "docs/playbooks/add-app/existing-apps/head-swap.md",
+      "docs/playbooks/add-app/01-descriptor-and-ops.md",
+      "docs/playbooks/add-app/README.md",
+      ".agents/mpi-kanban/tasks/MPI-299/task.json",
+      ".agents/mpi-kanban/tasks/MPI-304/task.json",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-304/task.json",
+      ".agents/mpi-kanban/tasks/MPI-299/task.json",
+      "docs/playbooks/add-app/existing-apps/head-swap.md",
+      "docs/playbooks/add-app/ui/box-gizmo.md",
+      "docs/playbooks/add-app/01-descriptor-and-ops.md",
+      "js/data/appsRegistry.js",
+      "js/data/modelConstants/dependencies.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "apps / App Library",
+      "dependencies + download manager",
+      "workflow authoring / injection"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md — THE ROOT-CAUSE RULE (MPI-304 touches a shared primitive: sweep ALL consumers, fix local AND remote twins in one pass)",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md (for the box gizmo UI work)",
+    "docs/playbooks/add-app/README.md + 01-descriptor-and-ops.md",
+    "docs/download-manager.md (dep resolution / install flow)"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-18T09:15:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/00e9d0f9-050d-41a1-bb53-e248c1337ced.json and use mpi-continue to pick up the Head Swap app work. Two cards are in play: MPI-304 (apps cannot require deps directly) blocks MPI-299 (the Head Swap app itself). Start with MPI-304: add requiredDeps to AppDef so an app can require dep ids from DEPS, so app-only weights stop being folded into a model's dependency list and taxing every user of that model. This touches dep resolution, which is a shared primitive, so grep and classify every consumer and fix the local and remote Pod engine twins in one pass rather than patching one call site. All design decisions for Head Swap are already settled and written up in docs/playbooks/add-app/existing-apps/head-swap.md and docs/playbooks/add-app/ui/box-gizmo.md, committed as 8d6e7a80 — read those before touching code and do not re-derive the box contract. Do not upload anything to Cloudflare R2: the user has not authorised it and is still A/B testing whether the fp32 or fp16 head-swap LoRA ships."
+}
