@@ -21,6 +21,7 @@
  * @typedef {Object} PluginDef
  * @property {string}   id            Stable id, used for dep-queue keys.
  * @property {string}   title         Human label (context menus, install prompts).
+ * @property {string}   description   One line, shown under the title in the Library row.
  * @property {string[]} requiredDeps  assetDeps ids this plugin owns.
  * @property {string}   operation     commandRegistry op key this plugin runs.
  */
@@ -30,6 +31,7 @@ export const PLUGINS = [
     {
         id: 'image-describer',
         title: 'Image Describer',
+        description: 'Unlocks "Describe image" on the gallery and history right-click menus.',
         requiredDeps: ['qwen3vl-abliterated-clip'],
         operation: 'imageDescribe',
     },

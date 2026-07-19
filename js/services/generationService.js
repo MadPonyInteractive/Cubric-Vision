@@ -20,6 +20,7 @@ import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
 import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { getAppById } from '../data/appsRegistry.js';
+import { pluginForOperation } from '../data/pluginsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
@@ -182,8 +183,11 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
     // App gens (config.appId) show the App's title in the Cue, not the generic
     // "Universal workflow" fallback that model:{id:null} would otherwise pick.
     const appTitle = config.appId ? (getAppById(config.appId)?.title || null) : null;
+    // Plugin ops (MPI-310) consume no prompt — the Cue's prompt line would fall
+    // back to "No prompt text". Name the capability instead, mirroring appTitle.
+    const plugin = pluginForOperation(config.operation);
     return {
-        promptExcerpt: _promptExcerpt(config.positive),
+        promptExcerpt: _promptExcerpt(config.positive) || plugin?.title || '',
         negativeExcerpt: _promptExcerpt(config.negative),
         modelId: model.id ?? null,
         modelName: model.displayName || model.name || model.label || model.id || appTitle || (command?.universal ? 'Universal workflow' : 'Unknown model'),

@@ -189,7 +189,16 @@ export const commands = {
         // slider help the edit path, so they stay. No batch: Krea2's second sampler
         // produces artifacts on batched follow-ups.
         injectParams: { Input_Is_Edit: true },
-        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'enhancePrompt'],
+        // NO enhancePrompt (MPI-310 session): the enhancer actively harms this op.
+        // Krea2EditGroundedEncode feeds the instruction to Qwen3-VL *together with the
+        // source image* (KREA2_EDIT_TEMPLATE in comfyui-krea2edit/__init__.py), so the
+        // text carries only the DELTA — appearance comes from the frame=1 source latent.
+        // An enhancer expands that delta into a standalone scene paragraph, which fights
+        // the grounding, and edit verbs are load-bearing ("replace"/"convert" = drastic,
+        // "change" = soft), so paraphrasing silently flips edit strength. Edit adherence
+        // is tuned by grounding_px, not prompt length. Tried and failed: a "clarify, don't
+        // expand" enhancer prompt.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio'],
     },
     qwenEdit: {
         label: 'Edit',

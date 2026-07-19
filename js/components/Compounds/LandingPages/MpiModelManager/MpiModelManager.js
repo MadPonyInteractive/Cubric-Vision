@@ -1174,7 +1174,10 @@ export const MpiModelManager = ComponentFactory.create({
             const info = ce('div', { className: 'mpi-plugin-row__info' });
             info.innerHTML = `
                 <span class="mpi-plugin-row__icon">${renderIcon('text', 'sm')}</span>
-                <span class="mpi-plugin-row__name">${plugin.title}</span>
+                <span class="mpi-plugin-row__text">
+                    <span class="mpi-plugin-row__name">${plugin.title}</span>
+                    <span class="mpi-plugin-row__desc">${plugin.description || ''}</span>
+                </span>
                 <span class="mpi-plugin-row__meta">${size}</span>`;
             tile.appendChild(info);
 

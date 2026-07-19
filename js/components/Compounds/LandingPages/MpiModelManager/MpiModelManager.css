@@ -678,9 +678,11 @@
     justify-content: space-between;
     gap: var(--s-4);
     padding: var(--s-3) var(--s-4);
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
-    background: var(--surface-2);
+    /* Match the tiles: local --lib-* surfaces, NOT the app-wide Stage tokens.
+       The Library ground is darker than the app, so var(--surface-2) read as a
+       lighter slab against the cards. */
+    border: 1px solid color-mix(in oklch, var(--line) 50%, transparent);
+    background: var(--lib-card);
 }
 .mpi-plugin-row__info {
     display: flex;
@@ -693,9 +695,25 @@
     color: var(--ink-3);
     flex: none;
 }
+/* Name over description. min-width:0 lets the description ellipsis instead of
+   pushing the size/actions off the row. */
+.mpi-plugin-row__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
 .mpi-plugin-row__name {
     font-size: var(--t-sm);
     color: var(--ink-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mpi-plugin-row__desc {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
