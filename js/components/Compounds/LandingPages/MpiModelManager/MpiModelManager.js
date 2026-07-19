@@ -1439,11 +1439,20 @@ export const MpiModelManager = ComponentFactory.create({
                 // sentinels are internal markers, not names, so they are filtered out.
                 const holders = [...new Set(keptShared.flatMap(k => k.sharedWith || []))]
                     .filter(n => n && !/^\((installing|app|plugin)\)$/.test(n));
+                // Cap the list at two + an overflow count. A weight shared by a whole
+                // model family (the abliterated encoder backs four Krea2 cards) would
+                // otherwise comma-join every name into an alarming wall of text. Two
+                // names keep the answer actionable — "uninstall that one first" — which
+                // a fully generic message loses.
+                const extra = holders.length - 2;
+                const who = extra > 0
+                    ? `${holders.slice(0, 2).join(', ')} and ${extra} more`
+                    : holders.join(' and ');
                 Events.emit('ui:info', {
-                    title: 'Nothing to remove',
+                    title: 'Files kept',
                     message: holders.length
-                        ? `${modelName} — files kept, still needed by ${holders.join(', ')}.`
-                        : `${modelName} — all files are shared with other models or required by the engine.`,
+                        ? `${modelName} — files kept, ${who} ${holders.length > 1 ? 'also use' : 'also uses'} them.`
+                        : `${modelName} — files kept; they are shared with other models or required by the engine.`,
                 });
             }
         }));
