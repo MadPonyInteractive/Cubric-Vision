@@ -264,6 +264,67 @@ function deepFreeze(o) {
 [FLUX_RATIOS, SDXL_RATIOS, WAN_RATIOS, WAN_5B_RATIOS, LTX_RATIOS, KREA2_RATIOS, SOCIAL_RATIOS, CROP_RATIOS]
     .forEach(deepFreeze);
 
+// ── Nearest named ratio ────────────────────────────────────────────────────
+
+// Both CROP_RATIOS orientations flattened: the union of every image ratio we
+// name (1:1, 3:4/4:3 … 9:16/16:9) plus the four cinema ones. Matching against
+// the union rather than one orientation means a portrait source finds "5:8"
+// and its landscape transpose finds "8:5" without the caller passing an
+// orientation it would only have to derive from w/h anyway.
+const _NAMED_RATIOS = [...CROP_RATIOS.portrait, ...CROP_RATIOS.landscape];
+
+// NEAREST WINS, not a fixed tolerance — a fixed one cannot work here. The
+// named entries are unevenly spaced: 9:21 and 2.39:1 sit 1.2% apart (half-gap)
+// while 4:5 and 1:1 sit 11.1% apart. Any single threshold loose enough for
+// 768×1280 (4.17% off 5:8, its true nearest) would also let the two cinema
+// ratios swallow each other. So each entry simply owns the band up to the
+// midpoint of its neighbour, which self-sizes: tight where entries crowd,
+// wide where they do not.
+//
+// This cap only decides when NOTHING named is plausible. It is the widest
+// half-gap in the table (4:5 ↔ 1:1), so it never overrides a nearest-wins
+// decision inside the populated range — it just stops a genuinely odd shape
+// like 1000:999 from being labelled "1:1".
+const _RATIO_MAX_ERR = 0.1111;
+
+function _gcd(a, b) {
+    return b === 0 ? a : _gcd(b, a % b);
+}
+
+/**
+ * Nearest named aspect ratio for a pixel size, e.g. 768×1280 → "5:8".
+ *
+ * Falls back to the GCD-reduced fraction when nothing named is within
+ * tolerance, so cropped/upscaled/imported media still reads something true
+ * rather than a confidently wrong label. Returns null only when there are no
+ * usable dimensions — projectModel.js defaults pixelDimensions to {w:0,h:0},
+ * so 0 means "absent" here and must never reach the division.
+ *
+ * @param {number} w
+ * @param {number} h
+ * @returns {string|null} Named ratio, reduced fraction, or null if no dims.
+ */
+export function nearestNamedRatio(w, h) {
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+
+    const aspect = w / h;
+    let best = null;
+    let bestErr = Infinity;
+    for (const r of _NAMED_RATIOS) {
+        // Relative error, not absolute: at 21:9 (2.33) an absolute epsilon
+        // that's strict enough for 1:1 would reject everything.
+        const err = Math.abs(r.ratio - aspect) / aspect;
+        if (err < bestErr) {
+            bestErr = err;
+            best = r;
+        }
+    }
+    if (best && bestErr <= _RATIO_MAX_ERR) return best.label;
+
+    const divisor = _gcd(w, h);
+    return `${w / divisor}:${h / divisor}`;
+}
+
 // ── UI Mode Mapping ────────────────────────────────────────────────────────
 
 // Maps model.type → which UI mode MpiRatioSelector should use.

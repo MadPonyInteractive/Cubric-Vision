@@ -54,6 +54,7 @@ import {
 } from '../../../data/projectModel.js';
 import { roundToDivisible } from '../../../utils/cropRounding.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
+import { nearestNamedRatio } from '../../../utils/ratios.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
@@ -105,6 +106,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Resolve group ─────────────────────────────────────────────────────
 
         let _group = state.currentProject?.itemGroups?.find(g => g.id === props.groupId);
+
+        // Copied mask (MPI-311): { layers: {manual, subtract}, dims }. Block-scoped
+        // and deliberately NOT the OS clipboard — the mask is a pair of layers plus
+        // the source dimensions the paste warning compares against, none of which
+        // survive a bitmap round-trip. Lives as long as the workspace is mounted.
+        let _copiedMask = null;
 
         if (!_group) {
             el.innerHTML = `<p class="mpi-group-history-block__error">Group not found. <span class="mpi-group-history-block__back-slot"></span></p>`;
@@ -328,6 +335,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const item = _group.history[idx];
                 return !!(await viewer.el.hasMaskForEntry?.(item));
             },
+            hasCopiedMask: () => !!_copiedMask,
         });
 
         // ── Load initial entry (inlined per-kind) ─────────────────────────────
@@ -1685,6 +1693,80 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _downloadMaskDataURL(maskDataUrl, item);
             historyList.el.exitSelectMode();
         });
+
+        historyList.on('copy-mask', async ({ index }) => {
+            if (isVideo || typeof index !== 'number') return;
+            const item = _group.history[index];
+            if (!item) return;
+            const layers = await viewer.el.getMaskLayersForEntry?.(item);
+            if (!layers) {
+                _showToast('No mask for this entry', 'warning');
+                return;
+            }
+            // Source dimensions ride along so paste can compare against the
+            // target and warn before a stretched/misplaced result.
+            _copiedMask = { layers, dims: item.pixelDimensions || null };
+            // No toast: user-initiated action, result is self-evident (Paste
+            // mask appears in the menu). Toasts are for non-user events.
+            historyList.el.exitSelectMode();
+        });
+
+        historyList.on('paste-mask', async ({ index }) => {
+            if (isVideo || typeof index !== 'number' || !_copiedMask) return;
+            const item = _group.history[index];
+            if (!item) return;
+
+            const src = _copiedMask.dims;
+            const dst = item.pixelDimensions;
+            // ASPECT decides, not resolution. setManualFromDataURL stretches the
+            // pasted layer to the target canvas, so 1024×1024 → 2048×2048 is a
+            // clean scale and warning there is pure noise; only a differing
+            // aspect actually distorts the mask.
+            //
+            // Unknown dimensions on either side still warn — pasting blind is
+            // when the user most needs it, and pixelDimensions defaults to
+            // {w:0,h:0} for older/imported items.
+            const known = !!(src?.w && src?.h && dst?.w && dst?.h);
+            // 1% relative slack absorbs the rounding in off-grid pairs that are
+            // the same shape in practice (e.g. 1920×1080 vs 1936×1088, 0.4%
+            // apart) without letting a real shape change through.
+            const distorts = known
+                && Math.abs((src.w / src.h) - (dst.w / dst.h)) / (dst.w / dst.h) > 0.01;
+
+            if (known && !distorts) {
+                await _applyPastedMask(item);
+                return;
+            }
+
+            const dialog = MpiOkCancel.mount(document.createElement('div'), {
+                title:       'Aspect ratios do not match',
+                text:        known
+                    ? `The copied mask is ${src.w}×${src.h} (${nearestNamedRatio(src.w, src.h)}) `
+                      + `but this entry is ${dst.w}×${dst.h} (${nearestNamedRatio(dst.w, dst.h)}). `
+                      + 'Pasting it may produce stretching or improper placement of the mask.'
+                    : 'The dimensions of the copied mask or this entry are unknown. '
+                      + 'Pasting it may produce stretching or improper placement of the mask.',
+                okLabel:     'Paste anyway',
+                cancelLabel: 'Cancel',
+            });
+            dialog.on('ok', async () => {
+                await _applyPastedMask(item);
+                dialog.destroy?.();
+            });
+            dialog.on('cancel', () => { dialog.destroy?.(); });
+            // MpiOkCancel builds its DOM on mount but stays hidden until show()
+            // portals it to body — without this the dialog never appears and the
+            // paste silently never happens.
+            dialog.el.show();
+        });
+
+        async function _applyPastedMask(item) {
+            const ok = await viewer.el.pasteMaskLayersToEntry?.(item, _copiedMask.layers);
+            // Success is silent — the mask appearing IS the feedback. Only warn
+            // on failure, where there is nothing visible to tell the user.
+            if (!ok) _showToast('Could not paste mask', 'warning');
+            historyList.el.exitSelectMode();
+        }
 
         async function _runCombine(itemIds) {
             const project = state.currentProject;

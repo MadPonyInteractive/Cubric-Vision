@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-311",
+  "title": "History cards show aspect ratio; copy/paste mask between entries",
+  "description": "Two features in the History workspace, both user-verified on 1.2.0.\n\n1) RATIO ON HISTORY CARDS. Cards read `768×1280 · 5:8` — dimensions plus the nearest NAMED ratio, so a card echoes the vocabulary the ratio picker speaks instead of an arbitrary reduced fraction. New `nearestNamedRatio(w,h)` in js/utils/ratios.js matches against the flattened CROP_RATIOS union (both orientations = every image ratio + the four cinema ones). Works for imported images automatically: mediaUploadService.js:62 populates pixelDimensions on upload.\n\nWHY NEAREST-WINS, NOT A TOLERANCE (the trap): named entries are unevenly spaced — 9:21↔2.39:1 sit 1.2% apart (half-gap), 4:5↔1:1 sit 11.1% apart. A first pass used a flat 3% tolerance and regressed the motivating case: 768×1280 is 4.17% off its true nearest (5:8) so it fell through to the GCD fraction '3:5'. No single threshold works — loose enough for 5:8 lets the two cinema ratios swallow each other. Each entry now owns the band to its neighbour's midpoint; the 11.11% cap only decides when NOTHING named is plausible (1000:999 → '1:1', but 900:1000 → '9:10').\n\nKNOWN CONSEQUENCE (deliberate, asserted in the test): LTX-native 1280×704 labels itself '1.85:1', not '16:9' — 1.8182 is genuinely nearer 1.85 (1.7%) than 1.7778 (2.3%). Cost of keeping cinema ratios in the same table.\n\n2) COPY/PASTE MASK. Right-click a history entry → 'Copy mask' (shares download-mask's gate: single non-video entry that has a mask). 'Paste mask' appears only once something is copied. Carries the manual + subtract LAYERS, not the flattened composite — flattening would bake the eraser in and make the pasted mask uneditable. Auto-pick masks excluded on purpose: RAM-only server detections tied to the source image's content.\n\nStorage note: masks are NOT in memory and NOT in sidecars — they are TEMP-file PNGs per (project, group, item) via maskTempStore, session-scoped. Survive a renderer reload (same main process, same sessionId), die on app restart (main.js:14 mints a fresh UUID, :183 cleans on quit, :616 prunes stale dirs at boot). Sidecar + restart persistence were both explicitly rejected by the 2026-04-29 layered-mask-persistence plan. Copy/paste therefore needed NO new storage: read/writeManual/writeSubtract already existed. `_copiedMask` is Block-scoped, so it cannot outlive the TEMP files it references.\n\nTWO BUGS FOUND BY INSTRUMENTED LOGGING (both were wrong assumptions, not typos):\n- Paste appeared to do nothing until an entry switch. In mode 'none' the viewer shows MpiMaskedImagePreview driven by _previewMaskCache — the live canvas is TORN DOWN (log: liveCanvas=false on every paste). Writing only to the canvas repainted nothing. Fixed by branching on the actual display surface: preview gets a rebuilt composite via setMaskDataURL, live canvas gets the layer restore.\n- Cross-dimension paste did nothing at all. MpiOkCancel builds its DOM on mount but needs dialog.el.show() to portal to body — never called, so the dialog was constructed invisibly, 'ok' never fired, no paste. Log proved it: mismatch=true followed by NO paste line.\n\nWARNING GATE IS ASPECT, NOT RESOLUTION (user call, and correct): setManualFromDataURL stretches the pasted layer to the target canvas via an explicit dest rect, so 1024×1024 → 2048×2048 is a clean scale and warning there is noise. Only a differing aspect distorts. 1% relative slack absorbs off-grid same-shape pairs (1920×1080 vs 1936×1088 = 0.4%). Unknown dims on either side also warn — pixelDimensions defaults to {w:0,h:0} on older items and pasting blind is when the warning matters most. Dialog names both ratios: 'The copied mask is 768×1280 (5:8) but this entry is 1024×1024 (1:1).'\n\nNo toasts on copy or paste (user-initiated, self-evident; failure-only warning kept).\n\nVERIFIED BY USER: ratio labels correct incl. imported 1792×2400 → 3:4; paste works same-dimension and cross-dimension-same-ratio; stretches as expected on differing ratio; a pasted mask GENERATES correctly through a masked edit. Guarded by tests/nearest-named-ratio.test.cjs (5 tests, incl. the aspect gate and a round-trip proving no two named entries collide).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "active",
+  "created_at": "2026-07-19T00:30:00Z",
+  "updated_at": "2026-07-19T00:30:00Z",
+  "labels": [
+    "feature",
+    "history",
+    "mask",
+    "ratios",
+    "ui"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  },
+  "events": [
+    {
+      "at": "2026-07-19T00:30:00Z",
+      "type": "task.created",
+      "note": "Ratio on history cards + copy/paste mask between entries. Both user-verified; paste confirmed to generate correctly."
+    }
+  ]
+}

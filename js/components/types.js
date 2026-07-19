@@ -1031,6 +1031,7 @@
  * @property {number} [selectedIndex=0] - Initially active entry index
  * @property {boolean} [isVideo=false] - Disables Compare in context menu for video groups
  * @property {(idx:number)=>Promise<boolean>|boolean} [hasMaskForIndex] - Per-entry mask availability check
+ * @property {()=>boolean} [hasCopiedMask] - Whether a mask is on the app-local copy buffer (gates "Paste mask")
  *
  * Instance methods (on instance.el):
  *   setActiveIndex(idx)          — highlight active card (no events)
