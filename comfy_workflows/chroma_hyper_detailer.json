@@ -313,17 +313,5 @@
     "_meta": {
       "title": "Input_Mask"
     }
-  },
-  "1693": {
-    "inputs": {
-      "image_a": [
-        "1556",
-        0
-      ]
-    },
-    "class_type": "Image Comparer (rgthree)",
-    "_meta": {
-      "title": "Image Comparer (rgthree)"
-    }
   }
 }
