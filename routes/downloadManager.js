@@ -194,7 +194,37 @@ async function _localSharedDepsMap(excludeModelId) {
         if (!map.has(depId)) map.set(depId, new Set());
         map.get(depId).add('(app)');
     }
+    // MPI-310 — same gap one entity further out: a PLUGIN's deps belong to no model
+    // AND no app, so neither sweep above protects them.
+    for (const depId of _pluginRequiredDepIds(excludeModelId)) {
+        if (!map.has(depId)) map.set(depId, new Set());
+        map.get(depId).add('(plugin)');
+    }
     return map;
+}
+
+// MPI-310 — dep ids required by a PLUGIN. Mirror of _appRequiredDepIds below, for the
+// third entity: see js/data/pluginsRegistry.js for why plugins are neither models nor
+// apps. Same both-engines requirement.
+//
+// UNLIKE the app twin this honours `excludeUninstallId`, because plugins are the first
+// entity with a user-facing Uninstall button. Protecting a plugin's deps unconditionally
+// would make its own uninstall a no-op — the guard cannot otherwise tell "some unrelated
+// model is being uninstalled, keep this" from "the OWNER is being uninstalled, delete
+// it". That is the same self-protection problem `excludeModelId` already solves for
+// models (see the in-flight sweep above), so it is solved the same way rather than with
+// a second uninstall route that would duplicate every shared-dep check.
+//
+// Deps stay protected here when ANOTHER plugin also requires them, so a shared weight
+// survives until its last owner is gone.
+function _pluginRequiredDepIds(excludeUninstallId) {
+    const { PLUGINS, pluginDepKey } = _require('../js/data/pluginsRegistry.js');
+    const out = new Set();
+    for (const plugin of PLUGINS) {
+        if (pluginDepKey(plugin.id) === excludeUninstallId) continue;
+        for (const depId of (plugin.requiredDeps || [])) out.add(depId);
+    }
+    return out;
 }
 
 // MPI-304 — dep ids required by an APP. Both uninstall guards below build their
@@ -294,6 +324,10 @@ async function _remoteSharedDepIds(excludeModelId) {
     // MODELS sweep above cannot protect them. Fixed in the SAME pass as the local twin
     // (CLAUDE.md engine-split rule — a one-engine fix here is a false done).
     for (const depId of _appRequiredDepIds()) keep.add(depId);
+    // MPI-310 — plugin twin, fixed in the same pass for the same reason. Honours the
+    // exclusion so a plugin's own uninstall can actually delete its weight (see the
+    // local twin's comment for why this differs from the app guard above).
+    for (const depId of _pluginRequiredDepIds(excludeModelId)) keep.add(depId);
     return keep;
 }
 
@@ -2586,4 +2620,5 @@ module.exports = {
     _byteRatioExcludingNodes, // MPI-231 — exported for unit test
     _customNodeUninstallPath, // MPI-276 — exported for unit test
     _filterDepsForEngine, // MPI-276 — exported for unit test
+    _pluginRequiredDepIds, // MPI-310 — exported for unit test
 };

@@ -95,6 +95,19 @@ export const assetDeps = {
         size: '4.88GB',
         sha256: '54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094',
     },
+    // Abliterated twin of krea2-qwen3vl-clip — same 4B architecture, refusal behaviour
+    // removed. Owned by the image-describer PLUGIN (js/data/pluginsRegistry.js), not by
+    // any model: nothing generates with it, it only captions. The stock encoder above
+    // refuses on some images, which is why the captioner cannot just reuse it.
+    'qwen3vl-abliterated-clip': {
+        id: 'qwen3vl-abliterated-clip',
+        name: 'Image Describer Encoder (Qwen3-VL-4B abliterated fp8_scaled)',
+        origin: 'huihui-ai/Huihui-Qwen3-VL-4B-Instruct-abliterated',
+        filename: 'text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors',
+        size: '5.24GB',
+        sha256: '45fe15d359fbc6fe8773f24cebc34acedf5696d96d41a0c9a3039611ece3b866',
+    },
     // Qwen3-VL-8B fp8_scaled (hidden 4096) — Boogu's text encoder, `type: 'boogu'` in
     // the CLIPLoader. Distinct weight from krea2-qwen3vl-clip (4B). Shared by all three
     // Boogu tiers.
