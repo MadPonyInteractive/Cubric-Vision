@@ -6,10 +6,11 @@ description: Cubric Vision session close-out. Runs the full MPI end-session work
 # mpi-end Skill
 
 Project-scope close-out for the **Cubric Vision** repo. It owns the "end this
-session" trigger here and does two things in order:
+session" trigger here and does three things in order:
 
 1. **Delegate** to the user-scope `mpi-end-session` workflow, run exactly as-is.
-2. **Then** run the release-awareness check (Step 3 below) as the final step.
+2. **Then** run the knowledge-healing pass (Step 2 below).
+3. **Then** run the release-awareness check (Step 3 below) as the final step.
 
 ## Why this skill exists
 
@@ -34,7 +35,39 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
    files, update/close the JSON task card) exactly as that skill defines it. Do
    not reimplement or summarize its steps here — follow that skill.
 
-2. **Release-awareness check (do NOT skip).** The generic `mpi-end-session`
+2. **Knowledge-healing pass (do NOT skip).** The routing system (CLAUDE.md →
+   folder README → subsystem doc) only stays trustworthy if every agent that
+   hits a gap repairs it. Replay THIS session and answer honestly:
+
+   - **Dead or wrong pointer?** A doc/rule/memory/skill pointed at a file,
+     section, function, or flag that no longer exists — or at the wrong home.
+   - **Routing gap?** The task matched no router row, or the routed doc lacked
+     the fact needed, forcing a codebase search or a wrong first attempt.
+   - **Rule gap?** A mistake happened (or the user corrected the agent) that an
+     existing rule SHOULD have prevented but doesn't cover — or a rule misled.
+   - **Skill/command friction?** A project skill or playbook step failed,
+     was ambiguous, or needed improvisation to complete.
+   - **Memory drift?** A memory entry contradicted reality or duplicated what
+     docs now hold.
+
+   Then heal at the source, honoring the no-catch-all rule (facts go to the ONE
+   subsystem doc the map routes to — never a dump file):
+
+   - **Mechanical heals — fix directly, no approval needed:** dead pointers,
+     broken links, stale file/function references, memory-entry corrections,
+     MEMORY.md index drift.
+   - **Substantive changes — one-line proposal per file, wait for approval:**
+     new/changed rule text, doc content additions, router-row changes,
+     project-skill (`.claude/skills/`) step edits. Same discipline as the rest
+     of close-out.
+   - **Global/user-scope artifacts (`~/.claude/skills/`, the MPI Kanban pack):
+     NEVER edit.** Record the needed change as a memory note (or kanban card)
+     so an issue can be filed on the pack — same lifecycle as promoted domains.
+
+   No friction this session → say "no knowledge gaps hit" in one line and move
+   on. Never invent a gap to have something to heal.
+
+3. **Release-awareness check (do NOT skip).** The generic `mpi-end-session`
    workflow does NOT look at the changelog or versioning — those are
    Cubric-specific release mechanics. Diff THIS session's changes (working tree,
    or the session's commit(s) if end-session already committed) and ask, per the
@@ -72,7 +105,7 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
 
    (The generic rule/doc/memory impact pass is already handled by
    `mpi-end-session` step 1 — this skill only adds what that skill omits:
-   changelog + versioning.)
+   knowledge healing, changelog, versioning.)
 
 ## Hard rules
 
