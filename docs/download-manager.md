@@ -105,14 +105,30 @@ store, never the dead flag:
   the check throws. Plus any dep held by a live in-flight job (`_inFlightDepIds`,
   store SOT — MPI-276).
 
-**Protection keys on DECLARATION + footprint, never on completeness (MPI-310).**
-A model protects every dep it *declares* as long as it has ANY dep on disk. The
-earlier gate (`if (!fullyInstalled) continue;`) was **circular and destroyed user
-data**: a shared *common* dep is itself an input to `fullyInstalled`, so the
-instant that weight went missing every model needing it stopped defending it, and
-the next uninstall deleted it permanently. It also cascaded — one absent shared
-weight silently disarmed the guard for a whole model family. This is the MPI-258
-tier-cycle hole generalised (a tier with an absent transformer protected nothing).
+**"Is this model installed?" is answered from its EXCLUSIVE deps (MPI-310).**
+A model protects every dep it *declares*, and it counts as installed when any dep
+that **no other model declares** is on disk. Both earlier rules conflated shared
+and exclusive evidence, and each was circular in an opposite direction:
+
+| Rule | Circularity | Damage |
+|---|---|---|
+| per-dep on-disk (pre-MPI-258) | a shared file counted as proof for *every* model declaring it, so a tier family protected the same idle copy from both sides while neither was installed | ~19GB undeletable (MPI-258 B1) |
+| `fullyInstalled` (MPI-258/276) | a shared **common** dep is itself an input to the gate, so the instant it went missing every model needing it stopped defending it | 5.24GB destroyed (MPI-310) |
+
+Exclusive deps break both cycles: a dep no one else declares cannot be another
+model's footprint, and it can never be the shared file under judgement — so the
+answer no longer depends on the file being protected. An absent-transformer tier
+has no exclusive footprint → protects nothing → still deletable. A model whose
+shared encoder was deleted still has its own transformer → still defends what it
+declares. Models with no exclusive deps at all fall back to any-footprint.
+
+> **Exclusivity MUST be computed over the whole registry** (`_multiModelDepIds`),
+> never over the guard's `others` list — `others` omits the uninstall target, which
+> makes its shared deps look exclusive to the sibling that also declares them. That
+> is precisely the LTX-2.3 High/Balanced pair from MPI-258 B1; scoping it wrong
+> reintroduces the stranding. This is **invariant 5** in
+> `.agents/mpi-kanban/tasks/MPI-276/research/04-bug-history-invariants.md` — read
+> that dossier before touching either guard.
 
 > **Live incident:** uninstalling the image-describer plugin deleted the 5.24GB
 > `qwen3vl_4b_abliterated_fp8_scaled.safetensors` that four Krea2 cards declared
@@ -126,9 +142,13 @@ tier-cycle hole generalised (a tier with an absent transformer protected nothing
 
 `installedOps` still narrows *which* ops' deps get protected; a damaged model with
 no complete op falls back to its full universe (the conservative direction).
-**Test both directions:** `tests/plugin-dep-gc.test.cjs` covers plugin deps during
-a MODEL uninstall; `tests/shared-dep-uninstall-direction.test.cjs` covers model
-deps during a PLUGIN uninstall — the direction that had never run before it broke.
+
+**Test both directions AND both circularities.** `tests/plugin-dep-gc.test.cjs`
+covers plugin deps during a MODEL uninstall; `tests/shared-dep-uninstall-direction.test.cjs`
+covers model deps during a PLUGIN uninstall (the direction that had never run
+before it broke) **and** pins the MPI-258 B1 tier-family case so a future fix
+cannot swing back to over-protection. Any change here must keep both green — they
+fail in opposite directions, which is the point.
 
 The old local `_findOtherModelsUsingDep` filtered on `m.installed` → always `[]`
 → uninstalling one LTX-2.3 tier deleted the Gemma/VAE/LoRAs the other tier

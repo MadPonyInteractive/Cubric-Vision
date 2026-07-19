@@ -81,5 +81,31 @@ function stubDisk(installedIds) {
         } finally { restore(); }
     }
 
-    console.log('ok — model deps survive a plugin uninstall (MPI-310)');
+    // (4) MPI-258 B1 MUST STAY FIXED. The opposite circularity: a tier family whose
+    //     transformers are BOTH absent must not protect its shared deps from each other
+    //     (that stranded ~19GB as undeletable). This is the regression the MPI-310 fix
+    //     nearly reintroduced — protection evidence must come from EXCLUSIVE deps, and
+    //     exclusivity must be computed over the whole registry, not the guard's `others`
+    //     list (which omits the uninstall target and makes its shared deps look
+    //     exclusive to the sibling). Invariant 5, MPI-276 research/04.
+    {
+        const tiers = MODELS.filter(m => /^ltx-23/.test(m.id));
+        if (tiers.length >= 2) {
+            const [a, b] = tiers;
+            const ua = resolveFullUniverse(a), ub = resolveFullUniverse(b);
+            const sharedTier = ua.filter(d => ub.includes(d));
+            assert.ok(sharedTier.length > 0, 'tier family must share deps for this case');
+            // Shared deps present, BOTH transformers absent — neither tier is installed.
+            const restore = stubDisk(new Set(sharedTier));
+            try {
+                const map = await dm._localSharedDepsMap(a.id);
+                const stranded = sharedTier.filter(d => map.has(d));
+                assert.strictEqual(stranded.length, 0,
+                    `MPI-258 B1 regression: ${stranded.length} tier-family deps stranded ` +
+                    `(neither transformer installed, yet ${stranded[0]} is protected)`);
+            } finally { restore(); }
+        }
+    }
+
+    console.log('ok — model deps survive a plugin uninstall; tier family stays deletable (MPI-310/258)');
 })();

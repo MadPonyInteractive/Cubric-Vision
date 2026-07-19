@@ -152,6 +152,7 @@ async function _localSharedDepsMap(excludeModelId) {
         }),
     }));
     const map = new Map(); // depId → Set<modelName>
+    const multiModelDeps = _multiModelDepIds();
     const results = await comfyRoutes.localModelsCheck(checkModels);
     for (const { model } of others) {
         const entry = results[model.id];
@@ -165,21 +166,34 @@ async function _localSharedDepsMap(excludeModelId) {
         // ≥1 op complete) and the installed-op list; we protect commonDeps + those
         // ops' deps only.
         //
-        // MPI-310: protection must NOT gate on fullyInstalled. That gate was CIRCULAR —
-        // a shared COMMON dep is itself an input to fullyInstalled, so the moment it went
-        // missing every model needing it stopped defending it, and the next uninstall
-        // could delete it for good. It also cascades: one absent shared weight silently
-        // disarms the guard for every model in the family (this is the MPI-258 tier-cycle
-        // hole generalised — a tier with an absent transformer protected nothing).
+        // MPI-310: "is this model a live install" must be answered from its EXCLUSIVE
+        // deps, never from the shared ones. Both previous rules conflated the two and
+        // each was circular in an opposite direction:
         //
-        // A model's CLAIM on a dep comes from its declaration, not from what survived on
-        // disk. Any model with a real on-disk footprint defends everything it declares;
-        // that is what makes "shared files will be kept" true even after partial damage.
+        //   - per-dep on-disk (pre-MPI-258): a shared file counted as proof for every
+        //     model that declares it, so a tier family protected the SAME idle copy
+        //     from both sides while neither was installed → ~19GB undeletable (258 B1).
+        //   - fullyInstalled (MPI-258/276): a shared COMMON dep is itself an input to
+        //     the gate, so the instant that weight went missing every model needing it
+        //     stopped defending it and the next uninstall deleted it for good, cascading
+        //     across the family (MPI-310 — 5.24GB of user data destroyed).
+        //
+        // Exclusive deps break both cycles. A dep no other model declares cannot be
+        // someone else's footprint, so it is honest evidence THIS model is installed;
+        // and because it is exclusive it can never be the shared file under judgement,
+        // so the answer no longer depends on the file being protected. An absent-
+        // transformer tier has no exclusive footprint → protects nothing → still
+        // deletable (258 B1 stays fixed). A model whose shared encoder was deleted
+        // still has its own transformer → still defends what it declares (310 fixed).
+        //
+        // Models with NO exclusive deps at all (a pure subset of another card) fall
+        // back to any-footprint: there is no exclusive evidence to demand, and the
+        // tier cycle needs a shared-only pair to form.
         const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
         const { installedOps } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'local');
-        // Footprint test, not a completeness test: skip only models that are entirely
-        // absent locally, so an untouched card never protects a weight nobody installed.
-        if (!(entry.deps || []).some(d => d.installed === true)) continue;
+        const exclusive = (entry.deps || []).filter(d => !multiModelDeps.has(d.id));
+        const evidence = exclusive.length ? exclusive : (entry.deps || []);
+        if (!evidence.some(d => d.installed === true)) continue;
         // null engine → union of both engine sets (never delete a weight the remote
         // engine also needs), matching the pre-MPI-276 protection stance.
         const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
@@ -211,6 +225,30 @@ async function _localSharedDepsMap(excludeModelId) {
         map.get(depId).add('(plugin)');
     }
     return map;
+}
+
+// MPI-310 — dep ids declared by MORE THAN ONE model, computed over the WHOLE registry.
+// Used by BOTH engine guards to split a model's deps into shared vs EXCLUSIVE, so "is
+// this model actually installed" is answered only from files that belong to it alone.
+// See the local guard for why both earlier rules were circular without this split.
+//
+// MUST be computed over every model, NOT over the guard's `others` list: `others` omits
+// the model being uninstalled, which would make ITS shared deps look exclusive to the
+// sibling that also declares them — exactly the tier pair (LTX-2.3 High/Balanced) whose
+// mutual protection stranded ~19GB in MPI-258 B1. Exclusivity is a property of the
+// registry, never of who happens to be uninstalling.
+function _multiModelDepIds() {
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const seen = new Set();
+    const shared = new Set();
+    for (const m of MODELS) {
+        for (const depId of (resolveFullUniverse(m) || [])) {
+            if (seen.has(depId)) shared.add(depId);
+            else seen.add(depId);
+        }
+    }
+    return shared;
 }
 
 // MPI-310 — dep ids required by a PLUGIN. Mirror of _appRequiredDepIds below, for the
@@ -298,6 +336,7 @@ async function _remoteSharedDepIds(excludeModelId) {
         }),
     }));
     const keep = new Set();
+    const multiModelDeps = _multiModelDepIds();
     try {
         const out = await remoteModels.remoteModelsCheck(checkModels);
         const results = (out && out.results) || {};
@@ -308,13 +347,16 @@ async function _remoteSharedDepIds(excludeModelId) {
             // the whole universe. Old gate (`installed === true`) required EVERY op
             // complete, so an op-partial volume install protected nothing and a
             // sibling uninstall trashed the shared clip/VAE both need. Mirrors the
-            // local guard — including MPI-310 dropping the CIRCULAR fullyInstalled gate
-            // (a shared common dep fed the gate that decided whether to protect it, so a
-            // missing weight disarmed its own protection). See the local twin for the
-            // full reasoning; these two must stay identical.
+            // local guard — including MPI-310 replacing the CIRCULAR fullyInstalled gate
+            // with EXCLUSIVE-dep evidence (a shared common dep fed the gate that decided
+            // whether to protect it, so a missing weight disarmed its own protection;
+            // the pre-258 per-dep rule was circular the other way and stranded ~19GB).
+            // See the local twin for the full reasoning; these two must stay identical.
             const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
             const { installedOps } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'remote');
-            if (!(entry.deps || []).some(d => d.installed === true)) continue;
+            const exclusive = (entry.deps || []).filter(d => !multiModelDeps.has(d.id));
+            const evidence = exclusive.length ? exclusive : (entry.deps || []);
+            if (!evidence.some(d => d.installed === true)) continue;
             const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
             for (const depId of protectedDeps) keep.add(depId);
         }
