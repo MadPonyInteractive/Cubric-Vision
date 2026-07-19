@@ -138,11 +138,15 @@ function _handleComfyOutput(level, chunk) {
     const text = chunk.toString().trim();
     if (!text) return;
 
-    // Log first, then parse. The filter below gates ONLY this file write —
-    // every progress/SSE parser further down still receives the raw `text`.
+    // Log first, then parse. Noise still reaches the TERMINAL via consoleOnly —
+    // it is only kept out of app.log. Every progress/SSE parser further down
+    // receives the raw `text` either way.
     const comfyLevel = _classifyComfyOutput(level, text);
-    if (comfyLevel !== 'info' || !_isComfyLogNoise(text)) {
-        logger[comfyLevel]('comfy', text.replace(/\x1b\[[0-9;]*m/g, ''));
+    const clean = text.replace(/\x1b\[[0-9;]*m/g, '');
+    if (comfyLevel === 'info' && _isComfyLogNoise(text)) {
+        logger.consoleOnly('info', 'comfy', clean);
+    } else {
+        logger[comfyLevel]('comfy', clean);
     }
 
     if (/Model Initialization complete!/i.test(text)) {

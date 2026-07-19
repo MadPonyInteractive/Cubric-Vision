@@ -29,7 +29,11 @@ const { redactSecrets } = require('./secretRedaction');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const MAX_LOG_BYTES  = 2 * 1024 * 1024; // 2 MB before rotation
+// 256 KB ≈ 2000 lines — deliberately close to the old 2500-line startup cap,
+// which is the size this log was comfortable at for months. Two files means a
+// ~512 KB ceiling total. Kept small so an agent can read the whole file without
+// burning its context; that is a real constraint here, not a disk concern.
+const MAX_LOG_BYTES  = 256 * 1024;
 const RING_SIZE      = 200;             // in-memory lines kept for live reads
 
 const LOGS_DIR = process.env.APP_USER_DATA
@@ -53,7 +57,7 @@ fs.ensureDir(LOGS_DIR)
 
 // ── Internal write ────────────────────────────────────────────────────────────
 
-function _write(level, category, message, err) {
+function _write(level, category, message, err, skipFile = false) {
     const ts   = new Date().toISOString();
     const safeMessage = redactSecrets(message);
     const safeErr = err ? redactSecrets(err.stack || err) : '';
@@ -76,6 +80,12 @@ function _write(level, category, message, err) {
     // Update ring buffer
     _ring.push(line);
     if (_ring.length > RING_SIZE) _ring.shift();
+
+    // skipFile: the line was mirrored to the console above (and kept in the ring
+    // for live reads) but is too noisy to persist. Used for ComfyUI subprocess
+    // churn — see routes/comfy.js. Debugging at a terminal still sees everything;
+    // only the durable file is kept lean. (MPI-315)
+    if (skipFile) return;
 
     if (!_ready) return;
 
@@ -101,6 +111,14 @@ const logger = {
     info  : (category, message)      => _write('info',  category, message),
     warn  : (category, message)      => _write('warn',  category, message),
     error : (category, message, err) => _write('error', category, message, err),
+
+    /**
+     * Console + ring buffer only — never written to app.log.
+     * For high-volume subprocess output that is useful live but would bury the
+     * durable log (ComfyUI tqdm redraws, boot banners). (MPI-315)
+     */
+    consoleOnly: (level, category, message) =>
+        _write(['info', 'warn', 'error'].includes(level) ? level : 'info', category, message, undefined, true),
 
     /** Returns the path to the current log file (for the download route). */
     getLogPath() { return LOG_PATH; },
