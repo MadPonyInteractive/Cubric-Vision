@@ -978,63 +978,6 @@
       "widgets_values": []
     },
     {
-      "id": 1693,
-      "type": "Image Comparer (rgthree)",
-      "pos": [
-        11517.79701535578,
-        6685.9185859414165
-      ],
-      "size": [
-        548.2431355031189,
-        677.9133342029909
-      ],
-      "flags": {},
-      "order": 24,
-      "mode": 0,
-      "inputs": [
-        {
-          "dir": 3,
-          "name": "image_a",
-          "type": "IMAGE",
-          "link": 2428
-        },
-        {
-          "dir": 3,
-          "name": "image_b",
-          "type": "IMAGE",
-          "link": 2429
-        }
-      ],
-      "outputs": [
-        {
-          "dir": 4,
-          "name": "images",
-          "shape": 3,
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "rgthree-comfy",
-        "ver": "738105af5fb14e96fbecaf406dc356e284797e8c",
-        "comparer_mode": "Slide"
-      },
-      "widgets_values": [
-        [
-          {
-            "name": "A",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_fdvqg_00009_.png&type=temp&subfolder=&rand=0.9208163835088387"
-          },
-          {
-            "name": "B",
-            "selected": true,
-            "url": "/api/view?filename=rgthree.compare._temp_fdvqg_00010_.png&type=temp&subfolder=&rand=0.23837934862082644"
-          }
-        ]
-      ]
-    },
-    {
       "id": 1594,
       "type": "MpiFloat",
       "pos": [
@@ -1408,6 +1351,63 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 1693,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        11517.79701535578,
+        6685.9185859414165
+      ],
+      "size": [
+        548.2431355031189,
+        677.9133342029909
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 4,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 2428
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 2429
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "738105af5fb14e96fbecaf406dc356e284797e8c",
+        "comparer_mode": "Slide"
+      },
+      "widgets_values": [
+        [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_fdvqg_00009_.png&type=temp&subfolder=&rand=0.9208163835088387"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_fdvqg_00010_.png&type=temp&subfolder=&rand=0.23837934862082644"
+          }
+        ]
+      ]
     }
   ],
   "links": [
@@ -1635,10 +1635,10 @@
     "links_added_by_ue": [],
     "workflowRendererVersion": "LG",
     "ds": {
-      "scale": 0.630394086312899,
+      "scale": 0.39142513012207236,
       "offset": [
-        -7171.2398931949265,
-        -5463.928515062867
+        -6956.520397979335,
+        -5153.133594466562
       ]
     },
     "frontendVersion": "1.45.20",
