@@ -163,7 +163,7 @@ export const modelDeps = {
     },
     // ── Krea2 transformers (MPI-242) ───────────────────────────────────────────
     // Flux-lineage in ARCHITECTURE ONLY — the conditioning + VAE stack is Qwen
-    // (reuses vae-qwen-image + krea2-qwen3vl-clip in assetDeps.js; vae-flux-ae is
+    // (reuses vae-qwen-image + qwen3vl-abliterated-clip in assetDeps.js; vae-flux-ae is
     // the WRONG dep). We ship the SFW fp8_scaled transformer and the NSFW int8_convrot
     // transformer (Coyote's Lustify v10 KREA-Turbo) as two INDEPENDENT models — a user
     // can install BOTH (unlike LTX's mutually-exclusive arch variants). Each is its own

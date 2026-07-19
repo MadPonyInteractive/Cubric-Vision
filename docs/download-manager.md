@@ -102,12 +102,33 @@ store, never the dead flag:
   `comfy.js`'s exported `localModelsCheck` (same custom-root + default-root +
   recursive-search + completeness logic as `/comfy/models/check`). Computed once
   before the delete loop; fail-safe **aborts** (`500 shared-dep-check-failed`) if
-  the check throws. A dep is protected iff another model is **whole-model
-  installed** (every one of its deps complete on disk) and needs it — MPI-258
-  replaced the earlier per-dep test, which was circular for a tier family (High
-  + Balanced each protecting the same shared copy while neither transformer was
-  installed → the cluster became undeletable). Plus any dep held by a live
-  in-flight job (`_inFlightDepIds`, store SOT — MPI-276).
+  the check throws. Plus any dep held by a live in-flight job (`_inFlightDepIds`,
+  store SOT — MPI-276).
+
+**Protection keys on DECLARATION + footprint, never on completeness (MPI-310).**
+A model protects every dep it *declares* as long as it has ANY dep on disk. The
+earlier gate (`if (!fullyInstalled) continue;`) was **circular and destroyed user
+data**: a shared *common* dep is itself an input to `fullyInstalled`, so the
+instant that weight went missing every model needing it stopped defending it, and
+the next uninstall deleted it permanently. It also cascaded — one absent shared
+weight silently disarmed the guard for a whole model family. This is the MPI-258
+tier-cycle hole generalised (a tier with an absent transformer protected nothing).
+
+> **Live incident:** uninstalling the image-describer plugin deleted the 5.24GB
+> `qwen3vl_4b_abliterated_fp8_scaled.safetensors` that four Krea2 cards declared
+> and one had fully installed. The dialog's *"shared files will be kept"* was a
+> lie. Two compounding causes: (1) the running server's `createRequire` cache held
+> a `models.js` from before the cards were moved onto that weight — **dep-graph
+> edits are not live until the server process restarts; a Ctrl+R renderer reload
+> does NOT clear it**; and (2) even on fresh data the circular gate above meant
+> the weight stopped protecting itself once absent. Guard:
+> `tests/shared-dep-uninstall-direction.test.cjs`.
+
+`installedOps` still narrows *which* ops' deps get protected; a damaged model with
+no complete op falls back to its full universe (the conservative direction).
+**Test both directions:** `tests/plugin-dep-gc.test.cjs` covers plugin deps during
+a MODEL uninstall; `tests/shared-dep-uninstall-direction.test.cjs` covers model
+deps during a PLUGIN uninstall — the direction that had never run before it broke.
 
 The old local `_findOtherModelsUsingDep` filtered on `m.installed` → always `[]`
 → uninstalling one LTX-2.3 tier deleted the Gemma/VAE/LoRAs the other tier

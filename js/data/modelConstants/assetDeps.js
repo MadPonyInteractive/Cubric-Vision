@@ -85,21 +85,10 @@ export const assetDeps = {
         sha256: '5bc10fa4adecf99dda132d916e23048cbd56797702c5fa50eb5d2079048a38c3',
     },
     // Text encoders / CLIP -------------------------------------------------
-    // DEAD 2026-07-19 — no model or plugin declares this; the Krea2 cards moved to
-    // qwen3vl-abliterated-clip below, and THE R2 OBJECT IS DELETED, so this url 404s.
-    // Verified safe first: neither shipped tag (v0.0.12, v1.0.1) references it — both
-    // predate Krea2, checked in dependencies.js, the file deps actually lived in then.
-    // Entry kept only as a tombstone against re-adding the split weight; delete freely.
-    'krea2-qwen3vl-clip': {
-        id: 'krea2-qwen3vl-clip',
-        name: 'Krea2 Text Encoder (Qwen3-VL-4B fp8_scaled)',
-        origin: 'Comfy-Org/Krea-2',
-        // Qwen3-VL-4B (hidden 2560). NOT qwen_2.5_vl_7b (hidden 3584) — different model.
-        filename: 'text_encoders/qwen3vl_4b_fp8_scaled.safetensors',
-        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_4b_fp8_scaled.safetensors',
-        size: '4.88GB',
-        sha256: '54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094',
-    },
+    // `krea2-qwen3vl-clip` (stock Qwen3-VL-4B fp8_scaled) was REMOVED 2026-07-19: the
+    // Krea2 cards moved to qwen3vl-abliterated-clip below and the R2 object was deleted,
+    // so the entry was an orphan whose url 404s. Do not re-add the split weight — the
+    // abliterated twin serves both the Krea2 cards and the image-describer plugin.
     // Abliterated twin of the stock Qwen3-VL-4B — same architecture, refusal behaviour
     // removed. SHARED: the image-describer PLUGIN (js/data/pluginsRegistry.js) AND all
     // four Krea2 cards, which moved off the stock encoder 2026-07-19 after an A/B showed
@@ -117,7 +106,7 @@ export const assetDeps = {
         sha256: '45fe15d359fbc6fe8773f24cebc34acedf5696d96d41a0c9a3039611ece3b866',
     },
     // Qwen3-VL-8B fp8_scaled (hidden 4096) — Boogu's text encoder, `type: 'boogu'` in
-    // the CLIPLoader. Distinct weight from krea2-qwen3vl-clip (4B). Shared by all three
+    // the CLIPLoader. Distinct weight from the Qwen3-VL-4B encoders above. Shared by all three
     // Boogu tiers.
     'boogu-qwen3vl-8b-clip': {
         id: 'boogu-qwen3vl-8b-clip',

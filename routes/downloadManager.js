@@ -165,11 +165,21 @@ async function _localSharedDepsMap(excludeModelId) {
         // ≥1 op complete) and the installed-op list; we protect commonDeps + those
         // ops' deps only.
         //
-        // MPI-258 tier-cycle stays broken: a tier whose transformer is absent has no
-        // complete op → fullyInstalled false → protects nothing → still deletable.
+        // MPI-310: protection must NOT gate on fullyInstalled. That gate was CIRCULAR —
+        // a shared COMMON dep is itself an input to fullyInstalled, so the moment it went
+        // missing every model needing it stopped defending it, and the next uninstall
+        // could delete it for good. It also cascades: one absent shared weight silently
+        // disarms the guard for every model in the family (this is the MPI-258 tier-cycle
+        // hole generalised — a tier with an absent transformer protected nothing).
+        //
+        // A model's CLAIM on a dep comes from its declaration, not from what survived on
+        // disk. Any model with a real on-disk footprint defends everything it declares;
+        // that is what makes "shared files will be kept" true even after partial damage.
         const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
-        const { installedOps, fullyInstalled } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'local');
-        if (!fullyInstalled) continue;
+        const { installedOps } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'local');
+        // Footprint test, not a completeness test: skip only models that are entirely
+        // absent locally, so an untouched card never protects a weight nobody installed.
+        if (!(entry.deps || []).some(d => d.installed === true)) continue;
         // null engine → union of both engine sets (never delete a weight the remote
         // engine also needs), matching the pre-MPI-276 protection stance.
         const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
@@ -298,11 +308,13 @@ async function _remoteSharedDepIds(excludeModelId) {
             // the whole universe. Old gate (`installed === true`) required EVERY op
             // complete, so an op-partial volume install protected nothing and a
             // sibling uninstall trashed the shared clip/VAE both need. Mirrors the
-            // local guard; MPI-258 tier-cycle stays broken (absent-transformer tier
-            // has no complete op → fullyInstalled false → protects nothing).
+            // local guard — including MPI-310 dropping the CIRCULAR fullyInstalled gate
+            // (a shared common dep fed the gate that decided whether to protect it, so a
+            // missing weight disarmed its own protection). See the local twin for the
+            // full reasoning; these two must stay identical.
             const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
-            const { installedOps, fullyInstalled } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'remote');
-            if (!fullyInstalled) continue;
+            const { installedOps } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'remote');
+            if (!(entry.deps || []).some(d => d.installed === true)) continue;
             const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
             for (const depId of protectedDeps) keep.add(depId);
         }
@@ -2621,4 +2633,5 @@ module.exports = {
     _customNodeUninstallPath, // MPI-276 — exported for unit test
     _filterDepsForEngine, // MPI-276 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
+    _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
 };
