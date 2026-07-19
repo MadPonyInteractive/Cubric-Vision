@@ -7,6 +7,12 @@
  * isFocused()). In every other case (pref OFF, or window focused) an in-app StatusBar
  * toast fires instead — split via `document.hasFocus()` so the two never both deliver.
  *
+ * MPI-310 — DOWNLOAD completions additionally DEFER an in-app toast to the next focus.
+ * The either/or split above loses the message outright when the OS notification is
+ * missed (focus assist, another app fullscreen, dismissed from the tray), and a download
+ * is the one flow users deliberately walk away from — so returning to the app left no
+ * trace that a multi-GB install had finished. The deferred toast is the trace.
+ *
  * Browser mode: no ipcRenderer, so the in-app toast always fires.
  */
 
@@ -16,6 +22,7 @@ import { Events } from '../events.js';
 import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { getModelById } from '../data/modelRegistry.js';
+import { PLUGINS, pluginDepKey } from '../data/pluginsRegistry.js';
 import { StatusBar } from './statusBar.js';
 
 let ipcRenderer = null;
@@ -34,6 +41,25 @@ let _doneCount = 0;
 // leftover timer from a previous batch can't fire against a new one.
 let _flushTimer = null;
 
+// MPI-310 — messages owed to the user on their next return to the window. Queued when
+// we hand off to an OS notification that may never be seen; drained by the `focus`
+// listener registered in init. Deduped by text so a batch of installs finishing while
+// away yields one line each, not repeats.
+const _pendingOnFocus = [];
+
+function _deferToFocus(message, variant = 'success') {
+    if (!_pendingOnFocus.some(p => p.message === message)) {
+        _pendingOnFocus.push({ message, variant });
+    }
+}
+
+function _flushPendingOnFocus() {
+    while (_pendingOnFocus.length) {
+        const { message, variant } = _pendingOnFocus.shift();
+        StatusBar.notify(message, variant);
+    }
+}
+
 function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
     if (!ipcRenderer) return false;
     if (minimizeFirst) {
@@ -51,6 +77,13 @@ function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
  */
 export function initNotificationService() {
     if (_unsubs.length) return;
+
+    // MPI-310 — drain anything owed from a completion that landed while the window was
+    // unfocused. `focus` (not visibilitychange): an Electron window can be visible but
+    // unfocused behind another app, which is exactly the case that queued the message.
+    const _onFocus = () => _flushPendingOnFocus();
+    window.addEventListener('focus', _onFocus);
+    _unsubs.push(() => window.removeEventListener('focus', _onFocus));
 
     // COALESCE the whole queue into ONE completion notification. Per-gen firing
     // (an OS notification + chime per item) was noise on a queue of N. Instead:
@@ -131,18 +164,25 @@ export function initNotificationService() {
         try {
             // UW installs surface through engine UI — no completion notification
             if (!data.modelId || data.modelId === '__universal_workflow__') return;
-            const model = getModelById(data.modelId);
-            const modelName = model?.name || data.modelId;
+            // MPI-310 — a PLUGIN install broadcasts its `plugin:<id>` key here, which
+            // MODELS never contains, so the raw key leaked into the notification body
+            // ("plugin:image-describer installed."). Same miss as the uninstall toast.
+            const modelName = getModelById(data.modelId)?.name
+                || PLUGINS.find(p => pluginDepKey(p.id) === data.modelId)?.title
+                || data.modelId;
+            const message = `${modelName} installed.`;
             const osEligible = state.notificationPrefs?.downloads !== false;
             if (osEligible && ipcRenderer && !document.hasFocus()) {
                 ipcRenderer.send('notify-download-complete', {
                     title: 'Download complete',
                     subtitle: 'Cubric Studio',
-                    body: `${modelName} installed.`,
+                    body: message,
                 });
+                // The OS notification may never be seen — owe the user a toast on return.
+                _deferToFocus(message, 'success');
                 return;
             }
-            StatusBar.notify(`${modelName} installed.`, 'success');
+            StatusBar.notify(message, 'success');
         } catch (err) {
             clientLogger.error('notificationService', 'failed to notify:', err);
         }
@@ -155,6 +195,7 @@ export function initNotificationService() {
 export function destroyNotificationService() {
     if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; }
     _doneCount = 0;
+    _pendingOnFocus.length = 0;
     while (_unsubs.length) { _unsubs.pop()(); }
 }
 
