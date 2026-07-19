@@ -145,7 +145,7 @@ Two graph facts worth knowing:
 loras/krea-2/style/krea2_*.safetensors      (9 files)
 loras/krea-2/control/depth-control-lora.safetensors
 diffusion_models/krea2_turbo_fp8_scaled.safetensors
-text_encoders/qwen3vl_4b_fp8_scaled.safetensors
+text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors
 vae/qwen_image_vae.safetensors
 ```
 

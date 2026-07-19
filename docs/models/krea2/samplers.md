@@ -165,6 +165,13 @@ across seeds — constant ⇒ upstream of the sampler. **Root cause: the 2-image
 including the hardest test (holding a thin pen). No sampler change will fix 2-image-ref hands; that
 is a separate reference-path problem.
 
+> **Finding recorded on v1.1; the pinned LoRA is now `v1_2_r128` (2026-07-19) and hands were not
+> re-tested on it.** Note the shape repeats: on 2026-07-19 the *identity* of two subjects also
+> degraded on the 2-reference path while single-reference held. Two-subject single-pass is a
+> documented LoRA limit (upstream prescribes chained single-ref passes — MPI-313); whether the
+> hands regression is the same root or merely rhymes is untested. Order matters on that path:
+> scene → slot 1, subject → slot 2 (MPI-312).
+
 **Timing caveat.** All Raw-tier times above are **RTX PRO 4500** (the Pod), not the user's 4060 Ti
 (where the same run is ~597s). Pod = remote code path; treat these as *relative* comparisons at
 4500-speed, never as app/local-engine timings ([[feedback_runpod_not_local_engine_proof]]).

@@ -13,7 +13,7 @@ Do not reason about it as a Flux model.
 |---|---|
 | Variants | **Turbo** (8-step distilled, ships first) · **Raw** (52-step, phase 2) |
 | Transformer | `diffusion_models/krea2_turbo_fp8_scaled.safetensors` |
-| Text encoder | `text_encoders/qwen3vl_4b_fp8_scaled.safetensors` — Qwen3-VL-4B, **not** a Flux encoder |
+| Text encoder | `text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors` — Qwen3-VL-4B, **not** a Flux encoder. Shared with the image-describer plugin; the stock `qwen3vl_4b_fp8_scaled` twin was retired 2026-07-19 (A/B'd equal, deleted from R2 and disk) |
 | VAE | `vae/qwen_image_vae.safetensors` — reuse existing dep **`vae-qwen-image`** (already on R2) |
 | Native res | Turbo **1024–2048** · Raw ≤1024 |
 | Upstream | `Comfy-Org/Krea-2` (weights) · `krea-ai/krea-2` (first-party inference code) |
