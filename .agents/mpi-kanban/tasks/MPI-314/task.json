@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-314",
+  "title": "Orphaned-dep reclaim: 19GB of B1-era LTX shared deps sit on disk with no owner and no UI path to delete them",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-19T18:45:00Z",
+  "updated_at": "2026-07-19T17:31:31Z",
+  "description": "CONFIRMED ON DISK 2026-07-19 (user report + verified): all shared LTX-2.3 deps are present (gemma_3_12B fp4, video+audio VAE, text projection, spatial upscaler, 3 LoRAs = 19GB by du) while BOTH exclusive transformers are absent. Nothing owns them. This is the fossil of MPI-258 B1: the pre-258 per-dep guard kept these files on an uninstall 'because the sibling has them on disk' while the sibling was never installed. The 258/276 fullyInstalled fix stopped NEW stranding but never reclaimed existing orphans, and the MPI-310 exclusive-evidence rule (48b76ace) correctly declines to protect them — but a not-installed card shows INSTALL, never Uninstall, so there is NO UI path to free the 19GB. The completeness bars (LTX High 33% / Balanced 45%) are honest and are how the user spotted it.\n\nSHAPE OF FIX (decide at pickup): likely extend the existing Cleanup surface (MPI-227 preview-assets GC precedent) with an orphaned-weights sweep: a dep file on disk that (a) belongs to no whole-model-installed model under the MPI-310 exclusive-evidence rule, (b) is not universal, (c) is not app/plugin-required (union _appRequiredDepIds + _pluginRequiredDepIds), (d) has no in-flight job -> offer reclaim with size. MUST route the decision through the SAME protection primitives in routes/downloadManager.js (_localSharedDepsMap / _multiModelDepIds) — do NOT write a second parallel notion of 'orphan' (engine-split rule: remote twin question exists too, volume orphans on the Pod).\n\nDO NOT auto-delete. User-facing, opt-in, per-file sizes shown. Manual workaround meanwhile: the 8 files are individually deletable from G:/CubricModels (list in du output in MPI-310 events / this card's origin).",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "events": [
+    {
+      "at": "2026-07-19T18:45:00Z",
+      "type": "task.created",
+      "note": "Split from MPI-310 shared-dep work. User spotted partial bars on both LTX cards with LTX never currently installed; disk check confirmed 19GB of ownerless shared deps (both transformers absent) — the literal ~19GB from MPI-258 B1, stranded by the pre-258 circular guard and never reclaimed by any later fix."
+    },
+    {
+      "at": "2026-07-19T17:31:31Z",
+      "type": "task.moved",
+      "from": "todo",
+      "to": "done",
+      "note": "Reclaimed on user go-ahead 2026-07-19. Read-only scan (inverting _localSharedDepsMap + _multiModelDepIds + universal/app/plugin guards) found exactly 8 ownerless LTX-2.3 deps = 18.62GB; user approved; deleted from G:/CubricModels + removed the emptied loras/ltx-2.3/ dirs. Free space 56G->75G (+19GB). Re-scan returns 0 orphans. NO code shipped and NO cleanup UI built: the pre-258 circular guard that stranded these is gone and MPI-310 exclusive-evidence closed the opposite cycle, so this was a one-time fossil, not a live leak. Card closes as a one-off reclaim, not a feature."
+    }
+  ]
+}

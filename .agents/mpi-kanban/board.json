@@ -24,6 +24,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-314",
       "MPI-311",
       "MPI-307",
       "MPI-305",
@@ -91,5 +92,13 @@
       "MPI-283"
     ]
   },
-  "updated_at": "2026-07-19T13:00:00Z"
+  "updated_at": "2026-07-19T17:31:31Z",
+  "events": [
+    {
+      "at": "2026-07-19T18:45:00Z",
+      "type": "task.created",
+      "task": "MPI-314",
+      "note": "Orphaned-dep reclaim — 19GB B1-era LTX shared deps, no owner, no UI delete path."
+    }
+  ]
 }
