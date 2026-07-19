@@ -48,6 +48,9 @@ media-for-testing/
 tmp/
 *.tmp
 *.log
+# `*.log` misses rotation targets (app.log.1 — extension is `.1`). Ignore the
+# whole logs dir so numbered rotations and any future sink are covered. (MPI-315)
+logs/
 
 # OS artifacts
 .DS_Store

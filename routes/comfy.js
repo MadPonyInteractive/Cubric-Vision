@@ -86,6 +86,47 @@ function _classifyComfyOutput(defaultLevel, text) {
     return 'info';
 }
 
+// ── Log noise filter (MPI-315) ────────────────────────────────────────────────
+// ComfyUI stdout was 69% of app.log and 98.7% of the rotated app.log.1 (~15k
+// lines), evicting real app history and blowing out agent context windows. The
+// bulk is tqdm redraws and routine INFO chatter with no diagnostic value.
+//
+// This gates the FILE LOG ONLY, and only for lines classified 'info'. It runs
+// AFTER nothing and BEFORE the logger call — every progress/SSE parser below
+// still sees the full raw text, so MPI-147 status-bar signals are unaffected.
+// Warnings, errors and tracebacks are never filtered.
+//
+// Dropped INFO detail (model-load timings, per-node imports, VRAM prep) is
+// still visible on the console mirror in _write(), which is where it gets read
+// during live debugging anyway.
+const COMFY_LOG_NOISE = [
+    /\d+%\|/,                              // any tqdm bar (incl. "Generating tokens:")
+    /\bmodels?\s+unloaded\b/i,             // "N models unloaded."
+    /prepared for dynamic VRAM loading/i,  // per-model VRAM prep chatter
+    /^\s*(\[INFO\])?\s*\d+\.\d+\s+seconds:/, // per-node import timings (indented, may carry [INFO])
+    /\bRequested to load\b/i,
+    /\bLoading \d+ new model/i,
+    /Found quantization metadata version/i,
+    /^\(RES4LYF\)/,                        // sampler banner, one per step
+    // Boot banners. app.log.1 held ~136 engine boots, each re-dumping the full
+    // extra_model_paths list (~30 lines/boot) plus every node import timing —
+    // that repetition, not generation output, is the bulk of that file. All of
+    // it is configuration echo, recoverable from extra_model_paths.yaml.
+    /Adding extra search path/i,
+    /^\s*(\[INFO\])?\s*setup plugin\s/i,   // alembic plugin registration
+    /Total VRAM \d+ MB, total RAM/i,
+    /Set vram state to:/i,
+    /Using \S+ attention/i,                // "Using pytorch attention in VAE" etc.
+];
+
+/** True when an INFO-level Comfy line is routine churn not worth persisting. */
+function _isComfyLogNoise(text) {
+    // Strip ANSI colour codes before matching — ComfyUI wraps INFO lines in them,
+    // and they also make the on-disk log unreadable.
+    const clean = text.replace(/\x1b\[[0-9;]*m/g, '');
+    return COMFY_LOG_NOISE.some(re => re.test(clean));
+}
+
 // tqdm progress line, e.g.  "14%|█▍ | 1/7 [00:07<00:43, 7.24s/it, ...]".
 // ComfyUI redraws with \r, so one stdout chunk can hold several states — we take
 // the LAST match (current state). `[` anchors N/M to the bar so we don't match
@@ -97,7 +138,12 @@ function _handleComfyOutput(level, chunk) {
     const text = chunk.toString().trim();
     if (!text) return;
 
-    logger[_classifyComfyOutput(level, text)]('comfy', text);
+    // Log first, then parse. The filter below gates ONLY this file write —
+    // every progress/SSE parser further down still receives the raw `text`.
+    const comfyLevel = _classifyComfyOutput(level, text);
+    if (comfyLevel !== 'info' || !_isComfyLogNoise(text)) {
+        logger[comfyLevel]('comfy', text.replace(/\x1b\[[0-9;]*m/g, ''));
+    }
 
     if (/Model Initialization complete!/i.test(text)) {
         _broadcastComfyEvent('comfy:model-init-complete', { message: text });
