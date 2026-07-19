@@ -295,20 +295,6 @@ const downloadService = {
             return;
         }
         const { removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] } = json;
-        // MPI-310 — an uninstall that freed NOTHING because every file is shared used to
-        // report plain success: the row flipped to "not installed", no bytes came back,
-        // and nothing said why. That reads as a bug. The guard already resolved WHO is
-        // holding each dep (keptShared[].sharedWith), so say it. Toast, not a dialog —
-        // this is a correct outcome, not an error. [[feedback_error_dialog_vs_toast]]
-        if (!removed.length && keptShared.length) {
-            const holders = [...new Set(keptShared.flatMap(k => k.sharedWith || []))]
-                .filter(n => n && n !== '(installing)' && n !== '(app)' && n !== '(plugin)');
-            Events.emit('ui:warning', {
-                message: holders.length
-                    ? `Nothing was freed — those files are still needed by ${holders.join(', ')}.`
-                    : 'Nothing was freed — those files are still in use.',
-            });
-        }
         Events.emit('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
         if (!state.downloadJobs.length) state.downloadQueueActive = false;

@@ -1410,7 +1410,11 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('download:complete', async () => { awaitReSync(); }));
 
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
-            const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
+            // MPI-310 — modelId is a PLUGIN key (`plugin:<id>`) on the plugin-row path,
+            // which MODELS never contains: the raw key leaked into the toast text.
+            const modelName = MODELS.find(m => m.id === modelId)?.name
+                || PLUGINS.find(p => pluginDepKey(p.id) === modelId)?.title
+                || modelId;
             const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
             // "shared" wording is only honest when ANOTHER MODEL still needs a dep
             // (keptShared carries sharedWith). keptUniversal/keptPipInstalls are
@@ -1426,7 +1430,21 @@ export const MpiModelManager = ComponentFactory.create({
             } else if (keptModelFiles.length > 0) {
                 Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.` });
             } else {
-                Events.emit('ui:info', { title: 'Nothing to remove', message: `${modelName} — all files are shared with other models or required by the engine.` });
+                // MPI-310 — NAME the holders. The generic wording ("shared with other
+                // models") left the user unable to tell a correct no-op from a broken
+                // uninstall — the exact confusion after the shared-dep guard fix, where
+                // uninstalling the Image Describer frees nothing because a Krea2 card
+                // needs the same encoder. The guard already resolved who is holding each
+                // dep into keptShared[].sharedWith; the '(installing)'/'(app)'/'(plugin)'
+                // sentinels are internal markers, not names, so they are filtered out.
+                const holders = [...new Set(keptShared.flatMap(k => k.sharedWith || []))]
+                    .filter(n => n && !/^\((installing|app|plugin)\)$/.test(n));
+                Events.emit('ui:info', {
+                    title: 'Nothing to remove',
+                    message: holders.length
+                        ? `${modelName} — files kept, still needed by ${holders.join(', ')}.`
+                        : `${modelName} — all files are shared with other models or required by the engine.`,
+                });
             }
         }));
 
