@@ -57,7 +57,7 @@ fs.ensureDir(LOGS_DIR)
 
 // ── Internal write ────────────────────────────────────────────────────────────
 
-function _write(level, category, message, err, { skipFile = false, skipConsole = false } = {}) {
+function _write(level, category, message, err) {
     const ts   = new Date().toISOString();
     const safeMessage = redactSecrets(message);
     const safeErr = err ? redactSecrets(err.stack || err) : '';
@@ -69,28 +69,17 @@ function _write(level, category, message, err, { skipFile = false, skipConsole =
     // Linux/macOS), a console write throws a synchronous EIO that would surface
     // as an uncaught "JavaScript error in the main process" dialog. The file
     // write below is the durable sink, so dropping the console mirror is safe.
-    if (!skipConsole) {
-        try {
-            if (level === 'error') console.error(line);
-            else if (level === 'warn') console.warn(line);
-            else console.log(line);
-        } catch {
-            // stdout/stderr unavailable (closed pipe) — rely on the file log.
-        }
+    try {
+        if (level === 'error') console.error(line);
+        else if (level === 'warn') console.warn(line);
+        else console.log(line);
+    } catch {
+        // stdout/stderr unavailable (closed pipe) — rely on the file log.
     }
 
-    // Ring buffer follows the console view (full detail for live reads). A
-    // fileOnly write is a de-noised copy of a chunk the ring already holds via
-    // its consoleOnly twin — adding it again would duplicate. (MPI-315)
-    if (!skipConsole) {
-        _ring.push(line);
-        if (_ring.length > RING_SIZE) _ring.shift();
-    }
-
-    // skipFile: mirrored to the console above but too noisy to persist —
-    // ComfyUI subprocess churn (see routes/comfy.js). Terminal debugging still
-    // sees everything; only the durable file is kept lean. (MPI-315)
-    if (skipFile) return;
+    // Update ring buffer
+    _ring.push(line);
+    if (_ring.length > RING_SIZE) _ring.shift();
 
     if (!_ready) return;
 
@@ -116,22 +105,6 @@ const logger = {
     info  : (category, message)      => _write('info',  category, message),
     warn  : (category, message)      => _write('warn',  category, message),
     error : (category, message, err) => _write('error', category, message, err),
-
-    /**
-     * Console + ring buffer only — never written to app.log.
-     * For high-volume subprocess output that is useful live but would bury the
-     * durable log (ComfyUI tqdm redraws, boot banners). (MPI-315)
-     */
-    consoleOnly: (level, category, message) =>
-        _write(['info', 'warn', 'error'].includes(level) ? level : 'info', category, message, undefined, { skipFile: true }),
-
-    /**
-     * File only — no console, no ring. The de-noised half of a chunk whose full
-     * text already went to the terminal via consoleOnly; writing it normally
-     * would print the same content twice. (MPI-315)
-     */
-    fileOnly: (level, category, message) =>
-        _write(['info', 'warn', 'error'].includes(level) ? level : 'info', category, message, undefined, { skipConsole: true }),
 
     /** Returns the path to the current log file (for the download route). */
     getLogPath() { return LOG_PATH; },
