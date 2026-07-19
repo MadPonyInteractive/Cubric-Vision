@@ -30,7 +30,7 @@ new uploads.
 | 2 | [conditioning-and-control.md](conditioning-and-control.md) | Krea2 re-composes, it cannot edit. i2i, the encoder-choice table, **NAG does not work**, depth-ControlNet wiring + traps. |
 | 3 | [style-loras.md](style-loras.md) | the 9 model-only style LoRAs, the trigger-phrase contract, the `Stylization` slider, stale-source warning. |
 | 4 | [resolution.md](resolution.md) | `FLUX_RATIOS` verdict, delete the `ResolutionSelector`, the **÷16 rule**, the proven 2K tier. |
-| 5 | [injection.md](injection.md) | the app injection seam (style system), local install layout, prompt-enhancement cut. |
+| 5 | [injection.md](injection.md) | the app injection seam (style system), local install layout, prompt enhancer + its mandatory chat scaffold. |
 | 6 | [preview-taesd.md](preview-taesd.md) | why the latent preview is mediocre (missing `lighttaew2_1`, `Latent2RGB` fallback) and why we **must NOT** install the decoder — ComfyUI #13366 corrupts real generations. |
 
 ## To test — Krea2 as an EDITOR (unstarted)

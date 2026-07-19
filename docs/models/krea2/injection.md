@@ -174,15 +174,46 @@ maps `cubric_models.loras: loras/` under `base_path: G:/CubricModels`.)
 > Krea2's encoder is `qwen3vl_4b` (Qwen3-VL-4B, hidden 2560). Do not put the 7B in
 > `dependencies.js`.
 
-## Prompt enhancement — cut it
+## Prompt enhancement — LIVE, and the system prompt MUST be a real chat turn
 
-The official template embeds an LLM prompt-expander (`TextGenerate` + system prompt +
-switches). **Removed for Cubric Vision** (user decision, 2026-07-09): it over-expands and
-drifts from the user's intent; a simple prompt tracked the idea better. Cubric Prompt is the
-app's answer to enhancement.
+The graph runs an LLM prompt-expander (`TextGenerate` on the `qwen3vl_4b` encoder), gated by
+`Input_enhance_prompt` (bakes FALSE — the app toggle drives it). An earlier note here said it
+was cut on 2026-07-09; that was reverted and the enhancer is load-bearing. It is the app's
+only enhancer.
 
-Bonus: this dissolves the enhancer-vs-style-LoRA tension (expander wants long prompts, style
-LoRAs want short ones).
+**The trap (2026-07-19).** `TextGenerate` wraps its whole `prompt` string in ONE
+`<|im_start|>user` block. Concatenating a system prompt in front of the user's text therefore
+delivers the rules as *user-turn text with no authority* — the 4B abliterated encoder treats
+them as subject matter, not constraints, and narrates its way through them into
+`Output_prompt` ("Wait, I need to re-read… Rule 1: … Rule 2: …"). That text is the prompt, so
+it reaches the sampler and gets RENDERED INTO THE IMAGE. It quotes banned words while breaking
+them; no amount of rule rewording fixes it (adding rules makes it worse — a longer checklist
+to narrate).
+
+**The fix — hand-built chat scaffold.** `Qwen3VLTokenizer.tokenize_with_weights`
+(`comfy/text_encoders/qwen3vl.py`) sets `skip_template = text.startswith('<|im_start|>')`, so a
+prompt that already carries turn markers is passed through verbatim. Assemble exactly:
+
+```
+<|im_start|>system\n{RULES}<|im_end|>\n<|im_start|>user\n{USER}<|im_end|>\n<|im_start|>assistant\n
+```
+
+Newline after each `<|im_start|>role`; NO newline before `<|im_end|>`. Built from node 420
+(system + trailing `<|im_start|>user`), the user prompt, and a closer node — joined by
+`StringConcatenate` (plain `delimiter.join`, empty delimiter; ComfyUI widgets trim trailing
+newlines, so a bare `"\n"` concat node supplies the missing one). A `StringReplace` strips the
+leading newline the assistant turn returns — expected, not a bug.
+
+Caveats: `skip_template` also bypasses the `<think>\n\n</think>` suppressor that the default
+path appends when `thinking:false` — the system turn carries compliance instead; do not
+hand-add the block (whitespace-sensitive, and it broke generation when malformed).
+`use_default_template` is then inert (auto-detect wins). Rule text: derived from Krea's
+official `docs/expansion.txt`, which *sanctions* a deliberation step — deleting that step while
+keeping rules that require deliberation is what created the leak, as did a word-count FLOOR
+fighting the "already detailed → polish" rule. Keep the floor a ceiling.
+
+Style-LoRA tension is real (expander wants long prompts, style LoRAs want short) — rule 1
+("never repeat a choice the user already made") is what holds it in check.
 
 ## Edit op — masked identity-edit (MPI-282)
 
