@@ -18,7 +18,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 8,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -412,7 +412,7 @@
         122
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -660,7 +660,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 10,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
@@ -684,51 +684,6 @@
         "Node name for S&R": "ConditioningZeroOut"
       },
       "widgets_values": []
-    },
-    {
-      "id": 1690,
-      "type": "CLIPLoader",
-      "pos": [
-        7551.54146516923,
-        5760.63524829972
-      ],
-      "size": [
-        450,
-        170
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            2429,
-            2431
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "CLIPLoader",
-        "models": [
-          {
-            "name": "qwen3vl_4b_fp8_scaled.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
-            "directory": "text_encoders"
-          }
-        ]
-      },
-      "widgets_values": [
-        "qwen3vl_4b_fp8_scaled.safetensors",
-        "krea2",
-        "default"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
     },
     {
       "id": 1687,
@@ -881,7 +836,7 @@
         122
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -939,7 +894,7 @@
         140
       ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -979,10 +934,10 @@
       ],
       "size": [
         276.9849609375,
-        142
+        166
       ],
       "flags": {},
-      "order": 6,
+      "order": 5,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1032,10 +987,10 @@
       ],
       "size": [
         276.9849609375,
-        142
+        166
       ],
       "flags": {},
-      "order": 7,
+      "order": 6,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1118,6 +1073,51 @@
       "widgets_values": [],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 1690,
+      "type": "CLIPLoader",
+      "pos": [
+        7551.54146516923,
+        5760.63524829972
+      ],
+      "size": [
+        450,
+        170
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2429,
+            2431
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3vl_4b_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+        "krea2",
+        "default"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
     }
   ],
   "links": [
@@ -1299,8 +1299,8 @@
     "ds": {
       "scale": 0.6303940863128973,
       "offset": [
-        -7906.932462031527,
-        -5733.685805289152
+        -6988.459378969306,
+        -5205.444809331088
       ]
     },
     "frontendVersion": "1.45.20",

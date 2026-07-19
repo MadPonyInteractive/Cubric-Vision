@@ -57,7 +57,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 12,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
@@ -515,7 +515,7 @@
         122
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
@@ -573,7 +573,7 @@
         206
       ],
       "flags": {},
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
@@ -903,7 +903,7 @@
         106
       ],
       "flags": {},
-      "order": 14,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
@@ -939,51 +939,6 @@
       ]
     },
     {
-      "id": 1688,
-      "type": "CLIPLoader",
-      "pos": [
-        7383.075041658959,
-        5766.539561055003
-      ],
-      "size": [
-        450,
-        170
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            2425,
-            2426
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "CLIPLoader",
-        "models": [
-          {
-            "name": "qwen3vl_4b_fp8_scaled.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
-            "directory": "text_encoders"
-          }
-        ]
-      },
-      "widgets_values": [
-        "qwen3vl_4b_fp8_scaled.safetensors",
-        "krea2",
-        "default"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
-    },
-    {
       "id": 1689,
       "type": "VAELoader",
       "pos": [
@@ -995,7 +950,7 @@
         120
       ],
       "flags": {},
-      "order": 7,
+      "order": 6,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1178,7 +1133,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 15,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
@@ -1258,7 +1213,7 @@
         140
       ],
       "flags": {},
-      "order": 8,
+      "order": 7,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1301,7 +1256,7 @@
         122
       ],
       "flags": {},
-      "order": 13,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -1359,7 +1314,7 @@
         58
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1400,7 +1355,7 @@
         58
       ],
       "flags": {},
-      "order": 10,
+      "order": 9,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1438,10 +1393,10 @@
       ],
       "size": [
         276.9849609375,
-        142
+        166
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1481,6 +1436,51 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 1688,
+      "type": "CLIPLoader",
+      "pos": [
+        7383.075041658959,
+        5766.539561055003
+      ],
+      "size": [
+        450,
+        170
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2425,
+            2426
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3vl_4b_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+        "krea2",
+        "default"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
     }
   ],
   "links": [
@@ -1766,8 +1766,8 @@
     "ds": {
       "scale": 0.6303940863128983,
       "offset": [
-        -8123.495542324479,
-        -6063.34779746148
+        -6994.04332273847,
+        -5214.672323474798
       ]
     },
     "frontendVersion": "1.45.20",
