@@ -11,10 +11,10 @@
       "MPI-309",
       "MPI-312",
       "MPI-313",
-      "MPI-315"
+      "MPI-315",
+      "MPI-310"
     ],
     "doing": [
-      "MPI-310",
       "MPI-308",
       "MPI-306",
       "MPI-299",
@@ -106,6 +106,12 @@
       "type": "task.created",
       "task": "MPI-315",
       "note": "Log architecture — split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
+    },
+    {
+      "at": "2026-07-19T21:30:00Z",
+      "type": "task.moved",
+      "task": "MPI-310",
+      "note": "doing -> todo (validating). Shared-dep bug fixed + user-verified locally; RunPod validation deferred."
     }
   ]
 }
