@@ -1389,3 +1389,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-316","type":"task.updated","at":"2026-07-20T00:15:00Z","actor":"claude","summary":"Retitled + description rewritten after A/B PASS. Evidence in research/01-turbo-lora-parity.md."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-316","type":"task.updated","at":"2026-07-20T04:30:00Z","actor":"claude","summary":"Handoff ede1dd84 created for the Krea2 4->2 collapse."}
 {"at": "2026-07-20T16:30:00Z", "event": "validation.updated", "actor": "claude", "note": "Krea2 4->2 collapse shipped and user-verified in-app (t2i/i2i/edit/detail/upscale). Sampler retuned to 25@cfg3.5 + 3-step skin pass, 130s->100s. Open: R2 turbo weight deletion (user, manual).", "task": "MPI-316"}
+{"at": "2026-07-20T17:05:00Z", "event": "task.moved", "task": "MPI-316", "actor": "claude", "from": "doing", "to": "done", "note": "R2 Turbo weights deleted by user and verified gone (both Raw weights intact). Last open item closed; Krea2 4->2 collapse complete."}

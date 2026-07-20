@@ -2,9 +2,15 @@
 
 ## Verdict
 
-**Shipped and user-verified in the app (2026-07-20).** One step remains outside
-the repo: deleting the two Turbo weights from R2 (user is doing this manually —
-an agent attempt was blocked by the irreversible-delete permission classifier).
+**COMPLETE — shipped, user-verified in the app, R2 cleaned (2026-07-20).**
+
+The last open item (deleting the two Turbo weights from R2) was done manually by
+the user and verified: both `krea2_turbo_fp8_scaled` and
+`lustify-v10-krea-turbo-int8_convrot` are gone from
+`vision/models/diffusion_models/`, and **both Raw weights survive** —
+`krea2_raw_int8_convrot` (13492686496 B) and `lustify-v10-krea-raw-int8_convrot`
+(13148974712 B), which are what the two shipping cards depend on. ~24.5GB freed
+with no collateral loss.
 
 ## User-verified in the app
 
@@ -70,22 +76,26 @@ tier-independent (2).
    verbatim → returned 0), and the style-label count was hardcoded to 10 after
    the rack grew to 11.
 
-## Open — NOT done
+## R2 cleanup — DONE
 
-- **R2: delete the 2 Turbo weights.** Pre-approved, sequenced last, and safe to
-  run (nothing in the repo references them). The agent's `rclone deletefile` was
-  blocked by the irreversible-delete permission classifier; the user is doing it
-  manually. Objects:
-  - `vision/models/diffusion_models/krea2_turbo_fp8_scaled.safetensors` (13141730784 B)
-  - `vision/models/diffusion_models/lustify-v10-krea-turbo-int8_convrot.safetensors` (13148974712 B)
+Deleted by the user 2026-07-20, verified gone by `rclone lsl`:
+- `vision/models/diffusion_models/krea2_turbo_fp8_scaled.safetensors` (13141730784 B)
+- `vision/models/diffusion_models/lustify-v10-krea-turbo-int8_convrot.safetensors` (13148974712 B)
 
-  Verified before recommending deletion: the two NSFW weights share an identical
-  byte count (13148974712) but have DIFFERENT recorded SHA256s (`0505412e…`
-  turbo vs `f165d4db…` raw) — distinct files, same arch/quant. Not a mis-upload.
+Checked BEFORE deleting: the two NSFW weights share an identical byte count
+(13148974712) but have DIFFERENT recorded SHA256s (`0505412e…` turbo vs
+`f165d4db…` raw) — distinct files, same arch/quant, not a mis-upload. Post-delete
+listing confirms both Raw weights remain.
+
+## Accepted as-is (not defects)
 
 - **Card art** — both cards still reference `krea2-turbo-*.webp`. Filenames are
   now misleading; user decided the images are close enough and small, so they
   stay. Deliberate, not an oversight.
+- **`samplers.md` carries two layers** — the superseded single-stage verdict
+  sits alongside the shipping config, because its sampler/scheduler refutations
+  were never revisited and still prevent someone re-running `res_2m`. Candidate
+  for a clean rewrite once the config has been stable a while.
 
 ## Done in passing
 

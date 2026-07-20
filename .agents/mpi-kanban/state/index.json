@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-07-20T04:30:00Z",
+  "updated_at": "2026-07-20T17:05:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -201,7 +201,7 @@
       "id": "ede1dd84-6894-4452-b0da-3c8199bbb03e",
       "path": ".agents/mpi-kanban/state/handoffs/ede1dd84-6894-4452-b0da-3c8199bbb03e.json",
       "task": "MPI-316",
-      "status": "open"
+      "status": "resolved"
     }
   ]
 }
