@@ -13,7 +13,8 @@
  *
  * Checks (all report the offending node + tell the user to re-title in ComfyUI —
  * agents NEVER edit workflow JSON, per the injection rules):
- *   1. Capture node: >=1 node titled Output_Image / Output_Video / Output_Preview.
+ *   1. Capture node: >=1 node titled Output_* (media captures are Output_Image /
+ *      Output_Video / Output_Preview; a text workflow captures e.g. Output_prompt).
  *   2. Seed convention (MPI-257): if any node exposes a noise_seed widget, a node
  *      titled "Input_Seed" must exist — else the seedless-dedupe guard mis-fires.
  *   3. Converter integrity: every required input of every emitted node is satisfied
@@ -37,7 +38,14 @@ import http from 'node:http';
 
 const COMFY = process.env.COMFY_URL || 'http://127.0.0.1:8188';
 
-const CAPTURE_TITLES = new Set(['output_image', 'output_video', 'output_preview']);
+// A capture is any Output_* node. Not every workflow produces pixels — image_descriptor
+// captures text on a PreviewAny titled `Output_prompt`, and Apps ship side outputs
+// alongside their media. The app reads back BY TITLE PREFIX (it injects Input_* and
+// reads Output_*), so the prefix is the actual contract; demanding one of the three
+// media titles made a text-output workflow unrepresentable. This matches what the
+// reachability check below (§4) has always done — it already treats any Output_* as a
+// valid terminus.
+const isCaptureTitle = (title) => /^output_/i.test(title);
 
 function fetchObjectInfo() {
   return new Promise((resolve, reject) => {
@@ -59,11 +67,13 @@ function checkWorkflow(wf, objectInfo) {
   const violations = [];
   const nodes = Object.entries(wf).filter(([, n]) => n && typeof n === 'object' && n.class_type);
 
-  // 1. Capture node present.
-  const hasCapture = nodes.some(([, n]) => CAPTURE_TITLES.has(titleOf(n).toLowerCase()));
+  // 1. Capture node present — any Output_* counts, since a workflow may legitimately
+  // capture text (image_descriptor -> Output_prompt) rather than pixels.
+  const hasCapture = nodes.some(([, n]) => isCaptureTitle(titleOf(n)));
   if (!hasCapture) {
     violations.push(
-      `no capture node — every workflow needs a node titled Output_Image / Output_Video / Output_Preview. ` +
+      `no capture node — every workflow needs a result node titled Output_* (Output_Image / ` +
+      `Output_Video / Output_Preview for media, or e.g. Output_prompt for a text result). ` +
       `Title the result node in the ComfyUI graph and re-export.`
     );
   }
@@ -136,7 +146,7 @@ function checkWorkflow(wf, objectInfo) {
       consumersOf.get(src).push(id);
     }
   }
-  // Any Output_* counts as a terminus here, not just the three CAPTURE_TITLES: Apps ship
+  // Any Output_* counts as a terminus here, same rule as check 1 above: Apps ship
   // numbered captures (Output_Image_2/_3) and side outputs (Output_prompt), and a slot that
   // feeds one of those is genuinely wired. Check 1 above still demands a primary capture.
   const captureIds = new Set(nodes.filter(([, n]) => /^output_/i.test(titleOf(n))).map(([id]) => id));
