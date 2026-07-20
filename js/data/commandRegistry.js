@@ -48,7 +48,7 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {Object}          [injectParams] - Constant workflow params this op ALWAYS injects, keyed by
  *                                              node title. For ops that share one graph and select a
  *                                              branch with a baked-false boolean (Krea2's t2i / i2i /
- *                                              poseReference all run krea2_turbo_t2i.json). Merged in
+ *                                              poseReference all run krea2_t2i_<sfw|nsfw>.json). Merged in
  *                                              commandExecutor._buildParams BEFORE the user's control
  *                                              params, so a control can still override. Titles follow
  *                                              the tier-2 naming law and are matched case-insensitively;
@@ -98,8 +98,9 @@ export const commands = {
         // tier-keyed model (Krea2) mounts it; SDXL/Chroma/Flux never see it.
         // Array order IS mount order (MpiPromptBox._refreshOpSlot appends in sequence):
         // the full-width tier block leads, the enhancer rides the bottom row beside
-        // ratio + batch, so Krea2's panel matches LTX/Wan/SDXL.
-        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'enhancePrompt'],
+        // ratio + batch, so Krea2's panel matches LTX/Wan/SDXL. The turbo bolt sits
+        // beside the enhancer — both are bare icon toggles, so they share that row.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     i2i: {
         label: 'Image to Image',
@@ -119,10 +120,10 @@ export const commands = {
         // the Input_Is_i2i gate (MpiIfElse 230), so it is live here and inert on t2i /
         // poseReference. Default matches the graph's baked 0.3. The bare `Denoise` key's
         // tier-2 alias `Input_Denoise` matches the node case-insensitively.
-        components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'enhancePrompt'],
+        components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
         defaults: { denoise: 0.30 },
     },
-    // Depth-ControlNet pose transfer. Third op on the SAME krea2_turbo_t2i.json graph:
+    // Depth-ControlNet pose transfer. Third op on the SAME krea2_t2i_<sfw|nsfw>.json graph:
     // Input_Image → AIO_Preprocessor → Krea2ControlImageEncode → Krea2ControlApply,
     // selected by the Input_depth_reference MpiIfElse. Composes with Input_Is_i2i
     // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
@@ -137,7 +138,7 @@ export const commands = {
         ],
         promptRequired: true,
         injectParams: { Input_depth_reference: true },
-        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'enhancePrompt'],
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     upscale: {
         label: 'Upscale',
@@ -149,7 +150,7 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: false,
-        components: ['useGrid', 'upscaleFactor', 'denoise'],
+        components: ['useGrid', 'upscaleFactor', 'denoise', 'krea2Turbo'],
         defaults: { denoise: 0.20 },
     },
     edit: {
@@ -198,7 +199,7 @@ export const commands = {
         // "change" = soft), so paraphrasing silently flips edit strength. Edit adherence
         // is tuned by grounding_px, not prompt length. Tried and failed: a "clarify, don't
         // expand" enhancer prompt.
-        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio'],
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'krea2Turbo'],
     },
     qwenEdit: {
         label: 'Edit',
@@ -237,7 +238,7 @@ export const commands = {
         ],
         requiresMask: true,
         promptRequired: true,
-        components: ['denoise'],
+        components: ['denoise', 'krea2Turbo'],
         defaults: { denoise: 0.30 },
     },
     change: {

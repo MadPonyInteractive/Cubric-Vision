@@ -45,12 +45,15 @@ assert.deepStrictEqual(urls, [], 'a text-only payload must contribute no URLs');
 // A static table cannot know that (it depends on a toggle, not the file+mode).
 const { stagesFor } = await import('../js/data/progressStages.js');
 
-assert.strictEqual(stagesFor('krea2_turbo_t2i.json', 'single'), 2,
-    'baseline: model-load + sampler');
-assert.strictEqual(stagesFor('krea2_turbo_t2i.json', 'single', 0), 2,
+// (Keyed on krea2_t2i.json since MPI-316 collapsed the turbo cards; stagesFor strips
+// the _sfw/_nsfw suffix, so the runtime files land on this key. Both tiers are
+// two-pass, hence 2.)
+assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single'), 2,
+    'baseline: one bar per sampler pass');
+assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', 0), 2,
     'enhance OFF must not change the recorded count');
-assert.strictEqual(stagesFor('krea2_turbo_t2i.json', 'single', 1), 3,
-    'enhance ON adds exactly one bar — else the counter shows 3/2 and reads as a hang');
+assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', 1), 3,
+    'a +1 delta adds exactly one bar — else the counter shows 3/2 and reads as a hang');
 
 // An unrecorded workflow stays unrecorded. A delta on top of "unknown" is still
 // unknown; returning 1 here would invent a total of 1 and show "2/1".
@@ -59,12 +62,17 @@ assert.strictEqual(stagesFor('not-a-real-workflow.json', 'single', 1), 0,
 assert.strictEqual(stagesFor('', 'single', 1), 0, 'empty filename => 0');
 
 // Existing callers pass no third arg — their behaviour must be byte-identical.
-assert.strictEqual(stagesFor('LTX_t2v.json', 'single'), 3, 'LTX single unchanged');
-assert.strictEqual(stagesFor('LTX_t2v_stage2.json', 'stage2'), 1, '_stage2 suffix still stripped');
-assert.strictEqual(stagesFor('Wan5B_t2v.json', 'single'), 1, 'Wan5B unchanged');
+// NOTE: filenames must be LOWERCASE here. stagesFor() looks the key up verbatim (it
+// only strips _stage2/_fp8/_sfw suffixes, it does not lowercase), and models.js stores
+// these filenames lowercase, so 'LTX_t2v.json' silently missed the table and returned
+// 0 — this assertion was failing before MPI-316 touched anything. Real callers pass the
+// models.js value, which is already lowercase.
+assert.strictEqual(stagesFor('ltx_t2v.json', 'single'), 3, 'LTX single unchanged');
+assert.strictEqual(stagesFor('ltx_t2v_stage2.json', 'stage2'), 1, '_stage2 suffix still stripped');
+assert.strictEqual(stagesFor('wan5b_t2v.json', 'single'), 1, 'Wan5B unchanged');
 
 // Negative/garbage deltas must not corrupt a real count.
-assert.strictEqual(stagesFor('krea2_turbo_t2i.json', 'single', -5), 2, 'negative delta clamps to 0');
+assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', -5), 2, 'negative delta clamps to 0');
 
 // ── the sidecar preference rule (mirrors generationService.exec.onComplete) ────
 // `positive = outputInfo.promptText || _positiveFromBox`
@@ -129,11 +137,19 @@ for (const op of ['upscale', 'detail']) {
     }
 }
 
-// Krea2's own label list must be index-aligned with its nine LoRA slots (+ index 0).
+// Krea2's label list must stay index-aligned with its style-card images (+ index 0 =
+// the no-style entry). Asserting the two arrays against EACH OTHER rather than against
+// a hardcoded count: the count grew 10 -> 11 when MidJourney was added and this test
+// kept asserting the old number, which is the rot a literal invites. What actually
+// matters is alignment — a label without its image (or vice versa) is the silent
+// half-application this guards. The gate/trigger-line count is enforced at BUILD time
+// by generate_krea2.py's _assert_style_rack.
 const krea2 = MODELS.find(m => m.id === 'krea2');
 assert.ok(krea2, 'krea2 must exist');
-assert.strictEqual(krea2.styleLoraLabels.length, 10,
-    '9 style LoRAs + the no-style entry at index 0 — a missing label silently half-applies a style');
+assert.ok(krea2.styleLoraLabels.length >= 2, 'krea2 must ship a style rack');
+assert.strictEqual(krea2.styleLoraLabels.length, krea2.styleLoraImages.length,
+    'every style label needs its card image and vice versa — a mismatch shifts the picker');
+assert.strictEqual(krea2.styleLoraLabels[0], 'None', 'index 0 must be the no-style entry');
 
 console.log('output-prompt-capture: all assertions passed');
 
