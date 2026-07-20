@@ -73,8 +73,17 @@ const outPathFor = (name) => {
 /** git output paths relative to repo root, forward-slashed (git wants those). */
 function rel(p) { return path.relative(REPO_ROOT, p).split(path.sep).join('/'); }
 
-/** raw/*.json that differ from HEAD (modified, staged, or untracked). This is the
- *  git-driven "what changed" — deterministic across checkouts/clones, unlike mtime. */
+/** raw/*.json that differ from HEAD (modified, staged, untracked, or DELETED), split by
+ *  whether the file still exists on disk. This is the git-driven "what changed" —
+ *  deterministic across checkouts/clones, unlike mtime.
+ *
+ *  The split matters: a deleted raw file must still be COMMITTED (the deletion is the
+ *  user's edit) but must never be CONVERTED — there is nothing on disk to read, so
+ *  handing it to the converter is an ENOENT crash mid-run, after the raw commit has
+ *  already landed. That happened on the krea2 turbo-template removal.
+ *
+ *  @returns {{toConvert: string[], toCommit: string[]}} basenames
+ */
 function gitChangedRaw() {
   // -uall so untracked files are listed individually (default collapses a wholly-
   // untracked dir to a single "?? raw/" line). Model Merger.json is gitignored, so
@@ -82,10 +91,17 @@ function gitChangedRaw() {
   const out = execFileSync('git', ['status', '--porcelain', '-uall', '--', 'comfy_workflows/raw'], {
     cwd: REPO_ROOT, encoding: 'utf8',
   });
-  return out.split('\n').filter(Boolean)
-    .map((l) => l.slice(3).trim().replace(/^"|"$/g, ''))       // strip status + quotes
-    .filter((p) => p.startsWith('comfy_workflows/raw/') && p.endsWith('.json'))
-    .map((p) => path.basename(p));
+  const rows = out.split('\n').filter(Boolean)
+    // Keep the XY status code — it is the only way to tell a deletion from an edit.
+    // 'R' (rename) reports old->new; the new path arrives as its own line, so the R
+    // line carries no conversion input of its own.
+    .map((l) => ({ xy: l.slice(0, 2), p: l.slice(3).trim().replace(/^"|"$/g, '') }))
+    .filter(({ p }) => p.startsWith('comfy_workflows/raw/') && p.endsWith('.json'));
+
+  return {
+    toConvert: rows.filter(({ xy }) => !xy.includes('D')).map(({ p }) => path.basename(p)),
+    toCommit: rows.map(({ p }) => path.basename(p)),
+  };
 }
 
 async function main() {
@@ -115,15 +131,21 @@ async function main() {
   }
 
   // 1. What changed — git-driven, not mtime. --all forces every raw file.
-  let changed;
+  //    `changed`   = what gets CONVERTED (must exist on disk)
+  //    `toCommit`  = what gets COMMITTED (includes deletions, which have no disk file)
+  //    --all reads the disk, so it has no deletions to carry: the two lists coincide.
+  let changed, toCommit;
   if (FORCE) {
     const { readdirSync } = await import('node:fs');
     changed = readdirSync(RAW_DIR).filter((f) => f.endsWith('.json'));
+    toCommit = changed;
   } else {
-    changed = gitChangedRaw();
+    ({ toConvert: changed, toCommit } = gitChangedRaw());
   }
-  if (!changed.length) { console.log('No raw/ workflows changed vs HEAD — nothing to do.'); return; }
-  console.log(`Changed raw workflow(s): ${changed.join(', ')}`);
+  if (!toCommit.length) { console.log('No raw/ workflows changed vs HEAD — nothing to do.'); return; }
+  const deletedCount = toCommit.length - changed.length;
+  console.log(`Changed raw workflow(s): ${changed.join(', ') || '(none to convert)'}`
+    + (deletedCount ? ` (+${deletedCount} deleted — committed, not converted)` : ''));
 
   // 1b. Filenames are normalized to lowercase on OUTPUT (see outPathFor) — the runtime
   //     file, its GEN template, and every models.js `workflows` key resolve on a
@@ -141,6 +163,7 @@ async function main() {
     const ignored = new Set(ignoredOut.split('\n').filter(Boolean).map((p) => path.basename(p.trim())));
     if (ignored.size) {
       changed = changed.filter((f) => !ignored.has(f));
+      toCommit = toCommit.filter((f) => !ignored.has(f));
       console.log(`Skipping gitignored raw: ${[...ignored].join(', ')}`);
     }
   }
@@ -149,7 +172,10 @@ async function main() {
   //    runtime are NOT committed here (too many commits); /mpi-end closes them.
   //    --all can be run on an already-committed raw tree (e.g. to re-bake runtime after
   //    a generator change) — nothing to commit then, so skip the commit rather than error.
-  const rawPaths = changed.map((f) => `comfy_workflows/raw/${f}`);
+  // Commit list, NOT the convert list — a deleted raw file has no disk copy to convert
+  // but its deletion is still the user's edit and must be recorded. `git add` stages a
+  // deletion the same as a modification when given the path.
+  const rawPaths = toCommit.map((f) => `comfy_workflows/raw/${f}`);
   execFileSync('git', ['add', '--', ...rawPaths], { cwd: REPO_ROOT, stdio: 'inherit' });
   const rawStaged = execFileSync('git', ['diff', '--cached', '--name-only', '--', ...rawPaths],
     { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
