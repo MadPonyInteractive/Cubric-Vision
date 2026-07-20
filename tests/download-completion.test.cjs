@@ -11,7 +11,7 @@ const {
     clearDownloadMarker,
     getPartialDownloadState,
 } = require('../routes/downloadCompletion');
-const { FileDownloader } = require('../routes/downloadManager');
+const { FileDownloader, _setModelStatus, _installStore } = require('../routes/downloadManager');
 
 async function withTempDir(fn) {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'cubric-download-test-'));
@@ -134,12 +134,61 @@ async function testDownloaderCancelUsesStop() {
     });
 }
 
+// MPI-317 F5 — once the reconciler has settled the store job to a terminal state
+// (disk truth on a resumed install), the legacy map's trailing status walk
+// (downloading→installing→complete) must keep driving its work WITHOUT pushing
+// writes into the settled store (each write was a rejected 'Illegal transition'
+// warn). Guard: store-terminal → map write only, no store transition attempt.
+async function testMapWalkDoesNotFightSettledStore() {
+    const modelId = 'f5-test-model';
+    _installStore.registerModelJob({
+        modelId,
+        engine: 'local',
+        deps: [{ depId: 'f5-test-dep', type: 'model', seedBytes: 10 }],
+    });
+    const transitions = [];
+    const realTransition = _installStore.transitionModel;
+    _installStore.transitionModel = (id, to, reason) => {
+        transitions.push({ id, to });
+        return realTransition(id, to, reason);
+    };
+    try {
+        // Walk the store to done (reconciler-settled analogue).
+        realTransition(modelId, 'downloading', 'test');
+        realTransition(modelId, 'done', 'test: reconciler settled');
+        transitions.length = 0;
+
+        // Trailing map walk on the settled job: map field updates, store untouched.
+        const mapJob = { modelId, status: 'downloading' };
+        _setModelStatus(mapJob, 'installing', 'uw installing');
+        assert.strictEqual(mapJob.status, 'installing'); // map still drives its work
+        _setModelStatus(mapJob, 'complete', 'uw done');
+        assert.strictEqual(mapJob.status, 'complete');
+        assert.deepStrictEqual(transitions, []); // no store write attempted
+        assert.strictEqual(_installStore.modelJob(modelId).status, 'done');
+
+        // Control: a NON-terminal store job still receives the write.
+        const otherId = 'f5-test-model-2';
+        _installStore.registerModelJob({
+            modelId: otherId,
+            engine: 'local',
+            deps: [{ depId: 'f5-test-dep-2', type: 'model', seedBytes: 10 }],
+        });
+        _setModelStatus({ modelId: otherId, status: 'queued' }, 'downloading', 'test');
+        assert.deepStrictEqual(transitions, [{ id: otherId, to: 'downloading' }]);
+    } finally {
+        _installStore.transitionModel = realTransition;
+        _installStore.clear();
+    }
+}
+
 (async () => {
     await testMarkerCompletionState();
     await testDownloaderResumesMarkedPartial();
     await testDownloaderStartsWhenNoPartialExists();
     await testDownloaderDoesNotResumeUnmarkedExistingFile();
     await testDownloaderCancelUsesStop();
+    await testMapWalkDoesNotFightSettledStore();
     console.log('download-completion tests passed');
 })().catch((err) => {
     console.error(err);

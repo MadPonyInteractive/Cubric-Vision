@@ -931,7 +931,18 @@ const _DEP_STATUS_TO_STORE = {
 function _setModelStatus(modelJob, status, reason) {
     modelJob.status = status;
     const to = _MODEL_STATUS_TO_STORE[status];
-    if (to && store.modelJob(modelJob.modelId)) store.transitionModel(modelJob.modelId, to, reason);
+    const sj = store.modelJob(modelJob.modelId);
+    // MPI-317 F5: on a RESUMED install the reconciler can settle the store job to a
+    // terminal state from disk truth (invariant #3) while this legacy map is still
+    // walking its downloading→installing→complete tail — the map drives real trailing
+    // work (node requirements re-verify + the model-level download:complete broadcast),
+    // so the walk must continue. But pushing its trailing statuses into an
+    // already-settled store just gets a (correct) 'Illegal transition … rejected' warn
+    // per resumed install. Terminal is terminal: once the store has settled, the map
+    // finishes its walk without writing to the store. Dies with the MPI-318 write-flip
+    // (map status-writes deleted).
+    if (sj && store.MODEL_TERMINAL.has(sj.status)) return;
+    if (to && sj) store.transitionModel(modelJob.modelId, to, reason);
 }
 function _setDepStatus(depJob, status, reason) {
     depJob.status = status;
@@ -2752,4 +2763,6 @@ module.exports = {
     _filterDepsForEngine, // MPI-276 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
+    _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
+    _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests
 };

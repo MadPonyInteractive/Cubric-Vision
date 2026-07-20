@@ -388,8 +388,20 @@ const downloadService = {
             // later finds no job and skips the POST, and the tile reverts to Install
             // while _inFlight still counts it → the queued install silently vanishes).
             // MPI-276 Phase 8.
+            // MPI-317 F4: 'installing' belongs in this keep-set too. On a resumed
+            // install the backend reconciler settles + immediately PRUNES the store
+            // job (disk truth) while the legacy-map walk is still running the
+            // custom-node phase — the pruned snapshot then arrived here and dropped
+            // the FE job mid-'installing' (it wasn't in the keep-set), so the
+            // model-level download:complete found state.downloadJobs empty: no job
+            // to anchor the completion on (missed toast) and the cascade re-sync
+            // toasted stale models instead. 'installing' is part of the busy set
+            // (MPI-241 no-Install-flash contract) and must survive a snapshot gap
+            // exactly like 'downloading'; the model-level complete/failed event
+            // that always follows is what settles it.
             const clientPending = state.downloadJobs.filter(
-                j => (j.status === 'pending' || j.status === 'downloading' || j.status === 'queued')
+                j => (j.status === 'pending' || j.status === 'downloading' || j.status === 'queued'
+                        || j.status === 'installing')
                     && !snapshotIds.has(j.modelId));
             state.downloadJobs = [...jobs, ...clientPending];
             state.downloadQueueActive = state.downloadJobs.some(
