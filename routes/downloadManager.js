@@ -3,12 +3,18 @@
  *
  * Endpoints:
  *   POST /comfy/models/download/start   — enqueue a model's deps
- *   POST /comfy/models/download/cancel  — clean stop + remove partial (no resume)
+ *   POST /comfy/models/download/cancel  — clean stop + remove partial (user intent)
  *   GET  /comfy/downloads/status         — full queue snapshot
  *   GET  /comfy/downloads/stream         — SSE stream
  *
- * Downloads do NOT resume (MPI-258 Bug 2): NDH resume appended a full 200 response
- * onto a partial → SHA256 corruption. A cancelled/interrupted download restarts clean.
+ * Resume contract (MPI-317): cancel is INTENT → partial deleted; failure/stall/app
+ * shutdown is ACCIDENT → partial kept, next attempt resumes via Range. Safe because
+ * the installed NDH clears __isResumed on a 200-not-206 answer and reopens the file
+ * in truncate (not append) mode — the MPI-258 Bug 2 corruption (full 200 body
+ * appended onto a partial) cannot recur on this version. A resumed stream skips the
+ * MPI-296 incremental hash (it'd only see the tail) and falls back to the full disk
+ * re-read in _verifySha256; a hash mismatch still scrubs the file, so a corrupt
+ * partial costs one failed verify, never a corrupt install.
  */
 
 'use strict';
@@ -37,6 +43,8 @@ const {
     isCompleteOnDisk,
     markDownloadInProgress,
     clearDownloadMarker,
+    getPartialDownloadState,
+    getDownloadMarkerPath,
 } = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
 const remoteModels = require('./remoteModels');
@@ -508,10 +516,11 @@ class FileDownloader {
         this._lastBytes = -1;
         // MPI-296 — SHA256 computed incrementally while the file streams in, so the
         // post-download verify never re-reads the whole file (killed a 35s wall on a
-        // 6.6GB weight). Safe because downloads NEVER resume (MPI-258 Bug 2): the pipe
-        // sees every byte once, in order. Reset on each 'download' (DHL re-emits it on
-        // retry after clearing __pipes). _streamHashHex holds the final digest for
-        // _verifySha256's in-memory fast path; null → fall back to disk re-read.
+        // 6.6GB weight). Valid only for FRESH streams (pipe sees every byte once, in
+        // order); a RESUMED stream (MPI-317) nulls the hash in the 'download' handler
+        // and _verifySha256 falls back to the disk re-read. Reset on each 'download'
+        // (DHL re-emits it on retry after clearing __pipes). _streamHashHex holds the
+        // final digest for _verifySha256's in-memory fast path; null → disk re-read.
         this._streamHash = null;
         this._streamHashHex = null;
     }
@@ -528,7 +537,17 @@ class FileDownloader {
         // (response → pipe1 → … → fileStream), so this MUST be a Transform that
         // forwards every chunk unchanged — a Writable would swallow the bytes and
         // starve the file stream. Hash on the way through, pass the chunk along.
-        this._downloader.on('download', () => {
+        this._downloader.on('download', (evt) => {
+            // MPI-317: on a RESUMED stream the pipe only sees bytes from the resume
+            // offset — an incremental hash would be tail-only garbage that fails
+            // verify and scrubs a good file. Null the hash instead; _verifySha256
+            // falls back to its full disk re-read (slower, correct). Fresh (non-
+            // resumed) starts keep the MPI-296 fast path.
+            if (evt && evt.isResumed) {
+                this._streamHash = null;
+                this._streamHashHex = null;
+                return;
+            }
             this._streamHash = crypto.createHash('sha256');
             this._streamHashHex = null;
             const hashPass = new nodeStream.Transform({
@@ -614,10 +633,18 @@ class FileDownloader {
             }
         });
 
-        // Error occurred
+        // Error occurred — partial is KEPT (removeOnFail:false) so a retry resumes.
         this._downloader.on('error', (err) => {
             _activeDownloaders.delete(this.depJob.id);
             if (this.depJob.status === 'paused' || this.depJob.status === 'cancelled') return;
+            // MPI-317: 416 Range Not Satisfiable = the on-disk partial is LARGER than
+            // the real file (garbage). Kept, it would 416 on every retry forever —
+            // scrub it so the next attempt starts clean. Only this status; a kept
+            // partial is the whole point of removeOnFail:false.
+            if (err && err.status === 416) {
+                fs.remove(this.localPath).catch(() => {});
+                clearDownloadMarker(this.localPath).catch(() => {});
+            }
             _setDepStatus(this.depJob, 'failed', 'downloader error');
             this.depJob.error = err.message;
             _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
@@ -633,11 +660,20 @@ class FileDownloader {
         const fileName = path.basename(this.localPath);
         const destDir = path.dirname(this.localPath);
 
-        // DO NOT add `resumeIfFileExists`/`override`. download() scrubs any stale/partial
-        // file before start() so NDH always writes one clean copy (no " (1)" dup). We do
-        // NOT resume partials at all (MPI-258 Bug 2), so no resume option belongs here.
+        // MPI-317 resume contract (resume itself is EXPLICIT — download() calls
+        // resumeFromFile on a marker-blessed partial; no resumeIfFileExists here, so
+        // NDH never resumes a file the marker doesn't vouch for). Safe on this NDH:
+        // a 200-not-206 answer clears __isResumed and truncates instead of appending
+        // (the MPI-258 Bug 2 corruption). override:true so a stale COMPLETE file
+        // (size === total) is truncated and re-downloaded in place — never a
+        // " (1)" duplicate (MPI-243). removeOnStop/removeOnFail:false — NDH must
+        // never delete bytes on its own; deletion is OURS and happens only on user
+        // cancel (cancel()), url-mismatch scrub, 416 scrub, and SHA256 mismatch.
         this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
             fileName: fileName,
+            override: true,
+            removeOnStop: false,
+            removeOnFail: false,
             // NDH default timeout is -1 (no socket timeout) → a black-hole route
             // (DNS resolves but the server never responds) hangs at 0% forever.
             // 30s socket timeout makes a stalled connection emit 'error' instead
@@ -651,23 +687,56 @@ class FileDownloader {
 
     async download() {
         await this._ensureDownloader();
-        // MPI-258 Bug 2: NEVER resume a leftover .part. NDH resumes with
-        // `Range: bytes=<n>-` on a file opened in append mode; when R2/Cloudflare
-        // answers 200 (full body) instead of 206, it appends the WHOLE file onto the
-        // partial → SHA256 mismatch (observed live on the 25GB LTX transformer). A
-        // stale/partial file at localPath is always scrubbed for a clean single-stream
-        // start. (Also covers the MPI-243 " (1)" duplicate: a stale COMPLETE file whose
-        // marker was already cleared — installed deps are marked complete upstream and
-        // never reach download(), so any file here is stale.)
-        await fs.remove(this.localPath).catch(() => {});
+        // MPI-317: a marker-blessed partial (stall/crash/shutdown left both the file
+        // AND its .cubricdl marker) resumes via an explicit Range request — see the
+        // header for the full contract and the constructor comment for why the
+        // MPI-258 Bug 2 append-corruption cannot recur. Resume ONLY when the marker's
+        // url matches this dep's url (a repointed R2 object must not be Range-read
+        // into a stale partial — lenient: legacy markers without a url still resume,
+        // the SHA256 verify is the net). Everything else — no marker, empty file,
+        // url mismatch, stale COMPLETE file (MPI-243) — starts clean; override:true
+        // truncates in place, never a " (1)" duplicate.
+        const partial = await getPartialDownloadState(this.localPath);
+        let markerUrl = null;
+        if (partial.resumable) {
+            const marker = await fs.readJson(getDownloadMarkerPath(this.localPath)).catch(() => ({}));
+            markerUrl = marker.url || null;
+        }
         await markDownloadInProgress(this.localPath, {
             depId: this.depJob.id,
             url: this.depJob.url,
         });
+        if (partial.resumable && (!markerUrl || markerUrl === this.depJob.url)) {
+            this.depJob.downloadedBytes = partial.downloaded;
+            // Not awaited (same idiom as start() below): the promise resolves only
+            // when the whole download finishes — events drive completion. Errors
+            // surface through the 'error' handler; the catch just silences the
+            // duplicate floating rejection.
+            this._downloader.resumeFromFile(this.localPath, {
+                downloaded: partial.downloaded,
+                fileName: partial.fileName,
+            }).catch(() => {});
+            return;
+        }
+        if (partial.resumable) await fs.remove(this.localPath).catch(() => {});
         this._downloader.start();
     }
 
+    // MPI-317: cancel is user INTENT — stop the stream AND delete the partial +
+    // marker. stop() itself no longer removes anything (removeOnStop:false), so
+    // the deletion here is the only one on this path.
     async cancel() {
+        if (this._downloader) {
+            await this._downloader.stop().catch(() => false);
+        }
+        await fs.remove(this.localPath).catch(() => {});
+        await clearDownloadMarker(this.localPath).catch(() => {});
+    }
+
+    // MPI-317: shutdown/teardown stop — stream closed, partial + marker KEPT so the
+    // next app start resumes via Range. Used by cancelAllDownloads (SIGTERM/SIGINT),
+    // never by the user-cancel route.
+    async stopKeep() {
         if (this._downloader) {
             await this._downloader.stop().catch(() => false);
         }
@@ -2422,8 +2491,11 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
 
 function cancelAllDownloads() {
+    // MPI-317: shutdown is an ACCIDENT for the download, not user intent — stop the
+    // streams but KEEP partials + markers so the next app start resumes via Range.
+    // stopKeep(), never cancel() (which deletes).
     for (const [, downloader] of _activeDownloaders) {
-        downloader.cancel().catch(() => {});
+        downloader.stopKeep().catch(() => {});
     }
     _activeDownloaders.clear();
     for (const [, job] of _modelJobs) {
