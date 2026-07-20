@@ -651,6 +651,19 @@
 }
 
 /* Footer actions — host for Install / Update / Uninstall MpiButtons */
+/* MPI-317 (F3) — live speed/ETA row above the footer while a download runs.
+   min-height keeps the panel from jumping when the first tick fills the text. */
+.mpi-detail__dlstats {
+    flex: none;
+    padding: var(--s-3) var(--s-5) 0;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    min-height: 15px;
+}
+.mpi-detail__dlstats[hidden] { display: none; }
+
 .mpi-detail__actions {
     flex: none;
     padding: var(--s-4) var(--s-5);

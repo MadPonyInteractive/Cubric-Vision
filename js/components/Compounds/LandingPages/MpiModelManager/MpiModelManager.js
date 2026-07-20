@@ -78,6 +78,7 @@ export const MpiModelManager = ComponentFactory.create({
                     <button class="mpi-detail__close" id="detail-close" type="button" aria-label="Close">${renderIcon('close', 'md')}</button>
                 </div>
                 <div class="mpi-detail__body" id="detail-body"></div>
+                <div class="mpi-detail__dlstats" id="detail-dlstats" hidden></div>
                 <div class="mpi-detail__actions" id="detail-actions"></div>
             </aside>
         </div>`,
@@ -904,6 +905,31 @@ export const MpiModelManager = ComponentFactory.create({
         const detailPanel = qs('#detail-panel', el);
         const detailBody = qs('#detail-body', el);
         const detailActions = qs('#detail-actions', el);
+        const detailStats = qs('#detail-dlstats', el);
+
+        // MPI-317 (F3) — live speed + ETA line for the open detail panel. job.speed
+        // is the backend's already-formatted string ("24.1 MB/s"); parse it back to
+        // bytes/s for the ETA instead of re-deriving a rate client-side. Text only
+        // while bytes are actually streaming — the verifying/installing phases have
+        // their own tile treatment and a stale rate would lie.
+        function _speedToBytes(speedStr) {
+            const m = /([\d.]+)\s*(KB|MB|GB)\/s/i.exec(speedStr || '');
+            if (!m) return 0;
+            return parseFloat(m[1]) * ({ kb: 1024, mb: 1048576, gb: 1073741824 })[m[2].toLowerCase()];
+        }
+        function _dlStatsText(job) {
+            if (!job || !job.totalBytes || job.indeterminate || job.phase === 'verifying') return '';
+            if (!['downloading', 'installing', 'pending', 'queued'].includes(job.status)) return '';
+            if (!(job.downloadedBytes > 0) || !job.speed) return '';
+            const gb = b => (b / 1073741824).toFixed(1);
+            let eta = '';
+            const rate = _speedToBytes(job.speed);
+            if (rate > 0 && job.totalBytes > job.downloadedBytes) {
+                const s = Math.round((job.totalBytes - job.downloadedBytes) / rate);
+                eta = s >= 60 ? ` · ~${Math.round(s / 60)} min left` : ' · under 1 min left';
+            }
+            return `${job.speed} · ${gb(job.downloadedBytes)} / ${gb(job.totalBytes)} GB${eta}`;
+        }
 
         function _destroyDetailToggles() {
             _detailOpToggles.forEach(({ inst }) => inst?.el?.destroy?.());
@@ -1014,6 +1040,13 @@ export const MpiModelManager = ComponentFactory.create({
             // progress bar, not keep "Update" up while bytes stream to disk unseen.
             // anyInstalled is checked BEFORE the TERMINAL-lingering isBusy so a spent
             // 'complete' job never keeps Cancel up once re-sync flips installed (MPI-241).
+            // MPI-317 (F3) — speed/ETA row above the footer. Visible whenever the
+            // download UI is up (Cancel showing); text fills on the first progress
+            // tick — the panel is NOT rebuilt on ticks (rebuildDetail:false), the
+            // download:progress listener patches this row's textContent in place.
+            detailStats.hidden = !(st.isActiveDownload || st.isBusy);
+            detailStats.textContent = _dlStatsText(st.job);
+
             detailActions.innerHTML = '';
             if (st.isActiveDownload) {
                 const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'md' });
@@ -1351,7 +1384,16 @@ export const MpiModelManager = ComponentFactory.create({
             if (rebuildDetail && _activeDetail && _activeDetail.id === modelId && model) openDetail(model);
         }
 
-        _unsubs.push(Events.on('download:progress', ({ modelId }) => { _patchTile(modelId, { rebuildDetail: false }); }));
+        _unsubs.push(Events.on('download:progress', (data) => {
+            _patchTile(data.modelId, { rebuildDetail: false });
+            // MPI-317 (F3) — the open panel is not rebuilt on ticks; patch just the
+            // stats row. The event payload carries speed/bytes but no status — the
+            // job in state is the source for that.
+            if (_activeDetail && _activeDetail.id === data.modelId && !detailStats.hidden) {
+                const job = state.downloadJobs.find(j => j.modelId === data.modelId);
+                if (job) detailStats.textContent = _dlStatsText(job);
+            }
+        }));
 
         // download:started — patch ONLY the started model's tile (progress bar) + flip
         // its open detail footer to Cancel. The model's tile already exists (the grid
