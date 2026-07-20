@@ -48,14 +48,24 @@ export const PROGRESS_STAGES = Object.freeze({
     // NVIDIA PiD upscaler — one 4-step distilled sampler pass = a single tqdm bar
     // (no separate model-load bar surfaces). Live-confirmed 2026-07-03.
     'nvidia_pid.json':           Object.freeze({ single: 1 }),
-    // Krea2 Turbo (MPI-242) — single-stage: BOTH ClownsharK sampler passes live in
-    // one file with a direct latent hand-off, so there is no `preview`/`stage2` mode.
-    // One file serves t2i, i2i AND poseReference (Input_Is_i2i / Input_depth_reference
-    // select the branch), and this table is keyed by FILE, so one key covers all three.
-    // 2 bars = model-load + sampler (user-confirmed 2026-07-10). If the depth branch's
-    // depth preprocessor surfaces its own tqdm bar, this needs a per-op split.
+    // Krea2 (MPI-242, re-counted MPI-316) — single-stage: BOTH ClownsharK sampler
+    // passes live in one file with a direct latent hand-off, so there is no
+    // `preview`/`stage2` mode. One file serves t2i, i2i AND poseReference
+    // (Input_Is_i2i / Input_depth_reference select the branch), and this table is
+    // keyed by FILE, so one key covers all three. stagesFor() strips the _sfw/_nsfw
+    // suffix, so this one key also covers both content variants.
+    //
+    // 1 bar = the sampler, with the quality tier (Input_Tier 1). The FAST tier emits a
+    // SECOND bar — user-counted 2026-07-20, turbo vs non-turbo on the same graph. Tier
+    // is a runtime toggle, not a file (MPI-316), so that +1 CANNOT live in this table:
+    // it is supplied per run as `extraBars` from commandExecutor, exactly like the
+    // enhancer delta. Recording 2 here would show `1/2` on every quality run.
+    //
+    // The prompt enhancer also runs before sampling, but it only fills ~10-20% of a
+    // bar rather than emitting its own, so it is NOT counted (user-confirmed
+    // 2026-07-20, superseding the MPI-242 note in stagesFor's docblock).
     // Its detailer/upscaler get NO entry, per the convention above.
-    'krea2_turbo_t2i.json':      Object.freeze({ single: 2 }),
+    'krea2_t2i.json':            Object.freeze({ single: 1 }),
     // Boogu-Image-Edit (MPI-257) — one graph per tier, ONE SamplerCustom pass (the
     // MpiAnySwitch selects the tier's chain; only that chain runs). Live-confirmed 1 bar
     // (sampler only; no separate model-load bar surfaces, same as PiD) — MPI-266 fixed the
