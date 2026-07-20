@@ -5,24 +5,25 @@ Krea2 needs NO op split: ONE universal graph serves t2i + i2i + pose-reference +
 switched at RUNTIME by injected values. EDIT is mask-based: an optional Input_Mask
 (painted in the History workspace) drives a masked crop; empty → whole-image edit.
 Input_HiRes_Mode (edit only) forces the masked crop to 1024px when a mask is present.
-But it ships across TWO axes → FOUR runtime files per t2i template:
+It ships across ONE axis → TWO runtime files per template:
 
-  tier    : High (Raw int8, cfg 3, working negatives) | Balanced (Turbo, cfg 1)
   content : SFW | NSFW
 
-Tiers ship as SEPARATE files (sizeTier "one tier per card" contract, like Boogu), so
-`<base>_<tier>_<content>.json` — high_sfw / high_nsfw / balanced_sfw / balanced_nsfw.
-Each becomes its own ModelDef card (4 total). (detailer/upscaler have no tier switch —
-see main(): only the t2i template fans out to 4; the others keep the old 2-way sfw/nsfw
-split via their own VARIANTS-equivalent — see the per-template note in main.)
+Tier is NOT a file axis (MPI-316). Both tiers run from the same Raw weight — the
+`Accelerator Lora` (turbo-distill, an SVD delta extracted FROM Raw) reconstructs the old
+Turbo transformer at strength 1.0, gated by an MpiMath off Input_Tier. So the app's
+krea2Turbo toggle injects the tier per run, and the two Turbo transformers were dropped,
+collapsing the Krea2 library from 4 cards to 2.
 
-The t2i source template routes here (registry `krea2_` prefix):
-  krea2_t2i_template.json -> _high_sfw / _high_nsfw / _balanced_sfw / _balanced_nsfw
+The source templates route here (registry `krea2_` prefix):
+  krea2_t2i_template.json       -> _sfw / _nsfw
+  krea2_detailer_template.json  -> _sfw / _nsfw
+  krea2_upscaler_template.json  -> _sfw / _nsfw
 
 Per output this handler bakes the three things a hand-export cannot be trusted to carry:
 
-  1. UNETLoader weight (titled `Load Diffusion Model`) — the tier×content diffusion weight.
-  2. Input_Tier.int — 1=High / 2=Balanced — pins the runtime sampler-chain switch.
+  1. UNETLoader weight (titled `Load Diffusion Model`) — the content-variant Raw weight.
+  2. Input_Tier.int — a SAFE DEFAULT of 1 (High); the krea2Turbo toggle is the authority.
   3. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass).
 
   (MPI-272: the optional Input_Image is now a self-gating MpiLoadImageFromPath — a
@@ -53,18 +54,19 @@ WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 UNET_LOADER_TITLE = "Load Diffusion Model"
 TIER_TITLE = "Input_Tier"
 
-# Krea2 now ships FOUR runtime files = {tier} × {content}. One universal graph serves
-# t2i / i2i / edit (edit = optional Input_Mask crop, runtime-injected), and carries
-# a High/Balanced sampler-chain switch keyed by Input_Tier. Tiers ship as SEPARATE files
-# (sizeTier "one tier per card" contract, like Boogu) — so each file bakes THREE things:
+# Krea2 ships TWO runtime files per template = {content}. One universal graph serves
+# t2i / i2i / edit (edit = optional Input_Mask crop, runtime-injected). Both tiers now run
+# from the SAME Raw weight: the `Accelerator Lora` (turbo-distill, extracted as an SVD
+# delta FROM Raw) reconstructs the old Turbo transformer at strength 1.0, so tier is a
+# RUNTIME choice, not a separate file (MPI-316). Each file bakes THREE things:
 #
-#   1. UNETLoader weight   — the tier×content diffusion weight
-#   2. Input_Tier.int      — 1 = High, 2 = Balanced (picks the sampler chain at runtime)
+#   1. UNETLoader weight   — the content-variant Raw diffusion weight
+#   2. Input_Tier.int      — baked to 1 (High) as a SAFE DEFAULT only; see _bake_tier
 #   3. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass)
 #
-# Tier map (matches the live bench + Krea2-Edit README recipe):
-#   Tier 1 = HIGH     — Raw int8_convrot weight, cfg 3, working negatives (needs Input_Negative)
-#   Tier 2 = BALANCED — Turbo weight, cfg 1 (distilled), no working negative
+# Tier map (now runtime-injected by the krea2Turbo toggle, NOT baked per file):
+#   Tier 1 = HIGH     — cfg 3, working negatives, accelerator LoRA gated OFF (strength 0)
+#   Tier 2 = BALANCED — cfg 1, accelerator LoRA at 1.0, negative computed then discarded
 #
 # The weight filenames are loader-relative (diffusion_models/) names; they MUST match the
 # dep `filename` tails in dependencies.js and the on-disk / R2 locations (playbook §3).
@@ -73,25 +75,13 @@ TIER_TITLE = "Input_Tier"
 # bypass LoRA must be ACTIVE (1.0) to match the NSFW output. The NSFW weight already
 # unfilters itself, so bypass is redundant there (0.0). The LoRA is a dep of BOTH — only
 # the baked strength differs. (Present on t2i only; a no-op where the node is absent.)
+#
+# ONE map for every krea2 template now — t2i, detailer and upscaler all fan to sfw/nsfw
+# on Raw weights. The old LEGACY_VARIANTS (turbo detailer/upscaler) died with the Turbo
+# transformers; their templates were deleted from raw/ and GEN_DIR.
 VARIANTS = {
-    "high_sfw":     {"tier": 1, "weight": "krea2_raw_int8_convrot.safetensors",              "bypass": 1.0},
-    "high_nsfw":    {"tier": 1, "weight": "lustify-v10-krea-raw-int8_convrot.safetensors",   "bypass": 0.0},
-    "balanced_sfw": {"tier": 2, "weight": "krea2_turbo_fp8_scaled.safetensors",              "bypass": 1.0},
-    "balanced_nsfw":{"tier": 2, "weight": "lustify-v10-krea-turbo-int8_convrot.safetensors", "bypass": 0.0},
-}
-
-# Tierless detailer/upscaler ship in TWO flavours, one template each — the weight is
-# baked from the FILENAME, not a runtime tier:
-#   krea2_turbo_detailer/upscaler_template -> TURBO weights (feeds the Balanced cards)
-#   krea2_detailer/upscaler_template       -> RAW   weights (feeds the High cards)
-# Both fan to 2 (sfw/nsfw). build() picks the map by "turbo" in the template name.
-LEGACY_VARIANTS = {   # turbo detailer/upscaler -> Balanced cards
-    "sfw":  {"tier": None, "weight": "krea2_turbo_fp8_scaled.safetensors",              "bypass": 1.0},
-    "nsfw": {"tier": None, "weight": "lustify-v10-krea-turbo-int8_convrot.safetensors", "bypass": 0.0},
-}
-RAW_VARIANTS = {      # raw detailer/upscaler -> High cards
-    "sfw":  {"tier": None, "weight": "krea2_raw_int8_convrot.safetensors",              "bypass": 1.0},
-    "nsfw": {"tier": None, "weight": "lustify-v10-krea-raw-int8_convrot.safetensors",   "bypass": 0.0},
+    "sfw":  {"weight": "krea2_raw_int8_convrot.safetensors",            "bypass": 1.0},
+    "nsfw": {"weight": "lustify-v10-krea-raw-int8_convrot.safetensors", "bypass": 0.0},
 }
 
 BYPASS_LORA_TITLE = "Input_Bypass_Filter_Lora"
@@ -171,10 +161,12 @@ def _sanitize_injected_inputs(workflow: dict) -> None:
             print(f"  [SCRUB]  {title}.{key}: {before!r} -> {safe!r}")
 
 
-def _bake_tier(workflow: dict, tier: int) -> None:
-    """Bake Input_Tier.int per file (1=High, 2=Balanced). Tiers ship as separate runtime
-    files, so the runtime tier switch is pinned at build — not left to the app to inject.
-    Forced, never trusted from the exported template (same rule as the diffusion weight)."""
+def _bake_tier(workflow: dict, tier: int = 1) -> None:
+    """Bake Input_Tier.int as a SAFE DEFAULT of 1 (High). The app's krea2Turbo toggle is
+    the real authority and injects 1 or 2 per run — but injection fails SILENTLY when a
+    title stops matching, so a baked 1 degrades a broken injection to the quality tier
+    instead of shipping whatever the user last exported. Forced, never trusted from the
+    exported template (same rule as the diffusion weight)."""
     node = _find_by_title(workflow, TIER_TITLE)
     if node is None:
         raise SystemExit(f"[FAIL] No MpiInt titled '{TIER_TITLE}' — graph changed?")
@@ -232,31 +224,21 @@ def _assert_style_rack(workflow: dict) -> int:
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. Emit the runtime files for this template. A template WITH an
-    Input_Tier node fans out to 4 (tier×content: high/balanced × sfw/nsfw); a tierless
-    template (detailer/upscaler) keeps the original 2-way sfw/nsfw split."""
+    """Orchestrator entry. Emit the runtime files for this template — always 2
+    (sfw/nsfw) on Raw weights. Tier is no longer a file axis; the krea2Turbo toggle
+    injects it at runtime, and _bake_tier writes only a safe default."""
     # krea2_t2i_template.json -> krea2_t2i
     base = source_path.name[: -len("_template.json")]
     print(f"Template: {source_path.name}")
 
-    # Matrix selection:
-    #   - t2i (has Input_Tier)                 -> VARIANTS       (4: tier×content)
-    #   - krea2_turbo_detailer/upscaler        -> LEGACY_VARIANTS (2: turbo sfw/nsfw -> Balanced cards)
-    #   - krea2_detailer/upscaler (raw, no tier)-> RAW_VARIANTS   (2: raw   sfw/nsfw -> High cards)
-    has_tier = _find_by_title(json.loads(source_path.read_text(encoding="utf-8")), TIER_TITLE) is not None
-    if has_tier:
-        variants = VARIANTS
-    elif "turbo" in source_path.name:
-        variants = LEGACY_VARIANTS
-    else:
-        variants = RAW_VARIANTS
-
     out_paths: list[Path] = []
-    for suffix, spec in variants.items():
+    for suffix, spec in VARIANTS.items():
         workflow = json.loads(source_path.read_text(encoding="utf-8"))
         _bake_weight(workflow, spec["weight"])
-        if spec["tier"] is not None:
-            _bake_tier(workflow, spec["tier"])
+        # Tierless graphs (no Input_Tier node) skip this — _bake_tier raises if the node
+        # is required-but-missing, so only call it where the node actually exists.
+        if _find_by_title(workflow, TIER_TITLE) is not None:
+            _bake_tier(workflow)
         _bake_bypass_strength(workflow, spec["bypass"])
         _sanitize_injected_inputs(workflow)
         n_styles = _assert_style_rack(workflow)
