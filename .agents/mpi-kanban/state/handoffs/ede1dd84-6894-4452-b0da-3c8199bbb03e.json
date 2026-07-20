@@ -1,0 +1,166 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "ede1dd84-6894-4452-b0da-3c8199bbb03e",
+  "generated_at": "2026-07-20T04:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-316 — Krea2 Turbo->RAW+accelerator-LoRA A/B, then the 4->2 card collapse",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Test whether Krea2 RAW + a speed-up LoRA matches the separately-shipped Turbo transformer. If it does, drop the Turbo weights and collapse the 4-card Krea2 library to 2 with a runtime tier toggle. Real driver: users report Turbo SEED-LOCKS (vague prompt + new seed => near-identical result).",
+    "status": "in_progress",
+    "summary": "A/B is DONE and PASSED — RAW + krea2_turbo_distill_r128 @1.0 reproduces Turbo seed-for-seed at ~29% lower wall-clock, on both anime and photoreal prompts. LoRA dep entry + R2 upload are done and verified. The turbo toggle UI is built and wired but has NEVER RUN IN THE APP. Remaining work is the actual 4->2 collapse (workflow regen, ModelDef/dep deletion, progressStages, webp, consumer sweep, R2 deletes)."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "A/B: Turbo seed-lock confirmed on matched SFW weights (3 seeds, vague prompt -> one image; RAW gave 3 distinct)",
+      "A/B: RAW+LoRA@1.0 reproduces Turbo seed-for-seed on anime AND photoreal prompts",
+      "Timings matched-step: Turbo 8+4=36s / 10+5=43s / 12+6=51s vs LoRA 25-26s / 31s / 36s (~29% faster at every step count)",
+      "SHIPPING CONFIG CHOSEN: 12+6 steps @ strength 1.0 (user call) — 36s, same wall-clock as Turbo 8+4, 50% more steps",
+      "Confirmed euler-beta @ 40 beats multistep/res_2m @ 25 on RAW (docs/models/krea2/samplers.md holds)",
+      "Discovered watermarks come from STOCK Krea2 RAW (not the Lustify NSFW finetune); krea2filterbypass3 suppresses them",
+      "Research written: .agents/mpi-kanban/tasks/MPI-316/research/01-turbo-lora-parity.md",
+      "Card MPI-316 moved todo -> doing, retitled, description rewritten (original framing was wrong)",
+      "User exported all 3 templates to comfy_workflows/raw/ (t2i, detailer, upscaler) with Accelerator Lora node + Input_Tier; deleted the 2 turbo templates",
+      "Dep entry krea2-lora-accelerator added to loraDeps.js (0.87GB, sha256 filled, facade-reachable, no type field)",
+      "R2 upload of krea2_turbo_distill_r128.safetensors — VERIFIED via rclone lsf + HTTP HEAD 200, Content-Length byte-exact (936944890)",
+      "FIXED scripts/computeDepHashes.py — it scanned the dependencies.js FACADE (zero literal entries) so every lora/asset dep was silently invisible; now scans the 4 split source files and writes back to each",
+      "Built the turbo toggle: krea2Turbo control (MpiButton toggleable, scope perModel, injects Input_Tier 1/2), turboToggle capability on krea2 + krea2-nsfw only, added to all 6 ops in commandRegistry, capability guard in MpiPromptBox._refreshOpSlot",
+      "Wired live negative-prompt hiding: krea2Turbo emits prompt:krea2-turbo, MpiPromptBox._refreshNegToggle gates on it (negative TEXT kept in memory, restored on flip back)",
+      "Verified: all touched files node --check clean, injection maps OFF->Input_Tier:1 / ON->Input_Tier:2, tests/inject-params-titles.test.cjs 5/5 pass"
+    ],
+    "pending": [
+      "TEST THE TURBO TOGGLE IN THE APP — built but never run; no generation has been made with it",
+      "Regen runtime workflows from the edited raw templates (comfy_workflows/*.json are STALE from Jul 19; raw/ has the new ones)",
+      "Delete the 2 Turbo ModelDefs (krea2-turbo, krea2-turbo-nsfw) from models.js",
+      "Delete the 2 Turbo transformer dep entries (krea2-turbo-transformer, krea2-turbo-transformer-nsfw) from modelDeps.js",
+      "progressStages.js — drop keys for the removed turbo workflow files, re-key any renamed ones, COUNT BARS LIVE (never guess)",
+      "Card image webp — krea2 + krea2-nsfw currently point at krea2-turbo-sfw.webp / krea2-turbo-nsfw.webp; must show the surviving tier's output",
+      "Consumer sweep: grep the dead dep ids + turbo workflow filenames across js/, operation_registry.json, docs/ — zero orphans",
+      "R2 DELETE the 2 Turbo weights (user pre-approved) — LAST, only after models.js no longer references them",
+      "Changelog: if an UNRELEASED entry names the 4-tier Krea2 layout, UPDATE it rather than adding a new one"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-316",
+    "title": "Krea2: replace the Turbo transformers with RAW + accelerator LoRA — collapse 4 model cards to 2",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-316/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-316/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "research/01-turbo-lora-parity.md holds the full A/B: LoRA provenance from the safetensors header, seed-lock grids, sampler confirmation, watermark/bypass finding, strength sweep, matched timings, photoreal check, disk math, open confounds",
+      "MPI-316 task.json description rewritten with the corrected framing + the shipping config + the still-to-decide list",
+      "Inline code comments carry the WHY on every edit (loraDeps accelerator entry, krea2Turbo control, _refreshNegToggle gate, computeDepHashes facade fix)"
+    ],
+    "pending": [
+      "docs/models/krea2/ needs a topic file for the tier collapse + the accelerator LoRA (README table still describes the 4-card layout)",
+      "The bypass-LoRA/watermark finding DESERVES ITS OWN CARD — watermarks are in stock Krea2 RAW, so every RAW generation shipping today can carry them. Evidence is n=1 per cell; seed-repeat before acting",
+      "docs/models/krea2/int8-quant.md says 'we ship fp8_scaled only' but modelDeps.js ships RAW as int8_convrot — a docs/code contradiction, unresolved, independent of this card",
+      "computeDepHashes.py facade bug is fixed but the CLASS of bug (text-scanning the deps facade) may bite other scripts — worth a grep for other readers of dependencies.js",
+      "Memory: the step-count-is-a-variance-lever finding (not just quality) is not yet in any memory file"
+    ]
+  },
+  "next_action": {
+    "description": "Launch the app and TEST THE TURBO TOGGLE on a Krea2 card before touching anything else — confirm the bolt button appears in PromptBox, persists across op switches (perModel scope), hides the negative toggle when ON, restores the negative text when flipped back, and injects Input_Tier 2. It is fully wired and syntax-clean but has never run. Then regen the runtime workflows from comfy_workflows/raw/ and proceed with the 4->2 collapse in the playbook's documented order (docs/playbooks/add-model/README.md § 'Removing or re-tiering a model').",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SHIPPING CONFIG = 12+6 steps @ accelerator strength 1.0. Chosen because it costs 36s — identical to Turbo at 8+4 — while running 50% more steps and rendering visibly better skin texture and linework.",
+      "r128 over r64: 93.6% vs 86.8% captured SVD energy; the user A/B'd it as visibly better. r128 exists ONLY on TheDivergentAI/krea2-turbo-distill-lora (Comfy-Org ships r64 only).",
+      "Turbo toggle scope = perModel, NOT perOp. Turbo is a MODE the user works in and must hold across t2i -> detail -> upscale; perOp would silently reset it on every op switch.",
+      "Negative prompt HIDES when turbo is ON (tier 2 runs cfg 1, where CFG is inactive and the negative conditioning is computed then discarded). The typed text is KEPT in memory and restored on flip back — flipping tiers must not destroy the user's work.",
+      "A toggle (MpiButton toggleable) not a radio, because Krea2 has exactly 2 tiers where Qwen-Edit has 3.",
+      "The `Accelerator Lora` node title is deliberately NOT Input_-prefixed. It is baked at authoring, never injected; the Input_ prefix is only for the title-matching injector.",
+      "R2 Turbo deletes were pre-approved by the user but DEFERRED to last — deleting while models.js still references those weights would break installs for anyone on a Turbo card."
+    ],
+    "constraints": [
+      "TRAP CONFIRMED THIS SESSION: dependencies.js is a FACADE that spreads modelDeps/assetDeps/loraDeps/nodesDeps. Text-scanning it finds ZERO entries and fails SILENTLY. computeDepHashes.py is fixed; assume other scripts may have the same bug.",
+      "The `Accelerator Lora` node is gated by an MpiMath (`0.0 if a == 1 else 1.0`) off Input_Tier — tier 1 sets strength 0.0 and MpiLoraModel.apply_lora short-circuits without loading the file. Do NOT 'fix' this to look like the style-LoRA gates; it is already correct.",
+      "comfy_workflows/*.json (runtime, 12 files) are STALE — Jul 19. The user's new work is in comfy_workflows/raw/*_template.json. The bake has not been run.",
+      "Krea2 templates are LiteGraph format (nodes[] with widgets_values arrays), NOT API format. Parse accordingly — a naive grep for '\"unet_name\"' returns nothing useful.",
+      "NEVER hand-edit a workflow JSON. Titles/values change in ComfyUI then re-export; a manual edit is silently lost on the next export.",
+      "Models are NOT version-bumped. This whole card touches no appVersion.js.",
+      "The detailer template currently bakes lustify-v10-krea-raw (NSFW) while t2i/upscaler bake krea2_raw_int8_convrot (SFW) — this is a per-variant export artifact, NOT a bug; the generator bakes the right weight per variant.",
+      "Uncommitted work by ANOTHER agent is in the tree: js/services/downloadService.js is modified and is not part of this card. Commit by explicit pathspec; never git add -A.",
+      "R2 uploads/deletes need explicit user approval; deletes for the Turbo weights ARE approved but sequenced last."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/loraDeps.js",
+      "js/data/modelConstants/models.js",
+      "js/data/promptControlDefaults.js",
+      "js/data/commandRegistry.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "scripts/computeDepHashes.py",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-316/task.json",
+      ".agents/mpi-kanban/tasks/MPI-316/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-316/research/01-turbo-lora-parity.md",
+      "comfy_workflows/raw/krea2_t2i_template.json (user-exported)",
+      "comfy_workflows/raw/krea2_detailer_template.json (user-exported)",
+      "comfy_workflows/raw/krea2_upscaler_template.json (user-exported)",
+      "comfy_workflows/raw/krea2_turbo_detailer_template.json (user-DELETED)",
+      "comfy_workflows/raw/krea2_turbo_upscaler_template.json (user-DELETED)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-316/task.json",
+      ".agents/mpi-kanban/tasks/MPI-316/research/01-turbo-lora-parity.md",
+      "docs/playbooks/add-model/README.md",
+      "docs/playbooks/add-model/02-dependencies-r2.md",
+      "docs/models/krea2/README.md",
+      "js/data/modelConstants/loraDeps.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "ComfyUI injection",
+      "Workflow authoring",
+      "Components / UI",
+      "Model registry + dependencies",
+      "Download system"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/playbooks/add-model/README.md",
+    "docs/workflow-authoring/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-20T04:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/ede1dd84-6894-4452-b0da-3c8199bbb03e.json and use mpi-continue to resume MPI-316 (Krea2: replace the Turbo transformers with RAW + accelerator LoRA, collapsing 4 model cards to 2). The A/B is done and passed — RAW + krea2_turbo_distill_r128 @1.0 reproduces Turbo seed-for-seed about 29% faster, and the shipping config is 12+6 steps at strength 1.0. The LoRA dep entry and its R2 upload are complete and verified, and the turbo toggle UI is fully wired (krea2Turbo control, turboToggle capability, all 6 ops, live negative-prompt hiding) but has NEVER been run in the app. Your first action is to launch the app and test that toggle on a Krea2 card before touching anything else. After that, regen the runtime workflows from comfy_workflows/raw/ (the 12 files in comfy_workflows/ are stale from Jul 19) and work the 4->2 collapse in the order documented in docs/playbooks/add-model/README.md section 'Removing or re-tiering a model' — deleting the Turbo weights from R2 LAST, only once models.js no longer references them."
+}
