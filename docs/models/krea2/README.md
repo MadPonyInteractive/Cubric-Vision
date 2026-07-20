@@ -11,12 +11,22 @@ Do not reason about it as a Flux model.
 
 | | |
 |---|---|
-| Variants | **Turbo** (8-step distilled, ships first) · **Raw** (52-step, phase 2) |
-| Transformer | `diffusion_models/krea2_turbo_fp8_scaled.safetensors` |
+| Cards | **2**: `krea2` (SFW) · `krea2-nsfw`. Content variants, installable side by side — **not** tiers, so neither carries an H/B/L letter |
+| Speed tiers | Runtime toggle, **not** separate cards (MPI-316). `krea2Turbo` → `Input_Tier` 1 = quality, 2 = fast |
+| Transformer | SFW `diffusion_models/krea2_raw_int8_convrot.safetensors` · NSFW `lustify-v10-krea-raw-int8_convrot.safetensors` |
+| Accelerator | `loras/krea-2/extra/krea2_turbo_distill_r128.safetensors` — an SVD delta extracted **from Raw**, so Raw + this @ 1.0 reconstructs Turbo. **This is the fast tier**; it replaced the two ~12GB Turbo transformers (deleted, ~24.5GB saved) |
 | Text encoder | `text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors` — Qwen3-VL-4B, **not** a Flux encoder. Shared with the image-describer plugin; the stock `qwen3vl_4b_fp8_scaled` twin was retired 2026-07-19 (A/B'd equal, deleted from R2 and disk) |
 | VAE | `vae/qwen_image_vae.safetensors` — reuse existing dep **`vae-qwen-image`** (already on R2) |
-| Native res | Turbo **1024–2048** · Raw ≤1024 |
+| Native res | **1024–2048** (both tiers; `qualityTiers: ['1k','2k']`) |
 | Upstream | `Comfy-Org/Krea-2` (weights) · `krea-ai/krea-2` (first-party inference code) |
+
+> **The 4-card layout is GONE** (MPI-316, 2026-07-20). There were once four cards —
+> Turbo/Raw × SFW/NSFW — each shipping its own transformer. The turbo-distill LoRA
+> collapsed that to two: every user now gets both speeds from whichever card they
+> installed, instead of paying for a second transformer to get the other speed mode.
+> The real driver was **Turbo seed-lock** (a vague prompt + a new seed returned
+> near-identical images); Raw + the LoRA keeps the speed without the collapse in
+> diversity. Evidence: `.agents/mpi-kanban/tasks/MPI-316/research/01-turbo-lora-parity.md`.
 
 **Dep reuse:** the VAE is already hosted (added for the PiD upscaler). `vae-flux-ae` is the
 WRONG dep — that's the Flux `ae.safetensors`. Only the transformer + Qwen text encoder are

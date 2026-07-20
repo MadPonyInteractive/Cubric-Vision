@@ -120,18 +120,43 @@ on this bench.
 
 ---
 
-## Raw / High tier (52-step, single-stage) — SETTLED (live A/B, 2026-07-16/17)
+## Raw tier — SHIPPING CONFIG (retuned 2026-07-20, MPI-316)
 
 > This is the **Raw** variant (`lustify-v10-krea-raw-int8_convrot`, SingleStreamDiT), a
 > separate regime from Turbo above. Raw is **NOT step-distilled** — no fixed trajectory — so
 > the Turbo lessons ("distilled ⇒ don't add steps") do **not** transfer here. It has its own
 > floor.
 
-**Ship this.** Single-stage.
+**Ship this.** Both tiers are **two-stage**; only stage 1 differs.
+
+| tier | stage 1 | stage 2 (skin pass) |
+|---|---|---|
+| **quality** (`Input_Tier` 1) | `euler`/`beta`, **25** steps, cfg **3.5** | `euler`/`beta`, 3 steps, denoise 0.19, cfg 1.0 |
+| **fast** (`Input_Tier` 2) | `euler`/`beta`, **8** steps, cfg 1.0 | *(same)* |
+
+Stage 2 runs with the **accelerator LoRA** active in both tiers. It exists because full Raw
+renders **very smooth, plastic-looking skin** — a short low-denoise pass puts the texture
+back. Quality-tier wall clock: **~130s → ~100s**.
+
+> **This supersedes the single-stage `euler`@40 cfg 3.0 recommendation below.** That
+> conclusion was correct *for a single-stage graph* and the evidence behind it still stands —
+> read it before re-tuning. But @40 tested **poorly on realistic prompts** in the shipping
+> graph, and adding the refiner pass changed the optimum: 25 steps at a **higher** cfg (3.5)
+> plus a 3-step skin pass beats 40 steps alone, and is faster. The "eval-count floor" argument
+> below assumed all evals come from one pass; the second pass supplies detail the first no
+> longer has to.
+>
+> Also note this retune moved cfg **up** (3.0 → 3.5) while moving steps **down** — the two are
+> not independent knobs here.
+
+### Superseded: the single-stage analysis (2026-07-16/17)
+
+Kept because the *refutations* below are still valid — they rule out samplers and schedulers,
+which the retune did not revisit. Only the "ship 40 steps single-stage" verdict is dead.
 
 | sampler | scheduler | steps | cfg |
 |---|---|---|---|
-| **`euler`** | `beta` | **40** | 3.0 |
+| ~~`euler`~~ | ~~`beta`~~ | ~~**40**~~ | ~~3.0~~ |
 
 **`euler`@40 `beta` is the floor AND the quality winner.** No sampler tested beat it on speed
 *or* quality — anime and photoreal, single- and multi-subject, across seeds. The whole
@@ -190,8 +215,11 @@ same node classes / run the same torch — they remove ~ms of HTTP/frontend laye
 | theory | killed by |
 |---|---|
 | A faster/higher-order sampler cuts Raw-tier time | every RES sampler lost to `euler`@40 on speed or quality |
-| Fewer euler steps (25–30) with a better scheduler holds quality | `beta`@30 AND `simple`@30 both undercooked — it's eval count, not curve |
+| Fewer euler steps (25–30) with a better scheduler holds quality **in a single-stage graph** | `beta`@30 AND `simple`@30 both undercooked — it's eval count, not curve. **Scope:** single-stage only. The shipping graph now runs **25 @ cfg 3.5 + a 3-step refiner** and beats @40 — the second pass supplies what a lone 25-step pass could not (2026-07-20). |
 | Manual sigmas (front-load the tail) recover detail at 30 steps | two schedulers undercooking @30 = compute-bound, not curve-bound; a 30-point curve adds no evals |
+| `euler`@40 is the quality ceiling, so ship it | **retune 2026-07-20:** @40 looked *bad on realistic styles* in the shipping graph. 25 @ cfg 3.5 + a 3-step accelerator-LoRA pass at denoise 0.19 is better **and** faster (~130s → ~100s). |
+| Full-Raw skin looks right at any step count | full Raw renders **very smooth / plastic** skin regardless of steps — it needs the short low-denoise second pass to regain texture. Adding steps to stage 1 does not substitute for it. |
+| Steps and cfg tune independently on Raw | the retune moved steps **down** (40 → 25) and cfg **up** (3.0 → 3.5) together; neither change works alone. |
 | `res_2s` 2-stage quality justifies a "High-Quality" tier | @40 not 2× better, @20 (break-even time) undercooked — pure time cost |
 | Lower cfg tames multistep contrast | cfg 2.8 only moved composition; contrast signature unchanged |
 | Broken hands are a sampler/step artifact | constant across all samplers + seeds; **single-image ref = perfect hands** → 2-image-ref LoRA path |

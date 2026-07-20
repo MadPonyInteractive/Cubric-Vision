@@ -26,10 +26,17 @@ that killed GGUF (MPI-190).
 
 ## The int8 finding
 
+> **Status 2026-07-20 (MPI-316):** both `krea2_turbo_*` weights below were **deleted** — the
+> turbo-distill LoRA on the Raw weight replaced them. Shipping weights are now
+> `krea2_raw_int8_convrot` (SFW) and `lustify-v10-krea-raw-int8_convrot` (NSFW), i.e. **we
+> ship int8_convrot**, not fp8_scaled. The table is kept as the historical measurement that
+> justified the quant choice; the variant names in it no longer exist. This also resolves the
+> doc/code contradiction previously flagged here ("we ship fp8_scaled only").
+
 | variant | RTX 3090, 1024², 8 steps |
 |---|---|
-| `krea2_turbo_fp8_scaled` (what we ship) | **14.82 s/img** |
-| `krea2_turbo_int8_convrot` | **7.70 s/img** |
+| `krea2_turbo_fp8_scaled` (retired) | **14.82 s/img** |
+| `krea2_turbo_int8_convrot` (retired) | **7.70 s/img** |
 
 **1.92× faster.** The mechanism is Ampere's INT8 tensor-core path (`convrot` =
 convolution-rotation weight reordering, engaging the INT8 IMMA pipeline that fp8 cannot

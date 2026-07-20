@@ -7,7 +7,7 @@
 > **Superseded.** An earlier research proposal had the app inject a style *filename* into one
 > `LoraLoaderModelOnly` plus a trigger string into a `PrimitiveStringMultiline`. **That is not
 > what shipped.** The authored workflow is better; the notes below describe the real graph
-> (`comfy_workflows/krea2_turbo_t2i.json`, API format).
+> (`comfy_workflows/krea2_t2i_<sfw|nsfw>.json`, API format).
 
 **The app injects exactly TWO scalars for the whole style system.** No filenames, no strings.
 
@@ -72,7 +72,7 @@ Per the Comfy node-naming law (MPI-116), every injected node must be titled `Inp
 
 ### The full injection surface (read live from the three API-format workflows)
 
-**`krea2_turbo_t2i.json`** — one graph serving **t2i + i2i + depth reference**:
+**`krea2_t2i_<sfw|nsfw>.json`** — one graph serving **t2i + i2i + depth reference + edit**:
 
 | title | class | type | notes |
 |---|---|---|---|
@@ -86,11 +86,35 @@ Per the Comfy node-naming law (MPI-116), every injected node must be titled `Inp
 | `Input_denoise` | `MpiFloat` | float | only consumed when `Input_Is_i2i` |
 | `Input_depth_reference` | `MpiIfElse` | boolean | `Krea2ControlApply` vs passthrough of `Input_Lora_6` |
 | `Input_Lora_1..6` | `MpiLoraModel` | object | the user LoRA rack |
+| `Input_Negative` | `MpiText` | string | **quality tier only** — see the tier note below |
+| `Input_Tier` | `MpiInt` | int | **1** = quality, **2** = fast. See below |
 | `Output_Image` | `PreviewImage` | — | capture |
 
-**No negative-prompt node exists** — `ConditioningZeroOut` supplies the uncond. This is the
-graph-level confirmation of `capabilities.negativePrompt: false`; a retained negative string has
-nowhere to land.
+#### The tier toggle (MPI-316)
+
+`Input_Tier` is the **runtime** speed switch, injected by the `krea2Turbo` PromptBox control
+(scope `perModel` — turbo is a MODE that must hold across t2i → detail → upscale, not a per-op
+setting). It replaced the old separate Turbo cards:
+
+- **1 = quality** — 25 steps @ cfg 3.5, then the 3-step refiner. Negative prompt **works**.
+- **2 = fast** — 8 steps @ cfg 1.0, then the same refiner. The `Accelerator Lora` gate
+  (an `MpiMath`, `0.0 if a == 1 else 1.0`, keyed off `Input_Tier`) raises the turbo-distill
+  LoRA to strength 1.0, reconstructing the old Turbo transformer from the Raw weights.
+
+> The accelerator gate is **correct as written** — at tier 1 the strength is 0.0 and
+> `MpiLoraModel.apply_lora` short-circuits without loading the file. Do **not** "fix" it to
+> look like the style-LoRA gates.
+
+The templates bake `Input_Tier: 1` as a **safe default only**; the injected value always wins.
+The bake exists so a silent injection failure (a title mismatch drops the param with no error)
+degrades to the quality tier rather than shipping whatever was last exported.
+
+**Negative prompt is tier-dependent.** At tier 2 (cfg 1) classifier-free guidance is inactive —
+the negative conditioning is computed, then discarded. So the PromptBox **hides the negative
+toggle while turbo is ON** (the control emits `prompt:krea2-turbo`, on mount as well as on
+click). The typed text is kept in memory and restored on flip back — flipping tiers must never
+destroy the user's work. Before the collapse this gating was structural (a separate Turbo card
+declared `negativePrompt: false`); it is now a live UI concern.
 
 #### Per-op injection contract (t2i graph)
 
@@ -126,10 +150,10 @@ Two graph facts worth knowing:
 > loads the LoRA but appends no trigger — a silent half-application. Fix in the workflow, not
 > app-side.
 
-**`krea2_turbo_detailer.json`** (op `detail`): `Input_Image`, `Input_Mask` (`LoadImageMask`),
+**`krea2_detailer_<sfw|nsfw>.json`** (op `detail`): `Input_Image`, `Input_Mask` (`LoadImageMask`),
 `Input_Positive`, `Input_Seed`, `Input_Denoise`, `Input_Lora_1..6`, `Output_image`.
 
-**`krea2_turbo_upscaler.json`** (op `upscale`): `Input_Image`, `Input_Positive`, `Input_Seed`,
+**`krea2_upscaler_<sfw|nsfw>.json`** (op `upscale`): `Input_Image`, `Input_Positive`, `Input_Seed`,
 `Input_Denoise`, `Input_Auto_Grid` (`MpiSimpleBoolean`), `Input_Upscale_Model`
 (`UpscaleModelLoader`), `Input_Lora_1..6`, `Output_image`.
 
@@ -144,7 +168,8 @@ Two graph facts worth knowing:
 ```
 loras/krea-2/style/krea2_*.safetensors      (9 files)
 loras/krea-2/control/depth-control-lora.safetensors
-diffusion_models/krea2_turbo_fp8_scaled.safetensors
+diffusion_models/krea2_raw_int8_convrot.safetensors        (SFW; NSFW = lustify-v10-krea-raw-int8_convrot)
+loras/krea-2/extra/krea2_turbo_distill_r128.safetensors     (accelerator = the fast tier)
 text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors
 vae/qwen_image_vae.safetensors
 ```
@@ -225,7 +250,7 @@ mask → whole-image edit (the `MpiAnyChecker` on `Input_Mask` gates it). The ma
 the standard MPI-272 path→string pipe (data-URL staged, path injected) — no edit-specific code.
 
 - **Dep:** `comfyui-inpaint-cropandstitch` (`lquesada/ComfyUI-Inpaint-CropAndStitch`,
-  `installRequirements:false`, rides the volume) on ALL 4 cards. `comfyui-krea2edit` too
+  `installRequirements:false`, rides the volume) on BOTH cards. `comfyui-krea2edit` too
   (Turbo cards were missing it — the shared graph references `Krea2Edit*` classes, and ComfyUI
   validates every node class before `MpiIfElse` picks a branch).
 - **Edit op has NO user controls** (`components: []`). The style-LoRA rack was tried and
