@@ -926,6 +926,14 @@ export const MpiPromptBox = ComponentFactory.create({
             // chip sourced from it is now a dead link. Drop live chips + the
             // persisted snapshot so a later mount doesn't restore broken media.
             Events.on('assets:cleaned', () => el.clearMedia()),
+            // MPI-316 — Krea2 turbo tier: cfg 1 discards the negative conditioning, so
+            // hide the negative toggle while turbo is ON. _refreshNegToggle() already
+            // handles the stranded-editing case (snaps the textarea back to positive)
+            // and `negativeValue` is kept in memory, so flipping back restores the text.
+            Events.on('prompt:krea2-turbo', ({ active }) => {
+                _krea2TurboOn = !!active;
+                _refreshNegToggle();
+            }),
             // Note: model list management is owned by the parent block (gallery /
             // history workspace). They call el.setModelList() with the appropriate
             // mediaType-scoped or all-installed list. Don't double-update here.
@@ -1267,6 +1275,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 // it never appears on other edit models (Boogu bakes its tier per file).
                 if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
 
+                // Krea2 turbo toggle (MPI-316) — same Input_Tier switch as qwenTier but
+                // two tiers, so a toggle rather than a radio. Its own capability flag:
+                // a model has EITHER the 3-way Qwen radio OR this, never both.
+                if (componentId === 'krea2Turbo' && model?.capabilities?.turboToggle !== true) continue;
+
                 // Batch picker is model-gated. Defaults TRUE (every model batches
                 // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
                 // its two-pass sampler graph has no Input_Batch_Size node, so a
@@ -1306,9 +1319,18 @@ export const MpiPromptBox = ComponentFactory.create({
         // no effect and NAG is a silent no-op that doubles NFE.
         const negSlot = qs('#bottom-neg-slot', el);
 
+        // MPI-316 — Krea2's turbo tier runs at cfg 1, where classifier-free guidance is
+        // inactive and the negative conditioning is computed then thrown away. Before the
+        // 4->2 card collapse that was gated STRUCTURALLY (the Turbo card declared
+        // `negativePrompt: false`); with one card and a runtime toggle the gating has to
+        // become live, or the field turns into an invisible no-op the user can type into.
+        // The krea2Turbo control emits this on mount AND on every click.
+        let _krea2TurboOn = false;
+
         function _refreshNegToggle() {
             const show = props.includeNegative === true
-                && model?.capabilities?.negativePrompt !== false;
+                && model?.capabilities?.negativePrompt !== false
+                && !_krea2TurboOn;
 
             if (show === !!_negBtn) return;
 

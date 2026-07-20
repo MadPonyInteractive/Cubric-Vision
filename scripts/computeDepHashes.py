@@ -23,9 +23,18 @@ from pathlib import Path
 
 DRY_RUN = '--dry-run' in sys.argv
 
-# Resolve deps path relative to this script's directory
-SCRIPT_DIR = Path(__file__).resolve().parent.parent
-DEPS_PATH = SCRIPT_DIR / 'js' / 'data' / 'modelConstants' / 'dependencies.js'
+# Resolve deps path relative to this script's directory.
+# NOTE: dependencies.js is a FACADE — it only spreads the four sibling files below,
+# so its own `export const DEPS = {…}` block contains ZERO literal entries. Scanning
+# it finds nothing and reports "All deps already have SHA256 hashes" — silently
+# skipping every lora/asset/node dep. Scan the SPLIT SOURCE FILES instead. (MPI-316)
+CONST_DIR = Path(__file__).resolve().parent.parent / 'js' / 'data' / 'modelConstants'
+DEPS_PATHS = [
+    CONST_DIR / 'modelDeps.js',
+    CONST_DIR / 'assetDeps.js',
+    CONST_DIR / 'loraDeps.js',
+    CONST_DIR / 'nodesDeps.js',
+]
 
 # Local master copy of R2-hosted weights (R2 ETag is multipart-MD5, unusable for sha256).
 LOCAL_ROOT = Path(os.environ.get('CUBRIC_MODELS_ROOT', 'g:/cubricmodels'))
@@ -75,15 +84,19 @@ def compute_sha256(url: str) -> str:
         return h.hexdigest()
 
 
-def main() -> None:
-    content = DEPS_PATH.read_text(encoding='utf-8')
+def scan_file(path: Path) -> list:
+    """Collect deps missing a sha256 from one split dep source file."""
+    if not path.is_file():
+        print(f'  ⚠ {path.name} not found — skipped')
+        return []
 
-    # Extract DEPS from the JS file — find the export block and eval it minimally.
-    # We look for the export const DEPS = { ... } block.
-    match = re.search(r'export\s+const\s+DEPS\s*=\s*\{', content)
+    content = path.read_text(encoding='utf-8')
+
+    # Each split file exports one object literal, e.g. `export const loraDeps = {`.
+    match = re.search(r'export\s+const\s+\w+\s*=\s*\{', content)
     if not match:
-        print('Could not find "export const DEPS =" in dependencies.js')
-        sys.exit(1)
+        print(f'  ⚠ no `export const <name> = {{` block in {path.name} — skipped')
+        return []
 
     # Find matching closing brace by counting nesting level
     start = match.end() - 1  # position of '{'
@@ -101,9 +114,8 @@ def main() -> None:
     deps_block = content[start:end + 1]
 
     # Parse each top-level entry: 'id': { ... }
-    # We'll process each HuggingFace dep that lacks a sha256.
     entries = re.finditer(r"'([^']+)':\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}", deps_block, re.DOTALL)
-    targets = []
+    found = []
     for entry_match in entries:
         dep_id = entry_match.group(1)
         entry_body = entry_match.group(2)
@@ -129,8 +141,16 @@ def main() -> None:
             continue  # already has a hash
 
         size = size_m.group(1) if size_m else 'unknown'
-        targets.append({'id': dep_id, 'url': url, 'size': size, 'source': source,
-                        'filename': file_m.group(1) if file_m else None})
+        found.append({'id': dep_id, 'url': url, 'size': size, 'source': source,
+                      'path': path,
+                      'filename': file_m.group(1) if file_m else None})
+    return found
+
+
+def main() -> None:
+    targets = []
+    for p in DEPS_PATHS:
+        targets.extend(scan_file(p))
 
     if not targets:
         print('All deps already have SHA256 hashes.')
@@ -160,32 +180,34 @@ def main() -> None:
         print(f'\nDry run — no changes written.')
         return
 
-    # Apply all patches to a single copy of the file and write once.
-    final_content = content
+    # Patch each dep in ITS OWN source file, then write each touched file once.
+    by_path = {}
     for res in results:
-        if not res['success']:
-            continue
+        if res['success']:
+            by_path.setdefault(res['path'], []).append(res)
 
-        dep_id = res['id']
-        h = res['hash']
+    written = 0
+    for path, patches in by_path.items():
+        final_content = path.read_text(encoding='utf-8')
+        for res in patches:
+            dep_id = res['id']
+            h = res['hash']
 
-        # Find this entry's sha256: null line within the file content.
-        # Anchor by the entry id so we replace the right one.
-        # Pattern: 'id': ... sha256: null (spanning lines)
-        pattern = re.compile(
-            rf"('{re.escape(dep_id)}'.*?sha256:\s*)null",
-            re.DOTALL
-        )
-        m = pattern.search(final_content)
-        if not m:
-            print(f'  ⚠ Could not locate sha256: null for {dep_id}')
-            continue
+            # Anchor by the entry id so we replace the right one.
+            pattern = re.compile(
+                rf"('{re.escape(dep_id)}'.*?sha256:\s*)null",
+                re.DOTALL
+            )
+            m = pattern.search(final_content)
+            if not m:
+                print(f'  ⚠ Could not locate sha256: null for {dep_id} in {path.name}')
+                continue
 
-        new_content = final_content[:m.start()] + m.group(1) + f"'{h}'" + final_content[m.end():]
-        final_content = new_content
+            final_content = final_content[:m.start()] + m.group(1) + f"'{h}'" + final_content[m.end():]
+            written += 1
 
-    DEPS_PATH.write_text(final_content, encoding='utf-8')
-    written = sum(1 for r in results if r['success'])
+        path.write_text(final_content, encoding='utf-8')
+
     print(f'\nDone. {written}/{len(targets)} hashes written.')
 
 

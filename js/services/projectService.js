@@ -70,6 +70,7 @@ const _QUEUE_DEBOUNCE_MS = 300;
 const _MODEL_WIDE_KEYS = new Set([
     'loras', 'upscaleModel', 'qualityTier',
     'styleSelect', 'stylization', 'enhancePrompt',
+    'krea2Turbo',
 ]);
 
 function _enqueueModelUpdate(modelId, opName, key, value) {

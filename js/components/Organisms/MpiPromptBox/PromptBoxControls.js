@@ -1028,6 +1028,69 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
+     * krea2Turbo — Krea2 speed toggle (MPI-316). ONE button, two tiers, injected as
+     * the 1-indexed `Input_Tier` int: OFF => 1 (High/raw, cfg 2.5), ON => 2 (Balanced).
+     * On tier 2 the graph's `Accelerator Lora` MpiMath gate (`0.0 if a == 1 else 1.0`)
+     * raises the turbo-distill LoRA to strength 1, reconstructing the old Turbo
+     * transformer from the Raw weights — which is why the two Turbo weights could be
+     * dropped and 4 Krea2 cards collapse to 2.
+     *
+     * A toggle, not a radio, because there are exactly two tiers (Qwen has three).
+     *
+     * scope `perModel`, NOT `perOp` — turbo is a MODE the user works in, so it must
+     * hold when they move t2i -> detail -> upscale. Per-op storage would silently
+     * reset it on every op switch.
+     *
+     * SIDE EFFECT — the negative prompt. Tier 2 runs at cfg 1, where classifier-free
+     * guidance is inactive and the negative conditioning is computed then discarded.
+     * Today that gating is STRUCTURAL (a separate Turbo card declared
+     * `negativePrompt: false`); collapsing the cards would have turned it into an
+     * invisible no-op the user can type into. So this control emits
+     * `prompt:krea2-turbo` and MpiPromptBox hides the negative toggle live while it
+     * is ON. The typed negative text is KEPT in memory, not cleared — flipping back
+     * restores it.
+     */
+    krea2Turbo: {
+        nodeTitle: 'Input_Tier',
+        scope: 'perModel',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.krea2Turbo,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'krea2Turbo', opts);
+            const initial = typeof saved.krea2Turbo === 'boolean' ? saved.krea2Turbo : !!fallback;
+            this.value = initial;
+
+            // Bare icon button, no label row — it sits in the button strip next to
+            // the enhancer, so it mounts like enhancePrompt does.
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'bolt',
+                info: 'Turbo — faster generation, different results and less precision',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initial,
+            });
+
+            // Tell the box up front, so a restored ON state hides the negative toggle
+            // on mount rather than only after the first click.
+            Events.emit('prompt:krea2-turbo', { active: initial });
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                _emitUpdate(this, opts, 'krea2Turbo', !!active);
+                Events.emit('prompt:krea2-turbo', { active: !!active });
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            // Boolean -> the graph's 1-indexed tier int. 1 = High/raw, 2 = Balanced.
+            return { Input_Tier: (this.value ?? this.defaultValue) ? 2 : 1 };
+        },
+    },
+
+    /**
      * styleSelect — style-LoRA picker (Krea2 pattern, MPI-242; playbook §9).
      *
      * Injects the INDEX (`Input_Style`, MpiInt), never a filename or a trigger
