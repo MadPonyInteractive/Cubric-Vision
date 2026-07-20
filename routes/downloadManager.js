@@ -708,6 +708,7 @@ class FileDownloader {
         });
         if (partial.resumable && (!markerUrl || markerUrl === this.depJob.url)) {
             this.depJob.downloadedBytes = partial.downloaded;
+            logger.info('download', `resuming ${this.depJob.id} from ${(partial.downloaded / 1073741824).toFixed(2)}GB on disk`);
             // Not awaited (same idiom as start() below): the promise resolves only
             // when the whole download finishes — events drive completion. Errors
             // surface through the 'error' handler; the catch just silences the
@@ -718,7 +719,10 @@ class FileDownloader {
             }).catch(() => {});
             return;
         }
-        if (partial.resumable) await fs.remove(this.localPath).catch(() => {});
+        if (partial.resumable) {
+            logger.info('download', `discarding unusable partial for ${this.depJob.id} (marker url mismatch) — clean start`);
+            await fs.remove(this.localPath).catch(() => {});
+        }
         this._downloader.start();
     }
 
