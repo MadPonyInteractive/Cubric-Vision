@@ -242,9 +242,16 @@ export const MODELS = [
         // is computed then discarded, so the PromptBox hides the negative toggle).
         // See docs/models/krea2/README.md "Krea2 as an EDITOR".
         id: 'krea2',
-        sizeTier: 'high',
+        // 'balanced', not 'high': the accelerator LoRA means one install now covers both
+        // speeds, so this is no longer the heavyweight half of a tier pair (MPI-316).
+        sizeTier: 'balanced',
         featured: true,
-        modelFamily: 'Krea-2',
+        // NO modelFamily (MPI-316). The family field drives the H/B/L tier letter, which
+        // only makes sense when siblings are TIERS of the same model. Krea2's two cards
+        // are CONTENT variants (SFW / NSFW) that a user can install side by side — the
+        // tier split they used to represent is now a runtime toggle. Keeping the family
+        // rendered "Krea 2 H" / "Krea 2 NSFW H": a tier letter on a content distinction,
+        // and the same letter on both, so it disambiguated nothing.
         name: 'Krea 2',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
@@ -269,7 +276,7 @@ export const MODELS = [
             'krea2-style-retroanime.webp', 'krea2-style-softwatercolor.webp', 'krea2-style-sunsetblur.webp',
             'krea2-style-vintagetarot.webp', 'krea2-style-midjourney.webp',
         ],
-        gen_speed: 'slow',
+        gen_speed: 'balanced',
         description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the distinctive photographic look, ten style LoRAs, depth reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
         workflows: {
             // Tier is NOT a file axis any more (MPI-316) — one Raw-weight graph per op,
@@ -317,9 +324,9 @@ export const MODELS = [
         // Lustify-Krea Raw int8 weight. Same rationale as the SFW card above: one card,
         // both tiers, the accelerator LoRA standing in for the deleted Turbo weight.
         id: 'krea2-nsfw',
-        sizeTier: 'high',
+        sizeTier: 'balanced',   // see the SFW card
         featured: true,
-        modelFamily: 'Krea-2',
+        // NO modelFamily — see the SFW card above.
         name: 'Krea 2 NSFW',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
@@ -344,7 +351,7 @@ export const MODELS = [
             'krea2-style-retroanime.webp', 'krea2-style-softwatercolor.webp', 'krea2-style-sunsetblur.webp',
             'krea2-style-vintagetarot.webp', 'krea2-style-midjourney.webp',
         ],
-        gen_speed: 'slow',
+        gen_speed: 'balanced',
         description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the photographic look, ten style LoRAs, depth reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
         workflows: {
             // Tier is NOT a file axis any more (MPI-316) — see the SFW card above.

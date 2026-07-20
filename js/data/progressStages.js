@@ -55,17 +55,18 @@ export const PROGRESS_STAGES = Object.freeze({
     // keyed by FILE, so one key covers all three. stagesFor() strips the _sfw/_nsfw
     // suffix, so this one key also covers both content variants.
     //
-    // 1 bar = the sampler, with the quality tier (Input_Tier 1). The FAST tier emits a
-    // SECOND bar — user-counted 2026-07-20, turbo vs non-turbo on the same graph. Tier
-    // is a runtime toggle, not a file (MPI-316), so that +1 CANNOT live in this table:
-    // it is supplied per run as `extraBars` from commandExecutor, exactly like the
-    // enhancer delta. Recording 2 here would show `1/2` on every quality run.
+    // 2 bars = one per sampler pass. BOTH tiers are two-pass (re-counted 2026-07-20
+    // after the sampler retune): quality runs 25 steps @ cfg 3.5 then a 3-step
+    // accelerator-LoRA pass at denoise 0.19, fast runs 8 steps then the same 3-step
+    // pass. That second pass exists because full Raw renders very smooth skin — the
+    // short low-denoise pass puts the texture back. Symmetric, so the count is
+    // tier-independent and stays in this table rather than becoming a runtime delta.
     //
     // The prompt enhancer also runs before sampling, but it only fills ~10-20% of a
     // bar rather than emitting its own, so it is NOT counted (user-confirmed
     // 2026-07-20, superseding the MPI-242 note in stagesFor's docblock).
     // Its detailer/upscaler get NO entry, per the convention above.
-    'krea2_t2i.json':            Object.freeze({ single: 1 }),
+    'krea2_t2i.json':            Object.freeze({ single: 2 }),
     // Boogu-Image-Edit (MPI-257) — one graph per tier, ONE SamplerCustom pass (the
     // MpiAnySwitch selects the tier's chain; only that chain runs). Live-confirmed 1 bar
     // (sampler only; no separate model-load bar surfaces, same as PiD) — MPI-266 fixed the

@@ -89,13 +89,13 @@
       "eta": 0.5,
       "sampler_name": "linear/euler",
       "scheduler": "beta",
-      "steps": 12,
+      "steps": 8,
       "steps_to_run": -1,
       "cfg": 1,
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
-        "77",
+        "440",
         0
       ],
       "positive": [
@@ -732,14 +732,14 @@
       "eta": 0.5,
       "sampler_name": "linear/euler",
       "scheduler": "beta",
-      "steps": 6,
+      "steps": 3,
       "steps_to_run": -1,
-      "denoise": 0.35,
+      "denoise": 0.19,
       "cfg": 1,
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
-        "77",
+        "440",
         0
       ],
       "positive": [
@@ -978,7 +978,7 @@
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
       "strength_model": 1.0,
       "model": [
-        "427",
+        "55",
         0
       ]
     },
@@ -1334,11 +1334,11 @@
       "eta": 0.5,
       "sampler_name": "linear/euler",
       "scheduler": "beta",
-      "steps": 40,
+      "steps": 25,
       "steps_to_run": -1,
-      "cfg": 2.5,
+      "cfg": 3.5,
       "sampler_mode": "standard",
-      "bongmath": true,
+      "bongmath": false,
       "model": [
         "77",
         0
@@ -1372,8 +1372,8 @@
   "312": {
     "inputs": {
       "samples": [
-        "311",
-        1
+        "436",
+        0
       ],
       "vae": [
         "77",
@@ -1724,15 +1724,69 @@
       "title": "Replace Text"
     }
   },
-  "427": {
+  "436": {
     "inputs": {
-      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "eta": 0.5,
+      "sampler_name": "linear/euler",
+      "scheduler": "beta",
+      "steps": 3,
+      "steps_to_run": -1,
+      "denoise": 0.19,
+      "cfg": 1,
+      "sampler_mode": "standard",
+      "bongmath": true,
       "model": [
-        "55",
+        "440",
         0
       ],
-      "strength_model": [
-        "429",
+      "positive": [
+        "77",
+        3
+      ],
+      "negative": [
+        "77",
+        4
+      ],
+      "latent_image": [
+        "311",
+        0
+      ],
+      "seed": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "437": {
+    "inputs": {
+      "true": [
+        "311",
+        1
+      ],
+      "false": [
+        "436",
+        0
+      ],
+      "boolean": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "440": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "strength_model": 1,
+      "model": [
+        "77",
         0
       ]
     },
@@ -1741,17 +1795,17 @@
       "title": "Accelerator Lora"
     }
   },
-  "429": {
+  "442": {
     "inputs": {
-      "math_expression": "0.0 if a == 1 else 1.0   ",
-      "a": [
-        "287",
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "309",
         0
       ]
     },
-    "class_type": "MpiMath",
+    "class_type": "SaveImage",
     "_meta": {
-      "title": "Mpi Math"
+      "title": "Save Image"
     }
   }
 }

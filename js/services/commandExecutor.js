@@ -1315,14 +1315,8 @@ export function runCommand(payload) {
         // TextGenerate path this delta was measured on, which is why the two differ.
         const _isKrea2 = /^krea2_/i.test(workflowFile || '');
         const _enhanceBars = (!_isKrea2 && _paramIsTrue(params, 'Input_Enhance_Prompt')) ? 1 : 0;
-        // Krea2's fast tier (Input_Tier 2, the accelerator LoRA) emits one MORE sampler
-        // bar than the quality tier on the SAME graph. Tier is a runtime toggle rather
-        // than a separate file (MPI-316), so the table — keyed by file+mode — cannot
-        // express it; like the enhancer, it is a per-run delta. Reading the injected
-        // param keeps this honest whether the tier came from the toggle or a reuse.
-        const _tierBars = Number(params?.Input_Tier) === 2 ? 1 : 0;
         const stageProgress = createStageProgress({
-            stages: stagesFor(workflowFile, _stageMode, _enhanceBars + _tierBars),
+            stages: stagesFor(workflowFile, _stageMode, _enhanceBars),
         });
 
         const opDef = COMMANDS[workingPayload.operation];
