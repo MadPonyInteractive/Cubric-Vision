@@ -18,7 +18,7 @@
 const assert = require('node:assert');
 const test = require('node:test');
 
-const KREA2 = { id: 'krea2-turbo', type: 'krea2', mediaType: 'image' };
+const KREA2 = { id: 'krea2', type: 'krea2', mediaType: 'image' };
 const LTX = { id: 'ltx', type: 'ltx', mediaType: 'video' };
 const SDXL = { id: 'sdxl-realistic', type: 'sdxl', mediaType: 'image' };
 

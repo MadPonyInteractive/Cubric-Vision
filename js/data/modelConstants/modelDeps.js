@@ -161,40 +161,23 @@ export const modelDeps = {
         size: '2.72GB',
         sha256: 'efa24eada8c414251410e786de96001b26d09701c3fe799a9f2eb0d7d3b8cf2d'
     },
-    // ── Krea2 transformers (MPI-242) ───────────────────────────────────────────
+    // ── Krea2 transformers (MPI-242, collapsed MPI-316) ────────────────────────
     // Flux-lineage in ARCHITECTURE ONLY — the conditioning + VAE stack is Qwen
     // (reuses vae-qwen-image + qwen3vl-abliterated-clip in assetDeps.js; vae-flux-ae is
-    // the WRONG dep). We ship the SFW fp8_scaled transformer and the NSFW int8_convrot
-    // transformer (Coyote's Lustify v10 KREA-Turbo) as two INDEPENDENT models — a user
-    // can install BOTH (unlike LTX's mutually-exclusive arch variants). Each is its own
-    // ModelDef; the two share every other dep. Quant variants are native in comfy 0.27 —
-    // see docs/models/krea2/int8-quant.md.
-    'krea2-turbo-transformer': {
-        id: 'krea2-turbo-transformer',
-        name: 'Krea2 Turbo Transformer (fp8_scaled)',
-        origin: 'Comfy-Org/Krea-2',
-        filename: 'diffusion_models/krea2_turbo_fp8_scaled.safetensors',
-        url: 'https://models.cubric.studio/vision/models/diffusion_models/krea2_turbo_fp8_scaled.safetensors',
-        size: '12.24GB',
-        sha256: 'eb4dd8c612cfd10f64f25b057e6e6bbcb5737c94a7372177e456dbf7579502f1',
-    },
-    // NSFW variant — Lustify v10 KREA-Turbo, int8_convrot quant. INT8 tensor-core path
-    // is native in our ComfyUI (0.27). Runs on any NVIDIA RTX (Turing+); see the NSFW
-    // ModelDef description for the end-user GPU note. Same size class as the SFW weight.
-    'krea2-turbo-transformer-nsfw': {
-        id: 'krea2-turbo-transformer-nsfw',
-        name: 'Krea2 Turbo Transformer NSFW (int8_convrot)',
-        origin: 'Comfy-Org/Krea-2',
-        filename: 'diffusion_models/lustify-v10-krea-turbo-int8_convrot.safetensors',
-        url: 'https://models.cubric.studio/vision/models/diffusion_models/lustify-v10-krea-turbo-int8_convrot.safetensors',
-        size: '12.25GB',
-        sha256: '0505412ed2ac568286c4bf43f8ace93f9f5a6dd7a607f47f1912a68767e6900d',
-    },
-    // ── Krea2 RAW transformers (MPI-282) — the HIGH edit tier ───────────────────
-    // Raw (un-distilled) Krea2 has a WORKING cfg, so it drives the identity-edit LoRA
-    // (Balanced/Turbo at cfg 1 starves the edit conditioning). Ships as the High tier
-    // of the 4-card Krea2 set; int8_convrot quant (native NVIDIA RTX Turing+). See
-    // docs/models/krea2/README.md "Krea2 as an EDITOR".
+    // the WRONG dep). We ship the SFW and NSFW RAW transformers as two INDEPENDENT
+    // models — a user can install BOTH (unlike LTX's mutually-exclusive arch variants).
+    // Each is its own ModelDef; the two share every other dep. Quant variants are native
+    // in comfy 0.27 — see docs/models/krea2/int8-quant.md.
+    //
+    // The two TURBO transformers were DELETED in MPI-316: krea2-lora-accelerator (a
+    // turbo-distill SVD delta extracted FROM Raw, ~0.87GB) reconstructs Turbo on top of
+    // these Raw weights at strength 1.0, so the fast tier is a runtime toggle instead of
+    // a second ~12GB download. That dropped ~24.5GB of shipped weights and collapsed the
+    // Krea2 library from 4 cards to 2.
+    //
+    // Raw (un-distilled) Krea2 also has a WORKING cfg, so it drives the identity-edit
+    // LoRA (cfg 1 starves the edit conditioning) — see docs/models/krea2/README.md
+    // "Krea2 as an EDITOR". int8_convrot quant (native NVIDIA RTX Turing+).
     'krea2-raw-transformer': {
         id: 'krea2-raw-transformer',
         name: 'Krea2 Raw Transformer (int8_convrot)',

@@ -130,8 +130,8 @@ for (const op of ['upscale', 'detail']) {
 }
 
 // Krea2's own label list must be index-aligned with its nine LoRA slots (+ index 0).
-const krea2 = MODELS.find(m => m.id === 'krea2-turbo');
-assert.ok(krea2, 'krea2-turbo must exist');
+const krea2 = MODELS.find(m => m.id === 'krea2');
+assert.ok(krea2, 'krea2 must exist');
 assert.strictEqual(krea2.styleLoraLabels.length, 10,
     '9 style LoRAs + the no-style entry at index 0 — a missing label silently half-applies a style');
 

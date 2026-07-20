@@ -44,6 +44,28 @@ export const loraDeps = {
         size: '0.91GB',
         sha256: 'f53db0bb4b081d638f196865cbc9f055379704fafb788336784fc1ccde18d825',
     },
+    // Accelerator LoRA (MPI-316) — this is TURBO, extracted as an SVD delta FROM Raw.
+    // Its safetensors metadata says base_model krea/Krea-2-Raw -> target_model
+    // krea/Krea-2-Turbo (extraction_method svd_lowrank_weight_delta), so
+    // Raw + this @1.0 RECONSTRUCTS Turbo. That is why it replaces the two Turbo
+    // transformers outright: 4 Krea2 cards collapse to 2, ~24.5GB less to host and
+    // download, and every card gains BOTH tiers instead of one.
+    // Gated by the `Accelerator Lora` node's MpiMath (`0.0 if a == 1 else 1.0`) off
+    // Input_Tier: tier 1 (High/raw) = 0.0 -> apply_lora short-circuits and never loads
+    // the file; tier 2 (Balanced) = 1.0. Baked at authoring, NOT injected — the node
+    // title is deliberately un-prefixed (no `Input_`), like the identity-edit loader.
+    // r128 over r64: 93.6% vs 86.8% captured SVD energy, and the user A/B'd it as
+    // visibly better. Measured 12+6 steps @ 36s vs Turbo's 8+4 @ 36s — same wall-clock,
+    // 50% more steps. Evidence: .agents/mpi-kanban/tasks/MPI-316/research/.
+    'krea2-lora-accelerator': {
+        id: 'krea2-lora-accelerator',
+        name: 'Krea2 Accelerator LoRA (Turbo distill r128)',
+        origin: 'TheDivergentAI/krea2-turbo-distill-lora',
+        filename: 'loras/krea-2/extra/krea2_turbo_distill_r128.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2_turbo_distill_r128.safetensors',
+        size: '0.87GB',
+        sha256: '0cd8b6a756456229b340d2382f30f91bd8540f9cdee4fb95edb897daf08f8c6f',
+    },
     // Baked LoRA — loaded by the workflow, not user slots. Travels with the model.
     // Subfoldered under loras/krea-2/; ComfyUI lists them BACKSLASHED
     // (`krea-2\style\...`) — rides the MPI-229 heal.

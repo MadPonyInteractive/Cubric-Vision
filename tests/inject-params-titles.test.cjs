@@ -139,7 +139,7 @@ test('the Krea2 shared graph carries both branch booleans', () => {
     // op silently degrades to plain t2i.
     // SFW + NSFW ship the same t2i graph (only the diffusion weight differs), so both
     // runtime files must carry the branch booleans.
-    for (const file of ['krea2_t2i_balanced_sfw.json', 'krea2_t2i_balanced_nsfw.json']) {
+    for (const file of ['krea2_t2i_sfw.json', 'krea2_t2i_nsfw.json']) {
         const have = titlesOf(file);
         for (const title of ['input_is_i2i', 'input_depth_reference']) {
             assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
