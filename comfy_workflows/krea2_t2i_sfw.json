@@ -126,7 +126,7 @@
   },
   "73": {
     "inputs": {
-      "int": 891976866874169
+      "int": 0
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -422,7 +422,7 @@
   },
   "112": {
     "inputs": {
-      "string": "Photo Real portrait of a woman with black and pink hair, tattoos on her face, grills on her teeth, looking down at the camera, low-angle shot, cinematic FOV"
+      "string": ""
     },
     "class_type": "MpiText",
     "_meta": {
@@ -976,7 +976,7 @@
   "245": {
     "inputs": {
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
-      "strength_model": 1,
+      "strength_model": 1.0,
       "model": [
         "427",
         0
@@ -1124,7 +1124,7 @@
   },
   "287": {
     "inputs": {
-      "int": 2
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {

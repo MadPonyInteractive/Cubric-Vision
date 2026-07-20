@@ -268,8 +268,6 @@
   },
   "1686": {
     "inputs": {
-      "steps": 20,
-      "cfg": 3,
       "sampler_name": "euler",
       "scheduler": "beta",
       "mode_type": "Linear",
@@ -313,6 +311,14 @@
       ],
       "seed": [
         "1603",
+        0
+      ],
+      "steps": [
+        "1696",
+        0
+      ],
+      "cfg": [
+        "1699",
         0
       ],
       "denoise": [
@@ -378,9 +384,9 @@
   "1693": {
     "inputs": {
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
-      "strength_model": 0,
+      "strength_model": 1,
       "model": [
-        "1687",
+        "1701",
         0
       ]
     },
@@ -398,6 +404,71 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "1696": {
+    "inputs": {
+      "math_expression": "20 if a == 1 else 6",
+      "a": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1697": {
+    "inputs": {
+      "int": 2
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "1699": {
+    "inputs": {
+      "math_expression": "2.5 if a == 1 else 1.0",
+      "a": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1700": {
+    "inputs": {
+      "math_expression": "0.0 if a == 1 else 1.0   ",
+      "a": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1701": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "model": [
+        "1687",
+        0
+      ],
+      "strength_model": [
+        "1700",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Accelerator Lora"
     }
   }
 }

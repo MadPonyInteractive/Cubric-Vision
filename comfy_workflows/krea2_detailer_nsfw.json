@@ -172,8 +172,6 @@
       "guide_size_for": true,
       "max_size": 1024,
       "mask_mode": true,
-      "steps": 20,
-      "cfg": 1.5,
       "sampler_name": "euler",
       "scheduler": "beta",
       "feather": 5,
@@ -200,6 +198,14 @@
       ],
       "seed": [
         "1603",
+        0
+      ],
+      "steps": [
+        "1705",
+        0
+      ],
+      "cfg": [
+        "1707",
         0
       ],
       "denoise": [
@@ -247,7 +253,7 @@
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
       "strength_model": 0.0,
       "model": [
-        "1689",
+        "1710",
         0
       ]
     },
@@ -301,6 +307,71 @@
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "neg"
+    }
+  },
+  "1705": {
+    "inputs": {
+      "math_expression": "20 if a == 1 else 6",
+      "a": [
+        "1706",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1706": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "1707": {
+    "inputs": {
+      "math_expression": "1.5 if a == 1 else 1.0",
+      "a": [
+        "1706",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1709": {
+    "inputs": {
+      "math_expression": "0.0 if a == 1 else 1.0   ",
+      "a": [
+        "1706",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1710": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "model": [
+        "1689",
+        0
+      ],
+      "strength_model": [
+        "1709",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Accelerator Lora"
     }
   }
 }
