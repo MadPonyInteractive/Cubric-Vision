@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-07-21T18:30:00Z",
+  "updated_at": "2026-07-21T18:50:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -17,6 +17,14 @@
     }
   ],
   "active_handoffs": [
+    {
+      "id": "c85c2cfe-43bf-4023-b725-fc7ab3cbcddb",
+      "path": ".agents/mpi-kanban/state/handoffs/c85c2cfe-43bf-4023-b725-fc7ab3cbcddb.json",
+      "task": "MPI-331",
+      "status": "open",
+      "to_role": "docs",
+      "created_at": "2026-07-21T18:50:00Z"
+    },
     {
       "id": "35082d23-e8bb-4add-9af2-6708de359879",
       "path": ".agents/mpi-kanban/state/handoffs/35082d23-e8bb-4add-9af2-6708de359879.json",

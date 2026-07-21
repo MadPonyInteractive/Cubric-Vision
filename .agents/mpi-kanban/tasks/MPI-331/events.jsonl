@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-331","at":"2026-07-21T18:50:00Z","actor":"claude","summary":"Next-session: collapse release skills to one GitHub-only skill (digit semantics 2nd=features/3rd=fixes) + update CLAUDE.md/versioning docs. Handoff c85c2cfe-43bf-4023-b725-fc7ab3cbcddb."}

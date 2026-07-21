@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 331,
+  "next_id": 332,
   "columns": {
     "todo": [
+      "MPI-331",
       "MPI-330",
       "MPI-329",
       "MPI-328",
@@ -108,8 +109,14 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T18:45:00Z",
+  "updated_at": "2026-07-21T18:50:00Z",
   "events": [
+    {
+      "at": "2026-07-21T18:50:00Z",
+      "type": "task.created",
+      "task": "MPI-331",
+      "note": "Next-session: collapse the 3 release skills into one GitHub-only release skill (2nd digit = features, 3rd = fixes, same op) + update CLAUDE.md/versioning docs. Handoff c85c2cfe-43bf-4023-b725-fc7ab3cbcddb."
+    },
     {
       "at": "2026-07-21T18:45:00Z",
       "type": "task.moved",

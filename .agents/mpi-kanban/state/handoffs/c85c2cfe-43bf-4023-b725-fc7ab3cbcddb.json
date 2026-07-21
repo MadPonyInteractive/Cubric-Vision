@@ -1,0 +1,116 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c85c2cfe-43bf-4023-b725-fc7ab3cbcddb",
+  "generated_at": "2026-07-21T18:50:00Z",
+  "from_session": null,
+  "to_role": "docs",
+  "status": "open",
+  "session": {
+    "name": "Public 1.1.0 SHIPPED to GitHub master (1.2.0 branch collapsed in). Release model simplified to GitHub-only. NEXT = collapse release skills + update docs/CLAUDE.md.",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Simplify the release process to the new GitHub-only model: one master branch, one release skill (bump a digit + GitHub release), and update the docs/rules/CLAUDE.md that still describe the old Patreon/Cloudflare/branch-merge flow.",
+    "status": "in_progress",
+    "summary": "1.1.0 is public on GitHub master and the branch model is collapsed to master-only. What remains is a documentation/skill refactor: fold the three release skills into one and correct every doc that describes the retired flow."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Public 1.1.0 shipped to master (commits 8d82a0e8 stamp, 31016550 event-log repair, 1abce6f3 install-test docs, 59689dcb merge 1.2.0->master, 2e16bd1e changelog fix, 6ddaf8b8 kanban close). 1.2.0 branch deleted local+remote.",
+      "Release model decision recorded in memory (project_release_model_github_only): GitHub-only, no Patreon tiers, no Cloudflare links."
+    ],
+    "pending": [
+      "DESIGN + BUILD one release skill replacing mpi-merge-branches + mpi-apply-patch + mpi-release-public. Flow: bump the right version digit (2nd = new features, 3rd = fixes - SAME mechanical op) -> mpi-version-bump file edits -> build portable (mpi-release-shared/build-dispatch.md) -> publish GitHub release. Reuse copy-review.md. DROP link-model.md + r2-upload.md (release-link only; R2 still hosts model weights).",
+      "Retire mpi-merge-branches, mpi-apply-patch, mpi-release-public (delete or make them thin pointers to the new skill).",
+      "Update CLAUDE.md: Context Router row (Portable builds & distribution), MPI Skills table, and any Procedures/versioning language referencing the retired skills. Get per-file approval.",
+      "Update .claude/rules/versioning.md + docs/versioning.md: GitHub-only model + digit semantics (major/minor=features/patch=fixes). Per-file approval.",
+      "Update docs/releases/ (portable-distribution-contract.md build process, github-release-checklist.md, patch-distribution.md) - fold to the single flow, drop Cloudflare/tier/branch-merge language.",
+      "Update the mpi-end project skill step 3 (release-awareness): it names mpi-apply-patch/mpi-merge-branches/mpi-release-public - point at the single new skill.",
+      "LATER/non-blocking: mpi-cleanup (30 handoffs, many superseded/resolved); MEMORY.md compaction (near size limit, needs user OK to drop/merge entries)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-331",
+    "title": "Collapse release skills to one (GitHub-only) + update CLAUDE.md/versioning docs",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-331/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-331/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "create-plan",
+    "edit project skills (with per-file approval)",
+    "edit docs/rules/CLAUDE.md (with per-file approval)"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Memory written: project_release_model_github_only (GitHub-only release model, 2026-07-21).",
+      "MPI-327 + MPI-324 closed to done; 1.1.0 release fully committed + pushed to master."
+    ],
+    "pending": [
+      "The single-release-skill + docs/CLAUDE.md refactor (this handoff).",
+      "mpi-cleanup for the handoff pile; MEMORY.md compaction (needs user sign-off per user rule 6)."
+    ]
+  },
+  "next_action": {
+    "description": "Collapse the three release skills (mpi-merge-branches + mpi-apply-patch + mpi-release-public) into ONE GitHub-only release skill: bump a version digit (2nd digit = new features, 3rd digit = fixes - now the same mechanical op), run the mpi-version-bump file edits, build the portable, and publish a GitHub release. No branch merge, no Patreon tiers, no Cloudflare pre-release link (link-model.md + r2-upload.md are dead for releases; R2 still hosts model weights). Then update CLAUDE.md, .claude/rules/versioning.md, docs/versioning.md, docs/releases/*, and mpi-end step 3 to match - one-line proposal per architectural file, wait for approval. Start by reading the three release skills + mpi-release-shared to see exactly what to keep vs drop.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Release model is GitHub-only from 2026-07-21 (user): one master branch, bump version, publish on GitHub. No Patreon Early Access/Pro tiers, no Cloudflare tier-neutral pre-release links.",
+      "Versioning digits: 2nd (minor) = new features, 3rd (patch) = fixes. A feature bump and a fix patch are now the SAME mechanical operation (increment the right digit + GitHub release) - so the three release skills collapse into one.",
+      "1.1.0 (not 1.2.0) is the first public version: internal 1.1.0/1.1.1 never shipped; the 1.2.0 dev branch became public 1.1.0 via the collapse merge 59689dcb."
+    ],
+    "constraints": [
+      "Project skills under Cubric-Vision/.claude/skills/ (mpi-merge-branches, mpi-apply-patch, mpi-release-public, mpi-release-shared, mpi-version-bump) ARE editable with per-file approval. NEVER edit user-scope ~/.claude/skills/ (the mpi-kanban pack: mpi-end-session, mpi-continue, mpi-handoff, mpi-lib) - record needed pack changes as memory/cards instead.",
+      "Do not edit CLAUDE.md or .claude/rules/*.md without explicit per-file approval (Cardinal Rule 5).",
+      "R2 (Cloudflare) is STILL used for model WEIGHTS and pod-runtime files - only the release-LINK model is retired. Do not remove R2 weight-upload plumbing.",
+      "mpi-version-bump is the in-repo file-edit mechanic (version constants + registries + notes) - keep it; the new skill orchestrates it."
+    ],
+    "files_modified": [
+      "js/core/appVersion.js, package.json, package-lock.json, js/core/operationRegistry.js, operation_registry.json (1.1.0 stamp)",
+      "js/data/releaseNotes.js, docs/releases/2026-07-09-v1.1.0.md, docs/releases/.approved-1.1.0.json (changelog + fix)",
+      ".agents/mpi-kanban/ (event-log escape repair + MPI-327/324 closed)",
+      "docs/README.md, docs/playbooks/README.md, docs/playbooks/install-test/, scripts/recover-runpod-key.js"
+    ],
+    "files_to_read_first": [
+      ".claude/skills/mpi-merge-branches/SKILL.md",
+      ".claude/skills/mpi-apply-patch/SKILL.md",
+      ".claude/skills/mpi-release-public/SKILL.md",
+      ".claude/skills/mpi-release-shared/SKILL.md",
+      ".claude/rules/versioning.md",
+      "docs/versioning.md",
+      "CLAUDE.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "versioning",
+      "releases"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/versioning.md",
+    "CLAUDE.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-21T18:50:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c85c2cfe-43bf-4023-b725-fc7ab3cbcddb.json and use mpi-continue to continue from where we left off (task MPI-331). Context: public 1.1.0 shipped to GitHub master this session (the 1.2.0 dev branch was collapsed into master as 1.1.0; 1.2.0 branch deleted). The release model is now GitHub-only - one master branch, bump a version digit, publish on GitHub. No more Patreon tiers, no Cloudflare pre-release links, no branch merging. Your job: collapse the three release skills (mpi-merge-branches + mpi-apply-patch + mpi-release-public) into ONE GitHub-only release skill where the 2nd version digit = new features and the 3rd = fixes (now the same mechanical op: bump digit -> mpi-version-bump edits -> build portable -> GitHub release). Keep mpi-version-bump + mpi-release-shared build-dispatch.md + copy-review.md; drop link-model.md + r2-upload.md (release links only - R2 still hosts model weights). Then update CLAUDE.md, .claude/rules/versioning.md, docs/versioning.md, docs/releases/*, and mpi-end step 3 to match, with per-file approval for architectural files. Read the three release skills + mpi-release-shared first."
+}
