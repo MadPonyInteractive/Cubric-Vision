@@ -3,11 +3,11 @@
   "id": "MPI-282",
   "title": "Test Krea2 as an editor (edit nodes + Raw fallback)",
   "description": "Krea2 Turbo re-composes but cannot edit. Test turning Krea2 into an editor model using upstream edit resources: https://huggingface.co/conradlocke/krea2-identity-edit (identity-edit weights) + https://github.com/lbouaraba/comfyui-krea2edit (ComfyUI edit nodes). Builder-Pod spike: install nodes, wire an edit workflow, run live. MAIN GOAL = get a real instruct-edit working. FALLBACK: if Turbo (distilled cfg 1.0) starves the edit conditioning and looks bad, test Krea2 Raw (52-step, phase 2) \u2014 the extra steps + working cfg may be what the edit path needs. This is the first concrete reason to build Raw. Details in docs/models/krea2/README.md 'To test \u2014 Krea2 as an EDITOR'.",
-  "column": "doing",
-  "maturity": "in-progress",
+  "column": "done",
+  "maturity": "complete",
   "status": "active",
   "created_at": "2026-07-14T00:00:00Z",
-  "updated_at": "2026-07-20T17:20:00Z",
+  "updated_at": "2026-07-21T15:55:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -19,8 +19,8 @@
     "research": "research/"
   },
   "attention": {
-    "state": "required",
-    "reason": "Local-verified (t2i + masked edit). FINAL gate: RunPod remote-engine verification deferred to 2026-07-17.",
-    "updated_at": "2026-07-16T04:45:00Z"
+    "state": "none",
+    "reason": "RunPod remote pass complete (MPI-324 sweep, RTX 2000): t2i, i2i, depth, upscale, masked edit + 2-character edit all clean. Accel LoRA resolved (clean non-degraded output = no silent LoRA miss). Step-count result-verified, not console-counted.",
+    "updated_at": "2026-07-21T15:55:00Z"
   }
 }

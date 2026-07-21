@@ -1,8 +1,12 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 325,
+  "next_id": 331,
   "columns": {
     "todo": [
+      "MPI-330",
+      "MPI-329",
+      "MPI-328",
+      "MPI-325",
       "MPI-323",
       "MPI-322",
       "MPI-320",
@@ -16,20 +20,22 @@
       "MPI-313"
     ],
     "doing": [
+      "MPI-327",
       "MPI-324",
-      "MPI-309",
       "MPI-315",
-      "MPI-310",
       "MPI-308",
       "MPI-306",
       "MPI-299",
-      "MPI-300",
-      "MPI-282",
       "MPI-259",
       "MPI-198",
       "MPI-4"
     ],
     "done": [
+      "MPI-310",
+      "MPI-300",
+      "MPI-326",
+      "MPI-282",
+      "MPI-309",
       "MPI-321",
       "MPI-319",
       "MPI-317",
@@ -102,8 +108,92 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T13:00:00Z",
+  "updated_at": "2026-07-21T18:25:00Z",
   "events": [
+    {
+      "at": "2026-07-21T18:25:00Z",
+      "type": "task.created",
+      "task": "MPI-330",
+      "note": "Removing a non-last image chip may strand the required Input_Image -> Qwen-Edit silently returns no output. Local engine healthy, NOT the MPI-326 fix. Primary hypothesis: chip-slot repack (project_media_slots_addressable_never_packed); secondary: stale Pod path. Deterministic repro + code entry points in card. Non-blocking for 1.1."
+    },
+    {
+      "at": "2026-07-21T18:15:00Z",
+      "type": "task.moved",
+      "task": "MPI-310",
+      "from": "doing",
+      "to": "done",
+      "note": "Remote PASS (RTX PRO 4000, MPI-324 sweep). Full shared-dep guard lifecycle: inverse-GC kept encoder on Krea uninstall (2->1 holder), describe from gallery+history landed caption, negative-flip correct, uninstall freed 5.24GB (104.2->99GB) + row flipped to Install after refresh. Both engine twins proven. Core deliverable + plugin entity + GC guard complete; stale destructive-bug attention cleared. Deferred step5 video-describe=MPI-287, plugin-row download-mode race=MPI-320."
+    },
+    {
+      "at": "2026-07-21T18:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-300",
+      "from": "doing",
+      "to": "done",
+      "note": "Remote PASS (RTX PRO 4000 Pod, MPI-324 sweep). Tier radio (all 3), 2-image combine (Head Swap), 3rd chip Input_Image_3 (injects local + remote - chip-3-unique blue-hair girl landed in qwenEdit_005 remote AND qwenEdit_003 local; graph wiring traced correct not crossed), style rack (3 styles remote). Caveat: scene + 2 distinct subjects in one pass is model-unstable (keeps one, morphs other) - same family as Krea2 2-subject limit, mitigation = chain per MPI-313. Injection correct; instability is the transformer."
+    },
+    {
+      "at": "2026-07-21T17:55:00Z",
+      "type": "task.created",
+      "task": "MPI-329",
+      "note": "Perf: remote cold model-load ~2min per swap vs ~14s warm (RTX PRO 4000, MPI-324 sweep). Per-model cold cost, consistent Krea2/Chroma. User caveat: may just be a weak inference card - retest on mainstream GPU. Not a 1.1 blocker."
+    },
+    {
+      "at": "2026-07-21T17:50:00Z",
+      "type": "task.moved",
+      "task": "MPI-326",
+      "from": "doing",
+      "to": "done",
+      "note": "Remote runtime PASS (RTX PRO 4000 Pod, MPI-324 sweep). Idle-connected: Network models filter 0/32 over 20s (no 5s models/status poll - Fix A), op dropdown stayed open, Denoise slider held 0.71 with no snap-back. Root killed at source. Fix A+B committed js/shell.js + js/data/modelRegistry.js."
+    },
+    {
+      "at": "2026-07-21T16:55:00Z",
+      "type": "task.created",
+      "task": "MPI-327",
+      "note": "Aggregate 1.1.0 + 1.1.1 + UNRELEASED.md into the public 1.2.0 changelog (GitHub skips 1.1). NOT simple concat - dedup bug-fix overlap between 1.1 and 1.2 (download queue). Curate for first-time users. Handoff: state/handoffs/f7677602-e881-4c74-b412-666604cf366b.json."
+    },
+    {
+      "at": "2026-07-21T16:55:00Z",
+      "type": "task.created",
+      "task": "MPI-328",
+      "note": "Remote models/check fails OPEN: remoteModels.js:325 defaults wrapper-omitted models to installed:true + :339 vacuous [].every(). Observed 1.1.1 CPU download Pod (booting wrapper -> 5 models falsely installed, no download). Lines present in 1.2.0. Adjacent to MPI-326. Fix: default false + guard every."
+    },
+    {
+      "at": "2026-07-21T16:50:00Z",
+      "type": "task.moved",
+      "task": "MPI-326",
+      "from": "todo",
+      "to": "doing",
+      "note": "Root VERIFIED + fix A+B IMPLEMENTED for 1.2 (user go). A: edge-guard the sync at shell.js:1370. B: diff-gate the models:checked emit at modelRegistry.js:218. node --check clean; all reSyncInstalledModels callers swept safe. maturity=validating pending remote runtime proof on a Pod. Files uncommitted."
+    },
+    {
+      "at": "2026-07-21T15:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-282",
+      "from": "doing",
+      "to": "done",
+      "note": "RunPod remote pass (MPI-324 sweep, RTX 2000). Krea2 t2i/i2i/depth/upscale/masked edit + 2-character edit all clean; accel LoRA resolved (no silent degrade); backslash LoRA path worked on Linux. Step count result-verified not console-counted."
+    },
+    {
+      "at": "2026-07-21T15:35:00Z",
+      "type": "task.created",
+      "task": "MPI-326",
+      "note": "Remote op-dropdown flashes + auto-closes on a ~1s models:checked rebuild storm. Defect B confirmed (PromptBox _refreshOpDropdown rebuilds unconditionally; Model Library already guards the same). Defect A hypothesis (remote:connection connected-edge flapping during Pod init re-fires syncModelInstalled). Surfaced in MPI-324 sweep. Scope 1.2-blocker vs 1.3 pending user."
+    },
+    {
+      "at": "2026-07-21T15:15:00Z",
+      "type": "task.moved",
+      "task": "MPI-309",
+      "from": "doing",
+      "to": "done",
+      "note": "Remote-proven on RTX 2000 Pod (MPI-324 sweep). Wrapper reinstalled MpiNodes aaa1d2d on connect; app_head_swap.json ran with no unknown-node rejection; box crop followed a user resize; correct swap saved. Hyper = 4 steps. node_lock.json ready to commit at close."
+    },
+    {
+      "at": "2026-07-21T15:15:00Z",
+      "type": "task.created",
+      "task": "MPI-325",
+      "note": "Head Swap: allow the target/reference box to extend OUTSIDE the frame and auto-pad that edge, keeping the box square. Surfaced during MPI-324 Head Swap validation - an edge-adjacent head cannot capture full hair with an in-frame square without grabbing the neighbour (caused the first-run fail). Pad, do not shrink. Workflow/UX improvement, not a v1.2 blocker."
+    },
     {
       "at": "2026-07-21T13:00:00Z",
       "type": "task.created",

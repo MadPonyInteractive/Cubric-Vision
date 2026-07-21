@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-330",
+  "title": "Removing a non-last image chip may strand the required Input_Image -> Qwen-Edit silently returns no output",
+  "description": "OBSERVED after the MPI-324 Pod sweep (2026-07-21, local engine, 16GB GPU). A Qwen-Edit (qwenEdit, requiresImages 1) generation flashed a queue card that vanished instantly and produced nothing; console '[generationService] Generation completed but no output returned' (the zero-output branch MPI-310 preserved for genuinely empty completions). Changing settings/seed did NOT recover it; changing the IMAGE CHIP did -> then it generated normally. Krea t2i AND Qwen both generated locally at other points, so the LOCAL ENGINE IS HEALTHY, Qwen IS installed locally, and it is NOT the MPI-326 fix (that only gates install-state re-sync, never generation dispatch/completion).\n\nPRIMARY HYPOTHESIS (user, matches known-fragile area): a chip-slot REPOSITIONING bug. The user had REMOVED chip 1, so chip 2 shifted into chip-1's position. If the visible chips repack but injection still maps by the old role/index (or vice versa), the REQUIRED Input_Image (slot 1) ends up EMPTY. Qwen's Input_Image MpiLoadImageFromPath is block_if_empty:true, so an empty slot 1 ExecutionBlocks the whole graph -> zero output -> card discarded. This is exactly the class in memory project_media_slots_addressable_never_packed (MPI-306 Head Swap: 'slot items SPARSE, role = SLOT's role not array position; packing ran Head Swap backwards. Never splice/repack.'). The Head-Swap-era fix may not cover qwenEdit's 3-slot UI, OR the UI and the injector disagree about sparse-vs-packed.\n\nSECONDARY HYPOTHESIS: stale Pod path. Local gen worked while the Pod was ALIVE (user switched to local via the cloud icon) and broke after the Pod was DELETED; a chip whose injected path was the Pod-uploaded file would go unresolvable when the Pod (and its temp files) were destroyed. Re-attaching forced a fresh local resolve. See feedback_media_injection_path_to_string / project_media_injection_path_to_string. The pod-delete timing may be coincidental with the chip-1 removal.\n\nDETERMINISTIC REPRO TO RUN FIRST (isolates A from B, no Pod needed): locally, attach 2-3 image chips to Qwen-Edit, remove the FIRST chip, then generate. If it silently no-outputs -> hypothesis A (slot repack / stranded required slot 1), independent of any Pod. If it only reproduces after a connect->local-switch->pod-delete dance -> hypothesis B (stale remote path).\n\nCODE ENTRY POINTS: js/components/Organisms/MpiPromptBox/MpiPromptBox.js (chip storage + removal - the ONLY match for the slot handling); injection in js/services/commandExecutor.js and js/services/workflowInjectors/; op decl js/data/commandRegistry.js:214 (qwenEdit 3 mediaInputs, inputImage/inputImage2/inputImage3 -> Input_Image/_2/_3). Runtime graph comfy_workflows/qwen_edit.json wiring is CORRECT and not crossed (verified this session: image1<-34<-70 Input_Image, image2<-169<-104 Input_Image_2, image3<-171<-72 Input_Image_3; both TextEncodeQwenImageEditPlus encoders get all three).\n\nTWO ISSUES: 1) the slot bug above; 2) SILENT DISCARD UX - only a console warning; a required-image op whose input is empty/unresolvable should TOAST 'could not load the input image' (or block dispatch), not vanish the card.\n\nSCOPE: NOT a 1.1 blocker - narrow (multi-image edit + remove a non-last chip), trivial workaround (re-attach), no data loss/crash. Patch candidate. Confirm A vs B first; if a shared slot primitive is touched, sweep BOTH engine paths + every media-op consumer per the root-cause rule.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-21T18:25:00Z",
+  "updated_at": "2026-07-21T18:25:00Z",
+  "labels": [
+    "bug",
+    "media-injection",
+    "qwen-edit"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

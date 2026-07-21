@@ -72,11 +72,14 @@ Full checklist: MPI-310 validation.md. Weight fetched on-demand in Phase 0.
 
 | Card | Remote result | Moves to | Notes |
 |---|---|---|---|
-| MPI-309 (node_lock) | ⬜ Pod loaded aaa1d2d? | done on pass | box nodes resolve |
-| Head Swap MPI-299/306 | ⬜ | see cards | local Phase 3 still separate |
-| MPI-282 Krea2 edit | ⬜ | done on pass | accel LoRA + tier-2 the risks |
-| MPI-300 Qwen-Edit | ⬜ | done on pass | 3-chip is the untested surface |
-| MPI-310 Describer | ⬜ | done on pass | uninstall LAST |
+| MPI-309 (node_lock) | ✅ PASS (RTX 2000) | **done** | Wrapper reinstalled aaa1d2d on connect ("Loading new nodes" toast); box nodes accepted, MpiBox crop followed a user resize, no unknown-node rejection. node_lock.json ready to commit at close. |
+| Head Swap MPI-299/306 | ✅ remote gen works (Hyper) | stays doing | Correct swap saved to gallery; Hyper = 4 steps. NOT a v1.2 gate (apps stay dev-only in 1.2). Still open: Quality-tier step-count compare not run remotely; MPI-306 Phase 3 is a separate LOCAL test. New idea MPI-325 (box outside frame + pad). |
+| MPI-282 Krea2 edit | ✅ PASS (RTX 2000) | **done** | t2i/i2i/depth/upscale/masked edit + 2-character edit all clean; accel LoRA resolved (no degrade); backslash LoRA path OK on Linux. Step count result-verified, not console-counted. |
+| MPI-300 Qwen-Edit | ✅ PASS (RTX PRO 4000) | **done** | Tier radio (3 tiers), 2-image combine (Head Swap), 3rd chip Input_Image_3 (injects local qwenEdit_003 + remote qwenEdit_005; graph wiring traced correct not crossed), style rack (3 styles remote incl 3D). Caveat: scene + 2 distinct subjects one-pass is model-unstable → chain per MPI-313 (NOT a code bug — injection correct, transformer limit, identical local+remote). |
+| MPI-310 Describer | 🟡 describe PASS, GC/uninstall NOT done | stays doing | Describe-from-gallery worked. Negative-mode flip, inverse-GC check, and uninstall-last NOT run. |
+
+### Bug found mid-sweep
+- **MPI-326** (NEW, todo) — remote op-dropdown flashes + auto-closes AND sliders snap back mid-drag on a ~1s `models:checked` re-render storm. Root fix candidate: gate the `models:checked` emit on a real diff. Severity leans 1.2-blocker; scope decision deferred to session close.
 
 Fill each row live. A card moves to `done` ONLY on its own remote pass; a partial or a silent
 degrade keeps it in `doing`. If the session runs long, `/mpi-handoff` and resume from this table.

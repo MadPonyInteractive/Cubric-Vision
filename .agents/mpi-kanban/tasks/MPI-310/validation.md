@@ -94,12 +94,40 @@ node tests/text-op-completion.test.cjs   # outputKind contract + 28 ops in sync 
 - **Video "Describe current frame" NOT built** (card step 5). The loader node reads an
   OS path, not a blob, so a captured frame must be written to disk first. `describeItem`
   refuses video with a toast. Related: MPI-287 (frame-accurate capture via frameSink).
-- **RunPod / remote engine untested.** The weight is NOT baked into the Pod image (a
-  deliberate decision — 5.24GB for an optional captioner). On a remote engine it must
-  fetch on demand. Untested; memory `feedback_runpod_not_local_engine_proof` applies —
-  a local pass proves nothing about the remote path.
+- **RunPod / remote engine — VERIFIED PASS (2026-07-21, MPI-324 sweep, RTX PRO 4000
+  Pod, volume cubric-vision-EU-RO-1).** See "## Remote validation" below. The weight is
+  NOT baked into the Pod image (deliberate — 5.24GB optional captioner); it fetched /
+  was staged on the volume and the describer ran.
 - **`runImageDescribe()` in `js/services/commandExecutor.js` is now dead code.** The dev
   harness that called it was retired. Left in place deliberately (pre-existing public
   export), flagged for an intentional sweep.
 - **Caption is not persisted.** It goes to the prompt box only — no sidecar storage, no
   auto-feed to upscale. Deliberately out of scope per the card.
+
+## Remote validation — PASS (RTX PRO 4000 Pod, MPI-324 sweep, 2026-07-21)
+
+Full shared-dep guard lifecycle + describe, all remote, all green:
+
+1. **Inverse-GC — PASS.** Uninstalled Krea 2 (a HOLDER of the shared abliterated
+   encoder, not merely an unrelated model) -> Image Describer stayed Installed and the
+   5.24GB encoder was retained. The remote twin guard (_remoteSharedDepIds
+   exclusive-evidence fix) held at the 2-holders -> 1-holder transition. Krea cards
+   showed a partial (21 percent) bar = exclusive files gone, shared encoder kept =
+   correct.
+2. **Describe from a gallery card — PASS.** Toast "Description added to the prompt";
+   caption landed in the prompt-box positive. The shared encoder that survived the Krea
+   uninstall actually RAN (strongest proof it was not swept).
+3. **Describe from a history item — PASS.** Full detailed caption landed in positive.
+4. **Negative-mode flip — PASS.** With negative mode on, Describe flipped the box back
+   to positive, pasted the caption, left negative empty; toggle matched.
+5. **Uninstall (DEAD LAST) — PASS.** Describer was now the ONLY holder of the encoder
+   (Krea already gone) = the 1-holder -> 0-holder transition. Uninstall freed 5.24GB
+   (storage 104.2GB -> 99GB) and, after the Model-Library refresh, the row flipped to
+   `Install (5.24GB)`. This is the case that regressed mid-build (GC guard made uninstall
+   a silent no-op) — now correct on remote.
+
+Net: the destructive shared-dep bug (data loss, 2026-07-19) is fixed AND remote-verified
+end to end; both engine twins proven. Describe feature works on the remote engine.
+
+Residuals (NOT this card): video "Describe current frame" = MPI-287; plugin-row
+concurrent-install display race (download-mode only, non-blocking) = MPI-320.
