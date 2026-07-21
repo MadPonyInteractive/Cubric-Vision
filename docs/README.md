@@ -87,6 +87,7 @@ NOT mechanically split these):
 | Patch/promote/public flow + R2 upload | [releases/patch-distribution.md](releases/patch-distribution.md) |
 | Portable artifact contract | [releases/portable-distribution-contract.md](releases/portable-distribution-contract.md) |
 | GitHub release checklist + macOS testing | [releases/github-release-checklist.md](releases/github-release-checklist.md) |
+| Install-test a fresh portable (per-folder data trap, RunPod key carry-over) | [playbooks/install-test/README.md](playbooks/install-test/README.md) |
 | Build evidence log + macOS fixes | [releases/build-experience-log.md](releases/build-experience-log.md) |
 | Per-version release notes | `releases/YYYY-MM-DD-v<ver>.md` |
 
