@@ -1,0 +1,105 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f7677602-e881-4c74-b412-666604cf366b",
+  "generated_at": "2026-07-21T16:55:00Z",
+  "from_session": null,
+  "to_role": "docs",
+  "status": "open",
+  "session": {
+    "name": "1.1.1 verification session that pivoted to shipping 1.2.0 to GitHub (drop 1.1)",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Build the comprehensive public 1.2.0 changelog for the Thursday GitHub release, aggregating 1.1.0 + 1.1.1 into 1.2.0 (1.1 is being skipped publicly).",
+    "status": "in_progress",
+    "summary": "Diagnosed the problem fully; NOT started implementing (deliberately deferred to a fresh session - the source session was ~300k tokens). The 1.2.0 changelog is unbuilt and its sources are out of sync."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Diagnosed: GitHub public jumps 1.0.1 -> 1.2.0; 1.1.0 + 1.1.1 never shipped publicly.",
+      "Found 3 out-of-sync sources (see constraints).",
+      "Confirmed with user this is NOT simple concat - bug-fix overlap between 1.1 and 1.2 must be deduped."
+    ],
+    "pending": [
+      "Rebuild RELEASE_NOTES['1.2.0'] in js/data/releaseNotes.js as ONE complete curated entry (fold UNRELEASED + 1.1.0 + master's 1.1.1, dedup overlapping fixes, curate for first-time users).",
+      "Update archival docs/releases/2026-07-09-v1.2.0.md to match.",
+      "Clear docs/releases/UNRELEASED.md back to its header comment.",
+      "Decide whether to also ship the 18+ modal backdrop fix (shell.js:293-302 sequence)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-327",
+    "title": "Aggregate 1.1.0 + 1.1.1 + UNRELEASED into the public 1.2.0 changelog",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-327/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-327/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement (after checking with the agent wrapping up 1.2 verifications - shared tree)"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Full diagnosis captured in MPI-327 card description and this handoff."
+    ],
+    "pending": [
+      "The actual curated 1.2.0 changelog must be authored in the fresh session.",
+      "Related bug MPI-328 (remote model-check fail-open) filed separately for the 1.2 wrap-up agent to judge."
+    ]
+  },
+  "next_action": {
+    "description": "Read docs/releases/UNRELEASED.md (the real 1.2.0 content), RELEASE_NOTES['1.2.0'] + ['1.1.0'] in js/data/releaseNotes.js, and `git show master:js/data/releaseNotes.js` for the 1.1.1 entry. Then rebuild RELEASE_NOTES['1.2.0'] as one curated entry that folds all three, deduping bug-fix overlap (the download queue: 1.1 introduced it, 1.2's MPI-276 refactor reworked it - do not double-list or contradict) and phrasing for a first-time GitHub user (intros not refinements). Update docs/releases/2026-07-09-v1.2.0.md and clear UNRELEASED.md. FIRST confirm the agent wrapping up 1.2 is not also editing these files.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Ship 1.2.0 to GitHub Thursday and abandon 1.1 entirely (zero Patreons, low traction, weak initial models; KREA2/Chroma in 1.2 are the draw).",
+      "Changelog is a DATA merge into RELEASE_NOTES['1.2.0'], not the minor-based aggregation code idea - that code cannot cross 1.1 -> 1.2 (different minor).",
+      "Defer the changelog build to a fresh session because this one hit ~300k tokens and the dedup needs careful judgment."
+    ],
+    "constraints": [
+      "SOURCE 1: RELEASE_NOTES['1.2.0'] (js/data/releaseNotes.js) is a STALE STUB - only 'Chroma Hyper' + 'Chroma Flash faster'; neither is in UNRELEASED. Do not treat it as the base.",
+      "SOURCE 2: docs/releases/UNRELEASED.md = the REAL 1.2.0 content (~22 features incl KREA2, KREA2 NSFW, Qwen Image Edit, Boogu Image Edit, Remove Background, Export GIF, frame-accurate playback, RunPod-unlock, mascot, Settings redesign + ~28 fixes), never folded.",
+      "SOURCE 3: RELEASE_NOTES['1.1.0'] (RunPod, Model Library, LTX 2.3, NVIDIA PiD, Wan 2.2 5B, Chroma Flash intro) + the 1.1.1 entry which exists ONLY on master (git show master:js/data/releaseNotes.js -> 3 fixes).",
+      "DEDUP is the hard part: bugs fixed in 1.1 re-fixed/refactored in 1.2 (download queue especially) must not double-list or contradict.",
+      "Curate for a first-time GitHub user: intros not refinements ('Chroma Flash IS...' not '...is faster'; 'RunPod remote engine' not 'toggle moved').",
+      "SHARED TREE: another agent is wrapping up 1.2 verifications - do not double-edit releaseNotes.js / UNRELEASED.md without checking.",
+      "Out of scope for Thursday: getAggregatedReleaseNotes(major.minor) helper for future 1.2.x patch accumulation (MpiChangelogDialog reads getReleaseNotes(APP_VERSION) exact-key today).",
+      "Optional to include: 18+ adult-content modal (MpiOkCancel) stacks over the changelog with no dim backdrop - z-index floor collapse at MpiModal.js:95; fix by sequencing at shell.js:293-302 (18+ first, changelog after Continue)."
+    ],
+    "files_modified": [],
+    "files_to_read_first": [
+      "docs/releases/UNRELEASED.md",
+      "js/data/releaseNotes.js",
+      ".agents/mpi-kanban/tasks/MPI-327/task.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "docs/versioning.md (release notes: archival vs runtime)",
+      "docs/releases/README.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/versioning.md",
+    "docs/versioning.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-21T16:55:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/f7677602-e881-4c74-b412-666604cf366b.json and use mpi-continue on task MPI-327. You are building the public 1.2.0 changelog for a Thursday GitHub release - GitHub skips 1.1 entirely (1.1.0 + 1.1.1 never shipped publicly), so their content must fold into RELEASE_NOTES['1.2.0']. Three sources are out of sync: the RELEASE_NOTES['1.2.0'] entry in js/data/releaseNotes.js is a stale stub (only Chroma Hyper + 'Chroma Flash faster'); docs/releases/UNRELEASED.md holds the REAL 1.2.0 content (KREA2, Qwen Edit, Boogu Edit, Remove Background, Export GIF, frame-accurate playback, RunPod-unlock, ~22 features + ~28 fixes) that was never folded; and RELEASE_NOTES['1.1.0'] plus the 1.1.1 entry that lives ONLY on master (git show master:js/data/releaseNotes.js) hold the Patreon-only content. Rebuild RELEASE_NOTES['1.2.0'] as ONE complete curated entry that folds all three - this is NOT a blind concat: bugs fixed in 1.1 were re-fixed or refactored in 1.2 (the download queue especially - 1.1 introduced it, 1.2's MPI-276 refactor reworked it), so dedup and reconcile overlapping fix items, and phrase everything for a first-time GitHub user (intros, not refinements). Then update docs/releases/2026-07-09-v1.2.0.md and clear UNRELEASED.md back to its header. IMPORTANT: another agent is wrapping up 1.2 verifications on the shared tree - confirm they are not also editing releaseNotes.js or UNRELEASED.md before you write. Separately, bug MPI-328 (remote model-check fail-open) was filed for that wrap-up agent to judge."
+}
