@@ -3,7 +3,6 @@
   "next_id": 333,
   "columns": {
     "todo": [
-      "MPI-330",
       "MPI-329",
       "MPI-328",
       "MPI-325",
@@ -24,6 +23,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-330",
       "MPI-306",
       "MPI-315",
       "MPI-299",
@@ -108,7 +108,7 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T20:20:00Z",
+  "updated_at": "2026-07-22T00:45:00Z",
   "events": [
     {
       "at": "2026-07-21T20:25:00Z",
@@ -336,13 +336,13 @@
       "at": "2026-07-19T18:45:00Z",
       "type": "task.created",
       "task": "MPI-314",
-      "note": "Orphaned-dep reclaim — 19GB B1-era LTX shared deps, no owner, no UI delete path."
+      "note": "Orphaned-dep reclaim \u2014 19GB B1-era LTX shared deps, no owner, no UI delete path."
     },
     {
       "at": "2026-07-19T21:00:00Z",
       "type": "task.created",
       "task": "MPI-315",
-      "note": "Log architecture — split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
+      "note": "Log architecture \u2014 split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
     },
     {
       "at": "2026-07-19T21:30:00Z",
