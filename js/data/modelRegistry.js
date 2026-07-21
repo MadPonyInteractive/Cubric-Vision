@@ -47,6 +47,14 @@ const _warnedBakedDrift = new Set();
 let _driftedModelIds = [];
 export function getDriftedModelIds() { return _driftedModelIds.slice(); }
 
+// MPI-326: last installed/drifted sets we emitted 'models:checked' for. The
+// remote connection heartbeat re-checks install-state every ~5s; models:checked
+// fans out to op-dropdown + slider rebuilds, so a no-change re-emit was tearing
+// down open menus + in-progress slider drags on the remote engine. Gate the emit
+// on a real diff so a steady-state re-sync stays silent.
+let _lastEmittedInstalledKey = null;
+let _lastEmittedDriftedKey = null;
+
 // ── Path Config ───────────────────────────────────────────────────────────────
 // Initialized asynchronously via initPaths() — defaults to Windows portable until server reports.
 
@@ -215,6 +223,15 @@ export async function syncModelInstalled() {
         // isModelUsable happening to reject an unknown id.
         const installedModelIds = Object.keys(results)
             .filter(id => !id.startsWith('app:') && !id.startsWith('plugin:') && isModelUsable(id));
+        // MPI-326: only fan out when the installed or drifted set actually changed —
+        // a redundant re-sync (remote heartbeat) must not rebuild the op UI.
+        const _installedKey = installedModelIds.slice().sort().join(',');
+        const _driftedKey = _driftedModelIds.slice().sort().join(',');
+        if (_installedKey === _lastEmittedInstalledKey && _driftedKey === _lastEmittedDriftedKey) {
+            return true; // nothing changed — skip the models:checked fan-out
+        }
+        _lastEmittedInstalledKey = _installedKey;
+        _lastEmittedDriftedKey = _driftedKey;
         Events.emit('models:checked', { installedModelIds, driftedModelIds: _driftedModelIds.slice() });
 
         return true;

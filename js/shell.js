@@ -1367,15 +1367,18 @@ async function _initDataRegistries() {
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('remote:connection', async ({ connected, phase = null } = {}) => {
     if (phase) return; // mid-transition, not a resolved state
-    if (connected) {
-      // MPI-200: re-sync on EVERY resolved connect, not just the first. A new
-      // Pod is a new machine with a potentially different GPU arch (4090 modern
-      // → 5090 blackwell), and arch-variant models (LTX balanced: mxfp8 vs
-      // fp8_scaled) require the arch-specific weight. Re-checking only on the
-      // first connect left the previous Pod's arch cache in place after a
-      // same-session Pod swap, so the panel showed a tier "installed" whose
-      // weight isn't on the new volume. A resolved connected:true IS a real
-      // (re)connection edge, so re-checking each time is correct, not redundant.
+    if (connected && !_wasRemoteConnected) {
+      // MPI-200: re-sync on each genuine connect EDGE — a new Pod may have a
+      // different GPU arch (4090 modern → 5090 blackwell) and arch-variant models
+      // (LTX balanced: mxfp8 vs fp8_scaled) need the arch-specific weight, so a
+      // same-session Pod swap must re-check or the panel shows a tier "installed"
+      // whose weight isn't on the new volume.
+      // MPI-326: guard on the edge (!_wasRemoteConnected). The connection
+      // heartbeat (_initRemoteStatusFeed) re-emits {connected:true} every ~5s to
+      // keep the live session-cost badge climbing; without this guard the sync ran
+      // every 5s and its models:checked fan-out tore down the op dropdown +
+      // in-progress slider drags on remote. A Pod swap still re-syncs: it routes
+      // through the disconnect edge below, which resets _wasRemoteConnected=false.
       _wasRemoteConnected = true;
       try {
         await syncModelInstalled();
