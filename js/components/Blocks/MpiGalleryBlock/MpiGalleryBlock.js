@@ -1589,6 +1589,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 : createImageItem({
                     id,
                     filePath: url,
+                    thumbPath,
                     uploaded: true,
                     operation: 'imported',
                     pixelDimensions: dims || { w: 0, h: 0 },

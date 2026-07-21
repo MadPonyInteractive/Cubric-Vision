@@ -1,21 +1,28 @@
-# MPI-321 — Gallery hover-intent delay
+# MPI-321 — Gallery hover playback vs scroll
 
 ## Problem
-Hovering a gallery video/audio card plays it instantly. While scrolling, the
-cursor drags across many cards → each fires `play()` → stutter + audio blares on
-scroll-past (worst with videos that have audio). Annoying + reads as lag.
+Hovering a gallery video/audio card plays it. While scrolling, the cursor drags
+across many cards → each fires `play()` → stutter + audio blares on scroll-past
+(worst with videos that have audio). Annoying + reads as lag.
 
-## Fix
-200ms hover-intent dwell before hover playback. On `mouseenter` schedule a timer;
-the timer re-checks `cardEl.matches(':hover')` when it fires — so a card the
-cursor scrolled away from never plays even when `mouseleave` didn't fire
-(scrolling moves the card, not the pointer; see the MPI-132 scroll-stop handler).
-`mouseleave` clears the pending timer. Click-to-play (audio) is unchanged —
-intentional, no dwell.
+## Approach (v2 — scroll-gate, no dwell)
+First tried a 200ms hover-intent dwell — user disliked waiting to play. Replaced
+with: **hover plays instantly when NOT scrolling; while scrolling nothing plays
+and everything stops; settling the scroll on a card plays it.**
 
-`HOVER_PLAY_DELAY_MS = 200` in MpiGalleryGrid.js. Poster frame / first paint is
-unaffected — only `.play()` waits.
+- Setup-scope `_isScrolling` flag + `_scrollIdleTimer`.
+- Scroll handler: set `_isScrolling = true`, `_stopOtherGalleryMedia(null)`
+  (stop ALL, including under cursor), restart a 150ms idle timer.
+- Idle timer fires (scroll stopped): clear the flag, then call
+  `qs('.mpi-group-card:hover')?._hoverPlay?.()` — replays the card the cursor
+  came to rest on (mouseenter won't re-fire; the scroll moved, not the pointer).
+- `mouseenter` (audio + video): `if (_isScrolling) return;` else play instantly.
+- Each card exposes `cardEl._hoverPlay` (video/audio play logic; no-op for image)
+  so the idle handler can trigger the settled card.
+- `_promoteVideo` hover-autoplay also gated on `!_isScrolling`.
+
+150ms idle threshold in MpiGalleryGrid.js. No wait on a real hover — the delay
+only applies to the moment scrolling stops with the cursor already on a card.
 
 ## Status
-Code complete, syntax-checked. Pending live in-app test (scroll fast over
-video/audio cards → no playback; settle 200ms → plays).
+Code complete, syntax-checked. Pending live in-app test.

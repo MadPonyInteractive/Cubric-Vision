@@ -133,6 +133,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
         /** @type {Array<Function>} */
         const _unsubs = [];
 
+        // ── Hover playback vs scroll (MPI-321) ─────────────────────────────────
+        // Hover plays a video/audio card INSTANTLY — but never while scrolling.
+        // The scroll handler sets _isScrolling and stops all playing media; a
+        // short idle timer clears it and replays whatever card the cursor settled
+        // on. So scroll-past = silence, settling = instant play, no dwell.
+        let _isScrolling = false;
+        let _scrollIdleTimer = null;
+
         // ── Selection state ───────────────────────────────────────────────────
         const _selectedIds = new Set();
         let _selectionMode = false;
@@ -645,6 +653,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.remove('mpi-group-card--missing');
             }
 
+            // Hover playback entry point (MPI-321). Set per-card on cardEl so the
+            // scroll-idle handler can replay the card the cursor settled on. Never
+            // plays while scrolling — the scroll handler gates + stops everything.
+            // No dwell: a real hover (not scrolling) plays instantly.
+            cardEl._hoverPlay = () => {};
+
             // Click the audio card → toggle play/pause (no loop). The center icon
             // swaps play↔pause as feedback. A hidden <audio> element drives it.
             let _audioEl = null;
@@ -691,11 +705,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // Play audio on hover (setting, default on): hovering an audio
                 // card plays it (stop button shows via the 'play' listener);
                 // leaving stops + resets. Click-to-stop still works.
-                on(cardEl, 'mouseenter', () => {
+                cardEl._hoverPlay = () => {
                     if (!Storage.getPlayAudioOnHover()) return;
                     if (!audio.paused) return;
                     _stopOtherGalleryMedia(audio);
                     audio.play().catch(() => {});
+                };
+                on(cardEl, 'mouseenter', () => {
+                    if (_isScrolling) return; // scroll-past never plays
+                    cardEl._hoverPlay();
                 });
                 on(cardEl, 'mouseleave', () => {
                     if (audio.paused) return;
@@ -748,11 +766,20 @@ export const MpiGalleryGrid = ComponentFactory.create({
             function _ensureVideoHoverBindings() {
                 if (_videoHoverBound) return;
                 _videoHoverBound = true;
+                cardEl._hoverPlay = _videoHoverPlay;
                 cardEl.addEventListener('mouseenter', _onCardEnter);
                 cardEl.addEventListener('mouseleave', _onCardLeave);
             }
 
             function _onCardEnter() {
+                if (_isScrolling) return; // scroll-past never plays (MPI-321)
+                cardEl._hoverPlay();
+            }
+
+            // Actual play, also invoked by the scroll-idle handler for the card
+            // the cursor settled on. Re-reads _videoThumb — a re-render could have
+            // swapped it since binding.
+            function _videoHoverPlay() {
                 if (!_videoThumb) return;
                 // Play audio on hover (setting, default on): stop any other
                 // playing card first, then unmute so this card is the only sound.
@@ -804,9 +831,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 v.src = _videoSrc;
                 _videoThumb = v;
 
-                // If user is already hovering at the moment of promotion, start
-                // playback as soon as data lands.
-                if (cardEl.matches(':hover')) {
+                // If user is already hovering at the moment of promotion (and not
+                // mid-scroll), start playback as soon as data lands. Scroll-settle
+                // replays via the idle handler, so the scroll gate stays honored.
+                if (cardEl.matches(':hover') && !_isScrolling) {
                     v.addEventListener('loadeddata', () => v.play().catch(() => {}), { once: true });
                 }
             }
@@ -894,7 +922,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     } else if (isVideo) {
                         _swapThumbToVideo(src, selected);
                     } else {
-                        _swapThumbToImage(src, selected);
+                        // MPI-319: render the small gallery thumb (a 512px JPG)
+                        // when present, not the full-res original — decoding 100+
+                        // 4K PNGs is what jammed scrolling. Full-res still opens in
+                        // the viewer (which reads filePath). Older items without a
+                        // thumb fall back to filePath.
+                        _swapThumbToImage(selected?.thumbPath || src, selected);
                     }
                 } else {
                     _swapThumbToEmpty();
@@ -1601,21 +1634,24 @@ export const MpiGalleryGrid = ComponentFactory.create({
             grid.scrollTop += e.deltaY;
         }, { passive: false }));
 
-        // Scrolling moves a playing card out from under the cursor without
-        // firing mouseleave (the element moves, the pointer doesn't) — so hover
-        // audio/video would keep playing off-screen. On any scroll, stop every
-        // media element whose card is no longer hovered. Keeps the one still
-        // under the cursor playing.
+        // While scrolling: NOTHING plays and anything playing stops (MPI-321).
+        // Scrolling drags the cursor across cards, firing mouseenter on each — the
+        // _isScrolling gate makes those no-ops so scroll-past stays silent. A short
+        // idle timer clears the flag and replays whatever card the cursor settled
+        // on, so stopping the scroll over a card plays it instantly (no dwell).
         _unsubs.push(on(grid, 'scroll', () => {
-            const hovered = qs('.mpi-group-card:hover', grid);
-            qsa('audio[data-src], video.mpi-group-card__thumb--video', grid).forEach((m) => {
-                if (m.paused) return;
-                if (hovered && hovered.contains(m)) return;
-                m.pause();
-                try { m.currentTime = 0; } catch (_) {}
-                if (m.tagName === 'VIDEO') m.muted = true;
-            });
+            _isScrolling = true;
+            _stopOtherGalleryMedia(null); // stop everything, including under the cursor
+            if (_scrollIdleTimer) clearTimeout(_scrollIdleTimer);
+            _scrollIdleTimer = setTimeout(() => {
+                _scrollIdleTimer = null;
+                _isScrolling = false;
+                // Play the card the cursor came to rest on (mouseenter won't
+                // re-fire — the pointer didn't move, the scroll did).
+                qs('.mpi-group-card:hover', grid)?._hoverPlay?.();
+            }, 150);
         }, { passive: true }));
+        _unsubs.push(() => { if (_scrollIdleTimer) clearTimeout(_scrollIdleTimer); });
 
         // ── Info toggle button ───────────────────────────────────────────────
 

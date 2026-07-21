@@ -33,7 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
-const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { extractVideoThumb, extractImageThumb } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
@@ -1447,6 +1447,14 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             // ponytail: no duration probe — probeVideo returns null without a
             // video stream; add a dedicated audio probe if the card must show length.
             metaContent.thumbPath = null;
+        } else {
+            // Image: downscale to a gallery thumb so scrolling 100+ 4K cards
+            // doesn't decode full-res per card (MPI-319).
+            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractImageThumb(filePath, thumbPath);
+            if (thumbed) {
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+            }
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
         res.json({
@@ -1529,6 +1537,54 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
         res.json({ success: true, patched, total });
     } catch (err) {
         logger.error('project', 'probe-videos failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * POST /backfill-image-thumbs
+ * Body: { folderPath }
+ * MPI-319: generate a gallery thumb for any IMAGE sidecar that lacks one
+ * (projects created before image thumbs existed). Patches the sidecar with
+ * thumbPath and returns a { itemId: thumbPathUrl } map so the client can patch
+ * live in-memory items without a reload. Fire-and-forget on project load —
+ * missing thumbs just fall back to full-res in the gallery meanwhile.
+ */
+router.post('/backfill-image-thumbs', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir = path.join(mediaDir, '.meta');
+        if (!(await fs.pathExists(metaDir))) return res.json({ success: true, patched: 0, thumbs: {} });
+
+        const sidecars = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        const thumbs = {};
+        let patched = 0;
+
+        for (const f of sidecars) {
+            const p = path.join(metaDir, f);
+            let meta;
+            try { meta = await fs.readJson(p); } catch { continue; }
+            if (meta.type !== 'image') continue;
+            if (meta.thumbPath) continue;
+
+            const inputPath = pathFromProjectFileUrl(meta.filePath);
+            if (!inputPath || !(await fs.pathExists(inputPath))) continue;
+
+            const id = meta.id || f.replace(/\.json$/, '');
+            const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractImageThumb(inputPath, thumbAbs);
+            if (!thumbed) continue;
+
+            meta.thumbPath = `/project-file?path=${encodeURIComponent(thumbAbs)}`;
+            await fs.writeJson(p, meta, { spaces: 2 });
+            thumbs[id] = meta.thumbPath;
+            patched++;
+        }
+
+        res.json({ success: true, patched, thumbs });
+    } catch (err) {
+        logger.error('project', 'backfill-image-thumbs failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -1900,6 +1956,14 @@ router.post('/project/save-generation', async (req, res) => {
             if (thumbed) {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
+        } else {
+            // Image gens get a gallery thumb too (MPI-319) so the gallery grid
+            // renders a small JPG, not the full-res output.
+            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractImageThumb(filePath, thumbPath);
+            if (thumbed) {
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+            }
         }
         if (replaceItemId) {
             // Final pass: stamp stage='final', drop preview-only metadata.
@@ -1923,8 +1987,11 @@ router.post('/project/save-generation', async (req, res) => {
                 catch (e) { logger.warn('project', 'replace: old media remove failed', e.message); }
             }
             if (_replacePrevThumbPath) {
-                const newThumbAbs = isVideo ? path.join(metaDir, `${id}.thumb.jpg`) : null;
-                if (!newThumbAbs || path.normalize(_replacePrevThumbPath) !== path.normalize(newThumbAbs)) {
+                // Both videos and images now write `<id>.thumb.jpg` (MPI-319).
+                // On a same-id replace the new thumb IS this path — never delete
+                // it as if it were the stale previous one.
+                const newThumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
+                if (path.normalize(_replacePrevThumbPath) !== path.normalize(newThumbAbs)) {
                     try { await fs.remove(_replacePrevThumbPath); }
                     catch (e) { logger.warn('project', 'replace: old thumb remove failed', e.message); }
                 }

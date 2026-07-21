@@ -1063,10 +1063,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 // instead of reopening the App. Reload worked; the fresh session didn't.
                 appId: config.appId ?? null,
                 appInputs: config.appInputs ?? null,
+                // Gallery thumb (MPI-319): both images and videos now get one so
+                // the grid renders a small JPG, not the full-res output.
+                thumbPath: savedData?.thumbPath ?? null,
             };
             if (isVideo) {
                 Object.assign(baseProps, {
-                    thumbPath:   savedData?.thumbPath ?? null,
                     fps:         savedData?.fps ?? 0,
                     duration:    savedData?.duration ?? 0,
                     frameCount:  savedData?.frameCount ?? 0,

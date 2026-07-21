@@ -295,6 +295,43 @@ export async function openProject(project) {
     Storage.setLastProject(reconciled.folderPath);
 
     Events.emit('project:changed', { project: reconciled });
+
+    // MPI-319: backfill gallery thumbs for pre-existing images (projects made
+    // before image thumbs existed). Fire-and-forget — until it lands, cards fall
+    // back to full-res. When it returns, patch live items and re-emit so the
+    // grid swaps to the cheap thumbs without a reload.
+    _backfillImageThumbs(reconciled.folderPath);
+}
+
+async function _backfillImageThumbs(folderPath) {
+    try {
+        const result = await post('/backfill-image-thumbs', { folderPath });
+        const thumbs = result?.thumbs;
+        if (!result?.success || !thumbs || !Object.keys(thumbs).length) return;
+        // Only patch if we're still on the same project (user may have navigated).
+        const proj = state.currentProject;
+        if (!proj || proj.folderPath !== folderPath) return;
+
+        let changed = false;
+        const itemGroups = proj.itemGroups.map((g) => ({
+            ...g,
+            history: g.history.map((item) => {
+                if (item?.id && thumbs[item.id] && !item.thumbPath) {
+                    changed = true;
+                    return { ...item, thumbPath: thumbs[item.id] };
+                }
+                return item;
+            }),
+        }));
+        if (!changed) return;
+        // Proxy contract: replace the top-level key, never mutate sub-objects.
+        state.currentProject = { ...proj, itemGroups };
+        // Rebuild the gallery grid from the freshly-patched state (same handler
+        // path a new group uses — pure rebuild from state.currentProject).
+        Events.emit('project:group-added', {});
+    } catch (err) {
+        clientLogger.warn('projectService', `image-thumb backfill failed: ${err.message}`);
+    }
 }
 
 /**

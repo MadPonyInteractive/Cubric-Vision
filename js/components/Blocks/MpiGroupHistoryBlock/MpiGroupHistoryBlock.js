@@ -1306,6 +1306,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const item = createImageItem({
                     id: uploaded.itemId,
                     filePath: uploaded.filePath,
+                    thumbPath: uploaded.thumbPath,
                     uploaded: true,
                     operation: 'snapshot',
                     pixelDimensions: uploaded.pixelDimensions,
@@ -1318,6 +1319,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     url: uploaded.filePath,
                     filename: uploaded.filename,
                     itemId: uploaded.itemId,
+                    thumbPath: uploaded.thumbPath,
                     pixelDimensions: uploaded.pixelDimensions,
                     mediaType: 'image',
                 });
@@ -1861,6 +1863,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                         operation:       'add-to-gallery',
                         displayName,
                         pixelDimensions: uploaded.pixelDimensions || item.pixelDimensions || { w: 0, h: 0 },
+                        thumbPath:       uploaded.thumbPath ?? null,
                     });
                 const newGroup = createItemGroup(mediaType, {
                     name: newItem.displayName,

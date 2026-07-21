@@ -1401,3 +1401,5 @@
 {"schema": "mpi-kanban/event/v1", "at": "2026-07-21T00:55:00.000Z", "type": "task.created", "task": "MPI-321", "note": "hover-intent 200ms dwell"}
 {"schema": "mpi-kanban/event/v1", "at": "2026-07-21T00:55:00.000Z", "type": "task.created", "task": "MPI-322", "note": "gallery windowing"}
 {"schema":"mpi-kanban/event/v1","at":"2026-07-21T01:15:00Z","type":"task.moved","task":"MPI-317","from":"doing","to":"done","note":"Live sign-off complete on resumed Pony Mix install: partial survived quit, Range resume from 2.29GB, correct toast, zero Illegal-transition lines. F1/F3/F4/F5 shipped+verified, F2 retracted, CANCEL check passed. Write-flip refactor -> MPI-320."}
+{"schema": "mpi-kanban/event/v1", "at": "2026-07-21T01:30:00.000Z", "type": "task.moved", "task": "MPI-319", "from": "doing", "to": "done", "note": "Live-verified by user; final completion approved in mpi-end."}
+{"schema": "mpi-kanban/event/v1", "at": "2026-07-21T01:30:00.000Z", "type": "task.moved", "task": "MPI-321", "from": "doing", "to": "done", "note": "Live-verified by user; final completion approved in mpi-end."}
