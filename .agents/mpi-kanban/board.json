@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 321,
+  "next_id": 324,
   "columns": {
     "todo": [
+      "MPI-323",
       "MPI-322",
       "MPI-320",
       "MPI-318",
@@ -100,8 +101,14 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-20T20:10:00Z",
+  "updated_at": "2026-07-21T12:00:00Z",
   "events": [
+    {
+      "at": "2026-07-21T12:00:00Z",
+      "type": "task.created",
+      "task": "MPI-323",
+      "note": "Evaluate FLUX.2 Klein 4B (Apache 2.0) for masked object/text removal. Fill dev + Klein 9B ruled out non-commercial. Outpainting already solved via black-border + edit models. Cheaper pre-test: does Krea2 masked-edit (MPI-282) already remove on empty prompt?"
+    },
     {
       "at": "2026-07-20T20:10:00Z",
       "type": "task.created",

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "at": "2026-07-21T12:00:00.000Z", "type": "task.created", "task": "MPI-323", "note": "Evaluate FLUX.2 Klein 4B (Apache 2.0) for masked object/text removal; Fill dev + Klein 9B ruled out on non-commercial license"}
