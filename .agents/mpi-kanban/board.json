@@ -1,8 +1,11 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 318,
+  "next_id": 321,
   "columns": {
     "todo": [
+      "MPI-322",
+      "MPI-320",
+      "MPI-318",
       "MPI-183",
       "MPI-249",
       "MPI-289",
@@ -10,12 +13,13 @@
       "MPI-302",
       "MPI-309",
       "MPI-312",
-      "MPI-313",
-      "MPI-310"
+      "MPI-313"
     ],
     "doing": [
-      "MPI-317",
+      "MPI-321",
+      "MPI-319",
       "MPI-315",
+      "MPI-310",
       "MPI-308",
       "MPI-306",
       "MPI-299",
@@ -26,6 +30,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-317",
       "MPI-314",
       "MPI-311",
       "MPI-307",
@@ -95,8 +100,14 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-20T17:20:00Z",
+  "updated_at": "2026-07-20T20:10:00Z",
   "events": [
+    {
+      "at": "2026-07-20T20:10:00Z",
+      "type": "task.created",
+      "task": "MPI-318",
+      "note": "Carded after a failed attempt on 2026-07-20 was fully reverted. Native Electron drag-out (startDrag) worked - real filenames, multi-file drop - but the e.preventDefault() it required killed the shared HTML5 dragstart that in-app drops ride on, so dragging cards inside the library stopped reaching the prompt and landed as imported cards. Reverted all three files to HEAD; tree clean, nothing shipped. Root process failure: skipped the Context Router (components.md / gallery.md / events.md) and never asked what else consumed that dragstart. Card instructs the next agent to read the docs FIRST. Open and unexplained: pressing Cancel on the Windows file-conflict dialog exited the app, with no trace in app.log because main.js has no render-process-gone or uncaughtException handler."
+    },
     {
       "at": "2026-07-19T23:55:00Z",
       "type": "task.created",
@@ -115,13 +126,13 @@
       "at": "2026-07-19T18:45:00Z",
       "type": "task.created",
       "task": "MPI-314",
-      "note": "Orphaned-dep reclaim — 19GB B1-era LTX shared deps, no owner, no UI delete path."
+      "note": "Orphaned-dep reclaim \u2014 19GB B1-era LTX shared deps, no owner, no UI delete path."
     },
     {
       "at": "2026-07-19T21:00:00Z",
       "type": "task.created",
       "task": "MPI-315",
-      "note": "Log architecture — split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
+      "note": "Log architecture \u2014 split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
     },
     {
       "at": "2026-07-19T21:30:00Z",

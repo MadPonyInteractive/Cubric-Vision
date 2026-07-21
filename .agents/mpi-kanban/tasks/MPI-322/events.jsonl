@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "at": "2026-07-21T00:55:00.000Z", "type": "task.created", "task": "MPI-322", "note": "Gallery windowing: only render on-screen cards (virtualize) for very large projects"}
