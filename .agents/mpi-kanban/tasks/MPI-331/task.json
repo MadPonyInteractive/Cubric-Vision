@@ -2,15 +2,17 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-331",
   "title": "Collapse release skills to one (GitHub-only) + update CLAUDE.md/versioning docs",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "activeSessionTitle": "Collapse release skills to one GitHub-only mpi-release skill",
   "created_at": "2026-07-21T18:50:00Z",
-  "updated_at": "2026-07-21T18:50:00Z",
+  "updated_at": "2026-07-21T19:45:00Z",
   "links": {
-    "validation": null,
+    "checklist": "checklist.md",
+    "validation": "validation.md",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
   },
-  "description": "Release model simplified to GitHub-only (see memory project_release_model_github_only). Collapse the 3 release skills (mpi-merge-branches + mpi-apply-patch + mpi-release-public) into ONE release skill: bump a version digit (2nd = new features, 3rd = fixes - now the SAME mechanical op), build portable, publish a GitHub release. No branch merging, no Patreon tiers, no Cloudflare pre-release links. mpi-version-bump stays as the file-edit mechanic; mpi-release-shared build-dispatch.md + copy-review.md stay; link-model.md + r2-upload.md go dead for releases (R2 still used for model WEIGHTS). Then update CLAUDE.md (Context Router + MPI Skills/Procedures tables), .claude/rules/versioning.md, docs/versioning.md, docs/releases/*, and mpi-end step 3 (release-awareness names the old skills). Get per-file approval for rule/CLAUDE.md edits."
+  "description": "Release model simplified to GitHub-only (see memory project_release_model_github_only). Collapse the 3 release skills (mpi-merge-branches + mpi-apply-patch + mpi-release-public) into ONE release skill: bump a version digit (2nd = new features, 3rd = fixes - now the SAME mechanical op), build portable, publish a GitHub release. No branch merging, no Patreon tiers, no Cloudflare pre-release links. mpi-version-bump stays as the file-edit mechanic; build-dispatch.md + copy-review.md fold into the new skill; link-model.md + r2-upload.md + mpi-release-shared go (R2 still used for model WEIGHTS). Then update mpi-version-bump + mpi-end step 3, docs/releases/* (README, portable-distribution-contract, github-release-checklist, delete patch-distribution.md), and kanban project-knowledge-index. VERIFIED clean, NO change: CLAUDE.md, .claude/rules/versioning.md, docs/versioning.md. Approved forks: GitHub release carries full + update bundles; banner plans/app-update-strategy.md."
 }

@@ -3,7 +3,6 @@
   "next_id": 332,
   "columns": {
     "todo": [
-      "MPI-331",
       "MPI-330",
       "MPI-329",
       "MPI-328",
@@ -30,6 +29,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-331",
       "MPI-324",
       "MPI-327",
       "MPI-310",
@@ -109,8 +109,24 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T18:50:00Z",
+  "updated_at": "2026-07-21T19:45:00Z",
   "events": [
+    {
+      "at": "2026-07-21T19:45:00Z",
+      "type": "task.moved",
+      "task": "MPI-331",
+      "from": "doing",
+      "to": "done",
+      "note": "Collapsed 3 release skills into one GitHub-only mpi-release (+ build-dispatch/copy-review refs). Deleted mpi-merge-branches/apply-patch/release-public/release-shared. Updated mpi-version-bump, mpi-end step 3, docs/releases/* (README, portable-contract, github-checklist), docs/README.md map, kanban index; deleted patch-distribution.md; bannered app-update-strategy.md. macos-x64 dropped (arm64-only), R2/Cloudflare stripped from release docs. Auto-verified; user-confirmed on close."
+    },
+    {
+      "at": "2026-07-21T19:20:00Z",
+      "type": "task.moved",
+      "task": "MPI-331",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started: collapse 3 release skills -> one GitHub-only mpi-release. User approved forks: fold shared lib into new skill, GitHub release carries full + update bundles, delete patch-distribution.md + banner app-update-strategy.md."
+    },
     {
       "at": "2026-07-21T18:50:00Z",
       "type": "task.created",

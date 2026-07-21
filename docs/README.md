@@ -84,7 +84,7 @@ NOT mechanically split these):
 | Topic | Doc |
 |---|---|
 | Release index (dev_mode, stage derivation, gating) | [releases/README.md](releases/README.md) |
-| Patch/promote/public flow + R2 upload | [releases/patch-distribution.md](releases/patch-distribution.md) |
+| Release flow (GitHub-only: bump digit → build → publish) | `.claude/skills/mpi-release/SKILL.md` |
 | Portable artifact contract | [releases/portable-distribution-contract.md](releases/portable-distribution-contract.md) |
 | GitHub release checklist + macOS testing | [releases/github-release-checklist.md](releases/github-release-checklist.md) |
 | Install-test a fresh portable (per-folder data trap, RunPod key carry-over) | [playbooks/install-test/README.md](playbooks/install-test/README.md) |

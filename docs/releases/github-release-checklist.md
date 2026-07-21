@@ -1,7 +1,7 @@
 # GitHub Release Checklist
 
-Use this checklist when drafting a GitHub Release or early-access release note
-for Cubric Studio Vision portable artifacts. Keep the release body aligned with
+Use this checklist when drafting a GitHub Release for Cubric Studio Vision
+portable artifacts. Keep the release body aligned with
 `portable-distribution-contract.md`.
 
 ## Required Asset Names
@@ -11,14 +11,13 @@ Full portable artifacts:
 - `CubricVision-windows-x64-v<version>.zip`
 - `CubricVision-linux-x64-v<version>.tar.gz`
 - `CubricVision-macos-arm64-v<version>.zip`
-- `CubricVision-macos-x64-v<version>.zip`
 
-Update bundles, when available:
+Update bundles (attach these too — they are the in-place update path via the
+online `update.*` script; GitHub is the only update source):
 
 - `CubricVision-windows-x64-update-v<version>.zip`
 - `CubricVision-linux-x64-update-v<version>.zip`
 - `CubricVision-macos-arm64-update-v<version>.zip`
-- `CubricVision-macos-x64-update-v<version>.zip`
 
 Do not publish Vision assets with legacy `CubricStudio` artifact names.
 

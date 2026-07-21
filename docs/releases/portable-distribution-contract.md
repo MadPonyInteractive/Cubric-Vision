@@ -89,19 +89,19 @@ tar -tvzf CubricVision-linux-x64-v<version>.tar.gz | grep 'electron/dist/electro
 
 ## Release Channels
 
-Cubric Vision uses one portable distribution model across early-access and
-public releases.
+Cubric Vision uses one portable distribution model with one channel: a public
+GitHub Release cut from master.
 
 | Channel | Delivery | Source |
 | --- | --- | --- |
-| Early alpha | Full portable artifact plus optional local update bundle | Direct zip delivery through private community channels |
-| Early beta | Full portable artifact plus optional local update bundle | Direct zip delivery through private community channels |
-| Public release | Full portable artifact plus matching update bundle when available | GitHub Releases |
+| Public release | Full portable artifact **plus** matching update bundle | GitHub Releases |
 
-Early-access artifacts are not technically restricted. A portable artifact
-contains readable app source, dependencies, launch scripts, and resources. The
-early-access gate is distribution timing and community trust, not code
-obfuscation or installer licensing.
+Every release attaches both the full builds (fresh installs) and the update
+bundles (in-place updates via the online `update.*` script — GitHub is the only
+update source). A portable artifact contains readable app source, dependencies,
+launch scripts, and resources; there is no code obfuscation or installer
+licensing. The derived stage (`alpha`/`beta`/`release`, from `APP_VERSION`) is a
+label on the same public artifact, not a separate distribution channel.
 
 ## Artifact Types
 
@@ -119,7 +119,6 @@ Expected public asset names:
 | Windows x64 | `CubricVision-windows-x64-v<version>.zip` |
 | Linux x64 | `CubricVision-linux-x64-v<version>.tar.gz` |
 | macOS arm64 | `CubricVision-macos-arm64-v<version>.zip` |
-| macOS x64 | `CubricVision-macos-x64-v<version>.zip` |
 
 Do not use legacy `CubricStudio` artifact names for Vision releases. Release
 copy may use the product name "Cubric Studio Vision", but release asset names
@@ -137,7 +136,6 @@ Expected public asset names:
 | Windows x64 | `CubricVision-windows-x64-update-v<version>.zip` |
 | Linux x64 | `CubricVision-linux-x64-update-v<version>.zip` |
 | macOS arm64 | `CubricVision-macos-arm64-update-v<version>.zip` |
-| macOS x64 | `CubricVision-macos-x64-update-v<version>.zip` |
 
 Update bundles are simple changed-file bundles for the first portable updater.
 Do not implement binary deltas for MPI-8.
@@ -232,8 +230,8 @@ The updater has two sources and one preservation model.
 
 | Source | Script | Use |
 | --- | --- | --- |
-| GitHub Release | `update.*` | Public users update from the latest compatible release manifest |
-| Local zip | `update-from-zip.*` | Early-access, offline, or manually downloaded update bundle |
+| GitHub Release | `update.*` | Users update from the latest compatible release manifest |
+| Local zip | `update-from-zip.*` | Offline or manually downloaded update bundle |
 
 Both scripts must apply the same manifest rules. The only difference is where
 the update bundle comes from.

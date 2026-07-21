@@ -1,6 +1,6 @@
 ---
 name: mpi-version-bump
-description: The file-edit MECHANIC for a Cubric Vision version bump — bump app version (appVersion.js + package.json + package-lock.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, run release:check, and offer pre-release tests. Use when the user says "bump the version", "/mpi-version-bump", or when one of the release skills (mpi-apply-patch, mpi-merge-branches) needs the version stamped. For the full ship flow (which branch, builds, Cloudflare link, GitHub release) use those release skills — this skill only does the in-repo file edits.
+description: The file-edit MECHANIC for a Cubric Vision version bump — bump app version (appVersion.js + package.json + package-lock.json), update operation registry, update model mappings, sync operation_registry.json, generate release notes, run release:check, and offer pre-release tests. Use when the user says "bump the version", "/mpi-version-bump", or when the release skill (mpi-release) needs the version stamped. For the full ship flow (builds, GitHub release) use mpi-release — this skill only does the in-repo file edits.
 user-invocable: true
 ---
 # /mpi-version-bump — version-bump file mechanic
@@ -10,17 +10,16 @@ version, updating engine versions, registering new operations, updating all
 related files, generating release notes, running `npm run release:check`, and
 optionally running pre-release tests.
 
-It does NOT decide *which branch*, run builds, touch the Cloudflare download
-link, or publish to GitHub. Those are the **three release skills** that call this
-one as their bump step:
+It does NOT run builds, push tags, or publish to GitHub. That is the single
+release skill that calls this one as its bump step:
 
-- **`mpi-apply-patch`** — bug-fix patch (3rd digit) on master + carry to dev branch.
-- **`mpi-merge-branches`** — promote dev branch → master (minor) + new Cloudflare link.
-- **`mpi-release-public`** — push the `v*` tag → public GitHub release.
+- **`mpi-release`** — the one GitHub-only release flow: pick the digit (3rd = fix,
+  2nd = feature, 1st = breaking), stamp the version here, build the portable in
+  CI, and publish a GitHub Release with the full builds + update bundles.
 
-Run this skill directly only for the in-repo file edits, or when a release skill
-tells you to. The branch/build/link/tag decisions live in the release skills and
-`mpi-release-shared` — don't improvise them here.
+Run this skill directly only for the in-repo file edits, or when `mpi-release`
+tells you to. The build/tag/publish decisions live in `mpi-release` — don't
+improvise them here.
 
 Use this skill whenever you're ready to stamp a new version of Cubric Vision.
 
@@ -89,9 +88,11 @@ I will ask you the following questions:
 ### Q1: Bump Type?
 Choose: **patch** / **minor** / **major**
 
-- **patch** (e.g., 1.0.1 → 1.0.2): Bug fixes, no new features, no schema change. Stage stays/derives **alpha** (Z>0). Shipped by `mpi-apply-patch`.
-- **minor** (e.g., 1.0.2 → 1.1.0): New operations added OR ComfyUI engine updated. Stage derives **beta** (X.Y.0, Y>0). Shipped by `mpi-merge-branches`.
+- **patch** (e.g., 1.0.1 → 1.0.2): Bug fixes, no new features, no schema change. Stage stays/derives **alpha** (Z>0).
+- **minor** (e.g., 1.0.2 → 1.1.0): New operations added OR ComfyUI engine updated. Stage derives **beta** (X.Y.0, Y>0).
 - **major** (e.g., 1.1.0 → 2.0.0): Breaking changes (schema change, significant architecture change). Stage derives **release** (X.0.0).
+
+All three are shipped by the same skill, `mpi-release` — the digit is the only difference.
 
 > **Derived stage:** `js/core/appStage.js` derives alpha/beta/release from the
 > version — you don't set it. `X.0.0`→release, `X.Y.0`(Y>0)→beta, `X.Y.Z`(Z>0)→alpha,
@@ -452,25 +453,20 @@ Test result: PASS (17 tests)
 ## What Happens Next
 
 > ⚠️ **Do NOT tag + push from here.** This skill only stamps the version files.
-> A `v*` tag fires `push: tags: v*` and **publishes a public GitHub release** —
-> doing that on a patch or a pre-release leaks it publicly. Tagging is ONLY
-> `mpi-release-public`'s job. The ship flow depends on the branch/channel:
+> Pushing the `v*` tag fires the private CI build (`push: tags: v*`) — that is
+> `mpi-release`'s step, not this one.
 
 1. **Commit the version files** by explicit pathspec (shared tree — `git commit
    --only <paths>`, never `git add -A`).
-2. **Hand off to the release skill that invoked you**, which owns the branch,
-   build, link, and (only for public) the tag:
-   - **patch** → `mpi-apply-patch` (master 3rd digit, refresh current Cloudflare
-     link, carry fix to dev branch unbumped). **No tag.**
-   - **minor promote** → `mpi-merge-branches` (dev→master, build, mint new
-     Cloudflare link + GC the old one). **No tag.**
-   - **public release** → `mpi-release-public` (push the `v*` tag → GitHub
-     release, reuse existing D: builds). **The only place a tag is pushed.**
-3. **Comms** (Patreon / Discord / YouTube / Gumroad) are owned by the
-   MadPony-Identity launch-comms workflow — a separate manual step, never
-   automated from here.
+2. **Hand back to `mpi-release`**, which owns the build, tag, and publish:
+   push master, push the `v<ver>` tag to trigger the CI build, download the 6
+   artifacts, then `gh release create` with the full builds + update bundles.
+   The digit you bumped (patch / minor / major) is the only thing that varies —
+   the ship steps are identical.
+3. **Comms** (Discord / YouTube / Gumroad) are owned by the MadPony-Identity
+   launch-comms workflow — a separate manual step, never automated from here.
 
-See `mpi-release-shared` for the shared build/link/upload mechanics.
+See `mpi-release` for the build/tag/publish flow.
 
 ---
 

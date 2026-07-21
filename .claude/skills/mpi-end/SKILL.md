@@ -95,9 +95,8 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
      Note: models have NO version field — only operations do. New model weights =
      a NEW model id/entry (e.g. "Wan 2.2 Smooth V2"), never a bump on the existing one.
      Do NOT bump here. Run `npm run release:check`, then tell the user whether a
-     `/mpi-version-bump` or a release skill (`mpi-apply-patch` /
-     `mpi-merge-branches` / `mpi-release-public`) pass is needed, naming the
-     specific surfaces that drifted.
+     `/mpi-version-bump` or a full `mpi-release` (the one GitHub-only release
+     flow) pass is needed, naming the specific surfaces that drifted.
 
    These are POINTERS, not auto-edits: surface a one-line proposal per affected
    file and wait for explicit per-file approval — same discipline as the

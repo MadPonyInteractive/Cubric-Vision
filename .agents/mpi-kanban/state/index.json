@@ -21,7 +21,7 @@
       "id": "c85c2cfe-43bf-4023-b725-fc7ab3cbcddb",
       "path": ".agents/mpi-kanban/state/handoffs/c85c2cfe-43bf-4023-b725-fc7ab3cbcddb.json",
       "task": "MPI-331",
-      "status": "open",
+      "status": "resolved",
       "to_role": "docs",
       "created_at": "2026-07-21T18:50:00Z"
     },

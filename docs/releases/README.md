@@ -26,10 +26,13 @@ broke, cross-build limits, CI, the macOS unknowns), see
 there after any build or build-tooling change — especially for macOS, which is
 maintainer-untested.
 
-For how patches reach users — **Patreon Pro patches (`1.0.x`) via Cloudflare with
-no git tag** vs **public GitHub releases that bundle accumulated patches** — see
-[`patch-distribution.md`](patch-distribution.md). Read it before cutting any
-post-`1.0.0` patch or deciding whether to push a tag.
+Releases ship one way: **from master to a public GitHub Release**. There is one
+release flow, the `mpi-release` skill, and the version digit is the only thing
+that varies (3rd = bug fixes, 2nd = new features/ops/engine, 1st = breaking).
+Each release attaches the full builds **and** the update bundles — the bundles
+are how existing users patch in place via the online `update.*` script (GitHub is
+the only update source). No pre-release tiers, no branch merging.
+See `.claude/skills/mpi-release/SKILL.md`.
 
 ## Naming Convention
 
@@ -41,12 +44,13 @@ Example: `2026-04-17-v0.1.0.md`
 
 ## Branch Model
 
-Branch name equals app version by convention. `master` is the current release
-trunk (e.g. 1.1.0); the dev branch is named for the **next minor** — `1.2.0`,
-NOT `1.2`. During the 1.1.0 promote (2026-07-09) the old `RunPod` dev branch and
-the old `1.2` branch were both deleted (local + remote); `1.2.0` replaced them.
+**`master` is the only branch.** Work lands on master, the version digit is
+bumped, and the release is cut from master — no dev/next-minor branches, no
+merge-to-promote step. (Historically there was a per-minor dev-branch model; it
+was retired with the move to the GitHub-only release flow on 2026-07-21.)
 A `v*` tag is not itself a release — pushing it only dispatches the private
-`mpi-ci` artifact rebuild (see `patch-distribution.md`).
+`mpi-ci` artifact build (`build-portable.yml` → `push: tags: v*`). The public
+release is the separate `gh release create` step in `mpi-release`.
 
 ## Generation
 
@@ -99,7 +103,7 @@ App release stage (`alpha` | `beta` | `release`) is derived purely from `APP_VER
 
 ### Repo distribution gating
 
-One repo (AGPL-3.0). Gating = distribution timing, not code: Patreon Pro → alpha zip ~1 month pre-public; Early Access → ~2 weeks pre-public; Public → GitHub Release + tag at launch. HuggingFace write token was scrubbed from all commits via `git filter-repo --replace-text`. Versioning policy: `major.minor.patch`; Major starts at 1; patches = bug-fix builds only.
+One repo (AGPL-3.0). Distribution is GitHub-only: every version ships as a public GitHub Release cut from master (no pre-release tiers). HuggingFace write token was scrubbed from all commits via `git filter-repo --replace-text`. Versioning policy: `major.minor.patch`; Major starts at 1; patches = bug-fix builds only.
 
 ---
 

@@ -4,7 +4,7 @@
   "generated_at": "2026-07-21T18:50:00Z",
   "from_session": null,
   "to_role": "docs",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "Public 1.1.0 SHIPPED to GitHub master (1.2.0 branch collapsed in). Release model simplified to GitHub-only. NEXT = collapse release skills + update docs/CLAUDE.md.",
     "branch": "master"

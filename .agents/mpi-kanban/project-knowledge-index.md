@@ -94,9 +94,9 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ### Release ops / versioning skills
 
-- **Read first:** `mpi-release-shared` skill references
-- **Memory:** none (topic files consolidated into docs/)
-- **Notes:** Patreon 1.0.x patches ship via Cloudflare with NO git tag / NO GitHub publish; tags reserved for public GitHub releases.
+- **Read first:** `mpi-release` skill (+ its `references/`) and `mpi-version-bump`
+- **Memory:** `project_release_model_github_only.md`
+- **Notes:** GitHub-only release model (2026-07-21). One master branch, bump the version digit (2nd=features, 3rd=fixes, 1st=breaking), publish a public GitHub Release with full builds + update bundles. `mpi-release` is the one release flow (replaced mpi-merge-branches/mpi-apply-patch/mpi-release-public). No Patreon tiers, no Cloudflare pre-release links. R2 still hosts model weights only.
 
 ### Cross-project / product
 

@@ -1,5 +1,10 @@
 # App Update Strategy
 
+> **SUPERSEDED (2026-07-21) — historical record only.** The Patreon tier model
+> below is retired. Distribution is now GitHub-only: one master branch, bump the
+> version digit, publish a public GitHub Release (full builds + update bundles).
+> See `.claude/skills/mpi-release/SKILL.md` and `docs/releases/README.md`.
+
 ## Release Tiers & Timeline
 
 - **Tier 3 (Patreon)**: Access 1 month before official release
