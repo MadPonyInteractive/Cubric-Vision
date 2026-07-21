@@ -1,14 +1,13 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 332,
+  "next_id": 333,
   "columns": {
     "todo": [
-      "MPI-329",
       "MPI-330",
-      "MPI-312",
+      "MPI-329",
       "MPI-328",
       "MPI-325",
-      "MPI-313",
+      "MPI-332",
       "MPI-320",
       "MPI-318",
       "MPI-289",
@@ -20,15 +19,15 @@
       "MPI-183"
     ],
     "doing": [
-      "MPI-315",
-      "MPI-308",
-      "MPI-306",
-      "MPI-299",
       "MPI-259",
       "MPI-198",
       "MPI-4"
     ],
     "done": [
+      "MPI-306",
+      "MPI-315",
+      "MPI-299",
+      "MPI-308",
       "MPI-331",
       "MPI-324",
       "MPI-327",
@@ -109,8 +108,68 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T19:45:00Z",
+  "updated_at": "2026-07-21T20:20:00Z",
   "events": [
+    {
+      "at": "2026-07-21T20:25:00Z",
+      "type": "task.created",
+      "task": "MPI-332",
+      "note": "Rip 3 deprecated test apps (image-regen/sdxl-4k/video-stitch), keep Head Swap. 8-touchpoint blast-radius map grep-verified in card. Carded now, code deferred (user)."
+    },
+    {
+      "at": "2026-07-21T20:20:00Z",
+      "type": "task.moved",
+      "task": "MPI-306",
+      "from": "doing",
+      "to": "done",
+      "note": "App-UI foundation complete: step-carousel frame + STEP_KINDS shipped/verified; Head Swap shipped, user-verified local + remote-proven (MPI-324). Phase 3 hold-until-Apply was built (bcbe161f) then reverted on the UX pass (results save themselves) - card was stale describing a removed phase, nothing left to verify."
+    },
+    {
+      "at": "2026-07-21T20:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-315",
+      "from": "doing",
+      "to": "done",
+      "note": "Board cleanup: log-architecture shipped + user-verified; only untracked leftover (MPI-147 progress-tick) lives elsewhere."
+    },
+    {
+      "at": "2026-07-21T20:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-299",
+      "from": "doing",
+      "to": "done",
+      "note": "Board cleanup: Head Swap umbrella closed - wiring + node-lock shipped, remote-proven in MPI-324 sweep; residuals split to MPI-306 (UI) + MPI-325 (box pad)."
+    },
+    {
+      "at": "2026-07-21T20:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-308",
+      "from": "doing",
+      "to": "done",
+      "note": "Board cleanup: image_descriptor dev harness + Describe-Image radial shipped; abliterated encoder (MPI-311, 1.2.0) cleared the refusal blocker."
+    },
+    {
+      "at": "2026-07-21T20:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-312",
+      "from": "todo",
+      "to": "archived",
+      "note": "Archived to tasks/_archived/MPI-312; migrated to Cubric Studio (Docs) MPI-10. Krea2 reference-order is user documentation, not an app change - the Vision wiring is correct."
+    },
+    {
+      "at": "2026-07-21T20:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-313",
+      "from": "todo",
+      "to": "archived",
+      "note": "Archived to tasks/_archived/MPI-313; migrated to Cubric Studio (Docs) MPI-11. Two-subjects-in-one-pass is a documented Krea2 model limitation with a chained-pass workaround - docs content, nothing to build."
+    },
+    {
+      "at": "2026-07-21T20:00:00Z",
+      "type": "task.updated",
+      "task": "MPI-330",
+      "note": "Escalated to release-blocker (user). release-blocker + bug added to labels (maturity stays idea - not yet started). Traces to the recent chip-repositioning feature stranding the required Input_Image slot; must fix before release. Moved to top of todo."
+    },
     {
       "at": "2026-07-21T19:45:00Z",
       "type": "task.moved",

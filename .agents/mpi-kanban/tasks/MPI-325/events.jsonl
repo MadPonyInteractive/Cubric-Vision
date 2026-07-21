@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","at":"2026-07-21T15:15:00Z","type":"task.created","task":"MPI-325","note":"Head Swap box may extend outside frame + auto-pad, keep square. Surfaced in MPI-324 Head Swap validation (edge-adjacent head could not capture full hair without grabbing the neighbour; caused first-run fail). Pad, do not shrink. Not a v1.2 blocker - apps stay dev-only in 1.2."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-325","at":"2026-07-21T22:50:03.266Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-325 from To do to To do."}

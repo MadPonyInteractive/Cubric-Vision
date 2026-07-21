@@ -1440,3 +1440,8 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-322","at":"2026-07-21T22:14:34.803Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-322 from To do to To do."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-323","at":"2026-07-21T22:14:41.795Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-323 from To do to To do."}
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-313","at":"2026-07-21T22:15:02.555Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-313 from To do to To do."}
+{"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-312", "at": "2026-07-21T20:10:00Z", "actor": "claude", "summary": "Archived MPI-312 to tasks/_archived/MPI-312; migrated to Cubric Studio (Docs) kanban (model-usage documentation, not a Vision app change)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.deleted", "id": "MPI-313", "at": "2026-07-21T20:10:00Z", "actor": "claude", "summary": "Archived MPI-313 to tasks/_archived/MPI-313; migrated to Cubric Studio (Docs) kanban (model-usage documentation, not a Vision app change)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-329","at":"2026-07-21T22:49:45.746Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-329 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-328","at":"2026-07-21T22:49:58.786Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-328 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-325","at":"2026-07-21T22:50:03.266Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-325 from To do to To do."}

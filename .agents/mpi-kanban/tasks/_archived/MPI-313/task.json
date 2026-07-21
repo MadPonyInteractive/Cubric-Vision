@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-313",
+  "title": "Multi-subject identity edits: chained single-ref passes (two people in one pass is a model limit, not a bug)",
+  "description": "ARCHIVED 2026-07-21 - migrated OUT of the Vision codebase to the Cubric Studio (Docs) kanban as MPI-11. Two-subjects-in-one-pass losing facial identity is a documented Krea2 LoRA limitation with a documented chained-pass workaround, NOT a Vision defect - so it belongs in user docs, nothing to build. Original investigation preserved below.\n\n---\n\nPutting TWO people through a krea2 identity edit in a single pass loses facial identity for both. Extensively reproduced 2026-07-19. EVIDENCE IT IS A MODEL LIMIT (user-run): both subjects drift including a large well-lit high-detail reference (so reference quality is not the binding constraint); clothing survives while faces regress (model card: 'texture-faithful, proportion-conservative... facial geometry regresses'); LoRA v1.1->v1.2 barely moved it despite 'better face likeness' headline; single-reference edits work well. Model card names the fix: chain single-ref inserts (place person A, then a second edit pass adding person B). RULED OUT (do not re-test): slot wiring/order (correct, see MPI-312), reference downscaling, lower megapixels, prompt phrasing. KEY RISK if ever revisited: does pass 2 degrade pass 1's subject? Untested - the edit path can alter regions outside the intended edit. FIRST STEP WAS A MANUAL TEST, NOT CODE.",
+  "column": "archived",
+  "maturity": "idea",
+  "status": "archived",
+  "created_at": "2026-07-21T13:00:00Z",
+  "updated_at": "2026-07-21T20:10:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

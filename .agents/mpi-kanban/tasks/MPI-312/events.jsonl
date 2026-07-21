@@ -1,6 +1,0 @@
-{"at": "2026-07-19T13:00:00Z", "type": "task.created", "task": "MPI-312", "note": "Surfaced while validating krea2 identity-edit v1.2. Slot order is load-bearing per the krea2edit node tooltip and upstream model card, but the UI shows bare numeric badges. Injection wiring traced and confirmed correct \u2014 labelling gap only."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-312","at":"2026-07-21T22:11:35.107Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-312 from To do to To do."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-312","at":"2026-07-21T22:11:42.835Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-312 from To do to To do."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-312","at":"2026-07-21T22:11:46.219Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-312 from To do to To do."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-312","at":"2026-07-21T22:11:49.227Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-312 from To do to To do."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-312","at":"2026-07-21T22:11:51.874Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-312 from To do to To do."}

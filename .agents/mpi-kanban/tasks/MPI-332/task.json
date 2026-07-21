@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-332",
+  "title": "Rip the 3 deprecated test apps (image-regen, sdxl-4k, video-stitch) - keep Head Swap",
+  "description": "The three earliest Apps were plumbing tests for the App Library / carousel frame (MPI-256/259/306), never released, marked for deprecation. Head Swap (MPI-299) is app #1 of the real product. Remove the three dead apps and everything only they touch. Head Swap and the portable frame STAY.\n\nDELETE (image-regen, sdxl-4k, video-stitch):\n1. js/data/appsRegistry.js - the 3 AppDef descriptors (the image-regen block ~L84-98, sdxl-4k ~L102-130, video-stitch ~L136-153). Leave head-swap descriptor + all the helper exports (appDepKey/appAvailability/appDepUniverse/etc) untouched.\n2. js/data/commandRegistry.js - universal ops appImageRegen (L472), appSdxl4k (L483), appVideoStitch (L500). KEEP appHeadSwap (L523).\n3. js/data/modelConstants/universal_workflows.js - entries appImageRegen/appSdxl4k/appVideoStitch (L44-51).\n4. js/shell.js - remove `import { MpiAppImageRegen }` (L27) and drop it from `_appComponents` (L374 -> leave { MpiAppHeadSwap }).\n5. js/shell/preloadStyles.js - remove the MpiAppImageRegen.css line (L51).\n6. js/components/types.js - remove the MpiAppImageRegenProps typedef (~L784).\n7. Component dir js/components/Organisms/MpiAppImageRegen/ (.js + .css) - used ONLY by image-regen AND sdxl-4k (both being ripped), NOT by Head Swap. Safe to delete.\n8. Workflow files: comfy_workflows/app_sdxl_regen.json, comfy_workflows/app_sdxl_4k.json (+ raw/app_sdxl_4k.json), comfy_workflows/app_video_test.json (+ raw/app_video_test.json). (No raw/app_sdxl_regen.json exists.)\n\nBLAST RADIUS VERIFIED 2026-07-21 (grep sweep): MpiAppImageRegen is referenced ONLY at shell.js:27/374, preloadStyles.js:51, types.js:784 - no other consumer. The 3 ops/workflows are referenced only in the registry files above. Head Swap uses appHeadSwap / MpiAppHeadSwap / app_head_swap.json - a disjoint set.\n\nKEEP (do NOT touch): head-swap app, appHeadSwap op, MpiAppHeadSwap component, app_head_swap.json, the whole carousel frame (MpiBaseApp + stepKinds + MpiStepBox), and every appsRegistry.js helper function.\n\nDEV-GATE NOTE (user-decided): MPI-259 item F gated the App Library on '>=4 apps', which was counting these 3 test apps. After the rip Head Swap is app 1 of 1, so the App Library stays dev-gated. That is intended - do NOT lift the gate as part of this rip. Revisiting how the gate triggers is a separate MPI-259 follow-up.\n\nVERIFY: `node --check` each edited .js; boot the app (npm start) and open the App Library dev overlay - only Head Swap shows, no console errors, no 404 for a missing workflow/component. Then confirm Head Swap still opens + runs. Per the root-cause rule, this is a shared-registry edit - re-grep for each removed id AFTER editing to prove zero dangling refs.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "pending",
+  "created_at": "2026-07-21T20:25:00Z",
+  "updated_at": "2026-07-21T20:25:00Z",
+  "labels": [
+    "cleanup",
+    "apps",
+    "release-relevant"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

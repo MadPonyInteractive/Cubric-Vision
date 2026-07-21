@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-312",
+  "title": "Krea2 edit media chips: surface the load-bearing slot roles (scene = 1, subject = 2)",
+  "description": "ARCHIVED 2026-07-21 - migrated OUT of the Vision codebase to the Cubric Studio (Docs) kanban as MPI-10. This is user documentation about Krea2 reference order (scene=image1, subject=image2), NOT a Vision app change: the injection wiring is addressable and correct. The behaviour should be presented to users in docs/tooltips, not forced into the UI. Original investigation preserved below.\n\n---\n\nThe two media chips on a krea2Edit generation are NOT interchangeable, but the UI presents them as if they were. Dropping them in the wrong order silently degrades output quality with no error, no warning, no visible cue. THE CONTRACT (node source, not inferred): comfyui-krea2edit __init__.py:119 tooltips source_latent_b as '2nd reference (subject photo) for multi-ref LoRAs -> RoPE frame=2, training-matched order: scene first, subject second'. Model card (conradlocke/krea2-identity-edit): 'The scene is always image 1, the person is always image 2. Swapping them sharply degrades results.' User-confirmed 2026-07-19: scene-in-1 / subject-in-2 produced correct identity-preserving edit on both LoRA versions. WIRING ALREADY CORRECT (labelling gap, not a bug): commandExecutor _buildParams writes params[slot.title] addressably, never positional; Input_Image(256)->scene, Input_Image_2(404)->subject; MPI-292 dedup guard stops one image filling both. The gap: MpiPromptBox renders bare numeric badges with no role label. NOT IN SCOPE: reordering, auto-detection, or injection-path changes (correct + verified).",
+  "column": "archived",
+  "maturity": "idea",
+  "status": "archived",
+  "created_at": "2026-07-21T13:00:00Z",
+  "updated_at": "2026-07-21T20:10:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}
