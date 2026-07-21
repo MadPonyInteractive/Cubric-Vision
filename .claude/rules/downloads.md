@@ -1,6 +1,6 @@
 # Download Manager Rules
 
-> **AI INSTRUCTION:** All model downloads and uninstalls must go through the download manager. Never bypass it with raw `fetch` or shell `curl`. Downloads are CANCEL-ONLY — pause/resume were removed (MPI-258 B2).
+> **AI INSTRUCTION:** All model downloads and uninstalls must go through the download manager. Never bypass it with raw `fetch` or shell `curl`. Resume contract (MPI-317): user CANCEL is intent → partial + `.cubricdl` marker deleted; failure/stall/app-quit is accident → partial kept, next Install resumes via an explicit Range request. There is still NO pause/resume UI (MPI-258 B2 deleted those routes — do not reintroduce them).
 
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves model downloads, uninstalls, or engine downloads.
@@ -9,7 +9,7 @@
 
 **The SOT is `routes/install/installStore.js` (MPI-276).** One store, legal-transition table (illegal moves rejected + logged), monotonic `version`. **No `refCount` — DELETED; never reintroduce it, never gate on `refCount === 0`.** "Is a dep in-flight" = `store.activeModelsForDep(depId)` / `_inFlightDepIds`. `routes/install/reconciler.js` drives the store from disk/volume truth (settles wedged jobs, fails orphans, prunes, broadcasts the snapshot) on SSE connect / 15s poll / post-uninstall.
 
-**Backend router:** `routes/downloadManager.js` — manages `FileDownloader` instances (renamed from `ResumableDownloader`; never resumed), runtime job maps (write-authoritative + transport carriers), completion sidecars, and SSE broadcast. NDH writes directly to the final filename; Cubric marks in-progress managed downloads with `<file>.cubricdl` and treats a file as installed only when `exists && no sidecar`.
+**Backend router:** `routes/downloadManager.js` — manages `FileDownloader` instances, runtime job maps (write-authoritative + transport carriers), completion sidecars, and SSE broadcast. Downloads RESUME after failure/stall/quit (MPI-317): a marker-blessed partial restarts via an explicit Range request (safe — the installed NDH truncates on a 200-not-206 answer, so the MPI-258 B2 append-corruption cannot recur); a resumed stream skips the MPI-296 incremental hash and `_verifySha256` falls back to a full disk re-read. User cancel still deletes the partial + marker. NDH writes directly to the final filename; Cubric marks in-progress managed downloads with `<file>.cubricdl` and treats a file as installed only when `exists && no sidecar`.
 
 **Uninstall (G13, MPI-276):** the route engine-filters the wire dep array (`_filterDepsForEngine`), protects shared deps (whole-model-installed rule) + in-flight deps (store, both engines), and deletes custom-nodes by their extracted FOLDER (`custom_nodes/<name>/`, NOT the long-gone install zip). A kept/missing path is never reported in `removed[]`.
 
@@ -107,7 +107,7 @@ setup: () => {
 }
 ```
 
-### Cancel (cancel-only — no pause/resume)
+### Cancel (deletes the partial — failure/quit resumes instead, MPI-317)
 ```javascript
 await downloadService.cancel(modelId); // idempotent; a second press / settled card no-ops
 ```
@@ -164,4 +164,4 @@ interface DownloadJob {
 
 The **engine** archive download (distinct from model downloads) is managed via `registerEngineDownload()` / `clearEngineDownload()` and `_activeEngineDownloader` in `routes/downloadManager.js`. `/engine/pause` + `/engine/resume` were DELETED (MPI-258 B2) — do not reintroduce them.
 
-`GET /comfy/downloads/active` reports active model downloads separately from the engine download for Electron quit warnings. Both restart from scratch on cancel/interruption — a killed partial is scrubbed, not resumed.
+`GET /comfy/downloads/active` reports active model downloads separately from the engine download for Electron quit warnings. On cancel both scrub the partial; on interruption MODEL downloads resume (MPI-317) — whether the engine-archive path also resumes has NOT been verified since that change; confirm before relying on it.

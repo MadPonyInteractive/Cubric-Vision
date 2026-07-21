@@ -55,8 +55,23 @@ connect, a 15s poll while any job is non-terminal, and after uninstall. Tests:
 > (`_modelJobs`/`_depJobs`) stay write-authoritative + carry transport detail
 > (url/localPath/sha256/pipPins). The old remote stall-watchdog still reads the
 > maps. The full read-flip (delete map status-writes, flip pull reads onto
-> `store.snapshot()`, retire the watchdog into the reconciler) is a DEFERRED
-> future slice, done with the G6 adapter split.
+> `store.snapshot()`, retire the watchdog into the reconciler) is **MPI-320**,
+> done with the G6 adapter split.
+>
+> **Resume divergence guards (MPI-317 F4/F5, die with MPI-320).** A RESUMED
+> download breaks the map↔store lockstep: `download()` presets
+> `depJob.downloadedBytes` and the reconciler settles + prunes the store job
+> from disk truth while the map walk is still in its custom-node tail. Two
+> guards hold the shadow stage together until the flip: (1) `_setModelStatus`
+> skips STORE writes once the store job is terminal — the map keeps driving its
+> real trailing work (node re-verify + the model-level `download:complete`
+> broadcast) without earning rejected-transition warns; (2) the FE snapshot
+> keep-set (`downloadService.js`) preserves client jobs in `installing` exactly
+> like `downloading`, so a reconciler prune can't strand the completion toast
+> with no job to anchor on. Known benign residue: the DEP-level twin of (1) —
+> cancel pushes `cancelled` onto already-complete store deps (3 warn lines per
+> cancel); left for MPI-320. Guard test:
+> `tests/download-completion.test.cjs` `testMapWalkDoesNotFightSettledStore`.
 
 ## Frontend — `js/services/downloadService.js`
 Singleton that owns the frontend download mirror (MPI-276: a mirror of the
@@ -170,7 +185,7 @@ were deleted would show a green INSTALLED and hide the loss.
 **Footer no-Install-flash contract (MPI-241, preserved by MPI-276).** A lingering terminal `done`→`complete` job still counts as *busy* (holds Cancel/progress, never flashes Install) until the post-complete resync prunes it; `anyInstalled` is checked BEFORE busy so Uninstall wins on re-sync. The busy set (G14) = `{pending, queued, downloading, verifying, installing, done-awaiting-resync}`; `verifying` is a `phase`, not a model status; `done` maps to `complete` in the snapshot listener. No "Finishing…" label — `Verifying…` is the only end-phase text. Guard: `tests/model-footer-settling.test.cjs`.
 
 ## Backend — `routes/downloadManager.js`
-Non-blocking download router using `node-downloader-helper`. **Downloads are CANCEL-ONLY (no pause/resume)** — resume was removed (MPI-258 Bug 2, commit c7313dff): NDH `resumeFromFile` sends `Range: bytes=<n>-` on an append-mode file; when R2/Cloudflare answers 200 (full body) not 206 it appends the WHOLE file onto the partial → SHA256 mismatch (hit live on the 25GB LTX transformer). A cancelled/interrupted install restarts clean.
+Non-blocking download router using `node-downloader-helper`. **Resume contract (MPI-317):** user CANCEL is intent → partial + marker deleted; failure/stall/app-quit is accident → partial kept, and the next Install resumes it via an explicit Range request (`resumeFromFile` on a marker-blessed partial). Safe because the installed NDH clears `__isResumed` and TRUNCATES on a 200-not-206 answer, so the MPI-258 Bug 2 append-corruption (200 full body appended onto a partial → SHA256 mismatch, hit live on the 25GB LTX transformer) cannot recur on this version. A 416 (partial larger than the remote object) scrubs the unusable partial and restarts clean. There is still no pause/resume UI — those routes stay deleted (c7313dff).
 
 **Endpoints:**
 - `POST /comfy/models/download/start` — register the model job in the store BEFORE responding (register-before-respond, G8); the response body carries the `job` snapshot + store `version`.
@@ -182,12 +197,13 @@ Non-blocking download router using `node-downloader-helper`. **Downloads are CAN
 
 > The `/download/pause`, `/download/resume`, `/engine/pause`, `/engine/resume` routes and the `_pausedDownloaders` map were DELETED in c7313dff. Do not reintroduce them.
 
-**FileDownloader class** (`routes/downloadManager.js`; renamed from `ResumableDownloader` in MPI-276 — it never resumed):
-A plain single-stream `node-downloader-helper` wrapper: start, cancel (clean `stop()` + remove), SHA256 verify, SSE progress broadcast.
-- `.download()`: always scrubs any stale/partial file at `localPath` first, then starts one clean stream (no `resumeIfFileExists`, no resume option). 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
-- `.cancel()`: `_downloader.stop()` + the caller removes the partial + marker.
-- On completion: verifies `sha256Expected` against the digest computed **incrementally while the file streamed in** (MPI-296 — a `Transform` hash-sink `.pipe()`d ahead of the file write, finalized on `end` into `_streamHashHex`), skipping a whole-file re-read that cost ~35s on a 6.6GB weight (34814ms→1ms). Safe **only because downloads never resume** (see above — the pipe sees every byte once, in order); `_verifySha256` keeps a disk re-read fallback for when no streamed digest exists. If resume is ever reintroduced, gate the fast path on `!wasResumed`. Then clears `<file>.cubricdl`, marks dep `complete`.
+**FileDownloader class** (`routes/downloadManager.js`; renamed from `ResumableDownloader` in MPI-276, resumable again since MPI-317):
+A single-stream `node-downloader-helper` wrapper: start/resume, cancel (stop + remove), stop-keep (shutdown), SHA256 verify, SSE progress broadcast.
+- `.download()`: a marker-blessed partial (file AND `.cubricdl` survived a failure/stall/quit) resumes via `resumeFromFile` with an explicit Range request — lenient url guard (legacy markers without a url still resume; a url MISMATCH discards the partial and starts clean). No marker-blessed partial → scrub any stale file, one clean stream. 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
+- `.cancel()`: user intent — `stop()` + delete partial + marker. `.stopKeep()`: shutdown/teardown — stream closed, partial + marker KEPT for next-boot resume (used by `cancelAllDownloads` on SIGTERM/SIGINT, never by the user-cancel route).
+- On completion: verifies `sha256Expected` against the digest computed **incrementally while the file streamed in** (MPI-296 — a `Transform` hash-sink `.pipe()`d ahead of the file write, finalized on `end` into `_streamHashHex`), skipping a whole-file re-read that cost ~35s on a 6.6GB weight (34814ms→1ms). RESUMED streams skip the fast path (the pipe saw only the tail — a tail-only digest is garbage) and `_verifySha256` falls back to the full disk re-read, so a bad resume costs one failed verify, never a corrupt install. Then clears `<file>.cubricdl`, marks dep `complete`.
 - On SHA256 mismatch: deletes the file, clears the marker, marks dep `failed`.
+- On error: partial is KEPT (`removeOnFail:false` — NDH's own removeOnStop/removeOnFail defaults were what ate a 5.66GB Chroma Flash partial pre-MPI-317) so a retry resumes.
 
 ### Uninstall pipeline (G13, MPI-276)
 
@@ -254,7 +270,7 @@ When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js
 
 ## NDH Download Gotchas
 
-`node-downloader-helper` v2.1.11 key traps: writes straight to final filename (no `.part` suffix), so a killed partial sits at the final path. Downloads are cancel-only (no pause/resume — MPI-258 B2); `.download()` scrubs any stale partial then starts one clean stream (no `resumeIfFileExists`). `models/check` uses bare `fs.pathExists` — partial-at-final-path reads as installed (false positive). MPI-54: `<file>.cubricdl` sidecar marker + `isCompleteOnDisk()` + `routes/downloadCompletion.js` fix this.
+`node-downloader-helper` v2.1.11 key traps: writes straight to final filename (no `.part` suffix), so a killed partial sits at the final path. `removeOnStop`/`removeOnFail` default TRUE — they ate a 5.66GB partial via the watchdog's `stop()` pre-MPI-317; both are now set false and deletion is owned by `.cancel()` alone. `.download()` resumes a marker-blessed partial via `resumeFromFile` (explicit Range; NDH truncates on a 200-not-206 answer) and scrubs only unusable/stale partials (no blind `resumeIfFileExists`). `models/check` uses bare `fs.pathExists` — partial-at-final-path reads as installed (false positive). MPI-54: `<file>.cubricdl` sidecar marker + `isCompleteOnDisk()` + `routes/downloadCompletion.js` fix this.
 
 **custom_nodes progress = indeterminate, never a byte ratio (MPI-231).** A GitHub `/archive/` zip is served with NO Content-Length → `stats.total`=0 → the denominator falls back to the tiny registry `seedBytes` (~15MB) while the numerator counts real streamed bytes; the following pip requirements phase has no honest up-front total either. A determinate bar overshoots (RES4LYF read `203 MB / 15 MB`). Fix: `_byteRatioExcludingNodes()` drops `type==='custom_nodes'` from BOTH sides on local (`_wireProgress`) + remote (`_onRemoteInstallEvent`); node ticks broadcast `indeterminate:true, phase:'preparing'`. Weights keep their real ratio (they send Content-Length). `MpiEngineInstall.setProgress` honors the flag (guarded by `!engineHasBytes`) → loading sweep + "Preparing dependencies…". The ComfyUI engine archive download/update is untouched — it uses the `engine:downloading` path with a real total, never this one.
 
