@@ -5,9 +5,9 @@
   "description": "OBSERVED on an RTX PRO 4000 Pod (MPI-324 sweep, 2026-07-21): the FIRST generation after switching to a model takes ~2min; a warm follow-up on the same model takes ~14s. Consistent across models (Krea2 cold ~2min then 14s warm; Chroma cold ~2min), so it is a per-model COLD-LOAD cost, not model-specific. Users are expected to switch models often, so ~2min per switch is a bad UX. HYPOTHESES (unverified): network-volume read speed streaming weights into RAM/VRAM dominates cold load; RTX PRO 4000's smaller VRAM (24GB) forces ComfyUI weight offload/reload, compounding it; possible cold GPU/CUDA-graph warmup. NEXT: time cold vs warm on a bigger-VRAM GPU (4090/5090) to isolate the VRAM-offload factor; check the Pod log for where the ~2min goes (volume read vs model-to-GPU). CAVEAT (user, 2026-07-21): the RTX PRO 4000 may simply be a poor inference card - retest cold-load on a mainstream GPU (4090/5090) BEFORE treating this as a real product bug; it may be a non-issue on the cards users actually pick. NOT a 1.1 blocker - deferred. Neighbour of the model-load/VRAM work in docs/builder/research/pod-perf-investigation.md (MPI-157).",
   "column": "todo",
   "maturity": "idea",
-  "status": "active",
+  "status": "pending",
   "created_at": "2026-07-21T17:55:00Z",
-  "updated_at": "2026-07-21T17:55:00Z",
+  "updated_at": "2026-07-21T22:11:28.355Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

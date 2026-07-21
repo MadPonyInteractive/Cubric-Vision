@@ -4,9 +4,9 @@
   "title": "MPI-276 write-flip: retire the legacy _modelJobs/_depJobs maps, installStore becomes the only lifecycle authority",
   "column": "todo",
   "maturity": "planned",
-  "status": "active",
+  "status": "pending",
   "created_at": "2026-07-21T00:30:00Z",
-  "updated_at": "2026-07-21T14:30:00Z",
+  "updated_at": "2026-07-21T22:14:15.619Z",
   "links": {
     "events": "events.jsonl",
     "brief": "brief.md"

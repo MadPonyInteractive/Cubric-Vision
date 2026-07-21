@@ -1,1 +1,6 @@
 {"at": "2026-07-19T13:00:00Z", "type": "task.created", "task": "MPI-313", "note": "Surfaced while validating krea2 identity-edit v1.2. Two-subject single-pass identity loss traced to a documented LoRA limitation; upstream prescribes chained single-ref passes. Gated on a manual chain test."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-313","at":"2026-07-21T22:12:58.723Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-313 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-313","at":"2026-07-21T22:13:11.515Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-313 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-313","at":"2026-07-21T22:13:18.867Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-313 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-313","at":"2026-07-21T22:13:55.346Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-313 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-313","at":"2026-07-21T22:15:02.555Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-313 from To do to To do."}
