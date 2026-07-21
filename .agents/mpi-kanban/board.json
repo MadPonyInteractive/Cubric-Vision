@@ -20,8 +20,6 @@
       "MPI-313"
     ],
     "doing": [
-      "MPI-327",
-      "MPI-324",
       "MPI-315",
       "MPI-308",
       "MPI-306",
@@ -31,6 +29,8 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-324",
+      "MPI-327",
       "MPI-310",
       "MPI-300",
       "MPI-326",
@@ -108,8 +108,24 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T18:25:00Z",
+  "updated_at": "2026-07-21T18:45:00Z",
   "events": [
+    {
+      "at": "2026-07-21T18:45:00Z",
+      "type": "task.moved",
+      "task": "MPI-324",
+      "from": "doing",
+      "to": "done",
+      "note": "RunPod validation sweep COMPLETE (1.1.0 release gate). MPI-282/300/310 remote-proven, MPI-326 fix verified; Head Swap residual tracked on MPI-299/306/325. Closed at 1.1.0 release close-out."
+    },
+    {
+      "at": "2026-07-21T18:45:00Z",
+      "type": "task.moved",
+      "task": "MPI-327",
+      "from": "doing",
+      "to": "done",
+      "note": "Public 1.1.0 changelog aggregation shipped; version-rename landed on master; drag-drop-import wording corrected to LoRA/upscale only. release:check green."
+    },
     {
       "at": "2026-07-21T18:25:00Z",
       "type": "task.created",

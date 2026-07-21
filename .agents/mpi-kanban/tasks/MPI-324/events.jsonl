@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","at":"2026-07-21T00:00:00Z","type":"task.created","note":"Umbrella for the 1.2.0 RunPod validation sweep. Sub-cards: MPI-282, MPI-300, MPI-310, Head Swap (MPI-299/306). MPI-309 node_lock bumped to MpiNodes aaa1d2d. MPI-198 deferred."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-324","at":"2026-07-21T18:45:00Z","actor":"claude","from":"doing","to":"done","summary":"Moved to done at 1.1.0 release close-out. RunPod validation sweep complete (MPI-282/300/310/326 resolved; Head Swap residual on MPI-299/306/325)."}
