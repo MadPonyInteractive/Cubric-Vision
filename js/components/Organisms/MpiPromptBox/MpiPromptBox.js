@@ -7,7 +7,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles } from '../../../data/commandRegistry.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
@@ -214,7 +214,11 @@ export const MpiPromptBox = ComponentFactory.create({
 
             const usedIds = new Set();
             const assigned = new Map();
-            const nextItems = items.map(item => ({ ...item, role: item.role || undefined }));
+            // MPI-330: ordinal roles (image 1/2/3) never stick — strip order is
+            // the meaning. A stale tag from a removed sibling would otherwise
+            // strand the required first slot (see stripOrdinalMediaRoles).
+            const nextItems = stripOrdinalMediaRoles(slots, items)
+                .map(item => ({ ...item, role: item.role || undefined }));
 
             for (const slot of slots) {
                 const explicit = nextItems.find(item =>

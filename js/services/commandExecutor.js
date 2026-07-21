@@ -24,7 +24,7 @@ import { getUniversalWorkflow, getModelById, getModelDepStatus } from '../data/m
 import { remoteEngineClient } from './remoteEngineClient.js';
 import { resolveDeps, resolveWorkflowFile, variantDepsOf, archVariantOptions } from '../data/modelConstants/resolveModelDeps.js';
 import { downloadService } from './downloadService.js';
-import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel, commandIsMultiStage } from '../data/commandRegistry.js';
+import { COMMANDS, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, commandIsMultiStage } from '../data/commandRegistry.js';
 import { Events } from '../events.js';
 import { clientLogger } from './clientLogger.js';
 import { state } from '../state.js';
@@ -617,9 +617,13 @@ function _buildParams(payload) {
         const usedIds = new Set();
         const assigned = new Map();
         const fallbackAssigned = new Set();
+        // MPI-330: ordinal roles (image 1/2/3) never stick — item order is the
+        // meaning. A stale tag from a removed sibling chip would otherwise
+        // strand the required first slot (see stripOrdinalMediaRoles).
+        const slotItems = stripOrdinalMediaRoles(mediaSlots, mediaItems);
 
         for (const slot of mediaSlots) {
-            const explicit = mediaItems.find(item =>
+            const explicit = slotItems.find(item =>
                 item.role === slot.key &&
                 item.mediaType === slot.mediaType &&
                 item.url &&
@@ -633,7 +637,7 @@ function _buildParams(payload) {
 
         for (const slot of mediaSlots) {
             if (assigned.has(slot.key)) continue;
-            const item = mediaItems.find(candidate =>
+            const item = slotItems.find(candidate =>
                 candidate.mediaType === slot.mediaType &&
                 candidate.url &&
                 !usedIds.has(candidate.id || candidate.url)
@@ -650,7 +654,7 @@ function _buildParams(payload) {
         // newly-added input nodes.
         for (const slot of mediaSlots) {
             if (assigned.has(slot.key)) continue;
-            const fallback = mediaItems.find(candidate =>
+            const fallback = slotItems.find(candidate =>
                 candidate.mediaType === slot.mediaType &&
                 candidate.url &&
                 // MPI-292: dedup — never reuse an item already routed to another
@@ -1253,6 +1257,31 @@ export function runCommand(payload) {
                     + 'Add it in Settings → External Connections (drag-drop), or pick another in Model Settings.',
             });
             exec.onError?.(new Error('model_missing'));
+            return;
+        }
+
+        // MPI-330 backstop: a REQUIRED media slot with no assigned asset means the
+        // graph's block_if_empty loader ExecutionBlocks the whole run — ComfyUI
+        // "completes" with zero output and the card silently vanishes. Warn and
+        // abort instead. Only fires when matching media IS attached (an empty box
+        // is already gated at Cue; stage-2 latent runs carry no media), so a
+        // legitimate media-less dispatch never trips it.
+        const _mediaSlots = filterMediaInputsForModel(
+            getCommandMediaInputs(workingPayload.operation),
+            getModelById(workingPayload.modelId),
+        );
+        const _mItems = Array.isArray(workingPayload.mediaItems) ? workingPayload.mediaItems : [];
+        const strandedSlot = _mediaSlots.find(s =>
+            s.required && !params[s.title] &&
+            _mItems.some(m => m.mediaType === s.mediaType && m.url)
+        );
+        if (strandedSlot) {
+            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
+            Events.emit('ui:warning', {
+                message: `Could not load the input ${strandedSlot.mediaType} for this operation. `
+                    + 'Remove and re-attach it, then try again.',
+            });
+            exec.onError?.(new Error('required_media_slot_empty'));
             return;
         }
 

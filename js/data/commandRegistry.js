@@ -175,11 +175,11 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
-            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true  },
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true,  ordinal: true },
             // 2nd reference image (MPI-292): optional. Empty → Input_Image_2's
             // MpiLoadImageFromPath self-gates → 1-image edit runs fine. Only this op
             // declares two image slots, so PromptBox shows the 2nd chip in edit only.
-            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false, ordinal: true },
         ],
         promptRequired: true,
         // Krea2's edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA
@@ -212,9 +212,9 @@ export const commands = {
         // are optional: an empty path makes Input_Image_2/_3's MpiLoadImageFromPath
         // self-gate, so a 1- or 2-image edit runs unchanged.
         mediaInputs: [
-            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true  },
-            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
-            { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false },
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true,  ordinal: true },
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false, ordinal: true },
+            { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false, ordinal: true },
         ],
         promptRequired: true,
         // Its own op, NOT the shared 'edit' (that one is Boogu's: no controls, one image).
@@ -685,6 +685,30 @@ export function filterMediaInputsForModel(slots, model = null) {
     if (!model) return slots;
     if (model.capabilities?.audio === true) return slots;
     return slots.filter(slot => slot.mediaType !== 'audio');
+}
+
+/**
+ * Drops explicit role tags that point at ORDINAL slots (slots marked
+ * `ordinal: true` — positional aliases like "image 1/2/3" where the chip's
+ * strip order IS the meaning). Sticky ordinal roles go stale: removing chip 1
+ * left the survivors tagged inputImage2/inputImage3, so the role-first slot
+ * assignment stranded the REQUIRED inputImage — Qwen-Edit's block_if_empty
+ * Input_Image then ExecutionBlocked the whole graph into a silent zero-output
+ * (MPI-330). With the tags dropped, the positional fill assigns ordinal slots
+ * by item order, which always matches the numbered chip badges. Non-ordinal
+ * roles (startFrame/endFrame, Head Swap's image1/image2) stay sticky — those
+ * slots are semantic, never positional (MPI-306: never repack).
+ * Call at EVERY slot-assignment point (PromptBox + commandExecutor).
+ * @param {Array<{key:string, ordinal?:boolean}>} slots
+ * @param {Array<{role?:string}>} items
+ * @returns {Array<Object>} copies of items with stale ordinal roles removed
+ */
+export function stripOrdinalMediaRoles(slots, items) {
+    const ordinalKeys = new Set(slots.filter(s => s.ordinal === true).map(s => s.key));
+    if (!ordinalKeys.size) return items;
+    return items.map(item =>
+        ordinalKeys.has(item.role) ? { ...item, role: undefined } : item
+    );
 }
 
 /**
