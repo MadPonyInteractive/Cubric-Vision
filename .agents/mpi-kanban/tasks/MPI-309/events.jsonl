@@ -1,1 +1,2 @@
 {"at": "2026-07-18T23:55:16Z", "type": "task.created", "task": "MPI-309"}
+{"schema":"mpi-kanban/event/v1","at":"2026-07-21T13:00:00Z","type":"task.moved","note":"todo -> doing (validating). node_lock MpiNodes bumped ba9e1569 -> aaa1d2d (1.2.6, adds box nodes MpiBox/MpiBoxCrop/MpiBoxMask/MpiFromBox, pure superset). Pending Pod-connect proof. Folded into MPI-324 Phase 0."}

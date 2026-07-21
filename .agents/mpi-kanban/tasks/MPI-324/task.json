@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-324",
+  "title": "RunPod validation sweep (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-07-21T00:00:00Z",
+  "updated_at": "2026-07-21T00:00:00Z",
+  "description": "Umbrella: ONE RunPod session to clear every remote-deferred 1.2.0 card. Validates MPI-282 (Krea2 masked edit), MPI-300 (Qwen-Edit 2511 + 3-chip), MPI-310 (Image Describer plugin, remote fetch + GC), and Head Swap MPI-299/306 (unblocked now that node_lock is bumped to MpiNodes aaa1d2d for the box nodes, MPI-309). Runsheet + results table in validation.md; each passing sub-card moves to done. MPI-198 deferred (Linux/mac LOCAL engine, not RunPod).",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "events": [
+    {
+      "at": "2026-07-21T00:00:00Z",
+      "type": "task.created",
+      "note": "Session umbrella for the 1.2.0 RunPod validation sweep, requested to clear doing-column cards before the Thursday release. Consolidates the four remote-deferred validations that MPI-282's validation.md anticipated (MPI-282, MPI-300, MPI-310, + Head Swap). MPI-309 node_lock bumped ba9e156 -> aaa1d2d (MpiNodes 1.2.6, adds MpiBox/MpiBoxCrop/MpiBoxMask/MpiFromBox, pure superset, no removed classes) so Head Swap can load on the Pod. MPI-198 explicitly deferred by the user. Detailed per-card checks live in each card's own validation.md; this card holds the session order + cross-card gotchas + the pass/fail results table."
+    }
+  ]
+}

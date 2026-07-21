@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 324,
+  "next_id": 325,
   "columns": {
     "todo": [
       "MPI-323",
@@ -12,11 +12,12 @@
       "MPI-289",
       "MPI-294",
       "MPI-302",
-      "MPI-309",
       "MPI-312",
       "MPI-313"
     ],
     "doing": [
+      "MPI-324",
+      "MPI-309",
       "MPI-315",
       "MPI-310",
       "MPI-308",
@@ -101,8 +102,22 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-21T12:00:00Z",
+  "updated_at": "2026-07-21T13:00:00Z",
   "events": [
+    {
+      "at": "2026-07-21T13:00:00Z",
+      "type": "task.created",
+      "task": "MPI-324",
+      "note": "RunPod validation sweep umbrella (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap. MPI-198 deferred."
+    },
+    {
+      "at": "2026-07-21T13:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-309",
+      "from": "todo",
+      "to": "doing",
+      "note": "node_lock MpiNodes pin bumped ba9e156 -> aaa1d2d (1.2.6 adds MpiBox/MpiBoxCrop/MpiBoxMask/MpiFromBox, pure superset). Code done; maturity validating pending Pod-connect proof the wrapper reinstalled the new commit. Folded into MPI-324 Phase 0."
+    },
     {
       "at": "2026-07-21T12:00:00Z",
       "type": "task.created",

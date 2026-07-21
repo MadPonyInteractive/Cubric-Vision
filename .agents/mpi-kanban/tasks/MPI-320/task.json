@@ -6,7 +6,7 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-07-21T00:30:00Z",
-  "updated_at": "2026-07-21T00:30:00Z",
+  "updated_at": "2026-07-21T14:30:00Z",
   "links": {
     "events": "events.jsonl",
     "brief": "brief.md"
@@ -16,6 +16,11 @@
       "at": "2026-07-21T00:30:00Z",
       "type": "task.created",
       "note": "Carded from MPI-317: F1's resume broke the lockstep the shadow-SOT stage assumed, surfacing F4 (dropped FE job -> missed/stale completion toast) and F5 (map walk fights reconciler-settled store -> rejected-transition warns). Both got narrow root-slice fixes in MPI-317; this card is the full deferred flip the download-manager doc already names: delete map status-writes, flip pull endpoints (/downloads/status, /active, _serializeModelJob) onto store.snapshot(), retire the remote stall-watchdog into the reconciler, G6 adapter split. Regression matrix = the 12 invariants in tasks/MPI-276/research/04-bug-history-invariants.md. NOT session-tail work: own plan (mpi-create-large-plan), live resume testing on BOTH engines."
+    },
+    {
+      "at": "2026-07-21T14:30:00Z",
+      "type": "task.progress",
+      "note": "FOLD IN (defer to v1.3): plugin install-state must derive from disk truth, not a lingering job. Two parts surfaced by the MPI-324 RunPod sweep (see MPI-310 repro 2026-07-21). (1) ROW BUG, surgical: MpiModelManager _pluginTile (~line 1218) checks busy (job non-terminal) BEFORE installed (pluginAvailability = disk truth), so a stuck/phantom plugin job hides the Installed state forever. Fix = check installed FIRST (pluginAvailability.installed is only true when ALL deps present, so it cannot false-flip a mid-install). Honours the registry design: a plugin has no install state of its own, its deps ARE its install state. (2) RECONCILER/STORE HYGIENE, the real write-flip work: the reconciler core is generic and settles any store job from checkInstalled truth, but a plugin job on a DOWNLOAD-MODE Pod does not clear when its shared dep completed under a DIFFERENT owner (Krea 2 won the shared abliterated encoder download; the describer job got no completion fan-out). Make the reconciler settle+prune a plugin job when its deps are on disk, and fan shared-dep completion out to ALL waiting owners (models AND plugins), not just the owner that won the download. Repro: install Qwen Edit, then Krea 2 + Image Describer together (shared 5.24GB encoder) on a CPU download Pod -> describer row stuck Installing, survives refresh + Library reopen; volume bar flat = nothing downloading. Feature still WORKS (describe keys off pluginAvailability = disk), so this is a display/hygiene bug, not a v1.2 blocker."
     }
   ]
 }
