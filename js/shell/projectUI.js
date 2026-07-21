@@ -8,11 +8,13 @@ import { listProjects, createProject, deleteProject, openProject, addProjectByFo
 import { fetchStats } from '../services/projectStatsService.js';
 import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
+import { state } from '../state.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
 import { APP_VERSION } from '../core/appVersion.js';
+import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
@@ -74,6 +76,8 @@ export function initProjectUI() {
   if (navSlot) {
     const defs = [
       { label: 'Models',   handler: () => Events.emit('models:open') },
+      // Apps (App Library) — dev-gated until ≥4 apps exist (MPI-256).
+      ...(APP_CONFIG.dev_mode ? [{ label: 'Apps', handler: () => Events.emit('apps:open') }] : []),
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
       { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
@@ -204,7 +208,16 @@ export async function loadProjectGrid() {
       return;
     }
     projectGrid.innerHTML = '';
-    projects.forEach(p => projectGrid.appendChild(_buildProjectRow(p)));
+    // Build every row up-front (name/date/spinner render instantly — the full
+    // list is visible immediately). Each returns a loader that fetches ONLY its
+    // thumbnail; we then drain those loaders newest-first, capped to 3 in flight,
+    // so N content-heavy 4K thumbs don't decode at once and stall the panel.
+    // Rows stay open-locked until their own thumb resolves (MPI-286).
+    const loaders = projects.map(p => _buildProjectRow(p)).map(({ row, load }) => {
+      projectGrid.appendChild(row);
+      return load;
+    });
+    _runThumbQueue(loaders, 3, _statsBatchAC.signal);
   } catch (err) {
     clientLogger.error('projectUI', 'loadProjectGrid failed', err);
     projectGrid.innerHTML = `
@@ -264,7 +277,7 @@ function _showDeleteConfirm(projectName, onConfirm) {
 function _showCleanupConfirm(project) {
   const dialog = MpiOkCancel.mount(document.createElement('div'), {
     title: 'Cleanup assets',
-    text: `Remove cached reuse assets (start/end frames) for "${project.name}"? This frees disk space. Your generated media and history are kept, but Reuse Prompt will no longer be able to re-add those input frames.`,
+    text: `Remove cached assets used by Reuse Prompt for this project? These are the input images, videos and audio that were fed into your generations. This frees disk space. Your generated media and history are kept, but Reuse Prompt will no longer be able to re-add those inputs.`,
     okLabel: 'Cleanup',
     cancelLabel: 'Cancel',
   });
@@ -277,6 +290,10 @@ function _showCleanupConfirm(project) {
       });
       const data = await res.json().catch(() => ({}));
       if (!data.success) throw new Error(data.error || 'Cleanup failed');
+      // Staged prompt-box chips point at the now-wiped store — drop the persisted
+      // snapshot (prompt box is unmounted here) and any live chips (if mounted).
+      state.promptMedia = {};
+      Events.emit('assets:cleaned', { folderPath: project.folderPath });
       Events.emit('ui:success', { title: 'Cleanup complete', message: `Removed ${data.removed || 0} cached asset${data.removed === 1 ? '' : 's'}.` });
     } catch (err) {
       clientLogger.warn('projectUI', `cleanup-assets failed: ${err.message}`);
@@ -374,10 +391,33 @@ async function _openProjectFolder(project) {
 }
 
 /**
+ * Drains thumbnail loaders with a bounded number in flight, newest-first
+ * (loaders arrive in listProjects() order, which the server sorts by updatedAt
+ * desc). Aborting the batch (grid rebuild) stops launching further loaders.
+ * @param {Array<() => Promise<void>>} loaders
+ * @param {number} limit  max concurrent loads
+ * @param {AbortSignal} [signal]
+ */
+function _runThumbQueue(loaders, limit, signal) {
+  let i = 0;
+  const next = () => {
+    if (signal?.aborted || i >= loaders.length) return;
+    const load = loaders[i++];
+    load().finally(next);
+  };
+  for (let k = 0; k < Math.min(limit, loaders.length); k++) next();
+}
+
+/**
  * Builds a Stage picker row for one project.
  * Layout: thumbnail | name + date | asset count + size
+ *
+ * The thumbnail is NOT loaded here — the row renders with a spinner and stays
+ * open-locked (`--loading`); the returned `load()` fetches the thumb, swaps the
+ * spinner for the media, and unlocks the row. Called via the cap-3 queue so
+ * heavy 4K thumbs decode a few at a time instead of all at once (MPI-286).
  * @param {Object} project
- * @returns {HTMLElement}
+ * @returns {{ row: HTMLElement, load: () => Promise<void> }}
  */
 function _buildProjectRow(project) {
   const date = new Date(project.updatedAt);
@@ -386,25 +426,53 @@ function _buildProjectRow(project) {
   const row = document.createElement('div');
   row.className = 'mpi-landing__pl-row';
 
-  // Thumbnail (image or video — first frame static, plays on row hover)
+  // Thumbnail slot — spinner until load() resolves. Row is open-locked while
+  // it shows one (see the click handler + --loading class below).
   const thumb = document.createElement('div');
-  thumb.className = 'mpi-landing__pl-thumb' + (project.recentThumbnail ? '' : ' mpi-landing__pl-thumb--empty');
-  if (project.recentThumbnail) {
+  const hasThumb = !!project.recentThumbnail;
+  thumb.className = 'mpi-landing__pl-thumb' + (hasThumb ? ' mpi-landing__pl-thumb--loading' : ' mpi-landing__pl-thumb--empty');
+  let spinner = null;
+  if (hasThumb) {
+    row.classList.add('mpi-landing__pl-row--loading');
+    spinner = document.createElement('div');
+    spinner.className = 'spinner';
+    thumb.appendChild(spinner);
+  }
+
+  // load(): fetch this row's thumbnail, swap the spinner for the media, unlock
+  // the row. Resolves on success OR failure (queue must always advance).
+  const load = () => new Promise((resolve) => {
+    if (!hasThumb) { resolve(); return; }
+    const done = () => {
+      thumb.classList.remove('mpi-landing__pl-thumb--loading');
+      row.classList.remove('mpi-landing__pl-row--loading');
+      resolve();
+    };
+    const swapIn = (media) => { if (spinner) spinner.remove(); thumb.appendChild(media); done(); };
+    const fail = () => {
+      if (spinner) spinner.remove();
+      thumb.classList.add('mpi-landing__pl-thumb--empty');
+      done();
+    };
     if (project.recentThumbnailType === 'video') {
       const video = document.createElement('video');
-      video.src = project.recentThumbnail;
       video.muted = true;
-      video.loop = true;
       video.playsInline = true;
-      video.preload = 'metadata';
-      thumb.appendChild(video);
+      // preload 'auto' so loadeddata fires (paints first frame). Static frame,
+      // no hover playback — hover-play previously forced preload of every video
+      // header up-front, defeating the whole point of the queue (MPI-286).
+      video.preload = 'auto';
+      video.addEventListener('loadeddata', () => swapIn(video), { once: true });
+      video.addEventListener('error', fail, { once: true });
+      video.src = project.recentThumbnail;
     } else {
       const img = document.createElement('img');
-      img.src = project.recentThumbnail;
       img.alt = project.name;
-      thumb.appendChild(img);
+      img.addEventListener('load', () => swapIn(img), { once: true });
+      img.addEventListener('error', fail, { once: true });
+      img.src = project.recentThumbnail;
     }
-  }
+  });
 
   // Meta
   const meta = document.createElement('div');
@@ -433,17 +501,6 @@ function _buildProjectRow(project) {
   row.appendChild(meta);
   row.appendChild(ct);
 
-  if (project.recentThumbnailType === 'video') {
-    const video = thumb.querySelector('video');
-    if (video) {
-      row.addEventListener('mouseenter', () => video.play().catch(() => {}));
-      row.addEventListener('mouseleave', () => {
-        video.pause();
-        video.currentTime = 0;
-      });
-    }
-  }
-
   // Live stats fetch — independent per row, aborted on grid rebuild.
   const signal = _statsBatchAC?.signal;
   fetchStats({ projectId: project.id, folderPath: project.folderPath, signal })
@@ -457,6 +514,9 @@ function _buildProjectRow(project) {
     });
 
   row.addEventListener('click', async () => {
+    // Open-locked until this row's thumbnail resolves — prevents opening a
+    // project mid-load (MPI-286).
+    if (row.classList.contains('mpi-landing__pl-row--loading')) return;
     if (await _blockedByDownloadMode()) return;
     await openProject(project);
     navigate(PAGE_GALLERY);
@@ -492,5 +552,5 @@ function _buildProjectRow(project) {
     });
   });
 
-  return row;
+  return { row, load };
 }

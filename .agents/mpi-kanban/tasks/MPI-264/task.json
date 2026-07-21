@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-264",
+  "title": "History rail tools: hover tooltip via MpiPopup",
+  "description": "The Group History left toolbar (js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js) renders icon-only rail buttons (Prompt/Crop/Resize/Upscale/Remove-BG/Mask). Today the ONLY name affordance on hover is the shell status-bar (statusBar.js reads [data-info]) — poor discoverability in the editor. Add a hover tooltip anchored to each rail button showing the tool name. REUSE the existing MpiPopup primitive (js/components/Primitives/MpiPopup/MpiPopup.js) — it portals to body, positions/flips relative to a triggerEl, and renders a caret via the mpi-popup--<side> class. Decisions (user-confirmed): (1) LIFECYCLE = mount-per-hover — on mouseenter of a .mpi-history-tools__btn wrapper, mount an MpiPopup with triggerEl=that button + position:'right', text = the button's data-info; destroy on mouseleave. Matches how MpiPopup captures its anchor at mount (closure); no re-anchor hacks. (2) POSITION = 'right' — rail is on the far-left edge; tooltip points into the canvas, always has room. MpiPopup's flip logic covers top/bottom only, so 'right' is a fixed side, which is correct here. (3) DISABLED = show too — disabled buttons already carry data-info = the disabled reason ('No prompt-driven ops'); reuse it so hover explains WHY greyed out. Content = plain text child (no items array). Register the popup instances in the component's _unsubs/teardown so a nav-away destroy cleans any open tooltip. Do NOT add [data-info] tooltip CSS or a title= attribute — use the primitive. Verify: hover each tool → tooltip appears on the right with the tool name; disabled tool → tooltip shows reason; leave → tooltip gone; nav away mid-hover → no orphan portal node in body.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-12T03:30:00.000Z",
+  "updated_at": "2026-07-12T05:15:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

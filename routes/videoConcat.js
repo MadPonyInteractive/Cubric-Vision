@@ -28,7 +28,7 @@ const logger = require('./logger');
 const { concatVideos } = require('../services/videoConcat');
 const { probeVideo }   = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
-const { materializeGenerationFrameSnapshots } = require('./projects');
+const { materializeGenerationFrameSnapshots, nextSequence } = require('./projects');
 
 // ── SSE channel ──────────────────────────────────────────────────────────────
 const _clients = new Set();
@@ -77,19 +77,10 @@ async function _resolveItemPath(metaDir, itemId) {
     return { abs, sidecar };
 }
 
-async function _nextSequencedName(mediaDir, prefix, ext = 'mp4') {
-    const entries = await fs.readdir(mediaDir);
-    const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
-    let maxNum = 0;
-    for (const f of entries) {
-        const m = f.match(re);
-        if (m) {
-            const n = parseInt(m[1], 10);
-            if (n > maxNum) maxNum = n;
-        }
-    }
-    const seq = String(maxNum + 1).padStart(3, '0');
-    return `${prefix}_${seq}.${ext}`;
+// Delegates to the monotonic allocator in routes/projects.js so combined_/
+// extended_ names never reuse a deleted number (avoids the overwrite/orphan bug).
+async function _nextSequencedName(folderPath, mediaDir, prefix, ext = 'mp4') {
+    return nextSequence(folderPath, mediaDir, prefix, ext);
 }
 
 function _makeProgressEmitter(jobId) {
@@ -105,7 +96,11 @@ function _makeProgressEmitter(jobId) {
 async function _writeOutputSidecar({ mediaDir, metaDir, outputPath, finalName, operation, extraFields = {} }) {
     const outMeta = await probeVideo(outputPath) || {};
     const newId   = uuidv4();
-    const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}`;
+    // Cache-bust on the output's mtime: a re-run that overwrites a reused
+    // filename (e.g. combined_001.mp4 after an in-app delete) gets a fresh URL,
+    // so Chromium can't replay stale cached bytes for the same /project-file path.
+    const _mtime = (await fs.stat(outputPath).catch(() => null))?.mtimeMs || 0;
+    const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}&v=${Math.round(_mtime)}`;
     const sidecar = {
         id:         newId,
         type:       'video',
@@ -174,12 +169,15 @@ router.post('/combine-videos', async (req, res) => {
             inputs.push(abs);
         }
 
-        const finalName = await _nextSequencedName(mediaDir, 'combined', 'mp4');
+        const finalName = await _nextSequencedName(folderPath, mediaDir, 'combined', 'mp4');
         outputPath = path.join(mediaDir, finalName);
 
         _broadcast('concat:progress', { jobId, ratio: 0 });
         const onProgress = _makeProgressEmitter(jobId);
-        const result = await concatVideos(inputs, outputPath, { onProgress });
+        // forceReencode: demuxer `-c copy` concat drifts PTS on short generated
+        // clips → non-integer output fps that breaks frame-accurate playback.
+        // Re-encode via the filter path for guaranteed CFR output.
+        const result = await concatVideos(inputs, outputPath, { onProgress, forceReencode: true });
 
         const sidecar = await _writeOutputSidecar({
             mediaDir, metaDir, outputPath, finalName, operation: 'combine',
@@ -264,7 +262,7 @@ router.post('/extend-video', async (req, res) => {
             return res.status(404).json({ success: false, error: `generated file missing: ${resolvedGenPath}` });
         }
 
-        const finalName = await _nextSequencedName(mediaDir, 'extended', 'mp4');
+        const finalName = await _nextSequencedName(folderPath, mediaDir, 'extended', 'mp4');
         outputPath = path.join(mediaDir, finalName);
 
         _broadcast('concat:progress', { jobId, ratio: 0 });

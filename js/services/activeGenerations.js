@@ -50,6 +50,48 @@ function setPromptId(id, promptId) {
     if (entry) entry.promptId = promptId;
 }
 
+/** @returns {GenerationEntry|null} The entry whose ComfyUI prompt_id matches. */
+function byPromptId(promptId) {
+    if (!promptId) return null;
+    for (const entry of _registry.values()) {
+        if (entry.promptId === promptId) return entry;
+    }
+    return null;
+}
+
+/**
+ * MPI-269 — last-good latent per generation, so a consumer that mounts (or
+ * repaints) between preview frames can immediately show the current latent
+ * instead of nothing. Keyed by regId; survives frame gaps (e.g. a slow second
+ * sampler that emits no previews for tens of seconds). Cleared on `end()`.
+ * @type {Map<string, {engine:string, promptId:string, seq:number, url:string}>}
+ */
+const _lastPreview = new Map();
+
+/** @returns {{engine,promptId,seq,url}|null} The latest latent for this gen. */
+function getLastPreview(id) {
+    return _lastPreview.get(id) ?? null;
+}
+
+// The unified preview bus (MPI-269). One subscription resolves every engine-tagged
+// frame to its generation and records the last-good latent. App-lifetime listener
+// (module singleton) — no teardown needed.
+// eslint-disable-next-line mpi/require-destroy-on-events
+Events.on('preview:frame', ({ engine, promptId, seq, url }) => {
+    const entry = byPromptId(promptId);
+    // Unresolved promptId (frame arrived before the /prompt ack set it) → drop.
+    // Do NOT fall back to "the active gen" — that is the cross-gen mis-attribution
+    // this whole card exists to kill.
+    if (!entry) return;
+    _lastPreview.set(entry.id, { engine, promptId, seq, url });
+    // MPI-271: keep latestPreviewUrl current for the non-subscriber reads that
+    // still poll it (queue-panel thumbnail, group-history rehydrate, gallery-grid
+    // card re-mount). The legacy generation:preview emit is gone; this listener is
+    // now the sole writer of latestPreviewUrl.
+    entry.latestPreviewUrl = url;
+    if (entry.placeholderGroup) entry.placeholderGroup.latestPreviewUrl = url;
+});
+
 /** @returns {GenerationEntry|null} */
 function get(id) {
     return _registry.get(id) ?? null;
@@ -70,15 +112,6 @@ function listFor(scope, groupId) {
         if (scope === 'groupHistory') return e.groupId === groupId;
         return true;
     });
-}
-
-/** Cache latest preview URL and emit event. */
-function setPreview(id, url) {
-    const entry = _registry.get(id);
-    if (!entry) return;
-    entry.latestPreviewUrl = url;
-    if (entry.placeholderGroup) entry.placeholderGroup.latestPreviewUrl = url;
-    Events.emit('generation:preview', { id, url });
 }
 
 /** Signal a new preview window (new sampler stage) — the card drops its current
@@ -110,6 +143,7 @@ function end(id, { revokePreview = true } = {}) {
         const url = entry.latestPreviewUrl;
         setTimeout(() => URL.revokeObjectURL(url), 0);
     }
+    _lastPreview.delete(id); // MPI-269: drop the held latent for this gen
     _registry.delete(id);
 }
 
@@ -130,4 +164,4 @@ function cancelAll() {
     for (const id of _registry.keys()) cancel(id);
 }
 
-export const activeGenerations = { start, get, list, listFor, setPreview, resetPreview, setPromptId, setStatus, end, cancel, cancelAll };
+export const activeGenerations = { start, get, list, listFor, resetPreview, setPromptId, byPromptId, getLastPreview, setStatus, end, cancel, cancelAll };

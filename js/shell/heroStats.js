@@ -125,6 +125,12 @@ function _renderRemoteSession({ uptimeSeconds, pricePerHr }) {
 let _localGpuFrag = null;
 let _remoteConnected = false;
 let _remotePhase = null; // MPI-73: 'connecting' | 'disconnecting' — suppress the local GPU line mid-transition
+// Last connect % seen this connecting window. The live % lives only in the GPU
+// slot's textContent, so any re-render of that slot (a phase re-emit, a nav that
+// flips the footer local→remote) loses it and re-seeded 0. Cache it so a
+// connecting re-render restores the real number instead of snapping back to 0%.
+// Reset to null when the connect resolves (connected / local / disconnected).
+let _lastConnectPct = null;
 
 function _buildLocalGpuFrag({ gpu, vramTotal, ramTotal }) {
     const gpuLabel = _stripGpuPrefix(gpu?.name);
@@ -200,9 +206,23 @@ function _renderEngine({ connected, gpuName, vramGb, ramGb, uptimeSeconds, price
         // MPI-87: while connecting, the GPU slot shows a live elapsed-based connect %
         // (seeded at 0% here; updated by remote:connect-progress). The footer label
         // already says "connecting", so the slot is just the bare number.
-        if (gpu) gpu.textContent = phase === 'connecting' ? '0%' : '';
+        // A repeated phase:'connecting' render (a phase re-emit, or a nav that flipped
+        // the footer local→remote and back) must NOT reset a % the boot poll already
+        // climbed. Restore from the cached last %, not a hard 0 — the slot's textContent
+        // is the ONLY place the live % lived, so any re-render lost it and snapped to 0
+        // (climb→0 on every gallery round-trip / feed tick).
+        if (gpu) {
+            if (phase === 'connecting') {
+                gpu.textContent = `${_lastConnectPct ?? 0}%`;
+            } else {
+                gpu.textContent = '';
+            }
+        }
         return;
     }
+    // Connect resolved (or dropped) — the connecting window is over, drop the cache
+    // so the NEXT connect starts fresh at 0 instead of restoring a stale prior %.
+    _lastConnectPct = null;
     if (phase === 'disconnected') {
         if (label) label.textContent = 'remote · disconnected';
         if (gpu) gpu.innerHTML = '';
@@ -252,7 +272,9 @@ export function initHeroStats() {
     // is active — a late tick after the phase resolves must not clobber the GPU card.
     Events.on('remote:connect-progress', ({ pct } = {}) => {
         if (_remotePhase !== 'connecting') return;
+        if (!Number.isFinite(pct)) return;
+        _lastConnectPct = pct; // cache so a re-render (nav round-trip) restores it
         const gpu = gid('heroStatGpu');
-        if (gpu && Number.isFinite(pct)) gpu.textContent = `${pct}%`;
+        if (gpu) gpu.textContent = `${pct}%`;
     });
 }

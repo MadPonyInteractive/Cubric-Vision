@@ -34,3 +34,24 @@
     width: calc(100% - 28px);
     margin: 6px 14px;
 }
+
+/* Rail icons a touch larger than the sm default (16px) for a better rail layout. */
+.mpi-history-tools .mpi-ibtn--rail .mpi-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* ── Rail tool tooltip (MPI-264) ──────────────────────────────────────────────
+   Compact skin for the MpiPopup used as a hover tooltip on rail buttons. The
+   popup portals to <body>, so this is a top-level selector, not nested under
+   .mpi-history-tools. Smaller text + tighter padding than the default popup. */
+.mpi-popup.mpi-popup--tip {
+    padding: 0.3rem 0.55rem;
+    font-size: var(--t-sm, 0.81rem);
+    line-height: 1.2;
+    /* The primitive uses `transition: all`, which animates our runtime padding/
+       left changes (looks like a big->small shrink). Restrict the transition to
+       the entrance fade+slide only so size/position snap instantly. Primitive
+       untouched. */
+    transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}

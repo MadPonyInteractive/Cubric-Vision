@@ -46,8 +46,8 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 
 - **Purpose:** Identifies which ComfyUI portable engine is bundled with this release.
 - **Format:** Semantic versioning matching upstream tags (e.g., `0.18.0` for ComfyUI).
-- **Where:** Stored in `dev_configs/system_dependencies.json` (single source of truth).
-- **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json`.
+- **Where:** Stored in `dev_configs/system_dependencies.json` (drives the local-engine download URL). **Tracked in a SECOND file too:** `dev_configs/node_lock.json` `comfyui.core.tag` is the node/Pod pin (read by `js/data/modelConstants/dependencies.js` for app node URLs AND by the mpi-ci Pod image build). These two CAN DESYNC — on the 1.1.0 promote `system_dependencies.json` said `0.26.0` while `node_lock.json` said `v0.27.0` (local engine would have pulled 0.26 while nodes targeted 0.27).
+- **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json` **AND** verify it matches `node_lock.json`'s `comfyui.core.tag` — grep BOTH at every bump, do not trust one file alone.
 - **Access:** `routes/platformEngine.js` reads this value at startup and exports `COMFY_VERSION` for use by `engine.js` and download manager.
 - **Validation:** On app boot, `_bootApp()` calls `GET /engine/version-check` which compares installed engine version against `COMFY_VERSION` from `platformEngine.js`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
 
@@ -125,9 +125,21 @@ A Python pre-release test suite needs to know which operations exist and their w
 }
 ```
 
-**Synchronization rule:** Every time you add, remove, or deprecate an operation (via the `/mpi-version-bump` skill), both `operationRegistry.js` **and** `operation_registry.json` must be updated together. The version-bump skill handles this automatically.
+**Synchronization rule:** Every time you add, remove, or deprecate an operation, both `operationRegistry.js` **and** `operation_registry.json` must be updated together.
 
-**Important:** Do NOT edit `operation_registry.json` by hand. Use the `/mpi-version-bump` skill or the version-bump skill will eventually fall out of sync.
+**Never REGENERATE this file from the JS registry** — it is a hand-maintained *superset*, and a wholesale regeneration would strip the `universal: true` flags that App ops depend on.
+
+**Who writes the entry:**
+
+| Situation | Who updates the JSON mirror |
+|---|---|
+| Operation added/changed during a version bump | `/mpi-version-bump` (its step 4i — itself a manual edit, not a script) |
+| **New model op** (`/mpi-add-model`) | **You, by hand** — models are never version-bumped, so the bump skill never runs |
+| **New app op** (`/mpi-add-app`) | **You, by hand** — same reason, plus the entry needs `universal: true` |
+
+There is no sync script. "Generated" language elsewhere is historical — treat this file as hand-maintained and **always finish with `npm run release:check`**, which fails on any drift between the two registries (missing entry, extra entry, `latestVersion` or `appVersionIntroduced` mismatch). It is not run automatically.
+
+⚠ MPI-300 shipped `qwenEdit` into `operationRegistry.js` while the JSON mirror went unwritten — the old "do NOT edit by hand" wording read as permission to skip it. The gate caught it, but only because someone thought to run `release:check`.
 
 ---
 

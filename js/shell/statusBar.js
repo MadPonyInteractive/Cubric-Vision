@@ -65,13 +65,6 @@ function _fmtTime(sec) {
     return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
 }
 
-function _fmtDuration(sec) {
-    const safeSec = Math.max(0, Math.round(Number(sec) || 0));
-    const m = Math.floor(safeSec / 60);
-    const s = safeSec % 60;
-    return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
-}
-
 function _setFill(pct) {
     if (!_fill) return;
     _fill.style.setProperty('--sb-progress', String(Math.min(100, Math.max(0, pct))));
@@ -444,21 +437,12 @@ export const StatusBar = {
             if (_jobTime) _jobTime.textContent = _fmtTime(totalElapsed);
             _fill.classList.add('shell-info__fill--flash');
 
-            // Fire the completion toast NOW, before the deferred fill/idle animation.
-            // The toast reports a job that genuinely finished, so it must NOT be gated
-            // by the supersession token: when a second queued job starts within the
-            // 400ms defer window it bumps _completionToken, which previously swallowed
-            // the first job's toast entirely (back-to-back queue → only one toast).
-            if (!silent) {
-                const wrapper = document.createElement('div');
-                document.body.appendChild(wrapper);
-                const t = MpiToast.mount(wrapper, {
-                    message: `${toastMessage} in ${_fmtDuration(totalElapsed)}`,
-                    variant: 'success',
-                    duration: 3000,
-                });
-                t.on('close', () => { t.destroy(); wrapper.remove(); });
-            }
+            // No per-gen toast here. Completion feedback is COALESCED by
+            // notificationService: it counts every finished gen and fires ONE
+            // notification (OS or in-app) when the whole queue drains. The old
+            // per-gen toast rang once per item; a queue of N spammed N toasts.
+            // `toastMessage`/`silent` are retained for the fill/idle timing only.
+            void toastMessage; void silent;
 
             setTimeout(() => {
                 if (token !== _completionToken) return;
@@ -501,11 +485,15 @@ export const StatusBar = {
      * Fire a standalone toast without a progress job.
      * @param {string} message
      * @param {'success'|'info'|'warning'|'danger'} [variant='info']
+     * @param {number} [duration=6000]
+     * @param {{sound?: boolean}} [opts] - sound: play the chime. Defaults true;
+     *        pass `{ sound: false }` for toasts fired as the IMMEDIATE feedback
+     *        of a user action (Connect, Install, Cue…) so a click never rings.
      */
-    notify(message, variant = 'info', duration = 6000) {
+    notify(message, variant = 'info', duration = 6000, opts = {}) {
         const wrapper = document.createElement('div');
         document.body.appendChild(wrapper);
-        const t = MpiToast.mount(wrapper, { message, variant, duration });
+        const t = MpiToast.mount(wrapper, { message, variant, duration, sound: opts.sound !== false });
         t.on('close', () => { t.destroy(); wrapper.remove(); });
     },
 
@@ -577,9 +565,11 @@ export const StatusBar = {
             _queueDepth = Math.max(0, Number(count) || 0);
             _renderJobLabel();
         }));
-        _listenUnsubs.push(Events.on('ui:success', ({ message }) => StatusBar.notify(message, 'success')));
-        _listenUnsubs.push(Events.on('ui:warning', ({ message }) => StatusBar.notify(message, 'warning')));
-        _listenUnsubs.push(Events.on('ui:info',    ({ message }) => StatusBar.notify(message, 'info')));
+        // `sound` defaults on; an emitter passes `sound:false` for a toast that
+        // is the immediate feedback of a user action (Connect, Install, Cue…).
+        _listenUnsubs.push(Events.on('ui:success', ({ message, sound }) => StatusBar.notify(message, 'success', 6000, { sound })));
+        _listenUnsubs.push(Events.on('ui:warning', ({ message, sound }) => StatusBar.notify(message, 'warning', 6000, { sound })));
+        _listenUnsubs.push(Events.on('ui:info',    ({ message, sound }) => StatusBar.notify(message, 'info', 6000, { sound })));
         // MPI-64 4.4: idle label scope tracks the remote engine connection.
         // MPI-73: `phase` ('connecting'|'disconnecting') overrides the steady
         // Local/Remote scope while a transition is in progress.

@@ -104,6 +104,22 @@ Community Cloud is unsupported (unstable/limited for this use case).
   window; `_starting` spans the **whole background boot/resume**. `GET /remote/comfy/status`
   reports `connecting = _connecting || _starting`, so Connect stays disabled for the entire
   boot → no pressable-mid-connect window → no duplicate create.
+- **Connect-phase ownership (MPI-274/275/278):** the live connect % + `connecting` phase
+  must be owned by an **app-lifetime** source, never an ephemeral component. The backend
+  stamps connect-start and returns `connectElapsedMs` (cleared with `_starting` via
+  `_setStarting`); the shell.js feed tick (survives nav) emits `remote:connect-progress`
+  from it, and heroStats caches `_lastConnectPct`. Traps that stranded a live connect,
+  all fixed: (1) the old renderer `setTimeout` poll in `MpiRunpodSettings` froze on
+  background-tab throttle / died on panel unmount → % owner gone (274). (2) A background
+  `ensureServerRunning` (models-check/warm-up) read a **booting** Pod's `ready:false` as
+  "gone" and POSTed `/remote/mode {active:false}`, killing the connect → Pod reached ready
+  with mode OFF, stuck on "connecting" forever; `comfyController._ensureRemoteReady` now
+  refuses on `check.connecting` before the local-fallback teardown (275). (3)
+  `MpiRunpodSettings.destroy()` (panel close) breaks its poll → `_connectEngine`'s `finally`
+  emitted `phase:null` = local·offline flash even though the Pod was left booting; a
+  `_destroyAborted` flag now skips that reset (panel-close ≠ Cancel/failure) (278). **Rule:
+  panel-close/nav/blur ≠ connect-failed — only a real Cancel (deletes the Pod) or a
+  persistent `connecting:false` not-ready may resolve the phase to local.**
 
 ### Billing semantics
 - **RUNNING** bills GPU per-second → never leave running across quit.
@@ -173,7 +189,13 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   filters the file list BEFORE it reaches the wrapper; the wrapper's own `HOT_STORE_MIN_BYTES`
   (env `CUBRIC_HOT_STORE_MIN_BYTES`, default 15 GB) is a looser Pod-side floor that never rejects
   what the app already selected. Bumping the app constant is sufficient; the wrapper floor is a
-  no-rebuild R2 push if you ever want them aligned (see below).
+  no-rebuild R2 push if you ever want them aligned (see below). **Judge staging on the WARM
+  number, never the first touch (MPI-200).** The first staged gen pays the one-time volume→disk
+  copy and looks *slower* than unstaged (24GB mxfp8: 30s first-staged vs 20s volume-served); the
+  warm repeat then ran 1m04s total = fast. A briefly-shipped threshold raise (15→26, commit
+  10ec822) to skip staging was reverted same session (2db240a) once the warm number was checked.
+  Rule for any cache/stage/memoize: confirm first-touch (fill cost) vs warm-repeat (read cost)
+  before concluding a tier is net-negative — get at least one warm number first.
 - **`wrapper.py` + `start.sh` are R2-floated, NOT baked (MPI-156).** Editing either is **NOT**
   an image rebuild. `bootstrap.sh` (the image CMD) curls both fresh from R2
   (`https://pod.cubric.studio/vision/stable/`) at every Pod boot; the baked copies are fallback
@@ -327,7 +349,7 @@ is committed).
 - **Verification snapshot** at MPI-64 close (2026-06-15) is archived in
   troubleshooting; live checklist is owned by MPI-93.
 
-## 11. Arch quick-reference (compressed from gotchas.md MPI-170)
+## 11. Arch quick-reference
 
 **Auto-retry GPU wait** (`js/shell.js` `_startGpuWait`/`_stopGpuWait`): opt-in "Auto-retry" picks an out-of-stock GPU and polls availability (15s) entirely in the shell — survives navigation. `state.remoteWaitGpu` (transient) mirrors the GPU being waited on. During wait: `phase:null`, `active:false`, NO Pod created. `autoRetry` must be in `normalizeRunpodConfig` whitelist or it strips on persist.
 

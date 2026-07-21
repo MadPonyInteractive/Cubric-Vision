@@ -2,10 +2,10 @@
 generate_ltx.py
 LTX-2.3 handler: from ONE i2v+t2v API export, produce FOUR app workflow files —
 the four mode/stage variants, all bf16 (both engines run the same transformer):
-  LTX_i2v.json         — Input_Text_to_video=false, Input_Is_Continue=false
-  LTX_i2v_stage2.json  — derived: Input_Is_Continue flipped true
-  LTX_t2v.json         — Input_Text_to_video=true,  Input_Is_Continue=false
-  LTX_t2v_stage2.json  — derived: Input_Is_Continue flipped true
+  ltx_i2v.json         — Input_Text_to_video=false, Input_Is_Continue=false
+  ltx_i2v_stage2.json  — derived: Input_Is_Continue flipped true
+  ltx_t2v.json         — Input_Text_to_video=true,  Input_Is_Continue=false
+  ltx_t2v_stage2.json  — derived: Input_Is_Continue flipped true
 
 MPI-190: the bf16/GGUF engine split was REVERTED. cu130 (MPI-187/189) collapsed
 the aimdo cold-fault tax that was the GGUF transformer's only justification, so
@@ -63,21 +63,10 @@ VARIANTS = {
     "_mxfp8": ("ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors", "default"),
 }
 
-# Media-input placeholders. The graph won't run without these LoadImage/LoadAudio
-# nodes holding SOME file, and ComfyUI validates them at prompt time even when the
-# output is gated off (t2v never uses the frames; an audio-less gen never uses the
-# wav). The app stages these exact filenames into the engine input/ on every submit
-# (routes/comfy.js WORKFLOW_INPUT_DEFAULTS) and injects real media over them at gen
-# time. But the EXPORTED template carries whatever test files were loaded in the
-# ComfyUI browser when you saved (e.g. a real mp3) — those don't exist on the engine
-# and reject. So stamp each media node back to its staged placeholder. Each entry:
-# title -> (filename_input_key, placeholder_filename).
-MEDIA_PLACEHOLDERS = {
-    "Input_Start_Frame": ("image", "placeholder.png"),
-    "Input_End_Frame":   ("image", "placeholder.png"),
-    "Input_Audio_File":  ("audio", "ltx_silence.wav"),
-}
-
+# MPI-272: media inputs migrated to path-into-string nodes (MpiLoadImageFromPath /
+# MpiLoadAudio) that self-gate on an empty `string`. No placeholder staging or
+# stamping needed — the exported template already carries empty strings.
+#
 # Titles that MUST survive into every output (sanity gate). Each entry is a set
 # of acceptable alternatives (any one present passes).
 REQUIRED_TITLES = [
@@ -134,30 +123,6 @@ def _stamp_transformer(wf: dict, unet_name: str, weight_dtype: str) -> None:
     inputs["weight_dtype"] = weight_dtype
 
 
-def _stamp_placeholders(wf: dict) -> None:
-    """Reset each media-input node's filename to its staged placeholder, so the
-    generated workflow validates on any engine regardless of what test media was
-    loaded in the ComfyUI browser at export. Fails loud on a missing node (a
-    rename must not silently skip a stamp). Also drops a stale `audioUI` preview
-    ref, which otherwise points the ComfyUI UI at the absent test file."""
-    for title, (key, filename) in MEDIA_PLACEHOLDERS.items():
-        nid = _find_node_id_by_title(wf, title)
-        if nid is None:
-            raise SystemExit(
-                f"[FAIL] No media node titled {title!r}. Title it in the ComfyUI "
-                f"graph and re-export, or update MEDIA_PLACEHOLDERS."
-            )
-        inputs = wf[nid].setdefault("inputs", {})
-        if key not in inputs:
-            raise SystemExit(
-                f"[FAIL] Node titled {title!r} has no {key!r} input (got "
-                f"{sorted(inputs)}); cannot stamp the placeholder."
-            )
-        inputs[key] = filename
-        inputs.pop("audioUI", None)  # stale browser-preview ref to the test file
-    print(f"  [media] stamped {len(MEDIA_PLACEHOLDERS)} placeholder input(s)")
-
-
 def _check_required(wf: dict, label: str) -> None:
     present = {n.get("_meta", {}).get("title") for n in wf.values() if isinstance(n, dict)}
     for alts in REQUIRED_TITLES:
@@ -190,9 +155,8 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
 
     written: list[Path] = []
     for vsuffix, (unet_name, weight_dtype) in VARIANTS.items():
-        for name, t2v in (("LTX_i2v", False), ("LTX_t2v", True)):
+        for name, t2v in (("ltx_i2v", False), ("ltx_t2v", True)):
             stage1 = _variant(template, t2v)
-            _stamp_placeholders(stage1)
             _stamp_transformer(stage1, unet_name, weight_dtype)
             s1_out = out_dir / f"{name}{vsuffix}.json"
             s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")

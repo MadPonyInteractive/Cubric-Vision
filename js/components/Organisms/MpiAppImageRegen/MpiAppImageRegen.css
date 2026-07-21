@@ -1,0 +1,28 @@
+/* MpiAppImageRegen — first App controls (prompt only). MPI-256 Phase 4. */
+
+.mpi-app-image-regen {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-app-image-regen__label {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+.mpi-app-image-regen__prompt {
+    width: 100%;
+    max-width: 560px;
+    background: var(--surface-2, oklch(0.28 0.02 350));
+    border: 1px solid var(--line);
+    color: var(--ink-1);
+    font-family: inherit;
+    font-size: var(--t-sm);
+    line-height: 1.5;
+    padding: var(--s-3);
+    resize: vertical;
+    outline: none;
+}
+.mpi-app-image-regen__prompt:focus { border-color: var(--ink-3); }
+.mpi-app-image-regen__prompt::placeholder { color: var(--ink-4); }

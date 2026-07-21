@@ -28,13 +28,15 @@ function normalizePromptReuseSource(value) {
 export const DEFAULT_NOTIFICATION_PREFS = Object.freeze({
   generation: true,
   downloads: true,
+  connection: true,
 });
 
-// Both default ON — preserves the prior always-notify behavior on a fresh/corrupt store.
+// All default ON — preserves the prior always-notify behavior on a fresh/corrupt store.
 function normalizeNotificationPrefs(value = {}) {
   return {
     generation: value?.generation !== false,
     downloads: value?.downloads !== false,
+    connection: value?.connection !== false,
   };
 }
 
@@ -160,6 +162,9 @@ export const Storage = {
   getPlayAudioOnHover: () => get(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, true),
   setPlayAudioOnHover: (v) => set(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, v),
 
+  getToastSound:       () => get(STORAGE_KEYS.TOAST_SOUND, true),
+  setToastSound:       (v) => set(STORAGE_KEYS.TOAST_SOUND, v),
+
   getExtraProjectPaths: () => get(STORAGE_KEYS.EXTRA_PROJECT_PATHS, []),
   setExtraProjectPaths: (v) => set(STORAGE_KEYS.EXTRA_PROJECT_PATHS, v),
 
@@ -188,6 +193,16 @@ export const Storage = {
 
   getNotificationPrefs: () => normalizeNotificationPrefs(get(STORAGE_KEYS.NOTIFICATION_PREFS, DEFAULT_NOTIFICATION_PREFS)),
   setNotificationPrefs: (v) => set(STORAGE_KEYS.NOTIFICATION_PREFS, normalizeNotificationPrefs(v)),
+
+  getFloatLatentWindow: () => get(STORAGE_KEYS.FLOAT_LATENT_WINDOW, true),
+  setFloatLatentWindow: (v) => set(STORAGE_KEYS.FLOAT_LATENT_WINDOW, !!v),
+
+  // Gallery card-size level (1–4) + info-mode toggle — cross-session.
+  getGallerySizeLevel: () => Math.min(4, Math.max(1, get(STORAGE_KEYS.GALLERY_SIZE_LEVEL, 3))),
+  setGallerySizeLevel: (v) => set(STORAGE_KEYS.GALLERY_SIZE_LEVEL, v),
+
+  getGalleryShowInfo:  () => get(STORAGE_KEYS.GALLERY_SHOW_INFO, false),
+  setGalleryShowInfo:  (v) => set(STORAGE_KEYS.GALLERY_SHOW_INFO, !!v),
 
   getPromptExpanded:   () => get(STORAGE_KEYS.PROMPT_EXPANDED, true),
   setPromptExpanded:   (v) => set(STORAGE_KEYS.PROMPT_EXPANDED, !!v),

@@ -5,11 +5,7 @@ The stable architecture contract is [runpod-remote-engine.md](runpod-remote-engi
 this file holds the "why it broke last time" traps + operational side-modes.
 Verify a named file/function/flag still exists before relying on an entry.
 
-<!-- MPI-170 routing target: RunPod troubleshooting gotchas land under this header. -->
-
 ## Fixed-bug traps
-
-<!-- routed from gotchas.md by MPI-170 -->
 
 ### autoretry live-test bugs (all fixed)
 
@@ -39,13 +35,19 @@ The ~80% snap on pressing Install is aria2c preallocating across 16 segments —
 
 Fixed 2026-07-05. Big-file installs on a Pod ran fast then crawled at the end (old: LTX/Wan hit ~4 MB/s at 80-90%, last 100MB at 63 KB/s). Cause was `wrapper.py`'s aria2c flags `-s 16 -k 16M`: `-s` caps TOTAL splits, so a 17-40GB file split into ~16 pieces of 270MB-2.5GB, and once early pieces finished their connections idled — the final large piece was dragged by ONE connection (single-stream). NOT R2/NIC throttle: bulk measured ~533 MB/s live, so the pipe was never the limit. Fix (wrapper **0.2.29**): `-x 16 -s 128 -k 1M` — let `-k` (min piece SIZE) be the limiter, not `-s` (count). The final piece is now ~1MB so the single-connection tail is negligible; tail floor rose from a 63 KB/s crawl to a steady ~11-14 MB/s (live-verified LTX 57.8GB + Wan on a fresh Pod, `/health`=0.2.29). ACCEPTED CEILING — do NOT re-open: aria2 STILL tapers slightly at the very end (last pieces on fewer connections is structural, not a flag bug; ~5-10 prior sessions could not flat-line it). The floor is raised and the original crawl-to-halt is gone — chasing 14→bulk is diminishing returns. Ships via `publish-runtime.sh` (R2), no image rebuild. Note the `--lowest-speed-limit=1M` from MPI-136 is a WHOLE-download floor (not per-connection), so it does not abort a healthy 11 MB/s tail.
 
+### remote install hangs at 100% — aria2 `--enable-rpc` never exits (MPI-254, wrapper 0.2.36)
+
+Fixed 2026-07-11. Wrapper 0.2.34 added `--enable-rpc` to aria2c so the wrapper could poll `aria2.tellStatus → completedLength` for a TRUE-bytes progress numerator. Side effect: **with `--enable-rpc`, aria2c does NOT exit when the download finishes — it idles as an RPC daemon forever.** So the download loop's `await proc.wait()` never returns → `_download_aria2` never returns → finalize (sha256 check + `os.replace(part, dest)` + `models:install-complete`) NEVER runs. Symptom: `.part` at full size, wrapper reports `installed=false` forever, app hangs at a determinate 100% with NO "Verifying…" sweep — this is NOT an app-side SSE bug, finalize genuinely never ran. Fix (wrapper **0.2.36**, db452f4): poll aria2's `status` field; on `complete` call `aria2.shutdown` so the process exits and `proc.wait()` resolves; on `error` shutdown + fall through to httpx fallback. Belt: if `.part` reaches the HEAD-resolved total but RPC is unreachable (port conflict / no-RPC build), terminate the process directly. **RULE: any future aria2 daemon/RPC flag (`--enable-rpc`, `--rpc-*`, `--bt-*` keep-running) requires the download loop to detect completion and shut aria2 down — it will NOT exit on its own.** Ships via `publish-runtime.sh` (R2), no image rebuild. (The earlier 80%/95% snap is a separate, correct behavior — see above.)
+
 ### restart-needed flag is per-engine — never share local + remote (MPI-64)
 
 Fixed 2026-06-29. `comfy:needs-restart` SSE fires for both local and remote installs; `downloadManager.js` broadcasts `{ remote: true }` for the Pod side. Renderer (`downloadService.js`) must route by that tag: `remote:true` → `state.remoteComfyNeedsRestart`, else → `state.comfyNeedsRestart`. They used to be ONE flag — a remote auto-upload flipped it, and the next local gen saw it set, ran `/comfy/stop` + restart, killing a healthy local ComfyUI. RULE: any new restart/needs-rescan signal that can originate remotely MUST carry and honor an engine tag.
 
 ### remote download silent-stall belt (MPI-136) — NOT live-verified
 
-**UNVERIFIED** (hard to force: needs a live network stall on a running Pod). A remote download can stall mid-flight with the SSE stream still open — a zombie CDN socket (TCP alive, stops bytes, no RST/FIN). Root trigger was HF/Xet throttle; MPI-129 (weights → R2) largely removed it. Three shipped defenses (wrapper **0.2.21**, app committed): (1) aria2c `--lowest-speed-limit=1M --timeout=30` aborts sub-1MB/s zombies in 30s; (2) httpx fallback: each chunk under `asyncio.wait_for(..., 60s)` → stall raises `RuntimeError`; (3) app watchdog (`downloadManager.js`): 15s poll, if open SSE silent >90s → abort + MPI-97 reconnect path. If a remote install ghost-freezes: confirm Pod runs wrapper ≥0.2.21 (`GET /health`), check `app.log` for `remote install silent for Ns … treating as stalled`.
+**UNVERIFIED** (hard to force: needs a live network stall on a running Pod). A remote download can stall mid-flight with the SSE stream still open — a zombie CDN socket (TCP alive, stops bytes, no RST/FIN). Root trigger was HF/Xet throttle; MPI-129 (weights → R2) largely removed it. Three shipped defenses (wrapper **0.2.21**, app committed): (1) aria2c `--lowest-speed-limit=1M --timeout=30` aborts sub-1MB/s zombies in 30s; (2) httpx fallback: each chunk under `asyncio.wait_for(..., 60s)` → stall raises `RuntimeError`; (3) app watchdog (`downloadManager.js` `_startRemoteStallWatchdog`): 15s poll, if open SSE silent >90s → abort + MPI-97 reconnect path. If a remote install ghost-freezes: confirm Pod runs wrapper ≥0.2.21 (`GET /health`), check `app.log` for `remote install silent for Ns … treating as stalled`.
+
+> **MPI-276:** the new install reconciler (`routes/install/reconciler.js`) runs a parallel disk/volume-truth pass (settle wedged jobs, fail orphans) and drives the store shadow SOT. It does NOT yet replace the app watchdog above — the watchdog still drives the runtime maps. Both retire into the reconciler at the deferred full read-flip (see [download-manager.md](download-manager.md) § shadow-SOT caveat). Until then, the watchdog is still the live remote-stall belt.
 
 ### Pod-image BUILD 403s on the weight-prebake — HF Xet CDN, use R2 (MPI-148, fixed 2026-07-03)
 

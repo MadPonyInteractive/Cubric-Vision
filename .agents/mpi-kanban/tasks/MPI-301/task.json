@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-301",
+  "title": "Style picker: dropdown → image-grid popup",
+  "description": "Replace the STYLE dropdown in the prompt-box settings with a BUTTON (label = selected style name, 'None' when index 0) that opens a small floating popup: a fixed-size, horizontally-scrolling grid of style cards. Each card = title-on-top + a 4:5 image below (representative of the style). First card = an empty NONE card. Click a card → apply selection + close popup. Current selection is highlighted (a border/bar) when the popup reopens.\n\nWHY: dropdown is a poor fit for image-representable styles; models have varying counts (Krea 11 incl. None, Qwen 7) so the grid must scroll horizontally at a fixed width. Matches the prompt-box model/op popups visually but is its OWN simpler card (NOT the mpi-tile library card — no chips/body; title top, image below, contained inside the new grid component).\n\nSCOPE / CONTRACT (locked in Socratic gate):\n- New component MpiStylePicker (prompt-box control), imports MpiPopup primitive for the floating container; renders its OWN grid + card markup + CSS (self-contained, no borrowing library .mpi-tile CSS).\n- Swap point = the `styleSelect` control in js/components/Organisms/MpiPromptBox/PromptBoxControls.js:983 ONLY. It currently mounts an inline MpiDropdown.\n- VALUE CONTRACT UNCHANGED: still emits/injects the style INDEX int as `Input_Style` (index 0 = None). Must still emit `promptbox:style-change` {index} so the sibling `stylization` slider enables/disables. Must still call _emitUpdate(...,'styleSelect',v) to persist perModel.\n- Labels from model.styleLoraLabels (index-aligned, index 0 = None) — unchanged.\n- Images: NEW `styleLoraImages[]` on the ModelDef, index-aligned with styleLoraLabels (index 0 = None card, no image). Files live under comfy_workflows/display/. Missing/absent image → empty placeholder card (Qwen imgs exist, Krea don't yet — placeholders are expected).\n- Button label = selected style name; 'None' at index 0 (same empty-state as today's dropdown).\n- Popup ~200-300px tall, ~400-500px wide, fixed width, horizontal scroll, `direction: 'up'` (prompt box sits at viewport bottom).\n- Use impeccable-craft skill for the new component's visual design.\n\nCritical rules apply: ComponentFactory.create, BEM (.mpi-style-picker__*), register CSS in preloadStyles.js, document props in components/types.js, on()/off() + destroy() teardown, colors from CSS vars, icons from icons.js.\n\nNON-GOALS: no change to Input_Style injection semantics, no change to stylization slider logic beyond keeping the event it listens on, no new MpiPopup features unless the grid genuinely needs them (prefer children-injection).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-18T00:00:00Z",
+  "updated_at": "2026-07-18T01:00:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   COMFY_ROOT_PATH:     'mpi_comfy_root_path',
   AUTO_START_COMFY:    'mpi_auto_start_comfy',
   PLAY_AUDIO_ON_HOVER: 'mpi_play_audio_on_hover',
+  TOAST_SOUND:         'mpi_toast_sound',
 
   // RunPod remote engine — NON-secret prefs only. The API key and wrapper
   // token live in the main process (safeStorage via secrets:* IPC), never here.
@@ -37,6 +38,13 @@ export const STORAGE_KEYS = {
 
   // OS notification prefs (per-type opt-out)
   NOTIFICATION_PREFS:  'mpi_notification_prefs',
+
+  // MPI-270: OS floating latent window when minimized (opt-in, default on)
+  FLOAT_LATENT_WINDOW: 'mpi_float_latent_window',
+
+  // Gallery UI (card size level + info-mode toggle)
+  GALLERY_SIZE_LEVEL:  'mpi_gallery_size_level',
+  GALLERY_SHOW_INFO:   'mpi_gallery_show_info',
 
   // PromptBox UI
   PROMPT_EXPANDED:     'mpi_prompt_expanded',

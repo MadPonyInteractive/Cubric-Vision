@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-07-02T15:00:00Z","actor":"claude","id":"MPI-177","title":"Extract RunPod section of MpiSettings.js into MpiRunpodSettings compound"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T16:00:00Z","actor":"claude","id":"MPI-177","from":"todo","to":"doing","reason":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","at":"2026-07-02T18:30:00Z","actor":"claude","id":"MPI-177","note":"Extraction shipped; automated desktop-test validation written. Awaiting live connect/disconnect smoke."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T20:15:00Z","actor":"claude","id":"MPI-177","from":"doing","to":"done","reason":"Live-verified by user: connect/generate/disconnect + terminate and delete Pod paths; dropdown fix confirmed."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-177", "type": "task.moved", "at": "2026-07-12T18:30:00Z", "actor": "claude", "from": "done", "to": "archived", "summary": "Archived completed card during board cleanup."}

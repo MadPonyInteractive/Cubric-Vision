@@ -1,0 +1,160 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "82fdd422-6871-4f14-9147-c7015224ac23",
+  "generated_at": "2026-07-18T18:30:00Z",
+  "from_session": "MPI-306 Phase 1 — the portable carousel frame, built and user-verified",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "App carousel frame — PHASE 1 SHIPPED; Phase 2 (Head Swap proof) is next",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Design the portable app UI frame (MPI-306), then build it.",
+    "status": "in_progress",
+    "summary": "Phase 1 is BUILT, self-verified, and confirmed by the user in the running app ('ok, looking good'). MpiBaseApp is now the step carousel; steps are data; the box gizmo exists. Two commits: 12a06b51 (the frame) + 9e6c4cae (a 0px-stage fix found by the user). Next session runs PHASE 2 — Head Swap as the frame's proof — then Phase 3."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+    "completed": [
+      "Mock-up phase: three mock-ups, C2 approved as THE design.",
+      "PHASE 1 (steps 1-6): frame shell + navigating ticker + inset divider + slot rendering + STEP_KINDS registry + MpiStepBox + declared `fields` + `steps` on AppDef + CSS/props registration. Committed 12a06b51.",
+      "Phase 1 follow-up fix: the carousel stage collapsed to 0px inside MpiOverlay (topbar rendered, nothing else). Committed 9e6c4cae.",
+      "Verification harnesses run against the LIVE app: 22/22 frame checks, 10/10 box checks, 12/12 geometry checks. All temp scaffolding reverted."
+    ],
+    "pending": [
+      "PHASE 2 — Head Swap as the frame's proof (plan step 7). THIS IS THE NEXT ACTION.",
+      "Phase 3 — hold-until-Apply run-path change (plan step 8), deliberately a separate diff.",
+      "User: head-swap LoRA fp32-vs-fp16 A/B, then R2 upload (NOT authorised). Head Swap cannot RUN until this lands — the graph 404s on the LoRA.",
+      "User: supply the real step-0 example image/video for Head Swap (currently the placeholder `sdxl-real-05.webp`)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-306",
+    "title": "App carousel frame + hold-until-Apply",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-306/",
+    "links": {
+      "plan": "plan.md",
+      "checklist": null,
+      "validation": "validation.md",
+      "handoffs": "handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "implement Phase 2 of .agents/mpi-kanban/tasks/MPI-306/plan.md",
+    "commit Phase 2 by explicit pathspec"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/add-app/ui/carousel-frame.md — updated with the Discard removal (both the run-path section and the approved-composition list).",
+      "docs/playbooks/add-app/existing-apps/head-swap.md — REFRESHED: the stale 'NOT YET BUILT' banner and the dead MPI-304 blocker are gone (requiredDeps shipped; Head Swap is its first consumer); the coord-convention and requiredModels open questions are marked settled.",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md — full Phase 1 evidence, the three bugs found during verification, and an explicit list of what is NOT yet validated.",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md — Phase 1 marked shipped with its two deltas."
+    ],
+    "pending": [
+      "A memory entry for the mpi_box contract once the gizmo ships end-to-end (deferred three times now; still deferred until Phase 2 proves it against a real workflow).",
+      "UNCARDED CLEANUP: `--lib-bg: oklch(0.26 0.020 350)` is declared LOCALLY in MpiAppLibrary.css:34, MpiModelManager.css:39 and now MpiBaseApp.css. DELIBERATE (see carousel-frame.md), but worth a card if a fourth surface wants it.",
+      "UNCARDED: MpiVideoViewer.enterCropMode(initialRect) was silently discarding its rect — the cropTool root fix now makes that parameter work. Nobody has re-tested video crop restore; worth a look if it ever seemed off."
+    ]
+  },
+  "next_action": {
+    "description": "Implement PHASE 2 of .agents/mpi-kanban/tasks/MPI-306/plan.md — Head Swap as the frame's proof. Read docs/playbooks/add-app/ui/carousel-frame.md § The approved composition and § Head Swap's instance first; the design is settled and must NOT be re-derived. The work is DATA plus one small controls component: (1) declare `steps` on the head-swap AppDef — two `box` steps, role image1 ('Mark where the new head goes') and role image2 ('Mark which head to take'), each ratio 1, with tickerLabel 'Target head' / 'Reference head'; (2) declare `labels: ['Original', 'Face Reference']` on its media group so the slots stop reading 'Image 1 / Image 2'; (3) build the tier radio as Head Swap's `uiComponent` (Quality/Turbo/Hyper) using the MEASURED RELATIVE labels baseline / ~25% / ~13% — never absolute seconds — and register it in shell.js's _appComponents map; (4) make the box values reach Input_Box / Input_Box_2 as top-left source pixels via the op's injection params. THE ACCEPTANCE TEST FOR THE FRAME: if any of this needs a frame change, the frame was wrong — fix the frame, not the app. Head Swap CANNOT RUN (its LoRA 404s pending an unauthorised R2 upload), so verify by inspection + the box values landing in state, NOT by generating.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "DISCARD IS GONE, and closing no longer prompts (user-decided this session, superseding the mock-up). Discard was redundant: 'Generate again' already overwrites a pending result and closing already drops it, so its only unique act was 'clear the pane and stay here'. With nothing unique to destroy, a close prompt guarded a non-decision. The 'Not saved yet' note SURVIVES — it is what makes Apply legible.",
+      "THE APPLY BUTTON IS HIDDEN UNTIL A RESULT EXISTS (`_applyRow.hidden = !_hasPending`). The user noticed it 'missing' — it is by design, but since Head Swap cannot run, it is never seen. OPEN QUESTION FOR PHASE 3: should Apply render DISABLED instead, so the commit step is visible before a run? Decide deliberately; do not just leave it hidden by accident.",
+      "Slot labels are APP DATA, not frame-invented. A media group may declare `labels: []` (index-aligned with roles); the frame falls back to a descriptive role, then a numbered noun. 'Image 1 / Image 2' is the fallback, not the design.",
+      "The step ticker NAVIGATES (overturns the older 'dots do not navigate'). Shipped and confirmed.",
+      "Middle steps are the bounded centred canvas — title above, optional ONE-row fields, hint below. No annotation column, no divider.",
+      "MpiOverlay is built for centred CARD content and gives its container no height + a 600px cap. Any full-bleed consumer must escape it with a `:has()` override from its OWN CSS (MpiAppLibrary and MpiModelManager already do; MpiBaseApp now does too). Never edit the shared MpiOverlay.css.",
+      "Tier cost labels are RELATIVE percentages (baseline / ~25% / ~13%), never absolute seconds — a hardcoded ETA is a lie on every GPU but the one it was measured on. Progress during a run comes from SERVER TRUTH (steps completed)."
+    ],
+    "constraints": [
+      "`steps` NOW EXISTS in code (introduced this session): AppDef gained `steps`, plus AppStep and AppStepField typedefs in js/data/appsRegistry.js. Phase 2 DECLARES data against it — it does not build the mechanism.",
+      "A step kind's contract is `{ media, value, onChange, step }` + `el.getValue()`. It must never learn its host app, the workflow, or any injector. STEP_KINDS lives in js/components/Organisms/MpiBaseApp/stepKinds.js — a new gizmo is one component + one line there.",
+      "MpiStepBox reports `{ box: {x,y,w,h} }` in ABSOLUTE TOP-LEFT SOURCE PIXELS, already clamped to the image. `Mpi Box` consumes that unconverted — do NOT add conversion at the injection site.",
+      "The box MUST stay clamped: `Mpi Box Crop` returns the intersection and does not pad, so an off-edge box silently yields a non-square crop — a distorted head the user blames on the model.",
+      "FIXED-PROMPT app: the graph has NO Input_Positive/Input_Negative — both prompts are BAKED. Never build a prompt box for Head Swap.",
+      "NO SEED UI, EVER — random seed every generation, never shown or saved.",
+      "The RUN PATH is untouched and stays untouched in Phase 2: submitAppGeneration still commits at ENQUEUE time (scope:'gallery' + placeholderGroup, js/services/appService.js:105-107). Apply is INERT. That is Phase 3.",
+      "Standing UI law: ComponentFactory.create (never modify js/components/factory.js), BEM, qs/qsa/gid + on/off from js/utils/dom.js, CSS vars from styles/01_base.css, icons from js/utils/icons.js, Events.on/emit with stored unsubs, a destroy() that cleans everything, register new CSS in js/shell/preloadStyles.js and document props in js/components/types.js.",
+      "MpiButton has NO setText — its label is a `.mpi-btn__text` span. There are no 'chevron-left'/'chevron-right' icons in js/utils/icons.js. Cancel is `activeGenerations.cancel(id)`, not an event. All three were discovered the hard way this session.",
+      "State: never mutate sub-objects — replace the top-level key. App inputs live in state.s_appInputs[appId].",
+      "Shared tree: commit by explicit pathspec, never `git add -A`. A concurrent session owns MPI-288/MPI-305 — do not touch them. `.agents/mpi-kanban/events.jsonl` has 3 PRE-EXISTING malformed lines (1260/1265/1324) from other sessions; leave them alone.",
+      "DO NOT upload anything to R2 — still not authorised, pending the fp32-vs-fp16 A/B.",
+      "Head Swap CANNOT RUN regardless of this work (LoRA 404). Do not treat a failed generation as a frame or app bug.",
+      "The user's app instance owns port 3000. Do NOT spawn a second one (zombie instances serve stale routes). Drive the RUNNING app; browser dev mode needs a project opened first (the app shell is display:none on the landing page).",
+      "VERIFY GEOMETRY, NOT JUST DOM PRESENCE. The first Phase 1 suite passed 22/22 while the whole stage was 0px tall. Assert real widths/heights."
+    ],
+    "files_modified": [
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.css",
+      "js/components/Organisms/MpiBaseApp/stepKinds.js",
+      "js/components/Organisms/MpiStepBox/MpiStepBox.js",
+      "js/components/Organisms/MpiStepBox/MpiStepBox.css",
+      "js/utils/cropTool.js",
+      "js/data/appsRegistry.js",
+      "js/shell/preloadStyles.js",
+      "js/components/types.js",
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      "docs/playbooks/add-app/existing-apps/head-swap.md",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md"
+    ],
+    "files_to_read_first": [
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      ".agents/mpi-kanban/tasks/MPI-306/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-306/validation.md",
+      "docs/playbooks/add-app/existing-apps/head-swap.md",
+      "docs/playbooks/add-app/ui/box-gizmo.md",
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      "js/components/Organisms/MpiBaseApp/stepKinds.js",
+      "js/components/Organisms/MpiStepBox/MpiStepBox.js",
+      "js/data/appsRegistry.js",
+      ".claude/rules/comfy_injection.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": [
+      "apps / App Library",
+      "app UI/UX portable layer",
+      "components + UI law",
+      "comfy injection (box params → Input_Box / Input_Box_2)"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md — THE ROOT-CAUSE RULE",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_injection.md",
+    "docs/playbooks/add-app/README.md + ui/carousel-frame.md",
+    "feedback: no seed UI; no toast on user Stop; error dialog vs toast"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-18T17:10:00Z",
+      "event": "MPI-306 Phase 1 built + self-verified (commit 12a06b51)"
+    },
+    {
+      "at": "2026-07-18T18:05:00Z",
+      "event": "user found the frame blank; 0px-stage overlay bug fixed (commit 9e6c4cae)"
+    },
+    {
+      "at": "2026-07-18T18:20:00Z",
+      "event": "user confirmed the frame in the app: 'ok, looking good'"
+    },
+    {
+      "at": "2026-07-18T18:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/82fdd422-6871-4f14-9147-c7015224ac23.json, then read docs/playbooks/add-app/ui/carousel-frame.md (§ The approved composition and § Head Swap's instance) and .agents/mpi-kanban/tasks/MPI-306/plan.md. MPI-306 Phase 1 is DONE and user-verified: MpiBaseApp is now the portable step carousel, `steps` exists on AppDef, STEP_KINDS + MpiStepBox are live, and two commits are in (12a06b51, 9e6c4cae). The design is SETTLED — do not re-derive or re-litigate it. Build PHASE 2 ONLY: Head Swap as the frame's proof. That is mostly DATA — declare two `box` steps on the head-swap AppDef (roles image1 and image2, ratio 1, ticker labels 'Target head' and 'Reference head'), declare `labels: ['Original','Face Reference']` on its media group, build the Quality/Turbo/Hyper tier radio as its `uiComponent` and register it in shell.js's _appComponents map, and make the box values reach Input_Box / Input_Box_2 as top-left source pixels. The acceptance test for the frame is that NONE of this should need a frame change — if it does, fix the frame, not the app. Tier labels are the MEASURED relative percentages (baseline / ~25% / ~13%), never absolute seconds, and there is no prompt box and no seed UI. Do NOT touch the run path: that is Phase 3, so Apply stays inert. Head Swap CANNOT RUN yet (its LoRA 404s pending an unauthorised R2 upload) — verify by inspection and by the box values landing in state, never by generating, and do not treat a failed generation as a bug. Also decide deliberately in Phase 3 whether Apply should render DISABLED rather than hidden before a result exists — the user noticed its absence. The user's app owns port 3000; drive the running instance, never spawn a second one, and assert real geometry (widths/heights), because a DOM-presence-only suite once passed while the entire stage was 0px tall."
+}

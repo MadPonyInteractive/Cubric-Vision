@@ -77,6 +77,11 @@ Keydown fires handlers only if all guards pass (in order):
 ## statusBar.js (`js/shell/statusBar.js`)
 
 Bottom status bar. Shows ComfyUI engine status, active model, generation progress.
+
+> **Before touching progress display, Stop handling, or lane/queue interplay, read
+> [generation-lifecycle.md](generation-lifecycle.md)** — the stdout-driven progress pipeline
+> (MPI-147) and the per-gen identity doctrine (MPI-195/203/208/245) live there. The bar derives
+> ownership + idleness from `generationStore`, and every driving `tool:*` event carries a gen id.
 - Listens to `comfy:starting`, `comfy:ready`, `comfy:error`, `tool:running`, `tool:loading-model`, `tool:sampling-start`, `tool:cancelled`, `tool:idle`, and `state.generationQueueCount`.
 - On `tool:running`: prepares the progress bar without starting elapsed timing
 - On `tool:loading-model`: updates label to "Loading model..." (model VRAM load phase)

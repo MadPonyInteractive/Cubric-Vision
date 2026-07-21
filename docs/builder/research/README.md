@@ -1,24 +1,25 @@
-# Research — locked decisions & measured data
+# Builder-Pod research — Pod-perf & cold-start only
 
 **Read the relevant file before re-testing anything.** These are concluded findings,
-not open questions. They graduated here from the live MPI-4 task log so they survive
-the card and don't get re-discovered.
+not open questions.
+
+This folder now holds **only Pod/infra research** — the perf and cold-start
+investigations tied to the RunPod engine, not to any one model. **Per-model authoring
+& tuning research moved to `docs/models/<model>/`** (MPI reorg 2026-07-12).
 
 | File | Holds |
 |---|---|
-| [ltx-2.3-tiers.md](ltx-2.3-tiers.md) | Resolution tiers, timing, the /32 size rule (+/64 pixel-exact), motion-vs-resolution dial. Drives `LTX_RATIOS`. |
-| [wan-2.2-tiers.md](wan-2.2-tiers.md) | Wan 2.2 resolution tiers (14B + 5B), /16 grid, no native 2K/4K. Drives `WAN_RATIOS` + `WAN_5B_RATIOS`. |
-| [wan-2.2-two-stage-sigmas.md](wan-2.2-two-stage-sigmas.md) | **Wan 2.2 two-stage manual-sigma schedule (MPI-126, live-proven 2026-07-02).** Shipped t2v 4+3@0.70 / i2v 2+4@0.85. Lever map (handoff = content dial; step count = preview legibility; cliff-split = consistency). Walls: sampler/shift can't fix specks, i2v eyes are 720p-bound, realistic look needs different weights. Read before re-tuning Wan sigmas. |
-| [lora-strength-law.md](lora-strength-law.md) | Distilled-LoRA strength law (0.3–0.7, sweet spot 0.5); model-only; **+ CAPABILITY-LoRA VERDICTS (VBVR + Singularity DROPPED; ship base + prompt-contract)**. |
-| [tested-loras-versions.md](tested-loras-versions.md) | **Exact LoRA versions + base tested** → re-test baseline when a NEW version appears. Don't re-litigate from zero. |
-| [model-set.md](model-set.md) | The base weights + LoRAs (roles, sizes, status), merge-vs-switch delivery, mirroring TODO. |
-| [prompt-contract.md](prompt-contract.md) | The LTX prompt SHAPE (front-loaded anchor + ordered steps) + audio rule → Cubric-Prompt recipe. |
-| [audio-input.md](audio-input.md) | Input-audio gate + influence wiring; influence = denoise-preserve dial (not a mix); verdict = binary gate at fixed 1.0, slider not needed. |
-| [strategy.md](strategy.md) | LTX>WAN moat, NSFW capability gap, future NSFW-motion-LoRA epic, release framing. |
-| [quant-and-coldstart-investigation.md](quant-and-coldstart-investigation.md) | **Quant transformer + cold-start sweep (2026-06-29).** Headline: GGUF Q8_0 STRUCTURALLY bypasses aimdo's staging/re-fault tax (→ removes the cold tax, doesn't just shrink it). Corrects the aimdo mechanism (VMM API + memlock-fail-restage, NOT hardware UVM). Quant candidate ranking (Q8_0 prime; NVFP4 cu130-gated; nunchaku=dead). Read before any quant/cold-start work. **Research only — needs the §5 live Pod A/B.** |
-| [pod-perf-investigation.md](pod-perf-investigation.md) | **Why the cloud 4090 isn't faster than a local 4060 Ti.** CONCLUDED: torch 2.8+cu126→2.12+cu130 bump is a DEAD END (cu130 gains are Blackwell-only, costs the r580 driver floor). OPEN: two unmeasured suspects (aimdo overhead on a card that doesn't need offload; cloud-host P-State/clock throttle) + the exact test plan. Read before proposing any torch/cu130 bump. |
-| [lora-merge-ltx.md](lora-merge-ltx.md) | **Flatten a LoRA stack into ONE file (LTX). LIVE-PROVEN 2026-07-01.** Recipe: `LoraExtractKJ` (standard + svd_linalg, rank = max source LoRA rank) → union model+clip halves with `scripts/merge-loras/merge_lora.py`. Documents 4 dead ends: checkpoint save, native merge nodes (`.temp` on LTX MixedPrecisionOps), `lora_type: full` (40GB + meta-tensor crash), quantized bases break the extract (extract from BF16). Read before re-attempting a merge. |
-| [pid-upscaler.md](pid-upscaler.md) | **NVIDIA PiD (PixelDiT) 4× upscaler — models downloaded 2026-07-03, live tests OPEN.** Source-verified: compat = VAE latent space not model name (Z-Image→pid_flux1); tier = longer-edge band not exact lock (keep ÷16, output=4×input); **only `degrade_sigma` (0.0–0.5) is a tuning knob — denoise/steps/cfg are DMD2-distilled LOCKS**; no speedup LoRA (it IS the distilled version); image-only (no Wan-VAE ckpt); PiD Conditioning always in path → existing-image upscale must VAE-encode first. Read before building/testing PiD. |
+| [pod-perf-investigation.md](pod-perf-investigation.md) | **Why the cloud 4090 isn't faster than a local 4060 Ti.** cu130 = the fault-in fix (MPI-187, ~10×). Read before proposing any torch/cu130 bump. |
+| [quant-and-coldstart-investigation.md](quant-and-coldstart-investigation.md) | **Quant transformer + cold-start sweep.** GGUF Q8_0 bypasses aimdo's staging tax; quant candidate ranking; the aimdo mechanism. Read before any quant/cold-start work. |
+
+## Per-model research moved → `docs/models/<model>/`
+
+| Model | Home |
+|---|---|
+| LTX-2.3 (tiers, workflow authoring, model-set, LoRA strength law, prompt contract, tested LoRAs, audio, black-bars, lora-merge, strategy) | [../../models/ltx/](../../models/ltx/) |
+| Wan 2.2 (tiers, two-stage sigmas) | [../../models/wan/](../../models/wan/) |
+| Krea2 (samplers, conditioning, styles, resolution, injection, preview, int8-quant) | [../../models/krea2/](../../models/krea2/) |
+| NVIDIA PiD upscaler | [../../models/pid/](../../models/pid/) |
 
 ## Live task log (NOT here — still on the card)
 
@@ -27,11 +28,5 @@ reminders stay in the MPI-4 task spec (it's a *task* log, this is *findings*):
 
 `Cubric-Vision/.agents/mpi-kanban/tasks/MPI-4/research/ltx-integration-spec.md`
 
-When a finding there concludes and stops being task-specific, graduate it into one
-of the files above and leave a pointer.
-
-## Adding a new model's research
-
-When onboarding a different model/workflow, add a sibling set here (e.g.
-`research/<model>-tiers.md`, `<model>-lora-notes.md`) and a row in this table. Same
-rule: concluded findings live here; the live test log stays on its task card.
+When a finding there concludes and stops being task-specific, graduate it into the
+right `docs/models/<model>/` file and leave a pointer.

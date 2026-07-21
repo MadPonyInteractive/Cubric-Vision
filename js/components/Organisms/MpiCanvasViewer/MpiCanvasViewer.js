@@ -36,8 +36,10 @@ import { hasMaskContent } from '../../../utils/maskUtils.js';
 import { runAutoMask } from '../../../services/commandExecutor.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { state } from '../../../state.js';
-import { createImageItem } from '../../../data/projectModel.js';
-import { qs } from '../../../utils/dom.js';
+import { createImageItem, getToolSettings } from '../../../data/projectModel.js';
+import { roundToDivisible } from '../../../utils/cropRounding.js';
+import { qs, on } from '../../../utils/dom.js';
+import { Events } from '../../../events.js';
 import { maskTempStore } from '../../../services/maskTempStore.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 
@@ -662,6 +664,16 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const rect = canvas.getCropRect();
             if (!rect || !_currentItem?.filePath || !state.currentProject?.folderPath) return;
 
+            // Round the selected output pixels to a multiple of the crop tool's
+            // "Divisible by" setting (MPI-261). Bound each dim by the source span
+            // from the crop origin so x+w never exceeds the source — the server's
+            // Sharp .extract throws on an out-of-bounds rect.
+            const n = getToolSettings(state.currentProject || {}, 'crop', { divisible_by: 16 }).divisible_by;
+            const srcW = canvas.img?.naturalWidth  || (rect.x + rect.w);
+            const srcH = canvas.img?.naturalHeight || (rect.y + rect.h);
+            const w = roundToDivisible(rect.w, n, srcW - rect.x);
+            const h = roundToDivisible(rect.h, n, srcH - rect.y);
+
             StatusBar.progress.start('Cropping...');
 
             const itemId = crypto.randomUUID();
@@ -674,7 +686,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                         folderPath: state.currentProject.folderPath,
                         itemId,
                         sourceFilePath: _resolveUrl(_currentItem.filePath),
-                        x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                        x: rect.x, y: rect.y, w, h,
                     }),
                 });
                 if (!res.ok) throw new Error(`crop-media ${res.status}`);
@@ -687,7 +699,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     filePath: `/project-file?path=${encodeURIComponent(data.filePath)}`,
                     operation: 'crop',
                     displayName: data.displayName || data.filename.replace(/\.[^.]+$/, ''),
-                    pixelDimensions: data.pixelDimensions || { w: rect.w, h: rect.h },
+                    pixelDimensions: data.pixelDimensions || { w, h },
                 });
 
                 emit('crop-applied', { item: newItem });
@@ -822,6 +834,67 @@ export const MpiCanvasViewer = ComponentFactory.create({
             return !!(await el.getMaskDataURLForEntry(item));
         };
 
+        // Copy/paste mask between history entries (MPI-311).
+        //
+        // Carries the manual + subtract LAYERS, not the flattened composite:
+        // flattening would bake the eraser in permanently, so the pasted mask
+        // could no longer be erased further on the target. Auto-pick masks are
+        // deliberately excluded — they are RAM-only server detections tied to
+        // the source image's content, so they mean nothing on a different one.
+        //
+        // The live canvas is the source of truth when the entry is on screen
+        // (unpersisted strokes have not reached TEMP yet); otherwise read TEMP.
+        el.getMaskLayersForEntry = async (item) => {
+            const k = _maskKey(item);
+            if (!k) return null;
+            if (_isCurrentEntry(item) && _cv.el?.getManualURL) {
+                const manual = _cv.el.getManualURL() || null;
+                const subtract = _cv.el.getSubtractURL?.() || null;
+                if (manual) return { manual, subtract };
+            }
+            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            return manual ? { manual, subtract } : null;
+        };
+
+        el.pasteMaskLayersToEntry = async (item, layers) => {
+            const k = _maskKey(item);
+            if (!k || !layers?.manual) return false;
+            // Delete first: a paste onto an entry that already had eraser
+            // strokes must not leave the OLD subtract layer behind punching
+            // holes in the newly pasted mask. Also drops stale auto-picks,
+            // which belong to the target's own image, not the pasted mask.
+            await maskTempStore.delete(k.projectId, k.groupId, k.itemId);
+            await maskTempStore.writeManual(k.projectId, k.groupId, k.itemId, layers.manual);
+            if (layers.subtract) {
+                await maskTempStore.writeSubtract(k.projectId, k.groupId, k.itemId, layers.subtract);
+            }
+            // Refresh whatever is ON SCREEN for this entry, or the paste stays
+            // invisible until an entry switch remounts and re-reads TEMP.
+            //
+            // Two surfaces, and outside mask mode it is NOT the canvas: in
+            // mode 'none' the viewer shows MpiMaskedImagePreview driven by
+            // _previewMaskCache (a flattened composite), while the live canvas
+            // is torn down. Writing only to the canvas — as this did first —
+            // repaints nothing, which is exactly the reported bug.
+            if (!_isCurrentEntry(item)) return true;
+
+            if (_previewInst) {
+                _previewMaskCache = await _buildCompositeFromTemp(item);
+                if (_previewMaskCache) _previewInst.el.setMaskDataURL(_previewMaskCache);
+                else _previewInst.el.clearMask();
+                _hasMask = !!_previewMaskCache;
+            } else if (_cv.el?.setManualFromDataURL) {
+                // clearMask() wipes manual + subtract + auto picks so the
+                // restore replaces rather than unions onto existing paint.
+                // Safe here: the layers we are about to restore were just
+                // written to this entry's TEMP, so nothing is lost.
+                _cv.el.clearMask?.();
+                await _restoreLayers(item);
+            }
+            emit('mask-ready', { hasMask: _hasMask });
+            return true;
+        };
+
         // Live check: paint strokes don't flip _hasMask flag (only commit/evaluate
         // does). Radial menu picks during active paint saw stale false. Compute
         // from canvas pixels when available; fall back to flag for preview mode.
@@ -906,7 +979,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Clear the entire painted mask and emit 'mask-clear'. */
         el.clearMask = () => {
-            canvas.clearMask();
+            if (_previewInst) {
+                // Canvas torn down for prompt-tool preview — clear the cached
+                // composite + overlay instead of touching the dead MpiCanvas.
+                _previewMaskCache = null;
+                _previewInst.el.clearMask?.();
+            } else {
+                canvas.clearMask();
+            }
             _hasMask = false;
             _clearAutoPickEntry(_currentItem, true);
             _autoMaskPicks.clear();
@@ -1112,10 +1192,18 @@ export const MpiCanvasViewer = ComponentFactory.create({
         };
 
         // ── Lifecycle: destroy ───────────────────────────────────────────────
+        // Right-click anywhere on the viewer surfaces a context menu (built by
+        // the owning block). Mirrors MpiVideoViewer's 'video-viewer:context-menu'.
+        const _offCtx = on(el, 'contextmenu', (e) => {
+            e.preventDefault();
+            Events.emit('image-viewer:context-menu', { x: e.clientX, y: e.clientY });
+        });
+
         // Block calls viewer.el.destroy?.() on workspace teardown. Without this
         // the inner MpiCanvas + its 3 image-px canvases leak GPU texture backing
         // (~100MB per 4K image), causing VRAM stacking on every workspace re-open.
         el.destroy = async () => {
+            _offCtx?.();
             if (_currentItem) {
                 if (!_previewInst) {
                     try {

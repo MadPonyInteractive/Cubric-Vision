@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-235","type":"task.created","at":"2026-07-08T22:07:18Z","actor":"claude","summary":"No connect-progress feedback in status bar while connecting to a Pod (investigation-first, cosmetic)."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-235","at":"2026-07-08T23:04:22.552Z","actor":"vscode","summary":"Deleted MPI-235."}
+{"ts": "2026-07-09T17:30:00Z", "type": "task.archived", "task": "MPI-235", "note": "soft-deleted workspace archived by mpi-cleanup; absent from board.json"}

@@ -2,14 +2,6 @@
   "349": {
     "inputs": {
       "ckpt_name": "rife47.pth",
-      "clear_cache_after_n_frames": [
-        "734",
-        1
-      ],
-      "multiplier": [
-        "735",
-        1
-      ],
       "fast_mode": false,
       "ensemble": true,
       "scale_factor": 1,
@@ -17,8 +9,16 @@
       "torch_compile": false,
       "batch_size": 1,
       "frames": [
-        "749",
+        "762",
         0
+      ],
+      "clear_cache_after_n_frames": [
+        "734",
+        1
+      ],
+      "multiplier": [
+        "735",
+        1
       ]
     },
     "class_type": "RIFE VFI",
@@ -42,8 +42,8 @@
     "inputs": {
       "math_expression": "a*b",
       "a": [
-        "725",
-        0
+        "762",
+        2
       ],
       "b": [
         "733",
@@ -55,33 +55,21 @@
       "title": "Mpi Math"
     }
   },
-  "725": {
-    "inputs": {
-      "video_info": [
-        "749",
-        3
-      ]
-    },
-    "class_type": "VHS_VideoInfoSource",
-    "_meta": {
-      "title": "Video Info (Source) 🎥🅥🅗🅢"
-    }
-  },
   "733": {
     "inputs": {
       "float": 2
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Interp_Multiplier"
+      "title": "Input_Interp_Multiplier"
     }
   },
   "734": {
     "inputs": {
       "round": true,
       "input": [
-        "725",
-        0
+        "762",
+        2
       ]
     },
     "class_type": "MpiConvert",
@@ -102,106 +90,40 @@
       "title": "Mpi Convert"
     }
   },
-  "746": {
+  "761": {
     "inputs": {
-      "video_path": [
-        "747",
-        0
-      ]
-    },
-    "class_type": "MpiHasAudio",
-    "_meta": {
-      "title": "Mpi Has Audio"
-    }
-  },
-  "747": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_Video"
-    }
-  },
-  "749": {
-    "inputs": {
-      "video": [
-        "747",
+      "filename_prefix": "MpiVideo",
+      "truncate_to_audio": false,
+      "images": [
+        "720",
         0
       ],
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 0,
-      "select_every_nth": 1,
-      "format": "AnimateDiff"
-    },
-    "class_type": "VHS_LoadVideoPath",
-    "_meta": {
-      "title": "Load Video (Path) 🎥🅥🅗🅢"
-    }
-  },
-  "754": {
-    "inputs": {
-      "boolean": [
-        "746",
-        0
+      "audio": [
+        "762",
+        1
       ],
-      "input": [
-        "749",
-        2
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Has Audio"
-    }
-  },
-  "756": {
-    "inputs": {
       "fps": [
         "724",
         0
       ],
-      "images": [
-        "720",
-        0
+      "use_audio": [
+        "762",
+        7
       ]
     },
-    "class_type": "CreateVideo",
-    "_meta": {
-      "title": "Create Video"
-    }
-  },
-  "757": {
-    "inputs": {
-      "filename_prefix": "video/interpolate",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "756",
-        0
-      ]
-    },
-    "class_type": "SaveVideo",
+    "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
     }
   },
-  "759": {
+  "762": {
     "inputs": {
-      "filename_prefix": "audio/interpolate",
-      "quality": "V0",
-      "audioUI": "/api/view?filename=interpolate_00001_.mp3&type=output&subfolder=audio&rand=0.681534115987703",
-      "audio": [
-        "754",
-        1
-      ]
+      "string": "",
+      "block_if_empty": true
     },
-    "class_type": "SaveAudioMP3",
+    "class_type": "MpiLoadVideo",
     "_meta": {
-      "title": "Output_Audio"
+      "title": "Input_Video"
     }
   }
 }

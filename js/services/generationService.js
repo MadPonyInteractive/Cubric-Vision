@@ -19,7 +19,9 @@ import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
 import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
-import { RATIO_MODES } from '../utils/ratios.js';
+import { getAppById } from '../data/appsRegistry.js';
+import { pluginForOperation } from '../data/pluginsRegistry.js';
+import { usesOrientation } from '../utils/ratios.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -115,7 +117,8 @@ function _findMissingMediaSlot(operation, mediaItems = []) {
 // dispatch so the message reads identically wherever the block lands.
 function _warnMissingMediaSlot(slot) {
     const noun = slot.mediaType === 'video' ? 'video' : slot.mediaType === 'audio' ? 'audio file' : 'image';
-    Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.` });
+    // sound:false — immediate feedback of pressing Cue; a click must not ring.
+    Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.`, sound: false });
 }
 
 function _promptExcerpt(text = '') {
@@ -172,16 +175,23 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
     const height = Number(injectionParams.Height || injectionParams.height || opts.placeholderGroup?.height || 0) || 0;
     const batchCount = Math.max(
         1,
-        Number(injectionParams.Batch_Size || injectionParams.batchSize || opts.batchCount || ((opts.extraTempIds?.length || 0) + 1)) || 1
+        Number(injectionParams.Input_Batch_Size || injectionParams.Batch_Size || injectionParams.batchSize || opts.batchCount || ((opts.extraTempIds?.length || 0) + 1)) || 1
     );
     const model = config.model || {};
     const command = getCommand(config.operation);
     const ratio = injectionParams.Ratio_Label || injectionParams.ratioLabel || config.ratioLabel || '';
+    // App gens (config.appId) show the App's title in the Cue, not the generic
+    // "Universal workflow" fallback that model:{id:null} would otherwise pick.
+    const appTitle = config.appId ? (getAppById(config.appId)?.title || null) : null;
+    // Plugin ops (MPI-310) consume no prompt — the Cue's prompt line would fall
+    // back to "No prompt text". Name the capability instead, mirroring appTitle.
+    const plugin = pluginForOperation(config.operation);
     return {
-        promptExcerpt: _promptExcerpt(config.positive),
+        promptExcerpt: _promptExcerpt(config.positive) || plugin?.title || '',
         negativeExcerpt: _promptExcerpt(config.negative),
         modelId: model.id ?? null,
-        modelName: model.displayName || model.name || model.label || model.id || (command?.universal ? 'Universal workflow' : 'Unknown model'),
+        modelName: model.displayName || model.name || model.label || model.id || appTitle || (command?.universal ? 'Universal workflow' : 'Unknown model'),
+        appTitle,
         operation: config.operation || '',
         ratio,
         width,
@@ -209,6 +219,7 @@ function _queueSnapshotItem(job, status) {
         1,
         Number(
             job.display?.batchCount
+            || job.config?.injectionParams?.Input_Batch_Size
             || job.config?.injectionParams?.Batch_Size
             || job.config?.injectionParams?.batchSize
             || ((job.opts?.extraTempIds?.length || 0) + 1)
@@ -223,6 +234,7 @@ function _queueSnapshotItem(job, status) {
         negativeExcerpt: job.display?.negativeExcerpt || '',
         modelId: job.display?.modelId ?? job.config?.model?.id ?? null,
         modelName: job.display?.modelName || job.config?.model?.name || job.config?.model?.id || 'Unknown model',
+        appTitle: job.display?.appTitle || null,
         operation: job.display?.operation || job.config?.operation || '',
         ratio: job.display?.ratio
             || job.config?.injectionParams?.Ratio_Label
@@ -615,6 +627,10 @@ async function _deleteSavedItems(items) {
  * @property {function({item, group}):void} [onComplete] — called with final item and group
  * @property {function():void}              [onError]    — called on failure
  * @property {function():void}              [onCancel]   — called on cancel/empty result
+ * @property {function(string):void}        [onText]     — called with the caption from an
+ *                                                         `outputKind: 'text'` op (MPI-310).
+ *                                                         Mutually exclusive with onComplete:
+ *                                                         a text op produces no item/group.
  */
 
 /**
@@ -625,11 +641,15 @@ async function _deleteSavedItems(items) {
  *
  * @param {GenerationConfig} config
  * @param {GenerationCallbacks} callbacks
- * @param {{ existingGroup?: Object, scope?: string, groupId?: string, tempId?: string, placeholderGroup?: Object }} [opts]
+ * @param {{ existingGroup?: Object, scope?: string, groupId?: string, tempId?: string, placeholderGroup?: Object, deferCommit?: boolean }} [opts]
  * @returns {{ cancel: function }}
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
     const { operation, model, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
+    // The prompt as the user typed it. Everything on the SUBMIT path must use this
+    // (it is what feeds the graph). Only the SAVE path may substitute what the
+    // encoder actually saw — see the `Output_prompt` note in exec.onComplete.
+    const _positiveFromBox = positive;
 
     // Guard: don't dispatch when a REQUIRED media slot has no asset. The Comfy
     // workflow ships baked-in default filenames on its LoadImage/LoadVideo nodes;
@@ -725,10 +745,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         Events.emit('tool:accepted', { tool: 'groupHistory', id: _regId });
     };
 
-    exec.onPreview = (url) => {
-        activeGenerations.setPreview(_regId, url);
+    // MPI-271: live latents now flow through the preview:frame bus, which writes
+    // latestPreviewUrl (activeGenerations). This handler only re-emits the queue
+    // snapshot so the queue-panel thumbnail refreshes as new latents land.
+    exec.onPreview = () => {
         _emitQueueChanged();
-        callbacks.onPreview?.(url);
     };
 
     exec.onPreviewReset = () => {
@@ -737,6 +758,50 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
 
 
     exec.onComplete = async (urls, outputInfo = {}) => {
+        // `Output_prompt` contract (MPI-242): when the workflow carries a node of
+        // that title, the string IT encoded is the prompt of record — not the text
+        // still sitting in the prompt box. The graph may have expanded the prompt
+        // (the enhancer toggle) between the box and the encoder, and the box is
+        // deliberately left showing the user's own words.
+        //
+        // Shadowing `positive` here is the whole integration: all five sidecar/history
+        // writes below already read this binding, so there is exactly one read path
+        // and no "sometimes the box, sometimes the graph" branch to keep in sync.
+        // Workflows without the node yield null → the prompt-box text, unchanged.
+        //
+        // NOTE the tap point is upstream of the style concat, so what lands here has
+        // no style trigger appended — that is what lets Reuse Prompt restore the text
+        // and still leave the style free to change. See docs/playbooks/add-model/05-prompt-and-styles.md §10.
+        const positive = outputInfo.promptText || _positiveFromBox;
+
+        // MPI-310 — a text op (the captioner) legitimately finishes with zero media:
+        // its whole product is the Output_prompt string read into `positive` above.
+        // This branches on the OP's declared contract, deliberately BEFORE the
+        // empty-array check, for two reasons. Emptiness is ambiguous — a Stopped media
+        // job is empty too, and only the op knows which case this is; and keeping the
+        // branch above leaves the check below owning exactly the job it was written
+        // for, instead of teaching the media path (sidecar writes, history item,
+        // gallery card) to defend against a case that has no media to write.
+        //
+        // The shape mirrors the cache-hit terminal below: end the activity, go idle,
+        // no history item. Callers get the caption through onText.
+        if (getCommand(operation)?.outputKind === 'text') {
+            activeGenerations.end(_regId, { revokePreview: true });
+            // Not a cancellation — but the gallery/history placeholder this job created
+            // must still be torn down, and generation:cancelled is what does that.
+            Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
+            Events.emit('generation:cancelled', { id: _regId, tempId: _stableTempId, extraTempIds: _stableExtraTempIds });
+            Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });
+            _emitPromptBoxGenerationEndIfIdle();
+            const _text = outputInfo.promptText || null;
+            if (_text) callbacks.onText?.(_text);
+            else {
+                clientLogger.warn('generationService', `${operation} returned no text.`);
+                Events.emit('ui:warning', { message: 'No description was returned.' });
+            }
+            return;
+        }
+
         if (!urls.length) {
             // Empty output after an explicit Stop is EXPECTED, not a fault: the
             // interrupt produced a terminal with nothing saved. Only warn when the
@@ -806,15 +871,25 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // Without this the sidecar is internally inconsistent and Reuse Prompt
             // replays the stale ratio. Only touch an existing ratioSelector on a
             // ratio-bearing op (Width+Height present); orientation derives from
-            // dims for orientation models, stays null for quality models.
+            // dims for any model with an orientation axis ('orientation' AND
+            // 'quality-orientation'), and stays null only for pure-quality models
+            // (wan/ltx), which have no such concept.
             if (_shared.ratioSelector && width && height) {
                 _shared.ratioSelector = {
                     ..._shared.ratioSelector,
                     selectedRatio: injectionParams.Ratio_Label ?? _shared.ratioSelector.selectedRatio,
-                    orientation: RATIO_MODES[model.type] === 'quality'
-                        ? null
-                        : (width > height ? 'landscape' : 'portrait'),
+                    orientation: usesOrientation(model.type)
+                        ? (width > height ? 'landscape' : 'portrait')
+                        : null,
                 };
+            }
+            // Same debounce race as ratioSelector above: `batch` is a shared control,
+            // so clicking it and generating inside the 300ms window snapshots the
+            // stale count while Batch_Size already carries the new one. The rendered
+            // value wins, or Reuse Prompt replays a batch the run never used.
+            const _batchInj = injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size;
+            if ('batch' in _shared && Number.isFinite(_batchInj)) {
+                _shared.batch = _batchInj;
             }
             const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
             const _model = {};
@@ -824,6 +899,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // bucket so Reuse Prompt replays it to modelSettings[id], and a
             // cross-model reuse clamps it (handled in buildPromptReuseSettings).
             if ('qualityTier' in _ms) _model.qualityTier = _ms.qualityTier;
+            // The style rack + enhancer are perModel too (they live in _MODEL_WIDE_KEYS).
+            // Snapshot them or Reuse Prompt silently drops the style, its strength, and
+            // the enhancer flag — injectionParams carries them, controlState did not.
+            for (const _k of ['styleSelect', 'stylization', 'enhancePrompt']) {
+                if (_k in _ms) _model[_k] = _ms[_k];
+            }
             const controlState = {};
             if (Object.keys(_shared).length) controlState.shared = _shared;
             if (Object.keys(_op).length) controlState.op = _op;
@@ -872,11 +953,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             _previewAssets = {
                 latent: _videoLatent,
                 audioLatent: _audioLatent,
+                // MPI-295: snapshot every declared image input, keyed by its own
+                // slot-role — not just startFrame/endFrame. Untagged image inputs are
+                // skipped (no role → nothing to resurface against on reuse).
                 snapshots: _frozenMediaItems
-                    .filter(item =>
-                        item.mediaType === 'image' &&
-                        (item.role === 'startFrame' || item.role === 'endFrame')
-                    )
+                    .filter(item => item.mediaType === 'image' && item.role)
                     .map(item => ({
                         id: item.id,
                         role: item.role,
@@ -941,6 +1022,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         loraSnapshot: _previewLoraSnapshot,
                         previewAssets: _previewAssets,
                         replaceItemId: (_replaceItemId && i === 0) ? _replaceItemId : undefined,
+                        // App provenance (MPI-256) — additive, top-level. Present only for
+                        // App gens; null for normal PromptBox gens. Lets Reuse reopen the App
+                        // with its inputs restored (survives restart — sidecar > session).
+                        appId: config.appId ?? null,
+                        appInputs: config.appInputs ?? null,
                     });
                     if (data.success) {
                         savedData = data;
@@ -970,10 +1056,19 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 // Server returns aggregated generationMs on preview→final replace
                 // (prev stage + this stage). Prefer it over the local timer.
                 generationMs: savedData?.generationMs ?? elapsedMs,
+                // App provenance (MPI-256) on the LIVE in-memory item too — not just
+                // the sidecar (line ~988). Without this, Reuse on a JUST-generated app
+                // card reads appId:undefined (the reconciler only hydrates appId from
+                // the sidecar on RELOAD), so live reuse fell through to the PromptBox
+                // instead of reopening the App. Reload worked; the fresh session didn't.
+                appId: config.appId ?? null,
+                appInputs: config.appInputs ?? null,
+                // Gallery thumb (MPI-319): both images and videos now get one so
+                // the grid renders a small JPG, not the full-res output.
+                thumbPath: savedData?.thumbPath ?? null,
             };
             if (isVideo) {
                 Object.assign(baseProps, {
-                    thumbPath:   savedData?.thumbPath ?? null,
                     fps:         savedData?.fps ?? 0,
                     duration:    savedData?.duration ?? 0,
                     frameCount:  savedData?.frameCount ?? 0,
@@ -1182,14 +1277,30 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 const g = createItemGroup(model.mediaType, { name, width, height });
                 return appendToHistory(g, it);
             });
-            for (const g of groups) await addGroup(g);
+            // HOLD-UNTIL-APPLY (MPI-306): with deferCommit the groups are built but
+            // NOT persisted — the media + sidecars are already on disk, only the
+            // project record is withheld. The caller (MpiBaseApp) holds them and
+            // commits with projectService.addGroup on Apply, or simply drops them.
+            // Orphaned files are the existing .preview-assets + Cleanup GC path's
+            // job (MPI-277/227), not a new mechanism.
+            if (!opts.deferCommit) {
+                for (const g of groups) await addGroup(g);
+            }
             activeGenerations.end(_regId, { revokePreview: false });
             const firstItem = builtItems[0];
             const firstGroup = groups[0];
             // Single emit — handler reads state.currentProject.itemGroups (already
             // contains all N groups via addGroup) and rebuilds grid with them.
-            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery' });
-            callbacks.onComplete?.({ item: firstItem, group: firstGroup });
+            // `items`/`groups` (all N) are additive for multi-output consumers (Apps,
+            // MPI-259) that show every result in-place; existing readers use `item`.
+            // `deferred` tells listeners the media exists but is NOT in the project
+            // yet. Current listeners are safe either way (stats refetch reads disk;
+            // the float-latent bridge only releases its lane), but a future consumer
+            // that writes to the project MUST honour it.
+            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, items: builtItems, groups, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery', deferred: !!opts.deferCommit });
+            // `groups` reaches the caller so a deferCommit consumer can persist them
+            // later; committed runs simply ignore it (they are already in the project).
+            callbacks.onComplete?.({ item: firstItem, group: firstGroup, items: builtItems, groups });
         }
 
         Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });

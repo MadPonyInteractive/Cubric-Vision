@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-272","at":"2026-07-13T03:26:44Z","actor":"claude","summary":"Created MPI-272 (media-load path-into-string cleanup) with large plan."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-272", "at": "2026-07-13T11:30:24Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Picked up MPI-272; starting Phase 1 (generators)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-272","from":"doing","to":"done","at":"2026-07-13T22:15:00Z","actor":"claude","reason":"All 5 phases done+verified (P3 live+remote-Pod; P4/P5 this session). Media path->string cleanup complete."}

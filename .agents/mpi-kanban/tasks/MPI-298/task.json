@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-298",
+  "title": "dev chore: extract shared playbook bodies into docs/playbooks/common/",
+  "description": "CHORE (2026-07-17): the add-model and add-app playbooks duplicate ~5 mechanics. Scaffold already landed (docs/playbooks/common/ README + 5 stub files, both playbook READMEs point at it), but the stubs currently only POINT at the canonical section that still holds the full body. This card = finish the extraction: move the shared bodies INTO common/ and GUT the duplicated sections out of both playbooks (replace with a one-line link).\n\nOverlap map (Explore agent, 2026-07-17) ranked by dup removed:\n1. op-registration.md — 4-file op wiring + two-mirror registry (operationRegistry.js + operation_registry.json) + appVersionIntroduced + no-version-bump. Divergence: app `universal:true` + NEVER-regenerate (stays inline add-app/01); model injectParams/commandRegistry shape (stays inline add-model/04).\n2. workflow-authoring-entry.md — sync-raw-workflows.mjs + validate-injection-rules gate + raw/ user-owned + staged output. Near word-for-word dup in add-app/README §0a and add-model/01 §0a. Divergence: model converter-staleness trap + _template routing stays inline.\n3. inject-titles-guard.md — injector silent-skip trap + tests/inject-params-titles.test.cjs. Stated 3x (add-model/04 full backstory, add-app/01 slot note, add-app/05 verify step).\n4. output-capture-titles.md — Output_* naming law MPI-252 base rule. Divergence: app prefix-match multi-output stays inline add-app/02.\n5. hard-rules.md — 2 identical hard rules (never hand-edit workflow JSON; covered-but-asked = failure).\n\nDO NOT extract (link only): media path->string loader contract = already canonical at docs/playbooks/workflow-authoring/media-inputs.md; both playbooks just link it.\nMUST STAY SPLIT (contradiction): all-lowercase filename law (MPI-291) applies to MODELS (case-sensitive Pod FS, sync gates it) but NOT apps (routes/workflowStatic.js case-insensitive middleware). Extracting needs an except-apps carve-out = noise. Keep in add-model/01 only.\n\nTOUCHED FILES when done: docs/playbooks/common/*.md (fill bodies), docs/playbooks/add-model/{README,01,04}.md (gut extracted sections -> links), docs/playbooks/add-app/{README,01,02,05}.md (gut -> links).\n\nNote: the detailer-CFG build-rule (bad MaskDetailer = cfg-in-crop, denoise-invariant tell) is MODEL-ONLY, already landed in add-model/01 §0a 'Detailer / refiner sampler settings' — do NOT move it to common/.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-17T10:15:54Z",
+  "updated_at": "2026-07-17T12:40:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

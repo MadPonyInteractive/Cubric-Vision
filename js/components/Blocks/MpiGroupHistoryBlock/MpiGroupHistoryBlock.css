@@ -2,7 +2,7 @@
 
 .mpi-group-history-block {
     display: grid;
-    grid-template-columns: 64px 1fr 360px;
+    grid-template-columns: 72px 1fr 360px;
     grid-template-rows: 0px 1fr auto;
     grid-template-areas:
         "header   header   header"
@@ -153,8 +153,8 @@
     position: absolute;
     bottom: 76px;
     right: 18px;
-    width: 44px;
-    height: 44px;
+    width: 66px;
+    height: 66px;
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--t-base) var(--ease);

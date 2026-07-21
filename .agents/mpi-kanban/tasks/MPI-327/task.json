@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-327",
+  "title": "Aggregate 1.1.0 + 1.1.1 + UNRELEASED into the public 1.2.0 changelog",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "activeSessionTitle": "Changelog aggregation into public 1.1.0",
+  "created_at": "2026-07-21T16:55:00Z",
+  "updated_at": "2026-07-21T17:25:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "validation": "validation.md",
+    "handoffs": "handoffs/"
+  },
+  "description": "GOAL: build the ONE complete, curated RELEASE_NOTES['1.2.0'] for the Thursday GitHub public release. GitHub jumps 1.0.1 -> 1.2.0; 1.1.0 + 1.1.1 NEVER shipped publicly, so their content must fold into the 1.2.0 note.\n\nTHREE OUT-OF-SYNC SOURCES: (1) js/data/releaseNotes.js RELEASE_NOTES['1.2.0'] is a STALE STUB - only 'Chroma Hyper' + 'Chroma Flash faster', and NEITHER is in UNRELEASED. (2) docs/releases/UNRELEASED.md holds the REAL 1.2.0 content (~22 features incl KREA2, KREA2 NSFW, Qwen Image Edit, Boogu Image Edit, Remove Background, Export GIF, frame-accurate playback, RunPod-unlock, mascot, Settings redesign, reorder prompt images, etc. + ~28 fixes) - NEVER folded into releaseNotes.js. (3) RELEASE_NOTES['1.1.0'] (RunPod remote engine, full-page Model Library, LTX 2.3, NVIDIA PiD, Wan 2.2 5B, Chroma Flash intro) + the 1.1.1 entry which lives ONLY on master (git show master:js/data/releaseNotes.js -> 3 fixes: missing-LoRA dialog, auto-mask Windows path, first-time engine setup).\n\nHARD REQUIREMENT (user, this is the crux): NOT simple aggregation. Bugs fixed in 1.1 were re-fixed / refactored in 1.2 - esp the download QUEUE (1.1 introduced it, 1.2's MPI-276 download/install refactor reworked it). Overlapping fix items must be deduped/reconciled per-item, not double-listed or contradictory. Requires per-item judgment.\n\nCURATE for a FIRST-TIME GitHub user: show intros not refinements ('Chroma Flash IS an NSFW model' not 'Chroma Flash is faster'; 'RunPod remote engine' not 'the RunPod toggle moved').\n\nDELIVERABLES: rebuild RELEASE_NOTES['1.2.0'] as the single complete curated entry (drop the stale stub), update archival docs/releases/2026-07-09-v1.2.0.md, clear UNRELEASED.md back to its header comment.\n\nSEPARATE / OUT OF SCOPE for Thursday: the minor-based auto-aggregation helper (getAggregatedReleaseNotes(major.minor) so future 1.2.x PATCHES accumulate; MpiChangelogDialog currently reads getReleaseNotes(APP_VERSION) exact-key in js/components/Compounds/MpiChangelogDialog/). Future improvement, note only.\n\nRELATED UI BUG (decide whether to fold into this release): the 18+ adult-content modal (MpiOkCancel) stacks OVER the What's New changelog with NO dim backdrop - z-index floor collapse at MpiModal.js:95 (both modals clamp to the same appZ+20 floor). Fix = SEQUENCE them at shell.js:293-302 (show maturity 18+ gate FIRST, changelog after Continue). Ships in 1.2.0 too. Cheap, better UX.\n\nCOORDINATION: another agent is wrapping up 1.2 verifications on the SHARED tree - do NOT double-edit releaseNotes.js / UNRELEASED.md without checking with them first. Full context: see the handoff at .agents/mpi-kanban/state/handoffs/f7677602-e881-4c74-b412-666604cf366b.json.\n\nSCOPE (user, 2026-07-21): public version target changed 1.2.0 -> 1.1.0 (dev branch '1.2.0' becomes public 1.1.0; nobody got 1.1/1.1.1). THIS session = changelog ONLY: build the single aggregated RELEASE_NOTES['1.1.0'] in releaseNotes.js + archival 2026-07-09-v1.1.0.md + clear UNRELEASED.md + drop the 1.2.0 stub notes/archival. The version-constant rename (appVersion.js/package.json/package-lock.json APP_VERSION -> 1.1.0), the op-registry appVersionIntroduced 1.2.0 -> 1.1.0 (operationRegistry.js + operation_registry.json, 9 ops: poseReference/krea2Edit/qwenEdit/removeBackground/imageDescribe/appImageRegen/appSdxl4k/appVideoStitch/appHeadSwap), the .approved-1.1.0.json re-approval, and release:check-green are OWNED BY THE MERGE AGENT doing branch 1.2.0 -> master. release:check stays RED (missing runtime notes for 1.2.0) until that bump lands - expected mid-flight.",
+  "attention": {
+    "state": "none",
+    "reason": "",
+    "updated_at": "2026-07-21T16:55:00Z"
+  }
+}

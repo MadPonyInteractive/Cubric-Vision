@@ -28,18 +28,32 @@ import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputU
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
-// Binary preview frames carry a header before the JPEG payload. Core ComfyUI uses
-// an 8-byte header ([event_type, image_type]); KJNodes' LTX2 preview override
-// (LTX latent previews, MPI-166) uses VideoHelperSuite's 28-byte VHS header. A
-// fixed slice(8) corrupts the VHS frames. Find the JPEG SOI marker (FF D8) and
-// slice from there so any header length works; fall back to 8 if not found.
+// Binary WS frames carry a 4-byte big-endian event-type header. Only event type 1
+// (PREVIEW_IMAGE) is an image; ComfyUI also sends OTHER binary event types on the
+// same socket — e.g. type 3, a ~93-byte stage/progress marker emitted when a second
+// model initializes in a multi-sampler workflow (MPI-269). That marker's bytes can
+// coincidentally contain an `FF D8` pair, so an SOI-only scan false-matches it and
+// yields a broken <img>. Gate on the event type FIRST, then locate the JPEG payload
+// by its SOI marker (core ComfyUI = 8-byte header; KJNodes' LTX2/VHS override =
+// 28-byte header — MPI-166 — so the offset varies). Returns the JPEG bytes, or
+// `null` for any non-image frame so the caller skips it and the last latent stays.
 function _stripPreviewHeader(buf) {
     const b = new Uint8Array(buf);
-    const max = Math.min(b.length - 1, 64); // SOI is within the header, scan a bounded prefix
-    for (let i = 0; i < max; i++) {
-        if (b[i] === 0xff && b[i + 1] === 0xd8) return buf.slice(i);
-    }
-    return buf.slice(8);
+    // Event type = first 4 bytes, big-endian. Anything but 1 is not a preview image.
+    const eventType = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+    const max = Math.min(b.length - 1, 64); // header + SOI live within a bounded prefix
+    let soi = -1;
+    for (let i = 0; i < max; i++) if (b[i] === 0xff && b[i + 1] === 0xd8) { soi = i; break; }
+    // A frame is a real preview image if EITHER it declares event type 1
+    // (PREVIEW_IMAGE — core ComfyUI, SDXL/PiD/Krea/etc.) OR it carries a JPEG SOI
+    // with a plausible image payload (covers nonstandard headers like KJNodes' VHS
+    // override without hard-coding its event type — MPI-166). A non-image binary
+    // event (e.g. the type-3, 93-byte stage marker) has no SOI and is tiny → skip,
+    // so the caller keeps the last latent instead of painting a broken <img>.
+    const looksLikeImage = soi >= 0 && b.length > 1024;
+    if (eventType !== 1 && !looksLikeImage) return null;
+    if (soi < 0) return null; // type 1 but no JPEG payload found — nothing to paint
+    return buf.slice(soi);
 }
 
 // MPI-73: the remote engine is mid-transition (connecting/disconnecting). During
@@ -156,6 +170,13 @@ function createEngine({ engine, alwaysLocal }) {
 
     /** @type {string|null} Last prompt_id reported as actively executing. Used for binary previews. */
     _activePromptId: null,
+
+    /** @type {'local'|'remote'} Which engine this socket is currently bound to. Resolved at `connect()` from the wsUrl choice and stamped onto every binary preview frame (MPI-269). */
+    _engine: 'local',
+
+    /** @type {Map<string, number>} Monotonic preview-frame counter keyed by promptId — lets a consumer drop a late frame when a newer one already painted (MPI-269). */
+    // ponytail: never pruned; one small int per prompt UUID, negligible over a session. Prune per-prompt if a run ever generates enough to matter.
+    _previewSeq: new Map(),
 
     /** @type {Map<string, (err: Error) => void>} Reject hooks mirroring `_promptListeners`, used to settle a pending generation if the WS drops out-of-band (e.g. a remote container OOM-kill — B4). */
     _promptRejectors: new Map(),
@@ -504,6 +525,25 @@ function createEngine({ engine, alwaysLocal }) {
             return { ready: true, remoteComfyRestarted };
         }
 
+        // MPI-275: a Pod that's still BOOTING reports ready:false — identical here to
+        // a dead/absent Pod. Without this guard a background ensureServerRunning (a
+        // models/check or warm-up) landing in the boot window fell straight through to
+        // the teardown below, POSTing /remote/mode {active:false} and killing the live
+        // connect — the Pod then reached ready with remote mode OFF, so the hero was
+        // stuck on 'connecting' forever. The upstream transition guard
+        // (ensureServerRunning:288) can be bypassed by a raced/missed phase event, so
+        // this is the defensive net AT the teardown site: if the backend reports a
+        // connect in flight (`connecting:true`), the Pod is NOT gone — refuse this
+        // dispatch with the same soft notice the wsOk path uses and leave remote mode
+        // intact so the boot poll can finish. Only a genuine persistent not-ready
+        // (connecting:false — real OOM/disconnect/delete) falls to local below,
+        // preserving MPI-85/MPI-107.
+        if (check.connecting) {
+            const connMsg = 'Still connecting to the remote engine — give it a moment, then try again. (Settings → RunPod shows the connection status.)';
+            if (!background) this._emitLifecycle('comfy:error', { message: connMsg });
+            else Events.emit('ui:info', { message: connMsg });
+            throw new Error(connMsg);
+        }
         // No Pod connected (auto-connect-off boot, or a mid-session disconnect/OOM).
         // MPI-85: the LOCAL engine is still available — fall back to it instead of
         // throwing the bug-reporter error and locking the user out. Drop the stale
@@ -639,14 +679,38 @@ function createEngine({ engine, alwaysLocal }) {
         // `preview` (binary frame) and `VHS_latentpreview` (video preview window
         // boundary, MPI-167) carry no prompt_id — route them to the active prompt.
         if (msg instanceof ArrayBuffer || (msg && (msg.type === 'preview' || msg.type === 'VHS_latentpreview'))) {
-            const listener = this._activePromptId ? this._promptListeners.get(this._activePromptId) : null;
+            const pid = this._activePromptId;
+            // MPI-269: stamp server-truth attribution onto the frame so consumers can
+            // route by (engine, promptId) instead of guessing the active generation.
+            if (msg && msg.type === 'preview' && pid) {
+                const seq = (this._previewSeq.get(pid) || 0) + 1;
+                this._previewSeq.set(pid, seq);
+                msg.engine = this._engine;
+                msg.promptId = pid;
+                msg.seq = seq;
+                // MPI-269: the unified, engine-tagged preview bus. Any surface subscribes
+                // here — no per-consumer plumbing. `generationId` is resolved downstream
+                // (activeGenerations owns the promptId→regId map). Emitted for BOTH the
+                // local ComfyUI WS and the remote Pod proxy WSS (engine distinguishes).
+                Events.emit('preview:frame', {
+                    engine: msg.engine,
+                    promptId: msg.promptId,
+                    seq: msg.seq,
+                    url: msg.url,
+                });
+            }
+            const listener = pid ? this._promptListeners.get(pid) : null;
             listener?.(msg);
             return;
         }
 
         const promptId = msg?.data?.prompt_id || msg?.prompt_id || null;
         if (promptId) {
-            if (msg.type === 'executing' && msg.data?.node !== null) {
+            // Track the prompt the server says is running so binary previews (which
+            // carry no prompt_id) attribute to it. `execution_start` fires BEFORE the
+            // first `executing` — without it, an early frame of a new gen would route
+            // to the previous gen's listener (MPI-269 cross-gen race #1).
+            if (msg.type === 'execution_start' || (msg.type === 'executing' && msg.data?.node !== null)) {
                 this._activePromptId = promptId;
             }
             const listener = this._promptListeners.get(promptId);
@@ -670,14 +734,28 @@ function createEngine({ engine, alwaysLocal }) {
     },
 
     connect() {
-        // Reuse a live socket (this engine owns exactly one; it always points at
-        // this engine's target, so no wrong-engine check is needed — that was the
-        // single-socket `_wsForceLocal` hack, dead now that sockets are per-engine).
-        if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
+        // Intended target for THIS connect: remote proxy WS when the remote engine
+        // is active and a wsUrl resolves, else the local socket. A local-pinned
+        // engine is always local. Computed up-front so the reuse branch can tell
+        // whether the live socket still points at the right engine.
+        const _intendedEngine = (!this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId)) ? 'remote' : 'local';
+
+        // Reuse a live socket ONLY if it is bound to the intended engine. A stale
+        // socket from the OTHER engine can exist: the remote instance opens a
+        // LOCAL-fallback socket during auto-start boot (before remote mode goes
+        // active), which reaches OPEN with `_engine==='local'`. Once remote is up,
+        // an engine-blind reuse would keep that local socket forever — its `onopen`
+        // already fired, so `_wsReady` never re-flips and `isWsReady()` stays false,
+        // wedging every remote generation on the "Still connecting" guard. Only reuse
+        // when the bound engine matches; otherwise fall through and re-open below.
+        if (this._ws
+            && this._engine === _intendedEngine
+            && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
             this._ws.onmessage = (event) => {
                 if (event.data instanceof ArrayBuffer) {
-                    const blob = new Blob([_stripPreviewHeader(event.data)], { type: 'image/jpeg' });
-                    const url = URL.createObjectURL(blob);
+                    const jpeg = _stripPreviewHeader(event.data);
+                    if (!jpeg) return; // non-image frame (stage marker) — keep prior latent (MPI-269)
+                    const url = URL.createObjectURL(new Blob([jpeg], { type: 'image/jpeg' }));
                     this._routeMessage({ type: 'preview', url });
                 } else {
                     const msg = JSON.parse(event.data);
@@ -699,14 +777,18 @@ function createEngine({ engine, alwaysLocal }) {
         // A local-pinned engine ALWAYS uses the local preview WS, even while remote-
         // connected, so its previews + completion events come from local ComfyUI.
         // The remote engine uses the proxy WS when connected, else local.
-        const wsUrl = (!this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId))
-            || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
+        const remoteWsUrl = !this._alwaysLocal && remoteEngineClient.wsUrl(this.clientId);
+        const wsUrl = remoteWsUrl || `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
+        // MPI-269: a frame's engine = which URL this socket bound to. Local-pinned
+        // instances and the local fallback are 'local'; the proxy WSS is 'remote'.
+        this._engine = remoteWsUrl ? 'remote' : 'local';
         this._ws = new WebSocket(wsUrl);
         this._ws.binaryType = "arraybuffer";
         this._ws.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
-                const blob = new Blob([_stripPreviewHeader(event.data)], { type: 'image/jpeg' });
-                const url = URL.createObjectURL(blob);
+                const jpeg = _stripPreviewHeader(event.data);
+                if (!jpeg) return; // non-image frame (stage marker) — keep prior latent (MPI-269)
+                const url = URL.createObjectURL(new Blob([jpeg], { type: 'image/jpeg' }));
                 this._routeMessage({ type: 'preview', url });
             } else {
                 const msg = JSON.parse(event.data);
@@ -1008,7 +1090,12 @@ function createEngine({ engine, alwaysLocal }) {
 
         // 2. Handle media inputs by inspecting the matching workflow node input.
         // This keeps future named slots (Input_Image_2, Reference_Video_3, etc.)
-        // from needing another hardcoded map in the controller.
+        // from needing another hardcoded map in the controller. MPI-272: media inputs
+        // are path nodes now (fields `string`/`channel` only), so the `image`/`mask`/
+        // `audio` field sniffs below match nothing on today's graphs — the TITLE-PATTERN
+        // sweep further down does the real routing. The `video` sniff still matches the
+        // one remaining `VHS_LoadVideoPath` (exposes a `video` field). Kept for any
+        // future raw-field node; harmless (they set a kind the title sweep would set too).
         const mediaParamKinds = {};
         for (const key of Object.keys(params)) {
             const nodes = Object.values(workflow).filter(node =>
@@ -1020,83 +1107,78 @@ function createEngine({ engine, alwaysLocal }) {
             else if (nodes.some(node => node?.inputs && 'image' in node.inputs)) mediaParamKinds[key] = 'image';
         }
         if (params.Image && !mediaParamKinds.Image) mediaParamKinds.Image = 'image';
-        if (params.Input_Image && !mediaParamKinds.Input_Image) mediaParamKinds.Input_Image = 'image';
         if (params.Mask && !mediaParamKinds.Mask) mediaParamKinds.Mask = 'mask';
         if (params.Input_Mask && !mediaParamKinds.Input_Mask) mediaParamKinds.Input_Mask = 'mask';
-        // `Input_Video`/`Input_Audio` may now target an `MpiString` fan-out node
-        // (string field, no `video`/`audio` input) instead of the VHS loader
-        // directly — the split video/audio workflows feed one injected path into
-        // both VHS and `MpiHasAudio` via a String node (B3). The field-based
-        // detection above misses that, so the raw `/project-file?path=` URL would
-        // reach VHS unresolved ("video is not a valid path"). Force the media kind
-        // by title so `_resolveMediaPath` (and remote upload) still runs.
-        if (params.Input_Video && !mediaParamKinds.Input_Video) mediaParamKinds.Input_Video = 'video';
-        if (params.Input_Audio && !mediaParamKinds.Input_Audio) mediaParamKinds.Input_Audio = 'audio';
+        // MPI-272: route by TARGET NODE CLASS, not title guessing. Every media input
+        // is now a path-reading loader — `MpiLoadImageFromPath` (image/mask/start-frame/
+        // end-frame), `MpiLoadAudio`, `VHS_LoadVideoPath` — that reads a real filesystem
+        // PATH from a string field (`os.path.isfile`; empty → ExecutionBlocker self-gates
+        // the branch), NOT a ComfyUI input-dir upload name. So ANY param whose same-titled
+        // node is one of these classes needs `_resolveMediaPath` (+ remote upload),
+        // regardless of the slot's title — this covers `Input_Start_Frame`,
+        // `Input_End_Frame`, `Input_Image(_N)`, `Input_video`, `Input_audio`, detailer
+        // `Input_Mask`, and any future slot the app declares. Title-pattern guessing
+        // (input_image only) missed the video frame slots → the raw URL reached the path
+        // node unresolved → self-gate → "no output returned". `imagepath` is the generic
+        // resolve-this-to-a-path kind (all three classes share the same resolve/upload).
+        // Includes the `MpiString` fan-out (a path feeding VHS + MpiHasAudio via a String
+        // node, titled `Input_video` like the param) and `MpiLoadVideo` (interpolate/
+        // upscale). A generic `MpiString` text node (titled "Mpi String") is never a param
+        // key, so the title-match below excludes it — no false path-resolve on text.
+        const PATH_MEDIA_CLASSES = new Set([
+            'MpiLoadImageFromPath', 'MpiLoadAudio', 'MpiLoadVideo', 'VHS_LoadVideoPath', 'MpiString',
+        ]);
+        for (const key of Object.keys(params)) {
+            const targetsPathNode = Object.values(workflow).some(node =>
+                (node?._meta?.title || '').toLowerCase() === key.toLowerCase() &&
+                PATH_MEDIA_CLASSES.has(node?.class_type)
+            );
+            if (targetsPathNode) mediaParamKinds[key] = 'imagepath';
+        }
 
         for (const [paramKey, mediaKind] of Object.entries(mediaParamKinds)) {
             let val = params[paramKey];
-            if (!val) continue;
+            if (!val || typeof val !== 'string') continue;
 
-            if (mediaKind === 'video' || mediaKind === 'audio') {
-                if (typeof val === 'string') {
-                    const localPath = this._resolveMediaPath(val);
-                    // Remote engine: the resolved path is local to this machine and
-                    // invisible to the Pod. Upload the file to the Pod volume input
-                    // dir via Express → wrapper and inject the bare filename, which
-                    // VHS LoadVideo/LoadAudio nodes resolve against the input dir. A
-                    // local-pinned engine keeps the local path.
-                    params[paramKey] = (!this._alwaysLocal && remoteEngineClient.isRemote())
-                        ? await this._uploadRemoteMedia(localPath)
-                        : localPath;
+            // MPI-272: path nodes read a filesystem path (`os.path.isfile`), but some
+            // inputs arrive as a `data:` URL (the auto-mask editor's painted mask).
+            // Stage it to a real file in the engine input dir and swap in that path so
+            // the resolve/upload/inject flow below treats it like any other path.
+            if (val.startsWith('data:')) {
+                const stageRes = await fetch('/comfy/stage-media-data-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dataUrl: val }),
+                });
+                const stageData = await stageRes.json().catch(() => null);
+                if (!stageRes.ok || !stageData?.success) {
+                    throw new Error(`[ComfyUIController] Media staging failed for ${paramKey}: ${stageData?.error || `HTTP ${stageRes.status}`}`);
                 }
-                continue;
+                val = stageData.path;
+                params[paramKey] = val;
             }
 
-            const staticName = `mpi_${paramKey.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.png`;
-
-            // Normalize local project paths to /project-file URLs
-            if (
-                typeof val === 'string' &&
-                !val.startsWith('data:') &&
-                !val.startsWith('blob:') &&
-                !val.startsWith('http') &&
-                !val.includes('project-file')
-            ) {
-                const cleanPath = val.replace(/\\/g, '/');
-                val = `/project-file?path=${encodeURIComponent(cleanPath)}`;
+            // MPI-272: every media input (image / mask / video / audio) is now a
+            // path-reading node. Resolve the value to a real path and inject that.
+            // A reused card carries a `/project-file?path=` URL whose source asset may
+            // have been deleted (manual Cleanup); the source is only touched lazily at
+            // dispatch, so verify it exists BEFORE injecting an empty-gating path — a
+            // missing source must surface the "assets no longer exist" WARNING TOAST
+            // (input_asset_deleted), not silently self-gate into a wrong-mode run or
+            // die mute on the engine. Shared path → covers local AND remote engines.
+            if (val.includes('project-file')) {
+                await this._assertMediaSourceExists(val, paramKey);
             }
 
-            if (
-                typeof val === 'string' &&
-                (val.startsWith('data:') || val.startsWith('blob:') || val.startsWith('http') ||
-                 val.includes('project-file') || val.includes('/project-media/'))
-            ) {
-                try {
-                    const uploadRes = await this._uploadImage(val, staticName);
-                    if (uploadRes && uploadRes.name) {
-                        params[paramKey] = uploadRes.name;
-                    }
-                } catch (e) {
-                    clientLogger.error('comfy', `Asset upload failed for ${paramKey}`, e);
-                    // A deleted input source (e.g. the reused frame's content asset
-                    // was removed by the manual Cleanup command, or the source is
-                    // otherwise gone — the upload is lazy at dispatch, so the
-                    // /project-file source 404s here). Tag it with a code so
-                    // commandExecutor surfaces a WARNING TOAST (user-actionable), not
-                    // the GitHub bug-reporter dialog (MPI-227 downgrade of MPI-225's
-                    // soft-fail). Shared path → covers local AND remote engines.
-                    if (
-                        typeof val === 'string' &&
-                        val.includes('project-file') &&
-                        /HTTP 404/.test(e.message || '')
-                    ) {
-                        const softErr = new Error('Cannot reuse — prompt assets no longer exist. Re-add the input and try again.');
-                        softErr.code = 'input_asset_deleted';
-                        throw softErr;
-                    }
-                    throw e;
-                }
-            }
+            const localPath = this._resolveMediaPath(val);
+            // Remote engine: the resolved path is local to this machine and invisible
+            // to the Pod. Upload the file and inject the Pod-absolute path returned by
+            // `_uploadRemoteMedia`, which the path-reading nodes resolve directly —
+            // VHS LoadVideo/LoadAudio and `MpiLoadImageFromPath` (its `os.path.isfile`
+            // check runs on the Pod). A local-pinned engine keeps the local path.
+            params[paramKey] = (!this._alwaysLocal && remoteEngineClient.isRemote())
+                ? await this._uploadRemoteMedia(localPath)
+                : localPath;
         }
 
         // 2b. Remote engine: auto-upload any selected LoRA/upscale model that is
@@ -1142,7 +1224,7 @@ function createEngine({ engine, alwaysLocal }) {
             const node = workflow[nodeId];
             if (!node || !node.inputs) return;
             const targets = [
-                'value', 'text', 'int', 'float', 'boolean', 'string',
+                'value', 'text', 'int', 'float', 'boolean', 'string', 'color',
                 'ckpt_name', 'model_name', 'unet_name', 'image', 'mask', 'picks',
                 'lora_name', 'strength_model', 'strength_clip',
                 'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent', 'select'
@@ -1436,39 +1518,33 @@ function createEngine({ engine, alwaysLocal }) {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Uploads an image or mask asset to THIS engine's ComfyUI server.
-     * @param {string} dataUrlOrPath
-     * @param {string} filename
-     * @returns {Promise<object>}
+     * Verify a `/project-file?path=` media source still exists before injecting its
+     * path into a self-gating path node. A reused card's source asset can be deleted
+     * (manual Cleanup); the path node would then silently self-gate (wrong-mode run)
+     * or fail mute on the engine. A HEAD 404 here throws the tagged `input_asset_deleted`
+     * soft-error so commandExecutor shows a WARNING TOAST, not the bug-reporter dialog
+     * (MPI-227 downgrade of MPI-225's soft-fail). Covers local AND remote engines.
+     * @param {string} projectFileUrl  a `/project-file?path=` URL
+     * @param {string} paramKey        the media param (for the log line)
      * @private
      */
-    async _uploadImage(dataUrlOrPath, filename) {
-        let blob;
+    async _assertMediaSourceExists(projectFileUrl, paramKey) {
+        let ok = false;
         try {
-            const res = await fetch(dataUrlOrPath);
-            if (!res.ok) {
+            const res = await fetch(projectFileUrl, { method: 'HEAD' });
+            ok = res.ok;
+            if (!ok && res.status !== 404) {
                 throw new Error(`source returned HTTP ${res.status}`);
             }
-            blob = await res.blob();
-            if (!blob.type.startsWith('image/')) {
-                throw new Error(`source is not an image (${blob.type || 'unknown content type'})`);
-            }
         } catch (e) {
-            throw new Error(`[ComfyUIController] Failed to prepare blob for ${filename}: ${e.message}`);
+            clientLogger.error('comfy', `Media source check failed for ${paramKey}`, e);
+            throw e;
         }
-
-        const formData = new FormData();
-        formData.append('image', blob, filename);
-        formData.append('overwrite', 'true');
-
-        const uploadRes = await fetch(`${this.httpBase()}/upload/image`, {
-            method: 'POST',
-            body: formData
-        });
-        if (!uploadRes.ok) {
-            throw new Error(`[ComfyUIController] Comfy upload failed for ${filename}: HTTP ${uploadRes.status}`);
+        if (!ok) {
+            const softErr = new Error('Cannot reuse — prompt assets no longer exist. Re-add the input and try again.');
+            softErr.code = 'input_asset_deleted';
+            throw softErr;
         }
-        return await uploadRes.json();
     },
 
     /**

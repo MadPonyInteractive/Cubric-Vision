@@ -1,0 +1,126 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "8cf229c5-d2ca-4a68-aaad-fb1cd97a0777",
+  "generated_at": "2026-07-17T21:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Add Qwen Image Edit 2511 model — PHASE 0 research + mpi-add-model skill upgrade",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add a new model, Qwen Edit, to Cubric Vision. Three tiers: Low=4-step Lightning LoRA, Balanced=8-step Lightning LoRA, High=no accelerator. Blocks the head-swap app (MPI-299) in another session.",
+    "status": "in_progress",
+    "summary": "Committed the PHASE 0 (research+scaffold) upgrade to /mpi-add-model plus the Qwen scaffold (card MPI-300, research dumps, docs/models/qwen-edit/ hub). Model is still in PHASE 0 research — transformer survey + LoRA-strength question are the next research tasks. No workflow authored/wired yet."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Confirmed 2511 is the latest Qwen Image Edit generation (base weights already current)",
+      "Found the user was running a MISMATCHED 2509-era Lightning LoRA on the 2511 base",
+      "Downloaded version-matched 2511 Lightning LoRAs (4-step + 8-step bf16, 810MB each) to C:/AI/Loras/Qwen",
+      "Researched the FluxKontextMultiReferenceLatentMethod node (4 reference_latents_method values; index_timestep_zero = 2511 default but color-shift caveat)",
+      "Dep-reuse pass: VAE reuses vae-qwen-image; text encoder qwen_2.5_vl_7b_fp8_scaled is a NEW dep (on G: at 9.38GB); diffusion is NEW",
+      "Created card MPI-300 (doing/in-progress) + research folder + docs/models/qwen-edit/ hub",
+      "Upgraded /mpi-add-model with a PHASE 0 front-end (9 steps): transformer survey, LoRA survey, sampler research, LoRA-strength axes, dep-reuse, scaffold card, scaffold research homes, local-author gate",
+      "Committed all of the above (cde5ee72)"
+    ],
+    "pending": [
+      "PHASE 0 step 4 — LoRA strength axes: does the 2511 Lightning LoRA take MODEL strength only, or MODEL + CLIP strength? (picks MpiLoraModel vs model+clip loader). FIRST ORDER OF BUSINESS.",
+      "PHASE 0 step 1 — transformer survey: raw vs distilled variants; quant formats (fp16/bf16/fp8/int8/gguf); full/undistilled weights for the High tier; enumerate all distilled (turbo/lightning) versions + step counts. Write the variant x format matrix.",
+      "PHASE 0 step 2 — LoRA survey: quality/adherence LoRAs + de-censor LoRAs for Qwen Edit 2511",
+      "Get exact diffusion filename + byte size for qwen_image_edit_2511_fp8mixed (>=20GB hot-store gate) — NOT on G:, lives in user's standalone ComfyUI",
+      "Confirm the 2nd '4 Step LoRA' node in the graph (loads base Qwen-Image-Lightning-4steps, not edit) is intentional",
+      "User to SAVE the ComfyUI canvas and drop the workflow into comfy_workflows/raw/",
+      "THEN PHASE 1 wiring via /mpi-add-model"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-300",
+    "title": "Model: Qwen Image Edit 2511 — 3-tier (4-step / 8-step / no-accel)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-300/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-300/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "research",
+    "web-search"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Research dumped to .agents/mpi-kanban/tasks/MPI-300/research/ (reference-latents-method.md, weights-and-tiers.md)",
+      "Settled hub written to docs/models/qwen-edit/README.md + reference-latents.md",
+      "mpi-add-model SKILL.md PHASE 0 upgrade committed; playbook README Phase 0 pointer committed"
+    ],
+    "pending": [
+      "Known sampler/scheduler/steps for Qwen Edit already known to the user (per the live graph) — capture the exact values into docs/models/qwen-edit/ once confirmed (skips PHASE 0 step 3 for this model)",
+      "Decide whether to swap PHASE 0 steps 3 and 4 so LoRA-survey -> LoRA-strength are adjacent (user left this open; skill currently has samplers=3, strength=4)"
+    ]
+  },
+  "next_action": {
+    "description": "Find out whether the Qwen-Image-Edit-2511 Lightning LoRA takes MODEL strength only or MODEL + CLIP strength (determines which LoRA loader to use). Then do the transformer survey: raw vs distilled, quant formats (fp16/bf16/fp8/int8/gguf), full weights, all distilled variants + step counts. Dump findings into .agents/mpi-kanban/tasks/MPI-300/research/ and settle into docs/models/qwen-edit/.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "3 tiers = same 2511 base, different Lightning LoRA per tier (Low=4-step, Balanced=8-step, High=no accel) — combined-op, single-stage image model, flat dependencies[] array",
+      "bf16 LoRA-only files chosen (810MB) over the 20GB fused fp8 — apply on top of the existing fp8 base",
+      "index_timestep_zero is the 2511-correct reference method (matches GGUF metadata default) but has a known color-shift artifact — flagged as a head-swap knob to watch",
+      "mpi-add-model was wiring-only; added PHASE 0 so research+scaffold is enforced, not ad-hoc"
+    ],
+    "constraints": [
+      "Models are NOT version-bumped",
+      "Lightning LoRA MUST be version-matched to the 2511 base (user had a 2509 LoRA mismatch)",
+      "R2 uploads + deletes need explicit user approval",
+      "Never hand-edit workflow JSON — author in ComfyUI, user saves, re-export",
+      "Shared tree: commit by explicit pathspec, never git add -A. Other sessions are editing models.js + MPI-291 + MPI-299 concurrently — leave those",
+      "Any single weight file >=20GB => STOP and ask (Pod hot-store gate)"
+    ],
+    "files_modified": [
+      ".claude/skills/mpi-add-model/SKILL.md",
+      "docs/playbooks/add-model/README.md",
+      ".agents/mpi-kanban/tasks/MPI-300/task.json",
+      ".agents/mpi-kanban/tasks/MPI-300/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-300/research/reference-latents-method.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/weights-and-tiers.md",
+      "docs/models/qwen-edit/README.md",
+      "docs/models/qwen-edit/reference-latents.md",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-300/task.json",
+      ".agents/mpi-kanban/tasks/MPI-300/research/weights-and-tiers.md",
+      ".agents/mpi-kanban/tasks/MPI-300/research/reference-latents-method.md",
+      "docs/models/qwen-edit/README.md",
+      ".claude/skills/mpi-add-model/SKILL.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["docs/models/qwen-edit", "docs/playbooks/add-model", "docs/models/krea2"]
+  },
+  "rules_active": [
+    "docs/playbooks/add-model/README.md",
+    ".claude/skills/mpi-add-model/SKILL.md",
+    "docs/models/qwen-edit/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-17T21:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming work on adding the Qwen Image Edit 2511 model to Cubric Vision (card MPI-300, in the 'doing' column). Read .agents/mpi-kanban/state/handoffs/8cf229c5-d2ca-4a68-aaad-fb1cd97a0777.json and the MPI-300 research files first. The model is in PHASE 0 (research) of the /mpi-add-model skill — the graph is NOT authored or wired yet. Three tiers are planned: Low=4-step Lightning LoRA, Balanced=8-step Lightning LoRA, High=no accelerator (both 2511-matched bf16 LoRAs are already downloaded to C:/AI/Loras/Qwen). This model BLOCKS the head-swap app in MPI-299 (a separate session). Your FIRST task: find out whether the Qwen-Image-Edit-2511 Lightning LoRA takes MODEL strength only or MODEL + CLIP strength (this picks the LoRA loader). Then run the transformer survey — raw vs distilled variants, quant formats (fp16/bf16/fp8/int8/gguf), full weights, all distilled versions + step counts — and a LoRA survey (quality/adherence + de-censor LoRAs). Dump findings into .agents/mpi-kanban/tasks/MPI-300/research/ and settle them into docs/models/qwen-edit/. Do NOT version-bump; do NOT hand-edit workflow JSON; commit by explicit pathspec only (other sessions are editing models.js/MPI-291/MPI-299 concurrently). Use mpi-continue."
+}

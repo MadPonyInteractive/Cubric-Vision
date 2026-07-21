@@ -1,0 +1,736 @@
+{
+  "1455": {
+    "inputs": {
+      "width": [
+        "1520",
+        0
+      ],
+      "height": [
+        "1521",
+        0
+      ],
+      "batch_size": [
+        "1523",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "1462": {
+    "inputs": {
+      "ckpt_name": "SDXL_NSFW.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint"
+    }
+  },
+  "1472": {
+    "inputs": {
+      "value": "two women talking to each other naked at the beach\n"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "1473": {
+    "inputs": {
+      "value": ""
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "1476": {
+    "inputs": {
+      "clip": [
+        "1540",
+        1
+      ],
+      "text": [
+        "1545",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1481": {
+    "inputs": {
+      "clip": [
+        "1540",
+        1
+      ],
+      "text": [
+        "1472",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1520": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "1521": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "1523": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Batch_Size"
+    }
+  },
+  "1533": {
+    "inputs": {
+      "steps": 7,
+      "cfg": 1.5,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "1558",
+        0
+      ],
+      "positive": [
+        "1481",
+        0
+      ],
+      "negative": [
+        "1476",
+        0
+      ],
+      "latent_image": [
+        "1455",
+        0
+      ],
+      "seed": [
+        "1534",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "1534": {
+    "inputs": {
+      "int": 1058
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "1535": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1462",
+        0
+      ],
+      "clip": [
+        "1462",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "1536": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1535",
+        0
+      ],
+      "clip": [
+        "1535",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "1537": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1536",
+        0
+      ],
+      "clip": [
+        "1536",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "1538": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1537",
+        0
+      ],
+      "clip": [
+        "1537",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "1539": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1538",
+        0
+      ],
+      "clip": [
+        "1538",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "1540": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "1539",
+        0
+      ],
+      "clip": [
+        "1539",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "1541": {
+    "inputs": {
+      "upscale_method": "bicubic",
+      "scale_by": 1.5,
+      "samples": [
+        "1533",
+        0
+      ]
+    },
+    "class_type": "LatentUpscaleBy",
+    "_meta": {
+      "title": "Upscale Latent By"
+    }
+  },
+  "1542": {
+    "inputs": {
+      "steps": 3,
+      "cfg": 1.5,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": 0.4,
+      "model": [
+        "1558",
+        0
+      ],
+      "positive": [
+        "1481",
+        0
+      ],
+      "negative": [
+        "1476",
+        0
+      ],
+      "latent_image": [
+        "1541",
+        0
+      ],
+      "seed": [
+        "1534",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (Hi-Res Fix)"
+    }
+  },
+  "1543": {
+    "inputs": {
+      "samples": [
+        "1542",
+        0
+      ],
+      "vae": [
+        "1462",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1545": {
+    "inputs": {
+      "string_b": "blurry, (lowres:1.2), (worst quality:1.4), (low quality:1.4), (bad anatomy:1.4), bad hands, multiple views, jpeg artifacts",
+      "delimiter": ", ",
+      "string_a": [
+        "1473",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "1551": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.crop": "center",
+      "scale_method": "lanczos",
+      "input": [
+        "1543",
+        0
+      ],
+      "resize_type.width": [
+        "1520",
+        0
+      ],
+      "resize_type.height": [
+        "1521",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1558": {
+    "inputs": {
+      "nag_scale": 0.8,
+      "nag_alpha": 0.5,
+      "nag_tau": 1,
+      "model": [
+        "1540",
+        0
+      ]
+    },
+    "class_type": "NAGuidance",
+    "_meta": {
+      "title": "Normalized Attention Guidance"
+    }
+  },
+  "1572": {
+    "inputs": {
+      "clip_name": "gemma_2_2b_it_elm_bf16.safetensors",
+      "type": "pixeldit",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "1573": {
+    "inputs": {
+      "clip": [
+        "1572",
+        0
+      ],
+      "text": [
+        "1472",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1574": {
+    "inputs": {
+      "conditioning": [
+        "1573",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "1583": {
+    "inputs": {
+      "pixels": [
+        "1613",
+        0
+      ],
+      "vae": [
+        "1593",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1584": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 4,
+      "denoise": 1,
+      "model": [
+        "1592",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "1592": {
+    "inputs": {
+      "unet_name": "pid_sdxl_1024_to_4096_4step_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1593": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "latent_format": "sdxl",
+      "positive": [
+        "1573",
+        0
+      ],
+      "latent": [
+        "1583",
+        0
+      ],
+      "degrade_sigma": [
+        "1616",
+        0
+      ]
+    },
+    "class_type": "PiDConditioning",
+    "_meta": {
+      "title": "PiD Conditioning"
+    }
+  },
+  "1598": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 3,
+      "cfg": 1,
+      "model": [
+        "1592",
+        0
+      ],
+      "positive": [
+        "1594",
+        0
+      ],
+      "negative": [
+        "1574",
+        0
+      ],
+      "sampler": [
+        "1600",
+        0
+      ],
+      "sigmas": [
+        "1584",
+        0
+      ],
+      "latent_image": [
+        "1614",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "1599": {
+    "inputs": {
+      "vae_name": "pixel_space"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1600": {
+    "inputs": {
+      "sampler_name": "lcm"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "1603": {
+    "inputs": {
+      "size": 1024,
+      "side": true,
+      "image": [
+        "1551",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1604": {
+    "inputs": {
+      "samples": [
+        "1598",
+        0
+      ],
+      "vae": [
+        "1599",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1608": {
+    "inputs": {
+      "images": [
+        "1604",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "1613": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "1551",
+        0
+      ],
+      "width": [
+        "1603",
+        0
+      ],
+      "height": [
+        "1603",
+        1
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "1614": {
+    "inputs": {
+      "batch_size": 1,
+      "width": [
+        "1615",
+        0
+      ],
+      "height": [
+        "1615",
+        1
+      ]
+    },
+    "class_type": "EmptyChromaRadianceLatentImage",
+    "_meta": {
+      "title": "EmptyChromaRadianceLatentImage"
+    }
+  },
+  "1615": {
+    "inputs": {
+      "size": 4096,
+      "side": true,
+      "image": [
+        "1613",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1616": {
+    "inputs": {
+      "float": 0
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Denoise"
+    }
+  },
+  "1624": {
+    "inputs": {
+      "images": [
+        "1625",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image_2"
+    }
+  },
+  "1625": {
+    "inputs": {
+      "direction": "right",
+      "match_image_size": false,
+      "spacing_width": 20,
+      "spacing_color": "white",
+      "image1": [
+        "1678",
+        0
+      ],
+      "image2": [
+        "1608",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Stitch Images"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "images": [
+        "1642",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image_3"
+    }
+  },
+  "1642": {
+    "inputs": {
+      "direction": "down",
+      "match_image_size": false,
+      "spacing_width": 20,
+      "spacing_color": "white",
+      "image1": [
+        "1625",
+        0
+      ],
+      "image2": [
+        "1680",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Stitch Images"
+    }
+  },
+  "1678": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1680": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  }
+}

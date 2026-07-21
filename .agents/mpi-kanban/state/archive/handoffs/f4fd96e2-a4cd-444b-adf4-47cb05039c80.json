@@ -1,0 +1,144 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f4fd96e2-a4cd-444b-adf4-47cb05039c80",
+  "generated_at": "2026-07-10T23:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "i2i on all image models + full-fleet tier-2 workflow conversion (phase 1 of tier-1 deprecation)",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Image-to-Image to every image model that lacks it (like Krea2), and by end of session deprecate tier 1 entirely so nothing refers to tiers anymore — updating playbook, skills, docs, rules, and memory.",
+    "status": "in_progress",
+    "summary": "Phase 1 (workflows + i2i wiring) is DONE and committed on branch 1.2.0 across cd1b9780, b5c63796, 9574b974. The entire workflow fleet is now tier-2 (zero bare injected-target titles) and i2i is live on all 6 image models via the still-active bare-key alias. Phase 2 (the SENSITIVE code pass to actually drop tier-1 + coupled consumer updates + docs/rules/playbook/memory rewrite) is NOT started — handed off to a fresh session on purpose."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-252 i2i: models.js adds 'i2i' to supportedOps + i2i->t2i workflow map for 5 SDXL + Chroma (Krea2 already had it; PiD excluded; video excluded)",
+      "SDXL t2i/upscaler/detailer templates re-authored tier-2; generate_sdxl.py patched with _stamp_placeholder (Input_Image->placeholder.png) + _force_t2i_default (Input_Is_i2i->false); 15 SDXL runtimes regenerated",
+      "generate_chroma.py NEW (registry Chroma_ prefix) applies the same two stamps; Chroma_t2i.json serves t2i+i2i; Chroma_upscaler.json converted tier-2",
+      "Krea2 upscaler template tier-2; runtimes regenerated",
+      "6 universal/utility workflows converted + re-exported API-format: image_upscale, video_upscale, resize, resize_video, video_interpolate, img_auto_mask",
+      "3 video utility workflows now emit ONE combined MpiSaveVideo titled Output_Video (audio embedded) instead of split Output_Video + Output_Audio",
+      "img_auto_mask renamed Detected->Output_Detected, Output->Output_image",
+      "Full-fleet inventory confirms zero bare injected-target titles remain",
+      "UNRELEASED.md updated: whatIsNew i2i-on-all-image-models + fixes upscale-denoise-matches-ComfyUI (already present)",
+      "MPI-251 (remove MpiExpoFloat from upscalers) shipped earlier this session (cd1b9780)"
+    ],
+    "pending": [
+      "CODE PASS (sensitive — do with a live smoke test): update the title-based consumers FIRST while keeping the alias active, THEN drop the bare-key emit LAST",
+      "resizeInjector.js: FLIP_TITLE 'imageflip'->'input_flip_image', ROTATE_TITLE 'image rotate'->'input_rotate_image', FLIP_ENABLED_TITLE 'flip'->'input_flip' (lines 12-14). _requireNodes THROWS on mismatch, so resize/resizeVideo ops CRASH until this lands. HIGH PRIORITY.",
+      "commandExecutor.js mask matcher: lines 798 (=== 'detected') and 803 (=== 'output') must accept the new img_auto_mask titles Output_Detected / Output_image (accept both, or switch).",
+      "PromptBoxControls.js nodeTitle values still bare: line 673 'Auto_Grid'->'Input_Auto_Grid', 711 'Upscale_Factor'->'Input_Upscale_Factor', 773 'Denoise'->'Input_Denoise', 492 'Batch_Size'->'Input_Batch_Size', 534 'Duration'->'Input_Duration', 603 'Motion_Intensity'->'Input_Motion_Intensity'. Currently work via alias; update to canonical Input_ (or rely on alias — but the point is to remove the alias).",
+      "commandExecutor.js DROP the bare-key emit: lines 569-570 (Positive/Negative always emitted bare) change to Input_Positive/Input_Negative; lines 725-739 alias pass — remove the bare half so only Input_* is emitted. THIS IS THE RISKY EDIT — do it LAST, after the above, then live-smoke every op on every model family.",
+      "commandExecutor.js capture path lines 1289-1301: simplify the tier-2 image/video capture 'alias' framing (it is now the only naming, not an alias).",
+      "models.js: remove the `tier` field from all models (lines 215/295/382/439/507 tier:2, line 560 wan22-5b tier:1). Grep consumers: projectMigrations.js:213 references per-model tier — update/remove.",
+      "DOCS/RULES/PLAYBOOK/MEMORY rewrite (needs approval for architectural rule files per CLAUDE.md): .claude/rules/comfy_injection.md (drop the two-tier naming law, make Input_*/Output_* the single law), docs/comfy.md (standard title map), docs/add-model-playbook.md (tier language), feedback_comfy_node_naming_law memory, project_comfy_injection_silent_title_skip memory. Check MEMORY.md for tier refs.",
+      "Chroma i2i, SDXL i2i: live-test the actual i2i op in-app on at least one SDXL model + Chroma (input image + prompt -> reshaped output) — coded + graph-verified, NOT live-verified."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-252",
+    "title": "Add Image-to-Image operation to all image models that lack it (SDXL x5 + Chroma) + deprecate tier 1",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-252/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-252/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "edit code",
+    "run generate scripts",
+    "live smoke test",
+    "commit by explicit pathspec",
+    "update docs/rules/memory (rules need user approval)"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-252 task.json + events.jsonl carry the full i2i + tier-2 + code-coupling scope",
+      "UNRELEASED.md changelog updated with the i2i-on-all-models what's-new line (denoise-sensitivity fix line already present)",
+      "generate_sdxl.py / generate_chroma.py / registry.py carry inline docstrings explaining the placeholder + Is_i2i stamps"
+    ],
+    "pending": [
+      "Architectural rule files (.claude/rules/comfy_injection.md, docs/add-model-playbook.md) must NOT be edited without explicit user approval per CLAUDE.md CARDINAL RULES — get approval before the docs rewrite",
+      "Memory files feedback_comfy_node_naming_law + project_comfy_injection_silent_title_skip reference the two-tier system and must be updated once tier-1 is gone",
+      "After the bare-emit drop lands + live smoke passes, add a fixes/internal changelog note if any user-visible behavior changed (mask/resize/video ops)"
+    ]
+  },
+  "next_action": {
+    "description": "Start the sensitive code pass. Do it in this order to keep a safety net: (1) resizeInjector.js 3 title constants (it THROWS if unmatched — resize is broken until fixed), (2) commandExecutor mask matcher accept Output_Detected/Output_image, (3) PromptBoxControls nodeTitle values -> Input_*, (4) LAST drop the bare-key emit (commandExecutor 569-570 + 725-739) and live-smoke every op on every model family, (5) remove models.js tier field + projectMigrations consumer, (6) get user approval then rewrite docs/rules/playbook/memory to make Input_*/Output_* the single naming law. The bare-key alias is currently ACTIVE so everything works today — do not drop it until 1-3 are done and verified.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "i2i shares the t2i graph switched by injected Input_Is_i2i boolean (Krea2 pattern) — models.js maps i2i to the same t2i json; no commandRegistry change (op already exists, components capability-gated).",
+      "generate scripts MUST force Input_Is_i2i->false and Input_Image->placeholder.png on every runtime, because a template exported mid-i2i-test bakes true / a real test image; a baked true would run every plain t2i as i2i.",
+      "Combined MpiSaveVideo (Output_Video, audio embedded) needs NO capture-code change — the existing output_video matcher already handles it; the split Output_Audio path just goes dormant for those 3 workflows.",
+      "User decided to LEAVE bare Positive/Negative CLIP nodes in sdxl_upscaler + sdxl_detailer templates (they are internal, link-fed by Input_Positive; harmless once the bare emit is dropped since they will no longer be injection targets). Do NOT rename them.",
+      "The bare 'Duration' node is MpiWanSeconds (a frames/seconds/fps converter), NOT app-injected — app injects Input_Duration (MpiInt). Never flag bare Duration as a violation.",
+      "Sequencing chosen by user: commit the tier-2 workflows FIRST as a stable bisectable checkpoint (done), then the code pass as its own commit(s) in a FRESH session."
+    ],
+    "constraints": [
+      "SHARED TREE: never git add -A / git add . — stage by explicit pathspec. A peer session had MpiPromptBox/PromptBoxControls/MpiDropdown/commandRegistry/dependencies modified at session start; verify before touching PromptBoxControls.js that your hunks don't collide.",
+      "The injector matches node title EXACTLY (comfyController.js:1159-1163 title.toLowerCase() === key.toLowerCase()) — no prefix magic. Silent-skip trap (MPI-242): a param whose title matches nothing is DROPPED with no error. This is exactly why dropping the bare emit is risky.",
+      "resizeInjector _requireNodes THROWS (loud) on a missing title — so a resize title mismatch crashes rather than silent-skips. Good, but means resize/resizeVideo are BROKEN between the workflow rename (already shipped) and the injector-const fix (pending). Fix resizeInjector FIRST.",
+      "RunPod/remote != local-engine proof: any engine-path behavior must be considered for BOTH engines (feedback_check_both_engine_paths). The injector/capture code is shared, so it covers both, but confirm.",
+      "Chroma_upscaler.json + all 6 utility workflows are RUNTIME files with no template/script — they are hand-authored, so changes go straight into comfy_workflows/<name>.json (no regen).",
+      "Do NOT edit architectural rule files (.claude/rules/*) without explicit user approval (CLAUDE.md CARDINAL RULE 3)."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/models.js",
+      "comfy_workflows/scripts/workflow_generation/generate_sdxl.py",
+      "comfy_workflows/scripts/workflow_generation/generate_chroma.py",
+      "comfy_workflows/scripts/workflow_generation/registry.py",
+      "comfy_workflows/scripts/workflow_generation/Chroma_t2i_template.json",
+      "comfy_workflows/scripts/workflow_generation/sdxl_t2i_template.json",
+      "comfy_workflows/scripts/workflow_generation/sdxl_upscaler_template.json",
+      "comfy_workflows/scripts/workflow_generation/sdxl_detailer_template.json",
+      "comfy_workflows/scripts/workflow_generation/krea2_turbo_upscaler_template.json",
+      "comfy_workflows/Chroma_t2i.json",
+      "comfy_workflows/Chroma_upscaler.json",
+      "comfy_workflows/t2i_sdxl_realistic.json (+ 4 sibling t2i, 5 upscaler, 5 detailer SDXL runtimes)",
+      "comfy_workflows/krea2_turbo_upscaler_sfw.json + _nsfw.json",
+      "comfy_workflows/image_upscale.json, video_upscale.json, resize.json, resize_video.json, video_interpolate.json, img_auto_mask.json",
+      "docs/releases/UNRELEASED.md",
+      ".agents/mpi-kanban/tasks/MPI-251/*, MPI-252/*"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-252/task.json",
+      ".agents/mpi-kanban/tasks/MPI-252/events.jsonl",
+      "js/services/workflowInjectors/resizeInjector.js",
+      "js/services/commandExecutor.js (lines 560-575, 725-745, 793-808, 1275-1310)",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js (nodeTitle values ~490-780)",
+      "js/data/modelConstants/models.js (tier fields)",
+      ".claude/rules/comfy_injection.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["comfy_injection", "comfy_engine", "add-model-playbook"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/add-model-playbook.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-10T23:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming the tier-1 deprecation work on Cubric Vision (branch 1.2.0). Phase 1 is DONE and committed (cd1b9780, b5c63796, 9574b974): every workflow in the fleet is now tier-2 (Input_*/Output_* on all app-touched nodes) and Image-to-Image is live on all 6 image models (5 SDXL + Chroma) via the still-active bare-key alias in commandExecutor. Your job is Phase 2, the sensitive code pass that actually removes tier 1. Read .agents/mpi-kanban/state/handoffs/f4fd96e2-a4cd-444b-adf4-47cb05039c80.json and MPI-252's task.json/events.jsonl, then run mpi-continue. Do the code edits in this exact order so a safety net stays up: (1) resizeInjector.js lines 12-14 rename FLIP_TITLE/ROTATE_TITLE/FLIP_ENABLED_TITLE to input_flip_image/input_rotate_image/input_flip — it THROWS on mismatch so resize/resizeVideo are BROKEN until this lands, do it first; (2) commandExecutor.js mask matcher lines 798/803 accept Output_Detected/Output_image; (3) PromptBoxControls.js nodeTitle values (Auto_Grid/Upscale_Factor/Denoise/Batch_Size/Duration/Motion_Intensity) -> Input_ canonical; (4) LAST, drop the bare-key emit in commandExecutor lines 569-570 and the alias pass 725-739, then LIVE-SMOKE every op on every model family before committing; (5) remove the models.js tier field on all models + its projectMigrations.js:213 consumer; (6) get explicit user approval, then rewrite .claude/rules/comfy_injection.md, docs/comfy.md, docs/add-model-playbook.md and the two naming-law memory files to make Input_*/Output_* the single law. Constraints: shared tree — stage by explicit pathspec, never git add . ; a peer may have unstaged hunks in PromptBoxControls.js, check before editing; the injector matches titles EXACTLY (no prefix magic) so a mismatch silently drops the param — that is why the bare emit is dropped LAST. Also still pending: live-test the i2i op in-app on one SDXL model + Chroma (coded + graph-verified, not live-verified). MPI-252 tracks all of this."
+}

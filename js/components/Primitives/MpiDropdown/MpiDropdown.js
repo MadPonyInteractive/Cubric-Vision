@@ -19,6 +19,9 @@ const renderOption = (opt, value) => {
     const meta     = optionMeta(opt);
     const active   = val === value ? 'is-active' : '';
     const disabled = opt.disabled ? 'is-disabled' : '';
+    const infoAttr = (typeof opt === 'object' && opt.info)
+        ? ` data-info="${escapeHtml(opt.info)}"`
+        : '';
     const metaHtml = meta
         ? `<span class="mpi-dropdown__option-meta">${escapeHtml(meta)}</span>`
         : '';
@@ -26,7 +29,7 @@ const renderOption = (opt, value) => {
     return `
         <div class="mpi-dropdown__option ${active} ${disabled}"
              data-value="${escapeHtml(val)}"
-             data-label="${escapeHtml(label)}">
+             data-label="${escapeHtml(label)}"${infoAttr}>
             <span class="mpi-dropdown__option-label">${escapeHtml(label)}</span>
             ${metaHtml}
         </div>
@@ -41,7 +44,7 @@ const renderOption = (opt, value) => {
  * ancestor overflow:hidden and CSS transform stacking-context issues.
  *
  * Props:
- * @param {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string}>} [options=[]] - Option list
+ * @param {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string,info?:string}>} [options=[]] - Option list
  * @param {string} [value=''] - Currently selected value
  * @param {string} [placeholder='Select...'] - Placeholder shown when nothing is selected
  * @param {boolean} [disabled=false] - Disabled state

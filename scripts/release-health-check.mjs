@@ -25,7 +25,6 @@ const FILES = {
   releasesDir: rel('docs', 'releases'),
   systemDependencies: rel('dev_configs', 'system_dependencies.json'),
   preReleaseTest: rel('scripts', 'pre_release_test.py'),
-  dependencies: rel('js', 'data', 'modelConstants', 'dependencies.js'),
   // The product Pod's start.sh is in the SIBLING mpi-ci repo. It hardcodes the
   // extra_model_paths.yaml ComfyUI reads on the volume. MPI-143: a model whose
   // dep `filename` targets a folder type NOT mapped here => ComfyUI can't see the
@@ -380,12 +379,21 @@ async function checkPodModelPaths() {
     console.warn(`Skipping Pod model-paths check: ${FILES.podStartSh} not found (mpi-ci sibling repo absent).`);
     return;
   }
-  const depsText = await readText(FILES.dependencies);
-  // Folder type = first path segment of each dep `filename:` (e.g.
-  // 'latent_upscale_models/x.safetensors' -> 'latent_upscale_models').
+  // MPI-293: dependencies.js only SPREADS the four split dep files (modelDeps,
+  // assetDeps, loraDeps, nodesDeps) and holds no inline block text, so scanning it
+  // found ZERO folder types → this MPI-143 guard silently passed on nothing. Scan
+  // every *Deps.js in the modelConstants dir (a lora/asset/model can each introduce
+  // a folder type; the glob also picks up any future split file).
+  const depsDir = rel('js', 'data', 'modelConstants');
+  const depFiles = (await fs.readdir(depsDir)).filter((f) => /Deps\.js$/.test(f));
   const folderTypes = new Set();
-  for (const m of depsText.matchAll(/filename:\s*['"]([^'"\/]+)\//g)) {
-    folderTypes.add(m[1]);
+  for (const f of depFiles) {
+    const text = await readText(path.join(depsDir, f));
+    // Folder type = first path segment of each dep `filename:` (e.g.
+    // 'latent_upscale_models/x.safetensors' -> 'latent_upscale_models').
+    for (const m of text.matchAll(/filename:\s*['"]([^'"\/]+)\//g)) {
+      folderTypes.add(m[1]);
+    }
   }
   // 'custom_nodes' installs are handled by the node-lock clone path, not the
   // model yaml — they map under comfyui/custom_nodes/, which start.sh already has.

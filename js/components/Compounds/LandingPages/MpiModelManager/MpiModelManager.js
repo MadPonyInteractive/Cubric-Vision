@@ -6,6 +6,7 @@ import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
+import { PLUGINS, pluginDepKey, pluginAvailability } from '../../../../data/pluginsRegistry.js';
 import {
     resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
     expandRequiredOps, dependentsOfOp, archVariantOptions, variantDepsOf, dedupeStable,
@@ -77,6 +78,7 @@ export const MpiModelManager = ComponentFactory.create({
                     <button class="mpi-detail__close" id="detail-close" type="button" aria-label="Close">${renderIcon('close', 'md')}</button>
                 </div>
                 <div class="mpi-detail__body" id="detail-body"></div>
+                <div class="mpi-detail__dlstats" id="detail-dlstats" hidden></div>
                 <div class="mpi-detail__actions" id="detail-actions"></div>
             </aside>
         </div>`,
@@ -112,9 +114,8 @@ export const MpiModelManager = ComponentFactory.create({
         // ── Live search query (name / dropdownMeta) ───────────────────────────
         let _searchQuery = '';
 
-        // Tracks whether the app is connected to a cloud (RunPod) engine. Remote
-        // downloads have no pause/resume API, so cards hide the Pause button when
-        // this is true. Kept in sync via the remote:connection event. (MPI-140)
+        // Tracks whether the app is connected to a cloud (RunPod) engine. Kept in
+        // sync via the remote:connection event. (MPI-140)
         let _isRemote = false;
 
         // ── Size-tier UI (MPI-168) ───────────────────────────────────────────
@@ -244,13 +245,16 @@ export const MpiModelManager = ComponentFactory.create({
             text:        'Delete these files?\n• Files shared with other installed models will be kept.',
             okLabel:     'Uninstall',
             cancelLabel: 'Cancel',
-            checkbox:    { label: 'Also delete model files from disk', checked: true },
         });
-        _confirmDialog.on('ok', async ({ checkboxChecked }) => {
+        _confirmDialog.on('ok', async () => {
             const pending = _pendingConfirm;
             _pendingConfirm = null;
             if (!pending) return;
-            await pending.run(checkboxChecked);
+            // Uninstall always deletes the model's own weights (universal + shared +
+            // outside-root deps are protected server-side). The old "keep files"
+            // checkbox was a no-op — install-state is derived by statting disk, so
+            // kept files just re-flagged the model INSTALLED. Removed; always true.
+            await pending.run(true);
             await reSyncInstalledModels();
         });
         _confirmDialog.on('cancel', () => { _pendingConfirm = null; });
@@ -559,8 +563,10 @@ export const MpiModelManager = ComponentFactory.create({
         }
 
         // ── Re-sync wrapper ────────────────────────────────────────────────
-        async function awaitReSync() {
-            refreshBtn.el.setAttribute('loading', 'true');
+        // quiet=true suppresses the refresh-button spinner — used by the missed-terminal
+        // backstop poll below so a background re-sync doesn't flash the spinner.
+        async function awaitReSync({ quiet = false } = {}) {
+            if (!quiet) refreshBtn.el.setAttribute('loading', 'true');
             // MPI-179: sync the engine mirror BEFORE resolving dep universes.
             // On a No-GPU download Pod nothing runs the ComfyUIController
             // connect that normally refreshes it, so isRemote() read a stale
@@ -572,13 +578,40 @@ export const MpiModelManager = ComponentFactory.create({
             refreshBtn.el.removeAttribute('loading');
         }
 
+        // Deps owned by an ALREADY-INSTALLED other model (MPI-258 Bug A). A small
+        // shared file on disk only because another installed model needs it (e.g. the
+        // 4x-NMKD upscaler, shared VAEs, LTX Gemma) must NOT read as partial progress
+        // for a model the user hasn't started — else an idle upscaler shows "4%" and a
+        // never-touched pack shows "1%". Union the full dep universe of every OTHER
+        // installed model; those ids are excluded from BOTH sides of this model's
+        // partial ratio, so the bar reflects only THIS model's own unique download.
+        function _sharedOwnedDepIds(excludeModelId) {
+            const owned = new Set();
+            for (const m of MODELS) {
+                if (m.id === excludeModelId || m.installed !== true) continue;
+                for (const id of resolveFullUniverse(m)) owned.add(id);
+            }
+            return owned;
+        }
+
         // ── Partial-progress measured against the DRAFT deps ─────────────────
         // The bar tracks how much of what the user will install is already on disk,
         // so a deliberately-omitted op never reads as partial. (MPI-122)
         function _computePartial(model) {
             const depStatus = getModelDepStatus(model.id);
             if (!depStatus) return { hasPartialProgress: false };
-            const deps = _draftDepIds(model).map(id => DEPS[id]).filter(Boolean);
+            const owned = _sharedOwnedDepIds(model.id);
+            // Exclude deps owned by an installed other-model (MPI-258 Bug A): they are
+            // on disk regardless of this model, so they are neither "downloaded for
+            // this model" nor part of its remaining work. Also exclude custom_nodes —
+            // they are work-not-bytes (a 70MB shared node like ComfyUI-LTXVideo stays
+            // on disk after uninstall and would otherwise read as a phantom partial),
+            // the same rule the active-download bar already applies (_byteRatioExcludingNodes, MPI-231).
+            const deps = _draftDepIds(model)
+                .filter(id => !owned.has(id))
+                .map(id => DEPS[id]).filter(Boolean)
+                .filter(dep => dep.type !== 'custom_nodes');
+            if (deps.length === 0) return { hasPartialProgress: false };
             let installedDeps = 0, downloaded = 0, total = 0;
             for (const dep of deps) {
                 const st = depStatus.get(dep.id);
@@ -587,10 +620,17 @@ export const MpiModelManager = ComponentFactory.create({
                 total += _parseSizeToBytes(dep.size);
             }
             const allInstalled = installedDeps === deps.length;
-            if (total > 0 && !allInstalled) {
+            // MPI-258 Bug C — a byte FLOOR before a bar draws. A model that only has a
+            // shared library asset on disk (Wan 5B borrows Wan 2.2's ~500MB CLIP/VAE;
+            // the anime packs share a 65MB upscaler owned by no installed model) read a
+            // phantom 1-3% partial on a pack the user never touched. Requiring ≥1GB of
+            // this model's OWN deps on disk means only a real, started download of its
+            // unique weight shows a bar — a handful of shared support files never does.
+            const PARTIAL_FLOOR_BYTES = 1024 ** 3; // 1 GB
+            if (total > 0 && downloaded >= PARTIAL_FLOOR_BYTES && !allInstalled) {
                 return {
                     hasPartialProgress: true,
-                    progress: Math.min(total > 0 ? downloaded / total : 0, 0.99),
+                    progress: Math.min(downloaded / total, 0.99),
                     downloadedBytes: downloaded,
                     totalBytes: total,
                 };
@@ -605,7 +645,7 @@ export const MpiModelManager = ComponentFactory.create({
             const job = state.downloadJobs.find(j => j.modelId === model.id);
             const downloadState = job ? job.status : 'idle';
             // 'queued' (MPI-184 serial install queue) counts as active.
-            const isActiveDownload = ['downloading', 'paused', 'installing', 'queued'].includes(downloadState);
+            const isActiveDownload = ['pending', 'downloading', 'paused', 'installing', 'queued'].includes(downloadState);
             // A terminal 'complete' job lingers in state.downloadJobs until the async
             // reSyncInstalledModels() (fired on download:complete) flips model.installed.
             // In that window the footer/tile computed NOT active + NOT installed → the
@@ -661,9 +701,14 @@ export const MpiModelManager = ComponentFactory.create({
         // media badge + a FIXED-HEIGHT inline state row (chip OR live progress bar).
         // A recently-installed heat dot rides absolute on the thumb. Click → detail.
         function _tileState(st) {
-            // anyInstalled first (MPI-241): once re-sync flips installed, show the chip
-            // even if a terminal 'complete' job still lingers in state.downloadJobs.
-            if (st.anyInstalled) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
+            // A LIVE download must win over anyInstalled (MPI-273): an Update on an
+            // already-installed model (add an op/arch to Wan 2.2 Smooth) else downloads
+            // with the "Installed" chip up and no progress bar — bytes stream to disk
+            // with zero UI feedback. Only the TERMINAL-complete lingering job yields.
+            // anyInstalled (MPI-241): once re-sync flips installed, show the chip
+            // even if a terminal 'complete' job still lingers — but NOT while a live
+            // download is running, so the progress branch below wins (MPI-273).
+            if (st.anyInstalled && !st.isActiveDownload) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Installed</span>`;
             // isBusy holds the progress UI through the whole download AND the brief
             // post-'complete' window before re-sync lands, so the Install chip never
             // flashes back on a fast ephemeral-pod install (MPI-241).
@@ -674,6 +719,18 @@ export const MpiModelManager = ComponentFactory.create({
                 // install (most deps on-disk + one real download over-counting).
                 if (st.job?.phase === 'verifying') {
                     return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Verifying…</span></div>`;
+                }
+                // MPI-276 G2: optimistic 'pending' click — indeterminate "Starting…"
+                // until the backend acks (or reverts after 10s).
+                if (st.downloadState === 'pending') {
+                    return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Starting…</span></div>`;
+                }
+                // Serial-queue wait (MPI-184): a job POSTed but held behind an active
+                // install sits at 'queued' with 0 bytes. Show an indeterminate "Queued…"
+                // so it reads as waiting, not a stuck 0% bar. Mascot waiting-peek on the
+                // card thumb is the MPI-284 follow-up.
+                if (st.downloadState === 'queued') {
+                    return `<div class="mpi-tile__prog mpi-tile__prog--indeterminate"><div class="mpi-tile__prog-bar"><span></span></div><span class="mpi-tile__prog-pct">Queued…</span></div>`;
                 }
                 const pct = Math.min(Math.round((st.job?.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
@@ -726,6 +783,19 @@ export const MpiModelManager = ComponentFactory.create({
             // Recently-installed heat dot (MPI-215) — the model's `justInstalled`
             // transient flag rides absolute on the thumb so it never shifts the tile.
             if (model.justInstalled) thumb.appendChild(ce('div', { className: 'mpi-tile__new' }));
+            // Featured star badge (rides absolute on the thumb, like the heat dot).
+            if (model.featured) {
+                const star = ce('div', { className: 'mpi-tile__featured', title: 'Featured' });
+                star.innerHTML = renderIcon('sparkle', 'sm');
+                thumb.appendChild(star);
+            }
+            // Queued-install waiting mascot (MPI-284) — rides absolute on the thumb
+            // like the heat dot; hidden until the job sits 'queued', removed the
+            // moment it starts downloading (see _patchTile). Reuses the shared
+            // waiting.png peek asset — no new asset.
+            const mascot = ce('img', { className: 'mpi-tile__mascot', src: 'assets/mascot/waiting.png', alt: '' });
+            if (st.downloadState === 'queued') mascot.classList.add('mpi-tile__mascot--visible');
+            thumb.appendChild(mascot);
             tile.appendChild(thumb);
 
             const tier = model.sizeTier || 'balanced';
@@ -748,7 +818,7 @@ export const MpiModelManager = ComponentFactory.create({
             tile.appendChild(body);
 
             _unsubs.push(on(tile, 'click', () => openDetail(model)));
-            _tileInstances.set(model.id, { tile, stateEl });
+            _tileInstances.set(model.id, { tile, stateEl, mascot });
             return tile;
         }
 
@@ -835,6 +905,31 @@ export const MpiModelManager = ComponentFactory.create({
         const detailPanel = qs('#detail-panel', el);
         const detailBody = qs('#detail-body', el);
         const detailActions = qs('#detail-actions', el);
+        const detailStats = qs('#detail-dlstats', el);
+
+        // MPI-317 (F3) — live speed + ETA line for the open detail panel. job.speed
+        // is the backend's already-formatted string ("24.1 MB/s"); parse it back to
+        // bytes/s for the ETA instead of re-deriving a rate client-side. Text only
+        // while bytes are actually streaming — the verifying/installing phases have
+        // their own tile treatment and a stale rate would lie.
+        function _speedToBytes(speedStr) {
+            const m = /([\d.]+)\s*(KB|MB|GB)\/s/i.exec(speedStr || '');
+            if (!m) return 0;
+            return parseFloat(m[1]) * ({ kb: 1024, mb: 1048576, gb: 1073741824 })[m[2].toLowerCase()];
+        }
+        function _dlStatsText(job) {
+            if (!job || !job.totalBytes || job.indeterminate || job.phase === 'verifying') return '';
+            if (!['downloading', 'installing', 'pending', 'queued'].includes(job.status)) return '';
+            if (!(job.downloadedBytes > 0) || !job.speed) return '';
+            const gb = b => (b / 1073741824).toFixed(1);
+            let eta = '';
+            const rate = _speedToBytes(job.speed);
+            if (rate > 0 && job.totalBytes > job.downloadedBytes) {
+                const s = Math.round((job.totalBytes - job.downloadedBytes) / rate);
+                eta = s >= 60 ? ` · ~${Math.round(s / 60)} min left` : ' · under 1 min left';
+            }
+            return `${job.speed} · ${gb(job.downloadedBytes)} / ${gb(job.totalBytes)} GB${eta}`;
+        }
 
         function _destroyDetailToggles() {
             _detailOpToggles.forEach(({ inst }) => inst?.el?.destroy?.());
@@ -940,10 +1035,24 @@ export const MpiModelManager = ComponentFactory.create({
             qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
 
             // Footer actions — the exact install/update/uninstall wiring from _buildCard.
-            // anyInstalled is checked BEFORE isBusy so a lingering terminal 'complete'
-            // job never keeps Cancel up once re-sync flips installed (MPI-241).
+            // isActiveDownload wins first (MPI-273): a LIVE download on an already-
+            // installed model (Update that adds an op/arch) must show Cancel + the
+            // progress bar, not keep "Update" up while bytes stream to disk unseen.
+            // anyInstalled is checked BEFORE the TERMINAL-lingering isBusy so a spent
+            // 'complete' job never keeps Cancel up once re-sync flips installed (MPI-241).
+            // MPI-317 (F3) — speed/ETA row above the footer. Visible whenever the
+            // download UI is up (Cancel showing); text fills on the first progress
+            // tick — the panel is NOT rebuilt on ticks (rebuildDetail:false), the
+            // download:progress listener patches this row's textContent in place.
+            detailStats.hidden = !(st.isActiveDownload || st.isBusy);
+            detailStats.textContent = _dlStatsText(st.job);
+
             detailActions.innerHTML = '';
-            if (st.anyInstalled) {
+            if (st.isActiveDownload) {
+                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'md' });
+                cancel.on('click', () => downloadService.cancel(model.id));
+                detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
+            } else if (st.anyInstalled) {
                 const label = st.draftDiffersFromInstalled ? 'Update' : 'Uninstall';
                 const primary = MpiButton.mount(ce('div'), { text: label, variant: 'secondary', size: 'md' });
                 primary.on('click', () => {
@@ -952,16 +1061,17 @@ export const MpiModelManager = ComponentFactory.create({
                 });
                 detailActions.appendChild(primary.el); _detailActionBtns.push(primary);
             } else if (st.isBusy) {
-                if (st.downloadState === 'downloading' && !_isRemote) {
-                    const pause = MpiButton.mount(ce('div'), { text: 'Pause', variant: 'secondary', size: 'md' });
-                    pause.on('click', () => downloadService.pause(model.id));
-                    detailActions.appendChild(pause.el); _detailActionBtns.push(pause);
-                } else if (st.downloadState === 'paused') {
-                    const resume = MpiButton.mount(ce('div'), { text: 'Resume', variant: 'primary', size: 'md' });
-                    resume.on('click', () => downloadService.resume(model.id));
-                    detailActions.appendChild(resume.el); _detailActionBtns.push(resume);
-                }
-                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'ghost', size: 'md' });
+                // Cancel only — Pause/Resume removed (MPI-258 Bug 2). Resume was for the
+                // old parallel-download model; installs are sequential now (MPI-184), so
+                // pause lost its purpose. It also corrupted large files: NDH resumes with
+                // `Range: bytes=<n>-` on a file opened in append mode; when R2/Cloudflare
+                // answers 200 (full body) instead of 206, NDH appends the WHOLE file onto
+                // the partial → SHA256 mismatch (observed live on the 25GB LTX transformer).
+                // Cancel does a clean stop() (removeOnStop) — no resume, no corruption.
+                // secondary (not ghost): ghost has no border/bg and was near-invisible
+                // unhovered against the dark detail panel — Cancel needs a visible resting
+                // affordance now that it's the only busy action. (MPI-258)
+                const cancel = MpiButton.mount(ce('div'), { text: 'Cancel', variant: 'secondary', size: 'md' });
                 cancel.on('click', () => downloadService.cancel(model.id));
                 detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
             } else {
@@ -988,8 +1098,15 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
 
         // ── Teardown of grid tiles ─────────────────────────────────────────────
+        // MPI-310 — MpiButton instances in the plugins row. Unlike tiles (plain DOM,
+        // cleared by the innerHTML wipe) these are components, so they need destroy()
+        // on every rebuild or each render leaks another listener set.
+        const _pluginBtns = [];
+
         function _destroyAllCards() {
             _tileInstances.clear();
+            _pluginBtns.forEach(b => b.destroy?.());
+            _pluginBtns.length = 0;
         }
 
         // ── Render signature (MPI-124) ─────────────────────────────────────
@@ -1028,14 +1145,25 @@ export const MpiModelManager = ComponentFactory.create({
             }).join('||')
                 // MPI-215: filter/search state is part of the visible output — a filter
                 // change with no per-model change must still force a rebuild.
-                + `##media:${[..._mediaActive].sort().join(',')}##size:${[..._filterActive].sort().join(',')}##q:${_searchQuery}`;
+                + `##media:${[..._mediaActive].sort().join(',')}##size:${[..._filterActive].sort().join(',')}##q:${_searchQuery}`
+                // MPI-310 — plugin install + job state. Without this the row never
+                // repaints: the sig is built from MODELS only, so installing a plugin
+                // would leave the button reading "Install" until something unrelated
+                // moved the model list.
+                + '##plugins:' + PLUGINS.map((p) => {
+                    const job = state.downloadJobs.find(j => j.modelId === pluginDepKey(p.id));
+                    return `${p.id}:${pluginAvailability(p).installed ? 1 : 0}:${job ? job.status : 'idle'}`;
+                }).join(',');
         }
 
         // ── Section sub-block (one media type, one aspect ratio) ──────────────
         // Renders a media sub-header (icon + count) then a contact-sheet grid of
         // lean tiles — all one aspect ratio so rows align (no ragged holes).
         function _mediaBlock(list, media) {
-            const items = list.filter(m => m.mediaType === media);
+            // Featured models sort first within each sub-grid (stable — Array.sort in
+            // modern V8 is stable, so non-featured keep their declared order).
+            const items = list.filter(m => m.mediaType === media)
+                .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
             if (!items.length) return;
             const head = ce('div', {
                 className: `mpi-model-library__media-head${media === 'video' ? ' mpi-model-library__media-head--video' : ''}`,
@@ -1056,6 +1184,97 @@ export const MpiModelManager = ComponentFactory.create({
             bodySlot.appendChild(header);
             if (_mediaActive.size === 0 || _mediaActive.has('image')) _mediaBlock(list, 'image');
             if (_mediaActive.size === 0 || _mediaActive.has('video')) _mediaBlock(list, 'video');
+        }
+
+        // ── Plugins section (MPI-310) ─────────────────────────────────────────
+        // Plugins are the third entity (see js/data/pluginsRegistry.js): a capability
+        // something else calls, not a thing you generate with. They render in their own
+        // row, deliberately OUTSIDE the media/size filters and outside the "N available"
+        // count — those describe models, and a captioner has no mediaType or sizeTier to
+        // filter on. Search still applies (a user typing "describe" should find it).
+        //
+        // They live here rather than behind a bespoke install prompt because the Library
+        // already owns install, uninstall, progress, the completion toast and the
+        // unfocused-app OS notification. Anywhere else means reimplementing all five.
+        function _pluginTile(plugin) {
+            const { installed } = pluginAvailability(plugin);
+            const job = state.downloadJobs.find(j => j.modelId === pluginDepKey(plugin.id));
+            const busy = !!job && !['complete', 'failed', 'cancelled'].includes(job.status);
+            const size = (plugin.requiredDeps || [])
+                .map(id => DEPS[id]?.size).filter(Boolean).join(' + ');
+
+            const tile = ce('div', { className: 'mpi-plugin-row' });
+            const info = ce('div', { className: 'mpi-plugin-row__info' });
+            info.innerHTML = `
+                <span class="mpi-plugin-row__icon">${renderIcon('text', 'sm')}</span>
+                <span class="mpi-plugin-row__text">
+                    <span class="mpi-plugin-row__name">${plugin.title}</span>
+                    <span class="mpi-plugin-row__desc">${plugin.description || ''}</span>
+                </span>
+                <span class="mpi-plugin-row__meta">${size}</span>`;
+            tile.appendChild(info);
+
+            const actions = ce('div', { className: 'mpi-plugin-row__actions' });
+            if (busy) {
+                // Progress is already narrated by the status bar + the completion toast;
+                // the row only needs to stop offering a second install.
+                actions.appendChild(ce('span', {
+                    className: 'mpi-plugin-row__state',
+                    textContent: job.status === 'queued' ? 'Queued' : 'Installing…',
+                }));
+            } else if (installed) {
+                const chip = ce('span', { className: 'mpi-plugin-row__state mpi-plugin-row__state--on' });
+                chip.innerHTML = `${renderIcon('check', 'sm')}Installed`;
+                actions.appendChild(chip);
+                const btn = MpiButton.mount(ce('div'), { text: 'Uninstall', variant: 'ghost', size: 'sm' });
+                btn.on('click', () => _uninstallPlugin(plugin));
+                _pluginBtns.push(btn);
+                actions.appendChild(btn.el);
+            } else {
+                const btn = MpiButton.mount(ce('div'), { text: `Install (${size})`, variant: 'primary', size: 'sm' });
+                btn.on('click', () => _installPlugin(plugin));
+                _pluginBtns.push(btn);
+                actions.appendChild(btn.el);
+            }
+            tile.appendChild(actions);
+            return tile;
+        }
+
+        async function _installPlugin(plugin) {
+            const dependencies = (plugin.requiredDeps || []).map(id => DEPS[id]).filter(Boolean);
+            if (!dependencies.length) return;
+            // Keyed by pluginDepKey so the job can never collide with a model id. The
+            // backend passes unknown ids straight through (_filterDepsForEngine), and
+            // the existing download:complete handler gives us the toast / OS notification
+            // for free.
+            await downloadService.start(pluginDepKey(plugin.id), dependencies);
+        }
+
+        function _uninstallPlugin(plugin) {
+            const deps = (plugin.requiredDeps || []).map(id => DEPS[id]).filter(Boolean);
+            if (!deps.length) return;
+            _showConfirm(
+                `Uninstall ${plugin.title}?\n• ${deps.map(d => d.size).filter(Boolean).join(' + ')} will be freed.\n• Files shared with other installed models will be kept.`,
+                async (deleteFiles) => {
+                    // The plugin's own key is what lets the server-side guard release
+                    // this weight — see _pluginRequiredDepIds(excludeUninstallId) in
+                    // routes/downloadManager.js. Passing a model id here would leave
+                    // the weight protected and the uninstall would silently no-op.
+                    await downloadService.uninstall(pluginDepKey(plugin.id), deps, deleteFiles);
+                },
+            );
+        }
+
+        function _pluginSection() {
+            const q = _searchQuery;
+            const list = PLUGINS.filter(p => q === '' || (p.title || '').toLowerCase().includes(q));
+            if (!list.length) return;
+            const header = ce('div', { className: 'mpi-model-library__section' });
+            header.innerHTML = `<span>Plugins</span><span class="mpi-model-library__section-n">${list.length}</span>`;
+            bodySlot.appendChild(header);
+            const wrap = ce('div', { className: 'mpi-plugin-list' });
+            list.forEach(p => wrap.appendChild(_pluginTile(p)));
+            bodySlot.appendChild(wrap);
         }
 
         // ── Render the contact sheet ────────────────────────────────────────
@@ -1096,11 +1315,16 @@ export const MpiModelManager = ComponentFactory.create({
                     className: 'mpi-model-library__empty',
                     textContent: 'No models match — clear filters or search.',
                 }));
+                // MPI-310 — still offer the plugins row: a search like "describe"
+                // matches no MODEL, and returning here would hide the only thing that
+                // DOES match.
+                _pluginSection();
                 return;
             }
 
             _section('Installed', installed);
             _section('Available', available);
+            _pluginSection();
 
             // Keep an open detail panel coherent after a full rebuild (install state
             // moved, engine switched, re-sync landed). Guard: openDetail must not be
@@ -1145,7 +1369,13 @@ export const MpiModelManager = ComponentFactory.create({
         function _patchTile(modelId, { rebuildDetail = true } = {}) {
             const tileRef = _tileInstances.get(modelId);
             const model = MODELS.find(m => m.id === modelId);
-            if (tileRef && model) tileRef.stateEl.innerHTML = _tileState(_modelState(model));
+            if (tileRef && model) {
+                const st = _modelState(model);
+                tileRef.stateEl.innerHTML = _tileState(st);
+                // MPI-284: waiting mascot only while queued — drop it once the
+                // job starts downloading (or any other transition).
+                if (tileRef.mascot) tileRef.mascot.classList.toggle('mpi-tile__mascot--visible', st.downloadState === 'queued');
+            }
             // Only rebuild the open slide-over on real STATE transitions (pause /
             // resume / install-phase) — those flip the footer buttons. A byte-level
             // progress tick changes nothing visible in the panel, so rebuilding it
@@ -1154,7 +1384,16 @@ export const MpiModelManager = ComponentFactory.create({
             if (rebuildDetail && _activeDetail && _activeDetail.id === modelId && model) openDetail(model);
         }
 
-        _unsubs.push(Events.on('download:progress', ({ modelId }) => { _patchTile(modelId, { rebuildDetail: false }); }));
+        _unsubs.push(Events.on('download:progress', (data) => {
+            _patchTile(data.modelId, { rebuildDetail: false });
+            // MPI-317 (F3) — the open panel is not rebuilt on ticks; patch just the
+            // stats row. The event payload carries speed/bytes but no status — the
+            // job in state is the source for that.
+            if (_activeDetail && _activeDetail.id === data.modelId && !detailStats.hidden) {
+                const job = state.downloadJobs.find(j => j.modelId === data.modelId);
+                if (job) detailStats.textContent = _dlStatsText(job);
+            }
+        }));
 
         // download:started — patch ONLY the started model's tile (progress bar) + flip
         // its open detail footer to Cancel. The model's tile already exists (the grid
@@ -1164,26 +1403,99 @@ export const MpiModelManager = ComponentFactory.create({
         // in downloadService.start() + the backend SSE echo — so a full rebuild also ran
         // twice.) A section move (available → installed) is handled by the sig-guarded
         // renderList() on download:complete.
+        // download:snapshot — the store's authoritative feed (G9), broadcast on every
+        // SSE connect. On a renderer reload mid-download the grid mounts before SSE
+        // reconnects, so it renders active cards as Install; this snapshot restores the
+        // live job in state.downloadJobs, and the sig-guarded renderList() repaints the
+        // recovered progress bar (the download never stopped server-side). Sig-guarded
+        // so an idle snapshot (no job change) is a no-op. MPI-276 Phase 8.
+        _unsubs.push(Events.on('download:snapshot', () => { renderList(); }));
+
+        // Missed-terminal backstop (MPI-276 Phase 8). Correctness must not ride on SSE
+        // delivery: if a terminal download:complete lands in an SSE-reconnect gap (e.g.
+        // a renderer reload right as the download finishes), the card sticks at 99% with
+        // no event to flip it — only a manual refresh recovered it. While the Library
+        // holds any active job, quiet-resync against disk truth every 5s so a lost
+        // terminal self-corrects. Self-idles the moment no job is active (no forever
+        // poll). Reuses awaitReSync — the exact recovery the refresh button does.
+        let _backstopTimer = null;
+        function _pumpBackstop() {
+            const active = state.downloadJobs.some(
+                j => ['downloading', 'installing', 'pending', 'queued'].includes(j.status));
+            if (active && !_backstopTimer) {
+                _backstopTimer = setInterval(() => {
+                    const stillActive = state.downloadJobs.some(
+                        j => ['downloading', 'installing', 'pending', 'queued'].includes(j.status));
+                    if (!stillActive) { clearInterval(_backstopTimer); _backstopTimer = null; return; }
+                    awaitReSync({ quiet: true });
+                }, 5000);
+            }
+        }
+        _unsubs.push(() => { if (_backstopTimer) { clearInterval(_backstopTimer); _backstopTimer = null; } });
+        _unsubs.push(Events.on('download:started', () => { _pumpBackstop(); }));
+        _unsubs.push(Events.on('download:snapshot', () => { _pumpBackstop(); }));
+
         _unsubs.push(Events.on('download:started', ({ modelId }) => { _patchTile(modelId); }));
 
-        _unsubs.push(Events.on('download:paused', ({ modelId }) => { _patchTile(modelId); }));
-        _unsubs.push(Events.on('download:resumed', ({ modelId }) => { _patchTile(modelId); }));
         _unsubs.push(Events.on('download:installing', ({ modelId }) => { _patchTile(modelId); }));
 
-        _unsubs.push(Events.on('download:cancelled', () => { awaitReSync(); }));
+        // MPI-258 Bug B — patch the cancelled model's OWN tile + detail back to Install
+        // immediately. awaitReSync()'s renderList() short-circuits when the installed set
+        // is unchanged (a cancel never installs anything), so the tile kept its frozen
+        // progress bar at the cancel-% and the footer stayed Cancel. _patchTile rebuilds
+        // that one tile from _modelState (now idle → Install chip). Still re-sync after,
+        // for any shared-dep bytes that did land.
+        _unsubs.push(Events.on('download:cancelled', ({ modelId } = {}) => {
+            if (modelId) _patchTile(modelId);
+            awaitReSync();
+        }));
         _unsubs.push(Events.on('download:complete', async () => { awaitReSync(); }));
 
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
-            const modelName = MODELS.find(m => m.id === modelId)?.name || modelId;
+            // MPI-310 — modelId is a PLUGIN key (`plugin:<id>`) on the plugin-row path,
+            // which MODELS never contains: the raw key leaked into the toast text.
+            const modelName = MODELS.find(m => m.id === modelId)?.name
+                || PLUGINS.find(p => pluginDepKey(p.id) === modelId)?.title
+                || modelId;
             const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
+            // "shared" wording is only honest when ANOTHER MODEL still needs a dep
+            // (keptShared carries sharedWith). keptUniversal/keptPipInstalls are
+            // engine-owned files (VAE, custom nodes, pip env) shared with no model —
+            // saying "shared files kept" there falsely implies a sibling model.
+            const keptForModel = keptShared.length + keptModelFiles.length;
             if (removed.length > 0 && keptTotal === 0) {
                 Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
-            } else if (removed.length > 0) {
+            } else if (removed.length > 0 && keptForModel > 0) {
                 Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} updated (some shared files kept).` });
+            } else if (removed.length > 0) {
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
             } else if (keptModelFiles.length > 0) {
                 Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.` });
             } else {
-                Events.emit('ui:info', { title: 'Nothing to remove', message: `${modelName} — all files are shared with other models or required by the engine.` });
+                // MPI-310 — NAME the holders. The generic wording ("shared with other
+                // models") left the user unable to tell a correct no-op from a broken
+                // uninstall — the exact confusion after the shared-dep guard fix, where
+                // uninstalling the Image Describer frees nothing because a Krea2 card
+                // needs the same encoder. The guard already resolved who is holding each
+                // dep into keptShared[].sharedWith; the '(installing)'/'(app)'/'(plugin)'
+                // sentinels are internal markers, not names, so they are filtered out.
+                const holders = [...new Set(keptShared.flatMap(k => k.sharedWith || []))]
+                    .filter(n => n && !/^\((installing|app|plugin)\)$/.test(n));
+                // Cap the list at two + an overflow count. A weight shared by a whole
+                // model family (the abliterated encoder backs four Krea2 cards) would
+                // otherwise comma-join every name into an alarming wall of text. Two
+                // names keep the answer actionable — "uninstall that one first" — which
+                // a fully generic message loses.
+                const extra = holders.length - 2;
+                const who = extra > 0
+                    ? `${holders.slice(0, 2).join(', ')} and ${extra} more`
+                    : holders.join(' and ');
+                Events.emit('ui:info', {
+                    title: 'Files kept',
+                    message: holders.length
+                        ? `${modelName} — files kept, ${who} ${holders.length > 1 ? 'also use' : 'also uses'} them.`
+                        : `${modelName} — files kept; they are shared with other models or required by the engine.`,
+                });
             }
         }));
 

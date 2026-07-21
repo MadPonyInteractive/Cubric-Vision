@@ -1,0 +1,125 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f3cb9c0b-6711-44da-b84e-a86f3a452768",
+  "generated_at": "2026-07-21T14:45:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-324 RunPod validation sweep (1.2.0 release gate) — staging done on CPU pod, GPU verification pending",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Umbrella session to validate every RunPod-deferred 1.2.0 card in ONE Pod session so cards can close before the Thursday release. Do downloads on a cheap CPU 'download-mode' pod first, then switch to a GPU pod on the same volume for generation. MPI-198 deferred by the user.",
+    "status": "in_progress",
+    "summary": "Staging is COMPLETE on a CPU download-mode Pod: all sweep weights are on the 150GB network volume (vol id 9t3awufudk). Next is the GPU-pod half: connect to the SAME volume and run MPI-324 validation phases A-D. No generation has run yet."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+    "completed": [
+      "Built umbrella card MPI-324 with the session runsheet (order + cross-card gotchas + results table)",
+      "MPI-309 unblocked: bumped dev_configs/node_lock.json MpiNodes pin ba9e1569 -> aaa1d2d9fa713decae6843e64f5a81b84f9f443d (v1.2.6). Class-map diff is a pure superset (adds MpiBox/MpiBoxCrop/MpiBoxMask/MpiFromBox, removes nothing). UNCOMMITTED.",
+      "CPU download-mode Pod: staged all sweep weights onto the volume — Qwen Image Edit (installed), Krea 2 (installed), the shared abliterated encoder qwen3vl_4b_abliterated_fp8_scaled.safetensors (5.24GB, satisfies both Krea 2 and Image Describer), Head Swap app deps (Qwen-backed + 1.2GB extra, app reads READY). Volume ~62GB/150GB.",
+      "Diagnosed the stuck Image-Describer install row to root; folded the fix into MPI-320 and deferred to v1.3 (user decision)."
+    ],
+    "pending": [
+      "Delete CPU pod; create a GPU pod attached to the SAME volume 9t3awufudk",
+      "GPU first-checks: (1) Head Swap enqueue does NOT reject app_head_swap.json with unknown-node-type = MPI-309 box nodes landed; (2) does the describer row settle + does Describe image work; (3) tier radios route (Quality != Hyper step count)",
+      "Phase A: Head Swap remote generation (MPI-299/306)",
+      "Phase B: Krea 2 masked edit (MPI-282) — accel LoRA resolves, tier-2 8+3 steps not silently baked, crop/stitch no seam",
+      "Phase C: Qwen-Edit (MPI-300) — tiers route, 2-image combine, 3rd-image chip (untested anywhere), style rack",
+      "Phase D LAST: Image Describer (MPI-310) — describe from gallery+history, negative-mode flip, inverse GC check, then uninstall (5GB refetch risk) dead last",
+      "Fill the MPI-324 results table; move each sub-card to done on its own remote pass",
+      "After the Pod confirms it reinstalled MpiNodes aaa1d2d, commit dev_configs/node_lock.json and close MPI-309"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-324",
+    "title": "RunPod validation sweep (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-324/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-324/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "drive the Pod validation with the user (user operates the app + connects the Pod)",
+    "fill MPI-324 results table + sub-card validation.md files",
+    "move a sub-card to done ONLY on its own remote pass",
+    "commit dev_configs/node_lock.json AFTER the Pod confirms the aaa1d2d reinstall"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-324 created with full runsheet",
+      "MPI-309 move to doing/validating + node_lock bump rationale logged (task.json + events.jsonl + board.json)",
+      "MPI-310: remote stuck-plugin-row repro + root-cause hypothesis logged",
+      "MPI-320: plugin-row branch-order fix + reconciler/plugin-awareness + shared-dep completion fan-out folded in, deferred v1.3"
+    ],
+    "pending": [
+      "Commit dev_configs/node_lock.json once the GPU Pod verifies it reinstalled MpiNodes aaa1d2d (currently uncommitted)",
+      "On each sub-card remote pass: update its validation.md + move to done",
+      "Session close-out (/mpi-end) after the sweep to file any residual findings"
+    ]
+  },
+  "next_action": {
+    "description": "Staging on the CPU download pod is done — all sweep weights are on volume 9t3awufudk (~62GB/150GB). Delete the CPU pod, create a GPU pod on the SAME volume, connect, then run the first-checks and MPI-324 phases A-D per .agents/mpi-kanban/tasks/MPI-324/validation.md. First check is Head Swap enqueue (no unknown-node rejection = MPI-309 box nodes proven).",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "CPU-then-GPU (Design A 'No GPU download only') to stage weights cheaply before paying for a GPU — blessed flow; the -cpu image runs wrapper-only, no ComfyUI.",
+      "Head Swap folded into the sweep because MPI-309 (node_lock bump) unblocks it and the user had already pushed MpiNodes v1.2.6; MpiFromBox rode along too.",
+      "Stuck Image-Describer install ROW is NOT a v1.2 blocker: describe keys off pluginAvailability (disk truth), so the feature works. Fix folded into MPI-320 for v1.3 (do NOT patch during release week).",
+      "MPI-198 explicitly deferred (Linux/mac LOCAL engine, not a RunPod concern)."
+    ],
+    "constraints": [
+      "local-engine pass proves NOTHING about the remote path (feedback_runpod_not_local_engine_proof) — everything in the sweep has passed locally, none on a Pod.",
+      "The GPU pod MUST attach the same volume 9t3awufudk or the staged weights are gone.",
+      "MPI-282 remote risks: krea2-lora-accelerator (new MPI-316 dep) must resolve (silent-degrade if missing); turbo-ON must render tier 2 (8+3 steps), tier is INJECTED and failure is silent; backslash subfolder LoRA path on Linux (existing LoRAs work this way — confirm).",
+      "MPI-300: the 3rd-image chip (Input_Image_3) is untested ANYWHERE, not just remotely.",
+      "MPI-310 uninstall test is DEAD LAST of the whole session (re-install = 5GB refetch); do the inverse GC check (uninstall an unrelated model, describer stays Installed) first.",
+      "The describer plugin row will keep showing 'Installing' this session — expected, ignore it; verify via the Describe image action instead."
+    ],
+    "files_modified": [
+      "dev_configs/node_lock.json (MpiNodes pin bump — UNCOMMITTED)",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-324/ (new: task.json, events.jsonl, validation.md)",
+      ".agents/mpi-kanban/tasks/MPI-309/ (task.json + events.jsonl — moved to doing/validating)",
+      ".agents/mpi-kanban/tasks/MPI-310/ (task.json + events.jsonl — stuck-row repro)",
+      ".agents/mpi-kanban/tasks/MPI-320/ (task.json + events.jsonl — v1.3 fold-in)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-282/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-300/task.json",
+      ".agents/mpi-kanban/tasks/MPI-310/validation.md",
+      "docs/runpod-remote-engine.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["download-manager", "runpod-remote-engine", "comfy_engine", "models/krea2", "models/qwen-edit"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-21T14:45:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/f3cb9c0b-6711-44da-b84e-a86f3a452768.json and use mpi-continue to resume the MPI-324 RunPod validation sweep for the 1.2.0 release. Staging is DONE: all sweep weights (Qwen Image Edit, Krea 2, the shared abliterated encoder, Head Swap deps) are on the 150GB network volume 9t3awufudk, staged on a cheap CPU download-mode pod. The user will now delete the CPU pod and create a GPU pod on that SAME volume. Once connected, run the first-checks then phases A-D from .agents/mpi-kanban/tasks/MPI-324/validation.md: (A) Head Swap remote gen — the very first check is that enqueuing Head Swap does NOT reject app_head_swap.json with an unknown-node-type, which proves MPI-309's node_lock bump to MpiNodes aaa1d2d landed on the Pod; (B) Krea 2 masked edit; (C) Qwen-Edit incl. the untested 3rd-image chip; (D) Image Describer LAST, uninstall dead-last. The Image Describer install ROW is stuck on 'Installing' — that is a known display bug folded into MPI-320 for v1.3, NOT a blocker; verify the describer via the Describe image action instead. dev_configs/node_lock.json is bumped but UNCOMMITTED — commit it only after the Pod confirms it reinstalled MpiNodes aaa1d2d. Fill the MPI-324 results table and move each sub-card to done only on its own remote pass. MPI-198 stays deferred."
+}

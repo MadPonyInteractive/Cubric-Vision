@@ -13,11 +13,14 @@
  *   - Packaged app: <APP_USER_DATA>/logs/app.log  (set by main.js via env var)
  *   - Development:  <project_root>/logs/app.log
  *
- * Rotation: when app.log exceeds MAX_LOG_BYTES it is renamed to app.log.1
+ * Retention: when app.log exceeds MAX_LOG_BYTES it is renamed to app.log.1
  * and a fresh app.log is started. Only one backup is kept.
  *
- * Line trimming: on startup, if app.log exceeds MAX_LOG_LINES lines it is
- * trimmed in-place to the last TRIM_TO_LINES lines.
+ * Rotation is the ONLY retention mechanism. A startup line-trim used to also
+ * run here; it was removed in MPI-315 because it rewrote app.log in place
+ * (destroying history rotation would have preserved) and swallowed its own
+ * errors, so a failed trim was silent. Do not reintroduce it — if app.log
+ * grows too fast, fix the noise at the source, not by deleting evidence.
  */
 
 const fs   = require('fs-extra');
@@ -26,9 +29,11 @@ const { redactSecrets } = require('./secretRedaction');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const MAX_LOG_BYTES  = 2 * 1024 * 1024; // 2 MB before rotation
-const MAX_LOG_LINES  = 2500;            // line count that triggers a trim
-const TRIM_TO_LINES  = 2000;            // lines kept after trimming
+// 256 KB ≈ 2000 lines — deliberately close to the old 2500-line startup cap,
+// which is the size this log was comfortable at for months. Two files means a
+// ~512 KB ceiling total. Kept small so an agent can read the whole file without
+// burning its context; that is a real constraint here, not a disk concern.
+const MAX_LOG_BYTES  = 256 * 1024;
 const RING_SIZE      = 200;             // in-memory lines kept for live reads
 
 const LOGS_DIR = process.env.APP_USER_DATA
@@ -45,32 +50,8 @@ let _ring   = [];      // circular in-memory buffer
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-/**
- * Trim app.log in-place to the last TRIM_TO_LINES lines if it currently
- * exceeds MAX_LOG_LINES lines.  Runs once at startup after the logs dir is
- * confirmed to exist.
- */
-async function _trimLogFile() {
-    try {
-        const exists = await fs.pathExists(LOG_PATH);
-        if (!exists) return;
-
-        const content = await fs.readFile(LOG_PATH, 'utf8');
-        const lines   = content.split('\n');
-
-        // Remove the trailing empty element that split() adds after a final \n
-        if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
-
-        if (lines.length <= MAX_LOG_LINES) return;
-
-        const trimmed = lines.slice(-TRIM_TO_LINES).join('\n') + '\n';
-        await fs.writeFile(LOG_PATH, trimmed, 'utf8');
-    } catch (_) { /* non-fatal — trimming is best-effort */ }
-}
-
-// Ensure logs directory exists asynchronously at startup, then trim if needed.
+// Ensure logs directory exists asynchronously at startup.
 fs.ensureDir(LOGS_DIR)
-    .then(() => _trimLogFile())
     .then(() => { _ready = true; })
     .catch(err => console.error('[logger] Failed to create logs dir:', err));
 

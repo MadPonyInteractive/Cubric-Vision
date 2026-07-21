@@ -162,8 +162,14 @@ function _universalNodeFilenames() {
   _universalNodeNames = new Set();
   try {
     // CJS-friendly read of the ESM dep registry (same pattern as shared.js).
+    // MPI-293: read nodesDeps.js — NOT dependencies.js. dependencies.js merely
+    // SPREADS `...nodesDeps` (it holds no inline custom_nodes block text), so the
+    // per-dep block regex below matched NOTHING there → the universal/baked set was
+    // silently EMPTY → every baked node (comfyui_controlnet_aux et al.) was treated
+    // as non-resident and sent to the wrapper, dying with the Errno-2 requirements
+    // self-heal on a fresh volume. The custom_nodes blocks live in nodesDeps.js.
     const path = require('path');
-    const file = path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'dependencies.js');
+    const file = path.join(__dirname, '..', 'js', 'data', 'modelConstants', 'nodesDeps.js');
     const src = require('fs').readFileSync(file, 'utf8');
     // Split into per-dep blocks at the top-level "  'id': {" keys so the marker
     // checks stay scoped to ONE dep (a whole-file regex leaks across deps). A
@@ -173,7 +179,16 @@ function _universalNodeFilenames() {
     let km;
     while ((km = keyRe.exec(src)) !== null) starts.push(km.index);
     for (let i = 0; i < starts.length; i++) {
-      const block = src.slice(starts[i], starts[i + 1] ?? src.length);
+      let block = src.slice(starts[i], starts[i + 1] ?? src.length);
+      // MPI-244: cut the block at its OWN closing `},` (4-space indent). Without
+      // this, the block bleeds into the NEXT dep's leading comments, and a comment
+      // that merely MENTIONS "installRequirements:true" (e.g. controlnet_aux's
+      // "⇒ installRequirements:true ⇒ BAKED" doc) falsely flags the PRECEDING
+      // code-only node (ComfyUI-Krea2-ControlNet, installRequirements:false) as
+      // baked → the app skips its volume install → the node is MISSING on the Pod
+      // → Krea2 gen fails ComfyUI node validation.
+      const close = block.search(/^\s{4}\},/m);
+      if (close !== -1) block = block.slice(0, close);
       if (!/type:\s*'custom_nodes'/.test(block)) continue;
       if (!/installRequirements:\s*true/.test(block)) continue;
       const fn = block.match(/filename:\s*'([^']+)'/);
@@ -353,6 +368,11 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
     const pinnedCommit = getPinnedNodeCommit(dep.id);
     if (pinnedCommit) body.commit = pinnedCommit;
     if (dep.installRequirementsCommand) body.install_command = dep.installRequirementsCommand;
+    // MPI-276: pass known-good pip pins (e.g. kornia==0.8.2 for LTXVideo) so the
+    // wrapper forces them AFTER requirements — parity with the local install path
+    // (downloadManager _runCustomNodeInstall). Without this a remote node's
+    // unpinned requirement could float to a version that breaks its import.
+    if (Array.isArray(dep.pipPins) && dep.pipPins.length) body.pip_pins = dep.pipPins;
     // requirements_only: the node folder is already on the volume, just (re-)run
     // its requirements.txt idempotently — do NOT re-download or remove the folder.
     // Self-heals a node that landed without its pip deps. (set by downloadManager
@@ -675,4 +695,5 @@ module.exports = {
   remoteUploadModel,
   remoteCancelInstall,
   openInstallEventStream,
+  _isImageResident,
 };

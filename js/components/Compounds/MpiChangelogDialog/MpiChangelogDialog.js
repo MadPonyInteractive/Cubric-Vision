@@ -70,6 +70,17 @@ export const MpiChangelogDialog = ComponentFactory.create({
 
     let _version = '';
 
+    // ── Minimal inline markdown → safe HTML (bold / italic / code) ─────────
+    // Not a full parser: escapes HTML first, then applies **bold**, *italic*,
+    // `code`. Enough to make release notes readable without a dependency.
+    const _esc = (s) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const _inlineMd = (raw) =>
+      _esc(String(raw))
+        .replace(/`([^`]+)`/g, '<code class="mpi-changelog__code">$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+
     // ── Render a single section (heading + bullet list) ────────────────────
     const _renderSection = ({ key, title, icon, tone }, notes) => {
       const items = Array.isArray(notes[key]) ? notes[key] : [];
@@ -93,7 +104,16 @@ export const MpiChangelogDialog = ComponentFactory.create({
       items.forEach((text) => {
         const li = document.createElement('li');
         li.className = 'mpi-changelog__item';
-        li.textContent = text;
+        // Notes follow a "LEAD PHRASE — body" shape. Split on the first em-dash
+        // to give the lead its own bold line and let the body breathe below it.
+        const m = String(text).match(/^(.*?)\s+—\s+([\s\S]+)$/);
+        if (m) {
+          li.innerHTML =
+            `<span class="mpi-changelog__lead">${_inlineMd(m[1])}</span>` +
+            `<span class="mpi-changelog__desc">${_inlineMd(m[2])}</span>`;
+        } else {
+          li.innerHTML = `<span class="mpi-changelog__desc">${_inlineMd(text)}</span>`;
+        }
         list.appendChild(li);
       });
       section.appendChild(list);

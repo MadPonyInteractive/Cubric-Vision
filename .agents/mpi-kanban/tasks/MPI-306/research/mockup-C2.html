@@ -1,0 +1,869 @@
+<!-- DESIGN NOTES — MOCK-UP C2 (revision of C, per user draft)
+  THESIS: "Surgical precision, with air." C's density kept for the gizmo;
+  everything else pulled to a centre gravity with generous outer margins.
+  Content clusters toward the middle; the outer edges stay deliberately empty.
+
+  FROM THE USER'S DRAFT:
+  - Outer air is structural. Wide left/right margins on every step.
+  - Divider is INSET top and bottom — it never touches the chrome. It is a
+    quiet --line hairline, not an accent rule.
+  - Ambient gradient background (radial, warm dusk) instead of a flat fill.
+  - Left column is a vertically-centred GROUP, not a filled column.
+  - Slot = placeholder, not container. Empty: bordered box + icon. Filled:
+    the image IS the box — border hugs the image at its own aspect, no crop,
+    no letterbox padding.
+  - Last step mirrors step 0: controls left, result right, composition
+    pulled to centre rather than spread edge-to-edge.
+
+  CHANGED FROM C (per user):
+  - Middle steps REVERT to the written design: bounded centred canvas,
+    title above, guidance below, NO annotation column, no 60/40 split.
+    C's argument that step-2 copy needs a column was rejected — the copy
+    lives below the canvas.
+  - Step ticker is now CLICKABLE. This overturns "dots indicate but do not
+    navigate": rather than making an inert thing look inert, the header
+    steps navigate for real.
+
+  CUT:
+  - The 60/40 middle-step split, the annotation column, step dots,
+    prompt UI (banned), seed UI (banned).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Head Swap — Cubric Vision App Frame C2</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+:root {
+  --surface-0: oklch(0.50 0.022 350);
+  --surface-1: oklch(0.46 0.022 350);
+  --surface-2: oklch(0.42 0.022 350);
+  --surface-3: oklch(0.55 0.024 350);
+  --surface-bar: oklch(0.34 0.022 350);
+  --surface-canvas: oklch(0.28 0.020 350);
+  --ink-1: oklch(0.98 0.008 80);
+  --ink-2: oklch(0.85 0.012 80);
+  --ink-3: oklch(0.66 0.014 80);
+  --ink-4: oklch(0.50 0.018 80);
+  --line: oklch(0.72 0.018 350 / 0.16);
+  --line-soft: oklch(0.72 0.015 350 / 0.08);
+  --accent-heat: oklch(0.76 0.17 355);
+  --accent-frost: oklch(0.82 0.13 220);
+  --accent-ok: oklch(0.78 0.13 150);
+  --accent-warn: oklch(0.78 0.14 60);
+  --t-2xs: 10px; --t-xs: 11px; --t-sm: 13px; --t-md: 15px; --t-lg: 19px; --t-xl: 32px;
+  --s-1: 4px; --s-2: 8px; --s-3: 14px; --s-4: 22px; --s-5: 32px; --s-6: 48px; --s-7: 72px;
+  --r-1: 0px; --r-2: 4px; --r-3: 12px; --r-pill: 999px;
+  --ease: cubic-bezier(0.16,1,0.3,1);
+  --t-fast: 200ms; --t-base: 280ms; --t-slow: 480ms;
+  --z-nav: 10; --z-dialog: 40;
+}
+
+body {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--t-md);
+  color: var(--ink-1);
+  /* Ambient gradient — CENTRE-OUT HORIZONTALLY: brightest along the centre
+     column where the work sits, falling away to the left and right edges.
+     Grounded on the App/Model Library surface (--lib-bg: oklch(0.26 0.020 350))
+     so the three overlays read as one family. Stops to be tuned live in the app. */
+  background:
+    radial-gradient(ellipse 75% 120% at 50% 50%,
+      oklch(0.29 0.021 350) 0%,
+      oklch(0.26 0.020 350) 55%,
+      oklch(0.225 0.019 350) 100%);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  user-select: none;
+}
+
+/* ── Top bar ────────────────────────────────────────────────────── */
+.topbar {
+  background: oklch(0.225 0.019 350 / 0.92);
+  border-bottom: 1px solid var(--line-soft);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--s-4);
+  height: 38px; flex-shrink: 0;
+  position: relative; z-index: var(--z-nav);
+}
+.topbar-left { display: flex; align-items: center; gap: var(--s-3); }
+.app-label {
+  font-size: var(--t-2xs); color: var(--ink-4);
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.app-name { font-size: var(--t-sm); color: var(--ink-2); font-weight: 600; }
+.topbar-sep { width: 1px; height: 13px; background: var(--line); }
+
+/* Clickable film-slate ticker */
+.step-ticker { display: flex; align-items: center; gap: var(--s-1); }
+.tick {
+  display: flex; align-items: baseline; gap: 7px;
+  padding: 5px var(--s-3);
+  background: none; border: 0; border-radius: var(--r-2);
+  font-family: inherit; font-size: var(--t-2xs);
+  letter-spacing: 0.08em; color: var(--ink-4);
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.tick:hover { color: var(--ink-2); background: oklch(0.55 0.024 350 / 0.28); }
+.tick:focus-visible { outline: 1px solid var(--accent-frost); outline-offset: 1px; }
+.tick .num { font-variant-numeric: tabular-nums; opacity: 0.75; }
+.tick[data-state="done"] { color: var(--ink-3); }
+.tick[data-state="active"] { color: var(--accent-heat); }
+.tick[data-state="active"] .num { opacity: 1; }
+
+.close-btn {
+  background: none; border: 0; color: var(--ink-4);
+  font-size: var(--t-md); cursor: pointer; padding: 2px 6px;
+  font-family: inherit; line-height: 1;
+  transition: color var(--t-fast) var(--ease);
+}
+.close-btn:hover { color: var(--ink-1); }
+
+/* ── Stage ──────────────────────────────────────────────────────── */
+.stage { flex: 1; position: relative; overflow: hidden; }
+
+.slide {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--t-base) var(--ease);
+}
+.slide[data-active="true"] { opacity: 1; pointer-events: auto; }
+
+/* Arrows — vertically centred, outside the content */
+.nav-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 64px;
+  background: none; border: 0;
+  color: var(--ink-4); font-size: 26px; line-height: 1;
+  font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color var(--t-fast) var(--ease);
+  z-index: var(--z-nav);
+}
+.nav-arrow:hover:not(:disabled) { color: var(--accent-heat); }
+.nav-arrow:focus-visible { outline: 1px solid var(--accent-frost); }
+.nav-arrow:disabled { opacity: 0; pointer-events: none; }
+.nav-prev { left: var(--s-3); }
+.nav-next { right: var(--s-3); }
+
+/* ── Split layout: air outside, gravity toward centre ───────────── */
+.split {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-7);
+  width: 100%;
+  max-width: 1180px;
+  padding: var(--s-6) var(--s-7);
+}
+/* The divider: INSET top and bottom — never touches the chrome */
+.divider {
+  width: 1px;
+  height: 62%;
+  min-height: 240px;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    var(--line) 12%,
+    var(--line) 88%,
+    transparent 100%);
+}
+
+/* Left column — a vertically-centred GROUP, not a filled column */
+.col-left {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--s-6);
+  justify-self: center;
+}
+.col-right { justify-self: center; max-width: 460px; }
+
+/* ── Slot: placeholder, not container ───────────────────────────── */
+.slot-unit { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); }
+.slot-label {
+  font-size: var(--t-sm); color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.slot {
+  width: 208px; height: 148px;
+  border: 1px solid var(--line);
+  background: oklch(0.26 0.018 350 / 0.5);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--s-2);
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.slot:hover, .slot:focus-visible {
+  border-color: var(--ink-4);
+  background: oklch(0.29 0.020 350 / 0.6);
+  outline: none;
+}
+.slot.dragover { border-color: var(--accent-heat); }
+.slot-icon { color: var(--ink-4); }
+.slot-hint { font-size: var(--t-2xs); color: var(--ink-4); letter-spacing: 0.04em; }
+
+/* FILLED: the image IS the box. Border hugs the image at its own aspect.
+   No fixed height, no crop, no letterbox padding. */
+.slot.filled {
+  width: auto; height: auto;
+  padding: 0; gap: 0;
+  background: none;
+  border-color: var(--line);
+  display: block; position: relative;
+  line-height: 0;
+}
+.slot.filled:hover { border-color: var(--ink-4); }
+.slot.filled img, .slot.filled svg {
+  display: block;
+  max-width: 208px;
+  max-height: 190px;
+  width: auto; height: auto;
+}
+.slot-clear {
+  position: absolute; top: 5px; right: 5px;
+  width: 19px; height: 19px;
+  background: oklch(0.24 0.018 350 / 0.82);
+  border: 0; color: var(--ink-2);
+  font-family: inherit; font-size: var(--t-2xs); line-height: 1;
+  cursor: pointer; opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.slot.filled:hover .slot-clear { opacity: 1; }
+.slot-clear:hover { color: var(--accent-heat); }
+
+/* ── Right pane (step 0) ────────────────────────────────────────── */
+.app-title {
+  font-size: var(--t-xl); font-weight: 700;
+  letter-spacing: -0.02em; color: var(--ink-1);
+  text-align: center; margin-bottom: var(--s-5);
+}
+.example-frame {
+  border: 1px solid var(--line); line-height: 0;
+  margin-bottom: var(--s-5);
+}
+.example-frame svg { display: block; width: 100%; height: auto; }
+/* Prose: block centred, text LEFT-aligned, capped measure */
+.explainer {
+  font-size: var(--t-sm); line-height: 1.65;
+  color: var(--ink-2); max-width: 62ch;
+  margin: 0 auto;
+}
+.explainer p + p { margin-top: var(--s-3); }
+.explainer strong { color: var(--ink-1); font-weight: 600; }
+
+/* ── Middle steps: bounded, centred canvas ──────────────────────── */
+.work {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-5) var(--s-7);
+  max-width: 900px; width: 100%;
+}
+.work-title {
+  font-size: var(--t-lg); font-weight: 600;
+  letter-spacing: -0.01em; color: var(--ink-1); text-align: center;
+}
+.canvas-bound {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--surface-canvas);
+  line-height: 0;
+  touch-action: none;
+}
+.canvas-bound svg { display: block; }
+.work-hint {
+  font-size: var(--t-sm); line-height: 1.6;
+  color: var(--ink-3); text-align: center;
+  max-width: 60ch;
+}
+.work-hint em { color: var(--ink-1); font-style: normal; font-weight: 600; }
+
+/* ── Box gizmo ──────────────────────────────────────────────────── */
+.gizmo { position: absolute; border: 1px solid var(--accent-heat); cursor: move; }
+.gizmo::after {
+  content: ''; position: absolute; inset: 0;
+  outline: 9999px solid oklch(0.18 0.016 350 / 0.56);
+  pointer-events: none;
+}
+.handle {
+  position: absolute; width: 9px; height: 9px;
+  background: var(--accent-heat);
+  z-index: 2;
+}
+.h-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.h-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.h-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.h-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.h-n { top: -5px; left: 50%; margin-left: -4.5px; cursor: ns-resize; }
+.h-s { bottom: -5px; left: 50%; margin-left: -4.5px; cursor: ns-resize; }
+.h-w { left: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+.h-e { right: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+.gizmo-dim {
+  position: absolute; top: -21px; left: 0;
+  font-size: var(--t-2xs); color: var(--accent-heat);
+  font-variant-numeric: tabular-nums; letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* ── Step 3 controls ────────────────────────────────────────────── */
+.controls { display: flex; flex-direction: column; gap: var(--s-5); width: 236px; }
+.control-group { display: flex; flex-direction: column; gap: var(--s-3); }
+.group-label {
+  font-size: var(--t-2xs); color: var(--ink-4);
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.tier { display: flex; flex-direction: column; gap: 1px; }
+.tier-opt {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--s-3);
+  background: oklch(0.26 0.018 350 / 0.45);
+  border: 1px solid transparent;
+  cursor: pointer; text-align: left; font-family: inherit;
+  transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.tier-opt:hover { background: oklch(0.30 0.020 350 / 0.6); }
+.tier-opt:focus-visible { outline: 1px solid var(--accent-frost); outline-offset: -1px; }
+.tier-opt[aria-checked="true"] { border-color: var(--accent-heat); background: oklch(0.30 0.020 350 / 0.7); }
+.tier-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-2); }
+.tier-name { font-size: var(--t-sm); color: var(--ink-2); font-weight: 600; }
+.tier-opt[aria-checked="true"] .tier-name { color: var(--ink-1); }
+.tier-time { font-size: var(--t-2xs); color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.tier-gloss { font-size: var(--t-2xs); color: var(--ink-4); line-height: 1.45; }
+
+.btn {
+  padding: 13px var(--s-4);
+  font-family: inherit; font-size: var(--t-sm); font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border: 1px solid var(--ink-2); background: none; color: var(--ink-1);
+  cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.btn:hover { background: var(--ink-1); color: var(--surface-canvas); }
+.btn:focus-visible { outline: 1px solid var(--accent-frost); outline-offset: 2px; }
+.btn-primary { background: var(--accent-heat); border-color: var(--accent-heat); color: oklch(0.20 0.02 350); }
+.btn-primary:hover { background: oklch(0.82 0.17 355); border-color: oklch(0.82 0.17 355); color: oklch(0.20 0.02 350); }
+.btn-running { border-color: var(--accent-frost); color: var(--accent-frost); background: none; }
+.btn-running:hover { background: var(--accent-frost); color: var(--surface-canvas); }
+.btn-ghost { border-color: var(--line); color: var(--ink-3); }
+.btn-ghost:hover { background: none; border-color: var(--ink-3); color: var(--ink-1); }
+
+.gen-wrap { display: flex; flex-direction: column; gap: var(--s-2); }
+.gauge { height: 1px; background: var(--line); position: relative; }
+.gauge > span {
+  position: absolute; inset: 0 auto 0 0; width: 0%;
+  background: var(--accent-frost);
+  transition: width 220ms linear;
+}
+.gen-status {
+  font-size: var(--t-2xs); color: var(--ink-3);
+  font-variant-numeric: tabular-nums; letter-spacing: 0.04em;
+  min-height: 14px;
+}
+
+/* Result pane */
+.result-pane { display: flex; flex-direction: column; align-items: center; gap: var(--s-4); }
+.result-frame {
+  position: relative; border: 1px solid var(--line);
+  background: var(--surface-canvas); line-height: 0;
+}
+.result-frame svg, .result-frame canvas { display: block; }
+.result-empty {
+  width: 384px; height: 288px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--t-sm); color: var(--ink-4); text-align: center;
+  line-height: 1.6; padding: var(--s-4);
+}
+.scanline {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: var(--accent-frost); opacity: 0.75;
+  animation: sweep 1.5s var(--ease) infinite;
+  pointer-events: none;
+}
+@keyframes sweep { from { top: 0; } to { top: 100%; } }
+.result-actions { display: flex; gap: var(--s-3); }
+.pending-note {
+  font-size: var(--t-2xs); color: var(--accent-warn);
+  letter-spacing: 0.04em;
+}
+
+/* Discard dialog */
+.dialog-back {
+  position: fixed; inset: 0; z-index: var(--z-dialog);
+  background: oklch(0.16 0.014 350 / 0.66);
+  display: none; align-items: center; justify-content: center;
+}
+.dialog-back[data-open="true"] { display: flex; }
+.dialog {
+  background: var(--surface-1); border: 1px solid var(--line);
+  padding: var(--s-5); max-width: 400px;
+  display: flex; flex-direction: column; gap: var(--s-4);
+}
+.dialog h2 { font-size: var(--t-md); font-weight: 600; }
+.dialog p { font-size: var(--t-sm); color: var(--ink-2); line-height: 1.6; }
+.dialog-actions { display: flex; gap: var(--s-3); justify-content: flex-end; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+  .scanline { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="app-label">App</span>
+    <span class="topbar-sep"></span>
+    <span class="app-name">Head Swap</span>
+  </div>
+  <nav class="step-ticker" id="ticker" aria-label="Steps"></nav>
+  <button class="close-btn" id="closeBtn" aria-label="Close app">&times;</button>
+</div>
+
+<div class="stage" id="stage">
+  <button class="nav-arrow nav-prev" id="prevBtn" aria-label="Previous step">&#8249;</button>
+  <button class="nav-arrow nav-next" id="nextBtn" aria-label="Next step">&#8250;</button>
+
+  <!-- ── STEP 0 ── -->
+  <section class="slide" data-step="0" data-active="true">
+    <div class="split">
+      <div class="col-left">
+        <div class="slot-unit">
+          <span class="slot-label">Original</span>
+          <div class="slot" id="slot1" tabindex="0" role="button" aria-label="Drop the original image"></div>
+        </div>
+        <div class="slot-unit">
+          <span class="slot-label">Face Reference</span>
+          <div class="slot" id="slot2" tabindex="0" role="button" aria-label="Drop the face reference image"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="col-right">
+        <h1 class="app-title">Head Swap</h1>
+        <div class="example-frame" id="exampleFrame"></div>
+        <div class="explainer">
+          <p>Takes the head from one image and places it onto the body in another, matching lighting and skin tone.</p>
+          <p>Works best when both faces are <strong>clearly lit and roughly front-on</strong>. Hard shadows across the face, heavy motion blur, or a head turned past three-quarters will fight the model.</p>
+          <p>You don't need to crop anything first — you'll mark the regions in the next two steps.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── STEP 1 ── -->
+  <section class="slide" data-step="1">
+    <div class="work">
+      <h2 class="work-title">Mark where the new head goes</h2>
+      <div class="canvas-bound" id="canvas1"></div>
+      <p class="work-hint">Box the head you want <em>replaced</em>. Include the hair and the jaw — the model needs the full silhouette to blend the edges.</p>
+    </div>
+  </section>
+
+  <!-- ── STEP 2 ── -->
+  <section class="slide" data-step="2">
+    <div class="work">
+      <h2 class="work-title">Mark which head to take</h2>
+      <div class="canvas-bound" id="canvas2"></div>
+      <p class="work-hint">Box the head to <em>copy from</em>. Already a tight portrait? Leave it as it is — the box starts on the whole image. This is here so you can drop in a full photo and take just the head.</p>
+    </div>
+  </section>
+
+  <!-- ── STEP 3 ── -->
+  <section class="slide" data-step="3">
+    <div class="split">
+      <div class="col-left">
+        <div class="controls">
+          <div class="control-group">
+            <span class="group-label">Quality</span>
+            <div class="tier" id="tierGroup" role="radiogroup" aria-label="Quality tier"></div>
+          </div>
+          <div class="gen-wrap">
+            <button class="btn btn-primary" id="genBtn">Generate</button>
+            <div class="gauge"><span id="genGauge"></span></div>
+            <div class="gen-status" id="genStatus"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="col-right">
+        <div class="result-pane">
+          <div class="result-frame" id="resultFrame">
+            <div class="result-empty" id="resultEmpty">Your result appears here.<br>Nothing is saved until you apply it.</div>
+          </div>
+          <div class="result-actions" id="resultActions" hidden>
+            <button class="btn btn-primary" id="applyBtn">Apply</button>
+            <button class="btn btn-ghost" id="discardBtn">Discard</button>
+          </div>
+          <span class="pending-note" id="pendingNote" hidden>Not saved yet</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="dialog-back" id="dialogBack">
+  <div class="dialog" role="alertdialog" aria-labelledby="dlgTitle">
+    <h2 id="dlgTitle">Discard the result?</h2>
+    <p>You have a generated image that hasn't been applied. Closing now throws it away.</p>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost" id="dlgCancel">Keep working</button>
+      <button class="btn" id="dlgConfirm">Discard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── Placeholder imagery (inline SVG, flat blocks + silhouette) ──── */
+function portrait(w, h, opts) {
+  opts = opts || {};
+  const bg = opts.bg || 'oklch(0.42 0.030 300)';
+  const fg = opts.fg || 'oklch(0.56 0.040 300)';
+  const headY = opts.headY != null ? opts.headY : 0.34;
+  const headR = opts.headR != null ? opts.headR : 0.15;
+  const cx = opts.cx != null ? opts.cx : 0.5;
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+    '<rect width="' + w + '" height="' + h + '" fill="' + bg + '"/>' +
+    '<ellipse cx="' + (w * cx) + '" cy="' + (h * (headY + headR * 2.4)) + '" rx="' + (w * headR * 1.9) + '" ry="' + (h * headR * 2.1) + '" fill="' + fg + '"/>' +
+    '<circle cx="' + (w * cx) + '" cy="' + (h * headY) + '" r="' + (Math.min(w, h) * headR) + '" fill="' + fg + '"/>' +
+    '</svg>';
+}
+function scene(w, h) {
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+    '<rect width="' + w + '" height="' + h + '" fill="oklch(0.40 0.032 200)"/>' +
+    '<rect y="' + (h * 0.62) + '" width="' + w + '" height="' + (h * 0.38) + '" fill="oklch(0.34 0.030 160)"/>' +
+    '<circle cx="' + (w * 0.31) + '" cy="' + (h * 0.40) + '" r="' + (h * 0.10) + '" fill="oklch(0.58 0.040 60)"/>' +
+    '<ellipse cx="' + (w * 0.31) + '" cy="' + (h * 0.70) + '" rx="' + (w * 0.09) + '" ry="' + (h * 0.20) + '" fill="oklch(0.58 0.040 60)"/>' +
+    '<circle cx="' + (w * 0.66) + '" cy="' + (h * 0.42) + '" r="' + (h * 0.095) + '" fill="oklch(0.62 0.045 30)"/>' +
+    '<ellipse cx="' + (w * 0.66) + '" cy="' + (h * 0.71) + '" rx="' + (w * 0.085) + '" ry="' + (h * 0.19) + '" fill="oklch(0.62 0.045 30)"/>' +
+    '</svg>';
+}
+const ICON = '<svg class="slot-icon" xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="M21 15l-5-5L5 21"/></svg>';
+
+/* ── State ──────────────────────────────────────────────────────── */
+const STEPS = [
+  { n: '01', label: 'Inputs' },
+  { n: '02', label: 'Target head' },
+  { n: '03', label: 'Reference head' },
+  { n: '04', label: 'Generate' }
+];
+// Relative cost, NOT absolute seconds. A hardcoded ETA is a lie on any GPU
+// but the one it was measured on; the RATIO is a property of the pipeline
+// (step count), so it holds everywhere. Quality is the 100% baseline.
+// Real percentages come from the workflow's step counts, not from guesses.
+// MEASURED on a real A/B (2026-07-18): 20-step raw 386 s / 8-step 100 s /
+// 4-step 51 s. NOT linear — raw runs without the speed LoRA, so deriving the
+// ratio from step count would be wrong by ~1.5x. Any new tier needs its own
+// measurement. Quality is the 100% baseline.
+const TIERS = [
+  { id: 'quality', name: 'Quality', time: 'baseline',      gloss: 'Full sampling. Best edge blending and skin match.' },
+  { id: 'turbo',   name: 'Turbo',   time: '~25% of time',  gloss: 'Half the steps. Softer detail in hair.' },
+  { id: 'hyper',   name: 'Hyper',   time: '~13% of time',  gloss: 'Fewest steps. For checking framing, not final work.' }
+];
+
+const app = {
+  step: 0,
+  media: { image1: null, image2: null },
+  boxes: { image1: null, image2: null },
+  tier: 'quality',
+  gen: 'idle',       // idle | running | done
+  hasPending: false
+};
+
+const $ = (id) => document.getElementById(id);
+
+/* ── Ticker (CLICKABLE — user override of "dots do not navigate") ─ */
+const ticker = $('ticker');
+STEPS.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'tick';
+  b.type = 'button';
+  b.innerHTML = '<span class="num">' + s.n + '</span><span>' + s.label + '</span>';
+  b.addEventListener('click', () => goTo(i));
+  ticker.appendChild(b);
+});
+
+/* ── Slots ──────────────────────────────────────────────────────── */
+const SLOT_SRC = {
+  image1: () => scene(300, 200),
+  image2: () => portrait(190, 240, { bg: 'oklch(0.44 0.034 260)', fg: 'oklch(0.60 0.045 260)', headY: 0.30, headR: 0.17 })
+};
+
+function renderSlot(role, elId) {
+  const el = $(elId);
+  const filled = app.media[role];
+  el.classList.toggle('filled', !!filled);
+  if (filled) {
+    el.innerHTML = filled + '<button class="slot-clear" aria-label="Remove image">&times;</button>';
+    el.querySelector('.slot-clear').addEventListener('click', (e) => {
+      e.stopPropagation();
+      app.media[role] = null;
+      app.boxes[role] = null;
+      renderSlot(role, elId);
+      syncNav();
+    });
+  } else {
+    el.innerHTML = ICON + '<span class="slot-hint">Drop image here</span>';
+  }
+}
+
+function wireSlot(role, elId) {
+  const el = $(elId);
+  const fill = () => {
+    if (app.media[role]) return;
+    app.media[role] = SLOT_SRC[role]();
+    renderSlot(role, elId);
+    syncNav();
+  };
+  el.addEventListener('click', fill);
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fill(); } });
+  el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', (e) => { e.preventDefault(); el.classList.remove('dragover'); fill(); });
+  renderSlot(role, elId);
+}
+wireSlot('image1', 'slot1');
+wireSlot('image2', 'slot2');
+$('exampleFrame').innerHTML = scene(420, 236);
+
+/* ── Box gizmo — draggable, resizable, CLAMPED to image bounds ──── */
+function makeGizmo(hostId, role, natural, initial) {
+  const host = $(hostId);
+  const W = natural.w, H = natural.h;
+  const dispW = natural.dw, dispH = natural.dh;
+  const sx = dispW / W, sy = dispH / H;
+
+  host.innerHTML = (role === 'image1' ? scene(dispW, dispH)
+    : portrait(dispW, dispH, { bg: 'oklch(0.44 0.034 260)', fg: 'oklch(0.60 0.045 260)', headY: 0.28, headR: 0.16 }));
+
+  const giz = document.createElement('div');
+  giz.className = 'gizmo';
+  giz.innerHTML =
+    '<span class="gizmo-dim"></span>' +
+    ['nw','ne','sw','se','n','s','w','e'].map(d => '<span class="handle h-' + d + '" data-dir="' + d + '"></span>').join('');
+  host.appendChild(giz);
+
+  // Box in SOURCE PIXELS (the graph's unit), clamped to [0..W]/[0..H].
+  let box = Object.assign({}, initial);
+  const MIN = 32;
+
+  function clampBox() {
+    box.w = Math.max(MIN, Math.min(box.w, W));
+    box.h = Math.max(MIN, Math.min(box.h, H));
+    box.x = Math.max(0, Math.min(box.x, W - box.w));
+    box.y = Math.max(0, Math.min(box.y, H - box.h));
+  }
+  function paint() {
+    clampBox();
+    giz.style.left = (box.x * sx) + 'px';
+    giz.style.top = (box.y * sy) + 'px';
+    giz.style.width = (box.w * sx) + 'px';
+    giz.style.height = (box.h * sy) + 'px';
+    giz.querySelector('.gizmo-dim').textContent = Math.round(box.w) + ' × ' + Math.round(box.h);
+    app.boxes[role] = { x: Math.round(box.x), y: Math.round(box.y), w: Math.round(box.w), h: Math.round(box.h) };
+  }
+
+  let drag = null;
+  function onDown(e, dir) {
+    e.preventDefault(); e.stopPropagation();
+    drag = { dir, px: e.clientX, py: e.clientY, start: Object.assign({}, box) };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+  function onMove(e) {
+    if (!drag) return;
+    const dx = (e.clientX - drag.px) / sx;
+    const dy = (e.clientY - drag.py) / sy;
+    const s = drag.start;
+    if (drag.dir === 'move') {
+      box.x = s.x + dx; box.y = s.y + dy;
+    } else {
+      let x1 = s.x, y1 = s.y, x2 = s.x + s.w, y2 = s.y + s.h;
+      if (drag.dir.includes('w')) x1 = Math.min(s.x + dx, x2 - MIN);
+      if (drag.dir.includes('e')) x2 = Math.max(s.x + s.w + dx, x1 + MIN);
+      if (drag.dir.includes('n')) y1 = Math.min(s.y + dy, y2 - MIN);
+      if (drag.dir.includes('s')) y2 = Math.max(s.y + s.h + dy, y1 + MIN);
+      // Clamp the EDGES to the image before deriving w/h — an off-edge drag
+      // can never produce a box that leaves the source.
+      x1 = Math.max(0, x1); y1 = Math.max(0, y1);
+      x2 = Math.min(W, x2); y2 = Math.min(H, y2);
+      box.x = x1; box.y = y1; box.w = x2 - x1; box.h = y2 - y1;
+    }
+    paint();
+  }
+  function onUp() {
+    drag = null;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+  }
+  giz.addEventListener('pointerdown', (e) => onDown(e, 'move'));
+  giz.querySelectorAll('.handle').forEach(h => {
+    h.addEventListener('pointerdown', (e) => onDown(e, h.dataset.dir));
+  });
+
+  paint();
+}
+
+makeGizmo('canvas1', 'image1', { w: 1200, h: 800, dw: 600, dh: 400 }, { x: 300, y: 210, w: 240, h: 240 });
+makeGizmo('canvas2', 'image2', { w: 900, h: 1200, dw: 330, dh: 440 }, { x: 0, y: 0, w: 900, h: 1200 });
+
+/* ── Tier radio ─────────────────────────────────────────────────── */
+const tierGroup = $('tierGroup');
+TIERS.forEach(t => {
+  const b = document.createElement('button');
+  b.className = 'tier-opt';
+  b.type = 'button';
+  b.setAttribute('role', 'radio');
+  b.setAttribute('aria-checked', String(t.id === app.tier));
+  b.innerHTML =
+    '<span class="tier-head"><span class="tier-name">' + t.name + '</span><span class="tier-time">' + t.time + '</span></span>' +
+    '<span class="tier-gloss">' + t.gloss + '</span>';
+  b.addEventListener('click', () => {
+    app.tier = t.id;
+    tierGroup.querySelectorAll('.tier-opt').forEach((n, i) => n.setAttribute('aria-checked', String(TIERS[i].id === app.tier)));
+  });
+  tierGroup.appendChild(b);
+});
+
+/* ── Generation ─────────────────────────────────────────────────── */
+let genTimer = null;
+const genBtn = $('genBtn'), genGauge = $('genGauge'), genStatus = $('genStatus');
+const resultFrame = $('resultFrame'), resultEmpty = $('resultEmpty');
+const resultActions = $('resultActions'), pendingNote = $('pendingNote');
+
+function setGen(next) {
+  app.gen = next;
+  genBtn.classList.toggle('btn-primary', next !== 'running');
+  genBtn.classList.toggle('btn-running', next === 'running');
+  genBtn.textContent = next === 'running' ? 'Cancel' : (next === 'done' ? 'Generate again' : 'Generate');
+  syncNav();
+}
+
+function startGen() {
+  setGen('running');
+  app.hasPending = false;
+  resultActions.hidden = true;
+  pendingNote.hidden = true;
+  resultEmpty.remove?.();
+  resultFrame.innerHTML =
+    portrait(384, 288, { bg: 'oklch(0.30 0.020 350)', fg: 'oklch(0.36 0.024 350)', headY: 0.32, headR: 0.14 }) +
+    '<span class="scanline"></span>';
+  const img = resultFrame.querySelector('svg');
+  img.style.filter = 'blur(9px)';
+
+  let pct = 0;
+  // Mock-up only: a stand-in duration so the progress line has something to
+  // count. In the real app this comes from SERVER PROGRESS (steps completed),
+  // never from a baked-in per-tier guess.
+  const total = app.tier === 'hyper' ? 9 : app.tier === 'turbo' ? 22 : 45;
+  genTimer = setInterval(() => {
+    pct += 4;
+    if (pct >= 100) {
+      pct = 100;
+      clearInterval(genTimer); genTimer = null;
+      finishGen(total);
+      return;
+    }
+    genGauge.style.width = pct + '%';
+    // De-blur as it forms — honest about a half-computed image.
+    img.style.filter = 'blur(' + (9 * (1 - pct / 100)).toFixed(2) + 'px)';
+    const left = Math.max(0, Math.round(total * (1 - pct / 100)));
+    genStatus.textContent = 'Generating · ' + pct + '% · ' + left + 's left';
+  }, 220);
+}
+
+function finishGen(total) {
+  genGauge.style.width = '100%';
+  genStatus.textContent = 'Done · ' + total.toFixed(1) + ' s';
+  resultFrame.innerHTML = portrait(384, 288, { bg: 'oklch(0.44 0.034 200)', fg: 'oklch(0.60 0.042 60)', headY: 0.30, headR: 0.15 });
+  app.hasPending = true;
+  resultActions.hidden = false;
+  pendingNote.hidden = false;
+  setGen('done');
+}
+
+function cancelGen() {
+  if (genTimer) { clearInterval(genTimer); genTimer = null; }
+  genGauge.style.width = '0%';
+  genStatus.textContent = 'Cancelled.';
+  resultFrame.innerHTML = '<div class="result-empty">Your result appears here.<br>Nothing is saved until you apply it.</div>';
+  app.hasPending = false;
+  resultActions.hidden = true;
+  pendingNote.hidden = true;
+  setGen('idle');
+}
+
+genBtn.addEventListener('click', () => {
+  if (app.gen === 'running') cancelGen(); else startGen();
+});
+$('applyBtn').addEventListener('click', () => {
+  app.hasPending = false;
+  resultActions.hidden = true;
+  pendingNote.hidden = true;
+  genStatus.textContent = 'Applied — added to your gallery.';
+});
+$('discardBtn').addEventListener('click', () => {
+  app.hasPending = false;
+  resultFrame.innerHTML = '<div class="result-empty">Your result appears here.<br>Nothing is saved until you apply it.</div>';
+  resultActions.hidden = true;
+  pendingNote.hidden = true;
+  genGauge.style.width = '0%';
+  genStatus.textContent = '';
+  setGen('idle');
+});
+
+/* ── Navigation ─────────────────────────────────────────────────── */
+function goTo(i) {
+  // Mid-run navigation is allowed; the run keeps going. Only CLOSING
+  // with an unapplied result is guarded.
+  app.step = Math.max(0, Math.min(i, STEPS.length - 1));
+  document.querySelectorAll('.slide').forEach(s => {
+    s.dataset.active = String(Number(s.dataset.step) === app.step);
+  });
+  syncNav();
+}
+function syncNav() {
+  $('prevBtn').disabled = app.step === 0;
+  $('nextBtn').disabled = app.step === STEPS.length - 1;
+  ticker.querySelectorAll('.tick').forEach((t, i) => {
+    t.dataset.state = i === app.step ? 'active' : (i < app.step ? 'done' : 'todo');
+    t.setAttribute('aria-current', i === app.step ? 'step' : 'false');
+  });
+}
+$('prevBtn').addEventListener('click', () => goTo(app.step - 1));
+$('nextBtn').addEventListener('click', () => goTo(app.step + 1));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') goTo(app.step - 1);
+  if (e.key === 'ArrowRight') goTo(app.step + 1);
+});
+
+/* ── Close guard ────────────────────────────────────────────────── */
+const dialogBack = $('dialogBack');
+$('closeBtn').addEventListener('click', () => {
+  if (app.hasPending) { dialogBack.dataset.open = 'true'; return; }
+  genStatus.textContent = '';
+});
+$('dlgCancel').addEventListener('click', () => { dialogBack.dataset.open = 'false'; });
+$('dlgConfirm').addEventListener('click', () => {
+  dialogBack.dataset.open = 'false';
+  app.hasPending = false;
+  resultActions.hidden = true;
+  pendingNote.hidden = true;
+  resultFrame.innerHTML = '<div class="result-empty">Your result appears here.<br>Nothing is saved until you apply it.</div>';
+  setGen('idle');
+});
+
+syncNav();
+</script>
+</body>
+</html>

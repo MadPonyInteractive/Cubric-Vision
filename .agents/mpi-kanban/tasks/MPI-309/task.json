@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-309",
+  "title": "Ship the box MpiNodes to the Pod (node_lock bump) — blocks RunPod for Head Swap",
+  "column": "done",
+  "maturity": "complete",
+  "status": "active",
+  "created_at": "2026-07-18T23:55:16Z",
+  "updated_at": "2026-07-21T15:15:00Z",
+  "description": "The Head Swap graph needs MpiBox / MpiBoxCrop / MpiBoxMask, and those nodes exist ONLY in\nthe local working tree. They are NOT in the pinned MpiNodes commit, so RunPod cannot load\napp_head_swap.json at all — ComfyUI rejects the prompt with unknown node types before any\nweight is touched. This is a SEPARATE blocker from the LoRA (which is now on R2, MPI-299).\n\nEVIDENCE (2026-07-19):\n- dev_configs/node_lock.json pins ComfyUI-MpiNodes at ba9e1569d9f77567907654ae04745580f43f18b9.\n- That commit is pushed and IS local HEAD, but `git grep mpi_box ba9e1569` returns NOTHING.\n- The box nodes live in UNCOMMITTED edits to img.py + __init__.py in\n  engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUi-MpiNodes (working tree also\n  dirty in README.md, changelog.md, logger.py, .mpi_node_commit).\n- app_head_swap.json requires class_types: MpiBox, MpiBoxCrop, MpiBoxMask (plus MpiAnySwitch,\n  MpiInt, MpiLoadImageFromPath, MpiMath which DO exist at the pin).\n\nWHY THE POD MISSES THEM: MpiNodes is a VOLUME node (code-only, installRequirements:false), not\nbaked into the image. The wrapper clones the node_lock commit onto the volume at connect\n(cubric-vision-pod/start.sh, README section \"Ship a new MpiNodes version\"). So the Pod gets\nexactly what is PUSHED at the pinned commit — never the local working tree. No image rebuild is\ninvolved; this is a commit-bump path.\n\nSTEPS:\n1. USER: commit + push the box nodes in the ComfyUi-MpiNodes repo (separate repo:\n   github.com/MadPonyInteractive/ComfyUi-MpiNodes). Bump the version + changelog per that\n   repo's convention.\n2. Bump `commit` for ComfyUI-MpiNodes in Cubric-Vision/dev_configs/node_lock.json to the new SHA.\n3. Verify the Pod picks it up on a fresh connect (the wrapper reinstalls a volume node when the\n   locked commit changes).\n4. THEN MPI-299's RunPod verification can actually run.\n\nDO NOT: bake MpiNodes into the image or rebuild the Pod image for this — it is a volume node\nBY DESIGN (MPI-222) precisely because it churns. Bumping the lock is the whole mechanism.",
+  "links": {
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  },
+  "events": [
+    {
+      "at": "2026-07-18T23:55:16Z",
+      "type": "task.created",
+      "note": "Split out of MPI-299: the box nodes are not in the pinned MpiNodes commit, so RunPod cannot load the Head Swap graph."
+    },
+    {
+      "at": "2026-07-21T13:00:00Z",
+      "type": "task.moved",
+      "note": "todo -> doing (validating). dev_configs/node_lock.json MpiNodes commit bumped ba9e1569 -> aaa1d2d9fa713decae6843e64f5a81b84f9f443d (repo HEAD = origin/main, v1.2.6). Class-map diff is a pure superset: adds MpiBox, MpiBoxCrop, MpiBoxMask, MpiFromBox; removes nothing, so no existing graph breaks. Remaining proof: confirm the Pod wrapper reinstalls the new volume-node commit on fresh connect and app_head_swap.json stops rejecting unknown node types. Tracked in MPI-324 Phase 0."
+    },
+    {
+      "at": "2026-07-21T15:15:00Z",
+      "type": "task.moved",
+      "note": "doing -> done (complete). PROVEN on RTX 2000 Pod (MPI-324 sweep). On connect the wrapper toasted 'Loading new nodes - restarting the remote engine' (it detected the aaa1d2d lock change and reinstalled the volume node), then app_head_swap.json compiled + ran with NO unknown-node rejection. Box nodes work end-to-end: user resized the MpiBox target region between runs and the crop region followed; correct head swap returned + saved to gallery. Hyper tier ran 4 steps. node_lock.json ready to commit at session close."
+    }
+  ]
+}

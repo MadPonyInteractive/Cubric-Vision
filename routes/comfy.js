@@ -42,28 +42,23 @@ const remoteModels = require('./remoteModels');
 
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
-// Repo-owned defaults staged into the engine input/ before every _ms submit.
-// ComfyUI validates EVERY LoadLatent/LoadImage node in a workflow even when its
-// output is unreached (e.g. behind an Is_Continue gate), so each model family's
-// load-node baked filenames must have a real file here. The engine input/ is
-// garbage-collected on shutdown (cleanComfyUITempFiles), but prepare runs every
-// submit so the defaults are always re-staged.
+// Repo-owned LATENT defaults staged into the engine input/ before every _ms submit.
+// ComfyUI validates EVERY LoadLatent node in a workflow even when its output is
+// unreached (e.g. behind an Is_Continue gate), so each model family's LoadLatent
+// baked filename must have a real file here. The engine input/ is garbage-collected
+// on shutdown (cleanComfyUITempFiles), but prepare runs every submit so the defaults
+// are always re-staged.
 //   ComfyUI_00001_.latent       — WAN _ms video latent (legacy default)
 //   ltx_video_latent_00001_     — LTX Input_Video_Latent (node 67)
 //   ltx_audio_latent_00001_     — LTX Input_Audio_Latent (node 69)
-//   placeholder.png             — generic Input_Start_Frame/End_Frame fallback (t2v
-//                                 has no real frame; i2v injects over it). Shared by
-//                                 any workflow with LoadImage frame nodes (LTX, Wan 5B).
-//                                 (was ltx_placeholder.png — renamed generic.)
-//   ltx_silence.wav             — LTX Input_Audio_File fallback (a gen with no
-//                                 audio input never injects this node; without a
-//                                 staged default it dies on Invalid audio file)
+// MPI-272: image/audio placeholders (placeholder.png / ltx_silence.wav) are GONE —
+// media inputs migrated to self-gating MpiLoadImageFromPath / MpiLoadAudio path
+// nodes (empty `string` = no media). LoadLatent has no path-string variant, so
+// latents remain the sole staging survivor.
 const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
     'ComfyUI_00001_.latent',
     'ltx_video_latent_00001_.latent',
     'ltx_audio_latent_00001_.latent',
-    'placeholder.png',
-    'ltx_silence.wav',
 ]);
 
 function _broadcastComfyEvent(event, data) {
@@ -226,11 +221,9 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
                 });
             }
             // Remote engine: upload the bundled default to the Pod volume input
-            // dir (idempotent, overwrite) instead of a local copy. Route by
-            // extension — `.latent` via the latent endpoint, image/audio
-            // placeholders (LTX ltx_placeholder.png / ltx_silence.wav) via the
-            // generic media endpoint. Both land in the same Pod input/ dir, but
-            // the latent endpoint may reject non-.latent uploads.
+            // dir (idempotent, overwrite) instead of a local copy. All defaults are
+            // now `.latent` (MPI-272 dropped the image/audio placeholders), so this
+            // always uses the latent endpoint; the media fallback stays for safety.
             if (remoteActive) {
                 const endpoint = filename.endsWith('.latent')
                     ? '/wrapper/upload/latent'
@@ -245,6 +238,40 @@ router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
         res.json({ success: true, copied });
     } catch (err) {
         logger.error('comfy', 'prepare workflow inputs failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * POST /comfy/stage-media-data-url
+ * Body: { dataUrl: string }
+ * Writes a `data:<mime>;base64,<...>` payload to a file in the LOCAL engine
+ * input dir and returns its absolute path. MPI-272: media inputs are now
+ * path-reading nodes (`MpiLoadImageFromPath` — `os.path.isfile`), but some
+ * inputs still arrive as data URLs (the auto-mask editor's painted mask), which
+ * a path node cannot read. Stage it to a real file so the path system can. The
+ * caller injects the returned path; a remote run then uploads it via
+ * `_uploadRemoteMedia` (which needs a local file), so we always write locally.
+ */
+router.post('/comfy/stage-media-data-url', async (req, res) => {
+    try {
+        const { dataUrl } = req.body || {};
+        const match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/s);
+        if (!match) {
+            return res.status(400).json({ success: false, error: 'body.dataUrl must be a base64 data URL' });
+        }
+        const ext = (match[1].split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '') || 'png';
+        // Content-hash the name so identical masks reuse one file and repeat runs
+        // don't leak the input dir. ponytail: crypto.hash, no cleanup job — the
+        // input dir is engine-scratch and small; add a sweep if it ever grows.
+        const hash = require('crypto').createHash('sha256').update(match[2]).digest('hex').slice(0, 16);
+        const inputDir = getComfyPath(ENGINE_ROOT, 'input');
+        await fs.ensureDir(inputDir);
+        const target = path.join(inputDir, `mpi_staged_${hash}.${ext}`);
+        await fs.writeFile(target, Buffer.from(match[2], 'base64'));
+        res.json({ success: true, path: target });
+    } catch (err) {
+        logger.error('comfy', 'stage media data url failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

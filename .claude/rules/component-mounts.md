@@ -95,7 +95,7 @@ Five self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 
 **Pattern:** `setup` enters viewer mode → owns controls → `destroy` evaluates mask + exits viewer mode. No apply buttons on mask panel (PromptBox drives ops). No cancel buttons.
 
-- `MpiToolOptionsCrop`   props: `{ viewer, kind: 'image'|'video' }`   — family `MpiDropdown` (SDXL/FLUX/SOCIAL/FREE) + orientation `MpiRadioGroup` (icon-only, sdxl/flux only) + ratio `MpiRadioGroup` (icon-only, hidden for FREE) + apply (image) / snapshot+save (video) buttons. Pushes ratio to `viewer.el.setCropRatio(ratio|null)` — `null` = FREE (no aspect lock). Emits `apply { kind: 'image'|'video-save'|'video-snapshot' }`. Crop drag honors Shift modifier (scales from rect center) via `Hotkeys.register('shift', …)` inside `CropManager`/`cropTool`.
+- `MpiToolOptionsCrop`   props: `{ viewer, kind: 'image'|'video' }`   — family `MpiRadioGroup` (RATIO/FREE) + orientation `MpiRadioGroup` (icon-only, RATIO only) + ratio `MpiRadioGroup` (icon-only, hidden for FREE, backed by `CROP_RATIOS` pure-aspect table incl cinema 2:1/1.85:1/21:9/2.39:1) + "Divisible by" `MpiInput` (default 16, both modes, above Apply) + apply (image) / snapshot+save (video) buttons. Persists `{ family:'ratio'|'free', orientation, label, divisible_by }` under `project.toolSettings.crop` via `settings:tool:update` (toolKey `'crop'`). Pushes ratio to `viewer.el.setCropRatio(ratio|null)` — `null` = FREE (no aspect lock). Exposes `el.getDivisibleBy()`. On apply, each output W/H is rounded to `divisible_by` via `roundToDivisible` (js/utils/cropRounding.js) — image in `MpiCanvasViewer._runCrop`, video in `MpiGroupHistoryBlock._handleCropSaveVideo` (sends `absoluteCropPx`; `routes/videoCrop.js` uses it directly and skips even-snap). Emits `apply { kind: 'image'|'video-save'|'video-snapshot' }`. Crop drag honors Shift modifier (scales from rect center) via `Hotkeys.register('shift', …)` inside `CropManager`/`cropTool`.
 - `MpiToolOptionsMask`   props: `{ viewer }`   — unified panel: detection-model `MpiDropdown` + box/segment `MpiRadioGroup` + `MpiAutoMaskThumbs` strip + Detect button + brush/eraser `MpiButton` toggles + invert + clear. No `apply` emitted. Hotkeys B/E registered while mounted. `destroy` calls `viewer.el.evaluateMask()` then `exitMode()`. Auto-detect composites picked thumbs ONTO existing mask (`compositeMaskDataURL`); Detect button does NOT clear existing paint.
 - `MpiToolOptionsResize` props: `{ viewer, kind: 'image'|'video', currentItem? }` — width/height `MpiInput`, method/proportion/crop-position `MpiDropdown`, `MpiColorPicker` for pad color, divisible-by `MpiInput`, flip/rotation `MpiRadioGroup`, inline preview `<img>` slot, Apply `MpiButton`. Live preview runs the **image** `resize` workflow on a 512px-longest-edge thumbnail extracted from `viewer.el.getSourceElement()` (HTMLImageElement or HTMLVideoElement), with `width`/`height`/`divisible_by` proportionally scaled to thumb space. Result paints into the inline preview slot — viewer is never touched. Apply appends a new full-resolution entry via `startGeneration` (`resize` for image, `resizeVideo` for video); preserves the source. Persists controls under `project.toolSettings.resize` via `settings:tool:update`.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
@@ -143,6 +143,8 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 - `MpiChangelogDialog` props: none   slot: `document.createElement('div')` — "What's New" overlay. Shown once per `APP_VERSION` by `_maybeShowChangelog()` in `_bootApp`, AFTER engine/deps gates + dev-state restore, BEFORE optional Comfy auto-start. Skipped when `Storage.getLastSeenChangelogVersion() === APP_VERSION` or `getReleaseNotes(APP_VERSION)` has no content. Content set via `el.open({ version, stage, notes })`; internally mounts `MpiButton` (Done) + `MpiIcon` (per-section). Reads notes from `js/data/releaseNotes.js`. NOT an updater.
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
 - `MpiModelManager` (the **Model Library** overlay)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `models:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + an in-overlay right-drawer detail panel. Shell calls `el.open()` each time (MPI-215). Reserved slide-over stays for Settings/Hotkeys/Queue only.
+- `MpiAppLibrary` (the **App Library** overlay, MPI-256)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `apps:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + a right-drawer detail panel (reuses the GLOBAL `.mpi-detail`/`.mpi-tile` selectors from MpiModelManager.css). Shell calls `el.open()` each time. **Dev-gated** — the only emitters of `apps:open` (Gallery radial + Landing nav) are `APP_CONFIG.dev_mode`-gated.
+- `MpiBaseApp` (the **App** overlay frame, MPI-256)   props: `{ app: AppDef, uiComponent: Blueprint|null }`   slot: `document.createElement('div')` — mounted by shell on `app:open {appId}` (resolves the descriptor + maps `uiComponent` NAME → blueprint; destroys any prior active app first). Self-hosts an `MpiOverlay(mountTarget:'main-area')`; mounts the per-app `uiComponent` (e.g. `MpiAppImageRegen`) into its content slot. `el.open()` shows it; Back-to-Library = `el.close()` + `apps:open`.
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
 - `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.
@@ -191,7 +193,6 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 - `MpiButton` (run/stop)   props: `{ icon:'play', iconActive:'stop', info, size:'md', variant:'primary', toggleable:true, active:isGenerating }`   slot: fresh div appended to `#bottom-right-slot`
 - `MpiDropdown` (op dropdown)   props: `{ options: availableOps, value: activeOperation, info:'Current model operation - Also accessible by holding Tab', direction:'up' }`   slot: `#op-dropdown-slot` — refreshed on every model/context change
 - `PromptBoxControl components` (e.g. `qualityTier`, `ratio`, `batch`, `duration`, `motionIntensity`, `previewStage`)   props: `{ model }`   slot: `#settings-op-slot` (inside the settings popup, not the bottom bar) — one control per operation's `components[]` array; cleared and remounted on operation change. `qualityTier` is a no-op for orientation-mode models (renders nothing) and only mounts UI for `RATIO_MODES[model.type] === 'quality'`. The mount loop wraps each `ctrl.mount()` in try/catch + `clientLogger.error` so a single failing control no longer blocks subsequent controls in the same op.
-- `MpiButton` (download manager)   props: `{ icon:'download', variant:'ghost', size:'sm', info:'Open Download Manager' }`   slot: fresh div appended to `#bottom-left-slot` — always rendered; on click emits `Events.emit('models:open', {})`
 
 ---
 
@@ -199,6 +200,21 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 - `MpiOverlay`   props: `{ closable: true }`   slot: `document.createElement('div')`
 - `MpiCanvas`   props: none (lazy, created on first `open()` call)   slot: `#canvas-wrap`
+
+---
+
+## MpiAppLibrary.js (internal mounts, MPI-256)
+
+- `MpiOverlay`   props: `{ closable: true, mountTarget: 'body' }`   slot: `document.createElement('div')`
+- `MpiButton` (detail footer Open/Install)   props: `{ text:'Open'|'Install models', variant:'primary', size:'md', disabled?: !canOpen }`   slot: `#app-detail-actions` — rebuilt on each `openDetail()`. Open (all models installed) emits `app:open {appId}`; Install drives each missing model's `downloadService.start`.
+
+---
+
+## MpiBaseApp.js (internal mounts, MPI-256)
+
+- `MpiOverlay`   props: `{ closable: true, mountTarget: 'main-area' }`   slot: `document.createElement('div')`
+- `<per-app uiComponent>` (e.g. `MpiAppImageRegen`)   props: `{ initialInputs }`   slot: `#app-content` — the per-app controls; must expose `el.getInputs()`. BaseApp merges its return with the uploaded source image at Run.
+- `MpiButton` (Run)   props: `{ text:'Run', variant:'primary', size:'md' }`   slot: `#app-run-slot`
 
 ---
 
@@ -227,7 +243,7 @@ its media-drop overlay sticks open. Browser dev mode (no `webUtils`) ignores dro
 
 ## MpiVideoSurface.js (Compound — js/components/Compounds/MpiVideoSurface — bare surface)
 
-Owns the bare `<video>` element + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics. Frame-step works in integer frame space (`round(t * fps)`) — float comparisons at range edges drift by a frame.
+Owns the bare `<video>` element + a sibling **exact-frame canvas overlay** (`.mpi-video-surface__frame`, `data-frame="true"` shows it) + click-to-toggle-play (skipped on `[data-no-toggle]` ancestors). No internal sub-component mounts. Preserves loop-disable/seeked-restore dance + frame-step wrap-on-loop semantics. Frame-step works in integer frame space (`round(t * effFps)`) — float comparisons at range edges drift by a frame. **Frame-accurate step/scrub (MPI-283):** `frameStep` decodes the exact frame via `js/services/frameSink.js` (mediabunny/WebCodecs), paints the canvas overlay, THEN moves `video.currentTime`; falls back to a native `+0.25·fs` seek when the sink can't decode (`canDecode` gate → null). `_effectiveFps` = `frameCount/duration` when both known (true PTS spacing), else declared `fps`. See `docs/video-player.md`.
 
 **Instance API (on `el`):** `_setSrc`, `_play`, `_pause`, `seek(seconds)`, `frameStep(direction, range?)` (`range = { rangeIn, rangeOut, loop }` — when present, wraps at range edges; `loop` is required when caller has disabled native `video.loop` for range emulation), `getVideoElement`, `_setFps`, `_setFrameCount`, `getFps`, `getFrameCount`, `_setVolume`, `_setMuted`, `destroy`. Emits component-local `play/pause/ended/timeupdate/loadedmetadata/volumechange`.
 
@@ -245,7 +261,9 @@ Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + (
 
 - `MpiButton` (play, frame-back, frame-forward, frames-toggle, loop, mute, fullscreen) — slots `[data-mount="play|frame-back|frame-forward|frames-toggle|loop|mute|fullscreen"]`
 - `MpiProgressBar` (volume) — slot `[data-mount="volume"]`
-- `MpiTrimBar` — slot `[data-mount="trim"]` (only when `showTrim`; props: `{ duration: 0, fps, value: 0, inPoint: 0, outPoint: 0 }`; updated via `setDuration`/`setRangeQuiet` on surface `loadedmetadata`)
+- `MpiTrimBar` — slot `[data-mount="trim"]` (only when `showTrim`; props: `{ duration: 0, fps, value: 0, inPoint: 0, outPoint: 0 }`; updated via `setDuration`/`setRangeQuiet`/`setFrameCount` on surface `loadedmetadata`)
+
+**Frame-index coordinate law (MPI-283):** `setFrameCount(n)` is pushed into the trim bar so playhead/handles map in integer-frame space. `_displayTime(currentTime)` snaps to the exact frame's TRUE time (`idx/effFps`) — it does NOT apply the `idx/lastIdx·dur` normalization (that lives only in `MpiTrimBar._pctOf`); applying it in both places shifts the echoed playhead one frame off the drop position. See `docs/video-player.md`.
 
 **Instance API (on `el`):** `attachSurface(instance)`, `detachSurface()`, `setRange(Quiet)`, `getRange`, `getValue`, `setVolume`, `setMuted`, `setFrameCount`, `setFps`, `setPendingTrim(in, out)` (one-shot for next `loadedmetadata`; no-op when `showTrim: false`), `destroy`. Emits `loop-change`, `range-change`.
 
@@ -253,7 +271,7 @@ Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + (
 
 ## MpiTrimBar.js (Compound — js/components/Compounds/MpiTrimBar — two-handle trim seek bar)
 
-Self-contained 28px track + two trim handles (in/out, ±8px overflow w/ 10×3 caps) + 2px playhead w/ triangle arrow + 12% heat selection fill. Stage tokens only. No internal sub-component mounts. Pointer drag coalesces on RAF; commits on `pointerup`. Track click drags playhead from cursor.
+Self-contained 28px track + two trim handles (in/out, ±8px overflow w/ 10×3 caps) + 2px playhead w/ triangle arrow + 12% heat selection fill. Stage tokens only. No internal sub-component mounts. Pointer drag coalesces on RAF; commits on `pointerup`. Track click drags playhead from cursor. **Frame-index mapping (MPI-283):** optional `frameCount` prop + `setFrameCount(n)`; when set, `_snap`/`_pctOf`/`_eventToSeconds` map in integer-frame space (`effFps = frameCount/duration`, position `idx/(frameCount-1)` so frame 0→0% / last→100%) to MATCH `MpiVideoControlBar._displayTime` — this is what removes the playhead drop-then-echo jump. Falls back to `time/duration` when `frameCount` is unset.
 
 **Instance API (on `el`):** `setDuration`, `setFps`, `setValue(Quiet)`, `setRange(Quiet)`, `getValue`, `getRange`, `destroy`. Emits component-local `seek`, `in-change`, `out-change`, `range-change`.
 

@@ -22,6 +22,7 @@ import { getAvailableCommands } from '../data/commandRegistry.js';
 import { getModelById } from '../data/modelRegistry.js';
 import { Overlays } from '../managers/overlayManager.js';
 import { clientLogger } from '../services/clientLogger.js';
+import { remoteEngineClient } from '../services/remoteEngineClient.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
 
@@ -264,6 +265,44 @@ Events.on('state:changed', ({ key, value }) => {
 });
 
 /**
+ * Dev-gated radial action: restart ONLY the ComfyUI engine (no app reload).
+ * Remote → wrapper's /proxy/restart-comfy (restarts the Pod's ComfyUI subprocess).
+ * Local → stop + start the local ComfyUI process (start is idempotent, spawns fresh).
+ */
+// MPI-310 — the MPI-308 `_describeFirstChip` dev harness lived here. It answered the
+// question it existed for (the caption is worth having), so the feature shipped as a
+// real op: right-click a gallery card or history item → "Describe image". The harness
+// is gone rather than kept alongside it — it bypassed both the queue and the plugin
+// install gate, so it would have failed deep inside ComfyUI once the weight became
+// optional. See js/utils/describeAction.js.
+
+async function _restartEngine() {
+    const remote = remoteEngineClient.isRemote();
+    Events.emit('ui:info', { message: 'Restarting the engine…' });
+    try {
+        if (remote) {
+            const r = await fetch('/proxy/restart-comfy', { method: 'POST' });
+            if (!r.ok) throw new Error(`restart-comfy ${r.status}`);
+        } else {
+            await fetch('/comfy/stop', { method: 'POST' });
+            // Let the process fully exit before starting, else /comfy/start races the
+            // still-dying process, hits its already-running early-return, and never
+            // spawns a fresh one (engine wedged, gen gate keeps restarting).
+            await new Promise(r => setTimeout(r, 2000));
+            const r = await fetch('/comfy/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isUserRestart: true }),
+            });
+            if (!r.ok) throw new Error(`comfy/start ${r.status}`);
+        }
+    } catch (err) {
+        clientLogger.error('navigation', `Restart engine failed: ${err.message}`);
+        Events.emit('ui:error', { title: 'Restart failed', message: `Could not restart the engine: ${err.message}` });
+    }
+}
+
+/**
  * Syncs the radial menu to the current page context.
  * Creates the radial on first call; switches context on subsequent calls.
  * Radial actions in gallery/group-history set the PromptBox operation via
@@ -272,7 +311,11 @@ Events.on('state:changed', ({ key, value }) => {
  */
 function _syncRadial(page) {
     const extraItems = APP_CONFIG.dev_mode
-        ? [{ action: 'components', label: 'Components', icon: 'grid' }]
+        ? [
+            { action: 'components', label: 'Components', icon: 'grid' },
+            { action: 'apps', label: 'Apps', icon: 'layers' }, // App Library (MPI-256), dev-gated
+            { action: 'restart-engine', label: 'Restart Engine', icon: 'refresh' }, // dev-gated: restart ComfyUI only
+          ]
         : [];
 
     if (!_radialInstance) {
@@ -287,6 +330,14 @@ function _syncRadial(page) {
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {
                 _loadComponentsGallery();
+                return;
+            }
+            if (action === 'apps') {
+                Events.emit('apps:open'); // App Library overlay (MPI-256, dev-gated)
+                return;
+            }
+            if (action === 'restart-engine') {
+                _restartEngine();
                 return;
             }
             Events.emit('workspace:set-operation', { operation: action });

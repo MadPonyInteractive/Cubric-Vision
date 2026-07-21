@@ -15,6 +15,7 @@ export const ICONS = {
 
     // ── Actions ───────────────────────────────────────────────────────────────
     'check': '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>',
+    'circle': '<path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/>',
     'plus': '<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>',
     'minus': '<path d="M19 13H5v-2h14v2z"/>',
     'trash': '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>',
@@ -23,6 +24,7 @@ export const ICONS = {
     'eraser': '<path d="M16.24 3.56l4.2 4.2a2 2 0 0 1 0 2.83l-9.2 9.2a2 2 0 0 1-2.83 0l-4.2-4.2a2 2 0 0 1 0-2.83l9.2-9.2a2 2 0 0 1 2.83 0zM4 20h6v2H4v-2z"/>',
     'invert': '<path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2v16a8 8 0 0 0 0-16z"/>',
     'copy': '<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>',
+    'paste': '<path d="M19 2h-4.18C14.4.84 13.3 0 12 0S9.6.84 9.18 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/>',
     'download': '<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>',
     'upload': '<path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>',
     'bell': '<path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>',
@@ -90,6 +92,10 @@ export const ICONS = {
     'flipX_stroke': '<path d="M12 3v18"/><path d="M8 7H3v10h5"/><path d="M16 7h5v10h-5"/><path d="M8 12H3"/><path d="M16 12h5"/>',
     'flipY_stroke': '<path d="M3 12h18"/><path d="M7 8V3h10v5"/><path d="M7 16v5h10v-5"/><path d="M12 8V3"/><path d="M12 16v5"/>',
     'resize_stroke': '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 9l6 6"/><path d="M9 9h4"/><path d="M9 9v4"/><path d="M15 15h-4"/><path d="M15 15v-4"/>',
+    // Film/video frame with a centered play triangle → "export animated clip".
+    // Stroke-only (fill="none"); fills the 24×24 grid like sibling rail icons
+    // (x3 y3 w18 h18) so it doesn't render visually smaller.
+    'to_gif_stroke': '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18"/><path d="M7 3v5M17 3v5"/><path d="M10 11l5 3-5 3v-6z"/>',
 
     // ── Prompt mode (from toolUtils.js) ──────────────────────────────────────
     // 'check' already covers ICON_POSITIVE. Adding negative/prohibited:
@@ -106,6 +112,16 @@ export const ICONS = {
     'ratio_8_5': '<rect x="2" y="6.5" width="20" height="11" rx="2"/>',
     'ratio_9_16': '<rect x="7" y="2" width="10" height="20" rx="2"/>',
     'ratio_16_9': '<rect x="2" y="7" width="20" height="10" rx="2"/>',
+    // Cinema ratios (MPI-261). Landscape = wide rect (16:9 convention),
+    // portrait = the transpose (tall rect), like ratio_16_9 vs ratio_9_16.
+    'ratio_2_1': '<rect x="2" y="7" width="20" height="10" rx="2"/>',
+    'ratio_185_1': '<rect x="2" y="6.5" width="20" height="11" rx="2"/>',
+    'ratio_21_9': '<rect x="1.5" y="7.5" width="21" height="9" rx="2"/>',
+    'ratio_2_39': '<rect x="2" y="7.8" width="20" height="8.4" rx="2"/>',
+    'ratio_1_2': '<rect x="7" y="2" width="10" height="20" rx="2"/>',
+    'ratio_1_185': '<rect x="6.5" y="2" width="11" height="20" rx="2"/>',
+    'ratio_9_21': '<rect x="7.5" y="1.5" width="9" height="21" rx="2"/>',
+    'ratio_1_239': '<rect x="7.8" y="2" width="8.4" height="20" rx="2"/>',
     'gallery': '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
     'refresh_stroke': '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
 };

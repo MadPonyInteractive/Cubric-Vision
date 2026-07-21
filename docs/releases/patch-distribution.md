@@ -19,8 +19,11 @@ A point bug-fix release delivered to Patreon supporters (Pro first, Early Access
 later — see the tier cadence below), in the weeks between public versions.
 
 - **No git tag.** The `build-portable.yml` dispatcher has a `push: tags: 'v*'`
-  trigger that auto-publishes a GitHub Release. Pushing a `v1.0.x` tag would leak
-  the patch publicly. Patreon patches are therefore tagless.
+  trigger. It does NOT auto-publish a GitHub Release — the workflow (`name:
+  Request portable artifacts`, `permissions: contents: read`) only DISPATCHES a
+  private `mpi-ci` artifact rebuild; the public GitHub Release is a separate,
+  explicit `gh release create` step. But a `v1.0.x` tag still fires that public
+  build dispatch, so Patreon patches are tagless to avoid it.
 - Commit the fix + version bump to **`master`** (the release trunk).
 - Build the per-OS artifacts via the private **`mpi-ci`** CI. `master` must be
   **pushed** first (`mpi-ci` builds the pushed ref). Dispatch with
@@ -108,7 +111,11 @@ See `mpi-release-shared/references/link-model.md` for the authoritative lifecycl
 ### 2. Public GitHub release
 
 Done later, **bundling all accumulated patches** since the last public version.
-This is the only time a `v*` tag is pushed (firing `push: tags: 'v*'` → publish).
+This is the only time a `v*` tag is pushed (firing `push: tags: 'v*'` → private
+artifact rebuild only — NOT a GitHub Release; the release is an explicit `gh
+release create`). Attach the **3 FULL portable installers only** — no
+`*-update-*` delta bundles. Deltas are the Cloudflare/Patreon supporter-update
+path; they do not belong on the public GitHub release.
 
 Example: if only `1.0.1` and `1.0.2` patches happened, the public release is
 `1.0.2` and its changelog lists **both** fixes.

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-271",
+  "title": "Migrate preview consumers to preview:frame bus (MPI-269 P4/P5)",
+  "description": "Migrate the live-latent consumers off the legacy generation:preview path onto the MPI-269 preview:frame bus + activeGenerations.getLastPreview(genId): (1) MpiBaseApp app pane (js/components/Organisms/MpiBaseApp/MpiBaseApp.js:166), (2) gallery placeholder card. Seed from getLastPreview on mount/repaint so a pane shows the current latent through frame gaps. Then P5: retire the legacy generation:preview emit + exec.onPreview->setPreview path once both consumers are migrated. MUST verify a REMOTE-connected gen too (feedback_runpod_not_local_engine_proof). Contract: docs/preview-bus.md + tasks/MPI-269/handoffs/bus-contract.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-12T21:50:00Z",
+  "updated_at": "2026-07-13T22:18:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

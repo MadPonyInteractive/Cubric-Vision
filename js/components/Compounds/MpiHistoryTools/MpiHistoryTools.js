@@ -32,7 +32,8 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { qs } from '../../../utils/dom.js';
+import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
+import { qs, on } from '../../../utils/dom.js';
 
 // ── Built-in tool lists ─────────────────────────────────────────────────────
 // Groups: each group gets a label strip + separator. group[] items render as
@@ -59,6 +60,8 @@ const IMAGE_TOOLS = [
         label: 'Enhance',
         group: [
             { mode: 'imageUpscale', icon: 'upscaler', info: 'Upscale' },
+            // ponytail: eraser icon reused for cutout; add a dedicated icon if design wants one.
+            { mode: 'removeBackground', icon: 'eraser', info: 'Remove Background' },
         ],
     },
     {
@@ -92,6 +95,13 @@ const VIDEO_TOOLS = [
         group: [
             { mode: 'videoUpscale', icon: 'upscaler',           info: 'Upscale'     },
             { mode: 'interpolate',  icon: 'interpolate_stroke', info: 'Interpolate' },
+        ],
+    },
+    {
+        mode: 'export',
+        label: 'Export',
+        group: [
+            { mode: 'exportGif', icon: 'to_gif_stroke', info: 'Export GIF' },
         ],
     },
 ];
@@ -258,6 +268,54 @@ export const MpiHistoryTools = ComponentFactory.create({
             }
         };
 
+        // ── Hover tooltip (MPI-264) ──────────────────────────────────────────
+        // A floating name label on the RIGHT of the hovered rail button. Reuses
+        // the MpiPopup primitive (portals to body, carets, entrance anim). One
+        // live instance at a time, mounted per-hover because MpiPopup captures its
+        // anchor at mount. Text = the button's [data-info] (the tool name).
+        // mouseenter/leave don't bubble → delegate via mouseover/mouseout + closest.
+        let _tip = null;
+
+        const _hideTip = () => { _tip?.destroy?.(); _tip = null; };
+
+        _unsubs.push(on(el, 'mouseover', (e) => {
+            const btn = e.target.closest('.mpi-history-tools__btn');
+            if (!btn || btn === _tip?._anchor) return;
+            _hideTip();
+            const name = btn.getAttribute('data-info');
+            if (!name) return;
+            const label = document.createElement('span');
+            label.textContent = name; // textContent-safe; names are internal
+            // Mount into a throwaway wrapper — MpiPopup.mount() does
+            // `container.innerHTML = html`, which would WIPE the button's icon if
+            // we mounted into `btn`. The popup portals itself to body on setup;
+            // `triggerEl: btn` is what actually anchors it.
+            const wrap = document.createElement('div');
+            _tip = MpiPopup.mount(wrap, {
+                active: true,
+                position: 'right',
+                variant: 'glass',
+                triggerEl: btn,
+            }, label.outerHTML);
+            _tip._anchor = btn;
+            if (_tip.el) {
+                // Compact-tooltip skin (smaller text + tighter padding). MpiPopup has
+                // no size variant, so scope it via a modifier + our own stylesheet
+                // rather than touching the shared primitive CSS.
+                _tip.el.classList.add('mpi-popup--tip');
+                // MpiPopup's built-in gap is small for a left-edge rail; nudge further right.
+                _tip.el.style.left = `${parseFloat(_tip.el.style.left || 0) + 12}px`;
+            }
+        }));
+
+        _unsubs.push(on(el, 'mouseout', (e) => {
+            const btn = e.target.closest('.mpi-history-tools__btn');
+            if (!btn) return;
+            // Ignore moves that stay inside the same button (icon <-> wrapper).
+            if (e.relatedTarget && e.relatedTarget.closest('.mpi-history-tools__btn') === btn) return;
+            _hideTip();
+        }));
+
         // ── Initial mount ────────────────────────────────────────────────────
 
         toolDefs.forEach((def, i) => _mountTool(def, i === 0));
@@ -265,6 +323,7 @@ export const MpiHistoryTools = ComponentFactory.create({
         // ── Teardown ─────────────────────────────────────────────────────────
 
         el.destroy = () => {
+            _hideTip();
             _unsubs.forEach(fn => fn?.());
             _buttons.forEach(btn => btn?.destroy?.());
             _buttons.clear();

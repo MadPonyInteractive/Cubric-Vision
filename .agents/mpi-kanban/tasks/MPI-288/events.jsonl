@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-288","at":"2026-07-15T10:35:09.141Z","actor":"vscode","summary":"Created MPI-288."}
+{"schema":"mpi-kanban/event/v1","type":"task.deleted","id":"MPI-288","at":"2026-07-18T15:28:48.107Z","actor":"vscode","summary":"Deleted MPI-288."}
+{"at":"2026-07-19T17:37:06Z","type":"task.moved","from":"todo","to":"(deleted)","note":"Superseded by MPI-300, which shipped Qwen-Edit 2511 end-to-end (op + ModelDef + style rack + tier radio). status:deleted was set 2026-07-18 but the card was left in the todo column with no event; completing that move so the card is coherent in history. Not reopened — see MPI-300 for the shipped work."}

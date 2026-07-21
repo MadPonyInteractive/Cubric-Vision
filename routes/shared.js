@@ -163,8 +163,9 @@ function stopComfyUI() {
  * Memory-efficient streaming download with redirect support.
  * Bypasses native fetch/undici buffering to ensure near-zero RAM footprint.
  *
- * NOTE: For downloads that need resumable support, use ResumableDownloader
- * from downloadManager.js instead. This is for simple one-shot downloads.
+ * NOTE: For managed model/engine downloads (cancel, sha256, progress wiring),
+ * use FileDownloader from downloadManager.js instead. This is for simple
+ * one-shot downloads.
  */
 function streamDownload(url, localPath, onProgress) {
     const request = (targetUrl) => {

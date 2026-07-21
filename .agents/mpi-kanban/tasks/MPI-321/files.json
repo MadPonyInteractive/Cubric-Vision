@@ -1,0 +1,6 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    { "path": "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js", "change": "HOVER_PLAY_DELAY_MS const; per-card _scheduleHoverPlay/_cancelHoverPlay with :hover recheck; audio + video mouseenter deferred, mouseleave cancels" }
+  ]
+}

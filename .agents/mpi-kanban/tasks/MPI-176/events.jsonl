@@ -1,3 +1,0 @@
-{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-07-02T15:00:00Z","actor":"claude","id":"MPI-176","title":"Consolidate duplicate _buildComfyViewUrl/_collectComfyOutputUrls (comfyController vs commandExecutor)"}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T16:30:00Z","actor":"claude","id":"MPI-176","from":"todo","to":"doing","reason":"Implementation started (dedup refactor)."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-07-02T17:00:00Z","actor":"claude","id":"MPI-176","from":"doing","to":"done","reason":"Dedup extraction shipped; app boots + remoteHeaders verified."}

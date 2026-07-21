@@ -136,3 +136,13 @@ PromptBoxControls own the scope decision via their `scope: 'shared' | 'perOp'` f
 - Persisted to `localStorage` via `Storage.getPromptExpanded` / `setPromptExpanded` (key `mpi_prompt_expanded`). Hydrated into `state.promptExpanded` at module init in `js/state.js`.
 - `state:changed` subscriber in `state.js` mirrors writes to Storage. Source of truth is the proxy field; localStorage is the cold-start mirror.
 - `MpiPromptBox` reads the field on mount to seed its `isExpansionLocked` local, and writes `state.promptExpanded = !isExpansionLocked` from the chevron lock button's click handler — never poke `Storage` directly from the component.
+
+---
+
+## Gallery View Prefs
+
+`state.gallerySizeLevel` (int `1–4`, default `3`) and `state.galleryShowInfo` (boolean, default `false`) control the gallery card-size slider and the info-mode (card badges) toggle.
+
+- Persisted to `localStorage` via `Storage.getGallerySizeLevel` / `setGallerySizeLevel` (key `mpi_gallery_size_level`, getter clamps 1–4) and `Storage.getGalleryShowInfo` / `setGalleryShowInfo` (key `mpi_gallery_show_info`). Hydrated into `state` at module init in `js/state.js`.
+- `state:changed` subscriber in `state.js` mirrors both writes to Storage. Source of truth is the proxy field; localStorage is the cold-start mirror.
+- `MpiGalleryGrid` reads the fields on mount (slider seed + info-btn active state) and writes them from the slider `input` handler and info-btn click — never poke `Storage` directly from the component.

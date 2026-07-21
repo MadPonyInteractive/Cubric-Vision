@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-253","at":"2026-07-10T23:11:37Z","actor":"claude","column":"doing","maturity":"validating"}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-253","at":"2026-07-10T23:11:37Z","actor":"claude","note":"MaskManager null-ctx guard coded + syntax-verified; needs in-app resize-tool confirm"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-253","at":"2026-07-11T00:20:00Z","actor":"claude","from":"doing","to":"done","maturity":"complete","reason":"User-verified full smoke; committed b07a30cc"}

@@ -1,0 +1,17 @@
+{
+ "schema": "mpi-kanban/message/v1",
+ "id": "reply-7918bb15-060d-4713-b3dd-2fe54502d5db",
+ "parent": "f6e0b91a-e5e9-4a27-895c-4c67ad7be6ff",
+ "to": {
+  "selector": "session",
+  "value": "getsize-progress-agent"
+ },
+ "from": {
+  "selector": "session",
+  "value": "krea2-custom-nodes-install"
+ },
+ "status": "open",
+ "subject": "Acked: app predates commit (true) AND my fix was too narrow. Widened it (a0abef8b): watchdog reconciles any all-bytes-in-but-unsettled dep at 15s, covers the transformer weight.",
+ "body": "Acked - and you were double-right. Two things:\n\n1) THE APP PREDATES THE COMMIT: correct. The restart that fixed the 404 booted the app BEFORE\nmy 708e3847 landed, so none of my reconcile code was in the running process. That alone explains\nwhy this install still hung. One clean restart loads it.\n\n2) BUT my first fix was ALSO too narrow, and would NOT have caught this hang even if loaded.\nLive per-dep snapshot from /comfy/downloads/status showed the stuck dep is the TRANSFORMER WEIGHT:\n  krea2-turbo-transformer  status=downloading  downloadedBytes==totalBytes (13141730784==13141730784)\nEvery other dep complete. So it's a missed terminal SSE on a WEIGHT, not a requirements_only node.\nMy 708e3847 only reconciled when a requirementsOnly node was present -> would have skipped this.\n\nWIDENED FIX (commit a0abef8b, supersedes 708e3847): moved the backstop into the stall watchdog.\nOn the normal 15s poll, if ANY outstanding dep is all-bytes-in (downloadedBytes>=totalBytes>0) but\nstatus still 'downloading', reconcile against volume truth NOW instead of waiting the full 90s stall.\nCovers weights AND requirements_only nodes. Reconcile only settles deps the wrapper reports\ninstalled:true, so it never force-completes an in-flight download - and never a weight whose sha256\nverify has not passed yet, which is exactly where your MPI-253 watchdog-during-verify bug lives.\nThey compose: reconcile keeps polling every 15s and settles the instant verify passes.\n\nSo the plan: user does ONE clean restart to load a0abef8b, then re-installs Krea2. Expected: bar hits\n100%, within ~15s the watchdog reconcile settles the transformer from volume truth, card flips INSTALLED.\nIf MPI-253 is unfixed the sha verify may add a beat, but it will still settle - no forever-hang.\n\nIf it STILL hangs after loading a0abef8b, then the reconcile is reporting the weight NOT installed on the\nvolume (sha mismatch or wrong path), which is a different animal and I will chase it. Watching the log.",
+ "created_at": "2026-07-11T08:50:00Z"
+}

@@ -16,16 +16,34 @@ import { clientLogger } from './clientLogger.js';
 // text so it can be surfaced as a friendly toast, not the GitHub error dialog.
 // Covers the RunPod network-volume quota ([Errno 122] Disk quota exceeded) and a
 // plain full disk ([Errno 28] No space left on device), plus their worded forms.
+// MPI-276 G2 — how long an optimistic 'pending' click waits for a backend ack
+// before it reverts the card to Install + a warning toast.
+const PENDING_ACK_MS = 10_000;
+
 function _isOutOfSpaceError(error) {
     const s = String(error || '').toLowerCase();
     return s.includes('errno 122')
         || s.includes('disk quota exceeded')
         || s.includes('errno 28')
-        || s.includes('no space left on device');
+        || s.includes('no space left on device')
+        // pre-flight statfs gate (downloadManager.js) — friendly message, no errno
+        || s.includes('not enough disk space');
 }
 
 const downloadService = {
     _eventSource: null,
+
+    // MPI-276 G9 — the snapshot protocol makes correctness ride on a monotonic
+    // version, not on SSE-delivery luck. The backend broadcasts download:snapshot
+    // {version, jobs[]} on every SSE connect and after every reconcile pass; each
+    // delta event also carries the version it was emitted at. The FE replaces
+    // state.downloadJobs wholesale from a snapshot and applies a delta only when its
+    // version is >= the last snapshot seen. A stale snapshot (lower version than one
+    // already applied) is dropped. This retires the MPI-241 merge heuristic,
+    // orphanedActive re-injection, and the _recentlyCancelled resurrection guard:
+    // register-before-respond (G8) means the backend registers the job before
+    // /download/start returns, so the SSE-open race those guards patched cannot form.
+    _snapshotVersion: -1,
 
     // MPI-184 — serial install queue. The app used to POST every install
     // immediately, so clicking Install on 3 models fired 3 concurrent
@@ -58,9 +76,18 @@ const downloadService = {
         const willQueue = this._inFlight > 0;
         this._inFlight += 1;
         const job = _createJob(modelId, dependencies);
-        job.status = willQueue ? 'queued' : 'downloading';
+        // MPI-276 G2: optimistic client-only 'pending' state — "Starting…",
+        // indeterminate — until the backend acks. A queued install (something ahead
+        // in the serial chain) shows 'queued' directly; a lone install shows
+        // 'pending' until _firePost swaps it for the register-before-respond job
+        // snapshot. If no ack lands within PENDING_ACK_MS, _armPendingRevert reverts
+        // the card to Install + a warning toast (the swallowed-request drill).
+        job.status = willQueue ? 'queued' : 'pending';
+        job.indeterminate = true;
         state.downloadJobs = [...state.downloadJobs.filter(j => j.modelId !== modelId), job];
         state.downloadQueueActive = true;
+        this._startLivenessWatchdog(); // MPI-291 — self-idles when no active job
+        if (job.status === 'pending') this._armPendingRevert(modelId);
         Events.emit('download:started', { modelId, job });
 
         // Chain the POST behind the previous install and release the next as soon as
@@ -118,8 +145,8 @@ const downloadService = {
         const job = state.downloadJobs.find(j => j.modelId === modelId);
         if (!job) return false;
 
-        // This job's turn — leave 'queued', become 'downloading' so the card swaps
-        // the Queued badge for the live progress bar + Pause/Cancel.
+        // This job's turn — leave 'queued'/'pending', become 'downloading' so the
+        // card swaps the badge for the live progress bar + Cancel.
         job.status = 'downloading';
         state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? job : j);
 
@@ -128,8 +155,8 @@ const downloadService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId, dependencies }),
         });
-
         if (!res.ok) {
+            this._clearPendingRevert(modelId);
             const err = await res.json().catch(() => ({ error: 'Failed to start download' }));
             job.status = 'failed';
             job.error = err.error;
@@ -138,7 +165,8 @@ const downloadService = {
             // MPI-120: offline is an expected, actionable state → warning toast,
             // not the GitHub-report error dialog.
             if (err.offline) {
-                Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models." });
+                // sound:false — immediate feedback of pressing Install; a click must not ring.
+                Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models.", sound: false });
             } else if (_isOutOfSpaceError(err.error)) {
                 // Disk-full PRE-FLIGHT reject (local statfs gate OR remote volume
                 // free-space gate) — expected + user-actionable, so the friendly
@@ -146,40 +174,57 @@ const downloadService = {
                 // download:failed handler. [[feedback_error_dialog_vs_toast]]
                 const model = getModelById(modelId);
                 const modelName = model?.name || modelId;
+                // sound:false — immediate feedback of pressing Install; a click must not ring.
                 Events.emit('ui:warning', {
                     message: `Not enough disk space to install ${modelName}. Free up space and try again.`,
+                    sound: false,
                 });
             } else {
                 Events.emit('ui:error', { title: 'Download Start Failed', message: err.error });
             }
             return false; // already emitted download:failed — no terminal wait needed
         }
+        // POST accepted (register-before-respond, G8): the backend registered the
+        // full job before responding, and the body carries its snapshot. Adopt it so
+        // the card reflects true backend progress (already-installed deps credited),
+        // and clear the pending-revert timer — the install is real now.
+        this._clearPendingRevert(modelId);
+        const body = await res.json().catch(() => null);
+        if (body && body.job) {
+            const cur = state.downloadJobs.find(j => j.modelId === modelId);
+            if (cur) {
+                const merged = { ...cur, ...body.job, status: 'downloading', indeterminate: false };
+                state.downloadJobs = state.downloadJobs.map(j => j.modelId === modelId ? merged : j);
+            }
+        }
         return true; // POST accepted — serialize the next install behind this one
     },
 
-    async pause(modelId) {
-        const res = await fetch('/comfy/models/download/pause', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelId }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ error: 'Failed to pause download' }));
-            Events.emit('ui:error', { title: 'Pause Failed', message: err.error });
-        }
+    // MPI-276 G2 — optimistic-pending revert. If the backend never acks a 'pending'
+    // install within the window (server down / request swallowed), revert the card to
+    // Install and surface a warning toast (never the GitHub-error dialog — this is an
+    // expected, user-actionable state). Cleared the moment _firePost gets a response.
+    _pendingTimers: new Map(),
+    _armPendingRevert(modelId) {
+        this._clearPendingRevert(modelId);
+        const t = setTimeout(() => {
+            this._pendingTimers.delete(modelId);
+            const job = state.downloadJobs.find(j => j.modelId === modelId);
+            if (!job || job.status !== 'pending') return; // acked/settled — nothing to revert
+            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
+            if (!state.downloadJobs.length) state.downloadQueueActive = false;
+            Events.emit('download:cancelled', { modelId }); // card falls back to Install
+            Events.emit('ui:warning', { message: "Install didn't start — try again." });
+        }, PENDING_ACK_MS);
+        this._pendingTimers.set(modelId, t);
+    },
+    _clearPendingRevert(modelId) {
+        const t = this._pendingTimers.get(modelId);
+        if (t) { clearTimeout(t); this._pendingTimers.delete(modelId); }
     },
 
-    async resume(modelId) {
-        const res = await fetch('/comfy/models/download/resume', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelId }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ error: 'Failed to resume download' }));
-            Events.emit('ui:error', { title: 'Resume Failed', message: err.error });
-        }
-    },
+    // pause()/resume() removed (MPI-258 Bug 2): NDH resume corrupted large files.
+    // Downloads are cancel-only; an interrupted install restarts clean.
 
     async cancel(modelId) {
         // MPI-184: a still-queued job (serial install queue, POST not fired) is unknown
@@ -187,14 +232,38 @@ const downloadService = {
         // back — the card would never revert from QUEUED to Install. Emit the event
         // locally in that case so the UI updates. (The listener is idempotent; a live
         // download still gets its cancel via the backend SSE round-trip below.)
-        const queuedJob = state.downloadJobs.find(j => j.modelId === modelId && j.status === 'queued');
+        // MPI-258 Bug B — no live client job for this model = nothing to cancel. A
+        // second Cancel press (or a click on an already-settled card) otherwise POSTed
+        // /cancel for a job the backend already deleted → 404 spam in the console and a
+        // pointless round-trip. Clear + emit locally (idempotent) and return without a
+        // fetch. The FIRST real cancel below still hits the backend. (MPI-276: the
+        // _recentlyCancelled resurrection guard is gone — the snapshot is authoritative,
+        // so a cancelled job can't be re-injected by a status-fetch race.)
+        this._clearPendingRevert(modelId); // MPI-276 G2 — cancelling kills any pending timer
+        const activeJob = state.downloadJobs.find(j => j.modelId === modelId);
+        if (!activeJob || activeJob.status === 'pending') {
+            // No live job, OR a still-optimistic 'pending' job the backend never
+            // registered — nothing on the backend to cancel. Clear + emit locally.
+            state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
+            Events.emit('download:cancelled', { modelId });
+            if (!state.downloadJobs.length) state.downloadQueueActive = false;
+            return;
+        }
+
+        // A still-queued job (serial install queue, POST not fired) is unknown to the
+        // backend; its /cancel is a harmless idempotent no-op (backend returns 200).
         await fetch('/comfy/models/download/cancel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelId }),
-        });
+        }).catch(() => {});
+        // Clear the job + fire the local event UNCONDITIONALLY. Previously this only
+        // ran for the queued/404 cases and otherwise relied on the backend's
+        // download:cancelled SSE — but if that tick dropped (or lost the race to an
+        // orphanedActive re-inject), the phantom job survived and Cancel looked dead.
+        // The listener is idempotent, so a live 200 that ALSO sends the SSE is fine.
         state.downloadJobs = state.downloadJobs.filter(j => j.modelId !== modelId);
-        if (queuedJob) Events.emit('download:cancelled', { modelId });
+        Events.emit('download:cancelled', { modelId });
         if (!state.downloadJobs.length) state.downloadQueueActive = false;
     },
 
@@ -236,52 +305,115 @@ const downloadService = {
         this._connectSSE();
     },
 
+    // MPI-291 — SSE liveness watchdog. The 'error' handler's 3s reconnect covers a
+    // stream that errors cleanly, but a silently-dropped stream (no error event) left
+    // _eventSource null/CLOSED with no reconnect while a download ran — the grid showed
+    // an orphan frozen bar (live server progress, dead FE stream). This self-idling
+    // backstop (mirrors MpiModelManager._pumpBackstop) verifies the stream is OPEN
+    // while any job is active and reconnects if not. Idles when no active job.
+    _livenessTimer: null,
+    _startLivenessWatchdog() {
+        if (this._livenessTimer) return;
+        this._livenessTimer = setInterval(() => {
+            const active = state.downloadJobs.some(
+                j => j.status === 'downloading' || j.status === 'installing'
+                    || j.status === 'pending' || j.status === 'queued');
+            if (!active) {
+                clearInterval(this._livenessTimer);
+                this._livenessTimer = null;
+                return;
+            }
+            const es = this._eventSource;
+            if (!es || es.readyState === EventSource.CLOSED) {
+                clientLogger.warn('downloadService', 'SSE liveness watchdog: stream dead, reconnecting');
+                this._connectSSE();
+            }
+        }, 5000);
+    },
+
     _connectSSE() {
         if (this._eventSource) this._eventSource.close();
         this._eventSource = new EventSource('/comfy/downloads/stream');
 
-        this._eventSource.addEventListener('open', async () => {
-            // Re-sync state from backend on reconnect to recover from dropped events
-            try {
-                const res = await fetch('/comfy/downloads/status');
-                if (res.ok) {
-                    const { jobs } = await res.json();
-                    if (jobs && jobs.length) {
-                        // Recalculate progress from dep data in case stored value is stale (bug fix)
-                        for (const job of jobs) {
-                            if (job.deps && job.totalBytes > 0) {
-                                const depBytes = job.deps.reduce((s, d) => s + (d.downloadedBytes || 0), 0);
-                                if (depBytes > job.downloadedBytes) {
-                                    job.downloadedBytes = depBytes;
-                                    job.progress = depBytes / job.totalBytes;
-                                }
-                            }
-                        }
-                        // MPI-241: PRESERVE a live client-side job the backend list does
-                        // not yet include. start() calls _ensureSSE() and creates the job
-                        // in the SAME tick; the SSE 'open' status-fetch that follows can
-                        // race ahead of the backend registering that install, returning a
-                        // list of only OLD (complete) jobs. Blindly overwriting wiped the
-                        // just-created 'downloading' job → the detail footer reverted from
-                        // Cancel to Install (worst on the first install after a reload,
-                        // before SSE was ever open). Keep any active client job the
-                        // backend hasn't caught up to; the backend copy wins for shared ids.
-                        const backendIds = new Set(jobs.map(j => j.modelId));
-                        const ACTIVE = ['downloading', 'queued', 'paused', 'installing'];
-                        const orphanedActive = state.downloadJobs.filter(
-                            j => !backendIds.has(j.modelId) && ACTIVE.includes(j.status));
-                        state.downloadJobs = [...jobs, ...orphanedActive];
-                        state.downloadQueueActive = state.downloadJobs.some(
-                            j => j.status === 'downloading' || j.status === 'installing');
-                    }
-                }
-            } catch (e) { /* non-critical */ }
+        this._eventSource.addEventListener('open', () => {
+            // MPI-276 G9: the backend broadcasts a download:snapshot on every SSE
+            // connect (after a reconcile pass). Reset the version floor so that
+            // connect-snapshot — the authoritative post-reconnect truth — is always
+            // accepted, even if its version is lower than one seen on a prior
+            // connection (a server restart resets the counter). No status-fetch, no
+            // merge: the snapshot listener replaces state.downloadJobs wholesale.
+            this._snapshotVersion = -1;
         });
 
         this._eventSource.addEventListener('error', () => {
             this._eventSource.close();
             this._eventSource = null;
             setTimeout(() => this._connectSSE(), 3000);
+        });
+
+        // MPI-276 G9 — the authoritative state feed. Replaces state.downloadJobs
+        // wholesale from the store snapshot. The store models a model's terminal
+        // success as 'done'; the FE vocabulary is 'complete' (its busy/footer logic
+        // keys on it), so translate here. Transport-only detail the pure store omits
+        // (speed, phase, indeterminate, error) rides the delta events; carry those
+        // forward from the matching client job so a snapshot doesn't blank a live
+        // speed/Preparing… label mid-download. A client-only 'pending' job (G2, added
+        // in 4b) the backend hasn't registered yet is preserved.
+        this._eventSource.addEventListener('download:snapshot', (e) => {
+            const data = JSON.parse(e.data);
+            if (typeof data.version === 'number' && data.version < this._snapshotVersion) return; // stale
+            this._snapshotVersion = typeof data.version === 'number' ? data.version : this._snapshotVersion;
+            const prevById = new Map(state.downloadJobs.map(j => [j.modelId, j]));
+            const jobs = (data.jobs || []).map(j => {
+                const prev = prevById.get(j.modelId);
+                return {
+                    ...j,
+                    status: j.status === 'done' ? 'complete' : j.status,
+                    // preserve delta-carried detail the snapshot doesn't include
+                    speed: j.speed || (prev && prev.speed) || '',
+                    phase: prev && prev.phase,
+                    indeterminate: prev ? prev.indeterminate : false,
+                    error: prev && prev.error,
+                };
+            });
+            const snapshotIds = new Set(jobs.map(j => j.modelId));
+            // Keep a client-owned ACTIVE job the backend snapshot hasn't caught up to
+            // yet: 'pending' (optimistic click, G2, POST still in flight), 'downloading'
+            // (_firePost flips pending→downloading before the POST, so a snapshot
+            // broadcast in that gap would otherwise DROP the live job → the SSE
+            // download:started echo then finds it undefined and stomps the open detail
+            // footer back to Install mid-download), OR 'queued' (a 2nd+ install waiting
+            // its turn in the serial chain — no POST fired yet, so it is legitimately
+            // absent from the backend snapshot; without this it gets wiped, _firePost
+            // later finds no job and skips the POST, and the tile reverts to Install
+            // while _inFlight still counts it → the queued install silently vanishes).
+            // MPI-276 Phase 8.
+            // MPI-317 F4: 'installing' belongs in this keep-set too. On a resumed
+            // install the backend reconciler settles + immediately PRUNES the store
+            // job (disk truth) while the legacy-map walk is still running the
+            // custom-node phase — the pruned snapshot then arrived here and dropped
+            // the FE job mid-'installing' (it wasn't in the keep-set), so the
+            // model-level download:complete found state.downloadJobs empty: no job
+            // to anchor the completion on (missed toast) and the cascade re-sync
+            // toasted stale models instead. 'installing' is part of the busy set
+            // (MPI-241 no-Install-flash contract) and must survive a snapshot gap
+            // exactly like 'downloading'; the model-level complete/failed event
+            // that always follows is what settles it.
+            const clientPending = state.downloadJobs.filter(
+                j => (j.status === 'pending' || j.status === 'downloading' || j.status === 'queued'
+                        || j.status === 'installing')
+                    && !snapshotIds.has(j.modelId));
+            state.downloadJobs = [...jobs, ...clientPending];
+            state.downloadQueueActive = state.downloadJobs.some(
+                j => j.status === 'downloading' || j.status === 'installing' || j.status === 'pending' || j.status === 'queued');
+            if (state.downloadQueueActive) this._startLivenessWatchdog(); // MPI-291 — reload/recover mid-download
+            // Signal consumers to repaint from the fresh snapshot. On a renderer reload
+            // mid-download the grid mounts with empty state.downloadJobs and renders the
+            // card as Install; this SSE-connect snapshot is what restores the live bar,
+            // but a bare state.downloadJobs mutation only fires state:changed (which
+            // MpiModelManager filters to s_installedModelIds). Without this event the
+            // reloaded grid never repaints the recovered job. MPI-276 Phase 8.
+            Events.emit('download:snapshot', { jobs: state.downloadJobs });
         });
 
         // Backend broadcasts download:started with correct progress from pre-installed deps.
@@ -298,7 +430,11 @@ const downloadService = {
                 job.indeterminate = !!data.indeterminate;
                 state.downloadJobs = [...state.downloadJobs];
             }
-            Events.emit('download:started', data);
+            // Only re-emit when the FE actually holds the job. A started echo for a
+            // model with no live FE job (snapshot/started ordering gap) would drive
+            // MpiModelManager._patchTile→openDetail to read an undefined job and stomp
+            // the footer back to Install mid-download. MPI-276 Phase 8.
+            if (job) Events.emit('download:started', data);
         });
 
         this._eventSource.addEventListener('download:progress', (e) => {
@@ -344,18 +480,9 @@ const downloadService = {
 
             // UW installs are surfaced through engine UI — skip toast
             const isUW = !data.modelId || data.modelId === '__universal_workflow__';
-            if (!isUW) {
-                const model = getModelById(data.modelId);
-                const modelName = model?.name || data.modelId;
-                const toastWrap = ce('div');
-                document.body.appendChild(toastWrap);
-                const toastInstance = MpiToast.mount(toastWrap, {
-                    message: `${modelName} installed.`,
-                    variant: 'success',
-                    duration: 4000,
-                });
-                toastInstance.on('close', () => toastWrap.remove());
-            }
+            // Primary "installed." toast is fired by notificationService on the
+            // re-emitted download:complete below (focus-aware: OS notif when
+            // unfocused, toast when focused). No inline toast here — it double-fired.
 
             // Reseed ComfyUI's model filename cache so newly downloaded weights are
             // immediately visible without a restart (MPI-121). Pure file-add into an
@@ -499,34 +626,8 @@ const downloadService = {
             reSyncInstalledModels().catch(err => clientLogger.error('downloadService', 're-sync after uninstall failed:', err));
         });
 
-        this._eventSource.addEventListener('download:paused', (e) => {
-            const data = JSON.parse(e.data);
-            const job = state.downloadJobs.find(j => j.modelId === data.modelId);
-            if (job) {
-                job.status = 'paused';
-                if (typeof data.downloadedBytes === 'number') job.downloadedBytes = data.downloadedBytes;
-                if (typeof data.totalBytes === 'number') job.totalBytes = data.totalBytes;
-                if (typeof data.progress === 'number') job.progress = data.progress;
-                if (typeof data.speed === 'string') job.speed = data.speed;
-                state.downloadJobs = [...state.downloadJobs];
-            }
-            Events.emit('download:paused', data);
-        });
-
-        this._eventSource.addEventListener('download:resumed', (e) => {
-            const data = JSON.parse(e.data);
-            _speedSamples.delete(data.modelId);
-            const job = state.downloadJobs.find(j => j.modelId === data.modelId);
-            if (job) {
-                job.status = 'downloading';
-                if (typeof data.downloadedBytes === 'number') job.downloadedBytes = data.downloadedBytes;
-                if (typeof data.totalBytes === 'number') job.totalBytes = data.totalBytes;
-                if (typeof data.progress === 'number') job.progress = data.progress;
-                if (typeof data.speed === 'string') job.speed = data.speed;
-                state.downloadJobs = [...state.downloadJobs];
-            }
-            Events.emit('download:resumed', data);
-        });
+        // download:paused / download:resumed listeners removed (MPI-258 Bug 2) —
+        // the backend no longer emits them; downloads are cancel-only.
 
         this._eventSource.addEventListener('download:installing', (e) => {
             const data = JSON.parse(e.data);

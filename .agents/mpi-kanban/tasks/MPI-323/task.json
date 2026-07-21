@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-323",
+  "title": "Evaluate FLUX.2 Klein 4B for masked object/text removal",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-21T12:00:00Z",
+  "updated_at": "2026-07-21T12:00:00Z",
+  "description": "Check out FLUX.2 Klein 4B as a paint-a-mask -> remove-object/text model (the promptless-feeling Flux inpaint we want). If we pick it up, test its actual removal capabilities and decide whether it's worth wiring in. LICENSE ALREADY CLEARED: Klein 4B is Apache 2.0 (commercial OK); Klein 9B and Flux.1 Fill dev are non-commercial and ruled OUT for a paid app. Outpainting is NOT needed here - black-border + existing edit models already covers canvas-extend. Before any wiring: cheaper first test is whether Krea2 masked-edit (MPI-282) already removes on an empty/'remove' prompt. If Klein 4B proceeds it needs the ComfyUI pin bumped (newer than the 0.26 Pod pin) and the full /mpi-add-model playbook.",
+  "links": {
+    "events": "events.jsonl",
+    "research": "research/",
+    "validation": "validation.md"
+  },
+  "attention": {
+    "state": "none",
+    "reason": "",
+    "updated_at": "2026-07-21T12:00:00Z"
+  }
+}

@@ -16,6 +16,7 @@
  *     overlayCanvas,     // HTMLCanvasElement for overlay drawing
  *     targetElement,     // img or video element with intrinsic dimensions
  *     onChange,          // (normRect) => void, called on drag end
+ *     showGrid,          // optional, default true — rule-of-thirds guides
  *   });
  *
  *   cropTool.enable({ x: 0.1, y: 0.1, w: 0.8, h: 0.8 });
@@ -34,7 +35,7 @@ const HANDLE_STROKE = 'oklch(0.95 0.005 80)';         /* --ink-1 */
 
 import { Hotkeys } from '../managers/hotkeyManager.js';
 
-export function createCropTool({ overlayCanvas, targetElement, onChange }) {
+export function createCropTool({ overlayCanvas, targetElement, onChange, showGrid = true }) {
     let _isEnabled = false;
     let _lockedRatio = null; // null = FREE (no aspect lock)
     let _normRect = { x: 0, y: 0, w: 1, h: 1 }; // normalized [0..1]
@@ -132,17 +133,44 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
 
     /**
      * Clamp and fit normalized rect to locked ratio and bounds.
+     *
+     * `preserve` (default false) keeps the CALLER'S rect instead of resetting to a
+     * maximal box. Both branches below deliberately ignore the incoming position
+     * and size — that is what makes entering crop mode always start from a fresh
+     * maximal selection, which the video/canvas croppers rely on. A caller
+     * RESTORING a saved rect needs the opposite, hence the opt-in flag.
      */
-    function _applyRatioToRect(rect = _normRect) {
-        // FREE mode: full normalized rect, no constraint
+    function _applyRatioToRect(rect = _normRect, preserve = false) {
+        const clamp01 = (r) => {
+            const w = Math.min(Math.max(r.w, 0.01), 1);
+            const h = Math.min(Math.max(r.h, 0.01), 1);
+            return {
+                x: Math.max(0, Math.min(r.x, 1 - w)),
+                y: Math.max(0, Math.min(r.y, 1 - h)),
+                w, h,
+            };
+        };
+
+        // FREE mode: no ratio constraint.
         if (_lockedRatio == null) {
-            _normRect = { x: 0, y: 0, w: 1, h: 1 };
+            _normRect = preserve ? clamp01(rect) : { x: 0, y: 0, w: 1, h: 1 };
             return;
         }
 
         const contentAspect = _contentAspect();
         // Pixel ratio → normalized-space ratio (account for anisotropic norm coords)
         const normRatio = _lockedRatio / contentAspect;
+
+        if (preserve) {
+            // Keep the caller's position/size, but force the locked ratio: derive
+            // height from width, shrinking to fit if that overflows the frame.
+            let { x, y, w } = clamp01(rect);
+            let h = w / normRatio;
+            if (h > 1) { h = 1; w = h * normRatio; }
+            _normRect = clamp01({ x, y, w, h });
+            return;
+        }
+
         let { x, y, w, h } = rect;
 
         // Fit by width first
@@ -443,21 +471,24 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
         ctx.setLineDash([]);
         ctx.strokeRect(px, py, pw, ph);
 
-        // 3. Rule-of-thirds grid
-        ctx.strokeStyle = CROP_THIRDS;
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        // Vertical thirds
-        ctx.moveTo(px + pw / 3, py);
-        ctx.lineTo(px + pw / 3, py + ph);
-        ctx.moveTo(px + (pw * 2) / 3, py);
-        ctx.lineTo(px + (pw * 2) / 3, py + ph);
-        // Horizontal thirds
-        ctx.moveTo(px, py + ph / 3);
-        ctx.lineTo(px + pw, py + ph / 3);
-        ctx.moveTo(px, py + (ph * 2) / 3);
-        ctx.lineTo(px + pw, py + (ph * 2) / 3);
-        ctx.stroke();
+        // 3. Rule-of-thirds grid — a COMPOSITION aid. Off for region-marking
+        // gizmos (the box step), where the box says "this thing", not "frame it".
+        if (showGrid) {
+            ctx.strokeStyle = CROP_THIRDS;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            // Vertical thirds
+            ctx.moveTo(px + pw / 3, py);
+            ctx.lineTo(px + pw / 3, py + ph);
+            ctx.moveTo(px + (pw * 2) / 3, py);
+            ctx.lineTo(px + (pw * 2) / 3, py + ph);
+            // Horizontal thirds
+            ctx.moveTo(px, py + ph / 3);
+            ctx.lineTo(px + pw, py + ph / 3);
+            ctx.moveTo(px, py + (ph * 2) / 3);
+            ctx.lineTo(px + pw, py + (ph * 2) / 3);
+            ctx.stroke();
+        }
 
         // 4. Draw handles (corner + edge)
         const hr = HANDLE_DIAMETER / 2;
@@ -603,11 +634,13 @@ export function createCropTool({ overlayCanvas, targetElement, onChange }) {
         },
 
         /**
-         * Set crop rect programmatically (normalized).
+         * Set crop rect programmatically (normalized). PRESERVES the given rect
+         * (clamped, and ratio-corrected when a ratio is locked) rather than
+         * resetting to a maximal box — this is the RESTORE path.
          */
         setRect(normRect) {
             _normRect = { ...normRect };
-            _applyRatioToRect();
+            _applyRatioToRect(_normRect, true);
             _redraw();
         },
 

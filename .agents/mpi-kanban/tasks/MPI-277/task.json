@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-277",
+  "title": "Blob-URL death-loop in Model Library console (997 ERR_FILE_NOT_FOUND)",
+  "description": "Same revoked blob URL (blob:http://127.0.0.1:3000/a080ab53-ed40-4278-b00b-77c7a53a8b7d) re-requested endlessly with net::ERR_FILE_NOT_FOUND \u00e2\u20ac\u201d ~997 console errors while Model Library open (2026-07-13, during install/uninstall churn). Something renders a card/preview/video thumb from a revoked or dead-session blob object URL and retries without invalidation or backoff. Media/preview subsystem, NOT the download system (that is MPI-276). Suspects: video tile previews in MpiModelManager, preview bus data-URLs (MPI-269), or .preview-assets blob rendering (MPI-227).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-13T20:40:55Z",
+  "updated_at": "2026-07-14T01:30:17Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

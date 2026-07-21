@@ -10,14 +10,19 @@ export const MpiCheckbox = ComponentFactory.create({
         const disabled = props.disabled ? 'disabled' : '';
         const name     = props.name || 'checkbox';
         const label    = props.label || '';
+        const isSwitch = props.variant === 'switch';
         const labelHtml = label
             ? `<span class="mpi-checkbox__label">${label}</span>`
             : '';
+        const control = isSwitch
+            ? '<span class="mpi-checkbox__switch" aria-hidden="true"></span>'
+            : '<span class="mpi-checkbox__box" aria-hidden="true"></span>';
+        const variantClass = isSwitch ? ' mpi-checkbox--switch' : '';
         return `
-            <label class="mpi-checkbox${props.disabled ? ' mpi-checkbox--disabled' : ''}">
+            <label class="mpi-checkbox${variantClass}${props.disabled ? ' mpi-checkbox--disabled' : ''}">
                 <input type="checkbox" class="mpi-checkbox__input"
                        name="${name}" ${checked} ${disabled}>
-                <span class="mpi-checkbox__box" aria-hidden="true"></span>
+                ${control}
                 ${labelHtml}
             </label>
         `;

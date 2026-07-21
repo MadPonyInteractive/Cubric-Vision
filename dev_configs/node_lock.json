@@ -1,8 +1,11 @@
 {
   "schema": "cubric/node-lock/v1",
-  "_doc": "Single source of truth for ComfyUI core + frontend + custom-node pins. BOTH install paths consume this: the app (js/data/modelConstants/dependencies.js builds node download URLs from it) and the RunPod Pod image build (mpi-ci/cubric-vision-pod). Per-node `source`: registry|git-tag|git-commit. `installRequirements` discriminates BAKED (pip-req nodes → Pod image at build time) from VOLUME (code-only nodes → installed on connect via the wrapper). To bump a node, edit its entry here only.",
+  "_doc": "Single source of truth for ComfyUI core + frontend + custom-node pins. BOTH install paths consume this: the app (js/data/modelConstants/dependencies.js builds node download URLs from it) and the RunPod Pod image build (mpi-ci/cubric-vision-pod). Per-node `source`: registry|git-tag|git-commit. `installRequirements` discriminates BAKED (pip-req nodes \u00e2\u2020\u2019 Pod image at build time) from VOLUME (code-only nodes \u00e2\u2020\u2019 installed on connect via the wrapper). To bump a node, edit its entry here only.",
   "comfyui": {
-    "core": { "tag": "v0.27.0", "commit": "bb131be9e83d2f773c90f1d6f1e4b248a498c8c5" },
+    "core": {
+      "tag": "v0.27.0",
+      "commit": "bb131be9e83d2f773c90f1d6f1e4b248a498c8c5"
+    },
     "frontend": {
       "comfyui-frontend-package": "1.45.20",
       "comfyui-workflow-templates": "0.11.1"
@@ -19,7 +22,7 @@
     "ComfyUI-MpiNodes": {
       "source": "git-commit",
       "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
-      "commit": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
+      "commit": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
       "filename": "ComfyUI-MpiNodes",
       "installRequirements": false
     },
@@ -79,6 +82,34 @@
       "commit": "419de2d7c78f415dde9aa352a7231820ebfc17a4",
       "filename": "RES4LYF",
       "installRequirements": true
+    },
+    "ComfyUI-Krea2-ControlNet": {
+      "source": "git-commit",
+      "repo": "facok/ComfyUI-Krea2-ControlNet",
+      "commit": "79ebfd3bd80d2180b334dd7ce57f3c9ddaa0848f",
+      "filename": "ComfyUI-Krea2-ControlNet",
+      "installRequirements": false
+    },
+    "comfyui_controlnet_aux": {
+      "source": "git-commit",
+      "repo": "Fannovel16/comfyui_controlnet_aux",
+      "commit": "e8b689a513c3e6b63edc44066560ca5919c0576e",
+      "filename": "comfyui_controlnet_aux",
+      "installRequirements": true
+    },
+    "comfyui-krea2edit": {
+      "source": "git-commit",
+      "repo": "lbouaraba/comfyui-krea2edit",
+      "commit": "17af88332728c97ab5c7d26296b2cae59c935976",
+      "filename": "comfyui-krea2edit",
+      "installRequirements": false
+    },
+    "comfyui-inpaint-cropandstitch": {
+      "source": "git-commit",
+      "repo": "lquesada/ComfyUI-Inpaint-CropAndStitch",
+      "commit": "3617559bcb9d15ff60b24c6800701402eb2cd478",
+      "filename": "comfyui-inpaint-cropandstitch",
+      "installRequirements": false
     }
   }
 }

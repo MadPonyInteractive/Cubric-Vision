@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-284",
+  "title": "Queued model card \u00e2\u20ac\u201d floating waiting-mascot on the thumb",
+  "description": "During MPI-276 Phase 8 the user asked for stronger feedback on a queued install. Shipped in MPI-276: a text 'Queued\u00e2\u20ac\u00a6' indeterminate label (replaces the silent 0% bar) in MpiModelManager._stateRowHtml, gated on downloadState==='queued'. FOLLOW-UP (this card): float the mascot waiting-image on top of the card thumbnail while a job sits queued, matching the waiting-state mascot used elsewhere (gallery card _setMascotState waiting / history-viewer mascot-peek=waiting). Absolute-position the peek mascot on .mpi-tile thumb, gate on st.downloadState==='queued', remove on transition to downloading. Reuse the existing waiting-mascot asset/surface \u00e2\u20ac\u201d do NOT add a new asset. Small UX polish, not a bug.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-14T19:30:00Z",
+  "updated_at": "2026-07-15T00:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

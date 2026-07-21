@@ -156,8 +156,8 @@ export const MpiHotkeys = ComponentFactory.create({
                                 <li><span>SPACE</span><span>Play / pause</span></li>
                                 <li><span>&larr;</span><span>Previous frame</span></li>
                                 <li><span>&rarr;</span><span>Next frame</span></li>
-                                <li><span>0</span><span>Jump to first frame</span></li>
-                                <li><span>1</span><span>Jump to last frame</span></li>
+                                <li><span>Home</span><span>Jump to first frame</span></li>
+                                <li><span>End</span><span>Jump to last frame</span></li>
                                 <li><span>&uarr;</span><span>Volume +10%</span></li>
                                 <li><span>&darr;</span><span>Volume -10%</span></li>
                                 <li><span>L</span><span>Toggle loop</span></li>

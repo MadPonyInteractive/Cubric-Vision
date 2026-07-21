@@ -14,8 +14,11 @@ export const OPERATION_REGISTRY = {
     // Image operations
     t2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     i2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    poseReference: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     upscale:      { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     edit:         { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    krea2Edit:    { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    qwenEdit:     { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     detail:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     change:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
@@ -30,9 +33,15 @@ export const OPERATION_REGISTRY = {
     interpolate:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     videoUpscale: { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     imageUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    removeBackground: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    imageDescribe: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resize:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resizeVideo:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    appImageRegen: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    appSdxl4k: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    appVideoStitch: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    appHeadSwap: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
 };
 
 /**

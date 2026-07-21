@@ -175,7 +175,8 @@
 .mpi-dropdown__option.is-disabled {
     opacity: 0.35;
     cursor: not-allowed;
-    pointer-events: none;
+    /* Keep pointer-events so the status-bar hover-info still fires; the click
+       handler already bails on .is-disabled, so this stays non-selectable. */
 }
 
 /* ── Compact modifier — model chip usage ───────────────────────────────────── */

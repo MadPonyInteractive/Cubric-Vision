@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-261",
+  "title": "Crop tool: Ratio/Free + divisible-by round-up; Resize default divisible=16",
+  "description": "Rework the Crop tool's Resolution Type. Replace the current 4-way family (SDXL/FLUX/SOCIAL/FREE) with TWO options: RATIO and FREE. RATIO uses the same orientation toggle + ratio-row UI as SDXL/FLUX today, but a NEW pure-aspect table (label + ratio float only, NO resolutions) that merges all existing ratios plus cinema ratios (e.g. 21:9, 2.39:1). The user drags a ratio-locked crop box; whatever pixels are selected become the output. Add a 'Divisible by' number input (default 16) directly above the Apply button, applied to the SELECTED output pixels (both W and H). Round-up rule: round each dim UP to the next multiple of N; if that exceeds the source dimension, round DOWN to the previous multiple instead (never invent pixels). Applies to both image AND video crop-apply paths. SEPARATE change in same card: change the Resize tool's default divisible_by from 1 to 16 (image + video modes).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-12T00:55:00Z",
+  "updated_at": "2026-07-12T03:15:00Z",
+  "activeSessionTitle": "MPI-261 Crop Ratio/Free rework — complete",
+  "labels": ["feature", "ui", "crop", "resize"],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

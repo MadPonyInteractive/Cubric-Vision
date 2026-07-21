@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-262",
+  "title": "Resize tool: pad-color only for solid-pad modes + default Divisible-by to 16",
+  "description": "Two fixes in the Resize tool (js/components/Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js). NODE CONTRACT: the single node ImageResizeKJv2 (title 'Resize Image v2' in comfy_workflows/resize.json + resize_video.json) receives ALL resize params on ONE node \u00e2\u20ac\u201d width, height, upscale_method, keep_proportion, crop_position, divisible_by, device, image, AND pad_color. pad_color is an RGB STRING in the form 'R, G, B' (e.g. '156, 50, 50'), NOT hex, NOT int. The injector js/services/workflowInjectors/resizeInjector.js ALREADY builds this correctly (line ~136: pad_color: `${r}, ${g}, ${b}`) and Object.assigns it onto every 'Resize Image v2' node \u00e2\u20ac\u201d injection is NOT broken, do not 'fix' it. (1) THE ACTUAL BUG is UI mode-gating: PAD_COLOR_MODES (MpiToolOptionsResize.js:38) wrongly includes edge modes (pad_edge, pad_edge_pixel, pillarbox_blur). ImageResizeKJv2 only PAINTS pad_color for the solid 'pad' mode; edge modes extend edge pixels + ignore pad_color, so the picker shows but does nothing (user set #9C3232 with 'pad edge' \u00e2\u2020\u2019 output unchanged). Fix: gate the color picker (show + apply) to ONLY the mode(s) that truly use a solid pad color \u00e2\u20ac\u201d verify each keep_proportion option against the KJ node behaviour; likely only 'pad' qualifies. (2) Default 'Divisible by' to 16 (currently DEFAULTS.divisible_by=1, MpiToolOptionsResize.js:~54). Verify: 'pad' mode paints the chosen RGB color; edge modes hide/ignore the picker; a fresh resize defaults divisible_by=16. Related: MPI-260 added 'color' to the generic title-injector field list in comfyController.js \u00e2\u20ac\u201d Resize does NOT use that (own injector), no dependency.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-12T02:50:01.000Z",
+  "updated_at": "2026-07-12T03:15:00.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

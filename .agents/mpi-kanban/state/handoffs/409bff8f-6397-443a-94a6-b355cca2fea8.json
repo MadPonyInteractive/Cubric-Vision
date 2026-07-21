@@ -1,0 +1,150 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "409bff8f-6397-443a-94a6-b355cca2fea8",
+  "generated_at": "2026-07-19T03:25:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-310 — PLUGIN entity + Describe Image shipped, needs in-app verification",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Promote the MPI-308 caption harness to a real feature: right-click a gallery card or history item -> 'Describe image', run it as a NORMAL QUEUED GENERATION, and inject the caption into the prompt box.",
+    "status": "in_progress",
+    "summary": "All 6 card steps are built and committed across 5 commits on branch 1.2.0. Every layer is unit-checked and the dep-status contract was verified against the live server, but NOTHING has run a real generation end-to-end in the app. The next session verifies in-app using .agents/mpi-kanban/tasks/MPI-310/validation.md, then moves the card to done."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "STEP 0 — PLUGIN entity: js/data/pluginsRegistry.js (3rd registry beside MODELS and APPS). Weight uploaded to R2 and verified (HTTP 200, 5242481504 bytes, byte-exact with local, Accept-Ranges present). assetDeps entry 'qwen3vl-abliterated-clip' with real sha256.",
+      "STEP 0 — GC protection: _pluginRequiredDepIds() unioned into BOTH uninstall guards in routes/downloadManager.js (local _localSharedDepsMap AND remote _remoteSharedDepIds, one pass per the engine-split rule). Honours the uninstall exclusion so a plugin can uninstall itself.",
+      "STEP 0 — install state: plugins ride the existing /comfy/models/check payload (id-agnostic, 'plugin:<id>' passes through). Verified against the running server. 'plugin:' excluded from the installed-MODEL set like 'app:' already is.",
+      "STEP 0 — UI: PLUGINS row in the Model Library (MpiModelManager.js + .css). Outside the media/size filters and the 'N available' count. Install/uninstall reuse downloadService, so the confirm dialog, progress, completion toast and unfocused-app OS notification all come free.",
+      "STEP 1 — outputKind: 'text' declared on the op (commandRegistry.js typedef + entry); generationService.onComplete branches on it ABOVE the empty-array check (option b).",
+      "STEP 2 — op registered: commandRegistry.js imageDescribe, js/core/operationRegistry.js, operation_registry.json (hand-edited, never regenerated). Consumer sweep done: 'universal: true' already gates it out of every picker/dropdown/radial/op-fit path.",
+      "STEP 3 — context-menu entry added TWICE (MpiGalleryGrid.js and MpiHistoryList.js — shared renderer, separate items arrays).",
+      "STEP 4 — parent wiring: shared js/utils/describeAction.js, called from MpiGalleryBlock and MpiGroupHistoryBlock. Gates on plugin install and points at the Model Library instead of failing inside ComfyUI.",
+      "STEP 6 — MPI-308 dev radial harness retired (_describeFirstChip + radial item + dispatch + orphaned import).",
+      "BONUS FIX — injectPrompts silently swallowed a positive-only injection while the box was in negative mode. Fixed in the primitive (wrong for every caller, not just mine); _negBtn moved above injectPrompts to avoid a temporal-dead-zone ReferenceError."
+    ],
+    "pending": [
+      "Verify in-app: run the 5 checks in .agents/mpi-kanban/tasks/MPI-310/validation.md (restart the app first — the renderer holds stale JS).",
+      "If all 5 pass: move MPI-310 to done (board.json columns + task.json column/maturity/updated_at + task.moved in BOTH event logs).",
+      "OPTIONAL follow-up, do not do without asking: video 'Describe current frame' (card step 5) — deferred, needs a frame written to a real path first. Related MPI-287.",
+      "OPTIONAL: sweep the now-dead runImageDescribe() in js/services/commandExecutor.js."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-310",
+    "title": "Describe Image: promote the MPI-308 caption harness to a context-menu action on a real queued generation",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-310/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-310/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-310/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "restart the app and run the 5 checks in tasks/MPI-310/validation.md",
+    "fix any defect the verification surfaces",
+    "move MPI-310 to done once all 5 checks pass",
+    "commit by explicit pathspec"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-310/validation.md written — the 5 in-app checks, the stale-renderer warning, the unit checks that already pass, and the known gaps.",
+      "MPI-310 task.json moved to maturity 'validating' with an attention block naming the 5 checks.",
+      "Every non-obvious decision is captured in the 5 commit messages (why a plugin is not a model/app, why the gate branches above the empty check, why the uninstall exclusion exists)."
+    ],
+    "pending": [
+      "MEMORY: add a project memory for the PLUGIN entity once verified — 'plugin = 3rd entity; deps owned by neither a model nor an app are invisible to BOTH uninstall guards; the guard must honour the uninstall exclusion or the entity's own Uninstall button is a silent no-op'. Hold until in-app verification passes.",
+      "DOCS: docs/README.md knowledge map has no route for the plugin entity yet. Add one (likely docs/download-manager.md § GC protection, plus a pointer from the add-app playbook's GC section) after verification.",
+      "CHANGELOG: not touched. 'Describe image' is a new user-facing feature on the unreleased 1.2.0 line — fold it into the feature entry, do NOT write it as an 'X is now Y' delta (memory feedback_changelog_only_for_shipped_deltas)."
+    ]
+  },
+  "next_action": {
+    "description": "Restart the Cubric Vision app (full restart, not a reload — routes/downloadManager.js is main-process), then work through the 5 checks in .agents/mpi-kanban/tasks/MPI-310/validation.md in order. Check 4 (negative-mode injection) and check 5 (uninstall actually frees 5.24GB) are the two that matter most — both are fixes for bugs found during the build and neither has run in the real UI. Do check 5 LAST because re-installing is a 5GB download.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "PLUGIN is a third entity, not a ModelDef with a flag. A ModelDef forces dead fields (workflows/qualityTiers/mediaType/gen_speed/ratio tables) AND every model consumer would have to learn to skip flagged entries. It is not an app either — apps are App-Library tiles with an inputSchema and uiComponent; a right-click action has neither.",
+      "The plugin gets a row in the Model Library rather than a bespoke right-click install prompt. User decided this after asking 'how is the user going to uninstall it?' — without a Library row there is no uninstall affordance and the 5.24GB weight is a one-way door. The Library already owns install, uninstall, progress, the completion toast and the unfocused-app OS notification, so this reimplements none of them.",
+      "The completion gate branches on a declared op contract (outputKind: 'text'), ABOVE the empty-array check, not inside it. Emptiness is ambiguous — a Stopped media job is also empty and only the op knows which case it is. Keeping the branch above leaves the existing check owning exactly the job it was written for and never asks the media path (sidecar writes, history item, gallery card) to defend against a case with no media.",
+      "The plugin GC guard honours the uninstall exclusion, unlike the app twin. Plugins are the first entity with a user-facing Uninstall button; unconditional protection made that button a silent no-op. Reused the existing excludeModelId thread rather than adding a second uninstall route that would duplicate every shared-dep check.",
+      "No ComfyUI restart after install — CORRECTION to the original plan. The weight is a plain safetensors, not a custom node; comfy:needs-restart only fires for node installs. POST /comfy/refresh-models reseeds the filename cache if needed.",
+      "The caption lands in the prompt box (editable), not on the item. The point is a dense accurate starting point a human edits toward a target — describe, edit, generate. Sidecar storage and auto-feed to upscale are deliberately out of scope."
+    ],
+    "constraints": [
+      "STALE RENDERER: the app ran on :3000 through the whole build session, so none of the changes are live in it. Renderer files need a reload; routes/downloadManager.js is main-process and needs a FULL restart (memory tool_main_process_no_hot_reload). Restart, do not reload.",
+      "DO NOT kill the user's app instance carelessly — but DO check for zombie node.exe instances serving stale routes before testing (memory feedback_kill_spawned_app_instances). netstat :3000 + tasklist node.exe.",
+      "CO-OWNED FILES: a concurrent session edits MpiGalleryGrid.js, MpiHistoryList.js, MpiGroupHistoryBlock.js, MpiCanvasViewer.js, js/components/types.js, js/utils/icons.js, js/utils/ratios.js and the MPI-288 card. Edit by content anchor, never line number; commit by explicit pathspec, never `git add .` (memory feedback_shared_tree_commit_hygiene, feedback_concurrent_sessions_same_file).",
+      "The weight is NOT baked into the Pod image (deliberate — 5.24GB for an optional captioner). Remote/RunPod behaviour is completely untested; a local pass proves nothing about it (memory feedback_runpod_not_local_engine_proof).",
+      "operation_registry.json is HAND-EDITED. Never regenerate it — regeneration strips the `universal` flags. It is CRLF with no trailing newline; edit by byte-level anchor to keep the diff to the real change.",
+      "Video describe is NOT implemented. describeItem() refuses video with a toast. MpiLoadImageFromPath reads an OS path, not a blob, so a captured frame must be written to disk first (memory feedback_media_injection_path_to_string)."
+    ],
+    "files_modified": [
+      "js/data/pluginsRegistry.js (NEW)",
+      "js/utils/describeAction.js (NEW)",
+      "tests/plugin-dep-gc.test.cjs (NEW)",
+      "tests/text-op-completion.test.cjs (NEW)",
+      "routes/downloadManager.js",
+      "js/data/modelConstants/assetDeps.js",
+      "js/data/modelConstants/universal_workflows.js",
+      "js/data/modelRegistry.js",
+      "js/data/commandRegistry.js",
+      "js/core/operationRegistry.js",
+      "operation_registry.json",
+      "js/services/generationService.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Compounds/MpiHistoryList/MpiHistoryList.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/shell/navigation.js",
+      ".agents/mpi-kanban/tasks/MPI-310/validation.md (NEW)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-310/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-310/task.json",
+      "js/data/pluginsRegistry.js",
+      "js/utils/describeAction.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": [
+      "download manager / dep GC protection",
+      "generation lifecycle + completion path",
+      "components + UI law",
+      "model library / install state"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md — THE ROOT-CAUSE RULE + Critical Rules Snapshot",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/downloads.md",
+    "docs/download-manager.md § GC protection",
+    "memory: tool_main_process_no_hot_reload (restart, don't reload)",
+    "memory: feedback_shared_tree_commit_hygiene (concurrent sessions, explicit pathspec)",
+    "memory: feedback_runpod_not_local_engine_proof (local pass ≠ remote proof)",
+    "memory: feedback_check_both_engine_paths (local AND remote twins)"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-19T03:25:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up MPI-310 in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch 1.2.0). The feature is CODE COMPLETE across five commits (33b09b3e, 1eaa4031, a9bf054c, 5c7f6d2e, 1fe8461a) but has NEVER been run in the app — your job is verification, not building. It adds a third registry entity called a PLUGIN (js/data/pluginsRegistry.js) that owns a 5.24GB captioner weight, a PLUGINS row in the Model Library to install/uninstall it, an op-level `outputKind: 'text'` declaration that stops generationService from discarding a text-only completion as a cancelled run, and a 'Describe image' right-click action on gallery cards and history items that queues a normal generation and writes the caption into the prompt box. Read .agents/mpi-kanban/state/handoffs/409bff8f-6397-443a-94a6-b355cca2fea8.json and .agents/mpi-kanban/tasks/MPI-310/validation.md, then FULLY RESTART the app (a reload is not enough — routes/downloadManager.js is main-process) and work the 5 checks in validation.md in order. Checks 4 and 5 matter most: check 4 is the negative-mode injection bug (a caption injected while the prompt box sits in negative mode used to vanish from view), and check 5 is that Uninstall actually frees 5.24GB (an earlier version of the GC guard made that button a silent no-op). Do check 5 LAST because reinstalling is a 5GB download. Note that a concurrent session edits several of the same component files, so edit by content anchor and commit by explicit pathspec. If all 5 checks pass, move MPI-310 to done in both board.json and tasks/MPI-310/task.json with a task.moved event in both event logs."
+}

@@ -23,6 +23,7 @@ export const MEDIA_TYPE = Object.freeze({
 /**
  * @typedef {Object} CommandDef
  * @property {string}          label          - Display name shown in UI
+ * @property {string}          [info]         - One-line description shown in the status bar on hover in the op dropdown.
  * @property {string}          [icon]         - MpiIcon registry key for op selectors (model-manager operation toggles). Optional.
  * @property {'image'|'video'} mediaType      - Which group type this applies to
  * @property {number}          requiresImages - Min number of input images needed (0 = none)
@@ -44,6 +45,23 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {Object}          [defaults]     - Per-control default override map, keyed by control id.
  *                                              Controls with scope:'perOp' look here first, then fall
  *                                              back to their own `defaultValue`. e.g. { denoise: 0.30 }
+ * @property {Object}          [injectParams] - Constant workflow params this op ALWAYS injects, keyed by
+ *                                              node title. For ops that share one graph and select a
+ *                                              branch with a baked-false boolean (Krea2's t2i / i2i /
+ *                                              poseReference all run krea2_t2i_<sfw|nsfw>.json). Merged in
+ *                                              commandExecutor._buildParams BEFORE the user's control
+ *                                              params, so a control can still override. Titles follow
+ *                                              the tier-2 naming law and are matched case-insensitively;
+ *                                              an unmatched title is silently skipped by the injector.
+ * @property {'media'|'text'}  [outputKind]   - What a completed run PRODUCES. Defaults to 'media'.
+ *                                              'text' declares the workflow returns a caption/string via
+ *                                              the Output_prompt contract and saves no file, so the
+ *                                              completion path must not treat its empty output-URL list
+ *                                              as a cancelled run. Declared on the OP rather than
+ *                                              inferred from an empty array because emptiness is
+ *                                              ambiguous — a Stopped media job is also empty, and only
+ *                                              the op knows which case it is. See generationService's
+ *                                              onComplete.
  * @property {string}          [progressLabel] - Present-participle verb shown in the status bar while
  *                                              this op is running (e.g. 'Upscaling', 'Detailing').
  *                                              Defaults to 'Generating' when omitted. NEW OPS should
@@ -68,23 +86,63 @@ export const commands = {
 
     t2i: {
         label: 'Text to Image',
+        info: 'Text to Image — generate a new image from your prompt alone',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
-        components: ['ratio', 'batch'],
+        // styleSelect/stylization/enhancePrompt are ALSO capability-gated per model
+        // (MpiPromptBox._refreshOpSlot) — listing them here only says "this op's graph
+        // has the nodes", not "every model shows them". Krea2's detailer/upscaler
+        // graphs carry no style rack and no enhancer, so those ops omit all three.
+        // qualityTier is gated the same way, on usesQualityTier(model.type): only a
+        // tier-keyed model (Krea2) mounts it; SDXL/Chroma/Flux never see it.
+        // Array order IS mount order (MpiPromptBox._refreshOpSlot appends in sequence):
+        // the full-width tier block leads, the enhancer rides the bottom row beside
+        // ratio + batch, so Krea2's panel matches LTX/Wan/SDXL. The turbo bolt sits
+        // beside the enhancer — both are bare icon toggles, so they share that row.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     i2i: {
         label: 'Image to Image',
+        info: 'Image to Image — reshape an input image toward your prompt',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        components: ['ratio', 'batch'],
+        // i2i shares the t2i graph (Input_Is_i2i flips the latent source), so it has
+        // the same style rack + enhancer nodes. Capability-gated per model as above.
+        // The boolean is baked FALSE in the graph and nothing else sets it, so without
+        // this the op silently runs as t2i and ignores the input image.
+        injectParams: { Input_Is_i2i: true },
+        // denoise (`Input_denoise`, MpiFloat node 228) reaches the sampler ONLY through
+        // the Input_Is_i2i gate (MpiIfElse 230), so it is live here and inert on t2i /
+        // poseReference. Default matches the graph's baked 0.3. The bare `Denoise` key's
+        // tier-2 alias `Input_Denoise` matches the node case-insensitively.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        defaults: { denoise: 0.30 },
+    },
+    // Depth-ControlNet pose transfer. Third op on the SAME krea2_t2i_<sfw|nsfw>.json graph:
+    // Input_Image → AIO_Preprocessor → Krea2ControlImageEncode → Krea2ControlApply,
+    // selected by the Input_depth_reference MpiIfElse. Composes with Input_Is_i2i
+    // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
+    poseReference: {
+        label: 'Depth',
+        info: 'Depth Reference — copy the pose/composition of an input image',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: true,
+        injectParams: { Input_depth_reference: true },
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     upscale: {
         label: 'Upscale',
+        info: 'Upscale — raise resolution while adding fine detail',
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -92,11 +150,12 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: false,
-        components: ['useGrid', 'upscaleFactor', 'denoise'],
+        components: ['useGrid', 'upscaleFactor', 'denoise', 'krea2Turbo'],
         defaults: { denoise: 0.20 },
     },
     edit: {
         label: 'Edit',
+        info: 'Edit — change the whole image following your prompt',
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -104,10 +163,73 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
+        // Boogu-Image-Edit's op: a whole-image instruction edit that follows the SOURCE
+        // image dimensions (no size picker) and exposes no controls. Krea2's edit is a
+        // separate op (krea2Edit) — it uses OUR provided dims and needs ratio + style.
         components: [],
+    },
+    krea2Edit: {
+        label: 'Edit',
+        info: 'Edit — change the whole image following your prompt',
+        progressLabel: 'Editing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true  },
+            // 2nd reference image (MPI-292): optional. Empty → Input_Image_2's
+            // MpiLoadImageFromPath self-gates → 1-image edit runs fine. Only this op
+            // declares two image slots, so PromptBox shows the 2nd chip in edit only.
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+        ],
+        promptRequired: true,
+        // Krea2's edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA
+        // path; baked FALSE, so this inject flips it on — same contract as i2i's
+        // Input_Is_i2i). Localized/masked edit was removed (inconsistent results) — no
+        // Input_Mask node in the graph anymore. The editor takes OUR provided dimensions
+        // (not the source image size), so it needs ratio + qualityTier. Styles + the style
+        // slider help the edit path, so they stay. No batch: Krea2's second sampler
+        // produces artifacts on batched follow-ups.
+        injectParams: { Input_Is_Edit: true },
+        // NO enhancePrompt (MPI-310 session): the enhancer actively harms this op.
+        // Krea2EditGroundedEncode feeds the instruction to Qwen3-VL *together with the
+        // source image* (KREA2_EDIT_TEMPLATE in comfyui-krea2edit/__init__.py), so the
+        // text carries only the DELTA — appearance comes from the frame=1 source latent.
+        // An enhancer expands that delta into a standalone scene paragraph, which fights
+        // the grounding, and edit verbs are load-bearing ("replace"/"convert" = drastic,
+        // "change" = soft), so paraphrasing silently flips edit strength. Edit adherence
+        // is tuned by grounding_px, not prompt length. Tried and failed: a "clarify, don't
+        // expand" enhancer prompt.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'krea2Turbo'],
+    },
+    qwenEdit: {
+        label: 'Edit',
+        info: 'Edit — change the image following your prompt',
+        progressLabel: 'Editing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        // THREE image slots (MPI-300). Qwen-Image-Edit-2511 takes up to three
+        // references natively (TextEncodeQwenImageEditPlus image1..3). Slots 2 and 3
+        // are optional: an empty path makes Input_Image_2/_3's MpiLoadImageFromPath
+        // self-gate, so a 1- or 2-image edit runs unchanged.
+        mediaInputs: [
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true  },
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+            { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false },
+        ],
+        promptRequired: true,
+        // Its own op, NOT the shared 'edit' (that one is Boogu's: no controls, one image).
+        // Qwen needs the tier radio + its own style rack. Output follows the SOURCE image
+        // dimensions (ImageScaleToTotalPixels off the input), so there is no ratio picker.
+        components: ['qwenTier', 'styleSelect', 'stylization'],
+        // Qwen's style LoRAs overpower the edit at full strength — 0.8 is the usable
+        // default. Krea2's ops keep the global 1.0. `stylization` stores per MODEL, but
+        // defaults resolve per OP (_resolveDefault), and qwenEdit is Qwen's alone, so a
+        // per-op default is the per-model default here without new machinery.
+        defaults: { stylization: 0.8 },
     },
     detail: {
         label: 'Detail',
+        info: 'Detail — refine only the masked area with more detail',
         progressLabel: 'Detailing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -116,11 +238,12 @@ export const commands = {
         ],
         requiresMask: true,
         promptRequired: true,
-        components: ['denoise'],
+        components: ['denoise', 'krea2Turbo'],
         defaults: { denoise: 0.30 },
     },
     change: {
         label: 'Change',
+        info: 'Change — replace the masked area to match your prompt',
         progressLabel: 'Changing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -133,6 +256,7 @@ export const commands = {
     },
     remove: {
         label: 'Remove',
+        info: 'Remove — erase the masked area and fill the background',
         progressLabel: 'Removing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -149,6 +273,7 @@ export const commands = {
     // default 0.0 = faithful. Prompt optional (empty works).
     pid: {
         label: 'Upscale',
+        info: 'Upscale — raise resolution while adding fine detail',
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -164,6 +289,7 @@ export const commands = {
 
     t2v: {
         label: 'Text to Video',
+        info: 'Text to Video — generate a video clip from your prompt alone',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
@@ -171,6 +297,7 @@ export const commands = {
     },
     i2v: {
         label: 'Image to Video',
+        info: 'Image to Video — animate an input image into a video clip',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         mediaInputs: [
@@ -182,6 +309,7 @@ export const commands = {
     },
     t2v_ms: {
         label: 'Text to Video',
+        info: 'Text to Video — generate a video clip from your prompt alone',
         icon: 'text',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
@@ -189,7 +317,7 @@ export const commands = {
         // capabilities.audio (LTX) surface/accept it. WAN filters it out at the
         // slot read points (MpiPromptBox._mediaSlotsForOperation, commandExecutor).
         mediaInputs: [
-            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_audio', required: false },
         ],
         promptRequired: true,
         // audioMode is capability-gated (only models with capabilities.audio mount
@@ -209,6 +337,7 @@ export const commands = {
     },
     i2v_ms: {
         label: 'Image to Video',
+        info: 'Image to Video — animate an input image into a video clip',
         icon: 'image',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
@@ -217,7 +346,7 @@ export const commands = {
         mediaInputs: [
             { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
             { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
-            { key: 'inputAudio', mediaType: 'audio', title: 'Input_Audio_File', required: false },
+            { key: 'inputAudio', mediaType: 'audio', title: 'Input_audio', required: false },
         ],
         promptRequired: false,
         // audioMode capability-gated (see t2v_ms note); ordered first.
@@ -228,6 +357,7 @@ export const commands = {
     },
     extend: {
         label: 'Extend',
+        info: 'Extend — continue an input video with more footage',
         progressLabel: 'Extending',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
@@ -277,6 +407,33 @@ export const commands = {
         promptRequired: false,
         universal: true,
     },
+    // MPI-310 — the captioner. Produces a caption string via Output_prompt and writes
+    // no file, hence outputKind: 'text'. Owned by the image-describer PLUGIN (see
+    // js/data/pluginsRegistry.js), which owns its encoder weight.
+    imageDescribe: {
+        label: 'Describe Image',
+        info: 'Describe Image — write a detailed prompt from the picture',
+        progressLabel: 'Describing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        outputKind: 'text',
+        universal: true,
+    },
+    removeBackground: {
+        label: 'Remove Background',
+        progressLabel: 'Removing background',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+    },
     autoMaskImg: {
         label: 'Auto Masking',
         progressLabel: 'Masking',
@@ -311,6 +468,81 @@ export const commands = {
         promptRequired: false,
         universal: true,
         injector: 'resize',
+    },
+    appImageRegen: {
+        label: 'App: Image Regen',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+        ],
+        promptRequired: true,
+        universal: true,   // first Apps op (MPI-256) — app_sdxl_regen.json, i2i baked true.
+    },
+    appSdxl4k: {
+        label: 'App: SDXL 4K',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 0,          // all image inputs optional — runs t2i with none (MPI-259).
+        // Up to 2 optional image slots → Input_Image / Input_Image_2 (MpiLoadImageFromPath
+        // nodes — take a filesystem PATH in their `string` input; empty path self-gates its
+        // Output_Image* branch via ExecutionBlocker, no card). role keys match the app's
+        // inputSchema. Injector routes these class='MpiLoadImageFromPath' slots through the
+        // media path-resolve branch (local path / Pod-uploaded path), not an upload-name.
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+        ],
+        promptRequired: true,
+        universal: true,            // 2nd Apps op — app_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
+    },
+    appVideoStitch: {
+        label: 'App: Video Stitch',
+        progressLabel: 'Stitching',
+        mediaType: MEDIA_TYPE.VIDEO,
+        requiresImages: 0,          // no image inputs — video utility, NO generation model.
+        // Video utility (app_video_test.json): up to 2 video PATHS (MpiString Input_video /
+        // Input_video_2 — VHS_LoadVideoPath reads the string) stitched side-by-side, plus an
+        // optional audio track. Empty video paths self-gate their branch via MpiAnyChecker/
+        // MpiBlockIfEmpty/MpiIfElse; empty audio keeps the baked LoadAudio placeholder.
+        // Titles are LOWERCASE/numbered to match the authored nodes; the injector matches
+        // case-insensitively and the media-kind sweep pattern-forces input_video*/input_audio*.
+        mediaInputs: [
+            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_video',   required: false },
+            { key: 'video2', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_video_2', required: false },
+            // Audio slot: mediaType is the string 'audio' (MEDIA_TYPE only enumerates
+            // image/video). The app's audio item carries mediaType 'audio' too, so the
+            // role-first match in _buildParams lines up — with VIDEO here it never matched
+            // and Input_audio was never injected (output kept the source's own audio).
+            { key: 'audio1', mediaType: 'audio', title: 'Input_audio', required: false },
+        ],
+        promptRequired: false,      // pure media utility — no prompt.
+        universal: true,            // 3rd Apps op — app_video_test.json, NO model.
+    },
+    appHeadSwap: {
+        label: 'App: Head Swap',
+        progressLabel: 'Swapping',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 0,          // media never a hard requirement at the op layer (the
+                                    // app's own UI walks the user through supplying both).
+        // Two image slots: the TARGET (the body/scene kept) and the SOURCE (the head taken).
+        // MpiLoadImageFromPath nodes — full path into their `string` input, self-gating on
+        // empty. Each slot has an OPTIONAL companion Mpi Box (Input_Box / Input_Box_2,
+        // suffix matches the image slot) carrying the head region in top-left SOURCE pixels;
+        // boxes are injectionParams, not media, so they are not declared here.
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+        ],
+        // Fixed-prompt outcome app: the graph has NO Input_Positive/Input_Negative — both
+        // prompts are BAKED. Do not add a prompt box for this app.
+        promptRequired: false,
+        universal: true,            // 4th Apps op — app_head_swap.json, qwen-edit + app LoRA.
+        // MpiBox carries FOUR widgets (x/y/width/height); the generic title injector
+        // writes a single value into one widget name and would match the node but
+        // silently write nothing. headSwapInjector is the only path a box takes.
+        injector: 'headSwap',
     },
 
     // ── Future Stubs ──────────────────────────────────────────────────────────
@@ -446,7 +678,12 @@ export function getCommandMediaInputs(key) {
  * @returns {Array<{mediaType:string}>}
  */
 export function filterMediaInputsForModel(slots, model = null) {
-    if (model?.capabilities?.audio === true) return slots;
+    // No model = a universal/App op (model.id === null). Its declared slots ARE the
+    // contract — there's no per-model audio capability to gate against, so keep them
+    // all (an App that declares an audio slot must inject it). The capability gate below
+    // only exists to drop LTX's audio slot on WAN, which has no capabilities.audio.
+    if (!model) return slots;
+    if (model.capabilities?.audio === true) return slots;
     return slots.filter(slot => slot.mediaType !== 'audio');
 }
 

@@ -116,11 +116,18 @@ reuse.
 
 Full authoring contract (two-file convention, `LoadLatent` injection, `Preview` vs `Output` capture, WAN baked-vs-live LoRA semantics, LTX flat-LoRA + `allowsBranchingContinue: false`) lives in `.claude/rules/comfy_injection.md` § "Multi-stage video workflows". Read it before touching `_ms` ops.
 
-LTX-2.3 resolution tiers, the /64 size rule (multi-stage ×0.5 stage), and measured per-tier timings + motion/audio tradeoff live in [`docs/builder/research/ltx-2.3-tiers.md`](builder/research/ltx-2.3-tiers.md). Read it before changing `LTX_RATIOS` in `js/utils/ratios.js`.
+LTX-2.3 resolution tiers, the /64 size rule (multi-stage ×0.5 stage), and measured per-tier timings + motion/audio tradeoff live in [`docs/models/ltx/tiers.md`](models/ltx/tiers.md). Read it before changing `LTX_RATIOS` in `js/utils/ratios.js`.
 
 ## assetService (`js/services/assetService.js`)
 
-Loads available LoRA and upscale model filenames from `GET /comfy/list-files` into `state.availableLoras` and `state.upscaleModels`. Called lazily on ModelSettings open.
+Loads available LoRA and upscale model filenames from `GET /comfy/list-files` into `state.availableLoras` and `state.upscaleModels`. `loadAll()` is the **only** writer of those two keys.
+
+Callers: `shell.js` on the `comfy:ready` event, plus lazy loads on ModelSettings/upscale-tool open and folder import/save. All the lazy ones are user-interaction gated.
+
+**The empty-list trap (MPI-245):** `commandExecutor._findMissingModel()` treats an EMPTY `availableLoras` as "engine not ready" and **fails open** (deliberately — blocking a generation on an unloaded list would be worse). So whenever the list has not loaded, the pre-dispatch missing-LoRA guard silently passes and a dead LoRA reaches ComfyUI. Two consequences worth knowing:
+
+- `ensureServerRunning()` must emit `comfy:ready` on **every** ready path, including the already-running early return — that emit is what runs `loadAssets()` at boot.
+- Even then, boot auto-start is gated on `Storage.getAutoStartComfy()` (**default `false`**), and the dispatch-time `ensureServerRunning()` inside `runWorkflow` fires *after* the guard has already run. So on a default config the guard can never pre-empt dispatch, and the engine-side rejection (see "missing LoRA is reported differently per engine" below) is the PRIMARY defense, not a fallback. Do not delete it believing the guard covers it.
 
 ## Models path & additive folders
 
@@ -154,6 +161,23 @@ lifecycle event table, ComfyUI auto-restart) live in
 **Engine upgrade must preserve models path (MPI-118):** `/engine/upgrade` MUST capture `getCustomRoot()` BEFORE `fs.remove(portableDir)`, then pass it to `_runEngineDownload()`. General law: any engine-wipe/reinstall op captures custom models root first and re-applies after.
 
 **Dep URL/filename integrity — cross-check content:** `dependencies.js` deps have `filename`, `url`, and `sha256`. Wan 2.2 had `url`+`sha256` CROSSED against `filename` (internally consistent — sha matched the wrong url-target). `computeDepHashes.py` only fills `sha256: null`, does NOT recompute wrong ones. Rule: trust `filename`+`origin` as intent; cross-check `url` basename matches `filename` basename and `sha256` matches that file's HF ETag.
+
+**A rejected `/prompt` is reported DIFFERENTLY per engine (MPI-229 remote, MPI-245 local).** Both engines answer HTTP 400 for a bad enum value (a LoRA/checkpoint missing from the loader's list), but the payload differs, and a parser written for one is blind to the other:
+
+| Engine | Body | Where the filename lives |
+|---|---|---|
+| remote (Pod) | `{error: "<string>", message, detail: {comfy_status, comfy_body}}` (wrapper) | inside the `comfy_body` **text** → scrape it |
+| local | `{error: {type, message, details}, node_errors: {...}}` (ComfyUI `server.py`) | `node_errors[id].errors[].extra_info.received_value` |
+
+Traps, all of which bit us:
+
+- The local top-level `error.details` is **`''`** whenever *any other* output node still validated (`execution.py` only fills it when `good_outputs` is empty). Never parse `details` — read `node_errors` structurally.
+- Local `error` is an **object**; remote `error` is a **string**. `errCode = errData?.error` therefore captures an object locally and silently breaks every `errCode === '...'` comparison below it. Take the string form only.
+- The carrier identifies the engine: `node_errors` ⇒ local, `detail.comfy_body` ⇒ remote. Tag the thrown error accordingly (`lora_missing_local` / `lora_missing_remote`) so `commandExecutor` can raise a `ui:warning` toast rather than letting it fall through to the `ui:error` GitHub bug-reporter dialog.
+
+Anything that classifies a ComfyUI rejection MUST handle both shapes — see the "fix BOTH engine paths" law. Guard: `tests/lora-missing-local-toast.test.cjs`.
+
+**Not every node's path enum uses the OS separator — self-listing nodes are always forward-slash (MPI-246).** `comfyController.runWorkflow`'s `PATH_INPUTS` separator heal assumes a loader lists paths with the ENGINE-OS separator (`folder_paths`: `\` on Windows, `/` elsewhere) and flips values to match. That holds for `folder_paths`-backed loaders (`LoraLoader`, `UpscaleModelLoader`, `SAMLoader`, checkpoint/vae/clip) but NOT for nodes that build their own enum — Impact Pack's `UltralyticsDetectorProvider` lists `model_name` as `bbox/face_yolov8n.pt` with a forward slash on **every** OS. The Windows-local `/`→`\` heal (MPI-229) corrupted that to `bbox\face_yolov8n.pt` → `value_not_in_list`, breaking auto-mask on the released build. Fix = `SLASH_ONLY_NODE_TYPES` set skips `model_name` for such nodes in BOTH heal directions. When adding a new node whose path list is self-built (not from `folder_paths`), add its `class_type` to that set. Guard: `tests/` self-check + the standalone assert in the MPI-246 commit.
 
 ## Generation / Prompt Gotchas
 

@@ -14,7 +14,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath } = require('./shared');
 const logger = require('./logger');
-const { broadcastEngineEvent, ResumableDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
+const { broadcastEngineEvent, FileDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
 const { ensureGit } = require('./gitProvision');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
@@ -107,7 +107,7 @@ async function _clearStaleWindowsEngineArtifacts(targetDir, filename) {
 async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
     const type = 'comfy';
 
-    // ── Download engine using ResumableDownloader ───────────────────────────
+    // ── Download engine using FileDownloader ────────────────────────────────
     let engineArchiveSize = 0;
     broadcastEngineEvent('engine:downloading', { progress: 0, downloadedBytes: 0, totalBytes: 0 });
 
@@ -132,12 +132,11 @@ async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
         status: 'downloading',
         downloadedBytes: 0,
         totalBytes: 0,
-        refCount: 1,
         error: null,
         sha256Expected: null
     };
 
-    const downloader = new ResumableDownloader(depJob, archivePath);
+    const downloader = new FileDownloader(depJob, archivePath);
 
     downloader.onProgress = (downloaded, total, speed) => {
         engineArchiveSize = total;

@@ -1,13 +1,20 @@
 /**
- * routes/downloadManager.js — Non-blocking download manager with resume support.
+ * routes/downloadManager.js — Non-blocking, single-stream download manager.
  *
  * Endpoints:
  *   POST /comfy/models/download/start   — enqueue a model's deps
- *   POST /comfy/models/download/pause
- *   POST /comfy/models/download/resume
- *   POST /comfy/models/download/cancel
+ *   POST /comfy/models/download/cancel  — clean stop + remove partial (user intent)
  *   GET  /comfy/downloads/status         — full queue snapshot
  *   GET  /comfy/downloads/stream         — SSE stream
+ *
+ * Resume contract (MPI-317): cancel is INTENT → partial deleted; failure/stall/app
+ * shutdown is ACCIDENT → partial kept, next attempt resumes via Range. Safe because
+ * the installed NDH clears __isResumed on a 200-not-206 answer and reopens the file
+ * in truncate (not append) mode — the MPI-258 Bug 2 corruption (full 200 body
+ * appended onto a partial) cannot recur on this version. A resumed stream skips the
+ * MPI-296 incremental hash (it'd only see the tail) and falls back to the full disk
+ * re-read in _verifySha256; a hash mismatch still scrubs the file, so a corrupt
+ * partial costs one failed verify, never a corrupt install.
  */
 
 'use strict';
@@ -26,6 +33,7 @@ async function _trash(p) {
     return _trashFn(p);
 }
 const crypto = require('crypto');
+const nodeStream = require('stream'); // MPI-296 — Writable hash-sink for streaming SHA256
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { checkOnline } = require('./netCheck');
@@ -36,18 +44,38 @@ const {
     markDownloadInProgress,
     clearDownloadMarker,
     getPartialDownloadState,
+    getDownloadMarkerPath,
 } = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
 const remoteModels = require('./remoteModels');
+const { createInstallStore } = require('./install/installStore');
+const { createReconciler } = require('./install/reconciler');
 
 const _require = createRequire(__filename);
 let _extractZip = null;
 
+// Extract a custom-node archive (GitHub /archive/ or Comfy Registry zip).
+// Fast path: native `tar` (bsdtar on Windows/macOS = libarchive, reads zip) —
+// ~2.7x faster than pure-JS extract-zip on Windows (the villain was extract-zip's
+// single-file JS write loop, not decompression), and streams one entry at a time
+// in a separate process = constant RAM regardless of file count. GNU tar on Linux
+// can't read zip, so ANY tar failure falls back to extract-zip (Linux keeps today's
+// exact behaviour). Remote/Pod nodes are image-resident and never reach this path.
+// See MPI-248 for measurements + the bite-back watchlist.
 async function _extractZipArchive(zipPath, extractDir) {
+    const dir = path.resolve(extractDir);
+    try {
+        const { execFile } = _require('child_process');
+        const { promisify } = _require('util');
+        await promisify(execFile)('tar', ['-xf', zipPath, '-C', dir], { windowsHide: true });
+        return;
+    } catch (err) {
+        logger.warn('download', `native tar extract failed (${err.message}) — falling back to extract-zip`);
+    }
     if (!_extractZip) {
         _extractZip = _require('extract-zip');
     }
-    await _extractZip(zipPath, { dir: path.resolve(extractDir) });
+    await _extractZip(zipPath, { dir });
 }
 
 // MPI-243: is a custom-node folder actually EXTRACTED, or just a shell created by
@@ -109,13 +137,17 @@ function _withEngineExtraDeps(modelId, dependencies, engine) {
 // REMOTE path (`_remoteSharedDepIds`, which checks the Pod volume) but the local path was
 // never given the fix: uninstalling LTX-2.3 high trashed the Gemma + VAEs + LoRAs that the
 // balanced tier shares. Here we stat the LOCAL disk (same custom-root + default-root +
-// recursive-search + completeness logic as /comfy/models/check) to learn which OTHER model's
-// deps are actually complete on disk, and protect those. Returns depId → [modelName, …].
+// recursive-search + completeness logic as /comfy/models/check) to learn which OTHER model
+// is WHOLE-MODEL installed (every dep complete on disk), and protect that model's deps —
+// plus any dep with a live in-flight install job. Returns depId → [modelName, …].
+// MPI-258 replaced the earlier per-dep on-disk test (see the loop below for why).
 async function _localSharedDepsMap(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
-    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const { resolveFullUniverse, deriveInstalledOps, resolveDeps } = _require('../js/data/modelConstants/resolveModelDeps.js');
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const comfyRoutes = _require('./comfy.js');
+    // Stat against the FULL universe so per-op completeness can be derived below —
+    // deriveInstalledOps needs the disk status of every op's deps, not just one op's.
     const others = MODELS
         .filter(m => m.id !== excludeModelId)
         .map(m => ({ model: m, depIds: resolveFullUniverse(m) }))
@@ -128,23 +160,159 @@ async function _localSharedDepsMap(excludeModelId) {
         }),
     }));
     const map = new Map(); // depId → Set<modelName>
+    const multiModelDeps = _multiModelDepIds();
     const results = await comfyRoutes.localModelsCheck(checkModels);
-    for (const { model, depIds } of others) {
+    for (const { model } of others) {
         const entry = results[model.id];
-        // A dep is protected iff another model still has that specific dep complete
-        // on disk — a per-dep check (not whole-model `installed`) so a PARTIALLY
-        // installed sibling still protects the shared files it DOES have. This is
-        // stricter than the remote whole-model gate on purpose: it must not delete a
-        // file another model is physically using, even mid-install.
-        if (!entry || !Array.isArray(entry.deps)) continue;
-        const onDisk = new Set(entry.deps.filter(d => d.installed === true).map(d => d.id));
-        for (const depId of depIds) {
-            if (!onDisk.has(depId)) continue;
+        if (!entry) continue;
+        // MPI-276: protect the deps of the OPS this model actually has on disk, not
+        // the whole universe. The old gate (`entry.installed !== true`) required
+        // EVERY op complete, so an op-partial install (e.g. Wan 2.2 Smooth with only
+        // I2V installed) counted as "not installed" and protected NOTHING — a sibling
+        // uninstall then trashed the shared clip/VAE both models need, cascading the
+        // op-partial model out too. deriveInstalledOps gives fullyInstalled (common +
+        // ≥1 op complete) and the installed-op list; we protect commonDeps + those
+        // ops' deps only.
+        //
+        // MPI-310: "is this model a live install" must be answered from its EXCLUSIVE
+        // deps, never from the shared ones. Both previous rules conflated the two and
+        // each was circular in an opposite direction:
+        //
+        //   - per-dep on-disk (pre-MPI-258): a shared file counted as proof for every
+        //     model that declares it, so a tier family protected the SAME idle copy
+        //     from both sides while neither was installed → ~19GB undeletable (258 B1).
+        //   - fullyInstalled (MPI-258/276): a shared COMMON dep is itself an input to
+        //     the gate, so the instant that weight went missing every model needing it
+        //     stopped defending it and the next uninstall deleted it for good, cascading
+        //     across the family (MPI-310 — 5.24GB of user data destroyed).
+        //
+        // Exclusive deps break both cycles. A dep no other model declares cannot be
+        // someone else's footprint, so it is honest evidence THIS model is installed;
+        // and because it is exclusive it can never be the shared file under judgement,
+        // so the answer no longer depends on the file being protected. An absent-
+        // transformer tier has no exclusive footprint → protects nothing → still
+        // deletable (258 B1 stays fixed). A model whose shared encoder was deleted
+        // still has its own transformer → still defends what it declares (310 fixed).
+        //
+        // Models with NO exclusive deps at all (a pure subset of another card) fall
+        // back to any-footprint: there is no exclusive evidence to demand, and the
+        // tier cycle needs a shared-only pair to form.
+        const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
+        const { installedOps } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'local');
+        const exclusive = (entry.deps || []).filter(d => !multiModelDeps.has(d.id));
+        const evidence = exclusive.length ? exclusive : (entry.deps || []);
+        if (!evidence.some(d => d.installed === true)) continue;
+        // null engine → union of both engine sets (never delete a weight the remote
+        // engine also needs), matching the pre-MPI-276 protection stance.
+        const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
+        for (const depId of protectedDeps) {
             if (!map.has(depId)) map.set(depId, new Set());
             map.get(depId).add(model.name);
         }
     }
+    // Mid-install protection (was the reason for the old per-dep test): a dep that is
+    // ACTIVELY downloading/queued for another model right now must never be trashed.
+    // MPI-276: the refCount lie is gone — liveness is now a STORE query. A dep is
+    // in-flight iff some NON-TERMINAL model job still references it
+    // (store.activeModelsForDep). That replaces the old `_depJobs.status` map read
+    // (which lingered as 'complete'/'idle' and could mis-protect). We exclude the
+    // model being uninstalled so its own just-cancelled job never self-protects.
+    for (const depId of _inFlightDepIds(excludeModelId)) {
+        if (!map.has(depId)) map.set(depId, new Set());
+        map.get(depId).add('(installing)');
+    }
+    // MPI-304 — an app's own deps belong to no model, so nothing above protects them.
+    for (const depId of _appRequiredDepIds()) {
+        if (!map.has(depId)) map.set(depId, new Set());
+        map.get(depId).add('(app)');
+    }
+    // MPI-310 — same gap one entity further out: a PLUGIN's deps belong to no model
+    // AND no app, so neither sweep above protects them.
+    for (const depId of _pluginRequiredDepIds(excludeModelId)) {
+        if (!map.has(depId)) map.set(depId, new Set());
+        map.get(depId).add('(plugin)');
+    }
     return map;
+}
+
+// MPI-310 — dep ids declared by MORE THAN ONE model, computed over the WHOLE registry.
+// Used by BOTH engine guards to split a model's deps into shared vs EXCLUSIVE, so "is
+// this model actually installed" is answered only from files that belong to it alone.
+// See the local guard for why both earlier rules were circular without this split.
+//
+// MUST be computed over every model, NOT over the guard's `others` list: `others` omits
+// the model being uninstalled, which would make ITS shared deps look exclusive to the
+// sibling that also declares them — exactly the tier pair (LTX-2.3 High/Balanced) whose
+// mutual protection stranded ~19GB in MPI-258 B1. Exclusivity is a property of the
+// registry, never of who happens to be uninstalling.
+function _multiModelDepIds() {
+    const { MODELS } = _require('../js/data/modelConstants/models.js');
+    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const seen = new Set();
+    const shared = new Set();
+    for (const m of MODELS) {
+        for (const depId of (resolveFullUniverse(m) || [])) {
+            if (seen.has(depId)) shared.add(depId);
+            else seen.add(depId);
+        }
+    }
+    return shared;
+}
+
+// MPI-310 — dep ids required by a PLUGIN. Mirror of _appRequiredDepIds below, for the
+// third entity: see js/data/pluginsRegistry.js for why plugins are neither models nor
+// apps. Same both-engines requirement.
+//
+// UNLIKE the app twin this honours `excludeUninstallId`, because plugins are the first
+// entity with a user-facing Uninstall button. Protecting a plugin's deps unconditionally
+// would make its own uninstall a no-op — the guard cannot otherwise tell "some unrelated
+// model is being uninstalled, keep this" from "the OWNER is being uninstalled, delete
+// it". That is the same self-protection problem `excludeModelId` already solves for
+// models (see the in-flight sweep above), so it is solved the same way rather than with
+// a second uninstall route that would duplicate every shared-dep check.
+//
+// Deps stay protected here when ANOTHER plugin also requires them, so a shared weight
+// survives until its last owner is gone.
+function _pluginRequiredDepIds(excludeUninstallId) {
+    const { PLUGINS, pluginDepKey } = _require('../js/data/pluginsRegistry.js');
+    const out = new Set();
+    for (const plugin of PLUGINS) {
+        if (pluginDepKey(plugin.id) === excludeUninstallId) continue;
+        for (const depId of (plugin.requiredDeps || [])) out.add(depId);
+    }
+    return out;
+}
+
+// MPI-304 — dep ids required by an APP. Both uninstall guards below build their
+// protected set from MODELS only, so a dep that no model requires (an app-only LoRA,
+// detector or node pack) is invisible to them and gets trashed by the next model
+// uninstall — the app then silently breaks with a "lora not found" deep in ComfyUI.
+// Apps have no engine-split weights and no per-op resolution, so this is a flat union
+// of every app's requiredDeps, protected for BOTH engines.
+//
+// Protection is unconditional (not gated on "is this app installed"): unlike a model,
+// an app has no install state of its own — its deps ARE its install state, so gating
+// protection on their presence would be circular.
+function _appRequiredDepIds() {
+    const { APPS } = _require('../js/data/appsRegistry.js');
+    const out = new Set();
+    for (const app of APPS) {
+        for (const depId of (app.requiredDeps || [])) out.add(depId);
+    }
+    return out;
+}
+
+// Dep ids held by a live (non-terminal) model job OTHER than excludeModelId.
+// The store is the SOT for "is this dep still being installed right now" (G5:
+// refCount deleted). Used by BOTH engine uninstall guards.
+function _inFlightDepIds(excludeModelId) {
+    const out = new Set();
+    for (const job of store.allModelJobs()) {
+        if (job.modelId === excludeModelId) continue;
+        if (store.MODEL_TERMINAL.has(job.status)) continue;
+        for (const d of job.deps) out.add(d.id);
+    }
+    return out;
 }
 
 // Remote variant of the shared-dep guard. `_findOtherModelsUsingDep` trusts the
@@ -158,7 +326,7 @@ async function _localSharedDepsMap(excludeModelId) {
 // ids that ARE still needed by another volume-installed model (must be kept).
 async function _remoteSharedDepIds(excludeModelId) {
     const { MODELS } = _require('../js/data/modelConstants/models.js');
-    const { resolveFullUniverse } = _require('../js/data/modelConstants/resolveModelDeps.js');
+    const { resolveFullUniverse, deriveInstalledOps, resolveDeps } = _require('../js/data/modelConstants/resolveModelDeps.js');
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     // Full dep universe per model (commonDeps + every op) so op-specific + common
     // deps of another volume-installed model are kept, not the gone flat list. (MPI-122)
@@ -176,15 +344,29 @@ async function _remoteSharedDepIds(excludeModelId) {
         }),
     }));
     const keep = new Set();
+    const multiModelDeps = _multiModelDepIds();
     try {
         const out = await remoteModels.remoteModelsCheck(checkModels);
         const results = (out && out.results) || {};
-        for (const { model, depIds } of others) {
+        for (const { model } of others) {
             const entry = results[model.id];
-            // Only an INSTALLED (complete-on-volume) other model protects its deps.
-            if (entry && entry.installed === true) {
-                for (const depId of depIds) keep.add(depId);
-            }
+            if (!entry) continue;
+            // MPI-276: protect the deps of the OPS this model has on the volume, not
+            // the whole universe. Old gate (`installed === true`) required EVERY op
+            // complete, so an op-partial volume install protected nothing and a
+            // sibling uninstall trashed the shared clip/VAE both need. Mirrors the
+            // local guard — including MPI-310 replacing the CIRCULAR fullyInstalled gate
+            // with EXCLUSIVE-dep evidence (a shared common dep fed the gate that decided
+            // whether to protect it, so a missing weight disarmed its own protection;
+            // the pre-258 per-dep rule was circular the other way and stranded ~19GB).
+            // See the local twin for the full reasoning; these two must stay identical.
+            const depStatus = new Map((entry.deps || []).map(d => [d.id, d.installed === true]));
+            const { installedOps } = deriveInstalledOps(model, id => depStatus.get(id) === true, 'remote');
+            const exclusive = (entry.deps || []).filter(d => !multiModelDeps.has(d.id));
+            const evidence = exclusive.length ? exclusive : (entry.deps || []);
+            if (!evidence.some(d => d.installed === true)) continue;
+            const protectedDeps = resolveDeps(model, installedOps.length ? installedOps : null, null, null);
+            for (const depId of protectedDeps) keep.add(depId);
         }
     } catch (err) {
         // Fail SAFE: if we cannot confirm volume state, keep nothing extra here —
@@ -195,6 +377,19 @@ async function _remoteSharedDepIds(excludeModelId) {
         logger.warn('download', `remote shared-dep check failed: ${err.message}`);
         throw err;
     }
+    // MPI-276: remote uninstall previously had NO in-flight protection — a dep
+    // actively installing for another model on the volume could be trashed mid-
+    // download. Mirror the local guard: keep any dep a live (non-terminal) model
+    // job still references. Store is the SOT (refCount deleted, G5).
+    for (const depId of _inFlightDepIds(excludeModelId)) keep.add(depId);
+    // MPI-304 — mirror of the local guard: app-only deps belong to no model, so the
+    // MODELS sweep above cannot protect them. Fixed in the SAME pass as the local twin
+    // (CLAUDE.md engine-split rule — a one-engine fix here is a false done).
+    for (const depId of _appRequiredDepIds()) keep.add(depId);
+    // MPI-310 — plugin twin, fixed in the same pass for the same reason. Honours the
+    // exclusion so a plugin's own uninstall can actually delete its weight (see the
+    // local twin's comment for why this differs from the app guard above).
+    for (const depId of _pluginRequiredDepIds(excludeModelId)) keep.add(depId);
     return keep;
 }
 
@@ -203,11 +398,21 @@ function _isInsidePath(root, target) {
     return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
+// Uninstall path derivation (MPI-276). For a custom_nodes dep the install path
+// extracts to the FOLDER `custom_nodes/<dep.filename>/` and the zip is removed
+// right after (see _runCustomNodeInstall: targetDir = extractDir/dep.filename,
+// fs.remove(zipPath)). The old uninstall re-derived `custom_nodes/<name>.zip` —
+// the long-gone zip — so the delete no-op'd yet the loop still reported the dep
+// in removed[] and logged a lie. Target the extracted folder instead. Weight
+// deps are unchanged (resolved by the caller against the models roots).
+function _customNodeUninstallPath(dep, customNodesRoot) {
+    return path.join(customNodesRoot, dep.filename);
+}
+
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
-const _activeDownloaders = new Map(); // depId → ResumableDownloader (actively downloading)
-const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, kept for resume)
+const _activeDownloaders = new Map(); // depId → FileDownloader (actively downloading)
 // 3 parallel deps. Was 1 (commit 47e924a) only because parallel HF/Xet streams
 // fought over throttled bandwidth and made each other worse. Now that all MPI
 // weights are on R2 (free egress, no wave-throttle, MPI-129), parallel pulls no
@@ -215,11 +420,6 @@ const _pausedDownloaders = new Map(); // depId → ResumableDownloader (paused, 
 // faster. Kept modest — a single R2 stream already saturates a typical link, so
 // 3 overlaps small deps with large ones without thrashing. (MPI-140)
 const LOCAL_DOWNLOAD_CONCURRENCY = 3;
-const SLOW_RECONNECT_MIN_BEST_BPS = 5 * 1024 * 1024;
-const SLOW_RECONNECT_MIN_BPS = 512 * 1024;
-const SLOW_RECONNECT_RATIO = 0.15;
-const SLOW_RECONNECT_AFTER_MS = 45000;
-const SLOW_RECONNECT_COOLDOWN_MS = 120000;
 
 function _createDepJob(dep) {
     return {
@@ -238,7 +438,6 @@ function _createDepJob(dep) {
         // ("sits at 100%"). seedBytes keeps every dep counted at its best-known
         // size from the moment the job is created.
         seedBytes: _parseSizeToBytes(dep.size),
-        refCount: 0,
         error: null,
         sha256Expected: dep.sha256 || null,
         // MPI-149 — carry the install-enforcement fields through to the runtime depJob.
@@ -296,32 +495,79 @@ function _createModelJob(modelId, deps) {
     };
 }
 
-// ── ResumableDownloader (node-downloader-helper wrapper) ─────────────────────
+// ── FileDownloader (node-downloader-helper wrapper) ──────────────────────────
+// Plain single-stream NDH wrapper: start, cancel (clean stop + remove), no
+// pause/resume — resume was removed (MPI-258 Bug 2, the 200-vs-206 append
+// corruption); the class was renamed from ResumableDownloader to match (MPI-276).
+// NDH itself stays — it downloads every engine + model file.
 
-class ResumableDownloader {
+class FileDownloader {
     constructor(depJob, localPath) {
         this.depJob = depJob;
         this.localPath = localPath;
         this._downloader = null;
         this.onProgress = null;
         this._eventsBound = false;
-        this._bestSpeed = 0;
-        this._slowSince = 0;
-        this._lastSlowReconnectAt = 0;
-        this._slowReconnectInFlight = false;
+        // MPI-291 — byte-flow stall watchdog. Last moment a progress tick moved bytes.
+        // Seeded at construction so a downloader that never emits a single tick (dead
+        // socket from the start, distinct from the timeout:30000 no-response case) is
+        // still caught. _watchdogSweep() force-errors any downloader quiet past the window.
+        this._lastByteTs = Date.now();
+        this._lastBytes = -1;
+        // MPI-296 — SHA256 computed incrementally while the file streams in, so the
+        // post-download verify never re-reads the whole file (killed a 35s wall on a
+        // 6.6GB weight). Valid only for FRESH streams (pipe sees every byte once, in
+        // order); a RESUMED stream (MPI-317) nulls the hash in the 'download' handler
+        // and _verifySha256 falls back to the disk re-read. Reset on each 'download'
+        // (DHL re-emits it on retry after clearing __pipes). _streamHashHex holds the
+        // final digest for _verifySha256's in-memory fast path; null → disk re-read.
+        this._streamHash = null;
+        this._streamHashHex = null;
     }
 
     _bindEvents() {
         if (this._eventsBound) return;
         this._eventsBound = true;
 
+        // MPI-296 — attach an incremental SHA256 sink to the download stream. DHL pipes
+        // the HTTP response through registered pipes BEFORE the file write, so this sees
+        // the same bytes the file gets. Fires at each stream start (incl. retry, where
+        // DHL clears __pipes and re-emits 'download'), so re-create the hash + re-register.
+        // DHL chains registered pipes IN SERIES ahead of the file write
+        // (response → pipe1 → … → fileStream), so this MUST be a Transform that
+        // forwards every chunk unchanged — a Writable would swallow the bytes and
+        // starve the file stream. Hash on the way through, pass the chunk along.
+        this._downloader.on('download', (evt) => {
+            // MPI-317: on a RESUMED stream the pipe only sees bytes from the resume
+            // offset — an incremental hash would be tail-only garbage that fails
+            // verify and scrubs a good file. Null the hash instead; _verifySha256
+            // falls back to its full disk re-read (slower, correct). Fresh (non-
+            // resumed) starts keep the MPI-296 fast path.
+            if (evt && evt.isResumed) {
+                this._streamHash = null;
+                this._streamHashHex = null;
+                return;
+            }
+            this._streamHash = crypto.createHash('sha256');
+            this._streamHashHex = null;
+            const hashPass = new nodeStream.Transform({
+                transform: (chunk, _enc, cb) => { this._streamHash.update(chunk); cb(null, chunk); },
+            });
+            this._downloader.pipe(hashPass);
+        });
+
         // Progress — forwarded to our onProgress callback
         this._downloader.on('progress', (stats) => {
             const speed = stats.speed || 0;
+            // MPI-291 — only a real byte advance resets the stall clock. A repeated
+            // same-total tick with no new bytes must NOT count as liveness.
+            if (stats.downloaded > this._lastBytes) {
+                this._lastBytes = stats.downloaded;
+                this._lastByteTs = Date.now();
+            }
             this.depJob.downloadedBytes = stats.downloaded;
             this.depJob.totalBytes = stats.total;
             this.depJob.speed = _formatSpeed(speed);
-            this._maybeRecoverSlowStream(speed, stats.downloaded, stats.total);
             if (this.onProgress) {
                 this.onProgress(stats.downloaded, stats.total, this.depJob.speed);
             }
@@ -330,6 +576,12 @@ class ResumableDownloader {
         // Download finished successfully
         this._downloader.on('end', async () => {
             _activeDownloaders.delete(this.depJob.id);
+            // MPI-296 — finalize the incrementally-computed digest so _verifySha256
+            // can compare in-memory instead of re-reading the whole file from disk.
+            if (this._streamHash) {
+                this._streamHashHex = this._streamHash.digest('hex');
+                this._streamHash = null;
+            }
             try {
                 // sha256 re-reads the whole file (~20-60s for 6GB, ~1-2min for Wan's
                 // 14GB) with no byte progress — the bar would sit at a dead 100%. Flip
@@ -363,9 +615,9 @@ class ResumableDownloader {
                         });
                     }
                 }
-                await _verifySha256(this.localPath, this.depJob.sha256Expected);
+                await _verifySha256(this.localPath, this.depJob.sha256Expected, this._streamHashHex);
                 await clearDownloadMarker(this.localPath);
-                this.depJob.status = 'complete';
+                _setDepStatus(this.depJob, 'complete', 'downloader end');
                 _broadcast('download:complete', { depId: this.depJob.id, modelId: null });
                 _checkModelJobsComplete();
                 _startPendingDeps();
@@ -373,7 +625,7 @@ class ResumableDownloader {
                 // SHA256 mismatch — clean up and mark failed
                 await fs.remove(this.localPath).catch(() => {});
                 await clearDownloadMarker(this.localPath).catch(() => {});
-                this.depJob.status = 'failed';
+                _setDepStatus(this.depJob, 'failed', 'downloader fail');
                 this.depJob.error = err.message;
                 _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
                 _checkModelJobsComplete();
@@ -381,11 +633,19 @@ class ResumableDownloader {
             }
         });
 
-        // Error occurred
+        // Error occurred — partial is KEPT (removeOnFail:false) so a retry resumes.
         this._downloader.on('error', (err) => {
             _activeDownloaders.delete(this.depJob.id);
             if (this.depJob.status === 'paused' || this.depJob.status === 'cancelled') return;
-            this.depJob.status = 'failed';
+            // MPI-317: 416 Range Not Satisfiable = the on-disk partial is LARGER than
+            // the real file (garbage). Kept, it would 416 on every retry forever —
+            // scrub it so the next attempt starts clean. Only this status; a kept
+            // partial is the whole point of removeOnFail:false.
+            if (err && err.status === 416) {
+                fs.remove(this.localPath).catch(() => {});
+                clearDownloadMarker(this.localPath).catch(() => {});
+            }
+            _setDepStatus(this.depJob, 'failed', 'downloader error');
             this.depJob.error = err.message;
             _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
             _checkModelJobsComplete();
@@ -400,23 +660,20 @@ class ResumableDownloader {
         const fileName = path.basename(this.localPath);
         const destDir = path.dirname(this.localPath);
 
-        // DO NOT add `resumeIfFileExists`/`override` here. They route start()
-        // through an async getTotalSize()→resumeFromFile() chain, so this.__request
-        // is not yet set when pause()/abort() runs immediately after start() — the
-        // abort misses and the stream keeps downloading after a Pause. In-session
-        // pause/resume relies on the synchronous start() path below.
-        //   - In-session resume uses the SAME instance via resume() (getResumeState
-        //     + resumeFromFile), which is independent of these constructor options.
-        //   - The cross-restart "(1)" duplication that resumeIfFileExists/override
-        //     would have addressed is instead handled by explicitly scrubbing stale
-        //     archives/.part/dups BEFORE download (see _clearStaleWindowsEngineArtifacts
-        //     in routes/engine.js). That keeps the fragile pause path untouched.
-        // `resume` is not a real node-downloader-helper option (silently ignored),
-        // but it is left as a harmless marker of intent; do not "fix" it to
-        // resumeIfFileExists — that reintroduces the pause race.
+        // MPI-317 resume contract (resume itself is EXPLICIT — download() calls
+        // resumeFromFile on a marker-blessed partial; no resumeIfFileExists here, so
+        // NDH never resumes a file the marker doesn't vouch for). Safe on this NDH:
+        // a 200-not-206 answer clears __isResumed and truncates instead of appending
+        // (the MPI-258 Bug 2 corruption). override:true so a stale COMPLETE file
+        // (size === total) is truncated and re-downloaded in place — never a
+        // " (1)" duplicate (MPI-243). removeOnStop/removeOnFail:false — NDH must
+        // never delete bytes on its own; deletion is OURS and happens only on user
+        // cancel (cancel()), url-mismatch scrub, 416 scrub, and SHA256 mismatch.
         this._downloader = new DownloaderHelper(this.depJob.url, destDir, {
             fileName: fileName,
-            resume: true,
+            override: true,
+            removeOnStop: false,
+            removeOnFail: false,
             // NDH default timeout is -1 (no socket timeout) → a black-hole route
             // (DNS resolves but the server never responds) hangs at 0% forever.
             // 30s socket timeout makes a stalled connection emit 'error' instead
@@ -428,131 +685,125 @@ class ResumableDownloader {
         this._bindEvents();
     }
 
-    _maybeRecoverSlowStream(speed, downloaded, total) {
-        // DISABLED (MPI-129): the pause()→resumeFromFile() recover path races the
-        // live NDH socket — old socket pushes bytes into a WriteStream resume has
-        // already ended → ERR_STREAM_WRITE_AFTER_END, an UNHANDLED 'error' that
-        // crashes the whole server (observed 2026-06-25 on ltx23-gemma-clip, HF
-        // throttled to 101 KB/s, bogus best=6554 MB/s baseline). Net value was
-        // negative: zero saves, one server-kill. HF/Xet wave-throttling self-
-        // recovers on its own, so riding it out beats reconnecting. The real fix
-        // is the R2 migration (this card); remove this method + the _bestSpeed/
-        // _slowSince/_slowReconnect* fields + SLOW_RECONNECT_* consts once the
-        // last HF URL is gone. No-op until then.
-        return;
-        if (!this._downloader || this.depJob.status !== 'downloading') return;
-        if (this._slowReconnectInFlight) return;
-        if (!downloaded || (total && downloaded >= total)) return;
-
-        const now = Date.now();
-        if (speed > this._bestSpeed) this._bestSpeed = speed;
-
-        const hadHealthySpeed = this._bestSpeed >= SLOW_RECONNECT_MIN_BEST_BPS;
-        const isVerySlow = speed > 0
-            && speed < SLOW_RECONNECT_MIN_BPS
-            && speed < this._bestSpeed * SLOW_RECONNECT_RATIO;
-
-        if (!hadHealthySpeed || !isVerySlow) {
-            this._slowSince = 0;
-            return;
-        }
-
-        if (!this._slowSince) {
-            this._slowSince = now;
-            return;
-        }
-
-        const slowForMs = now - this._slowSince;
-        const sinceReconnectMs = now - this._lastSlowReconnectAt;
-        if (slowForMs < SLOW_RECONNECT_AFTER_MS || sinceReconnectMs < SLOW_RECONNECT_COOLDOWN_MS) return;
-
-        this._recoverSlowStream(speed).catch(err => {
-            logger.warn('download', `slow-stream reconnect failed for ${this.depJob.id}: ${err.message}`);
-        });
-    }
-
-    async _recoverSlowStream(speed) {
-        if (!this._downloader || this._slowReconnectInFlight) return;
-        this._slowReconnectInFlight = true;
-        this._lastSlowReconnectAt = Date.now();
-        this._slowSince = 0;
-
-        try {
-            const state = this._downloader.getResumeState();
-            logger.warn('download', `slow-stream reconnect for ${this.depJob.id}: current=${_formatSpeed(speed)}, best=${_formatSpeed(this._bestSpeed)}`);
-            await this._downloader.pause().catch(() => false);
-            if (this.depJob.status !== 'downloading') return;
-            this._downloader.resumeFromFile(state.filePath, {
-                downloaded: state.downloaded,
-                total: state.total,
-                fileName: state.fileName,
-            }).catch(err => logger.warn('download', `slow-stream resume failed for ${this.depJob.id}: ${err.message}`));
-        } finally {
-            this._bestSpeed = 0;
-            this._slowReconnectInFlight = false;
-        }
-    }
-
     async download() {
         await this._ensureDownloader();
+        // MPI-317: a marker-blessed partial (stall/crash/shutdown left both the file
+        // AND its .cubricdl marker) resumes via an explicit Range request — see the
+        // header for the full contract and the constructor comment for why the
+        // MPI-258 Bug 2 append-corruption cannot recur. Resume ONLY when the marker's
+        // url matches this dep's url (a repointed R2 object must not be Range-read
+        // into a stale partial — lenient: legacy markers without a url still resume,
+        // the SHA256 verify is the net). Everything else — no marker, empty file,
+        // url mismatch, stale COMPLETE file (MPI-243) — starts clean; override:true
+        // truncates in place, never a " (1)" duplicate.
         const partial = await getPartialDownloadState(this.localPath);
+        let markerUrl = null;
         if (partial.resumable) {
-            await markDownloadInProgress(this.localPath, {
-                depId: this.depJob.id,
-                url: this.depJob.url,
-                resumedAt: new Date().toISOString(),
-            });
+            const marker = await fs.readJson(getDownloadMarkerPath(this.localPath)).catch(() => ({}));
+            markerUrl = marker.url || null;
+        }
+        await markDownloadInProgress(this.localPath, {
+            depId: this.depJob.id,
+            url: this.depJob.url,
+        });
+        if (partial.resumable && (!markerUrl || markerUrl === this.depJob.url)) {
             this.depJob.downloadedBytes = partial.downloaded;
-            this._downloader.resumeFromFile(partial.filePath, {
+            logger.info('download', `resuming ${this.depJob.id} from ${(partial.downloaded / 1073741824).toFixed(2)}GB on disk`);
+            // Not awaited (same idiom as start() below): the promise resolves only
+            // when the whole download finishes — events drive completion. Errors
+            // surface through the 'error' handler; the catch just silences the
+            // duplicate floating rejection.
+            this._downloader.resumeFromFile(this.localPath, {
                 downloaded: partial.downloaded,
                 fileName: partial.fileName,
             }).catch(() => {});
             return;
         }
-        // Not resumable but a file may still sit at localPath: a stale COMPLETE
-        // download whose marker was already cleared (e.g. a prior batch that
-        // downloaded the zip but aborted before extraction — MPI-243). NDH would
-        // see the existing destination and append " (1)" to the filename, leaking
-        // an orphaned duplicate (RES4LYF (1).zip et al.). Installed deps are marked
-        // complete upstream and never reach download(), so any file here is stale —
-        // scrub it so start() writes a clean single copy.
-        await fs.remove(this.localPath).catch(() => {});
-        await markDownloadInProgress(this.localPath, {
-            depId: this.depJob.id,
-            url: this.depJob.url,
-        });
+        if (partial.resumable) {
+            logger.info('download', `discarding unusable partial for ${this.depJob.id} (marker url mismatch) — clean start`);
+            await fs.remove(this.localPath).catch(() => {});
+        }
         this._downloader.start();
     }
 
-    abort() {
+    // MPI-317: cancel is user INTENT — stop the stream AND delete the partial +
+    // marker. stop() itself no longer removes anything (removeOnStop:false), so
+    // the deletion here is the only one on this path.
+    async cancel() {
         if (this._downloader) {
-            setImmediate(() => {
-                this._downloader.pause().catch(() => {});
-            });
+            await this._downloader.stop().catch(() => false);
         }
+        await fs.remove(this.localPath).catch(() => {});
+        await clearDownloadMarker(this.localPath).catch(() => {});
     }
 
-    async cancel() {
+    // MPI-317: shutdown/teardown stop — stream closed, partial + marker KEPT so the
+    // next app start resumes via Range. Used by cancelAllDownloads (SIGTERM/SIGINT),
+    // never by the user-cancel route.
+    async stopKeep() {
         if (this._downloader) {
             await this._downloader.stop().catch(() => false);
         }
     }
 
-    resume() {
+    // MPI-291 — driven by _watchdogSweep when the socket goes quiet mid-stream past
+    // the stall window. NDH's timeout:30000 promises this but does NOT fire on a
+    // mid-stream quiet socket (v2.1.11). Stop the stream and route into the EXISTING
+    // 'error' → _setDepStatus('failed') → retry/report path — never a raw store poke.
+    async forceStall() {
+        // stop() prevents NDH from emitting its own late 'end'/'error'; then we
+        // synthesize the error so the bound 'error' handler runs the failed path
+        // (_setDepStatus('failed') → retry/report). NDH extends EventEmitter, so emit
+        // always reaches the handler _bindEvents wired.
         if (!this._downloader) return;
-        const state = this._downloader.getResumeState();
-        this._downloader.resumeFromFile(state.filePath, {
-            downloaded: state.downloaded,
-            total: state.total,
-            fileName: state.fileName,
-        }).catch(() => {});
+        await this._downloader.stop().catch(() => false);
+        this._downloader.emit('error', new Error('Download stalled — no data received.'));
+    }
+}
+
+// MPI-291 — byte-flow stall watchdog. Self-idling backstop (mirrors
+// MpiModelManager._pumpBackstop): runs only while a download is active, stops when
+// _activeDownloaders drains. If a downloader hasn't advanced a byte in STALL_MS it's
+// force-errored into the existing failed/retry path. Window is longer than NDH's
+// timeout:30000 so this is a genuine backstop, not a double-fire.
+const STALL_MS = 60_000;
+let _watchdogTimer = null;
+
+function _startStallWatchdog() {
+    if (_watchdogTimer) return;
+    _watchdogTimer = setInterval(_watchdogSweep, 15_000);
+}
+
+function _watchdogSweep() {
+    if (_activeDownloaders.size === 0) {
+        clearInterval(_watchdogTimer);
+        _watchdogTimer = null;
+        return;
+    }
+    const now = Date.now();
+    for (const [depId, dl] of _activeDownloaders) {
+        if (now - dl._lastByteTs < STALL_MS) continue;
+        logger.warn('download', `stall watchdog: ${depId} no byte movement in ${STALL_MS}ms — forcing failure`);
+        dl.forceStall().catch(err =>
+            logger.error('download', `forceStall(${depId}) threw: ${err.message}`));
     }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function _verifySha256(filePath, expected) {
+// MPI-296 — `precomputed` is the SHA256 computed incrementally while the file
+// streamed in (DownloadManager's pipe sink). When present it's an exact hash of
+// the same bytes written to disk (no resume ever — MPI-258), so compare it in
+// memory and skip re-reading the whole file (killed a 35s wall on a 6.6GB weight).
+// null/absent → fall back to the disk re-read below (repair paths, edge cases).
+async function _verifySha256(filePath, expected, precomputed) {
     if (!expected) return;
+    if (precomputed) {
+        if (precomputed !== expected) {
+            throw new Error(`SHA256 mismatch: expected ${expected}, got ${precomputed}`);
+        }
+        return;
+    }
     return new Promise((resolve, reject) => {
         const hash = crypto.createHash('sha256');
         const stream = fs.createReadStream(filePath);
@@ -645,6 +896,152 @@ function _broadcast(event, data) {
     }
 }
 
+// ── installStore SOT (MPI-276 Phase 2b.3) ────────────────────────────────────
+// The store owns lifecycle state + progress + the monotonic snapshot version.
+// SHADOW STAGE: populated alongside _modelJobs/_depJobs and used for the READ
+// paths (status endpoint, snapshot); the maps stay write-authoritative until the
+// write-flip commit. The maps remain the transport carriers (url, localPath,
+// sha256Expected, pipPins, installRequirementsCommand — fields the pure store
+// deliberately omits). `broadcast` is late-bound so it is defined by call time.
+const store = createInstallStore({
+    broadcast: (event, data) => _broadcast(event, data),
+    logger,
+    now: Date.now,
+});
+
+// Runtime→store status translation. The runtime maps use a few strings the pure
+// store doesn't model: a model's terminal success is 'complete' here but 'done' in
+// the store, and 'idle' (disk-full / rejected pre-register) has no store state.
+const _MODEL_STATUS_TO_STORE = {
+    queued: 'queued', downloading: 'downloading', verifying: 'verifying',
+    installing: 'installing', complete: 'done', done: 'done',
+    failed: 'failed', cancelled: 'cancelled',
+    // idle: intentionally absent — the model is never registered in the store on
+    // that path (it 400s before register), so there is nothing to transition.
+};
+const _DEP_STATUS_TO_STORE = {
+    queued: 'queued', downloading: 'downloading', verifying: 'verifying',
+    complete: 'complete', failed: 'failed', cancelled: 'cancelled',
+};
+
+// Write the runtime map field (unchanged behavior) AND drive the store in lockstep
+// (MPI-276 2b.3). SHADOW STAGE: both writes happen; the map is still authoritative.
+// A status with no store equivalent (e.g. 'idle') updates the map only. transition*
+// no-ops safely if the store has no such job yet (register happens at start).
+function _setModelStatus(modelJob, status, reason) {
+    modelJob.status = status;
+    const to = _MODEL_STATUS_TO_STORE[status];
+    const sj = store.modelJob(modelJob.modelId);
+    // MPI-317 F5: on a RESUMED install the reconciler can settle the store job to a
+    // terminal state from disk truth (invariant #3) while this legacy map is still
+    // walking its downloading→installing→complete tail — the map drives real trailing
+    // work (node requirements re-verify + the model-level download:complete broadcast),
+    // so the walk must continue. But pushing its trailing statuses into an
+    // already-settled store just gets a (correct) 'Illegal transition … rejected' warn
+    // per resumed install. Terminal is terminal: once the store has settled, the map
+    // finishes its walk without writing to the store. Dies with the MPI-318 write-flip
+    // (map status-writes deleted).
+    if (sj && store.MODEL_TERMINAL.has(sj.status)) return;
+    if (to && sj) store.transitionModel(modelJob.modelId, to, reason);
+}
+function _setDepStatus(depJob, status, reason) {
+    depJob.status = status;
+    const to = _DEP_STATUS_TO_STORE[status];
+    if (to && store.depJob(depJob.id)) store.transitionDep(depJob.id, to, reason);
+    // Stamp last-activity on the store model job so the reconciler's orphan-fail
+    // gate (G11) measures staleness from real progress, not registration alone.
+    const sj = store.modelJob(depJob.modelId);
+    if (sj) sj.lastTickAt = Date.now();
+}
+
+// Mirror a map modelJob's freshly-recomputed progress/bytes into the store (4c) so
+// snapshot()/the download:snapshot broadcast reflect live progress, not just
+// lifecycle. Called right after each map-side progress recompute. Status stays owned
+// by _setModelStatus/_setDepStatus; this touches numbers only.
+function _syncStoreProgress(modelJob) {
+    if (!store.modelJob(modelJob.modelId)) return;
+    store.syncProgress(modelJob.modelId, {
+        progress: modelJob.progress,
+        totalBytes: modelJob.totalBytes,
+        downloadedBytes: modelJob.downloadedBytes,
+        speed: modelJob.speed,
+        deps: modelJob.deps.map(d => ({ id: d.id, downloadedBytes: d.downloadedBytes, totalBytes: d.totalBytes })),
+    });
+}
+
+// Register (or REPLACE) the store record for a runtime modelJob, translating its
+// deps into the store's spec. Called once per start on both engines. The store
+// holds lifecycle+progress+version; the runtime maps keep the transport fields.
+function _registerModelInStore(modelJob, engine) {
+    store.registerModelJob({
+        modelId: modelJob.modelId,
+        engine,
+        deps: modelJob.deps.map(d => ({
+            depId: d.id,
+            type: d.type || 'model',
+            size: d.size || '',
+            seedBytes: d.seedBytes || 0,
+            totalBytes: d.totalBytes || 0,
+            downloadedBytes: d.downloadedBytes || 0,
+            alreadyInstalled: d.status === 'complete',
+        })),
+    });
+    // Stamp the grace-window anchor for the reconciler's orphan-fail gate (G11).
+    const sj = store.modelJob(modelJob.modelId);
+    if (sj) { sj.registeredAt = Date.now(); sj.lastTickAt = Date.now(); }
+    reconciler.start(); // idempotent; self-idles when no jobs are active
+}
+
+// ── Reconciler SOT-driver (MPI-276 Phase 3, G11) ─────────────────────────────
+// Polls disk/volume truth while the store has active jobs, settles wedged jobs
+// (missed-terminal SSE), fails orphans, prunes terminal jobs, broadcasts the
+// snapshot. Generalises the remote-only recovery to BOTH engines. Disk truth is
+// injected so the module stays pure/testable.
+
+// Resolve installed-truth for a batch of the store's active model jobs. Groups
+// by engine: local jobs → localModelsCheck (disk), remote jobs → remoteModelsCheck
+// (volume). Returns Map<depId, boolean>. Any dep whose model can't be checked is
+// simply absent from the map (treated as not-yet-installed — never a false settle).
+async function _reconcilerCheckInstalled(jobs) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const comfyRoutes = _require('./comfy.js');
+    const truth = new Map();
+
+    const toCheckModel = (job) => ({
+        id: job.modelId,
+        deps: job.deps.map(d => {
+            const def = DEPS[d.id] || {};
+            return { id: d.id, type: def.type, filename: def.filename };
+        }),
+    });
+    const absorb = (results) => {
+        if (!results) return;
+        for (const modelId of Object.keys(results)) {
+            const deps = (results[modelId] && results[modelId].deps) || [];
+            for (const d of deps) if (d && d.id) truth.set(d.id, d.installed === true);
+        }
+    };
+
+    const localJobs = jobs.filter(j => j.engine !== 'remote');
+    const remoteJobs = jobs.filter(j => j.engine === 'remote');
+
+    if (localJobs.length) {
+        absorb(await comfyRoutes.localModelsCheck(localJobs.map(toCheckModel)));
+    }
+    if (remoteJobs.length && remoteModels.isRemoteActive()) {
+        const out = await remoteModels.remoteModelsCheck(remoteJobs.map(toCheckModel));
+        absorb(out && out.results);
+    }
+    return truth;
+}
+
+const reconciler = createReconciler({
+    store,
+    checkInstalled: _reconcilerCheckInstalled,
+    now: Date.now,
+    logger,
+});
+
 router.get('/comfy/downloads/stream', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -652,12 +1049,32 @@ router.get('/comfy/downloads/stream', (req, res) => {
     res.flushHeaders();
     _sseClients.add(res);
     req.on('close', () => { _sseClients.delete(res); });
+    // G11: reconcile against truth, then hand the fresh client the current
+    // snapshot so it rebuilds state.downloadJobs wholesale (kills cold-boot
+    // phantom cards). Runs only when jobs are live; otherwise emits an empty
+    // snapshot so the FE clears any stale bars. Errors are non-fatal.
+    (store.hasActiveJobs()
+        ? reconciler.reconcileOnce().catch((err) => logger.warn('download', `SSE-connect reconcile failed: ${err.message}`))
+        : Promise.resolve()
+    ).finally(() => store.broadcastSnapshot());
 });
 
 // ── Status Endpoint ───────────────────────────────────────────────────────────
 
-router.get('/comfy/downloads/status', (req, res) => {
-    const jobs = Array.from(_modelJobs.values()).map(job => ({
+// Serialize one model job for the wire — the shape the FE mirror consumes from
+// both GET /downloads/status and the register-before-respond /download/start body
+// (MPI-276 G8). Single serializer so the two never drift.
+//
+// MPI-276 4c NOTE: sourced from the runtime MAP job, NOT store.snapshot(). Live
+// progress/bytes are recomputed onto the map job at ~15 tick sites and are NOT yet
+// mirrored into the store (the store tracks lifecycle+status, mirrored in lockstep;
+// progress-mirror is the remaining gap). So a pull-read off store.snapshot() would
+// report 0% mid-download. The store-sourced SOT path is the `download:snapshot`
+// BROADCAST (reconciler, P3) + the FE snapshot consumer (4a); this pull endpoint
+// stays map-backed until progress is mirrored. Map `status` vocabulary is already
+// correct ('complete'); the FE mirror handles both it and the store's 'done'.
+function _serializeModelJob(job) {
+    return {
         id: job.id,
         modelId: job.modelId,
         status: job.status,
@@ -671,10 +1088,15 @@ router.get('/comfy/downloads/status', (req, res) => {
             downloadedBytes: d.downloadedBytes,
             totalBytes: d.totalBytes,
             error: d.error,
-            refCount: d.refCount,
-        }))
-    }));
-    res.json({ success: true, jobs });
+        })),
+    };
+}
+
+router.get('/comfy/downloads/status', (req, res) => {
+    const jobs = Array.from(_modelJobs.values()).map(_serializeModelJob);
+    // G9: monotonic snapshot version from the store (the FE version-gates deltas
+    // against it). Jobs stay map-sourced for live progress (see _serializeModelJob).
+    res.json({ success: true, version: store.version(), jobs });
 });
 
 router.get('/comfy/downloads/active', (req, res) => {
@@ -741,9 +1163,11 @@ router.post('/comfy/models/download/start', async (req, res) => {
     const defaultModelsRoot = getDefaultModelsRoot();
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
-    // Pre-sum totalBytes from ALL deps (including already-installed ones)
+    // Pre-sum totalBytes from ALL deps (including already-installed ones).
+    // SET, never += (MPI-276 G12): a re-POST of the same model must not accumulate
+    // the denominator — a second click read the bar at 200% of real size.
     const allDepsSize = localDeps.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    modelJob.totalBytes += allDepsSize;
+    modelJob.totalBytes = allDepsSize;
 
     for (const dep of localDeps) {
         let localPath;
@@ -776,7 +1200,6 @@ router.post('/comfy/models/download/start', async (req, res) => {
             depJob.localPath = localPath;
             _depJobs.set(dep.id, depJob);
         }
-        depJob.refCount += 1;
 
         if (!modelJob.deps.find(d => d.id === dep.id)) {
             modelJob.deps.push(depJob);
@@ -784,12 +1207,12 @@ router.post('/comfy/models/download/start', async (req, res) => {
 
         // Mark installed deps as complete immediately (they contribute to progress but not to active downloads)
         if (isInstalled) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'local already-installed');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
         } else if (depJob.status !== 'queued' && depJob.status !== 'downloading') {
             // Reset any terminal state (complete, failed, cancelled) back to queued.
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'local reset requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
         }
@@ -817,13 +1240,7 @@ router.post('/comfy/models/download/start', async (req, res) => {
         const targetDir = customRoot || defaultModelsRoot;
         const freeBytes = await _freeDiskBytes(targetDir);
         if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
-            // Roll back the refCount bumps this call made so a later retry (after
-            // the user frees space) is not blocked by orphaned references.
-            for (const dep of localDeps) {
-                const depJob = _depJobs.get(dep.id);
-                if (depJob) depJob.refCount = Math.max(0, depJob.refCount - 1);
-            }
-            modelJob.status = 'idle';
+            _setModelStatus(modelJob, 'idle', 'disk-full idle');
             logger.warn('download', `install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} at ${targetDir}`);
             return res.status(400).json({
                 error: `Not enough disk space to install this model. ${_fmtGb(neededBytes)} needed, ${_fmtGb(freeBytes)} free.`,
@@ -831,13 +1248,22 @@ router.post('/comfy/models/download/start', async (req, res) => {
         }
     }
 
-    modelJob.status = 'downloading';
+    // Register in the store now that the disk-full gate has passed (MPI-276 2b.3).
+    // registerModelJob REPLACES on a re-POST (kills totalBytes accumulation) and
+    // credits already-installed deps at full size. Done before the status flip so the
+    // transition below lands on a live store job.
+    _registerModelInStore(modelJob, 'local');
+
+    _setModelStatus(modelJob, 'downloading', 'download start');
     _resetModelSpeed(modelJob);
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
 
     _startPendingDeps();
 
-    res.json({ success: true, jobId: modelId });
+    // Register-before-respond (MPI-276 G8): the job is fully in _modelJobs before we
+    // reply, and the reply carries its snapshot — the FE mirror renders the card from
+    // the response, never racing the SSE stream open (the MPI-241 race class).
+    res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
 });
 
 // Free bytes available on the filesystem holding `dir`. Returns null on any
@@ -861,7 +1287,6 @@ function _fmtGb(bytes) {
 async function _startPendingDeps() {
     const pending = Array.from(_depJobs.values()).filter(d =>
         d.status === 'queued'
-        && d.refCount > 0
         && _depHasActiveDownloadConsumer(d.id)
     );
     const slots = Math.max(0, LOCAL_DOWNLOAD_CONCURRENCY - _activeDownloaders.size);
@@ -871,26 +1296,14 @@ async function _startPendingDeps() {
     let started = 0;
     for (const depJob of pending) {
         if (started >= slots) break;
-        // Resume a paused downloader (same instance — node-downloader-helper picks up from .part file)
-        if (_pausedDownloaders.has(depJob.id)) {
-            const downloader = _pausedDownloaders.get(depJob.id);
-            _pausedDownloaders.delete(depJob.id);
-            _activeDownloaders.set(depJob.id, downloader);
-            depJob.status = 'downloading';
-            // Re-wire progress in case the same dep is shared across model jobs
-            _wireProgress(depJob, downloader);
-            downloader.resume();
-            started += 1;
-            continue;
-        }
-
         if (_activeDownloaders.has(depJob.id)) {
             continue;
         }
 
-        depJob.status = 'downloading';
-        const downloader = new ResumableDownloader(depJob, depJob.localPath);
+        _setDepStatus(depJob, 'downloading', 'local dep start');
+        const downloader = new FileDownloader(depJob, depJob.localPath);
         _activeDownloaders.set(depJob.id, downloader);
+        _startStallWatchdog(); // MPI-291 — self-idles when _activeDownloaders drains
 
         _wireProgress(depJob, downloader);
         logger.info('download', `Starting download for ${depJob.id} from ${depJob.url}`);
@@ -932,6 +1345,7 @@ function _wireProgress(depJob, downloader) {
             // than a static 0 MB / 0 MB.
             const indeterminate = isNodeTick || modelJob.totalBytes <= 0;
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId: depJob.id,
@@ -949,6 +1363,18 @@ function _wireProgress(depJob, downloader) {
 function _depHasActiveDownloadConsumer(depId) {
     for (const modelJob of _modelJobs.values()) {
         if (modelJob.status !== 'downloading') continue;
+        if (modelJob.deps.some(d => d.id === depId)) return true;
+    }
+    return false;
+}
+
+// True if a model OTHER than excludeModelId is actively downloading/installing this
+// dep right now — the real "don't stop the downloader" test for cancel (MPI-258 Bug
+// B). refCount can't be trusted here (it leaks up on successful installs).
+function _otherActiveModelUsesDep(depId, excludeModelId) {
+    for (const modelJob of _modelJobs.values()) {
+        if (modelJob.modelId === excludeModelId) continue;
+        if (modelJob.status !== 'downloading' && modelJob.status !== 'queued' && modelJob.status !== 'installing') continue;
         if (modelJob.deps.some(d => d.id === depId)) return true;
     }
     return false;
@@ -987,6 +1413,29 @@ function _startRemoteStallWatchdog() {
     _remoteStallTimer = setInterval(() => {
         if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
         if (_remoteReconnectTimer) return; // a reconnect already in flight
+
+        // MPI-255: LOST-COMPLETION backstop, independent of the 90s stall gate.
+        // A dep whose bytes are 100% in (downloadedBytes >= totalBytes > 0) but whose
+        // status is still 'downloading' has a MISSED terminal SSE — the wrapper fired
+        // models:install-complete into a not-yet-attached / dropped stream, so it never
+        // settled and the model hangs at 100% forever. This hits any fast-settling dep
+        // (a `requirements_only` node pip no-op, OR a weight whose final tick was lost),
+        // NOT just stalls — and waiting the full 90s stall window to notice is the
+        // user-visible "tanking at 100%" hang. Reconcile against volume truth NOW, on
+        // the normal 15s poll. Reconcile only settles deps the wrapper reports
+        // installed:true, so an in-flight download is never force-completed.
+        let allBytesInButUnsettled = false;
+        for (const depId of _remoteDepIds) {
+            const dj = _depJobs.get(depId);
+            if (dj && dj.status === 'downloading' && dj.totalBytes > 0
+                && (dj.downloadedBytes || 0) >= dj.totalBytes) { allBytesInButUnsettled = true; break; }
+        }
+        if (allBytesInButUnsettled) {
+            _reconcileOutstandingRemoteDeps().catch((err) =>
+                logger.warn('download', `lost-completion reconcile failed: ${err.message}`));
+            return; // volume-truth reconcile settles it; skip the stall/abort path this poll
+        }
+
         if (Date.now() - _remoteLastTickAt < _REMOTE_STALL_MS) return;
         logger.warn('download', `remote install silent for ${Math.round((Date.now() - _remoteLastTickAt) / 1000)}s with ${_remoteDepIds.size} dep(s) outstanding — treating as stalled`);
         _markRemoteTick(); // don't re-fire every poll while recovery runs
@@ -1080,7 +1529,7 @@ async function _reconcileOutstandingRemoteDeps() {
         if (entry && entry.installed === true) {
             const depJob = _depJobs.get(depId);
             if (depJob) {
-                depJob.status = 'complete';
+                _setDepStatus(depJob, 'complete', 'local complete');
                 depJob.downloadedBytes = depJob.totalBytes || depJob.downloadedBytes;
             }
             _remoteDepIds.delete(depId);
@@ -1142,6 +1591,7 @@ function _onRemoteInstallEvent(evt) {
             modelJob.downloadedBytes = ratio.downloaded;
             const nodeIndeterminate = isNodeTick || modelJob.totalBytes <= 0;
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
+            _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId,
@@ -1161,7 +1611,7 @@ function _onRemoteInstallEvent(evt) {
         // re-reads the whole file — seconds on a CPU Pod, no byte progress). Flip the
         // bar to the indeterminate "Verifying…" sweep so the otherwise-silent stall
         // at 100% is explained — matching the LOCAL path (see download:verifying emit
-        // in ResumableDownloader.on('end')). Keeps remote + local consistent.
+        // in FileDownloader.on('end')). Keeps remote + local consistent.
         // (MPI-140; supersedes the MPI-95 park-at-100% determinate choice.)
         const total = Number(data.total) || depJob.totalBytes || 0;
         if (total) depJob.totalBytes = total;
@@ -1192,6 +1642,7 @@ function _onRemoteInstallEvent(evt) {
                 modelJob.downloadedBytes = modelJob.totalBytes;
                 modelJob.progress = 1;
             }
+            _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
                 modelId: modelJob.modelId,
                 depId,
@@ -1206,7 +1657,7 @@ function _onRemoteInstallEvent(evt) {
     } else if (evt.type === 'models:install-complete') {
         depJob.downloadedBytes = Number(data.size_bytes) || depJob.totalBytes || 0;
         depJob.totalBytes = depJob.downloadedBytes;
-        depJob.status = 'complete';
+        _setDepStatus(depJob, 'complete', 'remote complete');
         _remoteDepIds.delete(depId);
         _broadcast('download:complete', { depId, modelId: null });
         // A per-model custom_node landed on the volume; ComfyUI only scans
@@ -1220,9 +1671,9 @@ function _onRemoteInstallEvent(evt) {
     } else if (evt.type === 'models:install-error') {
         _remoteDepIds.delete(depId);
         if (data.error === 'cancelled') {
-            depJob.status = 'cancelled';
+            _setDepStatus(depJob, 'cancelled', 'remote cancelled');
         } else {
-            depJob.status = 'failed';
+            _setDepStatus(depJob, 'failed', 'remote failed');
             depJob.error = data.message || data.error || 'remote install failed';
             _broadcast('download:failed', { depId, error: depJob.error });
         }
@@ -1263,8 +1714,9 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         logger.warn('download', `remote pre-check failed: ${err.message}`);
     }
 
+    // SET, never += (MPI-276 G12) — a re-POST must not accumulate the denominator.
     const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    modelJob.totalBytes += allDepsSize;
+    modelJob.totalBytes = allDepsSize;
 
     const toInstall = [];
     for (const dep of dependencies) {
@@ -1274,7 +1726,6 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             depJob.totalBytes = _parseSizeToBytes(dep.size);
             _depJobs.set(dep.id, depJob);
         }
-        depJob.refCount += 1;
         if (!modelJob.deps.find(d => d.id === dep.id)) modelJob.deps.push(depJob);
 
         // MPI-97 — shared-dep ATTACH. When this dep is already installing for
@@ -1283,7 +1734,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // must NOT fire a second `/wrapper/models/install` — the wrapper rejects a
         // duplicate ("this model is already downloading") and B's whole install
         // was failing with a Download-Failed + Report-on-GitHub dialog. Instead B
-        // ATTACHES: refCount is already bumped above, the dep stays in B's
+        // ATTACHES: the dep stays in B's
         // modelJob.deps, and the shared install SSE (_onRemoteInstallEvent loops
         // EVERY modelJob owning this dep id) fills B's bar from A's stream. B
         // settles via _checkModelJobsComplete when the shared dep lands. We do not
@@ -1314,7 +1765,28 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // trust `installed`: anything not present is installed via the wrapper
         // (per-model custom_nodes now install onto the volume — Design B+).
         const alreadyInstalled = !!(statusResults[dep.id] && statusResults[dep.id].installed);
-        if (alreadyInstalled && dep.type === 'custom_nodes') {
+        // MPI-244: a BAKED (image-resident) custom_node lives in the Pod IMAGE at
+        // /opt/ComfyUI/custom_nodes, NOT on the /workspace volume. Its pip
+        // requirements already ran at image-build time. The `requirements_only`
+        // self-heal below `cd`s into the volume node folder to re-run pip -r — but
+        // a baked node has NO volume folder, so the wrapper dies with
+        // "[Errno 2] No such file or directory: '/workspace/.../comfyui_controlnet_aux'"
+        // and the whole model install fails with a Download-Failed dialog. Baked
+        // nodes are already present + already have their deps: settle complete,
+        // never send them to the wrapper. (comfyui_controlnet_aux is the first baked
+        // node a model DECLARES as a dep — LTX/Impact/etc. are implicit engine deps,
+        // never in a model's `deps`, so this path was never hit before Krea2.)
+        // MPI-293: the image-resident check must run REGARDLESS of alreadyInstalled.
+        // On a FRESH volume the wrapper scans /workspace and reports a baked node as
+        // NOT installed (it lives in the image at /opt, invisible to the volume scan),
+        // so `alreadyInstalled` is false — but sending it to the wrapper still dies
+        // with the Errno-2 above because there is no volume folder to cd into. A baked
+        // node is present + its pip deps ran at build time: settle complete either way.
+        if (dep.type === 'custom_nodes' && remoteModels._isImageResident(dep)) {
+            _setDepStatus(depJob, 'complete', 'remote baked complete');
+            depJob.downloadedBytes = _parseSizeToBytes(dep.size);
+            depJob.totalBytes = _parseSizeToBytes(dep.size);
+        } else if (alreadyInstalled && dep.type === 'custom_nodes') {
             // A custom_node folder present on the volume does NOT prove its pip
             // requirements ran (a prior install may have landed the folder but
             // failed/skipped requirements.txt — e.g. ComfyUI-GGUF present but the
@@ -1324,16 +1796,16 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             // wrapper re-runs (idempotent) pip -r requirements.txt WITHOUT
             // re-downloading or removing the folder. Self-heals the recurring
             // "node present, dep missing" class. Weights (non-node) trust the flag.
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'remote node requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
             toInstall.push({ ...dep, requirementsOnly: true });
         } else if (alreadyInstalled) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'remote already-installed');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
         } else {
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'remote requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
             // MPI-222: a DRIFTED volume node's folder is still present (wrong commit),
@@ -1384,13 +1856,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
       }
       if (freeInfo && Number.isFinite(freeInfo.freeBytes)
           && freeInfo.freeBytes < remoteNeededBytes * 1.05) {
-        // Roll back the refCount bumps this call made so a later retry (after the
-        // user frees space) is not blocked by orphaned references. Mirrors local.
-        for (const dep of dependencies) {
-          const dj = _depJobs.get(dep.id);
-          if (dj) dj.refCount = Math.max(0, dj.refCount - 1);
-        }
-        modelJob.status = 'idle';
+        _setModelStatus(modelJob, 'idle', 'remote disk-full idle');
         logger.warn('download', `remote install blocked — volume full: need ${_fmtGb(remoteNeededBytes)}, have ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}`);
         return res.status(400).json({
           error: `[Errno 28] No space left on device — ${_fmtGb(remoteNeededBytes)} needed, ${_fmtGb(freeInfo.freeBytes)} free on the Pod volume.`,
@@ -1400,13 +1866,14 @@ async function _startRemoteDownload(modelId, dependencies, res) {
 
     modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
-    modelJob.status = 'downloading';
+    _registerModelInStore(modelJob, 'remote');
+    _setModelStatus(modelJob, 'downloading', 'remote download start');
     _resetModelSpeed(modelJob);
 
     if (!toInstall.length) {
         // Everything already present — settle the job state immediately.
         _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
-        res.json({ success: true, jobId: modelId });
+        res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
         _checkModelJobsComplete();
         return;
     }
@@ -1416,12 +1883,13 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress, indeterminate: true });
 
     // Respond before kicking off installs (matches the local path's fire-and-forget).
-    res.json({ success: true, jobId: modelId });
+    // Register-before-respond (MPI-276 G8): job snapshot in the body.
+    res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
 
     _ensureRemoteEventStream();
     for (const dep of toInstall) {
         const depJob = _depJobs.get(dep.id);
-        if (depJob) depJob.status = 'downloading';
+        if (depJob) _setDepStatus(depJob, 'downloading', 'remote dep start');
         _remoteDepIds.add(dep.id);
         // Do NOT pass the app's display `size` ("67MB") as size_bytes — it is
         // approximate and the wrapper rejects an exact-correct file on a
@@ -1433,7 +1901,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
                 if (out && out.status === 'already_installed') {
                     const dj = _depJobs.get(dep.id);
                     if (dj) {
-                        dj.status = 'complete';
+                        _setDepStatus(dj, 'complete', 'remote uw dep complete');
                         dj.downloadedBytes = dj.totalBytes || _parseSizeToBytes(dep.size);
                     }
                     _remoteDepIds.delete(dep.id);
@@ -1444,7 +1912,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             })
             .catch((err) => {
                 const dj = _depJobs.get(dep.id);
-                if (dj) { dj.status = 'failed'; dj.error = err.message; }
+                if (dj) { _setDepStatus(dj, 'failed', 'remote uw dep error'); dj.error = err.message; }
                 _remoteDepIds.delete(dep.id);
                 logger.error('download', `remote install trigger failed for ${dep.id}: ${err.message}`);
                 _broadcast('download:failed', { depId: dep.id, error: err.message });
@@ -1483,7 +1951,7 @@ function _checkModelJobsComplete() {
         const allDone = modelJob.deps.every(d => ['complete', 'failed', 'cancelled'].includes(d.status));
 
         if (anyFailed || (allDone && !allComplete)) {
-            modelJob.status = 'failed';
+            _setModelStatus(modelJob, 'failed', 'uw fail');
             // Surface the first failed dep's error so the UI shows a real reason
             // instead of "undefined" (the model-level event carried no error).
             const failedDep = modelJob.deps.find(d => d.status === 'failed' && d.error);
@@ -1493,15 +1961,15 @@ function _checkModelJobsComplete() {
             });
         } else if (allComplete) {
             if (modelJob.installCustomNodes) {
-                modelJob.status = 'installing';
+                _setModelStatus(modelJob, 'installing', 'uw installing');
                 _broadcast('download:installing', { modelId: modelJob.modelId });
                 _runCustomNodeInstall(modelJob).catch(err => {
                     logger.error('download', `_runCustomNodeInstall crashed: ${err.message}`);
-                    modelJob.status = 'failed';
+                    _setModelStatus(modelJob, 'failed', 'uw install fail');
                     _broadcast('download:failed', { modelId: modelJob.modelId });
                 });
             } else {
-                modelJob.status = 'complete';
+                _setModelStatus(modelJob, 'complete', 'uw done');
                 _broadcast('download:complete', { modelId: modelJob.modelId });
             }
         }
@@ -1514,7 +1982,7 @@ async function _runCustomNodeInstall(modelJob) {
     );
     if (!customDeps.length) {
         logger.info('download', `_runCustomNodeInstall: no custom_nodes deps found for model ${modelJob.modelId}`);
-        modelJob.status = 'complete';
+        _setModelStatus(modelJob, 'complete', 'uw done');
         _broadcast('download:complete', { modelId: modelJob.modelId });
         return;
     }
@@ -1704,12 +2172,12 @@ async function _runCustomNodeInstall(modelJob) {
     }
 
     if (anyFailure) {
-        modelJob.status = 'failed';
+        _setModelStatus(modelJob, 'failed', 'local fail');
         _broadcast('download:failed', { modelId: modelJob.modelId, error: 'One or more custom node extractions failed' });
         throw new Error('One or more custom node extractions failed — see logs');
     }
 
-    modelJob.status = 'complete';
+    _setModelStatus(modelJob, 'complete', 'local done');
     _broadcast('download:complete', { modelId: modelJob.modelId });
     // A custom node was installed. The frontend gets `comfy:needs-restart` (→
     // state.comfyNeedsRestart) and the gen gate restarts ComfyUI. But that flag is
@@ -1728,65 +2196,29 @@ async function _runCustomNodeInstall(modelJob) {
     _broadcast('comfy:needs-restart', { modelId: modelJob.modelId });
 }
 
-// ── Pause / Resume / Cancel ───────────────────────────────────────────────────
-
-router.post('/comfy/models/download/pause', (req, res) => {
-    const { modelId } = req.body;
-    const job = _modelJobs.get(modelId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    // Remote installs stream on the Pod and have no resumable .part — pause is
-    // not supported; the install keeps running rather than break the button.
-    if (remoteModels.isRemoteActive()) {
-        return res.json({ success: true, remoteUnsupported: 'pause' });
-    }
-    job.status = 'paused';
-    job.deps.forEach(d => {
-        if (d.status === 'downloading') {
-            const dl = _activeDownloaders.get(d.id);
-            if (dl) {
-                dl.abort();
-                _activeDownloaders.delete(d.id);
-                // Keep the instance so resume can call .download() on the same object
-                _pausedDownloaders.set(d.id, dl);
-            }
-            d.status = 'paused';
-        }
-    });
-    _recalculateModelJobProgress(job);
-    _broadcast('download:paused', _downloadJobEventPayload(job));
-    _startPendingDeps();
-    res.json({ success: true });
-});
-
-router.post('/comfy/models/download/resume', (req, res) => {
-    const { modelId } = req.body;
-    const job = _modelJobs.get(modelId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    if (remoteModels.isRemoteActive()) {
-        return res.json({ success: true, remoteUnsupported: 'resume' });
-    }
-    job.status = 'downloading';
-    _resetModelSpeed(job);
-    job.deps.forEach(d => { if (d.status === 'paused') d.status = 'queued'; });
-    _recalculateModelJobProgress(job);
-    _broadcast('download:resumed', _downloadJobEventPayload(job));
-    _startPendingDeps();
-    res.json({ success: true });
-});
+// ── Cancel ────────────────────────────────────────────────────────────────────
+// Pause/Resume removed (MPI-258 Bug 2): NDH resume appended a full 200 response onto
+// a partial → SHA256 corruption. Cancel does a clean stop() + remove; a fresh install
+// re-downloads single-stream. Installs are queued (MPI-184) so pause had little value.
 
 router.post('/comfy/models/download/cancel', async (req, res) => {
     const { modelId } = req.body;
     const job = _modelJobs.get(modelId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
+    // Cancel is idempotent: a job the backend already lost (restart mid-install, a
+    // double Cancel press, an already-completed download) is not an error — nothing
+    // to stop. Return 200 so the client isn't spammed with 404s in the console.
+    // (MPI-258 Bug B)
+    if (!job) { _broadcast('download:cancelled', { modelId }); return res.json({ success: true, alreadyGone: true }); }
 
     for (const dep of job.deps) {
-        dep.refCount -= 1;
-        // MPI-97 — the refCount gate is load-bearing for shared-dep cancel: when a
-        // dep is shared with ANOTHER active model (it ATTACHED at start, so
-        // refCount >= 2), cancelling THIS model must only decrement, never
-        // wrapper-cancel or delete the dep out from under the model still using it.
-        // Do NOT collapse this `refCount <= 0` guard.
-        if (dep.refCount <= 0) {
+        // MPI-97 — cancelling THIS model must not stop a dep another ACTIVE model is
+        // still downloading. Gate on live consumers (job status), never a refCount:
+        // refCount leaked upward (a successful download never decremented it) so a
+        // second install of the same model stacked it to 2 and cancel then saw 1 > 0,
+        // skipped dl.cancel(), deleted _modelJobs, and left the download streaming
+        // invisibly while every re-press 404'd. (MPI-258 Bug B; refCount DELETED
+        // MPI-276.) _otherActiveModelUsesDep excludes THIS model (still in _modelJobs).
+        if (!_otherActiveModelUsesDep(dep.id, modelId)) {
             // Remote install in flight on the Pod — cancel via the wrapper.
             if (_remoteDepIds.has(dep.id)) {
                 _remoteDepIds.delete(dep.id);
@@ -1800,19 +2232,22 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
                 // re-derives a clean readout. Best-effort — never hard-fail cancel.
                 await remoteModels.remoteUninstallDep(dep).catch(() => {});
             }
-            const dl = _activeDownloaders.get(dep.id) || _pausedDownloaders.get(dep.id);
+            const dl = _activeDownloaders.get(dep.id);
             if (dl) {
                 await dl.cancel();
                 _activeDownloaders.delete(dep.id);
-                _pausedDownloaders.delete(dep.id);
             }
             if (dep.localPath) clearDownloadMarker(dep.localPath).catch(() => {});
-            dep.status = 'cancelled';
+            _setDepStatus(dep, 'cancelled', 'cancel');
             _depJobs.delete(dep.id);
         }
     }
 
     _teardownRemoteEventStreamIfIdle();
+    // Drive the store to the terminal state (it holds the cancelled job on its own
+    // short TTL — the final SOT; the map hard-delete below is the legacy path the
+    // write-flip step removes).
+    if (store.modelJob(modelId)) _setModelStatus(job, 'cancelled', 'user cancel');
     _modelJobs.delete(modelId);
     _broadcast('download:cancelled', { modelId });
     _startPendingDeps();
@@ -1822,10 +2257,19 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
 // ── Uninstall ─────────────────────────────────────────────────────────────────
 
 router.post('/comfy/models/uninstall', async (req, res) => {
-    const { modelId, dependencies, deleteFiles = true } = req.body;
-    if (!modelId || !Array.isArray(dependencies)) {
+    const { modelId, dependencies: wireDeps, deleteFiles = true } = req.body;
+    if (!modelId || !Array.isArray(wireDeps)) {
         return res.status(400).json({ error: 'modelId + dependencies required' });
     }
+
+    // MPI-276 G13: uninstall previously trusted the wire dep array verbatim, so a
+    // stale client / direct API call could ask to delete the WRONG engine's files
+    // (remote-resolved deps against local disk, or vice-versa). Re-resolve the
+    // engine-correct universe server-side and keep only deps that belong to it.
+    // Unknown model passes through unchanged (same _filterDepsForEngine contract as
+    // install). Wire the filtered set through the rest of the route as `dependencies`.
+    const _engine = remoteModels.isRemoteActive() ? 'remote' : 'local';
+    const dependencies = _filterDepsForEngine(modelId, wireDeps, _engine);
 
     // Remote mode: the model files live on the Pod volume, NOT local disk. The
     // local trash path below would destroy the user's LOCAL models and leave the
@@ -1960,8 +2404,8 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             const { localPath: lp } = await resolveComfyPath(dep, customRoot, {});
             localPath = lp;
         } else if (dep.type === 'custom_nodes') {
-            const zipName = (dep.filename || '').endsWith('.zip') ? dep.filename : `${dep.filename}.zip`;
-            localPath = path.join(defaultCustomNodesRoot, zipName);
+            // MPI-276: the extracted node FOLDER, not the long-gone install zip.
+            localPath = _customNodeUninstallPath(dep, defaultCustomNodesRoot);
         } else if (customRoot) {
             const { localPath: lp } = await resolveComfyPath({ type: dep.type, filename: dep.filename }, customRoot, {});
             localPath = lp;
@@ -2012,18 +2456,38 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         }
 
         try {
-            if (await fs.pathExists(localPath)) {
-                await _trash(localPath);
+            // MPI-276: only report a dep in removed[] when a delete ACTUALLY ran.
+            // The custom-node zip-path bug meant the old loop hit a non-existent
+            // path, deleted nothing, yet still pushed to removed[] and logged a lie.
+            // A missing path now lands in keptModelFiles(reason:'already-absent').
+            const existed = await fs.pathExists(localPath);
+            if (existed) {
+                // Try Recycle Bin first (undo-safety). But model weights are large
+                // (6-25GB) and Windows refuses to recycle a file bigger than the
+                // drive's Recycle Bin quota — windows-trash.exe exits 255 and the
+                // file survives. Since uninstall exists to FREE disk space, parking a
+                // 25GB weight in the bin wouldn't free it anyway: fall back to a
+                // permanent delete so uninstall never silently no-ops. (MPI-258)
+                try {
+                    await _trash(localPath);
+                    logger.info('download', `uninstall: moved to trash ${localPath}`);
+                } catch (trashErr) {
+                    await fs.remove(localPath);
+                    logger.warn('download', `uninstall: trash failed (${trashErr.message}) — permanently deleted ${localPath}`);
+                }
                 await cleanEmptyDirs(localPath, dep.type === 'custom_nodes' ? defaultCustomNodesRoot : managedModelsRoot);
-                logger.info('download', `uninstall: moved to trash ${localPath}`);
             }
             await clearDownloadMarker(localPath).catch(() => {});
-            removed.push({ depId: dep.id, depName: dep.name || dep.id });
-            const depJob = _depJobs.get(dep.id);
-            if (depJob) {
-                depJob.refCount -= 1;
-                if (depJob.refCount <= 0) _depJobs.delete(dep.id);
+            if (existed) {
+                removed.push({ depId: dep.id, depName: dep.name || dep.id });
+            } else {
+                keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id, reason: 'already-absent' });
+                logger.info('download', `uninstall: ${dep.id} already absent at ${localPath} — nothing removed`);
             }
+            // The shared-dep guard upstream already excluded deps another installed
+            // model needs, so a dep that reaches this delete loop is unshared — drop
+            // its job. A re-install re-creates it. (refCount gate DELETED MPI-276.)
+            _depJobs.delete(dep.id);
         } catch (err) {
             logger.error('download', `uninstall: failed to trash ${localPath}`, err);
         }
@@ -2032,26 +2496,31 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     logger.info('download', `uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
     _modelJobs.delete(modelId);
     _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
+    // G11: reconcile against post-delete disk truth (settles/prunes anything the
+    // removal touched) and refresh the snapshot. Non-fatal — the uninstall itself
+    // already succeeded.
+    reconciler.reconcileOnce().catch((err) => logger.warn('download', `post-uninstall reconcile failed: ${err.message}`));
     res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
 
 function cancelAllDownloads() {
+    // MPI-317: shutdown is an ACCIDENT for the download, not user intent — stop the
+    // streams but KEEP partials + markers so the next app start resumes via Range.
+    // stopKeep(), never cancel() (which deletes).
     for (const [, downloader] of _activeDownloaders) {
-        downloader.cancel().catch(() => {});
-    }
-    for (const [, downloader] of _pausedDownloaders) {
-        downloader.cancel().catch(() => {});
+        downloader.stopKeep().catch(() => {});
     }
     _activeDownloaders.clear();
-    _pausedDownloaders.clear();
     for (const [, job] of _modelJobs) {
-        job.deps.forEach(d => { d.status = 'cancelled'; });
-        job.status = 'cancelled';
+        job.deps.forEach(d => { _setDepStatus(d, 'cancelled', 'cancel all'); });
+        _setModelStatus(job, 'cancelled', 'cancel all');
     }
     _modelJobs.clear();
     _depJobs.clear();
+    store.clear();
+    reconciler.stop();
     _broadcast('download:cancelled', { all: true });
 }
 
@@ -2131,7 +2600,6 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             _depJobs.set(depId, depJob);
         }
         depJob.localPath = localPath;
-        depJob.refCount += 1;
 
         if (!modelJob.deps.find(d => d.id === depId)) {
             modelJob.deps.push(depJob);
@@ -2139,7 +2607,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
 
         // Mark already-installed deps as complete without downloading
         if (isInstalled) {
-            depJob.status = 'complete';
+            _setDepStatus(depJob, 'complete', 'uw already-installed');
             depJob.downloadedBytes = _parseSizeToBytes(dep.size);
             depJob.totalBytes = _parseSizeToBytes(dep.size);
             logger.info('download', `startUniversalWorkflowInstall: skipping already installed: ${depId} -> ${installedCheckPath}`);
@@ -2148,7 +2616,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             // so _startPendingDeps will re-download. Covers: zip missing after failed
             // extraction (was complete), and previously failed downloads on retry.
             const prevStatus = depJob.status;
-            depJob.status = 'queued';
+            _setDepStatus(depJob, 'queued', 'uw requeue');
             depJob.downloadedBytes = 0;
             depJob.error = null;
             logger.info('download', `startUniversalWorkflowInstall: resetting ${depId} (was ${prevStatus}) for re-download`);
@@ -2156,6 +2624,10 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
     }
 
     _modelJobs.set(modelJob.modelId, modelJob);
+    _registerModelInStore(modelJob, 'local');
+    // UW job is born 'downloading' (literal above); mirror that onto the fresh
+    // store record, which registers every model as 'queued'.
+    _setModelStatus(modelJob, 'downloading', 'uw install start');
 
     // Log download URLs before starting so we know which URL fails
     for (const depJob of modelJob.deps) {
@@ -2272,33 +2744,25 @@ function clearEngineDownload() {
     _activeEngineDownloadId = null;
 }
 
-router.post('/engine/pause', (req, res) => {
-    if (!_activeEngineDownloader) {
-        return res.status(404).json({ error: 'No active engine download to pause' });
-    }
-    _activeEngineDownloader.abort();
-    logger.info('engine', `Engine download paused: ${_activeEngineDownloadId}`);
-    res.json({ success: true });
-});
-
-router.post('/engine/resume', (req, res) => {
-    if (!_activeEngineDownloader) {
-        return res.status(404).json({ error: 'No paused engine download to resume' });
-    }
-    _activeEngineDownloader.resume();
-    logger.info('engine', `Engine download resumed: ${_activeEngineDownloadId}`);
-    res.json({ success: true });
-});
+// /engine/pause + /engine/resume removed (MPI-258 Bug 2): resume corrupted large
+// files (NDH 200-vs-206 append) and had no frontend caller. Engine download is
+// cancel-only via the existing cancel path.
 
 module.exports = {
     router,
     cancelAllDownloads,
     broadcastEngineEvent,
-    ResumableDownloader,
+    FileDownloader,
     registerEngineDownload,
     clearEngineDownload,
     runCustomNodeInstall: _runCustomNodeInstall,
     startUniversalWorkflowInstall,
     finishCustomNodeInstall,
     _byteRatioExcludingNodes, // MPI-231 — exported for unit test
+    _customNodeUninstallPath, // MPI-276 — exported for unit test
+    _filterDepsForEngine, // MPI-276 — exported for unit test
+    _pluginRequiredDepIds, // MPI-310 — exported for unit test
+    _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
+    _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
+    _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests
 };

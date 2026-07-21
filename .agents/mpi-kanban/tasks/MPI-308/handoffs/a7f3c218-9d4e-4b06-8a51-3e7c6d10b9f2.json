@@ -1,0 +1,95 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a7f3c218-9d4e-4b06-8a51-3e7c6d10b9f2",
+  "generated_at": "2026-07-18T22:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-308 image_descriptor — captioning investigation complete, workflow authored, app wiring not started",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Find out what JoyCaption is, whether we can use it, and its VRAM cost — for captioning images to feed creative upscalers.",
+    "status": "research_complete_implementation_not_started",
+    "summary": "Investigation converged on a better answer than the one we set out to test. JoyCaption (8B, GGUF) was fully validated on hardware via llama.cpp but requires per-platform native binaries — rejected. ComfyUI's NATIVE `Generate Text` node captions images using the qwen3vl_4b_fp8_scaled text encoder Krea2 ALREADY loads: zero download, zero new dependency, all platforms, and it describes explicit NSFW accurately (the one requirement that could have forced the llama.cpp route). User authored `comfy_workflows/raw/image_descriptor.json`. App wiring is NOT started and is blocked on one design decision (see next_action)."
+  },
+  "plan": {
+    "status": "not_created",
+    "note": "No MPI plan written. MPI-308 brief.md §4 holds an implementation SKETCH only — the §3 design decision must be settled first."
+  },
+  "task_card": "MPI-308",
+  "kanban_entry": "MPI-308 (todo, planned) — image_descriptor: caption the current image into the prompt box (dev radial)",
+  "allowed_actions": [
+    "Read .agents/mpi-kanban/tasks/MPI-308/brief.md IN FULL before any code",
+    "Convert comfy_workflows/raw/image_descriptor.json raw→API/runtime via scripts/workflow-to-api.mjs or sync-raw-workflows.mjs",
+    "Design the text-only completion contract (the blocker)",
+    "Wire the dev radial action + prompt-box write",
+    "Commit by explicit pathspec"
+  ],
+  "knowledge_preservation": {
+    "do_not_re_investigate": [
+      "JoyCaption / llama.cpp — evaluated and rejected. Full record: c:\\AI\\Mpi\\Cubric-Prompt\\.agents\\mpi-kanban\\tasks\\MPI-12\\brief.md. Weights deleted at session end.",
+      "Florence-2 — ruled out on the user's production experience (fast, poor quality in some cases).",
+      "MXFP8 (Blackwell-favoured), NVFP4 (fragile in practice), GGUF Qwen-VL (reintroduces a custom node), abliterated/Heretic builds (stock handles explicit content — user-verified).",
+      "Input resolution barely affects caption speed: 479×512 = 18.9s vs 1500×1500 = 21s. Do NOT crop/downscale for speed.",
+      "Temperature 0.1–0.3 is required. 0.7 produced thin captions; 0.2 produced dense upscale-grade output.",
+      "The prompt-ENHANCER system prompt is wrong for captioning — it instructs the model to invent detail. The describe-only prompt is already baked into the workflow."
+    ],
+    "already_built_do_not_rebuild": [
+      "Text-output capture is a GENERAL CONTRACT from MPI-242: commandExecutor.js:1347 scans for a node titled `output_prompt` (case-insensitive); comfyOutputUrls.js:51 `readComfyOutputText` reads PreviewAny's {ui:{text:[str]}}; delivered via onComplete's `promptText` at commandExecutor.js:1612. image_descriptor already satisfies it by naming its node Output_prompt.",
+      "The model needs no download — qwen3vl_4b_fp8_scaled.safetensors (5.24GB) is the Krea2 text encoder, already on disk at G:/CubricModels/text_encoders/."
+    ]
+  },
+  "next_action": {
+    "summary": "Settle the text-only completion contract, then wire the dev radial action.",
+    "blocker": "generationService.js:769 — `if (!urls.length)` treats a zero-media completion as a CANCELLED generation: it emits tool:cancelled + generation:cancelled, calls activeGenerations.end(), fires callbacks.onCancel() and returns — discarding the caption that arrived one line earlier at :767 as outputInfo.promptText. image_descriptor returns TEXT ONLY, so a successful run currently reads as a cancellation. This is the fleet's first text-only op.",
+    "required_approach": "THE ROOT-CAUSE RULE applies. Do NOT add `if (isCaptionOp)` at the crash site — that is the symptom patch and will be rejected. The structural fix is an OP-LEVEL declaration that a workflow returns text rather than media, so the completion path branches on a declared contract instead of on an empty array. Sweep every consumer of that declaration in one pass. If the fix needs a section refactor, BRIEF THE USER FIRST.",
+    "note": "generationService.js:767's existing use of promptText is 'record what the encoder saw' for Reuse Prompt — a DIFFERENT concern. Do not overload it for captioning."
+  },
+  "context": {
+    "workflow_file": "comfy_workflows/raw/image_descriptor.json (authored by the user; raw/ is user-owned — scripts READ raw and WRITE comfy_workflows/). NOT yet converted raw→API/runtime.",
+    "workflow_shape": "Input_Image (MpiNodes path→string, block_if_empty true) → Scale Image to Total Pixels (1.00 MP, nearest-exact) → Generate Text (clip: qwen3vl_4b_fp8_scaled type krea2; prompt: Text String system prompt; temp 0.2, max_length 512, thinking false) → Output_prompt (PreviewAny).",
+    "product_purpose": "Creative upscalers need a faithful description of the actual pixels. Users re-use their thin original prompt on upscale and lose the detail the model hallucinated → mediocre results. Re-captioning the RESULT fixes it. Applies harder to Apps (more automated, no user in the loop).",
+    "scope_boundary": "DEV-GATED TEST HARNESS ONLY. The shipped surface would be a button on the prompt box next to the positive/negative toggle — a SEPARATE card. The point of MPI-308 is to run real generations and judge whether caption→upscale actually improves output.",
+    "measured": "~21s per caption on an RTX 4060 Ti — trivial next to an upscale pass. Model-swap cost is real but sits inside Comfy's own manager (Krea2TEModel_ 4999MB loads after QwenImage unloads).",
+    "prompt_box_injection": "User pointed at docs/data.md (Reuse section) and the reuse system as the precedent for setting prompt text. See also js/components/Organisms/MpiPromptBox/PromptBoxControls.js:1218.",
+    "line_number_warning": "All line numbers were read in-source on 2026-07-18 and are current as of filing, but concurrent sessions edit these files — match by CONTENT ANCHOR, not line number, and re-read on stale-edit errors."
+  },
+  "project_knowledge": {
+    "rules_to_read": [
+      ".claude/rules/dos_and_donts.md (baseline — universal CSS/icon/utility rules)",
+      ".claude/rules/comfy_injection.md (media injection, node naming law)",
+      ".claude/rules/components.md (if touching the radial menu or prompt box UI)",
+      "docs/data.md § Reuse (prompt-box write precedent)",
+      "docs/playbooks/add-app/ (op + descriptor shape)"
+    ],
+    "memories_that_apply": [
+      "feedback_media_injection_path_to_string — image injection is full path → `string` on a path-reading loader node; no staging.",
+      "project_load_node_linked_string_placeholder_slot — socket-linked `string` slot MUST keep its placeholder (['',true] not [true]) or the converter eats it → 400.",
+      "feedback_raw_workflows_user_owned — comfy_workflows/raw/ is the user's ONLY editable LiteGraph source; scripts READ raw, WRITE comfy_workflows/.",
+      "feedback_orchestrate_global_rebuild_hazard — NEVER run orchestrate.py on a dirty comfy_workflows tree; it rebuilds ALL templates and overwrites uncommitted runtime files.",
+      "tool_litegraph_to_api_converter — scripts/workflow-to-api.mjs + sync-raw-workflows.mjs; verify 0 missing-required + 0 dangling.",
+      "feedback_comfy_node_naming_law — app-touched nodes MUST be Input_*/Output_*.",
+      "project_media_roles_agnostic_op_fit_by_count — fit the op to chip COUNT; never force roles by index.",
+      "feedback_shared_tree_commit_hygiene — never `git add .`; commit by explicit pathspec.",
+      "feedback_concurrent_sessions_same_file — edit by content anchors, not line numbers."
+    ]
+  },
+  "rules_active": [
+    "THE ROOT-CAUSE RULE — no symptom patches; the §3 blocker is exactly the kind of place a guard clause would be wrong.",
+    "Kanban writes are pre-authorized.",
+    "Commit by explicit pathspec; push is user-authorized only."
+  ],
+  "recent_events": [
+    "Investigated JoyCaption Beta One: 8B LLaVA (Llama 3.1 + SigLIP), uncensored, GGUF two-file architecture (LLM gguf + separate mmproj vision encoder).",
+    "Validated JoyCaption Q6_K on hardware via llama.cpp llama-mtmd-cli: accurate captions, 95ms GPU vision encode vs 1117ms CPU, ~4s cold full caption.",
+    "Hit 3 native-binary fault classes: AVX-512 SIGILL (0xc000001d) on Alder Lake from the abetlen wheel; ggml-cuda.dll silently falling back to CPU with no CUDA runtime DLLs present; llama.dll needing the MSVC runtime.",
+    "User identified ComfyUI's native `Generate Text` node — captions via an already-loaded CLIP, removing the entire native-binary problem.",
+    "User verified stock Qwen3-VL 4B describes explicit NSFW accurately, removing the uncensored justification for llama.cpp.",
+    "User authored comfy_workflows/raw/image_descriptor.json.",
+    "All JoyCaption weights (7.4GB) and llama-cpp-python deleted; ComfyUI generation stack left untouched.",
+    "Research record filed as Cubric-Prompt MPI-12 (stays there by the user's decision); implementation filed as Cubric-Vision MPI-308."
+  ],
+  "resume_prompt": "Continue MPI-308 in Cubric-Vision (branch 1.2.0). Read .agents/mpi-kanban/tasks/MPI-308/brief.md IN FULL first — it holds the whole investigation, every rejected alternative (do not re-litigate them), and the verified blocker.\n\nGoal: wire comfy_workflows/raw/image_descriptor.json into a DEV radial-menu action that captions the current image into the prompt box, so we can test whether caption->upscale beats re-using the user's thin original prompt.\n\nAlready solved, do not rebuild: text-output capture is a general contract from MPI-242 (commandExecutor.js:1347 title-scoped `output_prompt` scan; comfyOutputUrls.js:51 readComfyOutputText; delivered as onComplete's promptText at :1612). The model needs no download — it reuses the qwen3vl_4b_fp8_scaled text encoder Krea2 already loads.\n\nStart with the blocker: generationService.js:769 treats a zero-media completion as a CANCELLED generation and discards the caption read one line earlier at :767. image_descriptor returns text only, so a successful run currently reads as a cancellation. Fix it structurally with an op-level 'returns text, not media' declaration and sweep every consumer — a guard clause at the crash site is a symptom patch and will be rejected. If the fix needs a section refactor, brief the user before writing code.\n\nThen: convert the raw workflow to API/runtime, add the op + descriptor, wire the dev radial action (image path -> Input_Image as a string), and write the caption into the prompt box (docs/data.md § Reuse is the precedent). Line numbers are from 2026-07-18 — match by content anchor, not line number."
+}

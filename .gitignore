@@ -23,6 +23,11 @@ resources/*
 # Contains a hardcoded HF token — keep local only, do not track
 comfy_workflows/scripts/upload-models/upload.py
 
+# User's personal ComfyUI tool — not used by the app, never committed (both the
+# raw LiteGraph source and any converted copy)
+comfy_workflows/Model Merger.json
+comfy_workflows/raw/Model Merger.json
+
 # Worktrees
 .worktrees/
 
@@ -43,6 +48,9 @@ media-for-testing/
 tmp/
 *.tmp
 *.log
+# `*.log` misses rotation targets (app.log.1 — extension is `.1`). Ignore the
+# whole logs dir so numbered rotations and any future sink are covered. (MPI-315)
+logs/
 
 # OS artifacts
 .DS_Store
@@ -58,3 +66,6 @@ project-paths.json
 .env
 .env.local
 .expose-comfy
+
+# impeccable skill scratch output
+.impeccable/

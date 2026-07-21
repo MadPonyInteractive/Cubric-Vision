@@ -7,6 +7,10 @@
  *   folderPath:  string  (project folder path),
  *   sourcePath:  string  (absolute file path OR /project-file?path=... URL),
  *   cropRect:    { x, y, width, height } — normalized 0..1 relative to source frame,
+ *   absoluteCropPx: { x, y, w, h } — optional, absolute pixel rect already rounded
+ *                   by the caller (MPI-261 divisible-by). When present it is used
+ *                   directly and the normalized→even-snap path is skipped (the
+ *                   caller's multiples of 16 are already even for libx264).
  *   outFileName: string  (optional, default "video_crop_<timestamp>.mp4"),
  *   groupId:     string  (optional — for caller context, echoed back),
  *   itemId:      string  (optional — source item id, echoed back),
@@ -30,6 +34,7 @@ const logger = require('./logger');
 const { ffmpegPath } = require('../services/ffmpegBinary');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { nextSequence } = require('./projects');
 
 const execFileP = promisify(execFile);
 
@@ -47,7 +52,7 @@ function _resolveInput(raw) {
 router.post('/api/video/crop', async (req, res) => {
     let outputPath = '';
     try {
-        const { folderPath, sourcePath, cropRect, outFileName, groupId, itemId, trimIn, trimOut } = req.body || {};
+        const { folderPath, sourcePath, cropRect, absoluteCropPx, outFileName, groupId, itemId, trimIn, trimOut } = req.body || {};
         if (!folderPath || !sourcePath || !cropRect) {
             return res.status(400).json({ success: false, error: 'folderPath, sourcePath, cropRect required' });
         }
@@ -67,12 +72,25 @@ router.post('/api/video/crop', async (req, res) => {
             return res.status(500).json({ success: false, error: 'could not probe source dimensions' });
         }
 
-        // 2. Map normalized rect → pixel rect, snap to even numbers (libx264 req.)
-        const snapEven = n => Math.max(2, Math.floor(n / 2) * 2);
-        const cropW = snapEven(width  * srcMeta.width);
-        const cropH = snapEven(height * srcMeta.height);
-        const cropX = Math.max(0, Math.floor(x * srcMeta.width));
-        const cropY = Math.max(0, Math.floor(y * srcMeta.height));
+        // 2. Determine the pixel crop rect. If the caller supplied an
+        // already-rounded absolute rect (MPI-261 divisible-by), use it directly
+        // and clamp to the source — its multiples of 16 are already even, so no
+        // snapEven. Otherwise map the normalized rect and snap to even (libx264).
+        let cropW, cropH, cropX, cropY;
+        const absOk = absoluteCropPx
+            && [absoluteCropPx.x, absoluteCropPx.y, absoluteCropPx.w, absoluteCropPx.h].every(n => Number.isFinite(n));
+        if (absOk) {
+            cropX = Math.max(0, Math.min(Math.floor(absoluteCropPx.x), srcMeta.width  - 2));
+            cropY = Math.max(0, Math.min(Math.floor(absoluteCropPx.y), srcMeta.height - 2));
+            cropW = Math.max(2, Math.min(Math.floor(absoluteCropPx.w), srcMeta.width  - cropX));
+            cropH = Math.max(2, Math.min(Math.floor(absoluteCropPx.h), srcMeta.height - cropY));
+        } else {
+            const snapEven = n => Math.max(2, Math.floor(n / 2) * 2);
+            cropW = snapEven(width  * srcMeta.width);
+            cropH = snapEven(height * srcMeta.height);
+            cropX = Math.max(0, Math.floor(x * srcMeta.width));
+            cropY = Math.max(0, Math.floor(y * srcMeta.height));
+        }
 
         // 3. Prepare output path — sequenced "video_crop_NNN.mp4" like image crop
         const mediaDir = path.join(folderPath, 'Media');
@@ -82,15 +100,7 @@ router.post('/api/video/crop', async (req, res) => {
         if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
             finalName = outFileName;
         } else {
-            const existing = await fs.readdir(mediaDir);
-            const re = /^video_crop_(\d+)\./i;
-            let maxNum = 0;
-            for (const f of existing) {
-                const m = f.match(re);
-                if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
-            }
-            const seq = String(maxNum + 1).padStart(3, '0');
-            finalName = `video_crop_${seq}.mp4`;
+            finalName = await nextSequence(folderPath, mediaDir, 'video_crop', 'mp4');
         }
         outputPath = path.join(mediaDir, finalName);
 
@@ -125,7 +135,9 @@ router.post('/api/video/crop', async (req, res) => {
         const newId = uuidv4();
         const metaDir = path.join(mediaDir, '.meta');
         await fs.ensureDir(metaDir);
-        const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}`;
+        // Cache-bust on mtime so a re-run overwriting a reused name plays fresh bytes.
+        const _mtime = (await fs.stat(outputPath).catch(() => null))?.mtimeMs || 0;
+        const filePathUrl = `/project-file?path=${encodeURIComponent(outputPath)}&v=${Math.round(_mtime)}`;
         const sidecar = {
             id:         newId,
             type:       'video',

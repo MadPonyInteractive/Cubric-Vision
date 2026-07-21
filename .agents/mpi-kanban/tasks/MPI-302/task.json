@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-302",
+  "title": "Generation ETA in StatusBar (global percent-derived, both engines)",
+  "description": "Show a live ETA next to the elapsed clock during generation.\n\nAPPROACH (option B, chosen 2026-07-18 after investigation). Derive ETA from the progress fraction the app ALREADY computes — no new signal, no new plumbing, works on LOCAL and REMOTE identically:\n\n    eta = elapsed * (1 - pct) / pct\n\n- `pct` = `progressAggregator.percent()`, already emitted as `tool:progress` {value: 0..1} (js/services/commandExecutor.js:1699).\n- `elapsed` = StatusBar already tracks it: `_activeStartedAt` anchored at prompt_ack (js/services/statusBar.js:317), `_elapsedSec` ticked every 1000ms (js/services/statusBar.js:48,92-96).\n- Render next to the existing `M:SS` in `#shell-info-job-time`; reuse `_fmtTime()` (js/services/statusBar.js:62-66).\n\nREQUIRED GUARDS (without these the number flaps and looks broken):\n- Suppress the ETA until pct > ~0.05. Model load / VAE decode contribute wall-clock with ZERO step ticks, so early estimates are wildly wrong.\n- Smooth with an EMA. Raw per-tick ETA jitters across stage boundaries.\n\nWHY NOT option A (parse tqdm's own s/it + remaining from stdout): tqdm's ETA is correct only for the CURRENT bar. Multi-sampler workflows reset the bar per stage, so it degrades to \"rest of this sampler\", and it is LOCAL-ONLY — the Pod never pipes ComfyUI stdout (remote falls back to the WS aggregator; see js/services/commandExecutor.js:1527-1532). Revisit only if the global estimate proves visibly wrong.\n\nKNOWN INACCURACY — ACCEPTED, DO NOT CHASE. The denominator is not exactly knowable up front:\n- Detailer: segment count is runtime-only (`comfy:segment-total`, routes/comfy.js:111). Total = N segs x M steps, N unknown at start.\n- UltimateSDUpscale: tile count runtime-only; the aggregator already GUESSES `steps * 4` (js/services/progressAggregator.js:55).\n- Multi-stage video (LTX/Wan): per-step cost differs per stage, so a uniform rate lies across boundaries.\nThese are the aggregator's pre-existing weighting assumptions, not new debt. Exact per-workflow totals are a large job with small payoff — out of scope.\n\nINVESTIGATION BASELINE (2026-07-18): no ETA/remaining/secondsPerStep/itPerSec logic exists anywhere in the repo — confirmed zero hits. This is greenfield; the only existing timing is the elapsed counter above.\n\nVERIFY: run one plain single-sampler generation (ETA should converge and count down monotonically after the 5% gate) and one detailer or upscale run (ETA will jump when the runtime segment/tile count lands — confirm it recovers rather than going negative or NaN).",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-18T00:00:00Z",
+  "updated_at": "2026-07-18T00:00:00Z",
+  "labels": [
+    "feature",
+    "ui",
+    "statusbar",
+    "generation"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  }
+}

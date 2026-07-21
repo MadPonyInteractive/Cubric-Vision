@@ -1,0 +1,850 @@
+{
+  "id": "82ace2e7-7aad-46b0-ba38-638fe13bc981",
+  "revision": 0,
+  "last_node_id": 1641,
+  "last_link_id": 2286,
+  "nodes": [
+    {
+      "id": 1589,
+      "type": "SAMLoader",
+      "pos": [
+        3361.37772510532,
+        7213.48783182866
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "SAM_MODEL",
+          "type": "SAM_MODEL",
+          "links": [
+            2176
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0",
+        "Node name for S&R": "SAMLoader",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "sam_vit_b_01ec64.pth",
+        "AUTO"
+      ]
+    },
+    {
+      "id": 1587,
+      "type": "UltralyticsDetectorProvider",
+      "pos": [
+        3363.4772885778475,
+        7063.752226037079
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "BBOX_DETECTOR",
+          "type": "BBOX_DETECTOR",
+          "links": [
+            2175,
+            2177
+          ]
+        },
+        {
+          "name": "SEGM_DETECTOR",
+          "type": "SEGM_DETECTOR",
+          "links": []
+        }
+      ],
+      "title": "sams",
+      "properties": {
+        "cnr_id": "comfyui-impact-subpack",
+        "ver": "1.3.5",
+        "Node name for S&R": "UltralyticsDetectorProvider",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "bbox/face_yolov8n.pt"
+      ]
+    },
+    {
+      "id": 1588,
+      "type": "ImpactSimpleDetectorSEGS",
+      "pos": [
+        3703.5103544998515,
+        7076.608071086473
+      ],
+      "size": [
+        304.07421875,
+        360
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 2175
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2185
+        },
+        {
+          "name": "sam_model_opt",
+          "shape": 7,
+          "type": "SAM_MODEL",
+          "link": 2176
+        },
+        {
+          "name": "segm_detector_opt",
+          "shape": 7,
+          "type": "SEGM_DETECTOR",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "links": [
+            2212
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0",
+        "Node name for S&R": "ImpactSimpleDetectorSEGS",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        0.5,
+        15,
+        1.8,
+        10,
+        0.5,
+        0,
+        0,
+        0.7,
+        0
+      ]
+    },
+    {
+      "id": 1591,
+      "type": "ImpactSimpleDetectorSEGS",
+      "pos": [
+        3714.409093687908,
+        6693.982309019003
+      ],
+      "size": [
+        304.07421875,
+        310
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 2177
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2186
+        },
+        {
+          "name": "sam_model_opt",
+          "shape": 7,
+          "type": "SAM_MODEL",
+          "link": null
+        },
+        {
+          "name": "segm_detector_opt",
+          "shape": 7,
+          "type": "SEGM_DETECTOR",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "links": [
+            2213
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0",
+        "Node name for S&R": "ImpactSimpleDetectorSEGS",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        0.5,
+        24,
+        1.8,
+        10,
+        0.5,
+        0,
+        0,
+        0.7,
+        0
+      ]
+    },
+    {
+      "id": 1597,
+      "type": "Reroute",
+      "pos": [
+        3373.1130865830455,
+        6780.813473509972
+      ],
+      "size": [
+        82,
+        26
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 2260
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2185,
+            2186,
+            2190,
+            2191
+          ]
+        }
+      ],
+      "properties": {
+        "showOutputText": true,
+        "horizontal": false,
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.7",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
+      "id": 1627,
+      "type": "MaskToImage",
+      "pos": [
+        5047.251431677996,
+        6936.840456127846
+      ],
+      "size": [
+        193.2779296875,
+        26
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 2286
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2253
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "MaskToImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 1559,
+      "type": "PreviewImage",
+      "pos": [
+        5280.399050705977,
+        6843.4612520947185
+      ],
+      "size": [
+        496.42137403611014,
+        763.3737681995526
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2253
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_image",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "PreviewImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.7",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1593,
+      "type": "ImpactSEGSPicker",
+      "pos": [
+        4578.554397292343,
+        6841.618800029347
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 2194
+        },
+        {
+          "name": "fallback_image_opt",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 2190
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "links": [
+            2285
+          ]
+        }
+      ],
+      "title": "Input_Selected_Masks_Input",
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.2",
+        "Node name for S&R": "ImpactSEGSPicker",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "",
+        "image"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1630,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        3057.699648579663,
+        6785.7927571532455
+      ],
+      "size": [
+        276.9849609375,
+        354
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            2260
+          ]
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Input_Image",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadImageFromPath"
+      },
+      "widgets_values": [
+        "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\Boogu image edit\\Media\\t2i_002.png",
+        "alpha",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1592,
+      "type": "MpiIfElse",
+      "pos": [
+        4123.676335383006,
+        6833.257649289627
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 2213
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 2212
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            2194,
+            2266
+          ]
+        }
+      ],
+      "title": "Input_Box",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "36c409fa6029b8c205c6c1445f7403ca1571d1f7",
+        "Node name for S&R": "MpiIfElse",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        },
+        "aux_id": "MadPonyInteractive/ComfyUi-MpiNodes"
+      },
+      "widgets_values": [
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1571,
+      "type": "SEGSPreview",
+      "pos": [
+        4113.174526212765,
+        7200.617639076681
+      ],
+      "size": [
+        270,
+        314
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 2266
+        },
+        {
+          "name": "fallback_image_opt",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 2191
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "shape": 6,
+          "type": "IMAGE",
+          "links": [
+            2283
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.28.2",
+        "Node name for S&R": "SEGSPreview",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "alpha_mode": true,
+            "min_alpha": true
+          },
+          "version": "7.7",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        false,
+        0.2
+      ]
+    },
+    {
+      "id": 1640,
+      "type": "MpiBlockIfEmptyList",
+      "pos": [
+        4445.4810077864295,
+        7202.864776043414
+      ],
+      "size": [
+        191.0767578125,
+        26
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "list_input",
+          "type": "*",
+          "link": 2283
+        }
+      ],
+      "outputs": [
+        {
+          "name": "list_output",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            2284
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba9e1569d9f77567907654ae04745580f43f18b9",
+        "Node name for S&R": "MpiBlockIfEmptyList"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 1628,
+      "type": "PreviewImage",
+      "pos": [
+        4687.211269955398,
+        7197.387311759
+      ],
+      "size": [
+        346.0318952287789,
+        452.03170340400357
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2284
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_Detected",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "PreviewImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1641,
+      "type": "ImpactSEGSToMaskList",
+      "pos": [
+        5053.207752046286,
+        6846.293347472005
+      ],
+      "size": [
+        160.2330078125,
+        26
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 2285
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "shape": 6,
+          "type": "MASK",
+          "links": [
+            2286
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "429d0159ad429e64d2b3916e6e7be9c22d025c3c",
+        "Node name for S&R": "ImpactSEGSToMaskList"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      2175,
+      1587,
+      0,
+      1588,
+      0,
+      "BBOX_DETECTOR"
+    ],
+    [
+      2176,
+      1589,
+      0,
+      1588,
+      2,
+      "SAM_MODEL"
+    ],
+    [
+      2177,
+      1587,
+      0,
+      1591,
+      0,
+      "BBOX_DETECTOR"
+    ],
+    [
+      2185,
+      1597,
+      0,
+      1588,
+      1,
+      "IMAGE"
+    ],
+    [
+      2186,
+      1597,
+      0,
+      1591,
+      1,
+      "IMAGE"
+    ],
+    [
+      2190,
+      1597,
+      0,
+      1593,
+      1,
+      "IMAGE"
+    ],
+    [
+      2191,
+      1597,
+      0,
+      1571,
+      1,
+      "IMAGE"
+    ],
+    [
+      2194,
+      1592,
+      0,
+      1593,
+      0,
+      "SEGS"
+    ],
+    [
+      2212,
+      1588,
+      0,
+      1592,
+      1,
+      "SEGS"
+    ],
+    [
+      2213,
+      1591,
+      0,
+      1592,
+      0,
+      "SEGS"
+    ],
+    [
+      2253,
+      1627,
+      0,
+      1559,
+      0,
+      "IMAGE"
+    ],
+    [
+      2260,
+      1630,
+      0,
+      1597,
+      0,
+      "IMAGE"
+    ],
+    [
+      2266,
+      1592,
+      0,
+      1571,
+      0,
+      "SEGS"
+    ],
+    [
+      2283,
+      1571,
+      0,
+      1640,
+      0,
+      "IMAGE"
+    ],
+    [
+      2284,
+      1640,
+      0,
+      1628,
+      0,
+      "IMAGE"
+    ],
+    [
+      2285,
+      1593,
+      0,
+      1641,
+      0,
+      "SEGS"
+    ],
+    [
+      2286,
+      1641,
+      0,
+      1627,
+      0,
+      "MASK"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "workflowRendererVersion": "LG",
+    "ds": {
+      "scale": 0.6363636363636831,
+      "offset": [
+        -2886.207752046446,
+        -6326.150490329187
+      ]
+    },
+    "frontendVersion": "1.45.20",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

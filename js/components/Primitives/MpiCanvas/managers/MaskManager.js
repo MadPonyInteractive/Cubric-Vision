@@ -163,6 +163,10 @@ export class MaskManager {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
+                // Canvas may be destroyed while this decodes (tool swap / remount
+                // in the History workspace) — ctx goes null in destroy(). Bail
+                // instead of throwing on clearRect of null.
+                if (!this.manualCtx) return resolve();
                 this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
                 this.manualCtx.drawImage(img, 0, 0, this.manualCanvas.width, this.manualCanvas.height);
                 this._recomposite();
@@ -178,6 +182,7 @@ export class MaskManager {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
+                if (!this.subtractCtx) return resolve();
                 this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
                 this.subtractCtx.drawImage(img, 0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
                 this._recomposite();

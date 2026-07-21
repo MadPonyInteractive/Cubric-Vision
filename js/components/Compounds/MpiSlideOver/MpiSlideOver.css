@@ -89,6 +89,10 @@
     width: min(460px, calc(100vw - 48px));
     /* Dock above the prompt bar so its controls stay clickable. */
     bottom: calc(var(--statusbar-h, 32px) + var(--promptbar-h, 0px));
+    /* Stack above the App overlay (MpiOverlay 'main-area' mode) when one is open —
+       --app-overlay-z is published by that overlay while shown, absent otherwise, so
+       this falls back to base 90+10=100 (no regression under any other slide-over). */
+    z-index: calc(var(--app-overlay-z, 90) + 10);
 }
 
 .mpi-slide-over--queue .mpi-slide-over__header,

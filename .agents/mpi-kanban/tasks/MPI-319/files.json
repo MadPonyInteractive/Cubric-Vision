@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    { "path": "services/ffmpegThumb.js", "change": "add extractImageThumb() — 512px JPG downscale (no upscale) via bundled ffmpeg" },
+    { "path": "routes/projects.js", "change": "import + save-generation image branches call extractImageThumb; drop isVideo gate on replace-thumb cleanup; new /backfill-image-thumbs route" },
+    { "path": "js/services/generationService.js", "change": "thumbPath moved into baseProps so image items carry it (was video-only)" },
+    { "path": "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js", "change": "image render prefers selected.thumbPath over filePath" },
+    { "path": "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js", "change": "media:imported -> createImageItem now passes thumbPath" },
+    { "path": "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js", "change": "snapshot-save + add-to-gallery image items pass thumbPath; snapshot emit includes thumbPath" },
+    { "path": "js/services/projectService.js", "change": "fire-and-forget _backfillImageThumbs on project open; patch live items + rebuild grid" }
+  ]
+}

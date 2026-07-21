@@ -1,0 +1,125 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "68d9635f-532b-4930-b54d-06619de642e9",
+  "generated_at": "2026-07-16T19:40:00Z",
+  "from_session": null,
+  "to_role": "orchestrator",
+  "status": "open",
+  "session": {
+    "name": "KREA2 generation-speed investigation + engine acceleration research",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "User saw app 83s vs browser 55s for KREA2 edit (warm models) and suspected the APP was adding overhead in injection/pre-injection. Wanted a thorough investigation of how injection works, what happens before it, and what the culprit is. Then pivoted to: can we make ComfyUI itself run the same graph faster, especially long/high tiers that take ~10min per image.",
+    "status": "in_progress",
+    "summary": "MYSTERY SOLVED: the 83s-vs-55s gap was 100% the prompt ENHANCER toggle (ON in app, OFF in browser). App dispatch overhead ~tens of ms (proven). No app tax. Engine-speedup hunt: FBCache + FSampler ruled out (KREA2 = SingleStreamDiT). RES_2M sampler TESTED @40 steps and it LOST to euler@40 (slower + harsher + less detail) — so step-reduction is looking DEAD for KREA2. Two cheap confirming runs left (res_3m, RES-native scheduler); then likely pivot to a perceived-latency PREVIEW UX rather than making the math shorter."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Traced full pre-/prompt dispatch path (commandExecutor.js runCommand + comfyController.js runWorkflow): total client overhead ~18-63ms warm. NOT the cause.",
+      "Traced post-gen save path (generationService onComplete -> saveGeneration -> routes/projects.js): ~200ms-6s worst case, dominated by O(N) serial orphan-sidecar GC sweep that scales with project card count. Only relevant at 500+ cards; user's project = 14 cards.",
+      "Confirmed KREA2 edit uses SAME workflow file as t2i (Input_Is_Edit routes identity-edit LoRA path); image inputs are path-string (MpiLoadImageFromPath), NOT re-uploaded per gen.",
+      "User re-tested with enhancer OFF: app 55s == browser 55s. Enhancer confirmed as the entire 28s gap.",
+      "Web research on engine speedups. Boot log shows already-on: --fast pinned_memory, Dynamic VRAM, torch 2.12/cu130, ComfyUI 0.27.0, pytorch attention, LOW_VRAM on 16GB 4060 Ti.",
+      "Ruled OUT (user rejected fragile flags/kernels approach): fp16_accumulation (bf16 model, N/A), torch.compile (Windows no gain + conflicts w/ SageAttention), SageAttention (needs triton, compat fragility).",
+      "TESTED WaveSpeed FBCache (chengzeyi/Comfy-WaveSpeed, node ID 4606): HARD-FAILS on KREA2 with ValueError 'No double blocks found for SingleStreamDiT'. KREA2 (lustify-v10-krea-raw-int8_convrot) is SingleStreamDiT; FBCache needs double-stream/MMDiT blocks. DEAD.",
+      "TESTED FSampler (obisin/ComfyUI-FSampler, node ID 3660, MIT): SOFT-FAILS on KREA2. Ran but 'Detected model type: unknown', ran 80 steps not 40, only 13.8% reduction, final image FRIED (oversaturated/posterized, nan on last step). Sampler-level epsilon extrapolation doesn't recognize KREA2's arch. DEAD.",
+      "Filed MPI-293 (todo): Pod create 502 + unreleased-MpiNodes-version chain that blocked Pod testing.",
+      "Unblocked Pod testing: user released MpiNodes v1.2.5, manually re-cloned ComfyUI-MpiNodes fresh onto Pod volume, restarted comfy via wrapper (port 8889).",
+      "Established Pod baseline: euler@40, cfg 3.00, beta scheduler, COLOR in prompt, on RTX PRO 4500 = 211.76s (vs ~597s on user's 4060 Ti). Clean colored result (ComfyUI_00002_).",
+      "TESTED res_2m@40 (multistep/res_2m, cfg 3.0, beta, same seed/prompt) = 221.25s (ComfyUI_00003_). RESULT: LOSES to euler@40 — SLOWER (221 vs 211s), MORE contrast/harsher, LESS fine detail (bark/foliage softer). res_2m does NOT converge faster than euler on KREA2's flow schedule; it's behind at EQUAL steps, so dropping steps only makes it worse. The 'RES = ~2x via fewer steps' thesis FAILS at 40 steps on beta scheduler.",
+      "Earlier (local, pre-Pod): euler@25 = MUSH (undercooked). So euler needs its 40 steps; and res_2m<40 would be worse-than-mush -> not worth testing res_2m@25."
+    ],
+    "pending": [
+      "TWO CHEAP SHOTS LEFT before declaring step-reduction dead for KREA2 (Pod ~3min/run): (1) res_3m@40 beta — does ANY higher-order RES beat euler@40? (2) res_2m@40 with a DIFFERENT scheduler (karras, or RES4LYF-native bong/tangent) — RES samplers often need their native sigma schedule to shine; beta may be why res_2m looked bad. Hold seed+color-prompt+cfg 3.0 constant; compare to euler@40 baseline ComfyUI_00002_.",
+      "IF both flop -> step-reduction is DEAD for KREA2 (euler@40 is the floor). Stop sampler testing, KILL THE POD, pivot the whole speed effort to the PERCEIVED-LATENCY PREVIEW UX (below).",
+      "IF one wins (matches euler@40 quality) -> then sweep ITS steps down (30/25/20) to find the floor = the speedup.",
+      "PIVOT TARGET (likely where this lands): perceived-latency UX on 10-min tiers — user sees only noise until ~70% done. Options: earlier/faster latent preview (TAESD/Latent2RGB decode at ~step 8-10 so composition shows in ~1-2min), OR extend the _ms preview->finish pattern to long IMAGE tiers (fast rough preview user approves, then commit full run). Reuses preview-bus (MPI-269/270/271) + Continue/Finish UX. NOT yet carded — create the card.",
+      "SEPARATE: kill the Pod when done (billing — 'Delete Pod on quit' was OFF).",
+      "Write the docs/ research note once concluded (see knowledge_preservation.pending)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-293",
+    "title": "Pod create 502 + controlnet_aux install fail",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-293/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-293/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "research", "test"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-293 created + root-caused (unreleased MpiNodes version, wrapper node_lock pin lagged; create-502 was transient RunPod noise + aborted the connect-time install chain).",
+      "All investigation findings captured in this handoff (no code changed this session — pure research + live ComfyUI testing)."
+    ],
+    "pending": [
+      "Once RES_2M sweep concludes, write a docs/ research note (proposed: docs/krea2/ or docs/builder/research/) capturing: enhancer=the 83s cause; app dispatch overhead is negligible (~tens of ms); FBCache incompatible (SingleStreamDiT no double blocks); FSampler incompatible (unknown model type -> fried); RES_2M result (compatible; step-count floor TBD).",
+      "If RES_2M wins: create a task card to wire res_2m + reduced steps as the KREA2 High-tier default (workflow-authoring change, user owns the raw workflow edit; app-side is progressStages step-count updates).",
+      "Create a task card for the perceived-latency preview UX on long tiers (earlier latent preview / preview-then-finish).",
+      "Update MEMORY.md in-flight section with the enhancer finding + RES_2M lead once concluded."
+    ]
+  },
+  "next_action": {
+    "description": "res_2m@40 already LOST to euler@40 (slower+harsher+less detail, ComfyUI_00003_ 221s vs baseline ComfyUI_00002_ 211s). Run TWO final confirming tests on the live Pod (RTX PRO 4500), same seed+color-prompt+cfg3.0: (1) res_3m@40 beta, (2) res_2m@40 with a DIFFERENT scheduler (karras or RES4LYF bong/tangent) — beta may be why res_2m underperformed. Compare both to euler@40 baseline ComfyUI_00002_. If BOTH lose -> step-reduction is DEAD for KREA2: kill the Pod (billing!) and pivot the speed effort to a perceived-latency PREVIEW UX (earlier latent preview / _ms preview->finish for long image tiers). If one wins, sweep its steps down. Judge QUALITY; Pod time is 4500-speed only.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The 83s vs 55s app-vs-browser gap = prompt ENHANCER ON in app / OFF in browser. Autoregressive LM pass before sampling. NOT app overhead. Confirmed by user re-test (enhancer off -> 55s==55s).",
+      "App dispatch overhead is NEGLIGIBLE (~18-63ms warm) — the whole original premise ('app adds seconds') is FALSE. Do not chase app plumbing for speed.",
+      "'Convert workflow JSON to Python' idea (ComfyUI-to-Python-Extension etc.) is a DEAD END for speed — those tools still import the same node classes / run the same torch; they remove HTTP/frontend layer (~ms), not compute.",
+      "User REJECTS fragile flag/kernel accelerators (SageAttention/triton/torch.compile/fp16_accum) — compat hell across GPU/OS/torch. Wants universal 'works for everybody' solutions.",
+      "KREA2 model = lustify-v10-krea-raw-int8_convrot.safetensors, architecture SingleStreamDiT (NOT double-stream/MMDiT). This is WHY generic block-caching (FBCache) and epsilon-skip (FSampler) accelerators fail — they assume architectures KREA2 isn't.",
+      "RES4LYF (ClownsharKSampler) is already the user's sampler. RES_2M/3M are high-order multistep (Euler-speed). HOPE WAS ~2x via fewer steps — but res_2m@40 on beta LOST to euler@40 (slower+harsher+less detail). So on KREA2's flow schedule euler@40 is already the better converger. Remaining hope is thin: res_3m, or res_2m on a RES-native scheduler (not beta). If those lose too, the RES family is out and step-reduction is dead for KREA2.",
+      "IMPORTANT verdict trend: euler@40 = the quality floor for KREA2-High. euler@25=mush, res_2m@40=worse+slower. Making the math shorter appears NOT viable for this model. The realistic win is PERCEIVED latency (show a recognizable result earlier), not ABSOLUTE latency.",
+      "The O(N) orphan-sidecar GC sweep in routes/projects.js save-generation scales with project card count — a real latent scaling issue at 500+ cards (perceived completion, not compute). Not carded yet; user aware.",
+      "Perceived-latency UX (user stares at noise for ~70% of a 10-min gen) is a SEPARATE real problem from raw speed — worth its own card. App already has preview-bus (MPI-269/270/271) + _ms preview->finish pattern to build on."
+    ],
+    "constraints": [
+      "RunPod Pod = REMOTE code path, never local engine (feedback_runpod_not_local_engine_proof). Sampler/quality testing on Pod is VALID (same ComfyUI/model/math); TIMING is 4500-speed not user-4060-speed. Do NOT conclude anything about app engine behavior from Pod runs.",
+      "raw/ ComfyUI workflows are USER-OWNED — agents READ raw, never edit. Any workflow change (e.g. baking res_2m default) = user edits the LiteGraph source + re-exports API JSON.",
+      "No seed UI / random seed every gen normally — but for THIS testing the seed MUST be locked to compare samplers fairly.",
+      "KREA2 mono-drift: model drifts to B&W without an explicit 'color' cue in the prompt; different cards/runs land differently. Not a bug — add 'color' to prompt. Baseline uses color prompt.",
+      "MpiNodes on the Pod was manually re-cloned to v1.2.5 main HEAD (throwaway for tonight). Proper fix = node_lock.json pin bump (MPI-293).",
+      "Pod is still RUNNING + billing — kill it when testing done ('Delete Pod on quit' was OFF).",
+      "Comfy node naming law (Input_*/Output_*) applies to any workflow change; RES sampler swap doesn't touch titled nodes so is safe."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-293/task.json",
+      ".agents/mpi-kanban/tasks/MPI-293/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-293/task.json",
+      "js/services/commandExecutor.js",
+      "js/data/commandRegistry.js",
+      "js/data/modelConstants/models.js",
+      "docs/builder/research/README.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["builder-research", "krea2", "comfy-injection", "runpod-remote-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-16T19:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming a KREA2 generation-speed investigation for Cubric Vision (branch 1.2.0). SOLVED: the app '83s vs browser 55s' gap was 100% the prompt ENHANCER toggle (LM pass before sampling), NOT app overhead — app dispatch is ~tens of ms; don't chase app plumbing for speed. The user then asked to make ComfyUI run the same graph faster (esp. the ~10-min High tier). Findings so far: (a) FBCache + FSampler RULED OUT — KREA2 is a SingleStreamDiT (FBCache crashes 'no double blocks'; FSampler soft-fails 'model type unknown' -> fried). (b) RES4LYF RES_2M (already in stack) was the hope, but res_2m@40 on beta scheduler LOST to euler@40 baseline: slower (221s vs 211s on the Pod's RTX PRO 4500) + more contrast + LESS detail (ComfyUI_00003_ vs baseline ComfyUI_00002_). euler@25 was mush. So euler@40 looks like the KREA2-High quality FLOOR and step-reduction appears DEAD for this model. TWO cheap confirming Pod runs remain (same seed + 'color' prompt + cfg 3.0): (1) res_3m@40 beta, (2) res_2m@40 with a RES-native scheduler (karras or bong/tangent) since beta may be why res_2m underperformed. Compare both to euler@40 (ComfyUI_00002_). If BOTH lose -> declare step-reduction dead, KILL THE POD (still billing! 'Delete Pod on quit' was OFF), and PIVOT the whole speed effort to a PERCEIVED-latency preview UX: show a recognizable result earlier (TAESD/Latent2RGB latent preview at ~step 8-10, or extend the _ms preview->finish pattern to long image tiers, reusing preview-bus MPI-269/270/271 + Continue/Finish UX) — create a card for it. Context notes: Pod = remote code path, treat TIMING as 4500-speed only (feedback_runpod_not_local_engine_proof); raw/ workflows are user-owned (agent never edits); KREA2 drifts B&W without 'color' in the prompt. Also open: MPI-293 (Pod-create-502 + node_lock MpiNodes pin lag), an uncarded O(N) sidecar-GC sweep that bites at 500+ cards, and a docs research note to write once concluded. Read .agents/mpi-kanban/state/handoffs/68d9635f-532b-4930-b54d-06619de642e9.json and use mpi-continue to continue."
+}

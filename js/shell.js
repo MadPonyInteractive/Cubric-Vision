@@ -22,6 +22,11 @@ import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiSta
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/MpiChangelogDialog.js';
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
+import { MpiAppLibrary } from './components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.js';
+import { MpiBaseApp } from './components/Organisms/MpiBaseApp/MpiBaseApp.js';
+import { MpiAppImageRegen } from './components/Organisms/MpiAppImageRegen/MpiAppImageRegen.js';
+import { MpiAppHeadSwap } from './components/Organisms/MpiAppHeadSwap/MpiAppHeadSwap.js';
+import { getAppById } from './data/appsRegistry.js';
 import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { getModelsByType } from './data/modelRegistry.js';
 import { APP_VERSION } from './core/appVersion.js';
@@ -31,6 +36,7 @@ import { getReleaseNotes, hasReleaseContent } from './data/releaseNotes.js';
 // Shell Sub-modules
 import { preloadComponentStyles } from './shell/preloadStyles.js';
 import { bindWindowControls, quitApp } from './shell/windowControls.js';
+import { initFloatLatentBridge } from './shell/floatLatentBridge.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { initHeroStats } from './shell/heroStats.js';
 import { start as startProjectStats } from './services/projectStatsService.js';
@@ -174,6 +180,7 @@ export async function initShell() {
   StatusBar.init();
   StatusBar.listen();
   bindWindowControls();
+  initFloatLatentBridge();
   bindMemoryHotkeys(memMonitor);
 
   // 5. Initialize Navigation Orchestrator
@@ -348,6 +355,34 @@ async function _bootApp() {
   Events.on('models:open', () => {
     if (!_modelLibrary) _modelLibrary = MpiModelManager.mount(document.createElement('div'));
     _modelLibrary.el.open();
+  });
+
+  // App Library — same lazy-singleton pattern as the Model Library (MPI-256).
+  // Dev-gated: the only emitters of apps:open (Gallery radial + Landing nav) are
+  // themselves APP_CONFIG.dev_mode-gated, so a staged build never opens it.
+  let _appLibrary = null;
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('apps:open', () => {
+    if (!_appLibrary) _appLibrary = MpiAppLibrary.mount(document.createElement('div'));
+    _appLibrary.el.open();
+  });
+
+  // app:open {appId} — the App Library's Open button. Mount MpiBaseApp with the
+  // resolved descriptor + its per-app controls component (name → blueprint map;
+  // the descriptor's uiComponent is a string so the registry stays import-free).
+  // One live App at a time — destroy the prior instance before mounting the next.
+  const _appComponents = { MpiAppImageRegen, MpiAppHeadSwap };
+  let _activeApp = null;
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('app:open', ({ appId }) => {
+    const app = getAppById(appId);
+    if (!app) return;
+    if (_activeApp) { _activeApp.el.destroy(); _activeApp = null; }
+    _activeApp = MpiBaseApp.mount(document.createElement('div'), {
+      app,
+      uiComponent: _appComponents[app.uiComponent] || null,
+    });
+    _activeApp.el.open();
   });
 
   // ComfyUI Auto-start (optional). Local boot only here — when auto-connecting to a
@@ -704,7 +739,8 @@ async function _runRemoteBoot(runpod) {
     _announced = true;
     // The Pod is real now → leave the wait state and surface the connecting phase.
     if (state.remoteWaitGpu !== null) state.remoteWaitGpu = null;
-    StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000);
+    // sound:false — immediate feedback of pressing Connect; a click must not ring.
+    StatusBar.notify(warm ? 'Reconnecting to your Pod…' : 'Creating a Pod…', 'info', 6000, { sound: false });
     _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
   };
   if (warm) _announceConnecting();
@@ -1051,6 +1087,17 @@ function _initRemoteConnectionFeed() {
       if (!connected && !connecting && s && s.ready && !s.noGpu && s.comfyReady === false) {
         connecting = true;
       }
+      // MPI-274: own the live connect % from the app-lifetime feed. The % used to be
+      // driven only by the ephemeral MpiRunpodSettings poll (setTimeout — throttled
+      // when the app backgrounds, torn down on nav), so blurring/navigating mid-connect
+      // stranded the % then dropped the hero to local·offline. The backend now stamps
+      // connect-start and returns `connectElapsedMs`; emit the same elapsed→% here so a
+      // backgrounded/unmounted panel can no longer strand it. heroStats caches the % and
+      // ignores this while not in the 'connecting' phase. Old wrappers omit the field →
+      // no emit (unchanged behaviour, never worse).
+      if (connecting && s && Number.isFinite(s.connectElapsedMs)) {
+        Events.emit('remote:connect-progress', { pct: _connectPct(s.connectElapsedMs) });
+      }
     } catch (_) {
       connected = false;
     }
@@ -1103,8 +1150,15 @@ function _initRemoteConnectionFeed() {
       // bar on "connecting" (not local · offline) regardless of whether Settings is
       // open. _emitRemoteConnection with an explicit phase always emits and sets the
       // shared _remotePhase, so a late-mounted PromptBox also picks it up.
+      // Suppress the RE-emit once the phase is already 'connecting': the boot poll
+      // owns the live connect % (remote:connect-progress), and re-broadcasting
+      // 'connecting' every 5s made heroStats re-seed the GPU slot to 0%, fighting
+      // the climbing %. Only emit on the transition INTO connecting; while it holds,
+      // the state/_remotePhase are already correct for any late-mounted subscriber.
       if (connecting) {
-        _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+        if (_remotePhase !== 'connecting') {
+          _emitRemoteConnection({ connected: false, gpuName: null, vramGb: null, ramGb: null, phase: 'connecting' });
+        }
         _last = false;
         return;
       }
@@ -1313,15 +1367,18 @@ async function _initDataRegistries() {
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('remote:connection', async ({ connected, phase = null } = {}) => {
     if (phase) return; // mid-transition, not a resolved state
-    if (connected) {
-      // MPI-200: re-sync on EVERY resolved connect, not just the first. A new
-      // Pod is a new machine with a potentially different GPU arch (4090 modern
-      // → 5090 blackwell), and arch-variant models (LTX balanced: mxfp8 vs
-      // fp8_scaled) require the arch-specific weight. Re-checking only on the
-      // first connect left the previous Pod's arch cache in place after a
-      // same-session Pod swap, so the panel showed a tier "installed" whose
-      // weight isn't on the new volume. A resolved connected:true IS a real
-      // (re)connection edge, so re-checking each time is correct, not redundant.
+    if (connected && !_wasRemoteConnected) {
+      // MPI-200: re-sync on each genuine connect EDGE — a new Pod may have a
+      // different GPU arch (4090 modern → 5090 blackwell) and arch-variant models
+      // (LTX balanced: mxfp8 vs fp8_scaled) need the arch-specific weight, so a
+      // same-session Pod swap must re-check or the panel shows a tier "installed"
+      // whose weight isn't on the new volume.
+      // MPI-326: guard on the edge (!_wasRemoteConnected). The connection
+      // heartbeat (_initRemoteStatusFeed) re-emits {connected:true} every ~5s to
+      // keep the live session-cost badge climbing; without this guard the sync ran
+      // every 5s and its models:checked fan-out tore down the op dropdown +
+      // in-progress slider drags on remote. A Pod swap still re-syncs: it routes
+      // through the disconnect edge below, which resets _wasRemoteConnected=false.
       _wasRemoteConnected = true;
       try {
         await syncModelInstalled();

@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-247",
+  "title": "PromptBox silently reverts the user's chosen operation on every model-list refresh",
+  "description": "SYMPTOM (user, 2026-07-10): \"the prompt box keeps swapping to image-to-image. This happens when I go to the History workspace and come back to the Gallery. It also happens in the History workspace. When I apply an upscale or something else, it reverts back to Image to Image.\"\n\nROOT CAUSE: `MpiPromptBox.setModelList()` (js/components/Organisms/MpiPromptBox/MpiPromptBox.js:524) calls `_pickOpForModel(model)` on EVERY model-list refresh -- including when the model is unchanged (`stillPresent === true`). Workspace navigation (Gallery <-> History) remounts and refreshes the list, so the user's deliberate operation choice is re-derived from scratch and silently overwritten.\n\n`_pickOpForModel` (L439) rejects any op whose media requirement does not match the CURRENT chip state (L450-452), then falls back to the FIRST op in `model.supportedOps` declaration order that does match (L459-464). Simulated against the real registry with supportedOps ['t2i','i2i','poseReference','upscale','detail']:\n\n  image chip present -> t2i REVERTS to i2i;   i2i / poseReference / upscale / detail all kept\n  no image chip      -> i2i, poseReference, upscale, detail ALL REVERT to t2i;  t2i kept\n\nThat single rule explains both reported symptoms. It is order-dependent: `i2i` only wins because it precedes `poseReference` in supportedOps.\n\nPRE-EXISTING. Not caused by MPI-242 -- SDXL/Chroma carry the same ['t2i','i2i',...] shape and the same call site. MPI-242 merely added `poseReference` as one more op that can be silently lost. Will get MUCH more visible: the user is rolling the new i2i operation across every image workflow.\n\nFIX DIRECTION (not decided): `setModelList` should not re-pick when the model is unchanged AND the current op is still supported -- a refresh is not a model change. `_pickOpForModel` is correct as a MODEL-SWITCH resolver (L491) and as an invalid-op guard; it is wrong as an every-refresh normalizer. Care: the media-requirement check is legitimate (t2i genuinely cannot consume an image chip); the bug is re-running the resolver at all, and letting declaration order decide. Consider preserving the user's op across a media-state change and instead disabling/greying the Cue button, rather than swapping the op under them.\n\nREPRO: pick Upscale (or Pose Reference) on Krea 2 Turbo, navigate Gallery -> History -> Gallery, watch the op dropdown.\n\nSCOPE SPLIT (user, 2026-07-10): TWO symptoms, only ONE is proven here.\n(a) PROVEN by simulating the real _pickOpForModel against the real commandRegistry: the Gallery-side revert via setModelList on every list refresh. That is this card.\n(b) NOT INVESTIGATED: the History workspace revert after an upscale. MpiGroupHistoryBlock has its own op gating + auto-switching (historyMode forces single-stage, ops are constrained by the selected history entry). The History path was never read. User: \"It has a lot of gating and auto switch of operations and stuff. It could need a card of its own.\"\nDo NOT assume (b) shares the root cause of (a). Read MpiGroupHistoryBlock first; if it is a distinct mechanism, split it into its own card before fixing.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-10T15:20:00Z",
+  "updated_at": "2026-07-10T17:35:00Z",
+  "resolution": "REOPENED: the setModelList-only fix (commit 9780eff2) was necessary but INSUFFICIENT. User verified the op still reverts. TRUE ROOT CAUSE: the chosen operation was NEVER persisted -- every Gallery/History block remount re-derives it from a hardcoded default (MpiGalleryBlock.js:1026 t2i/t2v; MpiGroupHistoryBlock.js:203 first-available), and PromptBox re-picks on model switch + media-state change (_emitMediaChange auto-switch). FULL FIX (per-model session op memory): (1) state.s_selectedOpByModel session map + getSelectedOp/setSelectedOp in modelHelpers.js; (2) PromptBox.setOperation now carries a `programmatic` flag, set on every internal re-pick (setModel, setModelList, _emitMediaChange auto-switch) so consumers persist ONLY user picks; (3) both Gallery + History seed activeOperation from getSelectedOp at mount and persist user picks; (4) Gallery reuse re-asserts the reused op LAST (after clearMedia/injectMedia auto-switch had stomped it -- the pose-reference reuse->i2i symptom). Covers all 4 reported symptoms: Gallery nav revert, History nav revert, History model-switch revert, ReusePrompt revert. Awaiting user re-test.",
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "bug",
+    "promptbox",
+    "operations",
+    "pre-existing",
+    "ux",
+    "needs-split"
+  ],
+  "priority": "high"
+}

@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-294","type":"task.created","at":"2026-07-16T19:15:00Z","actor":"claude","summary":"Test taehv taeltx2_3 / taeltx2_3_wide decoders for better LTX live preview. New decoders found during 2026-07-16 Krea2-preview research. Verify no #13366-style output corruption (different latent format than Krea2's Wan21)."}

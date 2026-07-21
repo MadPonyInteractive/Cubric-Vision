@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-273","at":"2026-07-13T15:49:14Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-273","at":"2026-07-13T15:49:14Z","actor":"claude","note":"plan attached; implementation started"}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-273","at":"2026-07-13T15:52:00Z","actor":"claude","note":"Phase 1+2 code done (comfy.js, commandExecutor.js, statusBar.js); syntax-checked. Pilot awaits user wiring + server restart."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-273","at":"2026-07-13T15:56:00Z","actor":"claude","from":"doing","to":"done","summary":"Idea dropped during pilot wiring; all code reverted. Future: read rgthree node-title progress signal instead of logger markers."}

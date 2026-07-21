@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-278",
+  "title": "Closing Settings panel mid-connect strands the connect — hero flashes local·offline, % resets",
+  "description": "REPRO (live, instrumented + pinned): user pressed Connect, then closed the Settings panel (or navigated away) while still 'connecting' (~13-30%). The hero footer flashed 'local · offline', the connect % reset, then recovered to the real climbing % ~5s later on the next feed tick. The connect itself stayed alive backend-side and eventually completed — pure UI strand + flash.\n\nROOT CAUSE (pinned via a temp stack-capture trace, now removed): the leak is MpiRunpodSettings _connectEngine's finally block (line ~705). MpiRunpodSettings.el.destroy() (panel close / unmount, line ~1699) sets _connectAbort=true to stop the panel's OWN _pollEngineReady loop — deliberately LEAVING the Pod booting (its comment even says 'destroy is not a Cancel, so it must not delete a Pod the user may still want'; backend _starting tracks it; shell feed owns the live connect). BUT breaking that poll makes it return false → _connectSucceeded stays false → the finally emits Events.emit('remote:connection', {connected:false, phase:null}) = local·offline. That contradicts destroy()'s own intent: the Pod is still booting but the hero is told 'connect failed → local'. heroStats._renderEngine then wipes _remotePhase to null AND clears the cached _lastConnectPct, so the next 'connecting' render seeds 0% until the 5s shell feed tick re-emits phase:'connecting' + the real %.\n\nStack proof: renderEngine(phase=null, prevPhase=connecting) <- events.js emit <- _connectEngine (MpiRunpodSettings.js:705). No _emitRemoteConnection trace preceded it (raw component emit, bypasses the shell's phase-fold guard).\n\nThis is the SETTINGS-panel twin of the class MPI-274 (feed-tick %) + MPI-275 (comfyController teardown) addressed on other surfaces. Two rival connect drivers exist (shell _pollRemoteReady + Settings _pollEngineReady); killing the Settings one falsely signals 'failed'.\n\nFIX: add a _destroyAborted flag set in destroy() (distinct from _connectAbort, which Cancel also uses). In the _connectEngine finally, skip the local·offline reset when _destroyAborted — the shell feed owns the still-live connect and keeps showing 'connecting'. A real Cancel (_cancelConnect) deletes the Pod + emits local itself, so it is unaffected; a genuine connect failure (threw/refused, panel still open) still resets as before.\n\nSHIPPED this session. Temp trace274 instrumentation added to pin it, then fully removed. NOT yet live-verified post-fix.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-13T20:45:00Z",
+  "updated_at": "2026-07-14T00:35:00Z",
+  "attention": {
+    "state": "none",
+    "reason": "LIVE-VERIFIED 2026-07-14: closing Settings mid-connect no longer flashes local·offline; hero stays connecting with climbing %. Shipped 0807de23.",
+    "updated_at": "2026-07-14T00:35:00Z"
+  },
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "runpod",
+    "remote-engine",
+    "hero-card",
+    "connect-strand"
+  ],
+  "priority": "high"
+}

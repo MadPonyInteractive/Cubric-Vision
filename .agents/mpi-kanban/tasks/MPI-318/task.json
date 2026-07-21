@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-318",
+  "title": "Drag gallery cards out to the file system (real filenames, multi-select) WITHOUT breaking in-app drag-to-prompt",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-20T20:10:00Z",
+  "updated_at": "2026-07-20T20:10:00Z",
+  "description": "READ THE DOCS FIRST — a prior session shipped a fast fix, broke in-app drops, and was reverted whole. Goal: drag one or many gallery cards into an OS folder and get files named after the real media on disk, while in-app drag-to-prompt keeps working. See brief.md for the full failure account before touching code.",
+  "links": {
+    "events": "events.jsonl",
+    "brief": "brief.md"
+  },
+  "events": [
+    {
+      "at": "2026-07-20T20:10:00Z",
+      "type": "task.created",
+      "note": "Carded after a failed attempt on 2026-07-20 was fully reverted (git checkout of MpiGalleryGrid.js, mediaActions.js, main.js — tree clean, nothing shipped). User asked for the card so the work can restart from investigation instead of from a patch. Root failure: the agent never routed through the Context Router (.claude/rules/components.md, docs/gallery.md, .claude/rules/events.md) and did not ask what else consumed the dragstart event."
+    }
+  ]
+}

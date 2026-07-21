@@ -242,7 +242,7 @@ export function resolveWorkflowFile(model, op, engine = null, { stage2 = false, 
     if (typeof base !== 'string' || base.length === 0) return null;
     let file = base;
     // Order MUST match generate_ltx.py's output: base → variant suffix(es) →
-    // _stage2 → engine suffix, e.g. LTX_t2v + _mxfp8 + _stage2 (+ _remote).
+    // _stage2 → engine suffix, e.g. ltx_t2v + _mxfp8 + _stage2 (+ _remote).
     const vSuffix = variantSuffixOf(model, variantTokens);
     if (vSuffix) file = file.replace(/\.json$/i, `${vSuffix}.json`);
     if (stage2) file = file.replace(/\.json$/i, '_stage2.json');

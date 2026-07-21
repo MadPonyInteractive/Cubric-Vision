@@ -186,7 +186,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: color-mix(in oklch, var(--accent-heat) 10%, transparent);
+    background: var(--surface-bar);
     border: 2px dashed var(--accent-heat);
     border-radius: 0;
     z-index: 50;
@@ -201,7 +201,8 @@
     text-transform: uppercase;
 }
 
-.mpi-prompt-box--drag-over .mpi-prompt-box__drop-overlay {
+.mpi-prompt-box--drag-over .mpi-prompt-box__drop-overlay,
+.mpi-prompt-box--drag-armed .mpi-prompt-box__drop-overlay {
     display: flex;
 }
 
@@ -323,6 +324,40 @@
     border: 3px solid var(--accent-heat);
     flex-shrink: 0;
     background: var(--surface-2);
+    /* Reorder is pointer-driven; suppress the browser's own drag/scroll gesture. */
+    touch-action: none;
+    user-select: none;
+}
+
+/* Reorderable chips: grab affordance + the lifted ghost under the cursor. */
+.mpi-prompt-box-media-strip__chip--dragging {
+    cursor: grabbing;
+    z-index: 10;
+    opacity: 0.9;
+    box-shadow: 0 0.5rem 1rem color-mix(in oklch, var(--surface-0) 60%, transparent);
+    /* Ghost follows the pointer directly — no transition, or it lags. */
+    transition: none;
+}
+
+/* Index badge — mirrors the "image N" numbering used in prompts. */
+.mpi-prompt-box-media-strip__index {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 var(--s-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-heat);
+    color: var(--surface-0);
+    border: 1px solid var(--accent-heat);
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    line-height: 1;
+    pointer-events: none;
+    z-index: 5;
 }
 
 .mpi-prompt-box-media-strip__thumb {

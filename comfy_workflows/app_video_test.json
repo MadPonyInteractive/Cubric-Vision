@@ -1,0 +1,231 @@
+{
+  "7": {
+    "inputs": {
+      "video_path": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "MpiHasAudio",
+    "_meta": {
+      "title": "Mpi Has Audio"
+    }
+  },
+  "11": {
+    "inputs": {
+      "filename_prefix": "MpiVideo2",
+      "use_audio": true,
+      "images": [
+        "36",
+        0
+      ],
+      "audio": [
+        "41",
+        0
+      ],
+      "fps": [
+        "36",
+        2
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_video_2"
+    }
+  },
+  "15": {
+    "inputs": {
+      "true": [
+        "20",
+        0
+      ],
+      "false": [
+        "35",
+        0
+      ],
+      "boolean": [
+        "27",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "16": {
+    "inputs": {
+      "filename_prefix": "MpiVideo",
+      "images": [
+        "15",
+        0
+      ],
+      "audio": [
+        "35",
+        1
+      ],
+      "fps": [
+        "35",
+        2
+      ],
+      "use_audio": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_video"
+    }
+  },
+  "17": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_video"
+    }
+  },
+  "18": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_video_2"
+    }
+  },
+  "20": {
+    "inputs": {
+      "direction": "right",
+      "match_image_size": true,
+      "spacing_width": 0,
+      "spacing_color": "white",
+      "image1": [
+        "35",
+        0
+      ],
+      "image2": [
+        "36",
+        0
+      ]
+    },
+    "class_type": "ImageStitch",
+    "_meta": {
+      "title": "Stitch Images"
+    }
+  },
+  "23": {
+    "inputs": {
+      "any": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "25": {
+    "inputs": {
+      "any": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmpty",
+    "_meta": {
+      "title": "Mpi Any Blocker"
+    }
+  },
+  "26": {
+    "inputs": {
+      "any": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "MpiBlockIfEmpty",
+    "_meta": {
+      "title": "Mpi Any Blocker"
+    }
+  },
+  "27": {
+    "inputs": {
+      "any": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "35": {
+    "inputs": {
+      "block_if_empty": true,
+      "string": [
+        "25",
+        0
+      ]
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Mpi Load Video"
+    }
+  },
+  "36": {
+    "inputs": {
+      "block_if_empty": true,
+      "string": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Mpi Load Video"
+    }
+  },
+  "37": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 2,
+      "scale_method": "lanczos",
+      "input": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "41": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_audio"
+    }
+  },
+  "43": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "audio": [
+        "41",
+        0
+      ]
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "Save Audio (FLAC) (DEPRECATED)"
+    }
+  }
+}

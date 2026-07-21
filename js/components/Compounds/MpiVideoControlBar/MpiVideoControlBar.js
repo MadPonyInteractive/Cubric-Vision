@@ -100,12 +100,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
         let _frameWatchId = 0;
 
-        const _effectiveFps = () => {
-            return _fps;
-        };
-
         const _frameBounds = () => {
-            const eff = _effectiveFps();
+            const eff = _fps;
             const loFrame = Math.max(0, Math.round(_in * eff));
             const lastFrame = _isFullRange() && Number.isFinite(_frameCount) && _frameCount > 0
                 ? _frameCount - 1
@@ -127,19 +123,31 @@ export const MpiVideoControlBar = ComponentFactory.create({
             _frameWatchId = 0;
         };
 
+        // Sub-range playback boundary. Compare the native media time directly
+        // against the out-point time — do NOT reverse-engineer a frame index
+        // from currentTime (it drifts vs the file's true PTS; that rounding is
+        // exactly what froze sub-range loops before). At the out-point: loop →
+        // seek back to in AND keep playing; no-loop → pause. A small lead
+        // (~half a frame) triggers the wrap before the last in-range frame is
+        // overshot.
         const _handleRangeBoundary = (time) => {
             if (!_surface || !_isSubRange()) return;
             const v = _surface.getVideoElement();
             if (!v || v.paused) return;
-            const { eff, loFrame, lastFrame } = _frameBounds();
-            const curFrame = Math.round((Number(time) || 0) * eff);
-            if (curFrame < loFrame) {
-                _surface.seek(_in);
-                return;
-            }
-            if (curFrame >= lastFrame) {
-                if (_loopIntent) _surface.seek(_in);
-                else             _surface._pause();
+            const t = Number(time) || 0;
+            const lead = _fps > 0 ? 0.5 / _fps : 0;
+            // Only the out-point matters during playback: time only moves
+            // forward. (A "rewound before in" guard here re-fired every frame
+            // right after the wrap-seek landed a hair below _in, pinning the
+            // playhead on the in-handle — that was the in≠0 freeze.) Seeking to
+            // the in-point on play-start is handled by _seekRangeStartIfNeeded.
+            if (t >= _out - lead) {
+                if (_loopIntent) {
+                    _surface.seek(_in);
+                    _surface._play();
+                } else {
+                    _surface._pause();
+                }
             }
         };
 
@@ -159,9 +167,9 @@ export const MpiVideoControlBar = ComponentFactory.create({
         const _seekRangeStartIfNeeded = () => {
             if (!_surface || !_isSubRange()) return;
             const v = _surface.getVideoElement();
-            const { eff, loFrame, lastFrame } = _frameBounds();
-            const curFrame = Math.round((v.currentTime || 0) * eff);
-            if (curFrame < loFrame || curFrame >= lastFrame) _surface.seek(_in);
+            const lead = _fps > 0 ? 0.5 / _fps : 0;
+            const t = v.currentTime || 0;
+            if (t < _in - lead || t >= _out - lead) _surface.seek(_in);
         };
 
         const _togglePlay = () => {
@@ -211,11 +219,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             if (isDuration && Number.isFinite(_frameCount) && _frameCount > 0) {
                 return String(_frameCount).padStart(4, '0');
             }
-            // Prefer effective fps from frameCount/duration when known, so the
-            // current-frame readout stays in lockstep with the trim bar at
-            // boundary frames on NTSC-style clips.
-            const effFps = _effectiveFps();
-            let frame = Math.max(0, Math.round(s * effFps));
+            let frame = Math.max(0, Math.round(s * _fps));
             if (Number.isFinite(_frameCount) && _frameCount > 0) {
                 frame = Math.min(frame, _frameCount - 1);
             }
@@ -232,10 +236,12 @@ export const MpiVideoControlBar = ComponentFactory.create({
             }
         };
 
-        // Map a raw video.currentTime to the visual playhead time on the trim
-        // bar. Frame index N is rendered at `N/(lastIdx) * _duration` so the
-        // first frame sits at 0% and the last frame sits at 100%, regardless
-        // of NTSC-style PTS drift or our quarter-frame seek bias.
+        // Snap a raw video.currentTime to the exact frame's TRUE timestamp
+        // (idx / effFps) so the trim bar receives the same seconds value a drop
+        // on that frame commits. The last-frame→100% normalization lives solely
+        // in MpiTrimBar._pctOf — do NOT stretch to idx/lastIdx*dur here or it
+        // gets applied twice, shifting the echoed playhead one frame off the
+        // drop position (the "playhead jumps on release" bug).
         const _displayTime = (time) => {
             if (!_surface) return time;
             const dur = _duration;
@@ -247,7 +253,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             let idx = Math.round(time * effFps);
             if (idx < 0) idx = 0;
             else if (idx > lastIdx) idx = lastIdx;
-            return (idx / lastIdx) * dur;
+            return idx / effFps;
         };
 
         const _syncPlayBtn = () => {
@@ -355,6 +361,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             loopBtn.el.classList.toggle('is-active', _loopIntent);
             _renderTime(video.currentTime || 0, video.duration || 0);
             trim?.el.setFps(_fps);
+            trim?.el.setFrameCount(_frameCount);
             if (Number.isFinite(video.duration) && video.duration > 0) {
                 _duration = video.duration;
                 trim?.el.setDuration(_duration);
@@ -376,6 +383,16 @@ export const MpiVideoControlBar = ComponentFactory.create({
                     // must NOT be re-routed back into the range (the surface's
                     // frameStep already handles range-aware wrapping).
                     _handleRangeBoundary(time);
+                }),
+                // Native EOF with a sub-range: video.loop is forced off, so the
+                // clip dead-stops at the real end before timeupdate can wrap it.
+                // Emulate the loop here when the out-point sits at (or near) the
+                // clip end.
+                addCb(surfaceInstance, 'ended', () => {
+                    if (_loopIntent && _isSubRange()) {
+                        _surface.seek(_in);
+                        _surface._play();
+                    }
                 }),
                 addCb(surfaceInstance, 'loadedmetadata', ({ duration }) => {
                     _duration = duration || 0;
@@ -479,6 +496,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
 
         el.setFrameCount = (n) => {
             _frameCount = Number.isFinite(+n) && +n > 0 ? +n : null;
+            trim?.el.setFrameCount(_frameCount);
             if (_surface) _surface._setFrameCount(_frameCount);
             if (_surface) {
                 const v = _surface.getVideoElement();

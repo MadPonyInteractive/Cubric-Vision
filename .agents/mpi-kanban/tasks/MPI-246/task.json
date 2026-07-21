@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-246",
+  "title": "Auto-mask broken on Windows-local: MPI-229 path-heal corrupts Ultralytics model_name",
+  "description": "Auto-mask (Mask tool -> Detect) fails with `Prompt outputs failed validation` on the LOCAL Windows engine. Comfy log: `UltralyticsDetectorProvider 1587: Value not in list: model_name: 'bbox\\face_yolov8n.pt' not in ['bbox/face_yolov8n.pt', 'bbox/hand_yolov8n.pt', 'bbox/person_yolov8n-seg.pt']`.\n\nROOT CAUSE (proven against the live engine, 2026-07-10): `comfyController.runWorkflow` (~L1195) heals path separators over a blanket `PATH_INPUTS = ['lora_name','upscale_model','ckpt_name','unet_name','model_name','vae_name','clip_name']`. MPI-229 added the Windows-local INVERSE heal (`/` -> `\\`) so a LoRA name persisted during a Linux Pod session matches the Windows loader enum. That is correct for loaders whose enum comes from `folder_paths` (they list with the OS separator), but WRONG for `UltralyticsDetectorProvider`: Impact Pack builds its `model_name` list itself and ALWAYS uses forward slashes.\n\nVerified on the same Windows-local box via /object_info:\n  LoraLoader.lora_name              -> \"CHROMA\\Amira-2400-150-0.safetensors\"   (backslash)\n  UltralyticsDetectorProvider.model_name -> \"bbox/face_yolov8n.pt\"             (forward slash)\n\nSo `model_name` must be EXCLUDED from the separator heal (or the heal made loader-aware). Source of truth for the value is already correct: MpiToolOptionsMask.js:27-29 and MpiCanvasViewer.js:257-259 both declare `bbox/face_yolov8n.pt` with a forward slash; the heal corrupts it on the way out.\n\nSCOPE: pre-existing, live on the released build, NOT caused by MPI-242. Independent of model (reproduced from a Krea2 i2i context but the automask workflow is universal). Confirm whether the REMOTE (Pod/Linux) path is also affected: there `_healToSlash` is true, `\\`->`/`, which leaves an already-forward-slash value untouched -> remote is probably FINE, meaning this is Windows-local-only. [[feedback_check_both_engine_paths]]\n\nCARE: `model_name` is also used by other loaders (e.g. upscale `model_name`). Do not simply delete it from PATH_INPUTS without checking which nodes consume it -- an upscale model name DOES need the OS-separator heal. The fix likely keys the heal on node `class_type` rather than on the input name alone.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-10T15:10:00Z",
+  "updated_at": "2026-07-10T16:00:00Z",
+  "links": { "events": "events.jsonl" },
+  "tags": ["bug", "automask", "path-heal", "windows-local", "pre-existing"],
+  "priority": "high"
+}

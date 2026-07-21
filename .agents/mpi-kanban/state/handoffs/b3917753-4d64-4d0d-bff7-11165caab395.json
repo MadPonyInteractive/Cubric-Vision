@@ -1,0 +1,107 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b3917753-4d64-4d0d-bff7-11165caab395",
+  "generated_at": "2026-07-13T22:15:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-276 Phase 2a shipped — resume at Phase 2b (store wire + adapter split)",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Kill the download/install/uninstall subsystem's 5 root diseases with an installStore SOT + engine adapters + reconciler + snapshot protocol + FE mirror + unified uninstall + Pod wrapper fixes (MPI-276).",
+    "status": "in_progress",
+    "summary": "Phase 1 (pure core) + Phase 2a (disease cure) shipped and committed. Phase 2a deleted refCount everywhere, fixed totalBytes accumulation, and added register-before-respond — all against the existing runtime maps. Store instantiation was DEFERRED to 2b to avoid two live SOTs mid-refactor. Resume at 2b."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+    "completed": [
+      "Investigation (4-agent sweep, dossiers research/00-04)",
+      "Socratic Gate G1-G20 resolved",
+      "Phase 1: installStore.js + computeProgress.js + 34 tests green (0d4f0301)",
+      "Phase 2a: refCount DELETED + totalBytes +=->SET + register-before-respond (5bbf08f2)"
+    ],
+    "pending": [
+      "Phase 2b: instantiate createInstallStore as SOT replacing _modelJobs/_depJobs; physical adapter split (G6: localAdapter.js/remoteAdapter.js); ResumableDownloader->FileDownloader rename (sweep engine.js:17+:140); snapshot version into status + /download/start responses",
+      "Phase 3: reconciler.js (G11)",
+      "Phase 4+5 parallel batch: FE mirror + uninstall unification",
+      "Phase 6: Pod wrapper 0.2.36->0.2.37 (hot-store evict + pipPins; separate repo git -C c:/AI/Mpi/mpi-ci)",
+      "Phase 7: docs rewrite",
+      "Phase 8: user-ux verification matrix"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-276",
+    "title": "Download/install/uninstall system refactor - installStore SOT + engine adapters + reconciler",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-276/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-276/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift bullet added for Phase 2a + RESUME AT 2b instructions (committed cae5e6bd)",
+      "Both event logs appended task.updated for 2a (committed cae5e6bd)"
+    ],
+    "pending": [
+      "At card close: append 'refCount DELETED in MPI-276' to memory feedback_refcount_leaks_never_gate_on_zero",
+      "docs/download-manager.md refCount section rewrite is Phase 7, not yet due",
+      "MPI-123-local cancel-display closure check is Phase 8"
+    ]
+  },
+  "next_action": {
+    "description": "Start Phase 2b: instantiate createInstallStore({broadcast:_broadcast, logger, now}) in downloadManager.js as the SOT, migrate _modelJobs/_depJobs reads+writes onto it, physically split localAdapter.js + remoteAdapter.js out of downloadManager.js (G6), rename ResumableDownloader->FileDownloader (also update engine.js:17 import + :140 use), and add the monotonic version field into GET /downloads/status + the /download/start response snapshots (G9). Keep all G6 public export names/signatures. Preserve everything in the phase2-carve.md 'Preserve verbatim (G4)' list.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "2a/2b split: 2a = disease cure (refCount delete + totalBytes SET + register-before-respond) committed against existing runtime maps; 2b = store instantiation + physical adapter file split. Same end state, commit-safe intermediate.",
+      "Store DEFERRED to 2b (user confirmed this session): wiring installStore as a live parallel SOT alongside _modelJobs in 2a would create two SOTs — the exact disease being cured. Store becomes SOT only when it REPLACES the maps in 2b.",
+      "version field not added in 2a because the store (which owns the monotonic version) is not wired yet; status endpoint returns {success,jobs:[]} for now — version lands with the store in 2b.",
+      "refCount was pure dead weight: MPI-258 already made the two real gates (_depHasActiveDownloadConsumer, _otherActiveModelUsesDep) status-based; deleting the field + its writes changed no behavior.",
+      "engine.js refCount:1 field was on a hand-built depJob for the engine-archive path (G15 out of scope) but never read by ResumableDownloader — deleted as dead, zero behavior change."
+    ],
+    "constraints": [
+      "Shared tree: downloadManager.js, js/shell.js, kanban files edited by peers mid-task — content-anchor edits, re-read on stale-Edit, re-grep after. Never git add . / -A.",
+      "G6: public exports must keep name+signature (cancelAllDownloads, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall, runCustomNodeInstall, broadcastEngineEvent, ResumableDownloader->FileDownloader). engine.js + shutdown depend on them.",
+      "G4 preserve verbatim: NDH cancel-only transport (NEVER reintroduce pause/resume), .cubricdl contract, sha256 verify, path resolvers, _filterDepsForEngine/_withEngineExtraDeps, _localSharedDepsMap/_remoteSharedDepIds whole-model-installed rule, disk-full pre-flight, _extractZipArchive, _nodeFolderHasFiles (MPI-243), all wrapper endpoint signatures, all existing SSE event NAMES.",
+      "Port 3000 is user-owned — never kill their app. Route/module tests: load module or mount router alone on :3999 from repo root (needs repo-root cwd for node_modules), curl, revert. Not /tmp (no node_modules).",
+      "Pod wrapper (Phase 6) is a SEPARATE repo commit: git -C c:/AI/Mpi/mpi-ci."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js",
+      "routes/engine.js",
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-276/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-276/handoffs/phase2-carve.md",
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "routes/install/installStore.js",
+      "routes/install/computeProgress.js",
+      "routes/downloadManager.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-13T22:15:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-276 (download/install/uninstall refactor) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/b3917753-4d64-4d0d-bff7-11165caab395.json and then run mpi-continue. Phases 1 (installStore + computeProgress core, 0d4f0301) and 2a (disease cure: refCount DELETED everywhere, totalBytes += changed to SET on both engines, register-before-respond adding a job snapshot to all three /download/start responses, 5bbf08f2) are shipped and committed against the existing _modelJobs/_depJobs runtime maps. The installStore was intentionally NOT wired live in 2a to avoid two competing sources of truth. Your next action is Phase 2b: instantiate createInstallStore as the single source of truth (replacing _modelJobs/_depJobs), physically split localAdapter.js and remoteAdapter.js out of routes/downloadManager.js per Gate G6, rename ResumableDownloader to FileDownloader (also updating routes/engine.js:17 import and :140 use), and add the monotonic snapshot version field into GET /comfy/downloads/status and the /download/start response bodies per Gate G9. Read .agents/mpi-kanban/tasks/MPI-276/handoffs/phase2-carve.md first for verified carve anchors and the G4 preserve-verbatim list, then plan.md for full phase detail. Keep all G6 public export names and signatures intact. Shared tree: never git add . — content-anchor edits, re-grep after."
+}

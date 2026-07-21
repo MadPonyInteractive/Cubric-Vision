@@ -1,0 +1,8 @@
+{"schema":"mpi-kanban/task-files/v1","files":[
+  {"path":"js/services/frameSink.js","role":"created","note":"mediabunny VideoSampleSink wrapper; MANUAL YUV(I420)->RGB color-matched to <video> (BT.709 if h>=720 else BT.601 limited); canDecode gate + native fallback"},
+  {"path":"js/components/Compounds/MpiVideoSurface/MpiVideoSurface.js","role":"modified","note":"canvas overlay + frameSink-backed frameStep (dropped 0.25fs bias; paint canvas BEFORE seek to kill scrub-back flash; fallback bias when sink undecodable)"},
+  {"path":"js/components/Compounds/MpiVideoSurface/MpiVideoSurface.css","role":"modified","note":"__frame overlay: width/height:100%+object-fit:contain (matches <video>); data-frame toggle"},
+  {"path":"js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js","role":"modified","note":"sub-range loop freeze fix (time-based boundary + re-play on wrap); in!=0 pin fix (removed t<_in-lead re-seek); deleted _effectiveFps stub"},
+  {"path":"package.json","role":"modified","note":"added mediabunny@1.50.8 runtime dep"},
+  {"path":"package-lock.json","role":"modified","note":"mediabunny + @types lockfile"}
+]}

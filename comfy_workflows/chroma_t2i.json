@@ -1,0 +1,475 @@
+{
+  "792": {
+    "inputs": {
+      "clip": [
+        "1870",
+        0
+      ],
+      "text": [
+        "2594",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "797": {
+    "inputs": {
+      "clip": [
+        "1870",
+        0
+      ],
+      "text": [
+        "2595",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "neg"
+    }
+  },
+  "823": {
+    "inputs": {
+      "model_name": "Chroma1-HD-Flash.safetensors",
+      "weight_dtype": "default",
+      "clip_name1_opt": "t5xxl_fp16.safetensors",
+      "clip_name2_opt": ".none",
+      "clip_name3_opt": ".none",
+      "clip_name4_opt": ".none",
+      "clip_type": "chroma",
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "ClownModelLoader",
+    "_meta": {
+      "title": "ClownModelLoader"
+    }
+  },
+  "847": {
+    "inputs": {
+      "model": [
+        "2599",
+        0
+      ],
+      "clip": [
+        "1870",
+        0
+      ],
+      "vae": [
+        "823",
+        2
+      ],
+      "positive": [
+        "792",
+        0
+      ],
+      "negative": [
+        "797",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "1129": {
+    "inputs": {
+      "basic_pipe": [
+        "847",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1646": {
+    "inputs": {
+      "samples": [
+        "2248",
+        0
+      ],
+      "vae": [
+        "1129",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1647": {
+    "inputs": {
+      "images": [
+        "1646",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "1739": {
+    "inputs": {
+      "width": [
+        "2603",
+        0
+      ],
+      "height": [
+        "2604",
+        0
+      ],
+      "batch_size": [
+        "2608",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "1870": {
+    "inputs": {
+      "min_padding": 1,
+      "min_length": 0,
+      "clip": [
+        "823",
+        1
+      ]
+    },
+    "class_type": "T5TokenizerOptions",
+    "_meta": {
+      "title": "T5 Tokenizer Options"
+    }
+  },
+  "2248": {
+    "inputs": {
+      "eta": 0.5,
+      "sampler_name": "exponential/res_2s",
+      "scheduler": "bong_tangent",
+      "steps": 8,
+      "steps_to_run": -1,
+      "cfg": 1,
+      "sampler_mode": "standard",
+      "bongmath": true,
+      "model": [
+        "1129",
+        0
+      ],
+      "positive": [
+        "1129",
+        3
+      ],
+      "negative": [
+        "1129",
+        4
+      ],
+      "latent_image": [
+        "2611",
+        0
+      ],
+      "denoise": [
+        "2613",
+        0
+      ],
+      "seed": [
+        "2605",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "2250": {
+    "inputs": {
+      "shift": 1,
+      "model": [
+        "823",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "Flow Shift"
+    }
+  },
+  "2251": {
+    "inputs": {
+      "model": [
+        "2250",
+        0
+      ]
+    },
+    "class_type": "Mahiro",
+    "_meta": {
+      "title": "patch"
+    }
+  },
+  "2594": {
+    "inputs": {
+      "string": "Selfie shot from above off A beautiful redhead with green eyes and wavy long hair lying on a towel at a beach, wearing a bikini, sweaty, sun hitting your skin. Amateur photo taken on the phone. Candid moment. "
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "2595": {
+    "inputs": {
+      "string": "anime, bad hands, pixelated, drawing, CGI, ai, stable diffusion, action figure, 2d, cartoon, sketch, render, 3d, anime, painting, drawing, digital art, fan art, 2d art, wax, doll-like, perfect skin, 2.5d, smooth skin, jewelry, hyperrealistic, ultrarealistic, ugly, extra fingers, extra limbs, femboy, trans, child, toddler, watermark"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "2596": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "2251",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "2597": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "2596",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "2598": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "2600",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "2599": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "2601",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "2600": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "2597",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "2601": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "2598",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "2603": {
+    "inputs": {
+      "int": 896
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "2604": {
+    "inputs": {
+      "int": 1088
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "2605": {
+    "inputs": {
+      "int": 891976866874163
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "2608": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Batch_Size"
+    }
+  },
+  "2611": {
+    "inputs": {
+      "true": [
+        "2616",
+        0
+      ],
+      "false": [
+        "1739",
+        0
+      ],
+      "boolean": [
+        "2612",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "i2i"
+    }
+  },
+  "2612": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Is_i2i"
+    }
+  },
+  "2613": {
+    "inputs": {
+      "true": [
+        "2614",
+        0
+      ],
+      "false": [
+        "2615",
+        0
+      ],
+      "boolean": [
+        "2612",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "i2i"
+    }
+  },
+  "2614": {
+    "inputs": {
+      "float": 0.3
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_denoise"
+    }
+  },
+  "2615": {
+    "inputs": {
+      "float": 1
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "dummy"
+    }
+  },
+  "2616": {
+    "inputs": {
+      "pixels": [
+        "2619",
+        0
+      ],
+      "vae": [
+        "1129",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "2617": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "2619": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "2617",
+        0
+      ],
+      "width": [
+        "2603",
+        0
+      ],
+      "height": [
+        "2604",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  }
+}

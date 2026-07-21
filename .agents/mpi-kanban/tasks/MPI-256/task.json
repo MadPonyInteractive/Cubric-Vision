@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-256",
+  "title": "Artistic tier — App Library + Apps (Higgsfield-style outcome apps)",
+  "description": "New user tier: outcome apps behind a dev-gated App Library overlay. Investigation done (research/), decisions locked (design.md §12), large plan attached (plan.md). Dev-gated until >=4 apps.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-11T10:00:00Z",
+  "updated_at": "2026-07-11T20:25:00Z",
+  "labels": ["feature", "ui", "architecture", "dev-gated", "ongoing"],
+  "links": {
+    "plan": "plan.md",
+    "validation": "validation.md",
+    "research": "research/",
+    "events": "events.jsonl",
+    "memory": "C:/Users/Fabio/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/project_civarchive_lora_browser_and_workflow_cards.md"
+  }
+}

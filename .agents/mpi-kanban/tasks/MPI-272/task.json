@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-272",
+  "title": "Media-load system migration â€” path-into-string cleanup (kill placeholder/silence, keep latents)",
+  "description": "Workflows already migrated to path-into-string media nodes (MpiLoadImageFromPath / MpiLoadAudio / MpiLoadVideo / MpiString â€” full file PATH goes into one `string` widget; nodes self-gate on empty string). Clean up ALL app-side + generator + docs remnants of the OLD system (ComfyUI input slots + placeholder.png/ltx_silence.wav staging + _uploadImage upload-name branch). FULL REMOVAL EXCEPT LATENTS: .latent files still stage into ComfyUI input/ (LoadLatent has no path-string node) â€” keep ComfyUI_00001_/ltx_video_latent_/ltx_audio_latent_ staging, kill only placeholder.png + ltx_silence.wav. Path source is ALWAYS the project folder (gallery or .preview-assets via /project-file?path=), never raw filesystem â€” reuse-prompt depends on it. Image/mask join video/audio on the imagepath path-resolve branch (drop _uploadImage for local; keep _uploadRemoteMedia for Pod). Preserve the reuse-404 soft-error (input_asset_deleted) when moving image/mask to imagepath. Blocks clean orchestrate runs (generator STAMP steps fail on MpiLoadImageFromPath). Also finishes this session's scripts/workflow-to-api.mjs + scripts/sync-raw-workflows.mjs and references them in add-model/add-app playbooks.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-13T03:26:44Z",
+  "updated_at": "2026-07-13T22:15:00Z",
+  "labels": [
+    "refactor",
+    "comfy",
+    "media-injection",
+    "cleanup",
+    "tooling"
+  ],
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}

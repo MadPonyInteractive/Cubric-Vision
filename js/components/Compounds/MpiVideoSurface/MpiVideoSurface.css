@@ -20,3 +20,19 @@
     object-fit: contain;
     cursor: pointer;
 }
+
+/* Exact-frame overlay (MPI-283): painted for paused/frame-step display,
+   sits over the <video> and is shown only while stepping. */
+.mpi-video-surface__frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    display: none;
+}
+
+.mpi-video-surface[data-frame="true"] .mpi-video-surface__frame {
+    display: block;
+}

@@ -1,0 +1,1 @@
+{"at": "2026-07-19T13:00:00Z", "type": "task.created", "task": "MPI-312", "note": "Surfaced while validating krea2 identity-edit v1.2. Slot order is load-bearing per the krea2edit node tooltip and upstream model card, but the UI shows bare numeric badges. Injection wiring traced and confirmed correct \u2014 labelling gap only."}

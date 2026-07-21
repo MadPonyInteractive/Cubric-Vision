@@ -1,0 +1,111 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "35082d23-e8bb-4add-9af2-6708de359879",
+  "generated_at": "2026-07-14T17:03:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-276 Phase 8 (user-ux) — rows 1/2/3/4/6 PASS; Row 5 found TWO real bugs, BOTH FIXED (uncommitted) + unit-tested green + loaded in a fresh app, NOT live-retested. Resume: live-retest both fixes, rows 7-8, commit 5 files, close.",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Run Phase 8 — the user-ux validation matrix. Automated rail first, then walk the user through the live matrix at port 3000. On pass: write validation.md, move MPI-276 to done, run mpi-end.",
+    "status": "in_progress",
+    "summary": "Rows 1,2,3,4,6 PASS. Row 5 (uninstall) surfaced TWO real bugs, both fixed this session (UNCOMMITTED): (1) op-partial shared-dep guard deleted a shared dep an op-partially-installed sibling still needed → cascade (routes/downloadManager.js, both local+remote guards); (2) a queued 2nd install got wiped by a download:snapshot broadcast → silent vanish (js/services/downloadService.js). Unit tests for both green; both fixes on disk AND loaded in a freshly-restarted app. NEITHER live-retested. Remaining: live-retest bug1 (uninstall 5B, Wan Smooth survives) + bug2 (concurrent install, 2nd queues not drops), then rows 7 (remote Pod) + 8 (verdict), then commit 5 dirty files + card done + mpi-end."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+    "completed": [
+      "Phases 1-7 shipped + committed prior sessions (384dd7d8, 10767266, aba74a9, 4aa0c85f).",
+      "Phase 8 automated rail PASS (lint 0 errors; all MPI-276 suites green; 6 failing tests all pre-existing/other-card).",
+      "Row 2 (local install) PASS. Row 4 (cancel mid-download) PASS (closes MPI-123-local). Row 6 (reload restore) PASS.",
+      "Row 1 (cold-boot phantom) PASS — after restart backend jobs:[]; idle % bars on jobless cards are legitimate shared-dep partial-progress, not phantom active jobs.",
+      "Row 3 (swallowed-request) PASS — wifi off → ~0.5s revert + ui:warning toast + POST 503; no stuck spinner.",
+      "Row 5 BUG 1 fixed: op-partial shared-dep guard (routes/downloadManager.js, local + remote) — use deriveInstalledOps to protect the sibling's installed-op deps (commonDeps ride along); MPI-258 tier-cycle stays broken. Test in tests/uninstall-guards.test.cjs (11/11).",
+      "Row 5 BUG 2 fixed: download:snapshot preserves 'queued' client jobs (js/services/downloadService.js) so a queued 2nd install is not wiped. Test in tests/snapshot-preserves-queued.test.cjs (4/4).",
+      "Temp [TMP-Q] instrumentation fully removed from downloadService.js. Served FE re-verified: 0 TMP-Q, queued-preserve present. App freshly restarted → backend guard fix live."
+    ],
+    "pending": [
+      "LIVE RE-TEST BUG 2 (queue): install a fresh (0% no-partial) model e.g. ILL Anime → while downloading, install another fresh model e.g. PONY Mix → the 2nd MUST show queued → then download, NEVER revert to Install. Confirm DevTools console shows NO [TMP-Q] (proves clean code). Repeat 2-3x (bug was intermittent/timing).",
+      "LIVE RE-TEST BUG 1 (Row 5 uninstall): with Wan 2.2 Smooth installed I2V-only + Wan 2.2 5B installed → uninstall 5B → Wan 2.2 Smooth MUST STAY installed (no cascade). Then disk-verify: 5B-unique gone (diffusion_models/wan2.2_ti2v_5B_fp16.safetensors, loras/wan-2.2-5b/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors, vae/wan2.2_vae.safetensors) AND shared SURVIVES (text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors). Root check via G:/CubricModels.",
+      "Row 7: remote Pod pass — user connects a Pod (wrapper 0.2.37), install+uninstall small dep, confirm hot-store evict + pipPins in wrapper log, no local state mutated by remote events. NOTE the same op-partial guard fix now applies to the REMOTE guard too — worth a remote op-partial uninstall check if feasible.",
+      "Row 8: user verdict on phantom-free churn feel.",
+      "AT CLOSE: COMMIT the 5 UNCOMMITTED files by EXPLICIT PATHSPEC (never git add .): js/services/downloadService.js, js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js, routes/downloadManager.js, tests/uninstall-guards.test.cjs, tests/snapshot-preserves-queued.test.cjs. Then move MPI-276 doing->done, run mpi-end (append 'refCount DELETED in MPI-276' to feedback_refcount_leaks_never_gate_on_zero, drop MPI-276 from in-flight, note MPI-123-local closure).",
+      "OPTIONAL uncarded follow-up: quit-dialog copy 'will resume from partial on next launch' implies auto-resume but code does NOT auto-resume (downloadManager.js:478); resumes only on next manual Install. Minor copy/behavior mismatch — its own tiny card, NOT part of MPI-276."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-276",
+    "title": "Download/install/uninstall system refactor - installStore SOT + engine adapters + reconciler",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-276/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-276/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-276/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "validation.md updated: rows 1/3/5 filled; both new fixes documented in full (root cause + fix + test each); the two non-bug observations noted (quit-dialog copy mismatch; dup-download already handled)."
+    ],
+    "pending": [
+      "COMMIT the 5 dirty files at close (2 prior FE fixes + downloadManager.js guard + 2 test files). Prior-session FE fixes (rows 2/4/6) in downloadService.js + MpiModelManager.js are ALSO uncommitted and go in the same commit.",
+      "Memory at mpi-end: refCount-DELETED note + drop MPI-276 from in-flight + MPI-123-local closure. Consider a durable docs/download-manager.md note: 'shared-dep uninstall guard must protect installed-OP deps (deriveInstalledOps), not require whole-universe install — op-partial siblings (Wan I2V-only) else lose their shared clip/VAE'.",
+      "Consider carding the quit-dialog auto-resume copy mismatch as a separate tiny task."
+    ]
+  },
+  "next_action": {
+    "description": "Live-retest the two new fixes on the freshly-restarted app (port 3000, user-owned — coordinate, never kill their app). BUG 2: install a fresh 0% model, then a 2nd fresh 0% model mid-download → 2nd must queue then download (not revert), console shows NO [TMP-Q]. BUG 1: Wan Smooth I2V-only + Wan 5B installed → uninstall 5B → Wan Smooth SURVIVES + disk-verify umt5 shared clip kept, 5B-unique deleted. Then rows 7 (remote Pod) + 8 (verdict). On all-pass: commit the 5 dirty files by explicit pathspec, move MPI-276 doing->done, run mpi-end.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "BUG 1 fix reuses existing deriveInstalledOps (resolveModelDeps.js) rather than adding new per-op disk logic — it already returns {installedOps, fullyInstalled=common+>=1 op complete}. Guard now protects resolveDeps(model, installedOps, null, null). Applied to BOTH _localSharedDepsMap AND _remoteSharedDepIds (feedback_check_both_engine_paths). MPI-258 tier-cycle explicitly preserved: absent-transformer tier → fullyInstalled:false → protects nothing → still deletable (tested).",
+      "BUG 2 fix is a one-line status-set addition: the download:snapshot merge now preserves 'queued' (alongside 'pending'/'downloading') client jobs absent from the backend snapshot, + counts 'queued' in downloadQueueActive. Rationale: a queued job has fired NO POST yet so it is correctly absent from the backend snapshot; without preservation it is wiped and _firePost later skips its POST while _inFlight still counts it.",
+      "The earlier same-session concurrent-install tests PASSED intermittently on old code — bug 2 only triggers when a download:snapshot lands while a job sits 'queued'. Timing-dependent; the fix makes it deterministic-safe.",
+      "Row 1 was initially mis-called a phantom FAIL; corrected to PASS — the % bars on LTX/Wan5B are idle partial-progress (shared-dep coverage on disk), backend jobs:[] confirms no phantom active job.",
+      "Agent now owns app restarts (user asked). Full restart is required to load routes/downloadManager.js (backend, no hot-reload); location.reload / renderer reload does NOT re-fetch the FE bundle reliably here (bundle cached). Confirm a clean load by checking served FE has 0 [TMP-Q]."
+    ],
+    "constraints": [
+      "Phase 8 is user-ux — agent MUST NOT self-approve. User judges live UI. Port 3000 user-owned.",
+      "Shared tree: NEVER git add . / -A. Commit the 5 files by explicit pathspec, git commit -n. Unrelated dirty tree (.impeccable/, DESIGN.md, PRODUCT.md, other kanban, comfy_workflows) is NOT MPI-276 — leave it. Peer may hold unstaged hunks in MpiModelManager.js — stage by content anchor if so (feedback_shared_tree_commit_hygiene).",
+      "refCount is DELETED (G5). Liveness = store status / _inFlightDepIds. Never reintroduce.",
+      "G4 preserve-verbatim: NDH cancel-only (never pause/resume), .cubricdl, sha256 verify, shared-dep whole-model guard SEMANTICS (bug-1 fix keeps the guard, only widens WHICH sibling-deps it protects — op-partial included), wrapper endpoint signatures + SSE event names.",
+      "Both new fixes are the ONLY new code this session. downloadManager.js change is backend (needs restart). downloadService.js change is FE. No route/signature/SSE-name change.",
+      "peer commit 987cd539 removed the 'Also delete model files' uninstall checkbox — uninstall always deletes files now. Affects Row 5 (no keep-files option)."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js (UNCOMMITTED — BUG 1: _localSharedDepsMap + _remoteSharedDepIds now protect installed-op deps via deriveInstalledOps/resolveDeps, not whole-universe)",
+      "js/services/downloadService.js (UNCOMMITTED — BUG 2: download:snapshot preserves 'queued' client jobs + downloadQueueActive counts 'queued'; PLUS prior-session rows-2/4/6 fixes: snapshot preserves pending+downloading, started-echo guard, snapshot Events emit. Temp [TMP-Q] logs REMOVED.)",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js (UNCOMMITTED — prior-session rows-2/4/6: download:snapshot listener -> renderList, _pumpBackstop missed-terminal poll, awaitReSync quiet flag)",
+      "tests/uninstall-guards.test.cjs (UNCOMMITTED — new op-partial shared-dep case)",
+      "tests/snapshot-preserves-queued.test.cjs (UNCOMMITTED — NEW file, queued-preserve repro)",
+      ".agents/mpi-kanban/tasks/MPI-276/validation.md (rows 1/3/5 + both new fixes documented)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-276/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "routes/downloadManager.js",
+      "js/services/downloadService.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-14T17:03:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-276 Phase 8 (user-ux validation matrix) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/35082d23-e8bb-4add-9af2-6708de359879.json then run mpi-continue. Rows 1,2,3,4,6 PASS. Row 5 (uninstall) surfaced TWO real bugs, BOTH FIXED this session and UNCOMMITTED, both unit-tested green, both on disk AND loaded in a freshly-restarted app, but NEITHER live-retested. BUG 1 (routes/downloadManager.js): the uninstall shared-dep guards (_localSharedDepsMap + remote _remoteSharedDepIds) only protected a sibling's deps when it was WHOLE-UNIVERSE installed, so an op-partial install (Wan 2.2 Smooth with only I2V) protected nothing and uninstalling Wan 2.2 5B deleted the shared umt5 clip both need, cascading BOTH models to uninstalled; fixed by protecting the sibling's INSTALLED-OP deps via deriveInstalledOps + resolveDeps (commonDeps ride along; MPI-258 tier-cycle stays broken). BUG 2 (js/services/downloadService.js): the download:snapshot handler preserved only pending/downloading client jobs absent from the backend snapshot, so a QUEUED 2nd install (no POST fired yet) got wiped and silently reverted to Install while _inFlight still counted it; fixed by preserving 'queued' too. Live-retest BUG 2 first (install a fresh 0% model, then a 2nd fresh 0% model mid-download → the 2nd must queue then download, never revert; confirm DevTools console shows NO [TMP-Q]), then BUG 1 (Wan Smooth I2V-only + Wan 5B installed → uninstall 5B → Wan Smooth SURVIVES; disk-verify umt5_xxl_fp8_e4m3fn_scaled.safetensors kept and the three 5B-unique files gone on G:/CubricModels), then rows 7 (remote Pod, wrapper 0.2.37) and 8 (user verdict). Port 3000 is user-owned and the AGENT now owns app restarts (full restart needed to load the backend downloadManager.js change). On all-pass: COMMIT these 5 files by EXPLICIT PATHSPEC (never git add .; git commit -n) — js/services/downloadService.js, js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js, routes/downloadManager.js, tests/uninstall-guards.test.cjs, tests/snapshot-preserves-queued.test.cjs — then move MPI-276 doing->done and run mpi-end. validation.md already documents both fixes in full."
+}

@@ -1,0 +1,116 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "22ecec63-b870-4fa6-a8aa-6c7e19b2fc9d",
+  "generated_at": "2026-07-14T00:35:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-276 Phase 2b.1 + 2b.3 shipped — resume at Phase 3 (reconciler); read-flip deferred to Phase 4",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Kill the download/install/uninstall subsystem's 5 root diseases with an installStore SOT + engine adapters + reconciler + snapshot protocol + FE mirror + unified uninstall + Pod wrapper fixes (MPI-276).",
+    "status": "in_progress",
+    "summary": "Phases 1, 2a, 2b.1, 2b.3 shipped + committed. installStore is now a live, verified SHADOW SOT in downloadManager.js: populated at all 3 start sites, every status write mirrored into it via helpers, G9 version in the API responses. The maps stay write-authoritative until the FE mirror. Resume at Phase 3 (reconciler, independent of the FE) — the read-flip + map-status-write deletion were found to be BLOCKED on Phase 4 and moved there."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+    "completed": [
+      "Investigation (4-agent sweep, dossiers research/00-04) + Socratic Gate G1-G20",
+      "Phase 1: installStore.js + computeProgress.js + 34 tests green (0d4f0301)",
+      "Phase 2a: refCount DELETED + totalBytes +=->SET + register-before-respond (5bbf08f2)",
+      "Phase 2b.1: ResumableDownloader->FileDownloader rename (0ae5fa07)",
+      "Phase 2b.3: installStore wired as shadow SOT (749ce170) + G9 version additive (3e4fa02b)"
+    ],
+    "pending": [
+      "Phase 3: reconciler.js (G11) — drives the store from disk truth; independent of FE read shape, can proceed NOW",
+      "Phase 4 (RESHAPED): FE mirror consuming download:snapshot + store strings, THEN flip status-endpoint/snapshot reads onto store.snapshot(), THEN delete the now-redundant map status-writes and the physical adapter split (G6 localAdapter.js/remoteAdapter.js)",
+      "Phase 5: uninstall unification (folder-delete bug fix)",
+      "Phase 6: Pod wrapper 0.2.36->0.2.37 (hot-store evict + pipPins; separate repo git -C c:/AI/Mpi/mpi-ci)",
+      "Phase 7: docs rewrite",
+      "Phase 8: user-ux verification matrix"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-276",
+    "title": "Download/install/uninstall system refactor - installStore SOT + engine adapters + reconciler",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-276/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-276/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md Plan Drift updated with 2b.1 + 2b.3 + the Phase-4-block finding (committed 55bd1581)",
+      "Both event logs appended task.updated for 2b.1 and 2b.3",
+      "task.json updated_at bumped"
+    ],
+    "pending": [
+      "At card close: append 'refCount DELETED in MPI-276' to memory feedback_refcount_leaks_never_gate_on_zero",
+      "docs/download-manager.md refCount/SOT rewrite is Phase 7, not yet due",
+      "MPI-123-local cancel-display closure check is Phase 8",
+      "Prune the resume-dead download-completion.test.cjs (fails resumeFromFile on pristine tree too) when the resume-dead tests are cleaned up"
+    ]
+  },
+  "next_action": {
+    "description": "Start Phase 3: build routes/install/reconciler.js (G11). It polls disk truth while store.hasActiveJobs(), heals store state against what is actually installed, and prunes terminal jobs via store.pruneTerminal(confirmedInstalled). It drives the shadow store — it does NOT touch the FE read shape, so it is safe to land before Phase 4. Do NOT attempt the read-flip or delete the map status-writes yet: _serializeModelJob emits runtime strings ('complete','idle') and a different field set than store.snapshot() ('done', store dep shape), and no FE consumes download:snapshot until Phase 4 — flipping reads now breaks the Model-Library UI. Read plan.md Plan Drift (bottom) for the full 2b.3 state and the Phase-4-block reasoning.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Safe-slice-first (user call): split Phase 2b into 2b.1 (rename), 2b.3 (store wire + G9), leaving read-flip + write-cleanup + physical split for later. Each slice independently bootable + committable.",
+      "installStore wired as a SHADOW SOT, not a live-authoritative one: it is populated + mirrored in lockstep, but the maps still drive reads/writes. This proves the store tracks the full lifecycle without drift before anything user-facing depends on it.",
+      "The maps are NOT deleted — they carry 7 transport-only fields the pure store deliberately omits (url, filename, localPath, error, sha256Expected, pipPins, installRequirementsCommand). Final design: store = lifecycle+progress+version SOT; maps = transport carriers.",
+      "All 31 status writes routed through _setModelStatus/_setDepStatus helpers with a single runtime->store string map (_MODEL_STATUS_TO_STORE / _DEP_STATUS_TO_STORE). model 'complete'->'done'; 'idle' has no store state (map-only). Single translation point = zero drift risk; grep proves zero raw '.status =' writes remain.",
+      "G9 version added ADDITIVELY (store.version() alongside the existing map-derived jobs) so the FE shape is unchanged. Read-flip onto store.snapshot() is a SEPARATE, later step.",
+      "PLAN RESHAPE: read-flip + map-status-write deletion are BLOCKED on Phase 4 (FE mirror) and moved there. Phase 3 reconciler is independent and proceeds next.",
+      "2b.1 rename: the historical comment at downloadManager.js:333 intentionally keeps the old ResumableDownloader name as provenance."
+    ],
+    "constraints": [
+      "Shared tree: downloadManager.js + kanban files edited by peers mid-task — content-anchor edits, re-read on stale-Edit, re-grep after. Never git add . / -A. This session other-session dirty files present: MpiSettings*, MpiCheckbox* (peer, do not touch).",
+      "G6: public exports must keep name+signature (cancelAllDownloads, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall, runCustomNodeInstall, broadcastEngineEvent, FileDownloader). engine.js:17 + shutdown depend on them.",
+      "G4 preserve verbatim: NDH cancel-only transport (NEVER reintroduce pause/resume), .cubricdl contract, sha256 verify, path resolvers, _filterDepsForEngine/_withEngineExtraDeps, _localSharedDepsMap/_remoteSharedDepIds whole-model-installed rule, disk-full pre-flight, _extractZipArchive, _nodeFolderHasFiles (MPI-243), all wrapper endpoint signatures, all existing SSE event NAMES.",
+      "Store prune limitation to know for Phase 3: pruneTerminal evicts a DONE job immediately only when its modelId is in confirmedInstalled; failed/cancelled evict on FAILED_TTL_MS (30s), done on DONE_TTL_MS (120s) belt. There is no public single-model force-delete — the reconciler drives eviction via pruneTerminal + confirmedInstalled.",
+      "Port 3000 is user-owned — never kill their app. Route/module tests: load module or mount router alone on :3999 from repo root (needs repo-root cwd for node_modules), curl, revert. Not /tmp.",
+      "Pod wrapper (Phase 6) is a SEPARATE repo commit: git -C c:/AI/Mpi/mpi-ci."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js",
+      "routes/engine.js",
+      "routes/shared.js",
+      "tests/download-completion.test.cjs",
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-276/task.json",
+      ".agents/mpi-kanban/tasks/MPI-276/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-276/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-276/handoffs/phase2-carve.md",
+      "routes/install/installStore.js",
+      "routes/install/computeProgress.js",
+      "routes/downloadManager.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "events", "state"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-07-14T00:35:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-276 (download/install/uninstall refactor) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/22ecec63-b870-4fa6-a8aa-6c7e19b2fc9d.json and then run mpi-continue. Phases 1, 2a, 2b.1 (ResumableDownloader->FileDownloader rename, 0ae5fa07) and 2b.3 (installStore wired as a SHADOW single-source-of-truth in routes/downloadManager.js — populated at all 3 start sites via _registerModelInStore, every status write mirrored through _setModelStatus/_setDepStatus helpers into store.transitionModel/Dep with a runtime->store string map, G9 store.version() added additively to the status + start responses; commits 749ce170 + 3e4fa02b) are shipped and committed. The store is a verified shadow — it tracks the full lifecycle in lockstep but the _modelJobs/_depJobs maps stay write-authoritative and still drive all reads, and they remain the transport carriers for fields the pure store omits (url, localPath, sha256Expected, pipPins, installRequirementsCommand). Your next action is Phase 3: build routes/install/reconciler.js (G11) — it polls disk truth while store.hasActiveJobs(), heals store state against what is installed on disk, and prunes terminal jobs via store.pruneTerminal(confirmedInstalled). Phase 3 drives the store and is independent of the frontend, so it is safe to land now. Do NOT attempt to flip the status-endpoint/snapshot reads onto store.snapshot() or delete the map status-writes: those are BLOCKED on Phase 4 (the FE mirror) because _serializeModelJob emits runtime status strings ('complete','idle') and a different field set than store.snapshot() ('done', store dep shape) and no frontend consumes the download:snapshot event yet — flipping reads before the FE mirror would break the Model-Library UI. The read-flip + map-status-write deletion + the physical adapter split (G6) all move into Phase 4. Read the plan.md Plan Drift section (bottom) first for the full 2b.3 state and the Phase-4-block reasoning, then handoffs/phase2-carve.md for the G4 preserve-verbatim list and G6 export contract. Shared tree: never git add . — content-anchor edits, re-grep after."
+}

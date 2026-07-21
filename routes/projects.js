@@ -33,7 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
-const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { extractVideoThumb, extractImageThumb } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
@@ -100,25 +100,27 @@ async function findRecentProjectThumbnail(mediaDir) {
     const metaDir = path.join(mediaDir, '.meta');
     let sawMetaSidecar = false;
     if (await fs.pathExists(metaDir)) {
-        const metaFiles = await fs.readdir(metaDir);
-        for (const metaFile of metaFiles) {
-            if (!metaFile.endsWith('.json')) continue;
-            sawMetaSidecar = true;
+        const metaFiles = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        sawMetaSidecar = metaFiles.length > 0;
+        // Read every sidecar concurrently — a heavy project has 100+ of them and
+        // serialising readJson+stat over cold disk was the dominant cost.
+        const results = await Promise.all(metaFiles.map(async (metaFile) => {
             try {
                 const meta = await fs.readJson(path.join(metaDir, metaFile));
-                if (RECENT_THUMBNAIL_EXCLUDED_OPERATIONS.has(String(meta.operation || ''))) continue;
+                if (RECENT_THUMBNAIL_EXCLUDED_OPERATIONS.has(String(meta.operation || ''))) return null;
                 const absPath = pathFromProjectFileUrl(meta.filePath);
-                if (!absPath || !(await fs.pathExists(absPath))) continue;
+                if (!absPath || !(await fs.pathExists(absPath))) return null;
                 const ext = path.extname(absPath).toLowerCase().slice(1);
-                if (!RECENT_THUMBNAIL_EXTENSIONS.has(ext)) continue;
+                if (!RECENT_THUMBNAIL_EXTENSIONS.has(ext)) return null;
                 const stats = await fs.stat(absPath);
-                candidates.push({
+                return {
                     path: absPath,
                     ext,
                     timestamp: Date.parse(meta.createdAt || '') || stats.mtimeMs,
-                });
-            } catch (_) { /* skip malformed sidecars */ }
-        }
+                };
+            } catch (_) { return null; /* skip malformed sidecars */ }
+        }));
+        for (const c of results) if (c) candidates.push(c);
     }
 
     if (!candidates.length && !sawMetaSidecar) {
@@ -179,8 +181,60 @@ function updateItemMeta(metaPath, updater) {
     return next;
 }
 
+// ── Monotonic sequence allocator ─────────────────────────────────────────────
+// Sequenced media names (i2v_ms_001.mp4, combined_001.mp4, crop_001.mp4…) must
+// NEVER reuse a number, even after the file is deleted — a reused name lets a
+// new gen overwrite an existing card's file, or a delete-by-filename strip a
+// still-referenced entry (both → blank card + gallery 404).
+//
+// The counter is a per-prefix monotonic value in project.json under
+// `sequenceCounters` (e.g. { edit: 7, t2i: 2, upscale: 10 }). It is the SINGLE
+// source of truth: it is bumped and persisted atomically inside the same
+// project.json write queue, and disk is never consulted after the first seed —
+// so deleting media can't roll it back. Legacy projects (files already on disk,
+// no counter yet) seed the counter from the current disk-max ONCE on first use,
+// then stop scanning. This is deliberately NOT stored in Media/.meta/ (a
+// GC-swept directory); project.json is app-owned and never GC'd.
+async function nextSequence(folderPath, mediaDir, prefix, ext = 'mp4') {
+    // One-time legacy seed: max NNN already on disk for this prefix. Only used
+    // when the project has no counter for this prefix yet.
+    let diskMax = 0;
+    try {
+        const entries = await fs.readdir(mediaDir);
+        const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
+        for (const f of entries) {
+            const m = f.match(re);
+            if (m) { const n = parseInt(m[1], 10); if (n > diskMax) diskMax = n; }
+        }
+    } catch (_) { /* mediaDir missing → diskMax 0 */ }
+
+    let chosen = diskMax + 1;
+    const jsonPath = path.join(folderPath, 'project.json');
+    await updateProjectJson(jsonPath, project => {
+        const counters = { ...(project.sequenceCounters || {}) };
+        const prev = Number.isFinite(counters[prefix]) ? counters[prefix] : null;
+        // prev present → pure SoT (ignore disk). Absent → seed from disk-max once.
+        chosen = (prev === null ? diskMax : Math.max(prev, diskMax)) + 1;
+        counters[prefix] = chosen;
+        return { ...project, sequenceCounters: counters };
+    });
+    const seq = String(chosen).padStart(3, '0');
+    return `${prefix}_${seq}.${ext}`;
+}
+
 function projectFileUrl(filePath) {
     return `/project-file?path=${encodeURIComponent(filePath)}`;
+}
+
+// Cache-busted variant for FRESHLY-WRITTEN output files. A run that overwrites a
+// reused sequenced name (crop_001, combined_001, etc.) at the same path would
+// otherwise share the previous run's cached bytes in Chromium's <video>/<img>
+// cache. Appending the output's mtime gives each write a fresh URL. Read-side
+// callers (reconciler, thumbnails, latents) keep plain projectFileUrl.
+function projectFileUrlBusted(filePath) {
+    let mtime = 0;
+    try { mtime = Math.round(fs.statSync(filePath).mtimeMs); } catch (_) { /* file just written; best-effort */ }
+    return `/project-file?path=${encodeURIComponent(filePath)}&v=${mtime}`;
 }
 
 function relativeProjectPath(projectRoot, filePath) {
@@ -512,7 +566,9 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
     if (snapshotRequests.length) {
         for (const request of snapshotRequests) {
-            if (!request?.url || (request.role !== 'startFrame' && request.role !== 'endFrame')) continue;
+            // MPI-295: snapshot ANY declared image input, keyed by its own slot-role
+            // (inputImage/inputImage2/startFrame/endFrame/…), not just frame roles.
+            if (!request?.url || !request.role) continue;
             const ext = snapshotExt(request.url);
             const meta = {
                 role: request.role,
@@ -560,19 +616,28 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     return { frozenParams: nextFrozenParams, previewAssets: result };
 }
 
-function _isI2VOperation(operation) {
-    return String(operation || '').startsWith('i2v');
-}
-
+// MPI-295: role-agnostic. Persist whatever slot-key role the chip already carries
+// (assigned from the op's mediaInputs slot.key by MpiPromptBox._withAssignedRoles —
+// e.g. krea2Edit's inputImage/inputImage2, i2v's startFrame/endFrame). The generic
+// snapshot plumbing must NOT invent or force startFrame/endFrame by index; that
+// destroyed multi-image edit roles (both chips tagged startFrame/endFrame → restore
+// & reuse collapse). The positional startFrame/endFrame fallback survives ONLY for
+// legacy role-less i2v chips (an untagged first/second image → the i2v frame slots).
 function _snapshotRoleForMediaItem(item, index, usedRoles) {
-    if (item?.role === 'startFrame' || item?.role === 'endFrame') return item.role;
+    if (item?.role) return item.role;
     if (index === 0 && !usedRoles.has('startFrame')) return 'startFrame';
     if (index === 1 && !usedRoles.has('endFrame')) return 'endFrame';
     return null;
 }
 
+// Snapshot the INPUT image(s) of any image-input op (i2i, edit, i2v, …) into the
+// content-addressed store so Reuse Prompt can resurface them (MPI-227 wired only
+// i2v; i2i/edit had image inputs but never snapshotted → "Use Images" reuse was
+// dead for every image-edit card). Gate is the presence of image mediaItems, not
+// the op name: t2i/t2v have no image input → imageItems empty → bail below. Only
+// generationSettings.mediaItems (the inputs) are read, never the output.
 async function materializeGenerationFrameSnapshots({ projectRoot, mediaDir, itemId, operation, generationSettings }) {
-    if (!_isI2VOperation(operation) || !generationSettings || typeof generationSettings !== 'object') {
+    if (!generationSettings || typeof generationSettings !== 'object') {
         return { generationSettings, previewAssets: null };
     }
 
@@ -709,26 +774,32 @@ router.post('/list-projects', async (req, res) => {
         const roots = [defaultRoot, ...externalRoots.filter(r => r !== defaultRootNorm)];
         const projects = [];
 
+        // Scan every project folder concurrently. Each folder's thumbnail scan
+        // reads/stats up to N .meta sidecars; serialising this over 15+ heavy
+        // projects made cold-boot list-projects take seconds (OS file cache
+        // cold — hot reload masked it). Fan out so cold disk I/O overlaps.
+        // ponytail: unbounded Promise.all; add p-limit only if project count
+        // ever gets large enough to exhaust file handles.
         for (const root of roots) {
             if (!(await fs.pathExists(root))) continue;
             const entries = await fs.readdir(root);
             const isDefault = root === defaultRoot;
-            for (const entry of entries) {
+            const scanned = await Promise.all(entries.map(async (entry) => {
                 const jsonPath = path.join(root, entry, 'project.json');
-                if (await fs.pathExists(jsonPath)) {
+                if (!(await fs.pathExists(jsonPath))) return null;
+                try {
+                    const p = await fs.readJson(jsonPath);
+                    const diskFolder = path.join(root, entry).replace(/\\/g, '/');
+                    let recentThumbnail = null;
+                    let recentThumbnailType = null;
                     try {
-                        const p = await fs.readJson(jsonPath);
-                        const diskFolder = path.join(root, entry).replace(/\\/g, '/');
-                        let recentThumbnail = null;
-                        let recentThumbnailType = null;
-                        try {
-                            const mediaDir = path.join(root, entry, 'Media');
-                            ({ recentThumbnail, recentThumbnailType } = await findRecentProjectThumbnail(mediaDir));
-                        } catch (e) { /* silent fail for media scan */ }
-                        projects.push({ ...p, folderPath: diskFolder, recentThumbnail, recentThumbnailType, isDefaultRoot: isDefault });
-                    } catch (_) { /* skip corrupt entries */ }
-                }
-            }
+                        const mediaDir = path.join(root, entry, 'Media');
+                        ({ recentThumbnail, recentThumbnailType } = await findRecentProjectThumbnail(mediaDir));
+                    } catch (e) { /* silent fail for media scan */ }
+                    return { ...p, folderPath: diskFolder, recentThumbnail, recentThumbnailType, isDefaultRoot: isDefault };
+                } catch (_) { return null; /* skip corrupt entries */ }
+            }));
+            for (const s of scanned) if (s) projects.push(s);
         }
 
         projects.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
@@ -999,6 +1070,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
 
         const mediaDir = path.join(folderPath, 'Media');
         const filePath = path.join(mediaDir, filename);
+        let sidecarFilePath = null; // itemId's own filePath, for the delete guard below
 
         // Delete the UUID-based .meta/<uuid>.json if itemId is provided.
         // Also remove any companion video first-frame thumb referenced by the
@@ -1013,6 +1085,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             if (await fs.pathExists(uuidMetaPath)) {
                 try {
                     const sidecar = await fs.readJson(uuidMetaPath);
+                    sidecarFilePath = sidecar?.filePath || null;
                     if (sidecar?.thumbPath) {
                         const m = sidecar.thumbPath.match(/path=(.+)$/);
                         if (m) thumbAbsPath = decodeURIComponent(m[1]);
@@ -1051,9 +1124,25 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             // Cleanup command wipes the flat store.
         }
 
+        // Guard: only unlink the on-disk file when it still belongs to THIS
+        // item. Sequenced names (i2v_ms_001.mp4, combined_001.mp4…) get re-minted
+        // after a delete, so a later item can own the same filename while an
+        // earlier history entry still references it. Deleting by filename alone
+        // then orphans that other entry (missing sidecar → gallery 404). If the
+        // itemId's sidecar was still present above we captured its filePath;
+        // when it points elsewhere, skip the file unlink and only clean meta.
+        let ownsFile = true;
+        if (itemId && sidecarFilePath) {
+            const owned = pathFromProjectFileUrl(sidecarFilePath);
+            if (owned && path.normalize(owned) !== path.normalize(filePath)) {
+                ownsFile = false;
+                logger.warn('project', `delete: itemId ${itemId} sidecar points at ${path.basename(owned)}, not ${filename} — skipping file unlink to avoid orphaning another entry`);
+            }
+        }
+
         // Delete the legacy filename-based .meta/ sidecar
         const legacyMetaPath = filePath + '.json';
-        if (await fs.pathExists(filePath)) {
+        if (ownsFile && await fs.pathExists(filePath)) {
             await fs.remove(filePath);
             if (await fs.pathExists(legacyMetaPath)) await fs.remove(legacyMetaPath);
             res.json({ success: true, message: 'Permanently deleted' });
@@ -1306,18 +1395,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             const stem = path.basename(finalFileName, path.extname(finalFileName));
             // Strip trailing _NNN sequence to get the bare prefix (e.g. imported_001 → imported)
             const prefix = stem.replace(/_\d+$/, '') || 'imported';
-            const entries = await fs.readdir(mediaDir);
-            let maxNum = 0;
-            const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
-            entries.forEach(e => {
-                const m = e.match(re);
-                if (m) {
-                    const num = parseInt(m[1], 10);
-                    if (num > maxNum) maxNum = num;
-                }
-            });
-            const nextNum = (maxNum + 1).toString().padStart(3, '0');
-            finalFileName = `${prefix}_${nextNum}.${ext}`;
+            finalFileName = await nextSequence(folderPath, mediaDir, prefix, ext);
         }
 
         const base64Content = base64Data.replace(/^data:[^;]+;base64,/, '');
@@ -1333,7 +1411,7 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
         const metaContent = {
             id,
             type:           mediaType === 'video' ? 'video' : mediaType === 'audio' ? 'audio' : 'image',
-            filePath:       `/project-file?path=${encodeURIComponent(filePath)}`,
+            filePath:       projectFileUrlBusted(filePath),
             operation:      req.body.operation || 'imported',
             displayName:    finalFileName.replace(/\.[^.]+$/, ''),
             prompt:         promptContext || '',
@@ -1343,6 +1421,8 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       true,
+            appId:          null,   // App provenance parity (MPI-256) — imports are never App gens
+            appInputs:      null,
             pixelDimensions: { w: req.body.width || 0, h: req.body.height || 0 },
             generationMs:   null,
         };
@@ -1367,6 +1447,14 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             // ponytail: no duration probe — probeVideo returns null without a
             // video stream; add a dedicated audio probe if the card must show length.
             metaContent.thumbPath = null;
+        } else {
+            // Image: downscale to a gallery thumb so scrolling 100+ 4K cards
+            // doesn't decode full-res per card (MPI-319).
+            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractImageThumb(filePath, thumbPath);
+            if (thumbed) {
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+            }
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
         res.json({
@@ -1453,6 +1541,54 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
     }
 });
 
+/**
+ * POST /backfill-image-thumbs
+ * Body: { folderPath }
+ * MPI-319: generate a gallery thumb for any IMAGE sidecar that lacks one
+ * (projects created before image thumbs existed). Patches the sidecar with
+ * thumbPath and returns a { itemId: thumbPathUrl } map so the client can patch
+ * live in-memory items without a reload. Fire-and-forget on project load —
+ * missing thumbs just fall back to full-res in the gallery meanwhile.
+ */
+router.post('/backfill-image-thumbs', async (req, res) => {
+    try {
+        const { folderPath } = req.body;
+        const mediaDir = path.join(folderPath, 'Media');
+        const metaDir = path.join(mediaDir, '.meta');
+        if (!(await fs.pathExists(metaDir))) return res.json({ success: true, patched: 0, thumbs: {} });
+
+        const sidecars = (await fs.readdir(metaDir)).filter(f => f.endsWith('.json'));
+        const thumbs = {};
+        let patched = 0;
+
+        for (const f of sidecars) {
+            const p = path.join(metaDir, f);
+            let meta;
+            try { meta = await fs.readJson(p); } catch { continue; }
+            if (meta.type !== 'image') continue;
+            if (meta.thumbPath) continue;
+
+            const inputPath = pathFromProjectFileUrl(meta.filePath);
+            if (!inputPath || !(await fs.pathExists(inputPath))) continue;
+
+            const id = meta.id || f.replace(/\.json$/, '');
+            const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractImageThumb(inputPath, thumbAbs);
+            if (!thumbed) continue;
+
+            meta.thumbPath = `/project-file?path=${encodeURIComponent(thumbAbs)}`;
+            await fs.writeJson(p, meta, { spaces: 2 });
+            thumbs[id] = meta.thumbPath;
+            patched++;
+        }
+
+        res.json({ success: true, patched, thumbs });
+    } catch (err) {
+        logger.error('project', 'backfill-image-thumbs failed', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 router.post('/project-media/:projectId/upload-raw', async (req, res) => {
     try {
         const { folderPath } = req.query;
@@ -1478,6 +1614,28 @@ router.post('/project-media/:projectId/upload-raw', async (req, res) => {
             res.status(500).json({ success: false, error: err.message });
         });
     } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// MPI-259: place a dropped App input file into the content-addressed preview-assets
+// store (Media/.preview-assets/<sha256><ext>) instead of the visible gallery. Keeps the
+// gallery clean while persisting the file durably so a later Reuse can resolve it (the
+// store is the same one MPI-227 built + the manual Cleanup GCs). Accepts a base64 data
+// URL; dedups by content hash. Returns the /project-file URL of the placed asset.
+router.post('/project-media/:projectId/place-preview-asset', async (req, res) => {
+    try {
+        const { folderPath } = req.query;
+        const { dataUrl, ext } = req.body;
+        if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
+        if (!dataUrl || !ext) return res.status(400).json({ success: false, error: 'dataUrl and ext required' });
+
+        const mediaDir = path.join(folderPath, 'Media');
+        const safeExt = ext.startsWith('.') ? ext : `.${ext}`;
+        const placed = await placeContentAsset(dataUrl, safeExt, mediaDir, folderPath);
+        res.json({ success: true, ...placed });
+    } catch (err) {
+        logger.error('project', 'place-preview-asset error', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -1608,7 +1766,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, appId = null, appInputs = null } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1664,19 +1822,8 @@ router.post('/project/save-generation', async (req, res) => {
         // Sanitise operation key to a safe filename prefix (max 24 chars)
         const prefix = operation.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 24);
 
-        // Find the next available sequence number by scanning existing files
-        const existing = await fs.readdir(mediaDir);
-        let maxNum = 0;
-        const re = new RegExp(`^${prefix}_(\\d+)\\.`, 'i');
-        for (const f of existing) {
-            const m = f.match(re);
-            if (m) {
-                const n = parseInt(m[1], 10);
-                if (n > maxNum) maxNum = n;
-            }
-        }
-        const seq      = String(maxNum + 1).padStart(3, '0');
-        const filename = `${prefix}_${seq}.${ext}`;
+        // Monotonic sequence: never reuse a deleted number (see nextSequence).
+        const filename = await nextSequence(normalizedFolderPath, mediaDir, prefix, ext);
         const filePath = path.join(mediaDir, filename);
 
         // Download from ComfyUI server-side
@@ -1774,7 +1921,7 @@ router.post('/project/save-generation', async (req, res) => {
         const metaContent = {
             id,
             type: isVideo ? 'video' : 'image',
-            filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
+            filePath: projectFileUrlBusted(filePath),
             operation,
             displayName:    filename.replace(/\.[^.]+$/, ''),
             prompt:         meta.prompt        || '',
@@ -1785,6 +1932,11 @@ router.post('/project/save-generation', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,
+            // App provenance (MPI-256) — additive, top-level. null for normal PromptBox
+            // gens; the App's id + input snapshot for App gens, so Reuse can reopen the
+            // App with inputs restored (survives restart — sidecar is the source).
+            appId,
+            appInputs,
             pixelDimensions: resolvedDims ?? { w: 0, h: 0 },
             // Preview→final replace sums the previous stage's elapsed time into
             // the final sidecar so history shows aggregate generation time.
@@ -1801,6 +1953,14 @@ router.post('/project/save-generation', async (req, res) => {
             }
             const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
             const thumbed = await extractVideoThumb(filePath, thumbPath);
+            if (thumbed) {
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+            }
+        } else {
+            // Image gens get a gallery thumb too (MPI-319) so the gallery grid
+            // renders a small JPG, not the full-res output.
+            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
+            const thumbed = await extractImageThumb(filePath, thumbPath);
             if (thumbed) {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
@@ -1827,8 +1987,11 @@ router.post('/project/save-generation', async (req, res) => {
                 catch (e) { logger.warn('project', 'replace: old media remove failed', e.message); }
             }
             if (_replacePrevThumbPath) {
-                const newThumbAbs = isVideo ? path.join(metaDir, `${id}.thumb.jpg`) : null;
-                if (!newThumbAbs || path.normalize(_replacePrevThumbPath) !== path.normalize(newThumbAbs)) {
+                // Both videos and images now write `<id>.thumb.jpg` (MPI-319).
+                // On a same-id replace the new thumb IS this path — never delete
+                // it as if it were the stale previous one.
+                const newThumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
+                if (path.normalize(_replacePrevThumbPath) !== path.normalize(newThumbAbs)) {
                     try { await fs.remove(_replacePrevThumbPath); }
                     catch (e) { logger.warn('project', 'replace: old thumb remove failed', e.message); }
                 }
@@ -1858,17 +2021,16 @@ router.post('/project/save-generation', async (req, res) => {
                 let mediaPath = null;
                 let thumbPath = null;
 
-                // Try to read the meta file to get the actual media file path
+                // Try to read the meta file to get the actual media file path.
+                // Use pathFromProjectFileUrl (stops at `&`) NOT a greedy
+                // `path=(.+)$`: freshly-written outputs carry a `&v=<mtime>`
+                // cache-bust suffix, and the greedy match folded that into the
+                // path → pathExists() false → the GC wrongly deleted a live
+                // sidecar (missing sidecar → gallery 404, card vanishes on reload).
                 try {
                     const metaContent = await fs.readJson(metaFilePath);
-                    if (metaContent.filePath) {
-                        const match = metaContent.filePath.match(/path=(.+)$/);
-                        if (match) mediaPath = decodeURIComponent(match[1]);
-                    }
-                    if (metaContent.thumbPath) {
-                        const m = metaContent.thumbPath.match(/path=(.+)$/);
-                        if (m) thumbPath = decodeURIComponent(m[1]);
-                    }
+                    if (metaContent.filePath) mediaPath = pathFromProjectFileUrl(metaContent.filePath);
+                    if (metaContent.thumbPath) thumbPath = pathFromProjectFileUrl(metaContent.thumbPath);
                 } catch (_) {
                     // If we can't read the meta file, treat it as orphaned
                 }
@@ -2074,16 +2236,8 @@ router.post('/project/crop-media', async (req, res) => {
         // Derive extension from source
         const ext = path.extname(inputPath).slice(1).toLowerCase() || 'png';
 
-        // Sequenced filename using 'crop' prefix
-        const existing = await fs.readdir(mediaDir);
-        let maxNum = 0;
-        const re = /^crop_(\d+)\./i;
-        for (const f of existing) {
-            const m = f.match(re);
-            if (m) { const n = parseInt(m[1], 10); if (n > maxNum) maxNum = n; }
-        }
-        const seq      = String(maxNum + 1).padStart(3, '0');
-        const filename = `crop_${seq}.${ext}`;
+        // Sequenced filename using 'crop' prefix (monotonic, see nextSequence)
+        const filename = await nextSequence(folderPath, mediaDir, 'crop', ext);
         const filePath = path.join(mediaDir, filename);
 
         // Sharp crop
@@ -2107,7 +2261,7 @@ router.post('/project/crop-media', async (req, res) => {
         const metaContent = {
             id,
             type: 'image',
-            filePath: `/project-file?path=${encodeURIComponent(filePath)}`,
+            filePath: projectFileUrlBusted(filePath),
             operation: 'crop',
             displayName: filename.replace(/\.[^.]+$/, ''),
             prompt: '',
@@ -2117,6 +2271,8 @@ router.post('/project/crop-media', async (req, res) => {
             createdAt: new Date().toISOString(),
             name: null,
             uploaded: false,
+            appId: null,   // App provenance parity (MPI-256) — crops are never App gens
+            appInputs: null,
             pixelDimensions: { w: Math.round(w), h: Math.round(h) },
             generationMs: null,
             cropRect: { x, y, w, h },
@@ -2463,6 +2619,7 @@ router.get('/project-stats/:projectId', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.nextSequence = nextSequence;
 module.exports.materializeGenerationFrameSnapshots = materializeGenerationFrameSnapshots;
 module.exports.placeContentAsset = placeContentAsset;
 module.exports.computeFileSha256 = computeFileSha256;

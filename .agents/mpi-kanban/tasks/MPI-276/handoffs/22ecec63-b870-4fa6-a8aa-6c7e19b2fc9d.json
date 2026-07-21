@@ -1,0 +1,4 @@
+{
+  "schema": "mpi-kanban/task-handoff-pointer/v1",
+  "canonical_handoff": ".agents/mpi-kanban/state/handoffs/22ecec63-b870-4fa6-a8aa-6c7e19b2fc9d.json"
+}

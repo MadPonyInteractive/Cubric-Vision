@@ -1,7 +1,0 @@
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.created","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Created: Pod disk-usage bar in Model Library (volume + ephemeral pods)."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Attached compact plan; maturity=planned."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.moved","at":"2026-07-08T23:07:57Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"checklist.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Derived compact checklist: Implementation."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"checklist.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"Implementation complete; auto-verify passed (6/6 guard test, ESLint clean)."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"validation.updated","at":"2026-07-08T23:07:57Z","actor":"claude","summary":"maturity=validating: awaiting user-ux bar check + R2 runtime republish for ephemeral leg."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-237","type":"task.moved","at":"2026-07-08T23:07:57Z","actor":"claude","from":"doing","to":"done","summary":"Verified live on volume + ephemeral pods (RunPod-console cross-checked); committed b/ pathspec + mpi-ci start.sh. Closed."}

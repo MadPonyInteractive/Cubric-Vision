@@ -1,0 +1,119 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c84ef9b9-7f50-458a-867e-32301552f42b",
+  "generated_at": "2026-07-16T01:15:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-282 Krea2-as-editor: 4-card tier set + identity-edit op wiring",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Test Krea2 as an editor (identity-edit LoRA + comfyui-krea2edit nodes); if it works, integrate into the app.",
+    "status": "in_progress",
+    "summary": "Edit path works on the RAW (High) tier only. Shipped: 4-card Krea2 set {High,Balanced}x{SFW,NSFW}, generator 4-variant, edit LoRA + Raw transformers + krea2edit node wired, committed b972df5b. R2 uploads mid-flight; SHA256 fill + app-side prompt-box edit wiring still pending. USER is editing workflows further (detailer/upscaler) that will need re-convert + re-generate."
+  },
+  "plan": {
+    "file": null,
+    "completed": [],
+    "pending": []
+  },
+  "task_card": {
+    "id": "MPI-282",
+    "title": "Test Krea2 as an editor (edit nodes + Raw fallback)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-282/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-282/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "convert-workflows",
+    "run-generator",
+    "upload-r2",
+    "edit",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "R2 serialize+bwlimit rule documented in MadPony capabilities/cloudflare-r2/README.md, committed f3b9f86",
+      "MPI-282 moved todo->doing (card+board+events), committed b972df5b"
+    ],
+    "pending": [
+      "Fill SHA256 for 3 null dep entries after R2 uploads land (mpic-compute-dep-hashes or sha256sum)",
+      "MPI-282 validation notes + final tuning verdict not yet written to task card"
+    ]
+  },
+  "next_action": {
+    "description": "FIRST check background R2 upload of NSFW Raw int8 (log: scratchpad/nsfw_up.log). When it commits (rclone size shows object), re-download SFW Raw int8 (krea2_raw_int8_convrot, 13.49GB, was TRUNCATED - use curl -fL --retry -C - and assert size==13492686496), then upload SERIALIZED (--transfers 1 --bwlimit 3M, never concurrent). Then sha256sum all 3 new files and fill null SHA256 in modelDeps.js (krea2-raw-transformer, krea2-raw-transformer-nsfw) + loraDeps.js (krea2-lora-identity-edit). SEPARATELY: user has further workflow edits - when exported, re-convert raw->API (scripts/workflow-to-api.mjs) then re-run generate_krea2.py + validate.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "4 cards = {High,Balanced}x{SFW,NSFW}, TURBO-IN-NAME: High='Krea 2'/'Krea 2 NSFW', Balanced='Krea 2 Turbo'/'Krea 2 Turbo NSFW'.",
+      "High = Raw int8 (cfg 3 + negativePrompt:true); Balanced = Turbo (cfg 1, negativePrompt:false). Edit op on ALL 4 cards, edit LoRA dep of all 4.",
+      "Person-SWAP fails on ALL variants (Turbo AND Raw) - LoRA v1.1 ceiling, deferred to v1.2. v1 LoRA rejected (plastic/oversaturated). SHIP LoRA = v1.1 r128 (best texture+least noise).",
+      "bf16 Raw REJECTED: 945s vs int8 580s on 4060Ti, no fidelity win worth it. int8_convrot = ship quant.",
+      "Generator: t2i has Input_Tier -> 4 (VARIANTS); tierless detailer/upscaler pick TURBO vs RAW weight BY FILENAME -> 2 each (LEGACY_VARIANTS/RAW_VARIANTS).",
+      "High cards use RAW detailer/upscaler; Balanced keep TURBO."
+    ],
+    "constraints": [
+      "R2 uploads MUST be serialized + bwlimit 3M (never concurrent up+down). Documented in R2 playbook.",
+      "In-flight rclone multipart reads as 0 until 100% commit - check the log not lsf.",
+      "NEVER run orchestrate.py on dirty comfy_workflows tree. Use workflow-to-api.mjs single-file + generate_krea2.py directly.",
+      "raw/ is user-owned - convert FROM it, never write TO it.",
+      "SFW Raw int8 on disk is TRUNCATED (2.76GB) - re-download clean before upload/SHA. NSFW (13.15GB) present, uploading.",
+      "curl -s swallows errors silently (exit 0 on truncated file) - always -fL --retry -C - + assert byte size.",
+      "comfyui-krea2edit = installRequirements:false -> rides volume, NO Pod rebuild. At G:/ComfyUi/ComfyUI/custom_nodes/comfyui-krea2edit/, node_lock @ 17af88332728c97ab5c7d26296b2cae59c935976."
+    ],
+    "files_modified": [
+      "comfy_workflows/scripts/workflow_generation/generate_krea2.py",
+      "comfy_workflows/raw/krea2_t2i_template.json",
+      "comfy_workflows/raw/krea2_detailer_template.json",
+      "comfy_workflows/raw/krea2_upscaler_template.json",
+      "js/data/modelConstants/models.js",
+      "js/data/modelConstants/modelDeps.js",
+      "js/data/modelConstants/loraDeps.js",
+      "js/data/modelConstants/nodesDeps.js",
+      "dev_configs/node_lock.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-282/task.json",
+      "docs/models/krea2/README.md",
+      "comfy_workflows/scripts/workflow_generation/generate_krea2.py",
+      "js/data/modelConstants/models.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "krea2",
+      "workflow-authoring",
+      "add-model",
+      "cloudflare-r2"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    "docs/playbooks/add-model/README.md",
+    "docs/models/krea2/README.md",
+    "c:/AI/Mpi/MadPony-Identity/capabilities/cloudflare-r2/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-16T01:15:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Resuming MPI-282 (Krea2 as an editor) on branch 1.2.0. Read .agents/mpi-kanban/state/handoffs/c84ef9b9-7f50-458a-867e-32301552f42b.json and the MPI-282 task card, then use mpi-continue. Code is committed (b972df5b): 4-card Krea2 set {High=Raw/edit, Balanced=Turbo} x {SFW,NSFW}, generator does 4-variant, edit LoRA + Raw transformers + comfyui-krea2edit node all wired and dep-verified. TWO threads remain: (1) R2 uploads - a background rclone is uploading NSFW Raw int8 (scratchpad/nsfw_up.log, serialized+3MB cap); when it commits, re-download the TRUNCATED SFW Raw int8 (krea2_raw_int8_convrot, must be 13492686496 bytes, curl -fL --retry -C - + size assert), upload it serialized, then sha256sum all 3 R2 files and fill the null SHA256 in modelDeps.js + loraDeps.js. (2) The user is making further workflow edits (detailer/upscaler) - when exported to comfy_workflows/raw/, re-convert with scripts/workflow-to-api.mjs then re-run generate_krea2.py + validate-injection-rules.mjs. NEVER run orchestrate.py on a dirty tree; NEVER run concurrent R2 transfers. Deferred: app-side prompt-box edit-op wiring (Input_Image_2 slot + Is_Edit toggle) untested."
+}

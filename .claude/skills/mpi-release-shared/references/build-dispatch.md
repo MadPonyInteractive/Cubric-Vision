@@ -62,6 +62,33 @@ The **delta bundles** are how existing users update without redownloading the
 engine/models — they run their install's `update-from-zip.<bat|sh|command>` and
 point it at the bundle. The **full builds** are for fresh installs.
 
+## Delete the CI artifacts after a verified download (storage hygiene)
+
+The mpi-ci portable artifacts are ~1.6GB per build (win+linux+mac) and count
+against the 2GB free Actions storage quota. R2 is the real host — once you've
+downloaded + pushed to R2, the CI copies are dead weight. Delete them **after
+confirming the download landed in the Builds folder**, never before.
+
+```bash
+export MSYS_NO_PATHCONV=1   # Git Bash mangles leading-slash API paths
+RUN_ID=$(gh run list --repo MadPonyInteractive/mpi-ci \
+  --workflow cubric-vision-portable.yml -L 1 --json databaseId -q '.[0].databaseId')
+
+# 1. Download (into D:\...\Builds\v<ver>\), then VERIFY the files exist locally
+gh run download "$RUN_ID" --repo MadPonyInteractive/mpi-ci --dir "D:/CubricStudio/Vision/Builds/v<ver>"
+ls -la "D:/CubricStudio/Vision/Builds/v<ver>"   # confirm the 6 files are present + non-empty
+
+# 2. ONLY after the files are confirmed on disk: delete the run's artifacts
+for id in $(gh api --paginate "repos/MadPonyInteractive/mpi-ci/actions/runs/$RUN_ID/artifacts?per_page=100" -q '.artifacts[].id'); do
+  gh api -X DELETE "repos/MadPonyInteractive/mpi-ci/actions/artifacts/$id"
+done
+```
+
+Retention is already `retention-days: 3` in the workflow as a backstop, so
+skipping this only delays reclaim by 3 days — it does NOT permanently leak
+storage. Deleting Actions artifacts touches nothing else (git, GitHub releases,
+R2 downloads, and the Pod image are all separate).
+
 ## Notes
 
 - macOS x64 is in the checklist asset list but the live build matrix is

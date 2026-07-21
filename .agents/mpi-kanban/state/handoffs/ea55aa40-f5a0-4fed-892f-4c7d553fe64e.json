@@ -1,0 +1,143 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "ea55aa40-f5a0-4fed-892f-4c7d553fe64e",
+  "generated_at": "2026-07-21T16:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-324 RunPod validation sweep (1.2.0 release gate) — GPU pass DONE for MPI-309 + MPI-282; NEW remote-only re-render storm MPI-326 found (blocker candidate); MPI-300 + MPI-310-uninstall still pending a Pod",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Validate every RunPod-deferred 1.2.0 card in ONE Pod session so cards can close before release, then get the app release-ready ASAP. MPI-198 deferred.",
+    "status": "in_progress",
+    "summary": "GPU Pod pass on RTX 2000 (volume 9t3awufudk): MPI-309 (box nodes) and MPI-282 (Krea2 edit) are REMOTE-PROVEN and moved to done; Head Swap remote gen worked (NOT a 1.2 gate — apps stay dev-only in 1.2); MPI-310 describe worked but uninstall/GC + negative-mode are NOT run; MPI-300 Qwen-Edit was NOT tested this session. A NEW steady-state bug MPI-326 was found and fully isolated: while remote-connected, a ~1-3s poll storm remounts the PromptBox so the operations dropdown flashes/auto-closes and per-op sliders snap back mid-drag — controls are unusable on remote. It is 100% remote-driven (delete Pod / go local = clean) and survives a clean restart+reconnect, so it is a genuine design bug, not a connect artifact. Leans 1.2-blocker; user deferred the 1.2-vs-1.3 scope call to next session. A read-only root-cause trace was dispatched; its findings belong on the MPI-326 card."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+    "completed": [
+      "Deleted the CPU download pod, connected a GPU RTX 2000 on the SAME volume 9t3awufudk.",
+      "MPI-309 PROVEN remote + moved to done: on connect the wrapper toasted 'Loading new nodes - restarting the remote engine' (it saw the aaa1d2d lock change and reinstalled the volume node); app_head_swap.json compiled + ran with NO unknown-node rejection; MpiBox crop region followed a live user box-resize; correct head swap saved to gallery; Hyper tier = 4 steps.",
+      "MPI-282 PROVEN remote + moved to done: Krea2 t2i/i2i/depth/upscale/masked edit + 2-character edit all clean, no seam, no degrade; accel LoRA (krea2_turbo_distill_r128) resolved (clean output = no silent LoRA miss); backslash subfolder LoRA path worked on Linux. Step count result-verified, not console-counted.",
+      "MPI-310 describe-from-gallery worked remotely (weight fetched on-demand).",
+      "Carded MPI-325 (Head Swap: allow target/reference box to extend OUTSIDE frame + auto-pad, keep square — surfaced when an edge-adjacent head could not capture full hair without grabbing the neighbour; NOT a v1.2 blocker, apps dev-only).",
+      "Carded MPI-326 (remote-only ~1-3s re-render storm; op dropdown + sliders unusable on remote) with full diagnosis + fix-surface candidates.",
+      "Repaired a PRE-EXISTING backslash-escaped corrupt line in tasks/MPI-282/events.jsonl (escape-only, no wording change).",
+      "Filled the MPI-324 results table."
+    ],
+    "pending": [
+      "VERIFY the MPI-326 fix on a Pod (already IMPLEMENTED this session for 1.2, uncommitted). Fix A edge-guards the sync at shell.js:1370 (if connected AND NOT _wasRemoteConnected); Fix B diff-gates the models:checked emit at modelRegistry.js:218 (module-level _lastEmittedInstalledKey/_driftedKey + early return when unchanged). node --check clean; all reSyncInstalledModels callers swept safe. Remaining: connect a Pod, sit idle, confirm the op dropdown stays open + sliders drag cleanly on remote AND the Pod log no longer POSTs /wrapper/models/status every ~5s; then move MPI-326 to done and commit js/shell.js + js/data/modelRegistry.js.",
+      "Finish MPI-300 (Qwen-Edit: tier radio, 2-image combine, the UNTESTED-ANYWHERE 3rd-image chip Input_Image_3, style rack) on a cheap Pod reconnect (transformer staged on volume 9t3awufudk).",
+      "Finish MPI-310 (inverse-GC check FIRST, then describe-from-history + negative-mode flip, then uninstall DEAD LAST = 5GB refetch risk).",
+      "Move MPI-310 (and MPI-300) to done only on their own remote pass; fill the MPI-324 results table rows.",
+      "Then run the release flow. VERSION CHANGE (peer session MPI-327, 2026-07-21): the public target is now 1.1.0, NOT 1.2.0 — the internal 1.1.0 + 1.1.1 never shipped publicly, so this dev branch ships publicly as 1.1.0. The CHANGELOG is ALREADY DONE by MPI-327 (single RELEASE_NOTES['1.1.0'] + archival 2026-07-09-v1.1.0.md + UNRELEASED cleared; 1.2.0 stub notes/archival/.approved-1.2.0.json deleted) — do NOT rebuild it. You still owe the version-constant rename: appVersion.js/package.json/package-lock.json APP_VERSION -> 1.1.0; operationRegistry.js + operation_registry.json appVersionIntroduced 1.2.0 -> 1.1.0 for 9 ops; npm run release:approve (fresh .approved-1.1.0.json); npm run release:check green. Full step list: .agents/mpi-kanban/tasks/MPI-327/validation.md. Then promote branch 1.2.0 -> master AS 1.1.0 (mpi-merge-branches) or mpi-release-public. release:check is RED right now until you bump APP_VERSION — expected."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-324",
+    "title": "RunPod validation sweep (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-324/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-324/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "fix MPI-326 AFTER the user sets 1.2-vs-1.3 scope AND you brief the shared-machinery fix",
+    "drive the Pod validation with the user for MPI-300 + MPI-310 (user operates the app + connects the Pod)",
+    "fill MPI-324 results table + sub-card validation.md files",
+    "move a sub-card to done ONLY on its own remote pass",
+    "commit js/shell.js + js/data/modelRegistry.js (the MPI-326 fix) once verified on a Pod"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-309 + MPI-282 closed on remote evidence (task.json + events.jsonl + board.json all updated).",
+      "MPI-325 + MPI-326 created with full bodies + events.",
+      "MPI-326 living diagnosis recorded on its card: symptom, remote-only isolation, steady-state confirmation, fix-surface candidates.",
+      "MPI-324 results table filled for MPI-309/282/310/300 + Head Swap.",
+      "Fixed pre-existing backslash corruption in tasks/MPI-282/events.jsonl."
+    ],
+    "pending": [
+      "Commit the MPI-326 fix (js/shell.js + js/data/modelRegistry.js) once verified on a Pod.",
+      "MPI-300 + MPI-310 remote validation on a later cheap Pod.",
+      "Session close-out (/mpi-end) after the fix + remaining validation."
+    ]
+  },
+  "next_action": {
+    "description": "Priority = get 1.2 release-ready. MPI-326 (the remote-only re-render storm making the op dropdown + sliders unusable on remote) is ROOT-VERIFIED and the A+B fix is already IMPLEMENTED this session (uncommitted, verified by node --check + full caller sweep). Remaining for MPI-326 = VERIFY on a Pod (dropdown stays open + sliders drag on remote + Pod log no longer POSTs /wrapper/models/status every ~5s), then move it to done + commit js/shell.js + js/data/modelRegistry.js. Then finish MPI-300 (Qwen-Edit + untested 3rd-image chip) and MPI-310 (inverse-GC first, uninstall dead-last) on the same cheap Pod reconnect on volume 9t3awufudk. (dev_configs/node_lock.json is already committed in ab421bb7 — no action.) Then run the release flow — SEE the VERSION CHANGE note in key_decisions + plan.pending: the public target is now 1.1.0 (not 1.2.0), the changelog is already done by peer session MPI-327, and you owe the version-constant rename per .agents/mpi-kanban/tasks/MPI-327/validation.md.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "VERSION RENAME (peer session MPI-327, 2026-07-21): the public release target changed 1.2.0 -> 1.1.0. The internal 1.1.0 + 1.1.1 never shipped publicly, so this dev branch (internally '1.2.0') becomes the public 1.1.0. MPI-327 already rebuilt the CHANGELOG for it: one aggregated RELEASE_NOTES['1.1.0'], archival 2026-07-09-v1.1.0.md, UNRELEASED cleared, and the 1.2.0 stub notes/archival/.approved-1.2.0.json deleted. Remaining for the release flow = the version-constant rename (appVersion/package/lock APP_VERSION -> 1.1.0 + op-registry appVersionIntroduced 1.2.0 -> 1.1.0 for 9 ops in BOTH operationRegistry.js and operation_registry.json + npm run release:approve + npm run release:check green). Full list in .agents/mpi-kanban/tasks/MPI-327/validation.md. release:check stays RED until APP_VERSION is bumped — expected mid-flight, not a regression.",
+      "MPI-309 box nodes are remote-proven; dev_configs/node_lock.json (MpiNodes aaa1d2d) was ALREADY committed pre-session in ab421bb7 (git-verified not dirty) — the prior handoff's 'UNCOMMITTED' claim was stale.",
+      "Head Swap (MPI-299/306) is NOT a 1.2 release gate — apps stay dev-only in 1.2; apps may ship in 1.3/1.4. Its remote gen passed anyway (Hyper tier).",
+      "MPI-326 is remote-only (deleting the Pod / running local = clean) and steady-state (survives clean restart+reconnect), so it is a genuine design bug in the remote polling layer, not a connect-flap artifact. Severity leans 1.2-blocker because the slider corruption makes controls unusable on remote. User chose to decide 1.2-vs-1.3 next session.",
+      "Restart pod-lifecycle observation (UNCARDED): on app restart the auto-connect-on-start tears down the warm Pod and issues a fresh create, logging a NEW pod id + orphan-sweeping the old — but a <20s time-to-connected proves it reattached warm resources on the same volume, so the 'created new pod' logging is misleading. Neighbour of project_reconnect_deletes_warm_pod. Offer to card next session."
+    ],
+    "constraints": [
+      "A local-engine pass proves NOTHING about the remote path (feedback_runpod_not_local_engine_proof) — everything here except MPI-309/282 is still remote-unproven.",
+      "MPI-326 fix touches shared render/poll machinery — brief the user before patching (release week, same rule that deferred MPI-320). Root-fix candidate = source-diff the models:checked emit at modelRegistry.js:218 so redundant remote syncs stay silent + stop/throttle the steady-state remote poll; SWEEP all models:checked consumers (shell.js s_installedModelIds, heroStats, MpiModelManager, MpiAppLibrary, MpiGalleryBlock, MpiPromptBox) so nothing half-wires.",
+      "Slider snap-back means _refreshOpSlot is rebuilding (models:checked only calls _refreshOpDropdown) — the true trigger is likely a full PromptBox remount by a parent Block reacting to a polled state write; confirm from the trace before coding.",
+      "MPI-300: the 3rd-image chip (Input_Image_3) is untested ANYWHERE, not just remotely.",
+      "MPI-310 uninstall = 5.24GB refetch, do it DEAD LAST; do the inverse GC check (uninstall an unrelated model, describer stays Installed) FIRST. The describer plugin row shows 'Installing' this session (known display bug folded into MPI-320 for v1.3) — verify via the Describe action, not the row.",
+      "Volume 9t3awufudk keeps all sweep weights; a new Pod reconnect is cheap (~10 min, no re-download)."
+    ],
+    "files_modified": [
+      "js/shell.js (MPI-326 Fix A — edge-guard the connect-edge sync at ~1370; UNCOMMITTED)",
+      "js/data/modelRegistry.js (MPI-326 Fix B — diff-gate the models:checked emit at ~218; UNCOMMITTED)",
+      "dev_configs/node_lock.json — already committed pre-session in ab421bb7 (MpiNodes aaa1d2d); NOT dirty, no action needed",
+      ".agents/mpi-kanban/board.json (MPI-309 + MPI-282 -> done; MPI-325 + MPI-326 created)",
+      ".agents/mpi-kanban/tasks/MPI-309/ (task.json + events.jsonl — moved to done)",
+      ".agents/mpi-kanban/tasks/MPI-282/ (task.json + events.jsonl — moved to done; repaired a pre-existing backslash-corrupt event line)",
+      ".agents/mpi-kanban/tasks/MPI-324/validation.md (results table filled)",
+      ".agents/mpi-kanban/tasks/MPI-325/ (NEW — Head Swap box-outside-frame + pad idea)",
+      ".agents/mpi-kanban/tasks/MPI-326/ (NEW — remote re-render storm, full diagnosis)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-327/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-326/task.json",
+      ".agents/mpi-kanban/tasks/MPI-326/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-300/task.json",
+      ".agents/mpi-kanban/tasks/MPI-310/validation.md",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (_refreshOpDropdown ~1194, _refreshOpSlot ~1223, models:checked wiring ~1657, state:changed ~1632)",
+      "js/data/modelRegistry.js (syncModelInstalled + models:checked emit ~218)",
+      "js/shell.js (connect-edge sync ~1348-1424)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["runpod-remote-engine", "comfy_engine", "download-manager", "components", "events", "state", "models/qwen-edit"]
+  },
+  "rules_active": [
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-21T16:40:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-07-21T17:40:00Z",
+      "event": "amended (peer session MPI-327): public version target 1.2.0 -> 1.1.0; MPI-327 did the changelog aggregation; version-constant rename still owed by the release flow — see .agents/mpi-kanban/tasks/MPI-327/validation.md"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/ea55aa40-f5a0-4fed-892f-4c7d553fe64e.json and use mpi-continue to resume the MPI-324 RunPod validation sweep for the 1.2.0 release. The GPU Pod pass is DONE for MPI-309 (box nodes — remote-proven, moved to done) and MPI-282 (Krea2 edit — remote-proven, moved to done); Head Swap remote gen worked but is NOT a 1.2 gate (apps stay dev-only in 1.2). The priority now is to get 1.2 release-ready. MPI-326 — a remote-only re-render storm found this session (while remote-connected the op dropdown flashes/auto-closes and per-op sliders snap back mid-drag, controls unusable on remote) — is already ROOT-VERIFIED and FIXED this session (uncommitted). Root: the 5s connection heartbeat re-emits remote:connection {connected:true} for the live cost badge, and an unguarded listener re-syncs every 5s -> models:checked storm -> op-dropdown teardown + slider DOM rebuild. Fix A edge-guards the sync at shell.js:1370; Fix B diff-gates the models:checked emit at modelRegistry.js:218. Verified by node --check + a full reSyncInstalledModels caller sweep. FIRST action: VERIFY it on a Pod — connect, sit idle, confirm the dropdown stays open + sliders drag cleanly on remote and the Pod log no longer POSTs /wrapper/models/status every ~5s, then move MPI-326 to done and commit js/shell.js + js/data/modelRegistry.js. Then finish the two still-unproven cards on a cheap Pod reconnect on volume 9t3awufudk: MPI-300 (Qwen-Edit — tiers, 2-image combine, the UNTESTED-ANYWHERE 3rd-image chip Input_Image_3, style rack) and MPI-310 (inverse-GC check FIRST, then describe-from-history + negative-mode flip, then uninstall DEAD LAST = 5GB refetch). (dev_configs/node_lock.json is ALREADY committed in ab421bb7 at MpiNodes aaa1d2d — git-verified, no action.) Then run the 1.2 release flow (mpi-merge-branches to promote 1.2.0 -> master, or mpi-release-public). MPI-198 stays deferred."
+}

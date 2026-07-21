@@ -35,7 +35,7 @@ import { buildWeightMap, create as createAggregator } from './progressAggregator
 import { createStageProgress } from './phaseProgress.js';
 import { stagesFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
-import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputUrls.js';
+import { buildComfyViewUrl, collectComfyOutputUrls, readComfyOutputText } from '../utils/comfyOutputUrls.js';
 import { generationStore, PHASES } from './generationStore.js';
 
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176). MPI-74: a
@@ -77,12 +77,43 @@ function _collectComfyLatents(nodeOutput, target, role = 'video') {
     });
 }
 
-async function _prepareWorkflowInputs(payload) {
-    // Video workflows carry LoadImage frame nodes (+ LoadLatent on _ms) whose baked
-    // placeholder filenames must exist in the engine input/ or the graph fails
-    // validation. Stage for ANY video op — multi-stage OR single-stage (5B t2v/i2v
-    // are single-stage but still have Input_Start_Frame → need placeholder.png).
-    if (COMMANDS[payload.operation]?.mediaType !== 'video') return;
+/**
+ * Case-insensitive truthy lookup of an injection param by node title. Titles are
+ * matched case-insensitively at injection time (comfyController), and the graphs
+ * are authored by hand — `Input_enhance_prompt` and `Input_Enhance_Prompt` are the
+ * same node. Reading the param must be just as forgiving or the two spellings
+ * disagree about how many progress bars the run will emit.
+ */
+function _paramIsTrue(params, title) {
+    const want = title.toLowerCase();
+    for (const [k, v] of Object.entries(params || {})) {
+        if (k.toLowerCase() === want) return v === true;
+    }
+    return false;
+}
+
+/** Latent-input node classes whose baked filename must resolve in the engine `input/`. */
+const _MEDIA_INPUT_CLASSES = new Set(['LoadLatent']);
+
+async function _prepareWorkflowInputs(payload, workflow) {
+    // A workflow carrying a LoadLatent node has a baked latent filename that must
+    // exist in the engine `input/`, or ComfyUI rejects the graph at prompt time —
+    // even for nodes whose output is gated off (a stage-1 run never uses the loaded
+    // latent behind the Is_Continue gate).
+    //
+    // MPI-272: image/audio inputs no longer need staging — they migrated to
+    // self-gating MpiLoadImageFromPath / MpiLoadAudio path nodes that read a full
+    // path from a `string` widget and gate on empty. LoadLatent has no path-string
+    // variant, so latents are the sole staging survivor. (Only the LTX/WAN _ms
+    // stage-2 graphs carry a LoadLatent; every other graph short-circuits here.)
+    //
+    // Staging is small locally (a copy), but on the REMOTE engine it uploads each
+    // default to the Pod, so we must not run it for graphs that have no latent node.
+    if (!workflow || typeof workflow !== 'object') return;
+    const hasMediaInput = Object.values(workflow).some(
+        node => _MEDIA_INPUT_CLASSES.has(node?.class_type)
+    );
+    if (!hasMediaInput) return;
     const res = await fetch('/comfy/prepare-workflow-inputs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,7 +287,7 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
  * @typedef {Object} Execution
  * @property {function(string):void}   onPreview  - Called with each latent preview URL
  * @property {function(number):void}   onProgress - Called with 0–1 progress value from ComfyUI
- * @property {function(string[], {latents?: object[]}):void} onComplete - Called with final output URLs and side outputs on success
+ * @property {function(string[], {latents?: object[], audioUrl?: string|null, promptText?: string|null}):void} onComplete - Called with final output URLs and side outputs on success. `promptText` is the string an `Output_prompt` node encoded (null when the workflow has none).
  * @property {function(Error):void}    onError    - Called on failure
  * @property {function():void}         cancel     - Interrupt the running generation
  */
@@ -454,7 +485,7 @@ async function _findModelNotLocal(modelId, operation = null) {
 // network volume onto the Pod's fast container disk before generating. 20GB (binary,
 // to match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3). Selects only
 // the LTX 41GB transformer today; the 9.45GB TE and <=13.55GB Wan files stay on the
-// volume. See docs/add-model-playbook.md (>=20GB PING-USER gate) + docs/runpod-*.
+// volume. See docs/playbooks/add-model/02-dependencies-r2.md (>=20GB PING-USER gate) + docs/runpod-*.
 const HOT_STORE_MIN_GB = 20;
 
 /**
@@ -535,10 +566,15 @@ function _buildParams(payload) {
     const resolvedSeed = seed ?? ComfyUIController.generateRandomSeed();
 
     const params = {
-        Positive: positive || '',
-        Negative: negative || '',
-        Seed:     resolvedSeed,
+        Input_Positive: positive || '',
+        Input_Negative: negative || '',
+        Input_Seed:     resolvedSeed,
     };
+
+    // Constant params the OP always injects (commandRegistry.injectParams) — the
+    // branch-selecting booleans on graphs shared by several ops (Krea2's t2i / i2i /
+    // poseReference). Merged BEFORE injectionParams so a user control still wins.
+    Object.assign(params, COMMANDS[payload.operation]?.injectParams || {});
 
     // Merge operation-specific control params (ratio, steps, denoise, etc.)
     Object.assign(params, injectionParams);
@@ -557,10 +593,7 @@ function _buildParams(payload) {
         // by /comfy/stage-preview-latent. Default applies when no explicit
         // loadLatentName is supplied (every stage-1 run).
         const _latentName = payload.loadLatentName || 'ComfyUI_00001_.latent';
-        params['LoadLatent'] = _latentName;             // tier-1 (legacy)
-        // Tier-2 video-latent title (MPI-127). The generic Input_ alias can't
-        // derive this (LoadLatent -> Input_Video_Latent is a rename, not a
-        // prefix), so emit it explicitly. WAN + LTX stage-1 both load the single
+        // Video-latent load node (MPI-127). WAN + LTX stage-1 both load the single
         // engine-input latent here; stage-2 swaps in the staged preview latent.
         params['Input_Video_Latent'] = _latentName;
         // Dual-latent stage-2 (LTX, MPI-128). LTX saves TWO latents (video + audio)
@@ -575,7 +608,7 @@ function _buildParams(payload) {
     // explicit item.role wins, then remaining media fills matching mediaType in
     // declared order. This supports future multi-image/video/audio workflows.
     // Audio slot is model-capability-gated (LTX yes, WAN no) — drop it for
-    // models without audio so a WAN run never injects an Input_Audio_File.
+    // models without audio so a WAN run never injects an Input_audio.
     const mediaSlots = filterMediaInputsForModel(
         getCommandMediaInputs(payload.operation),
         getModelById(payload.modelId),
@@ -619,9 +652,15 @@ function _buildParams(payload) {
             if (assigned.has(slot.key)) continue;
             const fallback = mediaItems.find(candidate =>
                 candidate.mediaType === slot.mediaType &&
-                candidate.url
+                candidate.url &&
+                // MPI-292: dedup — never reuse an item already routed to another
+                // slot. Without this, ONE dropped image fills Input_Image AND
+                // (via this fallback) Input_Image_2, so a 1-image edit silently
+                // gets the source duplicated as its 2nd reference.
+                !usedIds.has(candidate.id || candidate.url)
             );
             if (!fallback) continue;
+            usedIds.add(fallback.id || fallback.url);
             assigned.set(slot.key, fallback);
             fallbackAssigned.add(slot.key);
             params[slot.title] = fallback.url;
@@ -686,21 +725,19 @@ function _buildParams(payload) {
         }
     }
 
-    // ── Tier-2 alias pass (MPI-127) ───────────────────────────────────────────
-    // The fleet is mixed: image workflows use bare tier-1 titles (Positive, Seed,
-    // Width…); the video workflows (WAN/LTX) were re-authored to tier-2 (Input_*).
-    // Every param key built above is the bare/legacy name. Emit an Input_-prefixed
-    // ALIAS for each so a tier-2 node consumes the alias and a tier-1 node consumes
-    // the bare key. Injection matches by node title and silently skips params with
-    // no matching node (comfyController filters to existing titles), so the unused
-    // half is a harmless no-op in either workflow. No per-key code, no model flag.
-    // ponytail: dual-emit alias, not a tier migration — cheaper than renaming every
-    // shared control's output key and re-authoring all image workflows. Drop the
-    // bare half once every workflow is tier-2.
+    // ── Input_ canonicalization pass (MPI-127 / MPI-252) ──────────────────────
+    // The whole workflow fleet is now Input_*/Output_* titled (tier-1 deprecated).
+    // A few params are still built with the bare control name (Preview_Only,
+    // Use_End_Image, Upscale_Model, Lora_N, and any control returning a bare key).
+    // Injection matches node title exactly and silently skips a param whose title
+    // has no node, so rename each bare key to its Input_ form and drop the bare
+    // half — there is no tier-1 node left to consume it. Keys already prefixed
+    // (Input_*/Output_*) pass through untouched.
     for (const key of Object.keys(params)) {
         if (key.startsWith('Input_') || key.startsWith('Output_')) continue;
         const aliased = `Input_${key}`;
         if (!(aliased in params)) params[aliased] = params[key];
+        delete params[key];
     }
 
     return params;
@@ -759,12 +796,12 @@ export function runAutoMask(payload) {
         // Identify "Detected" and "Output" node ids by title
         const detectedNodeIds = new Set(
             Object.keys(workflow).filter(id =>
-                workflow[id]._meta?.title?.toLowerCase() === 'detected'
+                workflow[id]._meta?.title?.toLowerCase() === 'output_detected'
             )
         );
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id =>
-                workflow[id]._meta?.title?.toLowerCase() === 'output'
+                workflow[id]._meta?.title?.toLowerCase() === 'output_image'
             )
         );
 
@@ -774,10 +811,10 @@ export function runAutoMask(payload) {
             : '';
 
         const params = {
-            Input_Image:           payload.imageUrl,
-            sams:                  payload.detectorModel,
-            Box:                   payload.useBox === true,
-            Selected_Masks_Input:  picksStr,
+            Input_Image:                 payload.imageUrl,
+            sams:                        payload.detectorModel,
+            Input_Box:                   payload.useBox === true,
+            Input_Selected_Masks_Input:  picksStr,
         };
 
         let _detectedFired = false;
@@ -814,6 +851,83 @@ export function runAutoMask(payload) {
         } catch (err) {
             clientLogger.error('comfy', `autoMask workflow failed`, err);
             Events.emit('ui:error', { title: 'Auto-mask failed', message: err.message });
+            exec.onError?.(err);
+        } finally {
+            _settled = true;
+        }
+    })();
+
+    return exec;
+}
+
+/**
+ * MPI-308 (DEV HARNESS) — caption an image into text via `image_descriptor`.
+ *
+ * Text-only workflow: it returns a caption and ZERO media. That is why this runs
+ * the engine directly instead of going through generationService — that path
+ * treats a zero-media completion as a cancelled generation and discards the text
+ * (generationService.js, the `if (!urls.length)` early return). Wiring a proper
+ * op-level "returns text, not media" contract is the real fix and is still open
+ * on MPI-308; this harness exists only to answer whether caption→upscale is
+ * worth shipping at all, so it deliberately reuses the runAutoMask shape (also
+ * a non-media workflow that reads its result off `executed` messages).
+ *
+ * @param {{ imageUrl: string, forceLocal?: boolean }} payload
+ * @returns {{ onText: ?Function, onError: ?Function, cancel: Function }}
+ */
+export function runImageDescribe(payload) {
+    let _settled = false;
+    const exec = {
+        onText:  null,
+        onError: null,
+        cancel() {
+            if (_settled) return;
+            getEngine(payload.forceLocal === true).interrupt();
+        },
+    };
+
+    (async () => {
+        const workflowFile = getUniversalWorkflow('imageDescribe');
+        if (!workflowFile) {
+            exec.onError?.(new Error('imageDescribe workflow not registered'));
+            return;
+        }
+
+        let workflow;
+        try {
+            const res = await fetch(`/comfy_workflows/${workflowFile}`);
+            if (!res.ok) throw new Error(`Failed to load workflow: ${workflowFile}`);
+            workflow = await res.json();
+        } catch (err) {
+            exec.onError?.(err);
+            return;
+        }
+
+        // Same `Output_prompt` title contract the generation path uses (MPI-242).
+        const textNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id]._meta?.title?.toLowerCase() === 'output_prompt'
+            )
+        );
+
+        let caption = null;
+        const onMessage = (msg) => {
+            if (msg.type !== 'executed') return;
+            if (!textNodeIds.has(msg.data?.node)) return;
+            caption = readComfyOutputText(msg.data?.output) || caption;
+        };
+
+        try {
+            await getEngine(payload.forceLocal === true).runWorkflow(
+                workflow,
+                { Input_Image: payload.imageUrl },
+                onMessage,
+            );
+            _settled = true;
+            if (caption) exec.onText?.(caption);
+            else exec.onError?.(new Error('No caption returned'));
+        } catch (err) {
+            clientLogger.error('comfy', 'image describe workflow failed', err);
             exec.onError?.(err);
         } finally {
             _settled = true;
@@ -1027,6 +1141,11 @@ export function runCommand(payload) {
             genId: payload.genId ?? null,
             engine,
             scope: payload.scope || (payload.historyMode ? 'groupHistory' : 'gallery'),
+            // Tool-internal preview runs (resize/upscale thumbnail previews) register
+            // in the store for lifecycle/cancel, but they are NOT user Cue jobs — mark
+            // them so queue-busy gates (e.g. the resize tool's own gate) can exclude
+            // them and not self-revert on their own preview. (MPI-253)
+            display: payload.previewOnly === true ? { previewKind: 'preview' } : undefined,
             interruptCb: () => {
                 try { _closeSSE(); } catch (_) { /* SSE already closed */ }
                 const _eng = getEngine(payload.forceLocal === true);
@@ -1184,7 +1303,21 @@ export function runCommand(payload) {
         // unrecorded → stages tick up without a total.
         const _stageMode = workingPayload.isStage2 === true ? 'stage2'
             : workingPayload.previewOnly === true ? 'preview' : 'single';
-        const stageProgress = createStageProgress({ stages: stagesFor(workflowFile, _stageMode) });
+        // The prompt enhancer (MPI-242) runs the text encoder's LM head autoregressively
+        // before sampling, emitting its own tqdm bar — but only when the toggle is on.
+        // The static table can't know that, so the delta is supplied per run. Without
+        // this the status bar shows `3/2` on an enhanced run: the counter climbs past
+        // its own total, which reads as a hang right when the run is genuinely slower.
+        //
+        // EXCEPT on Krea2 (MPI-316): there the enhancer only fills ~10-20% of a bar
+        // instead of emitting its own, so counting it would overstate the total by one
+        // on every enhanced run. Krea2's enhancer runs through a different node than the
+        // TextGenerate path this delta was measured on, which is why the two differ.
+        const _isKrea2 = /^krea2_/i.test(workflowFile || '');
+        const _enhanceBars = (!_isKrea2 && _paramIsTrue(params, 'Input_Enhance_Prompt')) ? 1 : 0;
+        const stageProgress = createStageProgress({
+            stages: stagesFor(workflowFile, _stageMode, _enhanceBars),
+        });
 
         const opDef = COMMANDS[workingPayload.operation];
         if (opDef?.injector) {
@@ -1193,12 +1326,24 @@ export function runCommand(payload) {
                 clientLogger.error('commandExecutor', `Missing injector "${opDef.injector}" for op ${workingPayload.operation}`);
             } else {
                 try {
-                    injector(workflow, workingPayload.injectionParams || {});
-                    // Standalone injector params are already written into the
-                    // workflow. Remove them so the generic title injector below
-                    // cannot re-match names like `flip` against a `Flip` node.
-                    Object.keys(workingPayload.injectionParams || {}).forEach(key => {
+                    injector.inject(workflow, workingPayload.injectionParams || {});
+                    // Params the injector CONSUMED are already written into the
+                    // workflow. Remove those — BOTH the bare key AND its Input_ alias
+                    // (added by the canonicalization pass) — so the generic title
+                    // injector below cannot re-match them. Without the alias delete,
+                    // `flip` → `Input_flip` survives and the generic loop injects the
+                    // raw 'x'/'y' string into the MpiIfElse node titled `Input_Flip`,
+                    // setting its `boolean` to false (val !== 'true') and silently
+                    // overwriting the injector's correct boolean=true. Flip then no-ops.
+                    //
+                    // Delete only what the injector DECLARES it consumes (MPI-306).
+                    // Clearing every injectionParams key swallowed params the injector
+                    // never touched: Head Swap sends Input_Tier alongside its boxes, and
+                    // it was deleted before the generic injector could write it — so the
+                    // graph kept its baked tier and every tier ran the same.
+                    (injector.consumes || []).forEach(key => {
                         delete params[key];
+                        delete params[`Input_${key}`];
                     });
                     clientLogger.info('commandExecutor', `Applied injector "${opDef.injector}"`);
                 } catch (err) {
@@ -1210,7 +1355,7 @@ export function runCommand(payload) {
         }
 
         try {
-            await _prepareWorkflowInputs(workingPayload);
+            await _prepareWorkflowInputs(workingPayload, workflow);
         } catch (err) {
             clientLogger.error('commandExecutor', 'Failed to prepare workflow input defaults', err);
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
@@ -1229,34 +1374,39 @@ export function runCommand(payload) {
         }
         if (await _abortedBail(tempTrimInputPaths)) return;
 
-        // Build a set of node ids whose _meta.title === "output" (case-insensitive)
-        // — or "preview" when this is a preview-only run on a multi-stage workflow.
-        // Only images/gifs/videos from these nodes are treated as final results.
-        // Split video/audio output (B3): video workflows replace the single
-        // "Output" VHS_VideoCombine (nvenc-broken on Blackwell) with a
-        // "Output_Video" SaveVideo + an optional "Output_Audio" SaveAudio node.
-        // Treat "Output_Video" as an output node too so the SAME capture path
-        // works for every video workflow; the audio node is tracked separately
-        // and muxed server-side at save time (video is master). Preview-only
-        // multi-stage runs still capture the "Preview" node — or "Output_Preview"
-        // for tier-2 workflows (Input_*/Output_* naming, e.g. LTX-2.3, MPI-127),
-        // which title their preview SaveVideo "Output_Preview" not bare "Preview".
+        // Build the set of capture node ids by Output_* title (case-insensitive).
+        // The fleet titles its final-result save nodes self-descriptively:
+        //   image  → "Output_Image"
+        //   video  → "Output_Video" SaveVideo (audio embedded; nvenc-broken VHS
+        //            retired on Blackwell). A separate "Output_Audio" SaveAudio may
+        //            still exist on older split graphs — tracked below and muxed
+        //            server-side at save time (video is master).
+        // Preview-only runs on a multi-stage workflow capture "Output_Preview".
+        // The bare "output"/"preview" base string is kept only as a defensive
+        // fallback; no shipping workflow titles a capture node without the Output_
+        // prefix anymore (tier-1 deprecated, MPI-252).
         const _captureTitle = workingPayload.previewOnly === true && commandIsMultiStage(workingPayload.operation)
             ? 'preview'
             : 'output';
         const _videoOutputTitle = _captureTitle === 'output' ? 'output_video' : 'output_preview';
-        // Tier-2 IMAGE capture alias: a fully tier-2 image workflow titles its
-        // capture node `Output_Image` (self-describing, like video's `Output_Video`)
-        // instead of the bare tier-1 `Output`. Accept it on the SAME image capture
-        // path so tier-2 image workflows (e.g. NVIDIA PiD, MPI-182) need no bare-title
-        // exception. Only aliases the non-preview image capture.
         const _imageOutputTitle = _captureTitle === 'output' ? 'output_image' : null;
+        // MPI-259 (Apps multi-output): a workflow may carry SEVERAL same-type capture
+        // nodes — Output_Image, Output_Image_2, Output_Image_3 (or Output_video,
+        // Output_video_2) — each producing its own card. Match by PREFIX so the
+        // numbered siblings qualify, not just the exact base title. Preview-stage
+        // (`output_preview`) and the audio side-channel (`output_audio`, handled
+        // separately below) stay EXACT so they are never swept into the image/video set.
         const outputNodeIds = new Set(
             Object.keys(workflow).filter(id => {
-                const t = workflow[id]._meta?.title?.toLowerCase();
-                return t === _captureTitle
-                    || (_videoOutputTitle && t === _videoOutputTitle)
-                    || (_imageOutputTitle && t === _imageOutputTitle);
+                const t = workflow[id]._meta?.title?.toLowerCase() || '';
+                if (_captureTitle === 'preview') {
+                    return t === 'preview' || t === 'output_preview';
+                }
+                // Non-preview run: 'output' base + any Output_Image* / Output_video*.
+                if (t === 'output_audio') return false; // audio has its own set
+                return t === 'output'
+                    || t === 'output_image' || t.startsWith('output_image_')
+                    || t === 'output_video' || t.startsWith('output_video_');
             })
         );
         const outputAudioNodeIds = new Set(
@@ -1265,13 +1415,39 @@ export function runCommand(payload) {
             )
         );
 
-        // Cache-hit dedupe only fires for workflows that do NOT inject a fresh
-        // seed. Convention: every seeded workflow has a node titled exactly
-        // "Seed" (case-insensitive). Universal workflows like Upscale have no
-        // such node and benefit from dedupe.
-        const _hasSeedNode = Object.values(workflow).some(node =>
-            node?._meta?.title?.toLowerCase() === 'seed'
+        // `Output_prompt` capture (MPI-242) — a `PreviewAny` node carrying the exact
+        // string the text encoder saw. A workflow that has one is declaring "the
+        // prompt I encoded is not necessarily the prompt the user typed": the app
+        // may have injected an enhancer toggle upstream, and the graph may append a
+        // style trigger downstream. Tapping the node instead of the prompt box gives
+        // one unconditional read path — no "sometimes the box, sometimes the graph"
+        // branch — and is why the tap sits BEFORE the style concat: the saved prompt
+        // must stay re-styleable on reuse.
+        //
+        // Title-scoped on purpose. A workflow may use PreviewAny for debugging; only
+        // the node titled `Output_prompt` is the contract. Case-insensitive, matching
+        // every other title lookup here.
+        //
+        // GENERAL CONTRACT, not a Krea2 special case — see docs/playbooks/add-model/05-prompt-and-styles.md §10.
+        const outputPromptNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id]._meta?.title?.toLowerCase() === 'output_prompt'
+            )
         );
+
+        // Cache-hit dedupe only fires for workflows that do NOT inject a fresh
+        // seed. Convention: a seeded workflow has an MpiInt titled `Input_Seed`
+        // (the MPI-116 naming law — `_buildParams` injects a random seed into it
+        // every run). Universal workflows like Upscale have no such node and
+        // benefit from dedupe. NOTE: the old match was `=== 'seed'`, which no
+        // shipping workflow uses (all use `Input_Seed`) — it was dead fleet-wide
+        // and only stayed harmless because a fresh seed usually dodges ComfyUI's
+        // cache anyway. Boogu-Edit's frozen-seed high tier exposed it (MPI-257).
+        // Bare `seed` kept as a defensive fallback for any legacy/hand graph.
+        const _hasSeedNode = Object.values(workflow).some(node => {
+            const t = node?._meta?.title?.toLowerCase();
+            return t === 'input_seed' || t === 'seed';
+        });
 
         // Map nodeId → class_type for loader detection
         const saveLatentNodeIds = new Set(
@@ -1316,6 +1492,10 @@ export function runCommand(payload) {
         // audio (the workflow's MpiHasAudio gate skips the audio save). Muxed
         // into the video server-side at save time.
         let audioOutputUrl = null;
+        // The string captured from an `Output_prompt` PreviewAny node, when the
+        // workflow has one. null for every workflow that doesn't — which is the
+        // signal generationService uses to fall back to the prompt-box text.
+        let promptTextOutput = null;
         let _samplingStartFired = false;
         // MPI-208 Phase 2: model-load state is now the store job's phase, not a
         // private closure. `_modelInitializing` is DERIVED — the job sits in
@@ -1514,7 +1694,7 @@ export function runCommand(payload) {
             // is belt-and-suspenders for the fill. Only when stdout drove (local).
             if (_stdoutDriving) { stageProgress.finish(); emitProgress(stageProgress.percent()); }
             closeComfyEventSource();
-            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl });
+            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl, promptText: promptTextOutput });
         };
 
         const onMessage = (msg) => {
@@ -1669,6 +1849,9 @@ export function runCommand(payload) {
                 if (outputAudioNodeIds.has(nodeId)) {
                     audioOutputUrl = _collectComfyAudioUrl(nodeOutput, workingPayload.forceLocal === true) || audioOutputUrl;
                 }
+                if (outputPromptNodeIds.has(nodeId)) {
+                    promptTextOutput = readComfyOutputText(nodeOutput) || promptTextOutput;
+                }
             }
         };
 
@@ -1759,6 +1942,19 @@ export function runCommand(payload) {
                 Events.emit('ui:warning', {
                     title: 'Prompt assets no longer exist',
                     message: err.message,
+                });
+                exec.onError?.(err);
+                return;
+            }
+            // Out-of-memory (system RAM or CUDA/VRAM). User-actionable — the inputs are
+            // too large for the available memory, not a bug to report. Warning toast, not
+            // the GitHub-report dialog. Covers Python MemoryError, torch CUDA OOM, and the
+            // generic "out of memory" / "cannot allocate" phrasings ComfyUI surfaces.
+            if (/\b(memoryerror|out of memory|cannot allocate|outofmemory|cuda out of memory)\b/i.test(err?.message || '')) {
+                clientLogger.warn('comfy', `Out of memory — ${workingPayload.operation} / ${workingPayload.modelId}`);
+                Events.emit('ui:warning', {
+                    message: 'Ran out of memory processing this — the inputs are likely too large. '
+                        + 'Try smaller or shorter media, or free up memory and run again.',
                 });
                 exec.onError?.(err);
                 return;

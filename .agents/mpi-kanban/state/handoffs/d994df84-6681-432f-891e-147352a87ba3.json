@@ -1,0 +1,108 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d994df84-6681-432f-891e-147352a87ba3",
+  "generated_at": "2026-07-11T15:20:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-258 Model Library uninstall/download cluster — bugs 1+3 shipped, resume purged, download-stall + phantom-job open",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "User clearing disk space noticed uninstalling LTX-2.3 tiers left ~45GB stranded and Model Library bars showed misleading percentages; wanted the uninstaller to actually free shared deps and the bars to stop lying. Then removed download resume (corruption). All tracked in one umbrella card MPI-258.",
+    "status": "in_progress",
+    "summary": "Bug 1 (tier-family uninstall) and Bug 3 (bar accuracy) FIXED + live-verified + committed (69a6302f). Bug 2 resume corruption FIXED by full purge to cancel-only + committed (c7313dff). THREE things remain open, all confirmed live: (A) downloads STALL ~30s in and nothing lands on disk; (B) a frozen phantom download job survives because orphanedActive resurrects it, defeating Cancel; (C) a 1% partial from a shared upscaler owned by no installed model."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Bug 1: _localSharedDepsMap gates on whole-model installed===true OR live in-flight status (downloading/queued), NOT refCount. Live: uninstall ltx-23-balanced -> removed 9, kept 0 shared, ~45GB freed. Committed 69a6302f.",
+      "Bug 3: _computePartial excludes deps owned by an installed other-model AND custom_nodes; bar only draws when this model's own bytes downloaded>0; else Install chip. Verified images+LTX -> 0%. Committed 69a6302f.",
+      "Bug 2: full resume purge (download() always fresh, deleted resume()/abort()/slow-reconnect/_pausedDownloaders/pause+resume routes/engine pause+resume routes/NDH resume:true/frontend pause+resume+SSE listeners/UI buttons). NDH kept. Verified routes gone via live probe (pause/resume -> 404). Committed c7313dff. Net -233 lines.",
+      "Cancel button ghost -> secondary (visibility). Committed c7313dff.",
+      "Root-caused the SHA256 corruption: R2 source is PERFECT (25GB curl hash == registry expected 0a1d7aac..702370f0). App corrupts on RESUME only: NDH resumeFromFile sends Range: bytes=<n>- on an append-mode file; R2/Cloudflare answering 200 (not 206) appends the WHOLE file onto the partial -> mismatch. NOT a hash-recompute problem."
+    ],
+    "pending": [
+      "BUG A (download stall) — HIGHEST PRIORITY: installs 'Starting download' in app.log then _startPendingDeps goes 0 active ~30s later, nothing on disk, no .cubricdl/.part, SSE stream silent. Hit on LTX transformer AND ILL Anime Beauty. R2 reachable (206). Pre-existing (first LTX download stalled identically before any of my changes). Root not found. Suspect the NDH download subprocess never actually streams, or dies silently on start. Reproduce: install any model single-stream, watch G:/CubricModels for a growing file; watch app.log + curl /comfy/downloads/stream. If NDH is the culprit, this may push toward replacing the download path.",
+      "BUG B (phantom job / Cancel dead): client keeps a frozen 'downloading' job; downloadService.js orphanedActive (~line 256) re-injects any client ACTIVE job the backend lacks on every SSE status tick, so Cancel (which correctly gets 404 'Job not found' from the backend and clears locally) is immediately undone. Fix: orphanedActive must NOT resurrect a job that was just cancelled or that has had no backend counterpart for N ticks. Coordinate with the cancel() 404-handler already added (line ~180).",
+      "BUG C (1% shared-asset): 4x-AnimeSharp (65MB upscaler) on disk, shared by ill-anime/ill-anime-beauty/pony-mix, owned by NO currently-installed model -> not excluded by _computePartial -> reads 1%. Fix direction: exclude deps SHARED across >=2 model universes (a shared library asset), not only installed-owned. Validated counts: 4x-AnimeSharp in 3 models, 4x-NMKD in 5, each model's own big weight in exactly 1 model. Small frontend change in _computePartial (_sharedOwnedDepIds or a new shared-count helper)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-258",
+    "title": "Model Library uninstall/install cluster — tier-family shared-dep uninstall + resumable-download corruption + partial-install bar accuracy (LTX-2.3)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-258/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-258/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-258 task.json broadened to umbrella with all 3 bugs; events.jsonl has full chronological diagnosis of every fix + failure (including the first-fix refCount regression and the R2-source-verified-clean finding)."
+    ],
+    "pending": [
+      "On close: consider a docs/download-manager.md note that downloads are cancel-only (no resume) + WHY (NDH 200-vs-206 append corruption), and that .part/markers remain for progress/preflight not resume.",
+      "The download-stall (Bug A) once root-caused likely deserves its own docs entry in docs/download-manager.md or runpod-troubleshooting.md depending on where it lives."
+    ]
+  },
+  "next_action": {
+    "description": "Reproduce and root-cause BUG A (download stall): install any model, confirm whether NDH actually streams bytes to G:/CubricModels or dies ~30s after 'Starting download' (app.log). This is the headline blocker — the phantom job (Bug B) and every 'cancel does nothing' symptom are downstream of installs never completing. Then fix Bug B (orphanedActive resurrection defeating cancel) and Bug C (1% shared-asset exclusion). App runs on 127.0.0.1:3000; user owns it — do NOT kill it. Renderer must HARD reload (Ctrl+Shift+R) to pick up frontend JS changes; soft reload caches ES modules.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Resume removed entirely (cancel-only, RunPod-style) rather than fixed — user's call; resume lost value once installs queue (MPI-184) and carried the 200-vs-206 corruption.",
+      "NDH (node-downloader-helper) KEPT — it downloads every engine + model file, not resume-only.",
+      "Bar partial excludes shared-owned deps + custom_nodes; only shows when this model's own bytes are on disk (downloaded>0) else Install chip — matches active-download bar's work-not-bytes rule (MPI-231).",
+      "Guard fix gates on whole-model installed OR active download STATUS, never refCount (refCount stays >0 after install completes — that was the first-fix regression that made uninstall a no-op)."
+    ],
+    "constraints": [
+      "Shared git tree: commit by explicit pathspec, never git add -A/. Use -n to avoid lint-staged pulling peer hunks. Many unrelated files are dirty from peer sessions — do NOT touch them.",
+      "Frontend changes need HARD renderer reload (Ctrl+Shift+R); ES modules are cached on soft reload — this caused an hour of 'nothing changed' confusion.",
+      "Backend (routes/) changes need a full app restart.",
+      "App is live on 127.0.0.1:3000 and user-owned — never taskkill it; use the router-on-:3999 harness or read-only curls to probe.",
+      "R2 source files are verified GOOD (registry sha256 correct) — do not chase hash-recompute for the stall.",
+      "Downloads are parallel up to LOCAL_DOWNLOAD_CONCURRENCY=3 within a model; install QUEUE (MPI-184) serializes across models."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js",
+      "js/services/downloadService.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+      "js/events.js",
+      ".agents/mpi-kanban/tasks/MPI-258/task.json",
+      ".agents/mpi-kanban/tasks/MPI-258/events.jsonl",
+      ".agents/mpi-kanban/board.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-258/task.json",
+      ".agents/mpi-kanban/tasks/MPI-258/events.jsonl",
+      "routes/downloadManager.js",
+      "js/services/downloadService.js",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["download-manager", "comfy-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-11T15:20:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming Cubric Vision task MPI-258 on branch 1.2.0 (read .agents/mpi-kanban/state/handoffs/d994df84-6681-432f-891e-147352a87ba3.json and the card at .agents/mpi-kanban/tasks/MPI-258/). Three Model-Library bugs are FIXED, committed, and live-verified: tier-family uninstall now frees shared deps (69a6302f), install-bar accuracy (69a6302f), and download resume was fully purged to cancel-only because it corrupted large files via an NDH 200-vs-206 append (c7313dff). THREE bugs remain open, all confirmed live. Start with the headline blocker: downloads STALL ~30s after 'Starting download' in logs/app.log and nothing lands on G:/CubricModels (no .cubricdl/.part, SSE stream silent) — this is pre-existing (first hit on the LTX transformer) and every downstream symptom (phantom climbing bar, 'Cancel does nothing') flows from installs never completing. Reproduce by installing any model and watching whether NDH actually streams bytes. Then fix Bug B: a frozen client 'downloading' job is resurrected by orphanedActive in js/services/downloadService.js (~line 256) every SSE tick, undoing the cancel() 404-handler already added (~line 180). Then Bug C: _computePartial should exclude deps shared across >=2 model universes (e.g. 4x-AnimeSharp, a 65MB upscaler owned by no installed model reads 1%). The app is live on 127.0.0.1:3000 and user-owned — never kill it; renderer needs a HARD reload (Ctrl+Shift+R) to pick up frontend JS, backend needs a full restart. Commit by explicit pathspec with -n (shared tree, peer files dirty). Use mpi-continue."
+}

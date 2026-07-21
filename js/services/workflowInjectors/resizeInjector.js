@@ -9,9 +9,9 @@
 'use strict';
 
 const RESIZE_TITLE = 'resize image v2';
-const FLIP_TITLE = 'imageflip';
-const ROTATE_TITLE = 'image rotate';
-const FLIP_ENABLED_TITLE = 'flip';
+const FLIP_TITLE = 'input_flip_image';
+const ROTATE_TITLE = 'input_rotate_image';
+const FLIP_ENABLED_TITLE = 'input_flip';
 
 const DEFAULTS = Object.freeze({
     width: 512,
@@ -20,7 +20,7 @@ const DEFAULTS = Object.freeze({
     keep_proportion: 'crop',
     pad_color: Object.freeze({ r: 0, g: 0, b: 0 }),
     crop_position: 'center',
-    divisible_by: 1,
+    divisible_by: 16,
     flip: 'none',
     rotation: 'none',
 });
@@ -47,6 +47,17 @@ const KEEP_PROPORTIONS = new Set([
 ]);
 
 const CROP_POSITIONS = new Set(['center', 'top', 'bottom', 'left', 'right']);
+
+/**
+ * The ONLY params this injector consumes — commandExecutor deletes exactly these
+ * from the generic param map afterwards. `flip` MUST stay listed: its Input_flip
+ * alias otherwise reaches the generic injector and overwrites the correct
+ * boolean with false (the long-standing "flip no-ops" bug).
+ */
+export const RESIZE_CONSUMES = Object.freeze([
+    'width', 'height', 'upscale_method', 'keep_proportion', 'pad_color',
+    'crop_position', 'divisible_by', 'flip', 'rotation',
+]);
 
 const FLIP_METHODS = Object.freeze({
     x: 'x-axis: vertically',

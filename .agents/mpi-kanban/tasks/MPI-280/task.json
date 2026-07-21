@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-280",
+  "title": "Settings panel redesign — plate/subgroup grammar, toggle switches, RunPod key-gating",
+  "description": "Redesigned the whole Settings slide-over (impeccable skill, Variant C 'plates') so every section reads as one system.\n\nSCOPE (6 files):\n- js/components/Primitives/MpiCheckbox: added variant:'switch' (track+knob), same API/events. Reusable app-wide on/off affordance.\n- js/components/Compounds/LandingPages/MpiSettings (.js/.css): plate grammar for all prefs (label+desc left, control right, state-driven --on heat outline on active toggles); on/off checkboxes -> toggle switches via _mountSwitchPlate helper; Pixel mode -> segmented MpiRadioGroup; Reuse parts stay checkboxes, 'Ask each time' -> switch; External Connections reframed into titled __subgroup blocks (ComfyUI path / LoRA folders / Upscale folders); killed 2 double-labels; deleted ~110 lines dead CSS (__toggle/__checkbox-pill/__row/__header/__title/__desc/__extra-folders).\n- js/components/Compounds/LandingPages/MpiRunpodSettings (.js/.css): 4 toggles -> switch plates; connect-flow reframed into ACCOUNT/STORAGE/MACHINE/Connect __subgroups; REMOVED side-stripe border (border-left:2px = impeccable absolute-ban); killed double-label.\n\nBEHAVIOR CHANGE (user-approved): removed the 'Enable RunPod remote engine' toggle. RunPod controls now GATE on a saved API key (_applyEnabled derives from hasApiKey). ACCOUNT subgroup moved to top under the referral box, with the billing/responsibility disclaimer (rescued from the deleted Enable plate) + an 'unlock: save a read+write API key' prompt. _applyEnabled gates UI visibility + persists cfg.enabled (drop-recovery guard) but does NOT push remote-mode {active:true} — remote mode stays driven by actual Connect/Disconnect + the auto-connect-on-start boot path.\n\nIN-SESSION REGRESSION FIXED (NOT changelogged — bug was introduced + fixed this same session, never shipped): an earlier iteration of _applyEnabled pushed /remote/mode {active:true} on key-save, so at boot with a saved key + no Pod, ensureServerRunning fell back to local and fired the 'No Pod connected — running locally' info toast every launch (+ 503 ws-token errors). Fix: _applyEnabled no longer pushes remote mode.\n\nPOLISH: referral promo box always stacks (button under copy) — a side-by-side row cramped text at the ~42vw panel width; Min System RAM row host width auto (was fixed 90px) so 'GB' hugs the input; hint line-height fixed via display:block (inline span was inheriting body{line-height:1.6} over .hint{1.5}; sheet-load-order let body win for a ce()-injected hint in MpiRunpodSettings).\n\nVERIFIED: full panel driven live in the real Electron desktop app (screenshots), no console errors from these changes. RunPod body unlock path (key-save) is logic-verified + desktop-observed. New gotchas -> docs/ui-gotchas.md (hint display:block; minram host width).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-14T00:30:00Z",
+  "updated_at": "2026-07-14T00:30:00Z",
+  "attention": {
+    "state": "none",
+    "reason": "Shipped + desktop-verified this session. Changelog: Settings redesign + RunPod key-gating are user-facing (proposed for UNRELEASED.md). The boot-toast fix is NOT changelogged (in-session regression, never shipped).",
+    "updated_at": "2026-07-14T00:30:00Z"
+  },
+  "links": {
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "ui",
+    "settings",
+    "runpod",
+    "impeccable",
+    "redesign"
+  ],
+  "priority": "medium"
+}

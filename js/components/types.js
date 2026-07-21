@@ -74,6 +74,12 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsRemoveBgProps (Organism — js/components/Organisms/MpiToolOptionsRemoveBg)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ * Emits: 'apply' { bgMode: 'transparent'|'color', color: '#rrggbb' }
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsInterpolateProps (Organism — js/components/Organisms/MpiToolOptionsInterpolate)
  * @property {Object} viewer - MpiVideoViewer instance
  * Emits: 'apply' { multiplier: number }
@@ -92,6 +98,18 @@
  * Image mode runs debounced live previews via commandExecutor without saving
  * history. Emits: 'apply' full resize params object; parent block appends the
  * resized result as a new history entry.
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsGifProps (Organism — js/components/Organisms/MpiToolOptionsGif)
+ * @property {Object} viewer - MpiVideoViewer instance (registry-uniform signature; unused directly)
+ *
+ * Video-only GIF EXPORT (not a history op). Persists project.toolSettings.exportGif:
+ * { fps, sizePreset, loop }. Parent injects the encoder via el.setEncoder(fn)
+ * (fn(params) → Promise<{ url, byteSize, fileName }> via POST /api/video/gif) and
+ * reads el.getExportParams(). "Generate preview" encodes a real GIF → inline
+ * animated preview + real file-size badge. Emits: 'apply' { url?, fileName? } —
+ * parent saves via native Save-As (<a download>); empty payload = encode on demand.
  */
 
 /**
@@ -206,6 +224,23 @@
  *
  * Emits:
  * 'change' { value: string, label: string }
+ */
+
+/**
+ * @typedef {Object} MpiStylePickerProps (Primitive — js/components/Primitives/MpiStylePicker)
+ * A trigger button + floating, horizontally-scrolling grid of image cards for
+ * picking a style LoRA. Replaces MpiDropdown for style selection but keeps an
+ * INDEX value contract (emits the selected index int). Card 0 is the "None" card
+ * (falls back to a "None" placeholder card when it has no image; supply one to
+ * show art there too). The grid is portalled to document.body and anchored above
+ * the trigger (the prompt box sits at the viewport bottom).
+ * @property {Array<{label:string, image?:string}>} [styles=[]] - Index-aligned style entries; index 0 = None (uses its image if given, else a placeholder)
+ * @property {number} [value=0] - Selected index
+ * @property {string} [imageBase='comfy_workflows/display/'] - Path prefix for card images
+ * @property {string} [info] - Info Bar description forwarded to the trigger
+ *
+ * Emits:
+ * 'change' { index: number, label: string }
  */
 
 /**
@@ -351,7 +386,7 @@
  * @property {string} [operation='t2i']
  * @property {string} [value='']
  * @property {string} [negativeValue='']
- * @property {boolean} [includeNegative=false]
+ * @property {boolean} [includeNegative=false] - Does this SURFACE offer a negative prompt? Necessary but not sufficient: the toggle also requires the active model's `capabilities.negativePrompt !== false` (absent ⇒ supported), re-evaluated on every model change.
  * @property {boolean} [showSettings=true]
  * @property {boolean} [generating=false]
  * @property {Object} [context={}]
@@ -524,6 +559,7 @@
  * @property {string} message - Notification message
  * @property {'info'|'success'|'warning'|'danger'} [variant='info'] - Visual variant
  * @property {number} [duration=3000] - Auto-hide duration in ms
+ * @property {boolean} [sound=true] - Play the notification chime (once per burst). Pass false for immediate user-action feedback (Connect, Install, Cue).
  */
 
 /**
@@ -645,6 +681,143 @@
  *   close()   — hides the overlay.
  *   destroy() — tears down subscriptions, tiles, detail toggles, the uninstall
  *               dialog, and the hosted overlay.
+ */
+
+/**
+ * @typedef {Object} MpiAppLibraryProps (Compound — js/components/Compounds/LandingPages/MpiAppLibrary)
+ *
+ * Takes no props. The App Library (MPI-256, dev-gated): a clone of the Model
+ * Library skeleton stripped to app scope. Self-hosts a full-page MpiOverlay(body)
+ * as a dark contact sheet of app tiles (preview + title + availability badge from
+ * appAvailability, read-only over s_installedModelIds), with a right-drawer detail
+ * panel carrying the description, the required-models install state, and ONE footer
+ * button — all-installed → Open (emits `app:open`, Gallery-only), missing → Install
+ * (drives each missing model's own dependency download). No ops/arch toggles, VRAM
+ * table, filters, or re-sync — availability derives entirely from the installed set,
+ * so download:* events only re-derive badges in place (never a full re-render).
+ *
+ * Opened via: Events.emit('apps:open') → shell mounts it once and calls el.open().
+ * Emits: `app:open` {appId} when Open is clicked in the Gallery.
+ *
+ * Instance methods (on instance.el):
+ *   open()    — shows the overlay + renders the app grid (alias: onOpen).
+ *   close()   — hides the overlay.
+ *   destroy() — tears down subscriptions, tiles, detail buttons, and the overlay.
+ */
+
+/**
+ * @typedef {Object} MpiBaseAppProps (Organism — js/components/Organisms/MpiBaseApp)
+ * @property {import('../data/appsRegistry.js').AppDef} app - The app descriptor.
+ * @property {Object|null} [uiComponent] - The per-app controls blueprint (mounted
+ *   into the content slot; must expose el.getInputs({stepValues})). Null for a
+ *   frame-only app.
+ * @property {Object} [initialInputs] - Optional seed inputs (overridden by
+ *   state.s_appInputs[app.id] when present).
+ *
+ * THE app frame: a STEP CAROUSEL (MPI-306 Phase 1; was a flat form in MPI-256).
+ * COMPOSITION: mounts a `main-area` MpiOverlay (covers #tool-container + prompt
+ * box, spares #shell-info-bar), renders a topbar (Back + app name + a NAVIGATING
+ * step ticker) over a slide stage with arrows outside the content.
+ *
+ * Shape — two zones split by an INSET centre divider on the FIRST and LAST step
+ * only (divided = supplying/reviewing, undivided = working):
+ *   step 0     media slots (from inputSchema.media) │ what this app does
+ *   1..N       declared middle steps — bounded centred canvas, no divider
+ *   last       controls + Generate                  │ result + Apply
+ *
+ * STEPS ARE DATA: an app declares `steps: [{kind, role, title, hint, fields?}]`
+ * (see AppDef/AppStep in js/data/appsRegistry.js) and writes NO layout code.
+ * `kind` keys into STEP_KINDS (MpiBaseApp/stepKinds.js); each kind takes
+ * {media, value, onChange, step} and reports a value. The frame collects
+ * {[role]: value} into `stepValues` and merges it into the Run inputs — it never
+ * learns what a gizmo does. A step is never invalid (every kind defaults), so the
+ * forward arrow is never blocked. Declared `fields` render as ONE frame-owned row
+ * between canvas and hint.
+ *
+ * Run merges media + stepValues + the uiComponent's getInputs({stepValues}) →
+ * submitAppGeneration(app, inputs). The step values are PASSED TO the controls
+ * component so the APP can map roles to its own graph params (e.g. Head Swap's
+ * box1/box2) — the frame never learns what a role means. Seeds/writes state.s_appInputs[app.id]
+ * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
+ * el.close() then Events.emit('apps:open'). Mid-run navigation is allowed; closing
+ * with an unapplied result does NOT prompt (there is no Discard — see
+ * docs/playbooks/add-app/ui/carousel-frame.md).
+ *
+ * PHASE 3 PENDING: the run path still commits at ENQUEUE time (scope:'gallery'),
+ * so APPLY IS INERT and the result is already in the gallery when it lands. The
+ * affordance + "Not saved yet" note ship with the frame; wiring is a separate diff.
+ *
+ * Mounted via: Events.emit('app:open', {appId}) → shell resolves the descriptor +
+ * uiComponent and mounts one instance (destroying any prior active app).
+ *
+ * Instance methods (on instance.el):
+ *   open()/close() — show/hide the overlay (alias onOpen).
+ *   destroy()      — tears down subs, the live slide (gizmos + listeners), the
+ *                    per-app component, and the overlay.
+ */
+
+/**
+ * @typedef {Object} MpiStepBoxProps (Organism — js/components/Organisms/MpiStepBox)
+ * @property {Object}   media      - The media item this step operates on ({url, …}).
+ * @property {Object}   step       - The AppStep declaration (uses `ratio` if present).
+ * @property {Object|null} [value] - Restored value ({box:{x,y,w,h}}) or null.
+ * @property {Function} onChange   - (value) => void; called as the box is dragged.
+ *
+ * The `box` STEP KIND (MPI-306) — a bounded image with a draggable/resizable
+ * region box. Reuses js/utils/cropTool.js with `showGrid:false` (a rule-of-thirds
+ * grid is a composition aid; this box marks a subject). Reports
+ * `{box:{x,y,w,h}}` in ABSOLUTE SOURCE PIXELS, top-left anchored — the unit
+ * `Mpi Box` consumes unconverted (docs/playbooks/add-app/ui/box-gizmo.md).
+ * cropTool works normalized; the conversion + EDGE clamp happen here, because
+ * `Mpi Box Crop` returns the intersection and does NOT pad — an off-edge box
+ * would otherwise yield a silently non-square crop.
+ *
+ * Knows nothing about its host app, the workflow, or any injector — that is the
+ * step-kind contract that keeps `steps` data.
+ *
+ * Instance methods (on instance.el):
+ *   getValue() — returns {box:{x,y,w,h}} in source pixels.
+ *   destroy()  — disconnects the ResizeObserver, destroys the crop tool.
+ */
+
+/**
+ * @typedef {Object} MpiAppImageRegenProps (Organism — js/components/Organisms/MpiAppImageRegen)
+ * @property {Object} [initialInputs] - Seed inputs ({positive}) from a prior run.
+ *
+ * The first App's controls (image-in → image-out regen): a single positive-prompt
+ * textarea rendered into MpiBaseApp's content slot. Exposes el.getInputs() →
+ * {positive}, which BaseApp merges with the uploaded image before Run. Controls
+ * only — the frame, upload, Run, and result come from MpiBaseApp.
+ *
+ * Instance methods (on instance.el):
+ *   getInputs() — returns {positive} (trimmed prompt text).
+ *   destroy()   — removes the input listener.
+ */
+
+/**
+ * @typedef {Object} MpiAppHeadSwapProps (Organism — js/components/Organisms/MpiAppHeadSwap)
+ * @property {Object} [initialInputs] - Seed inputs from a prior run; reads
+ *   injectionParams.Input_Tier to restore the tier.
+ *
+ * Head Swap's controls (MPI-306 Phase 2): a Quality/Turbo/Hyper tier radio →
+ * `Input_Tier` (1/2/3), plus the translation of the frame's role-keyed step
+ * values into this graph's box params. Cost labels are RELATIVE ratios
+ * (baseline / ~25% / ~13% of time), NEVER absolute seconds — a baked ETA is a lie
+ * on every GPU but the one it was measured on (carousel-frame.md).
+ *
+ * NO prompt UI (both prompts are baked in the graph) and NO seed UI, ever.
+ *
+ * WHY THE BOX MAPPING LIVES HERE: the frame collects `{[role]: {box}}` and must
+ * never learn what a role means; image1's box masks the head being replaced
+ * (Input_Box) while image2's crops the head being taken (Input_Box_2). Coords
+ * pass through UNCONVERTED (MpiStepBox already reports clamped top-left source
+ * pixels) — only the w/h → width/height key rename happens.
+ *
+ * Instance methods (on instance.el):
+ *   getInputs({stepValues}) — returns {injectionParams:{Input_Tier, box1?, box2?}};
+ *                             a box is omitted when its step reported none, so the
+ *                             node keeps its baked default.
+ *   destroy()               — destroys the radio group.
  */
 
 /**
@@ -858,6 +1031,7 @@
  * @property {number} [selectedIndex=0] - Initially active entry index
  * @property {boolean} [isVideo=false] - Disables Compare in context menu for video groups
  * @property {(idx:number)=>Promise<boolean>|boolean} [hasMaskForIndex] - Per-entry mask availability check
+ * @property {()=>boolean} [hasCopiedMask] - Whether a mask is on the app-local copy buffer (gates "Paste mask")
  *
  * Instance methods (on instance.el):
  *   setActiveIndex(idx)          — highlight active card (no events)
@@ -875,6 +1049,7 @@
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
  *   'download-selected' { indices }                     — download selected entries
  *   'download-mask'     { index }                       — download single entry mask
+ *   'reveal'            { indices }                       — open entry/Media folder in file system
  *   'reuse'             { item, positive, negative, modelId, operation, injectionParams, mediaItems } - reuse prompt button clicked
  */
 
@@ -886,6 +1061,7 @@
  * @property {{original?:boolean,current?:boolean}} [imageAvailability] - Per-source: does the source carry a reusable input image? false greys "Use Images" (MPI-212)
  * @property {{original?:boolean,current?:boolean}} [videoAvailability] - Per-source: reusable input video? false greys "Use Video" (MPI-227)
  * @property {{original?:boolean,current?:boolean}} [audioAvailability] - Per-source: reusable input audio? false greys "Use Audio" (MPI-227)
+ * @property {boolean} [isAppCard=false] - App-generated card: split Apply into "Apply to Prompt Box" + "Apply to App" (MPI-263)
  *
  * Instance methods (on instance.el):
  *   show()    - open the modal
@@ -893,8 +1069,8 @@
  *   destroy() - release modal listeners
  *
  * Emits:
- *   'apply'  { includes, source } - user confirmed reuse choices
- *   'cancel' {}                   - user cancelled
+ *   'apply'  { includes, source, dest } - user confirmed reuse. dest: 'promptbox' honors checkboxes; 'app' reopens the App card (MPI-263)
+ *   'cancel' {}                         - user cancelled
  */
 
 /**

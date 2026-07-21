@@ -221,7 +221,7 @@ async function _runFilterPath(probes, inputPaths, outputPath, opts) {
     await _runFfmpeg(args, opts);
 }
 
-async function concatVideos(inputPaths, outputPath, { onProgress, inputRanges } = {}) {
+async function concatVideos(inputPaths, outputPath, { onProgress, inputRanges, forceReencode } = {}) {
     if (!Array.isArray(inputPaths) || inputPaths.length < 2) {
         throw new Error('concatVideos requires at least 2 input paths');
     }
@@ -257,7 +257,12 @@ async function concatVideos(inputPaths, outputPath, { onProgress, inputRanges } 
     await fs.ensureDir(path.dirname(outputPath));
 
     // Per-input slicing requires re-encoding; demuxer copy cannot honor it.
-    if (!hasAnyRange && _canFastPath(probes)) {
+    // forceReencode also bypasses the fast path: `-c copy` concat sums each
+    // clip's container duration (incl. mp4 edit-list/trailing offsets), which
+    // for short generated clips drifts the output PTS spacing and yields a
+    // non-integer r_frame_rate (e.g. 283/12 ≈ 23.58) — breaking frame-accurate
+    // playback. The filter path forces `fps=N` + `setpts` → clean CFR output.
+    if (!hasAnyRange && !forceReencode && _canFastPath(probes)) {
         logger.info('project', `concat fast-path (demuxer copy) for ${inputPaths.length} inputs`);
         try {
             await _runDemuxerPath(inputPaths, outputPath, opts);

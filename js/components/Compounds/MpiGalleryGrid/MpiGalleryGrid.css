@@ -346,6 +346,63 @@
     }
 }
 
+/* ── Mascot (generating-card personality, MPI-265) ──────────────────────────
+   Decorative overlay above the spinner/preview. Positioned via top/left/width so
+   `transform` is free for the hover-float + happy-pop keyframes. Hidden until a
+   state class sets its src + geometry. Position/size transition on state change
+   gives the "shrink + slide to the corner" motion for free. */
+.mpi-group-card__mascot {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    user-select: none;
+    object-fit: contain;
+    opacity: 0;
+    /* geometry defaults (idle); overridden by cooking */
+    top: 50%;
+    left: 50%;
+    width: 46%;
+    height: auto;
+    transform: translate(-50%, -50%);
+    transition:
+        top var(--t-slow, 0.35s) var(--ease, ease),
+        left var(--t-slow, 0.35s) var(--ease, ease),
+        width var(--t-slow, 0.35s) var(--ease, ease),
+        opacity var(--t-base, 0.25s) var(--ease, ease);
+}
+
+.mpi-group-card__mascot[src] {
+    opacity: 1;
+}
+
+/* Idle + cooking: gentle hover float. The float keyframe re-declares the
+   centering translate so it composes with the -50%/-50% anchor. */
+.mpi-group-card--mascot-idle .mpi-group-card__mascot,
+.mpi-group-card--mascot-cooking .mpi-group-card__mascot {
+    animation: mpi-card-mascot-float 3.2s var(--ease, ease-in-out) infinite;
+}
+
+/* Cooking: small, tucked into the bottom-right corner. */
+.mpi-group-card--mascot-cooking .mpi-group-card__mascot {
+    top: auto;
+    left: auto;
+    bottom: 4%;
+    right: 4%;
+    width: 22%;
+    transform: none;
+    animation-name: mpi-card-mascot-float-corner;
+}
+
+@keyframes mpi-card-mascot-float {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50%      { transform: translate(-50%, calc(-50% - 6px)); }
+}
+
+@keyframes mpi-card-mascot-float-corner {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+}
+
 /* ── Select checkbox ─────────────────────────────────────────────────────── */
 
 .mpi-group-card__select-wrap {

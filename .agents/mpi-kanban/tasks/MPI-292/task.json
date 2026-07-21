@@ -1,0 +1,14 @@
+{
+    "schema": "mpi-kanban/task-card/v1",
+    "id": "MPI-292",
+    "title": "KREA2 edit: two image chips (Input_Image_2), count-driven op auto-switch",
+    "column": "done",
+    "maturity": "complete",
+    "status": "accepted",
+    "created_at": "2026-07-16T17:20:00.000Z",
+    "updated_at": "2026-07-16T17:45:00.000Z",
+    "links": {
+        "brief": "brief.md",
+        "events": "events.jsonl"
+    }
+}

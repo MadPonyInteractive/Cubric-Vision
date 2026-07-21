@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-283",
+  "title": "Frame-accurate video player via mediabunny (hybrid)",
+  "description": "Root cause (research-confirmed, 4 angles): <video>.currentTime is NOT frame-accurate by spec — Chromium drives it from the audio clock not video PTS, plus float->int PTS truncation gives ~0.5% drift (the 24-vs-23.98 mismatch behind the stuck-playhead / no-movement-on-step / loop-freeze / out-cant-reach-end bugs). No amount of currentTime math fixes it. FIX: add mediabunny (WebCodecs demux+decode, 1.33M dl/wk, MPL-2.0, Remotion-sponsored). HYBRID: native <video> for PLAY; mediabunny VideoSampleSink -> exact decoded frame on a canvas overlay for PAUSED/frame-step/trim-playhead. DELETE all seek-math: frameStep currentTime+0.25*fs bias, _effectiveFps guessing, _handleRangeBoundary seek dance. Caveat: mediabunny has no built-in .seek yet (#303) — trivial for our short clips (tiny GOP, decode-from-keyframe near-instant). Must frame.close() every VideoFrame (GPU mem). Spans MpiVideoSurface, MpiVideoControlBar, MpiTrimBar + new frame-sink layer.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "activeSessionTitle": "Frame-accurate video player via mediabunny",
+  "created_at": "2026-07-14T00:00:00Z",
+  "updated_at": "2026-07-15T00:40:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

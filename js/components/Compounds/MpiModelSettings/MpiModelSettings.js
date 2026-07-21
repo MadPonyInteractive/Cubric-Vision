@@ -558,10 +558,12 @@ export const MpiModelSettings = ComponentFactory.create({
                 return;
             }
 
-            // Lazy-load asset lists if not yet populated (ComfyUI may not have fired comfy:ready)
-            if (!state.upscaleModels?.length || !state.availableLoras?.length) {
-                await loadAssets();
-            }
+            // Rescan asset lists on every open. Files can land on disk outside the
+            // app (File Explorer copy, a new subfolder) with no state:changed to
+            // trigger a refresh — an open-time rescan is the only chance to pick
+            // them up. loadAssets() reassigns the state keys → state:changed →
+            // the live-rerender subscription rebuilds the dropdowns.
+            await loadAssets();
 
             _context = ctx;
 

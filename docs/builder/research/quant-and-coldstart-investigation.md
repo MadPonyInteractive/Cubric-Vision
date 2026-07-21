@@ -171,6 +171,13 @@ match — older/non-distilled LTX GGUFs exist and are wrong). fp8 is excluded
   (arXiv 2603.29078) **withdrawn by author 2026-04-20**; no ComfyUI path. Skip.
 - **INT8 mixed (Winnougan ~29GB)** — Ampere-targeted, no 5090 benefit, barely
   smaller. Skip.
+  > ⚠ **This verdict is scoped to LTX on Blackwell (RTX 5090), the target of this doc.**
+  > It is NOT a general "int8 is dead" finding. Blackwell has native fp8/mxfp8 tensor
+  > cores, so fp8 already saturates the pipeline and int8 buys nothing. On **Ampere**
+  > (no native fp8), int8 IMMA is the *faster* path — a 3090 bench shows Krea2
+  > `int8_convrot` at **1.92×** `fp8_scaled`. Same fact, opposite conclusion, different
+  > silicon. See [krea2-int8-quant.md](../../models/krea2/int8-quant.md) before citing this line to
+  > dismiss an int8 proposal for another model or GPU generation.
 
 ---
 
@@ -223,6 +230,13 @@ These came out of the cold-start lane and stand on their own. Ranked by leverage
    bf16 lever.** Fire a throwaway LTX gen on connect, interrupt at stage-1 step-1
    SSE → faults the 40GB in invisibly → user's first real gen starts warm. MUST be
    the LTX workflow itself (SDXL warm-up already proven useless — different VBAR).
+   > **ABANDONED (2026-07-02) — do NOT reopen.** Not going to be attempted. The
+   > cold-tax fix shipped a different way: the **Q8-GGUF transformer (MPI-168)** on
+   > the balanced-LTX Pod path, live-proven on RTX 5090. GGUF's RAM-caching makes the
+   > cold tax a one-time-per-boot event with no fire-and-interrupt warm-up needed.
+   > Node-58 (`MpiClearVram`) removal was also DISPROVEN live — bypassing it ran
+   > SLOWER, so the node stays. Reopen warm-on-connect only with new evidence that
+   > GGUF is insufficient.
    Open risk: does aimdo evict on interrupt before the real gen queues? (issue
    #13139 "models always unloaded" suggests it might.) Quick live test settles it.
 

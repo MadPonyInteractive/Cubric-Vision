@@ -133,6 +133,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
         /** @type {Array<Function>} */
         const _unsubs = [];
 
+        // ── Hover playback vs scroll (MPI-321) ─────────────────────────────────
+        // Hover plays a video/audio card INSTANTLY — but never while scrolling.
+        // The scroll handler sets _isScrolling and stops all playing media; a
+        // short idle timer clears it and replays whatever card the cursor settled
+        // on. So scroll-past = silence, settling = instant play, no dwell.
+        let _isScrolling = false;
+        let _scrollIdleTimer = null;
+
         // ── Selection state ───────────────────────────────────────────────────
         const _selectedIds = new Set();
         let _selectionMode = false;
@@ -320,6 +328,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <div class="mpi-group-card__thumb mpi-group-card__thumb--empty"></div>
                     <div class="mpi-group-card__preview">
                         <div class="mpi-group-card__spinner"></div>
+                        <img class="mpi-group-card__mascot" alt="" draggable="false">
                     </div>
                 </div>
                 <div class="mpi-group-card__top-badge"></div>
@@ -350,6 +359,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             let thumb        = qs('.mpi-group-card__thumb', cardEl);
             const preview    = qs('.mpi-group-card__preview', cardEl);
             const spinner    = qs('.mpi-group-card__spinner', cardEl);
+            const mascot     = qs('.mpi-group-card__mascot', cardEl);
             let previewImg   = null;
             // Latent-preview frame pacing + loop. Most models send one evolving still
             // per step, but video models (LTX via the KJNodes preview override) emit a
@@ -544,6 +554,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         img.classList.remove('mpi-group-card__preview-img--loaded');
                         spinner.style.display = '';
                     }
+                    // MPI-277: mark this URL failed so the L525 guard short-circuits
+                    // every future call with it. A revoked preview blob (gen ended,
+                    // blob revoked on next tick) would otherwise be re-requested on
+                    // each 8fps clip tick AND each install-churn re-render
+                    // (setGenerating(group.latestPreviewUrl) with the stale URL) →
+                    // hundreds of ERR_FILE_NOT_FOUND. Only latch a dead blob: real
+                    // file URLs may transiently 404 and should stay retryable.
+                    if (url.startsWith('blob:')) img.dataset.previewSrc = url;
                 };
                 next.src = url;
                 if (next.complete && next.naturalWidth > 0) {
@@ -635,6 +653,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.remove('mpi-group-card--missing');
             }
 
+            // Hover playback entry point (MPI-321). Set per-card on cardEl so the
+            // scroll-idle handler can replay the card the cursor settled on. Never
+            // plays while scrolling — the scroll handler gates + stops everything.
+            // No dwell: a real hover (not scrolling) plays instantly.
+            cardEl._hoverPlay = () => {};
+
             // Click the audio card → toggle play/pause (no loop). The center icon
             // swaps play↔pause as feedback. A hidden <audio> element drives it.
             let _audioEl = null;
@@ -681,11 +705,15 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // Play audio on hover (setting, default on): hovering an audio
                 // card plays it (stop button shows via the 'play' listener);
                 // leaving stops + resets. Click-to-stop still works.
-                on(cardEl, 'mouseenter', () => {
+                cardEl._hoverPlay = () => {
                     if (!Storage.getPlayAudioOnHover()) return;
                     if (!audio.paused) return;
                     _stopOtherGalleryMedia(audio);
                     audio.play().catch(() => {});
+                };
+                on(cardEl, 'mouseenter', () => {
+                    if (_isScrolling) return; // scroll-past never plays
+                    cardEl._hoverPlay();
                 });
                 on(cardEl, 'mouseleave', () => {
                     if (audio.paused) return;
@@ -738,11 +766,20 @@ export const MpiGalleryGrid = ComponentFactory.create({
             function _ensureVideoHoverBindings() {
                 if (_videoHoverBound) return;
                 _videoHoverBound = true;
+                cardEl._hoverPlay = _videoHoverPlay;
                 cardEl.addEventListener('mouseenter', _onCardEnter);
                 cardEl.addEventListener('mouseleave', _onCardLeave);
             }
 
             function _onCardEnter() {
+                if (_isScrolling) return; // scroll-past never plays (MPI-321)
+                cardEl._hoverPlay();
+            }
+
+            // Actual play, also invoked by the scroll-idle handler for the card
+            // the cursor settled on. Re-reads _videoThumb — a re-render could have
+            // swapped it since binding.
+            function _videoHoverPlay() {
                 if (!_videoThumb) return;
                 // Play audio on hover (setting, default on): stop any other
                 // playing card first, then unmute so this card is the only sound.
@@ -794,9 +831,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 v.src = _videoSrc;
                 _videoThumb = v;
 
-                // If user is already hovering at the moment of promotion, start
-                // playback as soon as data lands.
-                if (cardEl.matches(':hover')) {
+                // If user is already hovering at the moment of promotion (and not
+                // mid-scroll), start playback as soon as data lands. Scroll-settle
+                // replays via the idle handler, so the scroll gate stays honored.
+                if (cardEl.matches(':hover') && !_isScrolling) {
                     v.addEventListener('loadeddata', () => v.play().catch(() => {}), { once: true });
                 }
             }
@@ -884,7 +922,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     } else if (isVideo) {
                         _swapThumbToVideo(src, selected);
                     } else {
-                        _swapThumbToImage(src, selected);
+                        // MPI-319: render the small gallery thumb (a 512px JPG)
+                        // when present, not the full-res original — decoding 100+
+                        // 4K PNGs is what jammed scrolling. Full-res still opens in
+                        // the viewer (which reads filePath). Older items without a
+                        // thumb fall back to filePath.
+                        _swapThumbToImage(selected?.thumbPath || src, selected);
                     }
                 } else {
                     _swapThumbToEmpty();
@@ -1098,8 +1141,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         { key: 'compare',    icon: 'compare',  label: 'Compare',    disabled: compareDisabled },
                         { key: 'combine',    icon: 'merge',     label: 'Combine',    disabled: combineDisabled },
                         { key: 'add-to-project', icon: 'folder', label: 'Add to project' },
+                        { key: 'reveal',     icon: 'folder',    label: 'Open in file system' },
                         { key: 'rename',     icon: 'edit',      label: 'Rename',     disabled: targetIds.length !== 1 },
                         { key: 'card-notes', icon: 'text',      label: 'Card notes', disabled: targetIds.length !== 1 },
+                        // MPI-310 — single image only: the captioner reads one image
+                        // and writes one prompt, so a multi-select has no meaning.
+                        { key: 'describe',   icon: 'chat',      label: 'Describe image',
+                            disabled: targetIds.length !== 1 || _selectedVideoCount > 0 },
                         { key: 'download',   icon: 'download',  label: 'Download' },
                         { key: 'delete',     icon: 'trash',     label: 'Delete',     danger: true },
                     ],
@@ -1110,8 +1158,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         if (key === 'compare')    emit('compare',  { groups: selected });
                         if (key === 'combine')    emit('combine',  { groups: selected });
                         if (key === 'add-to-project') emit('add-to-project', { groups: selected });
+                        if (key === 'reveal')     emit('reveal', { groups: selected });
                         if (key === 'rename')     _startRename();
                         if (key === 'card-notes') emit('card-notes', { group });
+                        if (key === 'describe')   emit('describe', { group: selected[0] });
                         if (key === 'download')   emit('download', { groups: selected });
                         if (key === 'delete')     emit('delete',   { groups: selected, source: 'context' });
                         if (useSelection) _exitSelectionMode();
@@ -1126,12 +1176,67 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (idx >= 0) cardEl.setSelectionBadge(idx + 1);
             }
 
+            // ── Mascot (generating-card personality, MPI-265) ────────────────
+            // A pointer-events:none <img> overlaid on the generating card. Pure
+            // decoration: reads/mutates no state, sits above the spinner/preview.
+            // States (mutually-exclusive card classes): idle (big centered, replaces
+            // the spinner) → cooking (small, bottom-right) once a preview lands.
+            // idle↔greet face swaps on a self-rearming timer at a random 4–8s cadence;
+            // cooking drops the flip and shows the single waiting face.
+            // (No done/happy state on the card — the finished-generation happy mascot
+            //  lives on the success toast instead; the card rebuilds on complete.)
+            const MASCOT_SRC = {
+                idle:    'assets/mascot/idle.png',
+                greet:   'assets/mascot/greet.png',
+                waiting: 'assets/mascot/waiting.png',
+            };
+            let _mascotFlipTimer = null;
+            let _mascotFace = 'idle';   // current idle/greet face while flipping
+            let _mascotCooking = false; // latch: cooking entered once per gen
+            function _stopMascotFlip() {
+                if (_mascotFlipTimer) { clearTimeout(_mascotFlipTimer); _mascotFlipTimer = null; }
+            }
+            function _scheduleMascotFlip() {
+                _stopMascotFlip();
+                _mascotFlipTimer = setTimeout(() => {
+                    _mascotFace = _mascotFace === 'idle' ? 'greet' : 'idle';
+                    mascot.src = MASCOT_SRC[_mascotFace];
+                    _scheduleMascotFlip(); // re-arm
+                }, 4000 + Math.random() * 4000);
+            }
+            function _setMascotState(state) {
+                // state: 'idle' | 'cooking' | null (clear/hide)
+                cardEl.classList.remove(
+                    'mpi-group-card--mascot-idle',
+                    'mpi-group-card--mascot-cooking',
+                );
+                if (!state) {
+                    _stopMascotFlip();
+                    mascot.removeAttribute('src');
+                    _mascotFace = 'idle';
+                    _mascotCooking = false;
+                    return;
+                }
+                cardEl.classList.add(`mpi-group-card--mascot-${state}`);
+                if (state === 'cooking') {
+                    // Latents incoming → single waiting face, no idle/greet flip.
+                    _stopMascotFlip();
+                    mascot.src = MASCOT_SRC.waiting;
+                    return;
+                }
+                // idle: big centered, flips idle↔greet on the self-rearming timer.
+                _mascotFace = _mascotFace === 'greet' ? 'greet' : 'idle';
+                mascot.src = MASCOT_SRC[_mascotFace];
+                _scheduleMascotFlip();
+            }
+
             // ── Public methods ───────────────────────────────────────────────
             cardEl.setGenerating = (previewUrl = null) => {
                 _generating = true;
                 cardEl.classList.add('mpi-group-card--generating');
                 preview.classList.add('mpi-group-card__preview--visible');
-                spinner.style.display = previewUrl && _isPreviewLoaded() ? 'none' : '';
+                // Mascot replaces the spinner as the waiting indicator.
+                spinner.style.display = 'none';
                 if (thumb.getAttribute('src') !== EMPTY_IMAGE_SRC) {
                     thumb.style.visibility = '';
                 } else {
@@ -1140,13 +1245,22 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (previewUrl) {
                     const img = _ensurePreviewImage();
                     _setPreviewImageSrc(img, previewUrl);
+                    // Re-mounted mid-gen with a preview already in hand → cooking.
+                    _mascotCooking = true;
+                    _setMascotState('cooking');
                 } else {
                     _clearPreviewImage();
+                    _setMascotState('idle');
                 }
             };
 
             cardEl.updatePreview = (previewUrl) => {
                 if (!_generating) return;
+                // First real preview frame = "latency coming in" → shrink to corner.
+                if (!_mascotCooking) {
+                    _mascotCooking = true;
+                    _setMascotState('cooking');
+                }
                 _enqueuePreviewFrame(previewUrl);
             };
 
@@ -1169,6 +1283,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.classList.remove('mpi-group-card--generating');
                 preview.classList.remove('mpi-group-card__preview--visible');
                 _clearPreviewImage();
+                _setMascotState(null);
                 _render();
             };
 
@@ -1235,6 +1350,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     cardEl.classList.remove('mpi-group-card--generating');
                     preview.classList.remove('mpi-group-card__preview--visible');
                     _clearPreviewImage();
+                    _setMascotState(null); // reconcile, not a fresh finish → no happy pop
                 }
                 _render();
                 // In-place Finish (preview→video) replaces the entry on a card
@@ -1518,21 +1634,24 @@ export const MpiGalleryGrid = ComponentFactory.create({
             grid.scrollTop += e.deltaY;
         }, { passive: false }));
 
-        // Scrolling moves a playing card out from under the cursor without
-        // firing mouseleave (the element moves, the pointer doesn't) — so hover
-        // audio/video would keep playing off-screen. On any scroll, stop every
-        // media element whose card is no longer hovered. Keeps the one still
-        // under the cursor playing.
+        // While scrolling: NOTHING plays and anything playing stops (MPI-321).
+        // Scrolling drags the cursor across cards, firing mouseenter on each — the
+        // _isScrolling gate makes those no-ops so scroll-past stays silent. A short
+        // idle timer clears the flag and replays whatever card the cursor settled
+        // on, so stopping the scroll over a card plays it instantly (no dwell).
         _unsubs.push(on(grid, 'scroll', () => {
-            const hovered = qs('.mpi-group-card:hover', grid);
-            qsa('audio[data-src], video.mpi-group-card__thumb--video', grid).forEach((m) => {
-                if (m.paused) return;
-                if (hovered && hovered.contains(m)) return;
-                m.pause();
-                try { m.currentTime = 0; } catch (_) {}
-                if (m.tagName === 'VIDEO') m.muted = true;
-            });
+            _isScrolling = true;
+            _stopOtherGalleryMedia(null); // stop everything, including under the cursor
+            if (_scrollIdleTimer) clearTimeout(_scrollIdleTimer);
+            _scrollIdleTimer = setTimeout(() => {
+                _scrollIdleTimer = null;
+                _isScrolling = false;
+                // Play the card the cursor came to rest on (mouseenter won't
+                // re-fire — the pointer didn't move, the scroll did).
+                qs('.mpi-group-card:hover', grid)?._hoverPlay?.();
+            }, 150);
         }, { passive: true }));
+        _unsubs.push(() => { if (_scrollIdleTimer) clearTimeout(_scrollIdleTimer); });
 
         // ── Info toggle button ───────────────────────────────────────────────
 
@@ -1612,7 +1731,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         el.setGroups = (groups) => {
             _groups = groups || [];
-            _selectedIds.clear();
+            // ponytail: keep selection across refreshes (e.g. a generation
+            // finishing mid-select) — only drop ids whose group is gone.
+            if (_selectedIds.size) {
+                const live = new Set(_groups.map(g => g.id));
+                for (const id of _selectedIds) if (!live.has(id)) _selectedIds.delete(id);
+                if (_selectedIds.size === 0) _exitSelectionMode();
+                if (_anchorId && !live.has(_anchorId)) _anchorId = null;
+            }
             _rerenderJustified('setGroups');
         };
 

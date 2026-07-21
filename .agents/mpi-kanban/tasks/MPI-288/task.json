@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-288",
+  "title": "Implement Qwen image edit.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "deleted",
+  "created_at": "2026-07-15T10:35:09.141Z",
+  "updated_at": "2026-07-19T17:37:06Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "events": [
+    {
+      "at": "2026-07-19T17:37:06Z",
+      "type": "task.moved",
+      "from": "todo",
+      "to": "(deleted)",
+      "note": "Superseded by MPI-300, which shipped Qwen-Edit 2511 end-to-end (op + ModelDef + style rack + tier radio). status:deleted was set 2026-07-18 but the card was left in the todo column with no event; completing that move so the card is coherent in history. Not reopened — see MPI-300 for the shipped work."
+    }
+  ]
+}

@@ -125,8 +125,6 @@ export const Events = new EventBus();
  * 'download:progress'     { modelId: string, progress: number, speed: string, downloadedBytes: number, totalBytes: number } — download progress update
  * 'download:complete'     { modelId: string }                      — download succeeded
  * 'download:failed'       { modelId: string, error: string }       — download failed
- * 'download:paused'       { modelId: string }                      — download paused by user
- * 'download:resumed'      { modelId: string }                      — download resumed by user
  * 'download:cancelled'    { modelId: string }                      — download cancelled by user
  * 'download:uninstalled'  { modelId: string }                      — model files uninstalled
  * 'download:installing'   { modelId: string }                      — custom node install in progress
@@ -178,9 +176,9 @@ export const Events = new EventBus();
  *
  * Generation lifecycle events (emitted by generationService / activeGenerations):
  * 'generation:started'    { id, scope, groupId, tempId, placeholderGroup, extraTempIds, extraPlaceholders }
- * 'generation:preview'    { id, url }
+ * 'preview:frame'         { engine, promptId, seq, url } — unified latent-preview bus (MPI-269). Resolve via activeGenerations.byPromptId; seed via getLastPreview. See docs/preview-bus.md.
  * 'generation:cancelled'  { id, tempId, extraTempIds }
- * 'generation:complete'   { id, item, group, tempId?, extraTempIds? } — generation succeeded and persisted
+ * 'generation:complete'   { id, item, group, items?, groups?, tempId?, extraTempIds?, deferred? } — generation succeeded; persisted UNLESS `deferred` (MPI-306 hold-until-Apply: media is on disk, the project record is withheld until the App's Apply commits it)
  * 'generation-store:changed' { jobs, running, pending, depth } — generationStore snapshot after any job transition (MPI-208; the single source of truth all generation UI derives from)
  *
  * Focus mode events (state-driven; subscribe via `Events.onState('focusMode', ...)`):

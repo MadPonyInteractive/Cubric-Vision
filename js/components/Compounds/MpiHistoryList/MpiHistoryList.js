@@ -7,6 +7,7 @@
  * @param {number} [selectedIndex=0] - Initially active entry index
  * @param {boolean} [isVideo=false] - Whether the group is a video group (disables Compare)
  * @param {(idx:number)=>Promise<boolean>|boolean} [hasMaskForIndex] - Optional per-entry mask availability check
+ * @param {()=>boolean} [hasCopiedMask] - Whether a mask is on the app-local copy buffer (gates "Paste mask")
  *
  * Instance API (on el):
  *   el.setActiveIndex(idx)      — highlight active card (no events)
@@ -25,6 +26,8 @@
  *   'add-to-gallery'    { index }                    — add single selected entry to gallery
  *   'download-selected' { indices }                  — download selected entries
  *   'download-mask'     { index }                    — download single entry mask
+ *   'copy-mask'         { index }                    — copy single entry mask layers
+ *   'paste-mask'        { index }                    — paste copied mask onto entry
  *   'reuse'             { positive, negative }       — reuse prompt button clicked on a card
  */
 
@@ -35,6 +38,7 @@ import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildPromptReusePayload, itemHasReusablePrompt } from '../../../utils/promptReuse.js';
+import { nearestNamedRatio } from '../../../utils/ratios.js';
 
 function _resolveUrl(filePath) {
     if (!filePath) return '';
@@ -105,7 +109,10 @@ export const MpiHistoryList = ComponentFactory.create({
                 });
                 _dimsLogged = true;
             }
-            const dims = (w && w > 0) ? `${w}×${h}` : '?×?';
+            const ratio = nearestNamedRatio(w, h);
+            const dims = (w && w > 0)
+                ? `${w}×${h}${ratio ? ` · ${ratio}` : ''}`
+                : '?×?';
             if (item.type === 'video' || _isVideo) {
                 const duration = _formatDuration(item.duration);
                 const fps = _formatFps(item.fps);
@@ -232,10 +239,26 @@ export const MpiHistoryList = ComponentFactory.create({
                 if (_isVideo) {
                     items.push({ key: 'combine', icon: 'merge', label: 'Combine', disabled: combineDisabled });
                 }
+                // Copy mask shares download-mask's gate (single non-video entry
+                // that actually has a mask). Paste only appears once something
+                // has been copied — an always-visible greyed "Paste mask" would
+                // be noise on the common path.
+                const copyMaskDisabled = downloadMaskDisabled;
+                const pasteMaskDisabled = _isVideo || targetIdxs.length !== 1;
                 items.push(
                     { key: 'download',       icon: 'download', label: 'Download' },
                     ...(_isVideo ? [] : [{ key: 'download-mask', icon: 'download', label: 'Download mask', disabled: downloadMaskDisabled }]),
+                    ...(_isVideo ? [] : [{ key: 'copy-mask', icon: 'copy', label: 'Copy mask', disabled: copyMaskDisabled }]),
+                    ...(!_isVideo && props.hasCopiedMask?.()
+                        ? [{ key: 'paste-mask', icon: 'paste', label: 'Paste mask', disabled: pasteMaskDisabled }]
+                        : []),
+                    // MPI-310 — image-only, single item: the captioner reads one image
+                    // and writes one prompt. Follows the _isVideo omit pattern above
+                    // rather than shipping a permanently-greyed row on video groups.
+                    ...(_isVideo ? [] : [{ key: 'describe', icon: 'chat', label: 'Describe image',
+                        disabled: targetIdxs.length !== 1 }]),
                     { key: 'add-to-gallery', icon: 'plus',     label: 'Add to gallery', disabled: addToGalleryDisabled },
+                    { key: 'reveal',         icon: 'folder',   label: 'Open in file system' },
                     { key: 'delete',         icon: 'trash',    label: 'Delete',         danger: true },
                 );
                 MpiContextMenu.show({
@@ -253,8 +276,16 @@ export const MpiHistoryList = ComponentFactory.create({
                             emit('download-selected', { indices: targetIdxs });
                         } else if (key === 'download-mask') {
                             emit('download-mask', { index: targetIdxs[0] });
+                        } else if (key === 'copy-mask') {
+                            emit('copy-mask', { index: targetIdxs[0] });
+                        } else if (key === 'paste-mask') {
+                            emit('paste-mask', { index: targetIdxs[0] });
+                        } else if (key === 'describe') {
+                            emit('describe', { index: targetIdxs[0] });
                         } else if (key === 'add-to-gallery') {
                             emit('add-to-gallery', { index: targetIdxs[0] });
+                        } else if (key === 'reveal') {
+                            emit('reveal', { indices: targetIdxs });
                         }
                     },
                 });
@@ -392,6 +423,11 @@ export const MpiHistoryList = ComponentFactory.create({
             _history = _history.filter((_, i) => !idxSet.has(i));
             _selectedIdx = Math.max(0, Math.min(newSelectedIdx, _history.length - 1));
             _anchor = _selectedIdx;
+            // Multi-select delete leaves _selection/_selectMode stale; drop them
+            // so the list returns to single-active-entry state (the surviving
+            // entry is highlighted --active by _applyCardStates in the rebuild).
+            _selectMode = false;
+            _selection.clear();
             _buildHistoryCards();
         };
 

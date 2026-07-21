@@ -10,13 +10,13 @@
   },
   "29": {
     "inputs": {
-      "text": [
-        "1659",
-        0
-      ],
       "clip": [
         "1601",
         1
+      ],
+      "text": [
+        "1659",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -26,13 +26,13 @@
   },
   "30": {
     "inputs": {
-      "text": [
-        "1658",
-        0
-      ],
       "clip": [
         "1601",
         1
+      ],
+      "text": [
+        "1658",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
@@ -49,16 +49,7 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Output"
-    }
-  },
-  "1557": {
-    "inputs": {
-      "image": "Woman_seated_rooftop_edge_dangling_60a001b9ff.jpeg"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
+      "title": "Output_image"
     }
   },
   "1594": {
@@ -67,7 +58,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Denoise"
+      "title": "Input_Denoise"
     }
   },
   "1595": {
@@ -86,7 +77,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_1"
+      "title": "Input_Lora_1"
     }
   },
   "1597": {
@@ -105,7 +96,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_2"
+      "title": "Input_Lora_2"
     }
   },
   "1598": {
@@ -124,7 +115,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_3"
+      "title": "Input_Lora_3"
     }
   },
   "1599": {
@@ -143,7 +134,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_4"
+      "title": "Input_Lora_4"
     }
   },
   "1600": {
@@ -162,7 +153,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_5"
+      "title": "Input_Lora_5"
     }
   },
   "1601": {
@@ -181,7 +172,7 @@
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
-      "title": "Lora_6"
+      "title": "Input_Lora_6"
     }
   },
   "1603": {
@@ -190,7 +181,7 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Seed"
+      "title": "Input_Seed"
     }
   },
   "1604": {
@@ -217,36 +208,16 @@
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
-      "title": "Auto_Grid"
+      "title": "Input_Auto_Grid"
     }
   },
   "1615": {
     "inputs": {
-      "upscale_by": [
-        "1657",
-        0
-      ],
-      "seed": [
-        "1603",
-        0
-      ],
       "steps": 8,
       "cfg": 1.4,
       "sampler_name": "lcm",
       "scheduler": "simple",
-      "denoise": [
-        "1640",
-        0
-      ],
       "mode_type": "Linear",
-      "tile_width": [
-        "1639",
-        0
-      ],
-      "tile_height": [
-        "1639",
-        1
-      ],
       "mask_blur": 8,
       "tile_padding": 32,
       "seam_fix_mode": "None",
@@ -280,6 +251,26 @@
       "upscale_model": [
         "1656",
         0
+      ],
+      "upscale_by": [
+        "1657",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "denoise": [
+        "1594",
+        0
+      ],
+      "tile_width": [
+        "1639",
+        0
+      ],
+      "tile_height": [
+        "1639",
+        1
       ]
     },
     "class_type": "UltimateSDUpscale",
@@ -289,6 +280,10 @@
   },
   "1639": {
     "inputs": {
+      "image": [
+        "1655",
+        0
+      ],
       "horizontal_split": [
         "1604",
         0
@@ -304,28 +299,11 @@
       "auto": [
         "1613",
         0
-      ],
-      "image": [
-        "1655",
-        0
       ]
     },
     "class_type": "MpiGridDimensions",
     "_meta": {
       "title": "Mpi Grid Dimensions"
-    }
-  },
-  "1640": {
-    "inputs": {
-      "value": [
-        "1594",
-        0
-      ],
-      "exponent": 1.8
-    },
-    "class_type": "MpiExpoFloat",
-    "_meta": {
-      "title": "Mpi Expo Float"
     }
   },
   "1655": {
@@ -334,7 +312,7 @@
       "resize_type.multiple": 16,
       "scale_method": "lanczos",
       "input": [
-        "1557",
+        "1661",
         0
       ]
     },
@@ -349,7 +327,7 @@
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
-      "title": "Upscale_Model"
+      "title": "Input_Upscale_Model"
     }
   },
   "1657": {
@@ -358,7 +336,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Upscale_Factor"
+      "title": "Input_Upscale_Factor"
     }
   },
   "1658": {
@@ -367,7 +345,7 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Negative"
+      "title": "Input_Negative"
     }
   },
   "1659": {
@@ -376,7 +354,18 @@
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Positive"
+      "title": "Input_Positive"
+    }
+  },
+  "1661": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

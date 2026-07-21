@@ -1,9 +1,6 @@
-import { findClosestRatio, getModelRatios, RATIO_MODES } from './ratios.js';
+import { findClosestRatio, getModelRatios, qualityTiersFor, usesOrientation, usesQualityTier, clampQualityTier } from './ratios.js';
 import { getCommand, getCommandDefault, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../data/promptControlDefaults.js';
-import { clampQualityTier } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
-
-const QUALITY_TIERS = ['very_low', 'low', 'medium', 'high', 'very_high'];
 
 function _clone(value) {
     if (value == null) return value;
@@ -74,7 +71,11 @@ function _mediaItemsFromPreviewAssets(item = {}) {
         : [];
     return snapshots
         .filter(snap => snap && snap.status !== 'missing' && (snap.filePath || snap.url))
-        .filter(snap => snap.role === 'startFrame' || snap.role === 'endFrame')
+        // MPI-295: resurface EVERY saved image snapshot, keyed by its own slot-role
+        // (inputImage/inputImage2/startFrame/endFrame/…) — not just frame roles. A
+        // 2-image edit card carries two image inputs; the old frame-only filter kept
+        // whatever survived but assumed a max of two frame roles.
+        .filter(snap => (snap.mediaType || 'image') === 'image')
         .map((snap, index) => ({
             id:        snap.id ?? `reuse-preview-asset-${index}`,
             url:       snap.filePath || snap.url,
@@ -176,7 +177,22 @@ export async function resolvePromptReuseMediaItems(payload = {}) {
     const previewItems = _previewAssetMediaItems(payload.item);
     const existing = Array.isArray(payload.mediaItems) ? payload.mediaItems.filter(Boolean) : [];
     const merged = _mergeReuseMedia(previewItems, existing);
-    return merged;
+    // Drop items whose file no longer exists on disk (e.g. after Cleanup wiped the
+    // preview-assets store, or a history media file was deleted). Without this the
+    // dead url is injected as an empty/broken chip and only fails at generate time.
+    // HEAD each url in parallel; keep only the ones that resolve. Callers compare
+    // the returned count to what the source declared and toast if any were lost.
+    const checks = await Promise.all(merged.map(async (m) => {
+        const url = m.url || m.filePath;
+        if (!url) return false;
+        try {
+            const res = await fetch(url, { method: 'HEAD' });
+            return res.ok;
+        } catch (_) {
+            return false;
+        }
+    }));
+    return merged.filter((_, i) => checks[i]);
 }
 
 // True when a reuse payload actually carries an input image to reuse. A card
@@ -215,7 +231,8 @@ export function itemHasReusablePrompt(item = {}) {
         item.negativePrompt ||
         item.modelId ||
         source.modelId ||
-        item.frozenParams
+        item.frozenParams ||
+        item.appId          // App cards (MPI-256): Reuse reopens the App, no modelId/prompt needed
     );
 }
 
@@ -244,14 +261,22 @@ function _ratioSettingsFromParams(params = {}, item = {}, model = {}) {
     const height = _number(params.Height ?? params.height ?? item.pixelDimensions?.h);
     let label = params.Ratio_Label ?? params.ratioLabel ?? item.ratioLabel ?? '';
     const modelType = model.type ?? 'sdxl';
-    const mode = RATIO_MODES[modelType] ?? 'orientation';
     const next = {};
 
-    if (mode === 'quality') {
+    // The two axes are INDEPENDENT: a model may have either, or (krea2) both.
+    // Recover each one that applies, rather than branching on a single mode.
+    const orientation = usesOrientation(modelType)
+        ? (width && height && width > height ? 'landscape' : 'portrait')
+        : undefined;
+
+    if (usesQualityTier(modelType)) {
+        // Search THIS model's own tiers — a hardcoded list here used to miss
+        // ltx's 2k/4k and krea2's 1k/2k entirely, silently losing the tier.
+        const tiers = qualityTiersFor(modelType);
         let selectedTier = null;
         if (width && height) {
-            for (const tier of QUALITY_TIERS) {
-                const match = getModelRatios(modelType, undefined, tier).find(r => {
+            for (const tier of tiers) {
+                const match = getModelRatios(modelType, orientation, tier).find(r => {
                     if (label && r.label !== label) return false;
                     return r.w === width && r.h === height;
                 });
@@ -262,13 +287,21 @@ function _ratioSettingsFromParams(params = {}, item = {}, model = {}) {
                 }
             }
         } else if (label) {
-            const defaultTierRatios = getModelRatios(modelType, undefined, PROMPT_CONTROL_DEFAULTS.qualityTier);
-            if (defaultTierRatios.some(r => r.label === label)) selectedTier = PROMPT_CONTROL_DEFAULTS.qualityTier;
+            // No dims to match: accept the label if the model's first tier has it.
+            const fallbackTier = tiers.includes(PROMPT_CONTROL_DEFAULTS.qualityTier)
+                ? PROMPT_CONTROL_DEFAULTS.qualityTier
+                : tiers[0];
+            if (getModelRatios(modelType, orientation, fallbackTier).some(r => r.label === label)) {
+                selectedTier = fallbackTier;
+            }
         }
         if (selectedTier) next.qualityTier = selectedTier;
-    } else {
-        const orientation = width && height && width > height ? 'landscape' : 'portrait';
-        const ratios = getModelRatios(modelType, orientation);
+    }
+
+    if (orientation) {
+        // Resolve the label against the tier we just recovered, so a
+        // quality-orientation model matches in the right table.
+        const ratios = getModelRatios(modelType, orientation, next.qualityTier);
         const closest = label
             ? ratios.find(r => r.label === label)
             : findClosestRatio(width, height, ratios);
@@ -289,23 +322,23 @@ function _hasComponent(components, key) {
 }
 
 function _defaultRatioSettings(model = {}) {
-    const mode = RATIO_MODES[model.type ?? 'sdxl'] ?? 'orientation';
-    if (mode === 'quality') {
-        return {
-            qualityTier: PROMPT_CONTROL_DEFAULTS.qualityTier,
-            selectedRatio: PROMPT_CONTROL_DEFAULTS.ratio,
-        };
+    // Independent axes — a 'quality-orientation' model (krea2) gets BOTH keys.
+    const type = model.type ?? 'sdxl';
+    const next = { selectedRatio: PROMPT_CONTROL_DEFAULTS.ratio };
+    if (usesQualityTier(type)) {
+        const tiers = qualityTiersFor(type);
+        next.qualityTier = tiers.includes(PROMPT_CONTROL_DEFAULTS.qualityTier)
+            ? PROMPT_CONTROL_DEFAULTS.qualityTier
+            : tiers[0];
     }
-    return {
-        orientation: PROMPT_CONTROL_DEFAULTS.orientation,
-        selectedRatio: PROMPT_CONTROL_DEFAULTS.ratio,
-    };
+    if (usesOrientation(type)) next.orientation = PROMPT_CONTROL_DEFAULTS.orientation;
+    return next;
 }
 
 // Clamp a reused per-model qualityTier (MPI-133) to one the TARGET model has.
-// A cross-model reuse (LTX 2k/4k → Wan, model toggle OFF) carries a tier the
-// target lacks; clampQualityTier maps it to 'very_high' (nearest equivalent),
-// so the reused clip lands at the target's max quality, never a silent mid drop.
+// A cross-model reuse (LTX 2k/4k → Wan, or anything → Krea2's 1k/2k, model toggle
+// OFF) carries a tier the target lacks; clampQualityTier maps it to the target's
+// HIGHEST tier, so the reused item lands at max quality, never a silent mid drop.
 function _clampReusedTier(modelUpdates, model) {
     if (!modelUpdates || !('qualityTier' in modelUpdates)) return modelUpdates;
     return { ...modelUpdates, qualityTier: clampQualityTier(model?.type, modelUpdates.qualityTier) };
@@ -342,16 +375,21 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
     }
     if (
         _hasComponent(components, 'qualityTier') &&
-        RATIO_MODES[model.type ?? 'sdxl'] === 'quality' &&
+        usesQualityTier(model.type ?? 'sdxl') &&
         !sharedUpdates.ratioSelector?.qualityTier
     ) {
+        // Backfill a tier the recovery could not determine — from the model's own
+        // list, never a hardcoded 'medium' (krea2's tiers are 1k/2k).
+        const tiers = qualityTiersFor(model.type ?? 'sdxl');
         sharedUpdates.ratioSelector = {
             ...(sharedUpdates.ratioSelector || {}),
-        qualityTier: PROMPT_CONTROL_DEFAULTS.qualityTier,
+            qualityTier: tiers.includes(PROMPT_CONTROL_DEFAULTS.qualityTier)
+                ? PROMPT_CONTROL_DEFAULTS.qualityTier
+                : tiers[0],
         };
     }
 
-    const batch = _number(params.Batch_Size ?? params.batchSize);
+    const batch = _number(params.Input_Batch_Size ?? params.Batch_Size ?? params.batchSize);
     if (batch != null) sharedUpdates.batch = Math.min(4, Math.max(1, Math.round(batch)));
     else if (_hasComponent(components, 'batch')) sharedUpdates.batch = PROMPT_CONTROL_DEFAULTS.batch;
 
@@ -394,7 +432,13 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
     if (modelSrc && typeof modelSrc === 'object') {
         if ('loras' in modelSrc) modelUpdates.loras = _clone(modelSrc.loras);
         if ('upscaleModel' in modelSrc) modelUpdates.upscaleModel = modelSrc.upscaleModel ?? null;
+        // Keep in step with generationService's controlState.model snapshot: a
+        // per-model control the sidecar recorded must survive this path too, or
+        // reuse silently drops the tier and the whole style rack.
+        for (const key of ['qualityTier', 'styleSelect', 'stylization', 'enhancePrompt']) {
+            if (key in modelSrc) modelUpdates[key] = modelSrc[key];
+        }
     }
 
-    return { sharedUpdates, opUpdates, modelUpdates };
+    return { sharedUpdates, opUpdates, modelUpdates: _clampReusedTier(modelUpdates, model) };
 }

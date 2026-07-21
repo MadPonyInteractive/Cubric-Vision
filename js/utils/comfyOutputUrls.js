@@ -37,3 +37,20 @@ export function collectComfyOutputUrls(buildOne, nodeOutput, target) {
         for (const vid of nodeOutput.videos) target.push(buildOne(vid));
     }
 }
+
+/**
+ * Reads the string a `PreviewAny` node emits. `PreviewAny.main` returns
+ * `{"ui": {"text": (value,)}}` (comfy_extras/nodes_preview_any.py) and is an
+ * OUTPUT_NODE, so the value arrives on the `executed` message as `text: [str]`.
+ * It carries no file dict — it is NOT a /view URL and must never join the
+ * image/gif/video `target` array, or every media consumer downstream chokes.
+ *
+ * @param {object} nodeOutput  `msg.data.output` for one node
+ * @returns {string|null}      the string, or null when absent/empty
+ */
+export function readComfyOutputText(nodeOutput) {
+    const t = nodeOutput?.text;
+    if (!Array.isArray(t) || t.length === 0) return null;
+    const value = typeof t[0] === 'string' ? t[0].trim() : '';
+    return value === '' ? null : value;
+}

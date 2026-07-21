@@ -55,9 +55,25 @@ const _state = {
                                // to install). Separate axis from the op draft. Survives
                                // restart; mirrored to localStorage below.
 
+    s_selectedOpByModel: {},   // MPI-247: { [modelId]: opKey } — the user's last
+                               // chosen operation per model. Session-only (NOT
+                               // persisted to localStorage): a fresh app start
+                               // defaults to the model's natural op. Seeds
+                               // activeOperation on Gallery mount + model-switch so
+                               // navigation and model changes don't snap the op
+                               // back to i2i. Written via setSelectedOp() in
+                               // js/utils/modelHelpers.js, only on user-driven op
+                               // picks (programmatic PromptBox re-picks are guarded).
+
     // ── Installed model list (populated after syncModelInstalled) ──────────────
     s_installedModelIds: [],    // Array of model IDs where model.installed === true.
                                // Updated by the 'models:checked' event from modelRegistry.
+
+    // ── App inputs (session-only, MPI-256) ─────────────────────────────────────
+    s_appInputs: {},            // { [appId]: Object } — per-App last-collected inputs, so an
+                               // App overlay restores its controls on close→reopen. Session-only,
+                               // NOT persisted (across-restart restore comes from the sidecar, not
+                               // here). ALWAYS top-level replace: state.s_appInputs = { ...state.s_appInputs, [id]: {...} }.
 
     // ── Download Manager ───────────────────────────────────────────────────────
     downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery
@@ -67,8 +83,11 @@ const _state = {
 
     // ── Gallery organization ───────────────────────────────────────────────────
     gallerySort: { order: 'newest', filter: 'all' }, // order: 'newest'|'oldest', filter: 'all'|'images'|'videos'|'audios'|'previews'|'favorites'
-    galleryShowInfo: false,          // Show/hide model badges and type badges on gallery cards
-    gallerySizeLevel: 3,             // 1–4; survives gallery navigation within session
+    galleryShowInfo: Storage.getGalleryShowInfo(),
+                                     // Show/hide model badges and type badges on gallery cards.
+                                     // Cross-session; mirrored to localStorage by subscriber below.
+    gallerySizeLevel: Storage.getGallerySizeLevel(),
+                                     // 1–4; cross-session, mirrored to localStorage below.
 
     // ── Project stats (asset count + bytes on disk) ────────────────────────────
     projectStats: { count: 0, bytes: 0 },   // Whole-project totals; refreshed on media add/delete
@@ -136,6 +155,10 @@ const _state = {
                                      // { generation, downloads } — per-type OS-notification opt-out.
                                      // Both default true. Read by notificationService at event time;
                                      // does NOT affect in-app toasts. Mirrored by subscriber below.
+
+    floatLatentWindow: Storage.getFloatLatentWindow(),
+                                     // MPI-270: opt-in OS floating latent window when minimized.
+                                     // Default true. Read by floatLatentBridge. Mirrored below.
 
     // ── RunPod remote engine (cross-session, localStorage-mirrored) ───────────
     runpodConfig: Storage.getRunpodConfig(),
@@ -215,6 +238,9 @@ Events.on('state:changed', ({ key, value }) => {
     else if (key === 'promptExpanded') Storage.setPromptExpanded(value);
     else if (key === 'promptReuseOptions') Storage.setPromptReuseOptions(value);
     else if (key === 'promptReuseSource') Storage.setPromptReuseSource(value);
+    else if (key === 'galleryShowInfo') Storage.setGalleryShowInfo(value);
+    else if (key === 'gallerySizeLevel') Storage.setGallerySizeLevel(value);
     else if (key === 'notificationPrefs') Storage.setNotificationPrefs(value);
+    else if (key === 'floatLatentWindow') Storage.setFloatLatentWindow(value);
     else if (key === 'runpodConfig') Storage.setRunpodConfig(value);
 });

@@ -1,0 +1,474 @@
+{
+  "1556": {
+    "inputs": {
+      "images": [
+        "1686",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_image"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "float": 0.13
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Denoise"
+    }
+  },
+  "1603": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "1604": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "1605": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "1613": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Auto_Grid"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "image": [
+        "1655",
+        0
+      ],
+      "horizontal_split": [
+        "1604",
+        0
+      ],
+      "vertical_split": [
+        "1605",
+        0
+      ],
+      "upscale_factor": [
+        "1657",
+        0
+      ],
+      "auto": [
+        "1613",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "1655": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "1695",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1656": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Input_Upscale_Model"
+    }
+  },
+  "1657": {
+    "inputs": {
+      "float": 1.5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Upscale_Factor"
+    }
+  },
+  "1671": {
+    "inputs": {
+      "clip": [
+        "1688",
+        0
+      ],
+      "text": [
+        "1673",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "1673": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "1676": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1682",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "1677": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1676",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "1678": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1677",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "1679": {
+    "inputs": {
+      "model": [
+        "1680",
+        0
+      ],
+      "clip": [
+        "1688",
+        0
+      ],
+      "vae": [
+        "1689",
+        0
+      ],
+      "positive": [
+        "1671",
+        0
+      ],
+      "negative": [
+        "1691",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "1680": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1678",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "1682": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1683",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "1683": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "1693",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "1685": {
+    "inputs": {
+      "basic_pipe": [
+        "1679",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1686": {
+    "inputs": {
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "mode_type": "Linear",
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 0.6,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": false,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "1655",
+        0
+      ],
+      "model": [
+        "1685",
+        0
+      ],
+      "positive": [
+        "1685",
+        3
+      ],
+      "negative": [
+        "1685",
+        4
+      ],
+      "vae": [
+        "1685",
+        2
+      ],
+      "upscale_model": [
+        "1656",
+        0
+      ],
+      "upscale_by": [
+        "1657",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ],
+      "steps": [
+        "1696",
+        0
+      ],
+      "cfg": [
+        "1699",
+        0
+      ],
+      "denoise": [
+        "1594",
+        0
+      ],
+      "tile_width": [
+        "1639",
+        0
+      ],
+      "tile_height": [
+        "1639",
+        1
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Upscaling with Chroma..."
+    }
+  },
+  "1687": {
+    "inputs": {
+      "unet_name": "krea2_raw_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1688": {
+    "inputs": {
+      "clip_name": "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "1689": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1691": {
+    "inputs": {
+      "conditioning": [
+        "1671",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "1693": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "1701",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Bypass_Filter_Lora"
+    }
+  },
+  "1695": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1696": {
+    "inputs": {
+      "math_expression": "10 if a == 1 else 6",
+      "a": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1697": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "1699": {
+    "inputs": {
+      "math_expression": "2.0 if a == 1 else 1.0",
+      "a": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1700": {
+    "inputs": {
+      "math_expression": "0.0 if a == 1 else 1.0   ",
+      "a": [
+        "1697",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1701": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "model": [
+        "1687",
+        0
+      ],
+      "strength_model": [
+        "1700",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Accelerator Lora"
+    }
+  }
+}

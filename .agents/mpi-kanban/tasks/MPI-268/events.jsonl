@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-268","type":"task.created","at":"2026-07-12T15:24:24Z","actor":"claude","summary":"GIF export tool (video history) — created directly in doing for implementation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-268","type":"checklist.updated","at":"2026-07-12T15:24:24Z","actor":"claude","summary":"Derived 6-step implementation checklist."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-268","type":"validation.updated","at":"2026-07-12T18:09:30Z","actor":"claude","summary":"Backend harness-verified + user-verified live in Electron (preview, badge, export Save-As, icon, loop fix)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-268","type":"task.moved","at":"2026-07-12T18:09:30Z","actor":"claude","from":"doing","to":"done","summary":"GIF export tool complete + USER-VERIFIED."}

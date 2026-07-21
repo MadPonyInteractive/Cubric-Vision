@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-300",
+  "title": "Model: Qwen Image Edit 2511 — one card + runtime tier radio (Quality/Turbo/Hyper)",
+  "description": "NEW MODEL. Qwen-Image-Edit-2511 (released 2025-12-22, replaces 2509). Instruction-driven image editing. BLOCKS MPI-299 (Head Swap app).\n\nSHAPE (locked, shipped): ONE ModelDef `qwen-edit` + op `qwenEdit` + a RUNTIME TIER RADIO (`qwenTier` -> Input_Tier 1/2/3 = Quality/Turbo/Hyper). NOT 3 sibling cards: all tiers share the one int8 transformer, so 3 cards would pollute the library and install ~20GB three times. Only the accelerator Lightning LoRA changes per tier. PiD's pidResolution is the precedent.\n\nWEIGHTS: transformer qwen_image_edit_2511_int8_convrot (19.10 GiB, dep size '19GB' - below the 20GiB hot-store gate); TE qwen_2.5_vl_7b_fp8_scaled; VAE reuses `vae-qwen-image`; 2 baked Lightning LoRAs (4-step/8-step) in loras/qwen/; 7 style LoRAs in loras/qwen/styles/. All 11 SHA256 filled + verified on R2 (research/deps-manifest.md).\n\nSHIPPED THIS SESSION (commits ed79fb2f, fac21493, 2ef5e816):\n- qwenEdit op (3 image slots, 2nd/3rd optional self-gating; qwenTier + styleSelect + stylization) in commandRegistry.js + operationRegistry.js (appVersionIntroduced 1.2.0).\n- ModelDef: type 'qwen' (consumer sweep: none), enhanceRecipe 'flux', caps styleLoras + tierSelect, 8 styleLoraLabels + 8 styleLoraImages, 13 deps.\n- Runtime qwen_edit.json regenerated from the stripped template (mask section removed - mask belongs to a future APP, not this model); reference images 2/3 resize to image 1's dimensions (GetImageSize + ImageResizeKJv2, pad_edge_pixel, /32).\n- progressStages: single:1 (one KSampler on every tier, no model-load bar).\n- Per-op defaults now apply to any control regardless of storage scope; qwenEdit starts stylization at 0.8 while Krea2 keeps 1.0.\n\nLOCALLY VERIFIED (from ComfyUI /history, 2026-07-18): image slots 1+2 inject real paths and slot 3 self-gates when empty; tier switch routes BOTH model path and step count off one Input_Tier; style rack gates align (7 gates a==N, 7 triggers, 8 labels = 8 images) - user confirmed all styles render correctly, including the Anime 2D/3D pair whose LoRA filenames do not match their labels (slot 2 Qwen-Anime-V2 = Anime 3D, slot 3 animal_style = Anime 2D).\n\nMODEL BEHAVIOUR (verified, app AND native ComfyUI): strong at COMBINING images (character/face/garment from one image into another) - this is why it backs MPI-299. Weak at single-image instruction edits: small attribute changes land ('shirt to pink'), larger rewrites are ignored or degrade framing/faces. Reference images BY NUMBER in the prompt (opposite of Krea2).\n\nREMAINING: RunPod/remote-engine validation (local engine only so far). 3-chip path (Input_Image_3) still untested end-to-end.\n\nMODELS ARE NOT VERSION-BUMPED.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "active",
+  "created_at": "2026-07-17T21:10:00Z",
+  "updated_at": "2026-07-21T18:05:00Z",
+  "labels": [
+    "model",
+    "qwen",
+    "blocks-MPI-299"
+  ],
+  "links": {
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}

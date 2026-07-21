@@ -23,15 +23,17 @@ import { MpiAddToProject } from '../../Compounds/MpiAddToProject/MpiAddToProject
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
+import { openAppFromReuse } from '../../../services/appService.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
-import { extractFilenameFromPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
-import { resolveActiveModel, setSelectedModelId, getSelectedModelId } from '../../../utils/modelHelpers.js';
+import { extractFilenameFromPath, extractAbsPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
+import { describeItem } from '../../../utils/describeAction.js';
+import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
-import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
+import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
@@ -207,6 +209,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Edits notes on the card's selected history item, persisted into the
         // item sidecar (.meta/<id>.json). grid.on listeners are torn down by
         // grid.destroy() (factory listeners.clear()), so no separate unsub here.
+        // MPI-310 — caption the card's selected image into the prompt box.
+        grid.on('describe', ({ group }) => {
+            if (!group) return;
+            describeItem(getSelectedItem(group), { group, scope: 'gallery' });
+        });
+
         grid.on('card-notes', ({ group }) => {
             const project = state.currentProject;
             const item = getSelectedItem(group);
@@ -925,6 +933,38 @@ export const MpiGalleryBlock = ComponentFactory.create({
             downloadMediaFiles(state.currentProject, items);
         });
 
+        // ── Open in file system ──────────────────────────────────────────────────
+        // Single card → reveal + select the media file. Multiple → just open the
+        // Media folder (no portable multi-file select across OSes).
+        grid.on('reveal', async ({ groups: g }) => {
+            if (!g?.length) return;
+            try {
+                if (g.length === 1) {
+                    const item = getSelectedItem(g[0]);
+                    if (!item?.filePath) return;
+                    const absPath = extractAbsPath(item.filePath) || item.filePath; // filePath may be a /project-file?path= URL or a raw path
+                    const res = await fetch('/reveal-item', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ itemPath: absPath }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                } else {
+                    const folderPath = state.currentProject?.folderPath;
+                    if (!folderPath) return;
+                    const res = await fetch('/open-folder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folderPath: `${folderPath}/Media` }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                }
+            } catch (err) {
+                clientLogger.warn('MpiGalleryBlock', 'reveal item failed', err);
+                Events.emit('ui:error', { title: 'Open in file system', message: 'Could not open the file location.' });
+            }
+        });
+
         // ── Delete ──────────────────────────────────────────────────────────────
         const _deleteDialog = MpiOkCancel.mount(document.createElement('div'), {
             title:       'Delete',
@@ -1023,7 +1063,10 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Default op tracks active model's mediaType. t2i for image, t2v for video.
         // PromptBox will re-pick a valid op for context on its own; this just
         // keeps Block-side bookkeeping consistent with the initial model.
-        let activeOperation = activeModel?.mediaType === 'video' ? 't2v' : 't2i';
+        // MPI-247: seed from the user's remembered op for this model first, so
+        // navigating away and back doesn't snap the op back to t2i/i2i.
+        let activeOperation = getSelectedOp(activeModelId)
+            ?? (activeModel?.mediaType === 'video' ? 't2v' : 't2i');
         if (activeModel && !activeModel.supportedOps?.includes(activeOperation)) {
             activeOperation = activeModel.supportedOps?.[0] ?? activeOperation;
         }
@@ -1055,6 +1098,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     includes: options,
                     source: state.promptReuseSource,
                     showSource: true,
+                    // App cards (MPI-263): either resolved source being an app card
+                    // splits Apply into "to Prompt Box" vs "to App".
+                    isAppCard: !!bundle.original?.item?.appId || !!bundle.current?.item?.appId,
                     // Per-source media availability so the dialog can grey out each
                     // "Use …" toggle for a source lacking that input (MPI-212/227).
                     imageAvailability: {
@@ -1070,9 +1116,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         current: payloadHasReusableAudio(bundle.current),
                     },
                 });
-                dialog.on('apply', async ({ includes, source }) => {
+                dialog.on('apply', async ({ includes, source, dest }) => {
                     const payload = _resolveReusePayload(bundle, source);
-                    if (payload) await _applyPromptReuse(payload, _reuseIncludes(includes));
+                    if (payload) await _applyPromptReuse(payload, _reuseIncludes(includes), dest);
                     dialog.destroy?.();
                 });
                 dialog.on('cancel', () => dialog.destroy?.());
@@ -1081,10 +1127,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             const payload = _resolveReusePayload(bundle, state.promptReuseSource);
-            if (payload) _applyPromptReuse(payload, _reuseIncludes(options));
+            // No-dialog fast path (ask=false): app cards reopen the App as before.
+            if (payload) _applyPromptReuse(payload, _reuseIncludes(options), 'app');
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }, dest = 'app') {
+            // App cards (MPI-256): Reuse reopens the App with its saved inputs
+            // restored, NOT the PromptBox. Branch FIRST — above the _pb guard and the
+            // cross-mediaType reject — an app result whose mediaType differs from the
+            // reused model would otherwise bail before reaching here. MPI-263: only when
+            // the user chose "Apply to App"; "Apply to Prompt Box" falls through to inject.
+            if (dest === 'app' && openAppFromReuse(payload.item)) return;
             if (!_pb?.el) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
@@ -1145,9 +1198,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 const resolved = await resolvePromptReuseMediaItems(payload);
                 const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
                 const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
-                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
-                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
-                    StatusBar.notify('No saved frame images were found for this older entry.', 'warning');
+                // resolvePromptReuseMediaItems drops files that no longer exist on
+                // disk (Cleanup wiped them, or the history media was deleted). If a
+                // type the source declared resolved to nothing, the file is gone —
+                // warn instead of silently injecting an empty chip that only fails
+                // at generate time.
+                const _has = (t) => mediaItems.some(m => (m.mediaType || m.type) === t);
+                if ((_wantImages && !_has('image')) || (_wantVideo && !_has('video')) || (_wantAudio && !_has('audio'))) {
+                    StatusBar.notify('Some input media is missing and was not re-added.', 'warning');
                 }
                 // Resolve a reused input file back to its source group's custom
                 // name (if the user renamed that card), so the chip shows the
@@ -1185,6 +1243,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 // duration. Without this the live PromptBox lags until next nav.
                 _pb.el.refreshControls?.();
             }
+            // MPI-247: re-assert the reused op LAST. clearMedia/injectMedia above
+            // fire _emitMediaChange, which auto-switches the op when media state
+            // transiently mismatches the op's input slots (e.g. clearMedia wipes
+            // the chip while op=poseReference → box falls back to a text-only op).
+            // The reused op is authoritative, so set it once more after media +
+            // settings have settled.
+            if (targetModel.supportedOps?.includes(targetOperation) && activeOperation !== targetOperation) {
+                activeOperation = targetOperation;
+                _pb.el.setOperation?.(targetOperation);
+            }
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
             _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
@@ -1212,8 +1280,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 refreshRadial({ imageCount, videoCount, modelId: model.id });
             });
 
-            pb.on('operation-change', ({ operation }) => {
+            pb.on('operation-change', ({ operation, programmatic }) => {
                 activeOperation = operation;
+                // MPI-247: remember per model, but only for user-driven picks —
+                // a programmatic re-pick (model switch / media-context) must not
+                // overwrite what the user last chose.
+                if (!programmatic) setSelectedOp(activeModelId, operation);
             });
 
             pb.on('settings', () => {
@@ -1228,7 +1300,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             });
 
             const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image', mediaItems = []) => {
-                const batchCount = Math.max(1, Number(injectionParams.Batch_Size) || 1);
+                const batchCount = Math.max(1, Number(injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size) || 1);
                 const tempIds = Array.from({ length: batchCount }, () => crypto.randomUUID());
                 const tempId = tempIds[0];
                 const startFrame = (mediaItems || []).find(item => item?.mediaType === 'image' && item?.role === 'startFrame')
@@ -1363,16 +1435,30 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _myGenIds.add(id);
             const currentGroups = _visibleProjectGroups();
             grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            // MPI-271: seed the freshly-mounted placeholder from any held latent so a
+            // card that mounts mid-gen (or between frames) isn't blank until the next frame.
+            const first = _firstRunningEntry();
+            if (first && first.id === id) {
+                const last = activeGenerations.getLastPreview(id);
+                if (last?.url) _paintPreviewInto(first, last.url);
+            }
         }));
 
-        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
-            if (!_myGenIds.has(id)) return;
-            // Only paint preview for the first-running entry (the one whose
-            // placeholder is actually mounted).
-            const first = _firstRunningEntry();
-            if (!first || first.id !== id) return;
-            const allTempIds = [first.tempId, ...(first.extraTempIds || [])].filter(Boolean);
+        // Paint a latent into the first-running entry's placeholder card(s).
+        const _paintPreviewInto = (entry, url) => {
+            const allTempIds = [entry.tempId, ...(entry.extraTempIds || [])].filter(Boolean);
             for (const t of allTempIds) grid.el.updatePreview(t, url);
+        };
+
+        // Live latents (MPI-271): resolve preview:frame → generation by promptId, and
+        // only paint the first-running entry (whose placeholder is actually mounted).
+        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
+            if (!url) return;
+            const entry = activeGenerations.byPromptId(promptId);
+            if (!entry || !_myGenIds.has(entry.id)) return;
+            const first = _firstRunningEntry();
+            if (!first || first.id !== entry.id) return;
+            _paintPreviewInto(first, url);
         }));
 
         // New preview window (new sampler stage) → drop the card's current clip so
@@ -1401,6 +1487,18 @@ export const MpiGalleryBlock = ComponentFactory.create({
             if (!_myGenIds.has(id) && !_stoppedPendingComplete.has(id)) return;
             _stoppedPendingComplete.delete(id);
             _rebuildAfterEnd(id, tid, extraTempIds);
+        }));
+
+        // A group entering the project repaints the grid, WHENEVER it happens.
+        // The gallery used to repaint only via generation:complete, which worked
+        // by accident: addGroup ran inside that handler, so the project was
+        // already updated by the time the rebuild read it. An App's Apply commits
+        // minutes later (MPI-306 hold-until-Apply) and nothing repainted — the
+        // card only appeared after a workspace round-trip remounted the block.
+        // Keyed on the actual event (a group was added), not on a generation
+        // ending, so any future deferred/out-of-band commit repaints for free.
+        _unsubs.push(Events.on('project:group-added', () => {
+            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
         }));
 
         _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
@@ -1491,6 +1589,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 : createImageItem({
                     id,
                     filePath: url,
+                    thumbPath,
                     uploaded: true,
                     operation: 'imported',
                     pixelDimensions: dims || { w: 0, h: 0 },

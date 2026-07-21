@@ -274,6 +274,45 @@
     box-shadow: 0 0 0 3px oklch(0.26 0.02 350 / 0.5);
 }
 
+/* Featured star — top-right so it never collides with the top-left heat dot. */
+.mpi-tile__featured {
+    position: absolute;
+    z-index: 2;
+    top: var(--s-2);
+    right: var(--s-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    color: var(--accent-warn);
+    background: oklch(0.26 0.02 350 / 0.6);
+    box-shadow: 0 0 0 1px oklch(1 0 0 / 0.08);
+}
+
+/* Queued-install waiting mascot (MPI-284) — floats on the thumb while a job
+   sits queued; mirrors the history-viewer .mascot-peek treatment. */
+.mpi-tile__mascot {
+    position: absolute;
+    z-index: 3;
+    bottom: var(--s-2);
+    right: var(--s-2);
+    width: 54px;
+    height: 54px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-base) var(--ease);
+}
+.mpi-tile__mascot--visible {
+    opacity: 0.9;
+    animation: mpi-tile-mascot-float 4s var(--ease) infinite;
+}
+@keyframes mpi-tile-mascot-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+
 .mpi-tile__body {
     padding: var(--s-3);
     display: flex;
@@ -612,6 +651,19 @@
 }
 
 /* Footer actions — host for Install / Update / Uninstall MpiButtons */
+/* MPI-317 (F3) — live speed/ETA row above the footer while a download runs.
+   min-height keeps the panel from jumping when the first tick fills the text. */
+.mpi-detail__dlstats {
+    flex: none;
+    padding: var(--s-3) var(--s-5) 0;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    min-height: 15px;
+}
+.mpi-detail__dlstats[hidden] { display: none; }
+
 .mpi-detail__actions {
     flex: none;
     padding: var(--s-4) var(--s-5);
@@ -623,3 +675,82 @@
 /* Let the primary action button stretch */
 .mpi-detail__actions > * { flex: 1; }
 .mpi-detail__actions > *:only-child { flex: 1; }
+
+/* ── Plugins row (MPI-310) ─────────────────────────────────────────────────
+   Plugins are capabilities other surfaces call, not things you generate with,
+   so they get a compact list row rather than a preview tile — there is no
+   image to show and no media/size facet to filter on. */
+.mpi-plugin-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-plugin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: var(--s-3) var(--s-4);
+    /* Match the tiles: local --lib-* surfaces, NOT the app-wide Stage tokens.
+       The Library ground is darker than the app, so var(--surface-2) read as a
+       lighter slab against the cards. */
+    border: 1px solid color-mix(in oklch, var(--line) 50%, transparent);
+    background: var(--lib-card);
+}
+.mpi-plugin-row__info {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-width: 0;
+}
+.mpi-plugin-row__icon {
+    display: inline-flex;
+    color: var(--ink-3);
+    flex: none;
+}
+/* Name over description. min-width:0 lets the description ellipsis instead of
+   pushing the size/actions off the row. */
+.mpi-plugin-row__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.mpi-plugin-row__name {
+    font-size: var(--t-sm);
+    color: var(--ink-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mpi-plugin-row__desc {
+    font-size: var(--t-2xs);
+    color: var(--ink-4);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mpi-plugin-row__meta {
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    flex: none;
+}
+.mpi-plugin-row__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    flex: none;
+}
+.mpi-plugin-row__state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+}
+.mpi-plugin-row__state--on { color: var(--accent-ok); }

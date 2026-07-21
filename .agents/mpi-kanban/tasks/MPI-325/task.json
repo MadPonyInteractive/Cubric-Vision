@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-325",
+  "title": "Head Swap: box may extend outside frame + auto-pad (keep it square)",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-21T15:15:00Z",
+  "updated_at": "2026-07-21T15:15:00Z",
+  "description": "Head Swap target/reference box is a square clamped INSIDE the image. When the head sits near a frame edge with another subject adjacent, a square big enough to capture all the hair also grabs the neighbour - this caused the first-run fail during MPI-324 validation (the swap picked up the girl beside the target). Fix: let the box be dragged PAST the frame edge and auto-pad the image on that side (transparent/edge pad) so the box stays square and captures the full head+hair without shrinking. Padding, not shrinking - the model needs a square. Surfaced by the user during the MPI-324 Head Swap remote pass; workflow/UX improvement, NOT a v1.2 release blocker. Touches the Head Swap app box-crop UI (MpiBox/MpiBoxCrop path) + the pre-generation pad step.",
+  "links": {
+    "events": "events.jsonl",
+    "validation": "validation.md",
+    "research": "research/"
+  },
+  "attention": {
+    "state": "none",
+    "reason": "",
+    "updated_at": "2026-07-21T15:15:00Z"
+  }
+}

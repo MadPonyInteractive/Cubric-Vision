@@ -280,6 +280,17 @@
   color: var(--ink-3);
 }
 
+/* Thumb still loading (MPI-286) — center the spinner, row is open-locked. */
+.mpi-landing__pl-thumb--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mpi-landing__pl-row--loading {
+  cursor: progress;
+}
+
 /* Meta */
 .mpi-landing__pl-meta h3 {
   font-family: var(--font-main);

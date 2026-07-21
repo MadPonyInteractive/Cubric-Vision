@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-298","at":"2026-07-17T10:15:54Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-298","from":"todo","to":"doing","at":"2026-07-17T12:00:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-298","from":"doing","to":"done","at":"2026-07-17T12:30:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-298","at":"2026-07-17T12:40:00Z","actor":"claude","note":"fix invalid maturity done/active -> complete/accepted"}

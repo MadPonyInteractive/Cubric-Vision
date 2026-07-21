@@ -1,0 +1,141 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c90023ae-a373-49c2-baf6-a7f21cf669bb",
+  "generated_at": "2026-07-18T12:20:00Z",
+  "from_session": "MPI-304 implementation + MPI-299 wiring + MPI-306 UI brainstorm",
+  "to_role": "designer",
+  "status": "open",
+  "session": {
+    "name": "Head Swap: requiredDeps shipped, app wired, carousel frame designed",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Unblock and wire the Head Swap app, then design its UI.",
+    "status": "on-track",
+    "summary": "MPI-304 (requiredDeps) SHIPPED and verified. MPI-299 wired end-to-end EXCEPT the uiComponent. The app UI was brainstormed and the design is AGREED and written up. Next session runs the mock-up phase — it does NOT write app UI code yet."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-304 requiredDeps on AppDef — SHIPPED, commit f9636b35. Availability gate, aggregated 'Extra dependencies (N GB)' row, install/cancel/progress under key app:<id>, disk status via the SAME /comfy/models/check payload, and BOTH uninstall guards (local + remote Pod) taught to protect app-only deps.",
+      "MPI-299 wiring — commit 5c2a4622. Op appHeadSwap in all 4 files; app_head_swap.json converted from the authored raw graph (33 nodes, 0 dangling, validator passes); headSwapInjector; qwen-lora-headswap in loraDeps.js (fp32, provisional); AppDef with requiredDeps.",
+      "UI brainstorm — design AGREED, written to docs/playbooks/add-app/ui/carousel-frame.md, carded as MPI-306."
+    ],
+    "pending": [
+      "MPI-306 mock-up phase: THREE independent mock-ups via the `impeccable` skill. THIS IS THE NEXT ACTION.",
+      "Converge the mock-ups into one design with the user, then build.",
+      "User: head-swap LoRA fp32-vs-fp16 A/B, then R2 upload (NOT authorised yet). The app cannot RUN until this lands — the graph 404s on the LoRA.",
+      "MPI-299 uiComponent — blocked on the mock-up convergence."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-306",
+    "title": "App carousel frame + hold-until-Apply",
+    "column": "todo",
+    "maturity": "idea",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-306/",
+    "links": {
+      "events": "events.jsonl",
+      "handoffs": "handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "run the impeccable skill to produce three mock-ups for MPI-306",
+    "converge mock-ups with the user",
+    "implement MPI-306 / MPI-299 uiComponent ONLY after the user picks a direction"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/add-app/ui/carousel-frame.md — THE design record. Read this FIRST; it holds the frame, steps-as-data, the Apply change, Head Swap's instance, and the open list.",
+      "docs/playbooks/add-app/ui/README.md — pattern index updated; two previously-open items now answered by the frame, two sharpened.",
+      "docs/playbooks/add-app/01-descriptor-and-ops.md — requiredDeps documented as SHIPPED law, with the behaviour contract and a warning to add the app union to any NEW dep-protection path."
+    ],
+    "pending": [
+      "docs/playbooks/add-app/existing-apps/head-swap.md still says 'NOT YET BUILT — design record only' and lists MPI-304 as a blocker. Both are now stale — refresh when the UI lands.",
+      "A memory entry for the mpi_box contract once the gizmo actually ships (deferred from the previous handoff; still deferred)."
+    ]
+  },
+  "next_action": {
+    "description": "Run the `impeccable` skill to produce THREE INDEPENDENT mock-ups of the app carousel frame (MPI-306). Read docs/playbooks/add-app/ui/carousel-frame.md first and give the mock-ups the VISION AND CONSTRAINTS but NOT a prescribed layout — the user explicitly wants them to have absolute freedom, because mock-ups routinely surface things a written design misses, in BOTH directions (things to add AND things to cut). Head Swap is the worked example to mock: 4 steps (2 drop boxes + explainer -> box the target head -> box the reference head -> tier radio + Generate + result + Apply). Do NOT write app UI code this session.",
+    "command": "impeccable"
+  },
+  "context": {
+    "key_decisions": [
+      "The three existing apps (image-regen, sdxl-4k, video-stitch) are PLUMBING TESTS, never released, marked for deprecation. They are NOT compatibility constraints and must not shape the design. Head Swap is app #1 of the real product.",
+      "Divider on the FIRST and LAST step only. That absence is the signal: divided = supplying/reviewing, undivided = working. Consistency the user explicitly wants.",
+      "Middle-step canvas is BOUNDED AND CENTRED with a title above and guidance below — NOT edge-to-edge. ('full-bleed' was the agent's wrong word, corrected by the user.)",
+      "The canvas is a SLOT, not a box gizmo. Box now; mask painter, light-direction pointer, mood board later. The frame must never know what is inside it.",
+      "Steps are DATA: an app declares steps:[{kind, role, title, hint}] and writes no layout. `kind` is a registry key mirroring the injector registry. New gizmo = one component + one registry line.",
+      "A step binds to a MEDIA ROLE (image1/image2) — the same vocabulary the op's mediaInputs uses, so image1's box reaches Input_Box with no new mapping.",
+      "The forward arrow is NEVER blocked: every step kind supplies a usable default (the box defaults to the full image). Required-because-the-flow-walks-you-there.",
+      "Results are NOT real until Apply. Pending results live in app state and do NOT survive closing the app (confirm on close). No project-level persistence for something uncommitted.",
+      "Step dots indicate position and total length but do NOT navigate. Plain slide transition, nothing more.",
+      "Work-left / context-right: the right pane is always 'what you're looking at or will get' — examples at step 0, the real output at the end."
+    ],
+    "constraints": [
+      "FIXED-PROMPT app: the graph has NO Input_Positive/Input_Negative — both prompts are BAKED. Never design a prompt box for Head Swap.",
+      "NO SEED UI, ever — random seed every generation, never shown or saved.",
+      "The two boxes look identical but MEAN different things: step 1 marks WHERE THE HEAD GOES (Mpi Box Mask on image 1), step 2 marks WHICH HEAD TO TAKE (Mpi Box Crop on image 2). Their copy carries the whole distinction, and the reference box is the unintuitive one — it reads as redundant until you realise it lets the user drop a full portrait instead of pre-cropping.",
+      "Box must CLAMP to image bounds. Mpi Box Crop returns the intersection and does NOT pad, so an off-edge box silently yields a non-square crop — a distorted head the user blames on the model. Verified, see ui/box-gizmo.md.",
+      "Box interaction REUSES the crop tool. js/utils/cropTool.js is a standalone factory (createCropTool({overlayCanvas, targetElement, onChange})) with zero app coupling except Hotkeys — 8 handles, body drag, clamping and ratio-lock already correct. Agreed approach: add a `showGrid` option (default true) so the head-swap box can omit the rule-of-thirds grid, rather than forking the file.",
+      "cropTool works in NORMALIZED [0..1]; the graph wants TOP-LEFT SOURCE PIXELS. Multiply by natural dimensions at inject time — this is desirable, it survives any display size.",
+      "Slot previews are a HARD REQUIREMENT for this UI (you cannot box what you cannot see) and are still an open MPI-259 item — app slots currently show a raw path string.",
+      "MpiBaseApp is the frame; an app's uiComponent supplies ONLY what differs. Standing UI law (BEM, ComponentFactory.create, qs/on from utils/dom, CSS vars, icons.js) applies and is NOT restated in the design doc.",
+      "Shared tree: commit by explicit pathspec, never git add -A. A concurrent session owns MPI-288 and created MPI-305 — do not touch either.",
+      "DO NOT upload anything to R2 — still not authorised, pending the fp32-vs-fp16 A/B."
+    ],
+    "files_modified": [
+      "js/data/appsRegistry.js",
+      "js/data/modelRegistry.js",
+      "js/services/appService.js",
+      "js/components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.js",
+      "routes/downloadManager.js",
+      "js/services/workflowInjectors/headSwapInjector.js",
+      "js/services/workflowInjectors/index.js",
+      "js/data/commandRegistry.js",
+      "js/data/modelConstants/universal_workflows.js",
+      "js/data/modelConstants/loraDeps.js",
+      "js/core/operationRegistry.js",
+      "operation_registry.json",
+      "comfy_workflows/app_head_swap.json",
+      "comfy_workflows/raw/app_head_swap.json",
+      "docs/playbooks/add-app/01-descriptor-and-ops.md",
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      "docs/playbooks/add-app/ui/README.md"
+    ],
+    "files_to_read_first": [
+      "docs/playbooks/add-app/ui/carousel-frame.md",
+      "docs/playbooks/add-app/ui/box-gizmo.md",
+      "docs/playbooks/add-app/existing-apps/head-swap.md",
+      "js/utils/cropTool.js",
+      "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      ".agents/mpi-kanban/tasks/MPI-306/task.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "apps / App Library",
+      "app UI/UX portable layer",
+      "components + UI law"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md — THE ROOT-CAUSE RULE",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md (the UI build)",
+    "docs/playbooks/add-app/ui/README.md + carousel-frame.md",
+    "feedback: no seed UI; no toast on user Stop; error dialog vs toast"
+  ],
+  "recent_events": [
+    { "at": "2026-07-18T11:30:00Z", "event": "MPI-304 shipped (f9636b35)" },
+    { "at": "2026-07-18T12:00:00Z", "event": "MPI-299 wired, UI pending (5c2a4622)" },
+    { "at": "2026-07-18T12:15:00Z", "event": "MPI-306 created from brainstorm" },
+    { "at": "2026-07-18T12:20:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c90023ae-a373-49c2-baf6-a7f21cf669bb.json, then read docs/playbooks/add-app/ui/carousel-frame.md — that file is the agreed design and you should not re-derive it. Head Swap (MPI-299) is now fully wired except its uiComponent; MPI-304 shipped so apps can require their own deps. The next action is MPI-306's mock-up phase: use the `impeccable` skill to produce THREE INDEPENDENT mock-ups of the app carousel frame, using Head Swap as the worked example (step 0: two image drop boxes plus an explainer pane; step 1: box the target head; step 2: box the reference head; step 3: tier radio, Generate, result, Apply). Give the mock-ups the vision and the hard constraints but deliberately DO NOT prescribe a layout — the user wants them to have absolute freedom, because mock-ups surface what a written design misses in both directions. Hard constraints that cannot be designed away: no prompt UI (both prompts are baked in the graph), no seed UI ever, the box must clamp to image bounds, the two boxes look identical but mean different things, and slot previews are required because you cannot box what you cannot see. Do not write app UI code this session, and do not upload anything to R2."
+}

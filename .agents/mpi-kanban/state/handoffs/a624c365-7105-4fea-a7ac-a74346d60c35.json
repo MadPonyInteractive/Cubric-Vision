@@ -1,0 +1,128 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a624c365-7105-4fea-a7ac-a74346d60c35",
+  "generated_at": "2026-07-21T18:30:00Z",
+  "from_session": null,
+  "to_role": "integrator",
+  "status": "open",
+  "session": {
+    "name": "MPI-324 RunPod validation sweep COMPLETE (MPI-326/300/310 closed on remote evidence; MPI-329/330 carded). NEXT PHASE = the public 1.1.0 release flow.",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Validate every RunPod-deferred card in ONE Pod session so the cards can close before release, then get the app release-ready ASAP (public target is now 1.1.0).",
+    "status": "in_progress",
+    "summary": "The Pod sweep is DONE. All three remote-deferred cards were validated on an RTX PRO 4000 Pod (volume cubric-vision-EU-RO-1) and moved to done: MPI-326 (remote 5s poll-storm fix - verified idle-connected: models filter 0/32 over 20s, op dropdown stays open, Denoise slider holds; COMMITTED 256793df), MPI-300 (Qwen-Edit - tiers, 2-image combine, 3rd-chip Input_Image_3 injects on BOTH engines, style rack; caveat = multi-subject one-pass is model-unstable per MPI-313, NOT a code bug), MPI-310 (Image Describer - full shared-dep guard lifecycle proven remote: 2->1 holder kept on Krea uninstall, 1->0 freed 5.24GB on describer uninstall, describe from gallery/history + negative-flip). Two new cards filed: MPI-329 (perf: cold model-load ~2min, maybe just a weak GPU) and MPI-330 (removing a non-last image chip may strand the required Input_Image -> Qwen silent no-output; non-blocking). Pod torn down. ALL kanban state this session is UNCOMMITTED except the MPI-326 code fix. Remaining = the 1.1.0 release flow (version-constant rename + promote to master), then mpi-end."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-327/validation.md",
+    "completed": [
+      "MPI-326 verified on the Pod (idle-connected: Network models filter 0/32 over 20s = Fix A killed the 5s poll; op dropdown stayed open; Denoise slider held 0.71 no snap-back) -> moved to done -> js/shell.js + js/data/modelRegistry.js COMMITTED 256793df (ESLint clean).",
+      "MPI-300 verified on the Pod: tier radio (3 tiers via Head Swap), 2-image combine (Head Swap), 3rd-chip Input_Image_3 (graph wiring traced correct + chip-3-unique content landed LOCAL qwenEdit_003 AND REMOTE qwenEdit_005 = injects both engines), style rack (3 styles remote incl 3D) -> moved to done. Caveat recorded: scene + 2 distinct subjects one-pass is model-unstable (-> chain per MPI-313), injection is correct.",
+      "MPI-310 verified on the Pod - full shared-dep guard lifecycle both engine twins: inverse-GC kept the abliterated encoder on Krea uninstall (2->1 holder), describe from gallery + history landed the caption, negative-mode flip correct, describer uninstall freed 5.24GB (104.2->99GB) + row flipped to Install(5.24GB) after refresh -> moved to done + stale destructive-bug attention flag cleared.",
+      "MPI-329 carded (perf: remote cold model-load ~2min vs ~14s warm; user caveat = may just be a weak inference card, retest on 4090/5090).",
+      "MPI-330 carded (removing a non-last image chip may strand the required Input_Image -> Qwen silent no-output; deterministic repro + code entry points in the card).",
+      "MPI-324 results table filled (all rows resolved)."
+    ],
+    "pending": [
+      "RUN THE 1.1.0 RELEASE FLOW. Public target is 1.1.0 (NOT 1.2.0). The CHANGELOG is ALREADY DONE by peer session MPI-327 (single RELEASE_NOTES['1.1.0'], archival 2026-07-09-v1.1.0.md, UNRELEASED cleared, 1.2.0 stub/archival/approval-token deleted) - do NOT rebuild it.",
+      "VERSION-CONSTANT RENAME (owed, full step list in .agents/mpi-kanban/tasks/MPI-327/validation.md): appVersion.js APP_VERSION 1.2.0 -> 1.1.0 (SCHEMA_VERSION stays 4); package.json + package-lock.json (root + packages[''].version) -> 1.1.0; operationRegistry.js AND operation_registry.json appVersionIntroduced 1.2.0 -> 1.1.0 for the 9 ops (poseReference, krea2Edit, qwenEdit, removeBackground, imageDescribe, appImageRegen, appSdxl4k, appVideoStitch, appHeadSwap) - keep both files in lockstep; npm run release:approve (fresh .approved-1.1.0.json); npm run release:check green (it stays RED until APP_VERSION is bumped - expected mid-flight).",
+      "Promote branch 1.2.0 -> master AS 1.1.0 via mpi-merge-branches (creates a fresh tier-neutral Cloudflare pre-release link, GC's the prior one; NOT a GitHub release, NOT a git tag) OR mpi-release-public if a public GitHub release is intended.",
+      "BEFORE mpi-end commits the kanban state: repair the PRE-EXISTING event-log corruption (escape-only, no wording change): global .agents/mpi-kanban/events.jsonl lines 1260/1265 (embedded newline) + 1324 (backslash-escaped quotes), and tasks/MPI-300/events.jsonl line 3 (G:\\CubricModels single backslash). Grep for others first. Validate with python json.loads per line; assert only backslashes/escapes changed.",
+      "Commit all uncommitted kanban state (board.json, task.json's, event logs, validation.md's) at mpi-end, then run mpi-end. Move MPI-324 to done at close (sweep complete; Head Swap residual lives on MPI-299/306, not a gate).",
+      "LATER (non-blocking): investigate MPI-330 with the deterministic repro (attach 2-3 chips to Qwen-Edit, remove the FIRST, generate -> silent no-output = slot-repack bug)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-324",
+    "title": "RunPod validation sweep (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-324/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-324/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "run the 1.1.0 release flow (version-constant rename + release:approve + release:check + promote 1.2.0 -> master)",
+    "repair pre-existing event-log corruption escape-only (no wording change)",
+    "move MPI-324 to done at close (sweep complete)",
+    "commit the uncommitted kanban state at mpi-end",
+    "run mpi-end"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-326/300/310 closed on remote evidence; each has a validation.md with the Pod-pass detail; task.json + events.jsonl + board.json all updated.",
+      "MPI-329 + MPI-330 created with full bodies + events.",
+      "MPI-324 results table filled for all targets.",
+      "MPI-326 code fix committed (256793df); MPI-310 stale destructive-bug attention flag cleared."
+    ],
+    "pending": [
+      "Repair pre-existing event-log backslash/newline corruption (escape-only) BEFORE committing kanban state at mpi-end: global events.jsonl 1260/1265/1324, tasks/MPI-300/events.jsonl line 3, plus a grep sweep for others.",
+      "Commit the uncommitted kanban state at mpi-end.",
+      "Move MPI-324 to done at close.",
+      "Investigate MPI-330 in a later session (non-blocking)."
+    ]
+  },
+  "next_action": {
+    "description": "Run the public 1.1.0 release flow. The Pod sweep is COMPLETE (MPI-326/300/310 all done on remote evidence; MPI-326 fix committed 256793df; Pod torn down). Do the version-constant rename per .agents/mpi-kanban/tasks/MPI-327/validation.md: APP_VERSION 1.2.0 -> 1.1.0 in appVersion.js + package.json + package-lock.json; appVersionIntroduced 1.2.0 -> 1.1.0 for the 9 new ops in BOTH operationRegistry.js and operation_registry.json; npm run release:approve; npm run release:check green. The CHANGELOG is already done by MPI-327 - do NOT rebuild it. Then promote branch 1.2.0 -> master AS 1.1.0 (mpi-merge-branches, or mpi-release-public for a GitHub release). BEFORE mpi-end commits the kanban state, repair the pre-existing event-log corruption escape-only (global events.jsonl 1260/1265/1324, tasks/MPI-300/events.jsonl line 3, grep for others). Then commit the kanban state, move MPI-324 to done, and run mpi-end. release:check is RED until APP_VERSION is bumped - expected, not a regression.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Public release target is 1.1.0, NOT 1.2.0 (internal 1.1.0 + 1.1.1 never shipped publicly). MPI-327 already aggregated the CHANGELOG into a single RELEASE_NOTES['1.1.0']; the version-constant rename is the only release-code work still owed.",
+      "MPI-326 root cause: shell.js _initRemoteStatusFeed re-emits remote:connection {connected:true} every 5s (HEALTHY_MS) for the live cost badge; the connect-sync listener had no edge guard so it re-ran syncModelInstalled() every 5s -> models:checked storm -> op-dropdown teardown + slider DOM rebuild. Fix A edge-guard (shell.js:1370, if connected AND NOT _wasRemoteConnected; MPI-200 pod-swap preserved via the disconnect edge resetting the flag) + Fix B diff-gate the models:checked emit (modelRegistry.js:223). Remote-verified. Committed 256793df.",
+      "MPI-300 3rd-chip Input_Image_3 injection is CORRECT (graph traced not-crossed: image1<-34<-70, image2<-169<-104, image3<-171<-72; both TextEncodeQwenImageEditPlus encoders get all three). chip-3-unique content landed local AND remote. The multi-subject one-pass instability is a MODEL limit (-> MPI-313 chaining), not a code defect.",
+      "MPI-310 shared-dep guard proven remote end-to-end on BOTH engine twins (2->1 holder kept, 1->0 freed 5.24GB). The old plugin-row display-staleness was just refresh-lag (row flipped to Install after the Model-Library refresh).",
+      "MPI-330 (non-blocking, found post-sweep on the local engine): removing a non-last image chip may strand the required Input_Image -> Qwen silent no-output ('Generation completed but no output returned', card discarded). PRIMARY hypothesis = chip-slot repack (project_media_slots_addressable_never_packed - never splice/repack). NOT the MPI-326 fix (that only gates install-state sync), NOT a local-gen regression (Krea t2i generated fine). Deterministic repro in the card.",
+      "Pre-existing event-log corruption discovered (predates this session, already in the M state at start): global events.jsonl lines 1260/1265 (embedded newline) + 1324 (backslash-escaped quotes), tasks/MPI-300/events.jsonl line 3 (G:\\CubricModels single backslash). Must be escape-only-repaired before any kanban commit - the backslash trap breaks the board render."
+    ],
+    "constraints": [
+      "release:check stays RED until APP_VERSION is bumped to 1.1.0 - expected mid-flight, not a regression.",
+      "CHANGELOG is already done by MPI-327 - do NOT rebuild releaseNotes.js or the archival md.",
+      "operationRegistry.js and operation_registry.json must stay in lockstep (release:check compares them); NEVER regenerate operation_registry.json (it strips universal flags).",
+      "Event-log corruption repair is escape-only - after fixing, assert the raw line differs ONLY by backslashes/escapes so no wording drifts (kanban.md backslash trap).",
+      "MPI-330 is non-blocking for 1.1; do not gate the release on it.",
+      "Kanban writes are pre-authorized; all this session's kanban edits are uncommitted (commit at mpi-end). The MPI-326 code fix is already committed (256793df)."
+    ],
+    "files_modified": [
+      "js/shell.js + js/data/modelRegistry.js (MPI-326 fix - COMMITTED 256793df)",
+      ".agents/mpi-kanban/board.json (MPI-326/300/310 -> done; MPI-329 + MPI-330 created)",
+      ".agents/mpi-kanban/tasks/MPI-326/ (task.json -> done + validation.md + events)",
+      ".agents/mpi-kanban/tasks/MPI-300/ (task.json -> done + validation.md + events)",
+      ".agents/mpi-kanban/tasks/MPI-310/ (task.json -> done + validation.md + events; attention cleared)",
+      ".agents/mpi-kanban/tasks/MPI-329/ (NEW - perf cold-load card)",
+      ".agents/mpi-kanban/tasks/MPI-330/ (NEW - chip-slot repack bug)",
+      ".agents/mpi-kanban/tasks/MPI-324/validation.md (results table filled)",
+      ".agents/mpi-kanban/events.jsonl (event appends)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-327/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-324/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-330/task.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": ["versioning", "releases", "kanban", "git", "runpod-remote-engine"]
+  },
+  "rules_active": [
+    ".claude/rules/versioning.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-21T18:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/a624c365-7105-4fea-a7ac-a74346d60c35.json and use mpi-continue to continue. The MPI-324 RunPod validation sweep is COMPLETE: MPI-326 (remote 5s poll-storm fix - remote-verified, committed 256793df), MPI-300 (Qwen-Edit - tiers/2-image-combine/3rd-chip-injects-both-engines/style-rack; multi-subject instability is a model limit per MPI-313), and MPI-310 (Image Describer - full shared-dep guard lifecycle proven remote) are all done. Two new cards: MPI-329 (perf cold-load) and MPI-330 (chip-slot repack strands the required Input_Image -> Qwen silent no-output; non-blocking). The Pod is torn down. YOUR JOB is the public 1.1.0 release flow. The CHANGELOG is already done by peer session MPI-327 - do NOT rebuild it. Do the version-constant rename per .agents/mpi-kanban/tasks/MPI-327/validation.md: APP_VERSION 1.2.0 -> 1.1.0 in appVersion.js + package.json + package-lock.json; appVersionIntroduced 1.2.0 -> 1.1.0 for the 9 new ops (poseReference, krea2Edit, qwenEdit, removeBackground, imageDescribe, appImageRegen, appSdxl4k, appVideoStitch, appHeadSwap) in BOTH operationRegistry.js and operation_registry.json; npm run release:approve; npm run release:check green (it is RED until APP_VERSION is bumped - expected). Then promote branch 1.2.0 -> master AS 1.1.0 via mpi-merge-branches (or mpi-release-public for a GitHub release). BEFORE mpi-end commits the kanban state, repair the PRE-EXISTING event-log corruption escape-only (global events.jsonl lines 1260/1265/1324, tasks/MPI-300/events.jsonl line 3, grep for others - the backslash trap breaks the board). Then commit the kanban state, move MPI-324 to done, and run mpi-end. All kanban edits this session are uncommitted; the MPI-326 code fix is already committed."
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-244",
+  "title": "Rebuild the Pod image — bake comfyui_controlnet_aux (Krea2 depth CN), batch with Boogu's nodes",
+  "description": "DEFERRED BY USER (2026-07-10) so it batches with the Boogu image model's node set (Boogu lands ~2026-07-11; its nodes are unknown until then). Krea2 (MPI-242) adds TWO custom-node deps. ComfyUI-Krea2-ControlNet (facok @79ebfd3bd80d2180b334dd7ce57f3c9ddaa0848f) is code-only (repo = __init__.py + nodes.py, NO requirements.txt) => installRequirements:false => VOLUME-installed at connect => needs NO rebuild. comfyui_controlnet_aux (Fannovel16 @e8b689a513c3e6b63edc44066560ca5919c0576e) HAS a requirements.txt => installRequirements:true => BAKED into the Pod image => THIS card. BOTH node packs are MANDATORY for EVERY Krea2 t2i run, not just pose-reference: ComfyUI validates every node class before MpiIfElse picks a branch. So Krea2 CANNOT run on the REMOTE engine until this rebuild ships. LOCAL engine is unaffected (installs both on demand). *** THE TORCH TRAP (resolved, do not re-litigate) ***: comfyui_controlnet_aux is the FIRST baked node whose requirements.txt lists bare `torch` + `torchvision` with NO version constraint. The node does NOT need a different torch - our 2.12.0+cu130 satisfies it (empirically: `pip install --dry-run -r requirements.txt` reports `torch ... (2.12.0+cu130)` already satisfied). The hazard is OUR flag: the default installer runs `pip install -r requirements.txt --upgrade`, and --upgrade on an unconstrained name resolves from PyPI, which has NO +cu130 wheels (`pip install --dry-run --upgrade torch` => `Would install torch-2.13.0`). Losing +cu130 destroys the ~10x cold fault-in fix (MPI-187). FIX ALREADY SHIPPED in dependencies.js: installRequirementsCommand = 'python -m pip install -r requirements.txt --no-warn-script-location' (no --upgrade). pipPins CANNOT fix this - `pip install torch==2.12.0+cu130` has no --index-url on that path and the wheel is absent from PyPI, so the pin would FAIL and abort the node install. Guard: tests/controlnet-aux-torch-guard.test.cjs. THE DOCKERFILE ALREADY SOLVES THE SAME HAZARD for ComfyUI's own unpinned torch (cubric-vision-pod/Dockerfile:95-101: pin the exact cu130 trio AFTER the requirements resolve, `--index-url .../whl/cu130` is load-bearing, never let +cu126/+cu128 slip in). MIRROR THAT for controlnet_aux when baking. WHAT THIS CARD DOES: (1) add comfyui_controlnet_aux to the Pod image bake list (Dockerfile reads installRequirements:true from node_lock.json); (2) verify torch/torchvision are STILL 2.12.0+cu130 / 0.27.0+cu130 in the built image (this is the acceptance test - a plain `python -c \"import torch;print(torch.__version__)\"` in the container MUST print +cu130); (3) bump POD_IMAGE_VERSION; (4) the app warns 'Pod image is stale' if it detects a baked node adrift, so ship the bump with the image. NOTE controlnet_aux also pulls mediapipe (absent today), fvcore, omegaconf, onnxruntime-gpu, trimesh[easy], albumentations, scikit-learn, matplotlib - a heavy set; check image size delta. USE THE build-pod-image SKILL. Procedure: c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md. mpi-ci is a SEPARATE repo - use `git -C c:/AI/Mpi/mpi-ci`.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-10T11:40:00Z",
+  "updated_at": "2026-07-11T08:20:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "pod-image",
+    "mpi-ci",
+    "krea2",
+    "controlnet",
+    "torch-cu130",
+    "deferred"
+  ],
+  "priority": "high"
+}

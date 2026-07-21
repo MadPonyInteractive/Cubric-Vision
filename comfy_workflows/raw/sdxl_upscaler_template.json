@@ -1,0 +1,1644 @@
+{
+  "id": "cdcc4cbf-693b-4ecf-a8fb-cd6b4210a326",
+  "revision": 0,
+  "last_node_id": 1661,
+  "last_link_id": 2361,
+  "nodes": [
+    {
+      "id": 1615,
+      "type": "UltimateSDUpscale",
+      "pos": [
+        10175.690477716762,
+        6539.64229788804
+      ],
+      "size": [
+        337.5828241249292,
+        1109.2866229137062
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2346
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2348
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 2258
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 2259
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 2264
+        },
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 2355
+        },
+        {
+          "name": "upscale_by",
+          "type": "FLOAT",
+          "widget": {
+            "name": "upscale_by"
+          },
+          "link": 2356
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 2267
+        },
+        {
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": 2360
+        },
+        {
+          "name": "tile_width",
+          "type": "INT",
+          "widget": {
+            "name": "tile_width"
+          },
+          "link": 2319
+        },
+        {
+          "name": "tile_height",
+          "type": "INT",
+          "widget": {
+            "name": "tile_height"
+          },
+          "link": 2320
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2349
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui_ultimatesdupscale",
+        "ver": "1.7.1",
+        "Node name for S&R": "UltimateSDUpscale",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        2,
+        278012910863824,
+        "randomize",
+        8,
+        1.4,
+        "lcm",
+        "simple",
+        0.2,
+        "Linear",
+        512,
+        512,
+        8,
+        32,
+        "None",
+        1,
+        64,
+        8,
+        16,
+        true,
+        false,
+        1
+      ]
+    },
+    {
+      "id": 1639,
+      "type": "MpiGridDimensions",
+      "pos": [
+        9329.457961641901,
+        6758.637371070844
+      ],
+      "size": [
+        270,
+        206
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2345
+        },
+        {
+          "name": "horizontal_split",
+          "type": "INT",
+          "widget": {
+            "name": "horizontal_split"
+          },
+          "link": 2315
+        },
+        {
+          "name": "vertical_split",
+          "type": "INT",
+          "widget": {
+            "name": "vertical_split"
+          },
+          "link": 2316
+        },
+        {
+          "name": "upscale_factor",
+          "type": "FLOAT",
+          "widget": {
+            "name": "upscale_factor"
+          },
+          "link": 2359
+        },
+        {
+          "name": "auto",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "auto"
+          },
+          "link": 2317
+        }
+      ],
+      "outputs": [
+        {
+          "name": "tile_width",
+          "type": "INT",
+          "links": [
+            2319
+          ]
+        },
+        {
+          "name": "tile_height",
+          "type": "INT",
+          "links": [
+            2320
+          ]
+        },
+        {
+          "name": "horizontal_split",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "vertical_split",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiGridDimensions",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        1,
+        1,
+        1,
+        false
+      ]
+    },
+    {
+      "id": 1604,
+      "type": "MpiInt",
+      "pos": [
+        8903.666178875943,
+        6811.587729727936
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            2315
+          ]
+        }
+      ],
+      "title": "Grid_H",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiInt",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 1605,
+      "type": "MpiInt",
+      "pos": [
+        8909.990461126123,
+        6919.878617302491
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            2316
+          ]
+        }
+      ],
+      "title": "Grid_V",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiInt",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 1655,
+      "type": "ResizeImageMaskNode",
+      "pos": [
+        8876.043412637982,
+        7305.013702459208
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "IMAGE,MASK",
+          "link": 2361
+        }
+      ],
+      "outputs": [
+        {
+          "name": "resized",
+          "type": "IMAGE",
+          "links": [
+            2345,
+            2346
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "ResizeImageMaskNode",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "scale to multiple",
+        16,
+        "lanczos"
+      ]
+    },
+    {
+      "id": 28,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        7795.383710274128,
+        6113.229171961234
+      ],
+      "size": [
+        400,
+        100
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            2216
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            2219
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": [
+            2264
+          ]
+        }
+      ],
+      "title": "Checkpoint",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "ue_properties": {
+          "version": "7.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "SDXL_Realistic.safetensors"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 29,
+      "type": "CLIPTextEncode",
+      "pos": [
+        9812.099137769255,
+        6270.136106313668
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2230
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 2357
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            2258
+          ]
+        }
+      ],
+      "title": "Positive",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "Node name for S&R": "CLIPTextEncode",
+        "ue_properties": {
+          "version": "7.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 30,
+      "type": "CLIPTextEncode",
+      "pos": [
+        9811.122222313745,
+        6423.959538518706
+      ],
+      "size": [
+        210,
+        106.04047818489198
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2231
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 2358
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            2259
+          ]
+        }
+      ],
+      "title": "Negative",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.43",
+        "Node name for S&R": "CLIPTextEncode",
+        "ue_properties": {
+          "version": "7.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 1595,
+      "type": "MpiLoraModelClip",
+      "pos": [
+        8436.074292866262,
+        5984.2842228286345
+      ],
+      "size": [
+        270,
+        186
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2216
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2219
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2217
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            2218
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "strength_clip",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_1",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiLoraModelClip",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 1597,
+      "type": "MpiLoraModelClip",
+      "pos": [
+        8750.324508743253,
+        5984.4772102886245
+      ],
+      "size": [
+        270,
+        186
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2217
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2218
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2220
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            2221
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "strength_clip",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_2",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiLoraModelClip",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 1598,
+      "type": "MpiLoraModelClip",
+      "pos": [
+        8438.062649308958,
+        6244.248082740312
+      ],
+      "size": [
+        270,
+        186
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2220
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2221
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2222
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            2223
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "strength_clip",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_3",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiLoraModelClip",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 1599,
+      "type": "MpiLoraModelClip",
+      "pos": [
+        8758.722215239299,
+        6242.83873268697
+      ],
+      "size": [
+        270,
+        186
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2222
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2223
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2224
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            2225
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "strength_clip",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_4",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiLoraModelClip",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 1600,
+      "type": "MpiLoraModelClip",
+      "pos": [
+        8436.84633072499,
+        6492.995712086769
+      ],
+      "size": [
+        270,
+        186
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2224
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2225
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2226
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            2227
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "strength_clip",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_5",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiLoraModelClip",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 1601,
+      "type": "MpiLoraModelClip",
+      "pos": [
+        8782.341991682968,
+        6503.603844973131
+      ],
+      "size": [
+        270,
+        186
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2226
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2227
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            2348
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": [
+            2230,
+            2231
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength_model",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "strength_clip",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_6",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiLoraModelClip",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 1613,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        8901.430644684018,
+        7041.19154209238
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": [
+            2317
+          ]
+        }
+      ],
+      "title": "Input_Auto_Grid",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiSimpleBoolean",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 1603,
+      "type": "MpiInt",
+      "pos": [
+        9382.014506150368,
+        7026.4119636649575
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            2267
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiInt",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        2
+      ]
+    },
+    {
+      "id": 1594,
+      "type": "MpiFloat",
+      "pos": [
+        9384.387681444367,
+        7160.744950828083
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            2360
+          ]
+        }
+      ],
+      "title": "Input_Denoise",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiFloat",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        0.15
+      ]
+    },
+    {
+      "id": 1659,
+      "type": "MpiText",
+      "pos": [
+        9293.664302476802,
+        6187.118365224751
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2357
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 1658,
+      "type": "MpiText",
+      "pos": [
+        9287.364166968762,
+        6429.937673754383
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2358
+          ]
+        }
+      ],
+      "title": "Input_Negative",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 1657,
+      "type": "MpiFloat",
+      "pos": [
+        9761.670646822999,
+        6762.94864009797
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            2356,
+            2359
+          ]
+        }
+      ],
+      "title": "Input_Upscale_Factor",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiFloat",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        2
+      ]
+    },
+    {
+      "id": 1556,
+      "type": "PreviewImage",
+      "pos": [
+        10600.202929797539,
+        6556.738449466143
+      ],
+      "size": [
+        601.904147734147,
+        1078.691986482354
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2349
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_image",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "PreviewImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 1656,
+      "type": "UpscaleModelLoader",
+      "pos": [
+        9732.006662965898,
+        6650.955203717662
+      ],
+      "size": [
+        333.1663356499539,
+        58
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "links": [
+            2355
+          ]
+        }
+      ],
+      "title": "Input_Upscale_Model",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.66",
+        "Node name for S&R": "UpscaleModelLoader",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "model_name": true
+          },
+          "version": "7.4.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "4x_NMKD-Siax_200k.pth"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 1661,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        8562.82680483687,
+        7304.467963853418
+      ],
+      "size": [
+        276.9849609375,
+        142
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            2361
+          ]
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Input_Image",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadImageFromPath"
+      },
+      "widgets_values": [
+        "",
+        "alpha",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      2216,
+      28,
+      0,
+      1595,
+      0,
+      "MODEL"
+    ],
+    [
+      2217,
+      1595,
+      0,
+      1597,
+      0,
+      "MODEL"
+    ],
+    [
+      2218,
+      1595,
+      1,
+      1597,
+      1,
+      "CLIP"
+    ],
+    [
+      2219,
+      28,
+      1,
+      1595,
+      1,
+      "CLIP"
+    ],
+    [
+      2220,
+      1597,
+      0,
+      1598,
+      0,
+      "MODEL"
+    ],
+    [
+      2221,
+      1597,
+      1,
+      1598,
+      1,
+      "CLIP"
+    ],
+    [
+      2222,
+      1598,
+      0,
+      1599,
+      0,
+      "MODEL"
+    ],
+    [
+      2223,
+      1598,
+      1,
+      1599,
+      1,
+      "CLIP"
+    ],
+    [
+      2224,
+      1599,
+      0,
+      1600,
+      0,
+      "MODEL"
+    ],
+    [
+      2225,
+      1599,
+      1,
+      1600,
+      1,
+      "CLIP"
+    ],
+    [
+      2226,
+      1600,
+      0,
+      1601,
+      0,
+      "MODEL"
+    ],
+    [
+      2227,
+      1600,
+      1,
+      1601,
+      1,
+      "CLIP"
+    ],
+    [
+      2230,
+      1601,
+      1,
+      29,
+      0,
+      "CLIP"
+    ],
+    [
+      2231,
+      1601,
+      1,
+      30,
+      0,
+      "CLIP"
+    ],
+    [
+      2258,
+      29,
+      0,
+      1615,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      2259,
+      30,
+      0,
+      1615,
+      3,
+      "CONDITIONING"
+    ],
+    [
+      2264,
+      28,
+      2,
+      1615,
+      4,
+      "VAE"
+    ],
+    [
+      2267,
+      1603,
+      0,
+      1615,
+      7,
+      "INT"
+    ],
+    [
+      2315,
+      1604,
+      0,
+      1639,
+      1,
+      "INT"
+    ],
+    [
+      2316,
+      1605,
+      0,
+      1639,
+      2,
+      "INT"
+    ],
+    [
+      2317,
+      1613,
+      0,
+      1639,
+      4,
+      "BOOLEAN"
+    ],
+    [
+      2319,
+      1639,
+      0,
+      1615,
+      9,
+      "INT"
+    ],
+    [
+      2320,
+      1639,
+      1,
+      1615,
+      10,
+      "INT"
+    ],
+    [
+      2345,
+      1655,
+      0,
+      1639,
+      0,
+      "IMAGE"
+    ],
+    [
+      2346,
+      1655,
+      0,
+      1615,
+      0,
+      "IMAGE"
+    ],
+    [
+      2348,
+      1601,
+      0,
+      1615,
+      1,
+      "MODEL"
+    ],
+    [
+      2349,
+      1615,
+      0,
+      1556,
+      0,
+      "IMAGE"
+    ],
+    [
+      2355,
+      1656,
+      0,
+      1615,
+      5,
+      "UPSCALE_MODEL"
+    ],
+    [
+      2356,
+      1657,
+      0,
+      1615,
+      6,
+      "FLOAT"
+    ],
+    [
+      2357,
+      1659,
+      0,
+      29,
+      1,
+      "STRING"
+    ],
+    [
+      2358,
+      1658,
+      0,
+      30,
+      1,
+      "STRING"
+    ],
+    [
+      2359,
+      1657,
+      0,
+      1639,
+      3,
+      "FLOAT"
+    ],
+    [
+      2360,
+      1594,
+      0,
+      1615,
+      8,
+      "FLOAT"
+    ],
+    [
+      2361,
+      1661,
+      0,
+      1655,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "workflowRendererVersion": "LG",
+    "ds": {
+      "scale": 0.5730855330117207,
+      "offset": [
+        -7382.8477787792035,
+        -5981.405901392969
+      ]
+    },
+    "frontendVersion": "1.45.20",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

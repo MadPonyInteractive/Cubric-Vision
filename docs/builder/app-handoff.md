@@ -22,7 +22,7 @@
 | Compute missing SHA256 hashes | skill `mpic-compute-dep-hashes` |
 | Usable-model gate for pickers | `isModelUsable` |
 | Workflow → app API file generation | memory `Workflow generation system` (orchestrator + per-family scripts; an `generate_ltx.py` is planned for the LTX 4-file split) |
-| LTX recipe for the prompt app | `Cubric-Prompt/src/main/recipes/{model-id}.recipe.ts` — see [research/prompt-contract.md](research/prompt-contract.md) |
+| LTX recipe for the prompt app | `Cubric-Prompt/src/main/recipes/{model-id}.recipe.ts` — see [../models/ltx/prompt-contract.md](../models/ltx/prompt-contract.md) |
 
 ## Rule of thumb
 

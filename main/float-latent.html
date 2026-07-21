@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Latents</title>
+<style>
+  /* Colors mirror the app's mauve surface family (styles/01_base.css, hue 350).
+     This is a standalone OS window with no link to the app stylesheet, so the
+     oklch values are copied literally — keep in sync with --surface-* tokens. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: oklch(0.46 0.022 350); color: oklch(0.98 0.008 80);
+    overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header {
+    height: 22px; flex: 0 0 auto; display: flex; align-items: center;
+    background: oklch(0.34 0.022 350); border-bottom: 1px solid oklch(0.72 0.018 350 / 0.16);
+    -webkit-app-region: drag; user-select: none; padding-left: 8px;
+  }
+  header .label { font-size: 11px; opacity: .7; flex: 1; }
+  header .x {
+    -webkit-app-region: no-drag; width: 28px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: .6; font-size: 14px;
+  }
+  header .x:hover { opacity: 1; background: oklch(0.55 0.024 350); }
+  #tiles { flex: 1 1 auto; display: flex; min-height: 0; }
+  .tile {
+    flex: 1 1 0; min-width: 0; position: relative; cursor: pointer;
+    display: flex; flex-direction: column; border-right: 1px solid oklch(0.34 0.022 350);
+  }
+  .tile:last-child { border-right: none; }
+  .tile.done .cap { background: oklch(0.55 0.09 150); color: oklch(0.98 0.008 80); opacity: 1; }
+  .tile.done:hover { outline: 2px solid oklch(0.72 0.09 150); outline-offset: -2px; }
+  /* Centered "finished" cue: happy mascot + Done badge over the frozen latent. */
+  .done-overlay {
+    position: absolute; inset: 0 0 18px 0; /* leave the caption strip visible */
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; pointer-events: none;
+    animation: donePop 260ms cubic-bezier(.2,.9,.3,1.3) both;
+  }
+  /* Transparent mascot — NO background box (the .tile img solid bg must not apply
+     here). A double drop-shadow alone separates it from busy latents. */
+  .done-overlay img { flex: 0 0 auto; width: 56%; max-width: 92px; height: auto;
+    background: none;
+    filter: drop-shadow(0 2px 3px oklch(0 0 0 / 0.85)) drop-shadow(0 0 10px oklch(0 0 0 / 0.55)); }
+  .done-overlay .badge {
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 3px 12px;
+    border-radius: 999px; background: oklch(0.62 0.12 150); color: oklch(0.99 0.008 150);
+    box-shadow: 0 2px 6px oklch(0 0 0 / 0.4);
+  }
+  @keyframes donePop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+  .tile > img {
+    flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain;
+    background: oklch(0.28 0.020 350); display: block;
+  }
+  .tile .cap {
+    flex: 0 0 auto; font-size: 10px; text-align: center; padding: 2px 4px;
+    background: oklch(0.34 0.022 350); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; opacity: .8;
+  }
+  .tile .empty {
+    flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; opacity: .4; background: oklch(0.28 0.020 350);
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="label">Latents</span>
+    <div class="x" id="closeBtn" title="Close">&#10005;</div>
+  </header>
+  <div id="tiles"></div>
+<script>
+  const { ipcRenderer } = require('electron');
+  const tilesEl = document.getElementById('tiles');
+  const tiles = new Map(); // lane ('local'/'remote') -> { el, img, empty, cap, seq, done, overlay, owner }
+
+  function makeTile(lane, genId, title) {
+    const el = document.createElement('div');
+    el.className = 'tile';
+    el.title = 'Open app';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'waiting…';
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = title || '';
+    el.appendChild(empty);
+    el.appendChild(cap);
+    el.addEventListener('click', () => ipcRenderer.send('float-latent:restore'));
+    tilesEl.appendChild(el);
+    tiles.set(lane, { el, img: null, empty, cap, seq: -1, done: false, overlay: null, owner: genId });
+  }
+
+  // Reset an existing tile back to a live "waiting" state — used when the next
+  // queued item on the same lane reuses this tile. Clears the frozen frame, any
+  // Done overlay, and the seq gate so fresh frames paint again. Takes ownership
+  // for the new gen so a late spend/finalize from the previous item is ignored.
+  function resetTile(t, genId, title) {
+    t.owner = genId;
+    t.done = false;
+    t.seq = -1;
+    if (t.overlay) { t.overlay.remove(); t.overlay = null; }
+    t.el.classList.remove('done');
+    if (t.img) { t.img.remove(); t.img = null; }
+    if (!t.empty) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'waiting…';
+      t.el.insertBefore(empty, t.cap);
+      t.empty = empty;
+    }
+    if (title) t.cap.textContent = title;
+  }
+
+  // Idempotent: add-tile arrives on every frame (the frame owns tile creation).
+  // Create the lane tile if absent; reset it ONLY when the owner gen changes (queue
+  // advanced on this lane); otherwise no-op so live frames aren't wiped.
+  ipcRenderer.on('float-latent:add-tile', (_e, { lane, genId, title }) => {
+    const t = tiles.get(lane);
+    if (!t) { makeTile(lane, genId, title); return; }
+    if (genId && t.owner && genId !== t.owner) resetTile(t, genId, title);
+    else if (title && t.cap.textContent !== title) t.cap.textContent = title;
+  });
+
+  // ponytail: float window is STILL-only — one <img> swap per frame. LTX latents
+  // (looping clips in the gallery card) show as a single live frame here; that's a
+  // deliberate simplification, not worth the clip-loop + IPC machinery for a minimized
+  // window. Add clip mode only if users actually ask to watch LTX motion while minimized.
+  function ensureImg(t) {
+    if (!t.img) {
+      t.img = document.createElement('img');
+      t.el.insertBefore(t.img, t.el.firstChild);
+      if (t.empty) { t.empty.remove(); t.empty = null; }
+    }
+    return t.img;
+  }
+
+  ipcRenderer.on('float-latent:frame', (_e, { lane, genId, dataUrl, seq }) => {
+    const t = tiles.get(lane);
+    if (!t || !dataUrl || t.done) return; // ignore late frames once finalized
+    if (genId && t.owner && genId !== t.owner) return; // stale frame from prev item
+    if (typeof seq === 'number' && seq <= t.seq) return; // drop stale
+    t.seq = typeof seq === 'number' ? seq : t.seq;
+    ensureImg(t).src = dataUrl;
+  });
+
+  // Gen finished → freeze the tile on its final result and keep it up so the user
+  // can click to open the app. Paint the returned image if we got one; otherwise
+  // leave the last live latent showing (e.g. video results). The window no longer
+  // closes on completion — only a click / X / app-restore closes it.
+  ipcRenderer.on('float-latent:finalize', (_e, { lane, genId, dataUrl }) => {
+    const t = tiles.get(lane);
+    if (!t) return;
+    if (genId && t.owner && genId !== t.owner) return; // lane already advanced
+    t.done = true;
+    if (dataUrl) ensureImg(t).src = dataUrl;
+    t.el.classList.add('done');
+    if (t.cap) t.cap.textContent = 'Click to open';
+    // Centered finished cue: happy mascot + Done badge over the frozen latent.
+    if (!t.overlay) {
+      const ov = document.createElement('div');
+      ov.className = 'done-overlay';
+      const face = document.createElement('img');
+      face.src = '../assets/mascot/happy.png';
+      face.alt = '';
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.textContent = 'Done';
+      ov.appendChild(face);
+      ov.appendChild(badge);
+      t.el.insertBefore(ov, t.cap); // above the caption strip
+      t.overlay = ov;
+    }
+  });
+
+  // Gen finished mid-queue → freeze on its result, ignore late frames, but show
+  // NO Done cue (more work coming). The tile is reused by the next queue item,
+  // which resets it via add-tile. Paints the final image if we got one.
+  ipcRenderer.on('float-latent:spend', (_e, { lane, genId, dataUrl }) => {
+    const t = tiles.get(lane);
+    if (!t) return;
+    if (genId && t.owner && genId !== t.owner) return; // lane already advanced to next item
+    t.done = true; // gate late frames; no overlay/caption change
+    if (dataUrl) ensureImg(t).src = dataUrl;
+  });
+
+  ipcRenderer.on('float-latent:remove-tile', (_e, { lane, genId }) => {
+    const t = tiles.get(lane);
+    if (!t) return;
+    if (genId && t.owner && genId !== t.owner) return; // stale remove from prev item
+    t.el.remove(); tiles.delete(lane);
+  });
+
+  document.getElementById('closeBtn').addEventListener('click', () => {
+    ipcRenderer.send('float-latent:dismiss');
+  });
+</script>
+</body>
+</html>

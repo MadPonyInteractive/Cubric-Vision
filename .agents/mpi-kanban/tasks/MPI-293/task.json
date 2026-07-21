@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-293",
+  "title": "Pod create 502 + controlnet_aux install fail",
+  "description": "Renting a Pod (RTX PRO 4500, EU-RO-1) to test samplers. Chain of failures: (1) POST /remote/pod/create returned 502 Bad Gateway repeatedly + WS-token fetch failed (event channel unavailable) — likely transient RunPod stock/gateway (ties to project_reconnect_deletes_warm_pod). (2) Connecting to the raw ComfyUI web UI directly showed 67 errors 'nodes missing' — MpiNodes (MpiMath etc.) absent, plus a Krea2 dep install error for comfyui_controlnet_aux. ROOT CAUSE (corrected by user): the MpiNodes pack IS present on the Pod, but the current workflow uses a FEW NEW nodes added in a recent pack update (extra image-processing nodes) that the Pod's PINNED MpiNodes version predates. MpiNodes is code-only, installed to the network VOLUME at connect-time by the wrapper (NOT baked, per start.sh:238 / MPI-222), and node_lock.json pins its commit. FIX PATH: release the MpiNodes update + bump node_lock.json pin so the connect-time install pulls the version containing the new nodes. SECONDARY: harden create so a 502 doesn't silently abort the whole connect-time node/model install chain (the 502 is what left the Pod bare). Files: c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\start.sh, node_lock.json, wrapper/wrapper.py; MpiNodes repo github.com/MadPonyInteractive/ComfyUi-MpiNodes.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-16T18:50:00Z",
+  "updated_at": "2026-07-17T00:40:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

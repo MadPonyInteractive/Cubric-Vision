@@ -1,0 +1,158 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7b3e4c91-2a58-4d17-8e63-1f9a05c7d284",
+  "generated_at": "2026-07-10T11:50:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-242 Krea2 — wiring pass 1 SHIPPED (deps + ModelDef + staging gate + progressStages). Next: prompt-box style controls, sha256 x12, t2i placeholder bake.",
+    "branch": "1.2.0"
+  },
+  "goal": {
+    "original": "Add Krea2 (Flux-lineage image model) to Cubric Vision end-to-end. Phase 1 = Turbo variant.",
+    "current": "App wiring is ~70% done and all of it is auto-verified. THREE things remain: (1) the style dropdown + Stylization slider PROMPT_BOX_CONTROLS entries, op-gated to t2i/i2i; (2) fill 12 sha256 nulls once the R2 upload finishes (/mpic-compute-dep-hashes); (3) the user must bake placeholder.png into t2i node 201 in ComfyUI + re-export. Then live-verify one gen per op."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-242/checklist.md",
+    "completed": [
+      "THREAD 0: docs/krea2.md (449L) split -> docs/krea2/ (6 files, all <=200L), original deleted, links retargeted",
+      "THREAD 1: negative-prompt capability gate — USER-VERIFIED. capabilities.negativePrompt (inverted default: absent => TRUE). Gate lives INSIDE MpiPromptBox._refreshNegToggle(), called from _refreshOpSlot() (the convergence point of setModel/setModelList). The 3 call sites are UNCHANGED. Guard: tests/negative-prompt-gate.test.cjs (13 assertions)",
+      "MPI-243 filed (verify the 1.1.0 build on a clean machine; local engine never ran ComfyUI 0.27)",
+      "MPI-244 filed (Pod image rebuild for controlnet_aux — DEFERRED by user to batch with Boogu)",
+      "PLAYBOOK AUDITED + FIXED: §8's capture-title claim was ACTIVELY WRONG (said Output_Image is 'recognized NOWHERE'); added §9 style-LoRA system, the optional-vs-required media-input table, baked-LoRA deps. New skill .claude/skills/mpi-add-model/ forces the playbook read at Step 0",
+      "docs/builder/research/krea2-int8-quant.md — full quant matrix verified live on the HF API",
+      "WIRING: node_lock.json +2 pins; dependencies.js +14 entries; models.js krea2-turbo ModelDef; QUALITY_LABELS['1k']; _prepareWorkflowInputs gate widened; progressStages.js entry",
+      "R2 UPLOAD: 11/12 landed + size-verified. Transformer (13.14GB) in flight, DETACHED — survives this session."
+    ],
+    "remaining": [
+      "Style dropdown + Stylization slider: PROMPT_BOX_CONTROLS entries + commandRegistry components, op-gated to t2i/i2i AND model-gated (see next_action.threads[0])",
+      "sha256 x12: wait for upload, then /mpic-compute-dep-hashes",
+      "USER TASK: bake placeholder.png into krea2_turbo_t2i.json node 201 (in ComfyUI, re-export — NEVER hand-edit the JSON)",
+      "Live-verify: one generation per op (t2i, i2i, pose-reference, upscale, detail)",
+      "LATER: Krea2 Raw (52-step) variant; int8/mxfp8 quant axis (own card)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-242",
+    "title": "Add Krea2 (Flux family) - Turbo variant first, full variant later",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-242/",
+    "links": {
+      "checklist": "checklist.md",
+      "validation": "validation.md",
+      "research": "research/workflow-surface.md (THE authoritative graph read), research/style-loras.md, research/sampler-and-resolution.md, research/image-conditioning-and-controlnet.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "implement the prompt-box style controls",
+    "run /mpic-compute-dep-hashes once the upload completes",
+    "commit by explicit pathspec (never `git add -A`)"
+  ],
+  "knowledge_preservation": {
+    "authoritative_docs": "docs/krea2/ (6 files) + .agents/mpi-kanban/tasks/MPI-242/research/workflow-surface.md. The workflow-surface doc was read from the JSON, not from prior notes — trust it over older research files. docs/add-model-playbook.md is the PROCEDURE and was corrected this session.",
+    "completed": [
+      "SHAPE: combined-op (flat `dependencies: []`), SINGLE-STAGE. `multiStage: FALSE` — the prior handoff said true and was WRONG. capabilities.multiStage gates preview/Continue UI on a SHARED `_ms` op; t2i/i2i have isMultiStage:false (commandRegistry.js:493) and both ClownsharKSampler_Beta passes live in ONE file with a direct latent hand-off. There is NO _stage2 file. Only the `single` progressStages mode applies.",
+      "ONE t2i graph serves t2i + i2i + pose-reference, switched by Input_Is_i2i (MpiSimpleBoolean) and Input_pose_reference (MpiIfElse). They COMPOSE — Input_Image fans out to AIO_Preprocessor and ImageResizeKJv2 on independent branches.",
+      "Input_Is_i2i drives TWO MpiIfElse: latent source (VAEEncode vs EmptyLatentImage) AND denoise (Input_denoise vs a dummy float). So Input_denoise is INERT unless Input_Is_i2i is true.",
+      "STYLE SYSTEM = TWO injected scalars, nothing else. Input_Style (MpiInt 0-9) + Input_Stylization (MpiFloat, default 1.0). Nine hardcoded MpiLoraModel nodes `Input_style_lora_1..9`; each strength_model is fed by an MpiMath `b if a == N else 0.0` (a=Input_Style, b=Input_Stylization), so one int selects the LoRA AND zeroes the other eight. The SAME int feeds MpiPromptList.specific_item (1-indexed) to pluck the trigger phrase -> MpiPromptProcessor -> StringConcatenate.string_b, with Input_Positive as string_a. NEVER inject a filename or a trigger string.",
+      "STYLE LABELS (index -> dropdown): 0 No Style, 1 Dark Brush, 2 Dot Matrix, 3 Kids Drawing, 4 Neon Drip, 5 Rainy Window, 6 Retro Anime, 7 Soft Water Color, 8 Sunset Blur, 9 Vintage Tarot. Disable the Stylization slider at index 0.",
+      "STYLES ARE t2i/i2i ONLY (user decision). The detailer + upscaler graphs have no style rack — hide both controls there.",
+      "MpiLoraModel.apply_lora SHORT-CIRCUITS at strength_model==0 (loras.py:100, returns before load_lora_cached). Only ONE style LoRA is ever resident. footprint.js sums all 9 anyway (+3.50GB over-count) — MEASURED to change NO row of the table. DO NOT special-case footprint.js.",
+      "VRAM table is COMPUTED by footprint.js from dep `size` strings. Verified: totalWeights 22.17GB, floor 8.00GB (MIN_FLOOR clamp), rows 8=>16GB RAM / 16=>8 / 24=>0 resident. Independently corroborated by web research (peak sampling VRAM ~12.40GB ~= our 12.24GB transformer, because ComfyUI EVICTS the Qwen3-VL-4B encoder before sampling).",
+      "MPI-174 declared-ratios path WORKS on its first-ever production use: RATIO_MODES.krea2 auto-flips to 'quality', both tiers /16-clean, label lookup preserves selection across 1k<->2k, CHROMA UNTOUCHED (still 'orientation'). Zero edits to ratios.js. Ratio icons are `rect_*` NOT `ratio_*`.",
+      "_prepareWorkflowInputs GATE WIDENED (commandExecutor.js). Was `if (COMMANDS[op].mediaType !== 'video') return` — an op-type PROXY that had already been widened once (from commandIsMultiStage) and failed AGAIN on Krea2. Now inspects the workflow: stage iff it carries LoadImage/LoadImageMask/LoadAudio/LoadLatent. Signature is now (payload, workflow). Verified on real graphs: krea2_turbo_t2i STAGES; Chroma_t2i + SDXL t2i SKIP (no needless per-gen Pod upload). Guard: tests/workflow-input-staging-gate.test.cjs (13 assertions).",
+      "progressStages: 'krea2_turbo_t2i.json' => { single: 2 } (user-confirmed). Detailers/upscalers get NO entry — that is the established convention (Chroma has none either; the counter ticks without a total)."
+    ],
+    "traps": [
+      "*** THE TORCH TRAP (resolved — do NOT re-litigate) *** comfyui_controlnet_aux is the FIRST baked node whose requirements.txt lists bare `torch` + `torchvision` with NO version constraint. The node does NOT need a different torch — our 2.12.0+cu130 satisfies it. EMPIRICAL: `pip install --dry-run -r requirements.txt` => 'torch ... (2.12.0+cu130)' already satisfied ✓. `pip install --dry-run --upgrade torch` => 'Would install torch-2.13.0' ✗. The hazard is OUR flag: the default installer (downloadManager.js:1615) runs `pip install -r requirements.txt --upgrade`, and --upgrade on an unconstrained name resolves from PyPI, which has no +cu130 wheels. Losing +cu130 destroys the ~10x cold fault-in fix (MPI-187). FIX SHIPPED: installRequirementsCommand = 'python -m pip install -r requirements.txt --no-warn-script-location' (no --upgrade). pipPins CANNOT fix this — that path has no --index-url and the +cu130 wheel is absent from PyPI, so a `torch==2.12.0+cu130` pin would FAIL and abort the whole node install. Guard: tests/controlnet-aux-torch-guard.test.cjs. runCustomCommand (routes/shared.js:266) only swaps in python_embeded when argv[0] is EXACTLY 'python'.",
+      "BOTH ControlNet node packs are MANDATORY for EVERY Krea2 t2i run, not just pose-reference — ComfyUI validates every node CLASS before MpiIfElse picks a branch. So Krea2 CANNOT run on the REMOTE engine until MPI-244 (Pod image rebuild) ships. The LOCAL engine is unaffected.",
+      "CAPTURE TITLE IS DECIDED BY THE WORKFLOW'S TIER. tier-1 (legacy bare titles) = `Output`; tier-2 (Input_/Output_ prefixed) = `Output_Image`. NOT interchangeable. Krea2 is tier-2. `Output_image` (lowercase i) in the detailer/upscaler is CORRECT — matching is case-insensitive and Chroma does the same. NEVER 'normalize' one to the other. (The playbook used to claim Output_Image is 'recognized NOWHERE' — that was STALE and is now fixed.)",
+      "OPTIONAL vs REQUIRED media input. An op that ALWAYS receives an image (upscale, detail, i2i) has its LoadImage widget OVERWRITTEN by the injector before submit, so the baked filename is never read — Chroma's detailer bakes a local scratch name and has shipped for months. Do NOT 'fix' those. Only an OPTIONAL LoadImage (a graph that can run with no image) needs placeholder.png baked AND staged. Krea2's t2i is the ONLY such graph here.",
+      "STILL OPEN — t2i node 201 bakes `ComfyUI_temp_duvbo_00001_.png`, a file that exists only on the user's machine. Every other t2X graph with an optional image bakes `placeholder.png` (LTX_t2v, Wan5B_t2v). The USER must set this in ComfyUI and re-export. NEVER hand-edit the workflow JSON — a manual edit is silently lost on the next export.",
+      "The saved .json LAGS the ComfyUI canvas. ASK THE USER TO SAVE before reading a workflow they just edited.",
+      "mode:4 = BYPASS, mode:2 = MUTE. Check before claiming a node is live. (All three Krea2 graphs: nothing bypassed/muted, verified.)",
+      "AGENT ENV: system python has NO numpy. Use engine/ComfyUI_windows_portable/python_embeded/python.exe for comfy-dependent computation. A POSIX '/g/...' path inside `python -c` is treated as LITERAL on Windows — use r'G:/...'.",
+      "Krea2ControlImageEncode ships channel_mode:rgb + normalize:none. docs/krea2/conditioning-and-control.md:108 claims depth wants grayscale+per_image_minmax. The GRAPH is live-proven; the doc line is research. Do NOT change the graph without a live A/B.",
+      "NAG DOES NOT WORK ON KREA2 — a silent no-op that DOUBLES NFE (9->18) for zero effect. The t2i graph has no negative node at all (ConditioningZeroOut supplies the uncond). That is the graph-level reason for capabilities.negativePrompt:false.",
+      "Shared git tree — commit by explicit pathspec (`git commit --only <paths>`), NEVER `git add -A`. A parallel session's files are in the tree (handoff 618e771a, _archive/ moves). Do not touch them."
+    ]
+  },
+  "next_action": {
+    "description": "THREE threads. Thread 0 is the only remaining code work. Thread 1 is mechanical once the upload lands. Thread 2 is a USER task.",
+    "threads": [
+      {
+        "topic": "THREAD 0 (CODE): style dropdown + Stylization slider as PROMPT_BOX_CONTROLS, op-gated to t2i/i2i AND model-gated",
+        "finding_so_far": "TWO gates are needed, and the exact precedent is `previewStage`: it lives in an op's `components` array in commandRegistry.js AND is capability-gated per model inside MpiPromptBox._refreshOpSlot() (MpiPromptBox.js:951). Copy that shape. Today: commands.t2i.components = ['ratio','batch']; commands.i2i.components = ['ratio','batch']; upscale = ['useGrid','upscaleFactor','denoise']; detail = ['denoise'].",
+        "to_do": "1) Add a `styleSelect` control (an MpiOptionSelector/dropdown; nodeTitle 'Input_Style'; injects the INDEX int 0-9, clamp) and a `stylization` control (a slider; nodeTitle 'Input_Stylization'; float, default 1.0) to PROMPT_BOX_CONTROLS. Clone `upscaleFactor` for the shape — an MpiRadioGroup whose getInjectionParams() returns { <Node_Title>: value }. Values already `Input_`-prefixed inject as-is. 2) Add both control ids to commands.t2i.components AND commands.i2i.components ONLY (never upscale/detail — those graphs have no style rack). 3) Add defaults to promptControlDefaults.js (style 0, stylization 1.0). 4) Model-gate them in MpiPromptBox._refreshOpSlot() so SDXL/Chroma never mount them — add a `capabilities.styleLoras: true` on the Krea2 ModelDef and gate on `model?.capabilities?.styleLoras === true` (this one defaults FALSE, unlike negativePrompt). 5) DISABLE the Stylization slider when styleSelect === 0. 6) Labels: 0 No Style, 1 Dark Brush, 2 Dot Matrix, 3 Kids Drawing, 4 Neon Drip, 5 Rainy Window, 6 Retro Anime, 7 Soft Water Color, 8 Sunset Blur, 9 Vintage Tarot. 7) Guard test. Playbook §9 documents this whole pattern (it was written from this workflow).",
+        "verify_mode": "user-ux — the controls are visible prompt-box UI; the user must see them appear on t2i/i2i and vanish on upscale/detail, and confirm the slider disables at index 0."
+      },
+      {
+        "topic": "THREAD 1 (MECHANICAL): fill the 12 sha256 nulls",
+        "finding_so_far": "The R2 upload runs DETACHED and survives the session. Script: C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/fc20e9f4-9f2d-4315-8726-65df9699af64/scratchpad/upload-krea2.sh — sequential, --bwlimit 3M, --s3-no-check-bucket, verifies each file's size on landing, and is IDEMPOTENT (skips completed files by size). 11/12 landed; the 13.14GB transformer was in flight at handoff.",
+        "to_do": "1) Confirm the upload finished: re-run the script (it will SKIP everything already landed) or `rclone --config C:/Users/Fabio/.secrets/rclone-r2.conf lsf -R cubric-r2:cubric-models/vision/models/ --s3-no-check-bucket | grep -i krea`. Verify the transformer is 13,141,730,784 B. 2) Run /mpic-compute-dep-hashes to fill all 12 `sha256: null`. 3) Verify no `sha256: null` remains among the krea2-* deps. 4) HTTP HEAD spot-check per playbook §4 (a wrapping `echo` masks rclone's exit code — never trust exit 0 alone)."
+      },
+      {
+        "topic": "THREAD 2 (USER TASK): bake placeholder.png into t2i node 201",
+        "to_do": "The user opens krea2_turbo_t2i.json in ComfyUI, sets node 201 (`Input_Image`, LoadImage) to `placeholder.png`, saves, and re-exports to comfy_workflows/. The agent must NOT hand-edit the JSON. Rationale: t2i is the only Krea2 op that can run with NO image, so nothing is injected into Input_Image and ComfyUI validates the BAKED filename — currently a local scratch file. The app-side half is already done (the staging gate now covers image ops). Verify after: run a plain t2i with no image; it must not fail graph validation."
+      }
+    ],
+    "also_open": [
+      "MPI-244 (Pod image rebuild for controlnet_aux) — deferred to batch with Boogu. Krea2 remote-engine gens are BLOCKED until it ships.",
+      "MPI-243 (verify the shipped 1.1.0 build on a clean machine; local engine never ran 0.27) — user tests this.",
+      "Krea2 Raw (52-step) = phase 2. NOTE: Raw has only 3 quant variants (bf16/fp8_scaled/int8_convrot) — NO mxfp8, NO nvfp4.",
+      "int8_convrot / mxfp8 quant axis: own card if adopted. docs/builder/research/krea2-int8-quant.md has 7 gates (2 cleared). The 1.92x bench is a 3090 (Ampere); our 4060 Ti is Ada — DO NOT assume it transfers.",
+      "Krea2 detailer/upscaler have no style rack — if styled detailing is ever wanted, the user must add the rack to those graphs."
+    ]
+  },
+  "context": {
+    "key_decisions": [
+      "multiStage: FALSE (corrects the prior handoff).",
+      "Styles are t2i/i2i only; hidden on upscale/detail (user decision 2026-07-10).",
+      "Ship fp8_scaled only. int8/mxfp8/nvfp4 all exist and are native in comfy 0.27 (comfy/quant_ops.py QUANT_ALGOS — no fork needed), but none is adopted.",
+      "Pod image rebuild DEFERRED to batch with Boogu (user, 2026-07-10).",
+      "Do NOT special-case footprint.js for the mutually-exclusive style LoRAs — measured, changes no row.",
+      "Krea2 style LoRAs are baked deps, the same pattern LTX (3) and Wan-5B (1) already ship. NOT a first."
+    ],
+    "files_changed_uncommitted": [
+      "dev_configs/node_lock.json (+2 pins)",
+      "js/data/modelConstants/dependencies.js (+14 entries)",
+      "js/data/modelConstants/models.js (krea2-turbo ModelDef + capabilities typedef)",
+      "js/data/progressStages.js (+krea2_turbo_t2i)",
+      "js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js (QUALITY_LABELS['1k'])",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (_refreshNegToggle)",
+      "js/components/types.js (includeNegative doc)",
+      "js/services/commandExecutor.js (_prepareWorkflowInputs gate)",
+      "tests/negative-prompt-gate.test.cjs, tests/workflow-input-staging-gate.test.cjs, tests/controlnet-aux-torch-guard.test.cjs (all new)",
+      "docs/krea2/ (new, 6 files), docs/add-model-playbook.md (corrected + §9), docs/README.md, docs/builder/research/krea2-int8-quant.md (new), docs/builder/research/README.md, docs/builder/research/quant-and-coldstart-investigation.md (scoping warning)",
+      ".claude/skills/mpi-add-model/SKILL.md (new), CLAUDE.md (router + skills table)",
+      ".agents/mpi-kanban/ (MPI-242 checklist/validation/research, MPI-243, MPI-244, board.json, event logs)"
+    ],
+    "test_status": "24/25 pass. The ONE failure — runpod-remote-hardening.test.cjs 'reconnect recreates the pod when warm start fails' — is PRE-EXISTING and unrelated (stash-verified on clean HEAD). It is the known uncarded 'reconnect deletes warm Pod' bug.",
+    "collaboration_note": "THE USER'S CORRECTIONS BEAT THE AGENT'S REASONING REPEATEDLY THIS SESSION: (1) the agent had NOT read docs/add-model-playbook.md and rediscovered two things it already contained; (2) the agent claimed 'no model has ever declared a LoRA as a dep' — false, LTX ships 3 (the grep tested `type: 'lora'`, but weight deps have NO type field); (3) the agent flagged the detailer/upscaler placeholder as a bug — it is not, Chroma does the same and required-image ops overwrite the widget; (4) the agent asked for detail/upscale tqdm counts the codebase already answers (they get NO entry, by convention). READ THE PLAYBOOK. VERIFY WITH A GREP THAT TESTS THE RIGHT FIELD. See feedback_test_user_instinct_first."
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["add-model", "krea2", "comfy-workflows", "components", "state", "r2-upload"],
+    "must_read": [
+      "docs/add-model-playbook.md (THE procedure — read it FIRST, in full; the /mpi-add-model skill enforces this)",
+      ".agents/mpi-kanban/tasks/MPI-242/research/workflow-surface.md (the graph, read from JSON)",
+      "docs/krea2/README.md + docs/krea2/injection.md (the two-scalar style system)",
+      ".claude/rules/components.md (for the prompt-box controls)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/components.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {"at": "2026-07-10T11:50:00Z", "event": "handoff_created"}
+  ],
+  "resume_prompt": "You are resuming MPI-242 (add Krea2 Turbo to Cubric Vision) on branch 1.2.0.\n\n*** STEP 0, BEFORE ANY OTHER TOOL CALL: read docs/add-model-playbook.md IN FULL. *** The previous agent skipped it and rediscovered two things it already contained. The /mpi-add-model skill exists to enforce this. Then read .agents/mpi-kanban/tasks/MPI-242/research/workflow-surface.md (read from the JSON, trust it over older research files) and docs/krea2/injection.md.\n\nWiring pass 1 is SHIPPED and auto-verified: node_lock pins, 14 dependencies.js entries, the krea2-turbo ModelDef, QUALITY_LABELS['1k'], the _prepareWorkflowInputs staging gate, and the progressStages entry. Suite is 24/25 (the runpod-remote-hardening failure is pre-existing — stash-verified on clean HEAD). NOTHING IS COMMITTED. The git tree is SHARED with a parallel session — commit by explicit pathspec, never `git add -A`.\n\nDO THREE THINGS:\n\n(0) THE ONLY REMAINING CODE WORK — the style dropdown + Stylization slider. The style system injects exactly TWO scalars: Input_Style (MpiInt, 0-9) and Input_Stylization (MpiFloat, default 1.0). Nine MpiMath nodes compute `b if a == N else 0.0`, so one int picks the LoRA, zeroes the other eight, AND plucks the trigger phrase via MpiPromptList.specific_item. Never inject a filename or a trigger string. Add both as PROMPT_BOX_CONTROLS + commandRegistry `components` entries on t2i AND i2i ONLY (the detailer/upscaler graphs have no style rack). Model-gate them too — copy the `previewStage` precedent exactly (op `components` array + a capability check inside MpiPromptBox._refreshOpSlot(), MpiPromptBox.js:951). Add `capabilities.styleLoras: true` to the Krea2 ModelDef; unlike negativePrompt, this one defaults FALSE. Disable the slider at index 0. Labels: 0 No Style, 1 Dark Brush, 2 Dot Matrix, 3 Kids Drawing, 4 Neon Drip, 5 Rainy Window, 6 Retro Anime, 7 Soft Water Color, 8 Sunset Blur, 9 Vintage Tarot. Playbook §9 documents the whole pattern. Verify mode: user-ux.\n\n(1) FILL THE 12 sha256 NULLS. The R2 upload runs DETACHED and survives the session — 11/12 had landed and size-verified; the 13.14GB transformer was in flight. Confirm it finished (re-run scratchpad/upload-krea2.sh — it skips completed files by size — or `rclone --config C:/Users/Fabio/.secrets/rclone-r2.conf lsf -R cubric-r2:cubric-models/vision/models/ --s3-no-check-bucket | grep -i krea`; the transformer must be 13,141,730,784 B). Then run /mpic-compute-dep-hashes. Never trust a wrapping `echo` for rclone's exit code.\n\n(2) ASK THE USER to bake placeholder.png into krea2_turbo_t2i.json node 201 (Input_Image) in ComfyUI and re-export. NEVER hand-edit a workflow JSON. t2i is the only Krea2 op that can run with NO image, so nothing is injected and ComfyUI validates the baked filename — currently a local scratch file. The app-side half is done.\n\nKEY CORRECTIONS FROM LAST SESSION — do not re-litigate: multiStage is FALSE (both sampler passes are in ONE file; t2i/i2i are not `_ms` ops). Capture titles are TIER-decided (tier-1 `Output`, tier-2 `Output_Image`) and NOT interchangeable. The detailer/upscaler baked scratch filenames are FINE (required-image ops overwrite the widget; Chroma does the same). Detailers/upscalers get NO progressStages entry, by convention. Krea2 style LoRAs as deps is the pattern LTX already ships, not a first.\n\nTHE TORCH TRAP (resolved, do NOT reopen): comfyui_controlnet_aux lists bare `torch`/`torchvision` with no constraint. It does NOT need a different torch — our 2.12.0+cu130 satisfies it. The hazard was OUR `--upgrade` flag resolving from PyPI (`Would install torch-2.13.0`), which would destroy the MPI-187 cu130 fault-in fix. Fixed with installRequirementsCommand (no --upgrade); pipPins CANNOT fix it (no --index-url, the +cu130 wheel is absent from PyPI, so the pin would fail and abort the install). Guard: tests/controlnet-aux-torch-guard.test.cjs.\n\nBOTH ControlNet node packs are MANDATORY for EVERY t2i run (ComfyUI validates all node classes before MpiIfElse picks a branch), so Krea2 CANNOT run on the REMOTE engine until MPI-244 (Pod image rebuild) ships — deferred by the user to batch with the Boogu model. The LOCAL engine is unaffected.\n\nAFTER those: live-verify one generation per op (t2i, i2i, pose-reference, upscale, detail), then commit by pathspec."
+}

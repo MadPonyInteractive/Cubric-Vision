@@ -17,8 +17,10 @@ import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js
 import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.js';
 import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
+import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
 import { MpiToolOptionsResize } from '../../Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js';
+import { MpiToolOptionsGif } from '../../Organisms/MpiToolOptionsGif/MpiToolOptionsGif.js';
 import { MpiToolOptionsPrompt } from '../../Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js';
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
@@ -30,13 +32,16 @@ import { getModelsByType, isModelUsable } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
+import { generationStore } from '../../../services/generationStore.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { openAppFromReuse } from '../../../services/appService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { loadAll as loadAssets } from '../../../services/assetService.js';
-import { extractFilenameFromPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
-import { resolveActiveModel, setSelectedModelId } from '../../../utils/modelHelpers.js';
+import { extractFilenameFromPath, extractAbsPath, resolveMediaUrl, downloadMediaFiles } from '../../../utils/mediaActions.js';
+import { describeItem } from '../../../utils/describeAction.js';
+import { resolveActiveModel, setSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { updateGroup, addGroup, removeGroup, applyPromptReuseSettings } from '../../../services/projectService.js';
 import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
@@ -46,8 +51,11 @@ import {
     createImageItem,
     createVideoItem,
     createItemGroup,
+    getToolSettings,
 } from '../../../data/projectModel.js';
+import { roundToDivisible } from '../../../utils/cropRounding.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
+import { nearestNamedRatio } from '../../../utils/ratios.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
@@ -69,9 +77,11 @@ const TOOL_OPTIONS_REGISTRY = {
     mask:         MpiToolOptionsMask,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
+    removeBackground: MpiToolOptionsRemoveBg,
     interpolate:  MpiToolOptionsInterpolate,
     resize:       MpiToolOptionsResize,
     resizeVideo:  MpiToolOptionsResize,
+    exportGif:    MpiToolOptionsGif,
 };
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
@@ -97,6 +107,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Resolve group ─────────────────────────────────────────────────────
 
         let _group = state.currentProject?.itemGroups?.find(g => g.id === props.groupId);
+
+        // Copied mask (MPI-311): { layers: {manual, subtract}, dims }. Block-scoped
+        // and deliberately NOT the OS clipboard — the mask is a pair of layers plus
+        // the source dimensions the paste warning compares against, none of which
+        // survive a bitmap round-trip. Lives as long as the workspace is mounted.
+        let _copiedMask = null;
 
         if (!_group) {
             el.innerHTML = `<p class="mpi-group-history-block__error">Group not found. <span class="mpi-group-history-block__back-slot"></span></p>`;
@@ -200,9 +216,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _firstAvailable = _opOptions().find(o => !o.disabled);
         const _firstFrameOp = activeModel?.supportedOps?.find(op => op.startsWith('i2v') || op.startsWith('v2v'));
-        let activeOperation = _hasPromptOps()
-            ? (_firstAvailable?.value ?? 'upscale')
-            : (_firstFrameOp || (isVideo ? 't2v' : 'generate'));
+        // MPI-247: prefer the user's remembered op for this model so navigating
+        // Gallery<->History (which remounts the block) doesn't snap the op back
+        // to the first available. Only honour it if it's actually available in
+        // this history context; otherwise fall back to the first available op.
+        const _rememberedOp = getSelectedOp(activeModelId);
+        const _rememberedAvailable = _rememberedOp && _opOptions().some(o => o.value === _rememberedOp && !o.disabled);
+        let activeOperation = _rememberedAvailable
+            ? _rememberedOp
+            : (_hasPromptOps()
+                ? (_firstAvailable?.value ?? 'upscale')
+                : (_firstFrameOp || (isVideo ? 't2v' : 'generate')));
         let _preferredOperation = activeOperation;
         let _isProgrammaticOperationSync = false;
         let _currentIdx = _group.selectedIndex ?? 0;
@@ -258,7 +282,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const RESIZE_QUEUE_DISABLED_REASON = 'Resize is disabled while Cue has running or queued jobs';
 
         function _syncQueueBlockedTools() {
-            const cueBusy = (state.generationQueueCount || 0) > 0;
+            // Count only REAL user Cue jobs, not tool-internal preview runs. The resize
+            // tool fires its own `previewOnly` resize gen on mount; counting it here made
+            // the gate disable resize and self-revert to crop the instant you selected it
+            // (MPI-253). Preview jobs are tagged display.previewKind='preview'.
+            const snap = generationStore.getSnapshot();
+            const isReal = (j) => j?.display?.previewKind !== 'preview';
+            const cueBusy = snap.running.some(isReal) || snap.pending.some(isReal);
             historyTools.el.setDisabled?.({
                 resize: {
                     disabled: cueBusy,
@@ -293,7 +323,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _mascotEl = document.createElement('img');
         _mascotEl.className = 'mascot-peek';
         _mascotEl.id = 'mascot-peek';
-        _mascotEl.src = 'assets/mascot/idle.png';
+        _mascotEl.src = 'assets/mascot/waiting.png';
         _mascotEl.alt = '';
         centreSlot.appendChild(_mascotEl);
 
@@ -306,6 +336,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const item = _group.history[idx];
                 return !!(await viewer.el.hasMaskForEntry?.(item));
             },
+            hasCopiedMask: () => !!_copiedMask,
         });
 
         // ── Load initial entry (inlined per-kind) ─────────────────────────────
@@ -380,6 +411,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             _options = Compound.mount(slot, { viewer, kind: modeKind, currentItem: _group.history[_currentIdx] || null });
 
+            // GIF export owns no source resolution — inject the encoder so its
+            // preview/export call hits /api/video/gif with the current item +
+            // active trim range resolved here.
+            if (mode === 'exportGif') _options.el.setEncoder?.(_encodeGif);
+
             // Options compounds emit 'apply'; mediator routes to _handleApply.
             _options.on?.('apply', (payload) => _handleApply(mode, payload));
         }
@@ -407,19 +443,33 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (mode === 'imageUpscale') return _runImageTool('imageUpscale', injectionParams);
                 return _runVideoTool('videoUpscale', injectionParams);
             }
+            if (mode === 'removeBackground') {
+                const useColor = payload.bgMode === 'color';
+                const injectionParams = { Input_Bg_Use_Color: useColor };
+                if (useColor) {
+                    // EmptyImage.color is an int 0xRRGGBB; convert the picker hex (default black).
+                    injectionParams.Input_Bg_Color = parseInt(String(payload.color || '').replace('#', ''), 16) || 0;
+                }
+                return _runImageTool('removeBackground', injectionParams);
+            }
             if (mode === 'interpolate') {
                 return _runVideoTool('interpolate', { Interp_Multiplier: payload.multiplier ?? 2 });
             }
             if (mode === 'resize' || mode === 'resizeVideo') {
                 return _handleResizeApply(mode, payload || {});
             }
+            if (mode === 'exportGif') {
+                return _handleGifExport(payload || {});
+            }
         }
 
         const TOOL_LABELS = {
             prompt: 'Prompt', crop: 'Crop', mask: 'Mask',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
+            removeBackground: 'Remove Background',
             interpolate: 'Interpolate',
             resize: 'Resize', resizeVideo: 'Resize',
+            exportGif: 'Export GIF',
         };
 
         // Video viewer top-right chip strip: [op] · [mm:ss] · [Nfps].
@@ -487,7 +537,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const _setGenerating = (flag) => {
             viewer.el.setGenerating?.(flag);
-            if (flag) _mascotShow('assets/mascot/idle.png');
+            if (flag) _mascotShow('assets/mascot/waiting.png');
             // hide handled per-event below
         };
 
@@ -569,8 +619,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncPbGenerating();
         }));
 
-        _unsubs.push(Events.on('generation:preview', ({ id, url }) => {
-            if (!_myGenIds.has(id)) return;
+        // Live latents (MPI-271): resolve preview:frame → generation by promptId.
+        // Mount-time seeding still reads entry.latestPreviewUrl (now bus-fed) above.
+        _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
+            if (!url) return;
+            const entry = activeGenerations.byPromptId(promptId);
+            if (!entry || !_myGenIds.has(entry.id)) return;
             // Video workspace: preview latents are static frames, not playable.
             // Leave viewer in its current state so user can queue more ops.
             if (isVideo) return;
@@ -605,11 +659,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _myGenIds.delete(id);
             _stoppedPendingComplete.delete(id);
             viewer.el.setGenerating?.(false);
-            // Tool-only transforms (resize) skip the mascot — model ops only.
-            if (item?.operation !== 'resize' && item?.operation !== 'resizeVideo') {
-                _mascotShow('assets/mascot/happy.png');
-                _mascotHide(2000);
-            }
+            // Result paint overlaps the mascot on complete, so no happy flash here —
+            // just hide the waiting peek.
+            _mascotHide(0);
             _canvasHasMask = false;
             _refreshOpOptions();
             const _wasReplace = _group.history?.some(entry => entry.id === item.id);
@@ -731,9 +783,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
         let _pb = null;
 
+        // Extend / New shot always inject a self-captured start frame, so a
+        // continuation MUST run the model's image-to-video op — never a text op
+        // carried in by a reused card (t2v_ms has no image loader → the injected
+        // frame goes nowhere → "Prompt outputs failed validation"). Maps to the
+        // model's first i2v* op; falls back to the given op if none exists.
+        function _continuationOp(op) {
+            const i2v = activeModel?.supportedOps?.find(k => k.startsWith('i2v'));
+            return i2v || op;
+        }
+
         function _setPromptOperation(operation, { remember = false } = {}) {
             activeOperation = operation;
-            if (remember) _preferredOperation = operation;
+            if (remember) {
+                _preferredOperation = operation;
+                setSelectedOp(activeModelId, operation); // MPI-247: survive remount
+            }
             if (!_pb?.el) return;
             _isProgrammaticOperationSync = true;
             try {
@@ -831,9 +896,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _refreshOpOptions();
                 _syncPromptToolDisabled();
             }));
-            _unsubs.push(_pb.on('operation-change', ({ operation }) => {
+            _unsubs.push(_pb.on('operation-change', ({ operation, programmatic }) => {
                 activeOperation = operation;
-                if (!_isProgrammaticOperationSync) _preferredOperation = operation;
+                // User-driven pick only: update the preferred op AND remember it
+                // per model (MPI-247), so it survives a remount. Guard on BOTH the
+                // block's own programmatic-sync flag and the PromptBox's own
+                // programmatic re-pick (model switch / media-context).
+                if (!_isProgrammaticOperationSync && !programmatic) {
+                    _preferredOperation = operation;
+                    setSelectedOp(activeModelId, operation);
+                }
             }));
             _unsubs.push(_pb.on('media-change', () => {
                 // PromptBox media count drives op availability in history
@@ -902,6 +974,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const dialog = MpiReusePromptDialog.mount(document.createElement('div'), {
                     includes: options,
                     showSource: false,
+                    // App cards (MPI-263) split Apply into "to Prompt Box" vs "to App".
+                    isAppCard: !!payload.item?.appId,
                     // Single-source dialog (no Original/Current toggle) → the
                     // dialog defaults source to 'original'; gate each Use … toggle on
                     // whether THIS payload carries that input (MPI-212/227).
@@ -909,18 +983,25 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     videoAvailability: { original: payloadHasReusableVideos(payload) },
                     audioAvailability: { original: payloadHasReusableAudio(payload) },
                 });
-                dialog.on('apply', async ({ includes }) => {
-                    await _applyPromptReuse(payload, _reuseIncludes(includes));
+                dialog.on('apply', async ({ includes, dest }) => {
+                    await _applyPromptReuse(payload, _reuseIncludes(includes), dest);
                     dialog.destroy?.();
                 });
                 dialog.on('cancel', () => dialog.destroy?.());
                 dialog.el.show?.();
                 return;
             }
-            _applyPromptReuse(payload, _reuseIncludes(options));
+            // No-dialog fast path (ask=false): app cards reopen the App as before.
+            _applyPromptReuse(payload, _reuseIncludes(options), 'app');
         }
 
-        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }) {
+        async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }, dest = 'app') {
+            // App cards (MPI-256): Reuse reopens the App with saved inputs restored,
+            // NOT the PromptBox. Branch FIRST — above the cross-mediaType reject guard
+            // (an app result whose mediaType differs from the reused model would bail
+            // there before reaching the app branch). MPI-263: only when the user chose
+            // "Apply to App" (dest==='app'); "Apply to Prompt Box" falls through to inject.
+            if (dest === 'app' && openAppFromReuse(payload.item)) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 
@@ -960,9 +1041,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // wrong op and image inject is falsely rejected ("media type not
             // supported"). Falls back to activeOperation when the payload op is
             // not supported by the target model.
-            const targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
+            let targetOperation = payload.operation && targetModel.supportedOps?.includes(payload.operation)
                 ? payload.operation
                 : activeOperation;
+            // MPI-281 follow-up: History video is a continuation surface — it only
+            // serves i2v (Extend/New shot self-capture a start frame). A reused card
+            // whose op is text-only (t2v_ms) is filtered out of the op dropdown here,
+            // so restoring it renders "Select...". Remap a text-only reused op to the
+            // model's i2v op so the panel reads a real, runnable operation.
+            if (isVideo && !_opOptions().some(o => o.value === targetOperation)) {
+                targetOperation = _continuationOp(targetOperation);
+            }
 
             if (use.model) _pb.el.setModel?.(targetModel);
             _setPromptOperation(targetOperation, { remember: true });
@@ -983,9 +1072,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const resolved = await resolvePromptReuseMediaItems(payload);
                 const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
                 const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));
-                if (_wantImages && !mediaItems.some(m => (m.mediaType || m.type) === 'image')
-                    && getCommandMediaInputs(targetOperation).some(s => s.mediaType === 'image' && s.required !== false)) {
-                    _showToast('No saved frame images were found for this older entry.', 'warning');
+                // resolvePromptReuseMediaItems drops files that no longer exist on
+                // disk (Cleanup wiped them, or the history media was deleted). If a
+                // type the source declared resolved to nothing, the file is gone —
+                // warn instead of silently injecting an empty chip that only fails
+                // at generate time.
+                const _has = (t) => mediaItems.some(m => (m.mediaType || m.type) === t);
+                if ((_wantImages && !_has('image')) || (_wantVideo && !_has('video')) || (_wantAudio && !_has('audio'))) {
+                    _showToast('Some input media is missing and was not re-added.', 'warning');
                 }
                 for (const item of mediaItems) {
                     _pb.el.injectMedia?.({ url: item.url || item.filePath, mediaType: item.mediaType || item.type, role: item.role });
@@ -1212,6 +1306,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const item = createImageItem({
                     id: uploaded.itemId,
                     filePath: uploaded.filePath,
+                    thumbPath: uploaded.thumbPath,
                     uploaded: true,
                     operation: 'snapshot',
                     pixelDimensions: uploaded.pixelDimensions,
@@ -1224,6 +1319,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     url: uploaded.filePath,
                     filename: uploaded.filename,
                     itemId: uploaded.itemId,
+                    thumbPath: uploaded.thumbPath,
                     pixelDimensions: uploaded.pixelDimensions,
                     mediaType: 'image',
                 });
@@ -1252,6 +1348,26 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     groupId: _group.id,
                     itemId:  currentItem?.id,
                 };
+
+                // Round the selected output pixels to a multiple of the crop
+                // tool's "Divisible by" setting (MPI-261). The video crop rect is
+                // NORMALIZED 0..1 — convert to abs px against the source dims,
+                // round W/H (bounded by the source span from the origin), and send
+                // absoluteCropPx so the server uses it directly and skips its own
+                // even-snap (multiples of 16 are already even).
+                const srcDims = currentItem?.pixelDimensions;
+                const n = getToolSettings(project, 'crop', { divisible_by: 16 }).divisible_by;
+                if (srcDims?.w && srcDims?.h) {
+                    const px = {
+                        x: Math.max(0, Math.floor(rect.x * srcDims.w)),
+                        y: Math.max(0, Math.floor(rect.y * srcDims.h)),
+                    };
+                    const selW = rect.w * srcDims.w;
+                    const selH = rect.h * srcDims.h;
+                    px.w = roundToDivisible(selW, n, srcDims.w - px.x);
+                    px.h = roundToDivisible(selH, n, srcDims.h - px.y);
+                    cropBody.absoluteCropPx = px;
+                }
                 const trim = currentItem?.trim;
                 if (trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in) {
                     cropBody.trimIn  = +trim.in;
@@ -1284,18 +1400,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
         }
 
-        async function _handleReverseVideo() {
+        // mode: 'both' (video+audio) | 'video' | 'audio'
+        async function _handleReverseVideo(mode = 'both') {
             const project = state.currentProject;
             if (!project?.folderPath || !project?.id) return;
             const currentItem = _group.history[_currentIdx];
             const sourcePath = currentItem?.filePath;
             if (!sourcePath) { _showToast('No source video', 'error'); return; }
 
-            _showToast('Reversing video…', 'info');
+            const noun = mode === 'video' ? 'video' : mode === 'audio' ? 'audio' : 'video & audio';
+            _showToast(`Reversing ${noun}…`, 'info');
             try {
                 const body = {
                     folderPath: project.folderPath,
                     sourcePath,
+                    mode,
                     groupId: _group.id,
                     itemId:  currentItem?.id,
                 };
@@ -1324,10 +1443,60 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     hasAudio:   data.item.hasAudio,
                     trim:       data.item.trim,
                 });
-                _showToast('Reversed video saved', 'success');
+                _showToast(`Reversed ${noun} saved`, 'success');
             } catch (err) {
                 clientLogger.warn('MpiGroupHistoryBlock', 'video reverse failed', err);
-                _showToast('Video reverse failed: ' + err.message, 'error');
+                _showToast(`Reverse ${noun} failed: ` + err.message, 'error');
+            }
+        }
+
+        // ── GIF export (video only) ──────────────────────────────────────────
+        // Encoder injected into MpiToolOptionsGif. Resolves the current source +
+        // active trim, POSTs /api/video/gif, returns the temp GIF url/size for
+        // preview. Pure export — no history, no sidecar.
+        async function _encodeGif(params = {}) {
+            const currentItem = _group.history[_currentIdx];
+            const sourcePath = currentItem?.filePath;
+            if (!sourcePath) { _showToast('No source video', 'error'); return null; }
+
+            const body = {
+                sourcePath,
+                fps: params.fps,
+                sizePreset: params.sizePreset,
+                loop: params.loop,
+            };
+            const trim = _activeVideoTrim(currentItem);
+            if (trim) { body.trimIn = trim.in; body.trimOut = trim.out; }
+
+            const res = await fetch('/api/video/gif', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
+            return { url: data.url, byteSize: data.byteSize, fileName: data.fileName };
+        }
+
+        async function _handleGifExport(payload = {}) {
+            try {
+                // Reuse a fresh preview encode when present; else encode now.
+                let out = payload;
+                if (!out?.url) {
+                    const params = _options?.el?.getExportParams?.() || {};
+                    out = await _encodeGif(params);
+                }
+                if (!out?.url) return;
+                // Native Save-As via <a download> (docs/utils.md § mediaActions).
+                const a = document.createElement('a');
+                a.href = out.url;
+                a.download = out.fileName || 'clip.gif';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'GIF export failed', err);
+                _showToast('GIF export failed: ' + err.message, 'error');
             }
         }
 
@@ -1343,8 +1512,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     trim:       item.trim,
                 });
             } else {
-                // Viewer's loadEntry restores active tool mode internally.
+                // Viewer's loadEntry restores active tool mode internally, but a
+                // prior multi-select delete may have exited it — re-arm from the
+                // tool source-of-truth if the canvas mode is stale.
                 await viewer.el.loadEntry?.(item, idx);
+                const _tool = historyTools.el.getActiveMode?.();
+                if (_tool === 'crop' || _tool === 'mask') viewer.el.enterMode?.(_tool);
                 viewer.el.setMaskHidden?.(false);
             }
             _currentIdx = idx;
@@ -1463,12 +1636,50 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             await _runCombine(itemIds);
         });
 
+        // MPI-310 — caption this history item into the prompt box.
+        historyList.on('describe', ({ index }) => {
+            if (typeof index !== 'number') return;
+            describeItem(_group.history[index], { group: _group, scope: 'groupHistory' });
+        });
+
         historyList.on('add-to-gallery', async ({ index }) => {
             if (typeof index !== 'number') return;
             const item = _group.history[index];
             if (!item?.filePath) { _showToast('No source media', 'error'); return; }
             historyList.el.exitSelectMode();
             await _addItemToGallery(item, isVideo ? 'video' : 'image');
+        });
+
+        // Single entry → reveal + select the media file. Multiple → open the Media folder
+        // (no portable multi-file select across OSes). Mirrors MpiGalleryBlock.
+        historyList.on('reveal', async ({ indices }) => {
+            if (!indices?.length) return;
+            try {
+                if (indices.length === 1) {
+                    const item = _group.history[indices[0]];
+                    if (!item?.filePath) return;
+                    const absPath = extractAbsPath(item.filePath) || item.filePath;
+                    const res = await fetch('/reveal-item', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ itemPath: absPath }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                } else {
+                    const folderPath = state.currentProject?.folderPath;
+                    if (!folderPath) return;
+                    const res = await fetch('/open-folder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folderPath: `${folderPath}/Media` }),
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                }
+                historyList.el.exitSelectMode();
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'reveal item failed', err);
+                Events.emit('ui:error', { title: 'Open in file system', message: 'Could not open the file location.' });
+            }
         });
 
         historyList.on('download-selected', ({ indices }) => {
@@ -1491,6 +1702,80 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _downloadMaskDataURL(maskDataUrl, item);
             historyList.el.exitSelectMode();
         });
+
+        historyList.on('copy-mask', async ({ index }) => {
+            if (isVideo || typeof index !== 'number') return;
+            const item = _group.history[index];
+            if (!item) return;
+            const layers = await viewer.el.getMaskLayersForEntry?.(item);
+            if (!layers) {
+                _showToast('No mask for this entry', 'warning');
+                return;
+            }
+            // Source dimensions ride along so paste can compare against the
+            // target and warn before a stretched/misplaced result.
+            _copiedMask = { layers, dims: item.pixelDimensions || null };
+            // No toast: user-initiated action, result is self-evident (Paste
+            // mask appears in the menu). Toasts are for non-user events.
+            historyList.el.exitSelectMode();
+        });
+
+        historyList.on('paste-mask', async ({ index }) => {
+            if (isVideo || typeof index !== 'number' || !_copiedMask) return;
+            const item = _group.history[index];
+            if (!item) return;
+
+            const src = _copiedMask.dims;
+            const dst = item.pixelDimensions;
+            // ASPECT decides, not resolution. setManualFromDataURL stretches the
+            // pasted layer to the target canvas, so 1024×1024 → 2048×2048 is a
+            // clean scale and warning there is pure noise; only a differing
+            // aspect actually distorts the mask.
+            //
+            // Unknown dimensions on either side still warn — pasting blind is
+            // when the user most needs it, and pixelDimensions defaults to
+            // {w:0,h:0} for older/imported items.
+            const known = !!(src?.w && src?.h && dst?.w && dst?.h);
+            // 1% relative slack absorbs the rounding in off-grid pairs that are
+            // the same shape in practice (e.g. 1920×1080 vs 1936×1088, 0.4%
+            // apart) without letting a real shape change through.
+            const distorts = known
+                && Math.abs((src.w / src.h) - (dst.w / dst.h)) / (dst.w / dst.h) > 0.01;
+
+            if (known && !distorts) {
+                await _applyPastedMask(item);
+                return;
+            }
+
+            const dialog = MpiOkCancel.mount(document.createElement('div'), {
+                title:       'Aspect ratios do not match',
+                text:        known
+                    ? `The copied mask is ${src.w}×${src.h} (${nearestNamedRatio(src.w, src.h)}) `
+                      + `but this entry is ${dst.w}×${dst.h} (${nearestNamedRatio(dst.w, dst.h)}). `
+                      + 'Pasting it may produce stretching or improper placement of the mask.'
+                    : 'The dimensions of the copied mask or this entry are unknown. '
+                      + 'Pasting it may produce stretching or improper placement of the mask.',
+                okLabel:     'Paste anyway',
+                cancelLabel: 'Cancel',
+            });
+            dialog.on('ok', async () => {
+                await _applyPastedMask(item);
+                dialog.destroy?.();
+            });
+            dialog.on('cancel', () => { dialog.destroy?.(); });
+            // MpiOkCancel builds its DOM on mount but stays hidden until show()
+            // portals it to body — without this the dialog never appears and the
+            // paste silently never happens.
+            dialog.el.show();
+        });
+
+        async function _applyPastedMask(item) {
+            const ok = await viewer.el.pasteMaskLayersToEntry?.(item, _copiedMask.layers);
+            // Success is silent — the mask appearing IS the feedback. Only warn
+            // on failure, where there is nothing visible to tell the user.
+            if (!ok) _showToast('Could not paste mask', 'warning');
+            historyList.el.exitSelectMode();
+        }
 
         async function _runCombine(itemIds) {
             const project = state.currentProject;
@@ -1578,6 +1863,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                         operation:       'add-to-gallery',
                         displayName,
                         pixelDimensions: uploaded.pixelDimensions || item.pixelDimensions || { w: 0, h: 0 },
+                        thumbPath:       uploaded.thumbPath ?? null,
                     });
                 const newGroup = createItemGroup(mediaType, {
                     name: newItem.displayName,
@@ -1651,7 +1937,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const cur = _group.history[_currentIdx];
             if (cur) {
                 if (isVideo) viewer.el.loadVideo?.(resolveMediaUrl(cur.filePath), { fps: cur.fps || _group.fps || 24, trim: cur.trim });
-                else         viewer.el.loadEntry?.(cur, _currentIdx);
+                else {
+                    await viewer.el.loadEntry?.(cur, _currentIdx);
+                    // Multi-select for delete exited the viewer's tool mode (see
+                    // 'selection-changed'), so loadEntry had nothing to restore.
+                    // Re-arm the still-active canvas tool (crop/mask) — its options
+                    // panel is still mounted and won't re-enter on its own. Defer a
+                    // frame so it lands after any late canvas mode reset from the
+                    // image reload (which would otherwise clobber the fresh mode).
+                    const _tool = historyTools.el.getActiveMode?.();
+                    if (_tool === 'crop' || _tool === 'mask') {
+                        requestAnimationFrame(() => viewer.el.enterMode?.(_tool));
+                    }
+                }
             }
 
             if (!isVideo) {
@@ -1985,7 +2283,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     const vid = viewer.el.getSourceElement?.();
                     const lastTime = hasTrim ? +trim.out
                         : (Number.isFinite(vid?.duration) && vid.duration > 0 ? Math.max(0, vid.duration - 1e-3) : null);
-                    const { blob } = await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
+                    // MPI-287: grab the EXACT last frame via the frame-accurate
+                    // decode sink; native captureSnapshot seeks <video>.currentTime
+                    // which is not frame-accurate and can seed a drifted frame.
+                    // Fall back to native capture when the clip can't be decoded.
+                    const accurate = await viewer.el.captureLastFrameAccurate?.({ trimOut: hasTrim ? +trim.out : null });
+                    const { blob } = accurate || await viewer.el.captureSnapshot?.({ time: lastTime }) || {};
                     if (blob) {
                         const file = new File([blob], 'frame-startFrame.png', { type: 'image/png' });
                         const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id, {
@@ -2015,7 +2318,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const trim = currentItem?.trim;
                 const hasTrim = trim && Number.isFinite(+trim.in) && Number.isFinite(+trim.out) && +trim.out > +trim.in;
                 const mediaItems = await _captureLastFrameMedia(payload, hasTrim, trim);
-                _runGenerate({ ...payload, mediaItems, historyMode: true });
+                const operation = _continuationOp(payload.operation);
+                _runGenerate({ ...payload, operation, mediaItems, historyMode: true });
             }));
             _unsubs.push(Events.on('prompt-box-tools:extend', async () => {
                 if (!_pb?.el) return;
@@ -2032,6 +2336,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
                 const extendCfg = {
                     ...payload,
+                    operation: _continuationOp(payload.operation),
                     mediaItems: extendMedia,
                     historyMode: true,
                     extend: true,
@@ -2047,19 +2352,40 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(Events.on('video-viewer:context-menu', ({ x, y }) => {
                 const disabled = !_anyInstalledModelHasI2V();
                 const reason = disabled ? 'No installed video model supports I2V' : '';
+                const noAudio = !_group.history[_currentIdx]?.hasAudio;
                 MpiContextMenu.show({
                     x, y,
                     items: [
                         { key: 'snapshot',  icon: 'camera',       label: 'Create snapshot',    info: 'Save current frame as image' },
                         { key: 'set-start', icon: 'frameBack',    label: 'Set as start frame', disabled, info: reason },
                         { key: 'set-end',   icon: 'frameForward', label: 'Set as end frame',   disabled, info: reason },
-                        { key: 'reverse',   icon: 'reverse',      label: 'Reverse video' },
+                        { key: 'reverse-both',  icon: 'reverse', label: 'Reverse video & audio' },
+                        { key: 'reverse-video', icon: 'reverse', label: 'Reverse video' },
+                        { key: 'reverse-audio', icon: 'reverse', label: 'Reverse audio', disabled: noAudio, info: noAudio ? 'Source has no audio' : '' },
                     ],
                     onSelect: (key) => {
                         if (key === 'snapshot') _handleCropSnapshot();
                         else if (key === 'set-start') _setFrameFromVideo('startFrame');
                         else if (key === 'set-end') _setFrameFromVideo('endFrame');
-                        else if (key === 'reverse') _handleReverseVideo();
+                        else if (key === 'reverse-both')  _handleReverseVideo('both');
+                        else if (key === 'reverse-video') _handleReverseVideo('video');
+                        else if (key === 'reverse-audio') _handleReverseVideo('audio');
+                    },
+                });
+            }));
+        } else {
+            // ── Image-viewer context menu ───────────────────────────────────
+            // Clear Mask is reachable from any tool (no need to open the Mask
+            // tool). Disabled when no mask is painted.
+            _unsubs.push(Events.on('image-viewer:context-menu', ({ x, y }) => {
+                const noMask = !viewer.el.hasMask?.();
+                MpiContextMenu.show({
+                    x, y,
+                    items: [
+                        { key: 'clear-mask', icon: 'trash', label: 'Clear mask', disabled: noMask, info: noMask ? 'No mask to clear' : 'Remove the painted mask' },
+                    ],
+                    onSelect: (key) => {
+                        if (key === 'clear-mask') viewer.el.clearMask?.();
                     },
                 });
             }));

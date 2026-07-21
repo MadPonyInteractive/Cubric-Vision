@@ -7,10 +7,12 @@
  * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default Cubric Prompt enhancer-recipe key
  * @property {string}   [enhanceRecipe] - Explicit Cubric Prompt enhancer-recipe id, overriding `type` when they diverge (MPI-5)
  * @property {'image'|'video'} mediaType
- * @property {number}   [tier]       - Workflow node-title generation: 1 = legacy bare titles, 2 = Input_ / Output_ prefixed titles. Video models are tier 2. (NOT the size tier — see sizeTier.)
  * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
  * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
- * @property {{multiStage?:boolean, audio?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot. Absent → both false.
+ * @property {boolean}  [featured]   - Editorial spotlight flag for the Model Library ("hot / new / best right now"). Featured models sort FIRST within their sub-grid (stable) and carry a gold sparkle star badge. Purely a curation signal — set as many as you like, add/remove freely; no cap, no resolver effect. Consumed only by MpiModelManager (sort + `.mpi-tile__featured` badge).
+ * @property {{multiStage?:boolean, audio?:boolean, negativePrompt?:boolean, styleLoras?:boolean, promptEnhance?:boolean, tierSelect?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot; styleLoras shows the style picker + Stylization slider; promptEnhance shows the enhance toggle; tierSelect shows the runtime speed/quality tier radio (Qwen-Image-Edit's qwenTier → Input_Tier, MPI-300) for models whose tiers share one weight set instead of shipping as sibling cards. Absent → false. EXCEPTION: negativePrompt defaults to TRUE when absent (a model supports negatives unless it opts out) — set `negativePrompt: false` for distilled cfg-1.0 models (Krea2-Turbo) where the negative prompt has no effect and NAG cannot rescue it. Hides the prompt box's positive/negative toggle; the stored negativePrompt value is still persisted. `promptEnhance` requires a text encoder whose CLIP implements `.generate()` (Qwen3-VL, Gemma) — T5/umT5 models (Chroma, Wan) CRASH on the TextGenerate node, so never set it there.
+ * @property {string[]} [styleLoraLabels] - Style-LoRA display names, index-aligned with the workflow's MpiMath gates and MpiPromptList trigger lines. Index 0 must be the no-style entry (every gate zeroed); its label is free text. Required when `capabilities.styleLoras` is true.
+ * @property {string[]} [styleLoraImages] - Style card images for the picker, filenames in comfy_workflows/display/, INDEX-ALIGNED with styleLoraLabels. Index 0 is the no-style baseline (the same prompt with the rack off) — ship every card from the SAME prompt so the grid reads as a comparison. Optional: a missing entry (or the whole array) renders a placeholder card, so a model can ship styles before its art exists. See docs/playbooks/add-model/05-prompt-and-styles.md §9.
  * @property {Record<string, Array<{label:string,w:number,h:number,icon:string}>>} [ratios] - Per-type ratio table (MPI-174), keyed by quality tier (quality-mode models) or 'portrait'/'landscape' (orientation-mode). First model declaring it for a NEW `type` wins; existing types (flux/sdxl/wan/wan5b/ltx) keep their built-in tables in js/utils/ratios.js — do not redeclare them here.
  * @property {string[]} [qualityTiers] - Ordered quality-tier ids for a NEW `type` (MPI-174), e.g. ['low','medium','high']. Presence ⇒ quality UI mode (tier radio); absent + `ratios` present ⇒ orientation mode. Consumed via qualityTiersFor() in js/utils/ratios.js and the v3 project migration.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
@@ -35,11 +37,12 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-01.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This image generator uses the famous Juggernaut XL model as its base. It can create different styles but is best suited for realistic images.',
         workflows: {
             t2i: 't2i_sdxl_realistic.json',
+            i2i: 't2i_sdxl_realistic.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_sdxl_realistic.json',
             detail: 'detailer_sdxl_realistic.json',
         },
@@ -59,11 +62,12 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-05.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This spicy image generator uses one of the best NSFW models available for SDXL, the famous Lustify model by Coyotte.',
         workflows: {
             t2i: 't2i_sdxl_nsfw.json',
+            i2i: 't2i_sdxl_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_sdxl_nsfw.json',
             detail: 'detailer_sdxl_nsfw.json',
         },
@@ -83,11 +87,12 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
             t2i: 't2i_ill_anime_beauty.json',
+            i2i: 't2i_ill_anime_beauty.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_ill_anime_beauty.json',
             detail: 'detailer_ill_anime_beauty.json',
         },
@@ -107,11 +112,12 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
         workflows: {
             t2i: 't2i_ill_anime.json',
+            i2i: 't2i_ill_anime.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_ill_anime.json',
             detail: 'detailer_ill_anime.json',
         },
@@ -131,11 +137,12 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This image generator uses the AnimerJei V3 PONY model. It is a stylized model that can create different animation styles.',
         workflows: {
             t2i: 't2i_pony_mix.json',
+            i2i: 't2i_pony_mix.json',   // same graph; Input_Is_i2i flips the latent source
             upscale: 'upscaler_pony_mix.json',
             detail: 'detailer_pony_mix.json',
         },
@@ -155,20 +162,22 @@ export const MODELS = [
         // MPI-217.
         id: 'chroma-flash',
         sizeTier: 'balanced',
+        modelFamily: 'Chroma',
         name: 'Chroma Flash',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
         defaultUpscale: '4x-NMKD-Siax',
         image: 'chroma-flash-01.webp',
         type: 'chroma',
-        supportedOps: ['t2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
-        description: 'Chroma is a high-detail Flux-family image generator. This Flash build produces images in a single step for fast, uncensored results.',
+        description: 'Chroma is a high-detail Flux-family image generator. It can produce some really hardcore high quality NSFW but can sometimes struggle with hands.',
         workflows: {
-            t2i: 'Chroma_t2i.json',
-            upscale: 'Chroma_upscaler.json',
-            detail: 'Chroma_detailer.json',
+            t2i: 'chroma_t2i.json',
+            i2i: 'chroma_t2i.json',   // same graph; Input_Is_i2i flips the latent source
+            upscale: 'chroma_upscaler.json',
+            detail: 'chroma_detailer.json',
         },
         dependencies: [
             'chroma1-hd-flash',
@@ -181,10 +190,214 @@ export const MODELS = [
         ],
     },
     {
+        // Chroma (Hyper) — LOW-tier sibling of Chroma Flash. Same op shape, same support
+        // stack (RES4LYF/MpiNodes/UltimateSDUpscale, t5xxl-fp16, vae-flux-ae, Siax); only
+        // the diffusion weight differs (int8 Danrisi mix + Hyper/Turbo distill → faster,
+        // ~9.2GB vs Flash's 17GB). Clustered with Flash via modelFamily:'Chroma'; the L/B
+        // badge disambiguates. Separately installable alongside Flash (NOT mutually
+        // exclusive). Own t2i/upscaler/detailer runtime files (chroma_hyper_* — the
+        // upscaler/detailer keys are lowercase, matching the generated filenames on a
+        // case-sensitive Pod FS).
+        id: 'chroma-hyper',
+        sizeTier: 'low',
+        modelFamily: 'Chroma',
+        name: 'Chroma Hyper',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        defaultUpscale: '4x-NMKD-Siax',
+        image: 'chroma-hyper-01.webp',
+        type: 'chroma',
+        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
+        loraStrengths: ['model'],
+        gen_speed: 'fast',
+        description: 'A faster, lighter Chroma — the same high-detail Flux-family image generator distilled to run quicker at low VRAM. Great for realistic, hardcore NSFW; hands can still struggle.',
+        workflows: {
+            t2i: 'chroma_hyper_t2i.json',
+            i2i: 'chroma_hyper_t2i.json',   // same graph; Input_Is_i2i flips the latent source
+            upscale: 'chroma_hyper_upscaler.json',
+            detail: 'chroma_hyper_detailer.json',
+        },
+        dependencies: [
+            'chroma1-hd-hyper',
+            't5xxl-fp16',
+            'vae-flux-ae',
+            '4x-NMKD-Siax',
+            'RES4LYF',
+            'ComfyUI-MpiNodes',
+            'ComfyUI-UltimateSDUpscale',
+        ],
+    },
+    {
+        // ── Krea 2 — MPI-282, collapsed to a single card in MPI-316 ────────────────
+        // ONE Krea2 SFW card, BOTH speed tiers. The Raw (un-distilled) weight gives a
+        // working cfg + negative prompt, which drives the identity-edit LoRA cleanly.
+        // The old separate Turbo card is GONE: the `Accelerator Lora` (turbo-distill,
+        // an SVD delta extracted FROM Raw) reconstructs the Turbo transformer at
+        // strength 1.0, so the fast tier is now a runtime toggle on this same weight
+        // rather than a second ~12GB download. capabilities.turboToggle drives it.
+        //
+        // One universal graph serves t2i/i2i/depth/edit (switched at runtime), and the
+        // krea2Turbo control injects Input_Tier: 1 = quality (cfg 3, 40 steps, working
+        // negative), 2 = fast (cfg 1, 12+6 steps, accelerator LoRA at 1.0 — the negative
+        // is computed then discarded, so the PromptBox hides the negative toggle).
+        // See docs/models/krea2/README.md "Krea2 as an EDITOR".
+        id: 'krea2',
+        // 'balanced', not 'high': the accelerator LoRA means one install now covers both
+        // speeds, so this is no longer the heavyweight half of a tier pair (MPI-316).
+        sizeTier: 'balanced',
+        featured: true,
+        // NO modelFamily (MPI-316). The family field drives the H/B/L tier letter, which
+        // only makes sense when siblings are TIERS of the same model. Krea2's two cards
+        // are CONTENT variants (SFW / NSFW) that a user can install side by side — the
+        // tier split they used to represent is now a runtime toggle. Keeping the family
+        // rendered "Krea 2 H" / "Krea 2 NSFW H": a tier letter on a content distinction,
+        // and the same letter on both, so it disambiguated nothing.
+        name: 'Krea 2',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'krea2-turbo-sfw.webp',
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'krea2',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
+        loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
+        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false, turboToggle: true },
+        styleLoraLabels: [
+            'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
+            'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+            'MidJourney',
+        ],
+        // Style card images for the picker (index-aligned with styleLoraLabels;
+        // comfy_workflows/display/). Index 0 = the no-style baseline gen. All four
+        // Krea2 variants share the same style rack, so the same set applies.
+        styleLoraImages: [
+            'krea2-style-none.webp', 'krea2-style-darkbrush.webp', 'krea2-style-dotmatrix.webp',
+            'krea2-style-kidsdrawing.webp', 'krea2-style-neondrip.webp', 'krea2-style-rainywindow.webp',
+            'krea2-style-retroanime.webp', 'krea2-style-softwatercolor.webp', 'krea2-style-sunsetblur.webp',
+            'krea2-style-vintagetarot.webp', 'krea2-style-midjourney.webp',
+        ],
+        gen_speed: 'balanced',
+        description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the distinctive photographic look, ten style LoRAs, depth reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
+        workflows: {
+            // Tier is NOT a file axis any more (MPI-316) — one Raw-weight graph per op,
+            // with krea2Turbo injecting Input_Tier to pick the sampler chain at runtime.
+            t2i: 'krea2_t2i_sfw.json',
+            i2i: 'krea2_t2i_sfw.json',   // same graph; Input_Is_i2i flips the latent source
+            poseReference: 'krea2_t2i_sfw.json',   // same graph; Input_depth_reference selects the depth-ControlNet model
+            krea2Edit: 'krea2_t2i_sfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
+            upscale: 'krea2_upscaler_sfw.json',
+            detail: 'krea2_detailer_sfw.json',
+        },
+        qualityTiers: ['1k', '2k'],
+        dependencies: [
+            'krea2-raw-transformer',     // ONLY difference from the NSFW card's deps
+            'krea2-lora-accelerator',    // turbo-distill delta — REQUIRED: it IS the fast tier (MPI-316)
+            'qwen3vl-abliterated-clip',   // shared with the image-describer plugin
+            'vae-qwen-image',            // shared — already on R2, zero upload
+            'krea2-lora-depth-control',
+            'krea2-lora-identity-edit',  // instruct-edit LoRA (baked into the edit path); dep of both Krea2 cards
+            'krea2-lora-filterbypass',   // always-on bypass node; strength baked per variant (SFW 1.0 / NSFW 0.0)
+            'krea2-style-darkbrush',
+            'krea2-style-dotmatrix',
+            'krea2-style-kidsdrawing',
+            'krea2-style-neondrip',
+            'krea2-style-rainywindow',
+            'krea2-style-retroanime',
+            'krea2-style-softwatercolor',
+            'krea2-style-sunsetblur',
+            'krea2-style-vintagetarot',
+            'krea2-style-midjourney',
+            '4x-NMKD-Siax',
+            'RES4LYF',                   // ClownsharKSampler_Beta (both stages)
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',           // ImageResizeKJv2, ResizeImageMaskNode
+            'ComfyUI-Impact-Pack',       // MaskDetailerPipe, To/FromBasicPipe
+            'ComfyUI-UltimateSDUpscale',
+            'ComfyUI-Krea2-ControlNet',
+            'comfyui_controlnet_aux',
+            'comfyui-krea2edit',         // dual-conditioning edit nodes (Krea2EditModelPatch + GroundedEncode)
+            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
+        ],
+    },
+    {
+        // ── Krea 2 NSFW — MPI-282, collapsed to a single card in MPI-316 ───────────
+        // Lustify-Krea Raw int8 weight. Same rationale as the SFW card above: one card,
+        // both tiers, the accelerator LoRA standing in for the deleted Turbo weight.
+        id: 'krea2-nsfw',
+        sizeTier: 'balanced',   // see the SFW card
+        featured: true,
+        // NO modelFamily — see the SFW card above.
+        name: 'Krea 2 NSFW',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'krea2-turbo-nsfw.webp',
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'krea2',
+        enhanceRecipe: 'flux',
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
+        loraStrengths: ['model'],
+        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false, turboToggle: true },
+        styleLoraLabels: [
+            'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
+            'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
+            'MidJourney',
+        ],
+        // Style card images for the picker (index-aligned with styleLoraLabels;
+        // comfy_workflows/display/). Index 0 = the no-style baseline gen. All four
+        // Krea2 variants share the same style rack, so the same set applies.
+        styleLoraImages: [
+            'krea2-style-none.webp', 'krea2-style-darkbrush.webp', 'krea2-style-dotmatrix.webp',
+            'krea2-style-kidsdrawing.webp', 'krea2-style-neondrip.webp', 'krea2-style-rainywindow.webp',
+            'krea2-style-retroanime.webp', 'krea2-style-softwatercolor.webp', 'krea2-style-sunsetblur.webp',
+            'krea2-style-vintagetarot.webp', 'krea2-style-midjourney.webp',
+        ],
+        gen_speed: 'balanced',
+        description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the photographic look, ten style LoRAs, depth reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
+        workflows: {
+            // Tier is NOT a file axis any more (MPI-316) — see the SFW card above.
+            t2i: 'krea2_t2i_nsfw.json',
+            i2i: 'krea2_t2i_nsfw.json',
+            poseReference: 'krea2_t2i_nsfw.json',
+            krea2Edit: 'krea2_t2i_nsfw.json',
+            upscale: 'krea2_upscaler_nsfw.json',
+            detail: 'krea2_detailer_nsfw.json',
+        },
+        qualityTiers: ['1k', '2k'],
+        dependencies: [
+            'krea2-raw-transformer-nsfw',   // ONLY difference from the SFW card's deps
+            'krea2-lora-accelerator',    // turbo-distill delta — REQUIRED: it IS the fast tier (MPI-316)
+            'qwen3vl-abliterated-clip',   // shared with the image-describer plugin
+            'vae-qwen-image',
+            'krea2-lora-depth-control',
+            'krea2-lora-identity-edit',
+            'krea2-lora-filterbypass',
+            'krea2-style-darkbrush',
+            'krea2-style-dotmatrix',
+            'krea2-style-kidsdrawing',
+            'krea2-style-neondrip',
+            'krea2-style-rainywindow',
+            'krea2-style-retroanime',
+            'krea2-style-softwatercolor',
+            'krea2-style-sunsetblur',
+            'krea2-style-vintagetarot',
+            'krea2-style-midjourney',
+            '4x-NMKD-Siax',
+            'RES4LYF',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+            'ComfyUI-Impact-Pack',
+            'ComfyUI-UltimateSDUpscale',
+            'ComfyUI-Krea2-ControlNet',
+            'comfyui_controlnet_aux',
+            'comfyui-krea2edit',
+            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
+        ],
+    },
+    {
         // NVIDIA PiD generative upscaler — one model, 4 VAE-locked paths picked at
         // runtime via the pidVariant control (Input_Type switch). Prompt-box driven
         // (needs an image + optional prompt). Only op = `pid`. Research + decisions:
-        // docs/builder/research/pid-upscaler.md.
+        // docs/models/pid/upscaler.md.
         id: 'nvidia-pid',
         sizeTier: 'low',
         name: 'NVIDIA PiD Upscaler',
@@ -201,7 +414,7 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'NVIDIA PiD generative 4x image upscaler. This upscaler offers you 4 different models. (Flux/SD3/Qwen/SDXL) Each providing you different results. Like with any other model, you should reuse the prompt that generated the initial image or describe the image for better results. ',
         workflows: {
-            pid: 'NVIDIA_PID.json',
+            pid: 'nvidia_pid.json',
         },
         dependencies: [
             'pid-flux1', 'pid-sdxl', 'pid-sd3', 'pid-qwenimage',
@@ -209,6 +422,78 @@ export const MODELS = [
             'pid-gemma',
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
+        ],
+    },
+    // ── Boogu-Image-Edit (MPI-257) ─────────────────────────────────────────
+    // Unified 10B instruction image-edit (Apache-2.0). ONE graph, three quality
+    // TIERS shipped as three sibling cards (shared modelFamily + name; the L/B/H
+    // badge disambiguates). Each card installs only its tier's transformer; the
+    // runtime file (generate_boogu.py) bakes the tier's UNETLoader weight + the
+    // Input_Tier int that selects that tier's sampler chain. See
+    // docs/playbooks/add-model/03-model-registry.md § "Multi-tier models".
+    //
+    // Op = the existing `edit` (image+prompt → whole-image edit, dims from source,
+    // no ratio picker). `type: 'boogu'` is new → only consumer is `enhanceRecipe ??
+    // type` (set below). No ratios/qualityTiers: edit has no size selector, like PiD.
+    // User LoRA rack (Input_Lora_1..6) is live → settings gear shown, model-only.
+    // High/Balanced run cfg 4/3.5 (negatives fire); Low is turbo cfg 1 (negatives
+    // ignored, negativePrompt:false).
+    {
+        id: 'boogu-edit-high',
+        sizeTier: 'high',
+        modelFamily: 'Boogu-Image-Edit',
+        name: 'Boogu Image Edit',
+        dropdownMeta: 'EDIT',
+        mediaType: 'image',
+        image: 'boogu-edit-high.webp',
+        type: 'boogu',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'boogu' recipe; keep 'boogu' out of the sweep
+        supportedOps: ['edit'],
+        loraStrengths: ['model'],
+        capabilities: { multiStage: false, audio: false, negativePrompt: true },
+        gen_speed: 'slow',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor. Describe the change you want and it edits the image while preserving the rest. The High tier uses the full bf16 weights at 30 steps for the best quality; needs the most VRAM.',
+        workflows: {
+            edit: 'boogu_edit_high.json',
+        },
+        dependencies: [
+            'boogu-edit-transformer-high',
+            'boogu-qwen3vl-8b-clip',
+            'vae-flux-ae',            // shared — already on R2, zero upload
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',        // ResizeImageMaskNode
+            'ComfyUI-Impact-Pack',    // To/FromBasicPipe
+        ],
+    },
+    // Balanced = turbo int8_convrot (promoted from 'low'). fp8_scaled Balanced tier DROPPED
+    // — dark/underexposed on Blackwell (sm_120), MPI-266. int8_convrot is Blackwell-safe,
+    // faster, and higher quality than fp8_scaled on all NVIDIA (ComfyUI dev consensus). Still
+    // a cfg-1 turbo (8-step) ⇒ negatives are a no-op → negativePrompt:false (unchanged).
+    {
+        id: 'boogu-edit-balanced',
+        sizeTier: 'balanced',
+        modelFamily: 'Boogu-Image-Edit',
+        name: 'Boogu Image Edit',
+        dropdownMeta: 'EDIT',
+        mediaType: 'image',
+        image: 'boogu-edit-balanced.webp',
+        type: 'boogu',
+        enhanceRecipe: 'flux',
+        supportedOps: ['edit'],
+        loraStrengths: ['model'],
+        capabilities: { multiStage: false, audio: false, negativePrompt: false },
+        gen_speed: 'balanced',
+        description: 'Boogu Image Edit is a unified 10B instruction image editor. Describe the change you want and it edits the whole image while preserving the rest. The Balanced tier uses a distilled turbo (int8) weight at 8 steps — fast, lower VRAM, and consistent across NVIDIA GPUs. Fastest on NVIDIA RTX (Turing+); older or non-NVIDIA GPUs may be slow. Its understanding is not as deep as the High tier, but it is still a capable image editor.',
+        workflows: {
+            edit: 'boogu_edit_balanced.json',
+        },
+        dependencies: [
+            'boogu-edit-transformer-balanced',
+            'boogu-qwen3vl-8b-clip',
+            'vae-flux-ae',
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+            'ComfyUI-Impact-Pack',
         ],
     },
     // ── Video Models ───────────────────────────────────────────────────
@@ -219,7 +504,6 @@ export const MODELS = [
         name: 'Wan 2.2 Smooth',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 2,
         // branchingContinue: per-stage LoRAs vary the stage-2 result, so WAN
         // previews expose Continue (branch a new card) + Finish. LTX omits it
         // (no per-stage LoRA variance → Finish-only). See commandRegistry
@@ -241,10 +525,10 @@ export const MODELS = [
         ],
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
-        description: 'This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation. It can generate videos from text or images. Completely uncensored and with a spicy tendency. It creates videos at 16 fps, so it is advisable to interpolate them later.',
+        description: "This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation in it's text to video version and any style in image to video. It's fast and completely uncensored. It creates videos at 16 fps, so it is advisable to interpolate them later.",
         workflows: {
-            t2v_ms: 'Wan22_t2v.json',
-            i2v_ms: 'Wan22_i2v.json',
+            t2v_ms: 'wan22_t2v.json',
+            i2v_ms: 'wan22_i2v.json',
         },
         // Always-installed shared payload (VAE, text encoder, shared custom nodes).
         commonDeps: [
@@ -272,11 +556,11 @@ export const MODELS = [
         // modelFamily), per the sizeTier contract "one tier per card". The L/B/H badge
         // + dropdown letter surface only when 2+ tiers of LTX-2.3 are installed.
         sizeTier: 'high',
+        featured: true,
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 2,
         // MPI-128: dual-latent (video+audio) stage-2 staging wired, so the
         // previewStage toggle + preview→Finish are unlocked. multiStage:true shows
         // the toggle on the shared _ms ops. NO branchingContinue → Finish-only
@@ -295,8 +579,8 @@ export const MODELS = [
         gen_speed: 'medium',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes.',
         workflows: {
-            t2v_ms: 'LTX_t2v.json',
-            i2v_ms: 'LTX_i2v.json',
+            t2v_ms: 'ltx_t2v.json',
+            i2v_ms: 'ltx_i2v.json',
         },
         // MPI-190: engine split REVERTED, GGUF fully removed. cu130 (MPI-187/189)
         // collapsed the aimdo cold-fault tax that was the GGUF transformer's only
@@ -340,11 +624,11 @@ export const MODELS = [
         // the two cluster under one L/B/H badge.
         id: 'ltx-23-balanced',
         sizeTier: 'balanced',
+        featured: true,
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 2,
         capabilities: { multiStage: true, audio: true },
         video: 'ltx23_balanced_preview.mp4',
         type: 'ltx',
@@ -355,11 +639,11 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes. A faster tier that trades a little quality for speed and lighter VRAM use.',
         // Base filenames — the resolver appends the arch suffix from the `variants`
-        // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding LTX_t2v_mxfp8.json
+        // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding ltx_t2v_mxfp8.json
         // etc. (all emitted by generate_ltx.py).
         workflows: {
-            t2v_ms: 'LTX_t2v.json',
-            i2v_ms: 'LTX_i2v.json',
+            t2v_ms: 'ltx_t2v.json',
+            i2v_ms: 'ltx_i2v.json',
         },
         // Shared deps = the High card's set MINUS the bf16 transformer. The
         // arch-specific transformer comes from the `variants.arch` block: only the
@@ -397,7 +681,6 @@ export const MODELS = [
         name: 'Wan 2.2 5B',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        tier: 1,
         // Wan 2.2 TI2V-5B: one small transformer serves BOTH t2v + i2v (combined,
         // LTX-shape). SINGLE-STAGE (no ×2 upscaler stage) → multiStage:false, so no
         // previewStage/Continue. audio:false (no audio). NO branchingContinue →
@@ -420,8 +703,8 @@ export const MODELS = [
         // Combined transformer: both ops ship together (LTX pattern). generate_wan5b.py
         // bakes Input_Text_to_video from the template into the two runtime files.
         workflows: {
-            t2v: 'Wan5B_t2v.json',
-            i2v: 'Wan5B_i2v.json',
+            t2v: 'wan5b_t2v.json',
+            i2v: 'wan5b_i2v.json',
         },
         // FLAT deps (like LTX) — no per-op install toggle. clip (umt5) is SHARED with
         // the 14B card (already hosted); vae + model + turbo-lora are 5B-specific.
@@ -433,6 +716,71 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'ComfyUI-VideoHelperSuite',
             'comfyui-kjnodes',
+        ],
+    },
+    // Qwen-Image-Edit-2511 (MPI-300) — ONE card, not three.
+    //
+    // All three speed tiers share the SAME int8 transformer + TE + VAE; only the
+    // accelerator Lightning LoRA differs. Three sibling cards would therefore have
+    // pollute the library and make the user install ~20GB three times. Instead the
+    // tier is a RUNTIME radio (`qwenTier` → Input_Tier, an MpiInt driving the graph's
+    // MpiAnySwitch model path + step count): 1=Quality (raw ~20-step, no accelerator),
+    // 2=Turbo (8-step LoRA), 3=Hyper (4-step LoRA). PiD's pidResolution is the
+    // precedent for a runtime selector standing in for card variants.
+    //
+    // Op = qwenEdit (its own, NOT Boogu's shared `edit`) — three image slots, the tier
+    // radio, and its own style rack. Output follows the source image dimensions
+    // (ImageScaleToTotalPixels off the input), so there is no ratio picker, like PiD.
+    {
+        id: 'qwen-edit',
+        sizeTier: 'balanced',
+        modelFamily: 'Qwen-Image-Edit',
+        name: 'Qwen Image Edit',
+        dropdownMeta: 'EDIT',
+        mediaType: 'image',
+        image: 'qwen-edit.webp',
+        type: 'qwen',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'qwen' recipe; keep 'qwen' out of the sweep
+        supportedOps: ['qwenEdit'],
+        loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
+        // tierSelect gates the qwenTier radio in MpiPromptBox._refreshOpSlot(). No prompt
+        // enhancer in this graph (no TextGenerate node) ⇒ promptEnhance stays default false.
+        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, tierSelect: true, batch: false },
+        // INDEX-ALIGNED with the workflow's seven MpiMath gates (`b if a == N`) and its
+        // MpiPromptList trigger lines; index 0 = no style (every gate zeroed). NOTE the
+        // two anime entries: slot 2 is Qwen-Anime-V2 (3D) and slot 3 is animal_style.
+        // which is an anime-2D LoRA despite the filename. Confirmed by the user — do not
+        // "correct" this pair to match the filenames.
+        styleLoraLabels: [
+            'None', 'Illustration', 'Anime 3D', 'Anime 2D',
+            'Anime Zankuro', '3D', 'Caricature', 'SnapShot',
+        ],
+        // Style card images for the picker (index-aligned with styleLoraLabels;
+        // comfy_workflows/display/). Index 0 = the no-style baseline gen.
+        styleLoraImages: [
+            'qwen-style-none.webp', 'qwen-style-illustration.webp', 'qwen-style-anime3d.webp',
+            'qwen-style-anime2d.webp', 'qwen-style-zankuro.webp', 'qwen-style-3d.webp',
+            'qwen-style-caricature.webp', 'qwen-style-snapshot.webp',
+        ],
+        gen_speed: 'fast',
+        description: 'Qwen Image Edit 2511 is an instruction image editor: give it an image and describe the change, and it edits while preserving the rest. Takes up to three reference images at once, ships seven built-in style LoRAs, and keeps the source image dimensions. Pick a tier per run — Quality for the best result, Turbo or Hyper when you want it fast. It is at its best COMBINING images: take a character, face, garment, or object from one image and place it into another, and it keeps the reference recognisable. Refer to your images BY NUMBER in the prompt — "place the man and the woman from image 2 into the scene from image 1" — in the order you added them. (This is the opposite of Krea 2, which wants images described in natural language instead.) Single-image instruction edits are its weak side — simple attribute changes like recolouring a shirt work, but bigger rewrites tend to be ignored or come back with the framing and faces degraded. For those, try Boogu Image Edit or Krea 2.',
+        workflows: {
+            qwenEdit: 'qwen_edit.json',
+        },
+        dependencies: [
+            'qwen-edit-transformer',
+            'qwen-edit-qwen25vl-7b-clip',
+            'vae-qwen-image',            // shared with Krea2 — already on R2, zero upload
+            'qwen-edit-lightning-4step', // Hyper tier accelerator
+            'qwen-edit-lightning-8step', // Turbo tier accelerator
+            'qwen-edit-style-illustration',
+            'qwen-edit-style-anime3d',
+            'qwen-edit-style-anime2d',
+            'qwen-edit-style-zankuro',
+            'qwen-edit-style-3d',
+            'qwen-edit-style-caricature',
+            'qwen-edit-style-snapshot',
+            'ComfyUI-MpiNodes',
         ],
     },
 ];

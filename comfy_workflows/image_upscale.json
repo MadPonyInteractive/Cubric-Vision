@@ -2,12 +2,12 @@
   "400": {
     "inputs": {
       "upscale_method": "lanczos",
-      "scale_by": [
-        "739",
+      "image": [
+        "758",
         0
       ],
-      "image": [
-        "749",
+      "scale_by": [
+        "739",
         0
       ]
     },
@@ -23,7 +23,7 @@
         0
       ],
       "image": [
-        "749",
+        "758",
         0
       ]
     },
@@ -38,18 +38,18 @@
     },
     "class_type": "UpscaleModelLoader",
     "_meta": {
-      "title": "Upscale_Model"
+      "title": "Input_Upscale_Model"
     }
   },
   "609": {
     "inputs": {
       "upscale_method": "lanczos",
-      "scale_by": [
-        "742",
-        0
-      ],
       "image": [
         "607",
+        0
+      ],
+      "scale_by": [
+        "742",
         0
       ]
     },
@@ -64,7 +64,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Upscale_Factor"
+      "title": "Input_Upscale_Factor"
     }
   },
   "742": {
@@ -93,16 +93,7 @@
     },
     "class_type": "PreviewImage",
     "_meta": {
-      "title": "Output"
-    }
-  },
-  "749": {
-    "inputs": {
-      "image": "mpi_input_image.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Input_Image"
+      "title": "Output_image"
     }
   },
   "750": {
@@ -119,7 +110,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Upscale_Using_Model"
+      "title": "Input_Upscale_Using_Model"
     }
   },
   "751": {
@@ -133,6 +124,17 @@
     "class_type": "MpiUpscaleModelScale",
     "_meta": {
       "title": "Mpi Upscale Model Scale"
+    }
+  },
+  "758": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
     }
   }
 }

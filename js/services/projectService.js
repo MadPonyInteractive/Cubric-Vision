@@ -64,7 +64,14 @@ const _sharedQueues = new Map();
 
 const _QUEUE_DEBOUNCE_MS = 300;
 
-const _MODEL_WIDE_KEYS = new Set(['loras', 'upscaleModel', 'qualityTier']);
+// Keys a `scope: 'perModel'` control may write without an opName (they land in
+// modelSettings[modelId][key]). A perModel control whose key is missing here has
+// its write SILENTLY DROPPED with a warning — see the guard on 'settings:model:update'.
+const _MODEL_WIDE_KEYS = new Set([
+    'loras', 'upscaleModel', 'qualityTier',
+    'styleSelect', 'stylization', 'enhancePrompt',
+    'krea2Turbo',
+]);
 
 function _enqueueModelUpdate(modelId, opName, key, value) {
     if (!_modelQueues.has(modelId)) {
@@ -272,6 +279,10 @@ export async function openProject(project) {
     }
 
     state.currentProject = reconciled;
+    // MPI-247 memory is per working-session-on-a-project. Opening a different
+    // project must not carry a prior project's last op (e.g. i2i) into a fresh
+    // Gallery mount with an empty prompt — reset to natural per-model defaults.
+    state.s_selectedOpByModel = {};
 
     const extras = Storage.getExtraProjectPaths();
     const parentDir = reconciled.folderPath.split(/[\\/]/).slice(0, -1).join('/');
@@ -284,6 +295,43 @@ export async function openProject(project) {
     Storage.setLastProject(reconciled.folderPath);
 
     Events.emit('project:changed', { project: reconciled });
+
+    // MPI-319: backfill gallery thumbs for pre-existing images (projects made
+    // before image thumbs existed). Fire-and-forget — until it lands, cards fall
+    // back to full-res. When it returns, patch live items and re-emit so the
+    // grid swaps to the cheap thumbs without a reload.
+    _backfillImageThumbs(reconciled.folderPath);
+}
+
+async function _backfillImageThumbs(folderPath) {
+    try {
+        const result = await post('/backfill-image-thumbs', { folderPath });
+        const thumbs = result?.thumbs;
+        if (!result?.success || !thumbs || !Object.keys(thumbs).length) return;
+        // Only patch if we're still on the same project (user may have navigated).
+        const proj = state.currentProject;
+        if (!proj || proj.folderPath !== folderPath) return;
+
+        let changed = false;
+        const itemGroups = proj.itemGroups.map((g) => ({
+            ...g,
+            history: g.history.map((item) => {
+                if (item?.id && thumbs[item.id] && !item.thumbPath) {
+                    changed = true;
+                    return { ...item, thumbPath: thumbs[item.id] };
+                }
+                return item;
+            }),
+        }));
+        if (!changed) return;
+        // Proxy contract: replace the top-level key, never mutate sub-objects.
+        state.currentProject = { ...proj, itemGroups };
+        // Rebuild the gallery grid from the freshly-patched state (same handler
+        // path a new group uses — pure rebuild from state.currentProject).
+        Events.emit('project:group-added', {});
+    } catch (err) {
+        clientLogger.warn('projectService', `image-thumb backfill failed: ${err.message}`);
+    }
 }
 
 /**
@@ -475,11 +523,11 @@ export async function persistGroups() {
  * Save a generation result to the project folder.
  * @returns {{ success: boolean, filePath?: string, filename?: string }}
  */
-export async function saveGeneration({ folderPath, comfyViewUrl, audioViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }) {
+export async function saveGeneration({ folderPath, comfyViewUrl, audioViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, appId, appInputs }) {
     const res = await fetch('/project/save-generation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderPath, comfyViewUrl, audioViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId }),
+        body: JSON.stringify({ folderPath, comfyViewUrl, audioViewUrl, itemId, operation, meta, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, appId, appInputs }),
     });
     if (!res.ok) throw new Error(`save-generation returned ${res.status}`);
     return res.json();

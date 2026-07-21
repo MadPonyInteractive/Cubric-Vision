@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-245",
+  "title": "Missing local LoRA: bug-reporter dialog instead of toast, + stuck Cue card with dead STOP",
+  "description": "A LoRA lived in a folder the user later removed from Settings. Reusing that card's prompt on a cold app start produced the GitHub bug-reporter dialog ('Generation failed / Prompt outputs failed validation') instead of the missing-LoRA warning toast. Opening Model Settings once 'fixed' it. Bypassing the LoRA afterwards left the Cue panel stuck on a RUNNING card whose STOP button did nothing.\n\nTHREE INDEPENDENT DEFECTS, one repro:\n\n(1) COLD-START ASSET LIST NEVER LOADS. comfyController.ensureServerRunning() returned early on `status.running && status.ready` WITHOUT emitting `comfy:ready` (the comment says 'skip startup indicator to avoid flash' — the missing emit was collateral). shell.js hangs loadAssets() off that event, and assetService.loadAll() is the ONLY writer of state.availableLoras. So on a cold start against an already-running ComfyUI the list stayed []. The pre-dispatch guard _findMissingModel() treats an empty list as 'engine not ready' and FAILS OPEN (commandExecutor.js:423) — deliberate and correct — so the dead LoRA sailed through to ComfyUI. MpiModelSettings.open() lazily calls loadAssets(), which is why opening it once made the toast appear.\n  NOTE: boot auto-start is gated on Storage.getAutoStartComfy(), default FALSE — so for most users ensureServerRunning() never runs at boot at all, and the guard can never win the race against dispatch (guard at commandExecutor.js:1165, runWorkflow at :1759). The emit is still correct, but defect (2) is the PRIMARY fix, not a fallback.\n\n(2) THE 400 PARSER WAS REMOTE-ONLY. comfyController's `!req.ok` block only read the Pod wrapper's `detail.comfy_body`, scraping the filename with a regex. LOCAL ComfyUI answers directly with `{error, node_errors}` (server.py:1126) where the filename lives ONLY in node_errors[id].errors[].extra_info.received_value (execution.py:1063). The top-level `error.details` is '' whenever any other output still validated — exactly what the user's log showed ('details': ''). So the regex matched nothing, err.code was never set, and the error fell through to the ui:error bug-reporter dialog. Classic fix-one-engine-forget-the-twin.\n  Also fixed alongside: `errCode = errData?.error` captured an OBJECT on local 400s (remote sends a string), silently breaking every `errCode === '...'` comparison beneath it.\n\n(3) STOP NO-OPS ON AN ORPHANED CARD. No race needed. On failure exec.onError -> activeGenerations.end() DELETES the registry entry (activeGenerations.js:113), but the Cue panel renders RUNNING off `_lanes[lane].active` (generationService.js:524). cancelRunningCueJob() looks the job up in the registry, finds nothing, and hard-returns false at :450 — silent no-op, card forever, pending job never promotes.\n\nFIXES:\n- comfyController.js: already-ready path now emits comfy:ready (keeps the no-flash intent); new module-private _findNodeErrorLora() reads node_errors structurally (no regex, no '' trap); errCode only accepts the string form; carrier decides the tag — node_errors => 'lora_missing_local', comfy_body => 'lora_missing_remote'.\n- commandExecutor.js: handles 'lora_missing_local' -> same ui:warning toast as the remote twin (wording matched to the existing pre-dispatch guard), never the dialog.\n- generationService.js: cancelRunningCueJob() falls back to draining the orphaned lane when the registry entry is gone, so the card clears and the next pending job promotes.\n\nGuard: tests/lora-missing-local-toast.test.cjs (10 cases) — guard-fails-open, legacy regex blind to the local body, node_errors extraction + negative cases, errCode-must-stay-string, carrier->engine tag, and STOP orphan-lane before/after.\n\nUSER-VERIFIED live (local engine, cold start, reused card): warning toast, no dialog; removing the LoRA in Model Settings generates; re-adding the folder + reuse + Q generates with the LoRA. The 400 still appears in console (expected — defect (1) cannot pre-empt it with auto-start off; the (2) backstop catches it), user accepted this as harmless.\n\nFOLLOW-UP (uncarded, mirror of defect 1): _ensureRemoteReady emits comfy:ready ONLY when background:true (comfyController.js ~:472), so a foreground remote gen against an already-ready Pod also skips the emit. Same shape, less harmful (the engine does not need the asset list to run). Deliberately NOT fixed here — a local-engine bug is not the place to touch the remote path.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-07-10T15:00:00Z",
+  "updated_at": "2026-07-10T15:20:00Z",
+  "links": {
+    "brief": null,
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "files": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  },
+  "tags": [
+    "lora",
+    "comfyui",
+    "local-engine",
+    "error-handling",
+    "queue",
+    "toast-vs-dialog"
+  ],
+  "priority": "medium"
+}

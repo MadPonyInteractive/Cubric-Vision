@@ -407,7 +407,7 @@ export const HOTKEY_REGISTRY = [
     },
     {
         id:               'video.frame.first',
-        key:              '0',
+        key:              'home',
         type:             KEY_TYPE.DOWN,
         category:         'video',
         scopeLabel:       'Video Player',
@@ -416,7 +416,7 @@ export const HOTKEY_REGISTRY = [
     },
     {
         id:               'video.frame.last',
-        key:              '1',
+        key:              'end',
         type:             KEY_TYPE.DOWN,
         category:         'video',
         scopeLabel:       'Video Player',

@@ -9,12 +9,13 @@ import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel } from '../../../data/commandRegistry.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
+import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
-import { qs, on } from '../../../utils/dom.js';
+import { qs, qsa, on, off } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
@@ -241,12 +242,17 @@ export const MpiPromptBox = ComponentFactory.create({
             return nextItems;
         }
 
-        function _removeItem(id) {
+        function _removeItem(id, { silent = false } = {}) {
             const idx = _mediaItems.findIndex(m => m.id === id);
             if (idx === -1) return;
             const item = _mediaItems.splice(idx, 1)[0];
             if (item.source === 'file') URL.revokeObjectURL(item.url);
-            _emitMediaChange();
+            // silent: caller (a replace inside _tryAddMedia) will emit once after
+            // the new item lands. Emitting mid-replace flickers media to zero,
+            // which flips the op to text-only, which then re-derives to i2i on the
+            // next emit — dropping a replacement image onto upscale/inpaint lost
+            // the op. The final _emitMediaChange is the only one that should run.
+            if (!silent) _emitMediaChange();
         }
 
         function _emitMediaChange() {
@@ -262,14 +268,19 @@ export const MpiPromptBox = ComponentFactory.create({
             if (hasMedia && curIsTextOnly) {
                 const fallback = _pickFallbackOp();
                 if (fallback) {
-                    el.setOperation(fallback);
+                    el.setOperation(fallback, { programmatic: true });
                 } else {
                     _refreshOpDropdown();
                 }
-            } else if (!hasMedia && curCmd && !curIsTextOnly) {
+            } else if (!hasMedia && curCmd && !curIsTextOnly && !_context.filterNoInputOps) {
+                // MPI-281: when text-only ops are hidden (History video-continuation
+                // mode), an empty media box must NOT switch to a text op — the op
+                // dropdown filters it away and the trigger renders "Select...". The
+                // Extend / New shot buttons run I2V with a self-captured last frame,
+                // so keep the media op (e.g. I2V) pinned even with an empty box.
                 const textOp = _pickTextOnlyOp();
                 if (textOp) {
-                    el.setOperation(textOp);
+                    el.setOperation(textOp, { programmatic: true });
                 } else {
                     _refreshOpDropdown();
                 }
@@ -290,7 +301,34 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('media-change', { imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount, items: renderedItems });
         }
 
+        // MPI-292: the op that supports at least `targetCount` items of `mediaType`,
+        // preferring the smallest-capacity op that fits (so a lone image lands on
+        // i2i, not edit). Returns null if no supported op reaches targetCount.
+        function _opForMediaCount(mediaType, targetCount) {
+            if (!model?.supportedOps?.length) return null;
+            return model.supportedOps
+                .map(op => ({ op, max: _maxMediaForOperation(op, mediaType) }))
+                .filter(o => o.max >= targetCount)
+                .sort((a, b) => a.max - b.max)[0]?.op ?? null;
+        }
+
         function _tryAddMedia({ url, file, mediaType, source, role, name }) {
+            // MPI-292: dropping an image while the current op caps this mediaType
+            // below the resulting count up-jumps to the model's larger-capacity op
+            // (e.g. i2i → krea2Edit on the 2nd image) BEFORE the cap below would
+            // otherwise evict the existing chip. Skipped for role-tagged drops
+            // (start/end-frame carry their own slot) and models with no bigger op.
+            if (!role) {
+                const existing = _mediaItems.filter(m => m.mediaType === mediaType).length;
+                const wouldBe = existing + 1;
+                if (wouldBe > _maxMediaForCurrentOperation(mediaType)) {
+                    const biggerOp = _opForMediaCount(mediaType, wouldBe);
+                    if (biggerOp && biggerOp !== activeOperation) {
+                        el.setOperation(biggerOp, { programmatic: true });
+                    }
+                }
+            }
+
             const maxCount = _maxMediaForCurrentOperation(mediaType);
             if (maxCount <= 0) { _showIncompatibleToast(); return; }
 
@@ -301,14 +339,17 @@ export const MpiPromptBox = ComponentFactory.create({
             // regardless of capacity).
             if (role) {
                 const sameRole = _mediaItems.find(m => m.role === role && m.mediaType === mediaType);
-                if (sameRole) _removeItem(sameRole.id);
+                if (sameRole) _removeItem(sameRole.id, { silent: true });
             }
 
             const afterRoleDrop = _mediaItems.filter(m => m.mediaType === mediaType);
             if (maxCount === 1) {
-                afterRoleDrop.forEach(item => _removeItem(item.id));
+                afterRoleDrop.forEach(item => _removeItem(item.id, { silent: true }));
             } else if (afterRoleDrop.length >= maxCount) {
-                _removeItem(afterRoleDrop[0].id);
+                // MPI-292: evict the LAST chip, not the first. Chip 1 is the edit's
+                // base image — a drop at capacity replaces the trailing chip and
+                // leaves the base intact.
+                _removeItem(afterRoleDrop[afterRoleDrop.length - 1].id, { silent: true });
             }
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
@@ -331,9 +372,38 @@ export const MpiPromptBox = ComponentFactory.create({
                     el.classList.remove('mpi-prompt-box--drag-over');
             }));
 
-            _unsubs.push(on(el, 'drop', async (e) => {
-                el.classList.remove('mpi-prompt-box--drag-over');
+            // A gallery card carries `application/mpi-media`. The moment such a
+            // drag starts anywhere in the window, arm the box (solid drop state)
+            // so the user sees the target ready before the cursor reaches it —
+            // mirrors MpiGalleryBlock's inverted file-drag guard. External file
+            // drags (`Files`, no media type) never arm here, so the two-zone
+            // (gallery + prompt) behaviour is unchanged for them.
+            const _isMediaDrag = (e) =>
+                e.dataTransfer?.types?.includes('application/mpi-media');
+            _unsubs.push(on(window, 'dragenter', (e) => {
+                if (_isMediaDrag(e)) el.classList.add('mpi-prompt-box--drag-armed');
+            }));
+            // A card drag is only "valid" over elements that preventDefault on
+            // dragover. The gallery does that for FILE drags only, so a card
+            // dragged over it shows the forbidden cursor and the browser
+            // auto-scrolls hunting for a valid target. Since the box is armed
+            // for the whole drag, make the WHOLE window the drop target for a
+            // media drag: preventDefault everywhere (valid cursor, no scroll)
+            // and route the drop to the box — drop anywhere = attach to prompt.
+            _unsubs.push(on(window, 'dragover', (e) => {
+                if (_isMediaDrag(e)) e.preventDefault();
+            }));
+            const _disarm = () => el.classList.remove('mpi-prompt-box--drag-armed');
+            _unsubs.push(on(window, 'dragend', _disarm));
+            _unsubs.push(on(window, 'drop', (e) => {
+                if (!_isMediaDrag(e) || el.contains(e.target)) return; // el's own handler covers on-box drops
+                e.preventDefault();
+                _disarm();
+                _handleMediaDrop(e);
+            }));
 
+            /** Add a dragged gallery card / file to the prompt box. */
+            async function _handleMediaDrop(e) {
                 const appData = e.dataTransfer.getData('application/mpi-media');
                 if (appData) {
                     try {
@@ -374,6 +444,12 @@ export const MpiPromptBox = ComponentFactory.create({
                         mediaType,
                     });
                 }
+            }
+
+            _unsubs.push(on(el, 'drop', (e) => {
+                el.classList.remove('mpi-prompt-box--drag-over');
+                _disarm();
+                _handleMediaDrop(e);
             }));
         }
 
@@ -401,12 +477,16 @@ export const MpiPromptBox = ComponentFactory.create({
             _emitMediaChange();
         };
 
-        el.setOperation = (key) => {
+        // MPI-247: `programmatic` distinguishes an op the box RE-DERIVED for the
+        // user (model switch, media-context re-pick) from an op the USER chose.
+        // Consumers persist per-model op memory only for user picks — a
+        // programmatic re-pick must not overwrite what the user last selected.
+        el.setOperation = (key, { programmatic = false } = {}) => {
             activeOperation = key;
             _refreshOpDropdown();
             _refreshOpSlot();
             _renderBadge();
-            emit('operation-change', { operation: key });
+            emit('operation-change', { operation: key, programmatic });
         };
 
         el.updateContext = (ctx) => {
@@ -453,13 +533,35 @@ export const MpiPromptBox = ComponentFactory.create({
             };
 
             const currentCmd = byKey.get(activeOperation);
-            if (supported.includes(activeOperation) && matches(currentCmd)) return activeOperation;
+            // MPI-281 follow-up: in History video-continuation mode (text-only ops
+            // hidden), a text-only current op (e.g. t2v_ms carried in by a reused
+            // card) `matches()` an empty box and would be kept here — before the
+            // media-op fallback below ever runs. Reject it so the box lands on the
+            // model's i2v op; Extend/New-shot inject a self-captured start frame and
+            // must run I2V, never T2V (which has no image loader → validation fail).
+            const curIsTextOnly = currentCmd
+                && (currentCmd.requiresImages ?? 0) === 0
+                && (currentCmd.requiresVideo ?? 0) === 0;
+            const keepCurrent = !(_context.filterNoInputOps && curIsTextOnly);
+            if (keepCurrent && supported.includes(activeOperation) && matches(currentCmd)) return activeOperation;
 
             const ranked = supported.map(k => byKey.get(k)).filter(Boolean);
             const ready = ranked.find(c => matches(c) && c.available);
             if (ready) return ready.key;
             const fit = ranked.find(c => matches(c));
             if (fit) return fit.key;
+            // MPI-281: when text-only ops are hidden (History video-continuation
+            // mode), the final fallback must not land on a text op — the dropdown
+            // filters it away and the trigger renders "Select...". Prefer the first
+            // media op the model supports; the Extend / New shot buttons run I2V
+            // with a self-captured last frame regardless of box emptiness.
+            if (_context.filterNoInputOps) {
+                const mediaOp = supported.find(k => {
+                    const c = byKey.get(k);
+                    return c && ((c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
+                });
+                if (mediaOp) return mediaOp;
+            }
             return supported[0];
         }
 
@@ -495,7 +597,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 );
             }
             if (picked && picked !== activeOperation) {
-                el.setOperation(picked);
+                el.setOperation(picked, { programmatic: true });
             } else {
                 _refreshOpDropdown();
                 _refreshOpSlot();
@@ -519,9 +621,15 @@ export const MpiPromptBox = ComponentFactory.create({
                     nextOp = _pickOpForModel(next) ?? next.supportedOps?.[0] ?? activeOperation;
                     emit('model-change', { model: next });
                 }
-            } else if (model) {
-                nextOp = _pickOpForModel(model) ?? activeOperation;
             }
+            // MPI-247: model unchanged = a refresh, NOT a model switch. Do NOT
+            // re-derive the op — _pickOpForModel rejects the current op on a
+            // media-chip mismatch and falls back to supportedOps declaration
+            // order, silently reverting the user's deliberate choice on every
+            // Gallery<->History navigation. Keep activeOperation as long as the
+            // model still declares it (the L528 guard handles genuinely-invalid
+            // ops from a mixed image/video list). Re-picking only happens on an
+            // actual model change (setModel / model dropped from list above).
 
             // Guard: activeOperation may be invalid for current model (e.g. mixed image/video lists)
             if (model && !model.supportedOps?.includes(nextOp)) {
@@ -535,7 +643,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 );
             }
             if (nextOp !== activeOperation) {
-                el.setOperation(nextOp);
+                el.setOperation(nextOp, { programmatic: true });
             } else {
                 _refreshOpDropdown();
                 _refreshOpSlot();
@@ -570,8 +678,31 @@ export const MpiPromptBox = ComponentFactory.create({
 
         function _renderStrip(items) {
             if (!_stripEl) return;
+            // FLIP: remember where every chip sits before the re-render so a
+            // reorder animates from its old slot instead of teleporting.
+            const _prevRects = new Map();
+            const existing = qsa('.mpi-prompt-box-media-strip__chip', _stripEl);
+            existing.forEach(c => _prevRects.set(c.dataset.id, c.getBoundingClientRect()));
+
+            // Reorder fast path: same chips, new order. Rebuilding the DOM here
+            // would reload every <img src> mid-drag (flicker) and drop the
+            // dragged node out from under its own pointer handlers — so move the
+            // existing nodes instead and only re-stamp the index badges.
+            const sameSet = existing.length === items.length
+                && items.every(it => _prevRects.has(it.id));
+            if (sameSet) {
+                items.forEach((item, idx) => {
+                    const chip = existing.find(c => c.dataset.id === item.id);
+                    _stripEl.appendChild(chip); // appendChild moves, not clones
+                    const badge = qs('.mpi-prompt-box-media-strip__index', chip);
+                    if (badge) badge.textContent = String(idx + 1);
+                });
+                _playFlip(_prevRects);
+                return;
+            }
+
             _stripEl.innerHTML = '';
-            items.forEach(item => {
+            items.forEach((item, idx) => {
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
                 chip.dataset.id = item.id;
@@ -585,10 +716,17 @@ export const MpiPromptBox = ComponentFactory.create({
                                ${renderIcon('audio', 'sm')}
                                <span class="mpi-prompt-box-media-strip__audio-name" title="${_audioName(item)}">${_audioName(item)}</span>
                            </div>`;
+                // Index badge mirrors the "image N" numbering models like
+                // qwenEdit use in prompts. A lone chip needs no number.
+                const indexHtml = items.length > 1
+                    ? `<span class="mpi-prompt-box-media-strip__index">${idx + 1}</span>`
+                    : '';
                 chip.innerHTML = `
+                    ${indexHtml}
                     ${mediaHtml}
                     <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
                 `;
+                if (items.length > 1) _makeChipReorderable(chip, item.id);
                 // Belt + suspenders: kill any drag that escapes draggable=false
                 // (browsers ignore the attr on some media elements during specific
                 // gesture sequences). Prevents the strip from acting as a source
@@ -600,8 +738,118 @@ export const MpiPromptBox = ComponentFactory.create({
                 });
                 _stripEl.appendChild(chip);
             });
+
+            _playFlip(_prevRects);
+        }
+
+        // FLIP playback: invert each chip to its old position, then release.
+        function _playFlip(prevRects) {
+            qsa('.mpi-prompt-box-media-strip__chip', _stripEl).forEach(chip => {
+                // The chip under the cursor is positioned by the drag itself.
+                if (chip.dataset.id === _draggingId) return;
+                const prev = prevRects.get(chip.dataset.id);
+                if (!prev) return;
+                const next = chip.getBoundingClientRect();
+                const dx = prev.left - next.left;
+                const dy = prev.top - next.top;
+                if (!dx && !dy) return;
+                // Replace any in-flight FLIP instead of stacking a second
+                // animation on top of it (the old one would fight this one).
+                chip.getAnimations().forEach(a => a.cancel());
+                chip.animate(
+                    [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+                    { duration: 200, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+                );
+            });
         }
         _renderStrip([]);
+
+        // ── Chip reorder (pointer-driven) ─────────────────────────────────────
+        // Id of the chip currently under the cursor, or null. Read by the FLIP
+        // pass so it doesn't clobber the drag ghost's transform.
+        let _draggingId = null;
+        // Pointer events, not HTML5 drag: the root el intercepts every drag*
+        // event for file drops, so a native drag here would raise the drop
+        // overlay and re-import the chip as a new item.
+        function _makeChipReorderable(chip, id) {
+            on(chip, 'pointerdown', (e) => {
+                // Left button only; the remove button owns its own clicks.
+                if (e.button !== 0 || e.target.closest('.mpi-prompt-box-media-strip__remove')) return;
+                e.preventDefault();
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+                let dragging = false;
+
+                // Each reorder re-renders the strip, replacing this element — so
+                // always re-resolve the dragged chip by id rather than closing
+                // over a node that may already be detached.
+                const live = () => qs(`.mpi-prompt-box-media-strip__chip[data-id="${id}"]`, _stripEl);
+
+                const onMove = (ev) => {
+                    const cur = live();
+                    if (!cur) return;
+                    if (!dragging) {
+                        // Small threshold so a click-to-remove never starts a drag.
+                        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 4) return;
+                        dragging = true;
+                        _draggingId = id;
+                    }
+                    cur.classList.add('mpi-prompt-box-media-strip__chip--dragging');
+                    // Measure the chip's slot with the ghost offset cleared —
+                    // getBoundingClientRect() reports the TRANSFORMED box, so
+                    // measuring while offset would compound every move.
+                    cur.style.transform = '';
+                    const r = cur.getBoundingClientRect();
+                    cur.style.transform =
+                        `translate(${ev.clientX - (r.left + r.width / 2)}px, ${ev.clientY - (r.top + r.height / 2)}px)`;
+
+                    // Reorder only once the pointer passes a neighbour's MIDPOINT,
+                    // not on mere overlap: overlap holds true across many moves, so
+                    // firing on it re-rendered the strip every pointermove (flicker).
+                    // Crossing the midpoint fires once per actual position change.
+                    const over = qsa('.mpi-prompt-box-media-strip__chip', _stripEl)
+                        .find(n => {
+                            if (n.dataset.id === id) return false;
+                            const b = n.getBoundingClientRect();
+                            if (ev.clientY < b.top || ev.clientY > b.bottom) return false;
+                            const mid = b.left + b.width / 2;
+                            // Neighbour to our right: swap once the pointer is past
+                            // its midpoint going right. To our left: past it going
+                            // left. Short of that the order is already correct.
+                            return b.left > r.left ? ev.clientX > mid : ev.clientX < mid;
+                        });
+                    if (over) _moveMediaItem(id, over.dataset.id);
+                };
+
+                const onUp = () => {
+                    off(document, 'pointermove', onMove);
+                    off(document, 'pointerup', onUp);
+                    _draggingId = null;
+                    const cur = live();
+                    if (cur) {
+                        cur.style.transform = '';
+                        cur.classList.remove('mpi-prompt-box-media-strip__chip--dragging');
+                    }
+                };
+
+                on(document, 'pointermove', onMove);
+                on(document, 'pointerup', onUp);
+            });
+        }
+
+        // Move `id` to the slot `targetId` occupies, shifting the rest along
+        // (insert-reorder, not a swap — a swap can't reach every arrangement).
+        function _moveMediaItem(id, targetId) {
+            const from = _mediaItems.findIndex(m => m.id === id);
+            const to = _mediaItems.findIndex(m => m.id === targetId);
+            if (from === -1 || to === -1 || from === to) return;
+            // Roles follow strip position, so drop the explicit tags the drag
+            // invalidated and let _withAssignedRoles re-derive them by order.
+            _mediaItems.forEach(m => { delete m.role; });
+            _mediaItems.splice(to, 0, _mediaItems.splice(from, 1)[0]);
+            _emitMediaChange();
+        }
 
         // Init-time history-mode class (props.context may carry historyMode at mount)
         if (_context.historyMode === true) el.classList.add('mpi-prompt-box--history-mode');
@@ -634,9 +882,30 @@ export const MpiPromptBox = ComponentFactory.create({
             return Math.max(0, max - used);
         };
 
+        // Declared here (not beside _refreshNegToggle further down) because
+        // injectPrompts below syncs it, and a `let` in the temporal dead zone would
+        // throw a ReferenceError on any injection that changes mode.
+        let _negBtn = null;
+
         el.injectPrompts = ({ positive, negative }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
+            // MPI-310: injecting ONLY a positive while the box sits in negative mode
+            // used to store the text and leave the negative on screen — the injection
+            // silently vanished from the user's view (it was still in the draft, so it
+            // would reappear later out of nowhere). Switch to the field being written
+            // so an injection is always visible. Only when exactly one side is
+            // injected; a both-sides inject keeps the current mode.
+            const _wantNeg = (negative != null && positive == null);
+            const _wantPos = (positive != null && negative == null);
+            if ((_wantPos && isNegativeMode) || (_wantNeg && !isNegativeMode)) {
+                isNegativeMode = _wantNeg;
+                // Keep the toggle button, placeholder and listeners in sync — the
+                // same three things the toggle's own click handler updates.
+                _negBtn?.el?.setActive?.(isNegativeMode);
+                textareaEl.placeholder = isNegativeMode ? 'Type negative prompt...' : 'Type your prompt...';
+                emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
+            }
             textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
             updateHeight();
             _saveDraft();
@@ -653,6 +922,18 @@ export const MpiPromptBox = ComponentFactory.create({
             // to avoid two sources of truth (block-validated vs raw event).
             Events.on('workspace:inject-prompts', _onInjectPrompts),
             Events.on('promptbox:generation-end', () => el.setGenerating(false)),
+            // Manual Cleanup wipes the whole preview-assets store, so every staged
+            // chip sourced from it is now a dead link. Drop live chips + the
+            // persisted snapshot so a later mount doesn't restore broken media.
+            Events.on('assets:cleaned', () => el.clearMedia()),
+            // MPI-316 — Krea2 turbo tier: cfg 1 discards the negative conditioning, so
+            // hide the negative toggle while turbo is ON. _refreshNegToggle() already
+            // handles the stranded-editing case (snaps the textarea back to positive)
+            // and `negativeValue` is kept in memory, so flipping back restores the text.
+            Events.on('prompt:krea2-turbo', ({ active }) => {
+                _krea2TurboOn = !!active;
+                _refreshNegToggle();
+            }),
             // Note: model list management is owned by the parent block (gallery /
             // history workspace). They call el.setModelList() with the appropriate
             // mediaType-scoped or all-installed list. Don't double-update here.
@@ -893,8 +1174,21 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!model) return null;
             const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const candidates = cmds.filter(c => (c.requiresImages ?? 0) > 0 || (c.requiresVideo ?? 0) > 0);
-            const ready = candidates.find(c => c.available);
-            return (ready ?? candidates[0])?.key ?? null;
+            // MPI-295: the fallback op must FIT the media already present, not just be
+            // the first image op. Restoring/injecting 2 images must land on an op with
+            // capacity ≥ 2 (e.g. krea2Edit), never the cap-1 i2i — which would evict
+            // chip 1 on the 2nd inject. Filter to ops whose per-type cap covers the
+            // current counts, preferring the smallest-fitting available op.
+            const imgN = el.imageCount ?? 0;
+            const vidN = el.videoCount ?? 0;
+            const fits = c =>
+                _maxMediaForOperation(c.key, 'image') >= imgN &&
+                _maxMediaForOperation(c.key, 'video') >= vidN;
+            const fitting = candidates.filter(fits)
+                .sort((a, b) => _maxMediaForOperation(a.key, 'image') - _maxMediaForOperation(b.key, 'image'));
+            const pool = fitting.length ? fitting : candidates;
+            const ready = pool.find(c => c.available);
+            return (ready ?? pool[0])?.key ?? null;
         }
 
         function _refreshOpDropdown() {
@@ -909,7 +1203,7 @@ export const MpiPromptBox = ComponentFactory.create({
             const availableOps = filteredCmds.map(cmd => {
                 const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
                 const disabled = !cmd.available || (hasMedia && isTextOnly);
-                return { value: cmd.key, label: cmd.label, disabled };
+                return { value: cmd.key, label: cmd.label, disabled, info: cmd.info };
             });
 
             opDropdownSlot.innerHTML = '';
@@ -959,6 +1253,39 @@ export const MpiPromptBox = ComponentFactory.create({
                 // node, so the control would be dead UI — hide it.
                 if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
 
+                // Style rack (Input_Style + Input_Stylization) is capability-gated:
+                // only models shipping style LoRAs (Krea2) mount it. Unlike
+                // negativePrompt this defaults FALSE — a model must opt in.
+                if ((componentId === 'styleSelect' || componentId === 'stylization')
+                    && model?.capabilities?.styleLoras !== true) continue;
+
+                // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
+                // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.
+                // Never infer this from the op; the model declares it.
+                if (componentId === 'enhancePrompt' && model?.capabilities?.promptEnhance !== true) continue;
+
+                // Quality-tier radio mounts only for models whose ratio set is keyed
+                // by tier ('quality' + 'quality-orientation'). NOT a capability flag:
+                // the ratio table already states it, and a second source would drift.
+                // Without this, an orientation model (SDXL) would render Wan's tiers.
+                if (componentId === 'qualityTier' && !usesQualityTier(model?.type)) continue;
+
+                // Qwen-Edit tier radio (Input_Tier) mounts only for models that ship a
+                // runtime accelerator-tier switch (Qwen-Image-Edit). Capability-gated so
+                // it never appears on other edit models (Boogu bakes its tier per file).
+                if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
+
+                // Krea2 turbo toggle (MPI-316) — same Input_Tier switch as qwenTier but
+                // two tiers, so a toggle rather than a radio. Its own capability flag:
+                // a model has EITHER the 3-way Qwen radio OR this, never both.
+                if (componentId === 'krea2Turbo' && model?.capabilities?.turboToggle !== true) continue;
+
+                // Batch picker is model-gated. Defaults TRUE (every model batches
+                // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
+                // its two-pass sampler graph has no Input_Batch_Size node, so a
+                // batch>1 request is a dead injection — hide the control.
+                if (componentId === 'batch' && model?.capabilities?.batch === false) continue;
+
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';
                 opSlot.appendChild(ctrlEl);
@@ -976,15 +1303,59 @@ export const MpiPromptBox = ComponentFactory.create({
             const _seedAudioPresent = (el.audioCount || 0) > 0;
             _activeControls.get('audioMode')?.setAudioPresent?.(_seedAudioPresent);
             _activeControls.get('useAudio')?.setAudioPresent?.(_seedAudioPresent);
+
+            // The negative toggle is model-gated too, and `model` is reassigned
+            // live by setModel/setModelList without a remount. Both converge here.
+            _refreshNegToggle();
         }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
-        if (props.includeNegative) {
-            MpiButton.mount(qs('#bottom-neg-slot', el), {
+        // Two conditions, re-evaluated whenever the model changes:
+        //   props.includeNegative — does this SURFACE offer negatives at all?
+        //   capabilities.negativePrompt — does the ACTIVE MODEL support them?
+        // The capability defaults to TRUE when absent (a model supports negatives
+        // unless it opts out), inverting the convention of multiStage/audio/motion.
+        // Krea2-Turbo is distilled at cfg 1.0 and opts out: its negative prompt has
+        // no effect and NAG is a silent no-op that doubles NFE.
+        const negSlot = qs('#bottom-neg-slot', el);
+
+        // MPI-316 — Krea2's turbo tier runs at cfg 1, where classifier-free guidance is
+        // inactive and the negative conditioning is computed then thrown away. Before the
+        // 4->2 card collapse that was gated STRUCTURALLY (the Turbo card declared
+        // `negativePrompt: false`); with one card and a runtime toggle the gating has to
+        // become live, or the field turns into an invisible no-op the user can type into.
+        // The krea2Turbo control emits this on mount AND on every click.
+        let _krea2TurboOn = false;
+
+        function _refreshNegToggle() {
+            const show = props.includeNegative === true
+                && model?.capabilities?.negativePrompt !== false
+                && !_krea2TurboOn;
+
+            if (show === !!_negBtn) return;
+
+            if (!show) {
+                // Toggle is going away. If the user was typing INTO the negative
+                // field, they would be stranded editing an invisible value — snap
+                // the textarea back to positive and tell consumers.
+                _negBtn.destroy();   // factory destroy() also removes el from the slot
+                _negBtn = null;
+                if (isNegativeMode) {
+                    isNegativeMode = false;
+                    textareaEl.value = positiveValue;
+                    textareaEl.placeholder = 'Type your prompt...';
+                    updateHeight();
+                    emit('mode-change', { mode: 'positive' });
+                }
+                return;
+            }
+
+            _negBtn = MpiButton.mount(negSlot, {
                 icon: 'check', iconActive: 'negative',
                 info: 'Switch between Positive and Negative Prompt',
                 size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
-            }).on('click', (data) => {
+            });
+            _negBtn.on('click', (data) => {
                 isNegativeMode = data.active;
                 textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
                 textareaEl.placeholder = isNegativeMode ? 'Type negative prompt...' : 'Type your prompt...';
@@ -992,6 +1363,8 @@ export const MpiPromptBox = ComponentFactory.create({
                 emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
             });
         }
+
+        _refreshNegToggle();
 
         // ── Enhance (Cubric Prompt, MPI-5) ─────────────────────────────────────
         // Capability-gated: the control is only mounted when cubric.prompt is
@@ -1225,6 +1598,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
         // ── Run / Stop / Loop hotkeys ──────────────────────────────────────────
         const _triggerRun = () => {
+            // An open App overlay owns Ctrl+Enter → it runs the app, not the PromptBox
+            // behind it. bind() fires all handlers, so bail here when an app is live.
+            if (document.querySelector('.mpi-base-app')) return;
             // MPI-73: the run hotkey bypasses the (now-disabled) Cue button — block
             // it too while the remote engine is connecting/disconnecting.
             if (_remoteTransitioning) return;
@@ -1338,9 +1714,32 @@ export const MpiPromptBox = ComponentFactory.create({
         // media op via _emitMediaChange. Reuse Prompt clears+replaces these after
         // mount, so it always wins over a restore.
         {
-            const _mediaSlot = state.promptMedia?.[_wsKey];
+            const _mediaSlot = state.promptMedia?.[_wsKey] || {};
             const _saved = _matchesSlot(_mediaSlot) ? (_mediaSlot.items || []) : [];
             if (_saved.length) {
+                // MPI-295: restored chips carry an explicit slot-role (inputImage/
+                // inputImage2/startFrame/…). _tryAddMedia's op up-jump is SKIPPED for
+                // role-tagged drops, so injecting a 2-image edit under a cap-1 op
+                // (i2i) would evict chip 1 before krea2Edit is ever reached. Pick the
+                // op that fits the saved image count ONCE up front, so the cap/role
+                // logic runs under the correct op (e.g. krea2Edit, cap 2).
+                // MPI-295: fit the op to the saved image count BEFORE injecting, so the
+                // FIRST chip already lands under an op with enough capacity (e.g.
+                // krea2Edit cap 2). Compare against the CURRENT op's OWN cap
+                // (_maxMediaForOperation), NOT the model-wide max
+                // (_maxMediaForCurrentOperation) — the latter reports krea2Edit's 2 even
+                // while the active op is t2i (cap 0), so the guard never fired and the
+                // per-chip _emitMediaChange fallback snapped to i2i (cap 1) mid-restore,
+                // evicting chip 1. Video counts get the same treatment.
+                const _savedImages = _saved.filter(m => m.mediaType === 'image').length;
+                const _savedVideos = _saved.filter(m => m.mediaType === 'video').length;
+                if (_savedImages > _maxMediaForOperation(activeOperation, 'image')) {
+                    const _fitOp = _opForMediaCount('image', _savedImages);
+                    if (_fitOp && _fitOp !== activeOperation) el.setOperation(_fitOp, { programmatic: true });
+                } else if (_savedVideos > _maxMediaForOperation(activeOperation, 'video')) {
+                    const _fitOp = _opForMediaCount('video', _savedVideos);
+                    if (_fitOp && _fitOp !== activeOperation) el.setOperation(_fitOp, { programmatic: true });
+                }
                 _restoringMedia = true;
                 try {
                     for (const m of _saved) el.injectMedia({ url: m.url, mediaType: m.mediaType, role: m.role, name: m.name });
@@ -1363,6 +1762,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // ── Cleanup ─────────────────────────────────────────────────────────────
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
+            _negBtn?.destroy?.();
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();
