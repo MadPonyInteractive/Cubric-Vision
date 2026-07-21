@@ -18,11 +18,11 @@
   },
   "krea2Edit": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0"
+    "appVersionIntroduced": "1.1.0"
   },
   "qwenEdit": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0"
+    "appVersionIntroduced": "1.1.0"
   },
   "detail": {
     "latestVersion": "1.0",
@@ -42,7 +42,7 @@
   },
   "poseReference": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0"
+    "appVersionIntroduced": "1.1.0"
   },
   "t2v": {
     "latestVersion": "1.1",
@@ -81,12 +81,12 @@
   },
   "removeBackground": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0",
+    "appVersionIntroduced": "1.1.0",
     "universal": true
   },
   "imageDescribe": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0",
+    "appVersionIntroduced": "1.1.0",
     "universal": true
   },
   "autoMaskImg": {
@@ -106,22 +106,22 @@
   },
   "appImageRegen": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0",
+    "appVersionIntroduced": "1.1.0",
     "universal": true
   },
   "appSdxl4k": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0",
+    "appVersionIntroduced": "1.1.0",
     "universal": true
   },
   "appVideoStitch": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0",
+    "appVersionIntroduced": "1.1.0",
     "universal": true
   },
   "appHeadSwap": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.2.0",
+    "appVersionIntroduced": "1.1.0",
     "universal": true
   }
 }
