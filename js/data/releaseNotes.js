@@ -61,7 +61,7 @@ export const RELEASE_NOTES = {
       'FULL-PAGE MODEL LIBRARY — opening Models brings up a full-screen grid split into Installed/Available and Image/Video, with media, size and search filters, a per-model detail panel, a VRAM table, and fullscreen video previews.',
       'MODEL DOWNLOAD QUEUE — installing several models queues them one at a time; each waiting model shows a cancellable Queued state and the queue advances on its own.',
       'MODEL MEMORY GUIDANCE — each model shows a size tier (Low, Balanced, or High) with a hover table of the VRAM-plus-RAM trade-off, your own GPU row highlighted.',
-      'DRAG-AND-DROP MODEL IMPORT — drop a .safetensors, .ckpt, .pt, .bin or .pth file onto one of your model folders in Settings and Cubric copies it in.',
+      'DRAG-AND-DROP MODEL IMPORT — drop a .safetensors, .ckpt, .pt, .bin or .pth file onto one of your LoRA or upscale folders in Settings and Cubric copies it in.',
       'MULTIPLE MODEL FOLDERS — add more than one LoRA or upscale folder in Settings under External Connections. Cubric reads models from all of them (extra folders are read-only; only your primary folder is managed for installs and removals).',
       'SEARCHABLE LoRA PICKER — LoRA slots open a searchable, collapsible folder tree instead of a flat list, and long or deeply-nested names are no longer clipped.',
       'BYPASS A LoRA WITHOUT REMOVING IT — a per-slot toggle skips a LoRA at zero strength for quick A/B comparisons.',
