@@ -57,15 +57,29 @@ avoid editing the same primitive twice, or rebase cleanly if done first.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] `hotkeyRegistry.js` — `radialMenu.devToggle` = `control+tab` DOWN, gated on
+  `APP_CONFIG.dev_mode` + same page/overlay `when` as `radialMenu.toggle`.
+- [x] `MpiRadialMenu.js` — `_onDevTabDown` (Ctrl+Tab) swaps `_context` → `'dev'`
+  and `_show()`s only when a `dev` context has items; release reuses the shared
+  `_onTabUp`; `_hide()` restores the page context on ALL close paths (select,
+  cancel, lost pointer lock) via `_prevContext`.
+- [x] `navigation.js` — dev actions (Components/Apps/Restart Engine) pushed via
+  `setContextItems('dev', …)` in dev mode; removed the `extraItems` mount prop +
+  `setExtraItems()` dev wiring so the page radial renders operations only.
+- [x] Removed the now-orphaned `extraItems`/`setExtraItems` API from the primitive
+  (`MpiRadialMenu.js` + `types.js`) — navigation was its only consumer.
 
 ## Remaining Work
 
-- Implement the single change set above end to end.
+- User-UX live test (Electron `npm start`, dev build) — see `## Verification`.
 
 ## Plan Drift
 
-- None yet.
+- Design deviation from the plan sketch: context restore lives in `_hide()`
+  (not the tail of `_onTabUp`) so pointer-lock-loss also restores. Cleaner, one
+  restore site for every close path.
+- Also removed the dead `extraItems` mechanism (plan only said to stop CALLING
+  it) — navigation was its sole consumer, so it was a true orphan after the move.
 
 ## Verification
 
