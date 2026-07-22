@@ -87,6 +87,10 @@ tar -tvzf CubricVision-linux-x64-v<version>.tar.gz | grep 'electron/dist/electro
 # expect -rwxr-xr-x, not -rw-r--r--
 ```
 
+On Windows Git-Bash, GNU tar treats a `D:\…` path as a remote host and fails
+with `Cannot connect to D: resolve failed` — add `--force-local` to any `tar`
+command reading a build artifact off a drive letter.
+
 ## Release Channels
 
 Cubric Vision uses one portable distribution model with one channel: a public
