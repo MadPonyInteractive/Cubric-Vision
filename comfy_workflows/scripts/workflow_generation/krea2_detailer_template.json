@@ -311,7 +311,7 @@
   },
   "1705": {
     "inputs": {
-      "math_expression": "20 if a == 1 else 6",
+      "math_expression": "20 if a == 1 else 3",
       "a": [
         "1706",
         0
