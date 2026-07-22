@@ -118,6 +118,11 @@
   "events": [
     {
       "at": "2026-07-22T06:15:59.000Z",
+      "type": "cleanup",
+      "note": "mpi-cleanup: archived 3 orphaned deleted-status task workspaces (MPI-251, MPI-288, MPI-290) to tasks/_archived/ (not in any board column). Swept all handoff records to state/archive/handoffs/ and emptied index.json active_handoffs (no active sessions; all done). MPI-242 acknowledged message kept."
+    },
+    {
+      "at": "2026-07-22T06:15:59.000Z",
       "type": "task.moved",
       "task": "MPI-337",
       "from": "doing",
