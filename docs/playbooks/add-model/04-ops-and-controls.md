@@ -143,6 +143,12 @@ controls. `upscale` uses 0.20, `detail` 0.30, `pid` 0.0 — pick the value your 
 - [ ] Op declares `injectParams: { Input_<Name>: true }` — the ONLY thing that sets it
 - [ ] `models.js`: add the op to `supportedOps` **and** map `workflows.<op>` to the same file
 - [ ] Media slot declared if the op needs one (`requiresImages`, `mediaInputs`)
+- [ ] **Gating is automatic from that slot data (MPI-337) — no per-op radial wiring.**
+      `getAvailableCommands` admits an op only when
+      `requires* ≤ staged count ≤ #declared slots of that type` (+ `requiresMask`). A
+      type's MAX capacity = the number of `mediaInputs` slots of that type — a 2-image
+      op needs **2** image slots or it gates at 1. The op then enters the radial +
+      dropdown, dims (not hides) when unavailable, and Run toasts a missing mask.
 - [ ] i2i (or any latent-space op): add `'denoise'` to `components` + a `defaults.denoise`,
       **after** tracing that the denoise node is reachable on that branch
 - [ ] `progressStages.js`: keyed by **FILE**, not op — a shared graph needs no new entry.

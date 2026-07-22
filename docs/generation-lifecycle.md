@@ -14,6 +14,13 @@ bug-report dialog. Guard lives at the TOP of `startGeneration` (`generationServi
 chokepoint covering Q hotkey / Cue button / loop re-fire. Required-slot unsatisfied → `ui:warning`
 toast + `return null`.
 
+The same chokepoint also gates `requiresMask` ops (detail/change/remove) with no `maskDataUrl`
+— `_needsMaskButHasNone` + `_warnMissingMask`, mirrored at enqueue + dispatch (MPI-337). A missing
+requirement toasts + `return null`; it NEVER switches the op (the op stays selected, dimmed).
+Op availability is data-driven from `commandRegistry` `mediaInputs` slot count + `requires*`:
+`getAvailableCommands` admits an op only when `requires* ≤ staged count ≤ #slots of that type`
+(+ `requiresMask`) — so a type's MAX capacity = its declared slot count.
+
 ## Progress pipeline — ComfyUI stdout is the truth, WS events are useless (MPI-147)
 
 The status-bar progress bar is driven by **parsing ComfyUI's stdout**, NOT the WS `progress`/`progress_state` events. Why: ComfyUI 0.26's WS reports the SLOW phases (model-init, VAE decode) as binary `0/1` nodes, and LTX samplers are tiny (3-7 steps, done in seconds) — so a WS-weighted bar froze at 0%, snapped to a wrong %, or hung at 90%. The rich signal (tqdm `N/M [elapsed<eta]` per step + `Model Initializing` markers) exists ONLY on stdout. Flow: `routes/comfy.js _handleComfyOutput` parses tqdm → broadcasts `comfy:step-progress` (and `comfy:tile-progress` for `USDU:` bars, `comfy:segment-total` for detailer `# of Detected SEGS:`) over the `/comfy/events/stream` SSE → `commandExecutor.js` SSE listeners → `phaseProgress.js` (createStageProgress) → `tool:stage` + `tool:progress` → statusBar.

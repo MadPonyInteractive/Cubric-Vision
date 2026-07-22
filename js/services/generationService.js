@@ -121,6 +121,20 @@ function _warnMissingMediaSlot(slot) {
     Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.`, sound: false });
 }
 
+// MPI-337: some ops (detail/change/remove — commandRegistry `requiresMask`) need
+// a painted mask. Unlike a missing media slot, the op is NEVER switched away when
+// the mask is absent — the user's op stays selected and Run is gated HERE instead,
+// at both the enqueue and dispatch sites, with one shared message (mirrors the
+// _findMissingMediaSlot / _warnMissingMediaSlot pair above).
+function _needsMaskButHasNone(operation, maskDataUrl) {
+    return !!getCommand(operation)?.requiresMask && !maskDataUrl;
+}
+
+function _warnMissingMask() {
+    // sound:false — a click-to-run rejection must not ring (matches _warnMissingMediaSlot).
+    Events.emit('ui:warning', { message: 'Paint a mask before generating — this operation needs one.', sound: false });
+}
+
 function _promptExcerpt(text = '') {
     return String(text || '').replace(/\s+/g, ' ').trim().slice(0, PROMPT_EXCERPT_MAX);
 }
@@ -455,6 +469,16 @@ export function enqueueGeneration(config, callbacks = {}, opts = {}) {
         return null;
     }
 
+    // MPI-337: same treatment for a requiresMask op with no painted mask — reject
+    // before it enters the queue (a masked op stays selected even when the mask is
+    // cleared; this is the only place that stops the empty run).
+    if (_needsMaskButHasNone(config.operation, config.maskDataUrl)) {
+        _warnMissingMask();
+        try { callbacks.onCancel?.(); } catch {}
+        _emitPromptBoxGenerationEndIfIdle();
+        return null;
+    }
+
     // Freeze the control snapshot NOW — the instant Cue is pressed — before the user
     // can change a control while the gen runs. The completion handler consumes this
     // frozen copy instead of re-reading live settings (MPI-336). Every real path funnels
@@ -717,6 +741,14 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     if (missingSlot) {
         _warnMissingMediaSlot(missingSlot);
         callbacks.onError?.(new Error(`Missing required ${missingSlot.mediaType} for ${operation}`));
+        return null;
+    }
+
+    // MPI-337: dispatch-time net for the mask guard — covers loop re-fire / stage-2
+    // paths that skip enqueueGeneration, same as the media-slot net above.
+    if (_needsMaskButHasNone(operation, maskDataUrl)) {
+        _warnMissingMask();
+        callbacks.onError?.(new Error(`Missing required mask for ${operation}`));
         return null;
     }
 

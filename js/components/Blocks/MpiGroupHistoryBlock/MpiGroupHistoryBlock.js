@@ -823,13 +823,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 refreshGroupHistoryRadial(opts);
                 return;
             }
-            const currentStillOk = opts.find(o => o.value === activeOperation && !o.disabled);
-            if (!currentStillOk) {
-                const fallback = opts.find(o => !o.disabled);
-                if (fallback) {
-                    _setPromptOperation(fallback.value);
-                }
-            }
+            // MPI-337: NO force-DOWN. When the active op loses a requirement (mask
+            // cleared, maskless History card, media removed) it STAYS selected and
+            // renders disabled — Run toasts the missing input at generate time
+            // (generationService requiresMask/media guards). The old "current op
+            // unavailable -> fall back to first available" force was the
+            // detail->upscale bug (paint a mask, stuck on upscale).
             // Single source of truth: ship the same op list to the radial that
             // PromptBox uses. _opOptions() pixel-scans the live mask via
             // viewer.el.hasMask() (preview-mode aware), so radial reflects

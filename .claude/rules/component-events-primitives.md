@@ -83,6 +83,7 @@ EMITS:   `select`    `{ action: string }`
          `close`     `{}`
 LISTENS: Hotkeys 'tab' (open/close toggle), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
 NOTE:    Single-item context auto-activates (full-circle cone, no movement needed).
+NOTE:    Items may carry `disabled:true` (MPI-337). Disabled items render dimmed (`.mpi-radial__item--disabled`) and are SKIPPED by the pointer resolver → never highlighted or `select`-ed (incl. the single-item case). Op radials pass ALL ops (unavailable dimmed, NOT filtered) so positions stay stable/memorizable — `navigation._mapOpsToRadialItems` / `_buildGalleryItems` set `disabled` from `getAvailableCommands`.
 
 ### MpiRadioGroup
 EMITS:   `select` `{ value: string, option: object|string }`

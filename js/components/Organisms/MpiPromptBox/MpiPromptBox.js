@@ -276,19 +276,13 @@ export const MpiPromptBox = ComponentFactory.create({
                 } else {
                     _refreshOpDropdown();
                 }
-            } else if (!hasMedia && curCmd && !curIsTextOnly && !_context.filterNoInputOps) {
-                // MPI-281: when text-only ops are hidden (History video-continuation
-                // mode), an empty media box must NOT switch to a text op — the op
-                // dropdown filters it away and the trigger renders "Select...". The
-                // Extend / New shot buttons run I2V with a self-captured last frame,
-                // so keep the media op (e.g. I2V) pinned even with an empty box.
-                const textOp = _pickTextOnlyOp();
-                if (textOp) {
-                    el.setOperation(textOp, { programmatic: true });
-                } else {
-                    _refreshOpDropdown();
-                }
             } else {
+                // MPI-337: NO force-DOWN. Removing media (or any change that doesn't
+                // add media a text op can't use) never switches the op to a text op.
+                // The op stays selected — it renders disabled if it lost a required
+                // input, and Run toasts the missing input (generationService guards).
+                // This also subsumes the old MPI-281 pin (empty box in History
+                // video-continuation mode kept the I2V op): now nothing forces down.
                 _refreshOpDropdown();
             }
 
@@ -1165,13 +1159,6 @@ export const MpiPromptBox = ComponentFactory.create({
                 gearBtn.on('click', () => emit('settings', { model }));
                 modelSlot.appendChild(gearBtn.el);
             }
-        }
-
-        function _pickTextOnlyOp() {
-            if (!model) return null;
-            const cmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
-            const textOnly = cmds.filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0);
-            return textOnly[0]?.key ?? null;
         }
 
         function _pickFallbackOp() {

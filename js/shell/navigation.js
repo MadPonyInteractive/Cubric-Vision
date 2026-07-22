@@ -70,12 +70,17 @@ function _buildGalleryItems(ctx = {}) {
     if (!model) return [];
     const hasMedia = (ctx.imageCount ?? 0) > 0 || (ctx.videoCount ?? 0) > 0;
     return getAvailableCommands(model.mediaType, model, ctx)
-        .filter(cmd => {
-            if (!cmd.available) return false;
+        .map(cmd => {
             const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
-            return !(hasMedia && isTextOnly);
-        })
-        .map(cmd => ({ action: cmd.key, label: cmd.label, icon: OP_ICONS[cmd.key] || 'generate' }));
+            // MPI-337: keep every op in a stable, memorizable slot — dim the ones
+            // not currently usable instead of hiding them (same treatment as the
+            // History radial). Unavailable = missing a required input (mask/media);
+            // a text-only op is also dimmed once media is staged (a media op fits
+            // better). Both were hides before; now non-selectable dims that never
+            // move position.
+            const disabled = !cmd.available || (hasMedia && isTextOnly);
+            return { action: cmd.key, label: cmd.label, icon: OP_ICONS[cmd.key] || 'generate', disabled };
+        });
 }
 
 // Last items pushed by MpiGroupHistoryBlock — single source of truth, derived
@@ -84,14 +89,15 @@ let _groupHistoryItems = [];
 
 /**
  * Maps a PromptBox-shaped op option ({ value, label, disabled }) to a radial
- * item. Keeps only enabled options.
+ * item. MPI-337: ALL ops pass through (disabled ones included) so op positions
+ * stay stable/memorizable as mask/media availability changes — the radial dims
+ * disabled items and blocks their selection instead of hiding them.
  * @param {Array<{value:string,label:string,disabled?:boolean}>} opts
- * @returns {Array<{action:string,label:string,icon:string}>}
+ * @returns {Array<{action:string,label:string,icon:string,disabled?:boolean}>}
  */
 function _mapOpsToRadialItems(opts) {
     return (opts || [])
-        .filter(o => !o.disabled)
-        .map(o => ({ action: o.value, label: o.label, icon: OP_ICONS[o.value] || 'generate' }));
+        .map(o => ({ action: o.value, label: o.label, icon: OP_ICONS[o.value] || 'generate', disabled: !!o.disabled }));
 }
 
 // ── Public init ─────────────────────────────────────────────────────────────

@@ -61,6 +61,10 @@ export const MpiRadialMenu = ComponentFactory.create({
         // Cached item angles (set on render)
         /** @type {number[]} */
         let _itemAngles = [];
+        // MPI-337: per-index disabled flag — disabled items render dimmed and are
+        // skipped by the resolver so they can never be highlighted or selected.
+        /** @type {boolean[]} */
+        let _itemDisabled = [];
         let _itemCount = 0;
 
         // Direction line SVG elements (set in _render)
@@ -125,6 +129,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             const items = [...(CONTEXTS[_context] || CONTEXTS.root || []), ..._extraItems];
             _itemCount = items.length;
             _itemAngles = [];
+            _itemDisabled = [];
 
             el.innerHTML = '';
 
@@ -177,9 +182,13 @@ export const MpiRadialMenu = ComponentFactory.create({
                 const x = Math.cos(angleRad) * R;
                 const y = Math.sin(angleRad) * R;
 
+                const disabled = !!item.disabled;
+                _itemDisabled.push(disabled);
+
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'mpi-radial__item';
+                btn.className = 'mpi-radial__item' + (disabled ? ' mpi-radial__item--disabled' : '');
+                if (disabled) btn.setAttribute('aria-disabled', 'true');
                 btn.dataset.action = item.action;
                 btn.dataset.index = String(i);
 
@@ -260,8 +269,9 @@ export const MpiRadialMenu = ComponentFactory.create({
         function _resolveActiveIndex(dx, dy) {
             if (_itemCount === 0) return -1;
             // Single item — always active. Cone fills as full ring; no direction
-            // needed. Tab-release immediately selects the only option.
-            if (_itemCount === 1) return 0;
+            // needed. Tab-release immediately selects the only option. MPI-337: a
+            // lone disabled op is not selectable.
+            if (_itemCount === 1) return _itemDisabled[0] ? -1 : 0;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < moveDist) return -1;
 
@@ -270,6 +280,7 @@ export const MpiRadialMenu = ComponentFactory.create({
             let bestD = Infinity;
 
             for (let i = 0; i < _itemCount; i++) {
+                if (_itemDisabled[i]) continue; // MPI-337: dimmed ops can't be picked
                 let diff = mouseAngle - _itemAngles[i];
                 while (diff > Math.PI) diff -= 2 * Math.PI;
                 while (diff < -Math.PI) diff += 2 * Math.PI;

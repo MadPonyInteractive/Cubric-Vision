@@ -37,6 +37,12 @@ the History block's universal tool ops). Register it in all four, in this order:
    - **`mediaType` per slot: `MEDIA_TYPE.IMAGE` / `MEDIA_TYPE.VIDEO` / the string `'audio'`.**
      `MEDIA_TYPE` only enumerates image + video — audio is the bare string. Getting this
      wrong is the MPI-259 audio bug: see [02](02-media-io.md).
+   - **Slot count = capacity (MPI-337).** Declare one `mediaInputs` slot per item the op
+     accepts — the drop/eviction cap (`_maxMediaForOperation`) reads that count, and for
+     non-app ops so does the availability gate (`getAvailableCommands`:
+     `requires* ≤ count ≤ #slots` + `requiresMask`). `universal: true` app ops are
+     EXCLUDED from `getAvailableCommands`, so they never appear on the model op
+     radial/dropdown — the app surface owns its own media I/O.
 2. **`js/data/modelConstants/universal_workflows.js`** — op → workflow filename:
    ```js
    appVideoStitch: { workflow: 'app_video_test.json' },

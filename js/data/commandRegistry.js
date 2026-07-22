@@ -579,6 +579,16 @@ export const COMMANDS = commands;
  * @param {CommandContext}               [ctx]
  * @returns {Array<{key: string, available: boolean} & CommandDef>}
  */
+// MPI-337: max media of a type an op accepts = number of declared input slots of
+// that type. Falls back to the requires* minimum for ops with no mediaInputs, so
+// a legacy op degenerates to "count must equal its minimum" rather than uncapped.
+function _maxMediaSlots(cmd, mediaType, minFallback) {
+    const slots = Array.isArray(cmd.mediaInputs)
+        ? cmd.mediaInputs.filter(s => s.mediaType === mediaType).length
+        : 0;
+    return slots || Math.max(0, Number(minFallback) || 0);
+}
+
 export function getAvailableCommands(mediaType, model = null, ctx = {}) {
     const { imageCount = 0, videoCount = 0, hasMask = false, installedOps = null } = ctx;
 
@@ -602,9 +612,18 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
             return true;
         })
         .map(([key, cmd]) => {
+            // MPI-337: gate on BOTH bounds. The min (requires*) was always here;
+            // the max = number of declared input slots of that type. i2i/depth/
+            // upscale have 1 image slot so they can't run on 2 chips — only
+            // krea2Edit (2 slots) / qwen (3) can. Without the upper bound those
+            // ops showed selectable/enabled with 2 chips staged.
+            const maxImages = _maxMediaSlots(cmd, MEDIA_TYPE.IMAGE, cmd.requiresImages);
+            const maxVideos = _maxMediaSlots(cmd, MEDIA_TYPE.VIDEO, cmd.requiresVideo);
             const available =
                 imageCount >= (cmd.requiresImages ?? 0) &&
+                imageCount <= maxImages &&
                 videoCount >= (cmd.requiresVideo ?? 0) &&
+                videoCount <= maxVideos &&
                 (!cmd.requiresMask || hasMask);
             return { key, available, ...cmd };
         });

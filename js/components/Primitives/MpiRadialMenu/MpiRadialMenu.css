@@ -166,6 +166,13 @@
     outline: none;
 }
 
+/* MPI-337: op present but unavailable (missing mask/media). Dimmed + never
+   selectable — the resolver skips it so it can't be highlighted or run. Keeps
+   op POSITIONS stable as availability changes (memorizable radial). */
+.mpi-radial--visible .mpi-radial__item--disabled {
+    opacity: 0.28;
+}
+
 /* ── Item internals ─────────────────────────────────────── */
 
 .mpi-radial__item-icon {
