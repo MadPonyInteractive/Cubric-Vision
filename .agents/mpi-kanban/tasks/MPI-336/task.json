@@ -4,7 +4,7 @@
   "title": "The turbo setting for KREA is not being saved in the side car.",
   "description": "Either that is the issue, or something else is the issue, because reusing the prompt does not set the turbo toggle at all.",
   "column": "done",
-  "maturity": "stable",
+  "maturity": "complete",
   "status": "done",
   "created_at": "2026-07-22T02:11:25.643Z",
   "updated_at": "2026-07-22T04:51:11.717Z",
