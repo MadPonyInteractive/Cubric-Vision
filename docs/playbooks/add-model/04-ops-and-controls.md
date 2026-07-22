@@ -34,6 +34,13 @@ debugging:
   title). `_buildParams` renames any bare control key to its `Input_` form before injection
   (MPI-252), but author the control to return the `Input_*` key directly — the node title is
   the contract.
+  - **Its `scope` (shared/perOp/perModel) is a [shared] contract — canonical in
+    [../common/prompt-box-controls.md](../common/prompt-box-controls.md).** `scope` is the
+    SINGLE source of truth for persistence + sidecar snapshot + Reuse; the machinery is
+    `scope`-driven, so a new control needs NO edits to any key-list (`_MODEL_WIDE_KEYS`, the
+    snapshot loop, the reuse loop). `upscaleFactor` above is `perOp` — the scope that needs
+    the least; a **`perModel`** mode-control (turbo/style/quality) has the same zero-extra
+    wiring only because of the MPI-336 fix. Read the common doc before choosing `scope`.
 - **Image gating is FREE** — an image-required op declares `requiresImages: 1` +
   `mediaInputs:[{ key:'inputImage', title:'Input_Image', required:true }]` (clone `upscale`).
   That inherits the block-Run-if-no-image toast (`generationService.js`) + auto-op-switch. No

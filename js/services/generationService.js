@@ -386,6 +386,54 @@ function _dispatchNextCue() {
 }
 
 /**
+ * Snapshot the PromptBox control state into the three Reuse buckets, keyed 1:1 to
+ * applyPromptReuseSettings' input. Frozen at DISPATCH (enqueueGeneration) — NOT read
+ * at completion, which captured whatever the controls drifted to while the gen ran
+ * (MPI-336). injectionParams is the caller's frozen record; ratio/batch reconcile
+ * from it so the rendered value always wins over debounced settings.
+ *
+ *   shared = project.shared[mediaType]   (ratio/quality/duration/motion/…)
+ *   op     = per-op bucket               (denoise/useGrid/upscaleFactor/…)
+ *   model  = model-WIDE keys, WHOLESALE  (loras/upscaleModel + every perModel control)
+ *
+ * The model bucket is cloned wholesale minus its `operations` sub-tree, so ANY
+ * perModel control rides along with no hand-maintained key list (matches _shared/_op
+ * and the App s_appInputs snapshot). `operations` is excluded — it is the perOp store,
+ * carried by the `op` bucket; merging it back on reuse would clobber sibling ops.
+ *
+ * ponytail: cloned from the (300ms-debounced) modelSettings, so a control changed
+ * <300ms before dispatch can still snapshot one stale value; the ratio/batch reconcile
+ * below covers those two. Upgrade path if it ever bites: snapshot from control
+ * getValue() (App-style), which needs a ratioSelector compound-key remap.
+ */
+function _snapshotControlState(model, operation, injectionParams = {}) {
+    if (!state.currentProject || !model?.id) return undefined;
+    const width  = injectionParams.Width  || injectionParams.width  || 0;
+    const height = injectionParams.Height || injectionParams.height || 0;
+    const _ms = getModelSettings(state.currentProject, model.id);
+    const _shared = _clonePlain(getSharedSettings(state.currentProject, model.mediaType));
+    if (_shared.ratioSelector && width && height) {
+        _shared.ratioSelector = {
+            ..._shared.ratioSelector,
+            selectedRatio: injectionParams.Ratio_Label ?? _shared.ratioSelector.selectedRatio,
+            orientation: usesOrientation(model.type)
+                ? (width > height ? 'landscape' : 'portrait')
+                : null,
+        };
+    }
+    const _batchInj = injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size;
+    if ('batch' in _shared && Number.isFinite(_batchInj)) _shared.batch = _batchInj;
+    const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
+    const _model = _clonePlain(_ms);
+    delete _model.operations;
+    const controlState = {};
+    if (Object.keys(_shared).length) controlState.shared = _shared;
+    if (Object.keys(_op).length) controlState.op = _op;
+    if (_model && Object.keys(_model).length) controlState.model = _model;
+    return Object.keys(controlState).length ? controlState : undefined;
+}
+
+/**
  * Cue-mode entry point. Queues a generation and dispatches when idle.
  * Returns nothing — callers track via `activeGenerations` events.
  */
@@ -405,6 +453,14 @@ export function enqueueGeneration(config, callbacks = {}, opts = {}) {
         // Stop/Clear sit enabled over an empty queue (MPI-212).
         _emitPromptBoxGenerationEndIfIdle();
         return null;
+    }
+
+    // Freeze the control snapshot NOW — the instant Cue is pressed — before the user
+    // can change a control while the gen runs. The completion handler consumes this
+    // frozen copy instead of re-reading live settings (MPI-336). Every real path funnels
+    // through here; a job that skips it falls back to a completion-time snapshot.
+    if (config.model?.id && state.currentProject) {
+        config._controlSnapshot = _snapshotControlState(config.model, config.operation, config.injectionParams || {});
     }
 
     const queueJobId = opts.queueJobId || crypto.randomUUID();
@@ -853,64 +909,14 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             mediaItems: generationMediaItems,
             previewOnly: config.previewOnly === true,
         };
-        // Snapshot the exact PromptBox control state at gen time so Reuse Prompt
-        // replays it DIRECTLY (no reverse-derivation from injectionParams). The
-        // three buckets mirror applyPromptReuseSettings' input 1:1:
-        //   shared = project.shared[mediaType] (ratio/quality/duration/motion/...)
-        //   op     = per-op state (denoise/useGrid/upscaleFactor)
-        //   model  = model-wide (loras/upscaleModel)
-        // Empty buckets are omitted to keep the sidecar clean.
-        if (state.currentProject && model.id) {
-            const _ms = getModelSettings(state.currentProject, model.id);
-            const _shared = _clonePlain(getSharedSettings(state.currentProject, model.mediaType));
-            // Reconcile the snapshot's ratio with THIS run's injectionParams.
-            // `settings:shared:update` debounces 300ms (projectService), so a
-            // change-ratio-then-generate inside that window leaves _shared stale
-            // (read from project state). injectionParams.Ratio_Label/Width/Height
-            // are synchronous and authoritative — what the render actually used.
-            // Without this the sidecar is internally inconsistent and Reuse Prompt
-            // replays the stale ratio. Only touch an existing ratioSelector on a
-            // ratio-bearing op (Width+Height present); orientation derives from
-            // dims for any model with an orientation axis ('orientation' AND
-            // 'quality-orientation'), and stays null only for pure-quality models
-            // (wan/ltx), which have no such concept.
-            if (_shared.ratioSelector && width && height) {
-                _shared.ratioSelector = {
-                    ..._shared.ratioSelector,
-                    selectedRatio: injectionParams.Ratio_Label ?? _shared.ratioSelector.selectedRatio,
-                    orientation: usesOrientation(model.type)
-                        ? (width > height ? 'landscape' : 'portrait')
-                        : null,
-                };
-            }
-            // Same debounce race as ratioSelector above: `batch` is a shared control,
-            // so clicking it and generating inside the 300ms window snapshots the
-            // stale count while Batch_Size already carries the new one. The rendered
-            // value wins, or Reuse Prompt replays a batch the run never used.
-            const _batchInj = injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size;
-            if ('batch' in _shared && Number.isFinite(_batchInj)) {
-                _shared.batch = _batchInj;
-            }
-            const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
-            const _model = {};
-            if ('loras' in _ms) _model.loras = _clonePlain(_ms.loras);
-            if ('upscaleModel' in _ms) _model.upscaleModel = _ms.upscaleModel ?? null;
-            // qualityTier is per-model (MPI-133) — snapshot it into the model
-            // bucket so Reuse Prompt replays it to modelSettings[id], and a
-            // cross-model reuse clamps it (handled in buildPromptReuseSettings).
-            if ('qualityTier' in _ms) _model.qualityTier = _ms.qualityTier;
-            // The style rack + enhancer are perModel too (they live in _MODEL_WIDE_KEYS).
-            // Snapshot them or Reuse Prompt silently drops the style, its strength, and
-            // the enhancer flag — injectionParams carries them, controlState did not.
-            for (const _k of ['styleSelect', 'stylization', 'enhancePrompt']) {
-                if (_k in _ms) _model[_k] = _ms[_k];
-            }
-            const controlState = {};
-            if (Object.keys(_shared).length) controlState.shared = _shared;
-            if (Object.keys(_op).length) controlState.op = _op;
-            if (Object.keys(_model).length) controlState.model = _model;
-            generationSettings.controlState = controlState;
-        }
+        // Control snapshot was FROZEN AT DISPATCH (enqueueGeneration → _snapshotControlState)
+        // so Reuse Prompt replays exactly what this run rendered — reading it live here
+        // captured whatever the controls drifted to while the gen ran (MPI-336). Fall
+        // back to a completion-time snapshot only for a job that never went through
+        // enqueue (defensive; every real path does).
+        const _controlState = config._controlSnapshot
+            ?? _snapshotControlState(model, operation, injectionParams);
+        if (_controlState) generationSettings.controlState = _controlState;
 
         // Multi-stage video preview tagging: when this run was a Preview-only pass,
         // tag the saved sidecar with stage='preview' + frozenParams (so a later

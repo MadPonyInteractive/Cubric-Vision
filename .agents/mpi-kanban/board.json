@@ -1,9 +1,8 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 337,
+  "next_id": 338,
   "columns": {
     "todo": [
-      "MPI-336",
       "MPI-333",
       "MPI-335",
       "MPI-329",
@@ -18,7 +17,8 @@
       "MPI-294",
       "MPI-302",
       "MPI-249",
-      "MPI-183"
+      "MPI-183",
+      "MPI-337"
     ],
     "doing": [
       "MPI-334",
@@ -27,6 +27,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-336",
       "MPI-330",
       "MPI-306",
       "MPI-315",
@@ -112,8 +113,28 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-22T00:56:00Z",
+  "updated_at": "2026-07-22T04:51:11.717Z",
   "events": [
+    {
+      "at": "2026-07-22T04:51:11.717Z",
+      "type": "task.moved",
+      "task": "MPI-336",
+      "from": "doing",
+      "to": "done",
+      "note": "User-verified live: changed every perModel+shared control, all restored on Reuse. Scope-driven persistence fix + scope-contract playbook doc shipped."
+    },
+    {
+      "at": "2026-07-22T04:39:51.031Z",
+      "type": "task.updated",
+      "task": "MPI-336",
+      "note": "Structural root-cause fix: perModel control persistence/snapshot/reuse is now scope-driven (no hand-maintained key-lists). Dispatch-time wholesale controlState snapshot + modelWide-flag write guard + new scope-contract playbook doc. Round-trip test PASS; live reuse test pending."
+    },
+    {
+      "at": "2026-07-22T03:42:06.912Z",
+      "type": "task.moved",
+      "task": "MPI-336",
+      "note": "todo/idea -> doing/validating: krea2Turbo now snapshotted into sidecar controlState.model (generationService) + restored on legacy reuse path (promptReuse). Root cause = perModel key missing from both snapshot loops. Live reuse test pending."
+    },
     {
       "at": "2026-07-22T01:30:00Z",
       "type": "task.created",

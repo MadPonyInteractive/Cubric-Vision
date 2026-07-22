@@ -64,13 +64,13 @@ const _sharedQueues = new Map();
 
 const _QUEUE_DEBOUNCE_MS = 300;
 
-// Keys a `scope: 'perModel'` control may write without an opName (they land in
-// modelSettings[modelId][key]). A perModel control whose key is missing here has
-// its write SILENTLY DROPPED with a warning — see the guard on 'settings:model:update'.
+// Legacy opName-less model-wide keys emitted by callers that DON'T set `modelWide`
+// (the model-settings gear writes loras/upscaleModel this way). scope:'perModel'
+// controls no longer need to be listed here — they emit `modelWide: true` and the
+// guard on 'settings:model:update' trusts that flag (the control's `scope` is the
+// single source of truth). Add a new perModel control? Nothing to do here (MPI-336).
 const _MODEL_WIDE_KEYS = new Set([
-    'loras', 'upscaleModel', 'qualityTier',
-    'styleSelect', 'stylization', 'enhancePrompt',
-    'krea2Turbo',
+    'loras', 'upscaleModel',
 ]);
 
 function _enqueueModelUpdate(modelId, opName, key, value) {
@@ -206,12 +206,14 @@ const _settingsUnsubs = [
         };
         saveProjectSettings();
     }),
-    Events.on('settings:model:update', ({ modelId, opName, key, value }) => {
-        // Back-compat guard: legacy callers that omit `opName` and write a
-        // model-wide key (loras / upscaleModel) route to the model bucket;
-        // anything else without an explicit opName is a bug.
+    Events.on('settings:model:update', ({ modelId, opName, key, value, modelWide }) => {
+        // An opName-less write routes to the model bucket when it is a genuine
+        // model-wide write: either flagged `modelWide` (any scope:'perModel' control —
+        // the control's scope is the source of truth, no allowlist edit needed, MPI-336)
+        // or a legacy caller writing a known model-wide key (loras/upscaleModel).
+        // Anything else without an opName is a perOp caller that forgot it — a bug.
         if (!opName) {
-            if (_MODEL_WIDE_KEYS.has(key)) {
+            if (modelWide || _MODEL_WIDE_KEYS.has(key)) {
                 _enqueueModelUpdate(modelId, null, key, value);
             } else {
                 clientLogger.warn('projectService', `settings:model:update missing opName for non-model-wide key "${key}"`);

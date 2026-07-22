@@ -77,10 +77,13 @@ function _emitUpdate(ctrl, opts, key, value) {
     if (ctrl.scope === 'perModel') {
         const modelId = opts.model?.id;
         if (!modelId) return;
-        // Model-wide write — reuse the existing opName-less model:update path
-        // (same one loras/upscaleModel use). The key must be in _MODEL_WIDE_KEYS
-        // in projectService so it routes to modelSettings[modelId][key].
-        Events.emit('settings:model:update', { modelId, opName: null, key, value });
+        // Model-wide write — reuse the opName-less model:update path (same one
+        // loras/upscaleModel use). `modelWide: true` tells projectService this is a
+        // legit model-wide write from a scope:'perModel' control, so it routes to
+        // modelSettings[modelId][key] WITHOUT needing the key in the _MODEL_WIDE_KEYS
+        // allowlist. The control's `scope` is the single source of truth; a new
+        // perModel control persists with no hand-edited list (MPI-336).
+        Events.emit('settings:model:update', { modelId, opName: null, key, value, modelWide: true });
         return;
     }
     Events.emit('settings:shared:update', {

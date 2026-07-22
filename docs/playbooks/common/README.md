@@ -18,6 +18,7 @@
 | [op-registration.md](op-registration.md) | 4-file op wiring; two-mirror registry (`operationRegistry.js` + `operation_registry.json`); `appVersionIntroduced`; no-version-bump rule | app: `universal: true` mandatory + `operation_registry.json` NEVER regenerate (inline in add-app/01) |
 | [inject-titles-guard.md](inject-titles-guard.md) | Injector silently skips unmatched `Input_*` titles; `tests/inject-params-titles.test.cjs` guard convention | none |
 | [output-capture-titles.md](output-capture-titles.md) | `Output_*` capture naming law (MPI-252); base rule | app: prefix-match for multi-output (inline in add-app/02) |
+| [prompt-box-controls.md](prompt-box-controls.md) | Control `scope` (shared/perOp/perModel) = single SoT for persistence + sidecar snapshot + Reuse; the machinery is `scope`-driven, no key-lists to edit (MPI-336) | app: app inputs use `getInputs`/`stepValues`, not `PROMPT_BOX_CONTROLS` — the contract applies only if an app surfaces a real PromptBox control |
 
 ## NOT re-homed here (link, don't duplicate)
 

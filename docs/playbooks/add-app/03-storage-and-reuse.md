@@ -41,6 +41,13 @@ App gens add TWO additive top-level fields to the `.meta` sidecar: **`appId`** +
 Parity `appId:null`/`appInputs:null` defaults exist on every non-app item factory + synthetic/
 upload/crop path.
 
+> **Snapshot at Run (dispatch), never at completion.** `appInputs` is frozen when Run is
+> pressed (`state.s_appInputs`), so changing an input while the gen runs can't corrupt what
+> Reuse restores. This is the same discipline the PromptBox control pipeline now follows
+> (MPI-336). If an app ever surfaces a real `PROMPT_BOX_CONTROLS` control (vs its own
+> `getInputs`/`stepValues`), its `scope` follows the [shared] contract in
+> [../common/prompt-box-controls.md](../common/prompt-box-controls.md).
+
 ## Reuse routing — `openAppFromReuse(item)`
 
 Reuse on an app card reopens the **App** with its inputs restored, NOT the PromptBox.

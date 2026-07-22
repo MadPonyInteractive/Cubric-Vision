@@ -98,6 +98,12 @@ clientLogger.error('comfy', 'Description of error', err);
 
 ---
 
+## 🎛️ PromptBox controls — `scope` is the persistence SoT
+
+Adding a `PROMPT_BOX_CONTROLS` control? Its `scope` (`shared` / `perOp` / `perModel`) is the **single source of truth** for persistence, sidecar snapshot, and Reuse — the machinery is `scope`-driven. **Never hand-maintain a persistence key-list** (`_MODEL_WIDE_KEYS`, the snapshot loop, the reuse loop) to make a control save or restore; if you feel the urge, the machinery regressed off `scope` — fix the machinery. Full contract + checklist: [`docs/playbooks/common/prompt-box-controls.md`](../../docs/playbooks/common/prompt-box-controls.md) (MPI-336).
+
+---
+
 ## 📦 Imports — depth and case sensitivity
 
 Relative import depth varies by how deep a component sits under `js/`. Reference depths to reach `js/` root: `js/components/Compounds/<X>/file.js` → 3 ups; `js/components/Compounds/LandingPages/<X>/file.js` → 4 ups (extra `LandingPages/` segment). Wrong-depth import → boot JS halts → app stuck forever on the landing spinner; server log stays clean (error is browser-side). Case sensitivity (Linux-only): dev box is Windows (case-insensitive); Linux portables are case-sensitive. A relative import whose CASE doesn't match the on-disk filename resolves fine on Windows but 404s on Linux → same spinner failure. SWEEP before any portable/Linux release: walk the whole `js/` import graph and verify EXACT-CASE existence.
