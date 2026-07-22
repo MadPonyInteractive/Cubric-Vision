@@ -63,6 +63,15 @@ Fixes → Engine; each item plain text). Apply the user's edits to `releaseNotes
 AND the archival md so they stay aligned (`references/copy-review.md` Gate 1). Then
 `npm run release:approve` + `npm run release:check`.
 
+> ⚠️ **`release:approve` must be the LAST thing you touch before building.** The
+> build step hashes `releaseNotes.js` against the committed approval stamp
+> (`.approved-<ver>.json`); ANY edit after approving (even a one-word copy fix)
+> re-drifts the hash and the CI build FAILS with *"Release notes … changed after
+> approval"*. `release:check` does NOT catch this — a green check is not proof the
+> build will pass. If you touch the notes after approving, re-run
+> `release:approve`, re-commit the stamp, THEN build. `release:approve` prompts
+> y/N — the USER runs it; agents are classifier-blocked.
+
 ### 3. Commit master (explicit pathspec) — then 🛑 STOP for push
 Commit only your files (shared tree — never `git add -A`). Pushing master is a
 live op: stop, let the user push (or run it once authorized). CI builds the
