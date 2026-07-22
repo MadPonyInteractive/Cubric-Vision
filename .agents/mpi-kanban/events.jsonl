@@ -1457,3 +1457,7 @@
 {"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-334","at":"2026-07-22T03:09:29.535Z","actor":"claude","from":"todo","to":"doing","summary":"Moved MPI-334 from To do to Doing — starting in-app update prompt implementation."}
 {"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-334","at":"2026-07-22T03:23:53.664Z","actor":"claude","summary":"Dev-verified: gate skip, popup, 3x mute (exact), Update-Now IPC (not-portable log). Real fetch + quit/spawn = build-verify. maturity -> validating."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-337","at":"2026-07-22T04:35:38.884Z","actor":"vscode","summary":"Created MPI-337."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-337","at":"2026-07-22T04:59:57.000Z","actor":"claude","note":"Brainstorm complete — approved Option A (op forcing simplification). Design captured in card; dev Ctrl+Tab radial split to MPI-338."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-338","at":"2026-07-22T04:59:57.000Z","actor":"claude","note":"Dev-only Ctrl+Tab radial, split from MPI-337 brainstorm."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-337","at":"2026-07-22T05:06:43.000Z","actor":"claude","note":"Compact plan attached; idea -> planned. Verify mode user-ux."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-338","at":"2026-07-22T05:09:33.000Z","actor":"claude","note":"Compact plan attached; idea -> planned. Verify mode user-ux."}

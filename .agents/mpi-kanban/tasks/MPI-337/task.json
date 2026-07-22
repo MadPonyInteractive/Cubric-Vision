@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-337",
+  "title": "Operation Change Behavior",
+  "description": "Simplify operation-forcing. BRAINSTORM DONE (2026-07-22) — approved design (Option A): the op changes ONLY on (1) adding media a text op can't use (force-UP to a media op — unchanged) and (2) Reuse Prompt. A LOST requirement (mask cleared, maskless history card, media removed) NEVER switches the op — it stays selected; Run fires a toast naming the missing input. Original pain: on `detail`, loading a maskless History card flips to `upscale`, and painting a mask leaves you stuck on upscale. CHANGE SET: (a) MpiGroupHistoryBlock._refreshOpOptions — delete the 'current op unavailable -> fall back to first available' force (lines ~826-832) [the detail->upscale bug]; keep the op selected, render it disabled in dropdown+radial. (b) MpiPromptBox._emitMediaChange — delete the media-removed -> text-op force-DOWN branch; KEEP the media-added -> media-op force-UP branch (generalizes MPI-281's pin-the-op intent). (c) generationService — add a `requiresMask` guard + toast mirroring _findMissingMediaSlot/_warnMissingMediaSlot ('Paint a mask before generating — this operation needs one'), on BOTH enqueue (~L446) and dispatch (~L716) paths; mask has NO generate-time guard today. (d) Radial — stop _mapOpsToRadialItems `.filter(o=>!o.disabled)` (navigation.js:93); pass `disabled` through; add a dimmed, non-selectable item state to MpiRadialMenu so op POSITIONS stay stable (memorizable). Run affordance = toast-on-click (reuse existing guard), NOT a live-disabled button. OUT OF SCOPE: _pickOpForModel (already keeps the op when the new model supports it) and _tryAddMedia up-jump (force-UP, kept). Dev-only Ctrl+Tab radial split to a separate card (MPI-338). KNOWN EDGE (not solved here): a masked op Reused into Gallery has no mask tool -> un-runnable.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-07-22T04:35:38.884Z",
+  "updated_at": "2026-07-22T06:15:59.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

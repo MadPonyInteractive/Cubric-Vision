@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-338","at":"2026-07-22T04:59:57.000Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-338","at":"2026-07-22T05:09:33.000Z","actor":"claude","note":"Compact plan attached; idea -> planned. Verify mode user-ux."}

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-338",
+  "title": "Dev-only Ctrl+Tab Radial",
+  "description": "Split dev-only entries off the main radial into a separate dev radial triggered with Ctrl+Tab, so tutorial videos and normal use show only real operations (and main-radial op positions stay clean/memorizable). Today APP_CONFIG.dev_mode appends dev items to the CURRENT radial via extraItems (navigation.js ~L313-356): 'Apps' (apps:open) and 'Restart Engine' (restart-engine). PLAN: (a) new Hotkey (Ctrl+Tab) via Hotkeys.bind + a registry id in hotkeyRegistry.js — never raw keydown; (b) a second radial context/instance in MpiRadialMenu (it already supports named CONTEXTS + setContextItems) holding the dev items; (c) remove the dev extraItems from the main radial's build so Tab shows operations only; (d) gate the whole Ctrl+Tab radial behind APP_CONFIG.dev_mode (no-op in production). Grew out of the MPI-337 brainstorm (radial stability). NOTE: dev items already sit AFTER ops in the main radial ([...ops, ...extraItems]), so they do NOT shift op positions — this card is about clean tutorials + tidiness, not op-position memory (that win lands in MPI-337). Depends on / pairs with MPI-337 (main-radial show-all-dimmed).",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-22T04:59:57.000Z",
+  "updated_at": "2026-07-22T05:09:33.000Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 338,
+  "next_id": 339,
   "columns": {
     "todo": [
       "MPI-333",
@@ -18,7 +18,7 @@
       "MPI-302",
       "MPI-249",
       "MPI-183",
-      "MPI-337"
+      "MPI-338"
     ],
     "doing": [
       "MPI-334",
@@ -27,6 +27,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-337",
       "MPI-336",
       "MPI-330",
       "MPI-306",
@@ -113,8 +114,48 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-22T04:51:11.717Z",
+  "updated_at": "2026-07-22T06:15:59.000Z",
   "events": [
+    {
+      "at": "2026-07-22T06:15:59.000Z",
+      "type": "task.moved",
+      "task": "MPI-337",
+      "from": "doing",
+      "to": "done",
+      "note": "User-verified live: LTX (t2v_ms/i2v_ms) passed — validates wan-22 (same ops); wan22-5b covered by automated test. Image/KREA/History/Gallery behavior confirmed working earlier this session. 6 code files shipped; docs+rules future-proofed (data-driven gating documented in playbooks + generation-lifecycle + component-events)."
+    },
+    {
+      "at": "2026-07-22T05:17:08.000Z",
+      "type": "task.moved",
+      "task": "MPI-337",
+      "from": "todo",
+      "to": "doing",
+      "note": "Starting implementation of approved Option A change set (kill force-DOWN, add requiresMask guard, radial show-all-dimmed)."
+    },
+    {
+      "at": "2026-07-22T05:09:33.000Z",
+      "type": "task.updated",
+      "task": "MPI-338",
+      "note": "Compact plan attached (idea -> planned). Reuse the single radial instance: add a 'dev' CONTEXTS context + Ctrl+Tab hold in MpiRadialMenu, move Apps/Restart-Engine off the main radial's extraItems, gate on APP_CONFIG.dev_mode. Verify mode user-ux."
+    },
+    {
+      "at": "2026-07-22T05:06:43.000Z",
+      "type": "task.updated",
+      "task": "MPI-337",
+      "note": "Compact plan attached (idea -> planned). Single change set: kill force-DOWN in _refreshOpOptions + _emitMediaChange, add requiresMask generate-time guard+toast, radial show-all-dimmed. Verify mode user-ux. Say 'continue this plan' to start."
+    },
+    {
+      "at": "2026-07-22T04:59:57.000Z",
+      "type": "task.created",
+      "task": "MPI-338",
+      "note": "Split off from the MPI-337 brainstorm: dev-only Ctrl+Tab radial holding the dev extraItems (Apps, Restart Engine) so main-radial Tab shows operations only (clean tutorials + tidiness). Gated behind APP_CONFIG.dev_mode. Dev items already sit after ops, so this is not about op-position memory (that lands in MPI-337)."
+    },
+    {
+      "at": "2026-07-22T04:59:57.000Z",
+      "type": "task.updated",
+      "task": "MPI-337",
+      "note": "Brainstorm complete — approved Option A. Op changes only on media-add force-UP + Reuse; a lost requirement (mask/media removed, maskless card) never switches, op stays selected, Run toasts the missing input. Change set: kill _refreshOpOptions fallback (detail->upscale bug) + _emitMediaChange force-DOWN branch; add requiresMask generate-time guard+toast; radial show-all-dimmed (stop filtering disabled, new dimmed non-selectable MpiRadialMenu item state). Run = toast-on-click (reuse existing). Dev Ctrl+Tab radial split to MPI-338."
+    },
     {
       "at": "2026-07-22T04:51:11.717Z",
       "type": "task.moved",
