@@ -181,6 +181,20 @@ The `update/` directory may hold helper scripts, manifests, temporary
 extraction folders, and rollback data. Users should run the root update script;
 they should not manually copy files between folders.
 
+### In-app update prompt (MPI-334)
+
+On startup, **portable builds** check GitHub for a newer release and offer a
+one-click update — the in-app trigger for the `update.*` scripts above. Main
+`check-for-update` (main.js) gates on `resolveMainPortableRoot()` (empty in dev →
+skipped), fetches `releases/latest`, and returns `{portable, current, latest}`
+(current = `package.json` version). The renderer (`js/services/updateChecker.js`,
+called from `js/init.js`) runs `compareSemVer`; if newer it shows an `MpiOkCancel`.
+**OK** → `run-update` (main.js) spawns the platform `update.*` script detached +
+`app.quit()`. **Cancel** is counted per version (localStorage `UPDATE_DISMISSED`);
+after 3 declines that version is muted until a newer one lands. Dev escape hatch:
+localStorage `mpi_dev_force_update=<version>` forces the dialog in a non-portable
+build. Note: the prompt only fires once a GitHub release exists to compare against.
+
 ## Portable Environment
 
 Launchers must set portable environment variables before starting Electron or
