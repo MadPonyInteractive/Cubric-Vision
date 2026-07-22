@@ -17,7 +17,6 @@ import { ICONS } from '../../../utils/icons.js';
  *
  * @param {string} [context='root'] - Active context key.
  * @param {boolean} [open=false]    - Force-open state (first-run).
- * @param {Array<{action:string, label:string, icon:string}>} [extraItems=[]]
  *
  * Emits:
  * 'select'    { action: string }
@@ -48,8 +47,11 @@ export const MpiRadialMenu = ComponentFactory.create({
         // ── State ───────────────────────────────────────────────────────────────
         let _visible = props.open || false;
         let _context = props.context || 'root';
-        let _extraItems = props.extraItems || [];
         let _tabHeld = false;
+        // MPI-338: when the dev radial (Ctrl+Tab) is showing, the page context is
+        // stashed here and restored on hide, so the next plain-Tab open is back to
+        // operations. null = not in the dev radial.
+        let _prevContext = null;
         let _cleanups = [];
 
         // Virtual cursor — accumulated delta from centre since menu opened.
@@ -126,7 +128,7 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         // ── Render ──────────────────────────────────────────────────────────────
         function _render() {
-            const items = [...(CONTEXTS[_context] || CONTEXTS.root || []), ..._extraItems];
+            const items = [...(CONTEXTS[_context] || CONTEXTS.root || [])];
             _itemCount = items.length;
             _itemAngles = [];
             _itemDisabled = [];
@@ -351,6 +353,12 @@ export const MpiRadialMenu = ComponentFactory.create({
             _vy = 0;
             if (_lineEl) { _lineEl.style.opacity = '0'; _lineEl.setAttribute('x2', SVG_CX); _lineEl.setAttribute('y2', SVG_CY); }
             if (_dotVirtual) { _dotVirtual.style.opacity = '0'; _dotVirtual.setAttribute('cx', SVG_CX); _dotVirtual.setAttribute('cy', SVG_CY); }
+            // MPI-338: restore the page context after a dev-radial hold, whatever
+            // closed it (select, cancel, or lost pointer lock).
+            if (_prevContext !== null) {
+                _context = _prevContext;
+                _prevContext = null;
+            }
             emit('close', {});
         }
 
@@ -363,6 +371,21 @@ export const MpiRadialMenu = ComponentFactory.create({
         const _onTabDown = () => {
             if (_tabHeld) return;
             _tabHeld = true;
+            _show();
+        };
+
+        // MPI-338: Ctrl+Tab hold opens the dev radial by swapping to the 'dev'
+        // context for the duration of the hold. No-op unless a 'dev' context has
+        // been populated (dev mode only). Release is handled by the shared
+        // _onTabUp (Tab keyup fires whether or not Ctrl is still down); _hide
+        // restores the page context.
+        const _onDevTabDown = () => {
+            if (_tabHeld) return;
+            const devItems = CONTEXTS.dev;
+            if (!devItems || devItems.length === 0) return;
+            _tabHeld = true;
+            _prevContext = _context;
+            _context = 'dev';
             _show();
         };
 
@@ -392,6 +415,7 @@ export const MpiRadialMenu = ComponentFactory.create({
         };
 
         const _unbindTab = Hotkeys.bind('radialMenu.toggle', _onTabDown);
+        const _unbindDevTab = Hotkeys.bind('radialMenu.devToggle', _onDevTabDown);
         const _removeKeyUp = on(window, 'keyup', _onTabUp);
         const _removePointerMove = on(el, 'mousemove', _onPointerMove);
         const _removeLockChange = on(document, 'pointerlockchange', _onPointerLockChange);
@@ -402,11 +426,6 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         el.setContext = (ctx) => {
             _context = ctx;
-            if (_visible) _render();
-        };
-
-        el.setExtraItems = (items) => {
-            _extraItems = items;
             if (_visible) _render();
         };
 
@@ -426,7 +445,7 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         // ── Cleanup ─────────────────────────────────────────────────────────────
         _cleanups.push(_removeKeyUp, _removePointerMove, _removeLockChange);
-        _cleanups.push(_unbindTab);
+        _cleanups.push(_unbindTab, _unbindDevTab);
 
         const observer = new MutationObserver(() => {
             if (!document.contains(el)) {

@@ -242,6 +242,24 @@ export const HOTKEY_REGISTRY = [
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
             !document.querySelector('.mpi-overlay--body'),
     },
+    // Ctrl+Tab opens a SEPARATE dev-only radial (Apps / Components / Restart
+    // Engine) so the main Tab radial shows real operations only — clean tutorial
+    // capture. Gated on APP_CONFIG.dev_mode: inert in production. Same page/overlay
+    // gate as radialMenu.toggle. Ctrl+Tab is an OS tab-switch combo; the manager
+    // preventDefaults for us once this entry's when-gate passes.
+    {
+        id:               'radialMenu.devToggle',
+        key:              'control+tab',
+        type:             KEY_TYPE.DOWN,
+        category:         'radialMenu',
+        scopeLabel:       'Radial Menu',
+        description:      'Toggle dev radial menu',
+        allowWhileTyping: false,
+        when: ({ state }) =>
+            APP_CONFIG.dev_mode &&
+            (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
+            !document.querySelector('.mpi-overlay--body'),
+    },
 
     // ── Modal ─────────────────────────────────────────────────────────────────
     {

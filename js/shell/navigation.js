@@ -316,7 +316,11 @@ async function _restartEngine() {
  * @param {string} page - PAGE_GALLERY | PAGE_GROUP_HISTORY
  */
 function _syncRadial(page) {
-    const extraItems = APP_CONFIG.dev_mode
+    // MPI-338: dev actions live on their OWN radial (Ctrl+Tab / 'dev' context),
+    // NOT appended to the page radial — Tab shows real operations only, so
+    // tutorial capture is clean. Gated on dev_mode: no 'dev' context in production,
+    // so Ctrl+Tab is inert there.
+    const devItems = APP_CONFIG.dev_mode
         ? [
             { action: 'components', label: 'Components', icon: 'grid' },
             { action: 'apps', label: 'Apps', icon: 'layers' }, // App Library (MPI-256), dev-gated
@@ -327,11 +331,11 @@ function _syncRadial(page) {
     if (!_radialInstance) {
         _radialInstance = MpiRadialMenu.mount(_radialMount, {
             context: page,
-            extraItems,
         });
 
         _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
         _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
+        if (devItems.length) _radialInstance.el.setContextItems('dev', devItems);
 
         _radialInstance.on('select', ({ action }) => {
             if (action === 'components') {
@@ -359,7 +363,6 @@ function _syncRadial(page) {
         _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
         _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
         _radialInstance.el.setContext(page);
-        _radialInstance.el.setExtraItems(extraItems);
     }
 }
 
