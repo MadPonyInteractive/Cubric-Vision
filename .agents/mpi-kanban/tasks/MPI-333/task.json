@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-333",
+  "title": "Perf: RunPod post-install model VERIFICATION takes longer than the download itself",
+  "description": "OBSERVED on a live RunPod Pod (2026-07-22, portable 1.1.0 install test). After a model pack finishes downloading to the Pod, the app runs a post-install VERIFY step (the Model Library tile sits on 'Verifying...' after the download bar completes). That verify phase takes LONGER than the actual download of the model - a ridiculous ratio. Downloading is the expensive-looking part; verification should be near-instant, not the dominant cost. Likely a per-file re-hash (SHA256) of every weight AFTER it lands, run serially and/or over the network volume, instead of verifying while streaming (we already hash-while-streaming locally per MPI-296) or trusting the size/manifest. NEXT: find the remote verify path (wrapper.py on the Pod, or remoteModels.js / remoteEngine.js app-side) and measure where the time goes; check whether it re-reads every byte off the network volume to hash it. FIX DIRECTION (unverified): verify during the stream like the local path, or verify by size + expected-hash manifest without a full re-read, or parallelise. Adjacent to MPI-329 (cold model-load ~2min) but DISTINCT - that is load-into-VRAM at gen time; this is install-time verification. Top-of-todo priority (user, 2026-07-22).",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-22T00:55:00Z",
+  "updated_at": "2026-07-22T00:55:00Z",
+  "labels": ["perf", "runpod", "model-install"],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

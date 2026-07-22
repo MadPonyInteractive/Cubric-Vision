@@ -1988,6 +1988,15 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // A remote connect/disconnect transition refused the dispatch
+            // (comfyController). Expected UX, not a crash: comfyController already
+            // surfaced the plain info toast telling the user to wait, so here we just
+            // settle the job and return WITHOUT the bug-reporter dialog.
+            if (err?.code === 'remote_transition') {
+                clientLogger.warn('comfy', `Remote engine transition — generation deferred: ${err.message}`);
+                exec.onError?.(err);
+                return;
+            }
             clientLogger.error('comfy', `Workflow failed: ${workingPayload.operation} / ${workingPayload.modelId}`, err);
             const { title, message } = _formatWorkflowError(err.message, workingPayload.modelId);
             Events.emit('ui:error', { title, message });

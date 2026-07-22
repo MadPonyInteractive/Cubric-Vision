@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-334",
+  "title": "Release Awareness Toast or OK Confirm Pop-up",
+  "description": "Let's create a pop-up for when the user starts the app, or a toast that lets the user know that his version is outdated. This could be done possibly by fetching the latest release on GitHub.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-22T00:26:14.194Z",
+  "updated_at": "2026-07-22T00:26:14.194Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -91,9 +91,14 @@ function _emitRemoteConnection(payload = {}) {
  * One-time adult-content awareness overlay. Cubric's models are uncensored, so
  * this warns the app is 18+ and lets the user continue or quit. Shown once ever
  * (persisted in Storage); Continue records the acknowledgement, Quit closes the app.
+ *
+ * @param {Function} [onContinue] - run once the user acknowledges (Continue). Used
+ *   to CHAIN the changelog so the two modals never stack (MPI-333).
+ * @returns {boolean} true if the gate was shown (caller must NOT open the changelog
+ *   itself — it is chained here); false if already acknowledged.
  */
-function _maybeShowMaturityWarning() {
-  if (Storage.getMaturityAcknowledged()) return;
+function _maybeShowMaturityWarning(onContinue) {
+  if (Storage.getMaturityAcknowledged()) return false;
 
   const dlg = MpiOkCancel.mount(document.createElement('div'), {
     icon: 'warning',
@@ -107,9 +112,16 @@ function _maybeShowMaturityWarning() {
     okLabel: 'Continue',
     cancelLabel: 'Quit the app',
   });
-  dlg.on('ok', () => Storage.setMaturityAcknowledged(true));
+  dlg.on('ok', () => {
+    Storage.setMaturityAcknowledged(true);
+    // MpiOkCancel emits 'ok' BEFORE it calls el.hide(), so the gate's backdrop is
+    // still in the DOM here. Defer one frame so the gate fully tears down before
+    // the changelog opens — otherwise the two backdrops briefly stack (MPI-333).
+    if (onContinue) requestAnimationFrame(() => onContinue());
+  });
   dlg.on('cancel', () => quitApp());
   dlg.el.show();
+  return true;
 }
 
 // ── Global dialog singletons ──────────────────────────────────────────────────
@@ -290,16 +302,18 @@ async function _bootApp() {
     handleNavigation(savedPage || PAGE_LANDING, savedParams);
   }
 
-  // 3.5. Changelog overlay — show once per APP_VERSION, after engine/deps gates
-  // and dev-state restore, but BEFORE optional Comfy auto-start so it never
-  // competes with mandatory engine provisioning. Not an updater (MPI-46).
-  _maybeShowChangelog();
-
-  // 3.6. Adult-content / 18+ awareness — show once ever, after all boot
-  // navigation has settled (navigation calls Overlays.reset(), which would wipe
-  // an overlay shown earlier). Pushed LAST so it sits on TOP of the overlay
-  // stack — the 18+ gate is the first thing the user sees / must dismiss.
-  _maybeShowMaturityWarning();
+  // 3.5 + 3.6. Adult-content / 18+ gate and the changelog overlay. These must
+  // NEVER be on screen together — two modals stack their near-opaque backdrops
+  // and the lower one reads as a black slab (MPI-333). So: if the 18+ gate needs
+  // to show (first launch, not yet acknowledged), it shows ALONE and chains the
+  // changelog on Continue. If maturity is already acknowledged (a normal update),
+  // the changelog shows on its own. Runs after all boot navigation has settled —
+  // navigation calls Overlays.reset(), which would wipe an overlay shown earlier.
+  if (_maybeShowMaturityWarning(_maybeShowChangelog)) {
+    // gate shown — changelog will be chained on Continue, don't show it now
+  } else {
+    _maybeShowChangelog();
+  }
 
   // Wire startup modal to comfy engine events (MPI-74 P6: engine-tagged + non-
   // blocking when the OTHER engine is mid-gen). comfyController emits these with

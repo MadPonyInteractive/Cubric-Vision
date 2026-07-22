@@ -42,7 +42,6 @@ export const RELEASE_NOTES = {
     version: '1.1.0',
     importantChanges: [
       'INSTALL INDIVIDUAL MODEL OPERATIONS — Multi-capability models (for example Wan 2.2 does both text-to-video and image-to-video) let you toggle which operations to download in the detail panel; shared parts like the VAE and text encoder download once. Only the operations you install appear in the prompt box. Image models are unchanged.',
-      'PICK WHICH GPU TO INSTALL FOR — Models with separate RTX 50-series and 40-series weights (for example LTX 2.3 Balanced) show a per-GPU toggle so you never fetch the wrong weight. Your GPU is pre-selected; a missing weight is offered on demand.',
     ],
     whatIsNew: [
       'RUNPOD REMOTE ENGINE — run generation on a rented cloud GPU instead of your own machine. Saving a RunPod API key reveals the remote-engine controls; the app then starts, installs models to, and generates on the Pod. Generation stays local until you Connect, and GPU and storage billing happen on your own RunPod account. Includes an optional minimum-system-RAM requirement and a live disk-usage bar showing used and total GB while connected.',
