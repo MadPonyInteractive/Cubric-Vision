@@ -81,8 +81,9 @@ EMITS:   `select`    `{ action: string }`
          `will-open` `{}` (fires BEFORE items render; listeners can call `setContextItems()` synchronously to refresh availability)
          `open`      `{}`
          `close`     `{}`
-LISTENS: Hotkeys 'tab' (open/close toggle), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
+LISTENS: Hotkeys 'tab' (`radialMenu.toggle` — open/close toggle), Hotkeys 'control+tab' (`radialMenu.devToggle`, MPI-338 — hold swaps to the `dev` context, restored by `_hide()` on every close path; dev-mode-gated so inert in production), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
 NOTE:    Single-item context auto-activates (full-circle cone, no movement needed).
+NOTE:    Dev actions (Apps/Components/Restart Engine) live on the `dev` context (Ctrl+Tab), NOT the main Tab radial — `navigation.setContextItems('dev', …)` only in `APP_CONFIG.dev_mode`. The old `extraItems`/`setExtraItems` API was removed (MPI-338).
 NOTE:    Items may carry `disabled:true` (MPI-337). Disabled items render dimmed (`.mpi-radial__item--disabled`) and are SKIPPED by the pointer resolver → never highlighted or `select`-ed (incl. the single-item case). Op radials pass ALL ops (unavailable dimmed, NOT filtered) so positions stay stable/memorizable — `navigation._mapOpsToRadialItems` / `_buildGalleryItems` set `disabled` from `getAvailableCommands`.
 
 ### MpiRadioGroup

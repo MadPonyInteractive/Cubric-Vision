@@ -27,7 +27,7 @@ NAME → blueprint in `js/shell.js`'s `_appComponents`.
 ## The flow
 
 ```
-Gallery → (dev-gated) radial "Apps" | Landing "Apps" nav → apps:open
+Gallery → (dev-gated) Ctrl+Tab dev radial "Apps" | Landing "Apps" nav → apps:open
   → MpiAppLibrary overlay (grid + availability badges)
     → card → detail slide-over (description + required-models install state + Open/Install)
       → Open → app:open {appId} → MpiAppLibrary closes, MpiBaseApp opens
