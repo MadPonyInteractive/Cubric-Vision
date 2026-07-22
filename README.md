@@ -12,8 +12,9 @@
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/WX7tDFSVmY)
 [![Roadmap](https://img.shields.io/badge/Roadmap-Trello-0079BF?logo=trello&logoColor=white)](https://trello.com/b/wg1r5aYz/cubric-vision)
 [![Patreon](https://img.shields.io/badge/Patreon-support-FF424D?logo=patreon&logoColor=white)](https://www.patreon.com/madponyinteractive)
+[![Gumroad](https://img.shields.io/badge/Gumroad-donate-FF90E8?logo=gumroad&logoColor=black)](https://mad-pony-interactive.gumroad.com/l/vfdxe)
 
-[Website](https://cubric.studio/vision/) · [Documentation](https://docs.cubric.studio) · [Download](https://github.com/MadPonyInteractive/Cubric-Vision/releases/latest) · [Discord](https://discord.gg/WX7tDFSVmY) · [Roadmap](https://trello.com/b/wg1r5aYz/cubric-vision) · [Patreon](https://www.patreon.com/madponyinteractive)
+[Website](https://cubric.studio/vision/) · [Documentation](https://docs.cubric.studio) · [Download](https://github.com/MadPonyInteractive/Cubric-Vision/releases/latest) · [Discord](https://discord.gg/WX7tDFSVmY) · [Roadmap](https://trello.com/b/wg1r5aYz/cubric-vision) · [Patreon](https://www.patreon.com/madponyinteractive) · [Gumroad](https://mad-pony-interactive.gumroad.com/l/vfdxe)
 
 </div>
 
@@ -32,16 +33,23 @@ No accounts. No API fees. Runs on your machine — remote GPU optional.
 
 ## What it does
 
-- **Image generation** — curated lineup of local models (SDXL, Illustrious,
-  Pony-style), with workflows tuned to give strong results without parameter
-  fiddling.
+- **Image generation** — a curated lineup of the best open-source image models,
+  from fast photographic generators to instruction editors that change only what
+  you ask. Each ships with a tuned workflow so you get strong results without
+  parameter fiddling. Every release adds the latest models and workflows.
 - **Video generation** — text-to-video and image-to-video in stages: preview
-  first, then take the shot further only when it's worth the render time.
+  first, then take the shot further only when it's worth the render time. The
+  lineup tracks the best open-source video models, including ones that generate
+  with sound.
+- **Remote GPU (optional)** — can't run the heaviest models on your own machine?
+  Rent a cloud GPU on demand and generate on it instead, billed to your own
+  account. Everything stays local until you connect.
 - **Masking and detailing** — brush masks or auto-detect, inpaint any region,
   refine faces and details, export masks.
-- **Upscaling** — model-based upscalers for images and video, plus custom
+- **Editing and upscaling** — instruction-based image editing, background removal,
+  and model-based generative upscalers for images and video, plus custom
   upscaler support.
-- **Video tools** — interpolate, resize, crop, upscale, and combine clips
+- **Video tools** — interpolate, resize, crop, upscale, combine, and export clips
   without leaving the app.
 - **Projects and history** — every generation lands in a project with full
   history. Compare results side by side, branch from any earlier image, and
@@ -64,8 +72,10 @@ No accounts. No API fees. Runs on your machine — remote GPU optional.
 
 ## Video generation
 
-Text-to-video and image-to-video using Wan 2.2 — runs locally, staged previews
-so you spend compute only on shots worth finishing.
+Text-to-video and image-to-video from the latest open-source video models —
+runs locally, staged previews so you spend compute only on shots worth
+finishing. Some models generate with sound and support first- and last-frame
+guidance.
 
 https://github.com/user-attachments/assets/3a6277ab-554a-4d94-9af7-59c4451ec810
 
@@ -79,16 +89,22 @@ ComfyUI engine and asks where to store models.
 Step-by-step instructions, including the macOS quarantine note, are in the
 [installation guide](https://docs.cubric.studio/vision/installation/).
 
-Patrons on [Patreon](https://www.patreon.com/madponyinteractive) get new builds
-first — Patreon gates timing, not ownership. Every build reaches the public
-release channel.
+Every build is free and public on GitHub Releases. If Cubric Vision is useful to
+you, you can fund its development on
+[Patreon](https://www.patreon.com/madponyinteractive) (recurring) or
+[Gumroad](https://mad-pony-interactive.gumroad.com/l/vfdxe) (one-off) — support,
+not a paywall.
 
 ### What you'll need
 
 | Workflow | GPU VRAM | System RAM |
 | --- | --- | --- |
-| Images (SDXL / Illustrious / Pony-style) | 8 GB+ | 16–32 GB |
-| Video | 12–16 GB | 32–64 GB |
+| Images | 8 GB+ | 16–32 GB |
+| Video and the heaviest image models | 12–16 GB+ | 32–64 GB |
+
+Each model shows its own memory needs in the app, and lighter tiers are
+available for smaller machines. If a model is too heavy for your GPU, you can
+run it on a rented remote GPU instead.
 
 ## Documentation
 
@@ -111,9 +127,11 @@ The full user guide lives at [docs.cubric.studio](https://docs.cubric.studio):
   — bug reports.
 - [**GitHub Discussions**](https://github.com/MadPonyInteractive/Cubric-Vision/discussions)
   — feature requests.
-- [**Patreon**](https://www.patreon.com/madponyinteractive) — early-access
-  builds, tutorial project files, and a direct line to the developer. Patreon
-  funds the build.
+- [**Patreon**](https://www.patreon.com/madponyinteractive) — a recurring
+  three-tier subscription with tutorial project files and a direct line to the
+  developer. Funds ongoing development.
+- [**Gumroad**](https://mad-pony-interactive.gumroad.com/l/vfdxe) — a one-off
+  donation if you'd rather support the build without a subscription.
 
 Vision is the first app in the [Cubric Studio](https://cubric.studio) family.
 Audio and Prompt are planned siblings — all local, all open source.
