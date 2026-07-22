@@ -77,7 +77,9 @@ runs locally, staged previews so you spend compute only on shots worth
 finishing. Some models generate with sound and support first- and last-frame
 guidance.
 
-https://github.com/user-attachments/assets/3a6277ab-554a-4d94-9af7-59c4451ec810
+
+https://github.com/user-attachments/assets/dd4c46e8-6941-49a2-b279-949fa1815aae
+
 
 ## Download and install
 
