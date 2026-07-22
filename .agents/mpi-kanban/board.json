@@ -1,9 +1,10 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 335,
+  "next_id": 336,
   "columns": {
     "todo": [
       "MPI-333",
+      "MPI-335",
       "MPI-329",
       "MPI-328",
       "MPI-325",
@@ -112,6 +113,12 @@
   },
   "updated_at": "2026-07-22T00:56:00Z",
   "events": [
+    {
+      "at": "2026-07-22T01:30:00Z",
+      "type": "task.created",
+      "task": "MPI-335",
+      "note": "Publish the 1.1.0 GitHub release - prep DONE + delta update proven live; only tag-move + Gate 2 + publish remain. Deferred to a later session (user). Run mpi-release."
+    },
     {
       "at": "2026-07-22T00:56:00Z",
       "type": "task.created",
