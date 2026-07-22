@@ -3,12 +3,15 @@
   "id": "MPI-335",
   "title": "Publish the 1.1.0 GitHub Release (prep DONE - just tag-move + Gate 2 + publish)",
   "description": "All release prep is COMPLETE and verified as of 2026-07-22. Remaining = the public publish only, deferred to a later session by user. DONE: master at 7ffc3242 (UI fixes + notes + approval), release:check green, notes re-approved (.approved-1.1.0.json), 6 artifacts built + verified in D:/CubricStudio/Vision/Builds/v1.1.0/ (3 full + 3 delta, win/linux/macos-arm64), CI artifacts cleaned. Delta update 1.0.1 to 1.1.0 PROVEN live on a real install (18+ gate chains changelog clean, engine bumped 0.27.0, models preserved). TO PUBLISH (mpi-release steps 4-6): (1) MOVE the v1.1.0 tag to current master HEAD - it currently points at the pre-fix commit and MUST match shipped bytes (force-retag + force-push, or delete+recreate). NOTE: artifacts were built via workflow_dispatch on master so bytes already match HEAD - only the tag ref is stale. (2) Gate 2: user reviews the GitHub release body copy (github-release-checklist.md claim boundary + platform-disclosure block). (3) gh release create v1.1.0 --repo MadPonyInteractive/Cubric-Vision with all 6 artifacts (full builds + delta bundles - deltas are how existing users patch). Latest public release is currently v1.0.1; 1.1.0 has NO github release yet (Patreon-only zero-subs = effectively unreleased). Run the mpi-release skill for the full playbook.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "pending",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-07-22T01:30:00Z",
-  "updated_at": "2026-07-22T01:30:00Z",
-  "labels": ["release", "github"],
+  "updated_at": "2026-07-22T17:44:40.000Z",
+  "labels": [
+    "release",
+    "github"
+  ],
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
