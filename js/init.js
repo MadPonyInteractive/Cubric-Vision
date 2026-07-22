@@ -4,6 +4,7 @@
 import { initShell } from './shell.js';
 import { initPaths } from './data/modelRegistry.js';
 import { applyUiZoom } from './utils/uiZoom.js';
+import { checkForUpdate } from './services/updateChecker.js';
 
 // Capture native dialogs before any override to prevent mutual recursion.
 const _nativeAlert   = window.alert.bind(window);
@@ -40,6 +41,7 @@ document.addEventListener('wheel', (e) => {
 async function init() {
     await initPaths();
     await initShell();
+    checkForUpdate(); // MPI-334: fire-and-forget; portable-gated, never blocks boot
 }
 
 init();

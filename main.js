@@ -2,7 +2,7 @@ const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Not
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
-const { fork } = require('child_process');
+const { fork, spawn } = require('child_process');
 const logger = require('./routes/logger');
 const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
 const secretsStore = require('./main/secretsStore');
@@ -868,6 +868,67 @@ app.on('ready', () => {
       return { ok: true };
     } catch (err) {
       logger.error('system', 'open-external error', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  // MPI-334: in-app update prompt (PORTABLE builds only).
+  // check-for-update: gate on portable root, fetch GitHub releases/latest, return
+  // {portable, current, latest}. The renderer does the semver compare (compareSemVer
+  // is ESM; main is CJS) and owns the dialog + dismiss logic. Version comes from
+  // package.json (bumped in lockstep with APP_VERSION by mpi-version-bump).
+  ipcMain.handle('check-for-update', async () => {
+    const portableRoot = resolveMainPortableRoot();
+    const current = require('./package.json').version;
+    if (!portableRoot) {
+      logger.info('update', `dev/non-portable build (v${current}) — update check skipped`);
+      return { ok: true, portable: false, current };
+    }
+    try {
+      const res = await fetch(
+        'https://api.github.com/repos/MadPonyInteractive/Cubric-Vision/releases/latest',
+        { headers: { 'User-Agent': 'CubricVision-Updater', Accept: 'application/vnd.github+json' } },
+      );
+      if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+      const rel = await res.json();
+      const latest = String(rel.tag_name || '').replace(/^v/i, '');
+      if (!latest) throw new Error('release has no tag_name');
+      logger.info('update', `portable check — current=${current} latest=${latest}`);
+      return { ok: true, portable: true, current, latest };
+    } catch (err) {
+      logger.warn('update', `check failed: ${err.message}`);
+      return { ok: false, portable: true, current, error: err.message };
+    }
+  });
+
+  // run-update: launch the portable updater script detached, then quit so it can
+  // overwrite app files. The script (update.bat/.sh/.command) already fetches +
+  // downloads + applies + relaunches — hardware-validated. We only launch it.
+  ipcMain.handle('run-update', async () => {
+    const portableRoot = resolveMainPortableRoot();
+    if (!portableRoot) return { ok: false, error: 'not-portable' };
+    const script = process.platform === 'win32' ? 'update.bat'
+      : process.platform === 'darwin' ? 'update.command'
+      : 'update.sh';
+    const scriptPath = path.join(portableRoot, script);
+    if (!fs.existsSync(scriptPath)) {
+      logger.warn('update', `updater script not found: ${scriptPath}`);
+      return { ok: false, error: 'script-missing' };
+    }
+    try {
+      logger.info('update', `launching updater: ${scriptPath}`);
+      const child = spawn(scriptPath, [], {
+        cwd: portableRoot,
+        detached: true,
+        stdio: 'ignore',
+        shell: process.platform === 'win32', // .bat needs a shell to execute
+      });
+      child.unref();
+      // Give the detached child a beat to fully spawn before we tear the app down.
+      setTimeout(() => app.quit(), 500);
+      return { ok: true };
+    } catch (err) {
+      logger.error('update', 'failed to launch updater', err);
       return { ok: false, error: err.message };
     }
   });

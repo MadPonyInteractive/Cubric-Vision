@@ -58,6 +58,10 @@ export const STORAGE_KEYS = {
 
   // Adult-content / 18+ awareness overlay — true once the user has acknowledged it
   MATURITY_ACKNOWLEDGED: 'mpi_maturity_acknowledged',
+
+  // MPI-334: in-app update prompt — { version, count } of the latest release the
+  // user has dismissed (Cancel). Muted once count reaches 3, until a newer version lands.
+  UPDATE_DISMISSED: 'mpi_update_dismissed',
 };
 
 // --- sessionStorage keys ---

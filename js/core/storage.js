@@ -218,6 +218,10 @@ export const Storage = {
 
   getMaturityAcknowledged: () => get(STORAGE_KEYS.MATURITY_ACKNOWLEDGED, false),
   setMaturityAcknowledged: (v) => set(STORAGE_KEYS.MATURITY_ACKNOWLEDGED, !!v),
+
+  // MPI-334: dismissed-update record — { version, count }. Default count 0.
+  getUpdateDismissed: () => get(STORAGE_KEYS.UPDATE_DISMISSED, { version: null, count: 0 }),
+  setUpdateDismissed: (v) => set(STORAGE_KEYS.UPDATE_DISMISSED, v),
 };
 
 export const Session = {
