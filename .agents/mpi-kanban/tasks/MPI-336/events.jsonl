@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-336","at":"2026-07-22T02:11:25.643Z","actor":"vscode","summary":"Created MPI-336."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-336","at":"2026-07-22T02:11:34.373Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-336 from To do to To do."}

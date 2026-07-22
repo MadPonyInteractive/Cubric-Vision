@@ -1450,3 +1450,7 @@
 {"schema": "mpi-kanban/event/v1", "at": "2026-07-22T00:45:00Z", "type": "task.moved", "task_id": "MPI-330", "data": {"from": "doing", "to": "done", "note": "User validated live: 2 chips + nav away/back + remove chip 1 -> generation ran; drag reorder still works. Fix 29a02ab6. Code-verified only (not live-run): empty-slot warning toast, start/end swap stickiness, Head Swap direction."}}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-333","at":"2026-07-22T00:18:25.002Z","actor":"vscode","summary":"Created MPI-333."}
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-334","at":"2026-07-22T00:26:14.194Z","actor":"vscode","summary":"Created MPI-334."}
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-336","at":"2026-07-22T02:11:25.643Z","actor":"vscode","summary":"Created MPI-336."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-336","at":"2026-07-22T02:11:34.373Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-336 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-334","at":"2026-07-22T02:11:43.100Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-334 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-334","at":"2026-07-22T02:11:50.181Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-334 from To do to To do."}

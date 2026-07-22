@@ -1,1 +1,3 @@
 {"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-334","at":"2026-07-22T00:26:14.194Z","actor":"vscode","summary":"Created MPI-334."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-334","at":"2026-07-22T02:11:43.100Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-334 from To do to To do."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-334","at":"2026-07-22T02:11:50.181Z","actor":"vscode","from":"todo","to":"todo","summary":"Moved MPI-334 from To do to To do."}
