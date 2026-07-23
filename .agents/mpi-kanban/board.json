@@ -117,7 +117,7 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-23T08:05:00Z",
+  "updated_at": "2026-07-23T08:40:00Z",
   "events": [
     {
       "at": "2026-07-23T06:34:00Z",
@@ -477,6 +477,12 @@
       "type": "task.updated",
       "task": "MPI-340",
       "note": "Code + docs shipped; moved to validating (needs live Pod verify + dev-channel seed)."
+    },
+    {
+      "at": "2026-07-23T08:40:00Z",
+      "type": "task.updated",
+      "task": "MPI-340",
+      "note": "build-pod-image dev/release flow wired in; MPI-119 version-guard contradiction fixed; section-6 CUDA drift corrected."
     }
   ]
 }

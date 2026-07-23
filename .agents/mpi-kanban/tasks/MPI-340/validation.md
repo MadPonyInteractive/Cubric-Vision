@@ -46,6 +46,18 @@ artifacts on separate cadences.
   manifest refuses and names all three files; matching working-tree shas pass the guard.
   No R2 writes (refusals exit before rclone; rclone stubbed).
 
+## Follow-up pass (same session)
+
+- `.claude/commands/build-pod-image.md` — the dev/release split is in the FLOW now, not
+  just two asides: top blockquote, step 1 (asks dev-or-release first, defaults to dev),
+  step 4a dispatch (`manifest_version=<ver>-dev`, both legs), and a dev variant of the
+  done-definition. **Contradiction fixed:** the MPI-119 version guard allowed only
+  `^X.Y.Z$` and would have rejected the `0.17.0-dev` the same file told you to pass.
+- `docs/runpod-remote-engine.md` §6 CUDA-floor bullet corrected (the pre-existing MPI-189
+  drift noted below) — single cu130, `nvidia/cuda:13.0.3-runtime`, torch 2.12.0+cu130,
+  flat `allowedCudaVersions ['13.0']`, SDPA-only.
+- User published the dev runtime channel (`./publish-runtime.sh dev`) — item 4 below DONE.
+
 ## NOT verified — needs the user (live Pod)
 
 1. **Source run (`_devMode` true), GPU Pod:** RunPod console → Pod → Logs → Container shows
@@ -62,7 +74,8 @@ artifacts on separate cadences.
 5. **`promote` end-to-end** against real R2 (guard verified against fixtures only; the
    remote-to-remote copy path has never run).
 
-## Follow-up spotted, not fixed (out of scope)
+## Follow-up spotted → fixed above
 
-`docs/runpod-remote-engine.md` §6 bullet 2 ("Image CUDA floors") still describes the
-`-cu128`/`-cu124` two-profile split that MPI-189 deleted. Pre-existing drift, untouched.
+`docs/runpod-remote-engine.md` §6 bullet 2 ("Image CUDA floors") described the
+`-cu128`/`-cu124` two-profile split MPI-189 deleted. Pre-existing drift; corrected on the
+user's go (`8349f7e2`).
