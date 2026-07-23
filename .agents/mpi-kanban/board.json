@@ -24,21 +24,37 @@
       "MPI-344"
     ],
     "doing": [
-      "MPI-342",
       "MPI-340",
       "MPI-259",
-      "MPI-4",
-      "MPI-341"
+      "MPI-4"
     ],
     "done": [
+      "MPI-342",
+      "MPI-341",
       "MPI-315",
       "MPI-308",
       "MPI-263",
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-23T12:10:00Z",
+  "updated_at": "2026-07-23T21:40:00Z",
   "events": [
+    {
+      "at": "2026-07-23T21:40:00Z",
+      "type": "task.moved",
+      "task": "MPI-342",
+      "from": "doing",
+      "to": "done",
+      "note": "ComfyUI v0.27->v0.28 wave COMPLETE + user-approved for done. All 5 phases verified: pins (4 sites), dev image build both legs green, MPI-341's 4 checks, MPI-340 build-gated dev-tag leg (both legs pulled live), workflow sweep on 0.28. Stable pins untouched; released users unaffected."
+    },
+    {
+      "at": "2026-07-23T21:40:00Z",
+      "type": "task.moved",
+      "task": "MPI-341",
+      "from": "doing",
+      "to": "done",
+      "note": "Pod build hardening COMPLETE + user-approved for done. All 4 checks: smoke layer green on clean dev build, unpin-kornia proof RED at smoke layer (LTXVideo IMPORT FAILED, run 30028617382), +cu130 trio + constraints.txt in final image, one LTX gen on dev Pod. The load-bearing grep gate is proven to bite."
+    },
     {
       "at": "2026-07-23T06:34:00Z",
       "type": "task.updated",

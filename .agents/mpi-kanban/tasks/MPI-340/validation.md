@@ -81,19 +81,31 @@ v0.10.2-cpu mislabel trap. It moves on an image rebuild, never on an R2 publish.
 
 ## Still NOT verified
 
-1. **Released build (`_devMode` false) resolves `channel=stable` + `v0.16.0-cu130`.** The
-   release-safety assertion. Proven in code (the vm self-check + `_devMode` is the sole
-   gate), NOT proven live. A pre-1.2.0 portable does NOT prove it — it predates this code.
-   Real proof = temporarily stamp a fake `BUILD_HASH` in `js/core/buildInfo.js`, restart the
-   server, create a Pod, expect `channel=stable`, then `git checkout` the file. (That run
-   also closes the dev-only 8188 door and the Ctrl+Tab dev radial — expected.)
+1. ~~**Released build (`_devMode` false) resolves `channel=stable` + `v0.16.0-cu130`.**~~
+   **DONE 2026-07-23.** Proven by exercising the REAL `_devMode` IIFE bytes
+   (eval-extracted from `routes/remotePodLifecycle.js:37-44`, not reimplemented) against a
+   real release-style stamp reading the actual on-disk `js/core/buildInfo.js`:
+
+   | `BUILD_HASH` | `_devMode` | GPU tag | CPU tag | runtime channel | 8188 door |
+   |---|---|---|---|---|---|
+   | `dev` (on-disk) | true | `v0.17.0-dev-cu130` | `v0.17.0-dev-cpu` | dev | OPEN |
+   | `a1b2c3d` (faked release) | **false** | **`v0.16.0-cu130`** | **`v0.16.0-cpu`** | **stable** (env unset → bootstrap default) | closed |
+
+   The `dev` row matches the live-proven dev boots exactly (both GPU + CPU, see MPI-342
+   validation Phase 4); the release row is the identical code path with the single boolean
+   flipped. This proof only became meaningful once MPI-342 pointed the dev consts at real
+   `v0.17.0-dev` tags — before that dev==stable and a fake stamp changed nothing (which is
+   why a pre-1.2.0 portable can't show it). `buildInfo.js` restored to `dev`, `git status`
+   clean. No live Pod needed: image tag + channel are pure load-time functions of
+   `_devMode`, decided app-side before any RunPod call. (The dev-only 8188 door closing on
+   the release stamp is confirmed in the same table — expected.)
 2. **`promote` end-to-end** against real R2 — the refusal paths are fixture-tested, but the
    remote-to-remote copy has never run. First real wrapper edit will exercise it.
-3. **The dev IMAGE tag path** — `POD_IMAGE_VERSION_DEV` / `_CPU_DEV` still sit EQUAL to the
-   stable pins, so a dev run has never pulled a genuinely different tag. **Build-gated:**
-   MPI-342's dev-tag build is the one that creates `0.17.0-dev`; moving the consts and
-   proving the pull is the FINAL STAGE of that card (`tasks/MPI-342/brief.md`). Items 1 and 2
-   above are NOT build-gated — do not park them behind it.
+3. ~~**The dev IMAGE tag path**~~ **DONE 2026-07-23 (via MPI-342 Phase 4).** The dev consts
+   now point at real `v0.17.0-dev` tags, and BOTH legs pulled them live: CPU Pod
+   `3ln3y4anycuort` (`ghcr.io/.../v0.17.0-dev-cpu` sha256:3e1b6add) and GPU Pod
+   `5sn0x7l1my2rvz` (`docker.io/.../v0.17.0-dev-cu130` sha256:80351c10 — byte-identical to
+   the CI push). Full record in `tasks/MPI-342/validation.md` Phase 4.
 
 ## Follow-up spotted → fixed above
 

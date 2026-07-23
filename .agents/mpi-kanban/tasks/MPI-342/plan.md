@@ -30,6 +30,23 @@ Move POD_IMAGE_VERSION_DEV and POD_IMAGE_VERSION_CPU_DEV in routes/remotePodLife
 ### Phase 5: Workflow sweep on the dev Pod
 Every workflow still loads on 0.28: LTX 2.3, Krea2 t2i + edit + masked edit (no seam, MPI-282 acceptance), Qwen-Edit, Head Swap. Local engine on 0.28 too.
 
+## Plan Drift
+
+- **2026-07-23 - Phase 3 item 2 (unpin-kornia proof): the stated edit was wrong.**
+  "Unpin `kornia==0.8.2`" alone does NOT exercise the smoke test. The pin and its
+  self-check `python -c "from kornia.geometry.transform.pyramid import pad"` share
+  ONE `RUN` layer in `cubric-vision-pod/Dockerfile`, so an unpinned latest kornia
+  fails at THAT layer, ~20 layers before the smoke test - a red build that proves
+  nothing about the gate. Corrected: disable the WHOLE kornia `RUN`, so the node-req
+  install's unpinned kornia (0.8.3, LTXVideo's requirements.txt leaves it free)
+  survives to the smoke layer, where `ComfyUI-LTXVideo` must fail to import.
+  Executed on throwaway branch `mpi-341-kornia-proof` at `manifest_version=0.17.1-dev`,
+  `only_profile=cu130`.
+
 ## Verification
 
 **Verify mode:** user-ux (phases 2-5 need a live dev Pod and the user's eyes; phase 1 is auto)
+
+**Phase 3 item 2 is `auto`** - a CI build outcome, no Pod and no human eyes. PASS is a
+RED build failing at the node-import smoke layer with `IMPORT FAILED` naming
+`ComfyUI-LTXVideo`; a GREEN build means the gate is vacuous and is itself the bug.

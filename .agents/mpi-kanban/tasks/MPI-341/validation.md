@@ -45,8 +45,32 @@ broken by construction, not strict. Keep the extra index pinned next to the cons
 1. ~~Build to the MPI-340 **dev** tag; the smoke-test layer must PASS on a clean build.~~
    **DONE** — `[cubric] node-import smoke test OK` in run 29998306717, on ComfyUI 0.28,
    with all 7 baked pip-req packs installed. Released `v0.16.0` untouched.
-2. **Prove the smoke test bites**: temporarily drop the `kornia==0.8.2` pin, rebuild,
-   confirm the build FAILS at the smoke-test layer on the LTXVideo import. Restore the pin.
+2. ~~**Prove the smoke test bites**: temporarily drop the `kornia==0.8.2` pin, rebuild,
+   confirm the build FAILS at the smoke-test layer on the LTXVideo import. Restore the pin.~~
+   **DONE 2026-07-23 — the gate BITES.** Proof run `30028617382` on throwaway branch
+   `mpi-341-kornia-proof` (`manifest_version=0.17.1-dev`, `only_profile=cu130`).
+
+   Method correction (handoff step was wrong): the pin and its `python -c "from
+   kornia.geometry.transform.pyramid import pad"` self-check share ONE `RUN`, so
+   unpinning alone would have failed at that layer, ~20 layers early, proving nothing.
+   The WHOLE kornia `RUN` was disabled instead, so the node-req install's unpinned
+   kornia (0.8.3) reached the smoke layer.
+
+   Log evidence (`gh run view 30028617382 --log-failed`):
+   - `Downloading kornia-0.8.3-py3-none-any.whl` → `Successfully installed ... kornia-0.8.3`
+     (unpinned latest resolved, as designed)
+   - LTXVideo requirements: `Requirement already satisfied: kornia ... (0.8.3)` (no re-pin)
+   - **step `[11/22]` (the smoke layer) went RED:**
+     `77: [INFO]  0.4 seconds (IMPORT FAILED): /opt/ComfyUI/custom_nodes/ComfyUI-LTXVideo`
+     → `[cubric] a baked custom node failed to IMPORT — build stops here` → `exit code: 1`
+   - cpu leg GREEN (Dockerfile.cpu bakes no nodes → nothing to import → smoke layer trivially
+     passes; only the cu130 image exercises this gate, as the handoff predicted).
+
+   A green build here would have meant the gate is vacuous and is itself the bug. It went red
+   at exactly the right layer naming exactly the right node. Branch pushed only to origin for
+   the CI run, then deleted local + remote; **never merged**. `main` never carried the broken
+   pin. Throwaway `0.17.1-dev` tag was never pushed (the build died before the push step), so
+   the proven `v0.17.0-dev` tags are untouched.
 3. ~~**Prove the constraints bite** (cheap, same build)~~ **DONE 2026-07-23** - verified on
    the pulled FINAL image `v0.17.0-dev-cu130` (digest `sha256:80351c10`), not on build logs:
    - `pip list` -> `torch==2.12.0+cu130`, `torchaudio==2.11.0+cu130`, `torchvision==0.27.0+cu130`

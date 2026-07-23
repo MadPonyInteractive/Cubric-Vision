@@ -3,11 +3,11 @@
   "id": "MPI-341",
   "title": "Pod image build hardening: node-import smoke test + constraints torch pin",
   "description": "Two Dockerfile edits adopted from YanWenKun/ComfyUI-Docker (reviewed 2026-07-23). (1) Add `RUN python /opt/ComfyUI/main.py --quick-test-for-ci --cpu` after the node bake so a custom node that fails to IMPORT fails the BUILD instead of a live Pod gen - this is exactly the MPI-149 class of bug (kornia 0.8.3 removed the `pad` re-export, LTXVideo failed to load, shipped, died live as `Node Stage1_Bypass not found`), and it replaces the hand-run `8 nodes register` gate from the MPI-139 plan. (2) Generate a pip constraints file pinning the cu130 torch trio right after the torch install and pass `-c` to every later pip call, making torch drift UNRESOLVABLE rather than merely asserted after the fact (the MPI-244 guard becomes the belt, not the only line). Build on the MPI-340 dev tag - do NOT rebuild the released v0.16.0. Detail in brief.md.",
-  "column": "doing",
-  "maturity": "in-progress",
+  "column": "done",
+  "maturity": "complete",
   "status": "active",
   "created_at": "2026-07-23T06:09:34Z",
-  "updated_at": "2026-07-23T11:55:00Z",
+  "updated_at": "2026-07-23T21:40:00Z",
   "labels": [
     "runpod",
     "infra",
@@ -25,8 +25,8 @@
     "research": "research/"
   },
   "attention": {
-    "state": "required",
-    "reason": "Implementation landed unbuilt (mpi-ci 41a5517). Every verify item needs the dev-tag Pod build, which is USER-authorized and rides with MPI-342's single dispatch - see tasks/MPI-342/brief.md FINAL STAGE and this card's validation.md.",
-    "updated_at": "2026-07-23T11:55:00Z"
+    "state": "cleared",
+    "reason": "All four verify items DONE 2026-07-23: smoke layer green on the clean dev build (run 29998306717), unpin-kornia proof RED at the smoke layer (run 30028617382, LTXVideo IMPORT FAILED), +cu130 trio + constraints.txt confirmed on the pulled final image, and one LTX gen on the dev Pod. Ready for done pending explicit user approval.",
+    "updated_at": "2026-07-23T21:16:00Z"
   }
 }

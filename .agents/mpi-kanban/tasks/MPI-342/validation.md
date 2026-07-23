@@ -104,7 +104,15 @@ Build-log evidence:
 ## MPI-341 verification status
 
 1. Smoke layer passes on the clean dev build - **DONE** (run 2 log above).
-2. Unpin-kornia proof that the gate bites - NOT RUN (needs a deliberate ~19min failing rebuild).
+2. Unpin-kornia proof that the gate bites - **DONE 2026-07-23**. Proof run `30028617382`
+   (throwaway branch `mpi-341-kornia-proof`, `manifest_version=0.17.1-dev`, cu130 only):
+   the whole kornia `RUN` disabled so unpinned kornia 0.8.3 reached the smoke layer, which
+   went RED at step `[11/22]` -
+   `77: [INFO] 0.4 seconds (IMPORT FAILED): /opt/ComfyUI/custom_nodes/ComfyUI-LTXVideo` ->
+   `build stops here` -> `exit 1`. cpu leg green (no baked nodes). Branch deleted, never
+   merged; the throwaway tag never pushed (build died pre-push), so `v0.17.0-dev` untouched.
+   Full record in `tasks/MPI-341/validation.md` check 2. **All four MPI-341 checks are now
+   DONE.**
 3. `+cu130` trio + `/opt/constraints.txt` in the FINAL image - **DONE 2026-07-23**, checked on
    the pulled image `sha256:80351c10`, not on build logs: constraints.txt holds the three
    `+cu130` lines, `pip list` agrees, `PIP_CONSTRAINT` + `PIP_EXTRA_INDEX_URL` both live in
