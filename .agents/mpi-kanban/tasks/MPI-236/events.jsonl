@@ -1,4 +1,0 @@
-{"schema":"mpi-kanban/event/v1","id":"MPI-236","type":"task.created","at":"2026-07-09T00:00:00Z","actor":"claude","summary":"Model Library flashes + Install button flickers back during install (fixed same session)."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-236","type":"task.moved","at":"2026-07-09T00:00:01Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started (gate per-dep complete; targeted tile patch)."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-236","type":"validation.updated","at":"2026-07-09T00:00:02Z","actor":"claude","summary":"User verified live: no repeated grid redraws through install; footer stays Cancel; ends Uninstall."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-236","type":"task.moved","at":"2026-07-09T00:00:03Z","actor":"claude","from":"doing","to":"done","summary":"User approved completion: 'This is done.'"}

@@ -1,7 +1,0 @@
-{"schema":"mpi-kanban/event/v1","id":"MPI-293","type":"task.created","at":"2026-07-16T18:50:00Z","actor":"claude","summary":"Pod create 502 Bad Gateway + missing controlnet_aux at install, surfaced while renting a Pod for sampler tests."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-293","type":"task.updated","at":"2026-07-16T19:05:00Z","actor":"claude","summary":"Root cause: new MpiNodes unreleased, wrapper node_lock pin pulls old pack -> nodes missing on Pod. Fix = MpiNodes release + node_lock bump. Create-502 hardening is secondary."}
-{"schema":"mpi-kanban/event/v1","id":"MPI-293","type":"task.updated","at":"2026-07-16T19:08:00Z","actor":"claude","summary":"Correction: MpiNodes pack IS on Pod; only a few NEW image-processing nodes from a recent pack update are missing (Pod pin predates them). Fix = release + node_lock bump. User doing the release now."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"todo","to":"doing","at":"2026-07-17T00:00:00Z"}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"doing","to":"done","at":"2026-07-17T00:05:00Z"}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"done","to":"doing","at":"2026-07-17T00:20:00Z","note":"reopened: real bug was baked-node fresh-volume Errno2, not the pin; awaiting user verify"}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-293","from":"doing","to":"done","at":"2026-07-17T00:40:00Z","note":"user-verified: install clean, drift-heal fired, nodes loaded, engine ran (gen failure out-of-scope)"}

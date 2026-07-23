@@ -1,0 +1,5 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-286","at":"2026-07-14T22:18:24.400Z","actor":"vscode","summary":"Created MPI-286."}
+{"at":"2026-07-15T12:00:00.000Z","event":"task.moved","from":"todo","to":"doing","note":"Pick up: per-thumb spinner + cap-3 serial thumbnail reveal on Landing"}
+{"at":"2026-07-15T12:30:00.000Z","event":"task.moved","from":"doing","to":"done","note":"User-verified: projects load faster. cap-3 thumb-reveal queue + per-thumb spinner + open-lock shipped."}
+{"at":"2026-07-16T12:00:00.000Z","event":"task.note","note":"Cold-boot follow-up: server /list-projects sidecar scan was serial (root cause of slow open on fresh launch); parallelised both loops in routes/projects.js. User-verified cold-boot much faster."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-286", "type": "task.deleted", "at": "2026-07-23T10:55:00Z", "actor": "claude", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-286/ (workspace preserved intact). mpi-archive run 2026-07-23."}

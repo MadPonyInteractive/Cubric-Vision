@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-304","at":"2026-07-18T09:00:00Z","actor":"claude"}
+{"at":"2026-07-18T11:30:00Z","event":"task.moved","task_id":"MPI-304","from":"todo","to":"done","note":"requiredDeps on AppDef shipped: availability gate + extras row + app: install key + both uninstall guards"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-304", "type": "task.deleted", "at": "2026-07-23T10:55:00Z", "actor": "claude", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-304/ (workspace preserved intact). mpi-archive run 2026-07-23."}

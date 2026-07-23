@@ -1,2 +1,0 @@
-{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-278","at":"2026-07-13T20:45:00Z","actor":"claude","note":"panel-close mid-connect strands connect (finally emits local). Pinned via stack trace to MpiRunpodSettings:705. Fix shipped: _destroyAborted guard. Opened validating."}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-278","at":"2026-07-14T00:35:00Z","actor":"claude","from":"doing","to":"done","summary":"live-verified this session"}

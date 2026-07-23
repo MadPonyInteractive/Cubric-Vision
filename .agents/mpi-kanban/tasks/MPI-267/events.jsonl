@@ -1,3 +1,0 @@
-{"at":"2026-07-12T18:00:00Z","event":"task.created","actor":"claude","note":"Focused-window completion notifications silent (regression, 1.2.0). notificationService only forwarded OS notification, suppressed by main.js isFocused() gate; promised focused-toast never wired."}
-{"at":"2026-07-12T18:00:01Z","event":"task.moved","actor":"claude","note":"todo -> doing/in-progress. Investigated + fixed."}
-{"at":"2026-07-12T18:00:02Z","event":"task.moved","actor":"claude","note":"doing -> done/complete. Fix: split on document.hasFocus() in notificationService.js; pref toggles OS-notif only, in-app toast covers focused + pref-off cases; init runs without ipcRenderer (browser toast). USER-VERIFIED. No version bump, no changelog (never shipped)."}

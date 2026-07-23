@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-284","type":"task.created","at":"2026-07-14T19:30:00Z","actor":"claude","summary":"Follow-up from MPI-276 Phase 8: float waiting-mascot on model card thumb while queued (text Queued... label already shipped in MPI-276)."}
+{"type": "task.moved", "at": "2026-07-15T00:00:00Z", "from": "todo", "to": "doing", "by": "agent"}
+{"type": "task.moved", "at": "2026-07-15T00:05:00Z", "from": "doing", "to": "done", "by": "agent", "reason": "user-verified live; queued waiting-mascot on card thumb"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-284", "type": "task.deleted", "at": "2026-07-23T10:55:00Z", "actor": "claude", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-284/ (workspace preserved intact). mpi-archive run 2026-07-23."}

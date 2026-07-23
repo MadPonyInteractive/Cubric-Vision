@@ -1,0 +1,8 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"task.created","at":"2026-07-12T13:30:00Z","actor":"claude","summary":"Mascot generating states captured from brainstorm."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"task.updated","at":"2026-07-12T13:35:00Z","actor":"claude","summary":"Compact plan attached; maturity planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"task.moved","at":"2026-07-12T13:40:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"checklist.updated","at":"2026-07-12T13:40:00Z","actor":"claude","summary":"Derived 4 checklist items from compact plan."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"validation.updated","at":"2026-07-12T14:05:00Z","actor":"claude","summary":"User-verified in running app."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"task.moved","at":"2026-07-12T14:05:00Z","actor":"claude","from":"doing","to":"done","summary":"Mascot generating states verified + complete."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-265","type":"validation.updated","at":"2026-07-12T15:10:00Z","actor":"claude","summary":"Follow-up: happy-at-end dropped (card rebuild); happy stays on toast. Changelog entry added."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-265", "type": "task.deleted", "at": "2026-07-23T10:55:00Z", "actor": "claude", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-265/ (workspace preserved intact). mpi-archive run 2026-07-23."}
