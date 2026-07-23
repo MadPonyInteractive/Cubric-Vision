@@ -1,10 +1,12 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 339,
+  "next_id": 342,
   "columns": {
     "todo": [
+      "MPI-340",
       "MPI-333",
       "MPI-329",
+      "MPI-341",
       "MPI-328",
       "MPI-325",
       "MPI-332",
@@ -17,7 +19,8 @@
       "MPI-302",
       "MPI-198",
       "MPI-249",
-      "MPI-183"
+      "MPI-183",
+      "MPI-339"
     ],
     "doing": [
       "MPI-259",
@@ -114,8 +117,32 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-22T06:15:59.000Z",
+  "updated_at": "2026-07-23T06:34:00Z",
   "events": [
+    {
+      "at": "2026-07-23T06:34:00Z",
+      "type": "task.updated",
+      "task": "MPI-340",
+      "note": "Scope extended (user): the dev/stable split must land in docs, rules and skills, not just code. Grep-verified blast radius added to brief: CLAUDE.md:74 (Context Router row - highest-traffic instruction, currently teaches 'publish-runtime.sh stable' as THE way to ship a runtime edit), docs/runpod-remote-engine.md s5+s6, docs/builder/02-image-and-rebuild.md:100, .claude/commands/build-pod-image.md:123+94, .claude/rules/comfy_engine.md:291, docs/runpod-troubleshooting.md (4 mentions), mpi-ci/cubric-vision-pod/README.md 'Runtime externalize', plus a dos_and_donts.md one-liner. KEY FINDING: mpi-release/SKILL.md and mpi-version-bump/SKILL.md have ZERO Pod awareness today (grep-verified) - harmless with one channel, but this card creates the hazard, so mpi-release gains a Preconditions drift check (curl dev vs stable manifest.json, compare the sha256 fields they already carry) that STOPS and asks the user to promote or confirm deliberate non-shipping. Never auto-promote in the release flow - live op affecting released users, same class as git push. mpi-version-bump deliberately unchanged: app version and Pod runtime are separate artifacts on separate cadences."
+    },
+    {
+      "at": "2026-07-23T06:22:00Z",
+      "type": "task.updated",
+      "task": "MPI-340",
+      "note": "Moved to TOP of todo (user) - MPI-340 unblocks MPI-333/MPI-329 (both likely land fixes in wrapper.py, which currently publishes straight to the 'stable' channel released users boot). Brief extended: the dev/user split for wrapper.py + start.sh is the CHANNEL, not duplicate wrapper.dev.py files (git versions the file, the channel versions the deploy). Added a 'publish-runtime.sh promote' verb that rclone-copies vision/dev/* -> vision/stable/* server-side so promotion ships the EXACT bytes tested on dev, refusing on a working-tree/dev sha mismatch (the script already emits per-file sha256 in manifest.json). Runtime promote and image bump are independent paths."
+    },
+    {
+      "at": "2026-07-23T06:09:34Z",
+      "type": "task.created",
+      "task": "MPI-340",
+      "note": "Dev Pod images (GPU + CPU) + dev R2 runtime channel, both gated on the EXISTING server-side _devMode (remotePodLifecycle.js:37). 1.1.0 is released and every released app pins the same image tag AND the same 'stable' runtime channel, so publish-runtime.sh stable reaches real users on their next Pod boot. No new Dockerfile, no CI change (manifest_version=0.17.0-dev already yields v0.17.0-dev-cu130). Safety substrate for MPI-333 / MPI-329 / MPI-341."
+    },
+    {
+      "at": "2026-07-23T06:09:34Z",
+      "type": "task.created",
+      "task": "MPI-341",
+      "note": "Adopt two build practices from YanWenKun/ComfyUI-Docker: (1) RUN --quick-test-for-ci --cpu after the node bake so an import failure fails the BUILD (the MPI-149 kornia/LTXVideo class that shipped and died live as Node Stage1_Bypass not found; also automates the hand-run '8 nodes register' gate from MPI-139); (2) pip constraints file pinning the cu130 trio so torch drift is unresolvable, with the MPI-244 assert kept as the belt. Blocked on MPI-340 - build to the dev tag, never rebuild released v0.16.0."
+    },
     {
       "at": "2026-07-22T06:15:59.000Z",
       "type": "cleanup",

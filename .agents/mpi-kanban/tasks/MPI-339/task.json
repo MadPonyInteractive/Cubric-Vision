@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-339",
+  "title": "Investigate and possibly add NSFW LTX 2.3 model.",
+  "description": "page: https://civitai.red/models/2447875/ltx23-10eros\nmodels: https://huggingface.co/TenStrip/LTX2.3-10Eros/tree/main?not-for-all-audiences=true\nint8: https://huggingface.co/CornLogic/10EROS_1.4_Int8_ConvRot/tree/main\nint8 + dmd workflow: https://huggingface.co/tech77/Workflows/blob/main/10Eros_10SNodes_I2V_Basic_DMD_V5_int8.json\nother model possibly better: https://civitai.com/models/2601098/sulphur-2-base",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-22T22:19:47.375Z",
+  "updated_at": "2026-07-22T22:48:44.631Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

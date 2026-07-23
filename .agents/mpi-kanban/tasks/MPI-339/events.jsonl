@@ -1,0 +1,3 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-339","at":"2026-07-22T22:19:47.375Z","actor":"vscode","summary":"Created MPI-339."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-339","at":"2026-07-22T22:21:54.190Z","actor":"vscode","summary":"Updated MPI-339."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-339","at":"2026-07-22T22:48:44.631Z","actor":"vscode","summary":"Updated MPI-339."}
