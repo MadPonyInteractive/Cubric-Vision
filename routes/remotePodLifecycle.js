@@ -178,8 +178,12 @@ const POD_IMAGE_VERSION_CPU = 'v0.16.0';
 // v0.17.0-dev-cu130 + v0.17.0-dev-cpu. Always dispatch BOTH legs (the v0.10.3-cpu 404
 // trap above). They start EQUAL to the stable pins on purpose: an unbuilt dev tag 404s
 // on pull and the Pod exits on boot, so a dev tag only lands here once it exists.
-const POD_IMAGE_VERSION_DEV = 'v0.16.0';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.16.0';
+// v0.17.0-dev (MPI-342): ComfyUI v0.28.0 + MPI-341's node-import smoke test and cu130 pip
+// constraints. BOTH legs built and pushed (cu130 -> Docker Hub, cpu -> GHCR), both public
+// and pull-verified, so these are real tags — the first time this pair has pointed at
+// anything other than the stable pin.
+const POD_IMAGE_VERSION_DEV = 'v0.17.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.17.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
