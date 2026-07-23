@@ -132,7 +132,8 @@ Community Cloud is unsupported (unstable/limited for this use case).
 Non-secret pref `deleteOnQuit` in `state.runpodConfig` (default OFF; normalizer in
 `js/core/storage.js`, localStorage-mirrored via the state Proxy). Full config:
 `{ enabled, podId, datacenter, gpuType, volumeId, wasConnected, deleteOnQuit, autoRetry,
-containerDiskGb, minRamGb }` (minRamGb = optional system-RAM floor, MPI-160; 0 = none). Pushed to
+stageOnConnect, containerDiskGb, minRamGb }` (minRamGb = optional system-RAM floor, MPI-160;
+0 = none; stageOnConnect = warm all installed models on connect, MPI-329, default off). Pushed to
 backend `_mode` via `POST /remote/mode` on boot (`shell.js _initRemoteBoot`) and on checkbox
 toggle (`MpiSettings.js`). `main.js` stays pref-agnostic — it calls `/remote/pod/teardown`
 and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is server-owned.
@@ -168,34 +169,46 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   `/remote/pod/disk` resolves the denominator server-side via the pure
   `resolveDiskTotalBytes(pod, volumeList)` (volume size, or ephemeral
   `containerDiskInGb`) and returns `{used,total,ephemeral}`; a null total hides the bar.
-- **Hot-store: big weights are staged volume→container-disk on first use (MPI-194).** The
-  network volume reads at ~750 MB/s; aimdo re-faults a big transformer at every gen-stage,
-  re-reading it from that slow volume = the LTX stage-gap tax (36s warm gap). Fix: on a
-  **remote gen preflight** (`_ensureRemoteHotStore` in `commandExecutor.js`), any single dep
-  file **≥ 20 GB** is copied onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe),
-  which ComfyUI scans BEFORE the volume extra-paths so the fast copy wins with no yaml change.
-  Wrapper endpoint `POST /wrapper/hot-store/ensure` does the copy+sha-verify+SSE progress;
-  it's **sticky** (one copy per pod lifetime) and **LRU-evicts** disk copies only when a NEW
-  stage needs room. The volume stays the durable library (evicting a disk copy is always safe).
-  First stage of the 41 GB LTX transformer adds a one-time ~55s visible "staging" toast to the
-  first remote gen after a fresh pod; every later gen is fast. Only **volume** pods pay the
-  original tax — ephemeral pods (MPI-78) already root models on the disk.
-  **⚠️ Disk budget:** volume-pod container disk is **50 GB** (`CONTAINER_DISK_GB`,
-  `remotePodLifecycle.js`) — fits exactly ONE ≥20GB model (LTX's 41 GB transformer). Today's
-  ≥20GB set = LTX only (Gemma TE 9.45 GB, every Wan file ≤13.55 GB stay on the volume). **When a
-  model arrives whose ≥20GB hot-set does not fit in 50 GB free** (a 60–70 GB weight, or a 2nd big
-  model that must coexist), **bump `CONTAINER_DISK_GB`** — the add-model playbook has the
-  PING-USER gate for this. Threshold constant: `HOT_STORE_MIN_GB` (app, threshold-of-record, 20 GB)
-  filters the file list BEFORE it reaches the wrapper; the wrapper's own `HOT_STORE_MIN_BYTES`
-  (env `CUBRIC_HOT_STORE_MIN_BYTES`, default 15 GB) is a looser Pod-side floor that never rejects
-  what the app already selected. Bumping the app constant is sufficient; the wrapper floor is a
-  no-rebuild R2 push if you ever want them aligned (see below). **Judge staging on the WARM
-  number, never the first touch (MPI-200).** The first staged gen pays the one-time volume→disk
-  copy and looks *slower* than unstaged (24GB mxfp8: 30s first-staged vs 20s volume-served); the
-  warm repeat then ran 1m04s total = fast. A briefly-shipped threshold raise (15→26, commit
-  10ec822) to skip staging was reverted same session (2db240a) once the warm number was checked.
-  Rule for any cache/stage/memoize: confirm first-touch (fill cost) vs warm-repeat (read cost)
-  before concluding a tier is net-negative — get at least one warm number first.
+- **Hot-store: fits-VRAM weights are staged volume→container-disk (MPI-194, MPI-329).** The
+  network volume reads at ~750 MB/s AND aimdo pins ~90% of host RAM (`Enabled pinned memory`
+  ~231 GB), so the page cache can't hold a model → EVERY model switch random-reads the volume
+  (~80s on a 4090), not just LTX. Fix: on a **remote gen preflight** (`_ensureRemoteHotStore` in
+  `commandExecutor.js`) copy the active model's weight set (transformer + text-encoder + VAE +
+  LoRAs) onto the Pod's container disk (`/opt/ComfyUI/models`, local NVMe), which ComfyUI scans
+  BEFORE the volume extra-paths so the fast copy wins with no yaml change. Staged switch drops
+  ~80s→9s (live 4090, MPI-329). Wrapper `POST /wrapper/hot-store/ensure` does the
+  copy+sha-verify+SSE progress; **sticky** (one copy per pod lifetime) and **LRU-evicts** disk
+  copies only when a NEW stage needs room. Only **volume** pods pay the tax — ephemeral pods
+  (MPI-78) already root models on the disk.
+  **Two regimes (MPI-329).** A model that FITS VRAM (Krea2 13.5 / Qwen 20.5 on a 24 GB card) is
+  volume-read-bound → staging = ~10× win. A single file LARGER than VRAM (LTX 42 GB bf16 on a
+  24 GB card) can't stay resident → aimdo streams it per-stage regardless of source → staging
+  can't help, and a 42 GB copy would hog the wrapper's one hot-store lock and stall an
+  interactive gen. So `_ensureRemoteHotStore` **skips any single file > the pod's VRAM**
+  (`/remote/pod/specs` → vramGb, cached per gpuType); a 96 GB card keeps staging it (fits). LTX's
+  11 GB TE still stages.
+  **Thresholds.** `HOT_STORE_MIN_GB` (app) is **0.1 GB** — stage everything ≥100 MB (was 20 GB,
+  which only ever caught LTX). The pod env `CUBRIC_HOT_STORE_MIN_BYTES` (=100 MB, set per-create
+  in `remotePodLifecycle.js`) drops the wrapper's baked 15 GB floor to match — BOTH must be low
+  or the wrapper re-rejects the sub-15GB weights the app now sends.
+  **Container disk = network-volume size + 5 GB (MPI-329, DYNAMIC).** A volume GPU Pod mirrors
+  its disk to `vol.size` at create (one `listVolumes` lookup, `_volumeMatchedDiskGb`), clamped
+  [100, 600], fallback 200 GB if unreadable — so the disk holds the WHOLE stageable set and the
+  LRU never evicts (disk ≥ volume ≥ everything staged). The old static `CONTAINER_DISK_GB` is
+  GONE; nothing to bump — the mirror auto-tracks the volume the user sized.
+  **Optional prefetch — "Stage all models on connect" (MPI-329, default OFF).** RunPod setting
+  `stageOnConnect`: when ON, shell's connect edge (after `syncModelInstalled`, so install-state
+  is the remote volume's) calls `prefetchInstalledModels()` (exported from `commandExecutor.js`)
+  to warm EVERY installed model — first gen instant. OFF = lazy on-first-use staging (copies only
+  what's used). Wired from shell.js, NOT self-tracked in commandExecutor (a phased/debounced
+  disconnect made an in-module connect-edge flag unreliable).
+  **Judge staging on the WARM number, never the first touch (MPI-200).** The first staged gen
+  pays the one-time volume→disk copy and looks *slower* than unstaged (24GB mxfp8: 30s
+  first-staged vs 20s volume-served); the warm repeat then ran 1m04s total = fast. A
+  briefly-shipped threshold raise (15→26, commit 10ec822) to skip staging was reverted same
+  session (2db240a) once the warm number was checked. Rule for any cache/stage/memoize: confirm
+  first-touch (fill cost) vs warm-repeat (read cost) before concluding a tier is net-negative —
+  get at least one warm number first.
 - **`wrapper.py` + `start.sh` are R2-floated, NOT baked (MPI-156).** Editing either is **NOT**
   an image rebuild. `bootstrap.sh` (the image CMD) curls both fresh from R2
   (`https://pod.cubric.studio/vision/<channel>/`) at every Pod boot; the baked copies are

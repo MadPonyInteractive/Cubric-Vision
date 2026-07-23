@@ -12,3 +12,20 @@
   fixes (image describer + Krea2 edit CLIP), a text-model sampling speedup, and
   int8/int4 optimizations that mainly help local Turing/16xx-series GPUs. No
   workflow or behaviour changes — every shipped model was re-swept and passed.
+
+## What's new
+
+- **New RunPod setting — "Stage all models on connect"** (off by default). When
+  on, every installed model is copied to the cloud Pod's fast disk the moment it
+  connects, so your first generation is instant instead of waiting on the
+  first-use copy. Off keeps the default behaviour (models stage on first use,
+  copying only what you actually generate with).
+
+## Fixes
+
+- **Cloud model switching is dramatically faster.** Switching between image
+  models on a RunPod engine no longer re-reads the weights from the slow network
+  volume every time — they're staged to the Pod's fast local disk, cutting a
+  cold switch from ~2 minutes to a few seconds. The Pod's disk now auto-sizes to
+  your network volume so the whole model set fits. Video models (LTX) that stream
+  by design are unaffected.
