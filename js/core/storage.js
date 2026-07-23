@@ -63,6 +63,12 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // waits in the background (polling availability) for the picked GPU to free
   // before connecting — without blocking local generation (MPI-110). Default OFF.
   autoRetry: false,
+  // stageOnConnect: when ON, every installed model's weights are copied to the Pod's
+  // fast container disk the moment it connects (MPI-329), so the FIRST generation is
+  // instant. Default OFF = weights stage lazily on first use (gen-preflight), copying
+  // only what the user actually generates with. Persist-only; commandExecutor runs the
+  // prefetch on the remote-connect edge.
+  stageOnConnect: false,
   // idleTimeoutS: idle-watchdog timeout baked into the Pod env at create time,
   // stored in SECONDS (the wrapper unit), shown as minutes in Settings. Floor
   // 10 min (600 s), default 15 min (900 s) — mirrors MpiSettings' IDLE_* clamps.
@@ -98,6 +104,7 @@ function normalizeRunpodConfig(value = {}) {
     deleteOnQuit: value?.deleteOnQuit === true,
     autoConnectOnStart: value?.autoConnectOnStart === true,
     autoRetry: value?.autoRetry === true,
+    stageOnConnect: value?.stageOnConnect === true,
     idleTimeoutS: normalizeIdleTimeoutS(value?.idleTimeoutS),
     containerDiskGb: normalizeContainerDiskGb(value?.containerDiskGb),
     minRamGb: normalizeMinRamGb(value?.minRamGb),

@@ -1396,6 +1396,14 @@ async function _initDataRegistries() {
       _wasRemoteConnected = true;
       try {
         await syncModelInstalled();
+        // MPI-329: stage-on-connect prefetch. After the connect-edge sync (so
+        // s_installedModelIds is the REMOTE volume's set), warm every installed model
+        // onto the Pod's fast disk if the user enabled the toggle. Fire-and-forget +
+        // best-effort — never block the connect flow; the function no-ops when the
+        // toggle is off. Dynamic import: commandExecutor isn't loaded until first use.
+        import('./services/commandExecutor.js')
+          .then(({ prefetchInstalledModels }) => prefetchInstalledModels())
+          .catch((err) => clientLogger.warn('shell', `stage-on-connect prefetch skipped: ${err?.message || err}`));
         await _maybeNotifyArchChange(); // MPI-207: Pod swap to a new arch
         // MPI-230: syncModelInstalled just tagged any volume node at the wrong commit
         // as drifted. On the genuine first connect only, silently auto-heal it (local

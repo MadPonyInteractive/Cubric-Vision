@@ -196,7 +196,21 @@ const POD_IMAGE_VERSION_CPU_DEV = 'v0.17.0-dev';
 // 100%-hang fix) + true download-progress numerator. Baked in the v0.16.0 image; the
 // app pin lagged at 0.2.33 through v0.15.0 — corrected here.
 const WRAPPER_VERSION = '0.2.36';
-const CONTAINER_DISK_GB = 50;
+// MPI-329: a network-volume GPU Pod sizes its container disk to MIRROR the volume
+// (+ a small scratch headroom). The volume is the SOURCE of every model, so the
+// hot-store can never need to stage more bytes than the volume holds — mirroring the
+// volume size means the full staged set always fits and the wrapper's LRU eviction
+// never fires (disk ≥ the whole model universe). This kills the ~2min-per-switch
+// volume tax: staging the fits-VRAM weight set (transformer + text-encoder + VAE +
+// LoRAs) to the fast container disk drops a switch ~80s→9s, and copies are sticky
+// (one per pod lifetime). Container disk is billed only while the Pod runs (cheap).
+// Resolved at create time from the RunPod volume list (_volumeMatchedDiskGb); if the
+// size can't be read, fall back to a flat floor. Clamped to a sane band (guard a
+// garbage size + a runaway bill on a huge volume).
+const CONTAINER_DISK_VOLUME_FALLBACK_GB = 200;
+const CONTAINER_DISK_VOLUME_MIN_GB = 100;
+const CONTAINER_DISK_VOLUME_MAX_GB = 600;
+const CONTAINER_DISK_VOLUME_HEADROOM_GB = 5;
 // RunPod CPU Pods reject container disk > 20GB ("Container Disk must be <= 20").
 // Download-mode (MPI-88) lands models on the network volume, so 20GB is ample.
 const CONTAINER_DISK_CPU_GB = 20;
@@ -212,6 +226,37 @@ function _clampEphemeralDisk(gb) {
   if (!Number.isFinite(n)) return CONTAINER_DISK_EPHEMERAL_DEFAULT_GB;
   return Math.min(CONTAINER_DISK_EPHEMERAL_MAX_GB,
     Math.max(CONTAINER_DISK_EPHEMERAL_MIN_GB, n));
+}
+
+// MPI-329: pure clamp for the volume-mirrored container disk (unit-testable).
+function _clampVolumeDisk(sizeGb) {
+  const n = Math.round(Number(sizeGb) + CONTAINER_DISK_VOLUME_HEADROOM_GB);
+  if (!Number.isFinite(n)) return CONTAINER_DISK_VOLUME_FALLBACK_GB;
+  return Math.min(CONTAINER_DISK_VOLUME_MAX_GB,
+    Math.max(CONTAINER_DISK_VOLUME_MIN_GB, n));
+}
+
+// MPI-329: container disk (GB) for a network-volume GPU Pod = the volume's own size
+// + a small scratch headroom, so the hot-store can hold the full staged set without
+// eviction. Best-effort ONE listVolumes lookup at create; on any miss (API fails,
+// volume absent, garbage size) fall back to the flat floor. Mirrors the size-resolve
+// already used by the disk-usage bar (resolveDiskTotalBytes / remoteVolumeFreeBytes).
+async function _volumeMatchedDiskGb(key, volumeId) {
+  try {
+    const r = await client.listVolumes(key);
+    const list = Array.isArray(r?.json)
+      ? r.json
+      : (r?.json?.networkVolumes || r?.json?.volumes || null);
+    if (Array.isArray(list) && list.length) {
+      const vol = (volumeId && list.find((v) => v && String(v.id) === String(volumeId)))
+        || (list.length === 1 ? list[0] : null);
+      const sizeGb = Number(vol && vol.size);
+      if (Number.isFinite(sizeGb) && sizeGb > 0) return _clampVolumeDisk(sizeGb);
+    }
+  } catch (err) {
+    logger.warn('runpod', `volume size lookup failed; container disk falls back to ${CONTAINER_DISK_VOLUME_FALLBACK_GB}GB`);
+  }
+  return CONTAINER_DISK_VOLUME_FALLBACK_GB;
 }
 
 // Sentinel gpuTypeId for the no-GPU "download mode" Pod (MPI-88). The Settings GPU
@@ -564,20 +609,32 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   // bill. cpu3c = cheapest flavor; a model download is network/disk-bound.
   const imageName = podImageForCard(gpuTypeId);
   logger.info('runpod', `Pod image for ${noGpu ? 'CPU (download mode)' : gpuTypeId}: ${imageName}`);
+  // MPI-329: a volume GPU Pod mirrors its container disk to the network-volume size
+  // (one listVolumes lookup) so the hot-store holds the full staged set. Resolved
+  // before the spec since it's async; null for CPU/ephemeral (they size differently).
+  const volumeDiskGb = (!noGpu && volumeId) ? await _volumeMatchedDiskGb(key, volumeId) : null;
+  if (volumeDiskGb) logger.info('runpod', `container disk mirrored to volume: ${volumeDiskGb}GB`);
   const spec = {
     name: 'cubric-vision',
     imageName,
     // CPU Pods cap container disk at 20GB ("Container Disk must be <= 20"); a volume
-    // GPU Pod uses the small default (models live on the volume); an ephemeral
-    // no-volume GPU Pod (MPI-78) uses the user-chosen size since models download here.
+    // GPU Pod mirrors the network-volume size (MPI-329); an ephemeral no-volume GPU
+    // Pod (MPI-78) uses the user-chosen size since models download here.
     containerDiskInGb: noGpu ? CONTAINER_DISK_CPU_GB
       : ephemeral ? _clampEphemeralDisk(containerDiskGb)
-      : CONTAINER_DISK_GB,
+      : volumeDiskGb,
     ports: ['8889/http'],
     env: {
       CUBRIC_TOKEN: token,
       RUNPOD_API_KEY: key, // watchdog self-stop backstop
       CUBRIC_WRAPPER_VERSION: WRAPPER_VERSION,
+      // MPI-329: lower the Pod-side hot-store floor to match the app's HOT_STORE_MIN_GB
+      // (commandExecutor.js, now 0.1GB). The wrapper's baked default is 15GB — without
+      // this override it would re-reject every sub-15GB weight the app now asks to stage
+      // (Krea2/Qwen transformers + text-encoders + VAEs + LoRAs), which is exactly the
+      // fits-VRAM set whose volume-read is the ~2min switch tax (staged = ~9s switch).
+      // 100MB floor stages all real weights, skips ~0-byte stubs. Env-only, no rebuild.
+      CUBRIC_HOT_STORE_MIN_BYTES: '100000000',
       // Idle watchdog is a fixed 10-min CRASH backstop baked into the image
       // (wrapper CUBRIC_IDLE_TIMEOUT_S default 600). It fires only when the app
       // stops sending authenticated traffic — i.e. crashed/closed without a clean
@@ -1421,4 +1478,4 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   }
 });
 
-module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead };
+module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead, _clampVolumeDisk };

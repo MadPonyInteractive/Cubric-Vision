@@ -70,6 +70,14 @@ export const MpiRunpodSettings = ComponentFactory.create({
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodAutoRetrySlot"></div>
                     </div>
 
+                    <div class="mpi-settings__plate" id="mpiSettingsRunpodStageOnConnectGroup">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Stage all models on connect</span>
+                            <span class="mpi-settings__plate-desc">When on, every installed model is copied to the Pod's fast disk as soon as it connects, so the first generation is instant. Off by default — models are staged on first use instead, copying only what you actually generate with.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodStageOnConnectSlot"></div>
+                    </div>
+
                     <div class="mpi-settings__runpod-body" id="mpiSettingsRunpodBody">
                         <div class="mpi-settings__subgroup">
                             <span class="mpi-settings__subgroup-title">Storage</span>
@@ -1607,6 +1615,27 @@ export const MpiRunpodSettings = ComponentFactory.create({
                     arPlate?.classList.toggle('mpi-settings__plate--on', checked === true);
                     // Re-list GPUs so out-of-stock cards appear/disappear immediately.
                     _renderRunpodPickers(root);
+                });
+            }
+
+            // ── Stage all models on connect (MPI-329) ────────────────────────
+            // When ON, the hot-store prefetch stages EVERY installed model's weights
+            // to the Pod's fast disk on connect (first gen instant). OFF (default):
+            // weights stage lazily on first generation (gen-preflight), copying only
+            // what's actually used. Persist-only; commandExecutor reads it via
+            // Storage on the remote:connection flip and runs the prefetch there.
+            const stageOnConnectSlot = qs('#mpiSettingsRunpodStageOnConnectSlot', root);
+            if (stageOnConnectSlot) {
+                stageOnConnectSlot.innerHTML = '';
+                const soPlate = stageOnConnectSlot.closest('.mpi-settings__plate');
+                soPlate?.classList.toggle('mpi-settings__plate--on', cfg.stageOnConnect === true);
+                const soInst = MpiCheckbox.mount(stageOnConnectSlot, {
+                    checked: cfg.stageOnConnect === true,
+                    variant: 'switch',
+                });
+                soInst.on('change', ({ checked }) => {
+                    state.runpodConfig = { ..._runpodCfg(), stageOnConnect: checked === true };
+                    soPlate?.classList.toggle('mpi-settings__plate--on', checked === true);
                 });
             }
 

@@ -481,12 +481,42 @@ async function _findModelNotLocal(modelId, operation = null) {
     }
 }
 
-// MPI-194: single-file size at/above which a remote weight is staged from the slow
-// network volume onto the Pod's fast container disk before generating. 20GB (binary,
-// to match footprint.js's sizeToGb which parses "41GB" as 41 * 1024^3). Selects only
-// the LTX 41GB transformer today; the 9.45GB TE and <=13.55GB Wan files stay on the
-// volume. See docs/playbooks/add-model/02-dependencies-r2.md (>=20GB PING-USER gate) + docs/runpod-*.
-const HOT_STORE_MIN_GB = 20;
+// MPI-329: single-file size at/above which a remote weight is staged from the slow
+// network volume onto the Pod's fast container disk before generating. LOWERED from
+// 20GB → 0.1GB: the 20GB gate only ever caught the LTX 42GB transformer, and LTX is
+// the ONE model staging can't help (42GB bf16 > 24GB VRAM → aimdo streams per-stage,
+// source-independent). The models users actually SWITCH between — Krea2 13.49GB / Qwen
+// 20.5GB / their 5-9GB text-encoders / 0.25-1.5GB VAEs / 0.47-0.94GB LoRAs — all FIT
+// VRAM and were left on the volume, where aimdo's 231GB host-RAM pinning starves the
+// page cache and every switch random-reads the volume (live 2026-07-23: Krea2 switch
+// 80s from volume vs 9s from disk — a 10× fault, the whole "2min per switch" saga).
+// 0.1GB stages transformer + clip + vae + the active LoRAs (skips only ~0-byte stubs).
+// The Pod-side wrapper floor (CUBRIC_HOT_STORE_MIN_BYTES, remotePodLifecycle.js) is
+// dropped to match, and the container disk mirrors the network-volume size so the
+// full staged set fits — the wrapper's own 15GB floor would otherwise re-reject
+// everything this now sends.
+const HOT_STORE_MIN_GB = 0.1;
+
+// MPI-329: pod VRAM (GB), cached per gpuType (auto-invalidates on a Pod swap). Used to
+// skip staging any SINGLE weight file bigger than VRAM — such a file can't stay resident
+// (aimdo streams it per-stage regardless of source, so staging buys nothing) and a huge
+// copy (e.g. the LTX 42GB transformer) would hog the wrapper's single hot-store lock,
+// stalling an interactive gen's preflight for minutes. null = unknown → don't VRAM-filter.
+let _vramCache = { gpuType: null, vramGb: null };
+async function _remoteVramGb() {
+    const gpuTypeId = state.runpodConfig?.gpuType || null;
+    if (!gpuTypeId || gpuTypeId === '__cpu__') return null;
+    if (_vramCache.gpuType === gpuTypeId) return _vramCache.vramGb;
+    let vramGb = null;
+    try {
+        const res = await fetch(`/remote/pod/specs?gpuTypeId=${encodeURIComponent(gpuTypeId)}`);
+        const data = res.ok ? await res.json() : null;
+        const v = Number(data?.vramGb);
+        vramGb = Number.isFinite(v) && v > 0 ? v : null;
+    } catch (_) { /* unknown → no VRAM filter */ }
+    _vramCache = { gpuType: gpuTypeId, vramGb };
+    return vramGb;
+}
 
 /**
  * Remote-engine gen preflight (MPI-194): stage any weight file >= HOT_STORE_MIN_GB
@@ -496,16 +526,26 @@ const HOT_STORE_MIN_GB = 20;
  * Awaited before dispatch so the one-time ~55s first-stage shows a real progress
  * toast. Best-effort: on any failure the gen still runs from the volume — never blocks.
  */
-async function _ensureRemoteHotStore(modelId, operation) {
+async function _ensureRemoteHotStore(modelId, operation, { silent = false } = {}) {
     const model = getModelById(modelId);
     if (!model) return;
+    // null operation → resolveDeps returns the model's FULL op universe (used by the
+    // stage-on-connect prefetch, which warms every op of every installed model).
     const selectedOps = operation ? [operation] : null;
     // MPI-200: remote path → the pod's arch selects the one balanced transformer to
     // stage (else the >=20GB filter would miss it / stage the wrong variant).
     const arch = await remoteEngineClient.arch('remote');
+    const vramGb = await _remoteVramGb(); // null = unknown → skip the VRAM cap
     const files = resolveDeps(model, selectedOps, null, 'remote', { arch })
         .map(id => DEPS[id])
-        .filter(dep => dep && dep.filename && sizeToGb(dep.size) >= HOT_STORE_MIN_GB)
+        // Stage weights ≥100MB, but SKIP any single file larger than the pod's VRAM:
+        // it can't stay resident (streams per-stage → staging can't speed it) and a huge
+        // copy would hog the wrapper's one hot-store lock, stalling interactive gens. This
+        // drops e.g. the LTX 42GB transformer on a 24GB card while keeping its 11GB TE;
+        // a 96GB card keeps staging it (fits → benefits). See _remoteVramGb.
+        .filter(dep => dep && dep.filename
+            && sizeToGb(dep.size) >= HOT_STORE_MIN_GB
+            && (!vramGb || sizeToGb(dep.size) <= vramGb))
         .map(dep => {
             // dep.type is often undefined; the real comfy subdir is the first path
             // segment of filename (e.g. "diffusion_models/ltx-...safetensors").
@@ -531,7 +571,7 @@ async function _ensureRemoteHotStore(modelId, operation) {
         // stage). A warm gen (everything already on disk) shows nothing — the fix
         // for the "Preparing…" toast firing on every remote gen (MPI-194).
         const dry = await post({ files, dryRun: true });
-        if (dry.ok) {
+        if (dry.ok && !silent) {
             const info = await dry.json().catch(() => null);
             if ((info?.pending || 0) > 0) {
                 Events.emit('ui:info', { message: 'Preparing the cloud engine for a faster generation…' });
@@ -549,6 +589,43 @@ async function _ensureRemoteHotStore(modelId, operation) {
     } catch (e) {
         // Non-fatal — the volume copy still works, just slower.
         clientLogger.warn('commandExecutor', `hot-store ensure failed (${e.message}) — generating from volume`);
+    }
+}
+
+// MPI-329: stage-on-connect prefetch. When the user enables "Stage all models on
+// connect" (RunPod settings), warm EVERY installed model's full weight set onto the
+// Pod's fast disk right after it connects, so even the FIRST generation is instant.
+// Default OFF — normally weights stage lazily on first gen (_ensureRemoteHotStore in
+// the run preflight), copying only what's actually used.
+//
+// DRIVEN BY shell.js's authoritative remote-connect edge (called after
+// syncModelInstalled, so state.s_installedModelIds reflects the REMOTE volume). It is
+// exported + invoked there rather than self-tracking the edge from remote:connection
+// here: (1) commandExecutor isn't imported until first gen, so a module-level connect
+// listener wouldn't be registered on a cold auto-connect, and (2) re-deriving the edge
+// was fragile — a phased/debounced disconnect left the flag un-reset, so a fast
+// terminate→reconnect never re-armed. Best-effort + idempotent (the wrapper skips
+// already-staged files); sequential so we never fire N concurrent volume→disk copies.
+// A CPU download-mode Pod has no ComfyUI to warm.
+let _prefetchInFlight = false;  // guards against overlapping prefetch runs
+
+export async function prefetchInstalledModels() {
+    if (_prefetchInFlight) return;
+    const cfg = state.runpodConfig || {};
+    if (cfg.stageOnConnect !== true || cfg.gpuType === '__cpu__') return;
+    const ids = (state.s_installedModelIds || []).slice();
+    if (!ids.length) return;
+    _prefetchInFlight = true;
+    Events.emit('ui:info', {
+        message: `Warming the cloud engine — staging ${ids.length} model${ids.length > 1 ? 's' : ''} to fast disk…`,
+    });
+    try {
+        for (const id of ids) {
+            await _ensureRemoteHotStore(id, null, { silent: true });
+        }
+        clientLogger.info('commandExecutor', `hot-store: stage-on-connect warmed ${ids.length} model(s)`);
+    } finally {
+        _prefetchInFlight = false;
     }
 }
 
