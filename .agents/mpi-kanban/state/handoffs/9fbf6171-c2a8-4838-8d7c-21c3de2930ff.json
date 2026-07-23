@@ -1,0 +1,119 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "9fbf6171-c2a8-4838-8d7c-21c3de2930ff",
+  "generated_at": "2026-07-23T19:56:38Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-329 root-cause + disk-staging fix (network-volume switch tax)",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-329 (weeks-long ~2min remote model-switch saga); think outside the box.",
+    "status": "in_progress",
+    "summary": "ROOT CAUSE FOUND + fix proven: fits-VRAM models (Krea2/Qwen/etc) read from the slow network volume because HOT_STORE_MIN_GB=20 only staged the LTX 42GB transformer; aimdo pins ~231GB RAM starving page cache so every switch random-reads the volume. Disk-staging drops a switch 80s->9s (live-proven). 3 edits drafted (threshold 0.1 + wrapper floor env + disk 150), NOT committed, NOT live-verified through the app. Open design decisions to settle first."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-329/plan.md",
+    "completed": [
+      "Root-caused the switch cost to network-volume reads for fits-VRAM models (live 4090)",
+      "Ruled out torch-minor (rebuild dropped), dup node packs (MPI-193 verified), --highvram, API/wrapper path",
+      "Proved disk-staging fix: Krea2 switch 80.4s->9.0s; Krea2<->Qwen swap 3-19s vs 80s volume",
+      "Drafted 3 edits: HOT_STORE_MIN_GB 20->0.1, CUBRIC_HOT_STORE_MIN_BYTES=100MB env, CONTAINER_DISK_GB 50->150"
+    ],
+    "pending": [
+      "Settle open design decisions (disk size 100/150/200, stage scope + style-LoRA count, LTX>VRAM exclusion, staging trigger)",
+      "Verify resolveDeps scope: does it return all 10 Krea2 style LoRAs or just the active one?",
+      "Live-verify end-to-end: restart app -> fresh pod -> switch between two image models -> observe fast switch + staging toast",
+      "Commit (explicit pathspec) + close card"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-329",
+    "title": "Perf: remote cold model-load ~2min per swap (warm ~14s) - model-switch UX",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-329/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-329/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-329/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-329/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-329/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "discuss-design",
+    "continue",
+    "edit",
+    "live-verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md rewritten with root cause + two-regime model + ruled-out list + open decisions",
+      "checklist.md + validation.md updated",
+      "research/2026-07-23-phase1-live-breakdown.md holds all live numbers (Phase 1 + 1b dedup)",
+      "research/2026-07-23-ltx-cold-load-breakdown.md holds the LTX/prior-day breakdown"
+    ],
+    "pending": [
+      "After live-verify + design finalized: update docs/runpod-remote-engine.md and docs/download-manager.md hot-store section (HOT_STORE_MIN_GB semantics changed)",
+      "Update pod-perf-investigation.md with the fits-vs-doesnt-fit two-regime resolution (the staging-is-not-the-lever conclusion was over-generalized from LTX)",
+      "MPI-329 memory hook in MEMORY.md in-flight section once shipped"
+    ]
+  },
+  "next_action": {
+    "description": "Discuss the 4 open design decisions with the user (disk size, stage scope incl. style-LoRA count, LTX>VRAM exclusion, staging trigger), finalize the 3 drafted edits accordingly, then live-verify end-to-end (app restart -> fresh dev pod on EU-RO-1 volume 9t3awufudk -> switch between two image models). Edits are in tree already, NOT committed.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "torch 2.10 rebuild DROPPED as a fix - MPI-191 already proved our image slow on both 2.10 and 2.12; only stock image fast. Torch minor is not the lever. (2.12 Dockerfile drift edc09a8 is separate hygiene debt.)",
+      "Root cause = network-volume read for fits-VRAM models, not the aimdo fault mechanism per se: aimdo pins ~231GB host RAM -> page cache cannot hold the model -> every switch re-reads the /workspace volume. Container-disk staging fixes it 10x.",
+      "Two regimes: fits-VRAM (staging helps 10x) vs does-not-fit like LTX 42GB (aimdo streams per-stage, source-independent, staging cannot help). This resolves the LTX-disk-staged-still-2min paradox the user raised.",
+      "Fix = lower the hot-store threshold so ALL fits-VRAM model weights stage (transformer+TE+VAE+LoRAs), + raise container disk so multiple sets co-reside."
+    ],
+    "constraints": [
+      "Wrapper hot-store floor default is 15GB (HOT_STORE_MIN_BYTES); the app 20GB filter AND the wrapper floor BOTH gate the app path -> both must drop or the real app still rejects small models. Direct API calls with size_bytes=0 bypass the wrapper floor (falsy check) which is why manual staging worked in testing.",
+      "commandExecutor.js is renderer -> Ctrl+R picks up HOT_STORE_MIN_GB. remotePodLifecycle.js (env + disk) is the Express backend -> needs an app RESTART and only affects NEW pods.",
+      "Dev app (BUILD_HASH dev) auto-exposes ComfyUI 8188 (MPI-203) and boots the dev R2 runtime channel. Live-Pod create/delete via app routes /remote/pod/create + /remote/pod/delete-active; single-Pod invariant.",
+      "8188 direct access needs Origin + browser User-Agent headers (RunPod Cloudflare 1010-bans urllib UA; ComfyUI middleware 403s missing Origin). Wrapper 8889 needs Bearer token from /remote/ws-token.",
+      "Container disk = 50GB currently held only ~2 full sets (4.8GB free after Krea2+Qwen transformers+TEs). Full Krea2 set ~25GB, Qwen ~30GB.",
+      "Volume = EU-RO-1 id 9t3awufudk (150GB, 124GB used). 4090 @ $0.69/hr, 5090 @ $0.99/hr in EU-RO-1. No live pod right now (deleted to stop billing)."
+    ],
+    "files_modified": [
+      "js/services/commandExecutor.js (HOT_STORE_MIN_GB 20->0.1 + comment)",
+      "routes/remotePodLifecycle.js (spec.env CUBRIC_HOT_STORE_MIN_BYTES=100000000; CONTAINER_DISK_GB 50->150)",
+      ".agents/mpi-kanban/tasks/MPI-329/plan.md + checklist.md + validation.md",
+      ".agents/mpi-kanban/tasks/MPI-329/research/2026-07-23-phase1-live-breakdown.md (Phase 1 + 1b)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-329/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-329/research/2026-07-23-phase1-live-breakdown.md",
+      "js/services/commandExecutor.js (lines ~484-553 hot-store)",
+      "docs/builder/research/pod-perf-investigation.md (saga history; conclusion was over-generalized from LTX)"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "runpod-remote-engine",
+      "download-manager (hot-store)",
+      "comfy_engine"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-23T19:56:38Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Resume MPI-329 (remote model-switch perf). Read .agents/mpi-kanban/state/handoffs/9fbf6171-c2a8-4838-8d7c-21c3de2930ff.json and the task plan at .agents/mpi-kanban/tasks/MPI-329/plan.md, then use mpi-continue. ROOT CAUSE IS FOUND and the fix is PROVEN live: fits-VRAM models (Krea2/Qwen/etc) were read from the slow /workspace network volume because HOT_STORE_MIN_GB=20 only staged the LTX 42GB transformer; aimdo pins ~231GB host RAM so page cache cannot hold the model and every model switch random-reads the volume (80s), while staging the model set to the container disk drops a switch to ~9s. Do NOT re-chase torch-2.10 rebuild, dup node packs, or --highvram (all ruled out). Three edits are already in the working tree (NOT committed, NOT live-verified through the app): commandExecutor.js HOT_STORE_MIN_GB 20->0.1, remotePodLifecycle.js pod-create env CUBRIC_HOT_STORE_MIN_BYTES=100000000, and CONTAINER_DISK_GB 50->150. The next step is a DESIGN DISCUSSION with the user on four open decisions (disk size, exactly what to stage including how many style LoRAs, whether to exclude the LTX 42GB transformer since staging cannot speed a does-not-fit model, and whether to stage at gen-preflight vs proactively on model-select), then finalize the edits and live-verify end-to-end (needs an app restart to load the backend env+disk changes, then a fresh dev pod on EU-RO-1 volume 9t3awufudk, then switch between two image models). No live pod is running (deleted to stop billing)."
+}

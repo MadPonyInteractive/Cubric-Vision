@@ -5,7 +5,6 @@
     "todo": [
       "MPI-345",
       "MPI-333",
-      "MPI-329",
       "MPI-328",
       "MPI-325",
       "MPI-332",
@@ -29,6 +28,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-329",
       "MPI-342",
       "MPI-341",
       "MPI-315",
@@ -37,7 +37,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-23T21:40:00Z",
+  "updated_at": "2026-07-23T21:41:33.041Z",
   "events": [
     {
       "at": "2026-07-23T21:40:00Z",
@@ -461,6 +461,14 @@
       "type": "attention.required",
       "task": "MPI-341",
       "note": "Session close-out: implementation committed (mpi-ci 41a5517) but unbuilt; all verification is gated on MPI-342's user-authorized dev-tag build."
+    },
+    {
+      "at": "2026-07-23T21:41:33.041Z",
+      "type": "task.moved",
+      "task": "MPI-329",
+      "from": "doing",
+      "to": "done",
+      "note": "shipped f7e42376: switch-tax fix (HOT_STORE_MIN_GB 0.1) + dynamic disk (volume-mirror) + VRAM-relative stage skip + stage-on-connect toggle; live-verified on a 4090 (switch 80s->9s, LTX streams)"
     }
   ]
 }
