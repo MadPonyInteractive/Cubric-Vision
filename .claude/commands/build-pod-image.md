@@ -94,6 +94,7 @@ container is still up; `docker ps` + `docker stop` it first.
 `routes/remotePodLifecycle.js` bakes `POD_IMAGE_VERSION` + `WRAPPER_VERSION` into the running Express child at boot — editing them needs an APP RESTART or the live app keeps sending the old tag. Update to `<ver>`/`<wver>`, commit by explicit pathspec:
 `git commit --only routes/remotePodLifecycle.js -m "..."` (never `git add .` — shared tree).
 Note: `POD_IMAGE_VERSION` is the GPU (cu130) tag; `POD_IMAGE_VERSION_CPU` is the separate cpu tag (bump only when the cpu image is rebuilt). `POD_IMAGE_BASE`=Docker Hub, `POD_IMAGE_BASE_CPU`=GHCR.
+**MPI-340 — a DEV build bumps the DEV consts, not these.** Built at a `-dev` `manifest_version` (e.g. `0.17.0-dev` → `v0.17.0-dev-cu130` + `v0.17.0-dev-cpu`)? Then update `POD_IMAGE_VERSION_DEV` / `POD_IMAGE_VERSION_CPU_DEV` — only a `BUILD_HASH === 'dev'` run resolves them, so released users stay on the frozen stable pins. Move the stable pair only for a real-version rebuild you intend to ship.
 
 ### 3. Commit + push mpi-ci FIRST (CI gotcha)
 `gh workflow run` builds the **pushed** ref, not the local tree. Stage only your files.
@@ -120,12 +121,14 @@ Verify `start.sh` committed as LF:
 > (the image `CMD`) fetches `start.sh` + `wrapper.py` from R2 (`cubric-pod-runtime`,
 > `https://pod.cubric.studio/vision/<channel>/`) at boot, with the baked copies as fallback.
 > So after committing a shell/wrapper edit, PUBLISH instead of rebuilding:
-> `bash cubric-vision-pod/publish-runtime.sh stable` (rclone push + public-URL verify),
-> then on a running Pod `POST /wrapper/restart-comfy` (or recreate the Pod). A full
-> image rebuild is needed ONLY for torch/sage/node/base changes — or the one-time
-> rebuild that ships `bootstrap.sh` itself. Keep the published `stable` copy in sync
-> with the committed files (publish after the commit so the baked fallback and the R2
-> copy match).
+> `bash cubric-vision-pod/publish-runtime.sh dev` (rclone push + public-URL verify),
+> then on a running Pod `POST /wrapper/restart-comfy` (or recreate the Pod). Once proven,
+> `bash cubric-vision-pod/publish-runtime.sh promote` copies the tested dev objects to
+> `stable`, which is what released users boot (MPI-340 — never publish straight to
+> `stable` for day-to-day work). A full image rebuild is needed ONLY for
+> torch/sage/node/base changes — or the one-time rebuild that ships `bootstrap.sh`
+> itself. Keep the published `stable` copy in sync with the committed files (promote
+> after the commit so the baked fallback and the R2 copy match).
 
 ### 4. Build cu130 (GPU, Docker Hub) + cpu (GHCR) — CI FIRST, MPI-189
 ONE GPU image now (`-cu130`) + cpu. Two independent legs; converge at the public gate

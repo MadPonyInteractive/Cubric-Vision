@@ -97,10 +97,14 @@ repo; set once). The first cu130 Pod deploy is the real cold-start pull measurem
 `bootstrap.sh` is the image `CMD`. At boot it curls `start.sh` + `wrapper.py` (+ `manifest.json`)
 from public R2 at `https://pod.cubric.studio/vision/<channel>/` (default channel `stable`),
 validates them, and falls back to the baked copies on ANY failure. To ship a start.sh/wrapper.py
-edit WITHOUT a rebuild: commit → `bash publish-runtime.sh stable` (rclone push + verify) →
-on a running Pod `POST /wrapper/restart-comfy` (or recreate). Rebuild needed ONLY for
-torch/sage/node/base changes. rclone remote `cubric-r2:`, token in
-`~/.secrets/rclone-r2.conf`. Keep published `stable/` in sync with committed files.
+edit WITHOUT a rebuild: commit → `bash publish-runtime.sh dev` (rclone push + verify) →
+on a running Pod `POST /wrapper/restart-comfy` (or recreate) → prove it →
+`bash publish-runtime.sh promote` (copies the tested dev objects to `stable/`, refusing on
+working-tree drift). MPI-340: a dev app run boots the `dev` channel, released builds only ever
+boot `stable`; `publish-runtime.sh stable` publishes the working tree straight to released
+users and is a warned hotfix path only. Rebuild needed ONLY for torch/sage/node/base changes.
+rclone remote `cubric-r2:`, token in `~/.secrets/rclone-r2.conf`. Keep published `stable/` in
+sync with committed files.
 
 ## v0.26 + aimdo requires torch ≥ 2.8 — else 6-min model loads (MPI-156)
 

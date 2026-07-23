@@ -107,3 +107,16 @@ Adding a `PROMPT_BOX_CONTROLS` control? Its `scope` (`shared` / `perOp` / `perMo
 ## 📦 Imports — depth and case sensitivity
 
 Relative import depth varies by how deep a component sits under `js/`. Reference depths to reach `js/` root: `js/components/Compounds/<X>/file.js` → 3 ups; `js/components/Compounds/LandingPages/<X>/file.js` → 4 ups (extra `LandingPages/` segment). Wrong-depth import → boot JS halts → app stuck forever on the landing spinner; server log stays clean (error is browser-side). Case sensitivity (Linux-only): dev box is Windows (case-insensitive); Linux portables are case-sensitive. A relative import whose CASE doesn't match the on-disk filename resolves fine on Windows but 404s on Linux → same spinner failure. SWEEP before any portable/Linux release: walk the whole `js/` import graph and verify EXACT-CASE existence.
+
+---
+
+## 🛰️ Pod runtime — publish to `dev`, reach `stable` only by `promote`
+
+`wrapper.py` / `start.sh` are R2-floated, and RELEASED users' Pods boot the `stable`
+channel on every start. So a runtime edit ships `./publish-runtime.sh dev` → test on a
+dev Pod → `./publish-runtime.sh promote` (server-side copy of the tested bytes; refuses
+on working-tree drift). `./publish-runtime.sh stable` publishes the working tree straight
+to released users — deliberate, warned hotfix only, never the day-to-day verb. Same shape
+for images: a dev build bumps `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`, never the stable pins.
+Both are gated on `BUILD_HASH === 'dev'`, so a shipped app cannot resolve either. (MPI-340;
+full flow: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize".)

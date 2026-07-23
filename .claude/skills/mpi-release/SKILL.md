@@ -42,6 +42,19 @@ mandatory user-facing copy gates). The version file edits belong to
 - The user-facing changes are feature-complete and `docs/releases/UNRELEASED.md`
   holds the accumulated notes since the last release.
 - You know the digit to bump (table above).
+- **Pod runtime channel is not drifted (MPI-340).** Released Pods boot the R2 `stable`
+  runtime; dev work lands on `dev`. An un-promoted dev `wrapper.py`/`start.sh` means the
+  new app ships against the OLD Pod runtime and every user breaks on their next Pod boot.
+  Compare the two manifests (they carry a sha256 per file):
+  ```bash
+  curl -s https://pod.cubric.studio/vision/dev/manifest.json
+  curl -s https://pod.cubric.studio/vision/stable/manifest.json
+  ```
+  Shas differ → **STOP and ask the user**: promote first
+  (`c:/AI/Mpi/mpi-ci/cubric-vision-pod/publish-runtime.sh promote`), or confirm the dev
+  runtime work is deliberately not shipping in this release. **Never auto-promote** — it
+  is a live op affecting released users, same class as `git push`. (A dev-only Pod IMAGE
+  tag needs no action: released builds resolve the frozen `POD_IMAGE_VERSION` pins.)
 
 ## Steps
 

@@ -288,7 +288,10 @@ commit is on disk and reinstalls on mismatch, **both engines**.
   build (drift on a baked node → the warn-only toast, needs a rebuild); `false` nodes
   install on the volume at connect (drift heals in place, no rebuild). Bumping a
   volume node = node_lock edit only; bumping a baked node = node_lock edit + Pod image
-  rebuild + `POD_IMAGE_VERSION` bump + app restart.
+  rebuild + `POD_IMAGE_VERSION` bump + app restart. **MPI-340: prove an image change on the
+  DEV tag first** — build at a `-dev` `manifest_version` (both GPU + CPU legs) and bump
+  `POD_IMAGE_VERSION_DEV`/`POD_IMAGE_VERSION_CPU_DEV`, which only a `BUILD_HASH === 'dev'`
+  run resolves; the stable pins move only on a clean rebuild at a real version.
 - **Dev-symlink escape hatch:** on a source/dev run (`BUILD_HASH === 'dev'`) the drift
   check SKIPS `ComfyUI-MpiNodes` — it's the one node symlinked into `custom_nodes` for
   live editing, always at/ahead of the pin, and a "repair" would `fs.remove` the

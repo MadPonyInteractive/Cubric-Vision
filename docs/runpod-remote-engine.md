@@ -198,12 +198,24 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   before concluding a tier is net-negative — get at least one warm number first.
 - **`wrapper.py` + `start.sh` are R2-floated, NOT baked (MPI-156).** Editing either is **NOT**
   an image rebuild. `bootstrap.sh` (the image CMD) curls both fresh from R2
-  (`https://pod.cubric.studio/vision/stable/`) at every Pod boot; the baked copies are fallback
-  only. Ship a wrapper/start edit: edit the file in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`
-  (`wrapper/wrapper.py` or `start.sh`) → `./publish-runtime.sh stable` (rclone push) → restart
-  the Pod or `POST /wrapper/restart-comfy`. An image rebuild is only for truly-baked layers
-  (torch, ComfyUI, pip-requirement nodes, `bootstrap.sh` itself). Full procedure:
+  (`https://pod.cubric.studio/vision/<channel>/`) at every Pod boot; the baked copies are
+  fallback only. An image rebuild is only for truly-baked layers (torch, ComfyUI,
+  pip-requirement nodes, `bootstrap.sh` itself). Full procedure:
   `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize".
+- **TWO runtime channels — `dev` and `stable` (MPI-340).** `_createPodInternal` sets
+  `CUBRIC_RUNTIME_CHANNEL=dev` on every Pod it creates when `_devMode`
+  (`BUILD_HASH === 'dev'`) is true — GPU and CPU alike. A released portable stamps a real
+  build hash, so it never sets the env and `bootstrap.sh` falls back to its `stable` default.
+  Ship a wrapper/start edit: edit in `c:\AI\Mpi\mpi-ci\cubric-vision-pod\` →
+  `./publish-runtime.sh dev` → restart the Pod or `POST /wrapper/restart-comfy` → prove it →
+  `./publish-runtime.sh promote`. `promote` copies the live `vision/dev/` objects to
+  `vision/stable/` **server-side** (exact tested bytes) and REFUSES if the working tree has
+  drifted from the dev `manifest.json` shas. `./publish-runtime.sh stable` still works for a
+  deliberate hotfix and prints a loud warning — it bypasses dev entirely. `mpi-release`
+  checks the two manifests for drift in its Preconditions.
+  *Limit (accept, don't automate):* the network volume is still shared between dev and
+  released Pods, so a dev change touching `manifest_schema_version` (§10) or a volume node
+  pin needs a separate volume.
 - **Design A (locked):** PyTorch + ComfyUI live in the **Docker image**, NOT the volume → the
   volume has **zero GPU-arch binding** and is portable across every card the image can run.
   Users never reinitialize the volume to switch cards.
@@ -217,14 +229,21 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 
 ## 6. Pod image + custom-node split (Design B+)
 
-- App selects the image tag **per card** in `routes/remotePodLifecycle.js` via
-  `podImageForCard(gpuTypeId)`: `POD_IMAGE_BASE =
-  ghcr.io/madponyinteractive/cubric-vision-pod`, Blackwell (sm_120 substring match on the
-  gpuTypeId: `5090`/`rtx pro 6000`/`b200`/`blackwell`) → `-cu128`, everything else (and
-  unknown) → `-cu124`. `WRAPPER_VERSION` + `POD_IMAGE_VERSION` are separate consts. A
-  POD_IMAGE bump needs an **app restart** (the running process holds the consts in memory).
-  Ground-truth live image check = RunPod console → Pod → Logs → Container tab `create
-  container …:vX`.
+- App selects the image tag in `routes/remotePodLifecycle.js` via `podImageForCard(gpuTypeId)`.
+  Since MPI-189 there is ONE GPU tag for every card — `POD_IMAGE_BASE` (Docker Hub) +
+  `POD_IMAGE_VERSION` + `-cu130` — and the CPU download-mode sentinel takes the slim
+  `POD_IMAGE_BASE_CPU` (GHCR) + `POD_IMAGE_VERSION_CPU` + `-cpu`. `WRAPPER_VERSION` is a
+  separate const. A version bump needs an **app restart** (the running process holds the
+  consts in memory). Ground-truth live image check = RunPod console → Pod → Logs →
+  Container tab `create container …:vX`.
+- **Dev image pins (MPI-340).** `POD_IMAGE_VERSION_DEV` / `POD_IMAGE_VERSION_CPU_DEV` are
+  resolved instead whenever `_devMode` (`BUILD_HASH === 'dev'`) is true, so image work never
+  touches the frozen pins a released build resolves. Build a dev image by dispatching CI at a
+  `-dev` `manifest_version` (`0.17.0-dev` → `v0.17.0-dev-cu130` + `v0.17.0-dev-cpu`; the
+  workflow's tag step needs no change) — **always both legs** (the `v0.10.3-cpu` 404 trap).
+  Only then point the DEV consts at it: an unbuilt tag 404s on pull and the Pod exits at boot,
+  which is why they ship equal to the stable pins. Promotion is a clean rebuild at a real
+  version, never a dev tag renamed into the stable pin.
 - **Image CUDA floors:** `-cu128` = `runpod/pytorch:2.8.0-cuda12.8.1` (torch pinned stable
   2.7.1+cu128 — the base nightly broke flash-attn), Blackwell sm_120, floor `cuda>=12.8`.
   `-cu124` = `pytorch/pytorch:2.6.0-cuda12.4` (torch 2.6.0+cu124), Ampere/Ada/Hopper (no

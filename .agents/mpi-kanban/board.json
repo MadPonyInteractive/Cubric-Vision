@@ -3,7 +3,6 @@
   "next_id": 342,
   "columns": {
     "todo": [
-      "MPI-340",
       "MPI-333",
       "MPI-329",
       "MPI-341",
@@ -23,6 +22,7 @@
       "MPI-339"
     ],
     "doing": [
+      "MPI-340",
       "MPI-259",
       "MPI-4"
     ],
@@ -117,7 +117,7 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-23T06:34:00Z",
+  "updated_at": "2026-07-23T08:05:00Z",
   "events": [
     {
       "at": "2026-07-23T06:34:00Z",
@@ -465,6 +465,18 @@
       "type": "task.moved",
       "task": "MPI-317",
       "note": "Created in doing/investigating - local download reliability: failed-download resume, single-stream throughput ceiling, speed/ETA feedback."
+    },
+    {
+      "at": "2026-07-23T07:10:00Z",
+      "type": "task.moved",
+      "task": "MPI-340",
+      "note": "todo -> doing: implementing dev Pod image tags + dev R2 runtime channel (dev_mode-gated) + publish-runtime.sh promote verb + the docs/rules/skills sweep."
+    },
+    {
+      "at": "2026-07-23T08:05:00Z",
+      "type": "task.updated",
+      "task": "MPI-340",
+      "note": "Code + docs shipped; moved to validating (needs live Pod verify + dev-channel seed)."
     }
   ]
 }

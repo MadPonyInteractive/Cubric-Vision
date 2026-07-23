@@ -67,7 +67,7 @@ Fixed 2026-07-02. Two traps in `downloadManager.js` `_onRemoteInstallEvent`: (1)
 
 ### CPU image baked a rotting wrapper — /health lied (MPI-181)
 
-Fixed 2026-07-02 (`v0.10.4-cpu`), live-verified (Settings volume bar on a fresh CPU Pod). Pre-v0.10.4, `Dockerfile.cpu` had NO R2 bootstrap — it baked wrapper.py at build, so every wrapper fix after the image build silently never reached CPU Pods, while the baked `CUBRIC_WRAPPER_VERSION` stamp made `/health` claim a version it didn't run (v0.10.2-cpu: 0.2.22 code labeled 0.2.23, no `/wrapper/disk` → no volume bar). Now the CPU image runs the same `bootstrap.sh` (start script env-selectable via `CUBRIC_START_SCRIPT=start-cpu.sh`) and `publish-runtime.sh` also publishes `start-cpu.sh`. RULE: wrapper edits reach BOTH pod flavors via `publish-runtime.sh` — an image rebuild is only for base/dep changes; trust `/health` `wrapper_version` only on bootstrap-era images (≥v0.10.2 GPU, ≥v0.10.4 CPU).
+Fixed 2026-07-02 (`v0.10.4-cpu`), live-verified (Settings volume bar on a fresh CPU Pod). Pre-v0.10.4, `Dockerfile.cpu` had NO R2 bootstrap — it baked wrapper.py at build, so every wrapper fix after the image build silently never reached CPU Pods, while the baked `CUBRIC_WRAPPER_VERSION` stamp made `/health` claim a version it didn't run (v0.10.2-cpu: 0.2.22 code labeled 0.2.23, no `/wrapper/disk` → no volume bar). Now the CPU image runs the same `bootstrap.sh` (start script env-selectable via `CUBRIC_START_SCRIPT=start-cpu.sh`) and `publish-runtime.sh` also publishes `start-cpu.sh`. RULE: wrapper edits reach BOTH pod flavors via `publish-runtime.sh`, and since MPI-340 they reach them **per channel** — `./publish-runtime.sh dev` (what a source run's Pods boot) → test → `./publish-runtime.sh promote` (what released users boot). An image rebuild is only for base/dep changes; trust `/health` `wrapper_version` only on bootstrap-era images (≥v0.10.2 GPU, ≥v0.10.4 CPU).
 
 ### RunPod "Edit Pod" RECREATES the container — /root is wiped (MPI-197 side-find)
 
@@ -81,7 +81,7 @@ The Settings volume bar (`GET /remote/pod/disk` → wrapper `du -sb /workspace`)
 
 **A model stuck at 99% (or any X%) with all its weights on disk is usually a bumped custom-node commit**, not a missing weight. MPI-219 bumped `ComfyUI-MpiNodes` in `dev_configs/node_lock.json`; a Pod that still had the OLD MpiNodes commit failed the node-version check on that ONE dep → LTX Balanced showed 99%. Fix = click Install (re-fetches the node). The node-version check compares the installed commit to the pinned `node_lock` commit, so any `node_lock` bump drops every Pod carrying the old node to <100% until re-installed.
 
-The Pod wrapper runs from R2, not the image (see `project_pod_wrapper_runtime_from_r2` memory / `mpi-ci/cubric-vision-pod/bootstrap.sh`); publish `/wrapper/ls` and future wrapper edits via `mpi-ci/cubric-vision-pod/publish-runtime.sh` — no image rebuild.
+The Pod wrapper runs from R2, not the image (see `project_pod_wrapper_runtime_from_r2` memory / `mpi-ci/cubric-vision-pod/bootstrap.sh`); publish `/wrapper/ls` and future wrapper edits via `mpi-ci/cubric-vision-pod/publish-runtime.sh dev` then `promote` once proven (MPI-340) — no image rebuild.
 
 ## CPU "download mode" Pod (MPI-88)
 

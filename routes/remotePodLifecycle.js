@@ -170,6 +170,16 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // is a GPU-only baked weight; the cpu image gains nothing but is rebuilt from the same
 // tree — keep the tags in lockstep (v0.10.3-cpu 404 trap).
 const POD_IMAGE_VERSION_CPU = 'v0.16.0';
+// MPI-340: DEV-ONLY image pins. _devMode (BUILD_HASH === 'dev') is false in every
+// released portable, so a shipped app can NEVER resolve these — the stable pins above
+// stay frozen while Pod-image work iterates. Bump these (not the stable pair) after a
+// CI dispatch at a `-dev` manifest_version; the workflow's "Compute tags" step builds
+// `${image}:v${manifest_version}-${profile}`, so manifest_version=0.17.0-dev yields
+// v0.17.0-dev-cu130 + v0.17.0-dev-cpu. Always dispatch BOTH legs (the v0.10.3-cpu 404
+// trap above). They start EQUAL to the stable pins on purpose: an unbuilt dev tag 404s
+// on pull and the Pod exits on boot, so a dev tag only lands here once it exists.
+const POD_IMAGE_VERSION_DEV = 'v0.16.0';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.16.0';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
@@ -217,8 +227,13 @@ function podImageForCard(gpuTypeId) {
   // No-GPU "download mode" (MPI-88) → the SLIM wrapper-only image (no torch/ComfyUI),
   // still on GHCR (not part of the Docker Hub move). The full GPU image won't run on
   // a CPU Pod (its entrypoint inits CUDA), so the -cpu tag is mandatory.
-  if (gpuTypeId === CPU_SENTINEL) return `${POD_IMAGE_BASE_CPU}:${POD_IMAGE_VERSION_CPU}-cpu`;
-  return `${POD_IMAGE_BASE}:${POD_IMAGE_VERSION}-cu130`;
+  // MPI-340: dev builds resolve the dev pins, released builds the frozen stable ones.
+  if (gpuTypeId === CPU_SENTINEL) {
+    const v = _devMode ? POD_IMAGE_VERSION_CPU_DEV : POD_IMAGE_VERSION_CPU;
+    return `${POD_IMAGE_BASE_CPU}:${v}-cpu`;
+  }
+  const v = _devMode ? POD_IMAGE_VERSION_DEV : POD_IMAGE_VERSION;
+  return `${POD_IMAGE_BASE}:${v}-cu130`;
 }
 
 // MPI-188: hard driver-floor placement filter. RunPod's `allowedCudaVersions`
@@ -566,6 +581,15 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
       // the Settings control); no per-create override needed.
     },
   };
+  // MPI-340: dev builds boot the `dev` R2 runtime channel, so `publish-runtime.sh dev`
+  // never reaches a released user's Pod. bootstrap.sh reads CUBRIC_RUNTIME_CHANNEL and
+  // defaults to `stable` when unset (MPI-156), so a released build — where _devMode is
+  // false — keeps fetching vision/stable/ exactly as before. Outside the noGpu branch on
+  // purpose: CPU download Pods bootstrap the same wrapper.py and need the same channel.
+  if (_devMode) {
+    spec.env.CUBRIC_RUNTIME_CHANNEL = 'dev';
+    logger.info('runpod', 'dev_mode: Pod boots the `dev` R2 runtime channel (vision/dev/)');
+  }
   if (noGpu) {
     spec.computeType = 'CPU';
     spec.cpuFlavorIds = ['cpu3c'];
