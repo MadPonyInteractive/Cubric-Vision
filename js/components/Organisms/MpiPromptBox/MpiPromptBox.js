@@ -1412,8 +1412,10 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         // Probe capability async; reveal the button only if Prompt is live.
-        checkPromptEnhanceAvailable().then((available) => {
-            if (!available || !enhanceSlot) return;
+        // Poll (every 3s, up to 30s) so a capability that registers slightly
+        // late still reveals the button — belt-and-suspenders with the splash.
+        function _mountEnhanceBtn() {
+            if (!enhanceSlot || _enhanceBtn) return;
             enhanceSlot.classList.remove('hide');
             _enhanceBtn = MpiButton.mount(enhanceSlot, {
                 icon: 'enhance',
@@ -1421,6 +1423,29 @@ export const MpiPromptBox = ComponentFactory.create({
                 size: 'sm', variant: 'primary', toggleable: true, active: true,
             });
             _enhanceBtn.on('click', () => { void _runEnhance(); });
+        }
+
+        let _enhancePollCount = 0;
+        const ENHANCE_POLL_MAX = 10; // 10 × 3 000 ms = 30 s ceiling
+        function _pollEnhanceAvailable() {
+            if (_enhancePollCount >= ENHANCE_POLL_MAX || _enhanceBtn) return;
+            _enhancePollCount++;
+            checkPromptEnhanceAvailable().then((available) => {
+                if (available) {
+                    _mountEnhanceBtn();
+                } else if (_enhancePollCount < ENHANCE_POLL_MAX) {
+                    setTimeout(_pollEnhanceAvailable, 3000);
+                }
+            }).catch(() => { /* no broker / no Prompt → stay standalone */ });
+        }
+
+        checkPromptEnhanceAvailable().then((available) => {
+            if (available) {
+                _mountEnhanceBtn();
+            } else {
+                // Not yet available — start polling.
+                setTimeout(_pollEnhanceAvailable, 3000);
+            }
         }).catch(() => { /* no broker / no Prompt → stay standalone */ });
 
         // ── Run / Stop ─────────────────────────────────────────────────────────

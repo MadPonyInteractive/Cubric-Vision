@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cubric Vision</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0a0c;
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      color: #e2e0db;
+      user-select: none;
+      -webkit-app-region: drag;
+    }
+
+    .splash {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .wordmark {
+      font-family: 'Russo One', 'Impact', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.08em;
+      color: #e2e0db;
+    }
+
+    .wordmark span {
+      color: #d4b84a;
+    }
+
+    .status {
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: #6b6966;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .bar-track {
+      width: 160px;
+      height: 2px;
+      background: #1e1c1a;
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 40%;
+      background: #d4b84a;
+      border-radius: 1px;
+      animation: slide 1.6s ease-in-out infinite;
+    }
+
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(420%); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50%       { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <div class="wordmark">CUBRIC <span>VISION</span></div>
+    <div class="bar-track"><div class="bar-fill"></div></div>
+    <div class="status">Starting environment&hellip;</div>
+  </div>
+</body>
+</html>

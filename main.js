@@ -223,6 +223,7 @@ const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
 const NOTIFICATION_ICON_PATH = path.join(__dirname, 'assets', 'mascot', 'happy.png');
 
 let mainWindow;
+let splashWindow;
 let serverProcess;
 let windowState = {};
 const activeNotifications = new Set();
@@ -356,7 +357,19 @@ function createWindow() {
     if (windowState.isFullScreen) {
       mainWindow.setFullScreen(true);
     }
+    // Destroy the family splash (MPI-10) before revealing the main window.
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+      splashWindow = null;
+    }
     mainWindow.show();
+    // MPI-10: report window visibility to the broker (via the server fork) so
+    // it can track the family-wide window count for last-window teardown.
+    serverProcess?.send?.({ type: 'cubric-window-state', visible: true });
+  });
+
+  mainWindow.on('closed', () => {
+    serverProcess?.send?.({ type: 'cubric-window-state', visible: false });
   });
 
   mainWindow.on('close', (event) => {
@@ -628,6 +641,29 @@ app.on('ready', () => {
     }
   }
 
+  // Family splash (MPI-10): visible instantly, gate the main window.
+  // Destroyed in createWindow()'s ready-to-show handler once the page is live.
+  // The 5s server-ready fallback below is the natural splash ceiling.
+  try {
+    splashWindow = new BrowserWindow({
+      width: 400,
+      height: 200,
+      frame: false,
+      transparent: false,
+      resizable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      backgroundColor: '#0a0a0c',
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+    splashWindow.loadFile(path.join(__dirname, 'splash', 'splash.html'));
+    splashWindow.center();
+    splashWindow.on('closed', () => { splashWindow = null; });
+  } catch (err) {
+    logger.warn('main', `Failed to create splash window: ${err.message}`);
+    splashWindow = null;
+  }
+
   startServer();
 
   let readyCalled = false;
@@ -669,6 +705,14 @@ app.on('ready', () => {
     if (msg === 'server-ready') {
       console.log('[main] Server signaled ready.');
       onReady();
+      return;
+    }
+
+    // system.shutdown (MPI-10): broker asked Vision to quit cleanly.
+    if (msg && typeof msg === 'object' && msg.type === 'cubric-shutdown') {
+      logger.info('system', 'Broker requested Vision shutdown — quitting.');
+      app.quit();
+      return;
     }
   });
 

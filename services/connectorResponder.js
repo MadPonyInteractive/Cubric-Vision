@@ -91,6 +91,21 @@ async function startConnectorResponder(opts) {
     client.onCapabilityRequest('system.memory.release', (req) =>
       handleMemoryRelease(req),
     );
+    // system.shutdown: broker (or a peer app) requests Vision to quit cleanly.
+    // server.js is a forked child — process.send() reaches the Electron main.
+    client.onCapabilityRequest('system.shutdown', async (req) => {
+      if (typeof process.send === 'function') {
+        process.send({ type: 'cubric-shutdown' });
+      }
+      return {
+        schemaVersion: 1,
+        requestId: req.requestId,
+        ok: true,
+        from: { appId: 'cubric.vision', displayName: 'Cubric Vision' },
+        capability: 'system.shutdown',
+        output: { message: 'Vision shutdown initiated.' },
+      };
+    });
     // Force connect + handshake so the broker registers this session and can
     // forward requests to it. A missing broker rejects here — swallow it.
     await client.discoverApps();

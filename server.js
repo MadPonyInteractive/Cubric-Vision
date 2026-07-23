@@ -98,6 +98,9 @@ process.on('unhandledRejection', (reason) => {
 
 // ── Startup ────────────────────────────────────────────────────────────────────
 
+// Connected broker client, set once the connector responder registers (MPI-10).
+let _connectorClient = null;
+
 app.listen(port, '127.0.0.1', () => {
     // Dynamic import for ESM-only axios
     import('axios').then(mod => {
@@ -111,17 +114,56 @@ app.listen(port, '127.0.0.1', () => {
         console.error('Failed to load dynamic modules:', err);
     });
 
-    // Live connector responder (MPI-5): register with the hub broker and answer
-    // system.memory.release via /comfy/unload. Best-effort — no broker = no-op.
+    // Broker boot (MPI-10): ensure the shared family broker is running BEFORE
+    // startConnectorResponder attempts discoverApps(). Best-effort chain:
+    // ensureFamilyBroker (connect-or-spawn) → startConnectorResponder (register
+    // + handshake) → setClient (enable /connector/* routes). Any failure at any
+    // step leaves _client null → promptEnhance:false — Vision stays standalone.
     const path = require('node:path');
+    const { ensureFamilyBroker }    = require('./services/brokerBoot');
     const { startConnectorResponder } = require('./services/connectorResponder');
-    startConnectorResponder({
-        manifestPath: path.join(__dirname, 'resources', 'cubric', 'connector-manifest.json'),
-    }).then(responder => {
+
+    ensureFamilyBroker().then(async (brokerResult) => {
+        if (brokerResult) {
+            logger.info('system', `Broker ready (spawned=${brokerResult.spawned}, metadataPath=${brokerResult.metadataPath}).`);
+        }
+        const responder = await startConnectorResponder({
+            manifestPath: path.join(__dirname, 'resources', 'cubric', 'connector-manifest.json'),
+        });
         if (responder) {
             // Share the connected client with the caller routes (/connector/*).
             connectorRoutes.setClient(responder.client);
-            logger.info('system', 'Connector responder registered (system.memory.release) + caller routes live.');
+            _connectorClient = responder.client;
+            logger.info('system', 'Connector responder registered (system.memory.release, system.shutdown) + caller routes live.');
+            // D1 eager spawn (MPI-10 Phase 3): boot installed-but-not-running
+            // sibling apps headless so their capabilities are live for this
+            // session. Vision does NOT self-register a record (it has no
+            // --headless mode yet) — it is the spawner/consumer.
+            try {
+                const connector = await import('@cubric/connector');
+                const live = (await responder.client.discoverApps().catch(() => [])).map((a) => a.appId);
+                // server.js runs as an Electron fork, so ELECTRON_RUN_AS_NODE=1
+                // is set here. Siblings are Electron APPS — inheriting it would
+                // boot them as plain Node and they'd never start.
+                const spawnEnv = { ...process.env };
+                delete spawnEnv.ELECTRON_RUN_AS_NODE;
+                const result = await connector.spawnInstalledSiblings({
+                    selfAppId: 'cubric.vision',
+                    liveAppIds: live,
+                    env: spawnEnv,
+                });
+                if (result.spawned.length) {
+                    logger.info('system', `Spawned headless siblings: ${result.spawned.join(', ')}`);
+                }
+            } catch { /* best-effort */ }
         }
     }).catch(() => { /* best-effort: Vision works standalone without a broker */ });
+});
+
+// Window-state relay (MPI-10): the Electron main reports window visibility over
+// the fork IPC; forward it to the broker for family-wide last-window teardown.
+process.on('message', (msg) => {
+    if (msg && typeof msg === 'object' && msg.type === 'cubric-window-state') {
+        _connectorClient?.reportWindowState?.(!!msg.visible)?.catch(() => {});
+    }
 });
