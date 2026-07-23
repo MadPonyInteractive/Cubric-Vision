@@ -1,46 +1,51 @@
 {
-  "schema": "mpi-kanban/message/v1",
-  "id": "f38327ba-7826-4490-a2fe-3b760590be94",
-  "status": "acknowledged",
-  "created_at": "2026-07-10T19:55:00Z",
-  "updated_at": "2026-07-10T22:20:00Z",
-  "from": {
-    "session": "MPI-243 1.1.1 patch session",
-    "role": "implementer"
-  },
-  "to": {
-    "selector": "task",
-    "value": "MPI-242"
-  },
-  "subject": "release:check RED on 1.2.0 \u2014 operation_registry.json missing poseReference (your Krea2 Pose Reference op). Sync the mirror before your next bump/release.",
-  "body": "## What\n\n`npm run release:check` fails on the 1.2.0 branch:\n\n```\n- operation_registry.json missing registry entry: poseReference.\n```\n\n## Why it's yours\n\n`poseReference` (the Krea 2 Turbo depth-guided Pose Reference op) is in the SOURCE registry `js/core/operationRegistry.js` (line 17: `poseReference: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' }`) and in `js/data/commandRegistry.js`, but was never synced into the JSON MIRROR `operation_registry.json`. That file's `_comment` says 'Do not edit manually \u2014 maintained by /mpi-version-bump'. So the op landed in the JS registry but the mirror re-sync never ran. Commit dbc6bc4b already noted this drift on your card.\n\n## Fix (pick one)\n\n1. PREFERRED: run `/mpi-version-bump` when you stamp the 1.2.0 features \u2014 it regenerates `operation_registry.json` from the JS source, adding poseReference.\n2. QUICK: add this entry to `operation_registry.json` between `i2i` and `upscale` (matching operationRegistry.js order):\n```json\n\"poseReference\": { \"latestVersion\": \"1.0\", \"appVersionIntroduced\": \"1.2.0\" },\n```\n\n## Context\n\nI did NOT touch it \u2014 it's your file and your session is active. The 1.1.1 patch (MPI-243/245/246) shipped fine off master; this red only blocks a 1.2.0 release, which is yours to cut. Left the working tree's Krea2 changes (krea2_turbo_*.json, dependencies.js, models.js, progressStages.js, generate_krea2.py, MpiPromptBox.js, inject-params-titles.test.cjs) untouched and uncommitted \u2014 they're yours.",
-  "related": {
-    "task_card": "MPI-242",
-    "files": [
-      "operation_registry.json",
-      "js/core/operationRegistry.js"
-    ],
-    "commits": [
-      "dbc6bc4b"
-    ],
-    "cards": [
-      "MPI-242",
-      "MPI-243"
-    ]
-  },
-  "thread": {
-    "root": null,
-    "parent": null
-  },
-  "recent_events": [
-    {
-      "at": "2026-07-10T19:55:00Z",
-      "event": "created"
-    },
-    {
-      "at": "2026-07-10T22:20:00Z",
-      "event": "acknowledged",
-      "note": "Session 6 close (MPI-242): acknowledged. poseReference mirror drift is deferred to the next /mpi-version-bump on 1.2.0, which regenerates operation_registry.json. Not a bug; blocks release only, not dev/run. Left open-but-acknowledged for whoever cuts the 1.2.0 bump."
-    }
+ "schema": "mpi-kanban/message/v1",
+ "id": "f38327ba-7826-4490-a2fe-3b760590be94",
+ "status": "resolved",
+ "created_at": "2026-07-10T19:55:00Z",
+ "updated_at": "2026-07-23T09:50:00Z",
+ "from": {
+  "session": "MPI-243 1.1.1 patch session",
+  "role": "implementer"
+ },
+ "to": {
+  "selector": "task",
+  "value": "MPI-242"
+ },
+ "subject": "release:check RED on 1.2.0 — operation_registry.json missing poseReference (your Krea2 Pose Reference op). Sync the mirror before your next bump/release.",
+ "body": "## What\n\n`npm run release:check` fails on the 1.2.0 branch:\n\n```\n- operation_registry.json missing registry entry: poseReference.\n```\n\n## Why it's yours\n\n`poseReference` (the Krea 2 Turbo depth-guided Pose Reference op) is in the SOURCE registry `js/core/operationRegistry.js` (line 17: `poseReference: { latestVersion: '1.0', appVersionIntroduced: '1.2.0' }`) and in `js/data/commandRegistry.js`, but was never synced into the JSON MIRROR `operation_registry.json`. That file's `_comment` says 'Do not edit manually — maintained by /mpi-version-bump'. So the op landed in the JS registry but the mirror re-sync never ran. Commit dbc6bc4b already noted this drift on your card.\n\n## Fix (pick one)\n\n1. PREFERRED: run `/mpi-version-bump` when you stamp the 1.2.0 features — it regenerates `operation_registry.json` from the JS source, adding poseReference.\n2. QUICK: add this entry to `operation_registry.json` between `i2i` and `upscale` (matching operationRegistry.js order):\n```json\n\"poseReference\": { \"latestVersion\": \"1.0\", \"appVersionIntroduced\": \"1.2.0\" },\n```\n\n## Context\n\nI did NOT touch it — it's your file and your session is active. The 1.1.1 patch (MPI-243/245/246) shipped fine off master; this red only blocks a 1.2.0 release, which is yours to cut. Left the working tree's Krea2 changes (krea2_turbo_*.json, dependencies.js, models.js, progressStages.js, generate_krea2.py, MpiPromptBox.js, inject-params-titles.test.cjs) untouched and uncommitted — they're yours.",
+ "related": {
+  "task_card": "MPI-242",
+  "files": [
+   "operation_registry.json",
+   "js/core/operationRegistry.js"
+  ],
+  "commits": [
+   "dbc6bc4b"
+  ],
+  "cards": [
+   "MPI-242",
+   "MPI-243"
   ]
+ },
+ "thread": {
+  "root": null,
+  "parent": null
+ },
+ "recent_events": [
+  {
+   "at": "2026-07-10T19:55:00Z",
+   "event": "created"
+  },
+  {
+   "at": "2026-07-10T22:20:00Z",
+   "event": "acknowledged",
+   "note": "Session 6 close (MPI-242): acknowledged. poseReference mirror drift is deferred to the next /mpi-version-bump on 1.2.0, which regenerates operation_registry.json. Not a bug; blocks release only, not dev/run. Left open-but-acknowledged for whoever cuts the 1.2.0 bump."
+  }
+ ],
+ "resolution": {
+  "at": "2026-07-23T09:50:00Z",
+  "actor": "claude",
+  "note": "Satisfied. npm run release:check passes on master at 1.1.0 (run 2026-07-23), and v1.1.0 shipped 2026-07-22 with the registry mirror in sync (MPI-335). The poseReference mirror gap this message flagged on the 1.2.0 branch no longer exists on the single master line."
+ }
 }
