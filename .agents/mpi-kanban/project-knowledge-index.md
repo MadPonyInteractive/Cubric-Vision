@@ -80,7 +80,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/runpod-remote-engine.md` (image/volume/secrets), the private `mpi-ci` repo
 - **Memory:** none (topic files consolidated into docs/)
-- **Notes:** image builds are USER-authorized; live Pod ops stay USER-only.
+- **Notes:** image builds are USER-authorized; live Pod ops stay USER-only. Runtime edits (`wrapper.py`/`start.sh`) are R2-floated on TWO channels (MPI-340): `./publish-runtime.sh dev` → test on a dev Pod → `./publish-runtime.sh promote`. `stable` is what released users boot — never the day-to-day verb. Dev image tags bump `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`, never the stable pins.
 
 ### Build / release / distribution
 
@@ -133,7 +133,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/worktrees.md`
 - **Memory:** none (topic files consolidated into docs/)
-- **Notes:** `.engine-config.json` shares ComfyUI engine across worktrees. RunPod is the active shared integration branch (v1.1.0).
+- **Notes:** `.engine-config.json` shares ComfyUI engine across worktrees. Single `master` line — no integration branches (release model = bump on master, publish a GitHub Release).
 
 ### Desktop and browser testing
 
