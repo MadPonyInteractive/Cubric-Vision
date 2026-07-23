@@ -244,16 +244,19 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   Only then point the DEV consts at it: an unbuilt tag 404s on pull and the Pod exits at boot,
   which is why they ship equal to the stable pins. Promotion is a clean rebuild at a real
   version, never a dev tag renamed into the stable pin.
-- **Image CUDA floors:** `-cu128` = `runpod/pytorch:2.8.0-cuda12.8.1` (torch pinned stable
-  2.7.1+cu128 — the base nightly broke flash-attn), Blackwell sm_120, floor `cuda>=12.8`.
-  `-cu124` = `pytorch/pytorch:2.6.0-cuda12.4` (torch 2.6.0+cu124), Ampere/Ada/Hopper (no
-  Blackwell), floor `cuda>=12.4`. Both bake **ffmpeg + git**; **flash-attn dropped** (ABI-
-  fragile, ~7% slower than SDPA for diffusion, bypassed when sage is on). Accelerator =
-  **sageattention compiled to the volume on first boot per GPU arch**
-  (`/workspace/cubric/pylibs`, ~5-15 min one-time, arch-stamped sentinel → recompiles only on
-  arch switch) **+ PyTorch SDPA always-present fallback**. Readiness gates on ComfyUI-up only,
-  never on sage. App readiness-poll timeout is **1200s** so the one-time compile can't abort
-  readiness.
+- **Image CUDA floor (single profile since MPI-189):** `-cu130` = base
+  `nvidia/cuda:13.0.3-runtime-ubuntu24.04` (a `-runtime` base: no torch to discard, no CUDA
+  `-dev` toolkit — that shrink is structural, MPI-186) + explicit
+  `torch 2.12.0+cu130 / torchvision 0.27.0 / torchaudio 2.11.0`. One tag runs Ampere → Ada →
+  Blackwell. Host-driver floor is a flat `allowedCudaVersions: ['13.0']` (r580) for every
+  card — RunPod treats it as a minimum, so newer drivers still land; without it, placement is
+  driver-roulette and a too-old host crashes ComfyUI at boot (MPI-188). Bakes **ffmpeg + git**.
+  Accelerator = **PyTorch SDPA only**: flash-attn dropped (ABI-fragile, ~7% slower than SDPA
+  for diffusion) and **sageattention deferred on cu130** — the source build silently degrades
+  to Triton-only in GPU-less Docker, and MPI-187 hit the target latency without it. Sage is a
+  sampler bonus to re-add once a cu130 wheel is proven, not a readiness dependency: readiness
+  gates on ComfyUI-up only. *(Historical: the `-cu124`/`-cu128` two-profile split and the
+  per-arch volume sage compile are GONE — see the comment block in `remotePodLifecycle.js`.)*
 - **Custom-node lifecycle split = `installRequirements` (MPI-222, replaced the old
   `installOnEngine` bake list).** A node BAKES into the image iff `installRequirements: true`
   in `node_lock.json` (the pip-req nodes: Impact-Pack, KJNodes, Frame-Interpolation,
