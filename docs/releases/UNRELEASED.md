@@ -29,3 +29,10 @@
   cold switch from ~2 minutes to a few seconds. The Pod's disk now auto-sizes to
   your network volume so the whole model set fits. Video models (LTX) that stream
   by design are unaffected.
+
+- **Completion toast now fires reliably.** A single generation finishing while
+  the app is focused now shows the "Generation finished." toast — previously
+  only multi-generation batches did. Notifications are quieter overall: routine
+  confirmations (importing a model, uninstalling, adding cards to a project,
+  switching models to continue a preview) no longer play a sound, and returning
+  to the app after a download finished no longer replays a duplicate toast.
