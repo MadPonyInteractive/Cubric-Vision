@@ -59,6 +59,7 @@ NOT mechanically split these):
 | Architecture contract (topology, lifecycle, billing) | [runpod-remote-engine.md](runpod-remote-engine.md) |
 | Fixed-bug traps + CPU download-mode | [runpod-troubleshooting.md](runpod-troubleshooting.md) |
 | Engine-split (deps + workflow axis) | [.claude/rules/comfy_engine.md](../.claude/rules/comfy_engine.md) § Engine Split |
+| **Vast.ai as a 2nd provider — research (PARKED, MPI-344)** | [vast-ai-research/README.md](vast-ai-research/README.md) |
 
 ### Builder Pod / model onboarding
 | Topic | Doc |
