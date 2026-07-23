@@ -7,6 +7,10 @@ You (the agent) ARE the executor — run the commands below directly. Drive the 
 >   this is **ONE cu130 GPU image** (`-cu130`, → **Docker Hub**) + the slim **cpu** image
 >   (→ GHCR, via CI). The old cu124/cu128 two-profile split is GONE.
 > - **Builder** (`mpi-ci/cubric-vision-builder/`) — standalone authoring box. cu130, **LOCAL ONLY, no CI**.
+>
+> **Product Pod images come in two lines (MPI-340): dev and release.** A dev build tags
+> `v<ver>-dev-<profile>` and bumps only `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`, which a shipped
+> app can never resolve. Decide which in step 1 — it changes the tag and the consts you edit.
 
 > **HARD RULES (do not break):**
 > - **Live Pod ops are USER-only.** This command BUILDS images. Never autonomously create/delete/deploy a Pod. Image builds are fine once the user authorizes the run.
@@ -46,8 +50,9 @@ In the commands below, substitute:
 > ```
 > ver=$(echo "$ver" | sed 's/^v//'); wver=$(echo "$wver" | sed 's/^v//')
 > ```
-> Reject if it still doesn't match `^[0-9]+\.[0-9]+\.[0-9]+$` (or your scheme).
-> Same rule applies to the `manifest_version`/`wrapper_version` CI inputs in step 4.
+> Reject if it still doesn't match `^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$` — the `-dev`
+> suffix is the ONLY allowed extra (MPI-340 dev builds, step 1). Same rule applies to
+> the `manifest_version`/`wrapper_version` CI inputs in step 4.
 
 ---
 
@@ -81,6 +86,13 @@ If `docker rmi` says "image is being used by running container" → a Pod-smoke
 container is still up; `docker ps` + `docker stop` it first.
 
 ### 1. Decide versions (derive, don't guess)
+- **DEV or RELEASE build? Ask FIRST — it decides the tag AND which app consts move (MPI-340).**
+  A **dev** build tags `<ver>-dev` (e.g. `0.17.0-dev` → `v0.17.0-dev-cu130` + `v0.17.0-dev-cpu`)
+  and bumps `POD_IMAGE_VERSION_DEV`/`POD_IMAGE_VERSION_CPU_DEV`, which ONLY a
+  `BUILD_HASH === 'dev'` run resolves — released users cannot reach it. A **release** build
+  tags a clean version and moves the stable pins, reaching every released user's next Pod.
+  **Default to dev** unless the user says they're shipping it: prove the image on a dev tag,
+  then rebuild clean at a real version to promote (never rename a dev tag into the stable pin).
 - **`<ver>`:** ask the user, or infer from the "Pending for the NEXT image rebuild" block in the pod README.
 - **`<wver>`:** bump only if the wrapper changed —
   `git -C c:/AI/Mpi/mpi-ci log -1 --stat -- cubric-vision-pod/wrapper/wrapper.py`
@@ -151,7 +163,11 @@ cd c:/AI/Mpi/mpi-ci && gh workflow run cubric-vision-pod-image.yml --ref main \
 ```
 (Blank `only_profile` = both cu130 + cpu rows. cu130 → Docker Hub, cpu → GHCR. `<ref-TAG>`
 = the lock's `comfyui.core.tag`, e.g. `v0.27.0` — **NEVER the commit SHA**, or the clone
-`exit 128`s.) Watch: `gh run watch`. On failure, READ the actual error before falling
+`exit 128`s.) **Dev build:** pass `manifest_version=<ver>-dev` — the workflow's "Compute
+tags" step builds `${image}:v${manifest_version}-${profile}` verbatim, so it needs no
+change. **Dispatch BOTH legs even for a dev tag** (blank `only_profile`): a GPU-only push
+leaves CPU download Pods pulling a tag that doesn't exist — the Pod then EXITS at boot and
+the app mis-blames a bad host (the `v0.10.3-cpu` 404 trap). Watch: `gh run watch`. On failure, READ the actual error before falling
 back: a clone/input error → fix the input + re-dispatch CI; ONLY `No space left on device`
 → build cu130 locally (4b).
 
@@ -238,6 +254,12 @@ Pod verify below.
 
 Until 1–5, the card stays `doing`. Then remove the "Pending for the NEXT rebuild"
 block in the pod README.
+
+**Dev build (MPI-340):** 1–4 are IDENTICAL (RunPod still needs a public pull, so a
+dev tag must be public too) — only step 5 differs: the user verifies on a Pod created
+by a **source run**, where `_devMode` resolves `POD_IMAGE_VERSION_DEV`. A dev build
+NEVER moves the stable pins and never ends the parent card: it proves the change so a
+clean release-version rebuild can ship it.
 
 ---
 
