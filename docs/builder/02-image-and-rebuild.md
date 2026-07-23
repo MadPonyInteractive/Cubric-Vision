@@ -92,6 +92,26 @@ Docker Hub creds are repo secrets `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` (a fr
 repo; set once). The first cu130 Pod deploy is the real cold-start pull measurement
 (GHCR-vs-Docker-Hub) MPI-186 folded into this rebuild.
 
+## Pod build guards: node-import smoke test + pip constraints (MPI-341)
+
+Two Dockerfile guards adopted from `github.com/YanWenKun/ComfyUI-Docker` (reviewed 2026-07-23):
+
+1. **Node-import smoke test** — after the MPI-244 torch re-assert:
+   `python main.py --quick-test-for-ci --cpu`, log to a file, then **grep the log for
+   `IMPORT FAILED`**. The grep is load-bearing: verified in `main.py` at v0.27.0 AND v0.28.0,
+   the flag does a plain `exit(0)` and custom-node import failures are only LOGGED by
+   `nodes.init_external_custom_nodes` — a bare run is vacuously green. Catches the MPI-149
+   class (kornia 0.8.3 → LTXVideo import dies → live gen fails as `Node 'Stage1_Bypass' not
+   found`) at BUILD, and replaces the hand-run "8 nodes register" gate. Covers **baked nodes
+   only** — the code-only volume nodes install at connect and stay unverified. A failing
+   `comfy_extras/` core node also trips it (intended — that image is broken too).
+   It lives in the Dockerfile, not a CI step, because a CI `docker run` needs `load: true`
+   on a runner whose disk already overflows.
+2. **`ENV PIP_CONSTRAINT=/opt/constraints.txt`** — the file is generated from `pip list` right
+   after the cu130 trio install, so every later pip call (node bake, kornia pin, and the
+   wrapper's connect-time installs at runtime) cannot resolve a non-cu130 torch at all. The
+   MPI-244 assert stays as the belt — do not treat constraints as a replacement.
+
 ## start.sh + wrapper.py are R2-fetched at boot — no rebuild for shell/wrapper edits (MPI-156)
 
 `bootstrap.sh` is the image `CMD`. At boot it curls `start.sh` + `wrapper.py` (+ `manifest.json`)

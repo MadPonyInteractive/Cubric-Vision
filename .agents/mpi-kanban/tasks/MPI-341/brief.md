@@ -31,14 +31,25 @@ live Pod.
 **Implementation — in the Dockerfile, not in CI.** Place it immediately after the
 "cu130 torch re-assert AFTER node bake" step:
 
+**CORRECTION (2026-07-23, at implementation).** The claim above that the flag "exits
+non-zero on an import failure" is WRONG — read `main.py` at v0.27.0 AND v0.28.0: it does a
+plain `exit(0)`, and custom-node import failures are only LOGGED by
+`nodes.init_external_custom_nodes` (`IMPORT FAILED: <dir>`). A bare `RUN python main.py
+--quick-test-for-ci --cpu` is **vacuously green**. The shipped layer logs to a file and greps
+it — the grep is load-bearing, do not "simplify" it away:
+
 ```dockerfile
-# --- node-import smoke test (MPI-341) ---------------------------------------
-# ComfyUI's own CI flag: boots, imports every baked custom node, exits non-zero on
-# an import failure. Catches the kornia/LTXVideo class of trap (see the kornia pin
-# above) at BUILD time instead of as a live `Node 'Stage1_Bypass' not found`.
-# --cpu because the GH runner has no GPU.
-RUN python /opt/ComfyUI/main.py --quick-test-for-ci --cpu
+RUN set -eux; \
+    cd /opt/ComfyUI; \
+    python main.py --quick-test-for-ci --cpu > /tmp/ci-import.log 2>&1 \
+      || { cat /tmp/ci-import.log; echo '[cubric] node-import smoke test CRASHED'; exit 1; }; \
+    if grep -q 'IMPORT FAILED' /tmp/ci-import.log; then \
+      grep -n 'IMPORT FAILED' /tmp/ci-import.log; exit 1; fi; \
+    rm -f /tmp/ci-import.log
 ```
+
+Side effect of the grep: a failing `comfy_extras/` CORE node trips it too (same log line).
+Intended — that image is broken as well.
 
 Why in the Dockerfile rather than a CI `docker run` step: a CI test needs
 `load: true` on the build to have the image locally before pushing, which doubles image
@@ -67,9 +78,16 @@ Constraints make the drift **unresolvable at resolve time**: a node whose
 `requirements.txt` lists bare `torch` (comfyui_controlnet_aux does exactly this) cannot
 pull a non-cu130 wheel in the first place.
 
-Emit the file right after the cu130 trio install, then add `-c /opt/constraints.txt` to the
-pip calls inside the node-bake inline Python (both the `installRequirementsCommand` branch
-and the default `pip install -r requirements.txt` branch) and to the kornia pin.
+Emit the file right after the cu130 trio install.
+
+**Implemented as `ENV PIP_CONSTRAINT=/opt/constraints.txt`, not per-call `-c`** — the node
+bake runs pip through inline Python with a per-pack `installRequirementsCommand` string that
+would otherwise need rewriting; one env var covers the bake (both branches), the kornia pin,
+the wrapper requirements, AND the wrapper's connect-time installs at runtime. Verified
+locally: non-install pip commands (`list`, `uninstall`) ignore it, and a constraint really
+does force the resolve (constrained `certifi==0.0.1` → pip collected 0.0.1, not latest).
+File generated from `pip list --format=freeze | grep -E '^(torch|torchvision|torchaudio)=='`
+so the versions have ONE source (no duplicated literals to drift).
 
 **Keep the MPI-244 assert.** It becomes the belt to this suspenders — its Dockerfile
 comment already says "never remove". Do not treat constraints as a replacement.
