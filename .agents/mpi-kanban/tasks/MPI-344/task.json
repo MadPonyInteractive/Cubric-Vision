@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-344",
+  "title": "Vast.ai as a second option to runpod",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-23T08:26:38.370Z",
+  "updated_at": "2026-07-23T08:26:38.370Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
