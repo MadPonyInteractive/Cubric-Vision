@@ -75,6 +75,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Read first:** `docs/runpod-remote-engine.md`
 - **Rules:** `.claude/rules/comfy_engine.md` (engine routing), `.claude/rules/comfy_injection.md` (remote upload path)
 - **Memory:** `project_reconnect_deletes_warm_pod.md`, `project_stale_pod_reconnect_toast.md`
+- **Notes:** second-provider (Vast.ai) evaluation PARKED → `docs/vast-ai-research/` (MPI-344).
 
 ### Pod image / mpi-ci
 

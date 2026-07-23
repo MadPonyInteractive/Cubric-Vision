@@ -26,3 +26,14 @@ Card/event text is markdown inside a JSON string, so describing a Windows path o
 default stdout/file codec is cp1252, which throws `UnicodeDecodeError`/`UnicodeEncodeError` on
 emoji when an agent reads or re-emits a message. An emoji in a message body silently breaks the
 `mpi-message` read path. Keep bodies ASCII; put personality in the chat, not the JSON.
+
+## Full-file JSON rewrites — pass `encoding='utf-8'` to read AND write (Windows)
+
+When a script REWRITES `board.json`/`task.json` (not appends), `json.load(open(P))` +
+`json.dump(b, open(P,'w'))` corrupts existing non-ASCII in OTHER cards: Windows' default codec
+is cp1252 and `json.dump` defaults to `ensure_ascii=True`, so a real em-dash `—` round-trips to
+mojibake `â€”` across every note the file already had. Pass `encoding='utf-8'` to BOTH the
+read `open()` and the write `open()` (and prefer `ensure_ascii=False`); after any rewrite,
+`git diff` the file and grep for `u00e2`/`u20ac` before staging — nonzero = you corrupted it.
+Appends (`open(P,'a',encoding='utf-8')`) never touch existing lines, so they're safe; the trap
+is the read→rewrite cycle. (Bit MPI-344: a board move mojibake'd MPI-337/314/315 notes.)
