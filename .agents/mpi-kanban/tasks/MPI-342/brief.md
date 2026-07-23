@@ -74,6 +74,34 @@ a source run → then a clean rebuild at a real version when the wave is ready t
 - Krea2 masked edit still stitches with no seam (MPI-282 acceptance).
 - Local engine on 0.28 too (`system_dependencies.json`) — do not let LOCAL and Pod drift.
 
+## FINAL STAGE (do not close 342 without it) — verify the cards this build unblocks
+
+This is the only Pod rebuild on the board, and two cards are parked behind it. After the dev
+image is up and a dev Pod is connected, run BOTH verify sets in the same session:
+
+### MPI-341 — fully build-gated (all four)
+
+1. Smoke-test layer PASSES on the clean dev build.
+2. **Prove it bites** — drop the `kornia==0.8.2` pin, rebuild, the build must FAIL at the
+   smoke layer on the LTXVideo import; restore the pin. Skipping this leaves an unproven gate.
+3. `pip list` in the final image still shows `+cu130` for all three torch packages, and
+   `/opt/constraints.txt` holds the three `==...+cu130` lines.
+4. One LTX gen on the dev Pod (the node pack the trap targets) — folds into the
+   "every workflow still loads" sweep above.
+
+### MPI-340 — ONE leg is build-gated, the other two are NOT
+
+- **Build-gated:** the dev IMAGE tag path has only ever resolved a tag EQUAL to the stable
+  pin (`v0.16.0`), because pointing at an unbuilt tag 404s the pull and the Pod exits at boot.
+  Once the `0.17.0-dev` tags exist: move `POD_IMAGE_VERSION_DEV` + `POD_IMAGE_VERSION_CPU_DEV`
+  in `routes/remotePodLifecycle.js` to the real dev tags, restart, create a Pod from a source
+  run, confirm the pulled image is the `-dev` tag and a released run still resolves `v0.16.0`.
+  That closes the branch MPI-340 could only ship half-proven.
+- **NOT build-gated** (do not park these here): the released-build-resolves-`stable` proof
+  (fake a `BUILD_HASH` stamp in `js/core/buildInfo.js`, restart, create a Pod, expect
+  `channel=stable`, then `git checkout` the file) and one real `promote` run. Both can happen
+  any time — see `tasks/MPI-340/validation.md` § "Still NOT verified".
+
 ## NOT in this card
 
 Wiring the Krea2 grounded/storyboard/inpainting behavior. That is a `comfyui-krea2edit`

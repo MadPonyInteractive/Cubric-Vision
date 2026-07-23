@@ -89,6 +89,11 @@ v0.10.2-cpu mislabel trap. It moves on an image rebuild, never on an R2 publish.
    also closes the dev-only 8188 door and the Ctrl+Tab dev radial — expected.)
 2. **`promote` end-to-end** against real R2 — the refusal paths are fixture-tested, but the
    remote-to-remote copy has never run. First real wrapper edit will exercise it.
+3. **The dev IMAGE tag path** — `POD_IMAGE_VERSION_DEV` / `_CPU_DEV` still sit EQUAL to the
+   stable pins, so a dev run has never pulled a genuinely different tag. **Build-gated:**
+   MPI-342's dev-tag build is the one that creates `0.17.0-dev`; moving the consts and
+   proving the pull is the FINAL STAGE of that card (`tasks/MPI-342/brief.md`). Items 1 and 2
+   above are NOT build-gated — do not park them behind it.
 
 ## Follow-up spotted → fixed above
 

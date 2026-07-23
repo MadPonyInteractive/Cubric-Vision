@@ -36,7 +36,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-23T11:05:00Z",
+  "updated_at": "2026-07-23T11:30:00Z",
   "events": [
     {
       "at": "2026-07-23T06:34:00Z",
@@ -432,6 +432,12 @@
       "type": "task.deleted",
       "task": "(bulk)",
       "note": "mpi-archive: archived 84 done tasks to tasks/_archived/ (workspaces preserved, per-task task.deleted events logged). Held back MPI-263/308/315 (attention required) and MPI-243 (open message ff4e8854)."
+    },
+    {
+      "at": "2026-07-23T11:30:00Z",
+      "type": "task.updated",
+      "task": "MPI-342",
+      "note": "FINAL STAGE added (user): 342 carries the only Pod rebuild, so it must close the verification of MPI-341 (4 checks incl. the unpin-kornia proof that the smoke test bites) and MPI-340's build-gated dev-image-tag leg. MPI-340's other two open items are explicitly NOT build-gated."
     }
   ]
 }
