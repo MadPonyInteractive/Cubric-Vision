@@ -1,0 +1,93 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "57a359e6-fe33-4780-b244-94d52615819c",
+  "created_at": "2026-07-23T19:15:00Z",
+  "actor": "claude",
+  "title": "MPI-342 ComfyUI 0.28 bump - everything shipped except MPI-341 check 2 (unpin-kornia CI rebuild)",
+  "task_card": {
+    "id": "MPI-342",
+    "column": "doing",
+    "maturity": "in-progress",
+    "plan": ".agents/mpi-kanban/tasks/MPI-342/plan.md",
+    "validation": ".agents/mpi-kanban/tasks/MPI-342/validation.md",
+    "checklist": ".agents/mpi-kanban/tasks/MPI-342/checklist.md"
+  },
+  "read_first": [
+    ".agents/mpi-kanban/tasks/MPI-342/validation.md - the full verification record; read before anything",
+    ".agents/mpi-kanban/tasks/MPI-341/validation.md - the four checks and which are done",
+    ".claude/commands/build-pod-image.md - Flow A, the build playbook"
+  ],
+  "state": {
+    "committed": [
+      "Cubric-Vision fffd73ec - ComfyUI 0.27.0 -> 0.28.0 pins + POD_IMAGE_VERSION_DEV/_CPU_DEV -> v0.17.0-dev",
+      "Cubric-Vision a54f5210 + follow-up - kanban cards, MPI-342 plan/validation, MPI-345, MPI-329/333 research",
+      "mpi-ci 5bcc3b9 - node_lock re-sync + Builder COMFYUI_REF -> v0.28.0",
+      "mpi-ci 16354e5 - ENV PIP_EXTRA_INDEX_URL (the sam2 build-isolation fix)"
+    ],
+    "pushed": {
+      "mpi-ci": "yes, main at 16354e5",
+      "cubric-vision": "NO - local commits only; push is user-authorized"
+    },
+    "images_live": [
+      "docker.io/madponyinteractive/cubric-vision-pod:v0.17.0-dev-cu130  sha256:80351c10b7e7e991b5d5f426cc78041295ea8889335fda22200959ea93c8654c",
+      "ghcr.io/madponyinteractive/cubric-vision-pod:v0.17.0-dev-cpu      sha256:3e1b6add"
+    ],
+    "stable_pins_untouched": "POD_IMAGE_VERSION / _CPU stay v0.16.0 - released users unaffected",
+    "pod": "deleted by the user at end of session; anything Pod-dependent needs a fresh one"
+  },
+  "next_task": {
+    "id": "MPI-341 check 2",
+    "goal": "Prove the node-import smoke test BITES - an unpinned kornia must FAIL the build at the smoke layer.",
+    "why": "Checks 1, 3 and 4 pass, but a gate never seen to go red is unproven; the layer could be silently vacuous.",
+    "no_pod_needed": true,
+    "estimated": "~19 min of CI per build",
+    "steps": [
+      "1. Branch in mpi-ci so main never carries a knowingly-broken pin: git -C c:/AI/Mpi/mpi-ci checkout -b mpi-341-kornia-proof",
+      "2. In cubric-vision-pod/Dockerfile, find the kornia layer (RUN pip install --no-cache-dir 'kornia==0.8.2' && python -c 'import kornia; from kornia.geometry.transform.pyramid import pad; ...') and drop the ==0.8.2 pin so pip takes latest.",
+      "3. Commit and push THE BRANCH.",
+      "4. Dispatch against the branch, cu130 only (the cpu image bakes no nodes so it cannot exercise this): cd c:/AI/Mpi/mpi-ci && gh workflow run cubric-vision-pod-image.yml --ref mpi-341-kornia-proof -f manifest_version=0.17.1-dev -f wrapper_version=0.2.37 -f comfyui_ref=v0.28.0 -f push_latest=false -f only_profile=cu130",
+      "5. EXPECT A RED BUILD. Success = failure at the node-import smoke layer with 'IMPORT FAILED' naming ComfyUI-LTXVideo (printed by the grep). A GREEN build means the gate is vacuous and is itself the bug.",
+      "6. Record the outcome in tasks/MPI-341/validation.md (check 2) and tasks/MPI-342/validation.md, then delete the branch. Do NOT merge it.",
+      "7. The throwaway manifest_version (0.17.1-dev) matters: a surprise green build must not overwrite the proven v0.17.0-dev tags."
+    ],
+    "gotchas": [
+      "comfyui_ref MUST be the TAG (v0.28.0), never the commit SHA - git clone --branch rejects a bare SHA, exit 128 (MPI-189).",
+      "manifest_version must match ^[0-9]+[.][0-9]+[.][0-9]+(-dev)?$ with NO leading v (MPI-119 double-v trap).",
+      "Read failures with: gh run view <id> --log-failed. The smoke layer's grep prints the failing node name."
+    ]
+  },
+  "also_open": [
+    {
+      "id": "MPI-340",
+      "items": [
+        "released-build-resolves-stable proof: fake a BUILD_HASH stamp in js/core/buildInfo.js, restart, create a Pod, expect channel=stable, then git checkout the file. NOT build-gated.",
+        "one real publish-runtime.sh promote run. NOT build-gated."
+      ]
+    },
+    {
+      "id": "MPI-345",
+      "items": [
+        "New card, top of To do. Phantom generation. Repro LOCALLY first - free, qwen-edit is installed locally. First step: dispatch-origin logging in js/services/commandExecutor.js."
+      ]
+    },
+    {
+      "id": "MPI-329",
+      "items": [
+        "Now has a measured root pattern: model SWITCH costs ~2 min; same-model back-to-back is 8s. Suspect the aimdo dynamic-VRAM path. Do NOT lower HOT_STORE_MIN_GB - measured and largely disproven."
+      ]
+    },
+    {
+      "id": "MPI-333",
+      "items": [
+        "Leading suspect (full SHA256 re-read) looks wrong; per-FILE overhead is the better hypothesis. Next: time a Krea2 install, compare seconds-per-FILE."
+      ]
+    }
+  ],
+  "durable_gotchas_learned": [
+    "PIP_CONSTRAINT pinning a LOCAL version (+cu130) is unsatisfiable in any pip call that does not also know the pytorch index - PEP-517 isolated build envs inherit the constraint but not --index-url. Fixed with ENV PIP_EXTRA_INDEX_URL; keep the two together.",
+    "comfyui-krea2edit v1.2.1 tolerates ComfyUI's ref_latents wrapper arg introduced in core c9602625, dated AFTER the v0.28.0 tag. 0.28 is safe at our v1.1 pin; 0.29+ WILL break Krea2EditModelPatch unless the node moves past dc7940f4 in the same pass.",
+    "The mpi-ci node_lock copy had drifted (ComfyUI-MpiNodes ba9e1569 vs canonical aaa1d2d9). Always re-copy from the canonical lock at build time (MPI-117).",
+    "Krea2EditGroundedEncode (grounding_px) exists at krea2edit HEAD; our pin is v1.1. Wiring it is a node-commit bump only (installRequirements:false = volume-resident, no image). Still uncarded."
+  ],
+  "notes": "The Cubric-Vision working tree also holds an unrelated sibling session's edits (MpiPromptBox.js, main.js, server.js, connectorResponder.js, untracked services/brokerBoot.js and splash/). Deliberately NOT committed. Do not sweep them up."
+}
