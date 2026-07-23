@@ -356,6 +356,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     Events.emit('ui:success', {
                         title: 'Added to project',
                         message: `${data.added} card${data.added === 1 ? '' : 's'} added to "${target.name}".`,
+                        sound: false,
                     });
                 },
             });
@@ -561,7 +562,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     _pb?.el?.setOperation?.(item.operation);
                 }
                 const name = model.label || model.name || model.id;
-                StatusBar.notify(`Switched to "${name}" — continuing preview.`, 'info');
+                StatusBar.notify(`Switched to "${name}" — continuing preview.`, 'info', 6000, { sound: false });
             }
 
             const frozen = item.frozenParams || {};
@@ -742,7 +743,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     _pb?.el?.setOperation?.(item.operation);
                 }
                 const name = model.label || model.name || model.id;
-                StatusBar.notify(`Switched to "${name}" — finishing preview.`, 'info');
+                StatusBar.notify(`Switched to "${name}" — finishing preview.`, 'info', 6000, { sound: false });
             }
 
             const frozen = item.frozenParams || {};

@@ -533,7 +533,8 @@ export const MpiSettings = ComponentFactory.create({
                     bucket,
                     primary,
                     onImport: (filename) => {
-                        Events.emit('ui:success', { message: `Imported ${filename}.` });
+                        // sound:false — confirmation of a user drop-import; no chime.
+                        Events.emit('ui:success', { message: `Imported ${filename}.`, sound: false });
                         loadAssets();
                     },
                 });

@@ -269,7 +269,7 @@ export const MpiAppLibrary = ComponentFactory.create({
                 });
                 open.on('click', () => {
                     if (!canOpen) {
-                        Events.emit('ui:info', { message: 'Open apps from the Gallery, inside a project.' });
+                        Events.emit('ui:info', { message: 'Open apps from the Gallery, inside a project.', sound: false });
                         return;
                     }
                     el.close();

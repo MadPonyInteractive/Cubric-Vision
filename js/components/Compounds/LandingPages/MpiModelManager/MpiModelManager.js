@@ -1463,14 +1463,15 @@ export const MpiModelManager = ComponentFactory.create({
             // engine-owned files (VAE, custom nodes, pip env) shared with no model —
             // saying "shared files kept" there falsely implies a sibling model.
             const keptForModel = keptShared.length + keptModelFiles.length;
+            // sound:false throughout — these confirm a user-initiated uninstall; no chime.
             if (removed.length > 0 && keptTotal === 0) {
-                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.`, sound: false });
             } else if (removed.length > 0 && keptForModel > 0) {
-                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} updated (some shared files kept).` });
+                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} updated (some shared files kept).`, sound: false });
             } else if (removed.length > 0) {
-                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.` });
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.`, sound: false });
             } else if (keptModelFiles.length > 0) {
-                Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.` });
+                Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.`, sound: false });
             } else {
                 // MPI-310 — NAME the holders. The generic wording ("shared with other
                 // models") left the user unable to tell a correct no-op from a broken
@@ -1495,6 +1496,7 @@ export const MpiModelManager = ComponentFactory.create({
                     message: holders.length
                         ? `${modelName} — files kept, ${who} ${holders.length > 1 ? 'also use' : 'also uses'} them.`
                         : `${modelName} — files kept; they are shared with other models or required by the engine.`,
+                    sound: false,
                 });
             }
         }));

@@ -309,7 +309,8 @@ export const MpiModelSettings = ComponentFactory.create({
                     bucket,
                     primary,
                     onImport: async (filename) => {
-                        Events.emit('ui:success', { message: `Imported ${filename}.` });
+                        // sound:false — confirmation of a user drop-import; no chime.
+                        Events.emit('ui:success', { message: `Imported ${filename}.`, sound: false });
                         // loadAssets() reassigns state.availableLoras/upscaleModels →
                         // state:changed → the live-rerender subscription rebuilds the
                         // dropdowns (new file present, red flag cleared). No explicit

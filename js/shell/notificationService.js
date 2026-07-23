@@ -7,12 +7,6 @@
  * isFocused()). In every other case (pref OFF, or window focused) an in-app StatusBar
  * toast fires instead — split via `document.hasFocus()` so the two never both deliver.
  *
- * MPI-310 — DOWNLOAD completions additionally DEFER an in-app toast to the next focus.
- * The either/or split above loses the message outright when the OS notification is
- * missed (focus assist, another app fullscreen, dismissed from the tray), and a download
- * is the one flow users deliberately walk away from — so returning to the app left no
- * trace that a multi-GB install had finished. The deferred toast is the trace.
- *
  * Browser mode: no ipcRenderer, so the in-app toast always fires.
  */
 
@@ -41,23 +35,51 @@ let _doneCount = 0;
 // leftover timer from a previous batch can't fire against a new one.
 let _flushTimer = null;
 
-// MPI-310 — messages owed to the user on their next return to the window. Queued when
-// we hand off to an OS notification that may never be seen; drained by the `focus`
-// listener registered in init. Deduped by text so a batch of installs finishing while
-// away yields one line each, not repeats.
-const _pendingOnFocus = [];
-
-function _deferToFocus(message, variant = 'success') {
-    if (!_pendingOnFocus.some(p => p.message === message)) {
-        _pendingOnFocus.push({ message, variant });
+// Route + fire the coalesced completion notification. Extracted so it can be
+// re-checked from a setTimeout closure without duplicating the routing.
+function _fireCompletionNotification() {
+    const n = _doneCount;
+    _doneCount = 0;
+    try {
+        const body = n === 1 ? 'Generation finished.' : `${n} generations finished.`;
+        const osEligible = state.notificationPrefs?.generation !== false;
+        if (osEligible && ipcRenderer && !document.hasFocus()) {
+            ipcRenderer.send('notify-generation-complete', {
+                title: 'Generation complete',
+                subtitle: 'Cubric Studio',
+                body,
+            });
+            return;
+        }
+        StatusBar.notify(body, 'success'); // in-app; rings the chime once
+    } catch (err) {
+        clientLogger.error('notificationService', 'failed to notify:', err);
     }
 }
 
-function _flushPendingOnFocus() {
-    while (_pendingOnFocus.length) {
-        const { message, variant } = _pendingOnFocus.shift();
-        StatusBar.notify(message, variant);
-    }
+// Arm the single deferred flush IF the batch is drained (queue at 0) and at least
+// one gen finished. Called from BOTH edges that can complete a batch: the queue
+// count reaching 0, AND a `generation:complete` arriving. This matters because the
+// two fire from decoupled paths in an ORDER THAT IS NOT GUARANTEED — a single
+// gallery gen releases its store lane (count → 0) BEFORE it emits
+// `generation:complete` (see generationService: `activeGenerations.end` then the
+// emit). If only the count→0 edge armed the flush, `_doneCount` was still 0 at that
+// instant and the notification was silently dropped (the "no toast on a single gen"
+// bug). Whichever edge lands last with count==0 && _doneCount>0 arms the timer; the
+// timer re-checks both at fire time so a refill in the ~frame gap still cancels it.
+function _maybeArmFlush() {
+    if ((Number(state.generationQueueCount) || 0) !== 0) return; // batch not drained
+    if (_doneCount <= 0) return;                                 // nothing to report
+    if (_flushTimer) return;                                     // already scheduled
+    // Defer ~a frame: the last item's `generation:complete` and the count reaching 0
+    // fire from decoupled paths in either order, and pressing Cue again briefly
+    // re-derives the count; wait so it settles, then re-check before firing.
+    _flushTimer = setTimeout(() => {
+        _flushTimer = null;
+        if ((Number(state.generationQueueCount) || 0) !== 0) return;
+        if (_doneCount <= 0) return;
+        _fireCompletionNotification();
+    }, 150);
 }
 
 function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
@@ -78,13 +100,6 @@ function sendNotificationPayload(payload = {}, { minimizeFirst = false } = {}) {
 export function initNotificationService() {
     if (_unsubs.length) return;
 
-    // MPI-310 — drain anything owed from a completion that landed while the window was
-    // unfocused. `focus` (not visibilitychange): an Electron window can be visible but
-    // unfocused behind another app, which is exactly the case that queued the message.
-    const _onFocus = () => _flushPendingOnFocus();
-    window.addEventListener('focus', _onFocus);
-    _unsubs.push(() => window.removeEventListener('focus', _onFocus));
-
     // COALESCE the whole queue into ONE completion notification. Per-gen firing
     // (an OS notification + chime per item) was noise on a queue of N. Instead:
     // count every finished gen, and fire once when the WHOLE queue drains —
@@ -96,7 +111,11 @@ export function initNotificationService() {
     // Route decided at FLUSH time (focus can change during the run): unfocused +
     // pref on → one OS notification; else → one in-app summary toast (rings the
     // chime once). Main also gates the OS send on isFocused(), so no double.
-    _unsubs.push(Events.on('generation:complete', () => { _doneCount++; }));
+    // A finished gen — count it, then try to arm the flush. On a SINGLE gen this
+    // edge lands AFTER count→0 (the lane released before the emit), so this is the
+    // edge that actually arms the flush; on a multi-gen batch the count→0 edge below
+    // does. Either way the timer's re-check settles the race.
+    _unsubs.push(Events.on('generation:complete', () => { _doneCount++; _maybeArmFlush(); }));
     _unsubs.push(Events.onState('generationQueueCount', (count) => {
         const depth = Number(count) || 0;
         // Queue refilled (a new item running/pending) → the previous drain is no
@@ -104,34 +123,7 @@ export function initNotificationService() {
         // flush when IT drains. This also stops a slow pending flush from a finished
         // cue firing "as the next cue starts".
         if (depth !== 0) { if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; } return; }
-        if (_doneCount <= 0) return;               // nothing finished to report
-        if (_flushTimer) return;                   // a flush is already scheduled
-        // Defer ~a frame: the last item's `generation:complete` and the count
-        // reaching 0 fire from decoupled paths in either order, and pressing Cue
-        // again briefly re-derives the count; wait so the count settles, then
-        // re-check it's STILL 0 before firing. Single timer — never stacked.
-        _flushTimer = setTimeout(() => {
-            _flushTimer = null;
-            if ((Number(state.generationQueueCount) || 0) !== 0) return;
-            if (_doneCount <= 0) return;
-            const n = _doneCount;
-            _doneCount = 0;
-            try {
-                const body = n === 1 ? 'Generation finished.' : `${n} generations finished.`;
-                const osEligible = state.notificationPrefs?.generation !== false;
-                if (osEligible && ipcRenderer && !document.hasFocus()) {
-                    ipcRenderer.send('notify-generation-complete', {
-                        title: 'Generation complete',
-                        subtitle: 'Cubric Studio',
-                        body,
-                    });
-                    return;
-                }
-                StatusBar.notify(body, 'success'); // in-app; rings the chime once
-            } catch (err) {
-                clientLogger.error('notificationService', 'failed to notify:', err);
-            }
-        }, 150);
+        _maybeArmFlush();
     }));
 
     // `remote:connection` fires on every feed tick while connected — latch on the
@@ -178,8 +170,6 @@ export function initNotificationService() {
                     subtitle: 'Cubric Studio',
                     body: message,
                 });
-                // The OS notification may never be seen — owe the user a toast on return.
-                _deferToFocus(message, 'success');
                 return;
             }
             StatusBar.notify(message, 'success');
@@ -195,7 +185,6 @@ export function initNotificationService() {
 export function destroyNotificationService() {
     if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; }
     _doneCount = 0;
-    _pendingOnFocus.length = 0;
     while (_unsubs.length) { _unsubs.pop()(); }
 }
 

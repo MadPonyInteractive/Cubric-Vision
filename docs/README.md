@@ -35,6 +35,7 @@ NOT mechanically split these):
 | Versioning (APP/SCHEMA/COMFY, op registry) | [versioning.md](versioning.md) |
 | Shell services (overlays, hotkeys, statusbar) | [shell.md](shell.md) |
 | Events / EventBus | [events.md](events.md) |
+| **Toasts & notifications** (full call-site map, sound model, `ui:*`/`StatusBar.notify`/`notificationService`) | [toasts.md](toasts.md) |
 | Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | **Generation lifecycle** (dispatch guard, progress pipeline, Stop/lanes identity doctrine, queue-drain notifications) | [generation-lifecycle.md](generation-lifecycle.md) |

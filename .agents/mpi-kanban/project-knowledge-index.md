@@ -27,6 +27,12 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Rules:** `.claude/rules/events.md`, `.claude/rules/component-events.md`
 - **Memory:** none
 
+### Toasts & notifications
+
+- **Read first:** `docs/toasts.md` (full call-site map, sound model, `ui:*`/`StatusBar.notify`/`notificationService`)
+- **Also:** `docs/generation-lifecycle.md` § "Completion notifications COALESCE"
+- **Memory:** `project_toast_completion_coalesce_os_sound.md`, `project_toast_sound_burst_chime.md`, `project_completion_notif_dual_path.md`, `feedback_error_dialog_vs_toast.md`, `feedback_no_toast_user_stop.md`
+
 ### Application state
 
 - **Read first:** `js/state.js`
