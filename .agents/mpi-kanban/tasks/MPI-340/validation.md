@@ -58,21 +58,37 @@ artifacts on separate cadences.
   flat `allowedCudaVersions ['13.0']`, SDPA-only.
 - User published the dev runtime channel (`./publish-runtime.sh dev`) — item 4 below DONE.
 
-## NOT verified — needs the user (live Pod)
+## Live verify — USER, 2026-07-23
 
-1. **Source run (`_devMode` true), GPU Pod:** RunPod console → Pod → Logs → Container shows
-   `create container ...:v0.16.0-cu130` (will read `-dev` once MPI-341 builds one) and the
-   Pod log shows
-   `[cubric-bootstrap] fetching runtime from https://pod.cubric.studio/vision/dev (channel=dev)`.
-2. Same for a **CPU download-mode Pod** (`-cpu` tag, same `channel=dev` line).
-3. **Portable build (`_devMode` false):** still resolves `v0.16.0-cu130` and `channel=stable`.
-   The release-safety assertion — do not skip.
-4. **Seed the dev channel** before (1): `./publish-runtime.sh dev` from
-   `c:/AI/Mpi/mpi-ci/cubric-vision-pod/`. Not run here (live R2 write). Without it a dev Pod
-   404s the fetch and silently falls back to the BAKED runtime — it boots fine, so the only
-   symptom is edits appearing to do nothing.
-5. **`promote` end-to-end** against real R2 (guard verified against fixtures only; the
-   remote-to-remote copy path has never run).
+- [x] **Dev channel seeded** — `./publish-runtime.sh dev`.
+- [x] **GPU Pod, source run** (`qjh6edvwx0bqav`, 08:43): `fetching runtime from
+  https://pod.cubric.studio/vision/dev (channel=dev)`, manifest `"channel": "dev"`,
+  fetched `wrapper.py` installed, baked `CUBRIC_WRAPPER_VERSION` unset (version honesty).
+- [x] **CPU download-mode Pod** (`96malfxl1cnqmp`, 08:44): same `channel=dev` line, and
+  `start-cpu.sh` fetched from `vision/dev/` — the CPU leg of the env (outside the `noGpu`
+  branch) is the thing that would have silently regressed. `exec start-cpu.sh` → download
+  mode, ComfyManager disabled, manifest stamped (schema 2, wrapper 0.2.37), `/health` 200.
+  (`starting wrapper ... (version ?)` is EXPECTED — the baked env was unset.)
+
+Channel state at verify time: `dev` and `stable` manifests were byte-identical (same three
+sha256s, wrapper 0.2.37) — 0.2.37 (MPI-276) reached stable before the split existed, so
+`promote` is a no-op today and the `mpi-release` precondition passes clean.
+
+Note (do NOT "fix"): the app's `WRAPPER_VERSION = '0.2.36'` const is not stale. Its ONLY
+use is `spec.env.CUBRIC_WRAPPER_VERSION`, the stamp for the BAKED fallback, and v0.16.0
+baked 0.2.36. Bumping it to match the R2 copy would mislabel the fallback path — the
+v0.10.2-cpu mislabel trap. It moves on an image rebuild, never on an R2 publish.
+
+## Still NOT verified
+
+1. **Released build (`_devMode` false) resolves `channel=stable` + `v0.16.0-cu130`.** The
+   release-safety assertion. Proven in code (the vm self-check + `_devMode` is the sole
+   gate), NOT proven live. A pre-1.2.0 portable does NOT prove it — it predates this code.
+   Real proof = temporarily stamp a fake `BUILD_HASH` in `js/core/buildInfo.js`, restart the
+   server, create a Pod, expect `channel=stable`, then `git checkout` the file. (That run
+   also closes the dev-only 8188 door and the Ctrl+Tab dev radial — expected.)
+2. **`promote` end-to-end** against real R2 — the refusal paths are fixture-tested, but the
+   remote-to-remote copy has never run. First real wrapper edit will exercise it.
 
 ## Follow-up spotted → fixed above
 
