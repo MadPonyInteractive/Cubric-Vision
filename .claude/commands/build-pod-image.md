@@ -199,6 +199,14 @@ NO sage on cu130 (MPI-189 — SDPA fallback). Do NOT add an `import sageattentio
 to the verify line; nothing is baked, so it would (correctly) fail. The `+cu130` assert
 IS the load-bearing check — a wrong-CUDA wheel is the ~10x-regression trap.
 
+**A red build at the smoke-test layer is a NODE problem, not CI flake (MPI-341).** The
+Dockerfile boots ComfyUI (`--quick-test-for-ci --cpu`) after the node bake and greps the log
+for `IMPORT FAILED` — a baked custom node that no longer imports (the kornia/LTXVideo class)
+fails the BUILD instead of dying live as `Node 'X' not found`. The failing node's name is in
+the grep output. Do NOT "fix" it by deleting the layer or the grep. The same build also runs
+under `ENV PIP_CONSTRAINT=/opt/constraints.txt`: a pip resolve that now fails on torch means a
+node is demanding a non-cu130 wheel — that is the guard working, fix the node pin instead.
+
 **c. Converge:** watch the CI run (`cd c:/AI/Mpi/mpi-ci && gh run watch`) and, if used, the
 backgrounded local cu130 build. Do NOT proceed until BOTH pushes succeed (cu130 → Docker
 Hub, cpu → GHCR). Any fail → fix + re-run only that leg.

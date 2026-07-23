@@ -80,7 +80,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/runpod-remote-engine.md` (image/volume/secrets), the private `mpi-ci` repo
 - **Memory:** none (topic files consolidated into docs/)
-- **Notes:** image builds are USER-authorized; live Pod ops stay USER-only. Runtime edits (`wrapper.py`/`start.sh`) are R2-floated on TWO channels (MPI-340): `./publish-runtime.sh dev` → test on a dev Pod → `./publish-runtime.sh promote`. `stable` is what released users boot — never the day-to-day verb. Dev image tags bump `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`, never the stable pins.
+- **Notes:** image builds are USER-authorized; live Pod ops stay USER-only. Runtime edits (`wrapper.py`/`start.sh`) are R2-floated on TWO channels (MPI-340): `./publish-runtime.sh dev` → test on a dev Pod → `./publish-runtime.sh promote`. `stable` is what released users boot — never the day-to-day verb. Dev image tags bump `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`, never the stable pins. Builds carry two guards (MPI-341): a node-import smoke test (grep for `IMPORT FAILED` — a baked node that stops importing fails the BUILD) and `ENV PIP_CONSTRAINT` pinning the cu130 trio; detail in `docs/builder/02-image-and-rebuild.md`.
 
 ### Build / release / distribution
 

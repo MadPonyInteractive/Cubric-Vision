@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-07-23T06:09:34Z",
-  "updated_at": "2026-07-23T11:05:00Z",
+  "updated_at": "2026-07-23T11:55:00Z",
   "labels": [
     "runpod",
     "infra",
@@ -23,5 +23,10 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Implementation landed unbuilt (mpi-ci 41a5517). Every verify item needs the dev-tag Pod build, which is USER-authorized and rides with MPI-342's single dispatch - see tasks/MPI-342/brief.md FINAL STAGE and this card's validation.md.",
+    "updated_at": "2026-07-23T11:55:00Z"
   }
 }
