@@ -1361,9 +1361,9 @@ export const MpiPromptBox = ComponentFactory.create({
         // Capability-gated: the control is only mounted when cubric.prompt is
         // registered and advertises prompt.enhance. Absent Prompt → no control
         // at all (the slot stays hidden), so PromptBox is a clean standalone
-        // editor. Toggleable icon button, on by default (signals "available").
-        // Clicking enhances the active prompt field via the broker and writes
-        // the result back through the existing injectPrompts().
+        // editor. One-click action button: clicking enhances the active prompt
+        // field via the broker and writes the result back through the existing
+        // injectPrompts(). Disabled while a request is in flight.
         const enhanceSlot = qs('#enhance-slot', el);
         let _enhanceBtn = null;
         let _enhancing = false;
@@ -1420,7 +1420,7 @@ export const MpiPromptBox = ComponentFactory.create({
             _enhanceBtn = MpiButton.mount(enhanceSlot, {
                 icon: 'enhance',
                 info: 'Enhance prompt with Cubric Prompt',
-                size: 'sm', variant: 'primary', toggleable: true, active: true,
+                size: 'sm', variant: 'primary',
             });
             _enhanceBtn.on('click', () => { void _runEnhance(); });
         }
