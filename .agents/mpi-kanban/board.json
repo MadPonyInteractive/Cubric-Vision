@@ -1,11 +1,12 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 342,
+  "next_id": 343,
   "columns": {
     "todo": [
       "MPI-333",
       "MPI-329",
       "MPI-341",
+      "MPI-342",
       "MPI-328",
       "MPI-325",
       "MPI-332",
@@ -117,7 +118,7 @@
       "MPI-316"
     ]
   },
-  "updated_at": "2026-07-23T08:50:00Z",
+  "updated_at": "2026-07-23T09:05:00Z",
   "events": [
     {
       "at": "2026-07-23T06:34:00Z",
@@ -489,6 +490,12 @@
       "type": "task.updated",
       "task": "MPI-340",
       "note": "Live-verified: GPU + CPU Pods both boot the dev runtime channel. Remaining: released-build stable assertion + one real promote."
+    },
+    {
+      "at": "2026-07-23T09:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-342",
+      "note": "Created in todo, directly after MPI-341 - both are baked-layer changes that ship in ONE dev image build."
     }
   ]
 }
