@@ -2,20 +2,30 @@
 
 ## Why
 
-1. **A node we need for Krea2 edit / inpainting is gated at 0.28.** We looked at it during
-   the Krea2 masked-edit work (MPI-282) and could not use it on 0.27.
-   **OPEN — the user names the node before this starts.** Today the masked path runs on the
-   custom node `comfyui-inpaint-cropandstitch` (`InpaintCropImproved` → sample →
-   `InpaintStitchImproved`, `installRequirements:false`, volume-resident — see
-   `docs/models/krea2/injection.md`). If the 0.28 node is the core/native equivalent, this
-   bump may also DROP that custom dep — decide deliberately, don't half-migrate.
-   **It runs on the Krea2 1.2 identity-edit LoRA we ALREADY ship** (user, 2026-07-23) — no
-   new weight, no new download, no ModelDef change; it gives the existing LoRA more
-   capability. The user has a video with the details and will extract them before any
-   wiring starts.
-2. **int8/int4 work.** 0.28.0 (released 2026-07-15) carries more optimized int8 + int4
-   paths and a fix for black images on Turing with quantized models. We already ship an
-   int8 story for Krea2 (`docs/models/krea2/int8-quant.md`), so this is directly relevant.
+**Resolved 2026-07-23 (user checked the video):** the Krea2 storyboard/inpainting
+capability is NOT gated on ComfyUI core. It is `Krea2 Edit (grounded)` (+ `grounding_px`,
+`system_prompt`) from **`comfyui-krea2edit`** — a node we ALREADY ship, pinned at commit
+`17af88332728c97ab5c7d26296b2cae59c935976` — driving the **`krea2_identity_edit_v1_2`
+LoRA we already ship**, with the `qwen3vl_4b_fp8_scaled` CLIP we already ship. No new
+weight, no ModelDef change. If the grounded variant is missing from our pin, that is a
+**node-commit bump in `node_lock.json` only** — `installRequirements:false` means it rides
+the volume, so it needs NO image rebuild (`.claude/rules/comfy_engine.md` § bake vs volume).
+**Check that first** — it may be reachable today, independent of everything below.
+
+So the bump stands on its own merits (user: "there are a lot of improvements in 0.28,
+specifically int8, and it might help with other things"). From the v0.28.0 notes
+(Comfy-Org/ComfyUI, ~2026-07-15 — **no breaking changes stated**):
+
+1. **`Qwen3-VL` tokenizer crash fixes.** The most directly relevant item: we ship
+   `qwen3vl_4b` as the Krea2 edit CLIP *and* as the image describer.
+2. **int8/int4:** "more optimized int8 and int4 on turing" (#14927), int8 perf-regression
+   fix on 16xx (#14941), convrot int4 support (#14859), black-image-on-Turing-with-int4 fix
+   (#14864). Honest scope: Turing/16xx = **older LOCAL GPUs**. Pods run Ada/Blackwell, so
+   these are a local-user win, not a Pod speedup — don't size the card on Pod gains. We do
+   ship an int8 story for Krea2 (`docs/models/krea2/int8-quant.md`).
+3. **Support PID 1.5 models** (#14894) — the NVIDIA PID upscaler wave.
+4. Small speedup for text-model sampling (#14773); VAE dynamic-method `AttributeError` fix;
+   new core nodes (text overlay, Save Text, Save 3D advanced, SeedVR2, bounding-box input).
 
 ## The pin rule (memory `project_comfyui_bump_cadence`) — apply BEFORE choosing 0.28
 
@@ -66,10 +76,10 @@ a source run → then a clean rebuild at a real version when the wave is ready t
 
 ## NOT in this card
 
-Wiring the Krea2 "superpower" edit/inpaint behavior itself. This card only raises the floor
-so the node is *available*. The feature work waits on the user's video notes and gets its
-own card — keep the bump verifiable on its own (a core bump that also ships a feature is a
-bisect nightmare when a workflow breaks).
+Wiring the Krea2 grounded/storyboard/inpainting behavior. That is a `comfyui-krea2edit`
+node-commit question (see above), NOT a core-version question — it gets its own card and
+probably needs no image at all. Keep the bump verifiable on its own: a core bump that also
+ships a feature is a bisect nightmare when a workflow breaks.
 
 ## Related
 
