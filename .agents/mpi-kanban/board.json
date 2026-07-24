@@ -20,11 +20,11 @@
       "MPI-344"
     ],
     "doing": [
-      "MPI-340",
       "MPI-259",
       "MPI-4"
     ],
     "done": [
+      "MPI-340",
       "MPI-318",
       "MPI-333",
       "MPI-329",
@@ -36,7 +36,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-24T01:11:59Z",
+  "updated_at": "2026-07-24T02:53:48Z",
   "events": [
     {
       "at": "2026-07-24T01:20:00Z",
@@ -484,6 +484,14 @@
       "from": "doing",
       "to": "done",
       "note": "shipped f7e42376: switch-tax fix (HOT_STORE_MIN_GB 0.1) + dynamic disk (volume-mirror) + VRAM-relative stage skip + stage-on-connect toggle; live-verified on a 4090 (switch 80s->9s, LTX streams)"
+    },
+    {
+      "at": "2026-07-24T02:53:48Z",
+      "type": "task.moved",
+      "task": "MPI-340",
+      "from": "doing",
+      "to": "done",
+      "note": "Last item (dev->stable runtime promote) done this session: ran publish-runtime.sh promote, stable manifest now wrapper 0.2.38 (de748061). Dev/stable split shipped in v1.2.0. mpi-release Preconditions drift-check exercised end-to-end (caught this promote + the pod-image 0.28 pin)."
     }
   ]
 }
