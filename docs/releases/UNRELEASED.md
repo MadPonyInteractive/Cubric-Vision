@@ -30,6 +30,12 @@
   your network volume so the whole model set fits. Video models (LTX) that stream
   by design are unaffected.
 
+- **Fixed: copying a mask dropped the auto-detected regions.** Copy mask only
+  carried your brushed/erased strokes, so the auto-detected selection was lost
+  on paste — and a mask made purely from auto-detect copied as nothing. It now
+  carries the auto-detected regions too, matching what Download mask already
+  exported.
+
 - **Completion toast now fires reliably.** A single generation finishing while
   the app is focused now shows the "Generation finished." toast — previously
   only multi-generation batches did. Notifications are quieter overall: routine
