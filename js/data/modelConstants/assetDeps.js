@@ -281,4 +281,15 @@ export const assetDeps = {
         sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912',
         engineAsset: true,
     },
+    // SDXL depth-ControlNet (poseReference op). Shared by all 5 SDXL-family
+    // models; per-model dep (GC'd when the last SDXL model uninstalls) — NOT an
+    // engineAsset. controlnet/ path is mapped in extra_model_paths.yaml.
+    'controlnet-union-sdxl': {
+        id: 'controlnet-union-sdxl',
+        name: 'ControlNet Union ProMax SDXL',
+        filename: 'controlnet/ControlNet-Union-ProMax-SDXL.safetensors',
+        url: 'https://models.cubric.studio/vision/models/controlnet/ControlNet-Union-ProMax-SDXL.safetensors',
+        size: '2.34GB',
+        sha256: '9fae2e50cb431bfcbe05822b59ec2228df545ef27f711dea8949e9f4ed9f7cdc',
+    },
 };

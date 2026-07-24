@@ -42,7 +42,7 @@
   },
   "1472": {
     "inputs": {
-      "value": "two women talking to each other naked at the beach\n"
+      "value": ""
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -92,7 +92,7 @@
   },
   "1520": {
     "inputs": {
-      "int": 1024
+      "int": 768
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -124,16 +124,16 @@
       "sampler_name": "lcm",
       "scheduler": "simple",
       "model": [
-        "1558",
+        "1585",
         0
       ],
       "positive": [
-        "1481",
-        0
+        "1585",
+        3
       ],
       "negative": [
-        "1476",
-        0
+        "1585",
+        4
       ],
       "latent_image": [
         "1564",
@@ -155,7 +155,7 @@
   },
   "1534": {
     "inputs": {
-      "int": 1058
+      "int": 1059
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -298,16 +298,16 @@
       "scheduler": "simple",
       "denoise": 0.4,
       "model": [
-        "1558",
+        "1585",
         0
       ],
       "positive": [
-        "1481",
-        0
+        "1585",
+        3
       ],
       "negative": [
-        "1476",
-        0
+        "1585",
+        4
       ],
       "latent_image": [
         "1541",
@@ -330,7 +330,7 @@
         0
       ],
       "vae": [
-        "1462",
+        "1585",
         2
       ]
     },
@@ -509,6 +509,170 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
+    }
+  },
+  "1576": {
+    "inputs": {
+      "type": "depth",
+      "control_net": [
+        "1579",
+        0
+      ]
+    },
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    }
+  },
+  "1577": {
+    "inputs": {
+      "preprocessor": "DepthAnythingV2Preprocessor",
+      "resolution": 512,
+      "image": [
+        "1575",
+        0
+      ]
+    },
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    }
+  },
+  "1578": {
+    "inputs": {
+      "strength": 0.31,
+      "start_percent": 0,
+      "end_percent": 0.569,
+      "positive": [
+        "1481",
+        0
+      ],
+      "negative": [
+        "1476",
+        0
+      ],
+      "control_net": [
+        "1576",
+        0
+      ],
+      "image": [
+        "1577",
+        0
+      ],
+      "vae": [
+        "1462",
+        2
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
+    }
+  },
+  "1579": {
+    "inputs": {
+      "control_net_name": "ControlNet-Union-ProMax-SDXL.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "1580": {
+    "inputs": {
+      "images": [
+        "1577",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "1582": {
+    "inputs": {
+      "model": [
+        "1558",
+        0
+      ],
+      "clip": [
+        "1540",
+        1
+      ],
+      "vae": [
+        "1462",
+        2
+      ],
+      "positive": [
+        "1481",
+        0
+      ],
+      "negative": [
+        "1476",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "1583": {
+    "inputs": {
+      "model": [
+        "1558",
+        0
+      ],
+      "clip": [
+        "1540",
+        1
+      ],
+      "vae": [
+        "1462",
+        2
+      ],
+      "positive": [
+        "1578",
+        0
+      ],
+      "negative": [
+        "1578",
+        1
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "1584": {
+    "inputs": {
+      "boolean": false,
+      "true": [
+        "1583",
+        0
+      ],
+      "false": [
+        "1582",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_depth_reference"
+    }
+  },
+  "1585": {
+    "inputs": {
+      "basic_pipe": [
+        "1584",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
     }
   }
 }

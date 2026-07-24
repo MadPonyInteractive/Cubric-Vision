@@ -15,6 +15,12 @@
 
 ## What's new
 
+- **Depth Control for SDXL models.** The five SDXL generators (SDXL Realistic,
+  SDXL NSFW, ILL Anime Beauty, ILL Anime, PONY Mix) can now follow the pose and
+  composition of a reference image using a depth ControlNet. Pick the **Depth**
+  op, drop in an image, and the result keeps its structure while your prompt
+  drives the content.
+
 - **New RunPod setting — "Stage all models on connect"** (off by default). When
   on, every installed model is copied to the cloud Pod's fast disk the moment it
   connects, so your first generation is instant instead of waiting on the
