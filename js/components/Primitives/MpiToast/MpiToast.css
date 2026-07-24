@@ -1,13 +1,13 @@
-/* Shared stack container — fixed to bottom-left, lays toasts out in normal
+/* Shared stack container — fixed to bottom-right, lays toasts out in normal
    flow so each can grow to its own height without overlapping its neighbours.
    column-reverse keeps the newest toast nearest the bottom edge. */
 .mpi-toast-stack {
     position: fixed;
     bottom: var(--toast-bottom, var(--s-4));
-    left: var(--s-4);
+    right: var(--s-4);
     display: flex;
     flex-direction: column-reverse;
-    align-items: flex-start;
+    align-items: flex-end;
     gap: var(--s-3);
     max-height: calc(100vh - var(--s-6));
     z-index: 20000;
