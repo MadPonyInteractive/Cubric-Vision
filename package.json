@@ -1,6 +1,6 @@
 {
   "name": "cubric-vision",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cubric Vision Desktop app — Local Open Source Image and Video Generator",
   "main": "main.js",
   "productName": "Cubric Vision",

@@ -38,6 +38,26 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.2.0': {
+    version: '1.2.0',
+    importantChanges: [],
+    whatIsNew: [
+      'DEPTH CONTROL FOR SDXL — the five SDXL generators (SDXL Realistic, SDXL NSFW, ILL Anime Beauty, ILL Anime, PONY Mix) can now follow the pose and composition of a reference image using a depth ControlNet. Pick the Depth operation, drop in an image, and the result keeps its structure while your prompt drives the content.',
+      'STAGE ALL MODELS ON CONNECT — we found that copying your installed models onto the Pod fast local disk ahead of time makes the first generation start much sooner, so there is now a RunPod setting (off by default) that stages every installed model the moment the Pod connects. Off keeps the default, staging each model on first use.',
+    ],
+    fixes: [
+      'Switching between image models on a RunPod engine no longer re-reads the weights from the slow network volume every time; they are staged to the Pod fast local disk, cutting a cold switch from about 2 minutes to a few seconds. The Pod disk now auto-sizes to your network volume so the whole model set fits. Video models (LTX) that stream by design are unaffected.',
+      'After a model downloads to a RunPod engine, the app no longer re-reads every weight back off the slow network volume to checksum it; a completed multi-connection download is trusted directly, so the Verifying step that could run longer than the download itself (about 3 minutes on a 2GB file) is now near-instant.',
+      'Dragging a gallery card out into a folder now saves it with its real filename from the project Media folder (for example t2i_001.png) instead of a generic project-file.png, which also collided into an already-exists prompt when you dragged out more than one. Dragging cards onto the prompt to reuse them is unchanged.',
+      'Copy mask now carries the auto-detected regions too: it previously only carried your brushed and erased strokes, so the auto-detected selection was lost on paste, and a mask made purely from auto-detect copied as nothing. It now matches what Download mask already exported.',
+      'A single generation finishing while the app is focused now shows the Generation finished toast; previously only multi-generation batches did. Notifications are quieter overall: routine confirmations (importing a model, uninstalling, adding cards to a project, switching models to continue a preview) no longer play a sound, and returning to the app after a download finished no longer replays a duplicate toast.',
+      'Toast notifications no longer cover your prompt text: the toast stack now stacks up from the bottom-right corner instead of the bottom-left, keeping the prompt box clear.',
+    ],
+    breakingChanges: [],
+    engineNotes: [
+      'COMFYUI ENGINE UPDATED TO 0.28.0 — from 0.27. Brings a text-model sampling speedup and int8/int4 optimizations that mainly help local Turing and 16-series GPUs. No workflow or behavior changes; every shipped model was re-swept and passed.',
+    ],
+  },
   '1.1.0': {
     version: '1.1.0',
     importantChanges: [

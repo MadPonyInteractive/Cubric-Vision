@@ -5,11 +5,9 @@
  * is computed purely from the semantic APP_VERSION in appVersion.js, so it can
  * never drift from the version the build actually ships.
  *
- * Rule (locked MPI-2):
- *   - 0.x.x            → 'alpha'   (all pre-1.0 builds)
- *   - X.0.0 (X >= 1)   → 'release' (clean major.0.0)
- *   - X.Y.0 (Y > 0)    → 'beta'    (minor bump, no patch)
- *   - X.Y.Z (Z > 0)    → 'alpha'   (patch in flight)
+ * Rule:
+ *   - 0.x.x            → 'alpha'   (internal pre-1.0 builds, never shipped)
+ *   - X.Y.Z (X >= 1)   → 'release' (every public build; alpha/beta staging retired)
  *
  * Used by the About panel label and the in-app error reporter. The error
  * reporter's BACKEND re-derives stage from the version it receives — the client
@@ -31,13 +29,9 @@ export function deriveStage(version) {
     if (!m) return 'alpha';
 
     const major = Number(m[1]);
-    const minor = Number(m[2]);
-    const patch = Number(m[3]);
 
     if (major < 1) return 'alpha';
-    if (minor === 0 && patch === 0) return 'release';
-    if (patch === 0) return 'beta';
-    return 'alpha';
+    return 'release';
 }
 
 /** Current app stage, derived from APP_VERSION. */

@@ -141,7 +141,10 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // win). Built on the same cu130 stack (torch unchanged). See MPI-244.
 // v0.16.0 (MPI-260): bake background_removal/birefnet.safetensors (444MB, from R2)
 // for the native RemoveBackground node (requires ComfyUI >=0.27.0, already locked).
-const POD_IMAGE_VERSION = 'v0.16.0';
+// v0.17.0 (MPI-342): ComfyUI 0.28.0 — text-model sampling speedup + int8/int4; carries
+// MPI-341's node-import smoke gate + cu130 pip constraints. Release rebuild of the proven
+// v0.17.0-dev; CI run 30059725213 (both legs green, pull- + boot-verified).
+const POD_IMAGE_VERSION = 'v0.17.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
@@ -169,7 +172,9 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // v0.16.0-cpu (MPI-260): rebuilt in the same CI dispatch as the GPU image. birefnet
 // is a GPU-only baked weight; the cpu image gains nothing but is rebuilt from the same
 // tree — keep the tags in lockstep (v0.10.3-cpu 404 trap).
-const POD_IMAGE_VERSION_CPU = 'v0.16.0';
+// v0.17.0-cpu (MPI-342): rebuilt in the same CI dispatch as the GPU image (0.28 wave);
+// boot-smoke verified (/health wrapper 0.2.38). Keep in lockstep with the GPU pin.
+const POD_IMAGE_VERSION_CPU = 'v0.17.0';
 // MPI-340: DEV-ONLY image pins. _devMode (BUILD_HASH === 'dev') is false in every
 // released portable, so a shipped app can NEVER resolve these — the stable pins above
 // stay frozen while Pod-image work iterates. Bump these (not the stable pair) after a
