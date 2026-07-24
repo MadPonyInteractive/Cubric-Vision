@@ -29,6 +29,12 @@
 
 ## Fixes
 
+- **Cloud model installs verify almost instantly now.** After a model downloads
+  to a RunPod engine, the app no longer re-reads every weight back off the slow
+  network volume to checksum it — a completed multi-connection download is
+  trusted directly, so the "Verifying…" step that could run longer than the
+  download itself (~3 min on a 2 GB file) is now near-instant.
+
 - **Cloud model switching is dramatically faster.** Switching between image
   models on a RunPod engine no longer re-reads the weights from the slow network
   volume every time — they're staged to the Pod's fast local disk, cutting a

@@ -209,6 +209,14 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   session (2db240a) once the warm number was checked. Rule for any cache/stage/memoize: confirm
   first-touch (fill cost) vs warm-repeat (read cost) before concluding a tier is net-negative —
   get at least one warm number first.
+- **Install verify trusts a complete aria2 finish (MPI-333).** `_run_install` skips the
+  post-download SHA256 re-read when aria2 reports `status=="complete"` (its per-piece tracking
+  guarantees a hole-free file) and records the app's expected sha as canonical — the second full
+  read off the slow network volume (aimdo pins host RAM → no warm page cache) dominated install
+  wall-clock (a 2 GB weight re-read ~3 min vs ~1 min download). Full SHA is KEPT for the finishes
+  where completeness isn't guaranteed: the RPC-dead belt exit (sparse `getsize` can snap high with
+  holes), the httpx fallback, and any dep with no expected sha. Pod-only — the local/resumable
+  path (`downloadManager.js`, MPI-296 hash-while-streaming) is untouched.
 - **`wrapper.py` + `start.sh` are R2-floated, NOT baked (MPI-156).** Editing either is **NOT**
   an image rebuild. `bootstrap.sh` (the image CMD) curls both fresh from R2
   (`https://pod.cubric.studio/vision/<channel>/`) at every Pod boot; the baked copies are
