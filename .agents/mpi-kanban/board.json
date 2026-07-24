@@ -7,7 +7,6 @@
       "MPI-325",
       "MPI-332",
       "MPI-320",
-      "MPI-318",
       "MPI-289",
       "MPI-323",
       "MPI-322",
@@ -26,6 +25,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-318",
       "MPI-333",
       "MPI-329",
       "MPI-342",
@@ -36,8 +36,24 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-24T00:46:42Z",
+  "updated_at": "2026-07-24T01:11:59Z",
   "events": [
+    {
+      "at": "2026-07-24T01:20:00Z",
+      "type": "task.moved",
+      "task": "MPI-318",
+      "from": "doing",
+      "to": "done",
+      "note": "User-verified live 2026-07-24: single card dragged to an OS folder lands with its real Media-folder filename; drag-to-prompt still works (the thing the prior attempt broke). Shipped via Chromium DownloadURL alongside application/mpi-media on the same HTML5 drag — no preventDefault/startDrag/IPC, one file touched (MpiGalleryGrid.js). Multi-select export dropped by user (DownloadURL is single-file). Changelog fix added to UNRELEASED.md; gallery.md documents the two-consumer dragstart contract. validation.md represents PASS."
+    },
+    {
+      "at": "2026-07-24T01:11:59Z",
+      "type": "task.moved",
+      "task": "MPI-318",
+      "from": "todo",
+      "to": "doing",
+      "note": "Drag-out to file system. Routed the docs first (gallery.md, events.md, components.md) per the brief. Root of the prior revert confirmed: preventDefault on the shared card dragstart kills the HTML5 drag that in-app drag-to-prompt rides (consumers: MpiPromptBox getData, MpiGalleryBlock/MpiGroupHistoryBlock types-sniff). User scoped it to SINGLE-card only (dropped multi-select to avoid the startDrag+IPC surface). Fix = Chromium DownloadURL type set ALONGSIDE application/mpi-media on the same drag, NO preventDefault, NO startDrag, NO IPC, NO main.js change. Real media-folder filename via extractFilenameFromPath. In-app drag physically cannot break. Awaiting live drag-to-Explorer verification (DownloadURL drop-to-target behavior in this Electron build is the one unverified bit)."
+    },
     {
       "at": "2026-07-23T21:40:00Z",
       "type": "task.moved",

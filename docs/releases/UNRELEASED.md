@@ -29,6 +29,12 @@
 
 ## Fixes
 
+- **Dragged-out gallery cards keep their real name.** Dragging a gallery card
+  out into a folder now saves it with its real filename from the project's Media
+  folder (e.g. `t2i_001.png`) instead of a generic `project-file.png` — which
+  also collided into an "already exists" prompt when you dragged out more than
+  one. Dragging cards onto the prompt to reuse them is unchanged.
+
 - **Cloud model installs verify almost instantly now.** After a model downloads
   to a RunPod engine, the app no longer re-reads every weight back off the slow
   network volume to checksum it — a completed multi-connection download is

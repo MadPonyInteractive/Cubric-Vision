@@ -27,6 +27,10 @@ Gallery context-menu "Open in file system" → `reveal` event → `/reveal-item`
 
 `MpiGalleryBlock` binds `dragenter/dragleave/dragover/drop` on **`window`** to show/hide its `MpiMediaDropOverlay`. The window `drop` handler ONLY hides the overlay + resets a drag counter — actual import runs from the overlay element's own listener. Any other drop target must call `preventDefault()` but NOT `stopPropagation()` — swallowing the bubble starves the gallery's window-level cleanup, leaving the overlay stuck open. Found MPI-82.
 
+## Card drag — two consumers on ONE dragstart (MPI-318)
+
+A gallery card's `dragstart` (image thumb + video thumb, `MpiGalleryGrid.js`) feeds **both**: (1) `dataTransfer.setData('application/mpi-media', …)` → in-app drops (PromptBox chip, group-history); (2) `_addDownloadUrl()` sets a Chromium `DownloadURL` (`mime:realname:/project-file?path=` URL) → OS drag-out to a folder with the real Media-folder filename. Both ride the SAME HTML5 drag. **NEVER `e.preventDefault()` in this handler** — it kills the in-app drop (the whole card was reverted once for exactly that). `DownloadURL` is single-file only (Chromium cap); multi-select export would need `webContents.startDrag` + a disambiguator and was dropped by the user.
+
 ## Hover audio + scroll-stop
 
 MPI-132: hovering a gallery VIDEO card unmutes+plays its `<video>`; hovering an AUDIO card plays its hidden `<audio>`. Gated by `Storage.getPlayAudioOnHover()` (`mpi_play_audio_on_hover`, default true). One-card-at-a-time via `_stopOtherGalleryMedia(except)` covering BOTH `audio[data-src]` AND `video.mpi-group-card__thumb--video`. SCROLL BUG: `mouseleave` does NOT fire when the card scrolls out from under a STATIONARY cursor. Do NOT rely on mouseleave alone for "stopped hovering" in a scrollable list.

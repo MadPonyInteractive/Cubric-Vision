@@ -13,6 +13,7 @@ import { Storage } from '../../../core/storage.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
+import { extractAbsPath, extractFilenameFromPath } from '../../../utils/mediaActions.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
 
@@ -27,6 +28,27 @@ function _stopOtherGalleryMedia(except) {
         try { m.currentTime = 0; } catch (_) {}
         if (m.tagName === 'VIDEO') m.muted = true;
     });
+}
+
+// MPI-318 — let a dragged card ALSO export to the OS file system with its real
+// media-folder filename, without touching the in-app `application/mpi-media`
+// drag: Chromium's `DownloadURL` type rides the same HTML5 drag (no
+// preventDefault, no startDrag), so drag-to-prompt is unaffected. Single card
+// per drag — DownloadURL caps at one file (multi-select export dropped by user).
+const _EXPORT_MIME = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+    mp3: 'audio/mpeg', wav: 'audio/wav', flac: 'audio/flac', ogg: 'audio/ogg',
+};
+function _addDownloadUrl(e, item) {
+    const abs = extractAbsPath(item?.filePath);
+    const name = extractFilenameFromPath(item?.filePath);
+    if (!abs || !name) return; // blob/preview cards have no on-disk file to export
+    const mime = _EXPORT_MIME[name.split('.').pop().toLowerCase()] || 'application/octet-stream';
+    const url = `${location.origin}/project-file?path=${encodeURIComponent(abs)}`;
+    // DownloadURL value = "<mime>:<filename>:<url>" (Chromium splits on the first
+    // two colons, so the http(s):// in <url> is safe).
+    e.dataTransfer.setData('DownloadURL', `${mime}:${name}:${url}`);
 }
 
 /**
@@ -891,6 +913,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                             groupId: group.id, itemId: s?.id,
                             filePath: s?.filePath, type: group.type,
                         }));
+                        _addDownloadUrl(e, s);
                     });
                     _replaceThumb(v);
                     _videoThumb = v;
@@ -1006,6 +1029,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                             // media chip shows the real name, not the raw filename.
                             name: group.customName || group.name || sel?.name || '',
                         }));
+                        _addDownloadUrl(e, sel);
                     });
                 }
 
