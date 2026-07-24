@@ -155,6 +155,32 @@ export const MpiCanvasViewer = ComponentFactory.create({
             }
         }
 
+        // Union a manual layer (may be null) with the additive auto-pick masks
+        // into one alpha PNG that round-trips through setManualFromDataURL. Auto
+        // urls are white-on-transparent, so a plain source-over draw IS the
+        // union. No subtract here — that layer is carried separately so a pasted
+        // mask stays fully erasable.
+        async function _mergeManualWithAuto(manualUrl, autoUrls) {
+            if (!autoUrls?.length) return manualUrl || null;
+            try {
+                const imgs = [];
+                if (manualUrl) imgs.push(await _loadImg(manualUrl));
+                for (const u of autoUrls) imgs.push(await _loadImg(u));
+                const w = imgs[0]?.naturalWidth;
+                const h = imgs[0]?.naturalHeight;
+                if (!w || !h) return manualUrl || null;
+                const tmp = document.createElement('canvas');
+                tmp.width = w;
+                tmp.height = h;
+                const ctx = tmp.getContext('2d');
+                for (const img of imgs) ctx.drawImage(img, 0, 0, w, h);
+                return tmp.toDataURL('image/png');
+            } catch (err) {
+                console.warn('[MpiCanvasViewer] merge manual+auto failed:', err);
+                return manualUrl || null;
+            }
+        }
+
         async function _restoreLayers(item) {
             const k = _maskKey(item);
             if (!k) { _hasMask = false; return; }
@@ -836,24 +862,37 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // Copy/paste mask between history entries (MPI-311).
         //
-        // Carries the manual + subtract LAYERS, not the flattened composite:
-        // flattening would bake the eraser in permanently, so the pasted mask
-        // could no longer be erased further on the target. Auto-pick masks are
-        // deliberately excluded — they are RAM-only server detections tied to
-        // the source image's content, so they mean nothing on a different one.
+        // Carries the manual + subtract LAYERS, not a flattened B/W composite:
+        // flattening the SUBTRACT layer would bake the eraser in permanently, so
+        // the pasted mask could no longer be erased further on the target.
         //
-        // The live canvas is the source of truth when the entry is on screen
-        // (unpersisted strokes have not reached TEMP yet); otherwise read TEMP.
+        // The selected auto-detected region IS included — folded into the manual
+        // layer. Auto picks are additive (same polarity as manual), so unioning
+        // them here reproduces the on-screen composite on paste while keeping
+        // subtract separate, so the mask stays erasable. (They were dropped
+        // before, which lost exactly what download and the preview both show,
+        // and made an auto-only mask un-copyable.) The auto urls persist to TEMP
+        // as white-on-transparent PNGs, not RAM.
+        //
+        // The live canvas is the source of truth for manual/subtract when the
+        // entry is on screen (unpersisted strokes have not reached TEMP yet);
+        // auto always comes from TEMP, flushed first so a just-deselected pick
+        // does not ride along.
         el.getMaskLayersForEntry = async (item) => {
             const k = _maskKey(item);
             if (!k) return null;
+            if (_isCurrentEntry(item)) await _persistCurrentAutoPicks();
+            const { manual: tManual, subtract: tSub, auto } =
+                await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            let manual = tManual || null;
+            let subtract = tSub || null;
             if (_isCurrentEntry(item) && _cv.el?.getManualURL) {
-                const manual = _cv.el.getManualURL() || null;
-                const subtract = _cv.el.getSubtractURL?.() || null;
-                if (manual) return { manual, subtract };
+                manual = _cv.el.getManualURL() || manual;
+                subtract = _cv.el.getSubtractURL?.() || subtract;
             }
-            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
-            return manual ? { manual, subtract } : null;
+            const autoUrls = _normalizeAutoTempEntry(auto).urls;
+            const mergedManual = await _mergeManualWithAuto(manual, autoUrls);
+            return mergedManual ? { manual: mergedManual, subtract } : null;
         };
 
         el.pasteMaskLayersToEntry = async (item, layers) => {
