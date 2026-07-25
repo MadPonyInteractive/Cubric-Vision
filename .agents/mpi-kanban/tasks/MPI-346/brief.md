@@ -82,6 +82,24 @@ Candidate work, in ladder order:
 3. **`ref_boost_mask`** — needs app plumbing (mask painted on the SUBJECT chip, currently
    History-workspace only). Separate card when we get there.
 
+## Live findings (user, bench testing on the v1.2.2 nodes)
+
+- **`grounding_px` 1024 beats 768.** Confirmed by A/B on the bench. Consistent with
+  v1.2's high-res adaptation pass (v1.1's trained range was 384-768). Plan is to scale
+  input images to 1024 up front, which helps further. The shipped runtime JSON still
+  bakes 768 - revisit when rewiring.
+- **`ref_boost` 4 helps on a SINGLE reference** - real identity/character consistency gain.
+- **`ref_boost` INVERTS on two characters / two references** - actively destroys
+  consistency. Mechanically expected: the boost applies to the LAST ref only, but the
+  attention bias rows are `rows0:` (ALL target tokens), so character A's tokens are
+  dragged toward ref 2 as hard as character B's. There is no target-side gating.
+  `ref_boost_mask` should reduce this (fewer boosted columns, no outfit/background
+  contamination) but cannot cure it. Two-ref probably wants `ref_boost` near 1.0.
+- **Untested:** `ref_boost_mask` for localized edits. Note the mask masks the REFERENCE
+  columns, not the target rows - it cannot localize an edit or stop the model
+  reframing/zooming. That job belongs to the existing `InpaintCropImproved` /
+  `InpaintStitchImproved` path (MPI-282) plus `fit_mode: fit` for the grid mapping.
+
 ## Verify
 
 - Log line `[krea2edit] nodes v1.2.2 loaded` on engine boot.
