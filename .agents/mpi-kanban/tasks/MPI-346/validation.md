@@ -41,20 +41,38 @@ krea2 34 -> 34, describer 2 -> 2, nothing added or removed. No `commandRegistry`
 `<|im_start|>assistant\n`, exactly one `<|image_pad|>` inside the user turn, three turns
 total. Bypassed bench nodes (45/46/47) dropped by the converter as designed.
 
-**User bench testing.** Every Krea2 operation exercised in the ComfyUI node graph EXCEPT
-text-to-image.
+**User bench testing.** Every Krea2 operation exercised in the ComfyUI node graph. Text-to-image
+was initially BLOCKED — `Input_Image` (`MpiLoadImageFromPath`) had `block_if_empty: True`, so a
+t2i run, which supplies no image, could never execute past that node. Turned off in the same
+pass (`96980f88`); t2i then confirmed working in the browser, and image edit confirmed working.
+
+> Trade-off accepted with that flag: an empty path now yields a blank image instead of halting,
+> so a genuinely missing image on an EDIT run degrades to a black reference rather than
+> erroring. The graph's `Input_Is_i2i` / `Input_Is_Edit` gates decide whether the branch runs
+> at all, so this is contained.
+
+**Export hazard hit twice, both caught before baking.** Two consecutive exports of this
+template were serialized against the STALE v1.1 node schema and silently dropped the new
+widget values — first run lost `ref_boost`, `ref_boost_a`, `fit_mode` and `system_prompt`
+outright; second run restored the widgets but at DEFAULTS, so `408`'s `ref_boost` came back
+as 1 instead of 4. Cause both times was the ComfyUI browser tab restoring its own cached copy
+of the graph rather than the file on disk — not a stale install (both ComfyUI installs were
+confirmed on v1.2.2). Caught by diffing `raw/` against HEAD BEFORE running the sync. Standing
+lesson: diff the raw source, do not trust a green schema gate alone — the gate proves the
+SERVER is current, not that the exporting TAB was.
+See [[tool_comfy_schema_gate_before_workflow_sync]].
 
 ## NOT verified
 
 - **App-level generation on any operation.** Nothing has been run through Cubric Vision
-  itself. The injection surface is provably unchanged, which is why the user judged the risk
-  low, but "unchanged contract" is not the same as "ran green in the app".
-- **Krea2 text-to-image**, in the graph or the app.
+  itself. The injection surface is provably unchanged (34 -> 34), which is why the user judged
+  the risk low, but "unchanged contract" is not the same as "ran green in the app".
 - **`fit_mode: 'fit'` output effect.** It is genuinely active for the first time (both `vae`
   and `source_image` are connected, so it no longer warns and falls back). Reference geometry
   changes; nobody has compared before/after.
-- **`ref_boost` 4 output effect in the baked graph.** Measured good on the bench, never run
-  through the app's dispatch path.
+- **`ref_boost` 4 output effect.** Measured good on the bench, but the edit test above ran on
+  a tab whose graph had been reset to the default `ref_boost` 1, so the shipped value has not
+  actually been exercised end-to-end.
 - **The describer's first-word behaviour end-to-end** — the entire point of the new recipe is
   that it no longer opens with "The image shows"; confirm on a real describe run.
 - **Remote (RunPod) engine.** The `.mpi_node_commit` drift ladder should reinstall the node at

@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-25T03:20:00Z",
-  "updated_at": "2026-07-25T08:10:00Z",
+  "updated_at": "2026-07-25T08:55:00Z",
   "labels": [
     "krea2",
     "custom-nodes",
@@ -26,7 +26,7 @@
   },
   "attention": {
     "state": "required",
-    "reason": "Node bump + template rewiring are baked and asserted, but nothing has run through the app. Run one Krea2 edit and one describe in Cubric Vision to close. Krea2 text-to-image is untested even in the graph.",
-    "updated_at": "2026-07-25T08:10:00Z"
+    "reason": "Graph-level testing complete: t2i was blocked by Input_Image block_if_empty and is fixed; t2i and image edit both confirmed in the browser. Remaining: run one Krea2 edit and one describe through the APP, and exercise the shipped ref_boost 4 (the edit test ran at the default 1).",
+    "updated_at": "2026-07-25T08:55:00Z"
   }
 }
