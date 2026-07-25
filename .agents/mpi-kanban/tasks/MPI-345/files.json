@@ -1,1 +1,21 @@
-{"schema":"mpi-kanban/task-files/v1","files":[]}
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    {
+      "path": "js/shell.js",
+      "note": "destroy the App instance on its close event (deferred one tick)"
+    },
+    {
+      "path": "js/components/Organisms/MpiBaseApp/MpiBaseApp.js",
+      "note": "re-emit the overlay close outward"
+    },
+    {
+      "path": "js/components/types.js",
+      "note": "document the close event + destroy-on-close lifecycle"
+    },
+    {
+      "path": "tests/desktop/app-close-destroys-instance.spec.js",
+      "note": "NEW - hotkey-release invariant, negative-control proven"
+    }
+  ]
+}
