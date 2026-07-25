@@ -131,23 +131,50 @@ on this bench.
 
 | tier | stage 1 | stage 2 (skin pass) |
 |---|---|---|
-| **quality** (`Input_Tier` 1) | `euler`/`beta`, **25** steps, cfg **3.5** | `euler`/`beta`, 3 steps, denoise 0.19, cfg 1.0 |
-| **fast** (`Input_Tier` 2) | `euler`/`beta`, **8** steps, cfg 1.0 | *(same)* |
+| **quality** (`Input_Tier` 1) | `euler`/`beta`, **25** steps, cfg **2.0** | `euler`/`beta`, **2** steps, denoise **0.30**, cfg 1.0 |
+| **fast** (`Input_Tier` 2) | `euler`/`beta`, **8** steps, cfg 1.0 | `euler`/`beta`, 3 steps, denoise 0.19, cfg 1.0 |
 
 Stage 2 runs with the **accelerator LoRA** active in both tiers. It exists because full Raw
 renders **very smooth, plastic-looking skin** — a short low-denoise pass puts the texture
 back. Quality-tier wall clock: **~130s → ~100s**.
 
+> **Quality tier retuned 2026-07-25 (MPI-346): cfg 3.5 → 2.0, stage 2 `3 / 0.19` → `2 / 0.30`.**
+> Flat literals on nodes `311` / `436`, applying to every tier-1 operation including t2i. The
+> **fast tier is untouched** — it already runs at `cfg 1`, so it was never over-guided, and its
+> stage 2 (node `162`) keeps `3 / 0.19`. That turbo-tier refiner has **not** been A/B'd against
+> the new values; it is unfinished business, not a decision.
+>
+> Two things this table's "plastic skin" line got right and one it missed. Right: the pass is
+> there for texture, and Raw at high cfg really does render plastic. Missed: **cfg itself was a
+> large part of the cause.** 3.5 was mode-seeking — it flattened lighting, over-saturated, and
+> on the SFW weight injected content nobody asked for (young attractive subjects, period costume
+> on an undescribed person). Dropping to 2.0 fixed the rendering *and* made prompts land more
+> literally.
+>
+> Stage 2 also turned out to do a **second, independent job**: plausibility repair. At `cfg 1`
+> with no guidance amplifying the instruction, locally implausible regions get re-rendered toward
+> their surroundings — a reference's denim bleeding into a character's trousers vanished at
+> `0.30` and was present at `0.19`. Lowering base cfg did **not** move stage 2's optimum down,
+> which is how we know it was never merely compensating for an over-guided stage 1.
+>
+> Method note: cfg comparisons need coarse steps across **3 seeds** — a fixed seed fixes only the
+> initial noise, and a 2.0/2.1/2.2 sweep produced non-monotonic identity purely from trajectory
+> divergence. **Stage-2 comparisons do not** — with stage 1 fixed, every arm starts from an
+> identical latent. See [[feedback_seed_replication_for_cfg_sweeps]].
+>
+> Full reasoning, plus the edit-path dials (`ref_boost`, `grounding_px`, reference framing):
+> [editing.md](editing.md).
+
 > **This supersedes the single-stage `euler`@40 cfg 3.0 recommendation below.** That
 > conclusion was correct *for a single-stage graph* and the evidence behind it still stands —
 > read it before re-tuning. But @40 tested **poorly on realistic prompts** in the shipping
-> graph, and adding the refiner pass changed the optimum: 25 steps at a **higher** cfg (3.5)
-> plus a 3-step skin pass beats 40 steps alone, and is faster. The "eval-count floor" argument
-> below assumed all evals come from one pass; the second pass supplies detail the first no
-> longer has to.
+> graph, and adding the refiner pass changed the optimum: 25 steps plus a short skin pass beats
+> 40 steps alone, and is faster. The "eval-count floor" argument below assumed all evals come
+> from one pass; the second pass supplies detail the first no longer has to.
 >
-> Also note this retune moved cfg **up** (3.0 → 3.5) while moving steps **down** — the two are
-> not independent knobs here.
+> That 2026-07-20 retune moved cfg **up** (3.0 → 3.5) while moving steps **down** — the two are
+> not independent knobs here. MPI-346 later moved cfg back **down to 2.0** (see the box above);
+> the steps↔cfg coupling still holds, but 3.5 is history, not the shipped value.
 
 ### Superseded: the single-stage analysis (2026-07-16/17)
 
@@ -211,6 +238,13 @@ app tax. ("Convert workflow JSON to Python" is also a dead end for speed: those 
 same node classes / run the same torch — they remove ~ms of HTTP/frontend layer, not compute.)
 
 ### Raw-tier dead theories — do NOT re-propose (each refuted by a live run)
+
+> **Scope note.** The refutations below are live-run evidence and still stand. But rows written
+> during the 2026-07-20 retune describe the graph *as it shipped then* — where they say the graph
+> "now runs 25 @ cfg 3.5 + a 3-step refiner", read that as **history**. MPI-346 moved it to
+> **cfg 2.0 + a 2-step refiner @ 0.30** (2026-07-25); see the shipped table at the top. What the
+> rows actually kill — higher-order samplers, curve-over-eval-count, steps and cfg tuning
+> independently — is unaffected by that change.
 
 | theory | killed by |
 |---|---|

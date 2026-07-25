@@ -81,5 +81,11 @@ turbo didn't. The hunt ended by retuning **tier 1 outright** — base `cfg 3.5 �
 - https://www.stablediffusiontutorials.com/2026/06/krea2-lora-models.html — trigger-at-end
 - https://docs.comfy.org/tutorials/image/krea/krea-2 — **stale 4-LoRA table**
 - https://github.com/ClownsharkBatwing/RES4LYF · https://github.com/Auryg/Krea-2-Two-Stage-Sampler
-- https://huggingface.co/conradlocke/krea2-identity-edit — **edit-variant test** (see "To test — Krea2 as an EDITOR")
-- https://github.com/lbouaraba/comfyui-krea2edit — **edit nodes test**
+- https://huggingface.co/conradlocke/krea2-identity-edit — identity-edit weights + model card (settings-by-task table, ref_boost/grounding_px guidance)
+- https://github.com/lbouaraba/comfyui-krea2edit — the edit nodes
+- **The INSTALLED node pack ships its own usage guide — read it before searching the web.**
+  `engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/comfyui-krea2edit/README.md`
+  + `CHANGELOG.md` (same files in the `G:\ComfyUi` bench install). They carry the per-task
+  steps/cfg recipes, the "removals need Raw at cfg 3" rule, the `grounding_px` trade and the
+  ≤2MP ceiling. Unmined until 2026-07-25 — everything in [editing.md](editing.md) that isn't
+  user-measured came from there or from the pack's source.
