@@ -743,9 +743,9 @@
  * with an unapplied result does NOT prompt (there is no Discard — see
  * docs/playbooks/add-app/ui/carousel-frame.md).
  *
- * PHASE 3 PENDING: the run path still commits at ENQUEUE time (scope:'gallery'),
- * so APPLY IS INERT and the result is already in the gallery when it lands. The
- * affordance + "Not saved yet" note ship with the frame; wiring is a separate diff.
+ * The run path COMMITS ON COMPLETION (scope:'gallery') — there is no Apply step.
+ * MPI-306 Phase 3 built a hold-until-Apply flow and it was REVERTED after the UX
+ * pass (an Apply the user never wants to skip is friction). See appService.js.
  *
  * Mounted via: Events.emit('app:open', {appId}) → shell resolves the descriptor +
  * uiComponent and mounts one instance (destroying any prior active app).
