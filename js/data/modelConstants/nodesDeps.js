@@ -185,6 +185,9 @@ export const nodesDeps = {
     // latent as frame=1 RoPE tokens) + Krea2EditGroundedEncode (Qwen3-VL image-grounded
     // instruction). Single __init__.py, imports only torch/einops/comfy — NO
     // requirements.txt ⇒ installRequirements:false (rides the volume, not the Pod bake).
+    // Pinned at v1.2.2 (MPI-346) — matches the v1.2 weights we already ship. Adds the
+    // pixel-space source path (vae + source_image), fit_mode, ref_boost/ref_boost_mask,
+    // and the ComfyUI ref_latents wrapper-arg tolerance that ComfyUI 0.29 will require.
     'comfyui-krea2edit': {
         id: 'comfyui-krea2edit',
         name: 'ComfyUI Krea2 Edit',
@@ -192,7 +195,7 @@ export const nodesDeps = {
         filename: 'comfyui-krea2edit',
         url: lockUrl('comfyui-krea2edit'),
         installRequirements: false,
-        size: '11KB',
+        size: '45KB',
     },
     // Inpaint Crop & Stitch (MPI-282) — InpaintCropImproved (✂️ Inpaint Crop) crops the
     // masked region to a fixed working size, InpaintStitchImproved (✂️ Inpaint Stitch)

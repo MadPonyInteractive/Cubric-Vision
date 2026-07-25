@@ -100,7 +100,7 @@
     "comfyui-krea2edit": {
       "source": "git-commit",
       "repo": "lbouaraba/comfyui-krea2edit",
-      "commit": "17af88332728c97ab5c7d26296b2cae59c935976",
+      "commit": "223a9383eabf991cb2120663162441383da50f27",
       "filename": "comfyui-krea2edit",
       "installRequirements": false
     },

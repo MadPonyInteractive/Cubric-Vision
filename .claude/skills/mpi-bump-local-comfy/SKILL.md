@@ -86,8 +86,10 @@ Core bumps break version-sensitive custom nodes. **Before** bumping past a known
 tag, check `MEMORY.md` for the current pairing constraint and confirm with the user.
 Standing one (verify it still applies — the tag moves):
 
-> Past **0.28** breaks `Krea2EditModelPatch` unless `comfyui-krea2edit` bumps past
-> `dc7940f4` (v1.2.1) in the SAME pass. Core commit `c9602625` is the trigger.
+> ~~Past **0.28** breaks `Krea2EditModelPatch` unless `comfyui-krea2edit` bumps past
+> `dc7940f4` (v1.2.1) in the SAME pass. Core commit `c9602625` is the trigger.~~
+> **CLEARED 2026-07-25 (MPI-346):** the node is pinned at `223a9383` (v1.2.2), which
+> already tolerates the `ref_latents` wrapper arg. No live pairing constraint right now.
 
 ## Step 4 — verify (all three, live)
 
