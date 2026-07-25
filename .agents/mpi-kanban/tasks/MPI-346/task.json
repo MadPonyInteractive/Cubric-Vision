@@ -4,10 +4,10 @@
   "title": "Bump comfyui-krea2edit v1.1 -> v1.2.2 (node/weight version mismatch)",
   "description": "We already ship the v1.2 identity-edit weights (krea2_identity_edit_v1_2_r128) but pinned the v1.1 NODES (17af8833), so the v1.2 weights have been running on legacy geometry. Bumped node_lock to 223a9383 (v1.2.2). Unlocks the pixel-space source path (vae + source_image), fit_mode, ref_boost / ref_boost_a / ref_boost_mask, GroundedEncode system_prompt, and the ComfyUI ref_latents wrapper tolerance that 0.29 will require. User owns the workflow rewiring + live A/B. Detail in brief.md.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-25T03:20:00Z",
-  "updated_at": "2026-07-25T03:20:00Z",
+  "updated_at": "2026-07-25T08:10:00Z",
   "labels": [
     "krea2",
     "custom-nodes",
@@ -23,5 +23,10 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Node bump + template rewiring are baked and asserted, but nothing has run through the app. Run one Krea2 edit and one describe in Cubric Vision to close. Krea2 text-to-image is untested even in the graph.",
+    "updated_at": "2026-07-25T08:10:00Z"
   }
 }

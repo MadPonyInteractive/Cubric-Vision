@@ -39,8 +39,14 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-25T04:10:00Z",
+  "updated_at": "2026-07-25T08:10:00Z",
   "events": [
+    {
+      "at": "2026-07-25T08:10:00Z",
+      "type": "attention.required",
+      "task": "MPI-346",
+      "note": "Session close-out. Node pinned at v1.2.2 and live-schema-gated; template rewiring converted, validated and baked (both cards 104 nodes, 0 dangling, injection surface 34->34 unchanged); describer scaffold intact. User exercised every Krea2 op in the node graph EXCEPT text-to-image. NOT verified: any app-level generation, fit_mode/ref_boost output effect, describer first-word behaviour end-to-end, remote engine drift reinstall. Card stays in doing at maturity validating."
+    },
     {
       "at": "2026-07-25T04:10:00Z",
       "type": "task.created",
