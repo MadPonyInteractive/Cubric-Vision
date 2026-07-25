@@ -33,9 +33,16 @@ npm run build:portable:dry-run
 The Electron app uses an Express server on `127.0.0.1:3000`. Desktop tests use
 an isolated Electron user-data directory so they do not modify normal app data.
 
+Boot opens TWO windows: a frameless splash (`splash/splash.html`, loaded instantly
+by `main.js`) and then the shell on `127.0.0.1:3000`; the splash is destroyed on the
+shell's `ready-to-show`. So a desktop spec must NOT use `app.firstWindow()` — it
+returns the splash, which then closes underneath the test. Use the
+`tests/desktop/shellWindow.js` helper (`const window = await shellWindow(app)`).
+
 ## Project Shape
 
 - `main.js`, `server.js` - Electron main process and local Express server.
+- `splash/` - the frameless boot splash shown until the shell window is ready.
 - `js/` - frontend app, components, services, state, shell, and data registries.
 - `routes/` - backend routes for projects, ComfyUI, downloads, engine setup, and
   media utilities.

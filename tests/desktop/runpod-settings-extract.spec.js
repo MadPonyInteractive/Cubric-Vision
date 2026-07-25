@@ -3,6 +3,7 @@
 // and survive a close → re-open cycle (fresh instance each open).
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 test('settings slide-over renders the extracted RunPod section', async ({}, testInfo) => {
   // Suite runs share the machine with other work; app boot under load can blow the 30s default.
@@ -18,8 +19,7 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
   const app = await electron.launch({ args: ['.'], env });
 
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
     await expect(window).toHaveURL(/127\.0\.0\.1:3000/);
 
     const pageErrors = [];
@@ -41,7 +41,10 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
     // Extracted section mounted into its slot, with its own template intact.
     const mount = window.locator('#mpiSettingsRunpodMount');
     await expect(mount.locator('.mpi-settings__section-title')).toHaveText('RunPod Remote Engine');
-    await expect(mount.locator('#mpiSettingsRunpodToggleSlot .mpi-checkbox, #mpiSettingsRunpodToggleSlot input[type="checkbox"]').first()).toBeAttached();
+    // Was #mpiSettingsRunpodToggleSlot — MPI-280's Settings redesign dropped the master
+    // enable toggle (the section is key-gated now) and left this assertion pointing at an
+    // id that no longer exists. Auto-connect is the section's own first checkbox today.
+    await expect(mount.locator('#mpiSettingsRunpodAutoConnectSlot .mpi-checkbox, #mpiSettingsRunpodAutoConnectSlot input[type="checkbox"]').first()).toBeAttached();
 
     // _initRunpodSection ran via the forwarded onOpen: the key-status hint is populated.
     await expect(window.locator('#mpiSettingsRunpodKeyStatus')).not.toHaveText('', { timeout: 10000 });

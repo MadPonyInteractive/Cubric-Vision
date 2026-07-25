@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 // MPI-122: with Wan 2.2 merged back to a single operation-selectable model, the
 // renderer's whole model→dependency chain runs through resolveModelDeps.js. This
@@ -18,8 +19,7 @@ test('renderer resolves the merged wan-22 model via the op resolver', async ({},
   const app = await electron.launch({ args: ['.'], env });
 
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
     await expect(window).toHaveURL(/127\.0\.0\.1:3000/);
 
     const result = await window.evaluate(async () => {

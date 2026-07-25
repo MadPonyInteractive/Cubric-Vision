@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 const PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -15,8 +16,7 @@ test('maskTempStore service: write → read → delete → read', async ({}, tes
 
   const app = await electron.launch({ args: ['.'], env });
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
 
     // writeManual + writeSubtract
     const writeResult = await window.evaluate(async (px) => {

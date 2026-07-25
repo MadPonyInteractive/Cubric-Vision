@@ -4,6 +4,7 @@
 
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 const TINY_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAFElEQVR42mNk+M9QzwAEjGQwACdfA/MhYO3qAAAAAElFTkSuQmCC';
@@ -19,8 +20,7 @@ test('viewer: paint → swapToPreview persists layers, swapToCanvas restores the
 
   const app = await electron.launch({ args: ['.'], env });
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
 
     const result = await window.evaluate(async (imgUrl) => {
       const { MpiCanvasViewer } = await import('/js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
@@ -152,8 +152,7 @@ test('viewer: destroy persists combined manual and auto mask for remount', async
 
   const app = await electron.launch({ args: ['.'], env });
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
 
     const result = await window.evaluate(async (imgUrl) => {
       const { MpiCanvasViewer } = await import('/js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
@@ -255,8 +254,7 @@ test('navigation: history load restores active session-temp mask in prompt previ
 
   const app = await electron.launch({ args: ['.'], env });
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
 
     const result = await window.evaluate(async (imgUrl) => {
       const { state } = await import('/js/state.js');

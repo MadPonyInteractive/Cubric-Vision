@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 /**
  * MPI-345 — closing an App must DESTROY its instance, not just hide the overlay.
@@ -10,8 +11,9 @@ const { test, expect, _electron: electron } = require('@playwright/test');
  * The handler count on `down:control+enter` is the invariant — it must return to
  * its pre-open value once the app closes.
  */
-// Electron boot (splash → local server → shell) outruns the 30s default.
-test.setTimeout(150000);
+// Electron boot (splash → local server → shell) plus the settle wait below runs
+// past the 30s default.
+test.setTimeout(90000);
 
 test('closing an App releases its generation.run hotkey', async ({}, testInfo) => {
   const userDataDir = testInfo.outputPath('user-data');
@@ -25,14 +27,7 @@ test('closing an App releases its generation.run hotkey', async ({}, testInfo) =
   const app = await electron.launch({ args: ['.'], env });
 
   try {
-    // firstWindow() is the SPLASH (file://…/splash.html) — take the shell window.
-    let window = null;
-    for (let i = 0; i < 60 && !window; i++) {
-      window = app.windows().find(w => w.url().includes('127.0.0.1:3000')) || null;
-      if (!window) await new Promise(r => setTimeout(r, 500));
-    }
-    expect(window, 'shell window never appeared').toBeTruthy();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
     // The shell wires the app:open listener during boot; wait for it to settle.
     await window.waitForTimeout(6000);
 

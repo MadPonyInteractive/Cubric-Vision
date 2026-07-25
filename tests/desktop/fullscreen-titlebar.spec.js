@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 test('F11 fullscreen hides the custom titlebar and removes the shell offset', async ({}, testInfo) => {
   const userDataDir = testInfo.outputPath('user-data');
@@ -16,8 +17,7 @@ test('F11 fullscreen hides the custom titlebar and removes the shell offset', as
   });
 
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
     await expect(window).toHaveURL(/127\.0\.0\.1:3000/);
 
     await window.keyboard.press('F11');

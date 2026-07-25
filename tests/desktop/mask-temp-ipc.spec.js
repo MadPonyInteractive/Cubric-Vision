@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { test, expect, _electron: electron } = require('@playwright/test');
+const { shellWindow } = require('./shellWindow');
 
 const PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -18,8 +19,7 @@ test('mask-temp IPC: write/read/delete + session lifecycle', async ({}, testInfo
   const app = await electron.launch({ args: ['.'], env });
 
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
 
     // Resolve session info via IPC (running in main process via app.evaluate).
     const sessionInfo = await app.evaluate(async ({ ipcMain }) => {
@@ -161,8 +161,7 @@ test('mask-temp: stale cubric-* dirs pruned at boot', async ({}, testInfo) => {
 
   const app = await electron.launch({ args: ['.'], env });
   try {
-    const window = await app.firstWindow();
-    await window.waitForLoadState('domcontentloaded');
+    const window = await shellWindow(app);
 
     // Confirm stale dir gone post-boot.
     expect(fs.existsSync(stalePath)).toBe(false);
