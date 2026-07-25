@@ -110,6 +110,25 @@ Relative import depth varies by how deep a component sits under `js/`. Reference
 
 ---
 
+## 🧪 Tests — replay the shape production actually delivers
+
+A test feeds the code YOUR model of the input. If that model is wrong, the test passes
+against broken code and you ship the bug — the check is not evidence, it is a second
+copy of your assumption.
+
+- **Transcribe a real run, don't imagine one.** Pull the actual bytes/lines/events from
+  `logs/app.log`, a captured payload, or the wire — then replay those. Guessed input
+  shapes are where false greens come from.
+- **App contradicts a passing test → suspect the TEST first.** Two live cases: MPI-315
+  replayed `app.log` line-by-line while production passes multi-line CHUNKS (`.some()`
+  kept all 126 lines); MPI-350's tile test called `tile()` once per tile while USDU
+  emits **T+1** ticks, so the trailing tick swallowed the fix and the first cut shipped
+  broken. Both suites were green.
+- **Prove the test bites.** Run it against the UNFIXED code and watch it fail with the
+  expected assertion. A test that passes both ways is only a guard against regression
+  in the OTHER direction — fine to keep, but say which cases those are and never count
+  them as proof the fix works.
+
 ## 🛰️ Pod runtime — publish to `dev`, reach `stable` only by `promote`
 
 `wrapper.py` / `start.sh` are R2-floated, and RELEASED users' Pods boot the `stable`

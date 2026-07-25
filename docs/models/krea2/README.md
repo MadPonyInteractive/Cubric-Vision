@@ -43,6 +43,7 @@ new uploads.
 | 5 | [injection.md](injection.md) | the app injection seam (style system), local install layout, prompt enhancer + its mandatory chat scaffold. |
 | 6 | [preview-taesd.md](preview-taesd.md) | why the latent preview is mediocre (missing `lighttaew2_1`, `Latent2RGB` fallback) and why we **must NOT** install the decoder — ComfyUI #13366 corrupts real generations. |
 | 7 | [editing.md](editing.md) | the **edit path**: the two channels, prompt form, why negatives can't remove reference content, reference framing (pad vs crop), `ref_boost` / `cfg` / `grounding_px` measured trades. |
+| 8 | [upscaling.md](upscaling.md) | the **upscale** graph: the post-tile refiner (a FIX for unusable raw upscales), the `Input_Tier` gate on the accelerator LoRA, and the per-tile-prompt trap under `Use Grid`. |
 
 ## Krea2 as an EDITOR — SHIPPED
 

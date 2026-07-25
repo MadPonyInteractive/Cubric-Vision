@@ -37,6 +37,12 @@
 
 ## fixes
 
+- **Krea 2 upscaling is sharp again.** Upscales came out noisy — bad enough to be
+  unusable at full quality, and mediocre on the fast setting. The upscaler now
+  finishes with a short refining pass, and full quality no longer borrows the
+  fast setting's accelerator, so it actually renders at the quality you picked.
+  Both speeds improved; full quality is the bigger jump.
+
 - **Your images no longer carry hidden data.** ComfyUI stamps the entire
   generation graph — your prompt, negative prompt, seed, model names and the
   full node workflow — invisibly inside every PNG it produces. Cubric Vision now
