@@ -24,12 +24,6 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
 
 ## Steps
 
-0. **Switch to Sonnet first (cost — this workflow is mechanical).** Frontmatter
-   `model:` only holds for one turn, so it can't pin a multi-turn workflow like
-   this one. Instead run `/model sonnet` NOW, before Step 1, so the whole
-   close-out runs on Sonnet. If the session is already on Sonnet, skip. Tell the
-   user you switched; the session model resumes when they next prompt.
-
 1. **Run the user-scope end-session workflow.** Execute the full
    `mpi-end-session` skill (sync docs/rules, persist memory, commit touched
    files, update/close the JSON task card) exactly as that skill defines it. Do
