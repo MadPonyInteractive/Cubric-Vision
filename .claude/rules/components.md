@@ -235,6 +235,7 @@ setup: (el, props, emit) => {
 2. **PromptBox handlers never unsubscribed** — collect into `_unsubs` too
 3. **Child components not destroyed** — call `child.destroy?.()` in parent's `el.destroy`
 4. **State sub-object mutations** — ALWAYS use `state.key = { ...state.key, ...changes }`, never `state.key.field = x`
+5. **HIDDEN ≠ DESTROYED (MPI-345)** — an overlay component whose close only calls `overlay.el.hide()` keeps every binding its `setup` made. `Hotkeys.bind` allows MANY handlers per id and `_handle` fires ALL of them, so a closed-but-alive component's hotkey runs alongside the visible one's: a closed App's `generation.run` queued a phantom generation on the next Ctrl+Enter. Either **destroy on close** (`MpiBaseApp` — the shell emits/handles `close`, and every open remounts anyway) or **bind on open / unbind on close** (`MpiCompareOverlay`). Never bind a GLOBAL handler in `setup` for a component that outlives its own visibility.
 
 ### Utilities for Cleanup
 
