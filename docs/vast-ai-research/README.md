@@ -40,6 +40,12 @@ true and may be what the Discord user meant:
   **ephemeral** provider: spin up → download this job's weights → generate → tear down.
 - We already ship that shape: the **MPI-78 "Any region (no volume)"** ephemeral Pod
   (`MpiRunpodSettings.js:1021`). That is what makes Vast *possible at all* — no redesign.
+- **The volume gap NARROWED after this was written (2026-07-25, MPI-349).** RunPod publicly
+  told its own users to stop forcing network volumes during the availability crunch and ruled
+  out credits for volume pain. So "RunPod has volumes, Vast doesn't" is a weaker advantage than
+  it looked on 2026-07-23 — do not over-weight it when re-reading this. It does **not** unpark
+  the card: red flag 1 below (re-download per session) still bites, and it bites *harder* on
+  Vast, which bills per-byte bandwidth where RunPod's re-download is free.
 
 ## The two RED FLAGS (user's call, 2026-07-23 — these are why it stays parked)
 1. **Ephemeral kills the multi-model user.** A user who keeps 5-10 models would re-download

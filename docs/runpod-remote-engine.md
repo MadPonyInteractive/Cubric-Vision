@@ -152,6 +152,23 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 - Persistent state lives on a RunPod **network volume mounted at `/workspace`** (models +
   per-model custom nodes). One volume per data center; a volume is **locked to its DC**.
   Switching DC ⇒ delete + re-download.
+- **RunPod is steering users OFF network volumes (2026-06-03 announcement, MPI-349.)** Their
+  words: the availability crunch stresses volume topology, they **will not credit** volume
+  pain caused by low supply, and "if a network volume isn't serving you right now, don't force
+  it — keep your data in offsite cloud storage and pull it in as you need it." That is the
+  volume-pinned topology above. **Our escape hatch already exists** — weights on R2 +
+  the MPI-78 ephemeral "Any region" Pod (models on container disk, no DC pin) + the MPI-329
+  disk mirror — so volume-less is a config path, not a rewrite; the cost is a re-download per
+  session (time only, RunPod does not bill bandwidth). Unmeasured: cold-boot-to-first-gen
+  ephemeral vs volume. Do NOT build a "claim a refund" affordance — no credits are coming.
+- **"Deploy when available" is CONSOLE-ONLY (GA 2026-06-18, re-checked 2026-07-25, MPI-349).**
+  REST `POST /pods` has no queue / schedule / wait-for-capacity / subscription field, and we
+  create via REST + the GraphQL `podFindAndDeployOnDemand` fallback — nothing to hook. Our
+  app-side equivalent is `autoRetry` (MPI-110): the picker lists out-of-stock cards and Connect
+  polls until stock appears. Theirs is a real server-side reservation and would win the race,
+  but it **bills the instant capacity appears even with the app closed** — so if the field ever
+  lands in a schema, it gets its own pref + subscription window + explicit consent. Never fold
+  it silently into `autoRetry`, which by construction can only bill while the app is open.
 - **Delete a volume only after deleting its attached Pod** — RunPod refuses to delete an
   attached volume even when the Pod is EXITED. Settings deletes the tracked Pod first.
 - **No volume USED-bytes from RunPod (MPI-169).** REST `/networkvolumes` returns only

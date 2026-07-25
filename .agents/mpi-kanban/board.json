@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 349,
+  "next_id": 350,
   "columns": {
     "todo": [
       "MPI-325",
@@ -18,7 +18,8 @@
       "MPI-343",
       "MPI-344",
       "MPI-347",
-      "MPI-348"
+      "MPI-348",
+      "MPI-349"
     ],
     "doing": [
       "MPI-346",
@@ -39,8 +40,15 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-25T08:10:00Z",
+  "updated_at": "2026-07-25T09:15:00Z",
   "events": [
+    {
+      "at": "2026-07-25T09:15:00Z",
+      "type": "task.created",
+      "task": "MPI-349",
+      "to": "todo",
+      "note": "Card opened in todo (idea). WATCH card for two RunPod announcements. Deploy-When-Available went GA 18 Jun 2026 but is CONSOLE-ONLY - verified against the live REST schema (POST /pods has no queue/schedule/subscription field) and our create path is REST plus the GraphQL podFindAndDeployOnDemand fallback, so nothing to hook; autoRetry (MPI-110) is our app-side equivalent and is safer on billing (never runs with the app closed) but loses the race to a real server-side reservation. Re-open when the field appears in a schema, and gate it behind explicit consent - not folded into autoRetry. Second half is the real signal: RunPod publicly steered users off network volumes and ruled out credits, and our remote engine is volume-pinned; the escape hatch already exists (R2 weights plus ephemeral Any-region pods, MPI-78) so the work is to MEASURE ephemeral-first, not build it. Also narrows the Vast.ai no-volumes red flag in MPI-344. Detail in brief.md."
+    },
     {
       "at": "2026-07-25T08:10:00Z",
       "type": "attention.required",

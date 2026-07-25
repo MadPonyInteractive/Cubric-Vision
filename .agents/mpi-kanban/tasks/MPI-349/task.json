@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-349",
+  "title": "Revisit RunPod Deploy-When-Available API + network-volume steering",
+  "description": "WATCH / RESEARCH - no code today. Two RunPod announcements (18 Jun 2026 'Deploy when available is now GA'; 03 Jun 2026 network-volume availability crunch). (1) Deploy-When-Available is CONSOLE-ONLY as of 2026-07-25 - verified against the live REST schema: POST /pods has no queue/schedule/subscription field, and we create via REST plus the GraphQL podFindAndDeployOnDemand fallback, so there is nothing to hook. We already ship the app-side equivalent (autoRetry, MPI-110). Revisit ONLY when the field appears in the REST or GraphQL schema; theirs is a real server-side reservation and beats our client-side poll, but it bills the instant capacity appears even with the app closed, so it must land behind the subscription window plus explicit consent - never folded silently into autoRetry. (2) RunPod publicly steered users off network volumes and ruled out credits for volume-availability pain; our remote engine is volume-pinned (volume locked to one DC, Connect gated on GPU plus volume). Escape hatch already exists (weights on R2 plus ephemeral Any-region pods, MPI-78, hot-store MPI-329) - this card is the trigger to measure it, not to build it. Full detail in brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-25T09:15:00Z",
+  "updated_at": "2026-07-25T09:15:00Z",
+  "labels": [
+    "runpod",
+    "remote-engine",
+    "research",
+    "watch"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
