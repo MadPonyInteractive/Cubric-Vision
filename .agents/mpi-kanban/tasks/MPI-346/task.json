@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-25T03:20:00Z",
-  "updated_at": "2026-07-25T08:55:00Z",
+  "updated_at": "2026-07-25T21:30:00Z",
   "labels": [
     "krea2",
     "custom-nodes",
@@ -26,7 +26,7 @@
   },
   "attention": {
     "state": "required",
-    "reason": "Graph-level testing complete: t2i was blocked by Input_Image block_if_empty and is fixed; t2i and image edit both confirmed in the browser. Remaining: run one Krea2 edit and one describe through the APP, and exercise the shipped ref_boost 4 (the edit test ran at the default 1).",
-    "updated_at": "2026-07-25T08:55:00Z"
+    "reason": "Rewiring + tier-1 retune shipped and bake-asserted (raw 9371f3ec, both cards 100 nodes, 0 dangling, injection surface 34->34). Both edit references padded to the output frame; ref_boost 2 on node 408; tier 1 retuned outright - base cfg 3.5->2.0 and refiner 3/0.19->2/0.30, flat literals, t2i included; tier 2 untouched. Knowledge captured in docs/models/krea2/editing.md. STILL NOT VERIFIED: nothing has run through the Cubric Vision app - one Krea2 edit and one describe are the remaining gate before this closes.",
+    "updated_at": "2026-07-25T21:30:00Z"
   }
 }

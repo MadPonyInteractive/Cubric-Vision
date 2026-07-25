@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-handoff-pointer/v1",
+  "canonical_handoff": ".agents/mpi-kanban/state/handoffs/e33ccfc7-f3c4-4a54-a062-c1d0682d6502.json",
+  "status": "resolved",
+  "recent_events": [
+    {
+      "at": "2026-07-25T21:30:00Z",
+      "event": "handoff_resolved"
+    }
+  ]
+}

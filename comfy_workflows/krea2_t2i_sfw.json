@@ -212,7 +212,7 @@
   },
   "94": {
     "inputs": {
-      "cleanup": "",
+      "cleanup": 0,
       "opt_title": "",
       "prompt_list": [
         "80",
@@ -1324,6 +1324,7 @@
       "scheduler": "beta",
       "steps": 25,
       "steps_to_run": -1,
+      "cfg": 2,
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
@@ -1344,10 +1345,6 @@
       ],
       "denoise": [
         "468",
-        0
-      ],
-      "cfg": [
-        "466",
         0
       ],
       "seed": [
@@ -1599,9 +1596,9 @@
       "eta": 0.5,
       "sampler_name": "linear/euler",
       "scheduler": "beta",
-      "steps": 3,
+      "steps": 2,
       "steps_to_run": -1,
-      "denoise": 0.19,
+      "denoise": 0.3,
       "cfg": 1,
       "sampler_mode": "standard",
       "bongmath": true,
@@ -1629,26 +1626,6 @@
     "class_type": "ClownsharKSampler_Beta",
     "_meta": {
       "title": "ClownsharKSampler"
-    }
-  },
-  "437": {
-    "inputs": {
-      "true": [
-        "311",
-        1
-      ],
-      "false": [
-        "436",
-        0
-      ],
-      "boolean": [
-        "285",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
     }
   },
   "440": {
@@ -1689,19 +1666,6 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
-    }
-  },
-  "466": {
-    "inputs": {
-      "math_expression": "2.5 if a else 3.5",
-      "a": [
-        "285",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
     }
   },
   "468": {

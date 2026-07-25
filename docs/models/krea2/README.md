@@ -42,19 +42,19 @@ new uploads.
 | 4 | [resolution.md](resolution.md) | `FLUX_RATIOS` verdict, delete the `ResolutionSelector`, the **÷16 rule**, the proven 2K tier. |
 | 5 | [injection.md](injection.md) | the app injection seam (style system), local install layout, prompt enhancer + its mandatory chat scaffold. |
 | 6 | [preview-taesd.md](preview-taesd.md) | why the latent preview is mediocre (missing `lighttaew2_1`, `Latent2RGB` fallback) and why we **must NOT** install the decoder — ComfyUI #13366 corrupts real generations. |
+| 7 | [editing.md](editing.md) | the **edit path**: the two channels, prompt form, why negatives can't remove reference content, reference framing (pad vs crop), `ref_boost` / `cfg` / `grounding_px` measured trades. |
 
-## To test — Krea2 as an EDITOR (unstarted)
+## Krea2 as an EDITOR — SHIPPED
 
-Krea2 Turbo currently **re-composes, cannot edit** (see conditioning-and-control.md).
-These upstream resources claim a real instruct-edit path — worth testing to turn Krea2
-into an editor model:
+Krea2 got a real instruct-edit path via `conradlocke/krea2-identity-edit` weights +
+`lbouaraba/comfyui-krea2edit` nodes (MPI-282; nodes bumped to v1.2.2 in MPI-346). The old
+"Turbo re-composes, cannot edit" note in conditioning-and-control.md describes the *base*
+model without the edit LoRA — it is not the shipped edit path.
 
-- https://huggingface.co/conradlocke/krea2-identity-edit — identity-edit weights
-- https://github.com/lbouaraba/comfyui-krea2edit — ComfyUI edit nodes
-
-**Fallback plan:** if **Turbo** looks bad driving these edit nodes (distilled cfg 1.0 may
-starve the edit conditioning), test **Raw** (52-step, phase 2) — the extra steps + working
-cfg may be what the edit path needs. This is the first concrete reason to build Raw.
+The Raw-vs-Turbo question from the original test plan is answered and it is **not** simply
+"Raw is better": Raw at the t2i-tuned `cfg 3.5` went plastic, and Raw bought no identity that
+turbo didn't. The hunt ended by retuning **tier 1 outright** — base `cfg 3.5 → 2.0`, refiner
+`3 / 0.19 → 2 / 0.30`, both flat literals, t2i included. All of it → [editing.md](editing.md).
 
 ## Hard rules (apply every session)
 
@@ -63,6 +63,10 @@ cfg may be what the edit path needs. This is the first concrete reason to build 
 - **NAG is a silent no-op on Krea2** and *doubles* NFE for zero effect. Krea2-Turbo
   runs at `cfg 1.0` and has **no working negative prompt**.
   See [conditioning-and-control.md](conditioning-and-control.md).
+- **On the EDIT path a negative prompt cannot remove anything that is in the reference
+  image.** The reference arrives as source tokens in both the cond and uncond pass, so it
+  cancels out of the CFG difference. State removals in the *positive* prompt.
+  See [editing.md](editing.md).
 - **Check node `mode` before claiming a node is live** — `4` = bypass, `2` = mute.
 - **The saved `.json` lags the ComfyUI canvas.** Ask the user to save before reading it.
 - **Don't re-propose a dead theory.** [samplers.md](samplers.md) has the table; each row
