@@ -2,7 +2,7 @@
   "1556": {
     "inputs": {
       "images": [
-        "1686",
+        "1709",
         0
       ]
     },
@@ -13,7 +13,7 @@
   },
   "1594": {
     "inputs": {
-      "float": 0.13
+      "float": 0.4
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -286,7 +286,7 @@
         0
       ],
       "model": [
-        "1685",
+        "1711",
         0
       ],
       "positive": [
@@ -336,7 +336,7 @@
     },
     "class_type": "UltimateSDUpscale",
     "_meta": {
-      "title": "Upscaling with Chroma..."
+      "title": "Upscaling..."
     }
   },
   "1687": {
@@ -386,7 +386,7 @@
       "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
       "strength_model": 0.0,
       "model": [
-        "1701",
+        "1687",
         0
       ]
     },
@@ -408,7 +408,7 @@
   },
   "1696": {
     "inputs": {
-      "math_expression": "10 if a == 1 else 6",
+      "math_expression": "15 if a == 1 else 3",
       "a": [
         "1697",
         0
@@ -430,7 +430,7 @@
   },
   "1699": {
     "inputs": {
-      "math_expression": "2.0 if a == 1 else 1.0",
+      "math_expression": "1.5 if a == 1 else 1.0",
       "a": [
         "1697",
         0
@@ -443,7 +443,7 @@
   },
   "1700": {
     "inputs": {
-      "math_expression": "0.0 if a == 1 else 1.0   ",
+      "math_expression": "a == 1",
       "a": [
         "1697",
         0
@@ -454,21 +454,119 @@
       "title": "Mpi Math"
     }
   },
-  "1701": {
+  "1705": {
     "inputs": {
-      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "eta": 0.5,
+      "sampler_name": "linear/euler",
+      "scheduler": "beta",
+      "steps": 2,
+      "steps_to_run": -1,
+      "denoise": 0.2,
+      "cfg": 1,
+      "sampler_mode": "standard",
+      "bongmath": true,
       "model": [
-        "1687",
+        "1706",
         0
       ],
-      "strength_model": [
-        "1700",
+      "positive": [
+        "1707",
+        3
+      ],
+      "negative": [
+        "1707",
+        4
+      ],
+      "latent_image": [
+        "1708",
+        0
+      ],
+      "seed": [
+        "1603",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "1706": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "strength_model": 1,
+      "model": [
+        "1680",
         0
       ]
     },
     "class_type": "MpiLoraModel",
     "_meta": {
       "title": "Accelerator Lora"
+    }
+  },
+  "1707": {
+    "inputs": {
+      "basic_pipe": [
+        "1679",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1708": {
+    "inputs": {
+      "pixels": [
+        "1686",
+        0
+      ],
+      "vae": [
+        "1707",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1709": {
+    "inputs": {
+      "samples": [
+        "1705",
+        0
+      ],
+      "vae": [
+        "1707",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1711": {
+    "inputs": {
+      "true": [
+        "1685",
+        0
+      ],
+      "false": [
+        "1706",
+        0
+      ],
+      "boolean": [
+        "1700",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "is high tier"
     }
   }
 }
