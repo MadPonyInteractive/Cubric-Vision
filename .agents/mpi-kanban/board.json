@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 346,
+  "next_id": 347,
   "columns": {
     "todo": [
       "MPI-325",
@@ -19,6 +19,7 @@
       "MPI-344"
     ],
     "doing": [
+      "MPI-346",
       "MPI-259",
       "MPI-4"
     ],
@@ -36,8 +37,15 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-25T00:30:00Z",
+  "updated_at": "2026-07-25T03:20:00Z",
   "events": [
+    {
+      "at": "2026-07-25T03:20:00Z",
+      "type": "task.created",
+      "task": "MPI-346",
+      "to": "doing",
+      "note": "Bump comfyui-krea2edit 17af8833 (v1.1) -> 223a9383 (v1.2.2). We already ship the v1.2 identity-edit weights but pinned the v1.1 nodes, so the v1.2 weights ran on legacy reference geometry. Unlocks vae+source_image pixel path, fit_mode, ref_boost / ref_boost_a / ref_boost_mask, GroundedEncode system_prompt, and the ref_latents wrapper tolerance ComfyUI 0.29 will require. Node is installRequirements:false so this is a lock-file edit only - no Pod image rebuild, the .mpi_node_commit drift ladder reinstalls on both engines. Workflow rewiring + live A/B owned by the user."
+    },
     {
       "at": "2026-07-25T00:30:00Z",
       "type": "task.moved",
