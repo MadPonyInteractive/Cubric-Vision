@@ -111,7 +111,7 @@
         0
       ],
       "denoise": [
-        "230",
+        "468",
         0
       ],
       "seed": [
@@ -126,7 +126,7 @@
   },
   "73": {
     "inputs": {
-      "int": 891976866874170
+      "int": 891976866874171
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -422,7 +422,7 @@
   },
   "112": {
     "inputs": {
-      "string": "a woman in a red dress in a forest"
+      "string": "restage the 2 women to be placed in a pirate ship with pirate clothes "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -906,35 +906,6 @@
       "title": "Input_Is_i2i"
     }
   },
-  "230": {
-    "inputs": {
-      "true": [
-        "228",
-        0
-      ],
-      "false": [
-        "231",
-        0
-      ],
-      "boolean": [
-        "229",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "i2i"
-    }
-  },
-  "231": {
-    "inputs": {
-      "float": 1
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "dummy"
-    }
-  },
   "235": {
     "inputs": {
       "float": 1
@@ -1075,7 +1046,7 @@
   "274": {
     "inputs": {
       "pixels": [
-        "454",
+        "457",
         0
       ],
       "vae": [
@@ -1124,7 +1095,7 @@
   },
   "287": {
     "inputs": {
-      "int": 2
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1208,7 +1179,7 @@
         0
       ],
       "image": [
-        "454",
+        "457",
         0
       ],
       "image_b": [
@@ -1234,7 +1205,7 @@
         0
       ],
       "image": [
-        "454",
+        "457",
         0
       ],
       "image_b": [
@@ -1313,7 +1284,7 @@
         0
       ],
       "source_image": [
-        "454",
+        "457",
         0
       ],
       "source_image_b": [
@@ -1353,9 +1324,8 @@
       "scheduler": "beta",
       "steps": 25,
       "steps_to_run": -1,
-      "cfg": 3.5,
       "sampler_mode": "standard",
-      "bongmath": false,
+      "bongmath": true,
       "model": [
         "77",
         0
@@ -1373,7 +1343,11 @@
         0
       ],
       "denoise": [
-        "230",
+        "468",
+        0
+      ],
+      "cfg": [
+        "466",
         0
       ],
       "seed": [
@@ -1488,7 +1462,7 @@
   "405": {
     "inputs": {
       "true": [
-        "406",
+        "471",
         0
       ],
       "false": [
@@ -1503,28 +1477,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
-    }
-  },
-  "406": {
-    "inputs": {
-      "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "451",
-        3
-      ],
-      "width": [
-        "451",
-        0
-      ],
-      "height": [
-        "451",
-        1
-      ]
-    },
-    "class_type": "MpiCrop",
-    "_meta": {
-      "title": "Mpi Crop"
     }
   },
   "407": {
@@ -1549,7 +1501,7 @@
   },
   "408": {
     "inputs": {
-      "ref_boost": 4,
+      "ref_boost": 2,
       "ref_boost_a": 1,
       "fit_mode": "fit",
       "model": [
@@ -1565,7 +1517,7 @@
         0
       ],
       "source_image": [
-        "454",
+        "457",
         0
       ]
     },
@@ -1713,56 +1665,86 @@
       "title": "Accelerator Lora"
     }
   },
-  "451": {
+  "457": {
     "inputs": {
-      "size": 1024,
-      "side": true,
       "upscale_method": "lanczos",
-      "image": [
-        "388",
-        0
-      ]
-    },
-    "class_type": "MpiScaledDimensions",
-    "_meta": {
-      "title": "Mpi Scaled Dimensions"
-    }
-  },
-  "454": {
-    "inputs": {
+      "keep_proportion": "pad",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
       "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "455",
-        3
-      ],
-      "width": [
-        "455",
-        0
-      ],
-      "height": [
-        "455",
-        1
-      ]
-    },
-    "class_type": "MpiCrop",
-    "_meta": {
-      "title": "Mpi Crop"
-    }
-  },
-  "455": {
-    "inputs": {
-      "size": 1024,
-      "side": true,
-      "upscale_method": "lanczos",
+      "device": "cpu",
       "image": [
         "256",
         0
+      ],
+      "width": [
+        "75",
+        0
+      ],
+      "height": [
+        "74",
+        0
       ]
     },
-    "class_type": "MpiScaledDimensions",
+    "class_type": "ImageResizeKJv2",
     "_meta": {
-      "title": "Mpi Scaled Dimensions"
+      "title": "Resize Image v2"
+    }
+  },
+  "466": {
+    "inputs": {
+      "math_expression": "2.5 if a else 3.5",
+      "a": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "468": {
+    "inputs": {
+      "math_expression": "b if a else 1.0",
+      "a": [
+        "229",
+        0
+      ],
+      "b": [
+        "228",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "471": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "pad",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "388",
+        0
+      ],
+      "width": [
+        "75",
+        0
+      ],
+      "height": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
     }
   }
 }
