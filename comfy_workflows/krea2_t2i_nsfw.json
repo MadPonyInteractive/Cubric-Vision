@@ -1025,7 +1025,7 @@
     "inputs": {
       "string": "",
       "channel": "alpha",
-      "block_if_empty": true
+      "block_if_empty": false
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

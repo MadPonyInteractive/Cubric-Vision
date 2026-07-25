@@ -422,7 +422,7 @@
   },
   "112": {
     "inputs": {
-      "string": "re-stage her pose to be sitting on a log in a forest"
+      "string": "a woman in a red dress in a forest"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -1025,7 +1025,7 @@
     "inputs": {
       "string": "",
       "channel": "alpha",
-      "block_if_empty": true
+      "block_if_empty": false
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {

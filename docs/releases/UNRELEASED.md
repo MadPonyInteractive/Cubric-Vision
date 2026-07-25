@@ -9,8 +9,7 @@
 ## whatIsNew
 
 - **Krea 2 holds onto a character far better.** The edit path has been rebuilt
-  around the newer Krea 2 edit engine: references are now prepared at full
-  quality instead of being squeezed to fit, and the model is pushed harder to
+  around the newer Krea 2 edit engine: the model is pushed harder to
   keep the face and features of the person you gave it. Restaging someone into a
   new pose, outfit or scene now comes back recognisably *them*, and references
   whose shape doesn't match your output no longer come out stretched or soft.
