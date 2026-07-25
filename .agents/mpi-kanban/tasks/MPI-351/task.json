@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-351",
+  "title": "Upscale applies the factor twice - staged input is pre-scaled 1.5x before upscale_by",
+  "description": "Upscale op applies the factor TWICE - 1.5x on a 768x1344 source yields 1728x3024 (2.25x). Root is NOT the factor and NOT the workflow: Input_Upscale_Factor has exactly one writer (PromptBoxControls.upscaleFactor, injects the raw 1.5), the sidecars for upscale_013/014/015/016 all record 1.5, node 1657 feeds only MpiGridDimensions.upscale_factor and UltimateSDUpscale.upscale_by, and the user ran the same graph in the ComfyUI browser and got the correct size. The graph is fed the WRONG IMAGE: generationSettings.mediaItems points at Media/.preview-assets/1ed8902c...png which measures 1152x2016, i.e. the 768x1344 source already enlarged 1.5x. 1152x2016 * 1.5 = 1728x3024 exactly. t2i_039's own sidecar reports pixelDimensions 768x1344 and has no previewAssets, so that file is not a full-res twin - it exists only in the content-addressed staging store. All four runs used the same hash, consistent with a deterministic pre-scale of the same source at the same factor. UNPROVEN: which code writes the pre-scaled staged copy. Start there.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-25T23:55:00Z",
+  "updated_at": "2026-07-25T23:55:00Z",
+  "labels": [
+    "upscale",
+    "media-staging",
+    "bug",
+    "krea2"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
