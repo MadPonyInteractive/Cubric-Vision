@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-347", "type": "task.created", "at": "2026-07-25T03:50:00Z", "actor": "claude", "summary": "Card opened in todo (idea). High-res localized-edit App using crop-stitch. Brief records why crop-stitch beats ImageCompositeMasked at 4K/8K, the b3f9a018 tone-patch post-mortem, and the head-swap missing-dep defect found while scoping."}

@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 347,
+  "next_id": 348,
   "columns": {
     "todo": [
       "MPI-325",
@@ -16,7 +16,8 @@
       "MPI-183",
       "MPI-339",
       "MPI-343",
-      "MPI-344"
+      "MPI-344",
+      "MPI-347"
     ],
     "doing": [
       "MPI-346",
@@ -37,8 +38,15 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-25T03:20:00Z",
+  "updated_at": "2026-07-25T03:50:00Z",
   "events": [
+    {
+      "at": "2026-07-25T03:50:00Z",
+      "type": "task.created",
+      "task": "MPI-347",
+      "to": "todo",
+      "note": "New App idea: localized edits on 4K/8K images via InpaintCrop/Stitch - mask a small region on a huge scene, sample only the crop, so a small character keeps its definition. Mechanism proven by the user on Qwen. Card carries the crop-stitch tone-patch trap and its root cause (context_from_mask_extend_factor 1.2 starves the model of scene context; feathering at 32px was already on when b3f9a018 gave up on the krea2 masked edit). Also records a dep-declaration defect: app_head_swap.json uses the inpaint classes but neither the app nor the qwen-edit card declares comfyui-inpaint-cropandstitch - only the Krea2 cards do. Static finding, not reproduced live."
+    },
     {
       "at": "2026-07-25T03:20:00Z",
       "type": "task.created",

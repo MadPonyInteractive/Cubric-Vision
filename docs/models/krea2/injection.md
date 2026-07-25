@@ -240,20 +240,48 @@ fighting the "already detailed → polish" rule. Keep the floor a ceiling.
 Style-LoRA tension is real (expander wants long prompts, style LoRAs want short) — rule 1
 ("never repeat a choice the user already made") is what holds it in check.
 
-## Edit op — masked identity-edit (MPI-282)
+## Edit op — WHOLE-IMAGE identity-edit (MPI-282, de-masked in `b3f9a018`)
 
 Edit shares the t2i graph. The app injects `Input_Is_Edit: true` (commandRegistry `edit`
 op `injectParams`, baked FALSE — same contract as `Input_Is_i2i`) to route the identity-edit
-LoRA path. An **optional** `Input_Mask` (MpiString path node, painted in the History workspace
-only) drives a masked crop via `InpaintCropImproved` → sample → `InpaintStitchImproved`; empty
-mask → whole-image edit (the `MpiAnyChecker` on `Input_Mask` gates it). The mask flows through
-the standard MPI-272 path→string pipe (data-URL staged, path injected) — no edit-specific code.
+LoRA path. **The edit is whole-image, at our provided dimensions. There is no mask.**
 
-- **Dep:** `comfyui-inpaint-cropandstitch` (`lquesada/ComfyUI-Inpaint-CropAndStitch`,
-  `installRequirements:false`, rides the volume) on BOTH cards. `comfyui-krea2edit` too
-  (Turbo cards were missing it — the shared graph references `Krea2Edit*` classes, and ComfyUI
-  validates every node class before `MpiIfElse` picks a branch).
+> ⚠ **This section used to describe an `Input_Mask` → `InpaintCropImproved` → sample →
+> `InpaintStitchImproved` path. That was REMOVED on 2026-07-16 by `b3f9a018` ("masked edits
+> gave inconsistent results") and the doc did not follow. Verified 2026-07-25: no krea2 graph
+> contains `InpaintCropImproved`, and `Input_Mask` now exists only in the DETAILER workflows.**
+
+### Why the masked crop failed — read before re-adding one
+
+The removed config was already feathered (`mask_blend_pixels: 32`,
+`context_from_mask_extend_factor: 1.2`, crop resized to 1024²), so blending was **not** the
+missing piece. The symptom was a visible mask-shaped tone patch, which feathering cannot fix
+because the offset is region-wide, not boundary-local. Three causes, in likely order:
+
+1. **Context starvation** — a 1.2× margin means the model white-balances to the crop, not to
+   the scene.
+2. **Double lanczos resample** — crop → 1024² → back.
+3. **VAE round-trip on the pasted region only** — the surrounding pixels never went through
+   the VAE.
+
+`ImageCompositeMasked` (what `remove_background.json` node `9` uses, and what the v1.2
+community workflows use for localized edits) removes 1 and 2 outright — the model generates
+the full frame at native resolution and you keep only the masked part. Cause 3 survives but
+becomes uniform instead of patch-shaped; if a tone patch still shows, round-trip the
+DESTINATION through `VAEEncode` → `VAEDecode` so both sides carry identical VAE error.
+Crop-and-stitch still wins for 4K/8K sources with a small edit region — sampling the full
+frame there is not affordable. See MPI-347.
+
+### Deps + controls
+
+- **Dep:** `comfyui-krea2edit` on BOTH cards (the shared graph references `Krea2Edit*`
+  classes, and ComfyUI validates every node class before `MpiIfElse` picks a branch — Turbo
+  cards were missing it).
+- **`comfyui-inpaint-cropandstitch` is still declared on both Krea2 cards**
+  (`models.js:339`, `:413`, commented "mask-edit crop path") but **no krea2 graph references
+  it since `b3f9a018`**. Do not delete it blind — `app_head_swap.json` needs those classes and
+  currently has no declarer of its own (see MPI-347); the Krea2 cards are what drag the pack in.
 - **Edit op has NO user controls** (`components: []`). The style-LoRA rack was tried and
   reverted: style LoRAs and the identity-edit LoRA don't compose (edit degrades). A
   `Force_1024` crop toggle (`Input_HiRes_Mode`) was also tried and dropped (didn't help
-  enough). Both nodes stay in the graph, baked/scrubbed to safe defaults, just not exposed.
+  enough).
