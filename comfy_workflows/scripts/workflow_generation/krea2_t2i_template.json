@@ -17,7 +17,7 @@
   },
   "55": {
     "inputs": {
-      "unet_name": "krea2_raw_int8_convrot.safetensors",
+      "unet_name": "lustify-v10-krea-raw-int8_convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -126,7 +126,7 @@
   },
   "73": {
     "inputs": {
-      "int": 891976866874171
+      "int": 891976866874170
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -155,12 +155,12 @@
     "inputs": {
       "batch_size": 1,
       "width": [
-        "377",
-        0
+        "257",
+        1
       ],
       "height": [
-        "378",
-        0
+        "257",
+        2
       ]
     },
     "class_type": "EmptyLatentImage",
@@ -422,7 +422,7 @@
   },
   "112": {
     "inputs": {
-      "string": "Over the waist shot of a beautiful emo girl with bangs high, skin detail, skin reflections, sunlight, FOV"
+      "string": "re-stage her pose to be sitting on a log in a forest"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -855,7 +855,7 @@
   "217": {
     "inputs": {
       "pixels": [
-        "370",
+        "257",
         0
       ],
       "vae": [
@@ -890,7 +890,7 @@
   },
   "228": {
     "inputs": {
-      "float": 0.3
+      "float": 0.7
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -1075,7 +1075,7 @@
   "274": {
     "inputs": {
       "pixels": [
-        "370",
+        "454",
         0
       ],
       "vae": [
@@ -1201,13 +1201,14 @@
   },
   "299": {
     "inputs": {
-      "grounding_px": 768,
+      "grounding_px": 1024,
+      "system_prompt": "",
       "clip": [
         "69",
         0
       ],
       "image": [
-        "370",
+        "454",
         0
       ],
       "image_b": [
@@ -1226,13 +1227,14 @@
   },
   "300": {
     "inputs": {
-      "grounding_px": 768,
+      "grounding_px": 1024,
+      "system_prompt": "",
       "clip": [
         "69",
         0
       ],
       "image": [
-        "370",
+        "454",
         0
       ],
       "image_b": [
@@ -1291,6 +1293,9 @@
   },
   "306": {
     "inputs": {
+      "ref_boost": 1,
+      "ref_boost_a": 1,
+      "fit_mode": "fit",
       "model": [
         "265",
         0
@@ -1301,6 +1306,18 @@
       ],
       "source_latent_b": [
         "389",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "source_image": [
+        "454",
+        0
+      ],
+      "source_image_b": [
+        "405",
         0
       ]
     },
@@ -1397,101 +1414,6 @@
       "title": "Output_Image"
     }
   },
-  "370": {
-    "inputs": {
-      "true": [
-        "392",
-        3
-      ],
-      "false": [
-        "257",
-        0
-      ],
-      "boolean": [
-        "285",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "372": {
-    "inputs": {
-      "image": [
-        "370",
-        0
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Image Size"
-    }
-  },
-  "377": {
-    "inputs": {
-      "true": [
-        "372",
-        0
-      ],
-      "false": [
-        "75",
-        0
-      ],
-      "boolean": [
-        "285",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "378": {
-    "inputs": {
-      "true": [
-        "372",
-        1
-      ],
-      "false": [
-        "74",
-        0
-      ],
-      "boolean": [
-        "285",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "380": {
-    "inputs": {
-      "resize_type": "scale dimensions",
-      "resize_type.crop": "center",
-      "scale_method": "area",
-      "input": [
-        "256",
-        0
-      ],
-      "resize_type.width": [
-        "75",
-        0
-      ],
-      "resize_type.height": [
-        "74",
-        0
-      ]
-    },
-    "class_type": "ResizeImageMaskNode",
-    "_meta": {
-      "title": "Resize Image/Mask"
-    }
-  },
   "383": {
     "inputs": {
       "true": [
@@ -1542,21 +1464,6 @@
       "title": "VAE Encode"
     }
   },
-  "392": {
-    "inputs": {
-      "size": 768,
-      "side": false,
-      "upscale_method": "lanczos",
-      "image": [
-        "380",
-        0
-      ]
-    },
-    "class_type": "MpiScaledDimensions",
-    "_meta": {
-      "title": "Mpi Scaled Dimensions"
-    }
-  },
   "403": {
     "inputs": {
       "any": [
@@ -1603,16 +1510,16 @@
       "divisible_by": 16,
       "position": "center",
       "image": [
-        "388",
-        0
+        "451",
+        3
       ],
       "width": [
-        "388",
-        2
+        "451",
+        0
       ],
       "height": [
-        "388",
-        3
+        "451",
+        1
       ]
     },
     "class_type": "MpiCrop",
@@ -1642,12 +1549,23 @@
   },
   "408": {
     "inputs": {
+      "ref_boost": 4,
+      "ref_boost_a": 1,
+      "fit_mode": "fit",
       "model": [
         "265",
         0
       ],
       "source_latent": [
         "274",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "source_image": [
+        "454",
         0
       ]
     },
@@ -1795,17 +1713,56 @@
       "title": "Accelerator Lora"
     }
   },
-  "442": {
+  "451": {
     "inputs": {
-      "filename_prefix": "ComfyUI",
-      "images": [
-        "309",
+      "size": 1024,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "388",
         0
       ]
     },
-    "class_type": "SaveImage",
+    "class_type": "MpiScaledDimensions",
     "_meta": {
-      "title": "Save Image"
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "454": {
+    "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "455",
+        3
+      ],
+      "width": [
+        "455",
+        0
+      ],
+      "height": [
+        "455",
+        1
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "455": {
+    "inputs": {
+      "size": 1024,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "256",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
     }
   }
 }
