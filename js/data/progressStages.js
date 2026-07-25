@@ -82,6 +82,13 @@ export const PROGRESS_STAGES = Object.freeze({
     // runs, 2026-07-18); Quality swaps the accelerator LoRA for the raw UNET but keeps the
     // same single sampler, so the count is structural rather than per-tier.
     'qwen_edit.json':            Object.freeze({ single: 1 }),
+    // Krea2 upscaler (MPI-350) — no `single`: UltimateSDUpscale's tile count is the
+    // stage total and it's only known at runtime (it scales with the input size, the
+    // upscale factor and the Use Grid toggle), so a recorded total would be wrong and
+    // is overridden by tile mode anyway. What IS static is that this graph runs ONE
+    // sampler pass AFTER the tiles — the refiner that made raw upscales usable — so
+    // record that instead and let tile mode add it to the live tile count.
+    'krea2_upscaler.json':       Object.freeze({ postTile: 1 }),
 });
 
 /**
@@ -101,17 +108,34 @@ export const PROGRESS_STAGES = Object.freeze({
  * @param {number} [extraBars=0]  additional tqdm bars this specific run will emit
  * @returns {number}
  */
+// Strip _stage2, then any arch-variant suffix (MPI-200: _fp8/_mxfp8/…). A
+// variant swaps only the loader node, not the sampler graph, so the bar
+// count is identical to the base file — normalize back to it instead of
+// duplicating a row per variant.
+const _baseKey = (workflowFile) => workflowFile
+    .replace(/_stage2\.json$/i, '.json')
+    .replace(/_(?:fp8|mxfp8)\.json$/i, '.json')
+    .replace(/_(?:sfw|nsfw)\.json$/i, '.json');
+
 export function stagesFor(workflowFile, mode = 'single', extraBars = 0) {
     if (!workflowFile) return 0;
-    // Strip _stage2, then any arch-variant suffix (MPI-200: _fp8/_mxfp8/…). A
-    // variant swaps only the loader node, not the sampler graph, so the bar
-    // count is identical to the base file — normalize back to it instead of
-    // duplicating a row per variant.
-    const base = workflowFile
-        .replace(/_stage2\.json$/i, '.json')
-        .replace(/_(?:fp8|mxfp8)\.json$/i, '.json')
-        .replace(/_(?:sfw|nsfw)\.json$/i, '.json');
-    const entry = PROGRESS_STAGES[base];
+    const entry = PROGRESS_STAGES[_baseKey(workflowFile)];
     const recorded = entry ? (entry[mode] || 0) : 0;
     return recorded === 0 ? 0 : recorded + Math.max(0, extraBars | 0);
+}
+
+/**
+ * Bars a workflow runs AFTER UltimateSDUpscale's tiles finish (MPI-350), or 0.
+ *
+ * Separate from `stagesFor` because it is not a total — it is a delta the tile
+ * counter adds to the tile count it discovers at runtime. Only graphs with a
+ * post-tile pass record it; every other USDU card gets 0 and is unaffected.
+ *
+ * @param {string} workflowFile
+ * @returns {number}
+ */
+export function postTileBarsFor(workflowFile) {
+    if (!workflowFile) return 0;
+    const entry = PROGRESS_STAGES[_baseKey(workflowFile)];
+    return entry ? (entry.postTile || 0) : 0;
 }

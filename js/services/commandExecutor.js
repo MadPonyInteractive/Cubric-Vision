@@ -33,7 +33,7 @@ import { DEPS } from '../data/modelConstants/dependencies.js';
 import { sizeToGb } from '../data/modelConstants/footprint.js';
 import { buildWeightMap, create as createAggregator } from './progressAggregator.js';
 import { createStageProgress } from './phaseProgress.js';
-import { stagesFor } from '../data/progressStages.js';
+import { stagesFor, postTileBarsFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
 import { buildComfyViewUrl, collectComfyOutputUrls, readComfyOutputText } from '../utils/comfyOutputUrls.js';
 import { generationStore, PHASES } from './generationStore.js';
@@ -1423,6 +1423,7 @@ export function runCommand(payload) {
         const _enhanceBars = (!_isKrea2 && _paramIsTrue(params, 'Input_Enhance_Prompt')) ? 1 : 0;
         const stageProgress = createStageProgress({
             stages: stagesFor(workflowFile, _stageMode, _enhanceBars),
+            postTileBars: postTileBarsFor(workflowFile),
         });
 
         const opDef = COMMANDS[workingPayload.operation];

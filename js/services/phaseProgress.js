@@ -37,6 +37,11 @@
  */
 export function createStageProgress(map) {
     let _total = Number(map?.stages) > 0 ? Math.floor(map.stages) : 0;
+    // Bars this workflow runs AFTER tiling finishes (MPI-350). Tile mode derives the
+    // total from the live tile count, so a pass that comes after the tiles is
+    // invisible to it — without this the bar reads "1/1" through the whole upscale
+    // and only reveals the second stage once that stage has already started.
+    const _postTileBars = Number(map?.postTileBars) > 0 ? Math.floor(map.postTileBars) : 0;
 
     let _stage   = 0;     // 1-based once the first bar arrives; 0 before
     let _lastMax = null;
@@ -44,6 +49,7 @@ export function createStageProgress(map) {
     let _percent = 0;     // 0..1 within the current stage
     let _tileMode = false; // true once a tile bar reports (UltimateSDUpscale)
     let _tileOffset = 0;   // stages counted BEFORE tiles began (the load/pre-pass)
+    let _barsInTile = 0;   // inner step bars seen since the current tile bar (MPI-350)
 
     return {
         // Inner step bar → drives the 0-1 fill. In normal mode each new bar (max
@@ -52,9 +58,24 @@ export function createStageProgress(map) {
         step(value, max) {
             if (!(max > 0)) return;
             if (_tileMode) {
-                _percent = Math.min(1, value / max);
-                _lastMax = max; _lastVal = value;
-                return;
+                // A pass that runs AFTER tiling (the Krea2 upscaler's refiner sampler,
+                // MPI-350) arrives as an inner bar with no tile bar in front of it.
+                // USDU emits its tile bar before every tile's inner bar, so during
+                // tiling this counter is reset each tile and never reaches 2 — only a
+                // post-tile pass gets here. Leave tile mode so the stage counter ticks
+                // again; without this the refiner silently refills the last tile's bar.
+                // Ceiling: assumes ONE inner bar per tile, true while every USDU card
+                // runs seam_fix_mode "None". Enabling seam fix adds a second bar per
+                // tile and would false-trigger — count post-tile bars explicitly then.
+                if (max !== _lastMax || value < _lastVal) _barsInTile += 1;
+                if (_barsInTile <= 1) {
+                    _percent = Math.min(1, value / max);
+                    _lastMax = max; _lastVal = value;
+                    return;
+                }
+                // Post-tile pass: drop out and let the normal per-bar logic below
+                // stage it (which also self-corrects the tile-derived total).
+                _tileMode = false;
             }
             const isNewBar = _stage === 0 || max !== _lastMax || value < _lastVal;
             if (isNewBar) {
@@ -75,10 +96,20 @@ export function createStageProgress(map) {
         tile(tileIndex, tiles) {
             if (!(tiles > 0)) return;
             if (!_tileMode) { _tileMode = true; _tileOffset = _stage; }
-            _total = _tileOffset + tiles;
+            // Arm the post-tile detector for a tile that will actually run. `tileIndex
+            // === tiles` is the bar's FINAL tick, fired after the last tile's inner bar
+            // is already done (routes/comfy.js forwards the raw tqdm value, so T tiles
+            // produce T+1 events: 0/T .. T/T). Resetting on that trailing tick would
+            // re-arm after the last tile and swallow the refiner — the live bug this
+            // guard fixes. (MPI-350)
+            if (tileIndex < tiles) _barsInTile = 0;
+            _total = _tileOffset + tiles + _postTileBars;
             // tqdm tile bar is 0-based at start (0/T) then ticks 1/T..T/T. While
             // processing tile `tileIndex` (0-based) we're on offset+tileIndex+1.
-            const next = Math.min(_total, _tileOffset + tileIndex + 1);
+            // Clamp to the LAST TILE, not to _total — _total now includes post-tile
+            // bars, and the trailing T/T tick would otherwise advance the stage into
+            // the refiner's slot before the refiner has started.
+            const next = Math.min(_tileOffset + tiles, _tileOffset + tileIndex + 1);
             if (next > _stage) { _stage = next; _percent = 0; }
         },
         // Set a known total up front (e.g. detailer "# of Detected SEGS: N" — N
