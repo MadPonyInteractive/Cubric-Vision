@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 348,
+  "next_id": 349,
   "columns": {
     "todo": [
       "MPI-325",
@@ -17,7 +17,8 @@
       "MPI-339",
       "MPI-343",
       "MPI-344",
-      "MPI-347"
+      "MPI-347",
+      "MPI-348"
     ],
     "doing": [
       "MPI-346",
@@ -38,8 +39,15 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-25T03:50:00Z",
+  "updated_at": "2026-07-25T04:10:00Z",
   "events": [
+    {
+      "at": "2026-07-25T04:10:00Z",
+      "type": "task.created",
+      "task": "MPI-348",
+      "to": "todo",
+      "note": "Collaborative workflow-authoring track for the Krea2 swap family (face / head / character). User authors in the node graph, agent supplies krea2edit v1.2.2 semantics, graph topology and the measured regimes. Workflow proven in the graph BEFORE any App is built; app ideas that surface mid-authoring get their own cards. brief.md is a full working reference - node semantics, ref_boost two-regime rule, ref_boost_mask exact behaviour, the pose+edit topology finding, the untested two-LoRA gate, the div-16 rule, composite-vs-crop-stitch, and node ids. Target release v1.3 = the Apps release."
+    },
     {
       "at": "2026-07-25T03:50:00Z",
       "type": "task.created",
