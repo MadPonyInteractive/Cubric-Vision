@@ -750,6 +750,12 @@
  * Mounted via: Events.emit('app:open', {appId}) → shell resolves the descriptor +
  * uiComponent and mounts one instance (destroying any prior active app).
  *
+ * Emits: 'close' — the overlay closed (X, Escape, ui:close-all-popups, or Back).
+ * The shell DESTROYS the instance on it (MPI-345): a closed app that stays alive
+ * keeps its listeners, and the global `generation.run` hotkey among them queued a
+ * phantom app job on the next Ctrl+Enter. Every open mounts a fresh instance, so
+ * nothing is lost — inputs live in state.s_appInputs.
+ *
  * Instance methods (on instance.el):
  *   open()/close() — show/hide the overlay (alias onOpen).
  *   destroy()      — tears down subs, the live slide (gizmos + listeners), the

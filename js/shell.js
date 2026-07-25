@@ -396,6 +396,17 @@ async function _bootApp() {
       app,
       uiComponent: _appComponents[app.uiComponent] || null,
     });
+    // Closing an app DESTROYS it (MPI-345). Every open remounts a fresh instance, so
+    // a closed one is pure garbage that still holds live listeners — the global
+    // `generation.run` hotkey among them, which is what queued a phantom app job on
+    // the next Ctrl+Enter. Deferred a tick: the close arrives from inside MpiOverlay's
+    // own hide() → destroying its DOM mid-emit is exactly the teardown race the
+    // openAppFromReuse defer already dodges.
+    const _closing = _activeApp;
+    _closing.on('close', () => {
+      if (_activeApp === _closing) _activeApp = null;
+      setTimeout(() => _closing.el.destroy(), 0);
+    });
     _activeApp.el.open();
   });
 

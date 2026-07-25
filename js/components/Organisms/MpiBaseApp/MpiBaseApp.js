@@ -160,7 +160,7 @@ export const MpiBaseApp = ComponentFactory.create({
             </div>
         </div>`,
 
-    setup: (el, props) => {
+    setup: (el, props, emit) => {
         const app = props.app;
         const _unsubs = [];
 
@@ -169,7 +169,14 @@ export const MpiBaseApp = ComponentFactory.create({
             closable: true, mountTarget: 'main-area',
         });
         overlay.el.appendToContainer(el);
-        overlay.on('close', () => { el.close(); });
+        // Re-emit the overlay's close OUTWARD so the shell can destroy this instance
+        // (MPI-345). An app closed but not destroyed keeps every listener this setup
+        // registered — including the global `generation.run` hotkey below — so the
+        // next Ctrl+Enter in the main workspace fired the closed app's Run alongside
+        // the PromptBox's, queueing a phantom generation from its persisted inputs.
+        // Fires ONCE per close: MpiOverlay.hide() emits inside its `_isHiding` guard,
+        // so the `el.close()` re-entry here can't loop back through it.
+        overlay.on('close', () => { el.close(); emit('close', {}); });
 
         const tickerEl = qs('#app-ticker', el);
         const slidesEl = qs('#app-slides', el);
