@@ -277,10 +277,11 @@ frame there is not affordable. See MPI-347.
 - **Dep:** `comfyui-krea2edit` on BOTH cards (the shared graph references `Krea2Edit*`
   classes, and ComfyUI validates every node class before `MpiIfElse` picks a branch — Turbo
   cards were missing it).
-- **`comfyui-inpaint-cropandstitch` is still declared on both Krea2 cards**
-  (`models.js:339`, `:413`, commented "mask-edit crop path") but **no krea2 graph references
-  it since `b3f9a018`**. Do not delete it blind — `app_head_swap.json` needs those classes and
-  currently has no declarer of its own (see MPI-347); the Krea2 cards are what drag the pack in.
+- **`comfyui-inpaint-cropandstitch` is no longer a Krea2 dep** (removed 2026-07-25). No krea2
+  graph has referenced those classes since `b3f9a018`. The listing had outlived its path and
+  was silently the only reason the pack installed for the Head Swap app, whose own declaration
+  was missing; the app now declares it on its `requiredDeps` and is the sole consumer. Do not
+  re-add it here unless a Krea2 graph actually calls `InpaintCrop*`/`InpaintStitch*`.
 - **Edit op has NO user controls** (`components: []`). The style-LoRA rack was tried and
   reverted: style LoRAs and the identity-edit LoRA don't compose (edit degrades). A
   `Force_1024` crop toggle (`Input_HiRes_Mode`) was also tried and dropped (didn't help

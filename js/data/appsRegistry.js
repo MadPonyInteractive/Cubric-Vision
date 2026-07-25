@@ -159,6 +159,13 @@ export const APPS = [
     // head-swap LoRA no model requires. That LoRA is declared here, not folded into
     // qwen-edit — folding it would push 1.2GB onto every Qwen user for one app.
     //
+    // `comfyui-inpaint-cropandstitch` is declared here for the same reason: the graph
+    // calls InpaintCropImproved -> InpaintStitchImproved, and NOTHING on the qwen-edit
+    // path declared the pack. It only ever installed because the Krea2 cards happened
+    // to list it, so a qwen-edit-only install would fail ComfyUI class validation at
+    // dispatch. Krea2 no longer uses those classes (b3f9a018 dropped its masked-crop
+    // path), so that listing was removed and this app is now the sole declarer.
+    //
     // FIXED-PROMPT app: the graph has NO Input_Positive/Input_Negative (both baked),
     // so inputSchema declares no `positive` and the op sets promptRequired:false.
     // Boxes are injectionParams (box1/box2 → headSwapInjector), NOT media slots.
@@ -168,7 +175,7 @@ export const APPS = [
         preview: 'sdxl-real-05.webp',   // placeholder — swap for a head-swap sample
         description: 'Swap a head from one image onto another. Upload the image you want to keep, the image with the head you want, mark each head, and run.',
         requiredModels: ['qwen-edit'],
-        requiredDeps: ['qwen-lora-headswap'],
+        requiredDeps: ['qwen-lora-headswap', 'comfyui-inpaint-cropandstitch'],
         operation: 'appHeadSwap',
         workflow: 'app_head_swap.json',
         // Controls = the tier radio ONLY. It also owns the box→injectionParams

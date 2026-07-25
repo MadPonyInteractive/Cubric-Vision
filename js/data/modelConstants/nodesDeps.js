@@ -199,11 +199,14 @@ export const nodesDeps = {
     },
     // Inpaint Crop & Stitch (MPI-282) — InpaintCropImproved (✂️ Inpaint Crop) crops the
     // masked region to a fixed working size, InpaintStitchImproved (✂️ Inpaint Stitch)
-    // pastes it back. Drives the Krea2 mask-edit crop path. Pure-python (torch/numpy/
-    // opencv, all already present) — NO requirements.txt ⇒ installRequirements:false
-    // (rides the volume, no Pod rebuild). Dep of ALL 4 Krea2 cards: the shared t2i graph
-    // references both classes, and ComfyUI validates every node class before MpiIfElse
-    // picks a branch — so even a plain t2i run needs them.
+    // pastes it back. Pure-python (torch/numpy/opencv, all already present) — NO
+    // requirements.txt ⇒ installRequirements:false (rides the volume, no Pod rebuild).
+    // SOLE CONSUMER = the Head Swap app (`app_head_swap.json`), declared on the app's
+    // `requiredDeps` in appsRegistry.js. It used to be listed on the Krea2 cards for
+    // their masked-crop edit path; `b3f9a018` removed that path from the Krea2 graphs
+    // and the listing outlived it, which is what kept the pack installing for Head Swap
+    // (whose own declaration was missing). Both sides fixed — do not re-add it to a
+    // model card unless that model's graph actually references the classes.
     'comfyui-inpaint-cropandstitch': {
         id: 'comfyui-inpaint-cropandstitch',
         name: 'ComfyUI Inpaint Crop and Stitch',

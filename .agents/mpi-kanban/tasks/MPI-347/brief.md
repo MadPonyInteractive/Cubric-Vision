@@ -52,7 +52,7 @@ Krea2 v1.2 weights (shipped since 2026-07-09) list **inpainting** as a trained-i
 so the model side of this may already be better than when `b3f9a018` gave up. Re-test before
 assuming the old verdict still holds.
 
-## Defect found while scoping this — decide separately
+## Defect found while scoping this — FIXED 2026-07-25
 
 `app_head_swap.json` uses `InpaintCropImproved` / `InpaintStitchImproved`. The app runs on
 `qwen-edit` (`appsRegistry.js:171` `requiredModels: ['qwen-edit']`). But:
@@ -66,10 +66,23 @@ assuming the old verdict still holds.
 ⇒ Head Swap appears to work only because an installed Krea2 card drags the pack onto the
 volume. A qwen-edit-only install should fail ComfyUI class validation at dispatch.
 
-**Static analysis only — NOT reproduced live.** Node install is per-resolved-dep
-(`_runCustomNodeInstall` per-dep loop, MPI-222), which is what makes this look real, but the
-confirming test is a clean qwen-edit-only install running Head Swap. Fix, if confirmed, is one
-line: add `comfyui-inpaint-cropandstitch` to the app's `requiredDeps`. Related: MPI-325.
+**Static analysis only — never reproduced live.** Node install is per-resolved-dep
+(`_runCustomNodeInstall` per-dep loop, MPI-222), which is what made it look real.
+
+**FIXED 2026-07-25** on the user's call, without waiting for a repro:
+- `appsRegistry.js` — `requiredDeps: ['qwen-lora-headswap', 'comfyui-inpaint-cropandstitch']`.
+  The app-dep install path is generic (`_installPlugin` -> `downloadService.start`), the same
+  handler that installs model custom_nodes, so a node pack works there. This is the first
+  custom_node to ride `requiredDeps` — previously only a weight had.
+- `models.js` — dropped from BOTH Krea2 cards. No krea2 graph has referenced
+  `InpaintCrop*`/`InpaintStitch*` since `b3f9a018`; the listing was pure carry-over.
+- `nodesDeps.js` + `docs/models/krea2/injection.md` — comments corrected to name the app as
+  the sole consumer.
+
+**Still worth watching on an existing install:** a user who has Krea2 but not Head Swap now has
+an ownerless copy of the pack on disk. That is the correct state (nothing uses it), and the
+inverse-GC from MPI-310 should account for it, but the holder-count transition was not
+exercised live. Related: MPI-325, MPI-310, MPI-320.
 
 ## Open questions
 

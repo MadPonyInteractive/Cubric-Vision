@@ -336,7 +336,6 @@ export const MODELS = [
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
             'comfyui-krea2edit',         // dual-conditioning edit nodes (Krea2EditModelPatch + GroundedEncode)
-            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
         ],
     },
     {
@@ -410,7 +409,6 @@ export const MODELS = [
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
             'comfyui-krea2edit',
-            'comfyui-inpaint-cropandstitch',  // InpaintCrop/Stitch — mask-edit crop path
         ],
     },
     {
