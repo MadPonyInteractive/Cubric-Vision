@@ -1,8 +1,8 @@
 {
   "id": "af76adc3-bb19-4f25-92b1-d1984ca6c953",
   "revision": 0,
-  "last_node_id": 1710,
-  "last_link_id": 2470,
+  "last_node_id": 1713,
+  "last_link_id": 2479,
   "nodes": [
     {
       "id": 1676,
@@ -46,9 +46,9 @@
       ],
       "title": "Input_Lora_2",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -104,9 +104,9 @@
       ],
       "title": "Input_Lora_5",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -162,9 +162,9 @@
       ],
       "title": "Input_Lora_3",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -220,9 +220,9 @@
       ],
       "title": "Input_Lora_6",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -278,9 +278,9 @@
       ],
       "title": "Input_Lora_4",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -336,9 +336,9 @@
       ],
       "title": "Input_Lora_1",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -405,9 +405,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ToBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
-        "Node name for S&R": "ToBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -415,47 +415,6 @@
         }
       },
       "widgets_values": []
-    },
-    {
-      "id": 1603,
-      "type": "MpiInt",
-      "pos": [
-        9756.678474496619,
-        6072.998260951899
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "int",
-          "type": "INT",
-          "links": [
-            2422
-          ]
-        }
-      ],
-      "title": "Input_Seed",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiInt",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        2
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 1691,
@@ -469,7 +428,7 @@
         120
       ],
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -482,9 +441,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAELoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
-        "Node name for S&R": "VAELoader",
         "models": [
           {
             "name": "qwen_image_vae.safetensors",
@@ -498,133 +457,6 @@
       ],
       "color": "#323",
       "bgcolor": "#535"
-    },
-    {
-      "id": 1673,
-      "type": "MpiText",
-      "pos": [
-        7593.457039000451,
-        6239.74077962368
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            2384
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        ""
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 1594,
-      "type": "MpiFloat",
-      "pos": [
-        9751.120103304755,
-        6193.054464440482
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            2423
-          ]
-        }
-      ],
-      "title": "Input_Denoise",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiFloat",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        0.3
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 1556,
-      "type": "PreviewImage",
-      "pos": [
-        10476.68733583723,
-        5825.918906287331
-      ],
-      "size": [
-        777.9844797201695,
-        978.7545007605577
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 26,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 2421
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "title": "Output_image",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.17.1",
-        "Node name for S&R": "PreviewImage",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 1687,
@@ -646,12 +478,12 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 2469
+          "link": 2478
         },
         {
           "name": "mask",
           "type": "MASK",
-          "link": 2470
+          "link": 2479
         },
         {
           "name": "basic_pipe",
@@ -742,9 +574,9 @@
       ],
       "title": "MaskDetailer (Chroma)",
       "properties": {
+        "Node name for S&R": "MaskDetailerPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.2",
-        "Node name for S&R": "MaskDetailerPipe",
         "ue_properties": {
           "widget_ue_connectable": {
             "seed": true,
@@ -795,7 +627,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 12,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
@@ -823,9 +655,9 @@
       ],
       "title": "neg",
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
         "ver": "0.3.51",
-        "Node name for S&R": "CLIPTextEncode",
         "enableTabs": false,
         "tabWidth": 65,
         "tabXOffset": 10,
@@ -859,7 +691,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 11,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -887,9 +719,9 @@
       ],
       "title": "pos",
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
         "ver": "0.3.51",
-        "Node name for S&R": "CLIPTextEncode",
         "enableTabs": false,
         "tabWidth": 65,
         "tabXOffset": 10,
@@ -921,7 +753,7 @@
         200
       ],
       "flags": {},
-      "order": 4,
+      "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -935,9 +767,9 @@
       ],
       "title": "Input_Negative",
       "properties": {
+        "Node name for S&R": "MpiText",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -962,7 +794,7 @@
         170
       ],
       "flags": {},
-      "order": 5,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -977,9 +809,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CLIPLoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
-        "Node name for S&R": "CLIPLoader",
         "models": [
           {
             "name": "qwen3vl_4b_fp8_scaled.safetensors",
@@ -1008,7 +840,7 @@
         98.76431923436667
       ],
       "flags": {},
-      "order": 6,
+      "order": 3,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -1063,9 +895,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
+        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08"
       },
       "widgets_values": [
         "1.5 if a == 1 else 1.0"
@@ -1114,51 +946,13 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
+        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08"
       },
       "widgets_values": [
         "0.0 if a == 1 else 1.0   "
       ]
-    },
-    {
-      "id": 1706,
-      "type": "MpiInt",
-      "pos": [
-        9407.647994540534,
-        6365.090473541725
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "int",
-          "type": "INT",
-          "links": [
-            2459,
-            2460,
-            2464
-          ]
-        }
-      ],
-      "title": "Input_Tier",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
-      },
-      "widgets_values": [
-        2
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 1694,
@@ -1202,9 +996,9 @@
       ],
       "title": "Input_Bypass_Filter_Lora",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1230,7 +1024,7 @@
         140
       ],
       "flags": {},
-      "order": 8,
+      "order": 4,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1243,9 +1037,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "UNETLoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
-        "Node name for S&R": "UNETLoader",
         "models": [
           {
             "name": "krea2_turbo_fp8_scaled.safetensors",
@@ -1311,9 +1105,9 @@
       ],
       "title": "Accelerator Lora",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1370,13 +1164,219 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
+        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08"
       },
       "widgets_values": [
-        "20 if a == 1 else 3"
+        "16 if a == 1 else 3"
       ]
+    },
+    {
+      "id": 1603,
+      "type": "MpiInt",
+      "pos": [
+        9756.678474496619,
+        6072.998260951899
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            2422
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        2
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1594,
+      "type": "MpiFloat",
+      "pos": [
+        9751.120103304755,
+        6193.054464440482
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            2423
+          ]
+        }
+      ],
+      "title": "Input_Denoise",
+      "properties": {
+        "Node name for S&R": "MpiFloat",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        0.41
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1673,
+      "type": "MpiText",
+      "pos": [
+        7593.457039000451,
+        6239.74077962368
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2384
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "Node name for S&R": "MpiText",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "cute 20 year old woman"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1556,
+      "type": "PreviewImage",
+      "pos": [
+        10476.68733583723,
+        5825.918906287331
+      ],
+      "size": [
+        530.520229361442,
+        929.578912548247
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 26,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2421
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_image",
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1706,
+      "type": "MpiInt",
+      "pos": [
+        9407.647994540534,
+        6365.090473541725
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            2459,
+            2460,
+            2464
+          ]
+        }
+      ],
+      "title": "Input_Tier",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     },
     {
       "id": 1696,
@@ -1398,7 +1398,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            2469
+            2478
           ]
         },
         {
@@ -1419,9 +1419,9 @@
       ],
       "title": "Input_Image",
       "properties": {
+        "Node name for S&R": "MpiLoadImageFromPath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         "",
@@ -1456,7 +1456,7 @@
           "name": "mask",
           "type": "MASK",
           "links": [
-            2470
+            2479
           ]
         },
         {
@@ -1472,9 +1472,9 @@
       ],
       "title": "Input_Mask",
       "properties": {
+        "Node name for S&R": "MpiLoadImageFromPath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
         "",
@@ -1703,7 +1703,7 @@
       "MODEL"
     ],
     [
-      2469,
+      2478,
       1696,
       0,
       1687,
@@ -1711,7 +1711,7 @@
       "IMAGE"
     ],
     [
-      2470,
+      2479,
       1695,
       1,
       1687,
@@ -1726,13 +1726,13 @@
     "links_added_by_ue": [],
     "workflowRendererVersion": "LG",
     "ds": {
-      "scale": 0.5730855330117355,
+      "scale": 0.5730855330117427,
       "offset": [
-        -7918.364985830305,
-        -5314.445418603736
+        -7836.069466196845,
+        -5100.664219834244
       ]
     },
-    "frontendVersion": "1.45.20",
+    "frontendVersion": "1.45.21",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,

@@ -1,8 +1,8 @@
 {
   "id": "bd9b463d-5999-4cac-9b4a-d22278084b8c",
   "revision": 0,
-  "last_node_id": 47,
-  "last_link_id": 46,
+  "last_node_id": 48,
+  "last_link_id": 48,
   "nodes": [
     {
       "id": 41,
@@ -35,15 +35,247 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ImageScaleToTotalPixels",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "ImageScaleToTotalPixels"
+        "ver": "0.27.0"
       },
       "widgets_values": [
         "nearest-exact",
         1,
         16
       ]
+    },
+    {
+      "id": 35,
+      "type": "CLIPLoader",
+      "pos": [
+        13504.668263266847,
+        11444.8260064496
+      ],
+      "size": [
+        455.3394379110698,
+        108.2150756004794
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            28
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0",
+        "models": [
+          {
+            "name": "qwen3vl_4b_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+        "krea2",
+        "default"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 46,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        13438.718823549032,
+        12031.880074429975
+      ],
+      "size": [
+        582.1175105821521,
+        188.95024493959045
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "title": "Text String (System Prompt)",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0"
+      },
+      "widgets_values": [
+        "You are an image captioning model. Describe only what is visibly present in the image.\n\nRules:\n1. Describe subjects, clothing, colors, materials, textures, and their spatial relationships.\n2. Include composition, framing, camera angle, lighting, and background.\n3. State only what you can see. Do not infer mood, story, intent, or anything outside the frame.\n4. Do not add stylistic flourishes, quality tags, or words like \"beautiful\" or \"stunning\".\n5. Write one cohesive paragraph. No bullets, no JSON, no markdown, no preamble.\n\nWrite a detailed description of this image.\n"
+      ]
+    },
+    {
+      "id": 47,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        14052.466309125672,
+        12024.087849082634
+      ],
+      "size": [
+        582.1175105821521,
+        188.95024493959045
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "title": "output",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0"
+      },
+      "widgets_values": [
+        "The image shows two women standing on a balcony with a metal railing, positioned in the foreground. The woman on the left has red hair with bangs, is wearing a black triangle bikini top and matching bottoms with tied side ties, and is holding a camera to take a selfie. The woman on the right has dark hair with pink highlights styled in two braids, wears a green short-sleeved button-up shirt with small white dots and pink cuffs, and has a low neckline. Behind them, the Eiffel Tower is visible in the distance, centered in the background under a sky transitioning from orange and pink near the horizon to blue above, with scattered clouds. Below the tower, there are green trees, roads, and some distant buildings. The lighting suggests sunset or sunrise, casting warm tones across the scene. The composition is a selfie shot with the subjects occupying the lower half of the frame, while the Eiffel Tower dominates the upper portion of the image."
+      ]
+    },
+    {
+      "id": 38,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        13448.84613765026,
+        11631.539395838343
+      ],
+      "size": [
+        566.2795172949673,
+        350.5789969472653
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            45
+          ]
+        }
+      ],
+      "title": "Text String (System Prompt)",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0"
+      },
+      "widgets_values": [
+        "<|im_start|>system\nYou are an image captioning model. Produce one richly detailed description that could be\nused as a text-to-image prompt to recreate this image.\n\nYour entire reply is the description, and its first word is the first word of the scene —\nbegin with the main subject. Never open with a framing phrase (\"The image\", \"This image\",\n\"In the image\", \"A photo of\", \"There is\", \"There are\", \"We see\", \"Here\", \"Shown\"); if one\nwould start your reply, drop it and start at the subject.\n\nBe exhaustive — someone must be able to recreate the image from your words alone. Cover:\n- Every subject: count them; for each, apparent age/gender, pose, action, expression, hair\n  (color, length, style), full clothing (garment, color, pattern, material, fit), accessories.\n- Spatial layout: where each subject/object sits (foreground, midground, background;\n  left/right) and how they relate (who holds, touches, or faces what).\n- Setting and props: location, surfaces, furniture, background objects, any visible text.\n- Lighting: direction, quality (soft/hard), and color.\n- Camera: shot type and framing, angle, depth of field.\n- Medium and style: photograph, 3D render, illustration, and any distinct look.\n\nRules:\n- State only what is actually visible. Do not infer mood, story, or intent.\n- Concrete visual facts, not empty praise — never \"beautiful\", \"stunning\", \"amazing\".\n- Positive phrasing only: describe what is present, never what is absent (\"no\", \"without\").\n- One dense, continuous paragraph — no bullets, JSON, markdown, or preamble. Do not\n  summarize or omit; when the scene is complex, write more.<|im_end|>\n<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>Describe this image in exhaustive, recreation-ready detail.<|im_end|>\n<|im_start|>assistant\n"
+      ]
+    },
+    {
+      "id": 45,
+      "type": "LoadImage",
+      "pos": [
+        13111.821943164992,
+        11869.16178039581
+      ],
+      "size": [
+        282.798828125,
+        314
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "rgthree.compare._temp_unftz_00011_.png",
+        "image"
+      ]
+    },
+    {
+      "id": 43,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        12811.93487434975,
+        11562.294666415657
+      ],
+      "size": [
+        276.9849609375,
+        378
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            46
+          ]
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Input_Image",
+      "properties": {
+        "Node name for S&R": "MpiLoadImageFromPath",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
+      },
+      "widgets_values": [
+        "",
+        "alpha",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     },
     {
       "id": 36,
@@ -97,14 +329,14 @@
           "name": "generated_text",
           "type": "STRING",
           "links": [
-            31
+            47
           ]
         }
       ],
       "properties": {
+        "Node name for S&R": "TextGenerate",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "TextGenerate"
+        "ver": "0.25.0"
       },
       "widgets_values": [
         "",
@@ -122,166 +354,59 @@
       ]
     },
     {
-      "id": 35,
-      "type": "CLIPLoader",
+      "id": 48,
+      "type": "MpiClearVram",
       "pos": [
-        13504.668263266847,
-        11444.8260064496
+        14076.709698063332,
+        11472.861165368391
       ],
       "size": [
-        455.3394379110698,
-        108.2150756004794
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            28
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "CLIPLoader",
-        "models": [
-          {
-            "name": "qwen3vl_4b_fp8_scaled.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
-            "directory": "text_encoders"
-          }
-        ]
-      },
-      "widgets_values": [
-        "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
-        "krea2",
-        "default"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
-    },
-    {
-      "id": 46,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        13438.718823549032,
-        12031.880074429975
-      ],
-      "size": [
-        582.1175105821521,
-        188.95024493959045
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 4,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": []
-        }
-      ],
-      "title": "Text String (System Prompt)",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
-      },
-      "widgets_values": [
-        "You are an image captioning model. Describe only what is visibly present in the image.\n\nRules:\n1. Describe subjects, clothing, colors, materials, textures, and their spatial relationships.\n2. Include composition, framing, camera angle, lighting, and background.\n3. State only what you can see. Do not infer mood, story, intent, or anything outside the frame.\n4. Do not add stylistic flourishes, quality tags, or words like \"beautiful\" or \"stunning\".\n5. Write one cohesive paragraph. No bullets, no JSON, no markdown, no preamble.\n\nWrite a detailed description of this image.\n"
-      ]
-    },
-    {
-      "id": 47,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        14052.466309125672,
-        12024.087849082634
-      ],
-      "size": [
-        582.1175105821521,
-        188.95024493959045
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 4,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": []
-        }
-      ],
-      "title": "output",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
-      },
-      "widgets_values": [
-        "The image shows two women standing on a balcony with a metal railing, positioned in the foreground. The woman on the left has red hair with bangs, is wearing a black triangle bikini top and matching bottoms with tied side ties, and is holding a camera to take a selfie. The woman on the right has dark hair with pink highlights styled in two braids, wears a green short-sleeved button-up shirt with small white dots and pink cuffs, and has a low neckline. Behind them, the Eiffel Tower is visible in the distance, centered in the background under a sky transitioning from orange and pink near the horizon to blue above, with scattered clouds. Below the tower, there are green trees, roads, and some distant buildings. The lighting suggests sunset or sunrise, casting warm tones across the scene. The composition is a selfie shot with the subjects occupying the lower half of the frame, while the Eiffel Tower dominates the upper portion of the image."
-      ]
-    },
-    {
-      "id": 38,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        13448.84613765026,
-        11631.539395838343
-      ],
-      "size": [
-        566.2795172949673,
-        350.5789969472653
-      ],
-      "flags": {},
-      "order": 3,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            45
-          ]
-        }
-      ],
-      "title": "Text String (System Prompt)",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
-      },
-      "widgets_values": [
-        "<|im_start|>system\nYou are an image captioning model. Produce one richly detailed description that could be\nused as a text-to-image prompt to recreate this image.\n\nYour entire reply is the description, and its first word is the first word of the scene —\nbegin with the main subject. Never open with a framing phrase (\"The image\", \"This image\",\n\"In the image\", \"A photo of\", \"There is\", \"There are\", \"We see\", \"Here\", \"Shown\"); if one\nwould start your reply, drop it and start at the subject.\n\nBe exhaustive — someone must be able to recreate the image from your words alone. Cover:\n- Every subject: count them; for each, apparent age/gender, pose, action, expression, hair\n  (color, length, style), full clothing (garment, color, pattern, material, fit), accessories.\n- Spatial layout: where each subject/object sits (foreground, midground, background;\n  left/right) and how they relate (who holds, touches, or faces what).\n- Setting and props: location, surfaces, furniture, background objects, any visible text.\n- Lighting: direction, quality (soft/hard), and color.\n- Camera: shot type and framing, angle, depth of field.\n- Medium and style: photograph, 3D render, illustration, and any distinct look.\n\nRules:\n- State only what is actually visible. Do not infer mood, story, or intent.\n- Concrete visual facts, not empty praise — never \"beautiful\", \"stunning\", \"amazing\".\n- Positive phrasing only: describe what is present, never what is absent (\"no\", \"without\").\n- One dense, continuous paragraph — no bullets, JSON, markdown, or preamble. Do not\n  summarize or omit; when the scene is complex, write more.<|im_end|>\n<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>Describe this image in exhaustive, recreation-ready detail.<|im_end|>\n<|im_start|>assistant\n"
-      ]
-    },
-    {
-      "id": 37,
-      "type": "PreviewAny",
-      "pos": [
-        14294.153270588871,
-        11536.818997763896
-      ],
-      "size": [
-        406.42838206042006,
-        422.11044284475975
+        186.9140625,
+        26
       ],
       "flags": {},
       "order": 8,
       "mode": 0,
       "inputs": [
         {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 47
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            48
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiClearVram"
+      }
+    },
+    {
+      "id": 37,
+      "type": "PreviewAny",
+      "pos": [
+        14284.10223638739,
+        11540.169342497726
+      ],
+      "size": [
+        406.42838206042006,
+        422.11044284475975
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
           "name": "source",
           "type": "*",
-          "link": 31
+          "link": 48
         }
       ],
       "outputs": [
@@ -293,101 +418,11 @@
       ],
       "title": "Output_prompt",
       "properties": {
+        "Node name for S&R": "PreviewAny",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "PreviewAny"
+        "ver": "0.27.0"
       },
       "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 45,
-      "type": "LoadImage",
-      "pos": [
-        13111.821943164992,
-        11869.16178039581
-      ],
-      "size": [
-        282.798828125,
-        314
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 4,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": []
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "rgthree.compare._temp_unftz_00011_.png",
-        "image"
-      ]
-    },
-    {
-      "id": 43,
-      "type": "MpiLoadImageFromPath",
-      "pos": [
-        12811.93487434975,
-        11562.294666415657
-      ],
-      "size": [
-        276.9849609375,
-        378
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            46
-          ]
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": []
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Input_Image",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
-      },
-      "widgets_values": [
-        "",
-        "alpha",
-        true
-      ],
       "color": "#432",
       "bgcolor": "#653"
     }
@@ -400,14 +435,6 @@
       36,
       0,
       "CLIP"
-    ],
-    [
-      31,
-      36,
-      0,
-      37,
-      0,
-      "STRING"
     ],
     [
       36,
@@ -432,6 +459,22 @@
       41,
       0,
       "IMAGE"
+    ],
+    [
+      47,
+      36,
+      0,
+      48,
+      0,
+      "STRING"
+    ],
+    [
+      48,
+      48,
+      0,
+      37,
+      0,
+      "*"
     ]
   ],
   "groups": [],
@@ -440,8 +483,8 @@
     "ds": {
       "scale": 0.8954302432552399,
       "offset": [
-        -12649.110220155688,
-        -11268.54117080641
+        -12698.248609585155,
+        -11211.585310331342
       ]
     },
     "frontendVersion": "1.45.21",
