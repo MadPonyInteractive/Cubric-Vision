@@ -250,6 +250,15 @@ All full-file `project.json` updates on the server must go through `updateProjec
 
 This applies to `/update-project`, `/update-project-settings`, `/migrate-project`, and project template routes. Do not add another `readJson -> merge -> writeJson` route for `project.json`; concurrent settings saves and group persistence can otherwise interleave and leave concatenated or truncated JSON on disk.
 
+### Output Metadata Stripping
+
+ComfyUI's `SaveImage` embeds the full API graph (prompt, seed, model names, every node) in a PNG `tEXt` chunk keyed `prompt`. Users share generated images, so `/project/save-generation` calls `stripImageMetadata()` (`routes/shared.js`) immediately after `streamDownload`, dropping every `tEXt` / `zTXt` / `iTXt` / `eXIf` chunk.
+
+- **Raw chunk filter, not a Sharp re-encode.** Sharp does strip metadata by default, but it re-compresses: measured on a real 2MB output it took 55ms and *grew* the file by 113KB. The chunk filter is ~3ms and leaves pixel bytes bit-identical.
+- **Images only** — video files carry no Comfy graph, so the call is skipped for them.
+- Non-PNG, truncated, or unreadable files are left untouched and logged as a warning. This is a privacy scrub; it must never fail a save.
+- Applies at save time only. Media generated before this landed still carries its original `prompt` chunk — no backfill sweep exists.
+
 ---
 
 ## Path Normalization

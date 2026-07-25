@@ -224,6 +224,47 @@ function streamDownload(url, localPath, onProgress) {
     return request(url);
 }
 
+/**
+ * Strip ComfyUI provenance metadata from a saved PNG in place.
+ *
+ * ComfyUI's SaveImage writes the entire API graph into a `tEXt` chunk keyed
+ * `prompt` (plus `workflow` when the browser UI saves), so every output image
+ * we hand the user leaks the full node graph, prompts and model names. We drop
+ * every text/EXIF chunk instead of re-encoding through Sharp: the pixel bytes
+ * stay bit-identical (a Sharp round-trip re-compresses and typically GROWS the
+ * file) and it costs ~0ms.
+ *
+ * Non-PNG files and unreadable/malformed inputs are left untouched — this is a
+ * privacy scrub, never a reason to fail a save.
+ */
+async function stripImageMetadata(localPath) {
+    if (!/\.png$/i.test(localPath)) return;
+    try {
+        const buf = await fs.readFile(localPath);
+        // PNG signature guard — bail on anything that isn't really a PNG.
+        if (buf.length < 8 || buf.readUInt32BE(0) !== 0x89504e47) return;
+
+        const STRIP = new Set(['tEXt', 'zTXt', 'iTXt', 'eXIf']);
+        const keep = [buf.subarray(0, 8)];
+        let stripped = false;
+        let offset = 8;
+        while (offset + 12 <= buf.length) {
+            const length = buf.readUInt32BE(offset);
+            const type = buf.toString('latin1', offset + 4, offset + 8);
+            const end = offset + 12 + length;
+            if (end > buf.length) return; // truncated/corrupt — leave the file alone
+            if (STRIP.has(type)) stripped = true;
+            else keep.push(buf.subarray(offset, end));
+            offset = end;
+            if (type === 'IEND') break;
+        }
+        if (!stripped) return;
+        await fs.writeFile(localPath, Buffer.concat(keep));
+    } catch (err) {
+        logger.warn('project', `metadata strip failed for ${localPath}: ${err.message}`);
+    }
+}
+
 // Format bytes/second to human-readable speed (e.g., "2.5 MB/s")
 function _formatSpeed(bytesPerSec) {
     if (bytesPerSec < 1024) {
@@ -679,6 +720,7 @@ module.exports = {
     processState,
     stopComfyUI,
     streamDownload,
+    stripImageMetadata,
     runPipCommand,
     runCustomCommand,
     findFileRecursive,

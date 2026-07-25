@@ -30,7 +30,7 @@ const util = require('util');
 const { execFile } = require('child_process');
 const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
-const { getProjectsRoot, COMFYUI_PORT, streamDownload, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
+const { getProjectsRoot, COMFYUI_PORT, streamDownload, stripImageMetadata, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo } = require('../services/ffprobeVideo');
 const { extractVideoThumb, extractImageThumb } = require('../services/ffmpegThumb');
@@ -1828,6 +1828,10 @@ router.post('/project/save-generation', async (req, res) => {
 
         // Download from ComfyUI server-side
         await streamDownload(comfyViewUrl, filePath);
+
+        // ComfyUI stamps the full API graph into the PNG's `prompt` tEXt chunk.
+        // Every user-facing output funnels through this one save, so scrub here.
+        if (!isVideo) await stripImageMetadata(filePath);
 
         // Split video/audio output (B3): a video workflow saves VIDEO (no audio)
         // + AUDIO as two separate files (the single "Output" VHS_VideoCombine,
