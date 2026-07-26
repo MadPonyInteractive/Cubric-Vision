@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/services/generationService.js",
+    "js/shell/notificationService.js",
+    "js/events.js",
+    "docs/toasts.md",
+    ".claude/rules/component-events-lifecycle.md"
+  ]
+}

@@ -826,6 +826,15 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     const _stableTempId = opts.tempId ?? null;
     const _stableExtraTempIds = opts.extraTempIds ?? [];
 
+    // Did the user Stop this run? ComfyUI's interrupt is advisory, so a Stopped job
+    // can still return real output and walk the whole success path. The store's
+    // `cancelling` overlay is the only durable record of the user's intent by then —
+    // it is set synchronously in generationStore.cancel() and survives the late
+    // settle to `done`. The empty-output branch already gates its warning on this;
+    // the success terminals gate their "finished" signals on it too, so a Stop never
+    // reports as a completion. The saved item is untouched (R09).
+    const _wasCancelled = () => generationStore.byId(exec.jobId)?.cancelling === true;
+
     exec.onPromptAck = (promptId) => {
         activeGenerations.setPromptId(_regId, promptId);
         // Server accepted the prompt → NOW start the clock (past cold-start boot).
@@ -1254,7 +1263,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 await updateGroup(updatedGroup);
                 activeGenerations.end(_regId, { revokePreview: false });
                 Events.emit('gallery:item-updated', { groupId: updatedGroup.id, item: newItem, group: updatedGroup });
-                Events.emit('generation:complete', { id: _regId, item: newItem, group: updatedGroup });
+                Events.emit('generation:complete', { id: _regId, item: newItem, group: updatedGroup, cancelled: _wasCancelled() });
                 callbacks.onComplete?.({ item: newItem, group: updatedGroup });
             } else {
                 clientLogger.warn('generationService', 'replaceItemId set but no matching group/item found', { _replaceItemId });
@@ -1297,7 +1306,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             await updateGroup(updatedGroup);
             activeGenerations.end(_regId, { revokePreview: false });
             const lastItem = builtItems[builtItems.length - 1];
-            Events.emit('generation:complete', { id: _regId, item: lastItem, group: updatedGroup });
+            Events.emit('generation:complete', { id: _regId, item: lastItem, group: updatedGroup, cancelled: _wasCancelled() });
             callbacks.onComplete?.({ item: lastItem, group: updatedGroup });
         } else {
             // Gallery mode — one group (card) per item.
@@ -1335,13 +1344,23 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             // yet. Current listeners are safe either way (stats refetch reads disk;
             // the float-latent bridge only releases its lane), but a future consumer
             // that writes to the project MUST honour it.
-            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, items: builtItems, groups, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery', deferred: !!opts.deferCommit });
+            Events.emit('generation:complete', { id: _regId, item: firstItem, group: firstGroup, items: builtItems, groups, tempId: _galleryTempId, extraTempIds: _galleryExtraTempIds, scope: 'gallery', deferred: !!opts.deferCommit, cancelled: _wasCancelled() });
             // `groups` reaches the caller so a deferCommit consumer can persist them
             // later; committed runs simply ignore it (they are already in the project).
             callbacks.onComplete?.({ item: firstItem, group: firstGroup, items: builtItems, groups });
         }
 
-        Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });
+        // A Stopped run whose output still landed is NOT a completion. ComfyUI's
+        // interrupt is advisory, so a job can be `cancelling` and still return real
+        // media — the store honors the save (R09), but the user pressed Stop and must
+        // not be told "Generation finished". Emit the CANCELLED terminal instead of
+        // `tool:idle`: same latch release for the status bar, no success toast, no
+        // chime. Same flag the empty-output branch above already reads.
+        if (_wasCancelled()) {
+            Events.emit('tool:cancelled', { tool: 'groupHistory', id: _regId });
+        } else {
+            Events.emit('tool:idle', { tool: 'groupHistory', id: _regId, type: operation });
+        }
         _emitPromptBoxGenerationEndIfIdle();
     };
 

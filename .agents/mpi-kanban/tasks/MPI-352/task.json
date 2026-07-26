@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-352",
+  "title": "Stop reported as a completion: \"Generation finished\" toast fired on a cancelled run",
+  "description": "User-reported 2026-07-26. Pressing Stop fired the success toast + chime. Root cause is NOT a missing guard on the Stop path (that path was already clean): ComfyUI's interrupt is ADVISORY, so a Stopped job usually finishes its in-flight step and returns real output. The store honours that save (R09 late-settle), and exec.onComplete then walked the normal success path with no idea a Stop had happened, firing both tool:idle (statusBar toast + chime) and generation:complete (notificationService counter). The empty-output branch already read the store's `cancelling` overlay to suppress its warning; the success terminals never learned the same lesson. Fix reads that one flag and routes the terminal to tool:cancelled instead of tool:idle, and stamps cancelled:true on generation:complete so the coalesced counter skips it. The item still SAVES and every repaint/teardown consumer ignores the flag.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "active",
+  "activeSessionTitle": "Stop-toast fix",
+  "created_at": "2026-07-26T00:00:00Z",
+  "updated_at": "2026-07-26T00:00:00Z",
+  "links": {
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

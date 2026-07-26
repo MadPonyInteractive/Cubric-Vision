@@ -48,6 +48,7 @@ Session-scoped singleton. Survives navigation. Keyed by uuid; multi-entry (batch
 - Listens to `tool:sampling-start` → calls `updateLabel(getCommandProgressLabel(operation))` (e.g. `Generating`, `Upscaling`, `Detailing`) and starts elapsed timer. New ops add a `progressLabel` field in `commandRegistry.js` if the default `'Generating'` does not fit.
 - Listens to `tool:cancelled` → calls `cancel()`
 - Listens to `tool:idle` → calls `complete('Generation finished')` (fires success toast) for all groupHistory ops, including `resize` / `resizeVideo`. The earlier resize-specific silent gate was removed; the block emits no bespoke toast and StatusBar owns the only completion signal.
+  - **A user Stop never reaches this listener.** ComfyUI's interrupt is advisory, so a Stopped job can still return real output and walk the success path. `generationService` reads the store's `cancelling` overlay at the terminal and emits `tool:cancelled` instead of `tool:idle` — the bar releases, no "finished" toast, no chime. The item still saves (R09). Do not "restore" a plain `tool:idle` on that path.
 - Listens to `state.generationQueueCount` → appends pending Cue depth to the active label only, e.g. `GENERATING (2 queued)`
 
 **Pattern notes:**

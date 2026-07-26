@@ -1,0 +1,4 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.created","at":"2026-07-26T00:00:00Z","actor":"claude","summary":"Stop reported as a completion - advisory-interrupt output walked the success path."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.moved","at":"2026-07-26T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started (root-caused to the store cancelling overlay)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"validation.updated","at":"2026-07-26T00:00:00Z","actor":"claude","summary":"5 assertions pass, modules load, ESLint clean, blast radius swept."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.moved","at":"2026-07-26T00:00:00Z","actor":"claude","from":"doing","to":"done","summary":"User-verified: Stop no longer reports as a finished generation."}

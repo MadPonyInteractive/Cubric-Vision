@@ -115,7 +115,15 @@ export function initNotificationService() {
     // edge lands AFTER count→0 (the lane released before the emit), so this is the
     // edge that actually arms the flush; on a multi-gen batch the count→0 edge below
     // does. Either way the timer's re-check settles the race.
-    _unsubs.push(Events.on('generation:complete', () => { _doneCount++; _maybeArmFlush(); }));
+    // `cancelled: true` = the user pressed Stop and ComfyUI's advisory interrupt still
+    // returned output. The item saves, but a Stop must never report as a finished
+    // generation — don't count it. Still arm the flush: on a batch where the LAST item
+    // was Stopped, this edge is what drains the queue, and the surviving siblings'
+    // count deserves its one toast.
+    _unsubs.push(Events.on('generation:complete', ({ cancelled = false } = {}) => {
+        if (!cancelled) _doneCount++;
+        _maybeArmFlush();
+    }));
     _unsubs.push(Events.onState('generationQueueCount', (count) => {
         const depth = Number(count) || 0;
         // Queue refilled (a new item running/pending) → the previous drain is no

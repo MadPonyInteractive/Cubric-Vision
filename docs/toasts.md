@@ -59,12 +59,19 @@ These are the ones that also have an OS-notification path + a preference toggle.
 
 | Event | In-app message | Variant | Sound | OS-notif path |
 |---|---|---|---|---|
-| `generation:complete` (coalesced; fires when `generationQueueCount → 0`) | `Generation finished.` / `${n} generations finished.` | success | eligible (one chime per batch) | `notify-generation-complete` if unfocused + `notificationPrefs.generation !== false` |
+| `generation:complete` (coalesced; fires when `generationQueueCount → 0`; **skips `cancelled:true`**) | `Generation finished.` / `${n} generations finished.` | success | eligible (one chime per batch) | `notify-generation-complete` if unfocused + `notificationPrefs.generation !== false` |
 | `remote:connection` rising edge (`connected:true`, no phase) | `${gpuName} connected.` / `Remote engine connected.` | success | eligible | `notify-connection-complete` if unfocused + `notificationPrefs.connection !== false` |
 | `download:complete` (real modelId/plugin) | `${modelName} installed.` | success | eligible | `notify-download-complete` if unfocused + `notificationPrefs.downloads !== false` |
 
 OS-notif handlers in `main.js` (`showOsNotification`) re-gate on `!mainWindow.isFocused()` — a
 double focus gate (renderer + main).
+
+**Stop never reports as a completion (MPI-352).** Comfy's interrupt is advisory — a Stopped job
+often returns real output, which the store honours (`generationStore` § late-settle, R09: the item
+saves). So `generationService` reads the store's `cancelling` overlay at the terminal: emits
+`tool:cancelled` not `tool:idle` (bar releases, no toast/chime), and stamps `cancelled:true` on
+`generation:complete` (counter skips it). All other consumers ignore the flag and run normally —
+the media is on disk.
 
 ---
 
