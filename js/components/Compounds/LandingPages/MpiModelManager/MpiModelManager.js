@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
@@ -140,10 +141,11 @@ export const MpiModelManager = ComponentFactory.create({
             if (_isRemote) return _remotePhase ? null : _remoteVramGb; // live Pod only
             return _userVramGb;
         };
-        // Per-modelId TILE tracking so download:progress events can patch a single
-        // tile's inline state row in-place instead of re-rendering the whole grid.
-        //   Map<modelId, { tile, stateEl }>
-        const _tileInstances = new Map();
+        // One MpiTileSheet per media block (MPI-356). download:progress patches a
+        // single tile's inline state row in place instead of re-rendering the whole
+        // grid; a model lives in exactly one sheet, so patching is a blind fan-out
+        // and the sheets that don't hold it no-op.
+        const _sheets = [];
         // Op-toggle MpiButton instances (in the OPEN detail panel only), torn down
         // when the panel closes/reopens.  Array<{ key, inst }>  (key 'base' = base)
         let _detailOpToggles = [];
@@ -742,84 +744,28 @@ export const MpiModelManager = ComponentFactory.create({
             return `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
         }
 
-        function _mediaBadgeHtml(model) {
-            return model.mediaType === 'video'
-                ? `<span class="mpi-tile__badge mpi-tile__badge--video">${renderIcon('video', 'sm')}Video</span>`
-                : `<span class="mpi-tile__badge">${renderIcon('image', 'sm')}Image</span>`;
-        }
-
-        function _buildTile(model) {
+        // Tile item for the shared MpiTileSheet (MPI-356). The sheet owns the thumb,
+        // the badges, the heat dot and the waiting mascot; the state row below stays
+        // ours because only this component knows the install state machine.
+        function _tileItem(model) {
             const st = _modelState(model);
-            const isVideo = model.mediaType === 'video';
-            const tile = ce('button', {
-                className: `mpi-tile mpi-tile--${isVideo ? 'video' : 'image'}`,
-                type: 'button',
-            });
-
-            // Thumb — image still or hover-play muted video; placeholder gradient
-            // when no preview asset is declared.
-            const thumb = ce('div', { className: 'mpi-tile__thumb' });
-            if (isVideo && model.video) {
-                const vid = ce('video', {
-                    src: `comfy_workflows/display/${model.video}`,
-                    className: 'mpi-tile__thumb-media',
-                });
-                vid.muted = true; vid.loop = true; vid.playsInline = true; vid.preload = 'metadata';
-                _unsubs.push(on(vid, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); vid.remove(); }));
-                _unsubs.push(on(tile, 'mouseenter', () => { vid.play().catch(() => {}); }));
-                _unsubs.push(on(tile, 'mouseleave', () => { vid.pause(); try { vid.currentTime = 0; } catch (_) { /* noop */ } }));
-                thumb.appendChild(vid);
-            } else if (!isVideo && model.image) {
-                const img = ce('img', {
-                    src: `comfy_workflows/display/${model.image}`,
-                    className: 'mpi-tile__thumb-media',
-                    loading: 'lazy',
-                });
-                _unsubs.push(on(img, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); img.remove(); }));
-                thumb.appendChild(img);
-            } else {
-                thumb.classList.add('mpi-tile__thumb--placeholder');
-            }
-            // Recently-installed heat dot (MPI-215) — the model's `justInstalled`
-            // transient flag rides absolute on the thumb so it never shifts the tile.
-            if (model.justInstalled) thumb.appendChild(ce('div', { className: 'mpi-tile__new' }));
-            // Featured star badge (rides absolute on the thumb, like the heat dot).
-            if (model.featured) {
-                const star = ce('div', { className: 'mpi-tile__featured', title: 'Featured' });
-                star.innerHTML = renderIcon('sparkle', 'sm');
-                thumb.appendChild(star);
-            }
-            // Queued-install waiting mascot (MPI-284) — rides absolute on the thumb
-            // like the heat dot; hidden until the job sits 'queued', removed the
-            // moment it starts downloading (see _patchTile). Reuses the shared
-            // waiting.png peek asset — no new asset.
-            const mascot = ce('img', { className: 'mpi-tile__mascot', src: 'assets/mascot/waiting.png', alt: '' });
-            if (st.downloadState === 'queued') mascot.classList.add('mpi-tile__mascot--visible');
-            thumb.appendChild(mascot);
-            tile.appendChild(thumb);
-
             const tier = model.sizeTier || 'balanced';
-            const stateEl = ce('div', { className: 'mpi-tile__state' });
-            stateEl.innerHTML = _tileState(st);
-            const body = ce('div', { className: 'mpi-tile__body' });
-            const top = ce('div', { className: 'mpi-tile__top' });
-            const nameCol = ce('div');
-            nameCol.appendChild(ce('div', { className: 'mpi-tile__name', textContent: model.name }));
-            nameCol.appendChild(ce('div', {
-                className: 'mpi-tile__meta',
-                textContent: `${model.dropdownMeta || ''}${model.dropdownMeta ? ' · ' : ''}${TIER_WORD[tier] || tier}`,
-            }));
-            top.appendChild(nameCol);
-            const badge = ce('div');
-            badge.innerHTML = _mediaBadgeHtml(model);
-            top.appendChild(badge.firstElementChild);
-            body.appendChild(top);
-            body.appendChild(stateEl);
-            tile.appendChild(body);
-
-            _unsubs.push(on(tile, 'click', () => openDetail(model)));
-            _tileInstances.set(model.id, { tile, stateEl, mascot });
-            return tile;
+            return {
+                id: model.id,
+                name: model.name,
+                media: model.mediaType === 'video' ? 'video' : 'image',
+                preview: model.mediaType === 'video' ? model.video : model.image,
+                meta: `${model.dropdownMeta || ''}${model.dropdownMeta ? ' · ' : ''}${TIER_WORD[tier] || tier}`,
+                showMediaBadge: true,
+                featured: !!model.featured,
+                // Recently-installed heat dot (MPI-215) — the model's transient flag.
+                dot: !!model.justInstalled,
+                // Queued-install waiting mascot (MPI-284) — hidden until the job sits
+                // 'queued', dropped the moment it starts downloading (see _patchTile).
+                waiting: st.downloadState === 'queued',
+                state: _tileState(st),
+                source: model,
+            };
         }
 
         // ── Detail-panel toggle rows (ops + arch) ─────────────────────────────
@@ -1104,7 +1050,8 @@ export const MpiModelManager = ComponentFactory.create({
         const _pluginBtns = [];
 
         function _destroyAllCards() {
-            _tileInstances.clear();
+            _sheets.forEach(s => s?.el?.destroy?.());
+            _sheets.length = 0;
             _pluginBtns.forEach(b => b.destroy?.());
             _pluginBtns.length = 0;
         }
@@ -1170,9 +1117,10 @@ export const MpiModelManager = ComponentFactory.create({
             });
             head.innerHTML = `${renderIcon(media, 'sm')}<span>${media === 'video' ? 'Video' : 'Image'}</span><span class="mpi-model-library__media-head-n">${items.length}</span>`;
             bodySlot.appendChild(head);
-            const sheet = ce('div', { className: 'mpi-model-library__sheet' });
-            items.forEach(model => sheet.appendChild(_buildTile(model)));
-            bodySlot.appendChild(sheet);
+            const sheet = MpiTileSheet.mount(ce('div'), { items: items.map(_tileItem) });
+            sheet.on('select', ({ item }) => openDetail(item.source));
+            _sheets.push(sheet);
+            bodySlot.appendChild(sheet.el);
         }
 
         // A full section (Installed / Available): header + Image sub-grid + Video
@@ -1367,14 +1315,15 @@ export const MpiModelManager = ComponentFactory.create({
         // state is recomputed from the live download job. If the model's detail
         // panel is open, rebuild it too so its footer/progress stay in sync.
         function _patchTile(modelId, { rebuildDetail = true } = {}) {
-            const tileRef = _tileInstances.get(modelId);
             const model = MODELS.find(m => m.id === modelId);
-            if (tileRef && model) {
+            if (model) {
                 const st = _modelState(model);
-                tileRef.stateEl.innerHTML = _tileState(st);
-                // MPI-284: waiting mascot only while queued — drop it once the
-                // job starts downloading (or any other transition).
-                if (tileRef.mascot) tileRef.mascot.classList.toggle('mpi-tile__mascot--visible', st.downloadState === 'queued');
+                _sheets.forEach((s) => {
+                    s.el.patchState(modelId, _tileState(st));
+                    // MPI-284: waiting mascot only while queued — drop it once the
+                    // job starts downloading (or any other transition).
+                    s.el.setWaiting(modelId, st.downloadState === 'queued');
+                });
             }
             // Only rebuild the open slide-over on real STATE transitions (pause /
             // resume / install-phase) — those flip the footer buttons. A byte-level

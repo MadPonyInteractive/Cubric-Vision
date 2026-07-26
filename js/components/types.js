@@ -274,6 +274,37 @@
  */
 
 /**
+ * @typedef {Object} MpiTileSheetItem (MPI-356)
+ * @property {string} id - Unique; the key for patchState/setWaiting/setSelected
+ * @property {string} name - Primary label
+ * @property {'image'|'video'} [media='image'] - Drives 4:5 vs 16:9 thumb aspect
+ * @property {string} [preview] - Filename under comfy_workflows/display/
+ * @property {string} [meta] - Second label line (e.g. "VIDEO · High")
+ * @property {boolean} [showMediaBadge] - Render the Image/Video pill
+ * @property {boolean} [featured] - Sparkle badge on the thumb
+ * @property {boolean} [dot] - Recently-installed heat dot
+ * @property {boolean} [waiting] - Queued-install waiting mascot
+ * @property {string} [state] - HTML for the fixed-height bottom row
+ * @property {boolean} [selected] - Renders the tile as the current choice
+ * @property {*} [source] - Consumer payload, echoed back on select
+ */
+
+/**
+ * @typedef {Object} MpiTileSheetProps (Primitive — js/components/Primitives/MpiTileSheet)
+ * @property {MpiTileSheetItem[]} [items=[]] - Tiles to render, in order
+ *
+ * Shared by the Model Library, the App Library and the model picker. Consumers own
+ * their own status logic and pass the bottom row in as HTML (`item.state`).
+ *
+ * Instance methods (on instance.el):
+ *   setItems(items) · patchState(id, html) · setWaiting(id, bool) ·
+ *   setSelected(id|null) · getTile(id)
+ *
+ * Emits:
+ * 'select' { id: string, item: MpiTileSheetItem }
+ */
+
+/**
  * @typedef {Object} MpiDropdownCompoundProps (Compound — js/components/Compounds/MpiDropdown)
  * @property {string[]} titles - Options to display in the list
  * @property {string} [label='Select...'] - Initial trigger text

@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import { listApps, appAvailability, getAppDependencies, appDepKey } from '../../../../data/appsRegistry.js';
@@ -68,10 +69,10 @@ export const MpiAppLibrary = ComponentFactory.create({
 
         const _unsubs = [];
 
-        // Per-appId TILE tracking so download:* events can re-derive a single tile's
-        // badge in place instead of re-rendering the whole grid (MPI-235).
-        //   Map<appId, { tile, badgeEl }>
-        const _tileInstances = new Map();
+        // The shared tile grid (MPI-356). Patching a single tile's badge in place
+        // instead of re-rendering the whole grid (MPI-235) now goes through
+        // sheet.el.patchState(id, html).
+        let _sheet = null;
         // Footer MpiButton instances in the OPEN detail panel — torn down on
         // close/reopen (they own their own DOM listeners).
         let _detailBtns = [];
@@ -94,36 +95,16 @@ export const MpiAppLibrary = ComponentFactory.create({
                 : `<span class="mpi-tile__chip mpi-tile__chip--available">Get models</span>`;
         }
 
-        // ── Lean tile: preview thumb + title + availability badge. Click → detail. ──
-        function _buildTile(app) {
-            const tile = ce('button', { className: 'mpi-tile mpi-tile--image', type: 'button' });
-
-            const thumb = ce('div', { className: 'mpi-tile__thumb' });
-            if (app.preview) {
-                const img = ce('img', {
-                    src: `comfy_workflows/display/${app.preview}`,
-                    className: 'mpi-tile__thumb-media',
-                    loading: 'lazy',
-                });
-                _unsubs.push(on(img, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); img.remove(); }));
-                thumb.appendChild(img);
-            } else {
-                thumb.classList.add('mpi-tile__thumb--placeholder');
-            }
-            tile.appendChild(thumb);
-
-            const badgeEl = ce('div', { className: 'mpi-tile__state' });
-            badgeEl.innerHTML = _badgeHtml(app);
-            const body = ce('div', { className: 'mpi-tile__body' });
-            const nameCol = ce('div');
-            nameCol.appendChild(ce('div', { className: 'mpi-tile__name', textContent: app.title }));
-            body.appendChild(nameCol);
-            body.appendChild(badgeEl);
-            tile.appendChild(body);
-
-            _unsubs.push(on(tile, 'click', () => openDetail(app)));
-            _tileInstances.set(app.id, { tile, badgeEl });
-            return tile;
+        // ── Tile item for the shared sheet: preview thumb + title + availability badge ──
+        function _tileItem(app) {
+            return {
+                id: app.id,
+                name: app.title,
+                media: 'image',
+                preview: app.preview,
+                state: _badgeHtml(app),
+                source: app,
+            };
         }
 
         // ── Detail drawer ─────────────────────────────────────────────────────
@@ -297,7 +278,10 @@ export const MpiAppLibrary = ComponentFactory.create({
         _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
 
         // ── Render the contact sheet ────────────────────────────────────────
-        function _destroyAllTiles() { _tileInstances.clear(); }
+        function _destroyAllTiles() {
+            _sheet?.el?.destroy?.();
+            _sheet = null;
+        }
 
         function renderList() {
             _destroyAllTiles();
@@ -317,9 +301,9 @@ export const MpiAppLibrary = ComponentFactory.create({
                 return;
             }
 
-            const sheet = ce('div', { className: 'mpi-app-library__sheet' });
-            apps.forEach(app => sheet.appendChild(_buildTile(app)));
-            bodySlot.appendChild(sheet);
+            _sheet = MpiTileSheet.mount(ce('div'), { items: apps.map(_tileItem) });
+            _sheet.on('select', ({ item }) => openDetail(item.source));
+            bodySlot.appendChild(_sheet.el);
         }
 
         // ── Re-derive a single app's badge (+ its open detail footer) in place ──
@@ -328,8 +312,7 @@ export const MpiAppLibrary = ComponentFactory.create({
         function _patchTile(appId) {
             const app = listApps().find(a => a.id === appId);
             if (!app) return;
-            const ref = _tileInstances.get(appId);
-            if (ref) ref.badgeEl.innerHTML = _badgeHtml(app);
+            _sheet?.el?.patchState(appId, _badgeHtml(app));
             if (_activeDetail && _activeDetail.id === appId) openDetail(app);
         }
 

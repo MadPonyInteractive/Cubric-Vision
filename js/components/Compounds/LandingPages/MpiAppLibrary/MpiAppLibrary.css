@@ -6,10 +6,12 @@
    right-drawer detail panel with required-models install state and one
    Open/Install footer button.
 
-   Reuses the GLOBAL .mpi-tile and .mpi-detail selectors defined by
-   MpiModelManager.css (both stylesheets are always preloaded) — this
-   file only carries the .mpi-app-library shell + the overlay full-bleed
-   override + the required-models list.
+   Tiles come from the shared MpiTileSheet primitive (MPI-356), which owns
+   the .mpi-tile selectors and the sheet grid. Still reuses the GLOBAL
+   .mpi-detail selectors defined by MpiModelManager.css (both stylesheets are
+   always preloaded) — extracting the drawer is a separate job. This file
+   carries the .mpi-app-library shell + the overlay full-bleed override + the
+   required-models list.
 ═══════════════════════════════════════════════════════════════ */
 
 /* Full-bleed override of the shared MpiOverlay chrome — twin of the
@@ -71,13 +73,6 @@
 .mpi-app-library__body::-webkit-scrollbar { width: 10px; }
 .mpi-app-library__body::-webkit-scrollbar-thumb { background: var(--line); }
 .mpi-app-library__body::-webkit-scrollbar-track { background: transparent; }
-
-.mpi-app-library__sheet {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: var(--s-4);
-    align-items: start;
-}
 
 .mpi-app-library__empty {
     padding: var(--s-6) 0;
