@@ -133,6 +133,39 @@ test('the third App workflow (Video Stitch) carries its media I/O titles (MPI-25
     }
 });
 
+test('every MpiStyleSelector is titled + shaped for the dotted injection keys (MPI-359)', () => {
+    // The new style rack puts TWO injected knobs on ONE node, so the app addresses them
+    // as `Title.widget` (comfyController §3). Same silent-skip failure mode as the title
+    // sweep above, one level deeper: a renamed node OR a renamed widget = a dead picker.
+    // The expected title is DERIVED from the key the control actually emits, so a rename
+    // on either side fails here instead of shipping.
+    const controls = fs.readFileSync(
+        path.join(ROOT, 'js/components/Organisms/MpiPromptBox/PromptBoxControls.js'), 'utf8');
+    const keys = [...controls.matchAll(/'(\w+)\.(\w+)':/g)].map(m => ({ title: m[1], widget: m[2] }));
+    assert.ok(keys.length >= 2, 'no dotted injection keys found — the style controls have drifted');
+
+    const titles = new Set(keys.map(k => k.title.toLowerCase()));
+    assert.strictEqual(titles.size, 1, `dotted keys must address ONE node, got ${[...titles].join(', ')}`);
+    const [expectTitle] = titles;
+
+    const problems = [];
+    for (const file of fs.readdirSync(WORKFLOWS).filter(f => f.endsWith('.json'))) {
+        let wf;
+        try { wf = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8')); } catch { continue; }
+        for (const node of Object.values(wf)) {
+            if (node?.class_type !== 'MpiStyleSelector') continue;
+            const title = (node._meta?.title || '').toLowerCase();
+            if (title !== expectTitle) {
+                problems.push(`${file}: MpiStyleSelector titled "${title || '(none)'}", expected "${expectTitle}"`);
+            }
+            for (const { widget } of keys) {
+                if (!(widget in (node.inputs || {}))) problems.push(`${file}: MpiStyleSelector has no "${widget}" input`);
+            }
+        }
+    }
+    assert.deepStrictEqual(problems, [], `style-selector injection would silently no-op:\n  ${problems.join('\n  ')}`);
+});
+
 test('the Krea2 shared graph carries both branch booleans', () => {
     // Pins the specific regression: t2i / i2i / poseReference all run one file and
     // select a branch with a baked-false boolean. Lose a node (or its title) and the

@@ -1252,7 +1252,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 // node, so the control would be dead UI — hide it.
                 if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
 
-                // Style rack (Input_Style + Input_Stylization) is capability-gated:
+                // Style rack (the Input_Style_Selector node) is capability-gated:
                 // only models shipping style LoRAs (Krea2) mount it. Unlike
                 // negativePrompt this defaults FALSE — a model must opt in.
                 if ((componentId === 'styleSelect' || componentId === 'stylization')

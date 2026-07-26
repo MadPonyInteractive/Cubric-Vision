@@ -17,7 +17,7 @@ The injection **key** the control emits must equal that title. `_buildParams`
 ## The injector target-input list
 
 Once a node is matched by title, `comfyController._inject` (`comfyController.js`,
-~line 1141) writes `val` into the **first** of these input fields that the node has:
+~line 1223) writes `val` into **every** one of these input fields the node has:
 
 ```
 value, text, int, float, boolean, string,
@@ -35,6 +35,19 @@ gets `val === true || val === 'true'`, everything else is written as-is.
 > landed, the dropdown no-op'd. **When you author a node with a new injectable input
 > name, add it to this array** (and record it here). Prefer reusing an existing target
 > name (`value`, `int`, `select`) on your MpiNode so you never have to touch the list.
+
+## `Title.widget` — one node, two injected knobs (MPI-359)
+
+A key containing a dot addresses **one widget** on the matched node:
+`Input_Style_Selector.selector` writes only `selector`, leaving `strength_model` alone.
+Needed as soon as a single node carries two injectable values, which `_inject` cannot
+express — it sprays into every recognised name, so the style index would land in both
+strengths too.
+
+Additive and backwards-compatible: no plain param key contains a dot, so undotted keys
+behave exactly as before. Same silent-miss rule applies one level deeper — a renamed
+**widget** drops the write as quietly as a renamed title. First user (and the worked
+example): [style-rack.md](style-rack.md).
 
 ## Traps (each cost real debugging)
 

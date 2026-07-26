@@ -14,42 +14,49 @@ A model that ships a **set of mutually-exclusive style LoRAs** with trigger phra
 the first; LTX is next. The whole system is driven by **two injected scalars** — never a
 filename, never a trigger string.
 
-**In the workflow:**
-- N `MpiLoraModel` nodes titled `Input_style_lora_1..N`, each with its **`lora_name` hardcoded**
-  and its `strength_model` **linked** (not a widget).
-- Each strength comes from an `MpiMath` evaluating `b if a == N else 0.0`, where
-  `a ← Input_Style` (`MpiInt`) and `b ← Input_Stylization` (`MpiFloat`).
-  ⇒ Selecting style N sets slot N to the slider value and **zeroes the other N-1**.
-  `Input_Style = 0` zeroes all of them.
-- The **same int** feeds `MpiPromptList.specific_item` (1-indexed; `options` holds the trigger
-  phrases newline-joined, `prefix: ", "`, `suffix: "."`), whose output flows through
-  `MpiPromptProcessor` → `StringConcatenate.string_b`, with `Input_Positive` as `string_a`.
+**In the workflow** (the rack is ONE node pair — see
+[../../workflow-authoring/style-rack.md](../../workflow-authoring/style-rack.md)):
+- ONE `MpiStyleSelector` **titled `Input_Style_Selector`**: `selector` (the index),
+  `triggers` (one trigger phrase per line, style N = line N), `strength_model`,
+  `strength_clip`, `model` in, optional `clip`.
+- `ceil(N/5)` `MpiStyleLoras` banks **chained** off it (`style` → `style`), each holding
+  `lora_1..lora_5`. Slot order along the chain IS the style order. Untitled — the app never
+  addresses them.
+- The last bank's `model` / `prompt` outputs carry the patched model and the trigger phrase;
+  wire `prompt` into the same concat the prompt takes.
+  ⇒ `selector = 0` = no style: model and clip pass through, prompt empty.
 
 **Why this shape:** one integer drives BOTH the LoRA choice and the trigger phrase, so the two
 lists cannot drift. Do not port the upstream `CustomCombo` + `RegexExtract` two-list design —
-it ships already drifted.
+it ships already drifted. (Before MPI-359 the same contract was hand-built from
+`Input_Style` + N `MpiMath` gates + `Input_style_lora_N` slots + an `MpiPromptList`; the node
+pair collapses all of it. No shipped graph carries the gate rack any more.)
 
 **Traps:**
-- **`options` line count MUST equal the LoRA count.** A missing line means that style loads its
-  LoRA but appends no trigger — a *silent half-application* that reads as "the LoRA is weak."
-  (Krea2 shipped 8 lines for 9 LoRAs; caught by diffing the two.) **Assert `len(options) == N`.**
-  Krea2 now asserts this **at build time** in `generate_krea2.py::_assert_style_rack`, which also
-  checks that slot `N`'s `strength_model` is gated by the `MpiMath` reading `b if a == N` — a
-  swapped gate silently loads the wrong LoRA. Copy that function for the next style rack.
-- **`MpiLoraModel.apply_lora` short-circuits at `strength_model == 0`** (`loras.py:100` — returns
-  before `load_lora_cached`). So only ONE style LoRA is ever resident. See the `isWeightDep()`
-  over-count note in [02-dependencies-r2.md](02-dependencies-r2.md).
+- **Trigger-line count MUST match the populated lora slots.** A missing line means that style
+  loads its LoRA but appends no trigger — a *silent half-application* that reads as "the LoRA
+  is weak." (Krea2 shipped 8 lines for 9 LoRAs; caught by diffing the two.) Krea2 asserts this
+  **at build time** in `generate_krea2.py::_assert_style_rack`, which also pins the selector
+  title, the unbroken bank chain, and the unlinked injected widgets. Copy that function for the
+  next style rack.
+- **A `None` slot INSIDE the line range is legal** — that's a prompt-only style. A LoRA *past*
+  the last line is not.
+- **`MpiStyleLoras` skips a slot whose strength is 0**, so only ONE style LoRA is ever resident.
+  See the `isWeightDep()` over-count note in [02-dependencies-r2.md](02-dependencies-r2.md).
 - The style LoRAs are **deps** (they travel with the model), not user slots. The user rack stays
   `Input_Lora_1..6`.
 
 **In the app:**
-- Two `PROMPT_BOX_CONTROLS` entries: `styleSelect` (`nodeTitle: 'Input_Style'`, injects the
-  **index**) and a Stylization slider (`nodeTitle: 'Input_Stylization'`, float). Disable the
-  slider at index `0`.
+- Two `PROMPT_BOX_CONTROLS` entries, both addressing the SAME node per-widget:
+  `styleSelect` → `Input_Style_Selector.selector` (the **index**) and the Stylization slider
+  → `Input_Style_Selector.strength_model` (float). Disable the slider at index `0`.
+  The dotted `Title.widget` key is what makes two knobs on one node injectable
+  (`comfyController` §3) — a plain title key would spray the index into both strengths.
 - **`styleSelect` renders an `MpiStylePicker`** (MPI-301) — a trigger button showing the
   selected style's name, opening a horizontally-scrolling grid of image cards (title on top,
   4:5 image below). It replaced an inline dropdown; the **value contract is unchanged** (it
-  emits the selected index, which is injected as `Input_Style`). You add DATA, not code.
+  emits the selected index, which is injected as `Input_Style_Selector.selector`). You add
+  DATA, not code.
 - **Labels** = `styleLoraLabels` on the ModelDef: the filename stem after the model prefix,
   title-cased (`krea2_softwatercolor` → `Soft Water Color`). Index `0` = the no-style entry.
 - **Card images** = `styleLoraImages` on the ModelDef — an **index-aligned** filename array
@@ -61,8 +68,8 @@ it ships already drifted.
   Convention: name each file after its LoRA dep (`krea2-style-softwatercolor.webp`), WebP,
   cropped 4:5 (512×640 is plenty — the card is ~132px wide).
   ⚠ **Index alignment is the whole contract.** `styleLoraLabels[i]`, `styleLoraImages[i]`, the
-  `MpiMath` gate `a == i`, and the `MpiPromptList` trigger line all describe style `i`. An
-  off-by-one here shows the user the wrong picture for the style they get.
+  `i`-th lora slot along the bank chain, and the `i`-th `triggers` line all describe style `i`.
+  An off-by-one here shows the user the wrong picture for the style they get.
 - **Gate the controls on BOTH the op and the model**, exactly like `previewStage`:
   add the control ids to the relevant ops' `components` arrays in `commandRegistry.js`, and
   capability-gate per model inside `MpiPromptBox._refreshOpSlot()` so models without styles
@@ -141,4 +148,6 @@ the graph expands, rewrites, or decorates the prompt.
 - Latency is real and user-visible (up to `max_length` autoregressive steps through a 4B
   model). The toggle's `info` string must name the cost; keep it opt-in.
 
-Guard: `tests/output-prompt-capture.test.cjs`.
+Guard: `tests/output-prompt-capture.test.cjs`. Style rack guards:
+`tests/inject-params-titles.test.cjs` (selector title + widget names vs the dotted keys)
+and `generate_krea2.py::_assert_style_rack` at build time.

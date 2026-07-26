@@ -23,7 +23,7 @@ const escapeHtml = (value) => String(value ?? '')
  * the bottom of the viewport.
  *
  * VALUE CONTRACT: emits the selected INDEX (int), matching the old dropdown — the
- * caller injects it as `Input_Style`. Index 0 = None.
+ * caller injects it as `Input_Style_Selector.selector`. Index 0 = None.
  *
  * Props:
  * @param {Array<{label:string, image?:string}>} [styles=[]] - index-aligned style entries; index 0 = None (its image, a no-style baseline, shows if given)

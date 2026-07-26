@@ -13,12 +13,15 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
+// MpiStyleLoras slots (MPI-359) — matched by shape, not by name.
+const PATH_INPUT_RE = /^lora_\d+$/;
 
 // Replica of the source heal loop. healToSlash === _needsPathHeal(alwaysLocal).
 function heal(workflow, healToSlash) {
     for (const node of Object.values(workflow)) {
         if (!node || !node.inputs) continue;
-        for (const k of PATH_INPUTS) {
+        for (const k of Object.keys(node.inputs)) {
+            if (!PATH_INPUTS.includes(k) && !PATH_INPUT_RE.test(k)) continue;
             const v = node.inputs[k];
             if (typeof v !== 'string') continue;
             if (healToSlash) {
@@ -60,6 +63,29 @@ test('all PATH_INPUTS get the same treatment, not just lora_name', () => {
     heal(wf, false);
     assert.equal(wf['1'].inputs.ckpt_name, 'sub\\model.safetensors');
     assert.equal(wf['1'].inputs.upscale_model, 'up\\x.pth');
+});
+
+test('MpiStyleLoras slots heal like lora_name (MPI-359)', () => {
+    // The style rack bakes subfoldered paths into lora_1..lora_5. Before MPI-359 those
+    // same paths sat on a `lora_name` widget and healed; the new node names its slots
+    // by index, so a name-list-only heal would ship 'krea-2\\style\\x' to a Linux Pod
+    // and 400 with value_not_in_list — a style picker that works on Windows only.
+    const wf = { '1': { inputs: {
+        lora_1: 'krea-2\\style\\krea2_darkbrush.safetensors',
+        lora_5: 'None',
+        selector: 3,
+        strength_model: 1,
+    } } };
+    heal(wf, true);
+    assert.equal(wf['1'].inputs.lora_1, 'krea-2/style/krea2_darkbrush.safetensors');
+    assert.equal(wf['1'].inputs.lora_5, 'None');
+    assert.equal(wf['1'].inputs.selector, 3);
+});
+
+test('MpiStyleLoras slots flip back on Windows-local', () => {
+    const wf = { '1': { inputs: { lora_2: 'qwen/styles/Qwen-Anime-V2.safetensors' } } };
+    heal(wf, false);
+    assert.equal(wf['1'].inputs.lora_2, 'qwen\\styles\\Qwen-Anime-V2.safetensors');
 });
 
 test('non-string / missing inputs do not throw', () => {

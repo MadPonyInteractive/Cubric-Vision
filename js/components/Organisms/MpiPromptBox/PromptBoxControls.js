@@ -1096,11 +1096,11 @@ export const PROMPT_BOX_CONTROLS = {
     /**
      * styleSelect — style-LoRA picker (Krea2 pattern, MPI-242; playbook §9).
      *
-     * Injects the INDEX (`Input_Style`, MpiInt), never a filename or a trigger
-     * phrase. In the graph, nine MpiMath gates evaluate `b if a == N else 0.0`, so
-     * this one int both selects a LoRA and zeroes the other eight — and the SAME int
-     * drives MpiPromptList.specific_item to pluck the matching trigger. Two lists
-     * that cannot drift, because there is only one knob.
+     * Injects the INDEX (`Input_Style_Selector.selector`), never a filename or a
+     * trigger phrase. In the graph, one MpiStyleSelector holds that int plus the
+     * trigger lines and feeds a chain of MpiStyleLoras banks (five lora slots each),
+     * so style N picks the Nth slot AND the Nth trigger line. Two lists that cannot
+     * drift, because there is only one knob.
      *
      * Labels come from the ModelDef (`styleLoraLabels`), so a future model with a
      * style rack brings its own set. Index 0 is always the "no style" entry. The
@@ -1110,14 +1110,14 @@ export const PROMPT_BOX_CONTROLS = {
      * Rendered as an MpiStylePicker: a trigger button showing the selected style's
      * name, opening a horizontally-scrolling grid of image cards. It replaced the
      * old inline dropdown (MPI-301) but keeps the SAME value contract — it emits the
-     * selected INDEX, which is injected as `Input_Style`.
+     * selected INDEX, which is injected as `Input_Style_Selector.selector`.
      *
      * Changing the style re-renders the Stylization slider's enabled state — at
-     * index 0 the strength is inert (every gate is zeroed), so a live slider there
-     * would be dead UI.
+     * index 0 the selector passes the model through untouched, so a live slider
+     * there would be dead UI.
      */
     styleSelect: {
-        nodeTitle: 'Input_Style',
+        nodeTitle: 'Input_Style_Selector',
         scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.styleSelect,
         mount(hostEl, opts = {}) {
@@ -1167,7 +1167,10 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const v = parseInt(this.value ?? this.defaultValue, 10) || 0;
-            return { Input_Style: v };
+            // Dotted key: ONE `MpiStyleSelector` titled `Input_Style_Selector` carries
+            // both injected knobs, so each is addressed per-widget (comfyController §3).
+            // The legacy `Input_Style` MpiInt key died with the last gate rack (MPI-359).
+            return { 'Input_Style_Selector.selector': v };
         },
         destroy() {
             this._instance?.destroy?.();
@@ -1176,16 +1179,16 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
-     * stylization — strength of the selected style LoRA (`Input_Stylization`,
-     * MpiFloat). Feeds the `b` operand of every MpiMath gate; only the selected
-     * slot reads it. Disabled at styleSelect 0, where all gates are zeroed.
+     * stylization — strength of the selected style LoRA
+     * (`Input_Style_Selector.strength_model`). Applies to whichever LoRA the selector
+     * picked. Disabled at styleSelect 0, where no LoRA is applied at all.
      *
      * MpiProgressBar bakes `interactive` at mount and exposes no runtime setter, so
      * the disabled state is driven by the same class the primitive uses plus a guard
      * in the change handler. Remounting instead would drop the drag in progress.
      */
     stylization: {
-        nodeTitle: 'Input_Stylization',
+        nodeTitle: 'Input_Style_Selector',
         scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.stylization,
         mount(hostEl, opts = {}) {
@@ -1267,7 +1270,11 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue) || 0));
-            return { Input_Stylization: v };
+            // The selector node's own `strength_model` (the legacy `Input_Stylization`
+            // MpiFloat died with the last gate rack, MPI-359). `strength_clip` is left
+            // alone — no shipped style LoRA uses a CLIP side, and when one does it gets
+            // its own key here (or this slider drives both). See styleSelect above.
+            return { 'Input_Style_Selector.strength_model': v };
         },
     },
 

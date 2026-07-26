@@ -37,6 +37,7 @@ into the matching file below**, or add a new small file. Rules:
 | [injection.md](injection.md) | How the app writes values into a graph: the `Input_*`/`Output_*` title law, the injector target-input list, and the traps (silent title-miss, LoRA objects, media params). |
 | [generator-patterns.md](generator-patterns.md) | Template → runtime files: the orchestrate/registry/handler system, and the **selector→N-files** pattern (boolean split, `input_tier` 1/2/3 → three files). |
 | [media-inputs.md](media-inputs.md) | **Media-input path→string contract (MPI-272)** — image/mask/video/audio are path-reading loaders (`MpiLoadImageFromPath`/`MpiLoadAudio`/`MpiLoadVideo`) that self-gate on empty `string`; no placeholder. Only `LoadLatent` still stages a default. Path source law + reuse-404 soft-error. |
+| [style-rack.md](style-rack.md) | **Style LoRAs — `MpiStyleSelector` + chained `MpiStyleLoras`** (MPI-359). One index + one strength drive the LoRA AND its trigger line, injected per-widget via the dotted `Input_Style_Selector.selector` / `.strength_model` keys. |
 | [variant-injection.md](variant-injection.md) | **Diffusion-model / UNETLoader variant axis** — ship one graph, load a different transformer weight per GPU arch or quality (`variants.arch`, weight-only swap vs `workflowSuffix`). |
 
 ## The one-paragraph model

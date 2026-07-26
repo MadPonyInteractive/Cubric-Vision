@@ -260,8 +260,8 @@
   "73": {
     "inputs": {
       "model": [
-        "129",
-        0
+        "174",
+        1
       ],
       "clip": [
         "7",
@@ -547,340 +547,6 @@
       "title": "CFG"
     }
   },
-  "123": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\Illustration_style.safetensors",
-      "model": [
-        "97",
-        0
-      ],
-      "strength_model": [
-        "145",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_1"
-    }
-  },
-  "124": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\Qwen-Anime-V2.safetensors",
-      "model": [
-        "123",
-        0
-      ],
-      "strength_model": [
-        "131",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_2"
-    }
-  },
-  "125": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\animal_style.safetensors",
-      "model": [
-        "124",
-        0
-      ],
-      "strength_model": [
-        "132",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_3"
-    }
-  },
-  "126": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\zankuro-style-v1.safetensors",
-      "model": [
-        "125",
-        0
-      ],
-      "strength_model": [
-        "133",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_4"
-    }
-  },
-  "127": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\style_3d.safetensors",
-      "model": [
-        "126",
-        0
-      ],
-      "strength_model": [
-        "134",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_5"
-    }
-  },
-  "128": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\qwen-edit-2509-caricature_v1.1.safetensors",
-      "model": [
-        "127",
-        0
-      ],
-      "strength_model": [
-        "135",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_6"
-    }
-  },
-  "129": {
-    "inputs": {
-      "lora_name": "qwen\\styles\\Amateur_snapshot.safetensors",
-      "model": [
-        "128",
-        0
-      ],
-      "strength_model": [
-        "136",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_7"
-    }
-  },
-  "131": {
-    "inputs": {
-      "math_expression": "b if a == 2 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "132": {
-    "inputs": {
-      "math_expression": "b if a == 3 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "133": {
-    "inputs": {
-      "math_expression": "b if a == 4 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "134": {
-    "inputs": {
-      "math_expression": "b if a == 5 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "135": {
-    "inputs": {
-      "math_expression": "b if a == 6 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "136": {
-    "inputs": {
-      "math_expression": "b if a == 7 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "144": {
-    "inputs": {
-      "title": "styles",
-      "prefix": ",",
-      "options": "convert the picture to an illustration style\nanime style\nanime style\nZankuro Style\nconvert to 3D style\ncaricature\namtr snapshot photo",
-      "suffix": ".",
-      "blocks": "",
-      "amount": 0,
-      "random": false,
-      "seed": 0,
-      "probability": 1,
-      "specific_item": [
-        "147",
-        0
-      ]
-    },
-    "class_type": "MpiPromptList",
-    "_meta": {
-      "title": "Mpi Prompt List"
-    }
-  },
-  "145": {
-    "inputs": {
-      "math_expression": "b if a == 1 else 0.0   ",
-      "a": [
-        "147",
-        0
-      ],
-      "b": [
-        "146",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "146": {
-    "inputs": {
-      "float": 0.8
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Input_Stylization"
-    }
-  },
-  "147": {
-    "inputs": {
-      "int": 0
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Style"
-    }
-  },
-  "149": {
-    "inputs": {
-      "cleanup": 0,
-      "opt_title": "",
-      "prompt_list": [
-        "144",
-        0
-      ],
-      "positive": [
-        "150",
-        0
-      ],
-      "negative": [
-        "151",
-        0
-      ],
-      "seed": [
-        "144",
-        1
-      ],
-      "probability": [
-        "152",
-        0
-      ]
-    },
-    "class_type": "MpiPromptProcessor",
-    "_meta": {
-      "title": "Mpi Prompt Processor"
-    }
-  },
-  "150": {
-    "inputs": {
-      "string": "_styles_"
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Mpi String"
-    }
-  },
-  "151": {
-    "inputs": {
-      "string": "none"
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Mpi String"
-    }
-  },
-  "152": {
-    "inputs": {
-      "float": 1
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Mpi Float"
-    }
-  },
   "153": {
     "inputs": {
       "delimiter": "",
@@ -889,8 +555,8 @@
         0
       ],
       "string_b": [
-        "149",
-        1
+        "174",
+        3
       ]
     },
     "class_type": "StringConcatenate",
@@ -964,6 +630,56 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
+    }
+  },
+  "172": {
+    "inputs": {
+      "selector": 0,
+      "triggers": "convert the picture to an illustration style\nanime style\nanime style\nZankuro Style\nconvert to 3D style\ncaricature\namtr snapshot photo",
+      "strength_model": 1,
+      "strength_clip": 0,
+      "model": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "MpiStyleSelector",
+    "_meta": {
+      "title": "Input_Style_Selector"
+    }
+  },
+  "173": {
+    "inputs": {
+      "lora_1": "qwen\\styles\\Illustration_style.safetensors",
+      "lora_2": "qwen\\styles\\Qwen-Anime-V2.safetensors",
+      "lora_3": "qwen\\styles\\animal_style.safetensors",
+      "lora_4": "qwen\\styles\\zankuro-style-v1.safetensors",
+      "lora_5": "qwen\\styles\\style_3d.safetensors",
+      "style": [
+        "172",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
+    }
+  },
+  "174": {
+    "inputs": {
+      "lora_1": "qwen\\styles\\qwen-edit-2509-caricature_v1.1.safetensors",
+      "lora_2": "qwen\\styles\\Amateur_snapshot.safetensors",
+      "lora_3": "None",
+      "lora_4": "None",
+      "lora_5": "None",
+      "style": [
+        "173",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
     }
   }
 }

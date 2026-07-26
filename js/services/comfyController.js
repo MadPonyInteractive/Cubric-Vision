@@ -1239,11 +1239,30 @@ function createEngine({ engine, alwaysLocal }) {
         };
 
         for (const [key, val] of Object.entries(params)) {
+            // `Title.widget` addresses ONE widget on a node (MPI-359). Needed because a
+            // single node can now carry TWO injected knobs — MpiStyleSelector holds both
+            // `selector` and `strength_model` — which `_inject` cannot express: it sprays
+            // the value into every recognised widget name, so a plain key would write the
+            // style INDEX into both strengths and never reach the selector. Additive:
+            // no existing param key contains a dot, so plain keys behave exactly as before.
+            const dot = key.indexOf('.');
+            const matchTitle = dot === -1 ? key : key.slice(0, dot);
+            const widgetKey  = dot === -1 ? null : key.slice(dot + 1);
             const nodeIds = Object.keys(workflow).filter(id => {
                 const title = workflow[id]._meta?.title || "";
-                return title.toLowerCase() === key.toLowerCase();
+                return title.toLowerCase() === matchTitle.toLowerCase();
             });
             for (const id of nodeIds) {
+                if (widgetKey) {
+                    const node = workflow[id];
+                    if (node?.inputs && widgetKey in node.inputs) {
+                        const cur = node.inputs[widgetKey];
+                        if (typeof cur === 'number')       node.inputs[widgetKey] = parseFloat(val);
+                        else if (typeof cur === 'boolean') node.inputs[widgetKey] = (val === true || val === 'true');
+                        else                               node.inputs[widgetKey] = val;
+                    }
+                    continue;
+                }
                 // Special handling for LoRA objects (Lora_1..6, or the tier-2 alias
                 // Input_Lora_1..6 emitted by the MPI-127 alias pass). Without the
                 // optional Input_ prefix, flat-lora models whose workflow nodes are
@@ -1275,6 +1294,11 @@ function createEngine({ engine, alwaysLocal }) {
         // ComfyUI lists with '\\', so backslashes already match — flipping them
         // would BREAK local. (MPI-141 remote; MPI-198 local Linux/macOS)
         const PATH_INPUTS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
+        // MpiStyleLoras banks name their slots `lora_1..lora_5` instead of `lora_name`
+        // (MPI-359), so the style rack's BAKED subfoldered paths ('krea-2\style\x')
+        // would skip the heal entirely and 400 on every non-Windows engine. Same
+        // treatment, matched by shape. 'None' has no separator, so it passes through.
+        const PATH_INPUT_RE = /^lora_\d+$/;
         const _healToSlash = _needsPathHeal(this._alwaysLocal);
         // MPI-246: some nodes build their own enum with hardcoded '/' regardless of
         // OS — Impact Pack's UltralyticsDetectorProvider lists 'bbox/face_yolov8n.pt'
@@ -1290,7 +1314,8 @@ function createEngine({ engine, alwaysLocal }) {
         // target engine regardless of which engine saved the value. (MPI-229)
         for (const node of Object.values(workflow)) {
             if (!node || !node.inputs) continue;
-            for (const k of PATH_INPUTS) {
+            for (const k of Object.keys(node.inputs)) {
+                if (!PATH_INPUTS.includes(k) && !PATH_INPUT_RE.test(k)) continue;
                 if (k === 'model_name' && SLASH_ONLY_NODE_TYPES.has(node.class_type)) continue;
                 const v = node.inputs[k];
                 if (typeof v !== 'string') continue;

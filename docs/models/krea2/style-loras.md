@@ -11,16 +11,16 @@ text-encoder keys.
 Rank **32**, dtype **F32** (not rank-64 BF16 — that is the unrelated `krea2_turbo_lora_rank_64_bf16`
 distill LoRA in the same folder).
 
-- Use **`LoraLoaderModelOnly`**. A full `LoraLoader` would expose a `strength_clip` widget that
-  patches nothing.
+- They ride the **`MpiStyleSelector` + `MpiStyleLoras` rack** (MPI-359), with the selector's
+  `strength_clip` left at `0` and its `clip` input unconnected — a CLIP side would patch nothing.
 - ModelDef declares **`loraStrengths: ['model']`** (same as Wan/LTX).
 - **Trap:** 66 of the keys match `text_fusion.*` and look like text-encoder weights. They are
   not — `text_fusion` is a cross-attention block **inside the transformer** where image tokens
   attend to the already-encoded text embedding. Qwen3-VL itself is untouched.
-- Injection still uses the MPI-219 object form `{lora_name, strength_model, strength_clip}`
-  (`comfyController.js:1141` requires all three keys present to trip the special case). The
-  writes are individually gated, so `strength_clip` silently lands nowhere on a
-  `LoraLoaderModelOnly`. Send all three; only two apply.
+- The style rack is **not** injected slot-by-slot: the filenames are baked into the banks and
+  the app sends only the index + the strength. The MPI-219 object form
+  (`{lora_name, strength_model, strength_clip}`) belongs to the **user** rack
+  (`Input_Lora_1..6`), not here.
 
 | file (`loras/krea-2/style/`) | trigger phrase | strength |
 |---|---|---|
@@ -58,7 +58,7 @@ reproducible).
 > "monochrome ink wash style" while the LoRA barely applies it. The user reports it works well.
 > That tension may *be* the good part — but it has never been evaluated as a deliberate design.
 
-## UI labels + card images (`Input_Style` index → picker)
+## UI labels + card images (`Input_Style_Selector.selector` index → picker)
 
 The app injects the **index**, never the filename. Labels = the stem after `krea2_`, title-cased.
 The picker (`MpiStylePicker`) shows one image card per style; images come from
@@ -84,14 +84,16 @@ massive dinosaur In a rain forest"* — one gen per style, so the grid reads as 
 comparison. Index 0 is that prompt with the rack **off**: the model's native look.
 Re-shoot the whole set together if you ever change the prompt; a mixed set defeats the point.
 
-`0` zeroes all ten LoRA strengths **and** selects no trigger phrase ⇒ the Stylization slider
-is disabled at index `0`. See [injection.md](injection.md) for the two-scalar mechanism.
+`0` applies no LoRA at all **and** selects no trigger phrase ⇒ the Stylization slider
+is disabled at index `0`. See [injection.md](injection.md) for the two-scalar mechanism and
+[../../workflow-authoring/style-rack.md](../../workflow-authoring/style-rack.md) for the node pair.
 
 ## Prompt contract
 
 **The trigger phrase is APPENDED to the end of the prompt, joined with `", "`.**
-In the shipped graph this is `MpiPromptList` (`prefix: ", "`, `suffix: "."`), driven by the same
-`Input_Style` int — not an app-side string injection.
+In the shipped graph the phrase comes from the `Input_Style_Selector` node's own `triggers`
+text (line N = style N), emitted on the last bank's `prompt` output — not an app-side string
+injection.
 
 ```
 <user prompt>, monochrome ink wash style

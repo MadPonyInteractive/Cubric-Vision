@@ -180,246 +180,6 @@
       "title": "FromBasicPipe"
     }
   },
-  "80": {
-    "inputs": {
-      "title": "styles",
-      "prefix": ", ",
-      "options": "monochrome ink wash style\nmonochrome stippling style\nnaive expressive sketch style\ntextured abstract style\nrainy window style\npurple retro anime style\nart deco watercolor style\nethereal motion blur style\nvintage tarot style\nMidJourney style",
-      "suffix": ".",
-      "blocks": "",
-      "amount": 0,
-      "random": false,
-      "seed": 0,
-      "probability": 1,
-      "specific_item": [
-        "85",
-        0
-      ]
-    },
-    "class_type": "MpiPromptList",
-    "_meta": {
-      "title": "Mpi Prompt List"
-    }
-  },
-  "85": {
-    "inputs": {
-      "int": 0
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Style"
-    }
-  },
-  "94": {
-    "inputs": {
-      "cleanup": 0,
-      "opt_title": "",
-      "prompt_list": [
-        "80",
-        0
-      ],
-      "positive": [
-        "108",
-        0
-      ],
-      "negative": [
-        "109",
-        0
-      ],
-      "seed": [
-        "80",
-        1
-      ],
-      "probability": [
-        "111",
-        0
-      ]
-    },
-    "class_type": "MpiPromptProcessor",
-    "_meta": {
-      "title": "Mpi Prompt Processor"
-    }
-  },
-  "96": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_darkbrush.safetensors",
-      "model": [
-        "245",
-        0
-      ],
-      "strength_model": [
-        "125",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_1"
-    }
-  },
-  "100": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_dotmatrix.safetensors",
-      "model": [
-        "96",
-        0
-      ],
-      "strength_model": [
-        "126",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_2"
-    }
-  },
-  "101": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_kidsdrawing.safetensors",
-      "model": [
-        "100",
-        0
-      ],
-      "strength_model": [
-        "127",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_3"
-    }
-  },
-  "102": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_neondrip.safetensors",
-      "model": [
-        "101",
-        0
-      ],
-      "strength_model": [
-        "128",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_4"
-    }
-  },
-  "103": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_rainywindow.safetensors",
-      "model": [
-        "102",
-        0
-      ],
-      "strength_model": [
-        "129",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_5"
-    }
-  },
-  "104": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_retroanime.safetensors",
-      "model": [
-        "103",
-        0
-      ],
-      "strength_model": [
-        "130",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_6"
-    }
-  },
-  "105": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_softwatercolor.safetensors",
-      "model": [
-        "104",
-        0
-      ],
-      "strength_model": [
-        "131",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_7"
-    }
-  },
-  "106": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_sunsetblur.safetensors",
-      "model": [
-        "105",
-        0
-      ],
-      "strength_model": [
-        "132",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_8"
-    }
-  },
-  "107": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\krea2_vintagetarot.safetensors",
-      "model": [
-        "106",
-        0
-      ],
-      "strength_model": [
-        "133",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_9"
-    }
-  },
-  "108": {
-    "inputs": {
-      "string": "_styles_"
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Mpi String"
-    }
-  },
-  "109": {
-    "inputs": {
-      "string": "none"
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Mpi String"
-    }
-  },
-  "111": {
-    "inputs": {
-      "float": 1
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Mpi Float"
-    }
-  },
   "112": {
     "inputs": {
       "string": ""
@@ -437,166 +197,13 @@
         0
       ],
       "string_b": [
-        "94",
-        1
+        "481",
+        3
       ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
       "title": "Concatenate Text"
-    }
-  },
-  "125": {
-    "inputs": {
-      "math_expression": "b if a == 1 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "126": {
-    "inputs": {
-      "math_expression": "b if a == 2 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "127": {
-    "inputs": {
-      "math_expression": "b if a == 3 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "128": {
-    "inputs": {
-      "math_expression": "b if a == 4 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "129": {
-    "inputs": {
-      "math_expression": "b if a == 5 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "130": {
-    "inputs": {
-      "math_expression": "b if a == 6 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "131": {
-    "inputs": {
-      "math_expression": "b if a == 7 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "132": {
-    "inputs": {
-      "math_expression": "b if a == 8 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "133": {
-    "inputs": {
-      "math_expression": "b if a == 9 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
     }
   },
   "136": {
@@ -674,8 +281,8 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "250",
-        0
+        "481",
+        1
       ]
     },
     "class_type": "MpiLoraModel",
@@ -906,15 +513,6 @@
       "title": "Input_Is_i2i"
     }
   },
-  "235": {
-    "inputs": {
-      "float": 1
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Input_Stylization"
-    }
-  },
   "241": {
     "inputs": {
       "boolean": false,
@@ -956,40 +554,6 @@
     "class_type": "MpiLoraModel",
     "_meta": {
       "title": "Input_Bypass_Filter_Lora"
-    }
-  },
-  "250": {
-    "inputs": {
-      "lora_name": "krea-2\\style\\KREA_MIDJ_1.safetensors",
-      "model": [
-        "107",
-        0
-      ],
-      "strength_model": [
-        "251",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_style_lora_10"
-    }
-  },
-  "251": {
-    "inputs": {
-      "math_expression": "b if a == 10 else 0.0   ",
-      "a": [
-        "85",
-        0
-      ],
-      "b": [
-        "235",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
     }
   },
   "256": {
@@ -1709,6 +1273,56 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize Image v2"
+    }
+  },
+  "479": {
+    "inputs": {
+      "selector": 0,
+      "triggers": "monochrome ink wash style\nmonochrome stippling style\nnaive expressive sketch style\ntextured abstract style\nrainy window style\npurple retro anime style\nart deco watercolor style\nethereal motion blur style\nvintage tarot style\nMidJourney style",
+      "strength_model": 1,
+      "strength_clip": 0,
+      "model": [
+        "245",
+        0
+      ]
+    },
+    "class_type": "MpiStyleSelector",
+    "_meta": {
+      "title": "Input_Style_Selector"
+    }
+  },
+  "480": {
+    "inputs": {
+      "lora_1": "krea-2\\style\\krea2_darkbrush.safetensors",
+      "lora_2": "krea-2\\style\\krea2_dotmatrix.safetensors",
+      "lora_3": "krea-2\\style\\krea2_kidsdrawing.safetensors",
+      "lora_4": "krea-2\\style\\krea2_neondrip.safetensors",
+      "lora_5": "krea-2\\style\\krea2_rainywindow.safetensors",
+      "style": [
+        "479",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
+    }
+  },
+  "481": {
+    "inputs": {
+      "lora_1": "krea-2\\style\\krea2_retroanime.safetensors",
+      "lora_2": "krea-2\\style\\krea2_softwatercolor.safetensors",
+      "lora_3": "krea-2\\style\\krea2_sunsetblur.safetensors",
+      "lora_4": "krea-2\\style\\krea2_vintagetarot.safetensors",
+      "lora_5": "krea-2\\style\\KREA_MIDJ_1.safetensors",
+      "style": [
+        "480",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
     }
   }
 }

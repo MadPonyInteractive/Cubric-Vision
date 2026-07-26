@@ -11,26 +11,24 @@
 
 **The app injects exactly TWO scalars for the whole style system.** No filenames, no strings.
 
-| app injects | node `_meta.title` | class | effect |
+| app injects | key | widget | effect |
 |---|---|---|---|
-| `int` 0–9 | `Input_Style` | `MpiInt` | selects the style (0 = none) |
-| `float` | `Input_Stylization` | `MpiFloat` | that style's `strength_model` |
+| `int` 0–10 | `Input_Style_Selector.selector` | `selector` | selects the style (0 = none) |
+| `float` | `Input_Style_Selector.strength_model` | `strength_model` | that style's `strength_model` |
 
-The graph carries **9 hardcoded `MpiLoraModel` nodes**, `Input_style_lora_1` … `_9`, each with
-its `lora_name` baked in. Their `strength_model` is *linked*, not a widget — each is fed by an
-`MpiMath` node evaluating:
+Both land on ONE node: an `MpiStyleSelector` titled `Input_Style_Selector`, which also holds
+the ten trigger phrases (one per line in `triggers`). It feeds **two chained `MpiStyleLoras`
+banks** (`lora_1..lora_5` each) carrying the ten hardcoded style LoRA filenames in picker
+order. Style N = trigger line N = the Nth slot along the chain; `selector = 0` passes model
+and clip through untouched and emits an empty prompt.
 
-```
-b if a == N else 0.0      # a = Input_Style, b = Input_Stylization, N = this slot's index
-```
-
-So selecting style 5 drives slot 5 to the slider value and **zeroes the other nine**.
-`Input_Style = 0` zeroes all ten.
-
-**The same int also picks the trigger phrase.** `MpiPromptList` (title `styles`) holds the ten
-phrases newline-joined in `options`, with `specific_item ← Input_Style` (1-indexed, `0` = none),
-`prefix: ", "`, `suffix: "."`. Its output flows through `MpiPromptProcessor` into
+The banks' `prompt` output flows through `MpiPromptProcessor` into
 `StringConcatenate.string_b`, with `Input_Positive` (`MpiText`) as `string_a`.
+
+Since the two knobs sit on one node they are injected per-widget with the dotted
+`Title.widget` key — see [../../workflow-authoring/style-rack.md](../../workflow-authoring/style-rack.md).
+(MPI-359 replaced the old rack: `Input_Style` `MpiInt` + ten `MpiMath` gates +
+`Input_style_lora_1..10` + an `MpiPromptList`. Those titles no longer exist in any graph.)
 
 ⇒ **One knob, both effects.** The two-list drift problem the old proposal worried about cannot
 occur: the LoRA choice and the trigger phrase are driven by the same integer. Nothing to keep
@@ -65,8 +63,9 @@ Two consequences that still bind:
    the filename. Use the **object form** (`{lora_name, strength_model, strength_clip}`)
    special-cased at `comfyController.js:1141` — the path MPI-219 already built. This applies to
    the six **user** LoRA slots (`Input_Lora_1..6`), not the style rack.
-2. `int` and `float` are both targets, so `Input_Style` / `Input_Stylization` inject as plain
-   scalars. Nothing new is needed in `targets`.
+2. `targets` is irrelevant to the style rack now: both style knobs use the dotted
+   `Input_Style_Selector.<widget>` key, which writes the named widget directly and skips the
+   `targets` sweep entirely.
 
 Per the Comfy node-naming law (MPI-116), every injected node must be titled `Input_*` / `Output_*`.
 
@@ -79,8 +78,8 @@ Per the Comfy node-naming law (MPI-116), every injected node must be titled `Inp
 | `Input_Positive` | `MpiText` | string | `string_a` of the concat |
 | `Input_Seed` | `MpiInt` | int | |
 | `Input_Width` / `Input_Height` | `MpiInt` | int | must be **÷16** — see [resolution.md](resolution.md) |
-| `Input_Style` | `MpiInt` | int | `0`–`9`, clamp |
-| `Input_Stylization` | `MpiFloat` | float | default `1.0` |
+| `Input_Style_Selector.selector` | `MpiStyleSelector` | int | `0`–`10`, clamp |
+| `Input_Style_Selector.strength_model` | `MpiStyleSelector` | float | default `1.0` |
 | `Input_Image` | `LoadImage` | image | source for i2i **and** depth reference |
 | `Input_Is_i2i` | `MpiSimpleBoolean` | boolean | `MpiIfElse`: `VAEEncode` vs `EmptyLatentImage`, **and** `Input_denoise` vs a dummy float |
 | `Input_denoise` | `MpiFloat` | float | only consumed when `Input_Is_i2i` |
@@ -160,8 +159,8 @@ Two graph facts worth knowing:
 > `Output_image` (lowercase `i`) in the detailer + upscaler is **correct**, not a typo. Capture
 > titles are matched case-insensitively (`commandExecutor.js:7`), and `Chroma_detailer.json` /
 > `Chroma_upscaler.json` use the same lowercase form. Only `*_t2i.json` uses `Output_Image`.
-> Neither the style rack nor `Input_style_lora_N` is ever injected — do not add them to any
-> injection map.
+> The style rack's LoRA banks are never injected — only the two dotted
+> `Input_Style_Selector` widgets are; do not add the banks to any injection map.
 
 ## Local install layout (`G:\CubricModels`)
 
