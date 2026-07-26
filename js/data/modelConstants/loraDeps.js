@@ -328,4 +328,35 @@ export const loraDeps = {
         size: '1.1GB',
         sha256: 'e5af73441743b4852f228b03e444888dff3da80d2666033af2367ab7bda6d8b9',
     },
+    // Klein turbo/accelerator LoRA (MPI-354) — the SECOND TIER of the Klein card, same
+    // shape as krea2-lora-accelerator above: one base transformer + a strength-gated LoRA
+    // instead of shipping a second checkpoint. Gate it with an MpiMath off Input_Tier
+    // (`0.0 if a == 1 else 1.0`) so tier 1 short-circuits in apply_lora and never loads
+    // the file. Tier 1 (base, cfg ~5 / 20 steps) is the quality tier and the ONLY one
+    // where a negative prompt does anything; tier 2 (turbo) runs the low-cfg fast path.
+    // NOTE: unlike the Krea2 accelerator this file carries NO safetensors metadata, so
+    // its target checkpoint cannot be verified from the weight — it is trusted from the
+    // bench A/B against base, not from provenance.
+    'klein-lora-turbo': {
+        id: 'klein-lora-turbo',
+        name: 'FLUX.2 Klein 4B Turbo LoRA (r128, tier 2)',
+        origin: 'community turbo distill for FLUX.2-klein-base-4B',
+        filename: 'loras/flux2-klein/klein4b_turbo_r128.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/klein4b_turbo_r128.safetensors',
+        size: '786MB',
+        sha256: 'c204067b87c5039e768a94f41f6fe52a9150c1ec466f4af4edb4b7a093777a40',
+    },
+    // Klein outpaint LoRA (MPI-354) — BAKED at 1.1 in every Klein graph (LoraLoaderModelOnly,
+    // not a user slot). Mandatory for outpaint, harmless-to-helpful on inpaint/removal.
+    // MUST be the comfy-converted file (`diffusion_model.*` prefix, rank 16, all 68 target
+    // keys bind) — the plain diffusers weight silently binds nothing in ComfyUI.
+    'klein-lora-outpaint': {
+        id: 'klein-lora-outpaint',
+        name: 'FLUX.2 Klein Outpaint LoRA (baked)',
+        origin: 'fal (FLUX.2 Klein outpaint, comfy-converted)',
+        filename: 'loras/flux2-klein/flux2-klein-4b-outpaint.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2-klein-4b-outpaint.safetensors',
+        size: '76MB',
+        sha256: 'b8a5142b40f2e24aa1f5cfd0710323188836f49ea70b15b5f85b1e364316bc5b',
+    },
 };

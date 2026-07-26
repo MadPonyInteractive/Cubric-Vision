@@ -39,6 +39,17 @@ export const assetDeps = {
         size: '335MB',
         sha256: 'afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38'
     },
+    // FLUX.2 VAE — a DIFFERENT weight from `vae-flux-ae` (FLUX.1's ae.safetensors).
+    // Backs Klein 4B and any future FLUX.2 card. Named by the weight, like the rest.
+    'vae-flux2': {
+        id: 'vae-flux2',
+        name: 'FLUX.2 VAE',
+        origin: 'FLUX.2 stack (flux2-vae)',
+        filename: 'vae/flux2-vae.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/flux2-vae.safetensors',
+        size: '336MB',
+        sha256: 'd64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5'
+    },
     'vae-sdxl': {
         id: 'vae-sdxl',
         name: 'SDXL VAE',
@@ -128,6 +139,19 @@ export const assetDeps = {
         url: 'https://models.cubric.studio/vision/models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors',
         size: '8.74GB',
         sha256: 'cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4',
+    },
+    // FLUX.2 text encoder — Qwen3-4B, TEXT-ONLY (CLIPLoader `type: flux2`). NOT any of
+    // the Qwen3-VL / Qwen2.5-VL encoders above: different weight, different repo, no
+    // vision tower. Checked 2026-07-26 — nothing hosted matched, so Klein hosts it new.
+    // Named by the weight: the rest of the FLUX.2 family reuses this id.
+    'qwen3-4b-clip': {
+        id: 'qwen3-4b-clip',
+        name: 'FLUX.2 Text Encoder (Qwen3-4B)',
+        origin: 'FLUX.2 stack (qwen_3_4b)',
+        filename: 'text_encoders/qwen_3_4b.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen_3_4b.safetensors',
+        size: '8.04GB',
+        sha256: '6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a',
     },
     'pid-gemma': {
         id: 'pid-gemma',

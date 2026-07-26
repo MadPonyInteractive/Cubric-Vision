@@ -1,0 +1,28 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-354",
+ "title": "Wire FLUX.2 Klein 4B as a new model (t2i + edit + inpaint/removal)",
+ "column": "doing",
+ "maturity": "in-progress",
+ "created_at": "2026-07-26T10:51:07Z",
+ "updated_at": "2026-07-26T10:51:07Z",
+ "labels": [
+  "model",
+  "workflow",
+  "klein"
+ ],
+ "description": "Promote FLUX.2 Klein 4B from bench experiment (MPI-353) to a first-class Cubric Vision model. Apache-2.0, 4B params. LOW TIER: quality is modest but it is FAST and it is the only shipped path to object REMOVAL.\n\nOPERATIONS PROVEN ON THE BENCH (2026-07-26, ComfyUI 0.28, distilled ckpt, 8 steps, cfg 1.0, euler):\n- t2i: 10s @1024 8 steps. Step sweep 4/6/8/12/16/20 = 12/8/10/14/16/20s. Detail (lapvar) climbs 95->236 across the range but 20-step gain is film GRAIN, not structure; 8 steps is the knee. Skin/fabric texture is genuinely good - better than Qwen-Edit holds on edits.\n- edit (1 reference): 20s. ReferenceLatent + VAEEncode of the source, sampler starts from the source latent.\n- edit (MULTI reference): CHAINING ReferenceLatent WORKS (append=True in nodes_edit_model.py). 2 refs = 30s, 3 refs = 44s (~+14s per ref). VERIFIED: fox from ref-2 composited beside the woman from ref-1 with correct scale, lighting and floor contact.\n- inpaint / removal: 20-36s. Green-plate mechanism (EmptyImage color=65280 + ImageCompositeMasked), prompt 'Fill the green spaces according to the image.' + what should be there. Wrapped in InpaintCropImproved/InpaintStitchImproved (mask_blend_pixels 32, expand 8) = 6x less seam. The fal outpaint LoRA is MANDATORY for outpaint, optional for inpaint (region is surrounded, so it is a normal edit).\n\nVRAM: ~13GB measured on the user's system despite being a 4B model - may not fit 8GB cards. Confirm before setting the tier badge.\n\nOUT OF SCOPE (decided with user): outpainting ships as an APP, not a model op - users already do it via the resize tool + 'fill the black bars' prompting (proven with Boogu and Krea2). The MpiInpaintHeal colour/grain node (built this session, live in the bench) is NOT part of this card and is NOT released - artifacts are an app-level second-pass concern.\n\nCOST: +16.2GB user download (7.75 ckpt + 8.04 qwen_3_4b encoder + 0.34 VAE + 0.076 LoRA). Check dep reuse: qwen_3_4b may already be hosted for Qwen-Edit.\n\nDECIDED 2026-07-26 (user): ONE merged graph gated by Input_Operation (Krea2 pattern), edit op exposes 3 reference slots (~44s, already proven by klein_edit_3ref), R2 upload deferred until the merged graph is verified in-app.\n\nDONE 2026-07-26: dep reuse question CLOSED - no reuse. Klein's TE is Qwen3-4B TEXT-ONLY (CLIPLoader type flux2); every hosted Qwen encoder is a VL weight, and vae-flux-ae is FLUX.1's ae.safetensors. All four weights are new hosts, download stays 16.2GB. Dep entries written with real sha256 (hashed off G:/CubricModels masters): klein-4b-transformer (modelDeps.js), qwen3-4b-clip + vae-flux2 (assetDeps.js), klein-lora-outpaint (loraDeps.js). Verified via node import of DEPS; loader filenames match the bench graphs byte-for-byte. No file >=20GB so the hot-store gate is not tripped. NOT uploaded to R2 yet.\n\nTRANSFORMER DECIDED 2026-07-26 (user, bench A/B of four candidates): ship the BASE checkpoint int8_convrot quantized (4.26GB) + a community turbo LoRA (786MB) gated on Input_Tier - the Krea2 raw+accelerator pattern, ONE transformer for both tiers. Dropped: base bf16, distilled bf16, distilled int8. Base needs cfg 5.0 / 20 steps (~35-40s) and that is the ONLY config where a negative prompt is live. Klein is now the FASTEST image model we ship - faster than SDXL. Deps updated: klein-4b-transformer repointed to the base int8 weight, new klein-lora-turbo dep. Total download 16.2GB -> 13.5GB. docs/models/klein/README.md healed - the old 'base is closed' finding was measured on the FILL op at cfg 4.0 and did not survive t2i at cfg 5.0.\n\nSHIP GATE - turbo LoRA licence UNVERIFIED. klein4b_turbo_r128.safetensors came off CivitAI and carries NO safetensors metadata, so neither its licence nor its target checkpoint can be verified from the file. Klein 4B being Apache-2.0 does not extend to third-party LoRAs. Check before the R2 upload; a non-commercial LoRA is an MPI-357 problem, not a shippable dep.\n\nOPEN: text encoder is now the biggest file at 8.04GB, larger than the quantized transformer. Comfy-Org hosts qwen_3_4b_fp8_mixed (5.63GB) and qwen_3_4b_fp4_mixed (3.48GB); fp4_mixed is a format we already ship for LTX. Untested.",
+ "acceptance": [
+  "Workflow template authored + saved by the user to comfy_workflows/raw/ (all-lowercase name)",
+  "Ops decided: one graph with baked booleans vs separate runtime files per op",
+  "dependencies.js entries + sha256 via /mpic-compute-dep-hashes",
+  "progressStages.js bar counts COUNTED LIVE per run mode",
+  "ModelDef in models.js, low tier, showSettings per playbook",
+  "R2 upload (needs explicit user approval) verified by lsf + HTTP HEAD",
+  "Verified per docs/playbooks/add-model/06-verify.md"
+ ],
+ "links": {
+  "supersedes": "MPI-353",
+  "playbook": "docs/playbooks/add-model/README.md"
+ }
+}

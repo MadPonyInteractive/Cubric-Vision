@@ -241,6 +241,34 @@ export const modelDeps = {
         size: '19GB',
         sha256: '11b5af5ac601821d73930c84846c9a158e67177356daf927ce1c8d10f3963829',
     },
+    // ── FLUX.2 Klein 4B transformer (MPI-354) ──────────────────────────────────
+    // Apache-2.0, 4B. The FASTEST image model we ship. ONE transformer serves both
+    // tiers: the BASE checkpoint, int8_convrot quantized, with klein-lora-turbo
+    // (loraDeps) gated on Input_Tier — the Krea2 raw+accelerator pattern (MPI-316),
+    // NOT a per-tier card split.
+    //
+    // Four candidates were run on the bench 2026-07-26 and three were dropped:
+    // distilled bf16 + distilled int8 (base wins on image quality) and base bf16
+    // (int8 matches it at 3.5GB less). Base needs cfg ~5 / 20 steps, which is also
+    // the only config where a NEGATIVE PROMPT is live — at cfg 1.0 it is bit-identical.
+    //
+    // NOTE this quant is deliberately conservative — 70 layers quantized, 79 left
+    // BF16 (the distilled quant did 80/69). That is where the extra 190MB goes and
+    // why it holds quality. Native `comfy_quant` markers, so stock UNETLoader loads
+    // it with no custom node dep.
+    //
+    // Support weights: qwen3-4b-clip + vae-flux2 (assetDeps), klein-lora-outpaint +
+    // klein-lora-turbo (loraDeps). NOTHING was reusable — the FLUX.2 TE/VAE are
+    // distinct weights from every Qwen-* and FLUX.1 dep we already host.
+    'klein-4b-transformer': {
+        id: 'klein-4b-transformer',
+        name: 'FLUX.2 Klein 4B Transformer (base, int8_convrot)',
+        origin: 'black-forest-labs/FLUX.2-klein-base-4B (int8_convrot quant)',
+        filename: 'diffusion_models/flux-2-klein-base-4b-int8-convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/flux-2-klein-base-4b-int8-convrot.safetensors',
+        size: '4.26GB',
+        sha256: '0d83fd1df39613ee63fe92b517a1c03cac84466a7ab71470a0504e668621163c',
+    },
     // ── LTX-2.3 transformers (MPI-127) ─────────────────────────────────────────
     // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow scan
     // 2026-06-25). Support weights (video/audio VAE, gemma clip, text projection,
