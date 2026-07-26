@@ -1,0 +1,147 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d14ca3d3-82f2-4bd4-a82e-acc61c6ac71a",
+  "generated_at": "2026-07-26T13:14:16Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "consumed",
+  "session": {
+    "name": "MPI-356 op strip + model overlay - brainstorm, plan, and MpiTileSheet extraction",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Operation and model selection UX is fuzzy. The radial menu only works for blind hold-Tab gestures if items keep fixed positions, but switching model changes the item count and rotates the whole ring. Rethink how operations and models are chosen so the user is never confused.",
+    "status": "in_progress",
+    "summary": "Design settled and approved. Ops move to an always-visible radio strip above the prompt box; model moves to a card overlay reusing the Model Library tile; the settings popup becomes parameters-only behind a cogwheel; the radial stops owning ops. Step 2 of 8 (the MpiTileSheet extraction) is shipped and verified as commit f76791ff. Steps 3-8 are untouched."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-356/plan.md",
+    "completed": [
+      "1. Mockup - strip approved as drawn (right-aligned above the prompt box). Chips stay exactly where they are today. The mockup's bespoke model overlay was DISCARDED in favour of the Model Library tile.",
+      "2. MpiTileSheet extraction + rewire MpiModelManager and MpiAppLibrary - shipped as commit f76791ff, verified live against the running dev server."
+    ],
+    "pending": [
+      "3. commandRegistry - add a `short` field per command, a canonical verb ORDER for strip sorting, and a workspace-capability argument to getAvailableCommands() so requiresMask ops are ABSENT (not dimmed) in the Gallery.",
+      "4. Op strip in the prompt box, built on the existing MpiRadioGroup primitive, wired to the existing `workspace:set-operation` event.",
+      "5. Settings-popup surgery: remove the model dropdown (MpiPromptBox.js ~1128-1146) and the op dropdown (~1185-1212); popup becomes parameters-only behind a cogwheel; the existing bottom-right composite button becomes the model button.",
+      "6. MpiModelPicker overlay built on MpiTileSheet - installed models only, click selects and closes, LoRA & Upscale button in the state row calling MpiModelSettings.open({ modelId }).",
+      "7. Radial -> single Models item in _buildGalleryItems, plus the disabled-sector fix (a gesture at a dimmed sector must select NOTHING, not the nearest enabled item).",
+      "8. _pickFallbackOp memory preference - prefer the remembered op from state.s_selectedOpByModel when it fits the new chip count."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-356",
+    "title": "Op strip and model overlay",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-356/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-356/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-356/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-356/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-356/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Approved plan re-synced into .agents/mpi-kanban/tasks/MPI-356/plan.md (it was edited twice after card creation).",
+      "brief.md records the root cause: the radial computes item angles from the FILTERED item count.",
+      "checklist.md updated - steps 1 and 2 checked.",
+      "User preference saved to memory: never use the AskUserQuestion picker tool, ask in plain text (feedback_no_askuserquestion_picker.md, indexed in feedback-index.md)."
+    ],
+    "pending": [
+      "Decide and record what happens to the orphaned `change` and `remove` ops (present in commandRegistry.js with graphs and mask requirements, but in NO model's supportedOps - currently unreachable). Wire them to the Krea2/SDXL families or retire them.",
+      "docs/ update once the strip ships - operation selection currently has no subsystem doc; docs/generation-lifecycle.md is the likely home. Ask the user before touching .claude/rules/ files (CLAUDE.md cardinal rule 5).",
+      "Kanban files (board.json, tasks/MPI-356/) are deliberately UNCOMMITTED - board.json carries another session's changes (MPI-353 -> done, MPI-354/355 created). Leave for /mpi-end or commit by careful pathspec.",
+      "Separate card later: extract .mpi-detail* (240 lines) - still shared and unowned between MpiModelManager and MpiAppLibrary."
+    ]
+  },
+  "next_action": {
+    "description": "Start step 3: edit js/data/commandRegistry.js. Add a `short` field to each command def (t2i, i2i, depth, edit, upscale, detail for image; t2v, i2v, extend, interp, upscale for video), add a canonical verb ORDER array used to sort the strip so an op keeps roughly the same position across models, and add a workspace-capability argument to getAvailableCommands(mediaType, model, ctx) (commandRegistry.js:592-630) so ops with requiresMask:true are filtered OUT entirely where no mask tool exists (Gallery) rather than rendered permanently dimmed.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The radial STOPS owning operations. Its constraint (frozen positions for blind gesture) is in permanent conflict with what makes ops legible (dynamic availability). Deleting the requirement beats engineering around it. The radial keeps a single Models item; N===1 already bypasses the dead-zone in MpiRadialMenu._resolveActiveIndex, so hold-Tab-release opens the picker for free. Apps becomes a second item when the app library is un-gated.",
+      "The verb-collapse resolver (edit/krea2Edit/qwenEdit -> one 'Edit') was DROPPED. Those ids never coexist in one strip because each belongs to a different model, so the duplication is invisible. Sorting the strip by a canonical verb order achieves the same legibility with one sort and no resolver. Whole workstream deleted.",
+      "Shape-keyed op memory was DROPPED in favour of the existing state.s_selectedOpByModel (js/state.js:58), which already records only EXPLICIT user picks and is guarded from programmatic writes. _pickFallbackOp just needs to prefer it when it fits. ~3 lines, no new state.",
+      "Two kinds of unavailable, rendered differently. ABSENT = the model can't do it or the workspace can't (mask ops in the Gallery) -> not rendered at all. DISABLED = the model can do it but the chips don't fit -> dimmed with the reason on hover. A dim item the user can never light up is dead weight.",
+      "FOUR strip states, not three: unselected, selected, disabled, and selected+disabled. The last one is the MPI-337 no-force-down case (on Edit, clear the chips) and must be representable.",
+      "Strip labels are short codes (i2i, depth, edit) with the full label surfacing on hover via the existing per-option `info` field. User's call - people already know these.",
+      "The model picker reuses the Model Library TILE, not a bespoke UI. A third card design across three surfaces would create exactly the inconsistency this card removes. Only difference: click selects and closes instead of opening the detail drawer.",
+      "MpiTileSheet is a PRIMITIVE, not a Compound - both libraries are Compounds and the hierarchy forbids Compounds importing Compounds.",
+      "MpiTileSheet is state-DUMB: consumers keep their own status logic and pass the bottom row in as HTML (item.state). That is why _tileState() and _badgeHtml() did not move, and why the same one callback serves install progress, availability chips, and the picker's LoRA button.",
+      "Settings split by KIND, not scope: picks a file -> model card (LoRA, upscale model); turns a knob -> cogwheel popup (quality, style, stylization, denoise, ratio, batch, krea2Turbo). Burying a speed toggle like krea2Turbo behind overlay -> card -> button would be three clicks.",
+      "The model picker is NOT gated by the current op. Greying models by op would force an op change before a model change. Let the switch happen and let the strip re-render.",
+      "Image chips stay exactly where they are in the prompt box today - the mockup wrongly drew them over the negative/positive prompt toggle."
+    ],
+    "constraints": [
+      "USER PREFERENCE: never use the AskUserQuestion picker tool. Its overlay covers the screen so the user cannot read the analysis above it. Ask questions as plain text at the end of the response. ExitPlanMode is still fine.",
+      "The user's own app instance owns port 3000 (PID 11660 this session). Do NOT spawn a second instance - agent-launched instances become zombies serving a stale require-cache. Drive the RUNNING one with playwright instead.",
+      "Playwright harness gotchas: run the script from the REPO ROOT (module resolution will not find playwright from the scratchpad), delete it afterwards. Use waitUntil:'domcontentloaded' NOT 'networkidle' - the app holds a live SSE connection so the network never idles and goto() times out at 30s. Open the libraries with `const { Events } = await import('/js/events.js'); Events.emit('models:open')` (or 'apps:open') - Events is a module, not a global.",
+      "NEVER use `git stash push -- <path>` to probe history. It silently reverted this session's working changes to MpiAppLibrary.js and had to be popped back. Use `git show HEAD:<path>` instead.",
+      "board.json is CO-OWNED - another session added MPI-353/354/355 concurrently. Commit code by explicit pathspec (git commit --only <paths>), never git add -A.",
+      "Frontend-only changes are picked up by a browser reload; main-process/routes changes need a full app restart.",
+      "Lint baseline: 3 pre-existing warnings (2 raw querySelector in MpiAppLibrary._patchProgress, 1 in MpiPromptBox), 0 errors. The husky hook runs lint in warn-only mode.",
+      "MPI-337 is already in place: there is NO force-DOWN today. Removing media does not switch the op. The only automatic switch is force-UP when media arrives on a text-only op (MpiPromptBox.js:262-287).",
+      "Verify at build time that the empty-box auto-select to t2i goes through the PROGRAMMATIC path so it does not overwrite the memory via setSelectedOp() (js/utils/modelHelpers.js)."
+    ],
+    "files_modified": [
+      "js/components/Primitives/MpiTileSheet/MpiTileSheet.js (new, committed f76791ff)",
+      "js/components/Primitives/MpiTileSheet/MpiTileSheet.css (new, committed f76791ff)",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js (committed f76791ff)",
+      "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css (committed f76791ff)",
+      "js/components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.js (committed f76791ff)",
+      "js/components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.css (committed f76791ff)",
+      "js/shell/preloadStyles.js (committed f76791ff)",
+      "js/components/types.js (committed f76791ff)",
+      ".agents/mpi-kanban/board.json (UNCOMMITTED, co-owned)",
+      ".agents/mpi-kanban/tasks/MPI-356/ (UNCOMMITTED - task.json, plan.md, brief.md, checklist.md, validation.md, events.jsonl)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-356/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-356/checklist.md",
+      "js/data/commandRegistry.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Primitives/MpiTileSheet/MpiTileSheet.js",
+      "js/components/Primitives/MpiRadioGroup/MpiRadioGroup.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "components",
+      "events",
+      "state",
+      "generation-lifecycle",
+      "component-contracts",
+      "dos_and_donts"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/git.md",
+    "docs/generation-lifecycle.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-26T13:14:16Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-356 \"Op strip and model overlay\" in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/d14ca3d3-82f2-4bd4-a82e-acc61c6ac71a.json first, then .agents/mpi-kanban/tasks/MPI-356/plan.md for the approved design. The card is already in Doing. The goal: operations move out of the Tab radial menu (whose item angles are computed from the FILTERED item count, so changing model rotates the whole ring) and into an always-visible radio strip above the prompt box; the model moves to a card overlay that reuses the Model Library tile; the settings popup becomes parameters-only behind a cogwheel. Steps 1 and 2 of 8 are done - the mockup is approved and the MpiTileSheet extraction shipped as commit f76791ff, verified live. Your next action is step 3: edit js/data/commandRegistry.js to add a `short` field per command, a canonical verb ORDER for sorting the strip, and a workspace-capability argument to getAvailableCommands() so requiresMask ops are ABSENT rather than permanently dimmed in the Gallery. Two hard constraints: never use the AskUserQuestion picker tool (ask in plain text - the overlay hides your analysis), and do not start a second app instance because the user's own already owns port 3000."
+}
