@@ -27,7 +27,6 @@ import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
-import { refreshGroupHistoryRadial, clearGroupHistoryRadial } from '../../../shell/navigation.js';
 import { getModelsByType, isModelUsable } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
@@ -854,8 +853,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const preferredAvailable = opts.find(o => o.value === _preferredOperation && !o.disabled);
             if (preferredAvailable && _preferredOperation !== activeOperation) {
                 _setPromptOperation(_preferredOperation);
-                refreshGroupHistoryRadial(opts);
-                return;
             }
             // MPI-337: NO force-DOWN. When the active op loses a requirement (mask
             // cleared, maskless History card, media removed) it STAYS selected and
@@ -863,11 +860,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // (generationService requiresMask/media guards). The old "current op
             // unavailable -> fall back to first available" force was the
             // detail->upscale bug (paint a mask, stuck on upscale).
-            // Single source of truth: ship the same op list to the radial that
-            // PromptBox uses. _opOptions() pixel-scans the live mask via
-            // viewer.el.hasMask() (preview-mode aware), so radial reflects
-            // current capability instantly — no per-stroke event needed.
-            refreshGroupHistoryRadial(opts);
         }
 
         /** Gate prompt tool button disabled state. Frame-ops models stay enabled
@@ -2171,21 +2163,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _syncPromptToolDisabled();
             _pb?.el?.setModelList?.(currentModels);
         }));
-
-        // Seed radial with current op set on mount.
-        refreshGroupHistoryRadial(_opOptions());
-
-        // Pre-render hook from radial: refresh op list synchronously before
-        // items render. _opOptions() pixel-scans the live mask (preview-mode
-        // aware) so paint strokes made while still in mask mode — no mode-exit
-        // event yet — are reflected immediately.
-        _unsubs.push(Events.on('radial:will-open', () => {
-            refreshGroupHistoryRadial(_opOptions());
-        }));
-
-        // Clear on teardown so a stale set doesn't flash if Tab is held during
-        // navigation back to gallery.
-        _unsubs.push(() => clearGroupHistoryRadial());
 
         // ── Video-viewer context menu (Set as start/end frame) ──────────────
         // Wired only in video groups. Right-click on the video element emits

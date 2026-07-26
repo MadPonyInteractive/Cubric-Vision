@@ -35,7 +35,6 @@ import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
-import { refreshRadial } from '../../../shell/navigation.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
@@ -556,7 +555,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     activeModelId = model.id;
                     setSelectedModelId(model.mediaType, model.id);
                     _pb?.el?.setModel?.(model);
-                    refreshRadial({ imageCount, videoCount, modelId: model.id });
                 }
                 if (item.operation) {
                     activeOperation = item.operation;
@@ -737,7 +735,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     activeModelId = model.id;
                     setSelectedModelId(model.mediaType, model.id);
                     _pb?.el?.setModel?.(model);
-                    refreshRadial({ imageCount, videoCount, modelId: model.id });
                 }
                 if (item.operation) {
                     activeOperation = item.operation;
@@ -1258,12 +1255,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
             _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
-            refreshRadial({ imageCount, videoCount, modelId: activeModelId });
         }
 
-        // Seed radial with current model so its items render correctly before
-        // any PromptBox media-/model-change events fire.
-        refreshRadial({ imageCount, videoCount, modelId: activeModelId });
 
         function _wirePromptBox(pb) {
             if (!pb) return;
@@ -1279,7 +1272,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     activeOperation = model.supportedOps?.[0] ?? activeOperation;
                     _pb?.el?.setOperation(activeOperation);
                 }
-                refreshRadial({ imageCount, videoCount, modelId: model.id });
             });
 
             pb.on('operation-change', ({ operation, programmatic }) => {
@@ -1294,7 +1286,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 imageCount = ic;
                 videoCount = vc;
                 _pb?.el?.updateContext({ imageCount, videoCount, hasMask: false });
-                refreshRadial({ imageCount, videoCount, modelId: activeModelId });
             });
 
             const _galleryGenerationOptions = (injectionParams = {}, cardType = activeModel?.mediaType || 'image', mediaItems = []) => {
@@ -1540,7 +1531,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
             // setModel re-picks the op for the current media context and fires
             // operation-change (programmatic), so op memory is not overwritten.
             _pb?.el?.setModel(model);
-            refreshRadial({ imageCount, videoCount, modelId: model.id });
         });
 
         if (installedAllModels.length > 0) {
@@ -1553,12 +1543,11 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _pb?.el?.show();
             _wirePromptBox(_pb);
             // PromptBox may have restored persisted chips during mount (before
-            // _wirePromptBox subscribed to media-change), so sync counts + radial
-            // from the live box.
+            // _wirePromptBox subscribed to media-change), so sync counts from
+            // the live box.
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
             _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
-            refreshRadial({ imageCount, videoCount, modelId: activeModelId });
             // Restore Stop/Clear enabled state when remounting into a
             // workspace that still has gallery-scoped jobs in flight (e.g.
             // returning from history mid-video) or block-owned busy state
@@ -1701,7 +1690,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 });
                 _wirePromptBox(_pb);
                 _pb?.el?.show();
-                refreshRadial({ imageCount, videoCount, modelId: newModel.id });
             } else {
                 _pb.el.setModelList?.(installedAllModels);
             }

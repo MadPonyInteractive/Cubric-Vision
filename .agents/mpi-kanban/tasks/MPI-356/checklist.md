@@ -6,5 +6,7 @@
 - [x] Op strip in prompt box (MpiRadioGroup) wired to `workspace:set-operation`
 - [x] Settings popup surgery + cogwheel + model button
 - [x] MpiModelPicker overlay
-- [ ] Radial -> single Models item + disabled-sector fix
-- [ ] `_pickFallbackOp` memory preference
+- [x] Radial -> single Models item (hold-Tab skips the ring) + disabled-sector fix
+- [x] `_pickFallbackOp` memory preference
+- [x] Single-op models render ONE always-selected chip
+- [x] `.claude/rules/` + docs sweep (user-approved)

@@ -11,6 +11,7 @@ import { commands, getAvailableCommands, getCommandComponents, getCommandMediaIn
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
+import { getSelectedOp } from '../../../utils/modelHelpers.js';
 import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
@@ -1126,8 +1127,15 @@ export const MpiPromptBox = ComponentFactory.create({
             const fitting = candidates.filter(fits)
                 .sort((a, b) => _maxMediaForOperation(a.key, 'image') - _maxMediaForOperation(b.key, 'image'));
             const pool = fitting.length ? fitting : candidates;
+            // MPI-356: the user's last EXPLICIT pick for this model wins whenever it
+            // still fits the staged chips. Without it, Edit + 2 images -> clear ->
+            // re-add 2 images landed on the smallest-fitting op (i2i) instead of
+            // going back to Edit. s_selectedOpByModel only ever records user picks
+            // (setSelectedOp is guarded from programmatic ones), so this can't
+            // resurrect an op the user never chose.
+            const remembered = pool.find(c => c.key === getSelectedOp(model.id) && c.available);
             const ready = pool.find(c => c.available);
-            return (ready ?? pool[0])?.key ?? null;
+            return (remembered ?? ready ?? pool[0])?.key ?? null;
         }
 
         // Why an op the model CAN run is dim right now — a short clause APPENDED
@@ -1189,7 +1197,11 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!model) return;
 
             const choices = _opChoices();
-            if (choices.length < 2) return;   // one op = nothing to choose
+            // A single-op model still renders its ONE chip (user decision, MPI-356):
+            // the strip is a status readout as much as a picker — the lone chip is
+            // always selected and dims when its media requirement is missing
+            // (the selected+disabled state MPI-337 guarantees stays representable).
+            if (!choices.length) return;
 
             _opStrip = MpiRadioGroup.mount(opStripSlot, {
                 options: choices.map(o => ({ label: o.short, value: o.value, info: o.info, disabled: o.disabled })),

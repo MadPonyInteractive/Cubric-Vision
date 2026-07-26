@@ -122,8 +122,62 @@ missed it. Fixed with the same lift the Library needed
 (`.mpi-overlay--body:has(.mpi-model-picker) .mpi-overlay__close { z-index: 35 }`)
 and re-verified: the X now closes the overlay.
 
-### Open question carried forward
+### Open question carried forward - CLOSED
 
-Single-op models (PiD, Boogu Edit, Qwen-Edit) render NO strip - `_refreshOpStrip`
-returns early below 2 choices. Undecided whether a lone chip would be better for
-positional constancy.
+Single-op models rendered NO strip. User decided they must render ONE
+always-selected chip; shipped and verified below.
+
+---
+
+## Steps 7 + 8 + strip tweak (2026-07-26)
+
+Live-verified in headless chromium against the user's running dev server
+(same harness as steps 5-6; model switches restored to `SDXL NSFW` and every
+staged chip cleared at the end of each run). Zero page exceptions.
+
+**Single-op chip.** On `Qwen Image Edit` (one supported op) the strip renders
+exactly one chip: `[{"l":"edit","sel":true,"dis":true}]` - selected AND dim,
+because no image is staged. That is the MPI-337 selected+disabled state, so the
+chip is a status readout as much as a picker. Multi-op models are unchanged
+(`t2i* i2i i2i depth upscale` on Krea 2 / SDXL NSFW).
+
+**Tab -> picker, no ring.** Holding Tab shows NO ring
+(`.mpi-radial--visible` absent throughout the hold) and the model picker is open
+on release, with the 7 installed models and the current one outlined. Escape
+closes it; a second hold re-opens it (the hold flag is not left stuck). The
+short-circuit lives in `_onTabDown`: exactly one ENABLED item in the context ->
+`_selectItem` immediately, no `_show()`. Adding Apps later restores the ring
+with no code change.
+
+**Op memory (step 8).** Krea 2, drag one gallery card in -> strip lands on `i2i`
+(smallest fitting). Click `edit` (a real user pick, so `setSelectedOp` records
+it). Remove the chip -> `edit` stays selected + dim (no force-down, MPI-337 still
+holds). Bounce the model away and back so the empty box falls to `t2i`. Drag the
+same card in again -> the strip lands on **`edit`**, not `i2i`. The negative
+control is the earlier run of the identical script where the explicit `edit`
+click silently failed (bad selector): with no memory recorded, the re-add landed
+on `i2i`.
+
+**Registry test + lint.** `node --test tests/op-strip-availability.test.cjs` 4/4.
+ESLint on the five touched files: 0 errors, 1 pre-existing warning
+(`MpiPromptBox.js` raw querySelector).
+
+**Ops left the radial entirely.** `refreshRadial`, `refreshGroupHistoryRadial`,
+`clearGroupHistoryRadial`, `_mapOpsToRadialItems`, `OP_ICONS`, `_radialModelId`,
+the `radial:will-open` shell bridge and the 9 gallery + 4 history call sites are
+all deleted - both workspace contexts now share one static `RADIAL_ITEMS`.
+The Ctrl+Tab dev radial (3 items) still draws a ring, unaffected.
+
+**Not covered by the browser run:** the disabled-sector fix in
+`_resolveActiveIndex` is logic-verified only - with a single-item context the
+resolver is never reached, and the dev radial has no disabled items. It bites
+the moment the ring returns with Apps.
+
+**Rules + docs swept (user-approved):** `component-mounts.md` (model dropdown ->
+model button + cogwheel + op strip + MpiModelPicker rows on both Blocks; the
+MpiModelSettings trigger is now the picker, not the PromptBox; MpiTileSheet noted
+as the tile owner), `component-events-primitives.md` (single-enabled-item
+short-circuit, nearest-including-disabled resolver, ops-left-the-radial),
+`component-events-blocks.md` (`radial:will-open` -> `ui:open-model-picker`),
+`component-state.md` (`refreshRadial` mention), `docs/events.md`
+(`radial:will-open` row deleted), `docs/shell.md` (`refreshRadial`/`OP_ICONS`).

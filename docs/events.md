@@ -45,9 +45,8 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `download:installing` | Custom node install phase started |
 | `comfy:needs-restart` | ComfyUI auto-restart needed after custom node install |
 | `media:imported` | File imported via PromptBox drop `{ url, filename, mediaType }` |
-| `workspace:set-operation` | Op change from the prompt-box strip or the radial `{ operation }` — the workspace Block validates and calls back into `PromptBox.setOperation` |
-| `ui:open-model-picker` | Open the model overlay (MPI-356) `{}` — fired by the prompt box's model button; the workspace Block owns the `MpiModelPicker` instance and the model list it shows |
-| `radial:will-open` | Radial menu pre-render hook `{ page }` — workspace Block can refresh radial items synchronously before render |
+| `workspace:set-operation` | Op change from the prompt-box strip `{ operation }` — the workspace Block validates and calls back into `PromptBox.setOperation`. The radial no longer carries ops (MPI-356) |
+| `ui:open-model-picker` | Open the model overlay (MPI-356) `{}` — fired by the prompt box's model button and by hold-Tab (the radial's only item); the workspace Block owns the `MpiModelPicker` instance and the model list it shows |
 | `workspace:inject-prompts` | Reuse button injects prompt into PromptBox `{ positive, negative }` |
 | `slide-over:open` | Open a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |
 | `slide-over:toggle` | Toggle a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |

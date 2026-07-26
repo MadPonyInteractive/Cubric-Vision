@@ -236,8 +236,21 @@ Independent fix while in there: gesturing at a disabled sector must select
    model logic. LoRA & Upscale is a `<span role="button">` (a button may not nest
    in the tile button) intercepted in the CAPTURE phase, re-emitted as `settings`
    because a Compound may not import `MpiModelSettings`.
-7. Radial -> single Models item + disabled-sector fix.
-8. `_pickFallbackOp` memory preference.
+7. ~~Radial -> single Models item + disabled-sector fix~~ — done. USER OVERRODE
+   the plan: Tab must NOT draw a ring yet, so `MpiRadialMenu._onTabDown`
+   short-circuits to `_selectItem` whenever the context holds exactly ONE enabled
+   item — self-erasing the moment Apps adds a second. Both workspace contexts now
+   share one static `RADIAL_ITEMS` (Models -> `ui:open-model-picker`), so ALL op
+   plumbing to the ring died with it: `refreshRadial`, `refreshGroupHistoryRadial`,
+   `clearGroupHistoryRadial`, `_mapOpsToRadialItems`, `OP_ICONS`, the
+   `radial:will-open` bridge and 9 gallery call sites. Disabled-sector fix:
+   `_resolveActiveIndex` now aims at the nearest sector INCLUDING disabled ones
+   and returns -1 if it's dimmed (it used to fall through to the nearest enabled
+   neighbour).
+8. ~~`_pickFallbackOp` memory preference~~ — done. `getSelectedOp(model.id)` wins
+   over first-fit whenever the remembered op is in the fitting pool and available.
+9. ~~Single-op models render ONE chip~~ — done (user decision). `_refreshOpStrip`
+   now only bails on an EMPTY choice list.
 
 Use `/mpi-handoff` between steps if context gets large.
 

@@ -6,8 +6,8 @@
  *   PAGE_GALLERY      → main gallery (grid of ItemGroups); default on project open
  *   PAGE_GROUP_HISTORY → history view for a single ItemGroup (params: { groupId })
  *
- * The radial menu context tracks the current page and emits 'workspace:set-operation'
- * so the active PromptBox can update its selected operation without navigating.
+ * The radial menu tracks the current page but no longer carries operations
+ * (MPI-356) — hold-Tab opens the model picker via 'ui:open-model-picker'.
  */
 
 import { state } from '../state.js';
@@ -18,8 +18,6 @@ import { gid } from '../utils/dom.js';
 import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { loadProjectGrid } from './projectUI.js';
-import { getAvailableCommands } from '../data/commandRegistry.js';
-import { getModelById } from '../data/modelRegistry.js';
 import { Overlays } from '../managers/overlayManager.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
@@ -36,71 +34,17 @@ let _currentGroupId   = null;
 let _pageLanding      = null;
 let _currentBlock     = null;   // track mounted view Block for teardown
 let _navSeq           = 0;      // guards async teardown/import ordering
-let _radialModelId    = null;   // active model id for radial item generation;
-                                // pushed by Blocks via refreshRadial({ modelId })
 
 // ── Radial context definitions ─────────────────────────────────────────────
 
-// Icon to use for each operation key in the radial menu
-const OP_ICONS = {
-    t2i:         'image',
-    i2i:         'image',
-    upscale:     'upscaler',
-    detail:      'detailer',
-    edit:        'generate',
-    change:      'generate',
-    remove:      'generate',
-    t2v:         'video',
-    i2v:         'video',
-    extend:      'video',
-    interpolate: 'video',
-    videoUpscale:'upscaler',
-    imageUpscale:'upscaler',
-};
-
-/**
- * Builds radial items for the gallery context from the active model + current
- * media context. Only operations that are currently available (inputs met) are
- * included — the radial is an action launcher, not a capability browser.
- * @param {{ imageCount?: number, videoCount?: number }} [ctx]
- * @returns {Array<{action:string, label:string, icon:string}>}
- */
-function _buildGalleryItems(ctx = {}) {
-    const model = _radialModelId ? getModelById(_radialModelId) : null;
-    if (!model) return [];
-    const hasMedia = (ctx.imageCount ?? 0) > 0 || (ctx.videoCount ?? 0) > 0;
-    // MPI-356: this ring IS the gallery workspace, which has no mask canvas — so
-    // mask ops are absent here rather than permanently dimmed.
-    return getAvailableCommands(model.mediaType, model, { ...ctx, canMask: false })
-        .map(cmd => {
-            const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
-            // MPI-337: keep every op in a stable, memorizable slot — dim the ones
-            // not currently usable instead of hiding them (same treatment as the
-            // History radial). Unavailable = missing a required input (mask/media);
-            // a text-only op is also dimmed once media is staged (a media op fits
-            // better). Both were hides before; now non-selectable dims that never
-            // move position.
-            const disabled = !cmd.available || (hasMedia && isTextOnly);
-            return { action: cmd.key, label: cmd.label, icon: OP_ICONS[cmd.key] || 'generate', disabled };
-        });
-}
-
-// Last items pushed by MpiGroupHistoryBlock — single source of truth, derived
-// from the Block's own _opOptions() (same data the PromptBox dropdown uses).
-let _groupHistoryItems = [];
-
-/**
- * Maps a PromptBox-shaped op option ({ value, label, disabled }) to a radial
- * item. MPI-337: ALL ops pass through (disabled ones included) so op positions
- * stay stable/memorizable as mask/media availability changes — the radial dims
- * disabled items and blocks their selection instead of hiding them.
- * @param {Array<{value:string,label:string,disabled?:boolean}>} opts
- * @returns {Array<{action:string,label:string,icon:string,disabled?:boolean}>}
- */
-function _mapOpsToRadialItems(opts) {
-    return (opts || [])
-        .map(o => ({ action: o.value, label: o.label, icon: OP_ICONS[o.value] || 'generate', disabled: !!o.disabled }));
-}
+// MPI-356: ops LEFT the ring — they live in the prompt box's op strip, which is
+// always visible and doesn't rotate under the user. Both workspace contexts now
+// hold the same single item: Models. Apps joins it when the app library un-gates
+// (MPI-332); until then the radial short-circuits (see MpiRadialMenu._onTabDown)
+// and hold-Tab opens the model picker with no ring drawn.
+const RADIAL_ITEMS = [
+    { action: 'models', label: 'Models', icon: 'layers' },
+];
 
 // ── Public init ─────────────────────────────────────────────────────────────
 
@@ -335,11 +279,15 @@ function _syncRadial(page) {
             context: page,
         });
 
-        _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
-        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
+        _radialInstance.el.setContextItems(PAGE_GALLERY, RADIAL_ITEMS);
+        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, RADIAL_ITEMS);
         if (devItems.length) _radialInstance.el.setContextItems('dev', devItems);
 
         _radialInstance.on('select', ({ action }) => {
+            if (action === 'models') {
+                Events.emit('ui:open-model-picker', {});
+                return;
+            }
             if (action === 'components') {
                 _loadComponentsGallery();
                 return;
@@ -352,52 +300,10 @@ function _syncRadial(page) {
                 _restartEngine();
                 return;
             }
-            Events.emit('workspace:set-operation', { operation: action });
-        });
-
-        // Bridge: radial pre-render hook → workspace event. Active workspace
-        // Block can refresh radial items synchronously (e.g. re-evaluate live
-        // mask state) so the upcoming render reflects current capabilities.
-        _radialInstance.on('will-open', () => {
-            Events.emit('radial:will-open', { page: _currentPage });
         });
     } else {
-        _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems());
-        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
         _radialInstance.el.setContext(page);
     }
-}
-
-/**
- * Rebuilds the gallery radial items using the current media context.
- * Called by gallery.js when the PromptBox media-change or model-change fires.
- * @param {{ imageCount?: number, videoCount?: number, modelId?: string|null }} [ctx]
- */
-export function refreshRadial(ctx = {}) {
-    if (Object.prototype.hasOwnProperty.call(ctx, 'modelId')) {
-        _radialModelId = ctx.modelId ?? null;
-    }
-    if (!_radialInstance) return;
-    _radialInstance.el.setContextItems(PAGE_GALLERY, _buildGalleryItems(ctx));
-}
-
-/**
- * Replaces the group-history radial items. Called by MpiGroupHistoryBlock with
- * the SAME op options it feeds to MpiPromptBox — single source of truth so the
- * radial and PromptBox dropdown can never disagree.
- * @param {Array<{value:string,label:string,disabled?:boolean}>} opOptions
- */
-export function refreshGroupHistoryRadial(opOptions) {
-    _groupHistoryItems = _mapOpsToRadialItems(opOptions);
-    if (!_radialInstance) return;
-    _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, _groupHistoryItems);
-}
-
-/** Clears group-history radial items (called by Block on teardown). */
-export function clearGroupHistoryRadial() {
-    _groupHistoryItems = [];
-    if (!_radialInstance) return;
-    _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, []);
 }
 
 // ── Lazy view imports ───────────────────────────────────────────────────────

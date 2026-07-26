@@ -282,14 +282,17 @@ export const MpiRadialMenu = ComponentFactory.create({
             let bestD = Infinity;
 
             for (let i = 0; i < _itemCount; i++) {
-                if (_itemDisabled[i]) continue; // MPI-337: dimmed ops can't be picked
                 let diff = mouseAngle - _itemAngles[i];
                 while (diff > Math.PI) diff -= 2 * Math.PI;
                 while (diff < -Math.PI) diff += 2 * Math.PI;
                 const absDiff = Math.abs(diff);
                 if (absDiff < bestD) { bestD = absDiff; best = i; }
             }
-            return best;
+            // MPI-356: aim at the NEAREST sector, disabled ones included, then
+            // refuse it if it's dimmed. Skipping disabled items in the scan let
+            // the nearest ENABLED neighbour win instead, so a blind gesture at a
+            // dead sector fired the wrong action.
+            return best !== -1 && _itemDisabled[best] ? -1 : best;
         }
 
         function _applyActive(index) {
@@ -371,6 +374,15 @@ export const MpiRadialMenu = ComponentFactory.create({
         const _onTabDown = () => {
             if (_tabHeld) return;
             _tabHeld = true;
+            // MPI-356: a context holding exactly ONE selectable item has nothing
+            // to aim at — fire it on key-down and never draw the ring (today the
+            // workspace contexts hold only Models). Self-erases as soon as a
+            // second item lands (Apps), which brings the ring back with no edit.
+            const live = (CONTEXTS[_context] || CONTEXTS.root || []).filter(it => !it.disabled);
+            if (live.length === 1) {
+                _selectItem(live[0].action);
+                return;
+            }
             _show();
         };
 
