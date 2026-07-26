@@ -66,12 +66,24 @@ These are the ones that also have an OS-notification path + a preference toggle.
 OS-notif handlers in `main.js` (`showOsNotification`) re-gate on `!mainWindow.isFocused()` — a
 double focus gate (renderer + main).
 
-**Stop never reports as a completion (MPI-352).** Comfy's interrupt is advisory — a Stopped job
-often returns real output, which the store honours (`generationStore` § late-settle, R09: the item
-saves). So `generationService` reads the store's `cancelling` overlay at the terminal: emits
-`tool:cancelled` not `tool:idle` (bar releases, no toast/chime), and stamps `cancelled:true` on
-`generation:complete` (counter skips it). All other consumers ignore the flag and run normally —
-the media is on disk.
+**Stop never reports as a completion (MPI-352).** ComfyUI's interrupt is **advisory**: a Stopped
+job usually finishes its in-flight step and returns real output, which the store deliberately
+honours (`generationStore` § late-settle, R09 — the item saves). That output then reaches
+`exec.onComplete` with no knowledge of the Stop, so before the fix it walked the normal success
+path and fired both user-facing completion signals — the "Generation finished" toast + chime on a
+run the user had cancelled.
+
+The durable signal is the store's `cancelling` overlay (set synchronously in
+`generationStore.cancel()`, and it survives the late-settle to `done`) — **not** the Stop path's
+own emits, which were already clean. `generationService` reads it at the terminal and gates both
+signals: emits `tool:cancelled` instead of `tool:idle` (so `statusBar` releases the bar without the
+completion flash/toast/chime), and stamps `cancelled:true` on `generation:complete` (so the
+coalesced counter above skips it).
+
+Do **not** extend this to the persistence path. Gallery repaint, placeholder teardown, the
+float-latent bridge and stats refresh all ignore the flag and must keep running — the media really
+is on disk, so suppressing them trades a bad toast for a lost result. Only the *"finished"
+signals* are suppressed. Rule + rationale: memory `feedback_no_toast_user_stop`.
 
 ---
 

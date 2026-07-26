@@ -37,6 +37,12 @@
 
 ## fixes
 
+- **Stopping a generation no longer says it finished.** Pressing Stop could still
+  pop a "Generation finished" notification with the completion chime, because the
+  engine often completes the step it was already working on and hands back a
+  finished image. That result is still kept — it just no longer announces itself
+  as a successful run you didn't ask for.
+
 - **Krea 2 upscaling is sharp again.** Upscales came out noisy — bad enough to be
   unusable at full quality, and mediocre on the fast setting. The upscaler now
   finishes with a short refining pass, and full quality no longer borrows the

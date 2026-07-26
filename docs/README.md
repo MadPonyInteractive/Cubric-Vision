@@ -19,6 +19,7 @@ NOT mechanically split these):
 - `releases/build-experience-log.md` — build evidence log
 - `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md`, `download-manager.md` — coherent single-subject contracts, near/over the line by design (download-manager: the full install/download/uninstall lifecycle + store/reconciler/snapshot, MPI-276)
 - `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
+- `toasts.md` — coherent single-subject contract (the full toast/notification call-site map: `ui:*`, `StatusBar.notify`, `notificationService`, the sound model, and which events must NOT toast). Splitting it would scatter "does this fire a toast?" across files, which is the one question the doc exists to answer in one place.
 - `models/ltx/audio-input.md` — research lab notebook (evidence log)
 - `playbooks/add-model/` — end-to-end procedure split into a README hub + numbered section files; the README carries the mandatory step ordering
 
