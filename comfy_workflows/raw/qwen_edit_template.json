@@ -1,15 +1,15 @@
 {
   "id": "8ba9bc75-8c4b-4d6e-9467-8ff05f9f5186",
   "revision": 0,
-  "last_node_id": 171,
-  "last_link_id": 320,
+  "last_node_id": 174,
+  "last_link_id": 339,
   "nodes": [
     {
       "id": 8,
       "type": "VAELoader",
       "pos": [
-        3666.6610295212577,
-        10917.269085113327
+        3766.0661518902366,
+        9176.035845226921
       ],
       "size": [
         330,
@@ -73,7 +73,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 75,
+      "order": 71,
       "mode": 0,
       "inputs": [
         {
@@ -161,7 +161,7 @@
         60
       ],
       "flags": {},
-      "order": 70,
+      "order": 53,
       "mode": 0,
       "inputs": [
         {
@@ -201,7 +201,7 @@
         66
       ],
       "flags": {},
-      "order": 53,
+      "order": 40,
       "mode": 0,
       "inputs": [
         {
@@ -248,7 +248,7 @@
         66
       ],
       "flags": {},
-      "order": 37,
+      "order": 32,
       "mode": 0,
       "inputs": [
         {
@@ -410,7 +410,7 @@
         122
       ],
       "flags": {},
-      "order": 78,
+      "order": 58,
       "mode": 0,
       "inputs": [
         {
@@ -468,7 +468,7 @@
         122
       ],
       "flags": {},
-      "order": 80,
+      "order": 59,
       "mode": 0,
       "inputs": [
         {
@@ -526,7 +526,7 @@
         122
       ],
       "flags": {},
-      "order": 81,
+      "order": 60,
       "mode": 0,
       "inputs": [
         {
@@ -584,7 +584,7 @@
         122
       ],
       "flags": {},
-      "order": 76,
+      "order": 57,
       "mode": 0,
       "inputs": [
         {
@@ -706,7 +706,7 @@
         82
       ],
       "flags": {},
-      "order": 69,
+      "order": 52,
       "mode": 0,
       "inputs": [
         {
@@ -760,7 +760,7 @@
         46
       ],
       "flags": {},
-      "order": 64,
+      "order": 49,
       "mode": 0,
       "inputs": [
         {
@@ -830,15 +830,15 @@
       "id": 74,
       "type": "SetNode",
       "pos": [
-        4301.467251828153,
-        10745.463133080462
+        4397.602214380605,
+        8932.286377230366
       ],
       "size": [
         255.59765625,
         60
       ],
       "flags": {},
-      "order": 91,
+      "order": 67,
       "mode": 0,
       "inputs": [
         {
@@ -876,7 +876,7 @@
         122
       ],
       "flags": {},
-      "order": 74,
+      "order": 56,
       "mode": 0,
       "inputs": [
         {
@@ -934,7 +934,7 @@
         61.42857142857156
       ],
       "flags": {},
-      "order": 63,
+      "order": 48,
       "mode": 0,
       "inputs": [
         {
@@ -993,7 +993,7 @@
         58
       ],
       "flags": {},
-      "order": 54,
+      "order": 41,
       "mode": 0,
       "inputs": [
         {
@@ -1036,7 +1036,7 @@
         138
       ],
       "flags": {},
-      "order": 58,
+      "order": 44,
       "mode": 0,
       "inputs": [
         {
@@ -1252,7 +1252,7 @@
         128
       ],
       "flags": {},
-      "order": 38,
+      "order": 33,
       "mode": 0,
       "inputs": [
         {
@@ -1304,7 +1304,7 @@
         128
       ],
       "flags": {},
-      "order": 59,
+      "order": 45,
       "mode": 0,
       "inputs": [
         {
@@ -1424,592 +1424,6 @@
       "bgcolor": "#593930"
     },
     {
-      "id": 131,
-      "type": "MpiMath",
-      "pos": [
-        3272.87596188727,
-        9553.903746890646
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 45,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 200
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 201
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            187
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 2 else 0.0   "
-      ]
-    },
-    {
-      "id": 132,
-      "type": "MpiMath",
-      "pos": [
-        3271.6475021515325,
-        9739.40116698689
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 46,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 202
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 203
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            189
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 3 else 0.0   "
-      ]
-    },
-    {
-      "id": 133,
-      "type": "MpiMath",
-      "pos": [
-        3272.875961887271,
-        9927.355506554608
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 47,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 204
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 205
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            191
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 4 else 0.0   "
-      ]
-    },
-    {
-      "id": 134,
-      "type": "MpiMath",
-      "pos": [
-        3274.1044216230075,
-        10112.852926650854
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 48,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 206
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 207
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            193
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 5 else 0.0   "
-      ]
-    },
-    {
-      "id": 135,
-      "type": "MpiMath",
-      "pos": [
-        3279.0182605659556,
-        10298.350346747098
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 49,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 208
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 209
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            195
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 6 else 0.0   "
-      ]
-    },
-    {
-      "id": 136,
-      "type": "MpiMath",
-      "pos": [
-        3276.5613410944816,
-        10478.933927900396
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 50,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 210
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 211
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            197
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 7 else 0.0   "
-      ]
-    },
-    {
-      "id": 150,
-      "type": "MpiString",
-      "pos": [
-        4160.799138794793,
-        10301.691128138522
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 14,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "string",
-          "type": "STRING",
-          "links": [
-            227
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiString"
-      },
-      "widgets_values": [
-        "_styles_"
-      ]
-    },
-    {
-      "id": 151,
-      "type": "MpiString",
-      "pos": [
-        4161.332012483023,
-        10349.128828100336
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 15,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "string",
-          "type": "STRING",
-          "links": [
-            228
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiString"
-      },
-      "widgets_values": [
-        "none"
-      ]
-    },
-    {
-      "id": 152,
-      "type": "MpiFloat",
-      "pos": [
-        4165.266265106564,
-        10256.014761600678
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 16,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            230
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiFloat"
-      },
-      "widgets_values": [
-        1
-      ]
-    },
-    {
-      "id": 97,
-      "type": "MpiLoraModel",
-      "pos": [
-        2338.3452501009,
-        9287.238698772333
-      ],
-      "size": [
-        270,
-        122
-      ],
-      "flags": {},
-      "order": 82,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 145
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            232
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_Lora_6",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "None",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 145,
-      "type": "MpiMath",
-      "pos": [
-        3271.5874371502314,
-        9377.936281782975
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 52,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 224
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": 225
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            185
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "b if a == 1 else 0.0   "
-      ]
-    },
-    {
-      "id": 123,
-      "type": "MpiLoraModel",
-      "pos": [
-        3515.262754449175,
-        9381.180770633506
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 83,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 232
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 185
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            186
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_1",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\Illustration_style.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 90,
       "type": "MpiText",
       "pos": [
@@ -2021,7 +1435,7 @@
         112.77935876269294
       ],
       "flags": {},
-      "order": 17,
+      "order": 14,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2051,805 +1465,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 153,
-      "type": "StringConcatenate",
-      "pos": [
-        5860.299487329931,
-        8580.20838857803
-      ],
-      "size": [
-        210,
-        166
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 62,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "string_a",
-          "type": "STRING",
-          "widget": {
-            "name": "string_a"
-          },
-          "link": 234
-        },
-        {
-          "name": "string_b",
-          "type": "STRING",
-          "widget": {
-            "name": "string_b"
-          },
-          "link": 231
-        }
-      ],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            238,
-            239
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "StringConcatenate"
-      },
-      "widgets_values": [
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "id": 124,
-      "type": "MpiLoraModel",
-      "pos": [
-        3523.948133656385,
-        9559.393593372386
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 84,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 186
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 187
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            188
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_2",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\Qwen-Anime-V2.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 125,
-      "type": "MpiLoraModel",
-      "pos": [
-        3519.1204557704914,
-        9744.977174525682
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 85,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 188
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 189
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            190
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_3",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\animal_style.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 127,
-      "type": "MpiLoraModel",
-      "pos": [
-        3509.7382961533085,
-        10121.392287288627
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 87,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 192
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 193
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            194
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_5",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\style_3d.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 146,
-      "type": "MpiFloat",
-      "pos": [
-        2699.3731671436653,
-        10159.035660658985
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 18,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            201,
-            203,
-            205,
-            207,
-            209,
-            211,
-            225
-          ]
-        }
-      ],
-      "title": "Input_Stylization",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08",
-        "Node name for S&R": "MpiFloat"
-      },
-      "widgets_values": [
-        0.8
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 129,
-      "type": "MpiLoraModel",
-      "pos": [
-        3514.200536262684,
-        10481.194120379701
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 89,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 196
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 197
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            244
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_7",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\Amateur_snapshot.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 144,
-      "type": "MpiPromptList",
-      "pos": [
-        3968.6185793301747,
-        9660.156467144472
-      ],
-      "size": [
-        319.7947775841319,
-        539.2731410122067
-      ],
-      "flags": {},
-      "order": 51,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "opt_chained_list",
-          "shape": 7,
-          "type": "PROMPT_LST",
-          "link": null
-        },
-        {
-          "name": "opt_override",
-          "shape": 7,
-          "type": "PROMPT_OVR",
-          "link": null
-        },
-        {
-          "name": "specific_item",
-          "type": "INT",
-          "widget": {
-            "name": "specific_item"
-          },
-          "link": 223
-        }
-      ],
-      "outputs": [
-        {
-          "name": "prompt_list",
-          "type": "PROMPT_LST",
-          "links": [
-            226
-          ]
-        },
-        {
-          "name": "seed",
-          "type": "INT",
-          "links": [
-            229
-          ]
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "links": null
-        },
-        {
-          "name": "selected_options",
-          "type": "STRING",
-          "links": []
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiPromptList"
-      },
-      "widgets_values": [
-        "styles",
-        ",",
-        "convert the picture to an illustration style\nanime style\nanime style\nZankuro Style\nconvert to 3D style\ncaricature\namtr snapshot photo",
-        ".",
-        "",
-        0,
-        2,
-        false,
-        0,
-        "fixed",
-        1
-      ]
-    },
-    {
-      "id": 126,
-      "type": "MpiLoraModel",
-      "pos": [
-        3519.505655861639,
-        9933.646210898041
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 86,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 190
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 191
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            192
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_4",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\zankuro-style-v1.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 128,
-      "type": "MpiLoraModel",
-      "pos": [
-        3518.430136080391,
-        10300.83172384328
-      ],
-      "size": [
-        398.93750945335853,
-        122
-      ],
-      "flags": {},
-      "order": 88,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 194
-        },
-        {
-          "name": "strength_model",
-          "type": "FLOAT",
-          "widget": {
-            "name": "strength_model"
-          },
-          "link": 195
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            196
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "title": "Input_style_lora_6",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "qwen\\styles\\qwen-edit-2509-caricature_v1.1.safetensors",
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 143,
-      "type": "Note",
-      "pos": [
-        2733.0018020634534,
-        9814.650670020574
-      ],
-      "size": [
-        210,
-        165.07350138973413
-      ],
-      "flags": {},
-      "order": 19,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [],
-      "title": "Styles Mapping",
-      "properties": {},
-      "widgets_values": [
-        "0 = No Style\n1 = Illustration\n2 = Anime 3D\n3 = Anime 2D\n4 = Anime Zankuro\n5 = 3D\n6 = Caricature\n7 = SnapShot\n"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 7,
-      "type": "CLIPLoader",
-      "pos": [
-        3667.58400315407,
-        10758.934124175827
-      ],
-      "size": [
-        330,
-        110
-      ],
-      "flags": {},
-      "order": 20,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "slot_index": 0,
-          "links": [
-            104
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.48",
-        "Node name for S&R": "CLIPLoader",
-        "models": [
-          {
-            "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
-            "directory": "text_encoders"
-          }
-        ],
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65,
-        "ue_properties": {
-          "version": "7.1",
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        "qwen_2.5_vl_7b_fp8_scaled.safetensors",
-        "qwen_image",
-        "default"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 73,
-      "type": "MpiToChekPoint",
-      "pos": [
-        4102.418423703151,
-        10745.463133080462
-      ],
-      "size": [
-        169.048828125,
-        66
-      ],
-      "flags": {},
-      "order": 90,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 244
-        },
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 104
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 105
-        }
-      ],
-      "outputs": [
-        {
-          "name": "mpi_checkpoint",
-          "type": "MPI_CHECKPOINT",
-          "links": [
-            106
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba9e1569d9f77567907654ae04745580f43f18b9",
-        "Node name for S&R": "MpiToChekPoint"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 149,
-      "type": "MpiPromptProcessor",
-      "pos": [
-        4346.364061612477,
-        9658.474517059869
-      ],
-      "size": [
-        400,
-        342
-      ],
-      "flags": {},
-      "order": 57,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "prompt_list",
-          "type": "PROMPT_LST",
-          "link": 226
-        },
-        {
-          "name": "positive",
-          "type": "STRING",
-          "widget": {
-            "name": "positive"
-          },
-          "link": 227
-        },
-        {
-          "name": "negative",
-          "type": "STRING",
-          "widget": {
-            "name": "negative"
-          },
-          "link": 228
-        },
-        {
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 229
-        },
-        {
-          "name": "probability",
-          "type": "FLOAT",
-          "widget": {
-            "name": "probability"
-          },
-          "link": 230
-        }
-      ],
-      "outputs": [
-        {
-          "name": "prompt",
-          "type": "PROMPT_LST",
-          "links": []
-        },
-        {
-          "name": "positive",
-          "type": "STRING",
-          "links": [
-            231
-          ]
-        },
-        {
-          "name": "negative",
-          "type": "STRING",
-          "links": null
-        },
-        {
-          "name": "seed",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiPromptProcessor"
-      },
-      "widgets_values": [
-        "",
-        "",
-        0,
-        0,
-        "",
-        "",
-        ""
-      ]
-    },
-    {
       "id": 21,
       "type": "PreviewImage",
       "pos": [
@@ -2863,8 +1478,8 @@
       "flags": {
         "collapsed": false
       },
-      "order": 42,
-      "mode": 0,
+      "order": 37,
+      "mode": 4,
       "inputs": [
         {
           "name": "images",
@@ -2906,8 +1521,8 @@
         274.3542790423453
       ],
       "flags": {},
-      "order": 43,
-      "mode": 0,
+      "order": 38,
+      "mode": 4,
       "inputs": [
         {
           "name": "images",
@@ -2949,8 +1564,8 @@
         58
       ],
       "flags": {},
-      "order": 21,
-      "mode": 0,
+      "order": 15,
+      "mode": 4,
       "inputs": [],
       "outputs": [
         {
@@ -2984,8 +1599,8 @@
         58
       ],
       "flags": {},
-      "order": 22,
-      "mode": 0,
+      "order": 16,
+      "mode": 4,
       "inputs": [],
       "outputs": [
         {
@@ -3019,8 +1634,8 @@
         60
       ],
       "flags": {},
-      "order": 23,
-      "mode": 0,
+      "order": 17,
+      "mode": 4,
       "inputs": [],
       "outputs": [
         {
@@ -3043,49 +1658,6 @@
       "bgcolor": "#3f5159"
     },
     {
-      "id": 147,
-      "type": "MpiInt",
-      "pos": [
-        2692.6515282023447,
-        10041.501203486121
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 24,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "int",
-          "type": "INT",
-          "links": [
-            200,
-            202,
-            204,
-            206,
-            208,
-            210,
-            223,
-            224
-          ]
-        }
-      ],
-      "title": "Input_Style",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
-      },
-      "widgets_values": [
-        0
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 77,
       "type": "GetNode",
       "pos": [
@@ -3097,7 +1669,7 @@
         58
       ],
       "flags": {},
-      "order": 25,
+      "order": 18,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3130,7 +1702,7 @@
         60
       ],
       "flags": {},
-      "order": 60,
+      "order": 46,
       "mode": 0,
       "inputs": [
         {
@@ -3172,7 +1744,7 @@
         58
       ],
       "flags": {},
-      "order": 26,
+      "order": 19,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3208,7 +1780,7 @@
         58
       ],
       "flags": {},
-      "order": 27,
+      "order": 20,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -3241,7 +1813,7 @@
         58
       ],
       "flags": {},
-      "order": 28,
+      "order": 21,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3279,7 +1851,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 29,
+      "order": 22,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -3333,7 +1905,7 @@
         314.00048828125
       ],
       "flags": {},
-      "order": 30,
+      "order": 23,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -3387,7 +1959,7 @@
         163.76643684411465
       ],
       "flags": {},
-      "order": 68,
+      "order": 69,
       "mode": 4,
       "inputs": [
         {
@@ -3408,11 +1980,7 @@
         "ver": "0.27.0",
         "Node name for S&R": "PreviewAny"
       },
-      "widgets_values": [
-        null,
-        null,
-        null
-      ]
+      "widgets_values": []
     },
     {
       "id": 5,
@@ -3428,7 +1996,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 40,
+      "order": 35,
       "mode": 0,
       "inputs": [
         {
@@ -3495,7 +2063,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 41,
+      "order": 36,
       "mode": 0,
       "inputs": [
         {
@@ -3560,7 +2128,7 @@
         138
       ],
       "flags": {},
-      "order": 39,
+      "order": 34,
       "mode": 0,
       "inputs": [
         {
@@ -3638,7 +2206,7 @@
         60
       ],
       "flags": {},
-      "order": 71,
+      "order": 54,
       "mode": 0,
       "inputs": [
         {
@@ -3680,7 +2248,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 77,
+      "order": 72,
       "mode": 0,
       "inputs": [
         {
@@ -3734,7 +2302,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 79,
+      "order": 73,
       "mode": 4,
       "inputs": [
         {
@@ -3801,7 +2369,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 67,
+      "order": 68,
       "mode": 0,
       "inputs": [
         {
@@ -3881,7 +2449,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 56,
+      "order": 43,
       "mode": 0,
       "inputs": [
         {
@@ -3959,7 +2527,7 @@
         106
       ],
       "flags": {},
-      "order": 55,
+      "order": 42,
       "mode": 0,
       "inputs": [
         {
@@ -4020,7 +2588,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 73,
+      "order": 70,
       "mode": 0,
       "inputs": [
         {
@@ -4117,8 +2685,8 @@
         283.60683789010545
       ],
       "flags": {},
-      "order": 44,
-      "mode": 0,
+      "order": 39,
+      "mode": 4,
       "inputs": [
         {
           "name": "images",
@@ -4160,7 +2728,7 @@
         166
       ],
       "flags": {},
-      "order": 31,
+      "order": 24,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4213,7 +2781,7 @@
         124
       ],
       "flags": {},
-      "order": 61,
+      "order": 47,
       "mode": 0,
       "inputs": [
         {
@@ -4253,47 +2821,6 @@
       "widgets_values": []
     },
     {
-      "id": 91,
-      "type": "MpiText",
-      "pos": [
-        5425.336451119537,
-        8552.090370555758
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 32,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            234
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "Change the background of image 2 to be image 1 and keep the same style Of both images  "
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 104,
       "type": "MpiLoadImageFromPath",
       "pos": [
@@ -4307,7 +2834,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 33,
+      "order": 25,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4362,7 +2889,7 @@
         419.4899973661213
       ],
       "flags": {},
-      "order": 34,
+      "order": 26,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -4407,7 +2934,7 @@
         58
       ],
       "flags": {},
-      "order": 72,
+      "order": 55,
       "mode": 0,
       "inputs": [
         {
@@ -4447,7 +2974,7 @@
         378
       ],
       "flags": {},
-      "order": 35,
+      "order": 27,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4500,7 +3027,7 @@
         58
       ],
       "flags": {},
-      "order": 36,
+      "order": 28,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -4532,7 +3059,7 @@
         336
       ],
       "flags": {},
-      "order": 65,
+      "order": 50,
       "mode": 0,
       "inputs": [
         {
@@ -4615,7 +3142,7 @@
         336
       ],
       "flags": {},
-      "order": 66,
+      "order": 51,
       "mode": 0,
       "inputs": [
         {
@@ -4685,6 +3212,457 @@
         32,
         "cpu"
       ]
+    },
+    {
+      "id": 173,
+      "type": "MpiStyleLoras",
+      "pos": [
+        3161.2108974203297,
+        8910.642617158508
+      ],
+      "size": [
+        270,
+        214
+      ],
+      "flags": {},
+      "order": 63,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "style",
+          "type": "MPI_STYLE",
+          "link": 321
+        }
+      ],
+      "outputs": [
+        {
+          "name": "style",
+          "type": "MPI_STYLE",
+          "links": [
+            322
+          ]
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": null
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": null
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
+        "Node name for S&R": "MpiStyleLoras"
+      },
+      "widgets_values": [
+        "qwen\\styles\\Illustration_style.safetensors",
+        "qwen\\styles\\Qwen-Anime-V2.safetensors",
+        "qwen\\styles\\animal_style.safetensors",
+        "qwen\\styles\\zankuro-style-v1.safetensors",
+        "qwen\\styles\\style_3d.safetensors"
+      ]
+    },
+    {
+      "id": 97,
+      "type": "MpiLoraModel",
+      "pos": [
+        2338.3452501009,
+        9287.238698772333
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 61,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 145
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            323
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_6",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 91,
+      "type": "MpiText",
+      "pos": [
+        5395.905012770758,
+        8543.914971014428
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            234
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "Change the background of image 2 to be image 1 and keep the same style Of both images  "
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 153,
+      "type": "StringConcatenate",
+      "pos": [
+        5860.299487329931,
+        8580.20838857803
+      ],
+      "size": [
+        210,
+        166
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 66,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 234
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 324
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            238,
+            239
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "StringConcatenate"
+      },
+      "widgets_values": [
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 172,
+      "type": "MpiStyleSelector",
+      "pos": [
+        2722.469853585191,
+        8905.627650184344
+      ],
+      "size": [
+        418.27460763905856,
+        318.784949653881
+      ],
+      "flags": {},
+      "order": 62,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 323
+        },
+        {
+          "name": "clip",
+          "shape": 7,
+          "type": "CLIP",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "style",
+          "type": "MPI_STYLE",
+          "links": [
+            321
+          ]
+        }
+      ],
+      "title": "Input_Style_Selector",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
+        "Node name for S&R": "MpiStyleSelector"
+      },
+      "widgets_values": [
+        0,
+        "convert the picture to an illustration style\nanime style\nanime style\nZankuro Style\nconvert to 3D style\ncaricature\namtr snapshot photo",
+        1,
+        0
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 174,
+      "type": "MpiStyleLoras",
+      "pos": [
+        3455.4710201391727,
+        8915.471509121457
+      ],
+      "size": [
+        270,
+        214
+      ],
+      "flags": {},
+      "order": 64,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "style",
+          "type": "MPI_STYLE",
+          "link": 322
+        }
+      ],
+      "outputs": [
+        {
+          "name": "style",
+          "type": "MPI_STYLE",
+          "links": null
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            339
+          ]
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "links": null
+        },
+        {
+          "name": "prompt",
+          "type": "STRING",
+          "links": [
+            324
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
+        "Node name for S&R": "MpiStyleLoras"
+      },
+      "widgets_values": [
+        "qwen\\styles\\qwen-edit-2509-caricature_v1.1.safetensors",
+        "qwen\\styles\\Amateur_snapshot.safetensors",
+        "None",
+        "None",
+        "None"
+      ]
+    },
+    {
+      "id": 143,
+      "type": "Note",
+      "pos": [
+        3516.4566330409452,
+        9181.455703809235
+      ],
+      "size": [
+        210,
+        165.07350138973413
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "Styles Mapping",
+      "properties": {},
+      "widgets_values": [
+        "0 = No Style\n1 = Illustration\n2 = Anime 3D\n3 = Anime 2D\n4 = Anime Zankuro\n5 = 3D\n6 = Caricature\n7 = SnapShot\n"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 73,
+      "type": "MpiToChekPoint",
+      "pos": [
+        4198.553386255603,
+        8932.286377230366
+      ],
+      "size": [
+        169.048828125,
+        66
+      ],
+      "flags": {},
+      "order": 65,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 339
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 104
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 105
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mpi_checkpoint",
+          "type": "MPI_CHECKPOINT",
+          "links": [
+            106
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba9e1569d9f77567907654ae04745580f43f18b9",
+        "Node name for S&R": "MpiToChekPoint"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "CLIPLoader",
+      "pos": [
+        3766.989125523049,
+        9017.700884289421
+      ],
+      "size": [
+        330,
+        110
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 0,
+          "links": [
+            104
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.48",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+            "directory": "text_encoders"
+          }
+        ],
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65,
+        "ue_properties": {
+          "version": "7.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "qwen_image",
+        "default"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -5081,286 +4059,6 @@
       "FLOAT"
     ],
     [
-      185,
-      145,
-      0,
-      123,
-      1,
-      "FLOAT"
-    ],
-    [
-      186,
-      123,
-      0,
-      124,
-      0,
-      "MODEL"
-    ],
-    [
-      187,
-      131,
-      0,
-      124,
-      1,
-      "FLOAT"
-    ],
-    [
-      188,
-      124,
-      0,
-      125,
-      0,
-      "MODEL"
-    ],
-    [
-      189,
-      132,
-      0,
-      125,
-      1,
-      "FLOAT"
-    ],
-    [
-      190,
-      125,
-      0,
-      126,
-      0,
-      "MODEL"
-    ],
-    [
-      191,
-      133,
-      0,
-      126,
-      1,
-      "FLOAT"
-    ],
-    [
-      192,
-      126,
-      0,
-      127,
-      0,
-      "MODEL"
-    ],
-    [
-      193,
-      134,
-      0,
-      127,
-      1,
-      "FLOAT"
-    ],
-    [
-      194,
-      127,
-      0,
-      128,
-      0,
-      "MODEL"
-    ],
-    [
-      195,
-      135,
-      0,
-      128,
-      1,
-      "FLOAT"
-    ],
-    [
-      196,
-      128,
-      0,
-      129,
-      0,
-      "MODEL"
-    ],
-    [
-      197,
-      136,
-      0,
-      129,
-      1,
-      "FLOAT"
-    ],
-    [
-      200,
-      147,
-      0,
-      131,
-      0,
-      "INT"
-    ],
-    [
-      201,
-      146,
-      0,
-      131,
-      1,
-      "FLOAT"
-    ],
-    [
-      202,
-      147,
-      0,
-      132,
-      0,
-      "INT"
-    ],
-    [
-      203,
-      146,
-      0,
-      132,
-      1,
-      "FLOAT"
-    ],
-    [
-      204,
-      147,
-      0,
-      133,
-      0,
-      "INT"
-    ],
-    [
-      205,
-      146,
-      0,
-      133,
-      1,
-      "FLOAT"
-    ],
-    [
-      206,
-      147,
-      0,
-      134,
-      0,
-      "INT"
-    ],
-    [
-      207,
-      146,
-      0,
-      134,
-      1,
-      "FLOAT"
-    ],
-    [
-      208,
-      147,
-      0,
-      135,
-      0,
-      "INT"
-    ],
-    [
-      209,
-      146,
-      0,
-      135,
-      1,
-      "FLOAT"
-    ],
-    [
-      210,
-      147,
-      0,
-      136,
-      0,
-      "INT"
-    ],
-    [
-      211,
-      146,
-      0,
-      136,
-      1,
-      "FLOAT"
-    ],
-    [
-      223,
-      147,
-      0,
-      144,
-      2,
-      "INT"
-    ],
-    [
-      224,
-      147,
-      0,
-      145,
-      0,
-      "INT"
-    ],
-    [
-      225,
-      146,
-      0,
-      145,
-      1,
-      "FLOAT"
-    ],
-    [
-      226,
-      144,
-      0,
-      149,
-      0,
-      "PROMPT_LST"
-    ],
-    [
-      227,
-      150,
-      0,
-      149,
-      1,
-      "STRING"
-    ],
-    [
-      228,
-      151,
-      0,
-      149,
-      2,
-      "STRING"
-    ],
-    [
-      229,
-      144,
-      1,
-      149,
-      3,
-      "INT"
-    ],
-    [
-      230,
-      152,
-      0,
-      149,
-      4,
-      "FLOAT"
-    ],
-    [
-      231,
-      149,
-      1,
-      153,
-      1,
-      "STRING"
-    ],
-    [
-      232,
-      97,
-      0,
-      123,
-      0,
-      "MODEL"
-    ],
-    [
       234,
       91,
       0,
@@ -5383,14 +4081,6 @@
       155,
       0,
       "STRING"
-    ],
-    [
-      244,
-      129,
-      0,
-      73,
-      0,
-      "MODEL"
     ],
     [
       254,
@@ -5543,6 +4233,46 @@
       85,
       0,
       "IMAGE"
+    ],
+    [
+      321,
+      172,
+      0,
+      173,
+      0,
+      "MPI_STYLE"
+    ],
+    [
+      322,
+      173,
+      0,
+      174,
+      0,
+      "MPI_STYLE"
+    ],
+    [
+      323,
+      97,
+      0,
+      172,
+      0,
+      "MODEL"
+    ],
+    [
+      324,
+      174,
+      3,
+      153,
+      1,
+      "STRING"
+    ],
+    [
+      339,
+      174,
+      1,
+      73,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [
@@ -5586,10 +4316,10 @@
       "id": 7,
       "title": "Styles",
       "bounding": [
-        2682.651528202345,
-        9241.500721525003,
-        2211.960517482028,
-        1451.17893816976
+        2673.092603671035,
+        8760.368186782356,
+        2020.782026855814,
+        669.0851128807062
       ],
       "color": "#3f789e",
       "flags": {}
@@ -5598,33 +4328,33 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8954302432552398,
+      "scale": 0.23579476910000124,
       "offset": [
-        -2103.498846561314,
-        -7418.480833044783
+        1203.8523328553606,
+        -6099.788119360808
       ]
     },
     "reroutes": [
       {
-        "id": 1,
+        "id": 3,
         "pos": [
-          3486.1371292936924,
-          9304.57672646538
+          5075.470983843347,
+          8626.26785537088
         ],
         "linkIds": [
-          232
+          324
         ]
       }
     ],
-    "frontendVersion": "1.45.20",
+    "frontendVersion": "1.45.21",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "linkExtensions": [
       {
-        "id": 232,
-        "parentId": 1
+        "id": 324,
+        "parentId": 3
       }
     ]
   },
