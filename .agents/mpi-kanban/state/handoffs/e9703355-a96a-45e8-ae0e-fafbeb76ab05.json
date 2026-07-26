@@ -4,15 +4,15 @@
   "generated_at": "2026-07-26T22:10:00Z",
   "from_session": "28b4d5ea-5d01-4e11-862c-a8c6621d7ed0",
   "to_role": "implementer",
-  "status": "open",
+  "status": "consumed",
   "session": {
     "name": "MPI-356 steps 5-6 - settings-popup surgery + MpiModelPicker",
     "branch": "master"
   },
   "goal": {
     "original": "Operation and model selection UX is fuzzy. The radial menu only works for blind hold-Tab gestures if items keep fixed positions, but switching model changes the item count and rotates the whole ring. Rethink how operations and models are chosen so the user is never confused.",
-    "status": "in_progress",
-    "summary": "Steps 1-6 of 8 are done. The op strip is live, the settings popup is parameters-only behind a cogwheel, the bottom-right composite button is now the model button, and MpiModelPicker (new Compound on MpiTileSheet) is the model overlay - all live-verified in a real browser session against the running dev server. Steps 7-8 remain, plus one strip tweak and one rules-doc update the user has already approved. Nothing since f76791ff is committed."
+    "status": "validating",
+    "summary": "All 8 steps done plus the single-op chip tweak and the approved rules sweep. Steps 7-8 shipped in commit 814eb9ed and live-verified in chromium (hold-Tab -> picker with no ring; one always-selected chip on single-op models; _pickFallbackOp returns to the remembered op). Only the disabled-sector fix is logic-verified - it needs a multi-item ring, which returns with Apps."
   },
   "plan": {
     "file": ".agents/mpi-kanban/tasks/MPI-356/plan.md",
@@ -22,15 +22,13 @@
       "3. commandRegistry - `short` per op, OP_ORDER canonical sort, `ctx.canMask` workspace gate. Pinned by tests/op-strip-availability.test.cjs (4/4).",
       "4. Op strip in the prompt box on MpiRadioGroup, wired to `workspace:set-operation` - USER-VERIFIED live.",
       "5. Settings-popup surgery - `_refreshOpDropdown` DELETED (not renamed), all 10 call sites now call `_refreshOpStrip`; model dropdown, op dropdown and the LoRA gear all removed; new cogwheel column owns the popup; the composite button became the model button. LIVE-VERIFIED.",
-      "6. MpiModelPicker Compound on MpiTileSheet, opened by `ui:open-model-picker`; each Block owns an instance, passes its own filtered model list and applies the pick. LIVE-VERIFIED in both gallery and history."
+      "6. MpiModelPicker Compound on MpiTileSheet, opened by `ui:open-model-picker`; each Block owns an instance, passes its own filtered model list and applies the pick. LIVE-VERIFIED in both gallery and history.",
+      "STRIP TWEAK - single-op models render ONE always-selected chip (the choices.length<2 early-out is gone).",
+      "7. Radial - hold-Tab opens the model picker directly; RADIAL_ITEMS is one shared static item and every op->ring plumbing was deleted. Disabled-sector fix landed in _resolveActiveIndex (logic-verified only).",
+      "8. _pickFallbackOp prefers the remembered op from s_selectedOpByModel when it fits - live-proven with a negative control.",
+      "RULES UPDATE - component-mounts / component-events-primitives / component-events-blocks / component-state + docs/events.md + docs/shell.md swept."
     ],
-    "pending": [
-      "STRIP TWEAK (user decision this session): single-op models must render ONE chip instead of no strip. Delete the `if (choices.length < 2) return;` early-out in `_refreshOpStrip` (MpiPromptBox.js). The lone chip is always selected and dims when its required media is missing - that is the existing selected+disabled state, already representable.",
-      "7. Radial. USER OVERRODE THE PLAN: for now Tab must NOT open the ring at all - it opens the model picker directly. The radial stays wired and ready because later Tab will open a real ring with Models + Apps. Suggested shape (agreed direction, not yet written): `_buildGalleryItems` returns a single `{ action: 'models' }` item, `_groupHistoryItems` the same, navigation's select handler maps 'models' -> `Events.emit('ui:open-model-picker')`, and MpiRadialMenu's `_onTabDown` short-circuits to `_selectItem` without showing the ring when the context holds exactly one enabled item (self-erasing the moment Apps adds a second item). Also drop `refreshGroupHistoryRadial` from MpiGroupHistoryBlock (plan Files section) since ops no longer live in the ring.",
-      "7b. Independent radial fix, still wanted: a gesture toward a DISABLED sector must select NOTHING. `_resolveActiveIndex` (MpiRadialMenu.js ~284-292) `continue`s past disabled items, so the nearest ENABLED item wins instead. Find the nearest sector including disabled ones, then return -1 if that nearest one is disabled.",
-      "8. `_pickFallbackOp` memory preference - prefer the remembered op from `state.s_selectedOpByModel` when it fits the new chip count (MpiPromptBox.js `_pickFallbackOp`, ~line 1124 after the step-5 edits).",
-      "RULES UPDATE - the user EXPLICITLY APPROVED this session (CLAUDE.md cardinal rule 5 satisfied): `.claude/rules/component-mounts.md:190` still documents the model dropdown mounted into `#settings-model-slot`, which no longer exists. Sweep that file (and any sibling rule doc) for the removed dropdowns/gear and the new cogwheel + model button + MpiModelPicker."
-    ]
+    "pending": []
   },
   "task_card": {
     "id": "MPI-356",
@@ -45,7 +43,13 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
   "knowledge_preservation": {
     "completed": [
       "plan.md build order - steps 5 and 6 struck with the decisions that changed during the build.",
@@ -61,7 +65,7 @@
     ]
   },
   "next_action": {
-    "description": "Do the strip tweak (single-op models render one always-selected chip), then step 7 (Tab opens the model picker directly, radial left ready + the disabled-sector fix), then step 8 (_pickFallbackOp memory preference), then update .claude/rules/component-mounts.md (approved). Re-verify in the browser with the harness described under context.constraints - it is cheap and it already caught one shipping bug.",
+    "description": "Card MPI-356 is in Doing / validating. User-verify in Electron, then move it to Done. The orphaned change/remove ops and the missing op/model subsystem doc are still open (see knowledge_preservation.pending).",
     "command": "mpi-continue"
   },
   "context": {
@@ -112,7 +116,14 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": null,
-    "relevant_topics": ["components", "events", "state", "generation-lifecycle", "component-contracts", "dos_and_donts"]
+    "relevant_topics": [
+      "components",
+      "events",
+      "state",
+      "generation-lifecycle",
+      "component-contracts",
+      "dos_and_donts"
+    ]
   },
   "rules_active": [
     "CLAUDE.md",
@@ -125,8 +136,15 @@
     "docs/component-contracts.md"
   ],
   "recent_events": [
-    { "at": "2026-07-26T21:30:00Z", "event": "steps_5_and_6_completed_and_live_verified" },
-    { "at": "2026-07-26T22:10:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-07-26T21:30:00Z",
+      "event": "steps_5_and_6_completed_and_live_verified"
+    },
+    {
+      "at": "2026-07-26T22:10:00Z",
+      "event": "handoff_created"
+    }
   ],
-  "resume_prompt": "You are resuming MPI-356 \"Op strip and model overlay\" in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/e9703355-a96a-45e8-ae0e-fafbeb76ab05.json first, then .agents/mpi-kanban/tasks/MPI-356/plan.md and validation.md. The card is in Doing. Steps 1-6 of 8 are done: ops render as an always-visible strip floating above the prompt box, the settings popup is parameters-only behind a new cogwheel, the old composite button is now the model button, and the new MpiModelPicker Compound (built on MpiTileSheet) is the model overlay opened by `ui:open-model-picker`. Steps 5 and 6 were LIVE-VERIFIED by driving the user's running dev server from a headless chromium (harness recipe is in context.constraints - reuse it, it caught a real shipping bug). Everything after commit f76791ff is UNCOMMITTED. Four things remain, all four already decided by the user, so implement rather than re-ask: (1) single-op models must render ONE always-selected chip - delete the `choices.length < 2` early-out in `_refreshOpStrip`; (2) step 7 - Tab must open the model picker DIRECTLY with no ring for now, while the radial stays wired and ready for a later Models+Apps ring, and a gesture at a disabled sector must select NOTHING (MpiRadialMenu `_resolveActiveIndex` currently falls through to the nearest ENABLED item); (3) step 8 - `_pickFallbackOp` should prefer the remembered op from `state.s_selectedOpByModel` when it fits the new chip count; (4) update `.claude/rules/component-mounts.md` (the user explicitly approved the rules edit) - line ~190 still documents the deleted model dropdown. Hard constraints: never use the AskUserQuestion picker tool (ask in plain text), never run `npm run test:desktop` while the user's app holds port 3000, and never stage `js/data/modelConstants/*.js`, `docs/models/klein/` or `board.json` - they carry other sessions' work."
+  "resume_prompt": "You are resuming MPI-356 \"Op strip and model overlay\" in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/e9703355-a96a-45e8-ae0e-fafbeb76ab05.json first, then .agents/mpi-kanban/tasks/MPI-356/plan.md and validation.md. The card is in Doing. Steps 1-6 of 8 are done: ops render as an always-visible strip floating above the prompt box, the settings popup is parameters-only behind a new cogwheel, the old composite button is now the model button, and the new MpiModelPicker Compound (built on MpiTileSheet) is the model overlay opened by `ui:open-model-picker`. Steps 5 and 6 were LIVE-VERIFIED by driving the user's running dev server from a headless chromium (harness recipe is in context.constraints - reuse it, it caught a real shipping bug). Everything after commit f76791ff is UNCOMMITTED. Four things remain, all four already decided by the user, so implement rather than re-ask: (1) single-op models must render ONE always-selected chip - delete the `choices.length < 2` early-out in `_refreshOpStrip`; (2) step 7 - Tab must open the model picker DIRECTLY with no ring for now, while the radial stays wired and ready for a later Models+Apps ring, and a gesture at a disabled sector must select NOTHING (MpiRadialMenu `_resolveActiveIndex` currently falls through to the nearest ENABLED item); (3) step 8 - `_pickFallbackOp` should prefer the remembered op from `state.s_selectedOpByModel` when it fits the new chip count; (4) update `.claude/rules/component-mounts.md` (the user explicitly approved the rules edit) - line ~190 still documents the deleted model dropdown. Hard constraints: never use the AskUserQuestion picker tool (ask in plain text), never run `npm run test:desktop` while the user's app holds port 3000, and never stage `js/data/modelConstants/*.js`, `docs/models/klein/` or `board.json` - they carry other sessions' work.",
+  "consumed_at": "2026-07-26T23:45:00Z"
 }
