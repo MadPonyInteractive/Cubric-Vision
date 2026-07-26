@@ -32,10 +32,12 @@ Per output this handler bakes the three things a hand-export cannot be trusted t
   Input_Mask's baked widget is force-CLEARED at build so a no-mask edit self-gates.)
 
   3. ASSERT the style rack is coherent (t2i only; detailer/upscaler have no rack, so the
-     assert is a no-op there). Selecting style N drives BOTH the LoRA (via an MpiMath
-     gate `b if a == N else 0.0`) and the trigger phrase (via MpiPromptList.specific_item,
-     1-indexed). Two lists, one integer — if their lengths drift, style N loads its LoRA
-     but appends no trigger: a SILENT half-application that reads as "the LoRA feels weak".
+     assert is a no-op there). The rack is ONE MpiStyleSelector titled
+     `Input_Style_Selector` (selector int + one trigger line per style) chained into
+     MpiStyleLoras banks of five lora slots each; style N = trigger line N = the Nth slot
+     along the chain. If the line count and the slot count drift, style N loads its LoRA
+     but appends no trigger (or the reverse): a SILENT half-application that reads as
+     "the LoRA feels weak".
 
 Orchestrated: build(source_path, out_dir) — called by orchestrate.py after the `krea2_`
 prefix routes here (registry.py).
@@ -45,7 +47,6 @@ Node lookup is by `_meta.title` (MPI-116 naming law) — never by node id.
 """
 
 import json
-import re
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).parent
@@ -89,8 +90,8 @@ BYPASS_LORA_TITLE = "Input_Bypass_Filter_Lora"
 # MPI-272: the optional Input_Image is now a self-gating MpiLoadImageFromPath —
 # a plain t2i just leaves its `string` empty; no placeholder stamp needed.
 
-STYLE_SLOT_RE = re.compile(r"^Input_style_lora_(\d+)$")
-GATE_RE = re.compile(r"b\s+if\s+a\s*==\s*(\d+)\s+else")
+STYLE_SELECTOR_TITLE = "Input_Style_Selector"
+STYLE_BANK_SLOTS = 5   # MpiStyleLoras exposes lora_1..lora_5
 
 
 def _find_by_title(workflow: dict, title: str) -> dict | None:
@@ -138,7 +139,7 @@ _INJECTED_INPUT_DEFAULTS = [
     ("Input_Seed",           "int",     0),       # random per-gen, NEVER baked (no-seed-UI law)
     ("Input_Image",          "string",  ""),      # path node, self-gates empty; app injects path
     ("Input_Mask",           "string",  ""),      # edit crop, self-gates empty
-    ("Input_Style",          "int",     0),       # 0 = No Style; app injects selection
+    ("Input_Style_Selector", "selector", 0),      # 0 = No Style; app injects selection
     ("Input_Is_Edit",        "boolean", False),   # app injects true on the edit op only
     ("Input_Is_i2i",         "boolean", False),   # app injects true on the i2i op only
     ("Input_depth_reference", "boolean", False),   # app injects true on the depth op only
@@ -177,50 +178,75 @@ def _bake_tier(workflow: dict, tier: int = 1) -> None:
 
 
 def _assert_style_rack(workflow: dict) -> int:
-    """Style slot N must be gated by `b if a == N`, and the trigger list must have one
-    line per slot. Raises SystemExit on any drift — a wrong build must never ship.
+    """New rack (MPI-359): ONE MpiStyleSelector titled `Input_Style_Selector` feeding a
+    chain of MpiStyleLoras banks (lora_1..lora_5 each). Style N = trigger line N = the
+    Nth lora slot walking the chain, so the two lists cannot drift apart on their own —
+    what CAN drift is the line count vs the slot count, and a bank that hangs off nothing.
+    Raises SystemExit on any drift — a wrong build must never ship.
     Returns 0 for a graph with no style rack (detailer/upscaler)."""
-    slots: dict[int, dict] = {}
-    for node in workflow.values():
-        if not isinstance(node, dict):
-            continue
-        m = STYLE_SLOT_RE.match(node.get("_meta", {}).get("title", ""))
-        if m:
-            slots[int(m.group(1))] = node
-    if not slots:
+    selectors = [(nid, nd) for nid, nd in workflow.items()
+                 if isinstance(nd, dict) and nd.get("class_type") == "MpiStyleSelector"]
+    banks = [(nid, nd) for nid, nd in workflow.items()
+             if isinstance(nd, dict) and nd.get("class_type") == "MpiStyleLoras"]
+    if not selectors:
+        if banks:
+            raise SystemExit(f"[FAIL] {len(banks)} MpiStyleLoras bank(s) but no MpiStyleSelector "
+                             f"— the rack has no head, nothing selects a style")
         return 0  # a model with no style rack is fine; nothing to check
+    if len(selectors) > 1:
+        raise SystemExit(f"[FAIL] {len(selectors)} MpiStyleSelector nodes — the app injects ONE "
+                         f"selector title; a second rack would never be driven")
 
-    n = len(slots)
-    if sorted(slots) != list(range(1, n + 1)):
-        raise SystemExit(f"[FAIL] style slots are not 1..{n}: found {sorted(slots)}")
+    sel_id, sel = selectors[0]
+    title = sel.get("_meta", {}).get("title", "")
+    if title != STYLE_SELECTOR_TITLE:
+        # The app addresses the two knobs as `Input_Style_Selector.selector` /
+        # `.strength_model`. A wrong title is a SILENT no-op: the style picker moves and
+        # nothing happens, which reads exactly like strength 0.
+        raise SystemExit(f"[FAIL] MpiStyleSelector is titled {title!r}, must be "
+                         f"{STYLE_SELECTOR_TITLE!r} — the title IS the injection contract")
+    for widget in ("selector", "strength_model"):
+        if isinstance(sel["inputs"].get(widget), list):
+            raise SystemExit(f"[FAIL] {STYLE_SELECTOR_TITLE}.{widget} is linked, not a widget "
+                             f"— the app injects into it, so it must be a plain value")
 
-    # Each slot's strength_model must come from an MpiMath whose gate index == the slot.
-    for idx, node in sorted(slots.items()):
-        src = node["inputs"].get("strength_model")
+    # Walk the chain from the selector: each bank takes `style` from the previous node.
+    chain: list[dict] = []
+    by_upstream = {}
+    for nid, nd in banks:
+        src = nd["inputs"].get("style")
         if not isinstance(src, list):
-            raise SystemExit(f"[FAIL] Input_style_lora_{idx}.strength_model is a widget, "
-                             f"not linked to an MpiMath gate")
-        gate = workflow.get(src[0], {})
-        expr = gate.get("inputs", {}).get("math_expression", "")
-        gm = GATE_RE.search(expr)
-        if not gm:
-            raise SystemExit(f"[FAIL] Input_style_lora_{idx}: gate node {src[0]} has no "
-                             f"`b if a == N else` expression (got {expr!r})")
-        if int(gm.group(1)) != idx:
-            raise SystemExit(f"[FAIL] Input_style_lora_{idx} is gated by a == {gm.group(1)} "
-                             f"— slot and gate index must match, or the wrong LoRA loads")
+            raise SystemExit(f"[FAIL] MpiStyleLoras {nid} has no `style` link — an orphan bank "
+                             f"never sees the selector")
+        by_upstream.setdefault(src[0], []).append((nid, nd))
+    cur = sel_id
+    while cur in by_upstream:
+        nxt = by_upstream.pop(cur)
+        if len(nxt) > 1:
+            raise SystemExit(f"[FAIL] node {cur} feeds {len(nxt)} MpiStyleLoras banks — the rack "
+                             f"is a CHAIN; a fork silently drops one branch's LoRAs")
+        cur, nd = nxt[0]
+        chain.append(nd)
+    if len(chain) != len(banks):
+        raise SystemExit(f"[FAIL] {len(banks) - len(chain)} MpiStyleLoras bank(s) hang off "
+                         f"something other than the {STYLE_SELECTOR_TITLE} chain")
 
-    # One trigger line per slot. A missing line = silent half-application (playbook §9).
-    prompt_list = next((nd for nd in workflow.values()
-                        if isinstance(nd, dict) and nd.get("class_type") == "MpiPromptList"), None)
-    if prompt_list is None:
-        raise SystemExit("[FAIL] style rack present but no MpiPromptList supplies the triggers")
-    lines = [ln for ln in prompt_list["inputs"].get("options", "").split("\n") if ln.strip()]
-    if len(lines) != n:
-        raise SystemExit(f"[FAIL] {n} style LoRAs but {len(lines)} trigger lines — "
-                         f"style {len(lines) + 1}+ would load its LoRA and append NO trigger "
-                         f"(reads as 'the LoRA is weak', not as an error)")
-    return n
+    # One trigger line per style, and a lora slot to land on. A style index past the last
+    # slot appends its trigger and loads NOTHING — a silent half-application (playbook §9).
+    lines = [ln for ln in sel["inputs"].get("triggers", "").split("\n") if ln.strip()]
+    if not lines:
+        raise SystemExit(f"[FAIL] {STYLE_SELECTOR_TITLE}.triggers is empty — every style would "
+                         f"load its LoRA and append NO trigger")
+    slots = len(chain) * STYLE_BANK_SLOTS
+    if len(lines) > slots:
+        raise SystemExit(f"[FAIL] {len(lines)} trigger lines but only {slots} lora slots "
+                         f"({len(chain)} bank(s) x {STYLE_BANK_SLOTS}) — style {slots + 1}+ would "
+                         f"append its trigger and load NO LoRA")
+    if len(chain) != -(-len(lines) // STYLE_BANK_SLOTS):
+        raise SystemExit(f"[FAIL] {len(lines)} trigger lines need "
+                         f"{-(-len(lines) // STYLE_BANK_SLOTS)} bank(s), graph has {len(chain)} "
+                         f"— a spare bank means slots the picker can never reach")
+    return len(lines)
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
