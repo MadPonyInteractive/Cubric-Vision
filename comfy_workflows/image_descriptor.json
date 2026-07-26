@@ -44,7 +44,7 @@
   "37": {
     "inputs": {
       "source": [
-        "36",
+        "48",
         0
       ]
     },
@@ -86,6 +86,18 @@
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
+    }
+  },
+  "48": {
+    "inputs": {
+      "passthrough": [
+        "36",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

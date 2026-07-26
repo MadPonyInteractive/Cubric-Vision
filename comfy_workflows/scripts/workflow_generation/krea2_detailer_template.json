@@ -13,7 +13,7 @@
   },
   "1594": {
     "inputs": {
-      "float": 0.3
+      "float": 0.41
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -47,7 +47,7 @@
   },
   "1673": {
     "inputs": {
-      "string": ""
+      "string": "cute 20 year old woman"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -311,7 +311,7 @@
   },
   "1705": {
     "inputs": {
-      "math_expression": "20 if a == 1 else 3",
+      "math_expression": "16 if a == 1 else 3",
       "a": [
         "1706",
         0
@@ -324,7 +324,7 @@
   },
   "1706": {
     "inputs": {
-      "int": 2
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {
