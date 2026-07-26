@@ -1,0 +1,143 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "28b4d5ea-5d01-4e11-862c-a8c6621d7ed0",
+  "generated_at": "2026-07-26T15:20:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "closed",
+  "session": {
+    "name": "MPI-356 steps 3-4 - commandRegistry gating + the floating op strip",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Operation and model selection UX is fuzzy. The radial menu only works for blind hold-Tab gestures if items keep fixed positions, but switching model changes the item count and rotates the whole ring. Rethink how operations and models are chosen so the user is never confused.",
+    "status": "in_progress",
+    "summary": "Steps 1-4 of 8 are done and the strip is live and user-approved: ops now render as an always-visible radio strip floating above the prompt box, sorted by canonical verb order, with mask ops absent in the Gallery. Steps 5-8 remain: settings-popup surgery, the MpiModelPicker overlay, the radial reduction, and the _pickFallbackOp memory preference. Nothing is committed yet."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-356/plan.md",
+    "completed": [
+      "1. Mockup - strip approved right-aligned above the prompt box; chips stay put; the bespoke model overlay was discarded in favour of the Model Library tile.",
+      "2. MpiTileSheet extraction + rewire MpiModelManager and MpiAppLibrary - commit f76791ff, verified live.",
+      "3. commandRegistry - `short` per op, OP_ORDER canonical sort inside getAvailableCommands, `ctx.canMask` workspace gate. Pinned by tests/op-strip-availability.test.cjs (4/4).",
+      "4. Op strip in the prompt box on MpiRadioGroup, wired to `workspace:set-operation` - USER-VERIFIED live, plus 3 user corrections and the media-strip gradient."
+    ],
+    "pending": [
+      "5. Settings-popup surgery: remove the model dropdown (MpiPromptBox.js ~1128-1150) and the op dropdown (_refreshOpDropdown, now ~1255); popup becomes parameters-only behind a cogwheel; the existing bottom-right composite button becomes the model button.",
+      "6. MpiModelPicker overlay built on MpiTileSheet - installed models only, click selects and closes, LoRA & Upscale button in the state row calling MpiModelSettings.open({ modelId }).",
+      "7. Radial -> single Models item in _buildGalleryItems, plus the disabled-sector fix (a gesture at a dimmed sector must select NOTHING, not the nearest enabled item).",
+      "8. _pickFallbackOp memory preference - prefer the remembered op from state.s_selectedOpByModel when it fits the new chip count."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-356",
+    "title": "Op strip and model overlay",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-356/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-356/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-356/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-356/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-356/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md build order updated - steps 2, 3 and 4 struck with the decisions that changed during the build.",
+      "checklist.md - items 3 and 4 checked.",
+      "validation.md - full step-3 and step-4 records including the three user corrections and the MpiRadioGroup primitive fix.",
+      "tests/op-strip-availability.test.cjs is NEW and untracked - it pins the registry contracts the strip depends on."
+    ],
+    "pending": [
+      "Decide what happens to the orphaned `change` and `remove` ops. They exist in commandRegistry.js with graphs, mask requirements and now `short` codes, but appear in NO model's supportedOps, so they are unreachable. Wire them to the Krea2/SDXL families or retire them.",
+      "docs/ update once the card ships - operation selection has no subsystem doc; docs/generation-lifecycle.md is the likely home, and docs/component-contracts.md should gain the MpiRadioGroup aria-disabled contract. Ask the user before touching .claude/rules/ (CLAUDE.md cardinal rule 5).",
+      "Undecided: single-op models (PiD, Boogu Edit, Qwen-Edit) render NO strip - _refreshOpStrip returns early below 2 choices. A lone chip would give the strip a constant position. User was asked twice, has not answered; not blocking.",
+      "NOTHING IS COMMITTED. Nine modified js/ files plus one new test. Three of the modified files (js/data/modelConstants/{assetDeps,loraDeps,modelDeps}.js) belong to ANOTHER session - do not stage them. Kanban files are also deliberately uncommitted and co-owned."
+    ]
+  },
+  "next_action": {
+    "description": "Start step 5: settings-popup surgery in js/components/Organisms/MpiPromptBox/MpiPromptBox.js. Delete the model dropdown block (~1128-1150, guarded by `if (model) { if (modelList.length >= 1) {`) and the op dropdown (_refreshOpDropdown plus its `#settings-op-dropdown-slot`), leaving the popup as parameters only behind a cogwheel trigger. NOTE the strip refresh currently piggybacks on _refreshOpDropdown - `_refreshOpStrip()` is called from its first lines, and ten call sites call _refreshOpDropdown. When the dropdown half goes, rename the survivor to something honest (_refreshOpChoices) and keep every one of those call sites pointing at it, or the strip stops updating on media/model change. _opChoices() is already the shared list builder and stays. The existing bottom-right composite button (KREA 2 NSFW - IMAGE TO IMAGE) becomes the model button; its op half drops since the strip now shows it.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The op strip FLOATS above the bar (position:absolute, bottom:100%, right:var(--s-6), z-index:2) on the same layer as the media chips - it is NOT a grid row inside the bar. The user rejected the in-bar version explicitly: the bar has to keep its compact height or it covers the gallery grid and, worse, the history canvas. The strip carries its own --surface-bar background because it now sits over artwork.",
+      "A block reason APPENDS to the operation's description, never replaces it: `Image to Image - reshape an input image toward your prompt · needs 1 image`. The user's words: \"needs an image\" alone is almost useless, the information about the operation is much more useful.",
+      "Available (enabled, unselected) ops are --ink-1 near-white, scoped to the strip so other radio groups keep their muted --ink-3 look. The primitive's hover drops to --ink-2, which DARKENS a near-white chip, so that is overridden in MpiPromptBox.css too.",
+      "MpiRadioGroup option-level disabled now renders `aria-disabled=\"true\"` instead of the `disabled` attribute. Chrome dispatches NO mouse events on a disabled form control, so the repo-wide [data-info] status-bar hover (statusBar.js:262) died on exactly the options that most need to explain themselves. The click handler refuses aria-disabled; CSS dims both spellings. Swept: no component passes option-level `disabled` today, and the two places reading btn.disabled (MpiOptionSelector.js:233, PromptBoxControls.js:408) use the DOM property imperatively and still work.",
+      "The strip routes clicks through Events.emit('workspace:set-operation') - the same path the radial uses - so the owning Block still validates against its live context and calls back into setOperation. Selecting directly would give the box a second, unvalidated source of truth. MpiPromptBox deliberately does NOT subscribe to that event itself.",
+      "The canonical sort lives INSIDE getAvailableCommands, not just in the strip, so every surface shares one order. The risk that this moved _pickFallbackOp's landing op is pinned by test, not assumed.",
+      "canMask rides the PromptBox's existing `workspaceKey` prop ('gallery'|'history') rather than new Block plumbing - both mount sites already set it correctly, so a gallery box cannot drift into claiming a canvas. _buildGalleryItems passes canMask:false directly because that ring IS the gallery.",
+      "`short` is the canonical-order key, not the op key: edit/krea2Edit/qwenEdit all share short 'edit' and therefore share a strip position across models.",
+      "Absent vs disabled is the load-bearing distinction. ABSENT = the model or the workspace cannot run it -> not rendered. DISABLED = the model can, the staged chips do not fit -> dim with the reason on hover.",
+      "The media strip now carries `linear-gradient(to top, var(--surface-bar), transparent)` - from the original mockup, never implemented until now."
+    ],
+    "constraints": [
+      "USER PREFERENCE: never use the AskUserQuestion picker tool. Its overlay covers the screen so the user cannot read the analysis above it. Ask questions as plain text at the end of the response. ExitPlanMode is still fine.",
+      "The user's own app instance owns port 3000. Do NOT spawn a second instance - agent-launched instances become zombies serving a stale require-cache. Frontend-only changes are picked up by a plain reload, which is how steps 3-4 were verified.",
+      "npm run test:desktop cannot run while the user's app holds port 3000.",
+      "Registry-only node tests DO work and are the cheap proof: `node --test tests/op-strip-availability.test.cjs`. commandRegistry.js has zero imports, so a .cjs test can `await import` it directly (see tests/media-slot-ordinal-roles.test.cjs for the pattern).",
+      "Lint baseline: 0 errors, 1 pre-existing warning in MpiPromptBox.js (raw querySelector, now ~line 1699 after the edits). Do not chase it.",
+      "NEVER use `git stash push -- <path>` to probe history - it silently reverted a previous session's working changes. Use `git show HEAD:<path>`.",
+      "board.json and js/data/modelConstants/*.js are CO-OWNED by another session. Commit code by explicit pathspec (git commit --only <paths>), never git add -A.",
+      "MPI-337 is in place: there is NO force-DOWN. Removing media never switches the op - it goes selected+disabled, which is one of the strip's four states and must stay representable."
+    ],
+    "files_modified": [
+      "js/data/commandRegistry.js (step 3 - short, OP_ORDER, canMask; UNCOMMITTED)",
+      "js/shell/navigation.js (step 3 - _buildGalleryItems passes canMask:false; UNCOMMITTED)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (steps 3+4 - canMask from _wsKey, _opChoices, _opBlockedReason, _refreshOpStrip, strip slot, teardown; UNCOMMITTED)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.css (step 4 - floating strip, near-white ops, media-strip gradient; UNCOMMITTED)",
+      "js/components/Primitives/MpiRadioGroup/MpiRadioGroup.js (step 4 - aria-disabled; UNCOMMITTED)",
+      "js/components/Primitives/MpiRadioGroup/MpiRadioGroup.css (step 4 - dim both spellings; UNCOMMITTED)",
+      "tests/op-strip-availability.test.cjs (NEW, UNTRACKED)",
+      "js/components/Primitives/MpiTileSheet/* + MpiModelManager + MpiAppLibrary + preloadStyles + types.js (step 2, COMMITTED f76791ff)",
+      ".agents/mpi-kanban/tasks/MPI-356/ + board.json (UNCOMMITTED, co-owned)",
+      "js/data/modelConstants/{assetDeps,loraDeps,modelDeps}.js (ANOTHER SESSION'S WORK - do not stage)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-356/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-356/validation.md",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.css",
+      "js/components/Primitives/MpiTileSheet/MpiTileSheet.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "components",
+      "events",
+      "state",
+      "generation-lifecycle",
+      "component-contracts",
+      "dos_and_donts"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/git.md",
+    "docs/generation-lifecycle.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-26T15:20:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-356 \"Op strip and model overlay\" in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/28b4d5ea-5d01-4e11-862c-a8c6621d7ed0.json first, then .agents/mpi-kanban/tasks/MPI-356/plan.md and validation.md. The card is in Doing. Goal: operations move out of the Tab radial (whose item angles are computed from the FILTERED item count, so changing model rotates the whole ring) into an always-visible strip floating above the prompt box; the model moves to a card overlay reusing the Model Library tile; the settings popup becomes parameters-only behind a cogwheel. Steps 1-4 of 8 are done: MpiTileSheet shipped as f76791ff, the commandRegistry gating (short codes, OP_ORDER sort, canMask workspace gate) is pinned by tests/op-strip-availability.test.cjs, and the op strip is live and user-approved. Everything after f76791ff is UNCOMMITTED. Your next action is step 5, the settings-popup surgery in MpiPromptBox.js: remove the model dropdown and the op dropdown so the popup holds parameters only, and turn the bottom-right composite button into the model button. Critical trap: the strip's refresh currently piggybacks on _refreshOpDropdown (it calls _refreshOpStrip on its first lines) and ten call sites reach it, so when the dropdown half is deleted you must keep every one of those call sites driving the survivor or the strip silently stops updating. Three hard constraints: never use the AskUserQuestion picker tool (ask in plain text), never start a second app instance because the user's own owns port 3000 (frontend changes just need a reload), and never stage js/data/modelConstants/*.js or board.json - they carry another session's work."
+}

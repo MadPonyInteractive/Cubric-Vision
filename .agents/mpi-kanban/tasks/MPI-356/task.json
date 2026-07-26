@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-356",
+  "title": "Op strip and model overlay",
+  "description": "Ops move to an always-visible radio strip over the prompt box; model moves to a card overlay. Settings popup becomes parameters-only. Radial stops owning ops.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "activeSessionTitle": "Claude - op strip + model overlay implementation",
+  "created_at": "2026-07-26T11:41:46Z",
+  "updated_at": "2026-07-26T14:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}
