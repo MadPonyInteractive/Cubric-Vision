@@ -23,6 +23,11 @@ export const MEDIA_TYPE = Object.freeze({
 /**
  * @typedef {Object} CommandDef
  * @property {string}          label          - Display name shown in UI
+ * @property {string}          [short]        - Short code shown on the op strip (`i2i`, `depth`, `edit`).
+ *                                              Doubles as the canonical-order key (see OP_ORDER): ops that
+ *                                              share a verb across models (edit/krea2Edit/qwenEdit) share a
+ *                                              `short` and therefore a strip position. Only ops the strip can
+ *                                              render carry one — universal/tool ops live on the History rail.
  * @property {string}          [info]         - One-line description shown in the status bar on hover in the op dropdown.
  * @property {string}          [icon]         - MpiIcon registry key for op selectors (model-manager operation toggles). Optional.
  * @property {'image'|'video'} mediaType      - Which group type this applies to
@@ -76,6 +81,13 @@ export const MEDIA_TYPE = Object.freeze({
  * @property {number}  [imageCount] - Number of images currently in the PromptBox drop zone
  * @property {number}  [videoCount] - Number of videos currently available as input
  * @property {boolean} [hasMask]    - Whether the Mask Tool has produced an active mask
+ * @property {boolean} [canMask]    - Whether the WORKSPACE offers a mask tool at all. This is the third
+ *                                    availability dimension beside (model x media counts): `hasMask` says
+ *                                    "no mask painted yet" (dim, the user can fix it), `canMask:false` says
+ *                                    "no mask tool here" (absent — the Gallery has no canvas, so a dimmed
+ *                                    Detail there can never light up). Defaults to true: omitting it keeps
+ *                                    mask ops listed, so only a workspace that KNOWS it lacks the tool
+ *                                    has to say so.
  */
 
 /** @type {Record<string, CommandDef>} */
@@ -86,6 +98,7 @@ export const commands = {
 
     t2i: {
         label: 'Text to Image',
+        short: 't2i',
         info: 'Text to Image — generate a new image from your prompt alone',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
@@ -104,6 +117,7 @@ export const commands = {
     },
     i2i: {
         label: 'Image to Image',
+        short: 'i2i',
         info: 'Image to Image — reshape an input image toward your prompt',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -129,6 +143,7 @@ export const commands = {
     // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
     poseReference: {
         label: 'Depth',
+        short: 'depth',
         info: 'Depth Reference — copy the pose/composition of an input image',
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -142,6 +157,7 @@ export const commands = {
     },
     upscale: {
         label: 'Upscale',
+        short: 'upscale',
         info: 'Upscale — raise resolution while adding fine detail',
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -155,6 +171,7 @@ export const commands = {
     },
     edit: {
         label: 'Edit',
+        short: 'edit',
         info: 'Edit — change the whole image following your prompt',
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -170,6 +187,7 @@ export const commands = {
     },
     krea2Edit: {
         label: 'Edit',
+        short: 'edit',
         info: 'Edit — change the whole image following your prompt',
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -203,6 +221,7 @@ export const commands = {
     },
     qwenEdit: {
         label: 'Edit',
+        short: 'edit',
         info: 'Edit — change the image following your prompt',
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -229,6 +248,7 @@ export const commands = {
     },
     detail: {
         label: 'Detail',
+        short: 'detail',
         info: 'Detail — refine only the masked area with more detail',
         progressLabel: 'Detailing',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -243,6 +263,7 @@ export const commands = {
     },
     change: {
         label: 'Change',
+        short: 'change',
         info: 'Change — replace the masked area to match your prompt',
         progressLabel: 'Changing',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -256,6 +277,7 @@ export const commands = {
     },
     remove: {
         label: 'Remove',
+        short: 'remove',
         info: 'Remove — erase the masked area and fill the background',
         progressLabel: 'Removing',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -273,6 +295,7 @@ export const commands = {
     // default 0.0 = faithful. Prompt optional (empty works).
     pid: {
         label: 'Upscale',
+        short: 'upscale',
         info: 'Upscale — raise resolution while adding fine detail',
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
@@ -289,6 +312,7 @@ export const commands = {
 
     t2v: {
         label: 'Text to Video',
+        short: 't2v',
         info: 'Text to Video — generate a video clip from your prompt alone',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
@@ -297,6 +321,7 @@ export const commands = {
     },
     i2v: {
         label: 'Image to Video',
+        short: 'i2v',
         info: 'Image to Video — animate an input image into a video clip',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
@@ -309,6 +334,7 @@ export const commands = {
     },
     t2v_ms: {
         label: 'Text to Video',
+        short: 't2v',
         info: 'Text to Video — generate a video clip from your prompt alone',
         icon: 'text',
         mediaType: MEDIA_TYPE.VIDEO,
@@ -337,6 +363,7 @@ export const commands = {
     },
     i2v_ms: {
         label: 'Image to Video',
+        short: 'i2v',
         info: 'Image to Video — animate an input image into a video clip',
         icon: 'image',
         mediaType: MEDIA_TYPE.VIDEO,
@@ -357,6 +384,7 @@ export const commands = {
     },
     extend: {
         label: 'Extend',
+        short: 'extend',
         info: 'Extend — continue an input video with more footage',
         progressLabel: 'Extending',
         mediaType: MEDIA_TYPE.VIDEO,
@@ -570,9 +598,15 @@ export const COMMANDS = commands;
  * Returns all non-stub commands for a given media type, filtered by the
  * active model's supported ops and the current runtime context.
  *
- * The returned list is what the PromptBox and radial menu render.
- * Commands whose input requirements aren't met are included but marked
- * `available: false` so the UI can grey them out rather than hide them.
+ * The returned list is what the PromptBox and radial menu render, in canonical
+ * OP_ORDER (never registry or supportedOps order) so an op holds its position
+ * across models.
+ *
+ * Two kinds of unavailable, and they are NOT interchangeable: a command the
+ * model+workspace can run but whose inputs aren't staged yet is returned with
+ * `available: false` (the UI dims it). A command that can never run here — the
+ * model doesn't declare it, the user didn't install it, or the workspace has no
+ * mask tool — is not returned at all.
  *
  * @param {'image'|'video'}              mediaType
  * @param {import('./modelRegistry.js').ModelDef|null} model
@@ -589,8 +623,26 @@ function _maxMediaSlots(cmd, mediaType, minFallback) {
     return slots || Math.max(0, Number(minFallback) || 0);
 }
 
+/**
+ * MPI-356: canonical strip order, keyed on `short` (not op key), so a verb keeps
+ * roughly the same slot across models — Krea2's `krea2Edit` and Qwen's `qwenEdit`
+ * both sit where `edit` sits. Image and video ops share one list because
+ * getAvailableCommands never mixes media types in a single result.
+ * Ops with no `short` (or an unlisted one) sort to the end keeping their registry
+ * order — Array.prototype.sort is stable.
+ */
+export const OP_ORDER = Object.freeze([
+    't2i', 'i2i', 'depth', 'edit', 'upscale', 'detail', 'change', 'remove',
+    't2v', 'i2v', 'extend',
+]);
+
+function _orderIndex(cmd) {
+    const i = OP_ORDER.indexOf(cmd.short);
+    return i === -1 ? OP_ORDER.length : i;
+}
+
 export function getAvailableCommands(mediaType, model = null, ctx = {}) {
-    const { imageCount = 0, videoCount = 0, hasMask = false, installedOps = null } = ctx;
+    const { imageCount = 0, videoCount = 0, hasMask = false, canMask = true, installedOps = null } = ctx;
 
     // When the caller supplies the model's physically-installed op set (MPI-122),
     // a selectable op the user did NOT install is hidden — so a T2V-only install
@@ -602,6 +654,10 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
         .filter(([, cmd]) => !cmd.stub && cmd.mediaType === mediaType)
         .filter(([key, cmd]) => {
             if (cmd.universal) return false;
+            // MPI-356: workspace capability. A mask op in a workspace with no mask
+            // tool is ABSENT, not dimmed — the Gallery has no canvas, so its Detail
+            // entry could never light up no matter what the user did.
+            if (cmd.requiresMask && !canMask) return false;
             if (!model) return true;
             if (!model.supportedOps.includes(key)) return false;
             // Only gate ops the model declares as selectable operation groups; ops
@@ -626,7 +682,8 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
                 videoCount <= maxVideos &&
                 (!cmd.requiresMask || hasMask);
             return { key, available, ...cmd };
-        });
+        })
+        .sort((a, b) => _orderIndex(a) - _orderIndex(b));
 }
 
 /**

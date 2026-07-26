@@ -1,7 +1,7 @@
 /* BEM Block naming — mpi-prompt-box */
 .mpi-prompt-box {
     display: grid;
-    grid-template-columns: auto 1fr auto auto auto auto;
+    grid-template-columns: auto 1fr auto auto auto auto auto;
     align-items: end;
     gap: var(--s-2);
     background: var(--surface-bar);
@@ -27,6 +27,52 @@
     transition: opacity var(--t-fast) var(--ease);
 }
 
+/* Operation strip — HOVERS above the bar, right-aligned, same layer as the
+   media chips (MPI-356). Deliberately not a grid row: the bar has to keep its
+   compact height so it never covers the gallery grid or the history canvas.
+   Chips fill from the left and cap at 3, so the two never meet in practice;
+   z-index keeps the strip clickable if they ever do. */
+.mpi-prompt-box__op-strip {
+    position: absolute;
+    bottom: 100%;
+    right: var(--s-6);
+    padding-bottom: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    max-width: calc(100% - var(--s-6) * 2);
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.mpi-prompt-box__op-strip:empty {
+    display: none;
+}
+
+/* Floating over gallery art, so it carries its own surface. */
+.mpi-prompt-box__op-strip .mpi-radio-group {
+    background: var(--surface-bar);
+    border-color: var(--line-soft);
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.mpi-prompt-box__op-strip .mpi-radio-group::-webkit-scrollbar {
+    display: none;
+}
+
+/* An available op is a live choice — near-white, not a muted label. Dim (0.4
+   opacity, from the primitive) then reads clearly as "not right now". */
+.mpi-prompt-box__op-strip .mpi-radio-group__btn {
+    color: var(--ink-1);
+}
+
+/* The primitive's hover drops to --ink-2; here that would DARKEN a near-white
+   chip on hover. Keep it lit and let the background tint carry the feedback. */
+.mpi-prompt-box__op-strip .mpi-radio-group__btn:hover:not(.is-active):not(:disabled):not([aria-disabled="true"]) {
+    color: var(--ink-1);
+}
+
 /* Grid columns */
 .mpi-prompt-box__col {
     display: flex;
@@ -49,6 +95,10 @@
 }
 
 .mpi-prompt-box__col--settings {
+    flex-shrink: 0;
+}
+
+.mpi-prompt-box__col--cog {
     flex-shrink: 0;
 }
 
@@ -152,20 +202,6 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-1);
-}
-
-.mpi-prompt-box__badge-sep {
-    font-size: var(--t-xs);
-    color: var(--ink-3);
-    line-height: 1;
-}
-
-.mpi-prompt-box__badge-op {
-    font-size: var(--t-xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    font-weight: 500;
 }
 
 .mpi-prompt-box__badge-batch {
@@ -297,7 +333,10 @@
     justify-content: flex-start;
     pointer-events: auto;
     box-sizing: border-box;
-    background: transparent;
+    /* Continues the bar's surface upward and fades out, so chips read against a
+       settled backdrop instead of clashing with whatever gallery art is behind
+       them. From the original mockup. */
+    background: linear-gradient(to top, var(--surface-bar), transparent);
     flex-shrink: 0;
     /* Sits above siblings within #prompt-box-mount stacking context.
      * Mount-level z-index (workspace.css) keeps it above gallery cards

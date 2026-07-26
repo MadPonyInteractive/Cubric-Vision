@@ -1,7 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
@@ -24,10 +24,9 @@ import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/conne
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
  *
- * Bottom bar carries a settings badge (model · operation), the negative toggle
- * and the run button. All other controls (model dropdown, gear, download,
- * operation dropdown, op-specific controls) live inside a popup triggered by
- * the settings badge.
+ * Bottom bar carries the model button, a cogwheel, the negative toggle and the
+ * run button. Ops live in the floating strip above the box (MPI-356); the
+ * cogwheel popup holds parameters only — nothing that picks a model or an op.
  *
  * Media chips render in a sibling `.mpi-prompt-box-media-strip` element above
  * the box — the organism owns both the media state and the strip rendering.
@@ -52,7 +51,7 @@ import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/conne
  *
  * Emits:
  *   'input' | 'mode-change' | 'media-change' | 'media-imported'
- *   'run' | 'cancel' | 'model-change' | 'operation-change' | 'settings'
+ *   'run' | 'cancel' | 'model-change' | 'operation-change'
  */
 export const MpiPromptBox = ComponentFactory.create({
     name: 'MpiPromptBox',
@@ -69,10 +68,13 @@ export const MpiPromptBox = ComponentFactory.create({
             </div>
             ` : ''}
 
+            <div class="mpi-prompt-box__op-strip" id="op-strip-slot"></div>
+
             <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--enhance hide" id="enhance-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--cog" id="settings-cog-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--engine hide" id="engine-toggle-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
         </div>
@@ -131,9 +133,14 @@ export const MpiPromptBox = ComponentFactory.create({
         // Returns null when status is unknown → getAvailableCommands falls back to
         // static supportedOps (no behaviour change for image / pre-check models).
         function _ctxWithInstalledOps(model) {
-            if (!model?.operations) return _context;
+            // MPI-356: the mask tool is a HISTORY-workspace tool. Declaring that here
+            // (rather than making every Block remember to pass it) keeps the two mount
+            // sites' existing `workspaceKey` the single statement of which workspace
+            // this box serves — a gallery box cannot drift into claiming a canvas.
+            const base = { ..._context, canMask: _wsKey === 'history' };
+            if (!model?.operations) return base;
             const depStatus = getModelDepStatus(model.id);
-            if (!depStatus) return _context;
+            if (!depStatus) return base;
             // R31 (MPI-208): use effectiveEngine() so the "Run locally" override
             // is honoured — when the toggle is ON, installedOps are derived from
             // the LOCAL engine's weights, not the remote Pod's.
@@ -151,7 +158,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 // MPI-200: arch token for a future op-keyed model with a variants: block.
                 { arch: remoteEngineClient.archSync(engine) },
             );
-            return { ..._context, installedOps };
+            return { ...base, installedOps };
         }
 
         /** @type {Map<string, Object>} */
@@ -171,8 +178,8 @@ export const MpiPromptBox = ComponentFactory.create({
 
         let model = props.model || null;
         let modelList = props.modelList || [];
-        let _modelDropdown = null;
-        let _opDropdown = null;
+        let _opStrip = null;
+        const opStripSlot = qs('#op-strip-slot', el);
 
         /** @type {Array<Function>} Cleanup functions, all run in destroy. */
         const _unsubs = [];
@@ -274,7 +281,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (fallback) {
                     el.setOperation(fallback, { programmatic: true });
                 } else {
-                    _refreshOpDropdown();
+                    _refreshOpStrip();
                 }
             } else {
                 // MPI-337: NO force-DOWN. Removing media (or any change that doesn't
@@ -283,7 +290,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 // input, and Run toasts the missing input (generationService guards).
                 // This also subsumes the old MPI-281 pin (empty box in History
                 // video-continuation mode kept the I2V op): now nothing forces down.
-                _refreshOpDropdown();
+                _refreshOpStrip();
             }
 
             // Notify the audioMode control (LTX) that audio presence changed so
@@ -481,7 +488,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // programmatic re-pick must not overwrite what the user last selected.
         el.setOperation = (key, { programmatic = false } = {}) => {
             activeOperation = key;
-            _refreshOpDropdown();
+            _refreshOpStrip();
             _refreshOpSlot();
             _renderBadge();
             emit('operation-change', { operation: key, programmatic });
@@ -490,7 +497,7 @@ export const MpiPromptBox = ComponentFactory.create({
         el.updateContext = (ctx) => {
             const prevHistoryMode = _context.historyMode === true;
             _context = { ..._context, ...ctx };
-            _refreshOpDropdown();
+            _refreshOpStrip();
             const nextHistoryMode = _context.historyMode === true;
             if (prevHistoryMode !== nextHistoryMode) {
                 el.classList.toggle('mpi-prompt-box--history-mode', nextHistoryMode);
@@ -563,41 +570,14 @@ export const MpiPromptBox = ComponentFactory.create({
             return supported[0];
         }
 
-        // L/B/H tier marker (MPI-168): only disambiguates when the SAME family has
-        // 2+ installed tiers in the list — a lone SDXL/Wan/LTX gets no letter (no
-        // clutter). The letter goes on `label` (flows to the closed trigger via
-        // textContent); `meta` only shows in the open list, the wrong slot.
-        function _modelDropdownOptions() {
-            const TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
-            const familyCounts = new Map();
-            modelList.forEach(m => {
-                if (m.modelFamily) familyCounts.set(m.modelFamily, (familyCounts.get(m.modelFamily) || 0) + 1);
-            });
-            return modelList.map(m => {
-                const ambiguous = m.modelFamily && familyCounts.get(m.modelFamily) > 1;
-                const letter = ambiguous ? TIER_LETTER[m.sizeTier] : '';
-                return {
-                    value: m.id,
-                    label: letter ? `${m.name} ${letter}` : m.name,
-                    meta: m.dropdownMeta || '',
-                };
-            });
-        }
-
         el.setModel = (newModel) => {
             model = newModel;
             _currentModelType = newModel?.mediaType ?? _currentModelType;
             const picked = _pickOpForModel(newModel);
-            if (_modelDropdown) {
-                _modelDropdown.el.setOptions(
-                    _modelDropdownOptions(),
-                    newModel.id
-                );
-            }
             if (picked && picked !== activeOperation) {
                 el.setOperation(picked, { programmatic: true });
             } else {
-                _refreshOpDropdown();
+                _refreshOpStrip();
                 _refreshOpSlot();
                 _renderBadge();
             }
@@ -634,16 +614,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 nextOp = model.supportedOps?.[0] ?? nextOp;
             }
 
-            if (_modelDropdown) {
-                _modelDropdown.el.setOptions(
-                    _modelDropdownOptions(),
-                    model?.id ?? null
-                );
-            }
             if (nextOp !== activeOperation) {
                 el.setOperation(nextOp, { programmatic: true });
             } else {
-                _refreshOpDropdown();
+                _refreshOpStrip();
                 _refreshOpSlot();
                 _renderBadge();
             }
@@ -1017,8 +991,6 @@ export const MpiPromptBox = ComponentFactory.create({
                     ${MpiBadge.template({ label: 'SETTINGS', variant: 'secondary' })}
                 </div>
                 <div class="mpi-prompt-box__settings-grid">
-                    <div class="mpi-prompt-box__settings-row" id="settings-model-slot"></div>
-                    <div class="mpi-prompt-box__settings-row" id="settings-op-dropdown-slot"></div>
                     <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
                 </div>
             </div>
@@ -1030,7 +1002,7 @@ export const MpiPromptBox = ComponentFactory.create({
         let leaveTimer = null;
 
         const positionPopup = () => {
-            const rect = badgeBtn.el.getBoundingClientRect();
+            const rect = cogBtn.el.getBoundingClientRect();
             popupNode.style.bottom = `${window.innerHeight - rect.top + 12}px`;
             popupNode.style.left   = `${rect.left + rect.width / 2}px`;
             popupNode.style.top    = '';
@@ -1050,36 +1022,38 @@ export const MpiPromptBox = ComponentFactory.create({
             popupActive = true;
             positionPopup();
             popupNode.classList.add('is-active');
-            badgeBtn.el.classList.add('is-active');
+            cogBtn.el.classList.add('is-active');
         };
         const closePopup = () => {
             popupActive = false;
             popupNode.classList.remove('is-active');
-            badgeBtn.el.classList.remove('is-active');
+            cogBtn.el.classList.remove('is-active');
         };
 
         const cancelClose = () => { clearTimeout(leaveTimer); leaveTimer = null; };
         const scheduleClose = () => { /* hover-close disabled — see outside-click handler below */ };
 
-        // ── Settings badge (trigger) ───────────────────────────────────────────
+        // ── Model button ───────────────────────────────────────────────────────
+        // MPI-356: was the composite "MODEL · OPERATION" settings trigger. The op
+        // half is gone (the strip above the box shows it) and the popup moved to
+        // its own cogwheel, so this button now does one thing: open the model
+        // picker.
         const badgeSlot = qs('#settings-badge-slot', el);
-        const badgeBtn = MpiButton.mount(badgeSlot, {
+        const modelBtn = MpiButton.mount(badgeSlot, {
             variant: 'secondary', size: 'sm',
-            toggleable: true,
-            info: 'Open model & operation settings',
+            info: 'Change model',
             extraClasses: 'mpi-prompt-box__settings-trigger',
         });
         // Replace empty button content with a badge span we can update.
         const badgeHost = document.createElement('span');
         badgeHost.className = 'mpi-prompt-box__settings-badge-host';
-        badgeBtn.el.appendChild(badgeHost);
+        modelBtn.el.appendChild(badgeHost);
 
         function _renderBadge() {
             // MPI-200: append the size-tier letter (H/B/L) so the button matches the
             // dropdown + gallery cards (e.g. "LTX 2.3 B"). Empty for models with no tier family.
             const _tier = tierLetterFor(model);
             const modelName  = model ? `${model.name}${_tier ? ` ${_tier}` : ''}` : '—';
-            const opLabel    = commands[activeOperation]?.label ?? activeOperation;
             const batchCtrl  = _activeControls.get('batch');
             const batchCount = batchCtrl ? parseInt(batchCtrl.getValue(), 10) : 1;
             const batchTag   = batchCount > 1
@@ -1088,8 +1062,6 @@ export const MpiPromptBox = ComponentFactory.create({
             badgeHost.innerHTML = `
                 <span class="mpi-prompt-box__badge-line">
                     <span class="mpi-prompt-box__badge-model">${modelName}</span>
-                    <span class="mpi-prompt-box__badge-sep">·</span>
-                    <span class="mpi-prompt-box__badge-op">${opLabel}</span>
                 </span>
                 ${batchTag}
             `;
@@ -1097,7 +1069,17 @@ export const MpiPromptBox = ComponentFactory.create({
 
         _unsubs.push(Events.on('settings:shared:update', ({ key }) => { if (key === 'batch') _renderBadge(); }));
 
-        badgeBtn.on('click', () => {
+        // The picker overlay is opened by whoever owns it, not by this box — the
+        // radial (step 7) fires the same event.
+        modelBtn.on('click', () => Events.emit('ui:open-model-picker', {}));
+
+        // ── Cogwheel (parameters popup trigger) ────────────────────────────────
+        const cogBtn = MpiButton.mount(qs('#settings-cog-slot', el), {
+            icon: 'settings', variant: 'ghost', size: 'sm',
+            info: 'Generation parameters',
+            extraClasses: 'mpi-prompt-box__cog-trigger',
+        });
+        cogBtn.on('click', () => {
             if (popupActive) closePopup(); else openPopup();
         });
 
@@ -1105,7 +1087,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // Popup stays open until user clicks outside or presses Escape.
         const onPopupOutsideClick = (e) => {
             if (!popupActive) return;
-            if (popupNode.contains(e.target) || badgeBtn.el.contains(e.target)) return;
+            if (popupNode.contains(e.target) || cogBtn.el.contains(e.target)) return;
             // Ignore clicks inside any portaled child surface (dropdown list,
             // nested popup like MpiRatioSelector's). These are logically inside
             // our popup but live in document.body due to portaling.
@@ -1121,45 +1103,11 @@ export const MpiPromptBox = ComponentFactory.create({
         }));
 
         // ── Settings popup content ─────────────────────────────────────────────
-        const modelSlot      = qs('#settings-model-slot', popupNode);
-        const opDropdownSlot = qs('#settings-op-dropdown-slot', popupNode);
-        const opSlot         = qs('#settings-op-slot', popupNode);
-
-        if (model) {
-            if (modelList.length >= 1) {
-                _modelDropdown = MpiDropdown.mount(document.createElement('div'), {
-                    options:   _modelDropdownOptions(),
-                    value:     model.id,
-                    info:      'Active model',
-                    direction: 'up',
-                    extraClasses: 'mpi-dropdown--model-select',
-                    wrapLabels: true,
-                });
-                _modelDropdown.on('change', ({ value }) => {
-                    const selected = modelList.find(m => m.id === value);
-                    if (selected) {
-                        el.setModel(selected);
-                        Events.emit('settings:model:select', { modelId: selected.id });
-                        emit('model-change', { model: selected });
-                        requestAnimationFrame(() => {
-                            if (document.contains(el)) openPopup();
-                        });
-                    }
-                });
-                modelSlot.appendChild(_modelDropdown.el);
-            }
-
-            // Gear opens model settings (upscale-model + LoRA pickers). A model can
-            // opt out with showSettings:false when it configures neither — e.g. the
-            // PiD upscaler, which takes no upscale model and no LoRAs.
-            if (props.showSettings !== false && model.showSettings !== false) {
-                const gearBtn = MpiButton.mount(document.createElement('div'), {
-                    icon: 'settings', variant: 'ghost', size: 'sm', info: 'Model Settings',
-                });
-                gearBtn.on('click', () => emit('settings', { model }));
-                modelSlot.appendChild(gearBtn.el);
-            }
-        }
+        // Parameters only (MPI-356). Model, operation and the LoRA/upscale gear
+        // all left: the strip owns the op, the model button owns the model, and
+        // the picker's tile owns LoRA & Upscale — anything that picks a FILE
+        // belongs on the model card, only knobs belong here.
+        const opSlot = qs('#settings-op-slot', popupNode);
 
         function _pickFallbackOp() {
             if (!model) return null;
@@ -1182,33 +1130,81 @@ export const MpiPromptBox = ComponentFactory.create({
             return (ready ?? pool[0])?.key ?? null;
         }
 
-        function _refreshOpDropdown() {
-            if (!model) return;
-            if (!opDropdownSlot) return;
+        // Why an op the model CAN run is dim right now — a short clause APPENDED
+        // to the op's own description, never replacing it. What the op does is
+        // the useful half; "needs 1 image" alone tells the user nothing about
+        // what they'd be picking.
+        function _opBlockedReason(cmd, textOnlyBlocked) {
+            const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+            if (textOnlyBlocked) return 'remove the staged media to use it';
+            if (cmd.requiresMask && !_context.hasMask) return 'paint a mask first';
+            const imgN = el.imageCount ?? 0;
+            const vidN = el.videoCount ?? 0;
+            if (imgN < (cmd.requiresImages ?? 0)) return `needs ${count(cmd.requiresImages, 'image')}`;
+            if (vidN < (cmd.requiresVideo ?? 0)) return `needs ${count(cmd.requiresVideo, 'video')}`;
+            const maxImg = _maxMediaForOperation(cmd.key, 'image');
+            if (imgN > maxImg) return `takes at most ${count(maxImg, 'image')}`;
+            const maxVid = _maxMediaForOperation(cmd.key, 'video');
+            if (vidN > maxVid) return `takes at most ${count(maxVid, 'video')}`;
+            return null;
+        }
 
+        // Single source for both op selectors — the strip (short codes) and the
+        // settings dropdown (full labels). They must dim the SAME set, so the
+        // list is built once here rather than twice.
+        function _opChoices() {
+            if (!model) return [];
             const hasMedia = el.imageCount > 0 || el.videoCount > 0;
             const availableCmds = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model));
             const filteredCmds = _context.filterNoInputOps
                 ? availableCmds.filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
                 : availableCmds;
-            const availableOps = filteredCmds.map(cmd => {
+            return filteredCmds.map(cmd => {
                 const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
-                const disabled = !cmd.available || (hasMedia && isTextOnly);
-                return { value: cmd.key, label: cmd.label, disabled, info: cmd.info };
+                const textOnlyBlocked = hasMedia && isTextOnly;
+                const disabled = !cmd.available || textOnlyBlocked;
+                const reason = disabled ? _opBlockedReason(cmd, textOnlyBlocked) : null;
+                const describe = cmd.info || cmd.label;
+                return {
+                    value: cmd.key,
+                    label: cmd.label,
+                    short: cmd.short || cmd.label,
+                    disabled,
+                    info: reason ? `${describe} · ${reason}` : describe,
+                };
             });
+        }
 
-            opDropdownSlot.innerHTML = '';
-            if (availableOps.length === 0) return;
+        // MPI-356: the always-visible op strip. Remounted rather than patched —
+        // same contract as the dropdown below, and it re-seeds `value` so the
+        // selection can never drift from activeOperation. A disabled op stays
+        // RENDERED (dim, with its reason): the model can run it, the staged
+        // chips just don't fit yet. Ops the model or workspace can't run at all
+        // never reach here — getAvailableCommands drops them.
+        function _refreshOpStrip() {
+            if (!opStripSlot) return;
+            _opStrip?.destroy?.();
+            _opStrip = null;
+            opStripSlot.innerHTML = '';
+            if (!model) return;
 
-            _opDropdown = MpiDropdown.mount(document.createElement('div'), {
-                options: availableOps,
+            const choices = _opChoices();
+            if (choices.length < 2) return;   // one op = nothing to choose
+
+            _opStrip = MpiRadioGroup.mount(opStripSlot, {
+                options: choices.map(o => ({ label: o.short, value: o.value, info: o.info, disabled: o.disabled })),
                 value: activeOperation,
-                info: 'Current model operation - Also accessible by holding Tab',
-                direction: 'up',
+                name: 'operation',
+                size: 'sm',
             });
-            _opDropdown.on('change', ({ value }) => el.setOperation(value));
-
-            opDropdownSlot.appendChild(_opDropdown.el);
+            // Route through the workspace event the radial already uses: the
+            // owning Block validates the op against its live context (mask,
+            // history mode) and calls back into setOperation. Selecting here
+            // directly would give the box a second, unvalidated source of truth.
+            _opStrip.on('select', ({ value }) => {
+                if (value === activeOperation) return;
+                Events.emit('workspace:set-operation', { operation: value });
+            });
         }
 
         function _refreshOpSlot() {
@@ -1662,7 +1658,7 @@ export const MpiPromptBox = ComponentFactory.create({
             // changes so the selector shows the correct installed-op set for the
             // effective engine ('local' override → local weights; null → remote).
             if (key === 'engineOverride') {
-                _refreshOpDropdown();
+                _refreshOpStrip();
                 _renderBadge();
             }
         }));
@@ -1670,7 +1666,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // MPI-122: when install status is re-checked (e.g. the user adds the I2V op
         // to an already-installed Wan model), refresh the op dropdown so newly-
         // installed operations appear (and removed ones vanish) without a remount.
-        _unsubs.push(Events.on('models:checked', () => { _refreshOpDropdown(); }));
+        _unsubs.push(Events.on('models:checked', () => { _refreshOpStrip(); }));
 
         // MPI-73: disable the Cue button while the remote engine is connecting or
         // disconnecting. Generation mid-transition would fall to the wrong engine
@@ -1719,7 +1715,7 @@ export const MpiPromptBox = ComponentFactory.create({
         _unsubs.push(Events.on('remote:connection', ({ connected }) => _showEngineToggle(!!connected)));
 
         // ── Initialise ─────────────────────────────────────────────────────────
-        _refreshOpDropdown();
+        _refreshOpStrip();
         _refreshOpSlot();
         _renderBadge();
 
@@ -1779,6 +1775,7 @@ export const MpiPromptBox = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             _negBtn?.destroy?.();
+            _opStrip?.destroy?.();
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();

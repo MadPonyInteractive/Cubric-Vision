@@ -13,6 +13,13 @@ import { renderIcon } from '../../../utils/icons.js';
  *   string  — label & value identical, no icon, no info
  *   object  — { label, value, icon?, info?, disabled? }
  *
+ * A disabled option renders `aria-disabled`, NOT the `disabled` attribute:
+ * Chrome dispatches no mouse events at all on a disabled form control, so the
+ * repo-wide `[data-info]` status-bar hover died on exactly the options that
+ * most need to explain themselves ("needs 1 image"). Clicks are refused by the
+ * handler below instead. Setting `btn.disabled` imperatively still works — both
+ * are honoured.
+ *
  * Props:
  * @param {Array<string|{label:string,value:string,icon?:string,info?:string,disabled?:boolean}>} [options=[]]
  * @param {string}  [value=''] - Currently selected value
@@ -55,7 +62,7 @@ export const MpiRadioGroup = ComponentFactory.create({
             const iconHtml = icon ? renderIcon(icon, iconSize) : '';
             const labelHtml = iconOnly ? '' : `<span class="mpi-radio-group__label">${label}</span>`;
             const infoAttr = info ? `data-info="${info}"` : '';
-            const disabledAttr = disabled ? 'disabled' : '';
+            const disabledAttr = disabled ? 'aria-disabled="true"' : '';
             const iconCls = icon ? 'mpi-radio-group__btn--has-icon' : '';
             const onlyCls = iconOnly ? 'mpi-radio-group__btn--icon-only' : '';
             const featuredCls = (featuredFirst && i === 0) ? 'mpi-radio-group__btn--featured' : '';
@@ -95,7 +102,7 @@ export const MpiRadioGroup = ComponentFactory.create({
 
         el.addEventListener('click', (e) => {
             const btn = e.target.closest('.mpi-radio-group__btn');
-            if (!btn || btn.disabled) return;
+            if (!btn || btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
 
             qsa('.mpi-radio-group__btn', el).forEach(b => b.classList.remove('is-active'));
             btn.classList.add('is-active');

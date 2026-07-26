@@ -1,0 +1,100 @@
+/* ══════════════════════════════════════════════════════════════
+   MpiModelPicker — model overlay (MPI-356)
+
+   Chrome only. The tiles come from MpiTileSheet and must stay
+   pixel-identical to the Model Library, so this file declares the same
+   --lib-* ground tokens the sheet reads and adds nothing else about them.
+════════════════════════════════════════════════════════════════ */
+
+/* Full-bleed override of the shared MpiOverlay chrome — MpiOverlay pads its
+   root and caps the container at 600px for centered card content. Scoped via
+   :has() so no other overlay is touched (same approach as the Library). */
+.mpi-overlay--body:has(.mpi-model-picker) {
+    padding: 0;
+    align-items: stretch;
+}
+.mpi-overlay--body:has(.mpi-model-picker) .mpi-overlay__container {
+    max-width: none;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+}
+/* Full-bleed content paints over the overlay's own X (it has no stacking of its
+   own), leaving the close button visible but unclickable — the head element
+   swallows the pointer. The Library hit this too; same lift. */
+.mpi-overlay--body:has(.mpi-model-picker) .mpi-overlay__close {
+    z-index: 35;
+}
+
+.mpi-model-picker {
+    --lib-bg: oklch(0.26 0.020 350);
+    --lib-card: oklch(0.33 0.022 350);
+    --lib-card-hover: oklch(0.37 0.023 350);
+    --lib-canvas: oklch(0.28 0.020 350);
+
+    position: relative;
+    height: 100%;
+    background: var(--lib-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-mono, 'JetBrains Mono', ui-monospace, monospace);
+    color: var(--ink-1);
+}
+
+.mpi-model-picker__head {
+    padding: var(--s-5) var(--s-6) var(--s-4);
+    border-bottom: 1px solid var(--line);
+    flex: none;
+}
+
+.mpi-model-picker__title {
+    font-size: var(--t-xl, 32px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0 0 var(--s-2);
+}
+
+.mpi-model-picker__sub {
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    margin: 0;
+}
+
+.mpi-model-picker__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-4) var(--s-6) var(--s-6);
+}
+
+.mpi-model-picker__media-head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin: var(--s-4) 0 var(--s-3);
+}
+.mpi-model-picker__media-head--video { color: var(--accent-frost); }
+.mpi-model-picker__media-head .mpi-icon { width: 12px; height: 12px; }
+.mpi-model-picker__media-head-n { color: var(--ink-3); }
+
+/* LoRA & Upscale — lives in the tile's state row, so it is a span (a button
+   may not nest in the tile button). Heat on hover marks it as the one part of
+   the tile that does something other than select. */
+.mpi-model-picker__lora {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: color var(--t-base) var(--ease);
+}
+.mpi-model-picker__lora:hover { color: var(--accent-heat); }
+.mpi-model-picker__lora .mpi-icon { width: 12px; height: 12px; }

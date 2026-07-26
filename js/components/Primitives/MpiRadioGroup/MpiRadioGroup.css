@@ -61,16 +61,20 @@
 .mpi-radio-group--grid .mpi-radio-group__btn {
     background: transparent;
 }
-.mpi-radio-group--grid .mpi-radio-group__btn:hover:not(.is-active):not(:disabled) {
+.mpi-radio-group--grid .mpi-radio-group__btn:hover:not(.is-active):not(:disabled):not([aria-disabled="true"]) {
     background: color-mix(in oklch, var(--ink-1) 6%, transparent);
 }
 
-.mpi-radio-group__btn:hover:not(.is-active):not(:disabled) {
+.mpi-radio-group__btn:hover:not(.is-active):not(:disabled):not([aria-disabled="true"]) {
     background: color-mix(in oklch, var(--ink-1) 6%, transparent);
     color: var(--ink-2);
 }
 
-.mpi-radio-group__btn:disabled {
+/* Both spellings dim: `disabled` for consumers that set the property
+   imperatively, `aria-disabled` for option-level disabled — which stays
+   hoverable so its [data-info] reason reaches the status bar. */
+.mpi-radio-group__btn:disabled,
+.mpi-radio-group__btn[aria-disabled="true"] {
     opacity: 0.4;
     cursor: not-allowed;
 }

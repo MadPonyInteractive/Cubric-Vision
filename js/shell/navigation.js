@@ -69,7 +69,9 @@ function _buildGalleryItems(ctx = {}) {
     const model = _radialModelId ? getModelById(_radialModelId) : null;
     if (!model) return [];
     const hasMedia = (ctx.imageCount ?? 0) > 0 || (ctx.videoCount ?? 0) > 0;
-    return getAvailableCommands(model.mediaType, model, ctx)
+    // MPI-356: this ring IS the gallery workspace, which has no mask canvas — so
+    // mask ops are absent here rather than permanently dimmed.
+    return getAvailableCommands(model.mediaType, model, { ...ctx, canMask: false })
         .map(cmd => {
             const isTextOnly = (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
             // MPI-337: keep every op in a stable, memorizable slot — dim the ones

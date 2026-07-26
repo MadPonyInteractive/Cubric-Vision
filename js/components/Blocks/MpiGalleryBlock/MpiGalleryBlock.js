@@ -16,6 +16,7 @@ import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMed
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
+import { MpiModelPicker } from '../../Compounds/MpiModelPicker/MpiModelPicker.js';
 import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
 import { MpiNotesEditor } from '../../Compounds/MpiNotesEditor/MpiNotesEditor.js';
@@ -1289,10 +1290,6 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 if (!programmatic) setSelectedOp(activeModelId, operation);
             });
 
-            pb.on('settings', () => {
-                _settingsOverlay.el.open({ modelId: activeModel.id });
-            });
-
             pb.on('media-change', ({ imageCount: ic, videoCount: vc }) => {
                 imageCount = ic;
                 videoCount = vc;
@@ -1525,6 +1522,27 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Model settings overlay
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
 
+        // MPI-356: the model overlay. Opened by the prompt box's model button and
+        // (step 7) the radial, both via 'ui:open-model-picker'. The picker owns no
+        // model logic — this Block hands it the installed list and applies the
+        // pick, the same ownership split the op strip uses.
+        const _modelPicker = MpiModelPicker.mount(document.createElement('div'));
+        _unsubs.push(Events.on('ui:open-model-picker', () => {
+            _modelPicker.el.open({ models: installedAllModels, modelId: activeModelId });
+        }));
+        _modelPicker.on('settings', ({ model }) => _settingsOverlay.el.open({ modelId: model.id }));
+        _modelPicker.on('select', ({ model }) => {
+            if (!model || model.id === activeModelId) return;
+            setSelectedModelId(model.mediaType, model.id);
+            activeModelId = model.id;
+            activeModel   = model;
+            Events.emit('settings:model:select', { modelId: model.id });
+            // setModel re-picks the op for the current media context and fires
+            // operation-change (programmatic), so op memory is not overwritten.
+            _pb?.el?.setModel(model);
+            refreshRadial({ imageCount, videoCount, modelId: model.id });
+        });
+
         if (installedAllModels.length > 0) {
             _pb = _mountPb({
                 model:           activeModel,
@@ -1705,6 +1723,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _compareOverlay.destroy?.();
             _deleteDialog.destroy?.();
             _settingsOverlay.destroy?.();
+            _modelPicker.destroy?.();
             _pb?.el?.destroy?.();
             _pb = null;
         };

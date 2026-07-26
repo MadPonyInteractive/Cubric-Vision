@@ -59,6 +59,7 @@ import { nearestNamedRatio } from '../../../utils/ratios.js';
 import { trackConcatJob } from '../../../services/concatProgress.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
+import { MpiModelPicker } from '../../Compounds/MpiModelPicker/MpiModelPicker.js';
 import { MpiMediaDropOverlay } from '../../Primitives/MpiMediaDropOverlay/MpiMediaDropOverlay.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
@@ -783,6 +784,39 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
         let _pb = null;
 
+        // Block-side bookkeeping after the active model changed. Called by the
+        // PromptBox's own model-change AND by the MPI-356 picker below.
+        // markAsLast: false — History is a typed workspace (image or video group).
+        // Its selection is bound to the group's mediaType, not a user choice of
+        // "default mode," so it must not influence the marker Gallery uses to
+        // restore the active slot.
+        function _adoptModel(model) {
+            setSelectedModelId(model.mediaType, model.id, { markAsLast: false });
+            activeModelId = model.id;
+            activeModel = model;
+            _refreshOpOptions();
+            _syncPromptToolDisabled();
+        }
+
+        // MPI-356: the model overlay, opened by the prompt box's model button (and
+        // the radial). Video history stays i2v-only — the picker gets the same
+        // filtered list the prompt box does, recomputed live so an install lands.
+        const _modelPicker = MpiModelPicker.mount(document.createElement('div'));
+        _unsubs.push(Events.on('ui:open-model-picker', () => {
+            _modelPicker.el.open({
+                models: getModelsByType(modeKind).filter(isModelUsable).filter(_promptModelFilter),
+                modelId: activeModelId,
+            });
+        }));
+        _modelPicker.on('settings', ({ model }) => _settingsOverlay.el.open({ modelId: model.id }));
+        _modelPicker.on('select', ({ model }) => {
+            if (!model || model.id === activeModelId) return;
+            // setModel picks the op that fits the staged frames, then Block-side
+            // UI follows — same order as the PromptBox-driven path above.
+            _pb?.el?.setModel(model);
+            _adoptModel(model);
+        });
+
         // Extend / New shot always inject a self-captured start frame, so a
         // continuation MUST run the model's image-to-video op — never a text op
         // carried in by a reused card (t2v_ms has no image loader → the injected
@@ -881,20 +915,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 historyMode: true,
             });
 
-            _unsubs.push(_pb.on('settings', () => _settingsOverlay.el.open({ modelId: activeModel.id })));
-            _unsubs.push(_pb.on('model-change', ({ model }) => {
-                // markAsLast: false — History is a typed workspace (image or video
-                // group). Its selection is bound to the group's mediaType, not a
-                // user choice of "default mode," so it must not influence the
-                // marker Gallery uses to restore the active slot.
-                setSelectedModelId(model.mediaType, model.id, { markAsLast: false });
-                activeModelId = model.id;
-                activeModel = model;
-                // PromptBox.setModel already updated internal state + picked op
-                // for current media context. Just refresh Block-side UI.
-                _refreshOpOptions();
-                _syncPromptToolDisabled();
-            }));
+            _unsubs.push(_pb.on('model-change', ({ model }) => _adoptModel(model)));
             _unsubs.push(_pb.on('operation-change', ({ operation, programmatic }) => {
                 activeOperation = operation;
                 // User-driven pick only: update the preferred op AND remember it
@@ -2415,6 +2436,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             historyTools.destroy?.();
             _historyDeleteDialog.destroy?.();
             _settingsOverlay.destroy?.();
+            _modelPicker.destroy?.();
             _pb?.el?.destroy?.();
             _pb = null;
             if (_compareOverlay) {

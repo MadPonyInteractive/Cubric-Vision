@@ -418,7 +418,6 @@
  * @property {string} [value='']
  * @property {string} [negativeValue='']
  * @property {boolean} [includeNegative=false] - Does this SURFACE offer a negative prompt? Necessary but not sufficient: the toggle also requires the active model's `capabilities.negativePrompt !== false` (absent ⇒ supported), re-evaluated on every model change.
- * @property {boolean} [showSettings=true]
  * @property {boolean} [generating=false]
  * @property {Object} [context={}]
  * @property {'gallery'|'history'} [workspaceKey='gallery']
@@ -1444,6 +1443,23 @@
  * Emits:
  *   'saved' {} — user confirmed changes; already persisted to disk
  *   'close' {} — overlay dismissed without saving
+ */
+
+/**
+ * @typedef {Object} MpiModelPickerProps (Compound — js/components/Compounds/MpiModelPicker)
+ * No props at mount time — the opener passes its own model list to open().
+ *
+ * The model overlay (MPI-356). Renders the Model Library's tile (MpiTileSheet)
+ * over a self-hosted MpiOverlay(body); a click selects and closes.
+ *
+ * Instance methods (on instance.el):
+ *   open({ models: ModelDef[], modelId?: string|null })
+ *     — Render the passed (already workspace-filtered, installed) models and show.
+ *   close()
+ *
+ * Emits:
+ *   'select'   { model } — tile clicked; the overlay has already closed
+ *   'settings' { model } — LoRA & Upscale clicked; the opener owns MpiModelSettings
  */
 
 

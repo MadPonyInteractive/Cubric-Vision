@@ -198,11 +198,6 @@
     flex-shrink: 0;
 }
 
-.mpi-dropdown--model-select {
-    flex: 1 1 220px;
-    min-width: 0;
-}
-
 /* ── Disabled state ────────────────────────────────────────────────────────── */
 
 .mpi-dropdown--disabled {
