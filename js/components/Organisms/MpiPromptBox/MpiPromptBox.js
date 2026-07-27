@@ -992,15 +992,18 @@ export const MpiPromptBox = ComponentFactory.create({
         const popupEl = document.createElement('div');
         popupEl.innerHTML = MpiPopup.template({ active: false, position: 'top' }, `
             <div class="mpi-prompt-box__settings">
-                <!-- The op strip doubles as the popup's header (replacing the old
-                     SETTINGS badge): the popup covers the floating strip while it is
-                     open, so without this the user has to close the popup to change
-                     op. Same choices, same event — a second mount, not a second
-                     source of truth. -->
-                <div class="mpi-prompt-box__settings-header" id="op-strip-popup-slot"></div>
                 <div class="mpi-prompt-box__settings-grid">
                     <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
                 </div>
+                <!-- The op strip replaced the SETTINGS badge: the popup covers the
+                     floating bar strip while open, so without a mount in here the op
+                     can't be changed without closing the popup. Same choices, same
+                     event — a second mount, not a second source of truth.
+                     LAST child, not first: the popup is anchored by its BOTTOM edge
+                     to the cogwheel and grows upward, so every op change resizes it
+                     from the top. A strip at the top would jump under the cursor on
+                     each pick; at the bottom it never moves. -->
+                <div class="mpi-prompt-box__settings-ops" id="op-strip-popup-slot"></div>
             </div>
         `).trim();
         const popupNode = popupEl.firstChild;
