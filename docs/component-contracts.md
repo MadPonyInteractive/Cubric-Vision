@@ -17,6 +17,30 @@ The trap this fixes: the op was NEVER persisted, so every block remount (Gallery
 
 `MpiRadioGroup` emits `'select'` on user pick, not `'change'`. Listening for `'change'` results in silent no-op. Always use `.on('select', ...)`. Smoke-test that values round-trip to project.json before considering wiring correct.
 
+## MpiRadioGroup — a disabled option is `aria-disabled`, never `disabled` (MPI-356)
+
+`{ disabled: true }` renders `aria-disabled="true"`; the handler refuses the click. It does NOT set the `disabled` attribute, because **Chrome dispatches no mouse events at all on a disabled form control** — the repo-wide `[data-info]` status-bar hover would die on exactly the options that most need to explain themselves (the PromptBox op strip's "needs 1 image", "paint a mask first"). Setting `btn.disabled` imperatively still works; both are honoured on the click path.
+
+Consequences when you touch a group with disabled options:
+- **Test/automation:** assert on `getAttribute('aria-disabled') === 'true'`, not `.disabled` — the latter is `false` on a dimmed chip.
+- **Styling:** dim via `[aria-disabled="true"]`, and exclude it from hover rules (`:not([aria-disabled="true"])`) or a dimmed chip lights up under the cursor.
+- **Playwright:** `:text-is("edit")` and `hasText: /^edit$/` do NOT match the strip's buttons. Read the group with `$$eval` and click by index (`locator(...).nth(i)`).
+
+## MpiTileSheet — state-dumb tiles; the consumer owns the bottom row (MPI-356)
+
+`MpiTileSheet` (Primitive) renders one grid of tiles for three surfaces: Model Library, App Library, and `MpiModelPicker`. It is a **Primitive, not a Compound**, because both libraries are Compounds and the hierarchy forbids Compounds importing Compounds.
+
+It is deliberately **state-dumb**: install progress, availability chips, and the picker's LoRA & Upscale button are none of its business. The consumer hands the fixed-height bottom row over as an HTML string (`item.state`) and patches it in place with `el.patchState(id, html)` — never by rebuilding the sheet. Other instance methods: `setItems`, `setWaiting(id, bool)`, `setSelected(id|null)`, `getTile(id)`. Emits `'select' { id, item }`, echoing back the consumer's own `item.source` payload.
+
+The trap it retired: the tile markup existed twice (`MpiModelManager._buildTile` + `MpiAppLibrary._buildTile`) against ONE copy of the CSS that only the Model Library owned — the App Library borrowed the selectors across a component boundary and silently lost `--lib-card`. Add a new tile surface by feeding this sheet, never by copying tile markup.
+
+## MpiModelSettings — body-mounted, and its open() must not feed its own listener (MPI-356)
+
+Two contracts, both paid for with a live hang:
+
+- **`mountTarget: 'body'` is load-bearing.** Its only opener is `MpiModelPicker`, which is body-mounted. A `tool-container` mount lands inside `#tool-container`'s own stacking context, so a *higher* Overlays z-index still paints UNDERNEATH the picker — the LoRA & Upscale click reads as a dead no-op until the picker is closed. **Rule: an overlay opened FROM another overlay must mount at least as high as its opener.**
+- **`open()` rescans assets, and it subscribes to asset changes.** Those two facts nearly killed it: `assetService.loadAll()` used to assign `state.availableLoras`/`state.upscaleModels` unconditionally, the state Proxy emits `state:changed` on *every* assign, and the component's live-rerender subscription answers those two keys by calling `el.open()` again — two events per pass, exponential re-entry, an unclosable overlay and ~13k `net::ERR_INSUFFICIENT_RESOURCES`. Fixed on both sides: `loadAll` assigns only on a real content change, and `open()` sets `_rescanning` around its own `loadAssets()` so the subscription skips the changes it causes itself. **General rule: a component that both writes a state key and re-renders on that key must exclude its own writes — and a service must not fake a `state:changed` for a value that did not change.**
+
 ## MpiInput size='sm' width cap
 
 `MpiInput size='sm'` sets `.mpi-input--sm .mpi-input__field { width: 6ch }` on the `<input>` element directly, not the wrapper. Setting width on `.mpi-input` does nothing. To widen: target the field with equal-or-higher specificity (e.g. `.mpi-model-settings__lora-strengths .mpi-input--sm .mpi-input__field { width: 8ch }`). 8ch clears `-1.00`; 7ch still clips. Overlay renders 0-size on the landing page — don't measure through the overlay. CSS cache trap: edit + reload full page before measuring, not just re-mount. Inline-row trap: to put a unit label next to a small input (`Min System RAM [ 0 ] GB`), give the input's HOST `width: auto` — a fixed host width (e.g. 90px) reserves dead space so the unit floats far right, because the `--sm` field is only ~6ch.

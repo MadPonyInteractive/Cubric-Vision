@@ -254,3 +254,26 @@ workflow + `supportedOps` from the parallel FLUX.2 Klein 4B session, 1.2.0
 release notes mention none of this work, and op/model selection still has no
 subsystem doc. The card stays in Doing / validating - it needs a real Electron
 pass by the user before it moves to Done.
+
+## Queue item 4 - docs/registry follow-ups (two of three done)
+
+- **(b) 1.2.0 release notes** - two `whatIsNew` entries added to
+  `js/data/releaseNotes.js`: the operation strip (dim-with-reason chips, the
+  second mount in the parameters popup, the emptied-box auto-t2i) and the
+  full-screen model picker (contact sheet, hold-Tab straight in, LoRA & Upscale
+  from the tile). `inpaint` is deliberately NOT mentioned: no model exposes it
+  yet, so a user reading the notes could not find it. It goes in when the Klein
+  session wires the workflow + `supportedOps`. `npm run release:check` passes.
+- **(c) subsystem doc** - `docs/op-model-selection.md` created (98 lines, under
+  the 200-line ceiling) and routed from `docs/README.md`. It holds what had no
+  home: the two-mounts-one-list rule, why the popup strip is the LAST child and
+  why the capture-phase dismiss guard is load-bearing, absent-vs-dim gating,
+  `filterNoInputOps`, the op-memory write rule, the media transitions including
+  MPI-337's one exception, bar order, and the test gate. `docs/component-contracts.md`
+  gained three entries: MpiRadioGroup's aria-disabled-not-disabled contract (with
+  the Chrome no-mouse-events reason and the Playwright consequence), MpiTileSheet's
+  state-dumb tile contract, and MpiModelSettings' body-mount + no-self-feeding-listener
+  contracts.
+- **(a) `inpaint` workflow + `supportedOps`** - STILL OPEN, and not this session's
+  to close: it belongs to the parallel FLUX.2 Klein 4B session. The op def is
+  complete and `components: []` waits for whatever Klein's graph exposes.
