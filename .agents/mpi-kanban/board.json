@@ -1,607 +1,673 @@
 {
-  "schema": "mpi-kanban/board/v1",
-  "next_id": 354,
-  "columns": {
-    "todo": [
-      "MPI-351",
-      "MPI-325",
-      "MPI-332",
-      "MPI-320",
-      "MPI-289",
-      "MPI-323",
-      "MPI-322",
-      "MPI-294",
-      "MPI-302",
-      "MPI-198",
-      "MPI-249",
-      "MPI-183",
-      "MPI-339",
-      "MPI-343",
-      "MPI-344",
-      "MPI-347",
-      "MPI-348",
-      "MPI-349"
-    ],
-    "doing": [
-      "MPI-353",
-      "MPI-346",
-      "MPI-259",
-      "MPI-4"
-    ],
-    "done": [
-      "MPI-352",
-      "MPI-350",
-      "MPI-345",
-      "MPI-340",
-      "MPI-318",
-      "MPI-333",
-      "MPI-329",
-      "MPI-342",
-      "MPI-341",
-      "MPI-315",
-      "MPI-308",
-      "MPI-263",
-      "MPI-243"
-    ]
-  },
-  "updated_at": "2026-07-26T05:30:00Z",
-  "events": [
-    {
-      "at": "2026-07-26T00:45:00Z",
-      "type": "task.validated",
-      "task": "MPI-350",
-      "note": "TIER-1 BRANCH NOW VERIFIED LIVE - both sides of the MpiIfElse gate confirmed. Non-turbo upscale of t2i_038 (768x1344) produced upscale_018 at 1152x2016 (correct 1.5x) with stages 1/3 -> 2/3 -> 3/3 (2 tiles + refiner). This is the first run to take the 'is high tier' TRUE path: Input_Tier 1 -> MpiMath 'a == 1' true -> node 1685 FromBasicPipe base model, no accelerator LoRA on the UltimateSDUpscale tiles, refiner still distilled. Every earlier upscale sidecar recorded Input_Tier 2, so only the false path had been exercised until now. Tile stages were visibly slower than the turbo runs while the refiner stage stayed quick - the expected asymmetry of the gate. User also ran a side-by-side compare of upscale_017 (turbo) vs upscale_018 (non-turbo) and accepted both. Card was already done/complete; this closes the last unexercised path in the template rewire."
-    },
-    {
-      "at": "2026-07-26T00:30:00Z",
-      "type": "task.moved",
-      "task": "MPI-350",
-      "from": "doing",
-      "to": "done",
-      "note": "USER-VERIFIED LIVE, both halves. Progress: grid off read 1/2 during the tile then 2/2 on the refiner; grid on with 2 tiles read 2/3 then 3/3 (load bar does not register as a stage, so _tileOffset is 0 - 2 tiles + 1 refiner = 3). The earlier '9/9 twice' report was NOT a defect: that run had total_tiles=8 per logs/app.log, so 8 tiles + refiner = 9, and the two 9/9 sightings were the refiner's two steps (0/2 at 0:59, 1/2 at 1:17, matching log timestamps 21:51:23 and 21:51:38). It reads like a stall because the refiner is 2 steps at ~15s each on the full frame. That exact logged sequence is now replayed as a test case. Upscale quality also confirmed by the user: refiner makes raw usable and turbo much better. Suite tests/tile-post-pass-stage.test.cjs 7/7; negative controls 5/6 fail vs unfixed HEAD and 5/7 fail vs the first cut. Touched: js/services/phaseProgress.js, js/data/progressStages.js, js/services/commandExecutor.js, plus the synced workflow cards. Generated workflow files remain STAGED for mpi-end to commit."
-    },
-    {
-      "at": "2026-07-26T00:30:00Z",
-      "type": "task.progress",
-      "task": "MPI-351",
-      "note": "NEGATIVE CONTROL - did NOT reproduce on a clean run, which kills the pre-scale theory outright. Fresh source t2i_038 (768x1344), factor 1.5, Use Grid on: the staged asset handed to the graph measured 768x1344 (its TRUE size, hash 9d52e898...) and the output was 1152x2016 - exactly 1.5x. So media staging does NOT resize; a normal run stages the source at native size. That leaves the stale-reference path as the only remaining explanation for the four bad runs, which all pointed at hash 1ed8902c... measuring 1152x2016. Bug is TRIGGER-DEPENDENT, not always-on: a clean session upscales correctly, so repro needs the trigger (entry deletion in the lineage, possibly with a concurrent browser generation). Diagnostic that worked: compare generationSettings.mediaItems in the sidecar against the selected item's own file, and measure the staged asset's PNG header - the size of the staged file is the tell."
-    },
-    {
-      "at": "2026-07-26T00:05:00Z",
-      "type": "task.progress",
-      "task": "MPI-351",
-      "note": "User-reported context added, and it shifts the leading hypothesis. At the time of these runs the user (1) DELETED several upscale entries to make room to keep testing, and (2) at one point had a generation finishing in the ComfyUI browser while starting another in the app. (1) lines up with the MPI-225 comment above _opScopedMediaItems in generationService.js: a stale PromptBox media chip gets snapshotted into generationSettings.mediaItems and injects the wrong image, and the reference orphans once a card in that lineage is deleted. _opScopedMediaItems only filters chips whose mediaType the op does not declare - upscale DOES declare an image slot, so a stale image chip passes straight through and becomes Input_Image. That explains all four runs recording the same asset hash with a correct factor and a correct graph. (2) is unlikely alone: a one-off race would not produce the SAME hash at dispatch on four consecutive runs, so treat it as a possible aggravator. The earlier deliberate-pre-scale guess is SUPERSEDED - no code was found doing it and the stale-chip path explains the data without it; do not start from it. Repro plan in brief.md: check generationSettings.mediaItems in the new sidecar first, clean state vs after deleting a lineage entry."
-    },
-    {
-      "at": "2026-07-25T23:55:00Z",
-      "type": "task.created",
-      "task": "MPI-351",
-      "to": "todo",
-      "note": "Upscale op applies the factor TWICE - 1.5x on a 768x1344 source yields 1728x3024 (2.25x). Root is NOT the factor and NOT the workflow: Input_Upscale_Factor has exactly one writer (PromptBoxControls.upscaleFactor, injects the raw 1.5), the sidecars for upscale_013/014/015/016 all record 1.5, node 1657 feeds only MpiGridDimensions.upscale_factor and UltimateSDUpscale.upscale_by, and the user ran the same graph in the ComfyUI browser and got the correct size. The graph is fed the WRONG IMAGE: generationSettings.mediaItems points at Media/.preview-assets/1ed8902c...png which measures 1152x2016, i.e. the 768x1344 source already enlarged 1.5x. 1152x2016 * 1.5 = 1728x3024 exactly. t2i_039's own sidecar reports pixelDimensions 768x1344 and has no previewAssets, so that file is not a full-res twin - it exists only in the content-addressed staging store. All four runs used the same hash, consistent with a deterministic pre-scale of the same source at the same factor. UNPROVEN: which code writes the pre-scaled staged copy. Start there."
-    },
-    {
-      "at": "2026-07-25T23:15:00Z",
-      "type": "task.progress",
-      "task": "MPI-350",
-      "note": "Live app test caught a hole in the first progress fix. routes/comfy.js forwards the RAW tqdm value from 'USDU: t/T', so T tiles emit T+1 events (0/T .. T/T) - the last fires AFTER the final tile's inner bar. The first cut re-armed the post-tile detector on EVERY tile bar, so that trailing tick re-armed it after the last tile and the refiner never tripped it; app still read 1/1 on both stages. Guard is now 'if (tileIndex < tiles)' - arm only for a tile that will actually run. The original test called tile() once per tile and never modelled the trailing tick, so it passed against broken code: a WRONG test, not a thin one. It now models the tick explicitly. Also added the user's requested honest total: progressStages.js records 'krea2_upscaler.json': {postTile: 1} (no 'single' - the tile count is a runtime value that tile mode overrides), new postTileBarsFor() shares _baseKey with stagesFor, commandExecutor passes it into createStageProgress, and tile() uses _total = _tileOffset + tiles + _postTileBars. A blanket +1 in tile() was rejected because 7 of the 9 USDU cards have no refiner and would advertise a stage that never runs. Stage clamp in tile() also had to move from min(_total, ...) to min(_tileOffset + tiles, ...) or the trailing tick advances into the refiner slot early. Now: grid off 1/2 -> 2/2; grid on 4 tiles 1/5..4/5 -> 5/5; other upscalers unchanged. Test at 6 cases, all pass; TWO negative controls - vs unfixed HEAD 5 of 6 fail, vs the first cut 4 of 6 fail including both trailing-tick cases. eslint clean on all three touched modules. Verified: postTileBarsFor returns 1 for both krea2 upscaler variants and 0 for chroma/sdxl/pony/ill, stagesFor unregressed (krea2_t2i 2, ltx_t2v 3). Awaiting user re-test in the app."
-    },
-    {
-      "at": "2026-07-25T22:40:00Z",
-      "type": "task.progress",
-      "task": "MPI-350",
-      "note": "Refiner exposed a progress defect - FIXED in js/services/phaseProgress.js. progressStages.js was NOT the mechanism: phaseProgress.tile() overrides the total with the live tile count when UltimateSDUpscale's outer bar reports, so a static entry would be discarded on the first tile. Real bug was that tile mode was one-way - once _tileMode was set, step() only moved _percent and never advanced _stage, so the refiner's bar was swallowed and the fill ran 0-100 percent a second time while the readout sat on the last tile (reads as a stall at the end of every upscale). Rejected the simpler '_total = tiles + 1': it fixes the printed total but not the stall, and tile() is shared by all 9 USDU cards - the 7 without a refiner would advertise a stage that never runs. Fix counts inner bars since the last tile bar; USDU emits its tile bar before every tile's inner bar, so during tiling the counter resets each tile and only a post-tile pass reaches 2. On the second bar it leaves tile mode and falls through to the normal per-bar logic, which stages it and self-corrects the total. 1 tile -> 2/2, 4 tiles -> 5/5. tile() untouched, so tile counting is unchanged. Ceiling named in the comment: assumes one inner bar per tile, true while all 9 USDU cards run seam_fix_mode None (swept). Guarded by tests/tile-post-pass-stage.test.cjs, 5 cases, negative-control proven (3 of 5 fail against the unfixed module, 5/5 pass restored). eslint clean. Still NOT verified in the app."
-    },
-    {
-      "at": "2026-07-25T22:10:00Z",
-      "type": "task.created",
-      "task": "MPI-350",
-      "to": "doing",
-      "note": "Card opened directly in doing (in-progress). FIX for the Krea2 upscale op, which produced heavy noise - unusable on raw (turbo OFF) and only passable on turbo, because the accelerator (turbo distill) LoRA was applied in BOTH tiers. User reauthored the raw template (34 -> 38 nodes): new MpiIfElse 'is high tier' driven off the existing Input_Tier via MpiMath 'a == 1' now picks the UltimateSDUpscale model, so tier 1 runs the base model with no accelerator LoRA; and a refiner chain (VAEEncode -> ClownsharKSampler_Beta -> VAEDecode) was appended between the upscale and Output_image. The refiner deliberately runs on the accelerator-LoRA model in both tiers as a cheap 2-step polish - user-confirmed intentional. Blast radius verified zero: the moved node ids are unreferenced in js/ and routes/, injection is title-keyed, Output_image is unchanged, krea2Turbo already ships Input_Tier on the upscale command, upscalers are deliberately excluded from progressStages, and no new node types were introduced. Detail in brief.md."
-    },
-    {
-      "at": "2026-07-25T09:15:00Z",
-      "type": "task.created",
-      "task": "MPI-349",
-      "to": "todo",
-      "note": "Card opened in todo (idea). WATCH card for two RunPod announcements. Deploy-When-Available went GA 18 Jun 2026 but is CONSOLE-ONLY - verified against the live REST schema (POST /pods has no queue/schedule/subscription field) and our create path is REST plus the GraphQL podFindAndDeployOnDemand fallback, so nothing to hook; autoRetry (MPI-110) is our app-side equivalent and is safer on billing (never runs with the app closed) but loses the race to a real server-side reservation. Re-open when the field appears in a schema, and gate it behind explicit consent - not folded into autoRetry. Second half is the real signal: RunPod publicly steered users off network volumes and ruled out credits, and our remote engine is volume-pinned; the escape hatch already exists (R2 weights plus ephemeral Any-region pods, MPI-78) so the work is to MEASURE ephemeral-first, not build it. Also narrows the Vast.ai no-volumes red flag in MPI-344. Detail in brief.md."
-    },
-    {
-      "at": "2026-07-25T08:10:00Z",
-      "type": "attention.required",
-      "task": "MPI-346",
-      "note": "Session close-out. Node pinned at v1.2.2 and live-schema-gated; template rewiring converted, validated and baked (both cards 104 nodes, 0 dangling, injection surface 34->34 unchanged); describer scaffold intact. User exercised every Krea2 op in the node graph EXCEPT text-to-image. NOT verified: any app-level generation, fit_mode/ref_boost output effect, describer first-word behaviour end-to-end, remote engine drift reinstall. Card stays in doing at maturity validating."
-    },
-    {
-      "at": "2026-07-25T04:10:00Z",
-      "type": "task.created",
-      "task": "MPI-348",
-      "to": "todo",
-      "note": "Collaborative workflow-authoring track for the Krea2 swap family (face / head / character). User authors in the node graph, agent supplies krea2edit v1.2.2 semantics, graph topology and the measured regimes. Workflow proven in the graph BEFORE any App is built; app ideas that surface mid-authoring get their own cards. brief.md is a full working reference - node semantics, ref_boost two-regime rule, ref_boost_mask exact behaviour, the pose+edit topology finding, the untested two-LoRA gate, the div-16 rule, composite-vs-crop-stitch, and node ids. Target release v1.3 = the Apps release."
-    },
-    {
-      "at": "2026-07-25T03:50:00Z",
-      "type": "task.created",
-      "task": "MPI-347",
-      "to": "todo",
-      "note": "New App idea: localized edits on 4K/8K images via InpaintCrop/Stitch - mask a small region on a huge scene, sample only the crop, so a small character keeps its definition. Mechanism proven by the user on Qwen. Card carries the crop-stitch tone-patch trap and its root cause (context_from_mask_extend_factor 1.2 starves the model of scene context; feathering at 32px was already on when b3f9a018 gave up on the krea2 masked edit). Also records a dep-declaration defect: app_head_swap.json uses the inpaint classes but neither the app nor the qwen-edit card declares comfyui-inpaint-cropandstitch - only the Krea2 cards do. Static finding, not reproduced live."
-    },
-    {
-      "at": "2026-07-25T03:20:00Z",
-      "type": "task.created",
-      "task": "MPI-346",
-      "to": "doing",
-      "note": "Bump comfyui-krea2edit 17af8833 (v1.1) -> 223a9383 (v1.2.2). We already ship the v1.2 identity-edit weights but pinned the v1.1 nodes, so the v1.2 weights ran on legacy reference geometry. Unlocks vae+source_image pixel path, fit_mode, ref_boost / ref_boost_a / ref_boost_mask, GroundedEncode system_prompt, and the ref_latents wrapper tolerance ComfyUI 0.29 will require. Node is installRequirements:false so this is a lock-file edit only - no Pod image rebuild, the .mpi_node_commit drift ladder reinstalls on both engines. Workflow rewiring + live A/B owned by the user."
-    },
-    {
-      "at": "2026-07-25T00:30:00Z",
-      "type": "task.moved",
-      "task": "MPI-345",
-      "from": "doing",
-      "to": "done",
-      "note": "FIXED. Root cause: MpiBaseApp binds the global generation.run hotkey at setup, but closing an app only HID the overlay - the shell destroyed the instance only when a DIFFERENT app opened. HotkeyManager fires ALL handlers bound to an id, so the next Ctrl+Enter ran the PromptBox run AND the closed app _run, re-submitting the persisted s_appInputs. Explains every observation (same params, real prompt id, injector logged 8.5 min later = the phantom dispatched when the 1m41s Qwen edit drained the single remote lane). Fix: the app emits close outward and the shell DESTROYS the instance on it (every open remounts fresh), killing all stale listeners. Proven live on the real Electron shell by tests/desktop/app-close-destroys-instance.spec.js - passes with the fix, FAILS (Expected 0, Received 1) with both source files stashed. Blast radius swept: all 30 Hotkeys.bind sites; MpiBaseApp was the only hidden-but-alive holder of a global hotkey. Not re-staged end-to-end (needs a Pod + Head Swap session) - the mechanism is proven in both directions instead. Detail in validation.md."
-    },
-    {
-      "at": "2026-07-25T00:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-345",
-      "from": "todo",
-      "to": "doing",
-      "note": "Root cause found by code read (no repro needed): MpiBaseApp binds Hotkeys generation.run at SETUP, but closing an app only HIDES its overlay - the shell destroys the instance only when a DIFFERENT app opens. So the closed Head Swap app kept a live Ctrl+Enter handler; the next Ctrl+Enter in the main workspace fired BOTH the PromptBox run and the stale app _run, enqueuing a second job from the still-persisted s_appInputs. Fixing by destroying the app instance on close."
-    },
-    {
-      "at": "2026-07-24T01:20:00Z",
-      "type": "task.moved",
-      "task": "MPI-318",
-      "from": "doing",
-      "to": "done",
-      "note": "User-verified live 2026-07-24: single card dragged to an OS folder lands with its real Media-folder filename; drag-to-prompt still works (the thing the prior attempt broke). Shipped via Chromium DownloadURL alongside application/mpi-media on the same HTML5 drag — no preventDefault/startDrag/IPC, one file touched (MpiGalleryGrid.js). Multi-select export dropped by user (DownloadURL is single-file). Changelog fix added to UNRELEASED.md; gallery.md documents the two-consumer dragstart contract. validation.md represents PASS."
-    },
-    {
-      "at": "2026-07-24T01:11:59Z",
-      "type": "task.moved",
-      "task": "MPI-318",
-      "from": "todo",
-      "to": "doing",
-      "note": "Drag-out to file system. Routed the docs first (gallery.md, events.md, components.md) per the brief. Root of the prior revert confirmed: preventDefault on the shared card dragstart kills the HTML5 drag that in-app drag-to-prompt rides (consumers: MpiPromptBox getData, MpiGalleryBlock/MpiGroupHistoryBlock types-sniff). User scoped it to SINGLE-card only (dropped multi-select to avoid the startDrag+IPC surface). Fix = Chromium DownloadURL type set ALONGSIDE application/mpi-media on the same drag, NO preventDefault, NO startDrag, NO IPC, NO main.js change. Real media-folder filename via extractFilenameFromPath. In-app drag physically cannot break. Awaiting live drag-to-Explorer verification (DownloadURL drop-to-target behavior in this Electron build is the one unverified bit)."
-    },
-    {
-      "at": "2026-07-23T21:40:00Z",
-      "type": "task.moved",
-      "task": "MPI-342",
-      "from": "doing",
-      "to": "done",
-      "note": "ComfyUI v0.27->v0.28 wave COMPLETE + user-approved for done. All 5 phases verified: pins (4 sites), dev image build both legs green, MPI-341's 4 checks, MPI-340 build-gated dev-tag leg (both legs pulled live), workflow sweep on 0.28. Stable pins untouched; released users unaffected."
-    },
-    {
-      "at": "2026-07-23T21:40:00Z",
-      "type": "task.moved",
-      "task": "MPI-341",
-      "from": "doing",
-      "to": "done",
-      "note": "Pod build hardening COMPLETE + user-approved for done. All 4 checks: smoke layer green on clean dev build, unpin-kornia proof RED at smoke layer (LTXVideo IMPORT FAILED, run 30028617382), +cu130 trio + constraints.txt in final image, one LTX gen on dev Pod. The load-bearing grep gate is proven to bite."
-    },
-    {
-      "at": "2026-07-23T06:34:00Z",
-      "type": "task.updated",
-      "task": "MPI-340",
-      "note": "Scope extended (user): the dev/stable split must land in docs, rules and skills, not just code. Grep-verified blast radius added to brief: CLAUDE.md:74 (Context Router row - highest-traffic instruction, currently teaches 'publish-runtime.sh stable' as THE way to ship a runtime edit), docs/runpod-remote-engine.md s5+s6, docs/builder/02-image-and-rebuild.md:100, .claude/commands/build-pod-image.md:123+94, .claude/rules/comfy_engine.md:291, docs/runpod-troubleshooting.md (4 mentions), mpi-ci/cubric-vision-pod/README.md 'Runtime externalize', plus a dos_and_donts.md one-liner. KEY FINDING: mpi-release/SKILL.md and mpi-version-bump/SKILL.md have ZERO Pod awareness today (grep-verified) - harmless with one channel, but this card creates the hazard, so mpi-release gains a Preconditions drift check (curl dev vs stable manifest.json, compare the sha256 fields they already carry) that STOPS and asks the user to promote or confirm deliberate non-shipping. Never auto-promote in the release flow - live op affecting released users, same class as git push. mpi-version-bump deliberately unchanged: app version and Pod runtime are separate artifacts on separate cadences."
-    },
-    {
-      "at": "2026-07-23T06:22:00Z",
-      "type": "task.updated",
-      "task": "MPI-340",
-      "note": "Moved to TOP of todo (user) - MPI-340 unblocks MPI-333/MPI-329 (both likely land fixes in wrapper.py, which currently publishes straight to the 'stable' channel released users boot). Brief extended: the dev/user split for wrapper.py + start.sh is the CHANNEL, not duplicate wrapper.dev.py files (git versions the file, the channel versions the deploy). Added a 'publish-runtime.sh promote' verb that rclone-copies vision/dev/* -> vision/stable/* server-side so promotion ships the EXACT bytes tested on dev, refusing on a working-tree/dev sha mismatch (the script already emits per-file sha256 in manifest.json). Runtime promote and image bump are independent paths."
-    },
-    {
-      "at": "2026-07-23T06:09:34Z",
-      "type": "task.created",
-      "task": "MPI-340",
-      "note": "Dev Pod images (GPU + CPU) + dev R2 runtime channel, both gated on the EXISTING server-side _devMode (remotePodLifecycle.js:37). 1.1.0 is released and every released app pins the same image tag AND the same 'stable' runtime channel, so publish-runtime.sh stable reaches real users on their next Pod boot. No new Dockerfile, no CI change (manifest_version=0.17.0-dev already yields v0.17.0-dev-cu130). Safety substrate for MPI-333 / MPI-329 / MPI-341."
-    },
-    {
-      "at": "2026-07-23T06:09:34Z",
-      "type": "task.created",
-      "task": "MPI-341",
-      "note": "Adopt two build practices from YanWenKun/ComfyUI-Docker: (1) RUN --quick-test-for-ci --cpu after the node bake so an import failure fails the BUILD (the MPI-149 kornia/LTXVideo class that shipped and died live as Node Stage1_Bypass not found; also automates the hand-run '8 nodes register' gate from MPI-139); (2) pip constraints file pinning the cu130 trio so torch drift is unresolvable, with the MPI-244 assert kept as the belt. Blocked on MPI-340 - build to the dev tag, never rebuild released v0.16.0."
-    },
-    {
-      "at": "2026-07-22T06:15:59.000Z",
-      "type": "cleanup",
-      "note": "mpi-cleanup: archived 3 orphaned deleted-status task workspaces (MPI-251, MPI-288, MPI-290) to tasks/_archived/ (not in any board column). Swept all handoff records to state/archive/handoffs/ and emptied index.json active_handoffs (no active sessions; all done). MPI-242 acknowledged message kept."
-    },
-    {
-      "at": "2026-07-22T06:15:59.000Z",
-      "type": "task.moved",
-      "task": "MPI-337",
-      "from": "doing",
-      "to": "done",
-      "note": "User-verified live: LTX (t2v_ms/i2v_ms) passed — validates wan-22 (same ops); wan22-5b covered by automated test. Image/KREA/History/Gallery behavior confirmed working earlier this session. 6 code files shipped; docs+rules future-proofed (data-driven gating documented in playbooks + generation-lifecycle + component-events)."
-    },
-    {
-      "at": "2026-07-22T05:17:08.000Z",
-      "type": "task.moved",
-      "task": "MPI-337",
-      "from": "todo",
-      "to": "doing",
-      "note": "Starting implementation of approved Option A change set (kill force-DOWN, add requiresMask guard, radial show-all-dimmed)."
-    },
-    {
-      "at": "2026-07-22T05:09:33.000Z",
-      "type": "task.updated",
-      "task": "MPI-338",
-      "note": "Compact plan attached (idea -> planned). Reuse the single radial instance: add a 'dev' CONTEXTS context + Ctrl+Tab hold in MpiRadialMenu, move Apps/Restart-Engine off the main radial's extraItems, gate on APP_CONFIG.dev_mode. Verify mode user-ux."
-    },
-    {
-      "at": "2026-07-22T05:06:43.000Z",
-      "type": "task.updated",
-      "task": "MPI-337",
-      "note": "Compact plan attached (idea -> planned). Single change set: kill force-DOWN in _refreshOpOptions + _emitMediaChange, add requiresMask generate-time guard+toast, radial show-all-dimmed. Verify mode user-ux. Say 'continue this plan' to start."
-    },
-    {
-      "at": "2026-07-22T04:59:57.000Z",
-      "type": "task.created",
-      "task": "MPI-338",
-      "note": "Split off from the MPI-337 brainstorm: dev-only Ctrl+Tab radial holding the dev extraItems (Apps, Restart Engine) so main-radial Tab shows operations only (clean tutorials + tidiness). Gated behind APP_CONFIG.dev_mode. Dev items already sit after ops, so this is not about op-position memory (that lands in MPI-337)."
-    },
-    {
-      "at": "2026-07-22T04:59:57.000Z",
-      "type": "task.updated",
-      "task": "MPI-337",
-      "note": "Brainstorm complete — approved Option A. Op changes only on media-add force-UP + Reuse; a lost requirement (mask/media removed, maskless card) never switches, op stays selected, Run toasts the missing input. Change set: kill _refreshOpOptions fallback (detail->upscale bug) + _emitMediaChange force-DOWN branch; add requiresMask generate-time guard+toast; radial show-all-dimmed (stop filtering disabled, new dimmed non-selectable MpiRadialMenu item state). Run = toast-on-click (reuse existing). Dev Ctrl+Tab radial split to MPI-338."
-    },
-    {
-      "at": "2026-07-22T04:51:11.717Z",
-      "type": "task.moved",
-      "task": "MPI-336",
-      "from": "doing",
-      "to": "done",
-      "note": "User-verified live: changed every perModel+shared control, all restored on Reuse. Scope-driven persistence fix + scope-contract playbook doc shipped."
-    },
-    {
-      "at": "2026-07-22T04:39:51.031Z",
-      "type": "task.updated",
-      "task": "MPI-336",
-      "note": "Structural root-cause fix: perModel control persistence/snapshot/reuse is now scope-driven (no hand-maintained key-lists). Dispatch-time wholesale controlState snapshot + modelWide-flag write guard + new scope-contract playbook doc. Round-trip test PASS; live reuse test pending."
-    },
-    {
-      "at": "2026-07-22T03:42:06.912Z",
-      "type": "task.moved",
-      "task": "MPI-336",
-      "note": "todo/idea -> doing/validating: krea2Turbo now snapshotted into sidecar controlState.model (generationService) + restored on legacy reuse path (promptReuse). Root cause = perModel key missing from both snapshot loops. Live reuse test pending."
-    },
-    {
-      "at": "2026-07-22T01:30:00Z",
-      "type": "task.created",
-      "task": "MPI-335",
-      "note": "Publish the 1.1.0 GitHub release - prep DONE + delta update proven live; only tag-move + Gate 2 + publish remain. Deferred to a later session (user). Run mpi-release."
-    },
-    {
-      "at": "2026-07-22T00:56:00Z",
-      "type": "task.created",
-      "task": "MPI-333",
-      "note": "RunPod post-install model VERIFY takes longer than the download (portable 1.1.0 install test). Verify tile sits on 'Verifying...' longer than the download bar took. Suspect a full SHA256 re-read off the network volume post-land vs hash-while-streaming (local does this, MPI-296). Moved to TOP of todo (user priority). Distinct from MPI-329 cold model-LOAD."
-    },
-    {
-      "at": "2026-07-21T20:25:00Z",
-      "type": "task.created",
-      "task": "MPI-332",
-      "note": "Rip 3 deprecated test apps (image-regen/sdxl-4k/video-stitch), keep Head Swap. 8-touchpoint blast-radius map grep-verified in card. Carded now, code deferred (user)."
-    },
-    {
-      "at": "2026-07-21T20:20:00Z",
-      "type": "task.moved",
-      "task": "MPI-306",
-      "from": "doing",
-      "to": "done",
-      "note": "App-UI foundation complete: step-carousel frame + STEP_KINDS shipped/verified; Head Swap shipped, user-verified local + remote-proven (MPI-324). Phase 3 hold-until-Apply was built (bcbe161f) then reverted on the UX pass (results save themselves) - card was stale describing a removed phase, nothing left to verify."
-    },
-    {
-      "at": "2026-07-21T20:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-315",
-      "from": "doing",
-      "to": "done",
-      "note": "Board cleanup: log-architecture shipped + user-verified; only untracked leftover (MPI-147 progress-tick) lives elsewhere."
-    },
-    {
-      "at": "2026-07-21T20:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-299",
-      "from": "doing",
-      "to": "done",
-      "note": "Board cleanup: Head Swap umbrella closed - wiring + node-lock shipped, remote-proven in MPI-324 sweep; residuals split to MPI-306 (UI) + MPI-325 (box pad)."
-    },
-    {
-      "at": "2026-07-21T20:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-308",
-      "from": "doing",
-      "to": "done",
-      "note": "Board cleanup: image_descriptor dev harness + Describe-Image radial shipped; abliterated encoder (MPI-311, 1.2.0) cleared the refusal blocker."
-    },
-    {
-      "at": "2026-07-21T20:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-312",
-      "from": "todo",
-      "to": "archived",
-      "note": "Archived to tasks/_archived/MPI-312; migrated to Cubric Studio (Docs) MPI-10. Krea2 reference-order is user documentation, not an app change - the Vision wiring is correct."
-    },
-    {
-      "at": "2026-07-21T20:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-313",
-      "from": "todo",
-      "to": "archived",
-      "note": "Archived to tasks/_archived/MPI-313; migrated to Cubric Studio (Docs) MPI-11. Two-subjects-in-one-pass is a documented Krea2 model limitation with a chained-pass workaround - docs content, nothing to build."
-    },
-    {
-      "at": "2026-07-21T20:00:00Z",
-      "type": "task.updated",
-      "task": "MPI-330",
-      "note": "Escalated to release-blocker (user). release-blocker + bug added to labels (maturity stays idea - not yet started). Traces to the recent chip-repositioning feature stranding the required Input_Image slot; must fix before release. Moved to top of todo."
-    },
-    {
-      "at": "2026-07-21T19:45:00Z",
-      "type": "task.moved",
-      "task": "MPI-331",
-      "from": "doing",
-      "to": "done",
-      "note": "Collapsed 3 release skills into one GitHub-only mpi-release (+ build-dispatch/copy-review refs). Deleted mpi-merge-branches/apply-patch/release-public/release-shared. Updated mpi-version-bump, mpi-end step 3, docs/releases/* (README, portable-contract, github-checklist), docs/README.md map, kanban index; deleted patch-distribution.md; bannered app-update-strategy.md. macos-x64 dropped (arm64-only), R2/Cloudflare stripped from release docs. Auto-verified; user-confirmed on close."
-    },
-    {
-      "at": "2026-07-21T19:20:00Z",
-      "type": "task.moved",
-      "task": "MPI-331",
-      "from": "todo",
-      "to": "doing",
-      "note": "Implementation started: collapse 3 release skills -> one GitHub-only mpi-release. User approved forks: fold shared lib into new skill, GitHub release carries full + update bundles, delete patch-distribution.md + banner app-update-strategy.md."
-    },
-    {
-      "at": "2026-07-21T18:50:00Z",
-      "type": "task.created",
-      "task": "MPI-331",
-      "note": "Next-session: collapse the 3 release skills into one GitHub-only release skill (2nd digit = features, 3rd = fixes, same op) + update CLAUDE.md/versioning docs. Handoff c85c2cfe-43bf-4023-b725-fc7ab3cbcddb."
-    },
-    {
-      "at": "2026-07-21T18:45:00Z",
-      "type": "task.moved",
-      "task": "MPI-324",
-      "from": "doing",
-      "to": "done",
-      "note": "RunPod validation sweep COMPLETE (1.1.0 release gate). MPI-282/300/310 remote-proven, MPI-326 fix verified; Head Swap residual tracked on MPI-299/306/325. Closed at 1.1.0 release close-out."
-    },
-    {
-      "at": "2026-07-21T18:45:00Z",
-      "type": "task.moved",
-      "task": "MPI-327",
-      "from": "doing",
-      "to": "done",
-      "note": "Public 1.1.0 changelog aggregation shipped; version-rename landed on master; drag-drop-import wording corrected to LoRA/upscale only. release:check green."
-    },
-    {
-      "at": "2026-07-21T18:25:00Z",
-      "type": "task.created",
-      "task": "MPI-330",
-      "note": "Removing a non-last image chip may strand the required Input_Image -> Qwen-Edit silently returns no output. Local engine healthy, NOT the MPI-326 fix. Primary hypothesis: chip-slot repack (project_media_slots_addressable_never_packed); secondary: stale Pod path. Deterministic repro + code entry points in card. Non-blocking for 1.1."
-    },
-    {
-      "at": "2026-07-21T18:15:00Z",
-      "type": "task.moved",
-      "task": "MPI-310",
-      "from": "doing",
-      "to": "done",
-      "note": "Remote PASS (RTX PRO 4000, MPI-324 sweep). Full shared-dep guard lifecycle: inverse-GC kept encoder on Krea uninstall (2->1 holder), describe from gallery+history landed caption, negative-flip correct, uninstall freed 5.24GB (104.2->99GB) + row flipped to Install after refresh. Both engine twins proven. Core deliverable + plugin entity + GC guard complete; stale destructive-bug attention cleared. Deferred step5 video-describe=MPI-287, plugin-row download-mode race=MPI-320."
-    },
-    {
-      "at": "2026-07-21T18:05:00Z",
-      "type": "task.moved",
-      "task": "MPI-300",
-      "from": "doing",
-      "to": "done",
-      "note": "Remote PASS (RTX PRO 4000 Pod, MPI-324 sweep). Tier radio (all 3), 2-image combine (Head Swap), 3rd chip Input_Image_3 (injects local + remote - chip-3-unique blue-hair girl landed in qwenEdit_005 remote AND qwenEdit_003 local; graph wiring traced correct not crossed), style rack (3 styles remote). Caveat: scene + 2 distinct subjects in one pass is model-unstable (keeps one, morphs other) - same family as Krea2 2-subject limit, mitigation = chain per MPI-313. Injection correct; instability is the transformer."
-    },
-    {
-      "at": "2026-07-21T17:55:00Z",
-      "type": "task.created",
-      "task": "MPI-329",
-      "note": "Perf: remote cold model-load ~2min per swap vs ~14s warm (RTX PRO 4000, MPI-324 sweep). Per-model cold cost, consistent Krea2/Chroma. User caveat: may just be a weak inference card - retest on mainstream GPU. Not a 1.1 blocker."
-    },
-    {
-      "at": "2026-07-21T17:50:00Z",
-      "type": "task.moved",
-      "task": "MPI-326",
-      "from": "doing",
-      "to": "done",
-      "note": "Remote runtime PASS (RTX PRO 4000 Pod, MPI-324 sweep). Idle-connected: Network models filter 0/32 over 20s (no 5s models/status poll - Fix A), op dropdown stayed open, Denoise slider held 0.71 with no snap-back. Root killed at source. Fix A+B committed js/shell.js + js/data/modelRegistry.js."
-    },
-    {
-      "at": "2026-07-21T16:55:00Z",
-      "type": "task.created",
-      "task": "MPI-327",
-      "note": "Aggregate 1.1.0 + 1.1.1 + UNRELEASED.md into the public 1.2.0 changelog (GitHub skips 1.1). NOT simple concat - dedup bug-fix overlap between 1.1 and 1.2 (download queue). Curate for first-time users. Handoff: state/handoffs/f7677602-e881-4c74-b412-666604cf366b.json."
-    },
-    {
-      "at": "2026-07-21T16:55:00Z",
-      "type": "task.created",
-      "task": "MPI-328",
-      "note": "Remote models/check fails OPEN: remoteModels.js:325 defaults wrapper-omitted models to installed:true + :339 vacuous [].every(). Observed 1.1.1 CPU download Pod (booting wrapper -> 5 models falsely installed, no download). Lines present in 1.2.0. Adjacent to MPI-326. Fix: default false + guard every."
-    },
-    {
-      "at": "2026-07-21T16:50:00Z",
-      "type": "task.moved",
-      "task": "MPI-326",
-      "from": "todo",
-      "to": "doing",
-      "note": "Root VERIFIED + fix A+B IMPLEMENTED for 1.2 (user go). A: edge-guard the sync at shell.js:1370. B: diff-gate the models:checked emit at modelRegistry.js:218. node --check clean; all reSyncInstalledModels callers swept safe. maturity=validating pending remote runtime proof on a Pod. Files uncommitted."
-    },
-    {
-      "at": "2026-07-21T15:55:00Z",
-      "type": "task.moved",
-      "task": "MPI-282",
-      "from": "doing",
-      "to": "done",
-      "note": "RunPod remote pass (MPI-324 sweep, RTX 2000). Krea2 t2i/i2i/depth/upscale/masked edit + 2-character edit all clean; accel LoRA resolved (no silent degrade); backslash LoRA path worked on Linux. Step count result-verified not console-counted."
-    },
-    {
-      "at": "2026-07-21T15:35:00Z",
-      "type": "task.created",
-      "task": "MPI-326",
-      "note": "Remote op-dropdown flashes + auto-closes on a ~1s models:checked rebuild storm. Defect B confirmed (PromptBox _refreshOpDropdown rebuilds unconditionally; Model Library already guards the same). Defect A hypothesis (remote:connection connected-edge flapping during Pod init re-fires syncModelInstalled). Surfaced in MPI-324 sweep. Scope 1.2-blocker vs 1.3 pending user."
-    },
-    {
-      "at": "2026-07-21T15:15:00Z",
-      "type": "task.moved",
-      "task": "MPI-309",
-      "from": "doing",
-      "to": "done",
-      "note": "Remote-proven on RTX 2000 Pod (MPI-324 sweep). Wrapper reinstalled MpiNodes aaa1d2d on connect; app_head_swap.json ran with no unknown-node rejection; box crop followed a user resize; correct swap saved. Hyper = 4 steps. node_lock.json ready to commit at close."
-    },
-    {
-      "at": "2026-07-21T15:15:00Z",
-      "type": "task.created",
-      "task": "MPI-325",
-      "note": "Head Swap: allow the target/reference box to extend OUTSIDE the frame and auto-pad that edge, keeping the box square. Surfaced during MPI-324 Head Swap validation - an edge-adjacent head cannot capture full hair with an in-frame square without grabbing the neighbour (caused the first-run fail). Pad, do not shrink. Workflow/UX improvement, not a v1.2 blocker."
-    },
-    {
-      "at": "2026-07-21T13:00:00Z",
-      "type": "task.created",
-      "task": "MPI-324",
-      "note": "RunPod validation sweep umbrella (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap. MPI-198 deferred."
-    },
-    {
-      "at": "2026-07-21T13:00:00Z",
-      "type": "task.moved",
-      "task": "MPI-309",
-      "from": "todo",
-      "to": "doing",
-      "note": "node_lock MpiNodes pin bumped ba9e156 -> aaa1d2d (1.2.6 adds MpiBox/MpiBoxCrop/MpiBoxMask/MpiFromBox, pure superset). Code done; maturity validating pending Pod-connect proof the wrapper reinstalled the new commit. Folded into MPI-324 Phase 0."
-    },
-    {
-      "at": "2026-07-21T12:00:00Z",
-      "type": "task.created",
-      "task": "MPI-323",
-      "note": "Evaluate FLUX.2 Klein 4B (Apache 2.0) for masked object/text removal. Fill dev + Klein 9B ruled out non-commercial. Outpainting already solved via black-border + edit models. Cheaper pre-test: does Krea2 masked-edit (MPI-282) already remove on empty prompt?"
-    },
-    {
-      "at": "2026-07-20T20:10:00Z",
-      "type": "task.created",
-      "task": "MPI-318",
-      "note": "Carded after a failed attempt on 2026-07-20 was fully reverted. Native Electron drag-out (startDrag) worked - real filenames, multi-file drop - but the e.preventDefault() it required killed the shared HTML5 dragstart that in-app drops ride on, so dragging cards inside the library stopped reaching the prompt and landed as imported cards. Reverted all three files to HEAD; tree clean, nothing shipped. Root process failure: skipped the Context Router (components.md / gallery.md / events.md) and never asked what else consumed that dragstart. Card instructs the next agent to read the docs FIRST. Open and unexplained: pressing Cancel on the Windows file-conflict dialog exited the app, with no trace in app.log because main.js has no render-process-gone or uncaughtException handler."
-    },
-    {
-      "at": "2026-07-19T23:55:00Z",
-      "type": "task.created",
-      "task": "MPI-316",
-      "note": "Test-first card: does RAW + a speed-up LoRA match the Turbo transformer? If yes, drop ~24.5GB of Turbo weights and move Krea2 to the Qwen-Edit runtime tier-radio shape. Negative-prompt gating is currently structural (cfg 1 discards it) and would be LOST in a single-card collapse - flagged in the card as a design decision."
-    },
-    {
-      "at": "2026-07-19T22:30:00Z",
-      "type": "task.moved",
-      "task": "MPI-315",
-      "from": "todo",
-      "to": "doing",
-      "note": "Picked up. Decision: aggressive source-filter of ComfyUI stdout (user has terminal access for INFO detail), delete destructive startup line-trim, gitignore logs/. Reporter 2000-char slice UNCHANGED (user: expanding it breaks GitHub issue creation, already empirically trimmed). R2-upload idea explicitly parked."
-    },
-    {
-      "at": "2026-07-19T18:45:00Z",
-      "type": "task.created",
-      "task": "MPI-314",
-      "note": "Orphaned-dep reclaim — 19GB B1-era LTX shared deps, no owner, no UI delete path."
-    },
-    {
-      "at": "2026-07-19T21:00:00Z",
-      "type": "task.created",
-      "task": "MPI-315",
-      "note": "Log architecture — split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
-    },
-    {
-      "at": "2026-07-19T21:30:00Z",
-      "type": "task.moved",
-      "task": "MPI-310",
-      "note": "doing -> todo (validating). Shared-dep bug fixed + user-verified locally; RunPod validation deferred."
-    },
-    {
-      "at": "2026-07-20T17:20:00Z",
-      "type": "task.moved",
-      "task": "MPI-317",
-      "note": "Created in doing/investigating - local download reliability: failed-download resume, single-stream throughput ceiling, speed/ETA feedback."
-    },
-    {
-      "at": "2026-07-23T07:10:00Z",
-      "type": "task.moved",
-      "task": "MPI-340",
-      "note": "todo -> doing: implementing dev Pod image tags + dev R2 runtime channel (dev_mode-gated) + publish-runtime.sh promote verb + the docs/rules/skills sweep."
-    },
-    {
-      "at": "2026-07-23T08:05:00Z",
-      "type": "task.updated",
-      "task": "MPI-340",
-      "note": "Code + docs shipped; moved to validating (needs live Pod verify + dev-channel seed)."
-    },
-    {
-      "at": "2026-07-23T08:40:00Z",
-      "type": "task.updated",
-      "task": "MPI-340",
-      "note": "build-pod-image dev/release flow wired in; MPI-119 version-guard contradiction fixed; section-6 CUDA drift corrected."
-    },
-    {
-      "at": "2026-07-23T08:50:00Z",
-      "type": "task.updated",
-      "task": "MPI-340",
-      "note": "Live-verified: GPU + CPU Pods both boot the dev runtime channel. Remaining: released-build stable assertion + one real promote."
-    },
-    {
-      "at": "2026-07-23T09:05:00Z",
-      "type": "task.moved",
-      "task": "MPI-342",
-      "note": "Created in todo, directly after MPI-341 - both are baked-layer changes that ship in ONE dev image build."
-    },
-    {
-      "at": "2026-07-23T09:35:00Z",
-      "type": "task.moved",
-      "task": "MPI-343",
-      "note": "Created at the BOTTOM of todo (user: not a priority). Research-only idea surfaced by the 0.28 notes."
-    },
-    {
-      "at": "2026-07-23T10:20:00Z",
-      "type": "task.moved",
-      "task": "MPI-341",
-      "note": "todo -> doing: Dockerfile guards implemented in mpi-ci/cubric-vision-pod/Dockerfile - (1) node-import smoke test AFTER the MPI-244 assert, with a grep for IMPORT FAILED because --quick-test-for-ci exits 0 even when a custom node fails to import (verified in main.py at v0.27.0 AND v0.28.0 - the brief's bare RUN would have been vacuously green); (2) constraints file emitted from pip list after the cu130 trio install plus ENV PIP_CONSTRAINT so every later pip call (node bake, kornia pin, runtime wrapper installs) cannot resolve a non-cu130 torch. Docs recorded in docs/builder/02-image-and-rebuild.md. Left: the dev-tag CI build (rides with MPI-342) plus the unpin-kornia proof that the smoke test bites."
-    },
-    {
-      "at": "2026-07-23T11:05:00Z",
-      "type": "task.deleted",
-      "task": "(bulk)",
-      "note": "mpi-archive: archived 84 done tasks to tasks/_archived/ (workspaces preserved, per-task task.deleted events logged). Held back MPI-263/308/315 (attention required) and MPI-243 (open message ff4e8854)."
-    },
-    {
-      "at": "2026-07-23T11:30:00Z",
-      "type": "task.updated",
-      "task": "MPI-342",
-      "note": "FINAL STAGE added (user): 342 carries the only Pod rebuild, so it must close the verification of MPI-341 (4 checks incl. the unpin-kornia proof that the smoke test bites) and MPI-340's build-gated dev-image-tag leg. MPI-340's other two open items are explicitly NOT build-gated."
-    },
-    {
-      "at": "2026-07-23T11:55:00Z",
-      "type": "attention.required",
-      "task": "MPI-341",
-      "note": "Session close-out: implementation committed (mpi-ci 41a5517) but unbuilt; all verification is gated on MPI-342's user-authorized dev-tag build."
-    },
-    {
-      "at": "2026-07-23T21:41:33.041Z",
-      "type": "task.moved",
-      "task": "MPI-329",
-      "from": "doing",
-      "to": "done",
-      "note": "shipped f7e42376: switch-tax fix (HOT_STORE_MIN_GB 0.1) + dynamic disk (volume-mirror) + VRAM-relative stage skip + stage-on-connect toggle; live-verified on a 4090 (switch 80s->9s, LTX streams)"
-    },
-    {
-      "at": "2026-07-24T02:53:48Z",
-      "type": "task.moved",
-      "task": "MPI-340",
-      "from": "doing",
-      "to": "done",
-      "note": "Last item (dev->stable runtime promote) done this session: ran publish-runtime.sh promote, stable manifest now wrapper 0.2.38 (de748061). Dev/stable split shipped in v1.2.0. mpi-release Preconditions drift-check exercised end-to-end (caught this promote + the pod-image 0.28 pin)."
-    }
+ "schema": "mpi-kanban/board/v1",
+ "next_id": 362,
+ "columns": {
+  "todo": [
+   "MPI-361",
+   "MPI-360",
+   "MPI-358",
+   "MPI-357",
+   "MPI-355",
+   "MPI-351",
+   "MPI-325",
+   "MPI-332",
+   "MPI-320",
+   "MPI-289",
+   "MPI-323",
+   "MPI-322",
+   "MPI-294",
+   "MPI-302",
+   "MPI-198",
+   "MPI-249",
+   "MPI-183",
+   "MPI-339",
+   "MPI-343",
+   "MPI-344",
+   "MPI-347",
+   "MPI-348",
+   "MPI-349"
+  ],
+  "doing": [
+   "MPI-356",
+   "MPI-354",
+   "MPI-346",
+   "MPI-259",
+   "MPI-4"
+  ],
+  "done": [
+   "MPI-359",
+   "MPI-353",
+   "MPI-352",
+   "MPI-350",
+   "MPI-345",
+   "MPI-340",
+   "MPI-318",
+   "MPI-333",
+   "MPI-329",
+   "MPI-342",
+   "MPI-341",
+   "MPI-315",
+   "MPI-308",
+   "MPI-263",
+   "MPI-243"
   ]
+ },
+ "updated_at": "2026-07-27T00:00:00Z",
+ "events": [
+  {
+   "at": "2026-07-26T00:45:00Z",
+   "type": "task.validated",
+   "task": "MPI-350",
+   "note": "TIER-1 BRANCH NOW VERIFIED LIVE - both sides of the MpiIfElse gate confirmed. Non-turbo upscale of t2i_038 (768x1344) produced upscale_018 at 1152x2016 (correct 1.5x) with stages 1/3 -> 2/3 -> 3/3 (2 tiles + refiner). This is the first run to take the 'is high tier' TRUE path: Input_Tier 1 -> MpiMath 'a == 1' true -> node 1685 FromBasicPipe base model, no accelerator LoRA on the UltimateSDUpscale tiles, refiner still distilled. Every earlier upscale sidecar recorded Input_Tier 2, so only the false path had been exercised until now. Tile stages were visibly slower than the turbo runs while the refiner stage stayed quick - the expected asymmetry of the gate. User also ran a side-by-side compare of upscale_017 (turbo) vs upscale_018 (non-turbo) and accepted both. Card was already done/complete; this closes the last unexercised path in the template rewire."
+  },
+  {
+   "at": "2026-07-26T00:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-350",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED LIVE, both halves. Progress: grid off read 1/2 during the tile then 2/2 on the refiner; grid on with 2 tiles read 2/3 then 3/3 (load bar does not register as a stage, so _tileOffset is 0 - 2 tiles + 1 refiner = 3). The earlier '9/9 twice' report was NOT a defect: that run had total_tiles=8 per logs/app.log, so 8 tiles + refiner = 9, and the two 9/9 sightings were the refiner's two steps (0/2 at 0:59, 1/2 at 1:17, matching log timestamps 21:51:23 and 21:51:38). It reads like a stall because the refiner is 2 steps at ~15s each on the full frame. That exact logged sequence is now replayed as a test case. Upscale quality also confirmed by the user: refiner makes raw usable and turbo much better. Suite tests/tile-post-pass-stage.test.cjs 7/7; negative controls 5/6 fail vs unfixed HEAD and 5/7 fail vs the first cut. Touched: js/services/phaseProgress.js, js/data/progressStages.js, js/services/commandExecutor.js, plus the synced workflow cards. Generated workflow files remain STAGED for mpi-end to commit."
+  },
+  {
+   "at": "2026-07-26T00:30:00Z",
+   "type": "task.progress",
+   "task": "MPI-351",
+   "note": "NEGATIVE CONTROL - did NOT reproduce on a clean run, which kills the pre-scale theory outright. Fresh source t2i_038 (768x1344), factor 1.5, Use Grid on: the staged asset handed to the graph measured 768x1344 (its TRUE size, hash 9d52e898...) and the output was 1152x2016 - exactly 1.5x. So media staging does NOT resize; a normal run stages the source at native size. That leaves the stale-reference path as the only remaining explanation for the four bad runs, which all pointed at hash 1ed8902c... measuring 1152x2016. Bug is TRIGGER-DEPENDENT, not always-on: a clean session upscales correctly, so repro needs the trigger (entry deletion in the lineage, possibly with a concurrent browser generation). Diagnostic that worked: compare generationSettings.mediaItems in the sidecar against the selected item's own file, and measure the staged asset's PNG header - the size of the staged file is the tell."
+  },
+  {
+   "at": "2026-07-26T00:05:00Z",
+   "type": "task.progress",
+   "task": "MPI-351",
+   "note": "User-reported context added, and it shifts the leading hypothesis. At the time of these runs the user (1) DELETED several upscale entries to make room to keep testing, and (2) at one point had a generation finishing in the ComfyUI browser while starting another in the app. (1) lines up with the MPI-225 comment above _opScopedMediaItems in generationService.js: a stale PromptBox media chip gets snapshotted into generationSettings.mediaItems and injects the wrong image, and the reference orphans once a card in that lineage is deleted. _opScopedMediaItems only filters chips whose mediaType the op does not declare - upscale DOES declare an image slot, so a stale image chip passes straight through and becomes Input_Image. That explains all four runs recording the same asset hash with a correct factor and a correct graph. (2) is unlikely alone: a one-off race would not produce the SAME hash at dispatch on four consecutive runs, so treat it as a possible aggravator. The earlier deliberate-pre-scale guess is SUPERSEDED - no code was found doing it and the stale-chip path explains the data without it; do not start from it. Repro plan in brief.md: check generationSettings.mediaItems in the new sidecar first, clean state vs after deleting a lineage entry."
+  },
+  {
+   "at": "2026-07-25T23:55:00Z",
+   "type": "task.created",
+   "task": "MPI-351",
+   "to": "todo",
+   "note": "Upscale op applies the factor TWICE - 1.5x on a 768x1344 source yields 1728x3024 (2.25x). Root is NOT the factor and NOT the workflow: Input_Upscale_Factor has exactly one writer (PromptBoxControls.upscaleFactor, injects the raw 1.5), the sidecars for upscale_013/014/015/016 all record 1.5, node 1657 feeds only MpiGridDimensions.upscale_factor and UltimateSDUpscale.upscale_by, and the user ran the same graph in the ComfyUI browser and got the correct size. The graph is fed the WRONG IMAGE: generationSettings.mediaItems points at Media/.preview-assets/1ed8902c...png which measures 1152x2016, i.e. the 768x1344 source already enlarged 1.5x. 1152x2016 * 1.5 = 1728x3024 exactly. t2i_039's own sidecar reports pixelDimensions 768x1344 and has no previewAssets, so that file is not a full-res twin - it exists only in the content-addressed staging store. All four runs used the same hash, consistent with a deterministic pre-scale of the same source at the same factor. UNPROVEN: which code writes the pre-scaled staged copy. Start there."
+  },
+  {
+   "at": "2026-07-25T23:15:00Z",
+   "type": "task.progress",
+   "task": "MPI-350",
+   "note": "Live app test caught a hole in the first progress fix. routes/comfy.js forwards the RAW tqdm value from 'USDU: t/T', so T tiles emit T+1 events (0/T .. T/T) - the last fires AFTER the final tile's inner bar. The first cut re-armed the post-tile detector on EVERY tile bar, so that trailing tick re-armed it after the last tile and the refiner never tripped it; app still read 1/1 on both stages. Guard is now 'if (tileIndex < tiles)' - arm only for a tile that will actually run. The original test called tile() once per tile and never modelled the trailing tick, so it passed against broken code: a WRONG test, not a thin one. It now models the tick explicitly. Also added the user's requested honest total: progressStages.js records 'krea2_upscaler.json': {postTile: 1} (no 'single' - the tile count is a runtime value that tile mode overrides), new postTileBarsFor() shares _baseKey with stagesFor, commandExecutor passes it into createStageProgress, and tile() uses _total = _tileOffset + tiles + _postTileBars. A blanket +1 in tile() was rejected because 7 of the 9 USDU cards have no refiner and would advertise a stage that never runs. Stage clamp in tile() also had to move from min(_total, ...) to min(_tileOffset + tiles, ...) or the trailing tick advances into the refiner slot early. Now: grid off 1/2 -> 2/2; grid on 4 tiles 1/5..4/5 -> 5/5; other upscalers unchanged. Test at 6 cases, all pass; TWO negative controls - vs unfixed HEAD 5 of 6 fail, vs the first cut 4 of 6 fail including both trailing-tick cases. eslint clean on all three touched modules. Verified: postTileBarsFor returns 1 for both krea2 upscaler variants and 0 for chroma/sdxl/pony/ill, stagesFor unregressed (krea2_t2i 2, ltx_t2v 3). Awaiting user re-test in the app."
+  },
+  {
+   "at": "2026-07-25T22:40:00Z",
+   "type": "task.progress",
+   "task": "MPI-350",
+   "note": "Refiner exposed a progress defect - FIXED in js/services/phaseProgress.js. progressStages.js was NOT the mechanism: phaseProgress.tile() overrides the total with the live tile count when UltimateSDUpscale's outer bar reports, so a static entry would be discarded on the first tile. Real bug was that tile mode was one-way - once _tileMode was set, step() only moved _percent and never advanced _stage, so the refiner's bar was swallowed and the fill ran 0-100 percent a second time while the readout sat on the last tile (reads as a stall at the end of every upscale). Rejected the simpler '_total = tiles + 1': it fixes the printed total but not the stall, and tile() is shared by all 9 USDU cards - the 7 without a refiner would advertise a stage that never runs. Fix counts inner bars since the last tile bar; USDU emits its tile bar before every tile's inner bar, so during tiling the counter resets each tile and only a post-tile pass reaches 2. On the second bar it leaves tile mode and falls through to the normal per-bar logic, which stages it and self-corrects the total. 1 tile -> 2/2, 4 tiles -> 5/5. tile() untouched, so tile counting is unchanged. Ceiling named in the comment: assumes one inner bar per tile, true while all 9 USDU cards run seam_fix_mode None (swept). Guarded by tests/tile-post-pass-stage.test.cjs, 5 cases, negative-control proven (3 of 5 fail against the unfixed module, 5/5 pass restored). eslint clean. Still NOT verified in the app."
+  },
+  {
+   "at": "2026-07-25T22:10:00Z",
+   "type": "task.created",
+   "task": "MPI-350",
+   "to": "doing",
+   "note": "Card opened directly in doing (in-progress). FIX for the Krea2 upscale op, which produced heavy noise - unusable on raw (turbo OFF) and only passable on turbo, because the accelerator (turbo distill) LoRA was applied in BOTH tiers. User reauthored the raw template (34 -> 38 nodes): new MpiIfElse 'is high tier' driven off the existing Input_Tier via MpiMath 'a == 1' now picks the UltimateSDUpscale model, so tier 1 runs the base model with no accelerator LoRA; and a refiner chain (VAEEncode -> ClownsharKSampler_Beta -> VAEDecode) was appended between the upscale and Output_image. The refiner deliberately runs on the accelerator-LoRA model in both tiers as a cheap 2-step polish - user-confirmed intentional. Blast radius verified zero: the moved node ids are unreferenced in js/ and routes/, injection is title-keyed, Output_image is unchanged, krea2Turbo already ships Input_Tier on the upscale command, upscalers are deliberately excluded from progressStages, and no new node types were introduced. Detail in brief.md."
+  },
+  {
+   "at": "2026-07-25T09:15:00Z",
+   "type": "task.created",
+   "task": "MPI-349",
+   "to": "todo",
+   "note": "Card opened in todo (idea). WATCH card for two RunPod announcements. Deploy-When-Available went GA 18 Jun 2026 but is CONSOLE-ONLY - verified against the live REST schema (POST /pods has no queue/schedule/subscription field) and our create path is REST plus the GraphQL podFindAndDeployOnDemand fallback, so nothing to hook; autoRetry (MPI-110) is our app-side equivalent and is safer on billing (never runs with the app closed) but loses the race to a real server-side reservation. Re-open when the field appears in a schema, and gate it behind explicit consent - not folded into autoRetry. Second half is the real signal: RunPod publicly steered users off network volumes and ruled out credits, and our remote engine is volume-pinned; the escape hatch already exists (R2 weights plus ephemeral Any-region pods, MPI-78) so the work is to MEASURE ephemeral-first, not build it. Also narrows the Vast.ai no-volumes red flag in MPI-344. Detail in brief.md."
+  },
+  {
+   "at": "2026-07-25T08:10:00Z",
+   "type": "attention.required",
+   "task": "MPI-346",
+   "note": "Session close-out. Node pinned at v1.2.2 and live-schema-gated; template rewiring converted, validated and baked (both cards 104 nodes, 0 dangling, injection surface 34->34 unchanged); describer scaffold intact. User exercised every Krea2 op in the node graph EXCEPT text-to-image. NOT verified: any app-level generation, fit_mode/ref_boost output effect, describer first-word behaviour end-to-end, remote engine drift reinstall. Card stays in doing at maturity validating."
+  },
+  {
+   "at": "2026-07-25T04:10:00Z",
+   "type": "task.created",
+   "task": "MPI-348",
+   "to": "todo",
+   "note": "Collaborative workflow-authoring track for the Krea2 swap family (face / head / character). User authors in the node graph, agent supplies krea2edit v1.2.2 semantics, graph topology and the measured regimes. Workflow proven in the graph BEFORE any App is built; app ideas that surface mid-authoring get their own cards. brief.md is a full working reference - node semantics, ref_boost two-regime rule, ref_boost_mask exact behaviour, the pose+edit topology finding, the untested two-LoRA gate, the div-16 rule, composite-vs-crop-stitch, and node ids. Target release v1.3 = the Apps release."
+  },
+  {
+   "at": "2026-07-25T03:50:00Z",
+   "type": "task.created",
+   "task": "MPI-347",
+   "to": "todo",
+   "note": "New App idea: localized edits on 4K/8K images via InpaintCrop/Stitch - mask a small region on a huge scene, sample only the crop, so a small character keeps its definition. Mechanism proven by the user on Qwen. Card carries the crop-stitch tone-patch trap and its root cause (context_from_mask_extend_factor 1.2 starves the model of scene context; feathering at 32px was already on when b3f9a018 gave up on the krea2 masked edit). Also records a dep-declaration defect: app_head_swap.json uses the inpaint classes but neither the app nor the qwen-edit card declares comfyui-inpaint-cropandstitch - only the Krea2 cards do. Static finding, not reproduced live."
+  },
+  {
+   "at": "2026-07-25T03:20:00Z",
+   "type": "task.created",
+   "task": "MPI-346",
+   "to": "doing",
+   "note": "Bump comfyui-krea2edit 17af8833 (v1.1) -> 223a9383 (v1.2.2). We already ship the v1.2 identity-edit weights but pinned the v1.1 nodes, so the v1.2 weights ran on legacy reference geometry. Unlocks vae+source_image pixel path, fit_mode, ref_boost / ref_boost_a / ref_boost_mask, GroundedEncode system_prompt, and the ref_latents wrapper tolerance ComfyUI 0.29 will require. Node is installRequirements:false so this is a lock-file edit only - no Pod image rebuild, the .mpi_node_commit drift ladder reinstalls on both engines. Workflow rewiring + live A/B owned by the user."
+  },
+  {
+   "at": "2026-07-25T00:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-345",
+   "from": "doing",
+   "to": "done",
+   "note": "FIXED. Root cause: MpiBaseApp binds the global generation.run hotkey at setup, but closing an app only HID the overlay - the shell destroyed the instance only when a DIFFERENT app opened. HotkeyManager fires ALL handlers bound to an id, so the next Ctrl+Enter ran the PromptBox run AND the closed app _run, re-submitting the persisted s_appInputs. Explains every observation (same params, real prompt id, injector logged 8.5 min later = the phantom dispatched when the 1m41s Qwen edit drained the single remote lane). Fix: the app emits close outward and the shell DESTROYS the instance on it (every open remounts fresh), killing all stale listeners. Proven live on the real Electron shell by tests/desktop/app-close-destroys-instance.spec.js - passes with the fix, FAILS (Expected 0, Received 1) with both source files stashed. Blast radius swept: all 30 Hotkeys.bind sites; MpiBaseApp was the only hidden-but-alive holder of a global hotkey. Not re-staged end-to-end (needs a Pod + Head Swap session) - the mechanism is proven in both directions instead. Detail in validation.md."
+  },
+  {
+   "at": "2026-07-25T00:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-345",
+   "from": "todo",
+   "to": "doing",
+   "note": "Root cause found by code read (no repro needed): MpiBaseApp binds Hotkeys generation.run at SETUP, but closing an app only HIDES its overlay - the shell destroys the instance only when a DIFFERENT app opens. So the closed Head Swap app kept a live Ctrl+Enter handler; the next Ctrl+Enter in the main workspace fired BOTH the PromptBox run and the stale app _run, enqueuing a second job from the still-persisted s_appInputs. Fixing by destroying the app instance on close."
+  },
+  {
+   "at": "2026-07-24T01:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-318",
+   "from": "doing",
+   "to": "done",
+   "note": "User-verified live 2026-07-24: single card dragged to an OS folder lands with its real Media-folder filename; drag-to-prompt still works (the thing the prior attempt broke). Shipped via Chromium DownloadURL alongside application/mpi-media on the same HTML5 drag — no preventDefault/startDrag/IPC, one file touched (MpiGalleryGrid.js). Multi-select export dropped by user (DownloadURL is single-file). Changelog fix added to UNRELEASED.md; gallery.md documents the two-consumer dragstart contract. validation.md represents PASS."
+  },
+  {
+   "at": "2026-07-24T01:11:59Z",
+   "type": "task.moved",
+   "task": "MPI-318",
+   "from": "todo",
+   "to": "doing",
+   "note": "Drag-out to file system. Routed the docs first (gallery.md, events.md, components.md) per the brief. Root of the prior revert confirmed: preventDefault on the shared card dragstart kills the HTML5 drag that in-app drag-to-prompt rides (consumers: MpiPromptBox getData, MpiGalleryBlock/MpiGroupHistoryBlock types-sniff). User scoped it to SINGLE-card only (dropped multi-select to avoid the startDrag+IPC surface). Fix = Chromium DownloadURL type set ALONGSIDE application/mpi-media on the same drag, NO preventDefault, NO startDrag, NO IPC, NO main.js change. Real media-folder filename via extractFilenameFromPath. In-app drag physically cannot break. Awaiting live drag-to-Explorer verification (DownloadURL drop-to-target behavior in this Electron build is the one unverified bit)."
+  },
+  {
+   "at": "2026-07-23T21:40:00Z",
+   "type": "task.moved",
+   "task": "MPI-342",
+   "from": "doing",
+   "to": "done",
+   "note": "ComfyUI v0.27->v0.28 wave COMPLETE + user-approved for done. All 5 phases verified: pins (4 sites), dev image build both legs green, MPI-341's 4 checks, MPI-340 build-gated dev-tag leg (both legs pulled live), workflow sweep on 0.28. Stable pins untouched; released users unaffected."
+  },
+  {
+   "at": "2026-07-23T21:40:00Z",
+   "type": "task.moved",
+   "task": "MPI-341",
+   "from": "doing",
+   "to": "done",
+   "note": "Pod build hardening COMPLETE + user-approved for done. All 4 checks: smoke layer green on clean dev build, unpin-kornia proof RED at smoke layer (LTXVideo IMPORT FAILED, run 30028617382), +cu130 trio + constraints.txt in final image, one LTX gen on dev Pod. The load-bearing grep gate is proven to bite."
+  },
+  {
+   "at": "2026-07-23T06:34:00Z",
+   "type": "task.updated",
+   "task": "MPI-340",
+   "note": "Scope extended (user): the dev/stable split must land in docs, rules and skills, not just code. Grep-verified blast radius added to brief: CLAUDE.md:74 (Context Router row - highest-traffic instruction, currently teaches 'publish-runtime.sh stable' as THE way to ship a runtime edit), docs/runpod-remote-engine.md s5+s6, docs/builder/02-image-and-rebuild.md:100, .claude/commands/build-pod-image.md:123+94, .claude/rules/comfy_engine.md:291, docs/runpod-troubleshooting.md (4 mentions), mpi-ci/cubric-vision-pod/README.md 'Runtime externalize', plus a dos_and_donts.md one-liner. KEY FINDING: mpi-release/SKILL.md and mpi-version-bump/SKILL.md have ZERO Pod awareness today (grep-verified) - harmless with one channel, but this card creates the hazard, so mpi-release gains a Preconditions drift check (curl dev vs stable manifest.json, compare the sha256 fields they already carry) that STOPS and asks the user to promote or confirm deliberate non-shipping. Never auto-promote in the release flow - live op affecting released users, same class as git push. mpi-version-bump deliberately unchanged: app version and Pod runtime are separate artifacts on separate cadences."
+  },
+  {
+   "at": "2026-07-23T06:22:00Z",
+   "type": "task.updated",
+   "task": "MPI-340",
+   "note": "Moved to TOP of todo (user) - MPI-340 unblocks MPI-333/MPI-329 (both likely land fixes in wrapper.py, which currently publishes straight to the 'stable' channel released users boot). Brief extended: the dev/user split for wrapper.py + start.sh is the CHANNEL, not duplicate wrapper.dev.py files (git versions the file, the channel versions the deploy). Added a 'publish-runtime.sh promote' verb that rclone-copies vision/dev/* -> vision/stable/* server-side so promotion ships the EXACT bytes tested on dev, refusing on a working-tree/dev sha mismatch (the script already emits per-file sha256 in manifest.json). Runtime promote and image bump are independent paths."
+  },
+  {
+   "at": "2026-07-23T06:09:34Z",
+   "type": "task.created",
+   "task": "MPI-340",
+   "note": "Dev Pod images (GPU + CPU) + dev R2 runtime channel, both gated on the EXISTING server-side _devMode (remotePodLifecycle.js:37). 1.1.0 is released and every released app pins the same image tag AND the same 'stable' runtime channel, so publish-runtime.sh stable reaches real users on their next Pod boot. No new Dockerfile, no CI change (manifest_version=0.17.0-dev already yields v0.17.0-dev-cu130). Safety substrate for MPI-333 / MPI-329 / MPI-341."
+  },
+  {
+   "at": "2026-07-23T06:09:34Z",
+   "type": "task.created",
+   "task": "MPI-341",
+   "note": "Adopt two build practices from YanWenKun/ComfyUI-Docker: (1) RUN --quick-test-for-ci --cpu after the node bake so an import failure fails the BUILD (the MPI-149 kornia/LTXVideo class that shipped and died live as Node Stage1_Bypass not found; also automates the hand-run '8 nodes register' gate from MPI-139); (2) pip constraints file pinning the cu130 trio so torch drift is unresolvable, with the MPI-244 assert kept as the belt. Blocked on MPI-340 - build to the dev tag, never rebuild released v0.16.0."
+  },
+  {
+   "at": "2026-07-22T06:15:59.000Z",
+   "type": "cleanup",
+   "note": "mpi-cleanup: archived 3 orphaned deleted-status task workspaces (MPI-251, MPI-288, MPI-290) to tasks/_archived/ (not in any board column). Swept all handoff records to state/archive/handoffs/ and emptied index.json active_handoffs (no active sessions; all done). MPI-242 acknowledged message kept."
+  },
+  {
+   "at": "2026-07-22T06:15:59.000Z",
+   "type": "task.moved",
+   "task": "MPI-337",
+   "from": "doing",
+   "to": "done",
+   "note": "User-verified live: LTX (t2v_ms/i2v_ms) passed — validates wan-22 (same ops); wan22-5b covered by automated test. Image/KREA/History/Gallery behavior confirmed working earlier this session. 6 code files shipped; docs+rules future-proofed (data-driven gating documented in playbooks + generation-lifecycle + component-events)."
+  },
+  {
+   "at": "2026-07-22T05:17:08.000Z",
+   "type": "task.moved",
+   "task": "MPI-337",
+   "from": "todo",
+   "to": "doing",
+   "note": "Starting implementation of approved Option A change set (kill force-DOWN, add requiresMask guard, radial show-all-dimmed)."
+  },
+  {
+   "at": "2026-07-22T05:09:33.000Z",
+   "type": "task.updated",
+   "task": "MPI-338",
+   "note": "Compact plan attached (idea -> planned). Reuse the single radial instance: add a 'dev' CONTEXTS context + Ctrl+Tab hold in MpiRadialMenu, move Apps/Restart-Engine off the main radial's extraItems, gate on APP_CONFIG.dev_mode. Verify mode user-ux."
+  },
+  {
+   "at": "2026-07-22T05:06:43.000Z",
+   "type": "task.updated",
+   "task": "MPI-337",
+   "note": "Compact plan attached (idea -> planned). Single change set: kill force-DOWN in _refreshOpOptions + _emitMediaChange, add requiresMask generate-time guard+toast, radial show-all-dimmed. Verify mode user-ux. Say 'continue this plan' to start."
+  },
+  {
+   "at": "2026-07-22T04:59:57.000Z",
+   "type": "task.created",
+   "task": "MPI-338",
+   "note": "Split off from the MPI-337 brainstorm: dev-only Ctrl+Tab radial holding the dev extraItems (Apps, Restart Engine) so main-radial Tab shows operations only (clean tutorials + tidiness). Gated behind APP_CONFIG.dev_mode. Dev items already sit after ops, so this is not about op-position memory (that lands in MPI-337)."
+  },
+  {
+   "at": "2026-07-22T04:59:57.000Z",
+   "type": "task.updated",
+   "task": "MPI-337",
+   "note": "Brainstorm complete — approved Option A. Op changes only on media-add force-UP + Reuse; a lost requirement (mask/media removed, maskless card) never switches, op stays selected, Run toasts the missing input. Change set: kill _refreshOpOptions fallback (detail->upscale bug) + _emitMediaChange force-DOWN branch; add requiresMask generate-time guard+toast; radial show-all-dimmed (stop filtering disabled, new dimmed non-selectable MpiRadialMenu item state). Run = toast-on-click (reuse existing). Dev Ctrl+Tab radial split to MPI-338."
+  },
+  {
+   "at": "2026-07-22T04:51:11.717Z",
+   "type": "task.moved",
+   "task": "MPI-336",
+   "from": "doing",
+   "to": "done",
+   "note": "User-verified live: changed every perModel+shared control, all restored on Reuse. Scope-driven persistence fix + scope-contract playbook doc shipped."
+  },
+  {
+   "at": "2026-07-22T04:39:51.031Z",
+   "type": "task.updated",
+   "task": "MPI-336",
+   "note": "Structural root-cause fix: perModel control persistence/snapshot/reuse is now scope-driven (no hand-maintained key-lists). Dispatch-time wholesale controlState snapshot + modelWide-flag write guard + new scope-contract playbook doc. Round-trip test PASS; live reuse test pending."
+  },
+  {
+   "at": "2026-07-22T03:42:06.912Z",
+   "type": "task.moved",
+   "task": "MPI-336",
+   "note": "todo/idea -> doing/validating: krea2Turbo now snapshotted into sidecar controlState.model (generationService) + restored on legacy reuse path (promptReuse). Root cause = perModel key missing from both snapshot loops. Live reuse test pending."
+  },
+  {
+   "at": "2026-07-22T01:30:00Z",
+   "type": "task.created",
+   "task": "MPI-335",
+   "note": "Publish the 1.1.0 GitHub release - prep DONE + delta update proven live; only tag-move + Gate 2 + publish remain. Deferred to a later session (user). Run mpi-release."
+  },
+  {
+   "at": "2026-07-22T00:56:00Z",
+   "type": "task.created",
+   "task": "MPI-333",
+   "note": "RunPod post-install model VERIFY takes longer than the download (portable 1.1.0 install test). Verify tile sits on 'Verifying...' longer than the download bar took. Suspect a full SHA256 re-read off the network volume post-land vs hash-while-streaming (local does this, MPI-296). Moved to TOP of todo (user priority). Distinct from MPI-329 cold model-LOAD."
+  },
+  {
+   "at": "2026-07-21T20:25:00Z",
+   "type": "task.created",
+   "task": "MPI-332",
+   "note": "Rip 3 deprecated test apps (image-regen/sdxl-4k/video-stitch), keep Head Swap. 8-touchpoint blast-radius map grep-verified in card. Carded now, code deferred (user)."
+  },
+  {
+   "at": "2026-07-21T20:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-306",
+   "from": "doing",
+   "to": "done",
+   "note": "App-UI foundation complete: step-carousel frame + STEP_KINDS shipped/verified; Head Swap shipped, user-verified local + remote-proven (MPI-324). Phase 3 hold-until-Apply was built (bcbe161f) then reverted on the UX pass (results save themselves) - card was stale describing a removed phase, nothing left to verify."
+  },
+  {
+   "at": "2026-07-21T20:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-315",
+   "from": "doing",
+   "to": "done",
+   "note": "Board cleanup: log-architecture shipped + user-verified; only untracked leftover (MPI-147 progress-tick) lives elsewhere."
+  },
+  {
+   "at": "2026-07-21T20:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-299",
+   "from": "doing",
+   "to": "done",
+   "note": "Board cleanup: Head Swap umbrella closed - wiring + node-lock shipped, remote-proven in MPI-324 sweep; residuals split to MPI-306 (UI) + MPI-325 (box pad)."
+  },
+  {
+   "at": "2026-07-21T20:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-308",
+   "from": "doing",
+   "to": "done",
+   "note": "Board cleanup: image_descriptor dev harness + Describe-Image radial shipped; abliterated encoder (MPI-311, 1.2.0) cleared the refusal blocker."
+  },
+  {
+   "at": "2026-07-21T20:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-312",
+   "from": "todo",
+   "to": "archived",
+   "note": "Archived to tasks/_archived/MPI-312; migrated to Cubric Studio (Docs) MPI-10. Krea2 reference-order is user documentation, not an app change - the Vision wiring is correct."
+  },
+  {
+   "at": "2026-07-21T20:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-313",
+   "from": "todo",
+   "to": "archived",
+   "note": "Archived to tasks/_archived/MPI-313; migrated to Cubric Studio (Docs) MPI-11. Two-subjects-in-one-pass is a documented Krea2 model limitation with a chained-pass workaround - docs content, nothing to build."
+  },
+  {
+   "at": "2026-07-21T20:00:00Z",
+   "type": "task.updated",
+   "task": "MPI-330",
+   "note": "Escalated to release-blocker (user). release-blocker + bug added to labels (maturity stays idea - not yet started). Traces to the recent chip-repositioning feature stranding the required Input_Image slot; must fix before release. Moved to top of todo."
+  },
+  {
+   "at": "2026-07-21T19:45:00Z",
+   "type": "task.moved",
+   "task": "MPI-331",
+   "from": "doing",
+   "to": "done",
+   "note": "Collapsed 3 release skills into one GitHub-only mpi-release (+ build-dispatch/copy-review refs). Deleted mpi-merge-branches/apply-patch/release-public/release-shared. Updated mpi-version-bump, mpi-end step 3, docs/releases/* (README, portable-contract, github-checklist), docs/README.md map, kanban index; deleted patch-distribution.md; bannered app-update-strategy.md. macos-x64 dropped (arm64-only), R2/Cloudflare stripped from release docs. Auto-verified; user-confirmed on close."
+  },
+  {
+   "at": "2026-07-21T19:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-331",
+   "from": "todo",
+   "to": "doing",
+   "note": "Implementation started: collapse 3 release skills -> one GitHub-only mpi-release. User approved forks: fold shared lib into new skill, GitHub release carries full + update bundles, delete patch-distribution.md + banner app-update-strategy.md."
+  },
+  {
+   "at": "2026-07-21T18:50:00Z",
+   "type": "task.created",
+   "task": "MPI-331",
+   "note": "Next-session: collapse the 3 release skills into one GitHub-only release skill (2nd digit = features, 3rd = fixes, same op) + update CLAUDE.md/versioning docs. Handoff c85c2cfe-43bf-4023-b725-fc7ab3cbcddb."
+  },
+  {
+   "at": "2026-07-21T18:45:00Z",
+   "type": "task.moved",
+   "task": "MPI-324",
+   "from": "doing",
+   "to": "done",
+   "note": "RunPod validation sweep COMPLETE (1.1.0 release gate). MPI-282/300/310 remote-proven, MPI-326 fix verified; Head Swap residual tracked on MPI-299/306/325. Closed at 1.1.0 release close-out."
+  },
+  {
+   "at": "2026-07-21T18:45:00Z",
+   "type": "task.moved",
+   "task": "MPI-327",
+   "from": "doing",
+   "to": "done",
+   "note": "Public 1.1.0 changelog aggregation shipped; version-rename landed on master; drag-drop-import wording corrected to LoRA/upscale only. release:check green."
+  },
+  {
+   "at": "2026-07-21T18:25:00Z",
+   "type": "task.created",
+   "task": "MPI-330",
+   "note": "Removing a non-last image chip may strand the required Input_Image -> Qwen-Edit silently returns no output. Local engine healthy, NOT the MPI-326 fix. Primary hypothesis: chip-slot repack (project_media_slots_addressable_never_packed); secondary: stale Pod path. Deterministic repro + code entry points in card. Non-blocking for 1.1."
+  },
+  {
+   "at": "2026-07-21T18:15:00Z",
+   "type": "task.moved",
+   "task": "MPI-310",
+   "from": "doing",
+   "to": "done",
+   "note": "Remote PASS (RTX PRO 4000, MPI-324 sweep). Full shared-dep guard lifecycle: inverse-GC kept encoder on Krea uninstall (2->1 holder), describe from gallery+history landed caption, negative-flip correct, uninstall freed 5.24GB (104.2->99GB) + row flipped to Install after refresh. Both engine twins proven. Core deliverable + plugin entity + GC guard complete; stale destructive-bug attention cleared. Deferred step5 video-describe=MPI-287, plugin-row download-mode race=MPI-320."
+  },
+  {
+   "at": "2026-07-21T18:05:00Z",
+   "type": "task.moved",
+   "task": "MPI-300",
+   "from": "doing",
+   "to": "done",
+   "note": "Remote PASS (RTX PRO 4000 Pod, MPI-324 sweep). Tier radio (all 3), 2-image combine (Head Swap), 3rd chip Input_Image_3 (injects local + remote - chip-3-unique blue-hair girl landed in qwenEdit_005 remote AND qwenEdit_003 local; graph wiring traced correct not crossed), style rack (3 styles remote). Caveat: scene + 2 distinct subjects in one pass is model-unstable (keeps one, morphs other) - same family as Krea2 2-subject limit, mitigation = chain per MPI-313. Injection correct; instability is the transformer."
+  },
+  {
+   "at": "2026-07-21T17:55:00Z",
+   "type": "task.created",
+   "task": "MPI-329",
+   "note": "Perf: remote cold model-load ~2min per swap vs ~14s warm (RTX PRO 4000, MPI-324 sweep). Per-model cold cost, consistent Krea2/Chroma. User caveat: may just be a weak inference card - retest on mainstream GPU. Not a 1.1 blocker."
+  },
+  {
+   "at": "2026-07-21T17:50:00Z",
+   "type": "task.moved",
+   "task": "MPI-326",
+   "from": "doing",
+   "to": "done",
+   "note": "Remote runtime PASS (RTX PRO 4000 Pod, MPI-324 sweep). Idle-connected: Network models filter 0/32 over 20s (no 5s models/status poll - Fix A), op dropdown stayed open, Denoise slider held 0.71 with no snap-back. Root killed at source. Fix A+B committed js/shell.js + js/data/modelRegistry.js."
+  },
+  {
+   "at": "2026-07-21T16:55:00Z",
+   "type": "task.created",
+   "task": "MPI-327",
+   "note": "Aggregate 1.1.0 + 1.1.1 + UNRELEASED.md into the public 1.2.0 changelog (GitHub skips 1.1). NOT simple concat - dedup bug-fix overlap between 1.1 and 1.2 (download queue). Curate for first-time users. Handoff: state/handoffs/f7677602-e881-4c74-b412-666604cf366b.json."
+  },
+  {
+   "at": "2026-07-21T16:55:00Z",
+   "type": "task.created",
+   "task": "MPI-328",
+   "note": "Remote models/check fails OPEN: remoteModels.js:325 defaults wrapper-omitted models to installed:true + :339 vacuous [].every(). Observed 1.1.1 CPU download Pod (booting wrapper -> 5 models falsely installed, no download). Lines present in 1.2.0. Adjacent to MPI-326. Fix: default false + guard every."
+  },
+  {
+   "at": "2026-07-21T16:50:00Z",
+   "type": "task.moved",
+   "task": "MPI-326",
+   "from": "todo",
+   "to": "doing",
+   "note": "Root VERIFIED + fix A+B IMPLEMENTED for 1.2 (user go). A: edge-guard the sync at shell.js:1370. B: diff-gate the models:checked emit at modelRegistry.js:218. node --check clean; all reSyncInstalledModels callers swept safe. maturity=validating pending remote runtime proof on a Pod. Files uncommitted."
+  },
+  {
+   "at": "2026-07-21T15:55:00Z",
+   "type": "task.moved",
+   "task": "MPI-282",
+   "from": "doing",
+   "to": "done",
+   "note": "RunPod remote pass (MPI-324 sweep, RTX 2000). Krea2 t2i/i2i/depth/upscale/masked edit + 2-character edit all clean; accel LoRA resolved (no silent degrade); backslash LoRA path worked on Linux. Step count result-verified not console-counted."
+  },
+  {
+   "at": "2026-07-21T15:35:00Z",
+   "type": "task.created",
+   "task": "MPI-326",
+   "note": "Remote op-dropdown flashes + auto-closes on a ~1s models:checked rebuild storm. Defect B confirmed (PromptBox _refreshOpDropdown rebuilds unconditionally; Model Library already guards the same). Defect A hypothesis (remote:connection connected-edge flapping during Pod init re-fires syncModelInstalled). Surfaced in MPI-324 sweep. Scope 1.2-blocker vs 1.3 pending user."
+  },
+  {
+   "at": "2026-07-21T15:15:00Z",
+   "type": "task.moved",
+   "task": "MPI-309",
+   "from": "doing",
+   "to": "done",
+   "note": "Remote-proven on RTX 2000 Pod (MPI-324 sweep). Wrapper reinstalled MpiNodes aaa1d2d on connect; app_head_swap.json ran with no unknown-node rejection; box crop followed a user resize; correct swap saved. Hyper = 4 steps. node_lock.json ready to commit at close."
+  },
+  {
+   "at": "2026-07-21T15:15:00Z",
+   "type": "task.created",
+   "task": "MPI-325",
+   "note": "Head Swap: allow the target/reference box to extend OUTSIDE the frame and auto-pad that edge, keeping the box square. Surfaced during MPI-324 Head Swap validation - an edge-adjacent head cannot capture full hair with an in-frame square without grabbing the neighbour (caused the first-run fail). Pad, do not shrink. Workflow/UX improvement, not a v1.2 blocker."
+  },
+  {
+   "at": "2026-07-21T13:00:00Z",
+   "type": "task.created",
+   "task": "MPI-324",
+   "note": "RunPod validation sweep umbrella (1.2.0 release gate): MPI-282, MPI-300, MPI-310, Head Swap. MPI-198 deferred."
+  },
+  {
+   "at": "2026-07-21T13:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-309",
+   "from": "todo",
+   "to": "doing",
+   "note": "node_lock MpiNodes pin bumped ba9e156 -> aaa1d2d (1.2.6 adds MpiBox/MpiBoxCrop/MpiBoxMask/MpiFromBox, pure superset). Code done; maturity validating pending Pod-connect proof the wrapper reinstalled the new commit. Folded into MPI-324 Phase 0."
+  },
+  {
+   "at": "2026-07-21T12:00:00Z",
+   "type": "task.created",
+   "task": "MPI-323",
+   "note": "Evaluate FLUX.2 Klein 4B (Apache 2.0) for masked object/text removal. Fill dev + Klein 9B ruled out non-commercial. Outpainting already solved via black-border + edit models. Cheaper pre-test: does Krea2 masked-edit (MPI-282) already remove on empty prompt?"
+  },
+  {
+   "at": "2026-07-20T20:10:00Z",
+   "type": "task.created",
+   "task": "MPI-318",
+   "note": "Carded after a failed attempt on 2026-07-20 was fully reverted. Native Electron drag-out (startDrag) worked - real filenames, multi-file drop - but the e.preventDefault() it required killed the shared HTML5 dragstart that in-app drops ride on, so dragging cards inside the library stopped reaching the prompt and landed as imported cards. Reverted all three files to HEAD; tree clean, nothing shipped. Root process failure: skipped the Context Router (components.md / gallery.md / events.md) and never asked what else consumed that dragstart. Card instructs the next agent to read the docs FIRST. Open and unexplained: pressing Cancel on the Windows file-conflict dialog exited the app, with no trace in app.log because main.js has no render-process-gone or uncaughtException handler."
+  },
+  {
+   "at": "2026-07-19T23:55:00Z",
+   "type": "task.created",
+   "task": "MPI-316",
+   "note": "Test-first card: does RAW + a speed-up LoRA match the Turbo transformer? If yes, drop ~24.5GB of Turbo weights and move Krea2 to the Qwen-Edit runtime tier-radio shape. Negative-prompt gating is currently structural (cfg 1 discards it) and would be LOST in a single-card collapse - flagged in the card as a design decision."
+  },
+  {
+   "at": "2026-07-19T22:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-315",
+   "from": "todo",
+   "to": "doing",
+   "note": "Picked up. Decision: aggressive source-filter of ComfyUI stdout (user has terminal access for INFO detail), delete destructive startup line-trim, gitignore logs/. Reporter 2000-char slice UNCHANGED (user: expanding it breaks GitHub issue creation, already empirically trimmed). R2-upload idea explicitly parked."
+  },
+  {
+   "at": "2026-07-19T18:45:00Z",
+   "type": "task.created",
+   "task": "MPI-314",
+   "note": "Orphaned-dep reclaim — 19GB B1-era LTX shared deps, no owner, no UI delete path."
+  },
+  {
+   "at": "2026-07-19T21:00:00Z",
+   "type": "task.created",
+   "task": "MPI-315",
+   "note": "Log architecture — split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
+  },
+  {
+   "at": "2026-07-19T21:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-310",
+   "note": "doing -> todo (validating). Shared-dep bug fixed + user-verified locally; RunPod validation deferred."
+  },
+  {
+   "at": "2026-07-20T17:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-317",
+   "note": "Created in doing/investigating - local download reliability: failed-download resume, single-stream throughput ceiling, speed/ETA feedback."
+  },
+  {
+   "at": "2026-07-23T07:10:00Z",
+   "type": "task.moved",
+   "task": "MPI-340",
+   "note": "todo -> doing: implementing dev Pod image tags + dev R2 runtime channel (dev_mode-gated) + publish-runtime.sh promote verb + the docs/rules/skills sweep."
+  },
+  {
+   "at": "2026-07-23T08:05:00Z",
+   "type": "task.updated",
+   "task": "MPI-340",
+   "note": "Code + docs shipped; moved to validating (needs live Pod verify + dev-channel seed)."
+  },
+  {
+   "at": "2026-07-23T08:40:00Z",
+   "type": "task.updated",
+   "task": "MPI-340",
+   "note": "build-pod-image dev/release flow wired in; MPI-119 version-guard contradiction fixed; section-6 CUDA drift corrected."
+  },
+  {
+   "at": "2026-07-23T08:50:00Z",
+   "type": "task.updated",
+   "task": "MPI-340",
+   "note": "Live-verified: GPU + CPU Pods both boot the dev runtime channel. Remaining: released-build stable assertion + one real promote."
+  },
+  {
+   "at": "2026-07-23T09:05:00Z",
+   "type": "task.moved",
+   "task": "MPI-342",
+   "note": "Created in todo, directly after MPI-341 - both are baked-layer changes that ship in ONE dev image build."
+  },
+  {
+   "at": "2026-07-23T09:35:00Z",
+   "type": "task.moved",
+   "task": "MPI-343",
+   "note": "Created at the BOTTOM of todo (user: not a priority). Research-only idea surfaced by the 0.28 notes."
+  },
+  {
+   "at": "2026-07-23T10:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-341",
+   "note": "todo -> doing: Dockerfile guards implemented in mpi-ci/cubric-vision-pod/Dockerfile - (1) node-import smoke test AFTER the MPI-244 assert, with a grep for IMPORT FAILED because --quick-test-for-ci exits 0 even when a custom node fails to import (verified in main.py at v0.27.0 AND v0.28.0 - the brief's bare RUN would have been vacuously green); (2) constraints file emitted from pip list after the cu130 trio install plus ENV PIP_CONSTRAINT so every later pip call (node bake, kornia pin, runtime wrapper installs) cannot resolve a non-cu130 torch. Docs recorded in docs/builder/02-image-and-rebuild.md. Left: the dev-tag CI build (rides with MPI-342) plus the unpin-kornia proof that the smoke test bites."
+  },
+  {
+   "at": "2026-07-23T11:05:00Z",
+   "type": "task.deleted",
+   "task": "(bulk)",
+   "note": "mpi-archive: archived 84 done tasks to tasks/_archived/ (workspaces preserved, per-task task.deleted events logged). Held back MPI-263/308/315 (attention required) and MPI-243 (open message ff4e8854)."
+  },
+  {
+   "at": "2026-07-23T11:30:00Z",
+   "type": "task.updated",
+   "task": "MPI-342",
+   "note": "FINAL STAGE added (user): 342 carries the only Pod rebuild, so it must close the verification of MPI-341 (4 checks incl. the unpin-kornia proof that the smoke test bites) and MPI-340's build-gated dev-image-tag leg. MPI-340's other two open items are explicitly NOT build-gated."
+  },
+  {
+   "at": "2026-07-23T11:55:00Z",
+   "type": "attention.required",
+   "task": "MPI-341",
+   "note": "Session close-out: implementation committed (mpi-ci 41a5517) but unbuilt; all verification is gated on MPI-342's user-authorized dev-tag build."
+  },
+  {
+   "at": "2026-07-23T21:41:33.041Z",
+   "type": "task.moved",
+   "task": "MPI-329",
+   "from": "doing",
+   "to": "done",
+   "note": "shipped f7e42376: switch-tax fix (HOT_STORE_MIN_GB 0.1) + dynamic disk (volume-mirror) + VRAM-relative stage skip + stage-on-connect toggle; live-verified on a 4090 (switch 80s->9s, LTX streams)"
+  },
+  {
+   "at": "2026-07-24T02:53:48Z",
+   "type": "task.moved",
+   "task": "MPI-340",
+   "from": "doing",
+   "to": "done",
+   "note": "Last item (dev->stable runtime promote) done this session: ran publish-runtime.sh promote, stable manifest now wrapper 0.2.38 (de748061). Dev/stable split shipped in v1.2.0. mpi-release Preconditions drift-check exercised end-to-end (caught this promote + the pod-image 0.28 pin)."
+  },
+  {
+   "at": "2026-07-26T20:30:00Z",
+   "type": "task.created",
+   "task": "MPI-358",
+   "to": "todo",
+   "note": "Attribution sweep for shipped LoRAs - spun out of MPI-354 licence check."
+  },
+  {
+   "at": "2026-07-26T21:00:00Z",
+   "type": "task.created",
+   "task": "MPI-359",
+   "to": "todo",
+   "note": "Migrate Krea2 + Qwen-Edit style racks to MpiStyleSelector/MpiStyleLoras. Injection support already shipped with MPI-354."
+  },
+  {
+   "at": "2026-07-26T22:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-359",
+   "from": "todo",
+   "to": "doing",
+   "note": "Starting the migration. Raw LiteGraph templates for krea2_t2i + qwen_edit already carry the new rack (uncommitted); API templates, runtime files and generate_krea2.py still on the old shape."
+  },
+  {
+   "at": "2026-07-26T23:10:00Z",
+   "type": "task.progress",
+   "task": "MPI-359",
+   "note": "Graphs + app + docs + guards SHIPPED (891d4415, d61e84f5, 86460c82). krea2_t2i_sfw/nsfw + qwen_edit run the new rack; every lora and trigger is byte-identical to the old rack slot-for-slot, so styleLoraLabels stay aligned. Legacy Input_Style/Input_Stylization keys removed. Found + fixed on the way: comfyController step 3b healed only a fixed key list, so the banks' lora_1..lora_5 slots would have shipped Windows backslashes to every Linux engine. BLOCKED on 2 things: node_lock still pins MpiNodes aaa1d2d9 and the commit carrying the new nodes (0dd056c) is NOT pushed; and live per-model verification."
+  },
+  {
+   "at": "2026-07-26T22:20:00Z",
+   "type": "task.created",
+   "task": "MPI-360",
+   "to": "todo",
+   "note": "Per-op prompting help popup. Extends the existing commandRegistry info: one-liners."
+  },
+  {
+   "at": "2026-07-26T23:30:00Z",
+   "type": "task.created",
+   "task": "MPI-361",
+   "to": "todo",
+   "note": "Auto Detect Mask v2 with SAM3 open-vocabulary text prompts + point coords."
+  },
+  {
+   "at": "2026-07-27T00:10:00Z",
+   "type": "task.moved",
+   "task": "MPI-359",
+   "from": "todo",
+   "to": "doing",
+   "note": "Migration shipped by a parallel session and verified on disk; held in validating because the MpiNodes pin still lacks the new nodes."
+  },
+  {
+   "at": "2026-07-27T00:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-359",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED live. node_lock bumped aaa1d2d9 -> 69a43336 (pushed origin/main tip, carries MpiStyleSelector + MpiStyleLoras); node-drift 23/23. Both blockers closed - card complete."
+  }
+ ]
 }

@@ -1,0 +1,29 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-359",
+ "title": "Migrate the shipped style racks to MpiStyleSelector + MpiStyleLoras",
+ "description": "The style rack got a new node pair in ComfyUi-MpiNodes: MpiStyleSelector (model, selector INT, triggers multiline STRING, strength_model, strength_clip, optional clip -> MPI_STYLE) chained into one or more MpiStyleLoras (style + lora_1..lora_5 -> style, model, clip, prompt). It replaces the whole old rack: Input_Style MpiInt + N MpiMath gates + N Input_style_lora_N slots + the MpiPromptList of triggers, all collapse into ONE node whose triggers text holds the per-index lines. Klein (MPI-354) is authored on the new shape.\n\nINJECTION IS ALREADY DONE - not a blocker for this card. The old contract could not express it (one node, two injected knobs), so comfyController §3 gained Title.widget addressing and the two controls emit BOTH generations: styleSelect -> {Input_Style, Input_Style_Selector.selector}, stylization -> {Input_Stylization, Input_Style_Selector.strength_model}. A title that is not in the graph is a silent no-op, so each model migrates on its own schedule with nothing in lockstep.\n\nSCOPE - 3 ModelDefs, 2 graph families: krea2 + krea2-nsfw (krea2_t2i_sfw.json / krea2_t2i_nsfw.json, 11 styles) and qwen-edit (qwen_edit_base.json). Per graph: drop the gates/slots/prompt-list, add the selector + ceil(N/5) chained MpiStyleLoras banks, TITLE THE SELECTOR Input_Style_Selector (the app derives nothing - the title IS the contract), and move the trigger lines into triggers in the SAME index order as styleLoraLabels / styleLoraImages. Index 0 stays No Style.\n\nALSO: generate_krea2.py must follow - _assert_style_rack asserts the OLD shape (Input_style_lora_N + b if a == N gates) and will SystemExit on a migrated graph, and _INJECTED_INPUT_DEFAULTS scrubs Input_Style.int, which no longer exists. Rewrite both for the new shape: assert one selector, N chained banks, trigger-line count == label count, and scrub the selector back to 0.\n\nSHIPPING THE NODES: dev_configs/node_lock.json pins ComfyUI-MpiNodes at commit aaa1d2d9. It must be bumped to a commit that carries MpiStyleSelector + MpiStyleLoras before any migrated graph ships, or every user gets a red missing-node graph. Klein wiring does this bump; if Klein lands first this card inherits it done.\n\nCLEANUP (last step, only when NO graph carries the old rack): drop the legacy Input_Style / Input_Stylization keys from the two getInjectionParams in PromptBoxControls.js.\n\nSHIPPED 2026-07-26 by a parallel session: 891d4415 (generate_krea2.py asserts the new rack), d61e84f5 (raw krea2 + qwen templates), 86460c82 (migration). VERIFIED on disk: krea2_t2i_sfw.json, krea2_t2i_nsfw.json and qwen_edit.json each carry an MpiStyleSelector titled Input_Style_Selector, zero legacy Input_style_lora_N slots remain, the dual-generation keys were cleaned up (PromptBoxControls now emits ONLY the dotted keys), and tests/inject-params-titles.test.cjs passes 6/6.\n\nSTILL OPEN - AND IT IS A SHIP BLOCKER: dev_configs/node_lock.json still pins ComfyUI-MpiNodes at aaa1d2d9 (2026-07-19), which is ALSO the newest commit on MadPonyInteractive/ComfyUi-MpiNodes. The GitHub tree at that commit contains NO style-selector source. MpiStyleSelector and MpiStyleLoras therefore exist ONLY on the local bench and were never pushed. Every migrated graph now requires nodes no user can install, so shipping today gives every user a red missing-node graph on Krea2 AND Qwen-Edit. Push the node pack, then bump the pin, then re-verify an install from scratch.",
+ "column": "done",
+ "maturity": "complete",
+ "created_at": "2026-07-26T21:00:00Z",
+ "updated_at": "2026-07-27T00:00:00Z",
+ "labels": [
+  "workflow",
+  "components",
+  "comfy"
+ ],
+ "acceptance": [
+  "krea2_t2i_sfw.json + krea2_t2i_nsfw.json run the new rack: one MpiStyleSelector titled Input_Style_Selector, chained MpiStyleLoras banks, triggers text index-aligned with styleLoraLabels",
+  "qwen_edit_base.json migrated the same way",
+  "Style picker + Stylization slider verified LIVE on each migrated model - pick a mid-list style, confirm the right LoRA fires and the strength moves it (a silent no-op looks identical to working at strength 0)",
+  "generate_krea2.py _assert_style_rack rewritten for the new shape and the build still refuses a drifted graph",
+  "dev_configs/node_lock.json pins an ComfyUI-MpiNodes commit that carries both new nodes",
+  "tests/inject-params-titles.test.cjs style-selector guard passes on the migrated files (it is negative-control proven)",
+  "Legacy Input_Style / Input_Stylization injection keys removed once no graph uses them"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "events": "events.jsonl",
+  "validation": "validation.md"
+ }
+}
