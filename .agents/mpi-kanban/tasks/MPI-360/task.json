@@ -1,0 +1,35 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-360",
+ "title": "Per-op \"?\" help — a popup that teaches the user how to prompt that operation",
+ "description": "Every op prompts differently and nothing in the UI says so. Remove wants NO prompt at all. Inpaint wants a description of what SHOULD BE THERE, never an instruction to delete something (Fill the green spaces + \"remove the tattoo\" risks painting a tattoo). Edit wants an instruction. t2i wants a scene. Users cannot guess this and a wrong-shaped prompt looks like a broken model, not a misuse.\n\nAdd a \"?\" affordance beside the operation, opening a short prompting guide for THAT op: what the prompt is for, one good example, one common mistake.\n\nWHAT ALREADY EXISTS (do not rebuild): every op in js/data/commandRegistry.js already carries a one-line info: string (t2i, i2i, poseReference, upscale, edit, detail, change, remove, ...). Those stay as the hover/short form. MpiPopup and MpiModal both exist as primitives. So this is a longer-form field + one affordance + one popup, not new machinery.\n\nSCOPE CALL to make early: prompting advice is partly per-OP and partly per-MODEL - Klein/Krea2 text encoders are LLMs that want plain sentences, while SDXL-era models want keyword soup, and the same op therefore takes a different shape per model. Lazy version: per-op text with an OPTIONAL per-model-type override, added only where it actually differs. Do not build a full per-model help matrix up front.\n\nContent source for the first entries: docs/models/klein/removal.md (remove vs inpaint), docs/models/klein/README.md (negative prompt only live at cfg 5 / tier 1), and the MPI-353 finding that positive-side suppression beat negatives on Klein.\n\nLOAD-BEARING, not decorative (decided 2026-07-26): Klein collapses remove + inpaint into ONE op and routes on the PROMPT TEXT (MpiTextContains looking for remove-words, same mechanism as the NSFW gate). So the guide is what teaches the trigger vocabulary - ship that op with an empty guide and the router is a guessing game. The remove/inpaint entry MUST list the words that trigger removal.\n\nWhat the guide still cannot fix, so do not assume it does: (1) a legitimate sentence that contains a trigger word but means replacement - \"remove her jacket and add a red one\" routes to removal however well the user read the help; (2) users who never open help. Mitigation for both is the EMPTY-PROMPT FALLBACK on the graph side (empty prompt routes to remove), which keeps paint-and-go working with zero reading. Guide and fallback are complementary - neither alone is enough.",
+ "column": "done",
+ "maturity": "complete",
+ "created_at": "2026-07-26T22:20:00Z",
+ "updated_at": "2026-07-28T01:00:00Z",
+ "labels": [
+  "ui",
+  "components",
+  "ux"
+ ],
+ "acceptance": [
+  "A \"?\" affordance sits beside the active operation and is reachable by keyboard, not hover-only",
+  "The remove/inpaint entry names the exact words that route to removal - the router reads prompt text, so this text is part of the feature",
+  "Clicking it opens an MpiPopup/MpiModal with that op's prompting guide: purpose, one good example, one common mistake",
+  "Help text lives beside the existing info: one-liners in commandRegistry.js - one source of truth per op, no second registry",
+  "An op with no long-form text falls back to its info: one-liner instead of rendering an empty popup",
+  "Per-model-type override supported but used only where prompting genuinely differs (LLM text encoders vs SDXL keyword soup)",
+  "Covered at minimum: t2i, edit, change/inpaint, remove, detail, upscale",
+  "Popup instance is destroyed with the PromptBox - no leaked listeners (components teardown contract)"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "plan": "plan.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "files": "files.json",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/",
+  "research": "research/"
+ }
+}
