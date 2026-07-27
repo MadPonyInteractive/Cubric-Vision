@@ -21,6 +21,55 @@ export const MEDIA_TYPE = Object.freeze({
 // ── Command Definitions ───────────────────────────────────────────────────────
 
 /**
+ * Long-form prompting guide for one operation (MPI-360). Rendered by
+ * MpiOpHelpDialog behind the "?" in the parameters popup.
+ *
+ * @typedef {Object} OpHelp
+ * @property {string}   [title]     - Heading. Defaults to the command's `label`.
+ * @property {string[]} [body]      - Paragraphs, plain text. Defaults to `[info]`.
+ * @property {Array<{prompt:string, note?:string, bad?:boolean}>} [examples]
+ *                                    Prompt samples. `bad:true` renders as the
+ *                                    common-mistake entry, struck through in red.
+ * @property {string[]} [media]     - Static paths under `assets/` served from the app
+ *                                    root (`assets/help/inpaint.gif`). Extension picks
+ *                                    the element: mp4/webm/mov → <video>, everything
+ *                                    else (png/jpg/webp/gif/apng) → <img>. GIFs need no
+ *                                    special handling — the browser animates them.
+ * @property {Object<string, OpHelp>} [byModel]
+ *                                    Per-model overrides, keyed by model **id**
+ *                                    (`krea2-nsfw`) or model **type** (`sdxl`). id wins.
+ *                                    Shallow-merged over the base: supply only the keys
+ *                                    that differ. Add an entry ONLY where prompting
+ *                                    genuinely differs (LLM text encoders want sentences,
+ *                                    SDXL-era models want keyword soup) — this is not a
+ *                                    per-model help matrix.
+ */
+
+/** Shared video help — t2v/i2v and their `_ms` twins prompt identically. */
+const T2V_HELP = {
+    body: [
+        'Generates a video clip from your prompt alone — there is no input frame, so the prompt carries both the look and the movement.',
+        'Describe the SCENE first, then the MOTION: what moves, and how the camera behaves.',
+    ],
+    examples: [
+        { prompt: 'a paper boat drifting down a rain gutter, slow dolly follow, overcast afternoon', note: 'Scene, subject motion, camera move.' },
+        { prompt: 'beautiful, 4k, masterpiece', bad: true, note: 'Quality words describe nothing that can move.' },
+    ],
+};
+
+/** Shared video help — the staged image owns the look, the prompt owns the motion. */
+const I2V_HELP = {
+    body: [
+        'Animates the staged image. The image already decides the look, the framing and the identity — the prompt only decides the MOTION.',
+        'Leave it empty for subtle ambient movement. Re-describing the picture fights the input and drifts the first frame.',
+    ],
+    examples: [
+        { prompt: 'she turns her head toward the camera and smiles', note: 'Motion only.' },
+        { prompt: 'a woman in a red jacket standing in a field', bad: true, note: 'Describes the input image instead of what should happen.' },
+    ],
+};
+
+/**
  * @typedef {Object} CommandDef
  * @property {string}          label          - Display name shown in UI
  * @property {string}          [short]        - Short code shown on the op strip (`i2i`, `depth`, `edit`).
@@ -29,6 +78,10 @@ export const MEDIA_TYPE = Object.freeze({
  *                                              `short` and therefore a strip position. Only ops the strip can
  *                                              render carry one — universal/tool ops live on the History rail.
  * @property {string}          [info]         - One-line description shown in the status bar on hover in the op dropdown.
+ * @property {OpHelp}          [help]         - Long-form prompting guide shown by the "?" button beside the op
+ *                                              strip (MPI-360). The `info` one-liner stays the short form; this is
+ *                                              the teaching form. Omit it and `getOpHelp` synthesises a guide from
+ *                                              `label` + `info` rather than opening an empty popup.
  * @property {string}          [icon]         - MpiIcon registry key for op selectors (model-manager operation toggles). Optional.
  * @property {'image'|'video'} mediaType      - Which group type this applies to
  * @property {number}          requiresImages - Min number of input images needed (0 = none)
@@ -100,6 +153,30 @@ export const commands = {
         label: 'Text to Image',
         short: 't2i',
         info: 'Text to Image — generate a new image from your prompt alone',
+        help: {
+            body: [
+                'Generates a brand-new image from your prompt alone. Nothing is carried over from the gallery — what you write IS the whole picture.',
+                'Describe the scene: subject, setting, lighting, framing. Look and medium belong in the style rack, not in the prompt.',
+            ],
+            examples: [
+                { prompt: 'a rain-slick alley at night, neon signs reflected in the puddles, low camera angle', note: 'A scene the model can picture end to end.' },
+                { prompt: 'make it better', bad: true, note: 'There is no "it" — this op has no input image to change.' },
+            ],
+            byModel: {
+                // SDXL-family text encoders (CLIP) were trained on tag soup, not prose.
+                // Krea2/Chroma/Flux read sentences; these read commas.
+                sdxl: {
+                    body: [
+                        'Generates a brand-new image from your prompt alone.',
+                        'This model family reads KEYWORDS, not sentences. Comma-separated tags land far better than prose, and the first tags weigh the most.',
+                    ],
+                    examples: [
+                        { prompt: '1girl, red leather jacket, rain, neon, night, cinematic lighting, sharp focus', note: 'Comma-separated tags, most important first.' },
+                        { prompt: 'I would like a picture of a woman standing in the rain at night', bad: true, note: 'Prose dilutes every tag in it.' },
+                    ],
+                },
+            },
+        },
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
@@ -119,6 +196,16 @@ export const commands = {
         label: 'Image to Image',
         short: 'i2i',
         info: 'Image to Image — reshape an input image toward your prompt',
+        help: {
+            body: [
+                'Redraws the input image toward your prompt. Composition survives; how far the result drifts is the Denoise slider — around 0.2 nudges, 0.6 and up reinvents.',
+                'Describe the FINAL image you want, not the change you want made. This op does not follow instructions — that is Edit.',
+            ],
+            examples: [
+                { prompt: 'the same portrait as an oil painting, thick visible brush strokes', note: 'Describes the destination, not the delta.' },
+                { prompt: 'add a hat', bad: true, note: 'An instruction. Use Edit for that.' },
+            ],
+        },
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
@@ -145,6 +232,16 @@ export const commands = {
         label: 'Depth',
         short: 'depth',
         info: 'Depth Reference — copy the pose/composition of an input image',
+        help: {
+            body: [
+                'Copies the pose and composition of the input image, then paints your prompt into that shape. The input is a skeleton — none of its colour, style or identity comes across.',
+                'Describe the subject and the scene. Do NOT describe the pose: the depth map already carries it, and words spent on it are words not spent on the subject.',
+            ],
+            examples: [
+                { prompt: 'a knight in tarnished silver armour, castle courtyard, overcast light', note: 'Subject and scene; the pose arrives from the image.' },
+                { prompt: 'standing with both arms raised', bad: true, note: 'Re-states what the depth map already provides.' },
+            ],
+        },
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -159,6 +256,16 @@ export const commands = {
         label: 'Upscale',
         short: 'upscale',
         info: 'Upscale — raise resolution while adding fine detail',
+        help: {
+            body: [
+                'Raises resolution and invents the fine detail that was never in the pixels. The prompt is OPTIONAL and empty is the normal choice — detail follows the source image.',
+                'Write a few words only to hint at what the picture is when the upscaler guesses wrong. A full new scene description will fight the source.',
+            ],
+            examples: [
+                { prompt: '', note: 'Empty. What you want almost every time.' },
+                { prompt: 'close-up portrait, skin texture, fabric weave', note: 'A hint about the subject, not a new scene.' },
+            ],
+        },
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -173,6 +280,16 @@ export const commands = {
         label: 'Edit',
         short: 'edit',
         info: 'Edit — change the whole image following your prompt',
+        help: {
+            body: [
+                'Changes the image by following an INSTRUCTION. The model sees your picture and applies what you ask, leaving everything you did not mention alone.',
+                'Write a command, not a description. The verb sets how hard it pushes: "replace" and "convert" are drastic, "change" and "make" are gentle.',
+            ],
+            examples: [
+                { prompt: 'change her jacket to red leather', note: 'One clear instruction, one target.' },
+                { prompt: 'a woman in a red leather jacket, studio light', bad: true, note: 'A description re-generates the picture instead of editing it.' },
+            ],
+        },
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -189,6 +306,18 @@ export const commands = {
         label: 'Edit',
         short: 'edit',
         info: 'Edit — change the whole image following your prompt',
+        help: {
+            body: [
+                'Changes the image by following an INSTRUCTION. Everything you do not mention is preserved.',
+                'Write only the DELTA — the part that changes. The look, the identity and the framing all come from the source image, so a long standalone description fights the edit rather than steering it.',
+                'The verb is load-bearing: "replace" and "convert" push hard, "change" and "make" push softly. Stage a second image to bring in a reference the instruction can point at.',
+            ],
+            examples: [
+                { prompt: 'change the jacket to red leather', note: 'Short, one target, everything else untouched.' },
+                { prompt: 'convert the whole scene to winter, snow on every surface', note: 'A drastic verb when you mean drastic.' },
+                { prompt: 'a woman in a red leather jacket standing on a city street at dusk', bad: true, note: 'A full scene description. Adherence comes from brevity here, not length.' },
+            ],
+        },
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -223,6 +352,18 @@ export const commands = {
         label: 'Edit',
         short: 'edit',
         info: 'Edit — change the image following your prompt',
+        help: {
+            body: [
+                'Changes the image by following an INSTRUCTION. Everything you do not mention is preserved, and the output keeps the source image dimensions.',
+                'Up to three reference images can be staged. Point at them by number — "image 1", "image 2" — and the model will pull from the right one.',
+                'Two people in one edit is where this model is least reliable. Edit one subject at a time when the result matters.',
+            ],
+            examples: [
+                { prompt: 'put the jacket from image 2 on the person in image 1', note: 'Numbered references when more than one image is staged.' },
+                { prompt: 'change the background to a beach at sunset', note: 'One target; the subject is left alone.' },
+                { prompt: 'swap both of their outfits and change the background', bad: true, note: 'Multi-subject plus scene change — split it into separate edits.' },
+            ],
+        },
         progressLabel: 'Editing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -250,6 +391,16 @@ export const commands = {
         label: 'Detail',
         short: 'detail',
         info: 'Detail — refine only the masked area with more detail',
+        help: {
+            body: [
+                'Refines ONLY the masked area. The model can see what is under your mask and works from it, so this improves what is already there rather than replacing it.',
+                'Name what the masked area IS. A short noun phrase is enough — the op already knows its job is "more detail".',
+            ],
+            examples: [
+                { prompt: 'her face', note: 'Names the region so the refiner stays on target.' },
+                { prompt: 'make it sharper and higher quality', bad: true, note: 'That is the op, not the subject. Say what is in the mask.' },
+            ],
+        },
         progressLabel: 'Detailing',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -272,6 +423,25 @@ export const commands = {
         label: 'Inpaint',
         short: 'inpaint',
         info: 'Inpaint — regenerate the masked area; leave the prompt empty to erase it',
+        // The prompt is the ROUTER for this op, not a flavour knob: an empty prompt runs
+        // the erase path, any text runs the fill path. That makes this guide load-bearing
+        // — a user who never reads it can still paint-and-go (empty = erase), but the
+        // "never write an instruction to delete" line is the one that stops the classic
+        // failure of "remove the tattoo" painting a tattoo. If a model ever routes on
+        // trigger WORDS rather than emptiness (Klein's MpiTextContains plan), the word
+        // list belongs in a `byModel` override here, beside the behaviour it describes.
+        help: {
+            body: [
+                'The model can NOT see what is under your mask. It generates that area from scratch, using only the pixels around it for context.',
+                'Leave the prompt EMPTY to remove the masked object, or write what you would like to see there instead.',
+                'Never write an instruction to delete something. The model reads your words as things to DRAW — "remove the tattoo" risks painting a tattoo.',
+            ],
+            examples: [
+                { prompt: '', note: 'Removes the masked object, filling from the surrounding area.' },
+                { prompt: 'hat', note: 'Generates a hat in the masked area.' },
+                { prompt: 'remove the tattoo', bad: true, note: 'Reads as "draw a tattoo". Use an empty prompt to erase.' },
+            ],
+        },
         progressLabel: 'Inpainting',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -290,6 +460,16 @@ export const commands = {
         label: 'Upscale',
         short: 'upscale',
         info: 'Upscale — raise resolution while adding fine detail',
+        help: {
+            body: [
+                'A generative upscaler: it rebuilds detail rather than interpolating it. The prompt is OPTIONAL and empty keeps the result faithful to the source.',
+                'Denoise decides how much licence it takes — 0.0 is faithful, higher lets it invent.',
+            ],
+            examples: [
+                { prompt: '', note: 'Empty. Faithful to what is already there.' },
+                { prompt: 'weathered stone wall, moss', note: 'A hint when the source is ambiguous at low resolution.' },
+            ],
+        },
         progressLabel: 'Upscaling',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -307,6 +487,7 @@ export const commands = {
         label: 'Text to Video',
         short: 't2v',
         info: 'Text to Video — generate a video clip from your prompt alone',
+        help: T2V_HELP,
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
         promptRequired: true,
@@ -316,6 +497,7 @@ export const commands = {
         label: 'Image to Video',
         short: 'i2v',
         info: 'Image to Video — animate an input image into a video clip',
+        help: I2V_HELP,
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         mediaInputs: [
@@ -329,6 +511,7 @@ export const commands = {
         label: 'Text to Video',
         short: 't2v',
         info: 'Text to Video — generate a video clip from your prompt alone',
+        help: T2V_HELP,
         icon: 'text',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
@@ -358,6 +541,7 @@ export const commands = {
         label: 'Image to Video',
         short: 'i2v',
         info: 'Image to Video — animate an input image into a video clip',
+        help: I2V_HELP,
         icon: 'image',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
@@ -379,6 +563,16 @@ export const commands = {
         label: 'Extend',
         short: 'extend',
         info: 'Extend — continue an input video with more footage',
+        help: {
+            body: [
+                'Continues an input video from its last frame. The clip you staged decides the look; the prompt decides only what happens NEXT.',
+                'Leave it empty to let the motion carry on by itself.',
+            ],
+            examples: [
+                { prompt: '', note: 'Continues the existing motion.' },
+                { prompt: 'he walks out of frame to the left', note: 'What should happen next, not what already happened.' },
+            ],
+        },
         progressLabel: 'Extending',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,
@@ -834,6 +1028,45 @@ export function commandAllowsBranchingContinue(key, model = null) {
     // that don't have a model in scope, e.g. WAN-era single-model checks).
     if (model && model.capabilities) return model.capabilities.branchingContinue === true;
     return true;
+}
+
+/**
+ * Resolves the prompting guide for an op against the active model (MPI-360).
+ *
+ * Three layers, cheapest first: the op's own `help`, a `byModel` override picked
+ * by model **id** then model **type**, and a synthesised fallback built from
+ * `label` + `info` so an op with no authored guide still opens something useful
+ * instead of an empty popup.
+ *
+ * The override is a SHALLOW merge — an entry supplies only the keys that differ,
+ * so an `sdxl` override that changes `body` and `examples` still inherits the
+ * base `title` and `media`.
+ *
+ * @param {string} key                       Operation key (`inpaint`, `krea2Edit`, …)
+ * @param {{id?:string, type?:string}|null} [model]
+ * @returns {{title:string, body:string[], examples:Array<{prompt:string,note?:string,bad?:boolean}>, media:string[]}|null}
+ *          null only when the key is unknown.
+ */
+export function getOpHelp(key, model = null) {
+    const cmd = commands[key];
+    if (!cmd) return null;
+
+    const base = cmd.help || {};
+    const override = model
+        ? (base.byModel?.[model.id] ?? base.byModel?.[model.type])
+        : undefined;
+    const help = override ? { ...base, ...override } : base;
+
+    return {
+        title: help.title || cmd.label || key,
+        // No authored body → the one-liner already shown on hover. Strip the
+        // "Label — " prefix the info strings carry; the title says it already.
+        body: help.body?.length
+            ? help.body
+            : (cmd.info ? [String(cmd.info).replace(/^[^—]+—\s*/, '')] : []),
+        examples: help.examples || [],
+        media: help.media || [],
+    };
 }
 
 /**

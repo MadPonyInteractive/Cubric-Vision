@@ -56,6 +56,44 @@ source. It returns **canonical `OP_ORDER`**, not registry or `supportedOps` orde
 - `_context.filterNoInputOps` (History video-continuation mounts only) HIDES text-only ops
   entirely. Any new op logic must check it — see MPI-281.
 
+## The "?" prompting guide (MPI-360)
+
+Every op prompts differently and the strip alone cannot say so, so the parameters popup
+carries a `?` directly **above** the strip, hard right. It opens `MpiOpHelpDialog` — a
+read-only MpiModal with the op's purpose, one good example and the common mistake.
+
+**One source per op.** The long form lives in the op's own `help` block in
+`commandRegistry.js`, beside the `info` one-liner that stays the hover form. There is no
+second help registry. `getOpHelp(opKey, model)` is the only lookup; the component never
+resolves anything itself. An op with no `help` still opens something useful — the resolver
+synthesises `{ title: label, body: [info] }` rather than render an empty popup.
+
+**Per-model overrides are merged, not swapped.** `help.byModel` is keyed by model **id**
+first, then model **type**, and shallow-merged over the base, so an entry supplies only the
+keys that differ. It exists because prompting genuinely diverges — `t2i` on `sdxl` wants
+comma-separated tags where Krea2/Klein want a sentence. It is NOT a per-model help matrix:
+add an entry only where the advice actually changes.
+
+**Media is optional and self-healing.** `help.media` holds app-root-relative statics
+(`assets/help/<op>.gif`). Extension picks the element — mp4/webm/mov render as a muted
+looping `<video>`, everything else including GIF as an `<img>`, no library involved. A path
+that fails to load removes its own node, so a typo degrades to text-only instead of a
+broken glyph.
+
+**Two traps this surface created**, both fixed in `MpiPromptBox`:
+
+- `Overlays.request` fires `ui:close-all-popups` with `reason: 'overlay-open'` **before**
+  showing an overlay. The settings popup obeyed it unconditionally, so it dismissed itself
+  the instant its own child guide appeared — and was gone once the guide closed. It now
+  ignores that specific reason, the same exemption MpiSlideOver takes. Outside-click,
+  Escape, cog-toggle and an unqualified close-all still dismiss it.
+- The guide portals to `document.body`, so every click inside it — including the backdrop
+  that dismisses it — reads as "outside" to the popup's own outside-click handler. That
+  handler now skips `.mpi-modal-wrapper` / `.mpi-modal-backdrop`, beside the existing
+  `.mpi-dropdown__list` / `.mpi-popup` skips.
+
+The dialog is created lazily on first `?` click and destroyed with the PromptBox.
+
 ## The op memory, and who may write it
 
 `state.s_selectedOpByModel` (`{[modelId]: opKey}`) records **user picks only**, session-only,
@@ -94,5 +132,7 @@ no CSS. Props per slot: `.claude/rules/component-mounts.md`.
 `node --test tests/op-strip-availability.test.cjs` — `commandRegistry.js` has zero imports, so
 a `.cjs` test can `await import` it directly. It pins: every strip-eligible op has a `short`
 that appears in `OP_ORDER`; canonical ordering; absent-vs-dim mask gating; `inpaint`'s contract
-(mask-gated, prompt-OPTIONAL); and that the canonical sort does not change which op
-`_pickFallbackOp` lands on. `npm run release:check` is the gate for any op-registry edit.
+(mask-gated, prompt-OPTIONAL); that the canonical sort does not change which op
+`_pickFallbackOp` lands on; and the three `getOpHelp` contracts (info fallback, per-model
+merge, and that `inpaint`'s guide keeps teaching the empty-prompt erase — the prompt IS that
+op's router). `npm run release:check` is the gate for any op-registry edit.

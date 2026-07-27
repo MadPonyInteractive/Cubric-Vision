@@ -109,3 +109,44 @@ test('the canonical sort does not change which op _pickFallbackOp lands on', asy
             `fallback op changed at imageCount=${imageCount}`);
     }
 });
+
+/**
+ * MPI-360 — the "?" guide. getOpHelp is the only lookup the dialog performs, so
+ * three things are load-bearing: it never returns an empty popup, a per-model
+ * override merges rather than replaces, and the inpaint entry keeps teaching the
+ * empty-prompt erase (the prompt IS that op's router).
+ */
+test('getOpHelp falls back to the info one-liner when an op has no authored guide', async () => {
+    const { getOpHelp, commands } = await import('../js/data/commandRegistry.js');
+
+    const bare = Object.entries(commands).find(([, c]) => !c.help && c.info);
+    assert.ok(bare, 'expected at least one op with info but no help block');
+    const help = getOpHelp(bare[0]);
+    assert.ok(help.body.length > 0, 'a guide with no authored body must fall back to info, not render empty');
+    assert.ok(!/—/.test(help.body[0]), 'the "Label — " prefix belongs to the title, not the body');
+    assert.strictEqual(help.title, commands[bare[0]].label);
+
+    assert.strictEqual(getOpHelp('no-such-op'), null);
+});
+
+test('getOpHelp merges a per-model override over the base instead of replacing it', async () => {
+    const { getOpHelp } = await import('../js/data/commandRegistry.js');
+
+    const base = getOpHelp('t2i');
+    const sdxl = getOpHelp('t2i', { id: 'sdxl-realistic', type: 'sdxl' });
+    const krea2 = getOpHelp('t2i', { id: 'krea2', type: 'krea2' });
+
+    assert.notDeepStrictEqual(sdxl.body, base.body, 'sdxl overrides t2i body (keywords, not prose)');
+    assert.deepStrictEqual(krea2.body, base.body, 'a model with no override gets the base guide');
+    assert.strictEqual(sdxl.title, base.title, 'unspecified keys survive the merge');
+});
+
+test('the inpaint guide teaches the empty prompt and warns off delete instructions', async () => {
+    const { getOpHelp } = await import('../js/data/commandRegistry.js');
+    const help = getOpHelp('inpaint');
+
+    assert.ok(help.examples.some(e => e.prompt === ''),
+        'the empty prompt is the erase path — it must appear as an example');
+    assert.ok(help.examples.some(e => e.bad === true),
+        'the "remove the X" mistake must be marked bad, not merely described');
+});

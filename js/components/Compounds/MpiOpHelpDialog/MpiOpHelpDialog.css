@@ -1,0 +1,117 @@
+/* ── MpiOpHelpDialog ─────────────────────────────────────────────────────────
+   Per-operation prompting guide (MPI-360). Same shell language as
+   MpiChangelogDialog — surface-1 card, scrolling body — so the two read as one
+   family of read-only dialogs. */
+
+.mpi-op-help {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem 1.5rem;
+    background: var(--surface-1);
+    border-radius: var(--r-2);
+    border-top: 2px solid var(--accent-frost);
+    max-height: min(80vh, 720px);
+}
+
+/* Header — heading left, X hard right */
+.mpi-op-help__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.mpi-op-help__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.mpi-op-help__kicker {
+    font-size: var(--t-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.mpi-op-help__title {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    color: var(--ink-1);
+    line-height: 1.3;
+}
+
+.mpi-op-help__close {
+    flex: 0 0 auto;
+}
+
+/* Body — scrolls when the guide is long */
+.mpi-op-help__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.mpi-op-help__para {
+    margin: 0;
+    font-size: var(--t-md);
+    line-height: 1.6;
+    color: var(--ink-2);
+}
+
+/* Media — image, GIF or looping clip, all sized the same */
+.mpi-op-help__media {
+    width: 100%;
+    height: auto;
+    max-height: 45vh;
+    object-fit: contain;
+    border-radius: var(--r-1);
+    background: var(--surface-2);
+}
+
+.mpi-op-help__section-title {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+    font-size: var(--t-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+/* Example rows — prompt on its own line, the note softer beneath it */
+.mpi-op-help__example {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--accent-ok);
+}
+
+.mpi-op-help__example--bad {
+    border-left-color: var(--accent-heat);
+}
+
+.mpi-op-help__prompt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-sm);
+    color: var(--ink-1);
+    word-break: break-word;
+}
+
+.mpi-op-help__example--bad .mpi-op-help__prompt {
+    color: var(--accent-heat);
+    text-decoration: line-through;
+}
+
+.mpi-op-help__note {
+    font-size: var(--t-sm);
+    line-height: 1.5;
+    color: var(--ink-3);
+}

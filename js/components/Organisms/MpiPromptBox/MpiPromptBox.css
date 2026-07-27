@@ -256,6 +256,15 @@
     max-width: 90vw;
 }
 
+/* "?" row — sits between the parameters and the op strip, hard right so it
+   never sits on the path to a chip. Zero column height of its own: the button
+   is the row. */
+.mpi-prompt-box__settings-help {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: -0.5rem;
+}
+
 /* Op strip inside the popup — LAST row (the popup is bottom-anchored to the
    cogwheel, so only its bottom edge holds still across op changes). Spans the
    popup and scrolls sideways rather than wrapping, so it stays one line

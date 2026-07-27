@@ -1504,3 +1504,32 @@
  *       modal but do NOT emit dismiss; the seen-version is persisted only on Done
  *       (wired in shell.js).
  */
+
+
+/**
+ * @typedef {Object} MpiOpHelpDialogProps (Compound — js/components/Compounds/MpiOpHelpDialog)
+ * No props required at mount time — content is provided imperatively via open().
+ *
+ * Per-operation prompting guide (MPI-360), opened by the "?" above the op strip in
+ * the PromptBox parameters popup. Read-only: it has no confirm path and cannot
+ * change a generation. Content comes from `getOpHelp(opKey, model)` in
+ * js/data/commandRegistry.js, which resolves the op's own `help` block and any
+ * per-model override — this component never looks anything up itself.
+ *
+ * MpiModal owns the backdrop, the portal and the Overlays entry, so Escape and
+ * backdrop-click close it like every other modal.
+ *
+ * Instance methods (on instance.el):
+ *   open({ title: string, body: string[],
+ *          examples: Array<{prompt:string, note?:string, bad?:boolean}>,
+ *          media: string[] })
+ *     — Set content before showing. Rebuilds the body, so repeated open() calls are
+ *       idempotent (the same instance is reused across ops). `media` paths are app-
+ *       root-relative statics (`assets/help/inpaint.gif`); mp4/webm/mov render as a
+ *       muted looping <video>, everything else (including GIF) as an <img>. A path
+ *       that fails to load removes its own node rather than showing a broken glyph.
+ *   show() — portal + blocking backdrop (idempotent)
+ *   hide() — release overlay
+ *
+ * Emits: nothing. Closing is the only interaction.
+ */

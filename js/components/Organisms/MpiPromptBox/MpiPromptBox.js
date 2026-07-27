@@ -6,7 +6,8 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, getOpHelp } from '../../../data/commandRegistry.js';
+import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
@@ -1012,6 +1013,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 <div class="mpi-prompt-box__settings-grid">
                     <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
                 </div>
+                <!-- "?" for the ACTIVE op (MPI-360). Sits directly above the strip
+                     that selects it, hard right so it never competes with a chip
+                     for the click. Content is resolved per op AND per model. -->
+                <div class="mpi-prompt-box__settings-help" id="op-help-slot"></div>
                 <!-- The op strip replaced the SETTINGS badge: the popup covers the
                      floating bar strip while open, so without a mount in here the op
                      can't be changed without closing the popup. Same choices, same
@@ -1028,6 +1033,25 @@ export const MpiPromptBox = ComponentFactory.create({
 
         const _popupStripSlot = qs('#op-strip-popup-slot', popupNode);
         if (_popupStripSlot) opStripSlots.push(_popupStripSlot);
+
+        // ── Per-op prompting guide (MPI-360) ───────────────────────────────────
+        // One dialog instance, re-filled on each open — the guide is read-only, so
+        // there is nothing to keep alive between ops. Content is resolved at CLICK
+        // time, not mount time: both `activeOperation` and `model` are reassigned
+        // closure vars, and the popup outlives every op change.
+        let _opHelpDialog = null;
+        const _helpBtn = MpiButton.mount(qs('#op-help-slot', popupNode), {
+            icon: 'help', variant: 'ghost', size: 'sm',
+            info: 'How to prompt this operation',
+            extraClasses: 'mpi-prompt-box__help-trigger',
+        });
+        _helpBtn.on('click', () => {
+            const help = getOpHelp(activeOperation, model);
+            if (!help) return;   // unknown op key — nothing to teach
+            if (!_opHelpDialog) _opHelpDialog = MpiOpHelpDialog.mount(document.createElement('div'));
+            _opHelpDialog.el.open(help);
+            _opHelpDialog.el.show();
+        });
 
         let popupActive = false;
         let leaveTimer = null;
@@ -1137,12 +1161,25 @@ export const MpiPromptBox = ComponentFactory.create({
             // our popup but live in document.body due to portaling.
             if (e.target.closest?.('.mpi-dropdown__list')) return;
             if (e.target.closest?.('.mpi-popup')) return;
+            // The op-help modal (MPI-360) is opened FROM this popup but portals to
+            // body, so every click in it — including the backdrop that dismisses it
+            // — reads as "outside". Without this the settings popup vanished behind
+            // the guide and was gone once the guide closed.
+            if (e.target.closest?.('.mpi-modal-wrapper, .mpi-modal-backdrop')) return;
             closePopup();
         };
         _unsubs.push(on(document, 'click', onPopupOutsideClick));
         void cancelClose; void scheduleClose;
 
-        _unsubs.push(Events.on('ui:close-all-popups', () => {
+        // `reason: 'overlay-open'` is the pulse Overlays.request fires BEFORE showing
+        // a new overlay. This popup now opens one itself (the "?" guide, MPI-360), so
+        // obeying that pulse meant the popup dismissed itself the instant its own child
+        // appeared — and was gone once the guide closed. Same exemption MpiSlideOver
+        // takes, for the same reason: a child modal must not close its opener. Every
+        // OTHER dismiss path still applies — outside-click, Escape, cog toggle, and an
+        // unqualified close-all (overlay teardown / Overlays.reset).
+        _unsubs.push(Events.on('ui:close-all-popups', ({ reason } = {}) => {
+            if (reason === 'overlay-open') return;
             if (popupActive) closePopup();
         }));
 
@@ -1837,6 +1874,12 @@ export const MpiPromptBox = ComponentFactory.create({
             _negBtn?.destroy?.();
             for (const strip of _opStrips) strip.destroy?.();
             _opStrips = [];
+            // The help dialog portals to body and holds its own Overlays entry —
+            // dropping popupNode below would orphan both. Lazily created, so it
+            // may never have existed.
+            _helpBtn?.destroy?.();
+            _opHelpDialog?.el?.destroy?.();
+            _opHelpDialog = null;
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();
