@@ -34,7 +34,10 @@ function _stopOtherGalleryMedia(except) {
 // media-folder filename, without touching the in-app `application/mpi-media`
 // drag: Chromium's `DownloadURL` type rides the same HTML5 drag (no
 // preventDefault, no startDrag), so drag-to-prompt is unaffected. Single card
-// per drag — DownloadURL caps at one file (multi-select export dropped by user).
+// per drag — DownloadURL caps at one file.
+// NOTE: DownloadURL is only a virtual-file PROMISE — Explorer/Finder materialize
+// it, third-party apps (Discord, Photoshop) read CF_HDROP and see nothing. Those
+// need `_tryNativeDragOut` below (Alt+drag → Electron startDrag), MPI-363.
 const _EXPORT_MIME = {
     png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif',
     mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
@@ -261,6 +264,31 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 card.el.setSelected(_selectedIds.has(id));
                 card.el.setSelectionBadge?.(numberById.get(id) || 0);
             });
+        }
+
+        // MPI-363 — Alt+drag = REAL OS file drag (Discord, Photoshop, upload
+        // zones). The plain drag stays HTML5 (`application/mpi-media` +
+        // `DownloadURL`); `DownloadURL` is only a virtual-file promise that
+        // Explorer/Finder materialize, so third-party apps ignore it. Electron's
+        // `startDrag` is the only real-path handoff and it REPLACES the HTML5
+        // drag session — the two can never share one gesture, hence Alt.
+        // The `preventDefault()` here is what the "never preventDefault in this
+        // handler" rule (docs/gallery.md) forbids on the PLAIN path — the native
+        // path requires it (Electron's documented startDrag pattern) and only
+        // runs behind `altKey`, so the in-app drop is untouched.
+        // Multi-file works here (startDrag takes an array) where DownloadURL capped at one.
+        function _tryNativeDragOut(e, group) {
+            const ipc = window.require?.('electron')?.ipcRenderer; // absent in browser-dev
+            if (!e.altKey || !ipc) return false;
+            const ids = (_selectionMode && _selectedIds.has(group?.id)) ? [..._selectedIds] : [group?.id];
+            const files = ids
+                .map(id => _groups.find(g => g.id === id))
+                .map(g => extractAbsPath(g?.history?.[g.selectedIndex]?.filePath))
+                .filter(Boolean);
+            if (!files.length) return false; // blob/preview cards have no on-disk file
+            e.preventDefault();
+            ipc.send('drag-out-files', { files });
+            return true;
         }
 
         // ── Grid size slider (5 levels via MpiProgressBar) ──────────────────────
@@ -908,6 +936,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     });
                     v.dataset.mpiDragBound = '1';
                     v.addEventListener('dragstart', (e) => {
+                        if (_tryNativeDragOut(e, group)) return;
                         const s = group?.history?.[group.selectedIndex];
                         e.dataTransfer.setData('application/mpi-media', JSON.stringify({
                             groupId: group.id, itemId: s?.id,
@@ -1020,6 +1049,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (!thumb.dataset.mpiDragBound) {
                     thumb.dataset.mpiDragBound = '1';
                     thumb.addEventListener('dragstart', (e) => {
+                        if (_tryNativeDragOut(e, group)) return;
                         const sel = group?.history?.[group.selectedIndex];
                         e.dataTransfer.setData('application/mpi-media', JSON.stringify({
                             groupId: group.id, itemId: sel?.id,

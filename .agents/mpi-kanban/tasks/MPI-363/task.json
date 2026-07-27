@@ -1,0 +1,27 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-363",
+ "title": "Alt+drag a gallery card into another app (real OS file drag)",
+ "description": "Dragging a gallery card to Explorer/Finder works, but dropping it into Discord, Photoshop or a browser upload zone does nothing. Root cause is not a bug: MPI-318 exports via Chromium's `DownloadURL`, which is a VIRTUAL-FILE PROMISE (CFSTR_FILEDESCRIPTOR). Explorer materializes it; third-party apps read CF_HDROP (a real path) and see nothing. Only fix is Electron `webContents.startDrag({files, icon})`, which REPLACES the HTML5 drag session -- so it can never share the plain-drag gesture with the in-app `application/mpi-media` drop (PromptBox chip, group-history). Second gesture required: hold ALT while dragging a card = native OS file drag. Plain drag is untouched. Alt+drag while in selection mode drags EVERY selected card's file (multi-file export, the thing DownloadURL could not do and that was dropped in MPI-318).",
+ "column": "done",
+ "maturity": "complete",
+ "status": "closed",
+ "created_at": "2026-07-27T22:10:00Z",
+ "updated_at": "2026-07-27T23:00:00Z",
+ "labels": [
+  "gallery",
+  "drag-drop",
+  "electron",
+  "export"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "plan": "plan.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "files": "files.json",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/",
+  "research": "research/"
+ }
+}

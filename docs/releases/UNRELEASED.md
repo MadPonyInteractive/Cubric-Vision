@@ -29,6 +29,16 @@
   add flattering or on-theme details you never asked for, it now gives you what
   you actually described. The fast setting is unchanged.
 
+- **Hold Alt to drag a gallery card straight into another app.** Dragging a card
+  out to a folder has always worked, but dropping it into Discord, Photoshop or a
+  browser upload box did nothing — a plain drag only hands over a *promise* of a
+  file, which the file manager understands and other apps ignore. Hold **Alt**
+  while you drag and the card leaves as a real file, so any app that accepts a
+  dropped file now takes it. You can let go of Alt once the drag is moving. If
+  several cards are selected, Alt-dragging one of them drags all of them at once.
+  A plain drag is unchanged: onto the prompt to reuse a card, into a folder to
+  save it.
+
 - **Image descriptions are sharper and get straight to the point.** Describe an
   image and it no longer starts with "The image shows…" — the description opens
   on the subject itself, so you can paste it straight into a prompt. It is also

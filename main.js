@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification, safeStorage } = require('electron');
+const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification, safeStorage, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
@@ -878,6 +878,26 @@ app.on('ready', () => {
       urgency: payload.urgency,
       timeoutType: payload.timeoutType,
     }, 'Pod connected');
+  });
+
+  // Alt+drag a gallery card out to another app (MPI-363). The plain card drag
+  // exports via Chromium's `DownloadURL`, which is only a VIRTUAL-FILE PROMISE:
+  // Explorer/Finder materialize it, but third-party drop targets (Discord,
+  // Photoshop, browser upload zones) read CF_HDROP and see nothing. `startDrag`
+  // is the only thing that hands over a real path — and it REPLACES the HTML5
+  // drag, which is why the renderer gates it behind Alt.
+  ipcMain.on('drag-out-files', (event, payload = {}) => {
+    const files = (Array.isArray(payload.files) ? payload.files : [])
+      .filter(f => typeof f === 'string' && fs.existsSync(f));
+    if (!files.length) return;
+    // nativeImage reads PNG/JPEG only — video/webp cards fall back to the app icon.
+    let icon = nativeImage.createFromPath(files[0]);
+    if (icon.isEmpty()) icon = nativeImage.createFromPath(path.join(__dirname, 'favicon.png'));
+    try {
+      event.sender.startDrag({ file: files[0], files, icon: icon.resize({ width: 96 }) });
+    } catch (err) {
+      logger.warn('main', `startDrag failed: ${err.message}`);
+    }
   });
 
   // TODO: replace platform branches with screen.setCursorScreenPoint({x,y})
