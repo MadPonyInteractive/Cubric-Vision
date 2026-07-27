@@ -149,6 +149,7 @@ EMITS:   `entry-selected`    `{ idx, item }` — card clicked (single-select)
          `delete-selected`   `{ indices: number[] }` — Delete chosen from context menu OR `Delete` hotkey (selection → indices; no selection → `[_selectedIdx]` so active entry is targeted)
          `compare-requested` `{ indices: [number, number] }` — Compare chosen from context menu (exactly 2 selected)
          `combine-requested` `{ indices: number[] }` — Combine chosen from context menu (video group, ≥2 selected, chronological order)
+         `composite-requested` `{ indices: [number, number] }` — Mask composite chosen from context menu (image group, exactly 2 selected, ≥1 of them masked — gate awaits `props.hasMaskForIndex` on BOTH)
          `add-to-gallery`    `{ index: number }` — Add to gallery chosen from context menu (exactly 1 selected)
          `reuse`             `{ positive: string, negative: string }` — Reuse-prompt icon button on a card clicked. Parent emits `workspace:inject-prompts` so PromptBox restores text. Button hidden on cards without `item.prompt` or `item.negativePrompt`.
 LISTENS: (none)

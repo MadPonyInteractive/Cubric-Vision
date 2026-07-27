@@ -68,7 +68,8 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Both group types:**
 - `MpiHistoryTools`   props: `{ mode: 'image'|'video' }` — builds own tool list from `mode` prop   slot: `#left-slot`
-- `MpiHistoryList`   props: `{ history, selectedIndex, isVideo }` — ctrl/shift/right-click selection   slot: `#right-bottom-slot`
+- `MpiHistoryList`   props: `{ history, selectedIndex, isVideo, hasMaskForIndex, hasCopiedMask }` — ctrl/shift/right-click selection; the two mask callbacks gate the mask rows in its context menu   slot: `#right-bottom-slot`
+- `MpiMaskCompositeDialog` (Compound, MPI-362)   props: `{ maskName, otherName }`   slot: `document.createElement('div')` — lazy per-use dialog on `composite-requested` (image groups); emits `add`/`subtract`/`cancel`, Block destroys it in each handler
 - `MpiMediaDropOverlay`   props: `{ onDrop({ files: [{ file, mediaType }, ...] }) }` callback   slot: `document.createElement('div')` appended to `el` — loops files: uploads each, calls `_pb.el.injectMedia()` per file (no history card created). Suppressed while video prompt mode is active so start/end-frame slot drops keep local targeting.
 - `MpiModelSettings`   props: none   slot: `document.createElement('div')` — singleton settings overlay; opened by the model picker's `settings` event (MPI-356 — the PromptBox no longer emits `settings`; the LoRA/upscale gear left the popup with the dropdowns)
 - `MpiModelPicker` (Compound, MPI-356)   props: none   slot: `document.createElement('div')` — singleton model overlay opened on `ui:open-model-picker` via `el.open({ models, modelId })`. The Block owns the (workspace-filtered) list AND applies the pick — the picker holds no model logic. Its `settings` event opens `MpiModelSettings({ modelId })`.

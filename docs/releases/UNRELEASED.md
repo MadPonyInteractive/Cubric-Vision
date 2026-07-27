@@ -29,6 +29,16 @@
   add flattering or on-theme details you never asked for, it now gives you what
   you actually described. The fast setting is unchanged.
 
+- **Blend two versions of an image together with a mask.** When a re-run fixes
+  one part of a picture and ruins another, you no longer have to choose. Paint a
+  mask over the area you care about, select that entry and the one you want to
+  borrow from, right-click and pick **Mask composite**. **Add** drops the other
+  entry's pixels into the masked area; **Subtract** does the reverse, keeping the
+  other entry and taking only the masked area from the one you painted. The blend
+  lands as a new entry in the strip, so nothing is overwritten and deleting it
+  undoes the whole thing. The edge is softened automatically, and a mask drawn as
+  an outline fills in, exactly like everywhere else masks are used.
+
 - **Hold Alt to drag a gallery card straight into another app.** Dragging a card
   out to a folder has always worked, but dropping it into Discord, Photoshop or a
   browser upload box did nothing — a plain drag only hands over a *promise* of a
@@ -44,6 +54,23 @@
   on the subject itself, so you can paste it straight into a prompt. It is also
   considerably more thorough, covering the subject, clothing, materials,
   lighting, composition and background in enough detail to recreate the shot.
+
+- **Pick what you're making from a strip, not a dropdown.** Every operation your
+  model can do now sits above the prompt box as a row of chips, with the current
+  one lit. An operation you can't run right now stays visible but dimmed, and
+  hovering it says exactly what's missing — *needs 1 image*, *paint a mask
+  first*, *takes at most 2 images* — instead of quietly disappearing from a list.
+  The same strip appears inside the parameters popup, so you can change operation
+  without closing it. Clearing the last image now drops you back to
+  text-to-image on its own, and the operation you actually chose comes back the
+  moment you add an image again.
+
+- **Choosing a model is a full-screen contact sheet.** The model dropdown is now
+  a grid of preview tiles like the Model Library, so you pick by looking at the
+  work rather than reading names. Holding **Tab** opens it straight away — the
+  gesture is identical every time, instead of a ring that rotated and changed
+  size depending on which model you were on. LoRA & Upscale settings open from
+  the model's own tile.
 
 ## fixes
 
