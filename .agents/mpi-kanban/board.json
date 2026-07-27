@@ -1,8 +1,10 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 365,
+ "next_id": 367,
  "columns": {
   "todo": [
+   "MPI-366",
+   "MPI-365",
    "MPI-361",
    "MPI-358",
    "MPI-357",
@@ -55,8 +57,15 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-27T12:00:00Z",
+ "updated_at": "2026-07-28T00:15:00Z",
  "events": [
+  {
+   "at": "2026-07-28T00:15:00Z",
+   "type": "task.created",
+   "task": "MPI-366",
+   "to": "todo",
+   "note": "Investigate a shared community Krea2 ID-edit character-dataset workflow (tagger + optional RTX 50xx attention patch) as an App candidate. Source needs the user's VPN; nothing fetched or tested yet."
+  },
   {
    "at": "2026-07-28T00:05:00Z",
    "type": "task.moved",

@@ -1,0 +1,35 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-366",
+ "title": "Investigate the shared Krea2 ID-Edit character-dataset workflow as an App candidate",
+ "column": "todo",
+ "maturity": "idea",
+ "created_at": "2026-07-28T00:15:00Z",
+ "updated_at": "2026-07-28T00:15:00Z",
+ "labels": [
+  "app",
+  "research",
+  "krea2",
+  "dataset"
+ ],
+ "description": "Read and evaluate a community Krea2 identity-edit workflow that builds a tagged character dataset from one reference image, and decide whether it is worth wiring as an App. Investigation only — no implementation on this card.",
+ "acceptance": [
+  "Workflow JSON obtained and its node graph read end to end (source needs the VPN on)",
+  "Verdict on whether it actually does the job: identity held across the set, pose/expression/angle spread real, output usable as LoRA training data",
+  "Every custom node + weight it needs classified: already shipped / installable / blocked (licence, size, node lock)",
+  "Tagger decision made: keep its tagger, or swap to our own image_descriptor / Describe-Image harness, or a different LLM",
+  "The RTX 50xx attention patch assessed against our Pod image and local engine — needed, no-op, or harmful",
+  "Written recommendation: build as App, cannibalise the good parts into an in-house workflow, or drop — with the App shape sketched if it is a go",
+  "Findings land in docs/models/krea2/ (or a new docs page) and this card moves accordingly"
+ ],
+ "links": {
+  "brief": ".agents/mpi-kanban/tasks/MPI-366/brief.md",
+  "reference": "https://civitai.red/models/2805529/krea2-id-edit-character-dataset-creator-w-tagger-and-optional-rtx50xx-attention-fix",
+  "related": "MPI-259",
+  "depends_on": "",
+  "blocks": "",
+  "plan": "",
+  "handoff": "",
+  "validation": ""
+ }
+}
