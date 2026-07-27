@@ -14,6 +14,14 @@ model-agnostic *how* (deps, R2, registry, workflow split) is NOT here — that's
 Samplers, conditioning & control, style-LoRA set, resolution (÷16), injection seam,
 preview/taesd landmine, int8-quant candidates. Hub: [krea2/README.md](krea2/README.md).
 
+### [klein/](klein/) — FLUX.2 Klein 4B (Apache-2.0, fastest image model we ship)
+| File | Holds |
+|---|---|
+| [README.md](klein/README.md) | Hub: what ships (distilled int8, ONE tier), weights, the ONE-master-template `Input_wf_type` architecture, step counts, known limits. |
+| [removal.md](klein/removal.md) | The object-removal op — green plate, crop/stitch, 4 steps, the two traps. Klein's headline capability. |
+| [refcontrol.md](klein/refcontrol.md) | The depth op — the grayscale root cause (cost a day, do NOT re-derive) and the style×depth exclusivity rule. |
+| [licences.md](klein/licences.md) | Community-LoRA licence method + table. Klein's Apache-2.0 does NOT extend to them. |
+
 ### [ltx/](ltx/) — LTX-2.3 video
 | File | Holds |
 |---|---|

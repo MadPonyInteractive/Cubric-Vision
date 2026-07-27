@@ -103,10 +103,18 @@ assert.strictEqual(showEnhance({ capabilities: { promptEnhance: true } }), true,
 
 // T5/umT5 encoders CRASH on TextGenerate (AttributeError, no graceful degrade).
 // Chroma + Wan must never carry the capability.
+//
+// The allowlist is by model TYPE and holds only LLM-class text encoders, which are the
+// ones whose CLIP implements `.generate()`:
+//   krea2 — Qwen3-VL (abliterated)
+//   klein — Qwen3-4B text-only (MPI-354); an LLM, not a T5 derivative
+// Adding a type here is a claim about its ENCODER, not about the graph having an
+// enhancer node. Check the encoder family before widening it.
+const ENHANCER_CAPABLE_TYPES = ['krea2', 'klein'];
 const { MODELS } = await import('../js/data/modelConstants/models.js');
 for (const m of MODELS) {
     if (m.capabilities?.promptEnhance === true) {
-        assert.ok(['krea2'].includes(m.type),
+        assert.ok(ENHANCER_CAPABLE_TYPES.includes(m.type),
             `${m.id}: promptEnhance requires a CLIP with .generate() — T5/umT5 models crash`);
     }
     if (m.capabilities?.styleLoras === true) {
@@ -120,20 +128,48 @@ for (const m of MODELS) {
     }
 }
 
-// ── op scoping: the style rack + enhancer exist only on the base graph ────────
-// Krea2's detailer/upscaler graphs carry no style nodes and no TextGenerate.
-const { COMMANDS } = await import('../js/data/commandRegistry.js');
-const STYLE_CTRLS = ['styleSelect', 'stylization', 'enhancePrompt'];
+// ── op scoping: a control must never be offered for a graph that lacks its node ──
+//
+// Until MPI-354 this was enforced by the op's `components` list alone — `upscale` and
+// `detail` simply omitted the style controls, because the only style-rack model (Krea2)
+// ships rack-less detailer/upscaler files. That stopped being expressible when a model
+// arrived whose ops are all branches of ONE graph: Klein's detail and upscale DO carry
+// the rack. So `components` now says "this control can exist for this op" and
+// modelShowsStyleRack decides per MODEL.
+//
+// The invariant that actually matters is unchanged and is asserted directly below, per
+// model x op, against the real workflow JSON: if the picker is shown, the graph it runs
+// must contain the node it injects into. That is strictly stronger than the old check.
+const { COMMANDS, modelShowsStyleRack } = await import('../js/data/commandRegistry.js');
+const fs = require('fs');
+const path = require('path');
+const WF_DIR = path.join(__dirname, '..', 'comfy_workflows');
 
 for (const op of ['t2i', 'i2i']) {
-    for (const c of STYLE_CTRLS) {
+    for (const c of ['styleSelect', 'stylization', 'enhancePrompt']) {
         assert.ok(COMMANDS[op].components.includes(c), `${op} must offer ${c}`);
     }
 }
+// The enhancer is still base-graph-only: no detailer/upscaler carries TextGenerate, and
+// Klein's enhancer sits on the shared text path, not on those branches.
 for (const op of ['upscale', 'detail']) {
-    for (const c of STYLE_CTRLS) {
-        assert.ok(!COMMANDS[op].components.includes(c),
-            `${op} must NOT offer ${c} — its graph has no such node`);
+    assert.ok(!COMMANDS[op].components.includes('enhancePrompt'),
+        `${op} must NOT offer enhancePrompt — no graph has TextGenerate on that path`);
+}
+
+const titlesOfWorkflow = (file) => new Set(
+    Object.values(JSON.parse(fs.readFileSync(path.join(WF_DIR, file), 'utf8')))
+        .map(n => (n?._meta?.title || '').toLowerCase()).filter(Boolean));
+
+for (const m of MODELS) {
+    for (const op of m.supportedOps || []) {
+        const offered = (COMMANDS[op]?.components || []).includes('styleSelect')
+            && modelShowsStyleRack(m, op);
+        const file = m.workflows?.[op];
+        if (!offered || !file || !fs.existsSync(path.join(WF_DIR, file))) continue;
+        assert.ok(titlesOfWorkflow(file).has('input_style_selector'),
+            `${m.id}: the style picker is shown on "${op}" but ${file} has no `
+            + 'Input_Style_Selector node — the control would silently do nothing');
     }
 }
 

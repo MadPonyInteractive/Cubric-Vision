@@ -1,0 +1,165 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d79aa76a-6ac3-467b-b616-8ddbc25c2a0c",
+  "generated_at": "2026-07-28T00:40:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-354 Klein - dep reconcile, R2 upload, template conversion, full app wiring",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Finish wiring FLUX.2 Klein 4B as a new model (t2i + edit + inpaint/removal + depth refcontrol + detail/upscale).",
+    "status": "in_progress",
+    "summary": "Fifth Klein session, and the model is now WIRED END TO END: deps reconciled and uploaded to R2 (verified), the master template converted and baked to klein_t2i.json, and a full ModelDef with a new op plus two new registry mechanisms. Everything verifiable without running the app has been verified. What remains is IN-APP verification only - progress-bar counts per op and peak VRAM - which the user will run and report. NOTHING IS COMMITTED, deliberately."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Dep reconcile closed BOTH directions against the baked graph (16 weights, 0 unmapped; 0 declared deps the graph does not load)",
+      "Transformer repointed base -> distilled; klein-lora-refcontrol-depth added; klein-lora-turbo dropped",
+      "All 14 declared sha256 re-verified vs disk (sha256sum -c, 14/14) BEFORE upload",
+      "R2 upload done + verified (rclone check 0 differences / 14 matching; HTTP 200 + byte-exact Content-Length on all 14 URLs)",
+      "Licences fully re-swept for all 11 Klein LoRAs; credit obligation implemented in data (dep credit block -> MpiAbout Credits list)",
+      "Template exported, converted, gate-passed and baked: klein_t2i.json (184 nodes, 0 dangling, 0 missing-required, 0 unknown class types)",
+      "generate_klein.py + registry klein_ route, 8 guards negative-control proven",
+      "ModelDef klein-4b + kleinEdit op + ModelDef.opInject + ModelDef.styleOps/modelShowsStyleRack",
+      "docs/models/klein split to README/licences/refcontrol/removal, all <=200 lines; docs/models/README.md now routes Klein",
+      "Engine junction to ComfyUI-MpiNodes restored (the stale managed copy was pinned at the OLD commit)",
+      "MPI-365 carded: migrate all models to the one-master-template shape, then GC"
+    ],
+    "pending": [
+      "IN-APP: count progress bars PER OP (see validation.md) - blocked on live runs",
+      "IN-APP: measure PEAK VRAM on the distilled int8 weight -> confirm or move sizeTier",
+      "Wire the captured bar counts once PROGRESS_STAGES can key per-op (it cannot today - see constraints)",
+      "Decide whether the remove op should hide the prompt field (promptRequired has NO UI consumer)",
+      "mpi-end: commit this session's work (see the uncommitted manifest in constraints)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-354",
+    "title": "Wire FLUX.2 Klein 4B as a new model (t2i + edit + inpaint/removal)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-354/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-354/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-354/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/models/klein/README.md rewritten - it documented the REVERSED base+turbo decision as current, which was actively hazardous. Now: distilled int8, ONE tier, per-op step counts, the one-master-template architecture, the widget-vs-link trap.",
+      "docs/models/klein/licences.md NEW - CivitAI by-hash method (incl. the stub-object and REGION_BLOCKED traps), full table with creators, the bundle-flag reasoning, and how the credit obligation is discharged in data.",
+      "docs/models/klein/refcontrol.md NEW - the depth op: grayscale root cause, the refcontrol trigger-word finding, style x depth exclusivity.",
+      "docs/models/klein/removal.md - added the not-shipped adjacents (MpiInpaintHeal, ReplaceSubject LoRAs) and CORRECTED the now-dissolved tier trap.",
+      "docs/models/README.md now routes Klein (it did not before).",
+      ".agents/mpi-kanban/tasks/MPI-354/brief.md - full session record.",
+      ".agents/mpi-kanban/tasks/MPI-354/validation.md - the in-app capture sheet."
+    ],
+    "pending": [
+      "After the in-app runs: record the per-op bar counts and the measured VRAM in validation.md, and correct sizeTier in models.js if the peak exceeds ~11GB.",
+      "MEMORY: the tool_comfy_schema_gate_before_workflow_sync memory hook says to probe /object_info for a node before syncing. It should also record that /object_info/<Unknown> returns HTTP 200 with an EMPTY {} - a 200 is NOT proof the node exists. Probe the full /object_info and check membership.",
+      "docs/models/klein/README.md still carries 'VRAM ~13GB measured on bf16 ... STILL PENDING' - close that line once measured."
+    ]
+  },
+  "next_action": {
+    "description": "RESTART ComfyUI first (the junction was restored after the running engine booted, so PID 55436 still has the old node set). Then run each Klein op in the app and capture what .agents/mpi-kanban/tasks/MPI-354/validation.md asks for: the progress-bar count PER OP (t2i with the enhancer both ON and OFF) and PEAK VRAM on the heaviest op. Do not re-derive anything already verified - the dep reconcile, the R2 upload and the baked workflow are all confirmed. Commit nothing; mpi-end closes this session's work.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SHIP THE DISTILLED CHECKPOINT, ONE TIER. klein-4b-transformer now points at flux-2-klein-4b-int8-convrot.safetensors (4074445184 B, sha ac629fa69e0700ae689bce6b694ac0fc90ba5c24de15bd6c47195ad0c16fe90e). klein-lora-turbo DELETED as a dep (user call): its node is bypassed AND severed in the template, so 0.79GB nobody loads. A tombstone comment in loraDeps.js explains why the node survives - do NOT re-add the dep on the strength of that node.",
+      "ModelDef.opInject (NEW) - per-model op -> constant params map, applied in commandExecutor._buildParams. It REPLACES the op's own injectParams rather than merging: a model declaring it is saying 'my graph picks its branch differently', so the op's booleans name nodes it does not have. Klein maps its 7 ops to Input_wf_type 1..7.",
+      "ModelDef.styleOps + modelShowsStyleRack() (NEW) - the style rack is now gated per MODEL and per OP, not by the op's components list alone. Klein's one master graph carries the rack on detail and upscale; Krea2's separate detailer/upscaler files do not. Defaults to DEFAULT_STYLE_OPS = exactly the pre-Klein set, so every existing model is byte-identically unaffected.",
+      "Klein is ORIENTATION mode (type 'klein' -> FLUX_RATIOS), NO quality-tier radio. The graph runs 896x1088, i.e. FLUX ratio values. With one output class a tier radio would offer a single choice; bigger output is the upscale op's job. negativePrompt FALSE (bit-identical at cfg 1.0) and turboToggle FALSE.",
+      "kleinEdit is a NEW op with THREE reference slots (user call). Chaining ReferenceLatent is verified; 1/2/3 refs = 20/30/44 s, so three is a deliberate cap on a cost the user cannot see. Registered in operationRegistry.js + operation_registry.json at appVersionIntroduced 1.2.0.",
+      "REMOVAL uses the EXISTING `inpaint` op (landed by MPI-356 in a32b2503, explicitly anticipating Klein): requiresMask true, promptRequired false, empty prompt erases. No new op was needed.",
+      "Model card image = the woman-walking-the-dog aesthetic-LoRA render (user's choice), converted from G:/CubricModels/loras/flux2-klein/styles/aesthetic.png to comfy_workflows/display/klein-4b.webp at 896x1088.",
+      "MPI-365 carded for the user's stated direction: EVERY image model (and probably video) moves to the one-master-template shape, then a GC pass. The card lists what becomes deletable - the shared-op injectParams and the replace-vs-merge branch with them, the per-op detailer/upscaler raw files, DEFAULT_STYLE_OPS."
+    ],
+    "constraints": [
+      "NOTHING IS COMMITTED, deliberately, and it MUST stay that way until mpi-end. The Klein change spans js/data/commandRegistry.js and js/components/Organisms/MpiPromptBox/MpiPromptBox.js, which ALSO carry other sessions' uncommitted work (MPI-360 op-help content, MpiOpHelpDialog/, MpiMaskCompositeDialog/, services/imageComposite.js, tests/op-strip-availability.test.cjs, tests/mask-composite.test.cjs, MpiHistoryList.js, MpiGroupHistoryBlock.js, js/components/types.js, js/shell/preloadStyles.js, routes/projects.js, docs/op-model-selection.md). Splitting Klein out would produce a BROKEN commit - modelShowsStyleRack and the kleinEdit op both live in commandRegistry.js. The user has closed several sessions mid-flight and will run a dedicated cleanup session.",
+      "MINE this session (for mpi-end): comfy_workflows/klein_t2i.json, comfy_workflows/scripts/workflow_generation/klein_t2i_template.json (both already git-staged by the sync), comfy_workflows/display/klein-4b.webp, comfy_workflows/scripts/workflow_generation/generate_klein.py + registry.py (ALREADY COMMITTED b6973a77), js/data/modelConstants/models.js + loraDeps.js + modelDeps.js, js/data/commandRegistry.js (partly), js/services/commandExecutor.js, js/components/Organisms/MpiPromptBox/MpiPromptBox.js (one gate line + one import), js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js + .css, js/utils/ratios.js, js/core/operationRegistry.js, operation_registry.json, tests/inject-params-titles.test.cjs, tests/output-prompt-capture.test.cjs, docs/models/klein/*, docs/models/README.md, .agents/mpi-kanban/**.",
+      "ALREADY COMMITTED this session: a19f4f48 (krea2 rack orphan-slot guard, MPI-359), b6973a77 (Klein handler + registry route), 76d363d2 + 847fdfe7 (raw template, committed by sync-raw-workflows.mjs itself).",
+      "PROGRESS_STAGES CANNOT EXPRESS KLEIN. stagesFor() keys on the WORKFLOW FILENAME with a mode of single/preview/stage2. Klein runs ALL SEVEN ops from klein_t2i.json and their bar counts genuinely differ, so one key cannot hold seven answers. Capture PER OP, then extend the schema with a per-op key ('klein_t2i.json:detail') or a fourth argument. Until then Klein has NO entry: the counter ticks without a total ('2' not '2/3') - degraded, never wrong.",
+      "/object_info/<NodeName> RETURNS HTTP 200 WITH AN EMPTY {} FOR AN UNKNOWN CLASS. A 200 is NOT proof a node exists - this produced a wrong conclusion in this session. Fetch the FULL /object_info and test membership instead.",
+      "THE ENGINE'S MpiNodes WAS STALE, NOT MERELY UNLINKED. engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-MpiNodes was a real managed copy pinned at aaa1d2d9 (missing MpiTextContains / MpiStyleSelector / MpiStyleLoras) while node_lock.json pins 69a43336. FIXED: the stale copy is renamed ComfyUI-MpiNodes.stale-aaa1d2d9 (delete when happy) and a JUNCTION now points at C:/AI/Mpi/ComfyUi-MpiNodes, whose HEAD is EXACTLY the pin, clean, nothing unpushed. Its gitignored .mpi_node_commit was refreshed aaa1d2d9 -> 69a43336. A junction (mklink /J, or PowerShell New-Item -ItemType Junction) needs NO admin; only a true symlink (mklink /D) does. RESTART ComfyUI to pick it up.",
+      "There is a dev-mode escape hatch at routes/shared.js ~line 625 (MPI-222) that skips drift-repair for ComfyUI-MpiNodes on a source run precisely so it will not fs.remove the symlink. The link died anyway, so the ComfyUI version bump most likely replaced the portable tree wholesale. If it vanishes again WITHOUT a bump, suspect that hatch (_devMode reading false, or an install path bypassing the check).",
+      "KNOWN GAP, NOT IMPLEMENTED: docs/models/klein/removal.md requires the remove op to HIDE the prompt field ('paint then Remove, one click'). It does not. The inpaint op sets promptRequired:false but that field has NO consumer anywhere in the UI - it is metadata only, so the text area still renders. Removal works regardless (empty prompt erases). Fixing it means real work in MpiPromptBox, which is why it was left alone.",
+      "PRE-EXISTING TEST FAILURES, NOT CAUSED BY THIS WORK (confirmed by stashing and re-running): optional-media-placeholder, permodel-key-allowlist, resolve-model-deps, runpod-remote-hardening. The suite is 48 pass / 4 fail, and those are the same 4 that failed before the change. Do NOT attribute them to Klein.",
+      "Four shipped Klein weights are BASE-authored while we ship DISTILLED: klein-lora-refcontrol-depth, klein-style-aesthetic, klein-style-vintage, klein-style-chibi. They demonstrably work but were never isolated against a base run - first suspect if any underperforms.",
+      "MpiNodes is pushed to GitHub and node_lock pins it. NOT yet released, so it is not on the ComfyUI registry - the user will do that with a later release. Not a blocker.",
+      "Do NOT re-derive the grayscale/refcontrol bug (solved, docs/models/klein/refcontrol.md) or the checkpoint A/B (flipped twice, docs/models/klein/README.md). Both are closed and documented."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/models.js",
+      "js/data/modelConstants/loraDeps.js",
+      "js/data/modelConstants/modelDeps.js",
+      "js/data/commandRegistry.js",
+      "js/services/commandExecutor.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js",
+      "js/components/Compounds/LandingPages/MpiAbout/MpiAbout.css",
+      "js/utils/ratios.js",
+      "js/core/operationRegistry.js",
+      "operation_registry.json",
+      "tests/inject-params-titles.test.cjs",
+      "tests/output-prompt-capture.test.cjs",
+      "comfy_workflows/klein_t2i.json",
+      "comfy_workflows/scripts/workflow_generation/klein_t2i_template.json",
+      "comfy_workflows/scripts/workflow_generation/generate_klein.py",
+      "comfy_workflows/scripts/workflow_generation/registry.py",
+      "comfy_workflows/display/klein-4b.webp",
+      "docs/models/klein/README.md",
+      "docs/models/klein/licences.md",
+      "docs/models/klein/refcontrol.md",
+      "docs/models/klein/removal.md",
+      "docs/models/README.md",
+      ".agents/mpi-kanban/tasks/MPI-354/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-354/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-365/task.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-354/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-354/brief.md",
+      "docs/models/klein/README.md",
+      "js/data/modelConstants/models.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "model wiring",
+      "generation lifecycle",
+      "comfy injection",
+      "workflow authoring"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    "docs/generation-lifecycle.md",
+    "docs/playbooks/add-model/"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-28T00:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-354, the FLUX.2 Klein 4B model wiring in Cubric Vision. Read .agents/mpi-kanban/state/handoffs/d79aa76a-6ac3-467b-b616-8ddbc25c2a0c.json first, then .agents/mpi-kanban/tasks/MPI-354/validation.md, which is the capture sheet for this session's work. Klein is already wired END TO END and everything checkable without the app has been verified: the dependency set reconciles against the baked graph in both directions, all 14 weights are uploaded to R2 and confirmed by rclone check plus HTTP HEAD, the master template is converted and baked to klein_t2i.json, and a full ModelDef ships with a new kleinEdit op and two new registry mechanisms (ModelDef.opInject and ModelDef.styleOps). What remains is IN-APP verification only: the progress-bar count PER OP (the PROGRESS_STAGES table keys on filename and cannot express Klein's seven ops from one file, so capture per op) and PEAK VRAM on the distilled int8 weight, which decides whether sizeTier stays 'low'. RESTART ComfyUI before testing - a junction to the MpiNodes pack was restored after the running engine booted. Commit NOTHING: the change spans commandRegistry.js and MpiPromptBox.js, which also hold other sessions' uncommitted work, so mpi-end closes it all together at the end of the next session. Do not re-derive the grayscale bug or the checkpoint A/B; both are solved and documented in docs/models/klein/."
+}

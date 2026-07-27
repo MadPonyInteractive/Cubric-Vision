@@ -199,7 +199,7 @@ export const loraDeps = {
         sha256: 'a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8',
     },
     // Style LoRAs (7) — user-selectable style rack (Krea2 style-system: MpiMath a==N
-    // gate → Input_style_lora_N → Input_Stylization strength, default 0.80). Subfolder
+    // Input_Style_Selector → MpiStyleLoras slot N, strength default 0.80). Subfolder
     // loras/qwen/styles/. Index-aligned with styleLoraLabels on the ModelDef.
     'qwen-edit-style-illustration': {
         id: 'qwen-edit-style-illustration',
@@ -328,24 +328,13 @@ export const loraDeps = {
         size: '1.1GB',
         sha256: 'e5af73441743b4852f228b03e444888dff3da80d2666033af2367ab7bda6d8b9',
     },
-    // Klein turbo/accelerator LoRA (MPI-354) — the SECOND TIER of the Klein card, same
-    // shape as krea2-lora-accelerator above: one base transformer + a strength-gated LoRA
-    // instead of shipping a second checkpoint. Gate it with an MpiMath off Input_Tier
-    // (`0.0 if a == 1 else 1.0`) so tier 1 short-circuits in apply_lora and never loads
-    // the file. Tier 1 (base, cfg ~5 / 20 steps) is the quality tier and the ONLY one
-    // where a negative prompt does anything; tier 2 (turbo) runs the low-cfg fast path.
-    // NOTE: unlike the Krea2 accelerator this file carries NO safetensors metadata, so
-    // its target checkpoint cannot be verified from the weight — it is trusted from the
-    // bench A/B against base, not from provenance.
-    'klein-lora-turbo': {
-        id: 'klein-lora-turbo',
-        name: 'FLUX.2 Klein 4B Turbo LoRA (r128, tier 2)',
-        origin: 'community turbo distill for FLUX.2-klein-base-4B',
-        filename: 'loras/flux2-klein/klein4b_turbo_r128.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/klein4b_turbo_r128.safetensors',
-        size: '786MB',
-        sha256: 'c204067b87c5039e768a94f41f6fe52a9150c1ec466f4af4edb4b7a093777a40',
-    },
+    // Klein turbo/accelerator LoRA — DROPPED 2026-07-27, deliberately not a dep.
+    // klein-4b-transformer ships the DISTILLED checkpoint (see modelDeps.js), which is
+    // already a cfg 1.0 / 4-step weight, so the base+turbo two-tier pair this entry
+    // existed for no longer has a base leg to accelerate. Its node survives in the
+    // template BYPASSED and severed (nothing consumes it) purely so the two-tier wiring
+    // is recoverable if Klein 9B ever lands — do NOT re-add the dep on the strength of
+    // that node alone. 786MB nobody loads; the weight is never uploaded to R2.
     // Klein outpaint LoRA (MPI-354) — BAKED at 1.1 in every Klein graph (LoraLoaderModelOnly,
     // not a user slot). Mandatory for outpaint, harmless-to-helpful on inpaint/removal.
     // MUST be the comfy-converted file (`diffusion_model.*` prefix, rank 16, all 68 target
@@ -358,5 +347,150 @@ export const loraDeps = {
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2-klein-4b-outpaint.safetensors',
         size: '76MB',
         sha256: 'b8a5142b40f2e24aa1f5cfd0710323188836f49ea70b15b5f85b1e364316bc5b',
+    },
+    // Klein depth refcontrol LoRA (MPI-354) — BAKED on the depth branch (node 143,
+    // LoraLoaderModelOnly -> CFGGuider), not a user slot. This is what makes the depth
+    // op a depth op; without it the depth map is just an ordinary reference image.
+    // GOTCHA (cost most of a day, do not re-derive): a depth map is a GRAYSCALE image
+    // fed in as a ReferenceLatent, and at cfg 1.0 there is no classifier-free guidance
+    // to amplify the text — so a short prompt LOSES to the reference and the output
+    // inherits the reference's greyness. The template fixes this with a literal
+    // 'refcontrol, color' prefix on StringConcatenate#133. It is a BIAS, not a clamp:
+    // 'a black and white photo of...' still correctly yields B&W. Do NOT "tidy" that
+    // prefix away — `refcontrol` is also the LoRA's own recorded training tag
+    // (ss_tag_frequency `1_refcontrol`), so dropping it likely weakens the LoRA too.
+    // Trained with ostris ai-toolkit 0.7.20, 6000 steps / 7 epochs, 160 keys already in
+    // comfy format (`diffusion_model.*.lora_A/B`), ss_base_model_version flux2_klein_4b.
+    // BASE-AUTHORED, CONFIRMED — CivitAI records this version's baseModel as
+    // "Flux.2 Klein 4B-base" while we ship the DISTILLED checkpoint. It demonstrably
+    // works on distilled once the prompt carries the prefix above, but that was never
+    // isolated against a base run, so if depth quality ever looks off this mismatch is
+    // the first suspect, not the graph.
+    // Licence resolved by SHA256 2026-07-27: civitai.com/models/2657241 (thedeoxen,
+    // "RefControl FLUX.2 Klein 4B – Reference Depth LoRA" v1.0) — allowCommercialUse
+    // {Image,RentCivit,Rent,Sell}, allowNoCredit true, allowDerivatives true. The most
+    // permissive of the 11 community weights Klein ships; no credit obligation.
+    'klein-lora-refcontrol-depth': {
+        id: 'klein-lora-refcontrol-depth',
+        name: 'FLUX.2 Klein 4B Depth RefControl LoRA (baked)',
+        origin: 'FLUX.2 Klein refcontrol (depth)',
+        filename: 'loras/flux2-klein/flux2_klein_4b_refcontrol_depth.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2_klein_4b_refcontrol_depth.safetensors',
+        size: '92MB',
+        sha256: '65ec4c71fa7538b2201481928609a5836773f0dc06a4041b2d28abd05826c401',
+    },
+    // Klein NSFW LoRA (MPI-354) — BAKED, and PROMPT-GATED, not user-facing: node 38
+    // (`NSFW LoRA`, LoraLoaderModelOnly) takes its strength from an MpiMath
+    // `1.0 if a else 0.0` fed by an MpiTextContains keyword scan of Input_Positive.
+    // No control, no capability, no ModelDef entry — a clean prompt leaves strength at
+    // 0.0 and MpiLoraModel/LoraLoaderModelOnly never touches the file. Licence checked
+    // 2026-07-26: civitai.com/models/2458332, allowCommercialUse {Image,RentCivit,Rent,Sell}.
+    'klein-lora-nsfw': {
+        id: 'klein-lora-nsfw',
+        name: 'FLUX.2 Klein 4B NSFW LoRA (prompt-gated)',
+        origin: 'CivitAI 2458332 (Party Time, v2.0_klein4B)',
+        filename: 'loras/flux2-klein/NSFW_party_time_v2.0_klein4b.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/NSFW_party_time_v2.0_klein4b.safetensors',
+        size: '180MB',
+        sha256: '0c4aea1ba041985d2d7e6ce655b865e0fe22ea37575b3310c4619ad57dc80a00',
+    },
+    // ── Klein style LoRAs (MPI-354) ────────────────────────────────────────────
+    // 8 style LoRAs behind Input_Style_Selector 1..8 (index 0 = No Style, model passes through).
+    // Same runtime shape as the Krea2 rack above: MUTUALLY EXCLUSIVE, an MpiMath
+    // `b if a == N else 0.0` zeroes the other 7 and MpiLoraModel.apply_lora returns
+    // early at strength 0 (never loads the file). Do NOT special-case footprint.js.
+    // Subfoldered under loras/flux2-klein/styles/ — ComfyUI lists them BACKSLASHED
+    // (`flux2-klein\styles\...`, verified against the bench graph) — rides the MPI-229 heal.
+    // Index alignment is the contract: dep ↔ styleLoraLabels[i] ↔ styleLoraImages[i]
+    // ↔ the MpiMath gate `a == i` ↔ the MpiPromptList `styles` trigger line.
+    // LICENCES verified 2026-07-26 by SHA256 against the CivitAI API (Klein 4B's
+    // Apache-2.0 does not extend to community LoRAs). Five carry the `Image` right
+    // (may sell generated output); anime (2227157), chibi (400063) and doodle (2593550)
+    // do not — but CivitAI's flags and License badge are MODEL-level, and all three are
+    // multi-base bundles whose restrictive label belongs to a Flux-dev/other leg we do
+    // not ship. All eight ship (user call). Credit-requiring LoRAs are attributed in the
+    // app's About section; the cross-model sweep for those is MPI-358.
+    // Table + method: docs/models/klein/README.md § LoRA licences.
+    'klein-style-muppets': {
+        id: 'klein-style-muppets',
+        name: 'Klein Style — Muppets',
+        origin: 'CivitAI (FLUX.2 Klein 4B Muppet Show style)',
+        filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors',
+        size: '88MB',
+        sha256: 'd75818b477b4e852eeb862d03e92bcf61ef72326f8e7f0de1bebda38596fab7a',
+    },
+    'klein-style-cartoon': {
+        id: 'klein-style-cartoon',
+        name: 'Klein Style — Cartoon',
+        origin: 'CivitAI (FLUX.2 Klein 4B Fluxtoon style)',
+        filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors',
+        size: '88MB',
+        sha256: 'fd308c80f8801626bc0eb53f778ded7f5ae162c7c6b334f82a263ac5033d1354',
+    },
+    'klein-style-jojo': {
+        id: 'klein-style-jojo',
+        name: 'Klein Style — Jojo',
+        origin: 'CivitAI (FLUX.2 Klein 4B Jojoso style)',
+        filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors',
+        size: '88MB',
+        sha256: 'dd021028b403a3760776b04e2e9c3e23551cc9fdce939e2d49c6e31d5f3d860d',
+    },
+    // The ONE weight we ship whose creator requires attribution — CivitAI
+    // `allowNoCredit: false` (verified by SHA256 2026-07-27). The `credit` block below is
+    // not decoration: MpiAbout renders a Credits list from every dep that carries one, so
+    // the obligation is discharged by the data, not by someone remembering to hand-edit a
+    // template. Add a `credit` to any future dep whose creator asks for it (MPI-358).
+    'klein-style-anime': {
+        id: 'klein-style-anime',
+        name: 'Klein Style — Anime',
+        origin: 'CivitAI (Anime new mecha, klein4b)',
+        filename: 'loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors',
+        size: '88MB',
+        sha256: '2ca647f74ca265fa3e1c22084b78006662bf0c38cf70418b1e798b25971147a0',
+        credit: {
+            author: 'n_Arno',
+            work: 'New Mecha style',
+            url: 'https://civitai.com/models/2227157',
+        },
+    },
+    'klein-style-chibi': {
+        id: 'klein-style-chibi',
+        name: 'Klein Style — Chibi',
+        origin: 'CivitAI (Roblox chibi doll, klein4b)',
+        filename: 'loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors',
+        size: '88MB',
+        sha256: 'e809c8257a5f58eee14d3ab55a0f8f8b81a41f33eb1f5a3eb79f964cdcc6b7de',
+    },
+    'klein-style-doodle': {
+        id: 'klein-style-doodle',
+        name: 'Klein Style — Doodle',
+        origin: 'CivitAI (klein4b doodle v1)',
+        filename: 'loras/flux2-klein/styles/klein4b-doodle_v1.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/klein4b-doodle_v1.safetensors',
+        size: '22MB',
+        sha256: '5ad2d907fcaee23ae2f7b2a9bb125774cb3013d57b0a966fd050271825bdba67',
+    },
+    'klein-style-vintage': {
+        id: 'klein-style-vintage',
+        name: 'Klein Style — Vintage',
+        origin: 'CivitAI (vintage photo, klein4b)',
+        filename: 'loras/flux2-klein/styles/vintage_photo.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/vintage_photo.safetensors',
+        size: '88MB',
+        sha256: '727ade732ac509d6cd2de73b21458973878bd8057851c70bd3aec0b337934c1b',
+    },
+    'klein-style-aesthetic': {
+        id: 'klein-style-aesthetic',
+        name: 'Klein Style — Aesthetic',
+        origin: 'CivitAI (Flux Klein 4B Art)',
+        filename: 'loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors',
+        size: '184MB',
+        sha256: '7243d2664fa35beff2cc43e3e4073d98dfaef1ed16f8a462f3a7a6547c8cf98b',
     },
 };

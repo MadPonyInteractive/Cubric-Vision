@@ -15,6 +15,8 @@
  * @property {string[]} [styleLoraImages] - Style card images for the picker, filenames in comfy_workflows/display/, INDEX-ALIGNED with styleLoraLabels. Index 0 is the no-style baseline (the same prompt with the rack off) — ship every card from the SAME prompt so the grid reads as a comparison. Optional: a missing entry (or the whole array) renders a placeholder card, so a model can ship styles before its art exists. See docs/playbooks/add-model/05-prompt-and-styles.md §9.
  * @property {Record<string, Array<{label:string,w:number,h:number,icon:string}>>} [ratios] - Per-type ratio table (MPI-174), keyed by quality tier (quality-mode models) or 'portrait'/'landscape' (orientation-mode). First model declaring it for a NEW `type` wins; existing types (flux/sdxl/wan/wan5b/ltx) keep their built-in tables in js/utils/ratios.js — do not redeclare them here.
  * @property {string[]} [qualityTiers] - Ordered quality-tier ids for a NEW `type` (MPI-174), e.g. ['low','medium','high']. Presence ⇒ quality UI mode (tier radio); absent + `ratios` present ⇒ orientation mode. Consumed via qualityTiersFor() in js/utils/ratios.js and the v3 project migration.
+ * @property {Record<string, Object>} [opInject] - Per-OP constant workflow params THIS model always injects, keyed by operation id then node title (MPI-354). For a model whose ops are branches of ONE master graph selected by a value private to that model — FLUX.2 Klein maps each op to an `Input_wf_type` int, a numbering no shared op could own. Merged in commandExecutor._buildParams AFTER the op's own `injectParams` and BEFORE the user's controls. A model that declares this MUST cover every op in `supportedOps`: a missing entry does not error, it runs the graph's default branch and returns the wrong operation's output, so the executor warns on a gap. Prefer the op's `injectParams` when the constant is a property of the OP rather than of this model.
+ * @property {string[]} [styleOps] - Operations where this model's style rack is live (MPI-354). Defaults to DEFAULT_STYLE_OPS in commandRegistry.js — the set that mounted the rack before this field existed, so every pre-Klein model is unaffected. Declare it when the rack's reach differs: a one-master-template model carries the rack on detail/upscale too, while a model with separate rack-less detailer/upscaler files must not offer it there. Only consulted when `capabilities.styleLoras` is true; the op's `components` still decides whether the control exists at all.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
@@ -440,6 +442,108 @@ export const MODELS = [
             'pid-gemma',
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
+        ],
+    },
+    // ── FLUX.2 Klein 4B (MPI-354) ──────────────────────────────────────────────
+    // Apache-2.0, 4B, the FASTEST image model we ship — and the only path to object
+    // REMOVAL. Research: docs/models/klein/ (README + removal + refcontrol + licences).
+    //
+    // FIRST MODEL ON THE ONE-MASTER-TEMPLATE SHAPE. Every op is a branch of a single
+    // graph (klein_t2i.json) selected at run time by an injected `Input_wf_type` int —
+    // see `opInject` below. ComfyUI's lazy evaluation prunes the unselected branches, so
+    // one file costs nothing (t2i 4.03 s vs depth 7.46 s on the same 196-node graph).
+    // Consequences that differ from every earlier model:
+    //   * the STYLE RACK reaches every op, including detail and upscale — hence
+    //     `styleOps`. Krea2's detailer/upscaler are separate rack-less files.
+    //   * `opInject` is mandatory, not decorative: a missing entry silently runs the
+    //     graph's default branch and returns the wrong operation's image.
+    //
+    // ONE tier: the distilled int8 checkpoint already runs at cfg 1.0 / 4 steps, so the
+    // base+turbo pair was dropped (2026-07-27). turboToggle FALSE, and negativePrompt
+    // FALSE because at cfg 1.0 the negative is bit-identical (max diff 0).
+    // Orientation-mode ratios (type 'klein' → FLUX_RATIOS): one output class, so a
+    // quality-tier radio would offer a single choice. Bigger output is the upscale op.
+    {
+        id: 'klein-4b',
+        // 4.07GB int8 transformer. VRAM was ~13GB on the BF16 weight — the int8 figure
+        // is UNMEASURED as of 2026-07-27; confirm before trusting this badge on 8GB.
+        sizeTier: 'low',
+        featured: true,
+        name: 'FLUX.2 Klein',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'klein-4b.webp',
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'klein',
+        enhanceRecipe: 'flux',   // Cubric Prompt has no 'klein' recipe
+        supportedOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        loraStrengths: ['model'],   // MpiLoraModel is model-only; no CLIP side
+        capabilities: {
+            multiStage: false, audio: false, negativePrompt: false, styleLoras: true,
+            promptEnhance: true, batch: false, turboToggle: false,
+        },
+        // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
+        // in supportedOps; commandExecutor warns loudly if one is missing, because the
+        // failure mode is a plausible image from the WRONG op rather than an error.
+        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 inpaint/remove · 6 detail · 7 upscale.
+        opInject: {
+            t2i:           { Input_wf_type: 1 },
+            i2i:           { Input_wf_type: 2 },
+            poseReference: { Input_wf_type: 3 },
+            kleinEdit:     { Input_wf_type: 4 },
+            inpaint:       { Input_wf_type: 5 },
+            detail:        { Input_wf_type: 6 },
+            upscale:       { Input_wf_type: 7 },
+        },
+        // The rack is in the ONE graph, so it is live on every op — including detail and
+        // upscale, which the pre-Klein default (DEFAULT_STYLE_OPS) excludes.
+        styleOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        // Index-aligned with the MpiStyleSelector's trigger lines and its MpiStyleLoras
+        // banks (verified against the baked graph: bank 1 = muppets/cartoon/jojo/anime/
+        // chibi, bank 2 = doodle/vintage/aesthetic). Index 0 = no style, selector 0.
+        styleLoraLabels: [
+            'None', 'Muppets', 'Cartoon', 'Jojo', 'Anime',
+            'Chibi', 'Doodle', 'Vintage', 'Aesthetic',
+        ],
+        styleLoraImages: [
+            'klein-style-none.webp', 'klein-style-muppets.webp', 'klein-style-cartoon.webp',
+            'klein-style-jojo.webp', 'klein-style-anime.webp', 'klein-style-chibi.webp',
+            'klein-style-doodle.webp', 'klein-style-vintage.webp', 'klein-style-aesthetic.webp',
+        ],
+        gen_speed: 'fast',
+        description: 'The fastest image model in Cubric Vision, and the only one that can REMOVE things — paint over an object, hit Remove, and it is gone in about four seconds. Apache-2.0 and only 4B, so it runs where the big models will not. Generate from text, reshape an image, follow a depth reference, edit with up to three reference images, detail and upscale — all with eight style LoRAs available on every operation. Quality is modest next to Krea 2; this one is built for speed and for cleaning images up.',
+        workflows: {
+            // ONE file for all seven ops — the branch is chosen by opInject above.
+            t2i:           'klein_t2i.json',
+            i2i:           'klein_t2i.json',
+            poseReference: 'klein_t2i.json',
+            kleinEdit:     'klein_t2i.json',
+            inpaint:       'klein_t2i.json',
+            detail:        'klein_t2i.json',
+            upscale:       'klein_t2i.json',
+        },
+        dependencies: [
+            'klein-4b-transformer',
+            'qwen3-4b-clip',                 // Qwen3-4B TEXT-ONLY — not any Qwen-VL we host
+            'vae-flux2',                     // FLUX.2 VAE — not FLUX.1's ae.safetensors
+            'klein-lora-outpaint',           // baked; mandatory for the fill/removal path
+            'klein-lora-refcontrol-depth',   // baked on the depth branch; IS the depth op
+            'klein-lora-nsfw',               // baked + PROMPT-gated; never loads on a clean prompt
+            'klein-style-muppets',
+            'klein-style-cartoon',
+            'klein-style-jojo',
+            'klein-style-anime',
+            'klein-style-chibi',
+            'klein-style-doodle',
+            'klein-style-vintage',
+            'klein-style-aesthetic',
+            '4x-NMKD-Siax',                  // shared engineAsset (upscale op)
+            'ComfyUI-MpiNodes',              // 20 Mpi* classes incl. MpiStyleSelector/Loras
+            'comfyui-kjnodes',               // ImageResizeKJv2, GrowMaskWithBlur
+            'ComfyUI-Impact-Pack',           // MaskDetailerPipe, ToBasicPipe
+            'ComfyUI-UltimateSDUpscale',     // UltimateSDUpscale (upscale op)
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved (removal)
+            'comfyui_controlnet_aux',        // DepthAnythingV2Preprocessor (+ its own weight)
         ],
     },
     // ── Boogu-Image-Edit (MPI-257) ─────────────────────────────────────────

@@ -343,6 +343,10 @@ export const RATIO_MODES = {
     flux:   'orientation',
     sdxl:   'orientation',
     chroma: 'orientation', // Flux-family image model (MPI-217) → Flux ratios below
+    klein:  'orientation', // FLUX.2 Klein 4B (MPI-354) — 1024-native, Flux ratios.
+                           // NO quality axis: Klein ships ONE checkpoint at one output
+                           // class, so a tier radio would offer a single choice. Bigger
+                           // output is the upscale op's job, not a size selector.
     wan:    'quality',
     wan5b:  'quality',
     ltx:    'quality',
@@ -418,6 +422,7 @@ const BUILTIN_RATIOS = {
     flux: FLUX_RATIOS,
     sdxl: SDXL_RATIOS,
     chroma: FLUX_RATIOS,
+    klein: FLUX_RATIOS,   // FLUX.2 lineage, same 1024-class /16 grid (MPI-354)
     wan: WAN_RATIOS,
     wan5b: WAN_5B_RATIOS,
     ltx: LTX_RATIOS,

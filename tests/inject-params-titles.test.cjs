@@ -34,11 +34,38 @@ function injectParamsByOp(src) {
     return out;
 }
 
-/** Every `<op>: '<file>.json'` inside each ModelDef's `workflows: { ... }` block. */
+/**
+ * Every ModelDef as `{ workflows: Map<op,file>, opInject: Map<op,string[]> }`.
+ *
+ * Per-MODEL, not flattened by op, because the two injection sources are mutually
+ * exclusive: a model declaring `opInject` for an op REPLACES that op's `injectParams`
+ * (commandExecutor._buildParams), so the op's titles must not be demanded of its graph.
+ */
+function modelDefs(src) {
+    // CRLF-tolerant: models.js is checked out with CRLF on Windows.
+    return src.split(/\r?\n {4}\{\r?\n/).slice(1).map((body) => {
+        const grab = (key) => {
+            const m = body.match(new RegExp(`${key}:\\s*\\{([\\s\\S]*?)\\n\\s{8}\\}`));
+            return m ? m[1] : '';
+        };
+        const workflows = new Map(
+            [...grab('workflows').matchAll(/(\w+):\s*'([^']+\.json)'/g)].map(m => [m[1], m[2]]));
+        const opInject = new Map(
+            [...grab('opInject').matchAll(/(\w+):\s*\{([^}]*)\}/g)]
+                .map(m => [m[1], [...m[2].matchAll(/(\w+)\s*:/g)].map(x => x[1])]));
+        return { id: (body.match(/id:\s*'([^']+)'/) || [])[1], workflows, opInject };
+    }).filter(m => m.id && m.workflows.size);
+}
+
+/**
+ * op → workflow files that still take the OP's injectParams, i.e. skipping any model
+ * that overrides the op with its own `opInject`.
+ */
 function workflowsByOp(src) {
     const out = new Map();
-    for (const block of src.matchAll(/workflows:\s*\{([\s\S]*?)\n\s{8}\}/g)) {
-        for (const [, op, file] of block[1].matchAll(/(\w+):\s*'([^']+\.json)'/g)) {
+    for (const m of modelDefs(src)) {
+        for (const [op, file] of m.workflows) {
+            if (m.opInject.has(op)) continue;   // model owns this op's injection
             if (!out.has(op)) out.set(op, new Set());
             out.get(op).add(file);
         }
@@ -78,6 +105,41 @@ test('every injectParams title exists in the workflows its op runs', () => {
         + 'unmatched titles, so this ships as a dead control with no error:\n  '
         + problems.join('\n  '),
     );
+});
+
+// The same guard for the per-MODEL form (ModelDef.opInject, MPI-354). It carries the
+// identical failure mode — an unmatched title is silently skipped — plus a worse one
+// unique to a one-master-template model: a MISSING op entry does not inject the branch
+// selector at all, so the graph runs its default branch and returns a plausible image
+// from the WRONG operation. Both are invisible at runtime, so they are pinned here.
+test('every opInject title exists, and covers every op the model runs (MPI-354)', () => {
+    const defs = modelDefs(fs.readFileSync(REGISTRY, 'utf8')).filter(m => m.opInject.size);
+    assert.ok(defs.length > 0, 'parsed zero opInject models — the regex has drifted');
+
+    const problems = [];
+    for (const m of defs) {
+        for (const [op, file] of m.workflows) {
+            if (!m.opInject.has(op)) {
+                problems.push(`${m.id}: op "${op}" has a workflow but no opInject entry `
+                    + '— it would run the graph\'s DEFAULT branch');
+            }
+        }
+        for (const [op, titles] of m.opInject) {
+            const file = m.workflows.get(op);
+            if (!file) {
+                problems.push(`${m.id}: opInject declares "${op}" but no workflow maps it`);
+                continue;
+            }
+            const have = titlesOf(file);
+            for (const title of titles) {
+                if (!have.has(title.toLowerCase())) {
+                    problems.push(`${m.id}: ${op} → ${file}: no node titled "${title}"`);
+                }
+            }
+        }
+    }
+
+    assert.deepStrictEqual(problems, [], 'opInject is incoherent:\n  ' + problems.join('\n  '));
 });
 
 test('the first App workflow carries its inject + capture titles (MPI-256)', () => {

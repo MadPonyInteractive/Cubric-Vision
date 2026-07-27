@@ -252,6 +252,44 @@ export const commands = {
         injectParams: { Input_depth_reference: true },
         components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
+    // FLUX.2 Klein's instruction edit (MPI-354). A separate op from `edit` and
+    // `krea2Edit` for one reason: THREE reference images. `ReferenceLatent` sets
+    // `reference_latents` with append=True, so chaining the node stacks references —
+    // verified on the bench with a fox from ref-2 composited beside the woman from
+    // ref-1 at correct scale, lighting and floor contact.
+    //
+    // Slots 2 and 3 are optional; empty leaves their MpiLoadImageFromPath self-gating,
+    // so a 1-image edit runs unchanged. THREE is a deliberate cap, not a limit of the
+    // node: each extra reference costs ~14 s (1/2/3 refs = 20/30/44 s), so an unlimited
+    // slot list would let a user build a job whose cost they cannot see.
+    //
+    // Takes ratio (Klein's editor uses OUR dimensions, like krea2Edit) and the style
+    // rack. No qualityTier — Klein is orientation-mode, one output class.
+    kleinEdit: {
+        label: 'Edit',
+        short: 'edit',
+        info: 'Edit — change the image following your prompt, with up to 3 reference images',
+        help: {
+            body: [
+                'Edits the first image following your instruction. Add a second or third reference image to pull a subject, a style or an object from them into the result.',
+                'Say what should CHANGE, not what the picture already is. With extra references, name which one you mean: "put the animal from Image 2 next to her".',
+            ],
+            examples: [
+                { prompt: 'put the fox from Image 2 sitting beside her on the bench', note: 'Names the reference and the placement.' },
+                { prompt: 'a woman on a bench with a fox', bad: true, note: 'Describes a scene instead of an edit; ignores which image is which.' },
+            ],
+        },
+        progressLabel: 'Editing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true,  ordinal: true },
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false, ordinal: true },
+            { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false, ordinal: true },
+        ],
+        promptRequired: true,
+        components: ['styleSelect', 'stylization', 'ratio', 'enhancePrompt'],
+    },
     upscale: {
         label: 'Upscale',
         short: 'upscale',
@@ -273,7 +311,9 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: false,
-        components: ['useGrid', 'upscaleFactor', 'denoise', 'krea2Turbo'],
+        // styleSelect/stylization mount only for a model carrying the rack on this op
+        // (modelShowsStyleRack) — Klein's master graph, not Krea2's upscaler file.
+        components: ['useGrid', 'upscaleFactor', 'denoise', 'krea2Turbo', 'styleSelect', 'stylization'],
         defaults: { denoise: 0.20 },
     },
     edit: {
@@ -409,7 +449,10 @@ export const commands = {
         ],
         requiresMask: true,
         promptRequired: true,
-        components: ['denoise', 'krea2Turbo'],
+        // styleSelect/stylization are listed but only mount for a model whose graph
+        // carries the rack on THIS op — see modelShowsStyleRack. Klein's one master
+        // graph does; Krea2's separate detailer file does not.
+        components: ['denoise', 'krea2Turbo', 'styleSelect', 'stylization'],
         defaults: { denoise: 0.30 },
     },
     // Masked regeneration. Replaces the old `change` + `remove` pair, which were
@@ -450,7 +493,11 @@ export const commands = {
         ],
         requiresMask: true,
         promptRequired: false,
-        components: [],
+        // Style rack, gated per model as everywhere else (modelShowsStyleRack). Klein's
+        // master graph carries it on this branch too. NOTE it styles the PATCH, not the
+        // picture: useful when inpainting new content, unhelpful on a plain erase where
+        // the fill should match its surroundings — so leave it on None to remove.
+        components: ['styleSelect', 'stylization'],
     },
     // NVIDIA PiD generative upscaler. One workflow, internal 4-path VAE selector
     // (pidVariant → Input_Type) + output-size selector (pidResolution → Input_Resolution),
@@ -778,6 +825,38 @@ export const commands = {
 };
 
 export const COMMANDS = commands;
+
+/**
+ * Ops where a style-LoRA model shows the style rack WHEN IT DOES NOT SAY OTHERWISE.
+ *
+ * Historically the rack's reach was implied by which ops happened to list
+ * `styleSelect` in `components`. That stopped working once a model shipped ONE master
+ * graph for every op (FLUX.2 Klein, MPI-354): its detail and upscale branches carry the
+ * same rack as t2i, but Krea2's detailer/upscaler are SEPARATE files with no rack at
+ * all. So `detail`/`upscale` must offer the control to one model and not the other,
+ * which a per-op `components` list cannot express.
+ *
+ * The op's `components` still decides whether the control EXISTS for that op; this
+ * decides whether a given MODEL may show it. A model opts out of the default by
+ * declaring `styleOps` (see ModelDef) — Klein declares all seven.
+ *
+ * This list is exactly the set that mounted the rack before the mechanism existed, so
+ * every pre-Klein model behaves identically. Do NOT add to it: a new model that wants
+ * the rack somewhere else declares `styleOps`.
+ */
+export const DEFAULT_STYLE_OPS = Object.freeze(['t2i', 'i2i', 'poseReference', 'krea2Edit', 'qwenEdit']);
+
+/**
+ * May `model` show the style rack on `operation`?
+ *
+ * Returns false for a model with no style LoRAs at all. Otherwise honours the model's
+ * own `styleOps` when declared, else `DEFAULT_STYLE_OPS`.
+ */
+export function modelShowsStyleRack(model, operation) {
+    if (model?.capabilities?.styleLoras !== true) return false;
+    const allowed = Array.isArray(model?.styleOps) ? model.styleOps : DEFAULT_STYLE_OPS;
+    return allowed.includes(operation);
+}
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 

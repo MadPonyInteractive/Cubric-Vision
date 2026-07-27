@@ -242,32 +242,34 @@ export const modelDeps = {
         sha256: '11b5af5ac601821d73930c84846c9a158e67177356daf927ce1c8d10f3963829',
     },
     // ── FLUX.2 Klein 4B transformer (MPI-354) ──────────────────────────────────
-    // Apache-2.0, 4B. The FASTEST image model we ship. ONE transformer serves both
-    // tiers: the BASE checkpoint, int8_convrot quantized, with klein-lora-turbo
-    // (loraDeps) gated on Input_Tier — the Krea2 raw+accelerator pattern (MPI-316),
-    // NOT a per-tier card split.
+    // Apache-2.0, 4B. The FASTEST image model we ship. ONE checkpoint, ONE tier: the
+    // DISTILLED weight, int8_convrot quantized. There is no accelerator LoRA and no
+    // Input_Tier split — that was reversed 2026-07-27 after live step measurement:
+    // distilled at cfg 1.0 / 4 steps beats the base+turbo pair it replaced, so the
+    // base checkpoint and klein-lora-turbo were both dropped rather than shipped.
     //
-    // Four candidates were run on the bench 2026-07-26 and three were dropped:
-    // distilled bf16 + distilled int8 (base wins on image quality) and base bf16
-    // (int8 matches it at 3.5GB less). Base needs cfg ~5 / 20 steps, which is also
-    // the only config where a NEGATIVE PROMPT is live — at cfg 1.0 it is bit-identical.
+    // CONSEQUENCE FOR THE ModelDef: negativePrompt must be FALSE. The negative is
+    // bit-identical at cfg 1.0 (max diff 0) and was only ever live at the base's
+    // cfg ~5; distilled runs at cfg 1.0 only, so the field must not render.
     //
-    // NOTE this quant is deliberately conservative — 70 layers quantized, 79 left
-    // BF16 (the distilled quant did 80/69). That is where the extra 190MB goes and
-    // why it holds quality. Native `comfy_quant` markers, so stock UNETLoader loads
-    // it with no custom node dep.
+    // Verified genuine distilled, not a mislabelled base: header metadata records the
+    // quant source as flux-2-klein-4b.safetensors via OTUNetLoaderW8A8
+    // (outlier_method=convrot), and the dtype split is 80 I8 / 80 U8 / 80 F32 / 69 BF16
+    // = the documented distilled 80/69 split (base quantizes 70/79). Native
+    // `comfy_quant` markers, so stock UNETLoader loads it with no custom node dep.
     //
     // Support weights: qwen3-4b-clip + vae-flux2 (assetDeps), klein-lora-outpaint +
-    // klein-lora-turbo (loraDeps). NOTHING was reusable — the FLUX.2 TE/VAE are
-    // distinct weights from every Qwen-* and FLUX.1 dep we already host.
+    // klein-lora-refcontrol-depth + klein-lora-nsfw + 8 klein-style-* (loraDeps).
+    // NOTHING was reusable — the FLUX.2 TE/VAE are distinct weights from every
+    // Qwen-* and FLUX.1 dep we already host.
     'klein-4b-transformer': {
         id: 'klein-4b-transformer',
-        name: 'FLUX.2 Klein 4B Transformer (base, int8_convrot)',
-        origin: 'black-forest-labs/FLUX.2-klein-base-4B (int8_convrot quant)',
-        filename: 'diffusion_models/flux-2-klein-base-4b-int8-convrot.safetensors',
-        url: 'https://models.cubric.studio/vision/models/diffusion_models/flux-2-klein-base-4b-int8-convrot.safetensors',
-        size: '4.26GB',
-        sha256: '0d83fd1df39613ee63fe92b517a1c03cac84466a7ab71470a0504e668621163c',
+        name: 'FLUX.2 Klein 4B Transformer (distilled, int8_convrot)',
+        origin: 'wraps/FLUX.2-klein-4B-INT8-ConvRot-ComfyUI (distilled, int8_convrot quant)',
+        filename: 'diffusion_models/flux-2-klein-4b-int8-convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/flux-2-klein-4b-int8-convrot.safetensors',
+        size: '4.07GB',
+        sha256: 'ac629fa69e0700ae689bce6b694ac0fc90ba5c24de15bd6c47195ad0c16fe90e',
     },
     // ── LTX-2.3 transformers (MPI-127) ─────────────────────────────────────────
     // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow scan

@@ -1,0 +1,26 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-365",
+ "title": "Migrate all models to the one-master-template shape, then GC the dead scaffolding",
+ "column": "todo",
+ "maturity": "idea",
+ "created_at": "2026-07-27T23:55:00Z",
+ "updated_at": "2026-07-27T23:55:00Z",
+ "labels": [
+  "workflow",
+  "refactor",
+  "architecture"
+ ],
+ "description": "Migrate every image model (and probably the video models) onto the ONE-MASTER-TEMPLATE shape that FLUX.2 Klein 4B proved in MPI-354, then garbage-collect what the migration makes dead.\n\nWHY: today each model spreads its ops across separate raw files (krea2_t2i / krea2_detailer / krea2_upscaler, sdxl_t2i / sdxl_detailer / sdxl_upscaler, chroma x3...). Klein instead ships ONE graph whose branch is chosen by an injected Input_wf_type int, and ComfyUI's lazy evaluation prunes the rest at run time (measured: t2i 4.03s vs depth 7.46s on the same 196-node graph carrying four samplers). One file per model instead of three-to-six.\n\nUSER'S CALL (2026-07-27): this is the direction for all image models and possibly video. Klein went in on the easy route; this card is the cleanup pass once everything is migrated.\n\nWHAT KLEIN ALREADY BUILT (reuse, do not reinvent):\n- ModelDef.opInject — per-model op -> constant params map. commandExecutor._buildParams applies it INSTEAD OF the op's injectParams (replace, not merge), because a one-template model has no per-op booleans and merging would inject dead titles.\n- ModelDef.styleOps + modelShowsStyleRack() — the style rack reaches every op in a one-template model (including detail and upscale), but must NOT light up on a model whose detailer/upscaler files have no rack. Defaults to DEFAULT_STYLE_OPS so pre-Klein models are untouched.\n- generate_klein.py — prunes to the capture set and asserts wf_type/UNET/rack. Model it for the others.\n- tests: inject-params-titles (opInject coherence, negative-control proven), output-prompt-capture (per model x op, picker shown => graph has Input_Style_Selector).\n\nGC CANDIDATES once migrated (the 'less code' the user expects):\n- The per-op injectParams on shared ops (Input_Is_i2i, Input_depth_reference) — 9 and 7 models use them today. If every model moves to opInject, those come off the ops entirely and each model owns its own branch selection. That also removes the replace-vs-merge special case in _buildParams.\n- The per-model detailer/upscaler raw files + their generate_*.py variant maps.\n- DEFAULT_STYLE_OPS and the styleOps default, if EVERY style model ends up one-template.\n- progressStages entries keyed per file collapse to one key per model.\n\nIF A PRUNER IS EVER BUILT (decided MPI-354): do NOT use a reroute naming convention. Use reachability — keep = transitive_closure(switch.inputs[wf_type]) UNION transitive_closure(output_node), drop the rest. Shared infrastructure falls out correctly for free; a naming rule is human discipline that rots. Build it on the SECOND model that uses the template, not the first.\n\nTRAPS CARRIED FORWARD FROM KLEIN:\n- An op that forgets to set its wf_type fails SILENTLY — runs the default branch and returns a plausible WRONG image. The generate_*.py assert and the opInject test are what make it loud.\n- ComfyUI validates EVERY node's inputs at submit time even when a branch is lazily skipped. The template survives only because image loads use MpiLoadImageFromPath with block_if_empty:false. Keep that on every new branch or the one-file template breaks.\n- Only ONE node may carry a given Input_* title. Klein's first export had two 'input_mask' nodes; validate-injection-rules.mjs caught it.",
+ "acceptance": [
+  "Each migrated model ships ONE raw template whose ops are selected by an injected wf_type",
+  "Every migrated model declares opInject covering every op in supportedOps",
+  "Per-op injectParams removed from shared ops once no model needs them (and the replace-vs-merge branch in _buildParams with it)",
+  "Dead per-op raw files + generate_*.py variant maps deleted",
+  "Full node test suite green; inject-params-titles + output-prompt-capture still bite under negative control"
+ ],
+ "links": {
+  "depends_on": "MPI-354",
+  "reference": "docs/models/klein/README.md"
+ }
+}

@@ -1,17 +1,18 @@
 # FLUX.2 Klein 4B — model research
 
-Settled facts for the Klein wiring (MPI-354). Raw eval history: MPI-353.
-The model-agnostic *how* lives in `docs/playbooks/add-model/` — this file is
-Klein-specific only.
+Settled facts for the Klein wiring (MPI-354); raw eval history in MPI-353. The
+model-agnostic *how* lives in `docs/playbooks/add-model/`. Siblings:
+`removal.md`, `refcontrol.md`, `licences.md`.
 
 ## What it is
 
 FLUX.2 Klein, 4B params, **Apache-2.0**. Two checkpoints ship from fal, both
 7,751,105,712 bytes: `flux-2-klein-4b` (distilled) and `flux-2-klein-base-4b`.
 
-**We ship the BASE checkpoint, int8_convrot quantized** (decided 2026-07-26 after a
-four-way bench A/B — see "Which checkpoint ships" below). One transformer serves both
-tiers via a strength-gated turbo LoRA, the Krea2 raw+accelerator pattern (MPI-316).
+**We ship the DISTILLED checkpoint, int8_convrot quantized** (decided 2026-07-27 —
+this REVERSED the base+turbo decision of 2026-07-26; see "Which checkpoint ships").
+**ONE tier, no accelerator LoRA**: distilled already runs at cfg 1.0 / 4 steps, so
+the base leg the turbo LoRA existed to accelerate is gone.
 
 Its value to Vision: it is the **fastest image model we ship** — faster than SDXL —
 and the only proven path to **object removal**.
@@ -20,65 +21,95 @@ and the only proven path to **object removal**.
 
 | File | Size | Folder | dep id |
 |---|---|---|---|
-| `flux-2-klein-base-4b-int8-convrot.safetensors` | 4.26 GB | `diffusion_models/` | `klein-4b-transformer` |
+| `flux-2-klein-4b-int8-convrot.safetensors` | 4.07 GB | `diffusion_models/` | `klein-4b-transformer` |
 | `qwen_3_4b.safetensors` (text encoder) | 8.04 GB | `text_encoders/` | `qwen3-4b-clip` |
-| `klein4b_turbo_r128.safetensors` (tier 2) | 0.79 GB | `loras/flux2-klein/` | `klein-lora-turbo` |
 | `flux2-vae.safetensors` | 0.34 GB | `vae/` | `vae-flux2` |
+| `flux2_klein_4b_refcontrol_depth.safetensors` | 0.092 GB | `loras/flux2-klein/` | `klein-lora-refcontrol-depth` |
 | `flux2-klein-4b-outpaint.safetensors` | 0.076 GB | `loras/flux2-klein/` | `klein-lora-outpaint` |
+| `NSFW_party_time_v2.0_klein4b.safetensors` | 0.18 GB | `loras/flux2-klein/` | `klein-lora-nsfw` |
+| 8 style LoRAs | 0.77 GB | `loras/flux2-klein/styles/` | `klein-style-*` |
 
-Total **+13.5 GB**. The **text encoder is now the biggest file** — bigger than the
-quantized transformer. Comfy-Org's `z_image_turbo` repack hosts `qwen_3_4b_fp8_mixed`
-(5.63 GB) and `qwen_3_4b_fp4_mixed` (3.48 GB); fp4_mixed is a format we already ship
-(LTX's Gemma). Untested here — TE quantization shows up as prompt-adherence drift, so
-A/B it on a multi-constraint prompt, not a pretty-picture one.
+Total **+13.6 GB** (14 deps). Two more weights the graph loads are NOT Klein deps:
+`4x_NMKD-Siax_200k.pth` is the shared `4x-NMKD-Siax` engineAsset (already hosted, also
+used by SDXL/Krea2/Chroma), and `depth_anything_v2_vits.pth` is auto-downloaded by the
+`comfyui_controlnet_aux` node dep. **Reconcile the dep set against what the template
+actually loads before any R2 upload** — this list drifted twice (see below).
+
+The **text encoder is the biggest file**, bigger than the quantized transformer.
+Comfy-Org's `z_image_turbo` repack hosts `qwen_3_4b_fp8_mixed` (5.63 GB) and
+`qwen_3_4b_fp4_mixed` (3.48 GB, a format we already ship for LTX's Gemma). Untested —
+TE quantization surfaces as prompt-adherence drift, so A/B on a multi-constraint
+prompt, not a pretty-picture one.
 
 **Dep reuse: NONE — checked 2026-07-26 and closed.** Klein's TE is
 Qwen3-**4B text-only** (`CLIPLoader type: flux2`); every Qwen encoder we host is a *VL*
 weight (`qwen3vl_4b_abliterated`, `qwen3vl_8b`, `qwen_2.5_vl_7b`) — different files. Same
-for the VAE: `vae-flux-ae` is FLUX.**1**'s `ae.safetensors`, not `flux2-vae`. So all four
-weights are new hosts and the user download stays the full 16.2 GB.
+for the VAE: `vae-flux-ae` is FLUX.**1**'s `ae.safetensors`, not `flux2-vae`. Every Klein
+weight is a new host.
 
-All four dep entries are **written with real sha256** (hashed off the local
-`G:\CubricModels` masters, per playbook 02 — hashes never wait for the upload).
-**Not yet uploaded to R2** — that needs explicit user approval.
+All deps carry **real sha256** (hashed off `G:\CubricModels` masters, per playbook 02).
+**Uploaded + verified 2026-07-27**: `sha256sum -c` 14/14 vs disk, then `rclone check`
+(0 differences, 14 matching) and HTTP 200 + byte-exact Content-Length on all 14 URLs.
 
-**The LoRA must be the comfy-converted file** (`diffusion_model.*` prefix, rank 16 —
-all 68 target keys bind). The plain diffusers file does NOT work in ComfyUI.
+### LoRA licences → `licences.md`
 
-**VRAM: ~13 GB measured on the bf16 checkpoint**, despite being a 4B model. The
-shipped weight is int8 (3.5 GB smaller), so **re-measure before setting the tier
-badge** — the bf16 figure is what threatened the 8 GB tier and may no longer apply.
+All ten community weights resolved by SHA256 and **all ship** (user call 2026-07-26,
+re-verified 2026-07-27). Method, table, bundle-flag reasoning, and how the one credit
+obligation is discharged in data: **`licences.md`**. Note **the outpaint LoRA must be
+the comfy-converted file** (`diffusion_model.*` prefix, rank 16 — all 68 target keys
+bind); the plain diffusers file does NOT work in ComfyUI.
 
-## Graph shape (all ops)
+**VRAM: ~13 GB measured on the bf16 checkpoint**, despite being a 4B model — the figure
+that threatened the 8 GB tier. The shipped weight is int8 (3.7 GB smaller), so
+**re-measure before setting the tier badge**. STILL PENDING as of 2026-07-27.
 
-`UNETLoader` → `LoraLoaderModelOnly` → `CFGGuider` → `SamplerCustomAdvanced`,
+## Graph shape — ONE master template, all ops
+
+Every op lives in a **single graph** selected at run time by an injected
+`Input_wf_type` int (1 t2i, 2 i2i, 3 depth, 4 edit, 5 inpaint, 6 detail, 7 upscale).
+It drives an `MpiAnySwitch10` at the output plus internal gates (`is_i2i = wf_type==2`,
+`is_remove` via `MpiBooleanCompare`). **No pruning converter is needed**: lazy
+evaluation was confirmed empirically — a t2i run took 4.03 s against a depth run's
+7.46 s on the same 196-node graph carrying four samplers, so only the selected branch
+executes. `Input_wf_type` is just another injected control (an `MpiInt` with a title),
+riding the same path as `Input_Seed`.
+
+Two footguns, both now caught by `generate_klein.py` asserts: an op that forgets to set
+`Input_wf_type` fails **silently** (runs the default branch, returns a plausible wrong
+image); and ComfyUI validates every node's inputs at submit time even when a branch is
+lazily skipped — which the graph survives only because image loads use
+`MpiLoadImageFromPath` with `block_if_empty: false`. Keep that on every new branch.
+
+Chain: `UNETLoader` → `LoraLoaderModelOnly` → `CFGGuider` → `SamplerCustomAdvanced`,
 with `Flux2Scheduler` sigmas, `KSamplerSelect(euler)`, `CLIPLoader(type=flux2)`
 on `qwen_3_4b`, `VAELoader` on `flux2-vae`.
 
-**Shipped config (base): cfg 5.0, euler, 20 steps**, ~35-40 s. That is also the ONLY
-config where a **negative prompt is live** — at cfg 1.0 the negative is bit-identical
-(max diff 0), so distilled/turbo runs must `ConditioningZeroOut` it. Consequence for
-the ModelDef: `negativePrompt` is TRUE on the base tier, and the tier-2 turbo path
-cannot honour it.
+**Shipped config: cfg 1.0, euler, 4 steps.** At cfg 1.0 there is no classifier-free
+guidance, so the **negative prompt is bit-identical** (max diff 0) and gets
+`ConditioningZeroOut`. For the ModelDef: **`negativePrompt` FALSE**, `turboToggle`
+FALSE. Klein's TE is **Qwen3-4B, an LLM — not CLIP**, so CLIP-era keyword-soup
+negatives are out of distribution anyway; positive-side suppression is the only lever
+and measured better regardless (MPI-353: invented blemishes down 21%).
 
-Klein's TE is **Qwen3-4B, an LLM — not CLIP**, so CLIP-era keyword-soup negatives
-(`bad anatomy, worst quality, lowres`) are out of distribution. Use short plain
-phrases, and keep them short: at cfg 5 a long negative adds guidance pressure, the
-same over-guidance that drives base's colour drift. Positive-side suppression measured
-BETTER than negatives on this model (MPI-353: invented blemishes down 21%).
-
-The **distilled** numbers, for history: cfg 1.0, euler, 8 steps (the knee of a
-4/6/8/12/16/20 sweep — 20 steps adds film grain, not structure).
+**WIDGET-VS-LINK TRAP (burned an afternoon).** `Flux2Scheduler.steps` and
+`CFGGuider.cfg` have INPUT LINKS here, so their on-node widget values are DEAD and
+editing them does nothing — the real values live in `MpiMath` nodes. Check for a
+connected input before trusting any widget number in this graph.
 
 ## Operations — all proven on the bench (2026-07-26, ComfyUI 0.28)
 
 | op | time | how |
 |---|---|---|
-| t2i | 10s | `EmptyFlux2LatentImage` → sampler |
-| edit, 1 ref | 20s | `ReferenceLatent` + `VAEEncode`(source); sampler starts from source latent |
-| edit, 2 refs | 30s | chain a 2nd `ReferenceLatent` |
-| edit, 3 refs | 44s | chain a 3rd (~+14s per ref) |
-| inpaint / removal | 20–36s | green plate, below |
+| op | `Input_wf_type` | time | how |
+|---|---|---|---|
+| t2i | 1 | 10s | `EmptyFlux2LatentImage` → sampler |
+| i2i | 2 | — | `is_i2i` gate |
+| depth | 3 | — | → **`refcontrol.md`** |
+| edit, 1 ref | 4 | 20s | `ReferenceLatent` + `VAEEncode`(source); sampler starts from source latent |
+| edit, 2 / 3 refs | 4 | 30s / 44s | chain more `ReferenceLatent` (~+14s per ref) |
+| removal | 5 | **~4s** | green plate → **`removal.md`** |
+| detail | 6 | ~7s (23s worst) | second pass, area capped 1024² |
+| upscale | 7 | — | `UltimateSDUpscale` + `4x-NMKD-Siax` |
 
 ### Multi-reference works
 
@@ -88,63 +119,62 @@ images**. Verified: fox from ref-2 composited beside the woman from ref-1 with
 correct scale, lighting and floor contact. Each extra ref costs real time, so the
 op should cap the slot count deliberately rather than expose unlimited refs.
 
-### Removal / inpaint = green plate
+### Removal → `removal.md`
 
-Paint the region pure `#00FF00`, prompt `"Fill the green spaces according to the
-image."` + what should be there. `EmptyImage(color=65280)` + `ImageCompositeMasked`.
-All builtin nodes — no custom pack needed.
+Green plate (`EmptyImage(color=65280)` + `ImageCompositeMasked`, all builtin nodes),
+outpaint LoRA, crop/stitch, **4 steps** — ~4 s. Ships as TWO baked stages (removal then
+detail), no user toggle, and **hides the prompt field**: paint, click Remove.
+Full measurements, the crop-helps-locally/hurts-globally rule, and the two traps
+(native-resolution cap, and why removal must stay on the fast config) in `removal.md`.
+**Inpaint-as-add measured BAD and is likely dropped** — retest before wiring it.
 
-Wrap in `InpaintCropImproved` → sample → `InpaintStitchImproved`
-(`mask_blend_pixels=32`, `expand=8`): cuts the seam gradient **6×** (14.56 → 2.44)
-for ~4s.
+## Step count (REVISED 2026-07-27 by live measurement)
 
-The outpaint LoRA is **mandatory for outpaint** (without it ~95% of extended bands
-stay pure green) but **optional for inpaint** — a surrounded region is just a normal
-edit. LoRA strength barely matters for removal (0.0–1.8 all removed cleanly).
+Per-op, on the shipped distilled weight: **t2i = 4** (8 overcooks), **detail = 2**,
+**upscale = 2**, **inpaint = 2 + 2** (inpaint phase then detail phase). Roughly
+half-steps for any second-pass op.
 
-## Step count
-
-Sweep at 1024², seed fixed: 4/6/8/12/16/20 steps → 12/8/10/14/16/20 s.
-Detail (lapvar) climbs 95 → 236 across the range, but the 20-step gain is **film
-grain, not structure** — compositions differ, quality does not improve. **8 steps
-is the knee.**
+The old base-checkpoint sweep, for history: 4/6/8/12/16/20 steps → 12/8/10/14/16/20 s
+at 1024², detail (lapvar) 95 → 236, with the 20-step gain being **film grain, not
+structure**. That sweep is why "8 steps is the knee" was written; it does not describe
+the weight we now ship.
 
 ## Which checkpoint ships
 
-**Base int8_convrot, plus a turbo LoRA for tier 2.** Decided 2026-07-26 on the bench
-after running four transformers head to head. The other three are dropped:
+**Distilled int8_convrot. One tier, no turbo LoRA.** Decided 2026-07-27 — this
+**reversed** the previous day's base+turbo call after per-op step counts were measured
+live on distilled.
 
 | candidate | size | verdict |
 |---|---|---|
-| **base int8_convrot** | **4.26 GB** | **SHIPS.** Best images; int8 matches base bf16 at 3.5 GB less |
+| **distilled int8_convrot** | **4.07 GB** | **SHIPS.** cfg 1.0 / 4 steps out of the box |
+| base int8_convrot | 4.26 GB | dropped — needs cfg 5 / 20 steps to win, ~35-40 s |
 | base bf16 | 7.75 GB | dropped — int8 equals it for 3.5 GB more |
-| distilled int8_convrot | 4.07 GB | dropped — fast (~5 s) but base's images are better |
 | distilled bf16 | 7.75 GB | dropped |
 
-The two int8 quants are NOT equivalent work: the base quant touches 70 layers and
-leaves 79 in BF16, the distilled one does 80/69. The base quant is the conservative
-one — that is where its extra 190 MB goes, and why it holds quality. Both carry native
-`comfy_quant` markers, so stock `UNETLoader` loads them with no custom-node dep.
+**Verify a distilled quant is genuinely distilled** — the two files differ by 190 MB
+and nothing else obvious. Read the safetensors header: the shipped weight records its
+quant source as `flux-2-klein-4b.safetensors` via `OTUNetLoaderW8A8`
+(`outlier_method=convrot`), and its dtype split is **80 I8 / 80 U8 / 80 F32 / 69 BF16**
+— the documented distilled **80/69** split. The base quant is the conservative one at
+**70/79** (70 layers quantized, 79 left BF16); that is where its extra 190 MB goes.
+Both carry native `comfy_quant` markers, so stock `UNETLoader` loads them with no
+custom-node dep.
 
-### The earlier "base is closed" finding, and why it reversed
+The turbo LoRA (`klein4b_turbo_r128`, 0.79 GB, CivitAI 2324315) is **dropped, not a
+dep** — with no base leg there is nothing to accelerate. Its node survives in the
+template bypassed and severed so the two-tier wiring is recoverable if Klein 9B lands;
+do not re-add the dep on the strength of that node alone.
 
-An earlier pass (MPI-353) closed the base off this table:
+### This decision flipped twice — don't re-run the sweeps
 
-| config | time | fill detail (lapvar) | colour drift |
-|---|---|---|---|
-| distilled 8st cfg 1.0 | 20s | 19.6 | 10.60 |
-| base 28st cfg 4.0 | 92s | 14.6 | 12.10 |
-| base 50st cfg 4.0 | 154s | 16.0 | 11.88 |
-
-That measured the **removal/fill** op at cfg 4.0 and 28-50 steps, where base is
-over-guided (the `docs/models/krea2/editing.md` § cfg pathology). The reversal came
-from **t2i quality at cfg 5.0 / 20 steps**, a config that pass never ran, plus int8
-erasing the speed and size penalties. Both results stand — they measured different
-ops at different settings. Do not re-run the old sweep expecting the new answer.
-
-The old note that a turbo LoRA extraction was "closed" (both checkpoints byte-identical,
-so `distilled − base` would cost more disk than shipping distilled) is also superseded:
-we ship a **community turbo LoRA at 786 MB**, not an extracted delta.
+MPI-353 closed base off on the **removal/fill** op at cfg 4.0 / 28-50 steps
+(distilled 8st cfg 1.0: 20 s, lapvar 19.6, drift 10.60 — vs base 28st: 92 s, 14.6,
+12.10), where base is over-guided (`docs/models/krea2/editing.md` § cfg pathology).
+It flipped to base on **t2i at cfg 5.0 / 20 steps**, a config that pass never ran, then
+flipped **back to distilled** on 2026-07-27 once per-op step counts landed. All three
+results stand — different ops, different settings. **The deciding axis was
+speed-per-op, not image quality.**
 
 ## Known limits
 
@@ -164,9 +194,7 @@ we ship a **community turbo LoRA at 786 MB**, not an extracted delta.
 
 ## Out of scope for the model
 
-- **Outpainting ships as an App**, not a model op. Users already do it with the resize
+- **Outpainting ships as an App**, not a model op — users already do it with the resize
   tool + "fill the black bars with …" prompting (proven with Boogu and Krea2).
-- **`MpiInpaintHeal`** (ring-sampled colour/grain correction, built 2026-07-26, live in
-  the bench via symlink) is **not** part of this model and is **not** released. It helps
-  on small evenly-lit patches and *hurts* on regions spanning a lighting gradient — it
-  pulls the fill toward a ring average that is wrong when the region is lit unevenly.
+- **`MpiInpaintHeal`** (bench-only, not released) and the **ReplaceSubject LoRAs**
+  (App candidates, too specific for a model op) → `removal.md`.

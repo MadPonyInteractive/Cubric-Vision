@@ -648,10 +648,38 @@ function _buildParams(payload) {
         Input_Seed:     resolvedSeed,
     };
 
-    // Constant params the OP always injects (commandRegistry.injectParams) — the
-    // branch-selecting booleans on graphs shared by several ops (Krea2's t2i / i2i /
-    // poseReference). Merged BEFORE injectionParams so a user control still wins.
-    Object.assign(params, COMMANDS[payload.operation]?.injectParams || {});
+    // Branch-selecting constants for graphs shared by several ops. Two sources, and the
+    // model's REPLACES the op's rather than stacking on it:
+    //
+    //   op.injectParams   — the historical form. Names nodes that only some graphs have
+    //                       (`Input_Is_i2i`, `Input_depth_reference`), which is fine
+    //                       while every model implementing the op wires it the same way.
+    //   model.opInject    — a model whose ops are branches of ONE master graph selected
+    //                       by a value private to it. FLUX.2 Klein (MPI-354) maps each op
+    //                       to an `Input_wf_type` int and has no per-op booleans at all.
+    //
+    // REPLACE, not merge: a model declaring opInject for an op is saying "my graph picks
+    // its branch differently", so the op's booleans are not just useless to it, they name
+    // nodes it does not have. Merging would inject dead titles the injector silently
+    // skips — exactly the half-wire tests/inject-params-titles.test.cjs exists to catch.
+    // Both land BEFORE the user's controls, so a control still wins.
+    //
+    // A model that declares `opInject` MUST cover every op in supportedOps: a missing
+    // entry does not error, it runs the graph's default branch and returns a plausible
+    // image from the WRONG op, so warn loudly rather than generate the wrong thing.
+    const modelDef = payload.modelId ? getModelById(payload.modelId) : null;
+    const modelOpInject = modelDef?.opInject;
+    if (modelOpInject) {
+        const forOp = modelOpInject[payload.operation];
+        if (!forOp) {
+            clientLogger.warn('commandExecutor',
+                `${modelDef.id} declares opInject but has no entry for "${payload.operation}" — `
+                + `the graph will run its DEFAULT branch and return the wrong operation's output`);
+        }
+        Object.assign(params, forOp || {});
+    } else {
+        Object.assign(params, COMMANDS[payload.operation]?.injectParams || {});
+    }
 
     // Merge operation-specific control params (ratio, steps, denoise, etc.)
     Object.assign(params, injectionParams);

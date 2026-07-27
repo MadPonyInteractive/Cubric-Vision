@@ -1,0 +1,2977 @@
+{
+  "2": {
+    "inputs": {
+      "delimiter": "",
+      "string_a": [
+        "5",
+        0
+      ],
+      "string_b": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "3": {
+    "inputs": {
+      "string_a": "\n",
+      "delimiter": "",
+      "string_b": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "4": {
+    "inputs": {
+      "string_b": "\n<|im_end|>\n<|im_start|>assistant",
+      "delimiter": "",
+      "string_a": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "5": {
+    "inputs": {
+      "value": "<|im_start|>system\nYou are a prompt engineer for text-to-image models. You rewrite the user's input into one image-generation paragraph.\n\nOutput ONLY that paragraph. Your entire reply is the prompt itself. No preamble, no plan, no commentary, no headings, no quotes around it. Your first word is the first word of the scene.\n\nRules, in priority order:\n1. Never repeat a choice the user already made. If the input already states a medium, style, camera angle, framing, lighting, or palette, carry it through in their words and add nothing to that category. Only fill categories the user left empty.\n2. Faithfulness. Keep every original subject, action, color, and spatial relationship. Add no objects, characters, or animals the user did not imply.\n3. Already detailed? Polish and finalize. Preserve their phrasing and direction. A short, well-specified input stays short - expansion is for sparse input only.\n4. Structure for T2I. Group each subject with its own attributes and actions. Use grounded phrasing for poses, interactions, and spatial layout.\n5. Fill gaps only. Add style, medium, framing, or lighting only where the user left them unstated, and write them into the scene rather than naming them as choices.\n6. Don't over-specify. Invent clothing, colors, materials, or scene detail only where the input supports it.\n7. Preserve the user's medium exactly. \"photo of\", \"illustration of\", \"sketch of\", \"3D render of\" - honor it.\n8. Text rendering. If the user wants visible words, put them in quotes.\n9. If the input contradicts itself, follow the user's most specific wording and write a scene that reads naturally. Never point the contradiction out.\n10. One paragraph. Up to 150 words, and shorter when the input is already complete. No bullets, no JSON, no markdown.\n11. Positive phrasing only. Describe what is present, never what is absent. Never write \"no\", \"without\", \"free of\", \"not\", \"empty of\", or \"devoid of\". To express isolation or emptiness, describe the space itself - \"alone on bare floorboards\", \"a plain unbroken backdrop\", \"the only figure in frame\" - never what is missing from it.<|im_end|>\n<|im_start|>user"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Text String (System Prompt)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "max_length": 512,
+      "sampling_mode": "on",
+      "sampling_mode.temperature": 0.5,
+      "sampling_mode.top_k": 64,
+      "sampling_mode.top_p": 0.95,
+      "sampling_mode.min_p": 0.05,
+      "sampling_mode.repetition_penalty": 1.05,
+      "sampling_mode.seed": 0,
+      "sampling_mode.presence_penalty": 0,
+      "thinking": false,
+      "use_default_template": true,
+      "clip": [
+        "14",
+        0
+      ],
+      "prompt": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "TextGenerate",
+    "_meta": {
+      "title": "Generate Text"
+    }
+  },
+  "7": {
+    "inputs": {
+      "find": "\n",
+      "replace": "",
+      "string": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "StringReplace",
+    "_meta": {
+      "title": "Replace Text"
+    }
+  },
+  "8": {
+    "inputs": {
+      "boolean": false,
+      "true": [
+        "7",
+        0
+      ],
+      "false": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_enhance_prompt"
+    }
+  },
+  "9": {
+    "inputs": {
+      "source": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "Output_prompt"
+    }
+  },
+  "14": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "15": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "16": {
+    "inputs": {
+      "batch_size": 1,
+      "width": [
+        "324",
+        0
+      ],
+      "height": [
+        "325",
+        0
+      ]
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Latent"
+    }
+  },
+  "17": {
+    "inputs": {
+      "conditioning": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "21": {
+    "inputs": {
+      "samples": [
+        "28",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAEDecode"
+    }
+  },
+  "22": {
+    "inputs": {
+      "noise_seed": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "24": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "27": {
+    "inputs": {
+      "unet_name": "flux-2-klein-4b-int8-convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "28": {
+    "inputs": {
+      "noise": [
+        "22",
+        0
+      ],
+      "guider": [
+        "32",
+        0
+      ],
+      "sampler": [
+        "24",
+        0
+      ],
+      "sigmas": [
+        "338",
+        1
+      ],
+      "latent_image": [
+        "328",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "29": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "30": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "47",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "31": {
+    "inputs": {
+      "steps": [
+        "203",
+        0
+      ],
+      "width": [
+        "324",
+        0
+      ],
+      "height": [
+        "325",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "32": {
+    "inputs": {
+      "model": [
+        "100",
+        0
+      ],
+      "positive": [
+        "29",
+        0
+      ],
+      "negative": [
+        "57",
+        0
+      ],
+      "cfg": [
+        "204",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  },
+  "33": {
+    "inputs": {
+      "int": 976866873943
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "38": {
+    "inputs": {
+      "lora_name": "flux2-klein\\NSFW_party_time_v2.0_klein4b.safetensors",
+      "model": [
+        "27",
+        0
+      ],
+      "strength_model": [
+        "44",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "NSFW LoRA"
+    }
+  },
+  "43": {
+    "inputs": {
+      "words": "nude, naked, tits, breasts, pussy, ass, slut, cunt, vagina, nipples, asshole, sex, fuck, fucking, pubic hair, anus, vulva",
+      "text": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "MpiTextContains",
+    "_meta": {
+      "title": "Mpi Text Contains"
+    }
+  },
+  "44": {
+    "inputs": {
+      "math_expression": "1.0 if a else 0.0",
+      "a": [
+        "310",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "47": {
+    "inputs": {
+      "string_b": "malformed anatomy: hands with the wrong number of fingers, limbs that are missing, duplicated, or bent the wrong way, animals missing a head or legs\n",
+      "delimiter": "",
+      "string_a": [
+        "92",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Negative Text"
+    }
+  },
+  "52": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_is_Turbo"
+    }
+  },
+  "57": {
+    "inputs": {
+      "true": [
+        "17",
+        0
+      ],
+      "false": [
+        "30",
+        0
+      ],
+      "boolean": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "88": {
+    "inputs": {
+      "delimiter": "",
+      "string_a": [
+        "8",
+        0
+      ],
+      "string_b": [
+        "101",
+        3
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "92": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "93": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "95": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "98",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "96": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "95",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "97": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "96",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "98": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "99",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "99": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "101",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "100": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "101": {
+    "inputs": {
+      "lora_1": "flux2-klein\\styles\\klein4b-doodle_v1.safetensors",
+      "lora_2": "flux2-klein\\styles\\vintage_photo.safetensors",
+      "lora_3": "flux2-klein\\styles\\Flux-Klein-4B-Art_10.safetensors",
+      "lora_4": "None",
+      "lora_5": "None",
+      "style": [
+        "102",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
+    }
+  },
+  "102": {
+    "inputs": {
+      "lora_1": "flux2-klein\\styles\\flux2-klein-4b-lora-muppetshow-style.safetensors",
+      "lora_2": "flux2-klein\\styles\\flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
+      "lora_3": "flux2-klein\\styles\\flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
+      "lora_4": "flux2-klein\\styles\\Anime_new_mecha_klein4b.safetensors",
+      "lora_5": "flux2-klein\\styles\\robloxchibidoll_lora_klein4b_000002200.safetensors",
+      "style": [
+        "103",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
+    }
+  },
+  "103": {
+    "inputs": {
+      "selector": 0,
+      "triggers": "display the characters as Muppets, muppetshow style\ncartoon illustration, Fluxtoon Style\nJojosoStyle\nAn anime-style digital illustration\nchibi style\nRedraw this image in the most clumsy, scribbly, and utterly pathetic way possible.\nvintage photo 1920's style\nArtistic and aesthetic composition",
+      "strength_model": 1,
+      "strength_clip": 0,
+      "model": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "MpiStyleSelector",
+    "_meta": {
+      "title": "Input_Style_Selector"
+    }
+  },
+  "111": {
+    "inputs": {
+      "images": [
+        "318",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "112": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "113": {
+    "inputs": {
+      "noise": [
+        "127",
+        0
+      ],
+      "guider": [
+        "125",
+        0
+      ],
+      "sampler": [
+        "112",
+        0
+      ],
+      "sigmas": [
+        "126",
+        0
+      ],
+      "latent_image": [
+        "118",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "115": {
+    "inputs": {
+      "image": [
+        "131",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "117": {
+    "inputs": {
+      "samples": [
+        "113",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "118": {
+    "inputs": {
+      "batch_size": 1,
+      "width": [
+        "115",
+        0
+      ],
+      "height": [
+        "115",
+        1
+      ]
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "123": {
+    "inputs": {
+      "ckpt_name": "depth_anything_v2_vits.pth",
+      "resolution": 512,
+      "image": [
+        "474",
+        0
+      ]
+    },
+    "class_type": "DepthAnythingV2Preprocessor",
+    "_meta": {
+      "title": "Depth Anything V2 - Relative"
+    }
+  },
+  "125": {
+    "inputs": {
+      "model": [
+        "143",
+        0
+      ],
+      "positive": [
+        "138",
+        0
+      ],
+      "negative": [
+        "212",
+        0
+      ],
+      "cfg": [
+        "204",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG Guider"
+    }
+  },
+  "126": {
+    "inputs": {
+      "steps": [
+        "203",
+        0
+      ],
+      "width": [
+        "115",
+        0
+      ],
+      "height": [
+        "115",
+        1
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "127": {
+    "inputs": {
+      "noise_seed": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "129": {
+    "inputs": {
+      "pixels": [
+        "130",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "130": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "235",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "131": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "123",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "132": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "133",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "133": {
+    "inputs": {
+      "string_a": "refcontrol, color",
+      "delimiter": ", ",
+      "string_b": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "135": {
+    "inputs": {
+      "pixels": [
+        "131",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "136": {
+    "inputs": {
+      "conditioning": [
+        "137",
+        0
+      ],
+      "latent": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "137": {
+    "inputs": {
+      "conditioning": [
+        "132",
+        0
+      ],
+      "latent": [
+        "135",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "138": {
+    "inputs": {
+      "true": [
+        "136",
+        0
+      ],
+      "false": [
+        "137",
+        0
+      ],
+      "boolean": [
+        "231",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "139": {
+    "inputs": {
+      "conditioning": [
+        "132",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "143": {
+    "inputs": {
+      "lora_name": "flux2-klein\\flux2_klein_4b_refcontrol_depth.safetensors",
+      "strength_model": 1,
+      "model": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "160": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "161": {
+    "inputs": {
+      "conditioning": [
+        "160",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "163": {
+    "inputs": {
+      "pixels": [
+        "167",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "Encode ref 1"
+    }
+  },
+  "165": {
+    "inputs": {
+      "pixels": [
+        "187",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "Encode ref 2"
+    }
+  },
+  "166": {
+    "inputs": {
+      "samples": [
+        "185",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAEDecode"
+    }
+  },
+  "167": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "474",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "169": {
+    "inputs": {
+      "noise_seed": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "170": {
+    "inputs": {
+      "model": [
+        "100",
+        0
+      ],
+      "positive": [
+        "201",
+        0
+      ],
+      "negative": [
+        "222",
+        0
+      ],
+      "cfg": [
+        "204",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  },
+  "171": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "172": {
+    "inputs": {
+      "conditioning": [
+        "160",
+        0
+      ],
+      "latent": [
+        "163",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent 1"
+    }
+  },
+  "173": {
+    "inputs": {
+      "steps": [
+        "203",
+        0
+      ],
+      "width": [
+        "186",
+        0
+      ],
+      "height": [
+        "186",
+        1
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "175": {
+    "inputs": {
+      "pixels": [
+        "198",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "Encode ref 3"
+    }
+  },
+  "176": {
+    "inputs": {
+      "conditioning": [
+        "182",
+        0
+      ],
+      "latent": [
+        "175",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent 3"
+    }
+  },
+  "178": {
+    "inputs": {
+      "conditioning": [
+        "172",
+        0
+      ],
+      "latent": [
+        "165",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent 2"
+    }
+  },
+  "182": {
+    "inputs": {
+      "true": [
+        "178",
+        0
+      ],
+      "false": [
+        "172",
+        0
+      ],
+      "boolean": [
+        "231",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "185": {
+    "inputs": {
+      "noise": [
+        "169",
+        0
+      ],
+      "guider": [
+        "170",
+        0
+      ],
+      "sampler": [
+        "171",
+        0
+      ],
+      "sigmas": [
+        "173",
+        0
+      ],
+      "latent_image": [
+        "163",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "186": {
+    "inputs": {
+      "image": [
+        "167",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "187": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "235",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "198": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "234",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "201": {
+    "inputs": {
+      "true": [
+        "176",
+        0
+      ],
+      "false": [
+        "182",
+        0
+      ],
+      "boolean": [
+        "232",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "203": {
+    "inputs": {
+      "math_expression": "4 if a else 20",
+      "a": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "steps"
+    }
+  },
+  "204": {
+    "inputs": {
+      "math_expression": "1.0 if a else 5.0",
+      "a": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "cfg"
+    }
+  },
+  "212": {
+    "inputs": {
+      "true": [
+        "139",
+        0
+      ],
+      "false": [
+        "218",
+        0
+      ],
+      "boolean": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "215": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "47",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "216": {
+    "inputs": {
+      "conditioning": [
+        "215",
+        0
+      ],
+      "latent": [
+        "135",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "217": {
+    "inputs": {
+      "conditioning": [
+        "216",
+        0
+      ],
+      "latent": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "218": {
+    "inputs": {
+      "true": [
+        "217",
+        0
+      ],
+      "false": [
+        "216",
+        0
+      ],
+      "boolean": [
+        "231",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "222": {
+    "inputs": {
+      "true": [
+        "161",
+        0
+      ],
+      "false": [
+        "228",
+        0
+      ],
+      "boolean": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "223": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "47",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "225": {
+    "inputs": {
+      "conditioning": [
+        "223",
+        0
+      ],
+      "latent": [
+        "163",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent 1"
+    }
+  },
+  "226": {
+    "inputs": {
+      "conditioning": [
+        "225",
+        0
+      ],
+      "latent": [
+        "165",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent 2"
+    }
+  },
+  "227": {
+    "inputs": {
+      "true": [
+        "226",
+        0
+      ],
+      "false": [
+        "225",
+        0
+      ],
+      "boolean": [
+        "231",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "228": {
+    "inputs": {
+      "true": [
+        "229",
+        0
+      ],
+      "false": [
+        "227",
+        0
+      ],
+      "boolean": [
+        "232",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "229": {
+    "inputs": {
+      "conditioning": [
+        "227",
+        0
+      ],
+      "latent": [
+        "175",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent 3"
+    }
+  },
+  "231": {
+    "inputs": {
+      "any": [
+        "236",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "232": {
+    "inputs": {
+      "any": [
+        "233",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "233": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Image_3"
+    }
+  },
+  "234": {
+    "inputs": {
+      "channel": "alpha",
+      "block_if_empty": false,
+      "string": [
+        "232",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "img3"
+    }
+  },
+  "235": {
+    "inputs": {
+      "channel": "alpha",
+      "block_if_empty": false,
+      "string": [
+        "231",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "img2"
+    }
+  },
+  "236": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  },
+  "251": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "252": {
+    "inputs": {
+      "noise": [
+        "288",
+        0
+      ],
+      "guider": [
+        "254",
+        0
+      ],
+      "sampler": [
+        "251",
+        0
+      ],
+      "sigmas": [
+        "267",
+        0
+      ],
+      "latent_image": [
+        "257",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "254": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "259",
+        0
+      ],
+      "positive": [
+        "263",
+        0
+      ],
+      "negative": [
+        "266",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG Guider"
+    }
+  },
+  "257": {
+    "inputs": {
+      "pixels": [
+        "261",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "258": {
+    "inputs": {
+      "batch_size": 1,
+      "color": 65280,
+      "width": [
+        "386",
+        0
+      ],
+      "height": [
+        "386",
+        0
+      ]
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Empty Image"
+    }
+  },
+  "259": {
+    "inputs": {
+      "lora_name": "flux2-klein\\flux2-klein-4b-outpaint.safetensors",
+      "strength_model": 1.1,
+      "model": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "261": {
+    "inputs": {
+      "x": 0,
+      "y": 0,
+      "resize_source": true,
+      "destination": [
+        "276",
+        1
+      ],
+      "source": [
+        "258",
+        0
+      ],
+      "mask": [
+        "276",
+        2
+      ]
+    },
+    "class_type": "ImageCompositeMasked",
+    "_meta": {
+      "title": "Image Composite Masked"
+    }
+  },
+  "263": {
+    "inputs": {
+      "conditioning": [
+        "293",
+        0
+      ],
+      "latent": [
+        "257",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Set Reference Latent"
+    }
+  },
+  "264": {
+    "inputs": {
+      "padding": 64,
+      "mask": [
+        "296",
+        1
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Mpi Mask Square Bbox"
+    }
+  },
+  "266": {
+    "inputs": {
+      "conditioning": [
+        "263",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "267": {
+    "inputs": {
+      "steps": 2,
+      "width": [
+        "387",
+        0
+      ],
+      "height": [
+        "387",
+        0
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "274": {
+    "inputs": {
+      "samples": [
+        "252",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "275": {
+    "inputs": {
+      "stitcher": [
+        "286",
+        0
+      ],
+      "inpainted_image": [
+        "285",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "\u2702\ufe0f Inpaint Stitch"
+    }
+  },
+  "276": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 6,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1.2,
+      "output_resize_to_target_size": true,
+      "output_padding": "32",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "474",
+        0
+      ],
+      "mask": [
+        "296",
+        1
+      ],
+      "optional_context_mask": [
+        "264",
+        0
+      ],
+      "output_target_width": [
+        "389",
+        0
+      ],
+      "output_target_height": [
+        "389",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "\u2702\ufe0f Inpaint Crop"
+    }
+  },
+  "277": {
+    "inputs": {
+      "stitcher": [
+        "276",
+        0
+      ],
+      "inpainted_image": [
+        "274",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "\u2702\ufe0f Inpaint Stitch"
+    }
+  },
+  "278": {
+    "inputs": {
+      "model": [
+        "259",
+        0
+      ],
+      "clip": [
+        "14",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ],
+      "positive": [
+        "294",
+        0
+      ],
+      "negative": [
+        "378",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "280": {
+    "inputs": {
+      "min_value": 0,
+      "max_value": 1024,
+      "value": [
+        "264",
+        3
+      ]
+    },
+    "class_type": "MpiClamp",
+    "_meta": {
+      "title": "Mpi Clamp"
+    }
+  },
+  "281": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "282",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Convert Image to Mask"
+    }
+  },
+  "282": {
+    "inputs": {
+      "batch_size": 1,
+      "color": 16777215,
+      "width": [
+        "283",
+        0
+      ],
+      "height": [
+        "283",
+        1
+      ]
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Empty Image"
+    }
+  },
+  "283": {
+    "inputs": {
+      "image": [
+        "286",
+        1
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "285": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "steps": 2,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.38,
+      "feather": 6,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": true,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "286",
+        1
+      ],
+      "mask": [
+        "281",
+        0
+      ],
+      "basic_pipe": [
+        "278",
+        0
+      ],
+      "seed": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer (pipe)"
+    }
+  },
+  "286": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 6,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1.2,
+      "output_resize_to_target_size": true,
+      "output_padding": "32",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "277",
+        0
+      ],
+      "mask": [
+        "290",
+        0
+      ],
+      "optional_context_mask": [
+        "264",
+        0
+      ],
+      "output_target_width": [
+        "388",
+        0
+      ],
+      "output_target_height": [
+        "388",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "\u2702\ufe0f Inpaint Crop"
+    }
+  },
+  "288": {
+    "inputs": {
+      "noise_seed": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "290": {
+    "inputs": {
+      "expand": 32,
+      "incremental_expandrate": 0,
+      "tapered_corners": true,
+      "flip_input": false,
+      "blur_radius": 16,
+      "lerp_alpha": 1,
+      "decay_factor": 1,
+      "fill_holes": true,
+      "mask": [
+        "296",
+        1
+      ]
+    },
+    "class_type": "GrowMaskWithBlur",
+    "_meta": {
+      "title": "Grow Mask With Blur"
+    }
+  },
+  "293": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "380",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "294": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "14",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "override"
+    }
+  },
+  "296": {
+    "inputs": {
+      "channel": "red",
+      "block_if_empty": false,
+      "string": [
+        "297",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "mask"
+    }
+  },
+  "297": {
+    "inputs": {
+      "any": [
+        "298",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "298": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "304": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_wf_type"
+    }
+  },
+  "310": {
+    "inputs": {
+      "mode": "one_is_true",
+      "a": [
+        "43",
+        0
+      ],
+      "b": [
+        "375",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "318": {
+    "inputs": {
+      "any_1": [
+        "365",
+        0
+      ],
+      "any_2": [
+        "365",
+        0
+      ],
+      "any_3": [
+        "363",
+        0
+      ],
+      "any_4": [
+        "354",
+        0
+      ],
+      "any_5": [
+        "355",
+        0
+      ],
+      "any_6": [
+        "435",
+        0
+      ],
+      "any_7": [
+        "452",
+        0
+      ],
+      "select": [
+        "304",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch10",
+    "_meta": {
+      "title": "Mpi Any Switch 10"
+    }
+  },
+  "319": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 5,
+      "a": [
+        "304",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "320": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 2,
+      "a": [
+        "304",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "322": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "474",
+        0
+      ],
+      "width": [
+        "324",
+        0
+      ],
+      "height": [
+        "325",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "324": {
+    "inputs": {
+      "int": 896
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "325": {
+    "inputs": {
+      "int": 1088
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "328": {
+    "inputs": {
+      "true": [
+        "346",
+        0
+      ],
+      "false": [
+        "16",
+        0
+      ],
+      "boolean": [
+        "320",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "i2i"
+    }
+  },
+  "330": {
+    "inputs": {
+      "float": 0.4
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_denoise"
+    }
+  },
+  "331": {
+    "inputs": {
+      "math_expression": "b if a else 1.0",
+      "a": [
+        "320",
+        0
+      ],
+      "b": [
+        "330",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "denoise"
+    }
+  },
+  "338": {
+    "inputs": {
+      "sigmas": [
+        "31",
+        0
+      ],
+      "denoise": [
+        "331",
+        0
+      ]
+    },
+    "class_type": "SplitSigmasDenoise",
+    "_meta": {
+      "title": "SplitSigmasDenoise"
+    }
+  },
+  "346": {
+    "inputs": {
+      "pixels": [
+        "322",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "354": {
+    "inputs": {
+      "any": [
+        "357",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "edit"
+    }
+  },
+  "355": {
+    "inputs": {
+      "any": [
+        "356",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "inpaint"
+    }
+  },
+  "356": {
+    "inputs": {
+      "any": [
+        "275",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "inpaint"
+    }
+  },
+  "357": {
+    "inputs": {
+      "any": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "edit"
+    }
+  },
+  "358": {
+    "inputs": {
+      "any": [
+        "117",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "depth"
+    }
+  },
+  "363": {
+    "inputs": {
+      "any": [
+        "358",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "depth"
+    }
+  },
+  "364": {
+    "inputs": {
+      "any": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "t2i/i2i"
+    }
+  },
+  "365": {
+    "inputs": {
+      "any": [
+        "364",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "t2i/i2i"
+    }
+  },
+  "367": {
+    "inputs": {
+      "string": "Remove"
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Mpi String"
+    }
+  },
+  "374": {
+    "inputs": {
+      "any": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "375": {
+    "inputs": {
+      "mode": "a_true_b_false",
+      "a": [
+        "319",
+        0
+      ],
+      "b": [
+        "374",
+        1
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "378": {
+    "inputs": {
+      "conditioning": [
+        "294",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "380": {
+    "inputs": {
+      "string_a": "Fill the green spaces according to the image. ",
+      "delimiter": "",
+      "string_b": [
+        "381",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "381": {
+    "inputs": {
+      "true": [
+        "367",
+        0
+      ],
+      "false": [
+        "88",
+        0
+      ],
+      "boolean": [
+        "375",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "386": {
+    "inputs": {
+      "any": [
+        "389",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "W + H"
+    }
+  },
+  "387": {
+    "inputs": {
+      "any": [
+        "389",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "W + H"
+    }
+  },
+  "388": {
+    "inputs": {
+      "any": [
+        "389",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "W + H"
+    }
+  },
+  "389": {
+    "inputs": {
+      "any": [
+        "280",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "W + H"
+    }
+  },
+  "391": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "392": {
+    "inputs": {
+      "image": [
+        "396",
+        0
+      ],
+      "horizontal_split": [
+        "393",
+        0
+      ],
+      "vertical_split": [
+        "391",
+        0
+      ],
+      "upscale_factor": [
+        "397",
+        0
+      ],
+      "auto": [
+        "395",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "393": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "394": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Input_Upscale_Model"
+    }
+  },
+  "395": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Auto_Grid"
+    }
+  },
+  "396": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "474",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "397": {
+    "inputs": {
+      "float": 1.5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Upscale_Factor"
+    }
+  },
+  "405": {
+    "inputs": {
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "mode_type": "Linear",
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 0.6,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": false,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "396",
+        0
+      ],
+      "model": [
+        "100",
+        0
+      ],
+      "positive": [
+        "442",
+        0
+      ],
+      "negative": [
+        "444",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ],
+      "upscale_model": [
+        "394",
+        0
+      ],
+      "upscale_by": [
+        "397",
+        0
+      ],
+      "seed": [
+        "33",
+        0
+      ],
+      "steps": [
+        "439",
+        0
+      ],
+      "cfg": [
+        "437",
+        0
+      ],
+      "denoise": [
+        "330",
+        0
+      ],
+      "tile_width": [
+        "392",
+        0
+      ],
+      "tile_height": [
+        "392",
+        1
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Upscaling..."
+    }
+  },
+  "415": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "sampler_name": "euler",
+      "scheduler": "beta",
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "474",
+        0
+      ],
+      "mask": [
+        "296",
+        1
+      ],
+      "basic_pipe": [
+        "459",
+        0
+      ],
+      "seed": [
+        "33",
+        0
+      ],
+      "steps": [
+        "418",
+        0
+      ],
+      "cfg": [
+        "417",
+        0
+      ],
+      "denoise": [
+        "330",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer"
+    }
+  },
+  "417": {
+    "inputs": {
+      "math_expression": "1.0 if a else 1.5",
+      "a": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "418": {
+    "inputs": {
+      "math_expression": "2 if a else 10",
+      "a": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "433": {
+    "inputs": {
+      "any": [
+        "415",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "detailer"
+    }
+  },
+  "435": {
+    "inputs": {
+      "any": [
+        "433",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "detailer"
+    }
+  },
+  "436": {
+    "inputs": {
+      "any": [
+        "405",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "upscale"
+    }
+  },
+  "437": {
+    "inputs": {
+      "math_expression": "1.0 if a else 1.5",
+      "a": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "439": {
+    "inputs": {
+      "math_expression": "2 if a else 10",
+      "a": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "442": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "444": {
+    "inputs": {
+      "conditioning": [
+        "442",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "452": {
+    "inputs": {
+      "any": [
+        "436",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "upscale"
+    }
+  },
+  "459": {
+    "inputs": {
+      "model": [
+        "100",
+        0
+      ],
+      "clip": [
+        "14",
+        0
+      ],
+      "vae": [
+        "15",
+        0
+      ],
+      "positive": [
+        "463",
+        0
+      ],
+      "negative": [
+        "467",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "463": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "467": {
+    "inputs": {
+      "clip": [
+        "14",
+        0
+      ],
+      "text": [
+        "47",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "474": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  }
+}

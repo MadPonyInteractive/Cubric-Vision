@@ -26,6 +26,7 @@ export const OPERATION_REGISTRY = {
     change:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1', deprecated: true },
     remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1', deprecated: true },
     inpaint:      { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
+    kleinEdit:    { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
     pid:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
     // Video operations
     t2v:          { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },

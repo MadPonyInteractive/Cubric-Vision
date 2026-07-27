@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, getOpHelp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, getOpHelp } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -1337,11 +1337,14 @@ export const MpiPromptBox = ComponentFactory.create({
                 // node, so the control would be dead UI — hide it.
                 if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
 
-                // Style rack (the Input_Style_Selector node) is capability-gated:
-                // only models shipping style LoRAs (Krea2) mount it. Unlike
-                // negativePrompt this defaults FALSE — a model must opt in.
+                // Style rack (the Input_Style_Selector node) is capability-gated AND
+                // op-gated: a model must ship style LoRAs (defaults FALSE — opt in) and
+                // the rack must actually exist in the graph THAT OP runs. Krea2's
+                // detailer/upscaler are separate rack-less files while Klein's single
+                // master graph carries the rack on every branch, so `detail`/`upscale`
+                // offer the control to one and not the other. See modelShowsStyleRack.
                 if ((componentId === 'styleSelect' || componentId === 'stylization')
-                    && model?.capabilities?.styleLoras !== true) continue;
+                    && !modelShowsStyleRack(model, activeOperation)) continue;
 
                 // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
                 // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.
