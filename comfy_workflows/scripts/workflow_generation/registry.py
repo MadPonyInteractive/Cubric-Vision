@@ -31,6 +31,11 @@ HANDLERS = [
     ("qwen_edit_", "qwen"),  # MPI-300: qwen_edit_template.json — ONE graph → ONE runtime
                              # file; SAME int8 transformer every tier, Input_Tier injected at
                              # runtime by the qwenTier radio (no per-tier file, no tier bake).
+    ("klein_",    "klein"),  # MPI-354: klein_t2i_template.json — ONE MASTER graph → ONE runtime
+                             # file. Every op (t2i/i2i/depth/edit/inpaint/detail/upscale) lives
+                             # in this one graph and is selected by the injected Input_wf_type;
+                             # lazy evaluation prunes the unselected branches at run time, so
+                             # there is no op split, no tier axis and no content axis.
 ]
 
 
