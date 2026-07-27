@@ -5290,7 +5290,7 @@
       ],
       "size": [
         153.42099980335752,
-        59.73104390202133
+        104
       ],
       "flags": {},
       "order": 271,
@@ -5541,7 +5541,7 @@
         58
       ],
       "flags": {},
-      "order": 203,
+      "order": 204,
       "mode": 0,
       "inputs": [
         {
@@ -5579,7 +5579,7 @@
         60
       ],
       "flags": {},
-      "order": 224,
+      "order": 225,
       "mode": 0,
       "inputs": [
         {
@@ -5619,7 +5619,7 @@
         46
       ],
       "flags": {},
-      "order": 170,
+      "order": 172,
       "mode": 0,
       "inputs": [
         {
@@ -6366,7 +6366,7 @@
         60
       ],
       "flags": {},
-      "order": 171,
+      "order": 170,
       "mode": 0,
       "inputs": [
         {
@@ -6743,7 +6743,7 @@
         336.00000000000045
       ],
       "flags": {},
-      "order": 204,
+      "order": 202,
       "mode": 0,
       "inputs": [
         {
@@ -7395,7 +7395,7 @@
         60
       ],
       "flags": {},
-      "order": 172,
+      "order": 171,
       "mode": 0,
       "inputs": [
         {
@@ -9398,7 +9398,7 @@
         58
       ],
       "flags": {},
-      "order": 225,
+      "order": 224,
       "mode": 0,
       "inputs": [
         {
@@ -13574,104 +13574,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 298,
-      "type": "MpiString",
-      "pos": [
-        -2527.028269122505,
-        2271.0414609086247
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 112,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "string",
-          "type": "STRING",
-          "links": [
-            436
-          ]
-        }
-      ],
-      "title": "Input_mask",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "70d5a62b66b7cdbd5f799c14e27e4ce38c7a2c7c",
-        "Node name for S&R": "MpiString"
-      },
-      "widgets_values": [
-        ""
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 296,
-      "type": "MpiLoadImageFromPath",
-      "pos": [
-        -2106.3234209644284,
-        2270.0852383198226
-      ],
-      "size": [
-        276.9849609375,
-        166
-      ],
-      "flags": {},
-      "order": 202,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 438
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": []
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": [
-            848
-          ]
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Input_mask",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "0dd056c20fec13d3b59be31a5c13c3897d321511",
-        "Node name for S&R": "MpiLoadImageFromPath"
-      },
-      "widgets_values": [
-        "",
-        "red",
-        false
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 456,
       "type": "GetNode",
       "pos": [
@@ -13683,7 +13585,7 @@
         58
       ],
       "flags": {},
-      "order": 113,
+      "order": 112,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -13718,7 +13620,7 @@
         58
       ],
       "flags": {},
-      "order": 114,
+      "order": 113,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -14063,7 +13965,7 @@
         58
       ],
       "flags": {},
-      "order": 115,
+      "order": 114,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -14104,7 +14006,7 @@
         383.46562779932174
       ],
       "flags": {},
-      "order": 116,
+      "order": 115,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -14157,7 +14059,7 @@
         314.0000000000001
       ],
       "flags": {},
-      "order": 117,
+      "order": 116,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -14195,7 +14097,7 @@
         58.91996868586102
       ],
       "flags": {},
-      "order": 118,
+      "order": 117,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -14216,6 +14118,104 @@
       },
       "widgets_values": [
         1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 296,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        -2106.3234209644284,
+        2270.0852383198226
+      ],
+      "size": [
+        276.9849609375,
+        166
+      ],
+      "flags": {},
+      "order": 203,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 438
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            848
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "mask",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "0dd056c20fec13d3b59be31a5c13c3897d321511",
+        "Node name for S&R": "MpiLoadImageFromPath"
+      },
+      "widgets_values": [
+        "",
+        "red",
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 298,
+      "type": "MpiString",
+      "pos": [
+        -2527.028269122505,
+        2271.0414609086247
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 118,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "links": [
+            436
+          ]
+        }
+      ],
+      "title": "Input_Mask",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "70d5a62b66b7cdbd5f799c14e27e4ce38c7a2c7c",
+        "Node name for S&R": "MpiString"
+      },
+      "widgets_values": [
+        ""
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -17248,10 +17248,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.12100000000000015,
+      "scale": 0.8140274938683988,
       "offset": [
-        4424.560178921065,
-        2496.2139165114822
+        3085.4627736448065,
+        -1663.7693410650904
       ]
     },
     "reroutes": [
