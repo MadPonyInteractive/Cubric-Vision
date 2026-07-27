@@ -237,11 +237,22 @@ def _assert_style_rack(workflow: dict) -> int:
     if not lines:
         raise SystemExit(f"[FAIL] {STYLE_SELECTOR_TITLE}.triggers is empty — every style would "
                          f"load its LoRA and append NO trigger")
-    slots = len(chain) * STYLE_BANK_SLOTS
+    slot_loras = [bank["inputs"].get(f"lora_{i}", "None")
+                  for bank in chain for i in range(1, STYLE_BANK_SLOTS + 1)]
+    slots = len(slot_loras)
     if len(lines) > slots:
         raise SystemExit(f"[FAIL] {len(lines)} trigger lines but only {slots} lora slots "
                          f"({len(chain)} bank(s) x {STYLE_BANK_SLOTS}) — style {slots + 1}+ would "
                          f"append its trigger and load NO LoRA")
+    # The other half: a LoRA sitting in a slot PAST the last trigger line is a style the
+    # picker can select (labels are index-aligned) that loads its LoRA and appends nothing.
+    # A "None" slot INSIDE the line range is legal — that's a prompt-only style.
+    orphans = [i + 1 for i, lora in enumerate(slot_loras[len(lines):], start=len(lines))
+               if lora not in (None, "None", "")]
+    if orphans:
+        raise SystemExit(f"[FAIL] lora slot(s) {orphans} hold a LoRA past the last of "
+                         f"{len(lines)} trigger lines — that style would load its LoRA and "
+                         f"append NO trigger (reads as 'the LoRA is weak', not as an error)")
     if len(chain) != -(-len(lines) // STYLE_BANK_SLOTS):
         raise SystemExit(f"[FAIL] {len(lines)} trigger lines need "
                          f"{-(-len(lines) // STYLE_BANK_SLOTS)} bank(s), graph has {len(chain)} "
