@@ -277,3 +277,23 @@ pass by the user before it moves to Done.
 - **(a) `inpaint` workflow + `supportedOps`** - STILL OPEN, and not this session's
   to close: it belongs to the parallel FLUX.2 Klein 4B session. The op def is
   complete and `components: []` waits for whatever Klein's graph exposes.
+
+## Follow-up - LoRA & Upscale reads as a button (user request)
+
+The tile's affordance was a bare `<span role="button">`: uppercase ink-3 text and
+a cog icon, no border, no surface. A real `MpiButton` is not available here - a
+`<button>` may not nest inside the tile's own `<button>`, which is why it is a
+span in the first place - so it borrows MpiButton's `--secondary --sm` tokens
+instead: `var(--surface-2)`, `1px solid var(--ink-3)`, `var(--r-1)`, JetBrains
+Mono 600 uppercase. Hover keeps the existing heat text and adds the button's
+surface/border shift.
+
+Height is pinned to 22px to fit `.mpi-tile__state`'s own fixed 22px row - that
+row is a shared Primitive (MpiTileSheet) also serving the Model and App
+Libraries, so the pill fits the row rather than the row being grown for it.
+
+Verified live: computed border `1px solid oklch(0.66 0.014 80)` and background
+`oklch(0.42 0.022 350)` are IDENTICAL to the bar's cog and model buttons; pill
+height 22px in a 22px row with 0 pills spilling; clicking it still opens Model
+Settings. The bar cogwheel already carried the same border from the earlier
+`variant: 'secondary'` change - screenshots confirm both.

@@ -83,18 +83,36 @@
 .mpi-model-picker__media-head-n { color: var(--ink-3); }
 
 /* LoRA & Upscale — lives in the tile's state row, so it is a span (a button
-   may not nest in the tile button). Heat on hover marks it as the one part of
-   the tile that does something other than select. */
+   may not nest in the tile button). It BORROWS MpiButton's `--secondary --sm`
+   tokens rather than mounting one, so it reads as the button it behaves like:
+   same surface, border, radius and mono uppercase face. Heat on hover marks it
+   as the one part of the tile that does something other than select.
+   Height is pinned to the state row's own 22px (MpiTileSheet.css) — that row is
+   a shared Primitive serving the Model and App Libraries too, so the pill fits
+   it rather than the other way round. */
 .mpi-model-picker__lora {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    height: 22px;
+    padding: 0 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--ink-3);
+    border-radius: var(--r-1);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
     font-size: var(--t-2xs);
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-3);
     cursor: pointer;
-    transition: color var(--t-base) var(--ease);
+    transition: color var(--t-base) var(--ease),
+                background var(--t-base) var(--ease),
+                border-color var(--t-base) var(--ease);
 }
-.mpi-model-picker__lora:hover { color: var(--accent-heat); }
+.mpi-model-picker__lora:hover {
+    color: var(--accent-heat);
+    background: var(--surface-3);
+    border-color: var(--accent-heat);
+}
 .mpi-model-picker__lora .mpi-icon { width: 12px; height: 12px; }
