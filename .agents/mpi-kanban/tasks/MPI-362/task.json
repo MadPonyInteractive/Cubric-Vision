@@ -1,0 +1,29 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-362",
+ "title": "Mask composite - blend two image-history entries through a mask (Add / Subtract)",
+ "description": "New image-history context-menu action, gated like Compare on exactly 2 selected entries where one carries a mask. A dialog offers Add (masked area comes from the OTHER entry, rest stays the masked entry) or Subtract (the inverse: other entry is the base, masked area comes from the masked entry) plus Cancel. Result lands as a new history entry (operation 'composite'), so it is undoable by deleting it. Motivating case: an upscale morphs one of two cats - mask the bad cat, pull the good one back from the previous entry. Compositing is server-side Sharp (already a dependency, same engine crop-media uses) with a feathered mask, so no ComfyUI workflow and no 4K base64 round-trip.",
+ "column": "done",
+ "maturity": "complete",
+ "status": "active",
+ "created_at": "2026-07-27T21:30:49Z",
+ "updated_at": "2026-07-27T22:15:00Z",
+ "labels": [
+  "image-history",
+  "mask",
+  "composite",
+  "sharp",
+  "ui"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "plan": "plan.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "files": "files.json",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/",
+  "research": "research/"
+ },
+ "outcome": "SHIPPED + USER-VERIFIED live (\"working lovely\") - composite_001..006 produced across both directions on a real cat/character group. Sharp does the pixels server-side (POST /project/composite-media); no ComfyUI workflow, no canvas round-trip. Mask holes are filled to match MaskDetailerPipe contour_fill, and the mask is feathered (sigma min(w,h)/400, overridable). Two Sharp traps cost a debug cycle each: removeAlpha() before joinChannel silently drops the join, and sharp(raw,{channels:1}) writes back 3 channels - both caught by tests/mask-composite.test.cjs (3/3)."
+}

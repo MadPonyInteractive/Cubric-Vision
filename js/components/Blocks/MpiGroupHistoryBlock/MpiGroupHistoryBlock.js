@@ -65,6 +65,7 @@ import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiContextMenu } from '../../Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
+import { MpiMaskCompositeDialog } from '../../Compounds/MpiMaskCompositeDialog/MpiMaskCompositeDialog.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
 
 /**
@@ -1647,6 +1648,79 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (itemIds.length < 2) { _showToast('Need ≥2 video items', 'error'); return; }
             await _runCombine(itemIds);
         });
+
+        // MPI-362 — blend two entries through the mask one of them carries. The
+        // client only decides DIRECTION; Sharp does the pixels server-side
+        // (/project/composite-media), so a 4K result never round-trips as base64.
+        historyList.on('composite-requested', async ({ indices }) => {
+            if (isVideo || !Array.isArray(indices) || indices.length !== 2) return;
+            if (!state.currentProject?.folderPath) { _showToast('No project context', 'error'); return; }
+
+            const [entryA, entryB] = indices.map(i => _group.history[i]);
+            if (!entryA?.filePath || !entryB?.filePath) { _showToast('No source media', 'error'); return; }
+
+            // Whichever entry carries the mask owns the direction. The menu gate
+            // only requires ONE of the two to have one; when both do, the
+            // first-selected wins and the dialog names it so the choice is visible.
+            const maskItem  = (await viewer.el.hasMaskForEntry?.(entryA)) ? entryA : entryB;
+            const otherItem = maskItem === entryA ? entryB : entryA;
+            const maskDataUrl = await viewer.el.getMaskDataURLForEntry?.(maskItem);
+            if (!maskDataUrl) { _showToast('Neither entry has a mask', 'warning'); return; }
+
+            const _entryName = (item) => item.displayName || item.operation || 'entry';
+            const dialog = MpiMaskCompositeDialog.mount(document.createElement('div'), {
+                maskName:  _entryName(maskItem),
+                otherName: _entryName(otherItem),
+            });
+            // Add = the other entry lands INSIDE the mask; Subtract is the same
+            // composite with base and overlay swapped.
+            dialog.on('add', () => { dialog.destroy?.(); _runComposite(maskItem, otherItem, maskDataUrl); });
+            dialog.on('subtract', () => { dialog.destroy?.(); _runComposite(otherItem, maskItem, maskDataUrl); });
+            dialog.on('cancel', () => dialog.destroy?.());
+            dialog.el.show();
+        });
+
+        /** Base keeps everything outside the mask; overlay fills the masked area. */
+        async function _runComposite(baseItem, overlayItem, maskDataUrl) {
+            historyList.el.exitSelectMode();
+            _setBusy(true);
+            try {
+                const res = await fetch('/project/composite-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folderPath:  state.currentProject.folderPath,
+                        itemId:      crypto.randomUUID(),
+                        basePath:    extractAbsPath(baseItem.filePath) || baseItem.filePath,
+                        overlayPath: extractAbsPath(overlayItem.filePath) || overlayItem.filePath,
+                        maskDataUrl,
+                    }),
+                });
+                const data = await res.json().catch(() => null);
+                if (!res.ok || !data?.success) throw new Error(data?.error || `composite-media ${res.status}`);
+
+                const item = createImageItem({
+                    id:              data.itemId,
+                    filePath:        `/project-file?path=${encodeURIComponent(data.filePath)}`,
+                    operation:       'composite',
+                    displayName:     truncateCardName(data.displayName || 'composite'),
+                    pixelDimensions: data.pixelDimensions || { w: 0, h: 0 },
+                    ...(data.thumbPath ? { thumbPath: data.thumbPath } : {}),
+                });
+                _group = appendToHistory(_group, item);
+                _currentIdx = _group.selectedIndex;
+                _persistGroup();
+                historyList.el.appendEntry(item);
+                Events.emit('history:stats-dirty', { group: _group });
+                await viewer.el.loadEntry?.(item, _currentIdx);
+                viewer.el.setMaskHidden?.(false);
+            } catch (err) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'mask composite failed', err);
+                _showToast('Mask composite failed', 'error');
+            } finally {
+                _setBusy(false);
+            }
+        }
 
         // MPI-310 — caption this history item into the prompt box.
         historyList.on('describe', ({ index }) => {

@@ -904,6 +904,24 @@
  */
 
 /**
+ * @typedef {Object} MpiMaskCompositeDialogProps (Compound — js/components/Compounds/MpiMaskCompositeDialog)
+ * @property {string} [maskName='this entry']        - Display name of the entry whose mask is used.
+ * @property {string} [otherName='the other entry']  - Display name of the other selected entry.
+ *
+ * Picks the DIRECTION of a mask composite between two history entries (MPI-362).
+ * Both names appear inside each option's sentence — the direction is not readable
+ * from the mask alone, so "Add"/"Subtract" carry no meaning without them.
+ *
+ * Instance methods (on instance.el):
+ *   show() / hide() — via MpiModal: portals a backdrop + centred dialog to document.body.
+ *
+ * Emits:
+ * 'add'      {} — masked area is filled from the OTHER entry; the rest stays the masked entry.
+ * 'subtract' {} — the reverse: the other entry is the base, the masked area comes from the masked entry.
+ * 'cancel'   {} — Cancel BUTTON clicked only (NOT emitted on Escape or hide())
+ */
+
+/**
  * @typedef {Object} MpiNotesEditorProps (Compound — js/components/Compounds/MpiNotesEditor)
  * @property {string}   [title='Notes']      - Dialog title.
  * @property {string}   [value='']           - Initial notes text shown in the textarea.
@@ -1083,6 +1101,7 @@
  *   'selection-exited'  {}                              — select mode ended
  *   'delete-selected'   { indices }                     — delete from context menu
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
+ *   'composite-requested' { indices: [number, number] } — mask composite (image only, one entry masked)
  *   'download-selected' { indices }                     — download selected entries
  *   'download-mask'     { index }                       — download single entry mask
  *   'reveal'            { indices }                       — open entry/Media folder in file system
