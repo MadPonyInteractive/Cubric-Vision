@@ -12,7 +12,7 @@
   "goal": {
     "original": "Finish wiring FLUX.2 Klein 4B as a new model (t2i + edit + inpaint/removal + depth refcontrol + detail/upscale).",
     "status": "in_progress",
-    "summary": "Fifth Klein session, and the model is now WIRED END TO END: deps reconciled and uploaded to R2 (verified), the master template converted and baked to klein_t2i.json, and a full ModelDef with a new op plus two new registry mechanisms. Everything verifiable without running the app has been verified. What remains is IN-APP verification only - progress-bar counts per op and peak VRAM - which the user will run and report. NOTHING IS COMMITTED, deliberately."
+    "summary": "Fifth Klein session, and the model is now WIRED END TO END: deps reconciled and uploaded to R2 (verified), the master template converted and baked to klein_t2i.json, and a full ModelDef with a new op plus two new registry mechanisms. Everything verifiable without running the app has been verified. What remains is IN-APP verification only - progress-bar counts per op and peak VRAM. THE WORK IS COMMITTED (d2ded0a6); mpi-end no longer needs to land it."
   },
   "plan": {
     "file": null,
@@ -27,14 +27,14 @@
       "ModelDef klein-4b + kleinEdit op + ModelDef.opInject + ModelDef.styleOps/modelShowsStyleRack",
       "docs/models/klein split to README/licences/refcontrol/removal, all <=200 lines; docs/models/README.md now routes Klein",
       "Engine junction to ComfyUI-MpiNodes restored (the stale managed copy was pinned at the OLD commit)",
-      "MPI-365 carded: migrate all models to the one-master-template shape, then GC"
+      "MPI-365 carded: migrate all models to the one-master-template shape, then GC",
+      "COMMITTED: e5a0bf1c (a closed session's finished MPI-360 op-help work, landed separately and FIRST so attribution stays clean) then d2ded0a6 (the Klein wiring, 34 files). Split per .claude/rules/git.md - the two files were co-owned, and the import line carried both sessions' changes."
     ],
     "pending": [
       "IN-APP: count progress bars PER OP (see validation.md) - blocked on live runs",
       "IN-APP: measure PEAK VRAM on the distilled int8 weight -> confirm or move sizeTier",
       "Wire the captured bar counts once PROGRESS_STAGES can key per-op (it cannot today - see constraints)",
-      "Decide whether the remove op should hide the prompt field (promptRequired has NO UI consumer)",
-      "mpi-end: commit this session's work (see the uncommitted manifest in constraints)"
+      "Decide whether the remove op should hide the prompt field (promptRequired has NO UI consumer)"
     ]
   },
   "task_card": {
@@ -68,11 +68,12 @@
     "pending": [
       "After the in-app runs: record the per-op bar counts and the measured VRAM in validation.md, and correct sizeTier in models.js if the peak exceeds ~11GB.",
       "MEMORY: the tool_comfy_schema_gate_before_workflow_sync memory hook says to probe /object_info for a node before syncing. It should also record that /object_info/<Unknown> returns HTTP 200 with an EMPTY {} - a 200 is NOT proof the node exists. Probe the full /object_info and check membership.",
-      "docs/models/klein/README.md still carries 'VRAM ~13GB measured on bf16 ... STILL PENDING' - close that line once measured."
+      "docs/models/klein/README.md still carries 'VRAM ~13GB measured on bf16 ... STILL PENDING' - close that line once measured.",
+      "MEMORY/DOCS: parking a custom_nodes folder under any suffix other than `.disabled` BREAKS ComfyUI boot. This session renamed the stale pack to `.stale-aaa1d2d9`; ComfyUI only skips entries ending in `.disabled` (nodes.py ~2348), so BOTH copies imported routes.py, each registering POST /mpi/reload-extra-paths, and aiohttp refused the duplicate: 'RuntimeError: Added route will never be executed, method POST is already registered'. Fixed by renaming to `ComfyUI-MpiNodes.stale-aaa1d2d9.disabled`. Worth a line in the engine/comfy docs."
     ]
   },
   "next_action": {
-    "description": "RESTART ComfyUI first (the junction was restored after the running engine booted, so PID 55436 still has the old node set). Then run each Klein op in the app and capture what .agents/mpi-kanban/tasks/MPI-354/validation.md asks for: the progress-bar count PER OP (t2i with the enhancer both ON and OFF) and PEAK VRAM on the heaviest op. Do not re-derive anything already verified - the dep reconcile, the R2 upload and the baked workflow are all confirmed. Commit nothing; mpi-end closes this session's work.",
+    "description": "Run each Klein op in the app and capture what .agents/mpi-kanban/tasks/MPI-354/validation.md asks for: the progress-bar count PER OP (t2i with the enhancer both ON and OFF) and PEAK VRAM on the heaviest op (likely upscale or a 3-reference edit). The engine boot problem is already RESOLVED - see section 0 of validation.md; the stale pack is parked as .disabled and the junction is live. Do not re-derive anything already verified: the dep reconcile, the R2 upload and the baked workflow are all confirmed, and the wiring is COMMITTED (d2ded0a6). The 4 failing tests pre-date this work.",
     "command": "mpi-continue"
   },
   "context": {
@@ -87,8 +88,8 @@
       "MPI-365 carded for the user's stated direction: EVERY image model (and probably video) moves to the one-master-template shape, then a GC pass. The card lists what becomes deletable - the shared-op injectParams and the replace-vs-merge branch with them, the per-op detailer/upscaler raw files, DEFAULT_STYLE_OPS."
     ],
     "constraints": [
-      "NOTHING IS COMMITTED, deliberately, and it MUST stay that way until mpi-end. The Klein change spans js/data/commandRegistry.js and js/components/Organisms/MpiPromptBox/MpiPromptBox.js, which ALSO carry other sessions' uncommitted work (MPI-360 op-help content, MpiOpHelpDialog/, MpiMaskCompositeDialog/, services/imageComposite.js, tests/op-strip-availability.test.cjs, tests/mask-composite.test.cjs, MpiHistoryList.js, MpiGroupHistoryBlock.js, js/components/types.js, js/shell/preloadStyles.js, routes/projects.js, docs/op-model-selection.md). Splitting Klein out would produce a BROKEN commit - modelShowsStyleRack and the kleinEdit op both live in commandRegistry.js. The user has closed several sessions mid-flight and will run a dedicated cleanup session.",
-      "MINE this session (for mpi-end): comfy_workflows/klein_t2i.json, comfy_workflows/scripts/workflow_generation/klein_t2i_template.json (both already git-staged by the sync), comfy_workflows/display/klein-4b.webp, comfy_workflows/scripts/workflow_generation/generate_klein.py + registry.py (ALREADY COMMITTED b6973a77), js/data/modelConstants/models.js + loraDeps.js + modelDeps.js, js/data/commandRegistry.js (partly), js/services/commandExecutor.js, js/components/Organisms/MpiPromptBox/MpiPromptBox.js (one gate line + one import), js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js + .css, js/utils/ratios.js, js/core/operationRegistry.js, operation_registry.json, tests/inject-params-titles.test.cjs, tests/output-prompt-capture.test.cjs, docs/models/klein/*, docs/models/README.md, .agents/mpi-kanban/**.",
+      "COMMITTED 2026-07-28, NOT pending for mpi-end. e5a0bf1c = another session's completed MPI-360 op-help work (landed first, separately attributed); d2ded0a6 = the Klein wiring. js/data/commandRegistry.js and js/components/Organisms/MpiPromptBox/MpiPromptBox.js were CO-OWNED and were split per .claude/rules/git.md: their hunks committed first, mine restored on top. Verified afterwards that no sibling line was lost and that the remaining sibling work (MPI-353/355/358/361 kanban) is still uncommitted. mpi-end only needs to close whatever the NEXT session produces.",
+      "STILL UNCOMMITTED and NOT yours: .agents/mpi-kanban/tasks/MPI-353/*, and the untracked MPI-355 / MPI-358 / MPI-361 task dirs. Leave them for the user's cleanup session.",
       "ALREADY COMMITTED this session: a19f4f48 (krea2 rack orphan-slot guard, MPI-359), b6973a77 (Klein handler + registry route), 76d363d2 + 847fdfe7 (raw template, committed by sync-raw-workflows.mjs itself).",
       "PROGRESS_STAGES CANNOT EXPRESS KLEIN. stagesFor() keys on the WORKFLOW FILENAME with a mode of single/preview/stage2. Klein runs ALL SEVEN ops from klein_t2i.json and their bar counts genuinely differ, so one key cannot hold seven answers. Capture PER OP, then extend the schema with a per-op key ('klein_t2i.json:detail') or a fourth argument. Until then Klein has NO entry: the counter ticks without a total ('2' not '2/3') - degraded, never wrong.",
       "/object_info/<NodeName> RETURNS HTTP 200 WITH AN EMPTY {} FOR AN UNKNOWN CLASS. A 200 is NOT proof a node exists - this produced a wrong conclusion in this session. Fetch the FULL /object_info and test membership instead.",
@@ -161,5 +162,5 @@
       "event": "handoff_created"
     }
   ],
-  "resume_prompt": "You are resuming MPI-354, the FLUX.2 Klein 4B model wiring in Cubric Vision. Read .agents/mpi-kanban/state/handoffs/d79aa76a-6ac3-467b-b616-8ddbc25c2a0c.json first, then .agents/mpi-kanban/tasks/MPI-354/validation.md, which is the capture sheet for this session's work. Klein is already wired END TO END and everything checkable without the app has been verified: the dependency set reconciles against the baked graph in both directions, all 14 weights are uploaded to R2 and confirmed by rclone check plus HTTP HEAD, the master template is converted and baked to klein_t2i.json, and a full ModelDef ships with a new kleinEdit op and two new registry mechanisms (ModelDef.opInject and ModelDef.styleOps). What remains is IN-APP verification only: the progress-bar count PER OP (the PROGRESS_STAGES table keys on filename and cannot express Klein's seven ops from one file, so capture per op) and PEAK VRAM on the distilled int8 weight, which decides whether sizeTier stays 'low'. RESTART ComfyUI before testing - a junction to the MpiNodes pack was restored after the running engine booted. Commit NOTHING: the change spans commandRegistry.js and MpiPromptBox.js, which also hold other sessions' uncommitted work, so mpi-end closes it all together at the end of the next session. Do not re-derive the grayscale bug or the checkpoint A/B; both are solved and documented in docs/models/klein/."
+  "resume_prompt": "You are resuming MPI-354, the FLUX.2 Klein 4B model wiring in Cubric Vision. Read .agents/mpi-kanban/state/handoffs/d79aa76a-6ac3-467b-b616-8ddbc25c2a0c.json first, then .agents/mpi-kanban/tasks/MPI-354/validation.md, which is the capture sheet for this work. Klein is already wired END TO END and COMMITTED (d2ded0a6): the dependency set reconciles against the baked graph in both directions, all 14 weights are on R2 and confirmed by rclone check plus HTTP HEAD, the master template is baked to klein_t2i.json, and the ModelDef ships a new kleinEdit op plus two new mechanisms (ModelDef.opInject and ModelDef.styleOps). What remains is IN-APP verification only: the progress-bar count PER OP (PROGRESS_STAGES keys on filename and cannot express Klein's seven ops from one file, so capture per op) and PEAK VRAM on the distilled int8 weight, which decides whether sizeTier stays 'low'. The engine boot issue is already resolved - see section 0 of validation.md. Do not re-derive the grayscale bug or the checkpoint A/B; both are solved and documented in docs/models/klein/. The test suite is 48 pass / 4 fail and those 4 failed before this work - do not attribute them to Klein."
 }
