@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-364",
+  "title": "Model picker: scroll the selected model into view",
+  "description": "Opening the model picker should scroll to the currently-selected model's tile and centre it, instead of always opening at the top of the list.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "open",
+  "created_at": "2026-07-27T23:35:00Z",
+  "updated_at": "2026-07-27T23:35:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
