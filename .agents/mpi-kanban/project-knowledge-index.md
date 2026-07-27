@@ -21,6 +21,12 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Rules:** `.claude/rules/dos_and_donts.md`, `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`, `.claude/rules/component-state.md`
 - **Memory:** none (topic files consolidated into docs/)
 
+### Op & model selection
+
+- **Read first:** `docs/op-model-selection.md` (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker + hold-Tab, bar order)
+- **Also:** `docs/component-contracts.md` (PromptBox op memory, MpiRadioGroup `aria-disabled`, MpiTileSheet, MpiModelSettings), `docs/generation-lifecycle.md` (what happens after the pick)
+- **Memory:** none (lives in docs/)
+
 ### Events & cross-component communication
 
 - **Read first:** `docs/events.md`

@@ -67,6 +67,18 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
    or the session's commit(s) if end-session already committed) and ask, per the
    kind of work that landed:
 
+   - **Resolve WHICH file first: run `gh release list | head -3`.** A version
+     with a tag/release has FROZEN notes — `RELEASE_NOTES['<that version>']` in
+     `js/data/releaseNotes.js` is as archival as `docs/releases/YYYY-MM-DD-vX.Y.Z.md`,
+     and writing into it describes features that are in no build the user can
+     install. New user-facing work ALWAYS goes to `docs/releases/UNRELEASED.md`,
+     which `/mpi-version-bump` folds into the next version. **`package.json`
+     version is NOT the signal** — it reads `1.2.0` both while 1.2.0 is in
+     development and after 1.2.0 ships. A handoff or card naming a version is a
+     claim to verify, not an instruction: this check exists because MPI-356 wrote
+     two entries into `RELEASE_NOTES['1.2.0']` on a handoff's say-so, three days
+     after v1.2.0 was published.
+
    - **Unreleased changelog (`docs/releases/UNRELEASED.md`).** Did this session
      add a user-facing change (new feature, fixed bug, behaviour change) that
      belongs in the next release notes? OR does an EXISTING entry now contradict
