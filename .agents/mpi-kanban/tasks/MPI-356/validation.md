@@ -181,3 +181,76 @@ short-circuit, nearest-including-disabled resolver, ops-left-the-radial),
 `component-events-blocks.md` (`radial:will-open` -> `ui:open-model-picker`),
 `component-state.md` (`refreshRadial` mention), `docs/events.md`
 (`radial:will-open` row deleted), `docs/shell.md` (`refreshRadial`/`OP_ICONS`).
+
+## Post-plan queue items 1-3 (handoff 5d9ca59a)
+
+All three live-verified in a headless chromium against the user's running dev
+server (the app kept port 3000 throughout). Lint on the three touched JS files:
+0 errors, 1 pre-existing warning. `node --test tests/op-strip-availability.test.cjs`
+still 5/5.
+
+### 1. MpiModelSettings reopen loop - FIXED, two independent causes
+
+The 13k-error hang was not one bug. Both halves are fixed at the cause:
+
+- **The loop.** `el.open()` awaits `assetService.loadAll()`, which assigned
+  `state.availableLoras` AND `state.upscaleModels` unconditionally. The state
+  Proxy emits `state:changed` on every assign, identical content or not, and
+  MpiModelSettings' own live-rerender subscription answers exactly those two
+  keys with `el.open(_context)` - so open() fed its own listener, two events per
+  pass, exponentially. Fixed on both sides: `loadAll` now assigns only on a real
+  content change (a rescan that finds nothing new must not wake any subscriber -
+  this was repo-wide event noise, not just this component's problem), and
+  `open()` sets `_rescanning` around its own `loadAssets()` so the subscription
+  skips the changes open() itself causes. The live-rerender feature survives -
+  an external change (folder removed, drag-drop import) still rebuilds the
+  dropdowns. This also retires the load-bearing accident the handoff flagged:
+  `_isOpen = true` landing AFTER the await is no longer what makes the first
+  open safe.
+- **The invisible first click.** MpiModelSettings mounted its MpiOverlay as
+  `tool-container`, but its ONLY opener (MpiModelPicker, 2 call sites, both via
+  the picker's `settings` event) is `body`-mounted. #tool-container is a separate
+  stacking context, so the settings overlay's higher Overlays z-index could never
+  paint above the picker - it rendered UNDERNEATH, which is why the click looked
+  like a no-op until the picker was closed. Now `mountTarget: 'body'`.
+
+Live evidence: click model button -> LoRA & Upscale ->
+`{"overlayClass":"mpi-overlay mpi-overlay--body","z":"10020","visible":true,"topIsInsideSettings":true}`,
+`netErrors=0 consoleErrors=0` (was ~13k). Clicking its X -> `gone`, stays gone,
+still 0 errors.
+
+### 2. Cogwheel moved back + restyled
+
+Bar order read live off the DOM:
+`["bottom-neg-slot","textarea-slot","enhance-slot","settings-badge-slot","settings-cog-slot","engine-toggle-slot","bottom-right-slot"]`
+- i.e. neg / prompt / enhance / model / cog / engine / run. Button class is now
+`mpi-btn--secondary` (matches the model button beside it). DOM-order edit only;
+grid columns are all `auto` except the prompt's `1fr`, so no CSS change was
+needed. `.claude/rules/component-mounts.md` bar-order note updated to match.
+
+### 3. Empty-box auto-select t2i - shipped WITH a negative control
+
+Written as the narrow exception it is: only the transition TO zero staged media
+(`hadMedia` captured before the counts are recomputed), only when the model has
+a text-only non-mask op, never under `_context.filterNoInputOps` (History
+video-continuation mode HIDES text ops - MPI-281). MPI-337's no-force-DOWN rule
+is otherwise untouched.
+
+Live run 1 - the behaviour: empty `[t2i*, i2i~, depth~, upscale~]` -> drag an
+image `[t2i~, i2i*, depth, upscale]` -> remove the chip
+`[t2i*, i2i~, depth~, upscale~]`. Under the old code the box kept `i2i` selected
+and dimmed.
+
+Live run 2 - the NEGATIVE CONTROL that mattered: the programmatic write must not
+poison `s_selectedOpByModel`, or step 8's op memory would be erased every time
+the box emptied. Staged an image, explicitly clicked **depth** (a real user
+pick), removed the chip (auto `t2i*`), re-added an image -> landed back on
+**depth**, NOT on the smallest-fitting `i2i`. Memory intact.
+
+### Still open
+
+Queue item 4 (docs/registry follow-ups) is untouched: `inpaint` still needs its
+workflow + `supportedOps` from the parallel FLUX.2 Klein 4B session, 1.2.0
+release notes mention none of this work, and op/model selection still has no
+subsystem doc. The card stays in Doing / validating - it needs a real Electron
+pass by the user before it moves to Done.

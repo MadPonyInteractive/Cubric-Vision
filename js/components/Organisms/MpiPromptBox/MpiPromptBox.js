@@ -72,9 +72,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
             <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
-            <div class="mpi-prompt-box__col mpi-prompt-box__col--cog" id="settings-cog-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--enhance hide" id="enhance-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--cog" id="settings-cog-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--engine hide" id="engine-toggle-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
         </div>
@@ -272,6 +272,7 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         function _emitMediaChange() {
+            const hadMedia = (el.imageCount ?? 0) > 0 || (el.videoCount ?? 0) > 0;
             el.imageCount = _mediaItems.filter(m => m.mediaType === 'image').length;
             el.videoCount = _mediaItems.filter(m => m.mediaType === 'video').length;
             el.audioCount = _mediaItems.filter(m => m.mediaType === 'audio').length;
@@ -288,6 +289,22 @@ export const MpiPromptBox = ComponentFactory.create({
                 } else {
                     _refreshOpStrip();
                 }
+            } else if (model && !hasMedia && hadMedia && !curIsTextOnly && !_context.filterNoInputOps) {
+                // MPI-356: the ONE deliberate exception to MPI-337's no-force-DOWN
+                // rule below — the LAST chip leaving an empty box lands on the
+                // model's text-only op, because an empty box with a media op
+                // selected can do nothing at all. Narrow on purpose: only the
+                // transition TO zero media, only when the model actually has a
+                // text-only op, and never in History video-continuation mode
+                // (`filterNoInputOps` HIDES text ops — MPI-281).
+                // `programmatic: true` keeps this out of s_selectedOpByModel so the
+                // user's real pick is still what _pickFallbackOp restores when media
+                // comes back (MPI-356 step 8).
+                const textOps = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model))
+                    .filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0 && !c.requiresMask);
+                const textOp = textOps.find(c => c.available) ?? textOps[0];
+                if (textOp) el.setOperation(textOp.key, { programmatic: true });
+                else _refreshOpStrip();
             } else {
                 // MPI-337: NO force-DOWN. Removing media (or any change that doesn't
                 // add media a text op can't use) never switches the op to a text op.
@@ -1088,8 +1105,11 @@ export const MpiPromptBox = ComponentFactory.create({
         modelBtn.on('click', () => Events.emit('ui:open-model-picker', {}));
 
         // ── Cogwheel (parameters popup trigger) ────────────────────────────────
+        // `secondary` matches the model button it sits beside — the bar's buttons
+        // are primary/secondary throughout, and `ghost` made the cog read as a
+        // different class of control.
         const cogBtn = MpiButton.mount(qs('#settings-cog-slot', el), {
-            icon: 'settings', variant: 'ghost', size: 'sm',
+            icon: 'settings', variant: 'secondary', size: 'sm',
             info: 'Generation parameters',
             extraClasses: 'mpi-prompt-box__cog-trigger',
         });

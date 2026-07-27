@@ -236,19 +236,31 @@ export const MpiModelSettings = ComponentFactory.create({
         let _context = null;
         /** True while the overlay is shown — gates live re-render on asset changes. */
         let _isOpen = false;
+        /** True for the duration of open()'s OWN asset rescan — see the subscription. */
+        let _rescanning = false;
         const _unsubs = [];
 
         // ── MpiOverlay base ───────────────────────────────────────────────────
-        const overlay = MpiOverlay.mount(document.createElement('div'), { closable: true });
+        // body-mount: this overlay is only ever opened FROM MpiModelPicker, which is
+        // itself body-mounted. A tool-container mount lands inside #tool-container's
+        // stacking context, so its z-index (higher on the Overlays stack) still
+        // painted UNDER the picker — the LoRA & Upscale click looked like a no-op
+        // until the picker was closed (MPI-356).
+        const overlay = MpiOverlay.mount(document.createElement('div'), {
+            closable: true, mountTarget: 'body',
+        });
         overlay.el.appendToContainer(el);
         overlay.on('close', () => { _isOpen = false; emit('close', {}); });
 
         // Live re-render: if the LoRA/upscale lists change while the picker is open
         // (e.g. user removes an extra folder, or a drag-drop import lands), rebuild
         // the dropdowns so the missing/red flags and options stay current without a
-        // close-reopen.
+        // close-reopen. `_rescanning` excludes the changes open() causes ITSELF via
+        // its own loadAssets() — without it open() feeds its own listener and
+        // re-enters, two events per pass, exponentially (MPI-356: an unclosable
+        // reopen loop that flooded the console with ERR_INSUFFICIENT_RESOURCES).
         _unsubs.push(Events.on('state:changed', ({ key }) => {
-            if (!_isOpen || !_context) return;
+            if (!_isOpen || !_context || _rescanning) return;
             if (key === 'availableLoras' || key === 'upscaleModels') el.open(_context);
         }));
 
@@ -562,9 +574,10 @@ export const MpiModelSettings = ComponentFactory.create({
             // Rescan asset lists on every open. Files can land on disk outside the
             // app (File Explorer copy, a new subfolder) with no state:changed to
             // trigger a refresh — an open-time rescan is the only chance to pick
-            // them up. loadAssets() reassigns the state keys → state:changed →
-            // the live-rerender subscription rebuilds the dropdowns.
-            await loadAssets();
+            // them up. The rest of open() reads the fresh lists directly, so the
+            // live-rerender subscription must stay OUT of this one (see it above).
+            _rescanning = true;
+            try { await loadAssets(); } finally { _rescanning = false; }
 
             _context = ctx;
 

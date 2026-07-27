@@ -4,7 +4,7 @@
   "generated_at": "2026-07-27T00:20:00Z",
   "from_session": "534cc4c3-05a3-4f26-b27a-096b49b33789",
   "to_role": "implementer",
-  "status": "open",
+  "status": "consumed",
   "session": {
     "name": "MPI-356 steps 7-8 shipped + popup op strip, cog move, inpaint op",
     "branch": "master"
@@ -50,7 +50,13 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
   "knowledge_preservation": {
     "completed": [
       "plan.md — steps 7/8/9 struck with what actually changed.",
@@ -107,7 +113,15 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": null,
-    "relevant_topics": ["components", "events", "state", "generation-lifecycle", "component-contracts", "versioning", "dos_and_donts"]
+    "relevant_topics": [
+      "components",
+      "events",
+      "state",
+      "generation-lifecycle",
+      "component-contracts",
+      "versioning",
+      "dos_and_donts"
+    ]
   },
   "rules_active": [
     "CLAUDE.md",
@@ -121,10 +135,23 @@
     "docs/component-contracts.md"
   ],
   "recent_events": [
-    { "at": "2026-07-26T23:40:00Z", "event": "steps_7_and_8_shipped_and_live_verified" },
-    { "at": "2026-07-27T00:05:00Z", "event": "popup_op_strip_cog_move_and_inpaint_op_shipped" },
-    { "at": "2026-07-27T00:15:00Z", "event": "op_strip_moved_to_popup_bottom" },
-    { "at": "2026-07-27T00:20:00Z", "event": "handoff_created_with_four_new_user_items" }
+    {
+      "at": "2026-07-26T23:40:00Z",
+      "event": "steps_7_and_8_shipped_and_live_verified"
+    },
+    {
+      "at": "2026-07-27T00:05:00Z",
+      "event": "popup_op_strip_cog_move_and_inpaint_op_shipped"
+    },
+    {
+      "at": "2026-07-27T00:15:00Z",
+      "event": "op_strip_moved_to_popup_bottom"
+    },
+    {
+      "at": "2026-07-27T00:20:00Z",
+      "event": "handoff_created_with_four_new_user_items"
+    }
   ],
-  "resume_prompt": "You are resuming MPI-356 \"Op strip and model overlay\" in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/5d9ca59a-b614-4160-8e39-ed6fceb975f3.json first, then .agents/mpi-kanban/tasks/MPI-356/validation.md. The 8-step plan is DONE and committed (814eb9ed, a32b2503, f6b8d117) and the card sits in Doing / validating. Nothing is uncommitted. FOUR items are queued, all decided by the user, so implement rather than re-ask, in this order: (1) HIGH — the LoRA & Upscale button opens MpiModelSettings in an unclosable reopen loop (13k console errors, `net::ERR_INSUFFICIENT_RESOURCES`); the diagnosis is in plan.pending item 1: `el.open()` awaits `assetService.loadAll()`, which always reassigns `state.availableLoras` and `state.upscaleModels`, and MpiModelSettings' own `state:changed` subscription answers those two keys by calling `el.open(_context)` again — exponential re-entry. Fix the cause, not the symptom, and also look at why the settings overlay renders UNDER the picker. (2) Move the cogwheel BACK to after the model selector and restyle it to match the other bar buttons (it is `variant: 'ghost'` among primary/secondary neighbours). (3) When the last media chip is removed and the model has a text-only op, auto-select t2i — a deliberate NARROW exception to MPI-337's no-force-DOWN rule, written in `_emitMediaChange` and dispatched with `{ programmatic: true }` so it does not poison `s_selectedOpByModel`. (4) Docs/registry follow-ups: `inpaint` still needs its workflow + supportedOps from the parallel FLUX.2 Klein 4B session, 1.2.0 release notes mention none of this work, and op/model selection still has no subsystem doc. Hard constraints: never use the AskUserQuestion picker tool (ask in plain text), never run `npm run test:desktop` while the user's app holds port 3000, verify in the browser with the harness recipe in context.constraints, and commit by explicit pathspec only — several sessions share this tree."
+  "resume_prompt": "You are resuming MPI-356 \"Op strip and model overlay\" in the Cubric Vision repo (c:\\AI\\Mpi\\Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/5d9ca59a-b614-4160-8e39-ed6fceb975f3.json first, then .agents/mpi-kanban/tasks/MPI-356/validation.md. The 8-step plan is DONE and committed (814eb9ed, a32b2503, f6b8d117) and the card sits in Doing / validating. Nothing is uncommitted. FOUR items are queued, all decided by the user, so implement rather than re-ask, in this order: (1) HIGH — the LoRA & Upscale button opens MpiModelSettings in an unclosable reopen loop (13k console errors, `net::ERR_INSUFFICIENT_RESOURCES`); the diagnosis is in plan.pending item 1: `el.open()` awaits `assetService.loadAll()`, which always reassigns `state.availableLoras` and `state.upscaleModels`, and MpiModelSettings' own `state:changed` subscription answers those two keys by calling `el.open(_context)` again — exponential re-entry. Fix the cause, not the symptom, and also look at why the settings overlay renders UNDER the picker. (2) Move the cogwheel BACK to after the model selector and restyle it to match the other bar buttons (it is `variant: 'ghost'` among primary/secondary neighbours). (3) When the last media chip is removed and the model has a text-only op, auto-select t2i — a deliberate NARROW exception to MPI-337's no-force-DOWN rule, written in `_emitMediaChange` and dispatched with `{ programmatic: true }` so it does not poison `s_selectedOpByModel`. (4) Docs/registry follow-ups: `inpaint` still needs its workflow + supportedOps from the parallel FLUX.2 Klein 4B session, 1.2.0 release notes mention none of this work, and op/model selection still has no subsystem doc. Hard constraints: never use the AskUserQuestion picker tool (ask in plain text), never run `npm run test:desktop` while the user's app holds port 3000, verify in the browser with the harness recipe in context.constraints, and commit by explicit pathspec only — several sessions share this tree.",
+  "consumed_at": "2026-07-27T01:10:00Z"
 }
