@@ -2,7 +2,6 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
-import { MpiBadge } from '../../Primitives/MpiBadge/MpiBadge.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
@@ -73,9 +72,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
             <div class="mpi-prompt-box__col mpi-prompt-box__col--neg" id="bottom-neg-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--prompt" id="textarea-slot"></div>
+            <div class="mpi-prompt-box__col mpi-prompt-box__col--cog" id="settings-cog-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--enhance hide" id="enhance-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--settings" id="settings-badge-slot"></div>
-            <div class="mpi-prompt-box__col mpi-prompt-box__col--cog" id="settings-cog-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--engine hide" id="engine-toggle-slot"></div>
             <div class="mpi-prompt-box__col mpi-prompt-box__col--run" id="bottom-right-slot"></div>
         </div>
@@ -179,8 +178,13 @@ export const MpiPromptBox = ComponentFactory.create({
 
         let model = props.model || null;
         let modelList = props.modelList || [];
-        let _opStrip = null;
-        const opStripSlot = qs('#op-strip-slot', el);
+        /** @type {Array<{destroy?:Function, on:Function}>} live op-strip mounts */
+        let _opStrips = [];
+        // TWO strips, one choice list: the floating strip on the bar, and the
+        // settings popup's header — the popup sits on top of the bar strip while
+        // it is open, so the op has to stay reachable from inside it. The popup
+        // slot joins once its node exists (below).
+        const opStripSlots = [qs('#op-strip-slot', el)].filter(Boolean);
 
         /** @type {Array<Function>} Cleanup functions, all run in destroy. */
         const _unsubs = [];
@@ -988,9 +992,12 @@ export const MpiPromptBox = ComponentFactory.create({
         const popupEl = document.createElement('div');
         popupEl.innerHTML = MpiPopup.template({ active: false, position: 'top' }, `
             <div class="mpi-prompt-box__settings">
-                <div class="mpi-prompt-box__settings-header">
-                    ${MpiBadge.template({ label: 'SETTINGS', variant: 'secondary' })}
-                </div>
+                <!-- The op strip doubles as the popup's header (replacing the old
+                     SETTINGS badge): the popup covers the floating strip while it is
+                     open, so without this the user has to close the popup to change
+                     op. Same choices, same event — a second mount, not a second
+                     source of truth. -->
+                <div class="mpi-prompt-box__settings-header" id="op-strip-popup-slot"></div>
                 <div class="mpi-prompt-box__settings-grid">
                     <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
                 </div>
@@ -998,6 +1005,9 @@ export const MpiPromptBox = ComponentFactory.create({
         `).trim();
         const popupNode = popupEl.firstChild;
         document.body.appendChild(popupNode);
+
+        const _popupStripSlot = qs('#op-strip-popup-slot', popupNode);
+        if (_popupStripSlot) opStripSlots.push(_popupStripSlot);
 
         let popupActive = false;
         let leaveTimer = null;
@@ -1084,10 +1094,20 @@ export const MpiPromptBox = ComponentFactory.create({
             if (popupActive) closePopup(); else openPopup();
         });
 
+        // A click that STARTED inside the popup, recorded in the capture phase —
+        // before any handler can re-render. The op strip in the popup header
+        // destroys and remounts itself while handling its own click, so by the
+        // time the document-level dismiss runs, `e.target` is detached and
+        // `popupNode.contains(e.target)` is false: the popup closed on every op
+        // change, which is exactly what putting the strip in there had to fix.
+        let _clickFromInsidePopup = null;
+        _unsubs.push(on(popupNode, 'click', (e) => { _clickFromInsidePopup = e; }, true));
+
         // Outside-click dismiss (hover-close removed to avoid multi-popup churn).
         // Popup stays open until user clicks outside or presses Escape.
         const onPopupOutsideClick = (e) => {
             if (!popupActive) return;
+            if (e === _clickFromInsidePopup) return;
             if (popupNode.contains(e.target) || cogBtn.el.contains(e.target)) return;
             // Ignore clicks inside any portaled child surface (dropdown list,
             // nested popup like MpiRatioSelector's). These are logically inside
@@ -1190,10 +1210,9 @@ export const MpiPromptBox = ComponentFactory.create({
         // chips just don't fit yet. Ops the model or workspace can't run at all
         // never reach here — getAvailableCommands drops them.
         function _refreshOpStrip() {
-            if (!opStripSlot) return;
-            _opStrip?.destroy?.();
-            _opStrip = null;
-            opStripSlot.innerHTML = '';
+            for (const strip of _opStrips) strip.destroy?.();
+            _opStrips = [];
+            for (const slot of opStripSlots) slot.innerHTML = '';
             if (!model) return;
 
             const choices = _opChoices();
@@ -1203,20 +1222,26 @@ export const MpiPromptBox = ComponentFactory.create({
             // (the selected+disabled state MPI-337 guarantees stays representable).
             if (!choices.length) return;
 
-            _opStrip = MpiRadioGroup.mount(opStripSlot, {
-                options: choices.map(o => ({ label: o.short, value: o.value, info: o.info, disabled: o.disabled })),
-                value: activeOperation,
-                name: 'operation',
-                size: 'sm',
-            });
-            // Route through the workspace event the radial already uses: the
-            // owning Block validates the op against its live context (mask,
-            // history mode) and calls back into setOperation. Selecting here
-            // directly would give the box a second, unvalidated source of truth.
-            _opStrip.on('select', ({ value }) => {
-                if (value === activeOperation) return;
-                Events.emit('workspace:set-operation', { operation: value });
-            });
+            const options = choices.map(o => ({ label: o.short, value: o.value, info: o.info, disabled: o.disabled }));
+            for (const slot of opStripSlots) {
+                const strip = MpiRadioGroup.mount(slot, {
+                    options,
+                    value: activeOperation,
+                    name: 'operation',
+                    size: 'sm',
+                });
+                // Route through the workspace event the radial already uses: the
+                // owning Block validates the op against its live context (mask,
+                // history mode) and calls back into setOperation. Selecting here
+                // directly would give the box a second, unvalidated source of truth.
+                // Both mounts (bar + popup header) share this one path, so they can
+                // never disagree — the Block's setOperation re-renders both.
+                strip.on('select', ({ value }) => {
+                    if (value === activeOperation) return;
+                    Events.emit('workspace:set-operation', { operation: value });
+                });
+                _opStrips.push(strip);
+            }
         }
 
         function _refreshOpSlot() {
@@ -1787,7 +1812,8 @@ export const MpiPromptBox = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn());
             _negBtn?.destroy?.();
-            _opStrip?.destroy?.();
+            for (const strip of _opStrips) strip.destroy?.();
+            _opStrips = [];
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();

@@ -14,7 +14,7 @@ bug-report dialog. Guard lives at the TOP of `startGeneration` (`generationServi
 chokepoint covering Q hotkey / Cue button / loop re-fire. Required-slot unsatisfied → `ui:warning`
 toast + `return null`.
 
-The same chokepoint also gates `requiresMask` ops (detail/change/remove) with no `maskDataUrl`
+The same chokepoint also gates `requiresMask` ops (detail/inpaint) with no `maskDataUrl`
 — `_needsMaskButHasNone` + `_warnMissingMask`, mirrored at enqueue + dispatch (MPI-337). A missing
 requirement toasts + `return null`; it NEVER switches the op (the op stays selected, dimmed).
 Op availability is data-driven from `commandRegistry` `mediaInputs` slot count + `requires*`:

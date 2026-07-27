@@ -37,6 +37,16 @@ test('every strip-eligible op has a short, and every short is a known verb', asy
         'every short must appear in OP_ORDER or it sorts to the end of the strip');
 });
 
+test('inpaint replaces change/remove: mask-gated, prompt-optional, one op', async () => {
+    const { commands } = await import('../js/data/commandRegistry.js');
+    assert.ok(!commands.change && !commands.remove,
+        'change/remove are retired — inpaint covers both (deprecated in operationRegistry, not here)');
+    // Prompt-optional is what lets ONE op do both jobs: with a prompt it replaces
+    // the masked area, empty it erases and fills. Flip this and removal is gone.
+    assert.strictEqual(commands.inpaint.promptRequired, false);
+    assert.strictEqual(commands.inpaint.requiresMask, true);
+});
+
 test('results come back in canonical order, not registry or supportedOps order', async () => {
     const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
     assert.deepStrictEqual(

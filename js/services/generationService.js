@@ -121,7 +121,7 @@ function _warnMissingMediaSlot(slot) {
     Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.`, sound: false });
 }
 
-// MPI-337: some ops (detail/change/remove — commandRegistry `requiresMask`) need
+// MPI-337: some ops (detail/inpaint — commandRegistry `requiresMask`) need
 // a painted mask. Unlike a missing media slot, the op is NEVER switched away when
 // the mask is absent — the user's op stays selected and Run is gated HERE instead,
 // at both the enqueue and dispatch sites, with one shared message (mirrors the

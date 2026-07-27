@@ -261,32 +261,25 @@ export const commands = {
         components: ['denoise', 'krea2Turbo'],
         defaults: { denoise: 0.30 },
     },
-    change: {
-        label: 'Change',
-        short: 'change',
-        info: 'Change — replace the masked area to match your prompt',
-        progressLabel: 'Changing',
+    // Masked regeneration. Replaces the old `change` + `remove` pair, which were
+    // never wired to a workflow or a model's supportedOps (deprecated in
+    // operationRegistry rather than deleted, so a legacy history item still
+    // validates). One op covers both jobs: with a prompt it replaces the masked
+    // area, with an EMPTY prompt it erases and fills from the surroundings — hence
+    // promptRequired:false. First wired by FLUX.2 Klein 4B; the other flux editors
+    // plug into the same op.
+    inpaint: {
+        label: 'Inpaint',
+        short: 'inpaint',
+        info: 'Inpaint — regenerate the masked area; leave the prompt empty to erase it',
+        progressLabel: 'Inpainting',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         requiresMask: true,
-        promptRequired: true,
-        components: [],
-    },
-    remove: {
-        label: 'Remove',
-        short: 'remove',
-        info: 'Remove — erase the masked area and fill the background',
-        progressLabel: 'Removing',
-        mediaType: MEDIA_TYPE.IMAGE,
-        requiresImages: 1,
-        mediaInputs: [
-            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
-        ],
-        requiresMask: true,
-        promptRequired: true,
+        promptRequired: false,
         components: [],
     },
     // NVIDIA PiD generative upscaler. One workflow, internal 4-path VAE selector
@@ -632,7 +625,7 @@ function _maxMediaSlots(cmd, mediaType, minFallback) {
  * order — Array.prototype.sort is stable.
  */
 export const OP_ORDER = Object.freeze([
-    't2i', 'i2i', 'depth', 'edit', 'upscale', 'detail', 'change', 'remove',
+    't2i', 'i2i', 'depth', 'edit', 'upscale', 'detail', 'inpaint',
     't2v', 'i2v', 'extend',
 ]);
 

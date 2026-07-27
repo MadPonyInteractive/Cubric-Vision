@@ -256,10 +256,24 @@
     max-width: 90vw;
 }
 
+/* Popup header IS the op strip (it replaced the SETTINGS badge) — the strip
+   spans the popup and scrolls sideways rather than wrapping, so the header
+   keeps one line whatever the op count. */
 .mpi-prompt-box__settings-header {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+}
+
+.mpi-prompt-box__settings-header .mpi-radio-group {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.mpi-prompt-box__settings-header .mpi-radio-group::-webkit-scrollbar {
+    display: none;
 }
 
 .mpi-prompt-box__settings-grid {
