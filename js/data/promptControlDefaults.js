@@ -7,7 +7,7 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     duration: 5,
     motionIntensity: 0,
     useGrid: false,
-    upscaleFactor: 2,
+    upscaleFactor: 1.5,
     denoise: 0.2,
     // PiD upscaler (Input_Type MpiAnySwitch, 1-indexed): 1=flux, 2=sd3, 3=qwen, 4=sdxl.
     // Default 1 (flux) matches the workflow's baked select.
