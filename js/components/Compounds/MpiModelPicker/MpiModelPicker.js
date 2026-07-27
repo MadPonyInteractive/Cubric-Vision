@@ -124,6 +124,14 @@ export const MpiModelPicker = ComponentFactory.create({
             _models = models;
             _render(modelId);
             overlay.el.show();
+            // Centre the active tile — AFTER show(), the overlay is only in the DOM
+            // from there (a detached body measures 0 and the scroll silently no-ops).
+            // The fade-in's translateY shifts tile and scroller together, so the
+            // scroll delta is unaffected; no rAF/timeout needed. Instant, not smooth:
+            // the list must already BE in position when the overlay first paints.
+            // No selection / model filtered out of the list → getTile() is null → no-op.
+            _sheets.map(s => s.el.getTile(modelId)).find(Boolean)
+                ?.scrollIntoView({ block: 'center', inline: 'nearest' });
         };
 
         el.close = () => overlay.el.hide();

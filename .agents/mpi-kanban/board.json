@@ -1,10 +1,9 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 362,
+ "next_id": 365,
  "columns": {
   "todo": [
    "MPI-361",
-   "MPI-360",
    "MPI-358",
    "MPI-357",
    "MPI-355",
@@ -28,13 +27,17 @@
    "MPI-349"
   ],
   "doing": [
-   "MPI-356",
+   "MPI-360",
    "MPI-354",
    "MPI-346",
    "MPI-259",
    "MPI-4"
   ],
   "done": [
+   "MPI-364",
+   "MPI-356",
+   "MPI-362",
+   "MPI-363",
    "MPI-359",
    "MPI-353",
    "MPI-352",
@@ -52,8 +55,62 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-27T00:00:00Z",
+ "updated_at": "2026-07-27T12:00:00Z",
  "events": [
+  {
+   "at": "2026-07-28T00:05:00Z",
+   "type": "task.moved",
+   "task": "MPI-364",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED. Picker opens with the active model's tile centred vertically."
+  },
+  {
+   "at": "2026-07-27T23:45:00Z",
+   "type": "task.moved",
+   "task": "MPI-364",
+   "from": "todo",
+   "to": "doing",
+   "note": "Implementing: centre the active model tile in the picker body on open."
+  },
+  {
+   "at": "2026-07-27T23:35:00Z",
+   "type": "task.created",
+   "task": "MPI-364",
+   "to": "todo",
+   "note": "Model picker should scroll the currently-selected model into view and centre it when opened."
+  },
+  {
+   "at": "2026-07-27T23:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-356",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED live. Handoff 5d9ca59a queue closed: MpiModelSettings reopen loop fixed at both causes (loadAll fake state:changed feeding open()s own listener; tool-container mount under a body-mounted picker), cogwheel moved back after the model selector and restyled secondary, empty-box auto-t2i with an op-memory negative control, docs/op-model-selection.md + component contracts + 1.2.0 release notes. LoRA & Upscale now reads as a button. Remaining inpaint workflow belongs to the Klein card."
+  },
+  {
+   "at": "2026-07-27T23:05:00Z",
+   "type": "task.moved",
+   "task": "MPI-362",
+   "from": "doing",
+   "to": "done",
+   "note": "Mask composite USER-VERIFIED live both directions, hole fill matching MaskDetailerPipe contour_fill, feathered edge. Tests 3/3, route smoke-verified, lint clean."
+  },
+  {
+   "at": "2026-07-27T23:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-363",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED LIVE. Alt+drag a gallery card now drops a real file into any app (tested: Discord upload). main.js gained ipcMain.on(drag-out-files) -> webContents.startDrag; MpiGalleryGrid gained _tryNativeDragOut() on both card dragstart handlers. Plain drag unchanged. Docs: docs/gallery.md Card drag section + UNRELEASED.md whatIsNew entry."
+  },
+  {
+   "at": "2026-07-27T22:10:00Z",
+   "type": "task.created",
+   "task": "MPI-363",
+   "to": "doing",
+   "note": "Alt+drag a gallery card = real OS file drag via Electron startDrag. Card drag-out only works into Explorer/Finder because MPI-318 uses Chromium DownloadURL, a VIRTUAL-FILE PROMISE; Discord/Photoshop/upload zones read CF_HDROP and see nothing. startDrag REPLACES the HTML5 drag so it cannot share the plain-drag gesture with the in-app application/mpi-media drop - hence a second gesture, Alt. Multi-select Alt+drag exports every selected file, which DownloadURL could not do."
+  },
   {
    "at": "2026-07-26T00:45:00Z",
    "type": "task.validated",
@@ -668,6 +725,13 @@
    "from": "doing",
    "to": "done",
    "note": "USER-VERIFIED live. node_lock bumped aaa1d2d9 -> 69a43336 (pushed origin/main tip, carries MpiStyleSelector + MpiStyleLoras); node-drift 23/23. Both blockers closed - card complete."
+  },
+  {
+   "at": "2026-07-27T21:30:49Z",
+   "type": "task.created",
+   "task": "MPI-362",
+   "to": "doing",
+   "note": "Mask composite (Add/Subtract) in image history - Sharp server-side, feathered mask, result appended as a new history entry."
   }
  ]
 }
