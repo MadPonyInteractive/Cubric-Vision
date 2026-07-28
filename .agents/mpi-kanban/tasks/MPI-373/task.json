@@ -1,0 +1,42 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-373",
+ "title": "Composite tool: overlay two entries live and erase the top one to reveal the one under it",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-28T13:30:00Z",
+ "updated_at": "2026-07-28T13:30:00Z",
+ "labels": [
+  "ui",
+  "ux",
+  "masking",
+  "composite",
+  "history"
+ ],
+ "description": "The composite shipped in MPI-362 is blind: the user selects two entries, one of them must ALREADY carry a mask, a modal asks Add or Subtract, and Sharp blends server-side. The user never sees the blend while deciding it. The user's redesign: selecting two entries overlays the FIRST over the SECOND on the canvas, and a brush/eraser pair edits the boundary live - the eraser removes the top image where it paints, revealing the entry underneath; the brush paints the top image back.\n\nDelivery vehicle: a NEW composite tool in the rail (the user's own preferred option, over force-selecting an existing mask tool). It is a natural sibling of the mask family that MPI-371 just built - same strip, same brush/eraser/opacity, different meaning for the painted pixels.\n\nKey design call to make in the brief: the erase layer IS a mask. If the tool paints into the same manual/subtract layer pair MaskManager already owns, Apply can hand that layer to the EXISTING /project/composite-media route as maskDataUrl and the whole server side stays untouched (full-res, no base64 round-trip for a 4K result). The new work is then the live two-image preview, not new pixel code.\n\nBLAST RADIUS: js/components/Compounds/MpiHistoryList (the select-mode gate that currently requires a mask on one of the two entries - it must go), MpiGroupHistoryBlock.js `composite-requested` handler + `_runComposite` (~line 1706), MpiMaskCompositeDialog (Add/Subtract modal - kept or deleted, decide explicitly), MpiCanvasViewer + MpiCanvas/MaskManager (an underlay image layer that the base image is composited over), a new MpiToolOptionsComposite (register CSS in js/shell/preloadStyles.js AND props in js/components/types.js), MpiHistoryTools rail entry, docs/masking.md.",
+ "acceptance": [
+  "Selecting two image entries offers Composite whether or not either one already carries a mask",
+  "The first-selected entry renders OVER the second on the canvas, both visible, before anything is committed",
+  "Eraser reveals the underlying entry live at the painted pixels; brush restores the top entry; brush size and opacity behave as in the mask family",
+  "Apply commits ONE new history entry through the existing full-res server composite path - no base64 round-trip of a 4K result",
+  "Leaving the tool or cancelling changes no history and no stored mask",
+  "The old mask-driven Add/Subtract dialog is kept or removed deliberately, with the decision recorded - not left dangling",
+  "Entries of differing pixel dimensions have a defined behaviour (fit, cover, or refuse) rather than an accident"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "events": "events.jsonl",
+  "files": "files.md",
+  "handoffs": "handoffs/",
+  "plan": "plan.md",
+  "research": "research.md",
+  "related": [
+   "MPI-362",
+   "MPI-371",
+   "MPI-376"
+  ]
+ }
+}

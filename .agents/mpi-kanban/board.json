@@ -1,9 +1,13 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 373,
+ "next_id": 378,
  "columns": {
   "todo": [
-   "MPI-372",
+   "MPI-373",
+   "MPI-374",
+   "MPI-375",
+   "MPI-376",
+   "MPI-377",
    "MPI-368",
    "MPI-366",
    "MPI-365",
@@ -30,6 +34,7 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-372",
    "MPI-367",
    "MPI-370",
    "MPI-369",
@@ -63,8 +68,43 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-28T11:30:00Z",
+ "updated_at": "2026-07-28T13:38:00Z",
  "events": [
+  {
+   "at": "2026-07-28T13:38:00Z",
+   "type": "task.created",
+   "task": "MPI-377",
+   "to": "todo",
+   "note": "Media dropped into the History workspace produces no entry and no canvas load - it silently becomes a prompt chip, discovered only when the dropped image comes out of the latents on the next run. Root cause located while carding: the drop handler in MpiGroupHistoryBlock.js only calls injectMedia and never appends to history. Chip staging is load-bearing in video mode, so the entry must be added without stripping the chip globally."
+  },
+  {
+   "at": "2026-07-28T13:36:00Z",
+   "type": "task.created",
+   "task": "MPI-376",
+   "to": "todo",
+   "note": "No undo exists anywhere on the canvas - a grep returns comments only. Tolerable for masks, fatal for paint, so MPI-375 drives it. Command stack on MpiCanvas, one stroke per command, Ctrl+Z via the hotkey registry, dirty-rect patches rather than 9MB full-layer snapshots. Masking undo is CONDITIONAL: only if it is not a MaskManager refactor, otherwise split it rather than half-wire it."
+  },
+  {
+   "at": "2026-07-28T13:34:00Z",
+   "type": "task.created",
+   "task": "MPI-375",
+   "to": "todo",
+   "note": "New paint tool for History image mode: brush, eraser with the existing opacity slider, colour picker, Clear paint, Apply paint. A scribble is a shape reference for the models - paint a rough shape, mask it, detail it. Reuses the MpiMaskStrip from MPI-371; new part is an RGBA paint layer independent of the binary mask layers, since masking the paint afterwards is the whole point."
+  },
+  {
+   "at": "2026-07-28T13:32:00Z",
+   "type": "task.created",
+   "task": "MPI-374",
+   "to": "todo",
+   "note": "UI size set with Ctrl+wheel or Ctrl+plus / Ctrl+minus is thrown away on every restart - applyUiZoom reads the factor live from webFrame and never stores it. Persist through js/core/storage.js with a key in storageKeys.js, restore early enough to avoid a resize flash, clamp on read, no-op in Browser Mode."
+  },
+  {
+   "at": "2026-07-28T13:30:00Z",
+   "type": "task.created",
+   "task": "MPI-373",
+   "to": "todo",
+   "note": "User redesign of the MPI-362 composite after living with it: instead of a blind Add/Subtract modal gated on one entry already carrying a mask, selecting two entries should overlay the first over the second on the canvas with a brush/eraser pair - the eraser removes the top image to reveal the one under it, the brush paints it back. Delivered as a NEW composite tool in the rail, sibling of the MPI-371 mask family. If the erase layer IS a mask, Apply reuses the existing full-res server route untouched and the only new code is the live two-image preview."
+  },
   {
    "at": "2026-07-28T11:30:00Z",
    "type": "task.created",

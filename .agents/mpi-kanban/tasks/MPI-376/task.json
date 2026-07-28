@@ -1,0 +1,42 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-376",
+ "title": "Undo on the canvas - paint first, masking too if it is not a refactor",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-28T13:36:00Z",
+ "updated_at": "2026-07-28T13:36:00Z",
+ "labels": [
+  "ui",
+  "ux",
+  "canvas",
+  "architecture",
+  "paint",
+  "masking"
+ ],
+ "description": "There is no undo anywhere on the canvas today - a grep for undo across js/ returns only comments. Every destructive stroke is permanent until Clear wipes the whole layer. That is survivable for a mask (a mask is a rough selection, and Detect/Points can regenerate it) and NOT survivable for paint, where one bad stroke over good work has no recovery short of starting again. MPI-375 is therefore the driver.\n\nProposed shape: a small command stack owned by MpiCanvas. One stroke (pointerdown to pointerup) = one command; Ctrl+Z undo, Ctrl+Shift+Z redo, bound through Hotkeys with ids in js/managers/hotkeyRegistry.js - never a raw keydown listener. Bounded depth.\n\nMEMORY IS THE REAL CONSTRAINT, so decide it before coding: a full-layer RGBA snapshot at the 1536 max edge is roughly 9MB, so a 20-deep stack of snapshots is ~180MB per layer. Prefer dirty-rect patches (store only the bounding box a stroke touched, before and after) and fall back to whole-layer snapshots only for layer-wide operations like Clear.\n\nMASKING IS CONDITIONAL, and the condition is explicit: extend it to masks ONLY if it is not a big refactor. MaskManager juggles four things (manualCanvas, subtractCanvas, autoPickMasks, selectedAutoPicks) plus the layer-ORDER rule fixed during MPI-371 (auto picks union LAST so a detection beats an older erase). If routing every mask mutation through commands means restructuring that, STOP and split the mask half onto its own card instead of growing this one.",
+ "acceptance": [
+  "Undo and redo work for paint strokes in the paint tool, in stroke granularity",
+  "Ctrl+Z / Ctrl+Shift+Z bound through Hotkeys with ids in hotkeyRegistry.js - no raw keydown listener",
+  "Stack depth is bounded and the memory cost per entry is measured and recorded, not guessed",
+  "The stack is cleared on entry switch and on tool teardown - no undo across two different images",
+  "Masking undo is either delivered in the same coherent pass or split onto its own card with the reason recorded - not half-wired",
+  "If masking is included: the MPI-371 layer-order rule (auto picks union LAST) still holds after an undo/redo sequence"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "events": "events.jsonl",
+  "files": "files.md",
+  "handoffs": "handoffs/",
+  "plan": "plan.md",
+  "research": "research.md",
+  "related": [
+   "MPI-375",
+   "MPI-373",
+   "MPI-371"
+  ]
+ }
+}

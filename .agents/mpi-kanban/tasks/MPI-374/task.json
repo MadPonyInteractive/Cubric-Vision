@@ -1,0 +1,34 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-374",
+ "title": "UI size must survive a restart",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-28T13:32:00Z",
+ "updated_at": "2026-07-28T13:32:00Z",
+ "labels": [
+  "ui",
+  "ux",
+  "settings",
+  "small"
+ ],
+ "description": "Ctrl+wheel and Ctrl+plus / Ctrl+minus change the global UI size, and the setting is thrown away on every restart. A user who needs a larger UI has to re-set it every single launch.\n\nThe zoom is Electron's webFrame zoom factor, stepped by `applyUiZoom(dir)` in js/utils/uiZoom.js (ZOOM_MIN 0.5, ZOOM_MAX 3.0, ZOOM_STEP 0.1). Nothing writes it anywhere - `getZoomFactor()` is read live from webFrame each step, so the value dies with the window. Three call sites: the Ctrl+wheel handler in js/init.js, the Ctrl+plus / Ctrl+minus hotkeys in js/managers/hotkeyManager.js (~line 90), and the registry ids in js/managers/hotkeyRegistry.js (~line 520).\n\nFix: persist the factor through js/core/storage.js under a NEW key declared in js/core/storageKeys.js (that file is the mandated single home for every storage key), and restore it on boot. Restore must happen early enough that the user does not watch the UI resize itself after paint. webFrame is null in Browser Mode - applyUiZoom already no-ops there and the restore must too.",
+ "acceptance": [
+  "Change the UI size, fully restart the app, size is exactly as left",
+  "The key is declared in js/core/storageKeys.js, not inlined at the call site",
+  "Restore runs early enough that there is no visible resize flash after first paint",
+  "Browser Mode (no webFrame) neither throws nor persists a bogus value",
+  "A stored value outside [ZOOM_MIN, ZOOM_MAX] or a corrupt one falls back to 1.0 instead of wedging the UI at an unusable size"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "events": "events.jsonl",
+  "files": "files.md",
+  "handoffs": "handoffs/",
+  "plan": "plan.md",
+  "research": "research.md"
+ }
+}

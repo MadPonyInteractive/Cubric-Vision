@@ -1,0 +1,41 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-375",
+ "title": "Paint tool - scribble on an image entry, then mask or detail it",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-28T13:34:00Z",
+ "updated_at": "2026-07-28T13:34:00Z",
+ "labels": [
+  "ui",
+  "ux",
+  "canvas",
+  "history",
+  "paint"
+ ],
+ "description": "New rail tool in the History workspace, image mode: paint colour onto the entry. Deliberately simple - brush, eraser with the opacity slider we already ship for masking, a colour picker, Clear paint, Apply paint.\n\nWhy it earns its place (user's reasoning): a scribble is an INPUT to the models, not decoration. Paint a rough shape, then mask it and run detail over it - the model gets a shape reference plus the prompt instead of the prompt alone. It is the cheapest way to say 'put something roughly here, roughly this colour, roughly this big'.\n\nMost of the surface already exists. MPI-371 extracted the shared MpiMaskStrip (brush/eraser pair, size, opacity) as a mountable strip - reuse it rather than authoring a second one. What is genuinely new is a COLOUR layer on MpiCanvas: MaskManager's layers are binary alpha (manualCanvas / subtractCanvas / autoPickMasks), so paint needs its own RGBA layer that composites over the image without polluting the mask layers - the two must stay independent, because the whole point is painting first and MASKING the paint afterwards.\n\nApply must not round-trip a 4K image as base64. Follow the MPI-362 precedent: send the paint layer to the server and let Sharp flatten it onto the source, appending one new history entry (new or extended route).\n\nBLAST RADIUS: new MpiToolOptionsPaint (CSS in js/shell/preloadStyles.js, props in js/components/types.js), MpiHistoryTools rail entry, MpiCanvas + a PaintManager beside MaskManager, MpiCanvasViewer plumbing (per-entry load/clear, the same way masks are handled), the server flatten route, docs/masking.md or a new docs/painting.md.",
+ "acceptance": [
+  "Paint tool available in the rail for image entries in the History workspace",
+  "Brush, eraser with opacity, colour picker, Clear paint and Apply paint all work",
+  "The paint layer is independent of the mask layers - painting then masking the painted area works, and neither wipes the other",
+  "Apply appends ONE new history entry, flattened server-side, no base64 round-trip of a full-res image",
+  "Switching entries or leaving the tool has defined paint behaviour (persist per entry like masks, or discard) - decided, not accidental",
+  "Undo works on paint strokes (MPI-376 - do not ship paint with no undo)"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "checklist": "checklist.md",
+  "validation": "validation.md",
+  "events": "events.jsonl",
+  "files": "files.md",
+  "handoffs": "handoffs/",
+  "plan": "plan.md",
+  "research": "research.md",
+  "related": [
+   "MPI-376",
+   "MPI-371",
+   "MPI-373"
+  ]
+ }
+}
