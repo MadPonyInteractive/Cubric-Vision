@@ -4,9 +4,9 @@
   "generated_at": "2026-07-28T14:05:00Z",
   "from_session": "645985f8-8e04-4f57-b7d5-9b2297d12af1",
   "to_role": "implementer",
-  "status": "open",
+  "status": "superseded",
   "session": {
-    "name": "MPI-372 shipped + user-verified; next stage is MPI-361 Phase B (masking with words)",
+    "name": "MPI-372 shipped + user-verified; MPI-361 CLOSED (Phase B cancelled); next is MPI-379",
     "branch": "master"
   },
   "goal": {
@@ -28,27 +28,33 @@
       "Verified against the RUNNING dev app on 127.0.0.1:3000 with headless Chromium: 21/21 checks. Negative control with all five files reverted to HEAD: 12/21, reproducing every defect with the user's exact symptom. All files restored byte-identical after the control run."
     ],
     "pending": [
-      "MPI-361 PHASE B - SAM3_Detect open-vocabulary TEXT prompts (masking with words). THIS IS THE NEXT STAGE. Card is already doing/validating with full acceptance criteria; the Phase B items are the last four bullets of task.json acceptance. It mounts MpiMaskDetectRow + MpiMaskStrip unchanged.",
-      "DOCS DRIFT, NOT YET DONE and it needs the user's permission per CLAUDE.md rule 5: docs/masking.md (at 199/200 lines, TRIM before adding) and .claude/rules/component-events-blocks.md both still describe the mediator's `prompt` special case as the only PromptBox path. .claude/rules/component-state.md / component-events-organisms.md may also want the new onMaskStrokeEnd -> mask-ready flow.",
+      "MPI-379 - hover-to-select + COCO YOLO. THIS IS THE NEXT JOB.",
+      "MPI-378 - Tab becomes a workspace flipper. Radial decision already made: DROP the workspace radial entirely; it survives only as the dev-gated Ctrl+Tab ring, and Models stays reachable via the PromptBox model button + ui:open-model-picker.",
       "MPI-368 - Shapes tool. Mounts MpiMaskStrip (brush pair probably off) and NO detect row.",
-      "The remote engine has still NOT been exercised for points mode. Should work by construction (same upload path as Input_Image) but nobody has run it on a Pod.",
-      "UNCARDED FINDING: the radial menu has lost its operations. RADIAL_ITEMS in js/shell/navigation.js:45 is [{ action: 'models' }] and is used for BOTH gallery and history, so Tab only opens the model picker. The MPI-338 comment above it still claims 'Tab shows real operations only'. Either the ops were dropped deliberately and the comment is stale, or they went missing. The user noticed and has not decided whether to card it."
+      "The remote engine has still NOT been exercised for points mode.",
+      "Docs/rules for MPI-372 are DONE (commit 71c7a6ce) - docs/masking.md, docs/shell.md, component-events-blocks.md, component-events-organisms.md. No preservation debt outstanding."
     ]
   },
   "task_card": {
-    "id": "MPI-361",
-    "title": "Auto Detect Mask v2 - SAM3 text-prompt + click-to-point masking (PHASE B)",
-    "column": "doing",
-    "workspace": ".agents/mpi-kanban/tasks/MPI-361/",
+    "id": "MPI-379",
+    "title": "Hover-to-select on the Detect tool + a COCO YOLO model",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-379/",
     "links": {
       "plan": null,
       "checklist": null,
-      "validation": ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      "validation": null,
       "handoffs": null
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "implement", "verify", "commit"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
   "knowledge_preservation": {
     "completed": [
       "MPI-372 validation.md - both rounds, all five root causes, the 21/21 result and the full negative-control output",
@@ -57,11 +63,11 @@
       "js/components/types.js - MpiCanvasProps now documents onMaskStrokeEnd and onPointsChange"
     ],
     "pending": [
-      "docs/masking.md + .claude/rules/component-events-blocks.md still describe prompt mode as the only PromptBox path. ASK THE USER before editing the rules files (CLAUDE.md rule 5). docs/masking.md is at 199/200 lines - trim first."
+      "None. docs/masking.md, docs/shell.md and both rule files were updated 2026-07-29 with the user's permission."
     ]
   },
   "next_action": {
-    "description": "Start MPI-361 PHASE B - SAM3_Detect open-vocabulary TEXT prompts, the 'masking with words' stage. Read .agents/mpi-kanban/tasks/MPI-361/task.json acceptance criteria FIRST; the last four bullets are Phase B and they already carry the hard-won specifics: (1) sam3.1_multiplex_fp16, sha256 9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03, 1745546848 bytes, checkpoints/ folder type, SAM License text ships beside the weight, Comfy-Org/sam3.1 is NOT gated so no MPI-357 licence gate; (2) SAM3_Detect TEXT path goes through CLIPTextEncode conditioning, and ITS threshold gates TEXT detections ONLY - it is NOT the point-path confidence dial, so either keep the existing slider wired to the Impact path or make the UI explain the split; (3) positive_coords / negative_coords are forceInput:true, which is a FRONTEND hint only - the API accepts a literal, so feed them from MpiString nodes titled Input_Points_Pos / Input_Points_Neg rather than betting on widget injection; (4) the autoMaskImg op is currently promptRequired:false and universal - a text prompt changes that contract, so DECIDE WITH THE USER whether the text comes from the PromptBox or from a small field inside the mask tool. That last one is a UX fork, not a mechanical choice, and MPI-372 just changed the answer's context: the PromptBox is now visible while a mask tool is active, so 'use the PromptBox' is newly viable in a way it was not when the card was written. Brief the user on it before coding. Also: if any new node self-builds its path enum, add it to SLASH_ONLY_NODE_TYPES (docs/comfy.md - the MPI-246 trap that broke auto-mask on a released build). Phase B mounts MpiMaskDetectRow + MpiMaskStrip UNCHANGED - do not fork them.",
+    "description": "SUPERSEDED 2026-07-29. The Phase B instructions below are CANCELLED - do NOT build SAM3 text masking. Probed live: SAM3_Detect is strictly prompt-driven (no detect-everything mode) and the engine has no automatic-mask-generation node among its 1842 node types, so it could never give the hover-to-discover selection the user wanted, and the text selection it does offer the user judged unintuitive. MPI-361 is CLOSED (done/complete) with the full reasoning in its validation.md. The replacement is MPI-379: part 1 is hover-to-select over detections the viewer ALREADY holds (no node, no weight, no download, no workflow change); part 2 adds a COCO YOLO -seg model (~7MB, prefer yolov8n-seg.pt for real outlines) as an engineAsset in assetDeps.js beside the existing four. Part 2 has an open user decision: the current radios are one-class-per-entry and a COCO model detects 80 classes at once, so how it presents must be settled before wiring.",
     "command": "mpi-continue"
   },
   "context": {
@@ -132,9 +138,26 @@
     "docs/component-contracts.md"
   ],
   "recent_events": [
-    { "at": "2026-07-28T13:55:00Z", "event": "MPI-372 moved doing -> done (user-verified)" },
-    { "at": "2026-07-28T14:00:00Z", "event": "committed ebd5a82f" },
-    { "at": "2026-07-28T14:05:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-07-28T13:55:00Z",
+      "event": "MPI-372 moved doing -> done (user-verified)"
+    },
+    {
+      "at": "2026-07-28T14:00:00Z",
+      "event": "committed ebd5a82f"
+    },
+    {
+      "at": "2026-07-28T14:05:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-07-29T09:10:00Z",
+      "event": "MPI-361 closed - Phase B cancelled"
+    },
+    {
+      "at": "2026-07-29T09:15:00Z",
+      "event": "MPI-379 created; handoff superseded"
+    }
   ],
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/8460f9b6-28d5-40e0-bbff-b9b2ae58d70c.json and use mpi-continue to resume the Cubric Vision masking work. MPI-372 is DONE, user-verified and committed as ebd5a82f: the PromptBox now stays live while any mask tool is active. Do not rebuild or re-litigate it, and specifically do not reintroduce either of the two things that were deleted. First, the canvas/preview swap is a VRAM optimisation, not a display requirement - swapToPreview() destroys MpiCanvas to free GPU texture backing and MpiMaskedImagePreview is a strict subset of the canvas, so mask tools simply do not swap; Shapes and Text inherit that free via _isMaskTool(). Second, the radial-era force from `workspace:set-operation` to prompt mode is gone: MpiPromptBox's op strip is now the ONLY emitter and it lives inside the box, so the box is on screen by construction and the workspace never needs to change tools. Also live now: mask state is published as it CHANGES (InputController._endMaskStroke -> MpiCanvas onMaskStrokeEnd -> MpiCanvasViewer._publishMaskState -> evaluateMask), so a new mask tool that creates a mask by some route OTHER than a brush stroke must emit mask-ready itself or the op strip will not unlock; and the rail is the source of truth for the armed canvas tool, shared by both viewer-reload paths through _syncViewerToolMode(). YOUR NEXT JOB IS MPI-361 PHASE B - SAM3_Detect open-vocabulary TEXT prompts, 'masking with words'. The card is already in doing/validating and its acceptance criteria carry the specifics: sam3.1_multiplex_fp16 (sha256 9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03, 1745546848 bytes, checkpoints/ folder, SAM License ships beside the weight, NOT gated); the TEXT path goes through CLIPTextEncode and its threshold gates TEXT detections ONLY, so it is not the point-path confidence dial; positive_coords / negative_coords are forceInput:true as a frontend hint only, so feed them from MpiString nodes titled Input_Points_Pos / Input_Points_Neg. BRIEF THE USER BEFORE CODING on one open UX fork: autoMaskImg is currently promptRequired:false and universal, and a text prompt changes that contract - does the text come from the PromptBox or from a field inside the mask tool? MPI-372 just changed the context for that answer, because the PromptBox is now visible while a mask tool is active. Phase B mounts MpiMaskDetectRow + MpiMaskStrip UNCHANGED. Finally, the tree is shared: another session owns tasks/MPI-353 and the untracked tasks/MPI-355 + MPI-358, the user added MPI-373 through MPI-377 to the top of To do, so always commit by explicit pathspec and remember that `git commit --only` silently skips UNTRACKED files."
+  "resume_prompt": "This handoff is SUPERSEDED. Read it for the MPI-372 context (still accurate and load-bearing) but IGNORE its Phase B next-action: SAM3 text masking was CANCELLED by the user on 2026-07-29 and MPI-361 is closed. Probed live against our shipped engine: SAM3_Detect is strictly prompt-driven and no automatic-mask-generation node exists in any of the engine 1842 node types, so it could never enumerate objects for hover-to-discover selection. Next job is MPI-379 (hover-to-select over existing detections, plus a COCO YOLO -seg model), then MPI-378 (Tab workspace flipper, radial already decided: drop the workspace contexts entirely)."
 }

@@ -16,7 +16,7 @@
   "project-data"
  ],
  "acceptance": [
-  "USER DECISION FIRST, before any code: what happens to the radial's Models shortcut once Tab is the flipper? Rebind it to another key, fold it elsewhere, or drop the workspace radial contexts entirely and leave the radial as the dev-only Ctrl+Tab ring. Do not pick this silently.",
+  "DECIDED 2026-07-29 by the user: DROP THE WORKSPACE RADIAL ENTIRELY. Remove RADIAL_ITEMS and the PAGE_GALLERY / PAGE_GROUP_HISTORY setContextItems calls; the radial survives only as the dev-gated Ctrl+Tab ring. Models stays reachable via the PromptBox model button (which is how it is actually opened) and the existing ui:open-model-picker event, which must keep working. Do NOT invent a replacement key.",
   "In the gallery, Tab opens the last-used card of the current project; with exactly one card in the project it opens that card",
   "In a card, Tab returns to the gallery",
   "A project with no cards: Tab does nothing at all - no navigation, no toast, no visible reaction",

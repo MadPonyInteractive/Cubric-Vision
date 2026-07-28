@@ -192,3 +192,52 @@ section naming both twins.
 
 **Still needs the user:** re-run the exact screenshot case in the app — erase a face,
 Detect (and Points), confirm the green now covers it before pressing Add.
+
+---
+
+## PHASE B — DROPPED 2026-07-29 (user decision). Card closed.
+
+Phase A shipped and is user-verified. Phase B (SAM3 open-vocabulary **text**
+masking) is **cancelled** — do not resurrect it without re-reading this.
+
+### Why, with the evidence
+
+The user's objection was that typing a word to select an object is unintuitive:
+selection should be *discovered* (hover an object, see it highlight, click it),
+not *described*. They asked whether SAM3 can enumerate objects in a scene.
+
+**It cannot.** Probed live against our own shipped engine
+(`engine/ComfyUI_windows_portable`, ComfyUI **0.28.0** on :8188 — not the bench):
+
+- `SAM3_Detect` is core (`comfy_extras.nodes_sam3`), so it needs no custom node,
+  no ComfyUI bump and no `SLASH_ONLY_NODE_TYPES` entry. That part was easy.
+- It is **strictly prompt-driven**. `execute()` runs a points path, a box path and
+  a text path; with none of the three supplied `frame_masks` stays empty and the
+  node returns a zero mask. There is no "segment everything" mode.
+- **No automatic-mask-generation node exists anywhere in the engine** — all 1842
+  registered node types searched, zero hits.
+
+So the feature the user actually wanted was never reachable from SAM3, and the
+feature SAM3 does offer is the one they judged not worth having.
+
+### What was salvaged
+
+Two findings from the probe are worth keeping:
+
+- `SAM3_Detect.positive_coords` / `negative_coords` take **JSON pixel coords**
+  (`[{"x":int,"y":int}]`) directly. That is far cleaner than Phase A's shipped
+  `r=8` / `r=4` radius-straddling hack for point polarity, and routing points
+  through SAM3 would collapse the two-threshold split this card warned about.
+  Not acted on — Phase A works — but it is the obvious upgrade path if points
+  ever need rework.
+- `individual_masks: true` emits per-object masks, and the text path also returns
+  `BOUNDING_BOX` dicts with scores. Useful shape if SAM3 is ever revisited.
+
+The 1.75GB `sam3.1_multiplex_fp16` weight was never uploaded or wired. No
+dependency entry, no workflow change, no dead code to clean up.
+
+### What replaced it
+
+MPI-379 — hover-to-select on the Detect tool, plus a COCO YOLO model so the
+detector covers everyday objects without typing. That is the discoverable
+selection the user was actually describing.

@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-379","type":"task.created","at":"2026-07-29T09:15:00Z","actor":"claude","to":"todo","summary":"Hover-to-select on the Detect tool (part 1, no download - UI over detections we already have) + a COCO YOLO -seg model so the detector covers everyday objects (part 2). Replaces the cancelled MPI-361 Phase B."}

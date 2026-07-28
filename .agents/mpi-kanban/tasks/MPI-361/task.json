@@ -3,17 +3,11 @@
  "id": "MPI-361",
  "title": "Auto Detect Mask v2 — SAM3 text-prompt + click-to-point masking",
  "description": "Today img_auto_mask.json is capped by its DETECTOR VOCABULARY, not by its segmenter. It runs UltralyticsDetectorProvider with only four models installed (bbox/face_yolov8n.pt, bbox/hair_yolov8n-seg_60.pt, bbox/hand_yolov8n.pt, bbox/person_yolov8n-seg.pt) -> ImpactSimpleDetectorSEGS -> SAMLoader (sam_vit_b) refine -> ImpactSEGSPicker. YOLO only finds classes it was trained on, so \"mask the headphones\" is impossible and always will be on that path.\n\nSAM3 replaces the detector with an OPEN VOCABULARY. The nodes are already CORE (comfy_extras.nodes_sam3, no custom pack). SAM3_Detect inputs: model (MODEL, from a checkpoint loader), image, threshold (= the confidence slider), refine_iterations (SAM decoder passes, 0 = raw detector masks), individual_masks (per-object vs union), plus OPTIONAL conditioning (CONDITIONING from CLIPTextEncode = the TEXT prompt), bboxes (BOUNDING_BOX), positive_coords / negative_coords (STRING, JSON [{\"x\":int,\"y\":int}] in PIXEL coords = click-to-mask). Outputs masks + bboxes.\n\nWEIGHT: Comfy-Org/sam3.1 -> checkpoints/sam3.1_multiplex_fp16.safetensors, 1,745,546,848 bytes (1.75GB), lands in models/checkpoints/ and loads through a checkpoint loader (that is why the widget is a ckpt list). USE THE REPACK - facebook/sam3 is gated:manual, Comfy-Org/sam3.1 is NOT gated, so this needs no MPI-357 licence gate.\n\nLICENCE IS SHIPPABLE: SAM License dated 2025-11-19 grants use, reproduce, DISTRIBUTE, copy, derive and modify, royalty-free, with NO non-commercial clause (unlike FLUX NCL). Conditions: a copy of the Agreement must travel with the weights when redistributed, research use must acknowledge, no reverse engineering, plus trade-control / no-weapons / privacy terms. So we may host it on R2 provided the licence text ships beside it.\n\nALREADY AVAILABLE WITH ZERO DOWNLOADS: Impact Pack Preview Bridge (Image) right-click -> Open in SAM Detector gives point-click masking with a threshold against the sam_vit_b weight the auto-mask graph already loads. That is the ComfyUI-side editor the user remembered. It is a bench convenience, NOT a product surface - our users never see the ComfyUI canvas.\n\nIN-GRAPH interactive equivalent: PointsEditor (kjnodes) has a click UI over a bg_image and outputs positive_coords / negative_coords strings that drop straight into SAM3_Detect.",
- "column": "doing",
- "maturity": "validating",
- "status": "active",
- "activeSessionTitle": "MPI-361 Phase A close-out",
- "attention": {
-  "state": "cleared",
-  "reason": "Phase A is USER-VERIFIED end to end, including the detection colour. Remaining on this card: docs home for click-point masking, and Phase B (SAM3 text prompts).",
-  "updated_at": "2026-07-28T08:30:00Z"
- },
+ "column": "done",
+ "maturity": "complete",
+ "status": "done",
  "created_at": "2026-07-26T23:30:00Z",
- "updated_at": "2026-07-28T08:30:00Z",
+ "updated_at": "2026-07-29T09:10:00Z",
  "labels": [
   "workflow",
   "masking",
@@ -35,11 +29,12 @@
   "PHASE A: existing Detect button drives the points run; thumbs / pick / composite plumbing reused, not forked (commandExecutor.js autoMaskImg path + MpiAutoMaskThumbs)",
   "PHASE A: YOLO detector dropdown still works unchanged - regression-check Face and Person after the graph edit",
   "PHASE A: multi-pick contract preserved - the workflow still emits 1 mask per pick via ImpactSEGSToMaskList, never SegsToCombinedMask (shipped 1.2.0 trap)",
-  "PHASE B (own card): sam3.1_multiplex_fp16 dep entry, sha256 9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03, 1745546848 bytes, checkpoints/ folder type, SAM License text shipping beside the weight. Comfy-Org/sam3.1 is NOT gated so no MPI-357 licence gate",
-  "PHASE B: SAM3_Detect TEXT path via CLIPTextEncode conditioning. NOTE its threshold gates TEXT detections ONLY - it is not the point-path confidence dial, so the slider stays wired to the Impact path or the UI must explain the split",
-  "PHASE B: positive_coords / negative_coords are forceInput:true (a FRONTEND hint - the API accepts a literal). Feed them from MpiString nodes titled Input_Points_Pos / Input_Points_Neg rather than betting on widget injection",
-  "PHASE B: autoMaskImg op reconciled - currently promptRequired:false and universal. A text prompt changes that contract, so decide prompt box vs a small field in the mask tool",
-  "If any new node self-builds its path enum, it is added to SLASH_ONLY_NODE_TYPES (docs/comfy.md - the MPI-246 trap that broke auto-mask on a released build)"
+  "DROPPED 2026-07-29 (user decision) — PHASE B (own card): sam3.1_multiplex_fp16 dep entry, sha256 9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03, 1745546848 bytes, checkpoints/ folder type, SAM License text shipping beside the weight. Comfy-Org/sam3.1 is NOT gated so no MPI-357 licence gate",
+  "DROPPED 2026-07-29 (user decision) — PHASE B: SAM3_Detect TEXT path via CLIPTextEncode conditioning. NOTE its threshold gates TEXT detections ONLY - it is not the point-path confidence dial, so the slider stays wired to the Impact path or the UI must explain the split",
+  "DROPPED 2026-07-29 (user decision) — PHASE B: positive_coords / negative_coords are forceInput:true (a FRONTEND hint - the API accepts a literal). Feed them from MpiString nodes titled Input_Points_Pos / Input_Points_Neg rather than betting on widget injection",
+  "DROPPED 2026-07-29 (user decision) — PHASE B: autoMaskImg op reconciled - currently promptRequired:false and universal. A text prompt changes that contract, so decide prompt box vs a small field in the mask tool",
+  "If any new node self-builds its path enum, it is added to SLASH_ONLY_NODE_TYPES (docs/comfy.md - the MPI-246 trap that broke auto-mask on a released build)",
+  "PHASE B CANCELLED 2026-07-29: SAM3_Detect is strictly prompt-driven (no detect-everything mode) and no AMG node exists in the engine, so it could never deliver the hover-to-discover selection the user wanted; the text selection it does offer was judged unintuitive. Full reasoning + the two salvaged findings are in validation.md. Replaced by MPI-379."
  ],
  "links": {
   "brief": "brief.md",
