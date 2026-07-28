@@ -1,0 +1,181 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "ed34c675-5b4a-4380-a90c-249c42744692",
+  "generated_at": "2026-07-29T12:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "Masking-system brainstorm - SAM3 investigated and adopted; three cards written; NO CODE WRITTEN",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue from the MPI-372 handoff. Its next action pointed at MPI-379, but MPI-379 carried a BLOCKING acceptance line: do not implement, open with a brainstorm on the masking system as a whole because the user has ideas that may reshape it. So this session was that brainstorm.",
+    "status": "complete",
+    "summary": "The brainstorm ran to completion and produced three cards plus a large body of measured engine facts. NOTHING was implemented - no application code was touched. The headline outcome is that SAM3 was investigated live, found to be strong as a REFINER (not as a finder), and adopted as the masking foundation. The agreed build order is MPI-381, then MPI-380, then MPI-379. The next session starts by planning MPI-381."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-379 unblocked: the brainstorm its acceptance list demanded has now happened, and its outcome is folded into the card.",
+      "PROVED the engine can filter detections by class. ImpactSEGSLabelFilter carries 106 presets including all 80 COCO classes, plus a comma-separated labels string. TRAP: the preset dropdown does NOTHING server-side - only labels is read. Verified preset=person with empty labels filters to zero.",
+      "PROVED per-region class labels are retrievable: ImpactDecomposeSEGS -> ImpactFrom_SEG_ELT (output slot 7 = label) returned the strings person,person,person. This is what lets hover NAME what is under the cursor, which is why the thumb strip is not needed as a readout.",
+      "FOUND that our shipped Segment mode is not the model's own segmentation. Both branches of img_auto_mask.json (nodes 1588 and 1591) feed from BBOX_DETECTOR; Segment = bbox plus SAM refine via sam_model_opt. The provider's SEGM_DETECTOR output is wired to nothing.",
+      "FOUND that Impact Pack decides bbox vs segm by FOLDER, not filename. yolov8n-seg.pt in ultralytics/bbox/ crashes with a NO_SEGM_DETECTOR error; from ultralytics/segm/ it returns native masks.",
+      "MEASURED on one 768x1376 image, warm engine: YOLO native segm 0.5s, YOLO box 0.7-0.8s, SAM 1 vit_b refine 2.1-3.1s, SAM3 box refine 1.7s, SAM3 points 1.1s, SAM3 text 3.6s per category. Native segm masks are visibly blobby; SAM 1 and SAM3 are both crisp.",
+      "DOWNLOADED and fully exercised SAM3. sam3.1_multiplex_fp16.safetensors, 1745546848 bytes, now at G:/CubricModels/checkpoints/. All three prompt paths verified working: text, box and points.",
+      "CORRECTED a misreading carried in from the previous handoff. MPI-361 closed SAM3 as unable to ENUMERATE objects, which is true and still stands. But SAM3_Detect also accepts box and point prompts, so it is fully available as a REFINER. MPI-361 validation.md had already recorded this under 'What was salvaged' - the previous handoff summary flattened it.",
+      "CLEARED the licence. SAM License from Comfy-Org/sam3.1: zero hits for commercial, non-commercial, monthly active, revenue or research only. Royalty-free, worldwide, no MAU cap. Obligations are redistribute-with-licence, no reverse engineering, trade controls, no weapons use.",
+      "CREATED MPI-380 (SAM3 as the masking foundation) with a detailed brief.md holding every measurement, six engine traps and the licence verdict.",
+      "CREATED MPI-381 (split the mask family into 4 tools plus a black-and-white mask view).",
+      "UPDATED MPI-379 with the brainstorm outcome and a dependency on MPI-380.",
+      "REPAIRED an unrelated pre-existing defect found while validating: MPI-364 had maturity 'done', which is a status value and invalid as a maturity, so it rendered as a red invalid card. Corrected to 'complete'."
+    ],
+    "pending": [
+      "MPI-381 - THIS IS THE NEXT JOB. Split the mask family into 4 tools plus the black-and-white mask view. Pure UI, zero dependencies, ships alone.",
+      "MPI-380 - SAM3 foundation: R2 upload plus dependency entry, refiner swap, points rewrite onto JSON coords.",
+      "MPI-379 - hover-to-select plus the COCO enumerator plus the class-bucket buttons. Depends on MPI-380 for the refine step.",
+      "MPI-368 - Shapes tool becomes the 4th tool in the MPI-381 split.",
+      "The remote engine has still NOT been exercised for points mode, and nothing about SAM3 has been tried on a Pod."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-381",
+    "title": "Split the mask family into 4 tools + a black-and-white mask view",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-381/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "plan",
+    "implement",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-380 brief.md - the full investigation record: every timing, the six engine traps, the licence verdict, the video angle, and the sequencing warning about the Scope dial.",
+      "MPI-380 task.json - card with 9 acceptance criteria.",
+      "MPI-381 task.json - card with 11 acceptance criteria covering both the tool split and the black-and-white view.",
+      "MPI-379 task.json - brainstorm outcome appended to the description, acceptance list rewritten to 15 items, attention reason updated to the one remaining open decision.",
+      "MPI-364 task.json - invalid maturity repaired.",
+      "task.created and task.updated events appended to both the card logs and the global log for every change above; all board JSON and JSONL re-validated after writing."
+    ],
+    "pending": [
+      "docs/masking.md is STALE in two ways and is AT its 200-line cap, so trim before adding. (1) Its Roadmap still advertises MPI-361 Phase B (SAM3 text masking) as upcoming - that is CANCELLED. (2) Line 151 lists the detect models as Face / Hair / Hand / Person, but DETECTION_MODELS in MpiCanvasViewer.js ships only Face / Hand / Person. hair_yolov8n-seg_60.pt exists on disk but is not offered in the UI.",
+      "Test artifacts left in the user's model folder, awaiting a decision to delete: ultralytics/bbox/yolov8n-seg.pt is now redundant because the useful copy is the segm/ one; ultralytics/segm/person_yolov8n-seg.pt and ultralytics/segm/hair_yolov8n-seg_60.pt are ~13MB of test copies. KEEP ultralytics/segm/yolov8n-seg.pt (MPI-379 needs it) and KEEP checkpoints/sam3.1_multiplex_fp16.safetensors.",
+      "No memory files were written this session. The durable engine facts live in MPI-380 brief.md instead, which is the right home for them."
+    ]
+  },
+  "next_action": {
+    "description": "Start MPI-381 - split the mask family into 4 tools (brush / points / detect / shapes) and add the black-and-white mask view toggle between the invert and trash buttons in MpiMaskStrip. It is pure UI with zero dependencies and was chosen deliberately as first because it makes the tools coherent before behaviour is added to them. Offer the user a plan first (mpi-create-plan is enough; this does not need the large-plan treatment). Read the card's 11 acceptance criteria before touching anything - several encode teardown contracts that have bitten before.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "BUILD ORDER IS 381 then 380 then 379, agreed by the user. 381 is pure UI with no dependencies and makes the tools coherent before behaviour lands on them. 380 must precede 379 or hover would be built against a refiner that is about to be replaced. 379 is the payoff and wants both underneath it.",
+      "THE ARCHITECTURE IN ONE LINE: YOLO finds everything fast (0.5s, all 80 classes, coarse) and SAM3 makes the good mask when the user clicks (1.1 to 1.7s). They are COMPLEMENTARY, not competing. SAM3 cannot enumerate - 4 text categories already cost 10.5s - so it can never be the finder. YOLO cannot make a clean mask, so it can never be the refiner.",
+      "SAM3 REPLACES SAM 1 AS THE REFINER and rewrites the points path, but does NOT replace YOLO. Do not let a future session re-litigate this as 'SAM3 replaces everything'.",
+      "THE POINTS SIMPLIFICATION IS THE QUIET WIN. SAM3 takes positive_coords and negative_coords as plain JSON pixel coords. That deletes Phase A's dot-RADIUS polarity hack (r=8 positive, r=4 negative straddling the mask_hint_use_negative Small 10px cliff), deletes the snapping Scope threshold, and deletes the staged points-mask PNG - which on a remote Pod is one less media upload per run.",
+      "DO NOT REMAP THE POINTS SCOPE DIAL FIRST. The brainstorm agreed to remap 0-100 onto the only useful range 80-100. But the SAM3 point path has NO threshold at all, so if MPI-380 lands that dial disappears entirely and the remap is dead work. Sequence SAM3 first or accept the remap as throwaway.",
+      "USER DECISION - the thumb strip and the Detect button are BOTH DROPPED. Selection moves onto the canvas; detection auto-runs when the user changes model or box/segment, and when a point is added or removed. Both need a debounce.",
+      "STRONG USER CANDIDATE, up for debate at implementation - HOVER SHOULD SHOW A BOX, NOT THE COARSE BLOB. A blob under the cursor reads as poor quality and may make the user abandon the tool, even though the committed mask would be crisp. A rectangle reads as a selection and makes no promise it cannot keep. This SIMPLIFIES the build: no per-pixel index map is needed (a rectangle hit test with smallest-area-wins covers nesting), and the enumerator might not need to be a -seg model at all. Recorded in full on MPI-379.",
+      "CLASS BUCKETS (People / Animals / Objects) ARE FREE AT RUNTIME. One YOLO run returns every region AND its label, so buckets are a client-side filter over regions already in RAM - instant switching, no round trip, no ImpactSEGSLabelFilter in the graph. All 80 COCO classes bucket cleanly with none orphaned. Buckets belong to YOLO only: as SAM3 text, one bucket would be 10 detector passes at roughly 15-20s.",
+      "Carried from the previous session and still true: mask tools NEVER swap the viewer surface, because swapToPreview destroys MpiCanvas as a VRAM optimisation and is not a display requirement; a tool swap must not clear the mask; any tool that makes a mask outside a brush stroke must emit mask-ready or call viewer.el.evaluateMask() or the op strip never unlocks; the rail is the source of truth for which tool is armed."
+    ],
+    "constraints": [
+      "COMMIT BY EXPLICIT PATHSPEC. The tree carries another session's work: .agents/mpi-kanban/tasks/MPI-353/ (modified) plus untracked tasks/MPI-355/ and tasks/MPI-358/. Never use git add -A or git add dot.",
+      "git commit --only does NOT pick up UNTRACKED files - it silently commits nothing for them. New task files need an explicit git add first.",
+      "Another session may be active on this board. Re-read board.json before mutating it. next_id is now 382.",
+      "THE BACKSLASH TRAP: card and event text is markdown inside a JSON string, so a lone backslash breaks the WHOLE BOARD, not just one card. Prefer the word backslash over the character, and validate every JSON and JSONL file after writing.",
+      "docs are capped at 200 lines each and docs/masking.md is AT the cap. Trim before adding.",
+      "THE WORKFLOW CONVERTER HAS BLAST RADIUS. node scripts/workflow-to-api.mjs with NO ARGUMENTS re-emits ALL 31 workflows and writes 15 stray template files. Always pass one explicit file path. Passing a single path prints to stdout, which is safe.",
+      "SAM3 TRAP 1: the text field parses category:N, comma separated. A bare category silently returns ONE detection. Any injection must always emit the :N form.",
+      "SAM3 TRAP 2: text and box prompts are mutually exclusive. In SAM3_Detect.execute the box branch is gated on 'not has_text'; with conditioning connected, boxes become a detector constraint instead.",
+      "SAM3 TRAP 3: SAM3 works at a fixed 1008x1008 internally then interpolates back up, while SAM 1 crops 1.8x around each box. On large images SAM 1 may still resolve small objects better. Every measurement in this session was on a 768x1376 image - test at 4K before declaring SAM 1 retired.",
+      "SAM3 TRAP 4: the point path ignores threshold entirely; only refine_iterations applies.",
+      "Leaving a mask tool MUST call setMaskPointsMode(false) or right-click stays broken app-wide.",
+      "MpiAutoMaskThumbs.setPicks() deliberately does NOT emit change - points mode relies on that. Do not fix it. Note that MPI-379 will delete this component entirely along with the thumb strip.",
+      "The thumbs DOM node is OWNED BY THE VIEWER. MpiMaskDetectRow re-parents it and DETACHES it in destroy - it must never destroy it.",
+      "Every new component registers its .css in js/shell/preloadStyles.js AND documents its props in js/components/types.js. Never modify js/components/factory.js (locked).",
+      "Do not run git against sibling folders from this repo. Push stays a user-authorized live op."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-380/task.json",
+      ".agents/mpi-kanban/tasks/MPI-380/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-380/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-381/task.json",
+      ".agents/mpi-kanban/tasks/MPI-381/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-379/task.json",
+      ".agents/mpi-kanban/tasks/MPI-379/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-364/task.json",
+      ".agents/mpi-kanban/tasks/MPI-364/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-381/task.json",
+      ".agents/mpi-kanban/tasks/MPI-380/brief.md",
+      "docs/masking.md",
+      "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": [
+      "Masking",
+      "Components & UI",
+      "ComfyUI injection",
+      "Workflow authoring",
+      "Model wiring / dependencies"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/masking.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-29T12:00:00Z",
+      "event": "MPI-380 created (SAM3 masking foundation)"
+    },
+    {
+      "at": "2026-07-29T12:05:00Z",
+      "event": "MPI-379 updated with brainstorm outcome"
+    },
+    {
+      "at": "2026-07-29T12:10:00Z",
+      "event": "MPI-381 created (mask tool split + black-and-white view)"
+    },
+    {
+      "at": "2026-07-29T12:12:00Z",
+      "event": "MPI-364 invalid maturity repaired"
+    },
+    {
+      "at": "2026-07-29T12:30:00Z",
+      "event": "MPI-379 updated with the box-not-blob hover candidate"
+    },
+    {
+      "at": "2026-07-29T12:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/ed34c675-5b4a-4380-a90c-249c42744692.json and use mpi-continue to pick the masking work back up. The previous session was a BRAINSTORM ONLY - no application code was written, so there is nothing half-finished on disk. It investigated SAM3 live against our own engine, adopted it as the mask refiner, and split the work into three cards with a user-agreed build order: MPI-381 first (split the mask family into 4 tools plus a black-and-white mask view - pure UI, no dependencies), then MPI-380 (SAM3 foundation: refiner swap plus points rewritten onto JSON coords), then MPI-379 (hover-to-select plus the COCO enumerator plus class-bucket buttons). Start by reading .agents/mpi-kanban/tasks/MPI-381/task.json and offer the user a compact plan for it. Before touching MPI-380 or MPI-379, read .agents/mpi-kanban/tasks/MPI-380/brief.md - it holds every measurement and six engine traps that cost real time to find, including that a -seg model must live in ultralytics/segm/ not bbox/, and that the SAM3 text field silently returns only ONE detection unless you write category:N. One sequencing rule: do NOT remap the points Scope dial, because the SAM3 point path has no threshold and that dial disappears the moment MPI-380 lands."
+}

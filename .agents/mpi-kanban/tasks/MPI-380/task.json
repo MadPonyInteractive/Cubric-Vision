@@ -1,0 +1,34 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-380",
+  "title": "SAM3 as the masking foundation - refiner swap + points rewrite",
+  "description": "Adopt SAM3 (sam3.1_multiplex_fp16, 1.75GB, SAM License - commercially clear) as the mask refiner and the points engine. Measured live on our own 0.28.0 engine: SAM3 box refine 1.7s vs SAM 1 vit_b 2.1-3.1s and visibly crisper; SAM3 points 1.1s from a single dot. The points path becomes plain JSON pixel coords (positive_coords / negative_coords), retiring the r=8 / r=4 dot-radius polarity hack, the snapping Scope threshold, and the staged points-mask PNG (one less media upload per remote run). SAM3 does NOT replace YOLO: it cannot enumerate, and 4 text categories already cost 10.5s where COCO YOLO does 80 classes in 0.5s - so MPI-379 keeps YOLO as the hover enumerator and this card supplies the refine step it clicks into. Also unlocks video: SAM3_VideoTrack + SAM3_TrackToMask take an initial_mask, which is what Bernini and the Wan Animate style graphs will need. Full measurements, six engine traps and the licence verdict are in brief.md - READ IT before starting.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-29T12:00:00Z",
+  "updated_at": "2026-07-29T12:00:00Z",
+  "labels": [
+    "masking",
+    "models",
+    "engine",
+    "video"
+  ],
+  "acceptance": [
+    "BLOCKING: sequence before MPI-379 hover work only if convenient - but do NOT do the points Scope-dial remap first, it becomes dead work the moment SAM3 lands (SAM3 point path has no threshold at all)",
+    "sam3.1_multiplex_fp16.safetensors uploaded to R2 and declared with sha256 + byte size (1745546848) verified after upload",
+    "Mask refiner swapped from SAM 1 vit_b to SAM3 on the box path; a committed mask is at least as good as today on the same image",
+    "Points path rewritten onto positive_coords / negative_coords JSON; the r=8 / r=4 radius hack and the points-mask image staging are DELETED, not left dormant",
+    "Any injection of the SAM3 text field always emits the category:N form - a bare category silently caps at ONE detection",
+    "Fate of sam_vit_b decided by grepping EVERY consumer before removal - it is loaded by the auto-mask graph and may have others",
+    "Tested on a large (4K-ish) image: SAM3 works at a fixed 1008x1008 internally while SAM 1 crops 1.8x per box, so SAM 1 may still win on small objects in big images. Prove it before retiring SAM 1",
+    "Remote engine exercised, not just local - neither points nor the refiner has been proven on a Pod",
+    "docs/masking.md updated (200-line cap, currently AT the cap - trim before adding). Its Roadmap still advertises MPI-361 Phase B, which is cancelled - fix that too"
+  ],
+  "links": {
+    "events": "events.jsonl",
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  }
+}
