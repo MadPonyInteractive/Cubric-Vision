@@ -273,9 +273,9 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
  * @property {string}     detectorModel - Filename for the sams/UltralyticsDetector node (e.g. 'bbox/face_yolov8n.pt')
  * @property {boolean}    useBox       - true = box detection, false = segment detection
  * @property {Set<number>} picks       - Currently selected segment indices (0-based); empty = detect only
- * @property {boolean}    [pointsMode] - true = run the click-point (SAM mask-points) branch instead of the YOLO detector
- * @property {string}     [pointsMask] - data URL of the point dots (white on black) — required when pointsMode is true
- * @property {number}     [pointsThreshold] - SAMDetectorCombined.threshold, default 0.93
+ * @property {boolean}    [pointsMode] - true = run the click-point (SAM3) branch instead of the YOLO detector
+ * @property {string}     [pointsPositive] - JSON `[{"x":int,"y":int}]` of positive dots, source-image px — required when pointsMode is true
+ * @property {string}     [pointsNegative] - JSON `[{"x":int,"y":int}]` of negative dots, source-image px
  */
 
 /**
@@ -923,10 +923,10 @@ export function runAutoMask(payload) {
             : '';
 
         // MPI-361: the graph carries two detector branches behind a lazy MpiIfElse
-        // (`Input_Points_Mode`), so only the selected one executes. In detector mode
-        // the points path is left empty and `MpiLoadImageFromPath` self-gates it.
-        // The dots arrive as a `data:` URL; comfyController stages it to a real file
-        // (and uploads it to the Pod on a remote engine) before injection.
+        // (`Input_Points_Mode`), so only the selected one executes.
+        // MPI-380: the points half is SAM3, fed plain JSON pixel coords through two
+        // MpiString nodes — no dot image is rendered, staged, or uploaded any more.
+        // Nothing in the graph blocks an empty run, so the viewer gates it instead.
         const pointsMode = payload.pointsMode === true;
         const params = {
             Input_Image:                 payload.imageUrl,
@@ -934,10 +934,11 @@ export function runAutoMask(payload) {
             Input_Box:                   payload.useBox === true,
             Input_Selected_Masks_Input:  picksStr,
             Input_Points_Mode:           pointsMode,
-            Input_Points_Mask:           pointsMode ? (payload.pointsMask || '') : '',
-            'Input_Points.threshold':    typeof payload.pointsThreshold === 'number'
-                ? payload.pointsThreshold
-                : 0.93,
+            // Always emit BOTH lists. SAM3 takes bare JSON coords, so an emptied
+            // negative list has to reach the graph as '[]' — omitting the key would
+            // leave the previous run's value sitting on the node.
+            Input_Points_Positive:       pointsMode ? (payload.pointsPositive || '[]') : '',
+            Input_Points_Negative:       pointsMode ? (payload.pointsNegative || '[]') : '',
         };
 
         let _detectedFired = false;

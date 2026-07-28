@@ -25,8 +25,8 @@ const MASK_BW_BG           = 'oklch(0 0 0)';               /* B/W view backdrop 
 const MASK_BW_BG_INVERTED  = 'oklch(1 0 0)';               /* …and white when the display is inverted */
 const MASK_AUTO_FILL       = 'oklch(0.78 0.13 150)';       /* --accent-ok, matches the positive dot */
 
-/* Screen-px radius of a point-prompt dot. Purely a display size — the dot the
- * GRAPH sees is sized by MaskManager.pointRadius() and carries the polarity. */
+/* Screen-px radius of a point-prompt dot. Purely a display size — the graph gets
+ * bare coordinates, and polarity rides in WHICH list a point lands in. */
 const MASK_POINT_DRAW_R = 6;
 
 /**
@@ -62,7 +62,7 @@ const MASK_POINT_DRAW_R = 6;
  *   clearMask()
  *   getMaskDataURL(bg, fg)
  *   setPointsMode(bool)       — point-prompt mode: clicks place SAM dots, not paint
- *   clearMaskPoints() / getMaskPointCount() / getPointsMaskDataURL()
+ *   clearMaskPoints() / getMaskPointCount() / getPointsJSON()
  *   bakeAutoPicksInto('manual'|'subtract') — Add / Subtract the detected mask
  *   setCropRatio(ratio)
  *   getCropRect()
@@ -1011,7 +1011,7 @@ class _CanvasCore {
     isPointsMode()               { return !!this.mask.pointsMode; }
     clearMaskPoints()            { this.mask.clearPoints(); this.draw(); }
     getMaskPointCount()          { return this.mask.points.length; }
-    getPointsMaskDataURL()       { return this.mask.getPointsMaskDataURL(); }
+    getPointsJSON()              { return this.mask.getPointsJSON(); }
 
     // ── Crop API ──────────────────────────────────────────────────────────────
     setCropRatio(ratio) { this.crop.setRatio(ratio); this.draw(); }
@@ -1068,7 +1068,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks','bakeAutoPicksInto',
-            'setPointsMode','isPointsMode','clearMaskPoints','getMaskPointCount','getPointsMaskDataURL',
+            'setPointsMode','isPointsMode','clearMaskPoints','getMaskPointCount','getPointsJSON',
             'setCropRatio','getCropRect',
             'setProcessedImage','clearProcessedImage'
         ];

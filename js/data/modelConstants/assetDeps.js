@@ -305,6 +305,21 @@ export const assetDeps = {
         sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912',
         engineAsset: true,
     },
+    // SAM3 (MPI-380) — the click-point mask engine. Core ComfyUI 0.28 model, no
+    // custom node: loads through CheckpointLoaderSimple, which also builds its own
+    // CLIP via comfy/text_encoders/sam3_clip.py. Lives BESIDE sam-vit-b rather than
+    // replacing it — SAM 1 still refines the YOLO segment branch, whose Impact
+    // SAM_MODEL slot SAM3 cannot fill. Licence: SAM License (Meta), commercially
+    // clear (no non-commercial / MAU / revenue clause).
+    'sam3-multiplex': {
+        id: 'sam3-multiplex',
+        name: 'SAM 3.1 Multiplex',
+        filename: 'checkpoints/sam3.1_multiplex_fp16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/checkpoints/sam3.1_multiplex_fp16.safetensors',
+        size: '1.75GB',
+        sha256: '9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03',
+        engineAsset: true,
+    },
     // SDXL depth-ControlNet (poseReference op). Shared by all 5 SDXL-family
     // models; per-model dep (GC'd when the last SDXL model uninstalls) — NOT an
     // engineAsset. controlnet/ path is mapped in extra_model_paths.yaml.

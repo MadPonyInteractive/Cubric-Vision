@@ -87,11 +87,12 @@
  * @typedef {Object} MpiToolOptionsMaskPointsProps (Organism — js/components/Organisms/MpiToolOptionsMaskPoints)
  * @property {Object} viewer - MpiCanvasViewer instance
  *
- * The click-point (SAM mask-points) tool of the mask family. Owns the Scope
- * dial and Clear points; mounts MpiMaskDetectRow and MpiMaskStrip WITHOUT the
- * brush pair.
+ * The click-point (SAM3) tool of the mask family. Owns the click instructions
+ * and Clear points; mounts MpiMaskDetectRow and MpiMaskStrip WITHOUT the brush
+ * pair. The Scope dial went away with MPI-380 — SAM3's point path has no
+ * threshold, so there was nothing left for it to drive.
  * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
- *   setMaskPointsMode(), setMaskPointsThreshold(), clearMaskPoints()
+ *   setMaskPointsMode(), clearMaskPoints()
  * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
  */
 

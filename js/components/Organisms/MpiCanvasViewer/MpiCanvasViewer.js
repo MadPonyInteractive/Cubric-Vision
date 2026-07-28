@@ -16,8 +16,7 @@
  *   el.getCurrentMaskDataURL()         — returns current mask as data URL, or null
  *   el.hasMask()                      — returns boolean
  *   el.setGenerating(bool)             — show/hide generating spinner
- *   el.setMaskPointsMode(bool)         — click-point (SAM mask-points) detector branch
- *   el.setMaskPointsThreshold(n) / el.getMaskPointsThreshold()
+ *   el.setMaskPointsMode(bool)         — click-point (SAM3) detector branch
  *   el.clearMaskPoints() / el.getMaskPointCount()
  *   el.bakeAutoPicks('manual'|'subtract') — Add / Subtract the detected mask
  *
@@ -306,11 +305,11 @@ export const MpiCanvasViewer = ComponentFactory.create({
         ];
         let _autoMaskModel = DETECTION_MODELS[0].value;
         let _autoMaskUseBox = true;
-        // MPI-361 point prompts. `_pointsMode` swaps the graph's detector branch;
-        // `_pointsThreshold` drives SAMDetectorCombined.threshold. Held on the viewer
-        // (like _isMaskInverted) so they survive the swapToPreview/swapToCanvas remount.
+        // MPI-361 point prompts — `_pointsMode` swaps the graph's detector branch.
+        // Held on the viewer (like _isMaskInverted) so it survives the
+        // swapToPreview/swapToCanvas remount. MPI-380 removed the companion
+        // threshold: SAM3's point path ignores it entirely.
         let _pointsMode = false;
-        let _pointsThreshold = 0.93;
         // Display-only invert state. Held on the viewer (not just the canvas)
         // so it survives the canvas teardown/remount that swapToPreview/swapToCanvas
         // performs. Re-applied to the fresh MpiCanvas after every remount.
@@ -433,13 +432,18 @@ export const MpiCanvasViewer = ComponentFactory.create({
             // choose between. Pick it up front so a single run brings back both the
             // thumb and the mask, instead of the detector's two-round-trip
             // detect-then-pick dance.
-            let pointsMask = null;
+            //
+            // MPI-380: this guard is also the graph's ONLY empty-points gate. The old
+            // branch self-gated on `MpiLoadImageFromPath(block_if_empty)`; SAM3 is fed
+            // by plain string nodes, which cannot block, so an empty run must be
+            // stopped here.
+            let points = null;
             if (_pointsMode) {
-                pointsMask = canvas.getPointsMaskDataURL?.() || null;
-                if (!pointsMask) {
+                if (!canvas.getMaskPointCount?.()) {
                     StatusBar.notify('Click the image to place a point first', 'warning');
                     return;
                 }
+                points = canvas.getPointsJSON?.() || null;
                 _autoMaskPicks = new Set([0]);
             }
 
@@ -450,8 +454,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 useBox:          _autoMaskUseBox,
                 picks:           runPicks,
                 pointsMode:      _pointsMode,
-                pointsMask,
-                pointsThreshold: _pointsThreshold,
+                pointsPositive:  points?.positive,
+                pointsNegative:  points?.negative,
             });
             _autoMaskExec = exec;
 
@@ -1208,14 +1212,6 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _clearAutoPickEntry(_currentItem, true);
         };
         el.isMaskPointsMode  = () => _pointsMode;
-
-        /** SAMDetectorCombined.threshold. NOT a smooth dial — it snaps between
-         *  SAM's 3 candidate masks, so sweep it rather than nudging it. */
-        el.setMaskPointsThreshold = (v) => {
-            const n = Number(v);
-            if (Number.isFinite(n)) _pointsThreshold = Math.min(1, Math.max(0, n));
-        };
-        el.getMaskPointsThreshold = () => _pointsThreshold;
 
         el.clearMaskPoints    = () => { canvas.clearMaskPoints?.(); emit('mask-points-changed', { count: 0 }); };
         el.getMaskPointCount  = () => canvas.getMaskPointCount?.() ?? 0;

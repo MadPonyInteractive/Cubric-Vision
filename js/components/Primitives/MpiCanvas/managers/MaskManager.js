@@ -19,21 +19,18 @@
  *
  * POINT PROMPTS (MPI-361) are a FOURTH, separate layer and deliberately not a
  * canvas: they are a list of dots the auto-mask graph turns into a mask, not
- * mask content themselves. Nothing composites them — `getPointsMaskDataURL()`
- * renders them on demand for `Input_Points_Mask`.
+ * mask content themselves. Nothing composites them — `getPointsJSON()` serialises
+ * them on demand for `Input_Points_Positive` / `Input_Points_Negative`.
  */
 const MASK_MAX_EDGE = 1536;
 
 /**
- * `SAMDetectorCombined(mask_hint_use_negative='Small')` reads a dot whose bbox
- * width is < 10 px as a NEGATIVE point — brush size IS the polarity switch, with
- * an exact 10px cliff. Our UI carries explicit polarity (left/right click), so we
- * synthesize radii that land safely either side of it. These are SOURCE-image px
- * and deliberately fixed: the `mask-points` branch only uses each blob's CENTRE,
- * so dot size means polarity and nothing else.
+ * Hit radius in SOURCE-image px for picking a dot back off the canvas. Display
+ * size lives in `MpiCanvas.MASK_POINT_DRAW_R`; this one only has to be generous
+ * enough to click. Polarity no longer has a size (MPI-380): SAM3 takes it as two
+ * separate coordinate lists, so there is nothing to encode in a radius.
  */
-const POINT_R_POSITIVE = 8; // bbox 17px -> positive
-const POINT_R_NEGATIVE = 4; // bbox  9px -> negative
+const POINT_HIT_R = 12;
 
 export class MaskManager {
     constructor() {
@@ -59,8 +56,8 @@ export class MaskManager {
         // image-px coords + brush radius by this to hit the downscaled canvas.
         this._scale = 1;
 
-        // Point prompts, in SOURCE-image px (NOT mask-px — see POINT_R_* above:
-        // the graph measures each dot's bbox in real pixels of the image it loads).
+        // Point prompts, in SOURCE-image px (NOT mask-px): SAM3 normalises the
+        // coords against the image it loads, so they must be that image's pixels.
         /** @type {Array<{x:number,y:number,positive:boolean}>} */
         this.points = [];
         this.pointsMode = false;
@@ -113,11 +110,7 @@ export class MaskManager {
         this._recomposite();
     }
 
-    // ── Point prompts (MPI-361) ──────────────────────────────────────────────
-
-    pointRadius(positive) {
-        return positive ? POINT_R_POSITIVE : POINT_R_NEGATIVE;
-    }
+    // ── Point prompts (MPI-361, rebuilt onto SAM3 in MPI-380) ────────────────
 
     addPoint(imgX, imgY, positive = true) {
         this.points.push({ x: imgX, y: imgY, positive: !!positive });
@@ -125,15 +118,13 @@ export class MaskManager {
 
     /**
      * Remove the point under (imgX, imgY) — the "individually removable" half of
-     * the contract. `slack` widens the hit target beyond the dot's own radius so a
-     * 4px negative dot is still clickable.
+     * the contract.
      * @returns {boolean} true when a point was removed
      */
-    removePointAt(imgX, imgY, slack = 8) {
+    removePointAt(imgX, imgY, hitR = POINT_HIT_R) {
         for (let i = this.points.length - 1; i >= 0; i--) {
             const p = this.points[i];
-            const r = this.pointRadius(p.positive) + slack;
-            if ((p.x - imgX) ** 2 + (p.y - imgY) ** 2 <= r * r) {
+            if ((p.x - imgX) ** 2 + (p.y - imgY) ** 2 <= hitR * hitR) {
                 this.points.splice(i, 1);
                 return true;
             }
@@ -145,29 +136,23 @@ export class MaskManager {
     hasPoints()   { return this.points.length > 0; }
 
     /**
-     * White dots on black at SOURCE resolution — the shape `Input_Points_Mask`
-     * expects in `comfy_workflows/img_auto_mask.json` (its `ImageToMask` reads the
-     * RED channel, so this is deliberately not an alpha mask). Full size, not the
-     * MASK_MAX_EDGE-capped working size: SEG coords must line up with the source
-     * image `SAMDetectorCombined` receives, and the negative-point cliff is
-     * measured in that image's own pixels.
-     * @returns {string|null} data URL, or null when there are no points
+     * The two coordinate lists `SAM3_Detect` takes, as JSON strings in
+     * SOURCE-image px — the KJNodes `PointsEditor` shape the node documents.
+     * SAM3 normalises them against the image it loads, so these must be the
+     * source image's own pixels, NOT the MASK_MAX_EDGE-capped working size.
+     *
+     * Both keys are always present: clearing every negative point has to reach
+     * the graph as an empty list, or the previous run's value would persist in
+     * `Input_Points_Negative`.
+     * @returns {{positive: string, negative: string}}
      */
-    getPointsMaskDataURL() {
-        if (!this.points.length || !this._srcWidth || !this._srcHeight) return null;
-        const c = document.createElement('canvas');
-        c.width = this._srcWidth;
-        c.height = this._srcHeight;
-        const ctx = c.getContext('2d');
-        ctx.fillStyle = 'rgb(0, 0, 0)';
-        ctx.fillRect(0, 0, c.width, c.height);
-        ctx.fillStyle = 'rgb(255, 255, 255)';
-        for (const p of this.points) {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, this.pointRadius(p.positive), 0, Math.PI * 2);
-            ctx.fill();
-        }
-        return c.toDataURL('image/png');
+    getPointsJSON() {
+        const pack = (wanted) => JSON.stringify(
+            this.points
+                .filter(p => p.positive === wanted)
+                .map(p => ({ x: Math.round(p.x), y: Math.round(p.y) })),
+        );
+        return { positive: pack(true), negative: pack(false) };
     }
 
     paint(imgX, imgY) {

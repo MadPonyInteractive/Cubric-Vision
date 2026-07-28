@@ -71,58 +71,58 @@ changes. `displayInverted` is display only; `getURL(bg, fg)` does real inversion
 
 ---
 
-## Click-point masking (MPI-361 Phase A)
+## Click-point masking (MPI-361, rebuilt on SAM3 in MPI-380)
 
-Click a point and SAM segments whatever it belongs to — the answer to the YOLO vocabulary
+Click a point and SAM3 segments whatever it belongs to — the answer to the YOLO vocabulary
 ceiling ("mask the headphones" is permanently impossible on `UltralyticsDetectorProvider`).
-Runs on `sam_vit_b_01ec64.pth`, already loaded by the auto-mask graph: zero download, zero
-licence, zero dep entry. **MPI-380 replaces this whole SAM 1 path with SAM3.**
+Runs on `sam3.1_multiplex_fp16.safetensors` (1.75GB, `engineAsset`, SAM License —
+commercially clear), loaded by a plain `CheckpointLoaderSimple`: SAM3 is a **core ComfyUI
+0.28 model**, no custom node.
+
+SAM 1 (`sam_vit_b`) is **NOT retired** — it still refines the YOLO segment branch, whose
+Impact `SAM_MODEL` slot SAM3 cannot fill. That swap needs a SEGS→`BOUNDING_BOX` bridge and
+belongs to MPI-379.
 
 ### The points layer
 
 Points are a fourth layer and deliberately **not a canvas** — a list of dots the graph
 turns into a mask. `points[]` is in **SOURCE-image px**, not the `MASK_MAX_EDGE`-capped
-working size: SEG coords must match the image `SAMDetectorCombined` receives, and the
-negative-point cliff is measured in those pixels.
+working size: SAM3 normalises coords against the image it loads.
 
-**Polarity is carried by RADIUS.** `mask_hint_use_negative='Small'` reads a dot whose bbox
-width is `< 10 px` as negative. `MaskManager` synthesizes `r=8` (bbox 17px) and `r=4` (bbox
-9px) to straddle that cliff — proven live at 6.10× separation (same two locations: whole
-person at r8+r8, shorts alone at r8+r4). Dots ship **white on black** through
-`ImageToMask(channel=red)`, deliberately not alpha: `LoadImage`-family MASK outputs are
-`1-alpha` and that inversion is a known foot-gun. `getPointsMaskDataURL()` renders them on
-demand for `Input_Points_Mask`; a `data:` URL in a media param is staged to a real file (and
-uploaded to a Pod) automatically, because the param's same-titled node is in
-`PATH_MEDIA_CLASSES`.
+**Polarity is which LIST a point lands in**, not how big it is drawn. `getPointsJSON()`
+splits `points[]` into two `[{"x":int,"y":int}]` strings — the KJNodes `PointsEditor` shape
+SAM3 documents. Both are always emitted, `[]` included: omitting a key would leave the
+previous run's coords sitting on the node. No dot image is rendered, staged, or uploaded —
+**one less media upload per remote run.**
 
 ### The graph branch — `comfy_workflows/img_auto_mask.json`
 
 ```
-Input_Points_Mask (MpiLoadImageFromPath, empty path self-gates via ExecutionBlocker)
-  -> ImageToMask(channel=red)
-  -> MaskToSEGS(combined=False, crop_factor 3, drop_size 1)
-  -> Input_Points (SAMDetectorCombined, mask-points, dilation 0, threshold 0.93)
+Input_Points_Positive / Input_Points_Negative (MpiString, JSON pixel coords)
+  -> SAM3 Points (SAM3_Detect, refine_iterations 2, individual_masks false)
   -> GrowMaskWithBlur(-4) -> GrowMaskWithBlur(+4, fill_holes)   # scatter cleanup
   -> MaskToSEGS(combined=True)
   -> Input_Points_Mode (MpiIfElse) -> existing ImpactSEGSPicker + SEGSPreview
 ```
 
-Injectable keys: `Input_Points_Mask`, `Input_Points_Mode` (bool, default **false**),
-`Input_Points.threshold` (dotted, float). The branch rejoins the **existing** picker chain,
-so thumbs / pick / composite plumbing is reused, not forked, and the shipped one-mask-per-pick
-contract (`ImpactSEGSToMaskList`, never `SegsToCombinedMask`) stays intact. `MpiIfElse`
-inputs are lazy, so points mode never runs YOLO — 2s vs 5s.
+Injectable keys: `Input_Points_Positive`, `Input_Points_Negative`, `Input_Points_Mode`
+(bool, default **false**). The branch rejoins the **existing** picker chain, so thumbs /
+pick / composite plumbing is reused, not forked, and the shipped one-mask-per-pick contract
+(`ImpactSEGSToMaskList`, never `SegsToCombinedMask`) stays intact. `MpiIfElse` inputs are
+lazy, so points mode never runs YOLO.
 
 ### Behaviour you must not "fix"
 
-- **N dots do NOT give N objects.** All points go into one `sam_obj.predict`, so SAM
-  returns a single region consistent with **all** of them (dots on shorts + calf gave the
-  whole person). One part per run; Add accumulates across runs.
-- **`threshold` is not a smooth confidence.** `sam_predict` unions every candidate scoring ≥
-  threshold, else falls back to the best. SAM emits 3 candidates, so the dial **snaps between
-  3 states** — `0.50 → 0.60` is usually identical. Shipped raw as a 30-99 "Scope" slider
-  whose info box says *sweep it, don't nudge it*.
-- **`dilation` stays 0** — it blindly grows whatever SAM returned, scatter included.
+- **N dots do NOT give N objects.** All points go into one predict call, so SAM3 returns a
+  single region consistent with **all** of them. One part per run; Add accumulates.
+- **There is no threshold on the point path.** `SAM3_Detect` takes one, but the point branch
+  ignores it entirely — only `refine_iterations` applies. This is why MPI-380 **deleted** the
+  Scope dial instead of remapping it. Do not re-add a threshold control here.
+- **`positive_coords` / `negative_coords` are `forceInput` STRING** — they must be WIRED from
+  `MpiString` nodes; they cannot be widget values on `SAM3_Detect` itself.
+- **Nothing in the graph gates an empty run.** The old branch self-gated on
+  `MpiLoadImageFromPath(block_if_empty)`; string nodes cannot. `MpiCanvasViewer` refuses the
+  run with a toast — that guard is load-bearing, not a nicety.
 - **The cleanup pair stays equal and opposite** (`-4` then `+4`), else the mask grows or
   shrinks overall — 4/4 is the shipping default.
 - Points mode auto-picks index 0 up front (ONE round trip), relying on
@@ -195,6 +195,6 @@ A mask and a prompt are **one operation**, so every mask tool keeps the PromptBo
 
 - **MPI-368** — Shapes: rectangle / triangle / ellipse gizmo, Add or Subtract. The 4th tool of
   the split; mounts `MpiMaskStrip` with `brush: false`, no detect row.
-- **MPI-380** — SAM3 replaces SAM 1 (refiner + points on plain JSON coords, killing the radius
-  hack and the Scope dial). SAM3 *text* masking is CANCELLED (was MPI-361 Phase B): it cannot
-  enumerate, so it refines, never finds.
+- **MPI-379** — the SAM 1 refiner swap, carried over from MPI-380: it needs YOLO SEGS as
+  `BOUNDING_BOX` dicts, which this graph cannot produce today. SAM3 *text* masking stays
+  CANCELLED (was MPI-361 Phase B): it cannot enumerate, so it refines, never finds.

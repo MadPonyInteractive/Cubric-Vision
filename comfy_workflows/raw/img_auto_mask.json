@@ -1,8 +1,8 @@
 {
   "id": "82ace2e7-7aad-46b0-ba38-638fe13bc981",
   "revision": 0,
-  "last_node_id": 1657,
-  "last_link_id": 2311,
+  "last_node_id": 1661,
+  "last_link_id": 2314,
   "nodes": [
     {
       "id": 1589,
@@ -24,8 +24,7 @@
           "name": "SAM_MODEL",
           "type": "SAM_MODEL",
           "links": [
-            2176,
-            2301
+            2176
           ]
         }
       ],
@@ -690,199 +689,6 @@
       "widgets_values": []
     },
     {
-      "id": 1650,
-      "type": "MpiLoadImageFromPath",
-      "pos": [
-        3057.699648579663,
-        7600
-      ],
-      "size": [
-        276.9849609375,
-        354
-      ],
-      "flags": {},
-      "order": 14,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            2300
-          ]
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": null
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Input_Points_Mask",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
-      },
-      "widgets_values": [
-        "",
-        "alpha",
-        true
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 1651,
-      "type": "ImageToMask",
-      "pos": [
-        3400,
-        7600
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 15,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 2300
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            2306
-          ]
-        }
-      ],
-      "title": "dots -> mask (white on black)",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.17.1",
-        "Node name for S&R": "ImageToMask"
-      },
-      "widgets_values": [
-        "red"
-      ]
-    },
-    {
-      "id": 1652,
-      "type": "MaskToSEGS",
-      "pos": [
-        3400,
-        7710
-      ],
-      "size": [
-        270,
-        154
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "mask",
-          "type": "MASK",
-          "link": 2306
-        }
-      ],
-      "outputs": [
-        {
-          "name": "SEGS",
-          "type": "SEGS",
-          "links": [
-            2307
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.0",
-        "Node name for S&R": "MaskToSEGS"
-      },
-      "widgets_values": [
-        false,
-        3,
-        false,
-        1,
-        false
-      ]
-    },
-    {
-      "id": 1653,
-      "type": "SAMDetectorCombined",
-      "pos": [
-        3740,
-        7600
-      ],
-      "size": [
-        304.07421875,
-        220
-      ],
-      "flags": {},
-      "order": 17,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "sam_model",
-          "type": "SAM_MODEL",
-          "link": 2301
-        },
-        {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 2307
-        },
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 2303
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            2308
-          ]
-        }
-      ],
-      "title": "Input_Points",
-      "properties": {
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.0",
-        "Node name for S&R": "SAMDetectorCombined"
-      },
-      "widgets_values": [
-        "mask-points",
-        0,
-        0.93,
-        0,
-        0.7,
-        "Small"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1654,
       "type": "GrowMaskWithBlur",
       "pos": [
@@ -1077,6 +883,186 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 1658,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        3057.699648579663,
+        7600
+      ],
+      "size": [
+        340,
+        98
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2312
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": null
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": null
+        }
+      ],
+      "title": "SAM3 Model",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0",
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "sam3.1_multiplex_fp16.safetensors"
+      ]
+    },
+    {
+      "id": 1659,
+      "type": "MpiText",
+      "pos": [
+        3057.699648579663,
+        7760
+      ],
+      "size": [
+        340,
+        88
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2313
+          ]
+        }
+      ],
+      "title": "Input_Points_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "36c409fa6029b8c205c6c1445f7403ca1571d1f7",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1660,
+      "type": "MpiText",
+      "pos": [
+        3057.699648579663,
+        7880
+      ],
+      "size": [
+        340,
+        88
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2314
+          ]
+        }
+      ],
+      "title": "Input_Points_Negative",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "36c409fa6029b8c205c6c1445f7403ca1571d1f7",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1661,
+      "type": "SAM3_Detect",
+      "pos": [
+        3740,
+        7600
+      ],
+      "size": [
+        304.07421875,
+        150
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2312
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2303
+        },
+        {
+          "name": "positive_coords",
+          "type": "STRING",
+          "link": 2313,
+          "shape": 7
+        },
+        {
+          "name": "negative_coords",
+          "type": "STRING",
+          "link": 2314,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "masks",
+          "type": "MASK",
+          "links": [
+            2308
+          ]
+        },
+        {
+          "name": "bboxes",
+          "type": "BOUNDING_BOX",
+          "links": null
+        }
+      ],
+      "title": "SAM3 Points",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0",
+        "Node name for S&R": "SAM3_Detect"
+      },
+      "widgets_values": [
+        0.5,
+        2,
+        false
+      ]
     }
   ],
   "links": [
@@ -1217,22 +1203,6 @@
       "MASK"
     ],
     [
-      2300,
-      1650,
-      0,
-      1651,
-      0,
-      "IMAGE"
-    ],
-    [
-      2301,
-      1589,
-      0,
-      1653,
-      0,
-      "SAM_MODEL"
-    ],
-    [
       2302,
       1592,
       0,
@@ -1244,8 +1214,8 @@
       2303,
       1597,
       0,
-      1653,
-      2,
+      1661,
+      1,
       "IMAGE"
     ],
     [
@@ -1265,24 +1235,8 @@
       "SEGS"
     ],
     [
-      2306,
-      1651,
-      0,
-      1652,
-      0,
-      "MASK"
-    ],
-    [
-      2307,
-      1652,
-      0,
-      1653,
-      1,
-      "SEGS"
-    ],
-    [
       2308,
-      1653,
+      1661,
       0,
       1654,
       0,
@@ -1311,6 +1265,30 @@
       1657,
       0,
       "SEGS"
+    ],
+    [
+      2312,
+      1658,
+      0,
+      1661,
+      0,
+      "MODEL"
+    ],
+    [
+      2313,
+      1659,
+      0,
+      1661,
+      2,
+      "STRING"
+    ],
+    [
+      2314,
+      1660,
+      0,
+      1661,
+      3,
+      "STRING"
     ]
   ],
   "groups": [],

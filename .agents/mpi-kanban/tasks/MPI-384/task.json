@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-384",
+  "title": "Text masking - name the object, pick a chip (SAM3 open vocabulary)",
+  "description": "The 4th rail tool of the mask family: a text box plus a count, Detect, then the existing chips. SAM3 given an object's NAME nails exactly the subjects the Points tool struggles with - thin, strappy things like a bikini, a purse or a strap, where points over-select and a face can need six dots. User proved it live in the node graph: text 'bikini:2' with individual_masks true returned two clean per-object masks. This does NOT revive the cancelled MPI-361 Phase B, which was killed as a HOVER ENUMERATOR (4 categories cost 10.5s, so it can never drive hover). A deliberate type-it-and-pick tool is a different job at a deliberate ~3.6s per press. Cheap to build: MPI-380 already added the CheckpointLoaderSimple whose CLIP output is currently unwired, and MPI-381's split makes a new rail entry a one-line registry addition.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-29T18:00:00Z",
+  "updated_at": "2026-07-29T18:00:00Z",
+  "labels": [
+    "masking",
+    "ui",
+    "workflow"
+  ],
+  "acceptance": [
+    "BLOCKING TRAP: the count must reach the node as 'name:N'. A bare category silently returns exactly ONE detection - parsed by _parse_prompts in comfy/text_encoders/sam3_clip.py. The UI count input IS the N; never emit a bare category",
+    "New rail tool registered in _MASK_TOOLS AND TOOL_OPTIONS_REGISTRY - tests/mask-tool-registry.test.cjs guards both and a miss is otherwise silent",
+    "Text branch added to comfy_workflows/raw/img_auto_mask.json: reuse the EXISTING SAM3 CheckpointLoaderSimple (its CLIP output is free today) plus CLIPTextEncode, individual_masks TRUE so each object is its own mask, then into the existing picker chain",
+    "Convert with an EXPLICIT path - node scripts/workflow-to-api.mjs comfy_workflows/raw/img_auto_mask.json. With no arguments it re-emits all 31 workflows and writes 15 stray template files",
+    "Text and box prompts are MUTUALLY EXCLUSIVE in SAM3_Detect - the box branch is gated on not has_text. Do not feed bboxes and text to the same node",
+    "The branch needs a third leg on the Input_Points_Mode selector or its own MpiIfElse - lazy inputs mean only the chosen branch executes, which is what keeps YOLO out of a text run",
+    "Injection param for the text field must NOT target an MpiString node - MpiString is in comfyController PATH_MEDIA_CLASSES and would be media-staged. Use MpiText, as MPI-380 had to",
+    "Mask tools NEVER swap the viewer surface, and a tool swap must not clear the mask. Any tool making a mask outside a brush stroke must emit mask-ready or call viewer.el.evaluateMask() or the op strip never unlocks",
+    "Empty text must not dispatch a run - gate it app-side like the points tool does; nothing in the graph blocks it",
+    "docs/masking.md updated. It is at EXACTLY its 200-line cap - trim before adding"
+  ],
+  "links": {
+    "events": "events.jsonl",
+    "brief": "brief.md"
+  }
+}

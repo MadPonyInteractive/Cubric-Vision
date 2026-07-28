@@ -195,73 +195,6 @@
       "title": "SEGS to Mask List"
     }
   },
-  "1650": {
-    "inputs": {
-      "string": "",
-      "channel": "alpha",
-      "block_if_empty": true
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "Input_Points_Mask"
-    }
-  },
-  "1651": {
-    "inputs": {
-      "channel": "red",
-      "image": [
-        "1650",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "dots -> mask (white on black)"
-    }
-  },
-  "1652": {
-    "inputs": {
-      "combined": false,
-      "crop_factor": 3,
-      "bbox_fill": false,
-      "drop_size": 1,
-      "contour_fill": false,
-      "mask": [
-        "1651",
-        0
-      ]
-    },
-    "class_type": "MaskToSEGS",
-    "_meta": {
-      "title": "MASK to SEGS"
-    }
-  },
-  "1653": {
-    "inputs": {
-      "detection_hint": "mask-points",
-      "dilation": 0,
-      "threshold": 0.93,
-      "bbox_expansion": 0,
-      "mask_hint_threshold": 0.7,
-      "mask_hint_use_negative": "Small",
-      "sam_model": [
-        "1589",
-        0
-      ],
-      "segs": [
-        "1652",
-        0
-      ],
-      "image": [
-        "1630",
-        0
-      ]
-    },
-    "class_type": "SAMDetectorCombined",
-    "_meta": {
-      "title": "Input_Points"
-    }
-  },
   "1654": {
     "inputs": {
       "expand": -4,
@@ -273,7 +206,7 @@
       "decay_factor": 1,
       "fill_holes": false,
       "mask": [
-        "1653",
+        "1661",
         0
       ]
     },
@@ -334,6 +267,60 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Input_Points_Mode"
+    }
+  },
+  "1658": {
+    "inputs": {
+      "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "SAM3 Model"
+    }
+  },
+  "1659": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Points_Positive"
+    }
+  },
+  "1660": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Points_Negative"
+    }
+  },
+  "1661": {
+    "inputs": {
+      "threshold": 0.5,
+      "refine_iterations": 2,
+      "individual_masks": false,
+      "model": [
+        "1658",
+        0
+      ],
+      "image": [
+        "1630",
+        0
+      ],
+      "positive_coords": [
+        "1659",
+        0
+      ],
+      "negative_coords": [
+        "1660",
+        0
+      ]
+    },
+    "class_type": "SAM3_Detect",
+    "_meta": {
+      "title": "SAM3 Points"
     }
   }
 }

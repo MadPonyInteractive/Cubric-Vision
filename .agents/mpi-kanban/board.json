@@ -1,9 +1,9 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 384,
+ "next_id": 385,
  "columns": {
   "todo": [
-   "MPI-380",
+   "MPI-384",
    "MPI-382",
    "MPI-376",
    "MPI-379",
@@ -38,6 +38,7 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-380",
    "MPI-383",
    "MPI-367",
    "MPI-370",
@@ -74,8 +75,29 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-29T15:00:00Z",
+ "updated_at": "2026-07-29T18:00:00Z",
  "events": [
+  {
+   "at": "2026-07-29T18:00:00Z",
+   "type": "task.created",
+   "task": "MPI-384",
+   "to": "todo",
+   "note": "Text masking - the 4th rail tool, opened at the TOP of todo. Raised by the user while verifying MPI-380 and proven by them live in the node graph before carding: text 'bikini:2' with individual_masks true returned two clean per-object masks, including the thin side-straps the Points tool fights with. Points is precise but needs MORE dots than expected, especially NEGATIVE ones, or SAM3 over-selects; thin strappy subjects are its weak spot and a face can take six dots. Naming the object fixes exactly that. This does NOT revive the cancelled MPI-361 Phase B - that was killed as a HOVER ENUMERATOR and that verdict stands (4 categories cost 10.5s, so YOLO keeps hover in MPI-379); a deliberate type-it-and-pick tool at ~3.6s on an explicit press is a different job. Cheap because MPI-380 already landed the groundwork: the SAM3 CheckpointLoaderSimple is in the graph and its CLIP output is unwired and free, the weight is in R2, and the MPI-381 split makes a rail entry a one-line registry addition. Four traps recorded in brief.md, the sharpest being that the count MUST reach the node as name:N - a bare category silently returns ONE detection - and that the text param must target an MpiText node, never MpiString, which is in PATH_MEDIA_CLASSES and would be media-staged and break the remote engine."
+  },
+  {
+   "at": "2026-07-29T18:00:00Z",
+   "type": "task.updated",
+   "task": "MPI-380",
+   "note": "LOCAL RUN USER-VERIFIED - user words: everything here seems to be working fine, and this point system is more precise. Scope dial gone, dots place and remove, right-click negatives work, Add accumulates. Card set to doing/validating; the remote Pod leg is DEFERRED by the user until the mask feature set lands. Characterised but NOT a defect: SAM3 needs more points than expected, especially negative ones, or it over-selects - thin strappy subjects are the weak spot. That weakness motivated MPI-384. Pod research done ahead of the deferred leg: NO image rebuild is needed to test, because SAM3_Detect is core ComfyUI 0.28 baked at image build and the dev image v0.17.0-dev-cu130 is already on 0.28 (MPI-341 validation digest-verified comfyui_version.py). The weight is a normal R2 dep. Released users are separate - stable is its own tag and MPI-342 deliberately left stable pins untouched, so the 0.28 image must be promoted before this reaches them. Still unverified for the Pod: that the REMOTE install path picks up a newly added engineAsset, which is the likeliest failure and should be checked first. Mac and Linux CLEAR: nodes_sam3.py imports only torch, comfy, folder_paths, comfy_api and av - no onnxruntime, so this is NOT the MPI-370 class of breakage."
+  },
+  {
+   "at": "2026-07-29T16:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-380",
+   "from": "todo",
+   "to": "doing",
+   "note": "Implementation started. SCOPE CUT BY THE USER TO THE POINTS PATH after a blocker found in orientation: SAM3 cannot replace the SAM 1 refiner by rewiring. SAM 1 sits in ImpactSimpleDetectorSEGS.sam_model_opt (node 1588, the segment branch) and that slot wants an Impact SAM_MODEL, while SAM3 box prompts want BOUNDING_BOX dicts - and nothing in the graph emits those from YOLO SEGS, since MpiBboxToMask takes Impact BBOX, a different type. A refiner swap therefore needs a NEW MpiNodes node plus an mpi-ci release plus a node_lock bump before it could even be tested remotely. So: points path only, SAM 1 is KEPT for segment refine, and both weights ship as engineAsset (user chose keep-both over retire). The refiner swap moves to MPI-379, which rebuilds YOLO enumeration and will produce boxes natively. The acceptance item about proving SAM3 at 4K before retiring SAM 1 relaxes to a sanity check, because nothing is being retired. Confirmed against nodes_sam3.py in our own 0.28 engine: SAM3_Detect positive_coords and negative_coords are force_input STRING so they must be WIRED, and MpiString is the injection target - bare-title injection writes its string field, precedent Input_Mask in klein_t2i.json. Point path ignores threshold entirely, only refine_iterations applies, so the Scope dial is DELETED not remapped. Compact plan attached."
+  },
   {
    "at": "2026-07-28T10:00:00Z",
    "type": "task.created",
