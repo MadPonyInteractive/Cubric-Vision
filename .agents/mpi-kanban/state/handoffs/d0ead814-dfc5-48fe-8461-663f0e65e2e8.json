@@ -1,0 +1,156 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d0ead814-dfc5-48fe-8461-663f0e65e2e8",
+  "generated_at": "2026-07-28T09:00:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-361 Phase A close-out - detection colour fixed, docs written, both committed",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Give the user more masking methods. The trigger was the YOLO vocabulary ceiling - 'mask the headphones' is impossible on UltralyticsDetectorProvider. The user also remembered a ComfyUI feature where you click a point on the image, set a confidence, and it selects everything belonging to that area - they want that in the app.",
+    "status": "in_progress",
+    "summary": "PHASE A IS DONE, USER-VERIFIED AND COMMITTED. The last defect (a detected region drawing in the same white as the painted mask) is fixed as a display-only split and confirmed by the user in the app; docs/masking.md now owns the whole subsystem. What is left on MPI-361 is Phase B alone - swap SAM3_Detect in behind the same UI for open-vocabulary TEXT prompts. Alongside it, the user's UI direction became MPI-371: the mask surface becomes a family of sibling tools with one shared brush strip. Nothing is uncommitted for this work."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+    "completed": [
+      "Graph branch (nodes 1650-1657) in comfy_workflows/raw/img_auto_mask.json, re-synced to the API copy - 21 nodes, 0 dangling, 0 missing-required against the live /object_info",
+      "Points mode and the YOLO regression both proven live on the engine; negative-point polarity proven with a discriminating radius test at 6.10x separation",
+      "App side shipped: MaskManager points layer, MpiCanvas dots, InputController left/right click, MpiCanvasViewer state + bakeAutoPicks, commandExecutor params, MpiToolOptionsMask UI",
+      "USER-VERIFIED IN THE APP 2026-07-28 - click-point masking, negative points, Scope, Add / Subtract",
+      "DETECTION COLOUR FIXED + USER-VERIFIED (commit e5578757). MaskManager gained autoCanvas + hasAutoLayer + _recompositeAuto(); MpiCanvas draws it as a second overlay pass tinted --accent-ok green through a new shared _recolorMaskLayer() that also absorbed the old displayInverted scratch buffer. getURL() / getMaskDataURL() unchanged.",
+      "Add / Subtract un-gated for the YOLO detector - the commitRow.hidden = !_pointsMode gate is gone; el.bakeAutoPicks() was already mode-agnostic",
+      "DOCS DONE - docs/masking.md created (163 lines, under the 200-line rule) and routed from docs/README.md section Core app. No catch-all file created.",
+      "COMMITTED: e5578757 (code + docs) and 9bd18072 (kanban). Nothing from this work is left uncommitted."
+    ],
+    "pending": [
+      "MPI-371 - split the mask surface into sibling tools (Points / Detect / Shapes / Text) under the MASK rail and extract the shared brush-eraser-invert-clear-opacity strip into ONE component. User has answered every open question; the card and brief carry them. This is the user's stated next direction.",
+      "MPI-361 PHASE B - swap SAM3_Detect in behind the same UI for open-vocabulary TEXT prompts, true negative points and box prompts. 1.75GB sam3.1_multiplex_fp16, SAM License, NOT gated so no MPI-357 licence gate. Acceptance criteria are already written on the card.",
+      "OPTIONAL, NEEDS PERMISSION - CLAUDE.md's Context Router has no Masking row. Adding one would route mask work to docs/masking.md the way Gallery routes to gallery.md. CLAUDE.md rule 5 forbids editing architectural rule files without explicit permission, so ASK before adding it.",
+      "The remote engine has NOT been exercised for points mode. It should work by construction (same upload path as Input_Image) but nobody has run it on a Pod."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-361",
+    "title": "Auto Detect Mask v2 - SAM3 text-prompt + click-to-point masking",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-361/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-361/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-361/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/masking.md written and routed - owns the four-canvas layer model, the display-vs-export split, the overlay draw order, click-point masking (polarity-by-radius, the graph branch, the snap-not-glide threshold), Add / Subtract, and the roadmap",
+      "validation.md gained a Step 6 PASS section with the user's verdict and the full root-cause record",
+      "checklist.md fully ticked for Phase A including the docs item",
+      "brief.md gained a Plan Drift section recording what landed and the agreed tool-family direction",
+      "MPI-361 attention CLEARED; card stays doing/validating for Phase B",
+      "MPI-371 created at the top of To do with a full brief, acceptance criteria and the user's answers",
+      "Handoff 50192835 marked resolved with what actually shipped",
+      "Six events appended across both event logs (validation.updated, checklist.updated x2, attention.cleared, task.created, task.updated)"
+    ],
+    "pending": [
+      "CLAUDE.md Context Router has no Masking row - needs the user's explicit permission before editing (rule 5)",
+      "CLAUDE.md rule 5 - component wiring changed again this session (MpiCanvas gained _recolorMaskLayer, MaskManager gained autoCanvas). Ask the user whether .claude/rules/component-*.md should be updated.",
+      "The stale MPI-329 handoff noted in the previous handoff was already pruned in commit e85c0f50 - nothing to ask about",
+      "MPI-361/research/ holds 6 evidence files; they were committed in e85c0f50 by a parallel session, so nothing is pending there"
+    ]
+  },
+  "next_action": {
+    "description": "Start MPI-371 - the mask tool family. Read .agents/mpi-kanban/tasks/MPI-371/brief.md first; every open question is already answered there, so do NOT re-ask them. Split the mask surface into sibling tools (Points, Detect, and later Shapes/Text) each with its own icon inside the existing MASK rail group, and extract the shared bottom strip (brush, eraser, invert, clear, opacity) out of MpiToolOptionsMask into ONE component whose brush+eraser pair is OPTIONAL - the Points tool mounts it without them. Settings persist. Read .claude/rules/components.md (Observer Lifecycle & Teardown Contract) and docs/component-contracts.md before writing code, and sweep the blast radius in the brief: preloadStyles.js, types.js, the tool rail routing, hotkeyRegistry ids, and getToolSettings defaults. Two traps that must survive the split: destroy() must keep calling viewer.el.setMaskPointsMode(false) or right-click stays broken after leaving the tool, and a tool swap must NOT wipe manualCanvas/subtractCanvas. Surface the design check in the brief to the user when you get there - with no brush on the Points tool, cleaning up a baked Add means switching tools.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE COLOUR FIX IS A DISPLAY SPLIT, NEVER AN EXPORT SPLIT. MaskManager.autoCanvas holds (union of selected autoPickMasks) AND NOT subtract, purely so MpiCanvas can tint it green. getURL() / getMaskDataURL() still flatten the single unioned maskCanvas that every downstream mask consumer reads. Do not leak the split into an export path.",
+      "_recompositeAuto() returns early when nothing is selected, so the per-dab brush hot path pays nothing for the extra pass. Keep that guard if you refactor it.",
+      "_recolorMaskLayer(src, color, W, H) fills source-atop inside a SCRATCH BUFFER on purpose - filling on the overlay directly would recolour the comparison layer painted underneath. The buffer is reused across frames AND across both calls in one frame, which is safe because drawImage copies synchronously.",
+      "Canvas colours are module constants mirroring styles/01_base.css tokens (MASK_AUTO_FILL, MASK_INVERT_FILL, MASK_POINT_*). JS cannot read CSS vars in a per-frame draw. Update the constant when the token changes.",
+      "MASK TOOL FAMILY (user, 2026-07-28): Points / Detect / Shapes (MPI-368) / Text (MPI-361 Phase B). ONE ICON PER TOOL inside the existing MASK rail group - no switcher, revisit only if the family outgrows the rail. Settings persist. The shared strip must make the brush + eraser pair OPTIONAL because the Points tool has no use for them; invert, clear and opacity are on every tool.",
+      "TEXT MASKING IS PHASE B OF MPI-361, not a new card. SAM3_Detect + CLIPTextEncode conditioning. Its threshold gates TEXT detections ONLY - it is not the point-path confidence dial, so the Scope slider stays wired to the Impact path or the UI must explain the split.",
+      "Add / Subtract is APP-SIDE via MaskManager.bakeAutoPicksInto(), which writes BOTH layers the way paint() does: adding un-erases, subtracting un-paints. No AddMask/SubtractMask nodes, no extra round trip, undo preserved, composes with the brush. It is mode-agnostic, which is why un-gating it for the YOLO detector was one line.",
+      "Dot polarity is carried by RADIUS, not a separate mask: r=8 positive, r=4 negative, straddling the exact 10px bbox-width cliff that mask_hint_use_negative='Small' uses. Proven live at 6.10x separation.",
+      "The dots mask is rendered at SOURCE image resolution, NOT the MASK_MAX_EDGE-capped working size - SEG coords must line up with the image SAMDetectorCombined receives, and the negative cliff is measured in that image's own pixels.",
+      "The old YOLO detector path is KEPT as the fast one-click Face / Hair / Hand / Person shortcut. Points sit BESIDE it."
+    ],
+    "constraints": [
+      "N DOTS DO NOT GIVE N OBJECTS. Every point goes into ONE sam_obj.predict call, so SAM returns a SINGLE region consistent with ALL points. One part per run is the shape of the feature; Add accumulates parts across runs.",
+      "threshold is NOT a smooth confidence. sam_predict keeps every SAM candidate scoring >= threshold and unions them, falling back to the single best if none pass. SAM emits 3 candidates, so the dial SNAPS between 3 states and 0.50 -> 0.60 is usually identical. Sweep it, do not nudge it.",
+      "dilation STAYS AT 0 - it blindly grows whatever SAM returned, scatter included. The scatter cleanup pair (GrowMaskWithBlur -4 then +4 with fill_holes) MUST stay equal and opposite or the mask grows or shrinks overall.",
+      "MpiCanvasViewer has its own contextmenu handler on its root, so InputController's points-mode handler calls stopPropagation AS WELL AS preventDefault. That line is load-bearing. Leaving the mask tool MUST call setMaskPointsMode(false) or right-click stays broken.",
+      "MpiAutoMaskThumbs.setPicks() deliberately does NOT emit 'change'. Points mode relies on that to restore pick 0 after setImages() clears the selection without re-triggering the run. Do not 'fix' it while moving code around.",
+      "A tool swap must NOT wipe manualCanvas / subtractCanvas - that is the user's work. Only the auto layer is disposable. Today the panel is one component so the question never came up; after the split every mount/unmount is a chance to lose it.",
+      "THE WORKFLOW CONVERTER HAS BLAST RADIUS. Running `node scripts/workflow-to-api.mjs` with NO ARGUMENTS re-emits ALL 31 workflows and writes 15 stray comfy_workflows/*_template.json files. Convert ONE file: `node scripts/workflow-to-api.mjs comfy_workflows/raw/img_auto_mask.json` prints to stdout, then write it with JSON.stringify(wf, null, 2) plus a trailing newline.",
+      "Every new component registers its .css in js/shell/preloadStyles.js AND documents its props in js/components/types.js. Never modify js/components/factory.js (locked).",
+      "The working tree carries changes that are NOT from this work and must not be committed with it: js/data/modelConstants/models.js, .agents/mpi-kanban/tasks/MPI-353/, and untracked tasks/MPI-355 + tasks/MPI-358. Commit by explicit pathspec only - never git add -A.",
+      "Do not run git against sibling folders from this repo. Push stays a user-authorized live op."
+    ],
+    "files_modified": [
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js",
+      "docs/masking.md",
+      "docs/README.md",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-361/task.json",
+      ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-361/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-361/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-371/task.json",
+      ".agents/mpi-kanban/tasks/MPI-371/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-371/events.jsonl",
+      ".agents/mpi-kanban/state/handoffs/50192835-5bd1-4f82-a39f-155f6a9cdf0f.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-371/brief.md",
+      "docs/masking.md",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js",
+      ".claude/rules/components.md",
+      "docs/component-contracts.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "Components & UI",
+      "Events & cross-component communication",
+      "ComfyUI workflow injection",
+      "Conventions / gotchas"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/state.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/kanban.md",
+    "docs/masking.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-28T09:00:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/d0ead814-dfc5-48fe-8461-663f0e65e2e8.json and use mpi-continue to resume the Cubric Vision masking work. MPI-361 Phase A - click-point masking on the sam_vit_b weight the app already ships - is DONE, user-verified and COMMITTED (e5578757 code + docs, 9bd18072 kanban); do not rebuild or re-litigate it. Its last defect, a detected region drawing in the same white as the painted mask, was fixed as a DISPLAY-only split: MaskManager gained autoCanvas (the selected auto-picks AND NOT subtract, rebuilt beside the union and skipped entirely when nothing is selected) and MpiCanvas draws it as a second overlay pass tinted --accent-ok green through a shared _recolorMaskLayer(); getURL() and getMaskDataURL() still emit the single unioned black-and-white mask every downstream consumer reads, and that must stay true. docs/masking.md now owns the whole subsystem and is routed from docs/README.md - read it before touching MaskManager or the overlay draw path. YOUR NEXT JOB IS MPI-371, the mask tool family: split the mask surface into sibling tools (Points, Detect, later Shapes via MPI-368 and Text via MPI-361 Phase B), each with its own icon inside the existing MASK rail group with no switcher, and extract the shared bottom strip - brush, eraser, invert, clear, opacity - out of MpiToolOptionsMask into ONE component whose brush and eraser pair is OPTIONAL, because the Points tool mounts it without them. Settings persist. Read .agents/mpi-kanban/tasks/MPI-371/brief.md first: every open question the user could answer is already answered there, so do not re-ask them, and the blast radius (preloadStyles.js, types.js, the tool rail routing, hotkeyRegistry ids, getToolSettings defaults) is listed. Two traps must survive the split - destroy() has to keep calling viewer.el.setMaskPointsMode(false) or right-click stays broken after leaving the tool, and swapping tools must never wipe manualCanvas or subtractCanvas. After MPI-371, MPI-361 Phase B is the remaining work on that card: SAM3_Detect plus CLIPTextEncode for open-vocabulary text prompts, 1.75GB sam3.1_multiplex_fp16, not gated. One thing needs the user's permission before you do it: CLAUDE.md's Context Router has no Masking row, and rule 5 forbids editing architectural rule files without explicit approval. Finally, the working tree carries unrelated changes from another session - js/data/modelConstants/models.js, tasks/MPI-353, and untracked tasks/MPI-355 and MPI-358 - so commit by explicit pathspec only, never git add -A."
+}
