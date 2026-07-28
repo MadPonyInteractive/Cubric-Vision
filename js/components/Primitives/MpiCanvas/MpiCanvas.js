@@ -20,6 +20,8 @@ const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50%
 const MASK_POINT_POSITIVE  = 'oklch(0.78 0.13 150)';       /* --accent-ok */
 const MASK_POINT_NEGATIVE  = 'oklch(0.76 0.17 355)';       /* --accent-heat */
 const MASK_POINT_RING      = 'oklch(0.16 0.02 350 / 0.9)'; /* --surface-canvas 90% */
+const MASK_INVERT_FILL     = 'oklch(0 0 0)';               /* pure black — invert display */
+const MASK_AUTO_FILL       = 'oklch(0.78 0.13 150)';       /* --accent-ok, matches the positive dot */
 
 /* Screen-px radius of a point-prompt dot. Purely a display size — the dot the
  * GRAPH sees is sized by MaskManager.pointRadius() and carries the polarity. */
@@ -762,21 +764,16 @@ class _CanvasCore {
         if (!this._maskHidden) {
             ctx.globalAlpha = this.mask.maskOpacity;
             if (this.mask.displayInverted) {
-                // Render to a scratch buffer so source-atop recolor doesn't touch
-                // the comparison layer already painted above.
-                const buf = this._maskInvertBuf || (this._maskInvertBuf = document.createElement('canvas'));
-                if (buf.width !== W || buf.height !== H) { buf.width = W; buf.height = H; }
-                const bctx = buf.getContext('2d');
-                bctx.clearRect(0, 0, W, H);
-                bctx.drawImage(this.mask.maskCanvas, 0, 0, W, H);
-                bctx.globalCompositeOperation = 'source-atop';
-                // eslint-disable-next-line mpi/no-hardcoded-hex-color -- mask invert recolors overlay pixels to pure black
-                bctx.fillStyle = '#000';
-                bctx.fillRect(0, 0, W, H);
-                bctx.globalCompositeOperation = 'source-over';
-                ctx.drawImage(buf, 0, 0);
+                ctx.drawImage(this._recolorMaskLayer(this.mask.maskCanvas, MASK_INVERT_FILL, W, H), 0, 0);
             } else {
                 ctx.drawImage(this.mask.maskCanvas, 0, 0, W, H);
+            }
+            // The DETECTED subset, recolored on top of the same pixels the union
+            // above already drew — otherwise a detection landing inside an
+            // already-painted area is invisible and the user cannot see what the
+            // run returned. DISPLAY ONLY: every export still reads maskCanvas.
+            if (this.mask.hasAutoLayer) {
+                ctx.drawImage(this._recolorMaskLayer(this.mask.autoCanvas, MASK_AUTO_FILL, W, H), 0, 0);
             }
             ctx.globalAlpha = 1;
         }
@@ -834,6 +831,24 @@ class _CanvasCore {
         ctx.clip();
         ctx.drawImage(imgAfter, compX, compY, compW, compH);
         ctx.restore();
+    }
+
+    /** Recolor a mask layer's opaque pixels to `color`, via a scratch buffer so
+     *  the source-atop fill cannot touch what is already on the overlay (the
+     *  comparison layer draws first). The buffer is reused across frames AND
+     *  across both calls in one frame — safe because drawImage copies
+     *  synchronously before the next call overwrites it. */
+    _recolorMaskLayer(src, color, W, H) {
+        const buf = this._maskTintBuf || (this._maskTintBuf = document.createElement('canvas'));
+        if (buf.width !== W || buf.height !== H) { buf.width = W; buf.height = H; }
+        const bctx = buf.getContext('2d');
+        bctx.clearRect(0, 0, W, H);
+        bctx.drawImage(src, 0, 0, W, H);
+        bctx.globalCompositeOperation = 'source-atop';
+        bctx.fillStyle = color;
+        bctx.fillRect(0, 0, W, H);
+        bctx.globalCompositeOperation = 'source-over';
+        return buf;
     }
 
     /** Point prompts. Overlay ctx is image-px, so divide by scale to keep the

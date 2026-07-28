@@ -4,6 +4,7 @@
  *   manualCanvas    — brush strokes (white where painted)
  *   subtractCanvas  — eraser strokes (white where erased)
  *   maskCanvas      — derived composite display layer = (manual ∪ ⋃autoPickMasks[selected]) AND NOT subtract
+ *   autoCanvas      — derived DISPLAY-ONLY subset = (⋃autoPickMasks[selected]) AND NOT subtract
  *
  * autoPickMasks is RAM-only Map<pickIndex, ImageBitmap|HTMLCanvasElement>.
  * selectedAutoPicks is Set<number>.
@@ -45,6 +46,12 @@ export class MaskManager {
         this.maskCanvas = document.createElement('canvas');
         this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true });
 
+        // Display-only twin of maskCanvas holding the DETECTED pixels alone —
+        // see _recompositeAuto(). `hasAutoLayer` lets the renderer skip the pass.
+        this.autoCanvas = document.createElement('canvas');
+        this.autoCtx = this.autoCanvas.getContext('2d');
+        this.hasAutoLayer = false;
+
         this.autoPickMasks = new Map();
         this.selectedAutoPicks = new Set();
 
@@ -83,6 +90,8 @@ export class MaskManager {
         this.subtractCanvas.height = h;
         this.maskCanvas.width = w;
         this.maskCanvas.height = h;
+        this.autoCanvas.width = w;
+        this.autoCanvas.height = h;
         this.clear();
     }
 
@@ -222,6 +231,39 @@ export class MaskManager {
         this.maskCtx.drawImage(this.subtractCanvas, 0, 0);
 
         this.maskCtx.restore();
+
+        this._recompositeAuto(w, h);
+    }
+
+    /**
+     * DISPLAY-ONLY split (MPI-361). Same math as _recomposite() minus the manual
+     * layer, so MpiCanvas can tint a DETECTED region differently from a PAINTED
+     * one — the two are the same white pixels in maskCanvas, which makes a
+     * detection inside an already-masked area invisible.
+     *
+     * NEVER exported: getURL() / the viewer's composite still flatten the single
+     * unioned maskCanvas that every downstream mask consumer reads.
+     *   auto = (⋃autoPickMasks[selected]) AND NOT subtract
+     */
+    _recompositeAuto(w, h) {
+        if (!this.autoCtx) return;
+        this.autoCtx.clearRect(0, 0, w, h);
+        this.hasAutoLayer = false;
+
+        const layers = [...this.selectedAutoPicks]
+            .map(i => this.autoPickMasks.get(i))
+            .filter(Boolean);
+        // Brush-only work (the per-dab hot path) pays nothing for this pass.
+        if (!layers.length) return;
+
+        this.autoCtx.save();
+        this.autoCtx.globalCompositeOperation = 'source-over';
+        for (const l of layers) this.autoCtx.drawImage(l, 0, 0, w, h);
+        this.autoCtx.globalCompositeOperation = 'destination-out';
+        this.autoCtx.drawImage(this.subtractCanvas, 0, 0);
+        this.autoCtx.restore();
+
+        this.hasAutoLayer = true;
     }
 
     /**
@@ -354,7 +396,7 @@ export class MaskManager {
     }
 
     destroy() {
-        for (const c of [this.manualCanvas, this.subtractCanvas, this.maskCanvas]) {
+        for (const c of [this.manualCanvas, this.subtractCanvas, this.maskCanvas, this.autoCanvas]) {
             if (c) {
                 c.width = 0;
                 c.height = 0;
@@ -366,6 +408,9 @@ export class MaskManager {
         this.subtractCtx = null;
         this.maskCanvas = null;
         this.maskCtx = null;
+        this.autoCanvas = null;
+        this.autoCtx = null;
+        this.hasAutoLayer = false;
         this.autoPickMasks?.clear?.();
         this.selectedAutoPicks?.clear?.();
         this.points = [];

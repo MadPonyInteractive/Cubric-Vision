@@ -124,7 +124,6 @@ export const MpiToolOptionsMask = ComponentFactory.create({
             detectorGroup.hidden = _pointsMode;
             pointsGroup.hidden   = !_pointsMode;
             viewer.el.setMaskPointsMode?.(_pointsMode);
-            _syncCommitRow();
         };
         sourceRadio.on('select', ({ value }) => {
             _applySource(value);
@@ -209,8 +208,10 @@ export const MpiToolOptionsMask = ComponentFactory.create({
         _children.push(clearPointsBtn);
 
         // ── Add / Subtract — bake the detected mask into the paint layers ────
-        // Each points run returns ONE region, so this is how multi-part selections
-        // are built: Add the first part, place new dots, Add again.
+        // Shown in BOTH sources: a run's result renders green (see
+        // MpiCanvas._recolorMaskLayer) and waits for the user to commit it either
+        // way. A points run returns ONE region, so this is also how multi-part
+        // selections are built: Add the first part, place new dots, Add again.
 
         const commitRow = qs('#commit-slot', el);
         const addBtn = MpiButton.mount(document.createElement('div'), {
@@ -226,10 +227,6 @@ export const MpiToolOptionsMask = ComponentFactory.create({
         addBtn.on('click', () => viewer.el.bakeAutoPicks?.('manual'));
         subBtn.on('click', () => viewer.el.bakeAutoPicks?.('subtract'));
         _children.push(addBtn, subBtn);
-
-        function _syncCommitRow() {
-            commitRow.hidden = !_pointsMode;
-        }
 
         _applySource(_pointsMode ? 'points' : 'detector');
 
