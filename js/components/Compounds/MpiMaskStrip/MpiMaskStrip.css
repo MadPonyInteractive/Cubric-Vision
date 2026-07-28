@@ -32,6 +32,18 @@
     border-color: var(--accent-heat);
 }
 
+.mpi-mask-strip__bw--on {
+    color: var(--accent-heat);
+    border-color: var(--accent-heat);
+}
+
+/* B/W draws the mask opaque, so opacity is inert — say so instead of letting
+   the user drag a dead slider. */
+.mpi-mask-strip--bw .mpi-mask-strip__slider-row {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
 .mpi-mask-strip__slider-row {
     display: flex;
     flex-direction: column;

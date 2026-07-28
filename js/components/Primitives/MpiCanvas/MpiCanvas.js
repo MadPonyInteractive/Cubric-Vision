@@ -21,6 +21,8 @@ const MASK_POINT_POSITIVE  = 'oklch(0.78 0.13 150)';       /* --accent-ok */
 const MASK_POINT_NEGATIVE  = 'oklch(0.76 0.17 355)';       /* --accent-heat */
 const MASK_POINT_RING      = 'oklch(0.16 0.02 350 / 0.9)'; /* --surface-canvas 90% */
 const MASK_INVERT_FILL     = 'oklch(0 0 0)';               /* pure black — invert display */
+const MASK_BW_BG           = 'oklch(0 0 0)';               /* B/W view backdrop — mask draws white on it */
+const MASK_BW_BG_INVERTED  = 'oklch(1 0 0)';               /* …and white when the display is inverted */
 const MASK_AUTO_FILL       = 'oklch(0.78 0.13 150)';       /* --accent-ok, matches the positive dot */
 
 /* Screen-px radius of a point-prompt dot. Purely a display size — the dot the
@@ -764,7 +766,18 @@ class _CanvasCore {
 
         // 2. Mask
         if (!this._maskHidden) {
-            ctx.globalAlpha = this.mask.maskOpacity;
+            // B/W view (MPI-381): the mask ALONE, opaque, on a flat background —
+            // stray specks are invisible as a 70%-alpha tint over a busy image.
+            // Opacity is deliberately ignored here rather than producing grey
+            // mush; invert still applies, so the two together show exactly what
+            // gets exported. The green auto layer below still draws on top.
+            if (this.mask.bwView) {
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = this.mask.displayInverted ? MASK_BW_BG_INVERTED : MASK_BW_BG;
+                ctx.fillRect(0, 0, W, H);
+            } else {
+                ctx.globalAlpha = this.mask.maskOpacity;
+            }
             if (this.mask.displayInverted) {
                 ctx.drawImage(this._recolorMaskLayer(this.mask.maskCanvas, MASK_INVERT_FILL, W, H), 0, 0);
             } else {
@@ -938,7 +951,8 @@ class _CanvasCore {
         const ctx = this.screenUICtx;
         const scale = this.view.scale || 1;
         const { x, y } = this.input.getMousePosition();
-        if (this.mask.pointsMode) return; // dots, not a brush — nothing to indicate
+        if (this.mask.pointsMode) return;    // dots, not a brush — nothing to indicate
+        if (!this.mask.paintEnabled) return; // brushless mask tool (MPI-381)
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
             const r = (this.mask.brushSize * scale) / 2;
             const isEraser = this.mask.brushType === 'eraser';
@@ -977,6 +991,9 @@ class _CanvasCore {
     flipMaskColor()         { const c = this.mask.flipColor(); this.draw(); return c; }
     setMaskInverted(v)      { this.mask.displayInverted = !!v; this.draw(); }
     isMaskInverted()        { return !!this.mask.displayInverted; }
+    setMaskBwView(v)        { this.mask.bwView = !!v; this.draw(); }
+    isMaskBwView()          { return !!this.mask.bwView; }
+    setMaskPaintEnabled(v)  { this.mask.paintEnabled = !!v; this.draw(); }
     setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
     clearMask()             { this.mask.clear(); this.draw(); }
     getMaskDataURL(bg = null, fg = null) { return this.mask.getURL(bg, fg); }
@@ -1047,7 +1064,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setCompareLoop','getCompareLoop','isCompareVideoPair',
             'resetView','setGrid','resize','draw',
             'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
-            'setMaskInverted','isMaskInverted',
+            'setMaskInverted','isMaskInverted','setMaskBwView','isMaskBwView','setMaskPaintEnabled',
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks','bakeAutoPicksInto',

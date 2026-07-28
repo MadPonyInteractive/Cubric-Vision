@@ -29,6 +29,8 @@
  *   setMaskingMode(bool)      — shorthand for activeMode = 'mask'/'none'
  *   setBrushSize(size), setBrushType(type), flipMaskColor(),
  *   setMaskOpacity(opacity), clearMask(), getMaskDataURL(bg, fg)
+ *   setMaskBwView(bool)       — display the mask opaque B/W instead of tinted
+ *   setMaskPaintEnabled(bool) — arm/disarm brush painting for the active tool
  *   setCropRatio(ratio), getCropRect()
  *   destroy()                 — remove canvas + detach all window listeners
  *
@@ -59,11 +61,22 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsMaskBrushProps (Organism — js/components/Organisms/MpiToolOptionsMaskBrush)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * The hand-painting tool of the mask family (MPI-381) and the ONLY tool that
+ * paints. Owns nothing of its own — it is MpiMaskStrip WITH its brush pair.
+ * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
+ *   setMaskPointsMode()
+ * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsMaskDetectProps (Organism — js/components/Organisms/MpiToolOptionsMaskDetect)
  * @property {Object} viewer - MpiCanvasViewer instance
  *
  * The YOLO tool of the mask family (MPI-371). Owns the model + box/segment
- * radios; mounts MpiMaskDetectRow and MpiMaskStrip (with brush).
+ * radios; mounts MpiMaskDetectRow and MpiMaskStrip WITHOUT the brush pair.
  * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
  *   setMaskPointsMode(), getDetectionModels?(), setAutoMaskModel(),
  *   setAutoMaskUseBox()
@@ -189,12 +202,14 @@
  * @property {boolean} [brush=true] - Show the paint / erase pair and bind the B / E hotkeys.
  *
  * The shared bottom strip of EVERY mask tool (MPI-371): paint / erase · invert ·
- * clear · opacity. Tools where a brush makes no sense (Points) pass
- * `brush: false` and get invert / clear / opacity alone. Opacity and invert
- * persist under the `mask` tool key, shared by the whole family.
+ * B/W view · clear · opacity. Tools where a brush makes no sense (Points,
+ * Detect) pass `brush: false` and get the rest alone — and that same prop
+ * disarms canvas painting for the tool (MPI-381). Opacity, invert and the B/W
+ * view persist under the `mask` tool key, shared by the whole family.
  *
  * Requires viewer.el: setMaskBrushMode('brush'|'eraser'), setMaskInverted(),
- *   isMaskInverted(), clearMask(), setMaskOpacity()
+ *   isMaskInverted(), setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
+ *   clearMask(), setMaskOpacity()
  * Emits nothing.
  */
 

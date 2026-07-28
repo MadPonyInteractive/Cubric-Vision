@@ -1,12 +1,12 @@
 {
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-376",
- "title": "Undo on the canvas - paint first, masking too if it is not a refactor",
+ "title": "Undo on the canvas - masks first, paint when MPI-375 lands",
  "column": "todo",
- "maturity": "idea",
+ "maturity": "planned",
  "status": "active",
  "created_at": "2026-07-28T13:36:00Z",
- "updated_at": "2026-07-28T13:36:00Z",
+ "updated_at": "2026-07-29T15:00:00Z",
  "labels": [
   "ui",
   "ux",
@@ -15,14 +15,17 @@
   "paint",
   "masking"
  ],
- "description": "There is no undo anywhere on the canvas today - a grep for undo across js/ returns only comments. Every destructive stroke is permanent until Clear wipes the whole layer. That is survivable for a mask (a mask is a rough selection, and Detect/Points can regenerate it) and NOT survivable for paint, where one bad stroke over good work has no recovery short of starting again. MPI-375 is therefore the driver.\n\nProposed shape: a small command stack owned by MpiCanvas. One stroke (pointerdown to pointerup) = one command; Ctrl+Z undo, Ctrl+Shift+Z redo, bound through Hotkeys with ids in js/managers/hotkeyRegistry.js - never a raw keydown listener. Bounded depth.\n\nMEMORY IS THE REAL CONSTRAINT, so decide it before coding: a full-layer RGBA snapshot at the 1536 max edge is roughly 9MB, so a 20-deep stack of snapshots is ~180MB per layer. Prefer dirty-rect patches (store only the bounding box a stroke touched, before and after) and fall back to whole-layer snapshots only for layer-wide operations like Clear.\n\nMASKING IS CONDITIONAL, and the condition is explicit: extend it to masks ONLY if it is not a big refactor. MaskManager juggles four things (manualCanvas, subtractCanvas, autoPickMasks, selectedAutoPicks) plus the layer-ORDER rule fixed during MPI-371 (auto picks union LAST so a detection beats an older erase). If routing every mask mutation through commands means restructuring that, STOP and split the mask half onto its own card instead of growing this one.",
+ "description": "There is no undo anywhere on the canvas today - a grep for undo across js/ returns only comments. Every destructive stroke is permanent until Clear wipes the whole layer.\n\nUSER RESTEER 2026-07-29: MASKS ARE NOW A FIRST-CLASS DRIVER, not the conditional half. The original card treated a mask as cheap to redo (Detect and Points can regenerate it) and let paint drive. That reasoning has expired. The mask family grew to three tools in MPI-381 with a fourth (Shapes, MPI-368) coming, Add and Subtract BAKE irreversibly into manualCanvas and subtractCanvas, and MPI-382 adds a grow/shrink that rewrites the whole layer in one gesture. A user can now lose real work with one click and has no way back except Clear. Paint (MPI-375) still wants the same stack - build it once, for both.\n\nProposed shape: a small command stack owned by MpiCanvas. One stroke (pointerdown to pointerup) = one command; Ctrl+Z undo, Ctrl+Shift+Z redo, bound through Hotkeys with ids in js/managers/hotkeyRegistry.js - never a raw keydown listener. Bounded depth.\n\nMEMORY IS THE REAL CONSTRAINT, so decide it before coding: a full-layer RGBA snapshot at the 1536 max edge is roughly 9MB, so a 20-deep stack of snapshots is ~180MB per layer. Prefer dirty-rect patches (store only the bounding box a stroke touched, before and after) and fall back to whole-layer snapshots only for layer-wide operations like Clear, a bake or a grow.\n\nWHAT MAKES THE MASK HALF HARD, and it has to be faced now rather than dodged: MaskManager juggles four things (manualCanvas, subtractCanvas, autoPickMasks, selectedAutoPicks) plus the layer-ORDER rule fixed during MPI-371 - auto picks union LAST so a detection beats an older erase. An undo must restore that ordering, not just the pixels. If routing every mask mutation through commands turns into a MaskManager restructure, STOP and brief the user before proceeding rather than half-wiring it.\n\nNot every mask mutation is a brush stroke. The undoable units are: a stroke, a Clear, an Add or Subtract bake, a points-run commit, and (when it lands) a grow/shrink release. Enumerate them from the code before designing the stack.\n\nSequenced by the user after MPI-380 and MPI-382, before MPI-379.",
  "acceptance": [
-  "Undo and redo work for paint strokes in the paint tool, in stroke granularity",
+  "Undo and redo work for MASK edits at a sensible granularity - one stroke, one Clear, one Add/Subtract bake, one points commit, one grow/shrink release",
+  "The undoable units are enumerated from the code before the stack is designed, not guessed - a mutation that bypasses the stack is a silent hole",
   "Ctrl+Z / Ctrl+Shift+Z bound through Hotkeys with ids in hotkeyRegistry.js - no raw keydown listener",
   "Stack depth is bounded and the memory cost per entry is measured and recorded, not guessed",
   "The stack is cleared on entry switch and on tool teardown - no undo across two different images",
-  "Masking undo is either delivered in the same coherent pass or split onto its own card with the reason recorded - not half-wired",
-  "If masking is included: the MPI-371 layer-order rule (auto picks union LAST) still holds after an undo/redo sequence"
+  "The MPI-371 layer-order rule survives any undo/redo sequence: auto picks still union LAST, so an undo cannot let an old erase veto a detection",
+  "Undo across a TOOL SWAP behaves predictably - the mask survives a swap (MPI-381), so the history must not silently die with the tool that made it",
+  "Paint undo (MPI-375) reuses this same stack rather than growing a second one; if MPI-375 has not landed, the stack is built so paint can plug in without a rewrite",
+  "If the mask half turns into a MaskManager restructure, the user is briefed BEFORE the refactor - never half-wired"
  ],
  "links": {
   "brief": "brief.md",

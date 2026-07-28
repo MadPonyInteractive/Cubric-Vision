@@ -89,7 +89,9 @@ export const MpiToolOptionsMaskDetect = ComponentFactory.create({
         _children.push(modeRadio);
 
         _children.push(MpiMaskDetectRow.mount(qs('#detect-row-slot', el), { viewer }));
-        _children.push(MpiMaskStrip.mount(qs('#strip-slot', el), { viewer, brush: true }));
+        // No brush pair (MPI-381): painting belongs to the Brush tool, and a
+        // canvas click on a brushless tool is unambiguous.
+        _children.push(MpiMaskStrip.mount(qs('#strip-slot', el), { viewer, brush: false }));
 
         el.destroy = () => {
             viewer.el.evaluateMask?.();

@@ -90,7 +90,7 @@ export class InputController {
             e.preventDefault();
             view.isManagedView = false;
 
-            if (mask.isMaskingMode && !this.isSpacePressed) {
+            if (mask.isMaskingMode && mask.paintEnabled && !this.isSpacePressed) {
                 const delta = -e.deltaY;
                 mask.brushSize = Math.max(1, mask.brushSize + (delta > 0 ? 5 : -5));
                 if (this.options.onBrushSizeChange) {
@@ -160,7 +160,7 @@ export class InputController {
                     this.startPanX = e.clientX - view.offsetX;
                     this.startPanY = e.clientY - view.offsetY;
                 }
-            } else if (mask.isMaskingMode && !this.isSpacePressed) {
+            } else if (mask.isMaskingMode && mask.paintEnabled && !this.isSpacePressed) {
                 mask.isDrawingMask = true;
                 mask.paint(i.x, i.y);
             } else {
@@ -296,8 +296,11 @@ export class InputController {
                 : crop.hitTest(imgX, imgY, view.scale);
             target.style.cursor = CropManager.getCursor(handle);
         } else if (mask.isMaskingMode) {
-            // Points mode has no brush indicator to stand in for the cursor.
-            target.style.cursor = mask.pointsMode ? 'crosshair' : 'none';
+            // Only the brush hides the real cursor — its indicator stands in for
+            // it. Points and the other brushless mask tools (MPI-381) keep one.
+            if (mask.pointsMode)        target.style.cursor = 'crosshair';
+            else if (mask.paintEnabled) target.style.cursor = 'none';
+            else                        target.style.cursor = 'default';
         } else if (x !== undefined) {
             const containerW = this.container.getBoundingClientRect().width || 1;
             target.style.cursor = comparison.isOverSlider(x, containerW)

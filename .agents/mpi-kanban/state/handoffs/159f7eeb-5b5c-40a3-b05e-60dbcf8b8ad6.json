@@ -1,0 +1,191 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "159f7eeb-5b5c-40a3-b05e-60dbcf8b8ad6",
+  "generated_at": "2026-07-29T15:20:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-381 shipped and user-verified - mask family split into three tools plus the black-and-white view; two cards resequenced above MPI-379",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue from the masking-brainstorm handoff and start MPI-381: split the mask family into separate tools and add a black-and-white mask view. Offer a compact plan first.",
+    "status": "complete",
+    "summary": "MPI-381 is DONE and user-verified live, closed on the board. The mask rail is now Brush / Points / Detect, each mounting only what it needs, plus a B/W mask view in the shared strip. Two things were added to the plan on the way: a real paint-capability gate (brush:false now disarms canvas painting, not just the controls) and a registry guard test with negative controls. The user then raised two more items, both carded: a Grow/Shrink mask slider (MPI-382, new) and undo (MPI-376, resteered so masks are the primary driver). The next session starts MPI-380."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-381/plan.md",
+    "completed": [
+      "MPI-381 SHIPPED and USER-VERIFIED. Card closed done/complete; board, task.json and both event logs coherent and re-validated.",
+      "Three mask tools, one job each. New MpiToolOptionsMaskBrush organism (~50 lines, NO css file - it is the strip with its brush pair). Points unchanged. Detect now mounts the strip with brush:false.",
+      "THE SPLIT WAS MADE REAL, not cosmetic. brush:false previously only hid the controls - a drag on Detect still painted. The strip now forwards the prop to a new setMaskPaintEnabled(): a brushless tool pans on drag, zooms on wheel and keeps its cursor. Flag held on the VIEWER, because a canvas rebuild restores the MaskManager default (true) and would silently re-arm the brush.",
+      "Black-and-white mask view shipped in MpiMaskStrip between invert and trash. Alpha pinned to 1 over a flat backdrop, composes with the display-only invert (backdrop and mask swap together), green auto layer still drawn on top, opacity slider goes inert rather than producing grey mush.",
+      "New icon mask_bw in js/utils/icons.js; props documented in js/components/types.js for both the new organism and the changed strip contract.",
+      "GUARD SHIPPED: tests/mask-tool-registry.test.cjs, 4/4, negative-control proven in BOTH directions - removing maskBrush from _MASK_TOOLS fails one test, removing its TOOL_OPTIONS_REGISTRY entry fails another. _isMaskTool() is now a Set lookup.",
+      "docs/masking.md updated and re-trimmed to EXACTLY 200 lines: cancelled MPI-361 Phase B roadmap entry deleted, stale Face/Hair/Hand/Person corrected to the shipped Face/Hand/Person, B/W documented in the overlay-draw section, tool split and the paint-gate contract documented.",
+      "MPI-382 CREATED - Grow/Shrink mask slider, with a live-drag mechanism recommendation and two traps recorded.",
+      "MPI-376 RESTEERED by the user - masks are now a first-class driver of undo rather than the conditional half; rewritten idea to planned with 9 acceptance items and moved above MPI-379."
+    ],
+    "pending": [
+      "MPI-380 - THIS IS THE NEXT JOB. SAM3 foundation: R2 upload plus dependency entry, swap the refiner from SAM 1 to SAM3, rewrite the points path onto plain JSON coords. Read its brief.md FIRST.",
+      "MPI-382 - Grow/Shrink mask slider. Small and self-contained; cleans up exactly the specks the new B/W view exposes.",
+      "MPI-376 - Undo, masks first. Enumerate the undoable units from code before designing the stack.",
+      "MPI-379 - hover-to-select plus the COCO enumerator plus class-bucket buttons. Wants 380 underneath it.",
+      "MPI-368 - Shapes becomes the 4th rail entry; the MPI-381 split makes it a one-line registry addition.",
+      "NOT COMMITTED YET at the time this handoff was written - mpi-end runs next in the same session and owns the commit."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-380",
+    "title": "SAM3 as the masking foundation",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-380/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "plan",
+    "implement",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/masking.md - the tool split, the paint-capability contract and the B/W view are all documented; file is at exactly 200 lines, its cap.",
+      "js/components/types.js - MpiToolOptionsMaskBrush props added; MpiMaskStrip and the MpiCanvas API contracts updated with setMaskBwView / setMaskPaintEnabled.",
+      "tests/mask-tool-registry.test.cjs - the silent-failure mode (a rail mask tool missing from _MASK_TOOLS or the registry) is now a failing test instead of a mystery.",
+      "MPI-381 plan.md and validation.md record what shipped, what was verified automatically, and what the user checked live.",
+      "MPI-382 task.json carries the full grow/shrink feasibility finding so it does not have to be rediscovered.",
+      "MPI-376 task.json rewritten with the user resteer and the reason the original reasoning expired."
+    ],
+    "pending": [
+      "CHANGELOG CAUTION FROM THE USER - the masking system is NOT finished, so anything written to UNRELEASED.md must cover only what actually LANDED (the three-tool split and the B/W view) and must not advertise the roadmap. mpi-end handles this.",
+      "9 PRE-EXISTING test failures are UNCARDED: missing fixtures in optional-media-placeholder (ltx_silence.wav, placeholder.png), drifted source-text regexes in permodel-key-allowlist, plus resolve-model-deps and 4 remoteProxy cases. None reads a file MPI-381 touched - confirmed by construction, not assumed. Worth a card.",
+      "The PREVIOUS handoff ed34c675 is still listed in state/index.json active_handoffs and now points at a closed card. mpi-cleanup or mpi-end should sweep it, along with 645985f8 (MPI-372).",
+      "Test artifacts still sitting in the user's model folder awaiting a delete decision: ultralytics/bbox/yolov8n-seg.pt (redundant), ultralytics/segm/person_yolov8n-seg.pt and ultralytics/segm/hair_yolov8n-seg_60.pt. KEEP ultralytics/segm/yolov8n-seg.pt (MPI-379) and KEEP checkpoints/sam3.1_multiplex_fp16.safetensors (MPI-380).",
+      "One fact was dropped from docs/masking.md to stay under the 200-line cap and then restored - if that file needs more content, something else must come out first."
+    ]
+  },
+  "next_action": {
+    "description": "Start MPI-380, the SAM3 masking foundation. Read .agents/mpi-kanban/tasks/MPI-380/brief.md BEFORE anything else - it holds every measurement and six engine traps that cost real debugging time, including that a -seg model must live in ultralytics/segm/ and not bbox/, and that the SAM3 text field silently returns ONE detection unless the injection writes category:N. Scope is R2 upload plus a dependency entry for sam3.1_multiplex_fp16.safetensors, swapping the refiner from SAM 1 to SAM3 on the box path, rewriting the points path onto positive_coords / negative_coords JSON, and deciding the fate of SAM 1 vit_b by grepping every consumer. Do NOT remap the points Scope dial - the SAM3 point path has no threshold, so that dial disappears entirely when this card lands. Offer a plan first; this one is bigger than MPI-381 and touches weights, dependencies and a workflow, so mpi-create-plan at minimum.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "BUILD ORDER IS NOW 380 then 382 then 376 then 379, decided by the user this session. 380 first because it rewrites the points path that everything else would otherwise be built against. 382 (grow/shrink) next because it is small, self-contained and cleans up exactly the specks the new B/W view exposes. 376 (undo) before 379 so the payoff feature is protected rather than retrofitted. 379 last, wanting all of it underneath.",
+      "MPI-381 SHIPPED THREE TOOLS, NOT FOUR. The card said four, but MPI-368 is a live card owning the entire shapes gizmo (CropManager-derived handles, rotation about a handle, triangle and ellipse hit-tests and rasterisers). Folding it in would have swallowed that card. Shapes becomes the 4th rail entry when 368 ships, and the split makes it a one-line registry addition.",
+      "THE PAINT GATE WAS AN ADDITION TO THE PLAN, made deliberately. brush:false only hid the strip controls, so a drag on Detect still painted - the tools would have been split visually while behaving identically. setMaskPaintEnabled() closes that, and it is held on the viewer because the canvas rebuild path re-applies inverted / bwView / pointsMode and would otherwise leave paintEnabled at the manager default.",
+      "UNDO RESTEER (user). The original MPI-376 reasoning - a mask is cheap to redo, so paint drives - has EXPIRED. Add and Subtract bake irreversibly into manualCanvas and subtractCanvas, the family is now three tools with a fourth coming, and MPI-382 will rewrite the whole layer in one gesture. Masks are now the primary driver. Kept as ONE card (user choice) so paint plugs into the same stack rather than growing a second one.",
+      "GROW/SHRINK MECHANISM, carded but NOT proven live: blur plus an alpha threshold IS a morphological dilate or erode. Canvas2D takes CSS filters so the blur is one line; the threshold needs an inline SVG filter referenced as ctx.filter = url(#id) with feComponentTransfer and feFuncA type=discrete, because contrast() acts on colour and our mask layers are white-on-transparent. Sharp exists server-side (the MPI-362 feather) but is a round trip per drag, so it is the FALLBACK, not the starting point.",
+      "Carried forward and still true: mask tools NEVER swap the viewer surface (swapToPreview destroys MpiCanvas as a VRAM optimisation); a tool swap must not clear the mask; any tool that makes a mask outside a brush stroke must emit mask-ready or call viewer.el.evaluateMask() or the op strip never unlocks; the rail owns which tool is armed.",
+      "From the previous session and unchanged: SAM3 REPLACES SAM 1 AS THE REFINER but does NOT replace YOLO. SAM3 cannot enumerate (4 text categories already cost 10.5s), so it can never be the finder; YOLO cannot make a clean mask, so it can never be the refiner. Do not let a future session re-litigate this as SAM3 replaces everything."
+    ],
+    "constraints": [
+      "CHANGELOG DISCIPLINE (explicit user instruction this session): the masking system is unfinished. Only what LANDED goes in UNRELEASED.md - the three-tool split and the black-and-white view. Do not describe the roadmap as shipped.",
+      "COMMIT BY EXPLICIT PATHSPEC. The tree carries another session's work: .agents/mpi-kanban/tasks/MPI-353/ modified plus untracked tasks/MPI-355/ and tasks/MPI-358/. Never git add -A or git add dot.",
+      "git commit --only does NOT pick up UNTRACKED files - it silently commits nothing for them. New files (js/components/Organisms/MpiToolOptionsMaskBrush/, tests/mask-tool-registry.test.cjs, tasks/MPI-382/) need an explicit git add first.",
+      "Another session may be active on this board. Re-read board.json before mutating it. next_id is now 383.",
+      "THE BACKSLASH TRAP: card and event text is markdown inside a JSON string, so a lone backslash breaks the WHOLE BOARD, not just one card. Prefer the word backslash over the character, and validate every JSON and JSONL file after writing.",
+      "docs are capped at 200 lines each and docs/masking.md is now EXACTLY at 200. Anything new means trimming something first.",
+      "THE WORKFLOW CONVERTER HAS BLAST RADIUS. node scripts/workflow-to-api.mjs with NO ARGUMENTS re-emits ALL 31 workflows and writes 15 stray template files. Always pass one explicit file path.",
+      "SAM3 TRAP 1: the text field parses category:N, comma separated. A bare category silently returns ONE detection. Any injection must always emit the :N form.",
+      "SAM3 TRAP 2: text and box prompts are mutually exclusive - in SAM3_Detect.execute the box branch is gated on not has_text.",
+      "SAM3 TRAP 3: SAM3 works at a fixed 1008x1008 internally then interpolates back up, while SAM 1 crops 1.8x around each box. Every measurement so far was on a 768x1376 image - test at 4K before declaring SAM 1 retired.",
+      "SAM3 TRAP 4: the point path ignores threshold entirely; only refine_iterations applies. That is why the Scope dial disappears.",
+      "IMPACT PACK DECIDES BBOX VS SEGM BY FOLDER, NOT FILENAME. A -seg model in ultralytics/bbox/ crashes with NO_SEGM_DETECTOR; it must live in ultralytics/segm/.",
+      "Leaving a mask tool MUST call setMaskPointsMode(false) or right-click stays broken app-wide.",
+      "MpiAutoMaskThumbs.setPicks() deliberately does NOT emit change - points mode relies on that silence. Do not fix it. MPI-379 deletes this component along with the thumb strip.",
+      "The thumbs DOM node is OWNED BY THE VIEWER. MpiMaskDetectRow re-parents it and DETACHES it in destroy - it must never destroy it.",
+      "Every new component registers its .css in js/shell/preloadStyles.js AND documents its props in js/components/types.js. MpiToolOptionsMaskBrush has NO css file by design, so it has no preloadStyles entry - that is deliberate, not an omission. Never modify js/components/factory.js (locked).",
+      "Frontend-only changes hot-reload with Ctrl+R. main.js, any .cjs and float-latent.html need a full restart.",
+      "Do not run git against sibling folders from this repo. Push stays a user-authorized live op."
+    ],
+    "files_modified": [
+      "js/components/Organisms/MpiToolOptionsMaskBrush/MpiToolOptionsMaskBrush.js",
+      "js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js",
+      "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.js",
+      "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.css",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/Primitives/MpiCanvas/managers/InputController.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/utils/icons.js",
+      "js/components/types.js",
+      "docs/masking.md",
+      "tests/mask-tool-registry.test.cjs",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-381/",
+      ".agents/mpi-kanban/tasks/MPI-382/",
+      ".agents/mpi-kanban/tasks/MPI-376/task.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-380/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-380/task.json",
+      "docs/masking.md",
+      "comfy_workflows/img_auto_mask.json",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "docs/playbooks/add-model/README.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": "file",
+    "relevant_topics": [
+      "Masking",
+      "Components & UI",
+      "ComfyUI injection",
+      "Workflow authoring",
+      "Model wiring / dependencies",
+      "Download system"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/masking.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-29T13:10:00Z",
+      "event": "MPI-381 moved todo to doing, implementation started"
+    },
+    {
+      "at": "2026-07-29T14:20:00Z",
+      "event": "MPI-381 automated checks passed, validation.md written"
+    },
+    {
+      "at": "2026-07-29T14:30:00Z",
+      "event": "MPI-381 USER-VERIFIED live and closed to done/complete"
+    },
+    {
+      "at": "2026-07-29T15:00:00Z",
+      "event": "MPI-382 created (Grow/Shrink mask slider)"
+    },
+    {
+      "at": "2026-07-29T15:00:00Z",
+      "event": "MPI-376 resteered - masks become the primary driver of undo, moved above MPI-379"
+    },
+    {
+      "at": "2026-07-29T15:20:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/159f7eeb-5b5c-40a3-b05e-60dbcf8b8ad6.json and use mpi-continue to pick the masking work back up. The previous session SHIPPED MPI-381 and the user verified it live, so nothing is half-finished on disk: the mask rail is now Brush / Points / Detect plus a black-and-white mask view, brush:false genuinely disarms canvas painting rather than just hiding the controls, and tests/mask-tool-registry.test.cjs guards the silent failure where a new mask tool is missing from _MASK_TOOLS. Your job is MPI-380, the SAM3 foundation: upload sam3.1_multiplex_fp16.safetensors to R2 with a dependency entry, swap the mask refiner from SAM 1 to SAM3 on the box path, rewrite the points path onto positive_coords and negative_coords JSON, and decide the fate of SAM 1 vit_b by grepping every consumer. Read .agents/mpi-kanban/tasks/MPI-380/brief.md BEFORE touching anything - it holds every measurement and six engine traps that cost real time, including that a -seg model must live in ultralytics/segm/ and not bbox/, and that the SAM3 text field silently returns only ONE detection unless you write category:N. Do NOT remap the points Scope dial: the SAM3 point path has no threshold at all, so that dial disappears the moment this card lands. The agreed order after 380 is MPI-382 (a live Grow/Shrink mask slider - the card carries a blur-plus-alpha-threshold mechanism and a compounding trap), then MPI-376 (undo, now driven by masks rather than paint), then MPI-379 (hover-to-select plus the COCO enumerator). One standing instruction from the user: the masking system is NOT finished, so keep the changelog to what actually landed."
+}

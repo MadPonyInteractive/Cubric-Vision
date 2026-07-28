@@ -3,11 +3,10 @@
   "id": "MPI-381",
   "title": "Split the mask family into 4 tools + a black-and-white mask view",
   "description": "Two UI changes agreed in the 2026-07-29 masking brainstorm that ship independently of both MPI-379 (hover/COCO) and MPI-380 (SAM3). No detection change, no new weight, no workflow change.\n\nA. FOUR TOOLS, ONE JOB EACH. Today the brush rides along on the detect and points tools. Separate them: (1) Mask brush - brush + eraser only, nothing else; (2) Points - as it is today; (3) Object detection - face / hand / person / objects, no brush; (4) Shapes (MPI-368). The user goes to the brush tool to paint, and nowhere else. Rail modes today are maskDetect / maskPoints and the viewer only knows the canvas mode mask, so MpiGroupHistoryBlock._viewerModeFor bridges them - EVERY new mask tool must be added to _isMaskTool() or everything hanging off it silently misbehaves.\n\nB. BLACK-AND-WHITE MASK VIEW. A new toggle between the invert-mask button and the trash button in MpiMaskStrip, showing the mask itself as plain black and white instead of a translucent overlay on the image. This is what lets a user find and erase stowaways - the stray specks a detection leaves behind. Native segm masks in particular come back with visible scatter.\n\nPulling the brush out of the detect tool also RETIRES an earlier MPI-379 decision: a third Select mode in MpiMaskStrip (Brush | Erase | Select) is no longer needed, because on a tool with no brush a canvas click is unambiguous.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
   "created_at": "2026-07-29T12:10:00Z",
-  "updated_at": "2026-07-29T12:10:00Z",
+  "updated_at": "2026-07-29T14:30:00Z",
   "labels": [
     "ui",
     "ux",
@@ -28,7 +27,9 @@
   ],
   "links": {
     "events": "events.jsonl",
+    "plan": "plan.md",
     "checklist": "checklist.md",
-    "validation": "validation.md"
+    "validation": "validation.md",
+    "handoffs": "handoffs/"
   }
 }

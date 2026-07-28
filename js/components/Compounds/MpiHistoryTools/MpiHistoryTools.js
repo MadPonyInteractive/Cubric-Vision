@@ -67,11 +67,12 @@ const IMAGE_TOOLS = [
     {
         mode: 'mask',
         label: 'Mask',
-        // One icon per masking method (MPI-371). Shapes (MPI-368) and Text
-        // (MPI-361 Phase B) join this group; they do not become a switcher.
+        // One icon per masking method (MPI-371), one job each (MPI-381). Shapes
+        // (MPI-368) joins this group; it does not become a switcher.
         group: [
-            { mode: 'maskDetect', icon: 'search', info: 'Detect' },
+            { mode: 'maskBrush',  icon: 'brush',  info: 'Brush'  },
             { mode: 'maskPoints', icon: 'circle', info: 'Points' },
+            { mode: 'maskDetect', icon: 'search', info: 'Detect' },
         ],
     },
 ];

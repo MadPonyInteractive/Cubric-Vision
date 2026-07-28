@@ -1,16 +1,16 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 382,
+ "next_id": 384,
  "columns": {
   "todo": [
-   "MPI-381",
    "MPI-380",
+   "MPI-382",
+   "MPI-376",
    "MPI-379",
    "MPI-378",
    "MPI-373",
    "MPI-374",
    "MPI-375",
-   "MPI-376",
    "MPI-377",
    "MPI-368",
    "MPI-366",
@@ -38,6 +38,7 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-383",
    "MPI-367",
    "MPI-370",
    "MPI-369",
@@ -46,6 +47,7 @@
    "MPI-4"
   ],
   "done": [
+   "MPI-381",
    "MPI-361",
    "MPI-372",
    "MPI-371",
@@ -72,8 +74,44 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-29T12:10:00Z",
+ "updated_at": "2026-07-29T15:00:00Z",
  "events": [
+  {
+   "at": "2026-07-28T10:00:00Z",
+   "type": "task.created",
+   "task": "MPI-383",
+   "to": "doing",
+   "note": "Crop past the image edge - the Photoshop behaviour, aimed at outpainting and reusable by Apps. The box may leave the image on every side; the new pixels take a colour from an MpiColorPicker (same primitive as the Resize pad and Remove Background) and that colour is what the user asks an edit model to fill. Snapping to the image edges kills the accidental 1-2px border, and in ratio mode it adjusts the SCALE so the ratio survives. Third resolution type RESOLUTION takes an exact WxH, seeds the box at exactly those pixels, and is the ONLY type that resamples. User decided against auto-masking the new area. Opened straight in doing."
+  },
+  {
+   "at": "2026-07-29T15:00:00Z",
+   "type": "task.updated",
+   "task": "MPI-376",
+   "note": "USER RESTEER - masks are now a FIRST-CLASS driver of undo, not the conditional half, and the card moved up to sit between MPI-382 and MPI-379. The original reasoning (a mask is cheap to redo, so paint drives) has expired: the family is three tools with a fourth coming, Add and Subtract BAKE irreversibly into manualCanvas and subtractCanvas, and MPI-382 will rewrite the whole layer in one gesture. Card rewritten - maturity idea to planned, acceptance regrown to 9 items. New requirements: enumerate the undoable units from the code first (stroke, Clear, Add/Subtract bake, points commit, grow release) because a mutation that bypasses the stack is a silent hole; undo must restore the MPI-371 layer ORDER not just pixels; history must survive a tool swap since the mask does; paint (MPI-375) plugs into the SAME stack. The stop-and-brief rule is kept and sharpened."
+  },
+  {
+   "at": "2026-07-29T15:00:00Z",
+   "type": "task.created",
+   "task": "MPI-382",
+   "to": "todo",
+   "note": "Grow / Shrink mask slider, user request, sequenced right after MPI-380. Feasibility carded but NOT proven live: blur plus an alpha threshold is a morphological dilate or erode, so ctx.filter = blur(Npx) followed by an SVG feFuncA discrete threshold should hold a live drag at the 1536 working size - contrast() cannot do the threshold because it acts on colour and our layers are white-on-transparent. Sharp exists server-side (the MPI-362 feather) but is a round trip per drag, so it is the fallback, not the default. Two traps recorded: COMPOUNDING (every frame must derive from a drag-start snapshot, or grow 3 applies three times - the MPI-351 double-scale class of bug), and WHICH LAYER grows, since maskCanvas is derived by _recomposite() and a grow baked into manual must not resurrect an erased region."
+  },
+  {
+   "at": "2026-07-29T14:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-381",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED live. Mask family is now three tools with one job each - Brush (new organism, no CSS, it IS the strip with its brush pair), Points unchanged, Detect stripped of its brush - plus the black-and-white mask view between invert and trash. The split is real, not cosmetic: brush:false now forwards to a new setMaskPaintEnabled(), so a brushless tool pans on drag and zooms on wheel instead of painting with no visible brush control, and the flag is held on the VIEWER because a canvas rebuild would restore the manager default true and silently re-arm it. B/W pins alpha to 1 over a flat backdrop, composes with the display-only invert (backdrop and mask swap together), keeps the green auto layer on top and makes the opacity slider inert. Guard shipped: tests/mask-tool-registry.test.cjs, negative-control proven in both directions - a rail mask tool missing from _MASK_TOOLS or from TOOL_OPTIONS_REGISTRY now fails a test instead of failing silently. docs/masking.md re-trimmed to exactly 200 lines: cancelled MPI-361 Phase B roadmap entry deleted, stale Hair detect model corrected to the shipped Face / Hand / Person. Shapes joins as the 4th rail entry when MPI-368 ships - that card still owns the whole gizmo."
+  },
+  {
+   "at": "2026-07-29T13:10:00Z",
+   "type": "task.moved",
+   "task": "MPI-381",
+   "from": "todo",
+   "to": "doing",
+   "note": "Implementation started, first card of the agreed 381 -> 380 -> 379 masking order. Scope resolved from the board: MPI-368 still owns the whole shapes gizmo (handles, rotation, rasterisers), so this card ships THREE tools - Brush / Points / Detect - plus the black-and-white mask view, and Shapes slots in as the 4th when 368 ships. Compact plan attached."
+  },
   {
    "at": "2026-07-28T13:38:00Z",
    "type": "task.created",

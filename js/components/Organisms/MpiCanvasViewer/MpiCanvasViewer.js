@@ -315,6 +315,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // so it survives the canvas teardown/remount that swapToPreview/swapToCanvas
         // performs. Re-applied to the fresh MpiCanvas after every remount.
         let _isMaskInverted = false;
+        // Display-only black-and-white mask view (MPI-381) — same deal, and it
+        // must also survive a swap between mask tools.
+        let _isMaskBwView = false;
+        // Whether the armed mask tool paints (MPI-381). Declared by the tool on
+        // mount, but held here too: a canvas rebuild would otherwise restore the
+        // manager default (true) and silently re-arm the brush on Detect/Points.
+        let _maskPaintEnabled = true;
         // Per-item auto-mask state.
         //   Map<itemId, { thumbs: string[], urls: string[], picks: number[] }>
         //   thumbs — detect-node preview images (visual)
@@ -1103,6 +1110,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
             canvas.setMaskInverted(_isMaskInverted);
         };
         el.isMaskInverted    = () => _isMaskInverted;
+        el.setMaskBwView     = (v) => {
+            _isMaskBwView = !!v;
+            canvas.setMaskBwView(_isMaskBwView);
+        };
+        el.isMaskBwView      = () => _isMaskBwView;
+        el.setMaskPaintEnabled = (v) => {
+            _maskPaintEnabled = !!v;
+            canvas.setMaskPaintEnabled(_maskPaintEnabled);
+        };
         el.setMaskOpacity    = (v) => canvas.setMaskOpacity(v);
         el.getMaskOpacity    = () => canvas.maskOpacity;
 
@@ -1345,6 +1361,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 await _restoreAutoPickMasks();
 
                 _cv.el.setMaskInverted?.(_isMaskInverted);
+                _cv.el.setMaskBwView?.(_isMaskBwView);
+                _cv.el.setMaskPaintEnabled?.(_maskPaintEnabled);
                 _cv.el.setPointsMode?.(_pointsMode);
 
                 _previewMaskCache = null;

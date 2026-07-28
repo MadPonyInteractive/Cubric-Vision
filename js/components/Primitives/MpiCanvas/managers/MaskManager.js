@@ -71,11 +71,20 @@ export class MaskManager {
         this.isDrawingMask = false;
         this.brushSize = 40;
         this.brushType = 'brush';
+        // MPI-381: mask mode is shared by the whole tool family, but only the
+        // Brush tool paints. A tool that mounts MpiMaskStrip without its brush
+        // pair disarms this, so a drag on the canvas pans instead of painting
+        // and the wheel zooms instead of resizing an invisible brush.
+        this.paintEnabled = true;
         this.maskOpacity = 0.7;
         this.maskColor = 'rgba(255, 255, 255, 1)';
         // Display-only inversion: swaps the visible overlay color without
         // touching the underlying mask data. Used by viewer.draw() / getURL().
         this.displayInverted = false;
+        // Display-only black-and-white view (MPI-381): the mask alone, opaque,
+        // on a flat background instead of a translucent tint over the image —
+        // how a user finds the stray specks a detection leaves behind.
+        this.bwView = false;
     }
 
     init(width, height) {
