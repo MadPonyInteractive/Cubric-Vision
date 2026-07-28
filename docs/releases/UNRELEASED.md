@@ -97,6 +97,18 @@
   size depending on which model you were on. LoRA & Upscale settings open from
   the model's own tile.
 
+- **Crop outside the picture.** The crop box no longer stops at the edge of your
+  image — drag it past any side and the new area fills with a colour you pick.
+  That flat colour is what you hand to a model next: switch to an edit model (or
+  any model with edit capabilities), don't mask anything, and just describe what
+  should be there — it paints into the coloured area. Good for turning a portrait
+  into a landscape, or giving a subject room to breathe. Two smaller things came
+  with it: the box now snaps to your image edges when it gets close, so you can't
+  accidentally leave a one-pixel sliver of border, and there's a third
+  **Resolution** mode beside Ratio and Free where you type an exact width and
+  height — the box locks to that shape and the result comes out at exactly those
+  pixels. Images only; video crop is unchanged.
+
 ## fixes
 
 - **Stopping a generation no longer says it finished.** Pressing Stop could still

@@ -79,6 +79,21 @@ Asking a user for the wrong one wastes a round trip — and if the failure is a 
 
 Still invisible: anything that kills the process before those handlers register (a require-time throw in `main.js`'s first nine lines), and anything that prevents Electron from starting at all. For those, ask the user to run the app from a terminal — `start-with-terminal.bat` on Windows — because main-process stdout never reaches any log file.
 
+## A failed re-test is often a STALE BUILD, not a regression (MPI-383)
+
+Before treating a re-test failure as a bug, prove the app is running your code. A renderer only
+re-fetches ES modules on reload, so anything written after the page loaded is invisible to it —
+silently, with the OLD behaviour intact. Two checks, both cheaper than reading code:
+
+- **A stack-trace line number that disagrees with the file on disk = stale build.** MPI-383's
+  console said `MpiCanvasViewer.js:1101`; that call sits at 1110 on disk. Conclusive on its own.
+- **Compare file mtimes to the process start time** — `ls -l --time-style=+%Y-%m-%d\ %H:%M <files>`
+  against `Get-Process -Id <pid> | Select StartTime` (pid from `netstat -ano | grep ":3000.*LISTENING"`).
+
+Then say **reload or restart, precisely**: if `routes/*` / `services/*` predate the boot the server
+already has them and Ctrl+R is enough — only main-process or separate-window files force a restart
+(see MPI-279).
+
 ## Portable Builds
 
 The source repository workflow at `.github/workflows/build-portable.yml` is a
