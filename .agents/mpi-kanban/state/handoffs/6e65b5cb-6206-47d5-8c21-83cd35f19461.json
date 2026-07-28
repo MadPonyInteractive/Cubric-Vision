@@ -4,7 +4,7 @@
   "generated_at": "2026-07-27T20:02:45Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "consumed",
+  "status": "resolved",
   "session": {
     "name": "MPI-354 Klein - distilled swap, master-template decision, grayscale root cause, dep reconcile before R2",
     "branch": "master"

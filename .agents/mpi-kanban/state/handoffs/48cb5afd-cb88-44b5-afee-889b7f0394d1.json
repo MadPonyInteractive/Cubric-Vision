@@ -1,0 +1,135 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "48cb5afd-cb88-44b5-afee-889b7f0394d1",
+  "generated_at": "2026-07-27T00:20:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "resolved",
+  "session": {
+    "name": "MPI-354 Klein - style/NSFW deps, LoRA licence clearance, style-rack injection, removal measured",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Promote FLUX.2 Klein 4B from bench experiment to a first-class Cubric Vision model (t2i + edit + removal).",
+    "status": "in_progress",
+    "summary": "Dependency and licence work is CLOSED: 14 deps at 14.4GB all hashed, all nine community LoRAs cleared to ship, both fal LoRAs Apache-2.0. Injection gained Title.widget addressing so the new MpiStyleSelector rack can be driven. Removal is measured and excellent (~4s, turbo, 4 steps); inpaint-to-add is bad and may be dropped; the fal object-remove LoRA is rejected. Still blocked on the user saving the merged graph to comfy_workflows/raw/ before registry.py, generate_klein.py, progressStages, ModelDef, VRAM re-measure and R2."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Style + NSFW deps written with real sha256, filenames verified against the bench graph, DEPS import resolves all 14.",
+      "LoRA licence gate closed - every CivitAI file resolved by hash; user decided all nine ship; both fal LoRAs are Apache-2.0.",
+      "comfyController Title.widget injection + dual-generation keys, guarded by a negative-control-proven test (later cleaned to dotted-only by a parallel session).",
+      "Removal measured: ~4s on turbo at 4 steps, crop at native resolution; two traps recorded.",
+      "docs/models/klein/removal.md written; README licence table added.",
+      "Cards opened: MPI-358, MPI-359, MPI-360, MPI-361."
+    ],
+    "pending": [
+      "Merged graph saved to comfy_workflows/raw/ (user).",
+      "registry.py HANDLERS prefix + generate_klein.py asserting the NEW rack shape.",
+      "progressStages counted LIVE per branch, enhancer on and off.",
+      "ModelDef in models.js with styleLoraLabels / styleLoraImages index-aligned.",
+      "VRAM re-measure on the int8 weight.",
+      "R2 upload with explicit user approval, then 06-verify.md."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-354",
+    "title": "Wire FLUX.2 Klein 4B as a new model",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-354/",
+    "links": {
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-354/handoffs/",
+      "events": ".agents/mpi-kanban/tasks/MPI-354/events.jsonl",
+      "research": ".agents/mpi-kanban/tasks/MPI-354/research/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/models/klein/removal.md (new) - fal LoRA family, the red-box dead end, remove-vs-inpaint rule, the 4s config and its two traps.",
+      "docs/models/klein/README.md - LoRA licence table plus the hash-lookup method; at the 200-line ceiling, so new Klein knowledge needs a sibling file.",
+      "MPI-354 card carries every decision: dep totals, licence call, ops split, removal config, style rack v2."
+    ],
+    "pending": [
+      "Klein has no injection/samplers doc yet and the README is full - new Klein knowledge goes in a new sibling file under docs/models/klein/.",
+      "Decide whether the inpaint op exists at all before writing its help text (MPI-360) or counting its progress stages."
+    ]
+  },
+  "next_action": {
+    "description": "The user is fixing SEAMS in the remove workflow. Removal repaints everything inside the mask, so precision now matters in a way it never did for detail/upscale - and mask_expand_pixels plus mask_blend_pixels 32 (tuned to hide seams on the old green-plate inpaint) now work against that. A tight mask with a fat blend is still a fat mask: A/B a much smaller blend once the boundary is accurate. Other live knobs: context_from_mask_extend_factor 1.20, output_padding 32, mask_hipass_filter 0.10, mask_fill_holes true. After seams, resume the Klein wiring at step 1 of the pending list.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "All nine community LoRAs ship. CivitAI allowCommercialUse flags and the License badge are MODEL-level, not version-level; the three lacking the Image right are multi-base bundles whose restrictive label belongs to a Flux-dev leg we do not ship.",
+      "The NSFW LoRA ships and is PROMPT-GATED via MpiTextContains on Input_Positive - no control, no capability, no ModelDef entry.",
+      "Injection addresses one widget with a dotted Title.widget key. The style selector node MUST be titled Input_Style_Selector; that title is the contract, and a test derives it from the key the control emits.",
+      "Remove and inpaint need different graphs: crop/stitch helps when the answer is LOCAL (texture continuation) and hurts when it is GLOBAL (inventing a subject - the crop cut a cat tail and shifted tone). Padding cannot fix framing; mask_blend_pixels cannot fix tone.",
+      "Inpaint-to-ADD measured bad - the existing detail workflow beats it - so the split may collapse to remove-only. Retest before wiring an inpaint op.",
+      "The fal object-remove LoRA is rejected: it needs a red BOX drawn over a still-visible object, and it lost to the bare base model on a tattoo.",
+      "Turbo composes with the outpaint LoRA, and 4 steps beats 6-8 because extra steps let the model INVENT inside the mask (it grew a knee on a leg-tattoo removal).",
+      "Removal at ~4s is a tool rather than a generation - argues for reaching it from the mask UI via existing op-strip availability (absent vs disabled, MPI-356), NOT a separate tool or plugin. It needs no extra download: it runs weights Klein already installs."
+    ],
+    "constraints": [
+      "SHIP BLOCKER: node_lock pins ComfyUI-MpiNodes at aaa1d2d9 (2026-07-19), which is also the newest commit on the repo, and its tree has no style-selector source. MpiStyleSelector/MpiStyleLoras were never pushed, yet the shipped Krea2 and Qwen-Edit graphs now require them and the legacy injection keys are deleted. Push the pack, bump the pin, verify a clean install. -> MPI-359.",
+      "board.json is CO-OWNED by parallel sessions - commit by explicit pathspec, never git add -A.",
+      "docs/models/klein/README.md is at the 200-line ceiling.",
+      "R2 upload needs explicit user approval every time.",
+      "Any new node that self-builds its path enum must be added to SLASH_ONLY_NODE_TYPES (docs/comfy.md) - the MPI-246 trap that broke auto-mask on a released build.",
+      "progressStages must be COUNTED LIVE - commandExecutor sizes the run from it, and MPI-350 proved this area lies to you."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/loraDeps.js (UNCOMMITTED) - 8 style deps + klein-lora-nsfw + licence notes",
+      "docs/models/klein/README.md (UNCOMMITTED) - licence table + hash-lookup method",
+      "docs/models/klein/removal.md (NEW, UNCOMMITTED)",
+      ".agents/mpi-kanban/board.json + tasks/MPI-354 + new tasks 358/359/360/361 (UNCOMMITTED, co-owned)",
+      "js/services/comfyController.js, js/components/Organisms/MpiPromptBox/PromptBoxControls.js, tests/inject-params-titles.test.cjs (COMMITTED by a parallel session alongside 86460c82)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-354/handoffs/HANDOFF-2026-07-27-klein-deps-licences-removal.md",
+      ".agents/mpi-kanban/tasks/MPI-354/handoffs/HANDOFF-2026-07-26b-klein-base-int8.md",
+      "docs/models/klein/removal.md",
+      "docs/models/klein/README.md",
+      "docs/playbooks/add-model/README.md",
+      "comfy_workflows/scripts/workflow_generation/generate_krea2.py"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "comfy_injection",
+      "comfy_engine",
+      "workflow-authoring",
+      "downloads",
+      "generation-lifecycle",
+      "components"
+    ]
+  },
+  "rules_active": [
+    "CLAUDE.md",
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/git.md",
+    "docs/playbooks/add-model/",
+    "docs/models/klein/"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-27T00:20:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-354 \"Wire FLUX.2 Klein 4B as a new model\" in Cubric Vision (c:\\AI\\Mpi\\Cubric-Vision, master). Read .agents/mpi-kanban/tasks/MPI-354/handoffs/HANDOFF-2026-07-27-klein-deps-licences-removal.md FIRST - it opens with a ship blocker: the shipped Krea2 and Qwen-Edit graphs now require MpiStyleSelector/MpiStyleLoras, but those nodes were never pushed and node_lock still pins the old commit. Dependencies and licences are CLOSED (14 deps, 14.4GB, all hashed; all nine community LoRAs cleared; both fal LoRAs Apache-2.0). Removal is measured and excellent (~4s on turbo at 4 steps); inpaint-to-add is bad and may be dropped. The user is currently fixing SEAMS in the remove workflow: removal repaints everything inside the mask, so mask_expand_pixels and mask_blend_pixels 32 - tuned to hide seams on the old inpaint - now fight precision. After seams, Klein resumes at: user saves the merged graph to comfy_workflows/raw/, then registry.py + generate_klein.py asserting the NEW MpiStyleSelector rack, progressStages counted LIVE per branch, ModelDef, VRAM re-measure, then R2 with explicit approval."
+}

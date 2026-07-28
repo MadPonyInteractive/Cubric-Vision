@@ -4,7 +4,7 @@
   "generated_at": "2026-07-28T00:40:00Z",
   "from_session": null,
   "to_role": "verifier",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-354 Klein - dep reconcile, R2 upload, template conversion, full app wiring",
     "branch": "master"
