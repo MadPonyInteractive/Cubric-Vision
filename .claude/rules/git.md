@@ -17,6 +17,9 @@ unless asked.
 Safe recipe for a co-owned file:
 
 1. Stage ONLY your hunks, anchored by **content**, never line numbers (they drift under you): `git diff -- <file> > p.patch`, keep the hunks whose *added* lines contain a marker unique to your change, then `git apply --cached --recount <filtered.patch>`.
+   - **Match on REMOVED lines too, not just added ones** — a deletion-only hunk (you deleted a function) has no `+` lines and an added-only filter silently drops it, leaving your deletion uncommitted.
+   - **`--recount` is not enough on its own; you must also rewrite each kept hunk's `+`side START line** (MPI-380). Dropping a hunk shifts every later hunk's new-file offset, and `--recount` only recomputes the *counts* — the patch then fails with `error: patch does not apply`, which reads like a context clash and is not one. Recompute per kept hunk: `newStart = oldStart + delta`, where `delta` accumulates `newCount - oldCount` over the hunks you KEPT. Then apply with plain `git apply --cached`.
+   - A hunk containing BOTH your marker and theirs cannot be filtered — that is the interleaved case; go straight to the build-the-blob recipe below for that file. Classify every hunk as mine / theirs / mixed and let a mixed hunk fail loudly rather than guessing.
 2. Verify: `git diff --cached -- js/ | grep -c '<their marker>'` must be `0`, and each staged blob must parse standalone (`git show ":<file>" > /tmp/x.js && node --check /tmp/x.js`) — a half-applied hunk still lints fine in the working tree.
 3. Commit the INDEX: bare `git commit -n`, **no pathspec at all**. `-n` bypasses the lint-staged stash/reapply — run eslint yourself first; you are opting out of the hook, not the check.
 4. Confirm the sibling's files are still `M` (modified, uncommitted) afterwards.
