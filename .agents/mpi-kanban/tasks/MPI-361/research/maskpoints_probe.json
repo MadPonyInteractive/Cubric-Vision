@@ -1,0 +1,203 @@
+{
+  "id": "mpi361-maskpoints-probe",
+  "revision": 0,
+  "last_node_id": 10,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "Note",
+      "pos": [-40, 60],
+      "size": [430, 560],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "MPI-361 PHASE A PROBE v2 - click-point masking, zero downloads\n\nHOW TO USE\n1. Load Image -> pick a photo.\n2. Right-click it -> Open in MaskEditor.\n3. Dab SMALL DOTS on what you want. One dot per part.\n   Do NOT paint the object - just dab its centre. Brush ~16px.\n4. Save to node, Run.\n\nMultiple dots = multiple parts in ONE run (shirt + hair together).\nWant shirt then pants separately? Two runs. That is fine and expected.\n\nTHIS RUN IS NOW: RAW vs CLEANED, same mask.\nBroad/0.50 branch removed - tight is enough (your call).\n\n--- threshold ---\nSame knob as the old ComfyUI Preview Bridge 'confidence'. Confirmed.\nWHY NUDGING IT DOES NOTHING: SAM returns 3 candidate masks with\nscores. This keeps every candidate scoring >= threshold and unions\nthem; if none pass it falls back to the single best. So it only\nchanges when a candidate's SCORE falls between the old and new value.\n0.50 -> 0.60 = usually identical. SWEEP it (0.50 / 0.70 / 0.93 / 0.97),\ndo not nudge it. It steps, it does not ramp.\n\n--- dilation: LEAVE AT 0 ---\nConfirmed your read. It grows into unwanted areas because it is a\nblind dilate of whatever SAM returned, scatter included. The eraser\nbrush is the better answer.\n\n--- THE SCATTER FIX (the real problem) ---\nLoose specks and pinholes cost real time downstream: the detailer\nmasks each zone INDIVIDUALLY, so a stray speck becomes a wasted\ndetail pass. Same complaint you have with detect-person.\n\nCleanup = morphological OPEN then CLOSE, 2 nodes, no new weights:\n  erode -4   -> detached specks thinner than 8px vanish\n  dilate +4  -> genuine mask returns to its true size\n  fill_holes -> pinholes inside the mask close\n\nCompare the two previews. Tune the pair TOGETHER - they must stay\nequal and opposite or the mask grows or shrinks overall.\n  4/4  gentle - kills dust only\n  6/6  moderate - what most people want\n  10/10 aggressive - also eats fingers, straps, thin hair strands\n\nIf cleanup eats something you needed, that is the ceiling of this\napproach - lower the pair, do not raise dilation.\n\nZERO DOWNLOADS - sam_vit_b_01ec64.pth already ships with the app.\n\n--- YOUR NOTES BELOW ---\n"
+      ]
+    },
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [420, 60],
+      "size": [340, 320],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [1, 8, 10] },
+        { "name": "MASK", "type": "MASK", "links": [3] }
+      ],
+      "properties": { "Node name for S&R": "LoadImage" },
+      "widgets_values": ["mpi361_probe.png", "image"]
+    },
+    {
+      "id": 3,
+      "type": "SAMLoader",
+      "pos": [420, 430],
+      "size": [340, 82],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [{ "name": "SAM_MODEL", "type": "SAM_MODEL", "links": [6] }],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "Node name for S&R": "SAMLoader"
+      },
+      "widgets_values": ["sam_vit_b_01ec64.pth", "AUTO"]
+    },
+    {
+      "id": 2,
+      "type": "MaskToSEGS",
+      "pos": [420, 560],
+      "size": [340, 154],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [{ "name": "mask", "type": "MASK", "link": 3 }],
+      "outputs": [{ "name": "SEGS", "type": "SEGS", "links": [4] }],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "Node name for S&R": "MaskToSEGS"
+      },
+      "widgets_values": [false, 3.0, false, 1, false]
+    },
+    {
+      "id": 4,
+      "type": "SAMDetectorCombined",
+      "pos": [820, 60],
+      "size": [340, 220],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "title": "SAM point-detect (threshold = confidence)",
+      "inputs": [
+        { "name": "sam_model", "type": "SAM_MODEL", "link": 6 },
+        { "name": "segs", "type": "SEGS", "link": 4 },
+        { "name": "image", "type": "IMAGE", "link": 1 }
+      ],
+      "outputs": [{ "name": "MASK", "type": "MASK", "links": [9, 12] }],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "Node name for S&R": "SAMDetectorCombined"
+      },
+      "widgets_values": ["mask-points", 0, 0.93, 0, 0.7, "False"]
+    },
+    {
+      "id": 8,
+      "type": "GrowMaskWithBlur",
+      "pos": [820, 330],
+      "size": [340, 220],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "title": "1. ERODE -4  (kill detached specks)",
+      "inputs": [{ "name": "mask", "type": "MASK", "link": 12 }],
+      "outputs": [
+        { "name": "mask", "type": "MASK", "links": [5] },
+        { "name": "mask_inverted", "type": "MASK", "links": null }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "Node name for S&R": "GrowMaskWithBlur"
+      },
+      "widgets_values": [-4, 0.0, true, false, 0.0, 1.0, 1.0, false]
+    },
+    {
+      "id": 9,
+      "type": "GrowMaskWithBlur",
+      "pos": [820, 600],
+      "size": [340, 220],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "title": "2. DILATE +4 + fill_holes  (restore size, close pinholes)",
+      "inputs": [{ "name": "mask", "type": "MASK", "link": 5 }],
+      "outputs": [
+        { "name": "mask", "type": "MASK", "links": [11] },
+        { "name": "mask_inverted", "type": "MASK", "links": null }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "Node name for S&R": "GrowMaskWithBlur"
+      },
+      "widgets_values": [4, 0.0, true, false, 0.0, 1.0, 1.0, true]
+    },
+    {
+      "id": 6,
+      "type": "ImageAndMaskPreview",
+      "pos": [1220, 60],
+      "size": [380, 460],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "title": "RAW - straight off SAM",
+      "inputs": [
+        { "name": "image", "type": "IMAGE", "link": 8, "shape": 7 },
+        { "name": "mask", "type": "MASK", "link": 9, "shape": 7 }
+      ],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE", "links": null }],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "Node name for S&R": "ImageAndMaskPreview"
+      },
+      "widgets_values": [0.55, "255, 0, 80", false]
+    },
+    {
+      "id": 7,
+      "type": "ImageAndMaskPreview",
+      "pos": [1640, 60],
+      "size": [380, 460],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "title": "CLEANED - open + close",
+      "inputs": [
+        { "name": "image", "type": "IMAGE", "link": 10, "shape": 7 },
+        { "name": "mask", "type": "MASK", "link": 11, "shape": 7 }
+      ],
+      "outputs": [{ "name": "IMAGE", "type": "IMAGE", "links": null }],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "Node name for S&R": "ImageAndMaskPreview"
+      },
+      "widgets_values": [0.55, "0, 200, 120", false]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 4, 2, "IMAGE"],
+    [3, 1, 1, 2, 0, "MASK"],
+    [4, 2, 0, 4, 1, "SEGS"],
+    [6, 3, 0, 4, 0, "SAM_MODEL"],
+    [8, 1, 0, 6, 0, "IMAGE"],
+    [9, 4, 0, 6, 1, "MASK"],
+    [10, 1, 0, 7, 0, "IMAGE"],
+    [11, 9, 0, 7, 1, "MASK"],
+    [12, 4, 0, 8, 0, "MASK"],
+    [5, 8, 0, 9, 0, "MASK"]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "paint dots here",
+      "bounding": [400, -10, 380, 740],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "scatter cleanup - tune the pair together",
+      "bounding": [800, 300, 380, 540],
+      "color": "#a1309b",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

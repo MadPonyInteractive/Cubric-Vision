@@ -1,0 +1,160 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "50192835-5bd1-4f82-a39f-155f6a9cdf0f",
+  "generated_at": "2026-07-28T06:45:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-361 Phase A implementation - click-point masking shipped and user-verified",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Give the user more masking methods. The trigger was the YOLO vocabulary ceiling - 'mask the headphones' is impossible on UltralyticsDetectorProvider. The user also remembered a ComfyUI feature where you click a point on the image, set a confidence, and it selects everything belonging to that area - they want that in the app.",
+    "status": "in_progress",
+    "summary": "PHASE A IS BUILT AND USER-VERIFIED IN THE APP. The user ran it across several images and said it works really well. What remains on Phase A is ONE functional defect the user hit plus deferred UI polish: a detected region draws in the SAME WHITE as the painted mask, so detecting inside an area that is already masked shows nothing - the user cannot see what the run returned. It needs a distinct colour, they suggested green. Nothing is committed."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+    "completed": [
+      "Graph branch added to comfy_workflows/raw/img_auto_mask.json (nodes 1650-1657) and re-synced to comfy_workflows/img_auto_mask.json - 21 nodes, 0 dangling, 0 missing-required against the live /object_info",
+      "Points mode proven live on the engine: one dot returned the denim shorts alone, 15564 px = 1.48% of frame, matching the bench proof exactly",
+      "YOLO regression proven live: Face detector still emits Output_image + Output_Detected, and runs in 2s vs the points branch's 5s, so the lazy MpiIfElse really does skip the unused branch",
+      "Negative-point polarity PROVEN live with a discriminating test - same two dot LOCATIONS, only the second radius differs: r8+r8 = the whole person (94835 px, 9.00%), r8+r4 = the shorts alone (15553 px, 1.48%), 6.10x apart",
+      "MaskManager gained the points layer (points[] in SOURCE-image px, addPoint / removePointAt / clearPoints / getPointsMaskDataURL) plus bakeAutoPicksInto('manual'|'subtract') for app-side Add / Subtract",
+      "MpiCanvas draws the dots above the mask at constant screen size, suppresses the brush indicator in points mode, and exposes the new methods through its _methods proxy list",
+      "InputController maps left-click positive / right-click negative / click-an-existing-dot removes, with contextmenu suppressed via preventDefault AND stopPropagation",
+      "MpiCanvasViewer holds _pointsMode + _pointsThreshold across the preview remount, auto-picks index 0 so a points run is ONE round trip, and exposes el.bakeAutoPicks + a mask-points-changed event",
+      "commandExecutor sends Input_Points_Mode, Input_Points_Mask (data URL) and the dotted key Input_Points.threshold",
+      "MpiToolOptionsMask gained a Detect / Points source radio, a Scope slider, the info box, Clear points, and Add / Subtract, and turns points mode off in destroy()",
+      "eslint clean and node --check clean on all six touched JS files",
+      "USER VERIFIED IN THE APP 2026-07-28 - click-point masking, negative points, Scope and Add / Subtract all behave"
+    ],
+    "pending": [
+      "FIX THE DETECTION COLOUR - a detected region must render in a distinct colour (user suggests green) so it is visible against an already-painted mask. This is the one thing blocking Phase A close-out",
+      "UI polish the user wants to look at once the colour fix is in - they did not enumerate it, ASK THEM before changing layout",
+      "Docs - click-point masking still has no home. Add it to docs/gallery.md or a new docs/masking.md and route it from docs/README.md. Do NOT create a catch-all gotchas file",
+      "PHASE B (its own card, after A closes) - swap SAM3_Detect in behind the same UI for open-vocabulary text, true negative points and box prompts"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-361",
+    "title": "Auto Detect Mask v2 - SAM3 text-prompt + click-to-point masking",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-361/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-361/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-361/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "validation.md rewritten with the Step 1 / Step 1b / app-side record, the two live PASS tables, the user's verdict, and the outstanding colour defect",
+      "checklist.md ticked for every Phase A item that shipped",
+      "Both event logs carry the graph result, the polarity proof, the app-side completion and the user verification",
+      "The two live test scripts were saved as task evidence - research/polarity-test.mjs (with a run-from-repo-root header, since it imports sharp) and research/check-api-graph.mjs",
+      "Card set to doing / validating with attention.required naming the colour defect"
+    ],
+    "pending": [
+      "docs/ has no home for click-point masking - add it once the colour fix lands, routed from docs/README.md",
+      "The stale MPI-329 handoff in state/index.json active_handoffs points at a card already in done. Ask the user before pruning it - it survived the previous handoff for the same reason",
+      "research/ now holds 6 untracked evidence files (2 probe PNGs, the probe graph, the probe python, and the 2 new .mjs tests). Decide at mpi-end whether they are committed as task evidence",
+      "CLAUDE.md rule 5 - component wiring changed (MpiCanvas gained a points API, MpiCanvasViewer gained a mask-points-changed event), so ask the user whether .claude/rules/component-*.md should be updated"
+    ]
+  },
+  "next_action": {
+    "description": "Fix the detection colour. Root cause is structural, not cosmetic: MaskManager._recomposite() UNIONS the manual layer and the selected autoPickMasks into ONE maskCanvas, and MpiCanvas._renderOverlay() draws that single canvas - so a detected region and a painted region are indistinguishable by construction. Split the DISPLAY, never the EXPORT: render the manual layer in the current white and the auto-pick layer in green as a second overlay pass (both still minus subtractCanvas), while getURL() / getMaskDataURL() keep emitting the SINGLE unioned black-and-white mask every consumer downstream expects. Watch three things in _renderOverlay: the displayInverted branch recolours through a scratch buffer with source-atop, maskOpacity is applied as globalAlpha around the whole draw, and the dots are drawn on top afterwards. Then ask the user which UI polish they want before touching layout.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "PHASE A FIRST, PHASE B AFTER. Phase A = Impact Pack Mask Pointer on the sam_vit_b_01ec64.pth weight the auto-mask graph ALREADY loads. Zero download, zero licence, zero dependency entry.",
+      "The points branch converts its MASK back to SEGS with MaskToSEGS(combined=True) and rejoins the EXISTING ImpactSEGSPicker -> ImpactSEGSToMaskList chain. That is what let the thumbs / pick / composite plumbing be reused rather than forked, and it keeps the shipped 1.2.0 one-mask-per-pick contract intact.",
+      "Points mode auto-picks index 0 up front, so a points run is ONE round trip. The detector's detect-then-pick two-step exists because YOLO returns N segments to choose between; the mask-points branch returns exactly one region, so there is nothing to choose.",
+      "The two detector branches sit behind a second MpiIfElse titled Input_Points_Mode. Its inputs are lazy (check_lazy_status), so only the selected branch executes - points mode never runs YOLO and vice versa.",
+      "Dot polarity is carried by RADIUS, not by a separate mask: MaskManager synthesizes r=8 for positive and r=4 for negative, straddling the exact 10px bbox-width cliff that mask_hint_use_negative='Small' uses. PROVEN live at 6.10x separation. The graph node now has mask_hint_use_negative='Small'.",
+      "The dots mask is rendered at SOURCE image resolution, NOT the MASK_MAX_EDGE-capped working size. Two reasons: SEG coords must line up with the image SAMDetectorCombined receives, and the negative cliff is measured in that image's own pixels.",
+      "The dots ship as white on BLACK through ImageToMask(channel=red), deliberately not as an alpha mask - LoadImage-family MASK outputs are 1-alpha and that inversion is a known foot-gun.",
+      "Add / Subtract is APP-SIDE via MaskManager.bakeAutoPicksInto(), which writes BOTH layers the way paint() does: adding un-erases, subtracting un-paints. No AddMask/SubtractMask nodes, no extra round trip, undo preserved, composes with the brush.",
+      "The Scope slider ships the raw threshold 30-99 with no remapping and no MpiNormalizeValue rig - the user proposed then retracted that. An info box carries the sweep-do-not-nudge advice instead.",
+      "The old YOLO detector path is KEPT as the fast one-click Face / Hair / Hand / Person shortcut. Points sit BESIDE it.",
+      "Add / Subtract buttons are shown in points mode only, so the detector's existing UX is untouched."
+    ],
+    "constraints": [
+      "THE CONVERTER HAS BLAST RADIUS. Running `node scripts/workflow-to-api.mjs` with NO ARGUMENTS re-emits ALL 31 workflows and additionally writes 15 stray comfy_workflows/*_template.json files that do not belong there. Convert ONE file instead: `node scripts/workflow-to-api.mjs comfy_workflows/raw/img_auto_mask.json` prints to stdout, then write it with JSON.stringify(wf, null, 2) + a trailing newline - that byte format matches what the batch writer produces, verified by diff.",
+      "getURL() / getMaskDataURL() MUST keep emitting one unioned black-and-white mask. Every mask consumer downstream reads it. The colour fix is a DISPLAY-only split.",
+      "MpiCanvasViewer already has its own contextmenu handler on its root that pops the image context menu. InputController's points-mode handler therefore calls stopPropagation as well as preventDefault - that line is load-bearing, do not simplify it away.",
+      "MpiAutoMaskThumbs.setPicks() deliberately does NOT emit 'change'. Points mode relies on that to restore pick 0 after setImages() clears the selection without re-triggering the run.",
+      "N DOTS DO NOT GIVE N OBJECTS. Every point goes into ONE sam_obj.predict call, so SAM returns a SINGLE region consistent with ALL points. This was re-confirmed by accident in the polarity test: two positive dots gave the whole person. One part per run is the shape of the feature; Add accumulates parts across runs.",
+      "threshold is NOT a smooth confidence. sam_predict keeps every SAM candidate scoring >= threshold and unions them, falling back to the single best if none pass. SAM emits 3 candidates, so the dial SNAPS between 3 states and 0.50 -> 0.60 is usually identical. Sweep it, do not nudge it.",
+      "dilation STAYS AT 0. The user verified on the bench that it grows into unwanted areas because it blindly dilates whatever SAM returned, scatter included.",
+      "The scatter cleanup pair (GrowMaskWithBlur -4 then +4 with fill_holes) MUST stay equal and opposite or the mask grows or shrinks overall. 4/4 is the shipping default.",
+      "MpiLoadImageFromPath still EXECUTES in detector mode (it emits a preview) but self-gates on the empty path via ExecutionBlocker, so nothing downstream of it runs. That is expected, not a leak.",
+      "A data: URL in a media param is staged to a real file by comfyController (and uploaded to the Pod on a remote engine) automatically, because the param's same-titled node is in PATH_MEDIA_CLASSES. Input_Points_Mask needed no new plumbing for either engine.",
+      "MPI-246 trap checked and NOT applicable - none of the eight added nodes self-builds a path enum, so no SLASH_ONLY_NODE_TYPES entry is needed.",
+      "The remote engine path has NOT been exercised for points mode. It should work by construction (same upload path as Input_Image) but nobody has run it on a Pod.",
+      "Do not run git against sibling folders from this repo, and commit by explicit pathspec only - never git add -A."
+    ],
+    "files_modified": [
+      "comfy_workflows/raw/img_auto_mask.json",
+      "comfy_workflows/img_auto_mask.json",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+      "js/components/Primitives/MpiCanvas/managers/InputController.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.css",
+      "js/services/commandExecutor.js",
+      ".agents/mpi-kanban/tasks/MPI-361/task.json",
+      ".agents/mpi-kanban/tasks/MPI-361/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-361/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-361/research/polarity-test.mjs",
+      ".agents/mpi-kanban/tasks/MPI-361/research/check-api-graph.mjs",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "Components & UI",
+      "ComfyUI workflow injection",
+      "Events & cross-component communication",
+      "Conventions / gotchas"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/events.md",
+    ".claude/rules/kanban.md",
+    "docs/component-contracts.md",
+    "docs/comfy.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-28T06:45:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/50192835-5bd1-4f82-a39f-155f6a9cdf0f.json and use mpi-continue to resume MPI-361 (Auto Detect Mask v2), which is in the doing column at maturity validating. Phase A - click-point masking on the sam_vit_b weight the app already ships - is BUILT AND USER-VERIFIED in the app; the user ran it across several images and said it works really well, so do not rebuild or re-litigate it. Read .agents/mpi-kanban/tasks/MPI-361/validation.md first for the full record, then brief.md for the settled design. Exactly one functional defect remains: a detected region renders in the SAME WHITE as the painted mask, so detecting inside an already-masked area is invisible and the user cannot see what the run returned. It needs a distinct colour, they suggested green. The root cause is structural - MaskManager._recomposite() unions the manual layer and the selected autoPickMasks into ONE maskCanvas and MpiCanvas._renderOverlay() draws that single canvas, so the two are indistinguishable by construction. Split the DISPLAY only: draw the manual layer white and the auto-pick layer green as a second overlay pass, both still minus subtractCanvas, while getURL() and getMaskDataURL() keep emitting the single unioned black-and-white mask that every downstream consumer reads. Mind three things in _renderOverlay - the displayInverted branch recolours through a scratch buffer with source-atop, maskOpacity is applied as globalAlpha around the whole draw, and the point dots are drawn on top afterwards. After that, ASK the user which UI polish they want before changing any layout; they said there is more but did not list it. Two traps you must not rediscover: running scripts/workflow-to-api.mjs with NO arguments re-emits all 31 workflows and writes 15 stray comfy_workflows/*_template.json files, so convert the single file to stdout and write it yourself with JSON.stringify(wf, null, 2) plus a trailing newline; and InputController's points-mode contextmenu handler calls stopPropagation as well as preventDefault because MpiCanvasViewer has its own contextmenu handler on its root. Nothing is committed. Docs for click-point masking still have no home and should land once the colour fix is verified."
+}

@@ -1,0 +1,162 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "4f371eb8-9720-473a-956d-8489a2e7e49b",
+  "generated_at": "2026-07-28T03:15:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "superseded",
+  "superseded_by": "state/handoffs/50192835-5bd1-4f82-a39f-155f6a9cdf0f.json",
+  "session": {
+    "name": "MPI-361 masking-methods research + Phase A bench validation",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Give the user more masking methods. Explore what ComfyUI offers plus what the community uses, then build it. The trigger was the YOLO vocabulary ceiling - 'mask the headphones' is impossible on UltralyticsDetectorProvider. The user also remembered a ComfyUI feature where you click a point on the image, set a confidence, and it selects everything belonging to that area - they want that in the app.",
+    "status": "in_progress",
+    "summary": "Research and live bench validation are COMPLETE and the design is fully settled. The user's remembered feature is Impact Pack 'Mask Pointer' and it works on the sam_vit_b weight the app ALREADY ships - zero downloads. A probe graph was authored, opened by the user in ComfyUI, driven through several images, and every open design question was answered on the bench. NO app code has been written yet. Phase A implementation is the entire remaining work."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Probed the live bench /object_info (1842 nodes) and catalogued every masking option actually installed",
+      "Web-searched what the community ships in 2026 (ComfyUI-RMBG/BiRefNet, Easy-Sam3, TBG-SAM3, Florence2) and ruled each in or out",
+      "Verified the SAM3.1 weight on the HF API: Comfy-Org/sam3.1, checkpoints/sam3.1_multiplex_fp16.safetensors, 1745546848 bytes, sha256 9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03, NOT gated",
+      "Read comfyui-impact-pack/modules/impact/core.py to learn the real semantics of detection_hint, threshold and the negative-point cutoff rather than trusting tooltips",
+      "PROVED Phase A live: one dot on denim shorts, threshold 0.93 returned the shorts alone (1.48% of frame), 0.50 returned the whole person (8.97%)",
+      "Authored an openable LiteGraph probe graph, verified it converts via scripts/workflow-to-api.mjs with 0 dangling / 0 missing-required and executes on the live engine",
+      "User drove the probe graph in ComfyUI across several photos and settled every open design question",
+      "Found and fixed the scatter problem (loose specks / pinholes) with a 2-node morphological open+close; user confirmed it closes the holes",
+      "Split the shapes-masking request out to its own card, MPI-368",
+      "Rewrote MPI-361 acceptance criteria into Phase A and Phase B blocks with every discovered trap baked in"
+    ],
+    "pending": [
+      "PHASE A CODE - add a 'points' mode to MaskManager: left-click places a positive point, right-click a negative one, points render on the overlay, individually removable",
+      "PHASE A CODE - add the points-mode UI to MpiToolOptionsMask beside the existing YOLO detector dropdown (which STAYS), plus a threshold/confidence control and an info box",
+      "PHASE A CODE - add the graph branch to comfy_workflows/raw/img_auto_mask.json then re-sync to comfy_workflows/img_auto_mask.json via scripts/workflow-to-api.mjs",
+      "PHASE A CODE - extend the autoMaskImg payload in js/services/commandExecutor.js (~line 889-930) with the point coords and threshold, injected by node title",
+      "PHASE A CODE - wire Add / Subtract buttons that draw the returned mask into MaskManager.manualCanvas or MaskManager.subtractCanvas",
+      "PHASE A VERIFY - regression-check the YOLO Face and Person shortcuts still work after the graph edit",
+      "PHASE B (own card, after A is user-verified) - swap SAM3_Detect in behind the same UI for open-vocabulary text, true negative points and box prompts"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-361",
+    "title": "Auto Detect Mask v2 - SAM3 text-prompt + click-to-point masking",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-361/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-361/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "Full research + bench record written to .agents/mpi-kanban/tasks/MPI-361/brief.md, including the LIVE PROOF table, the threshold semantics read from source, the N-dots correction, and the app-side Add/Subtract design",
+      "Probe evidence saved to .agents/mpi-kanban/tasks/MPI-361/research/ - probe-thr093-shorts.png, probe-thr050-person.png, maskpoint_probe.py, maskpoints_probe.json",
+      "Five events appended to .agents/mpi-kanban/tasks/MPI-361/events.jsonl covering the move to doing, the live proof, the graph authoring, the user bench session, and the correction",
+      "MPI-361 acceptance criteria rewritten into Phase A / Phase B blocks with a scope_decisions block recording the user's calls",
+      "MPI-368 created for shape masking with prior-art pointers to CropManager.js and docs/playbooks/add-app/ui/box-gizmo.md"
+    ],
+    "pending": [
+      "docs/ has no home yet for click-point masking. When Phase A ships, add it to docs/gallery.md or a new docs/masking.md and route it from docs/README.md - do NOT create a catch-all gotchas file",
+      "The stale MPI-329 handoff in state/index.json active_handoffs points at a card that is already in done. Ask the user before pruning it",
+      "The probe graph and the two probe PNGs live under .agents/mpi-kanban/tasks/MPI-361/research/ and are untracked. Decide at mpi-end whether they are committed as task evidence"
+    ]
+  },
+  "next_action": {
+    "description": "Read .agents/mpi-kanban/tasks/MPI-361/brief.md end to end - it holds the entire settled design. Then start Phase A with the SAFEST piece first: add the mask-points branch to comfy_workflows/raw/img_auto_mask.json (MaskToSEGS combined=False, drop_size 1 -> SAMDetectorCombined detection_hint='mask-points', threshold 0.93, dilation 0 -> GrowMaskWithBlur expand -4 -> GrowMaskWithBlur expand +4 fill_holes true), keeping the existing YOLO detector path intact and gated beside it. Re-sync with scripts/workflow-to-api.mjs (ComfyUI must be running on 127.0.0.1:8188) and confirm 0 dangling links and 0 missing-required inputs. Only then touch MaskManager and the UI.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "PHASE A FIRST, PHASE B AFTER. Phase A = Impact Pack Mask Pointer on the sam_vit_b_01ec64.pth weight the auto-mask graph ALREADY loads. Zero download, zero licence, zero dependency entry. Phase B = swap SAM3_Detect in behind the same UI for a 1.75GB checkpoint, as its own card, only once A is user-verified.",
+      "The chain is MaskToSEGS(combined=False, drop_size 1) -> SAMDetectorCombined(detection_hint='mask-points'). detection_hint MUST be 'mask-points'. Every other hint crops per-seg and would cage SAM inside a tiny box around the dot.",
+      "threshold IS the confidence dial the user remembered from the old ComfyUI Preview Bridge SAM detector. Confirmed by the user.",
+      "dilation STAYS AT 0. The user verified on the bench that it grows into unwanted areas because it is a blind dilate of whatever SAM returned, scatter included. The eraser brush is the better answer.",
+      "The BROAD/0.50 branch was DROPPED. Tight (0.93) is enough.",
+      "NO slider remapping and NO MpiNormalizeValue rig. The user proposed then retracted it. Ship the raw threshold plus an info box - users learn tools fast.",
+      "Scatter cleanup = morphological open then close, 2 KJNodes, no new weights: GrowMaskWithBlur(expand=-4) then GrowMaskWithBlur(expand=+4, fill_holes=true). The pair MUST stay equal and opposite or the mask grows or shrinks overall. 4/4 is the shipping default. USER-CONFIRMED on the bench that it closes the holes.",
+      "Add / Subtract is APP-SIDE, not graph-side. MaskManager already keeps manualCanvas (paint), subtractCanvas (erase) and derives maskCanvas = (manual union autoPickMasks) AND NOT subtract. So Add = draw the returned mask into manualCanvas, Subtract = draw it into subtractCanvas. No AddMask/SubtractMask nodes, no extra round-trip per boolean, undo preserved, composes with the existing brush.",
+      "The old YOLO detector path is KEPT as a fast one-click Face / Hair / Hand / Person shortcut. Points sit BESIDE it, they do not replace it.",
+      "Shape masking (rectangle / triangle / ellipse gizmo) was split out to MPI-368, not part of this card."
+    ],
+    "constraints": [
+      "N DOTS DO NOT GIVE N OBJECTS. In the mask-points branch every point goes into ONE sam_obj.predict call, so SAM returns a SINGLE region consistent with ALL points. Bench-confirmed: one dot on a crop top = the top alone; top dot + pants dot = the WHOLE BODY. Phase A is genuinely ONE PART PER RUN. The info box must say so plainly or users will keep adding dots expecting more parts and get less.",
+      "SAMDetectorSegmented has the BYTE-IDENTICAL mask-points branch, so it is not an escape hatch for multi-object. Only the center-1 else-branch loops per-seg, but it passes each dot's own bbox as SAM's box constraint, so a 16px dot boxes SAM into 16px unless bbox_expansion is cranked - which reintroduces the exact crop ceiling mask-points was chosen to avoid. Multi-object-per-run is PARKED as an unbuilt experiment.",
+      "threshold is NOT a smooth confidence. sam_predict keeps every SAM candidate mask scoring >= threshold and unions them, falling back to the single highest-scoring mask if none pass. SAM emits 3 candidates (part / subpart / whole), so the dial SNAPS between 3 states. 0.50 -> 0.60 is usually identical. The user hit this and thought it was broken. Sweep it, do not nudge it, and say so in the info box.",
+      "In the mask-points branch SAM runs ONCE over the FULL image with bbox=None, so crop_factor does NOT cage a tiny dot. This was the main technical risk and it is dead.",
+      "Negative-point cutoff is EXACT: with mask_hint_use_negative='Small', a dot whose bbox width is < 10 px becomes plab=0 (negative). Brush size is the polarity switch. A 10px cliff is poor UX - prefer two explicit point layers in our own UI and synthesise the dot sizes when building the mask we send.",
+      "Scatter is not cosmetic. The detailer masks each zone INDIVIDUALLY, so a stray speck buys a wasted detail pass. The user reports the same failure on the existing detect-person path, so the cleanup pair fixes both.",
+      "MPI-246 trap: if any newly-added node self-builds its path enum, it must be added to SLASH_ONLY_NODE_TYPES (docs/comfy.md). This broke auto-mask on a released build before.",
+      "Shipped 1.2.0 contract: the auto-mask workflow MUST emit one mask per pick via ImpactSEGSToMaskList, never SegsToCombinedMask. The JS guards on length === picks.size and a combined mask wipes multi-pick.",
+      "LoadImage's MASK output is 1 - alpha, so a painted point is alpha 0. Only relevant to the probe graph's baked demo dot; MaskEditor handles it correctly on its own.",
+      "MpiLoadImageFromPath emits a preview image into the prompt outputs map. A result reader that grabs the first outputs entry picks up the INPUT, not the result. Key by node id.",
+      "Masks persist as TEMP PNGs per (project, group, item) - they survive reload but die on restart. A committed points result is a normal mask edit, nothing special.",
+      "The app's own engine runs on 127.0.0.1:8188 from engine/ComfyUI_windows_portable. scripts/workflow-to-api.mjs needs it UP to resolve widget names from /object_info.",
+      "Do not run git against sibling folders from this repo, and commit by explicit pathspec only - never git add -A."
+    ],
+    "files_modified": [
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/tasks/MPI-361/task.json",
+      ".agents/mpi-kanban/tasks/MPI-361/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-361/research/maskpoints_probe.json",
+      ".agents/mpi-kanban/tasks/MPI-361/research/maskpoint_probe.py",
+      ".agents/mpi-kanban/tasks/MPI-361/research/probe-thr093-shorts.png",
+      ".agents/mpi-kanban/tasks/MPI-361/research/probe-thr050-person.png",
+      ".agents/mpi-kanban/tasks/MPI-368/task.json",
+      ".agents/mpi-kanban/tasks/MPI-368/events.jsonl",
+      "engine/ComfyUI_windows_portable/ComfyUI/input/mpi361_probe.png"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-361/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-361/task.json",
+      ".agents/mpi-kanban/tasks/MPI-361/research/maskpoints_probe.json",
+      "comfy_workflows/raw/img_auto_mask.json",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/services/commandExecutor.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "masking",
+      "comfy injection",
+      "workflow authoring",
+      "components",
+      "generation lifecycle"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/state.md",
+    ".claude/rules/events.md",
+    ".claude/rules/kanban.md",
+    "docs/workflow-authoring/README.md",
+    "docs/generation-lifecycle.md",
+    "docs/comfy.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-28T03:15:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/4f371eb8-9720-473a-956d-8489a2e7e49b.json and use mpi-continue to resume MPI-361 (Auto Detect Mask v2), which is in the doing column. Research and live bench validation are finished and the design is fully settled - read .agents/mpi-kanban/tasks/MPI-361/brief.md end to end before touching anything, because it holds every trap discovered. No app code exists yet. You are building Phase A: click-point masking using Impact Pack's Mask Pointer on the sam_vit_b_01ec64.pth weight the app already ships, so there is NO new download and NO dependency entry. Start with the safest piece - add the branch to comfy_workflows/raw/img_auto_mask.json as MaskToSEGS(combined=False, drop_size 1) -> SAMDetectorCombined(detection_hint='mask-points', threshold 0.93, dilation 0) -> GrowMaskWithBlur(expand=-4) -> GrowMaskWithBlur(expand=+4, fill_holes=true), keeping the existing YOLO detector path intact beside it because the user wants it kept as a fast Face/Hair/Hand/Person shortcut. Re-sync to comfy_workflows/img_auto_mask.json with scripts/workflow-to-api.mjs (ComfyUI must be running on 127.0.0.1:8188) and confirm 0 dangling links and 0 missing-required inputs. Then add a points mode to MaskManager, the UI to MpiToolOptionsMask, the payload fields in js/services/commandExecutor.js around line 889, and Add/Subtract buttons that draw the returned mask into MaskManager.manualCanvas or subtractCanvas. Critical facts you must not rediscover the hard way: N dots do NOT give N objects because all points go into one SAM predict call, so it is one part per run; threshold snaps between 3 SAM candidates rather than ramping, so nudging it does nothing and the info box must say sweep it; dilation must stay 0; and the workflow must still emit one mask per pick via ImpactSEGSToMaskList, never SegsToCombinedMask."
+}

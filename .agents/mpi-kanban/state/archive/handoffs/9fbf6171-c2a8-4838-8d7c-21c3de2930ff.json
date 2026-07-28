@@ -4,7 +4,8 @@
   "generated_at": "2026-07-23T19:56:38Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
+  "resolved_note": "MPI-329 shipped f7e42376 and closed to done 2026-07-23. This handoff outlived its card; archived 2026-07-28.",
   "session": {
     "name": "MPI-329 root-cause + disk-staging fix (network-volume switch tax)",
     "branch": "master"
