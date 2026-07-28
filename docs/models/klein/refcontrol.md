@@ -9,6 +9,39 @@ makes the depth op a depth op — without it the depth map is just an ordinary r
 image. Depth maps come from `DepthAnythingV2Preprocessor` on `depth_anything_v2_vits.pth`,
 auto-downloaded by the `comfyui_controlnet_aux` node dep (no file dep of ours).
 
+## TWO images, and the second one changes what the op means
+
+Klein's depth branch shares the edit branch's `ReferenceLatent` chain — traceable in the
+baked graph: the `any_3` output path runs back through `VAEDecode 117`, which is
+downstream of `Input_Image_2`. So depth takes an optional second image:
+
+- **image 1 = the depth** (pose and composition, nothing else crosses over)
+- **image 2 = the subject** posed into it
+
+With one image the subject comes from the prompt, as on every other model's depth. With
+two, it comes from the picture, and the prompt should describe the setting instead.
+
+The app gated depth to one image until 2026-07-28 and lost this entirely. Ungating it
+did NOT touch Krea2/SDXL depth, which share the one `poseReference` op def and have no
+such input: the slot declares `requiresCapability: 'depthSubject'` and
+`filterMediaInputsForModel()` drops it for any model that does not declare the
+capability. Klein alone does. The trap worth remembering is that op-FIT is a separate
+read of the same list — `_maxMediaSlots()` had to learn the model gate too, or Krea2
+depth would have gone selectable on two staged chips and injected an image its graph
+never reads. See `validation.md` § 3b in the MPI-354 workspace for the test list.
+
+The graph would carry a THIRD reference here as well; only two slots are exposed,
+because two is what the op means.
+
+**No ratio picker on depth or edit.** Both branches scale the input image to a megapixel
+target and inherit its shape — `Input_Width`/`Input_Height` are never read there — so
+Klein declares `imageSizedOps: ['poseReference', 'kleinEdit']` and the picker is hidden
+(`modelShowsRatio`). Do not "restore" it: a landscape choice on a portrait input produced
+a portrait image, which is correct behaviour wearing a misleading control.
+
+Depth maps use `depth_anything_v2_vits.pth` (small), swapped down from vitl on
+2026-07-28. `comfyui_controlnet_aux` fetches it on first use — not a dep of ours.
+
 ## The grayscale bug — root cause, do NOT re-derive
 
 **Cost most of a day.** Depth refcontrol output came out flat grey and desaturated.

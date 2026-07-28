@@ -1321,7 +1321,20 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const _galleryExtraTempIds = _galleryEntry?.extraTempIds ?? _stableExtraTempIds;
             const groups = builtItems.map((it) => {
                 const name = truncateCardName(it.displayName || it.operation || firstDisplayName);
-                const g = createItemGroup(model.mediaType, { name, width, height });
+                // MPI-354: shape the CARD from the item's ACTUAL pixels, not the
+                // requested Width/Height. Those two diverge whenever the graph sizes
+                // its own output — Klein's depth/edit scale the input image to a
+                // megapixel target and ignore the ratio entirely — and the gallery's
+                // justified layout then reserved a landscape cell for a portrait
+                // image, which is the padding the user sees. The item was always
+                // right (the server probes the file with sharp), only the group was
+                // not. Falls back to the requested size when the probe returned 0.
+                const dims = it.pixelDimensions;
+                const g = createItemGroup(model.mediaType, {
+                    name,
+                    width:  dims?.w || width,
+                    height: dims?.h || height,
+                });
                 return appendToHistory(g, it);
             });
             // HOLD-UNTIL-APPLY (MPI-306): with deferCommit the groups are built but

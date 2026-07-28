@@ -150,3 +150,92 @@ test('the inpaint guide teaches the empty prompt and warns off delete instructio
     assert.ok(help.examples.some(e => e.bad === true),
         'the "remove the X" mistake must be marked bad, not merely described');
 });
+
+/**
+ * MPI-354 — depth takes a SECOND, optional image on Klein only.
+ *
+ * Klein runs all seven ops from one master graph, and its depth branch shares the
+ * edit branch's ReferenceLatent chain: image 1 supplies the depth, image 2 supplies
+ * the subject posed into it. Krea2/SDXL depth has no such input and must stay
+ * one-image — but all three share the single `poseReference` op def, so the slot is
+ * capability-gated rather than declared per model.
+ *
+ * Both directions are pinned: the slot must APPEAR for a model declaring
+ * `depthSubject`, and must be ABSENT everywhere else — including in the op-fit
+ * count, or Krea2 depth would light up with two chips staged and then inject an
+ * image its graph never reads.
+ */
+const KLEIN = {
+    id: 'klein-4b', type: 'klein', mediaType: 'image',
+    supportedOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+    capabilities: { depthSubject: true },
+};
+
+test('depth exposes its optional subject slot on Klein and hides it everywhere else', async () => {
+    const { getCommandMediaInputs, filterMediaInputsForModel } = await import('../js/data/commandRegistry.js');
+    const raw = getCommandMediaInputs('poseReference');
+
+    const klein = filterMediaInputsForModel(raw, KLEIN);
+    assert.deepStrictEqual(klein.map(s => s.title), ['Input_Image', 'Input_Image_2']);
+    assert.strictEqual(klein[1].required, false, 'the subject image must stay optional — depth alone still runs');
+
+    const krea2 = filterMediaInputsForModel(raw, KREA2);
+    assert.deepStrictEqual(krea2.map(s => s.title), ['Input_Image'],
+        'a model without capabilities.depthSubject must never see the second slot');
+});
+
+test('the gated slot widens op-fit for Klein only', async () => {
+    const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
+    const depthOf = (model, imageCount) =>
+        getAvailableCommands('image', model, { imageCount, canMask: true }).find(c => c.key === 'poseReference');
+
+    assert.strictEqual(depthOf(KLEIN, 2)?.available, true, 'Klein depth accepts two images');
+    assert.strictEqual(depthOf(KLEIN, 1)?.available, true, 'and still accepts one');
+    assert.strictEqual(depthOf(KREA2, 2)?.available, false, 'Krea2 depth must NOT light up on two chips');
+    assert.strictEqual(depthOf(KREA2, 1)?.available, true, 'Krea2 depth unchanged on one');
+});
+
+test('the depth guide teaches the two-image meaning on Klein only', async () => {
+    const { getOpHelp } = await import('../js/data/commandRegistry.js');
+    const base = getOpHelp('poseReference');
+    const klein = getOpHelp('poseReference', KLEIN);
+
+    assert.notDeepStrictEqual(klein.body, base.body, 'Klein depth has its own guide');
+    assert.ok(klein.body.some(p => /second image/i.test(p)),
+        'the Klein guide must explain what the second image does — it changes the op');
+    assert.deepStrictEqual(getOpHelp('poseReference', KREA2).body, base.body,
+        'every other model keeps the one-image guide');
+});
+
+/**
+ * MPI-354 — the ratio picker is hidden on ops that size themselves from the input.
+ *
+ * Klein's depth and edit scale the input image to a megapixel target and never read
+ * Input_Width/Height, so the picker there is not merely inert — it tells the user they
+ * chose an output shape they will not get. Krea2/SDXL depth DOES generate at our
+ * dimensions and shares the same `poseReference` op, so the gate is per model.
+ */
+test('the ratio picker is hidden only on a model\'s declared image-sized ops', async () => {
+    const { modelShowsRatio } = await import('../js/data/commandRegistry.js');
+    const klein = { ...KLEIN, imageSizedOps: ['poseReference', 'kleinEdit'] };
+
+    assert.strictEqual(modelShowsRatio(klein, 'poseReference'), false, 'Klein depth inherits the input shape');
+    assert.strictEqual(modelShowsRatio(klein, 'kleinEdit'), false, 'Klein edit inherits the input shape');
+    assert.strictEqual(modelShowsRatio(klein, 't2i'), true, 'Klein t2i still takes a ratio');
+    assert.strictEqual(modelShowsRatio(klein, 'i2i'), true, 'Klein i2i still takes a ratio');
+
+    // The negative control that matters: a model with no declaration keeps every picker.
+    assert.strictEqual(modelShowsRatio(KREA2, 'poseReference'), true,
+        'Krea2 depth generates at our dimensions — it must keep the ratio picker');
+    assert.strictEqual(modelShowsRatio(null, 'poseReference'), true, 'no model = no gate');
+});
+
+test('Klein declares exactly the two ops that derive their own size', async () => {
+    const { getModelById } = await import('../js/data/modelRegistry.js');
+    const klein = getModelById('klein-4b');
+    assert.deepStrictEqual(klein.imageSizedOps, ['poseReference', 'kleinEdit']);
+    // Every declared op must be one this model actually runs, or the entry is dead.
+    for (const op of klein.imageSizedOps) {
+        assert.ok(klein.supportedOps.includes(op), `${op} must be in supportedOps`);
+    }
+});

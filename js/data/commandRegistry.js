@@ -94,8 +94,12 @@ const I2V_HELP = {
  *   key:string,
  *   mediaType:'image'|'video'|'audio',
  *   title:string,
- *   required?:boolean
+ *   required?:boolean,
+ *   requiresCapability?:string
  * }>}                         [mediaInputs] - Named media slots injected by Comfy node title.
+ *                                              `requiresCapability` hides the slot on any model
+ *                                              whose `capabilities` lacks that flag — how one
+ *                                              shared op offers a model-specific extra input.
  * @property {string[]}        [components]   - IDs of operation-specific sub-controls injected
  *                                              into MpiPromptBox's operation slot.
  *                                              Each ID maps to a component in js/components/.
@@ -241,12 +245,38 @@ export const commands = {
                 { prompt: 'a knight in tarnished silver armour, castle courtyard, overcast light', note: 'Subject and scene; the pose arrives from the image.' },
                 { prompt: 'standing with both arms raised', bad: true, note: 'Re-states what the depth map already provides.' },
             ],
+            // MPI-354: Klein alone accepts a second image here (capabilities.depthSubject).
+            // Keyed on `type` so it applies to Klein models only — every other model keeps
+            // the one-image copy above.
+            byModel: {
+                klein: {
+                    body: [
+                        'Copies the pose and composition of the FIRST image, then paints your prompt into that shape. That image is a skeleton — none of its colour, style or identity comes across.',
+                        'A SECOND image is optional and changes what the op does: image 1 becomes the pose, image 2 becomes the subject wearing it. With one image the subject comes from your prompt; with two it comes from the picture.',
+                        'Describe the scene, not the pose — the depth map already carries it. With a second image, describe the setting and let the reference supply who is in it.',
+                    ],
+                    examples: [
+                        { prompt: 'a knight in tarnished silver armour, castle courtyard, overcast light', note: 'One image: the pose arrives from it, the subject from your words.' },
+                        { prompt: 'her on a windswept clifftop at dusk', note: 'Two images: pose from image 1, the person from image 2.' },
+                        { prompt: 'standing with both arms raised', bad: true, note: 'Re-states what the depth map already provides.' },
+                    ],
+                },
+            },
         },
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
         mediaInputs: [
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+            // MPI-354: OPTIONAL subject slot — image 1 supplies the depth, image 2
+            // supplies WHO is posed into it. Only models declaring
+            // `capabilities.depthSubject` (Klein, whose depth branch shares the edit
+            // branch's ReferenceLatent chain) get this slot; on Krea2/SDXL the
+            // capability gate drops it and depth stays exactly one image.
+            {
+                key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2',
+                required: false, ordinal: true, requiresCapability: 'depthSubject',
+            },
         ],
         promptRequired: true,
         injectParams: { Input_depth_reference: true },
@@ -858,6 +888,25 @@ export function modelShowsStyleRack(model, operation) {
     return allowed.includes(operation);
 }
 
+/**
+ * May `model` show the ratio picker on `operation`? (MPI-354)
+ *
+ * Some ops do not size their own output: they scale the INPUT image to a megapixel
+ * target and inherit its shape, so `Input_Width`/`Input_Height` are never read and the
+ * picker is not merely useless — it is actively misleading. The user picks landscape,
+ * the graph returns portrait, and (until the group-dims fix in generationService) the
+ * gallery card was cut to the shape that was asked for rather than the one produced.
+ *
+ * Which ops those are is a property of the MODEL's graph, not of the op: Klein's depth
+ * and edit derive their size, while Krea2/SDXL depth generates at our dimensions. So a
+ * model names its own image-sized ops and everything else is unaffected — the default is
+ * an empty list, i.e. exactly today's behaviour for every pre-Klein model.
+ */
+export function modelShowsRatio(model, operation) {
+    const imageSized = Array.isArray(model?.imageSizedOps) ? model.imageSizedOps : [];
+    return !imageSized.includes(operation);
+}
+
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 /**
@@ -882,9 +931,12 @@ export function modelShowsStyleRack(model, operation) {
 // MPI-337: max media of a type an op accepts = number of declared input slots of
 // that type. Falls back to the requires* minimum for ops with no mediaInputs, so
 // a legacy op degenerates to "count must equal its minimum" rather than uncapped.
-function _maxMediaSlots(cmd, mediaType, minFallback) {
+// MPI-354: count the MODEL'S slots, not the op's raw list — a capability-gated slot
+// the model cannot use must not widen the count, or Krea2 depth would start
+// accepting the two images only Klein's graph can consume.
+function _maxMediaSlots(cmd, mediaType, minFallback, model = null) {
     const slots = Array.isArray(cmd.mediaInputs)
-        ? cmd.mediaInputs.filter(s => s.mediaType === mediaType).length
+        ? filterMediaInputsForModel(cmd.mediaInputs, model).filter(s => s.mediaType === mediaType).length
         : 0;
     return slots || Math.max(0, Number(minFallback) || 0);
 }
@@ -939,8 +991,8 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
             // upscale have 1 image slot so they can't run on 2 chips — only
             // krea2Edit (2 slots) / qwen (3) can. Without the upper bound those
             // ops showed selectable/enabled with 2 chips staged.
-            const maxImages = _maxMediaSlots(cmd, MEDIA_TYPE.IMAGE, cmd.requiresImages);
-            const maxVideos = _maxMediaSlots(cmd, MEDIA_TYPE.VIDEO, cmd.requiresVideo);
+            const maxImages = _maxMediaSlots(cmd, MEDIA_TYPE.IMAGE, cmd.requiresImages, model);
+            const maxVideos = _maxMediaSlots(cmd, MEDIA_TYPE.VIDEO, cmd.requiresVideo, model);
             const available =
                 imageCount >= (cmd.requiresImages ?? 0) &&
                 imageCount <= maxImages &&
@@ -1025,8 +1077,15 @@ export function filterMediaInputsForModel(slots, model = null) {
     // all (an App that declares an audio slot must inject it). The capability gate below
     // only exists to drop LTX's audio slot on WAN, which has no capabilities.audio.
     if (!model) return slots;
-    if (model.capabilities?.audio === true) return slots;
-    return slots.filter(slot => slot.mediaType !== 'audio');
+    return slots.filter(slot => {
+        if (slot.mediaType === 'audio' && model.capabilities?.audio !== true) return false;
+        // MPI-354: generalised form of the same gate — a slot may name the capability
+        // it needs (`requiresCapability`), and a model that does not declare it never
+        // sees the slot. Used by poseReference's optional subject image: Klein's depth
+        // branch accepts it, Krea2/SDXL's does not, and they share the one op def.
+        if (slot.requiresCapability && model.capabilities?.[slot.requiresCapability] !== true) return false;
+        return true;
+    });
 }
 
 /**

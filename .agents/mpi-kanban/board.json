@@ -30,12 +30,12 @@
    "MPI-349"
   ],
   "doing": [
-   "MPI-354",
    "MPI-346",
    "MPI-259",
    "MPI-4"
   ],
   "done": [
+   "MPI-354",
    "MPI-360",
    "MPI-364",
    "MPI-356",
@@ -742,6 +742,14 @@
    "task": "MPI-362",
    "to": "doing",
    "note": "Mask composite (Add/Subtract) in image history - Sharp server-side, feathered mask, result appended as a new history entry."
+  },
+  {
+   "at": "2026-07-28T02:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-354",
+   "from": "doing",
+   "to": "done",
+   "note": "FLUX.2 Klein 4B shipped and user-validated in-app: all seven ops, bar counts, styles, enhancer, depth with two images, no ratio on the image-sized ops. Verified with only ~6GB VRAM free (spills to RAM and completes). RunPod re-test deferred by the user - no card, they will open one if it bites."
   }
  ]
 }

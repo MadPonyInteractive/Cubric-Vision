@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, getOpHelp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, getOpHelp } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -1345,6 +1345,13 @@ export const MpiPromptBox = ComponentFactory.create({
                 // offer the control to one and not the other. See modelShowsStyleRack.
                 if ((componentId === 'styleSelect' || componentId === 'stylization')
                     && !modelShowsStyleRack(model, activeOperation)) continue;
+
+                // Ratio picker is model-AND-op gated for the same reason as the rack.
+                // An op that scales its INPUT image to a megapixel target inherits that
+                // image's shape and never reads Input_Width/Height — Klein's depth and
+                // edit do exactly that. Offering the picker there is worse than useless:
+                // it makes the user believe they chose an output shape they did not get.
+                if (componentId === 'ratio' && !modelShowsRatio(model, activeOperation)) continue;
 
                 // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
                 // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.

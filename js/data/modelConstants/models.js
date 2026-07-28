@@ -17,6 +17,7 @@
  * @property {string[]} [qualityTiers] - Ordered quality-tier ids for a NEW `type` (MPI-174), e.g. ['low','medium','high']. Presence ⇒ quality UI mode (tier radio); absent + `ratios` present ⇒ orientation mode. Consumed via qualityTiersFor() in js/utils/ratios.js and the v3 project migration.
  * @property {Record<string, Object>} [opInject] - Per-OP constant workflow params THIS model always injects, keyed by operation id then node title (MPI-354). For a model whose ops are branches of ONE master graph selected by a value private to that model — FLUX.2 Klein maps each op to an `Input_wf_type` int, a numbering no shared op could own. Merged in commandExecutor._buildParams AFTER the op's own `injectParams` and BEFORE the user's controls. A model that declares this MUST cover every op in `supportedOps`: a missing entry does not error, it runs the graph's default branch and returns the wrong operation's output, so the executor warns on a gap. Prefer the op's `injectParams` when the constant is a property of the OP rather than of this model.
  * @property {string[]} [styleOps] - Operations where this model's style rack is live (MPI-354). Defaults to DEFAULT_STYLE_OPS in commandRegistry.js — the set that mounted the rack before this field existed, so every pre-Klein model is unaffected. Declare it when the rack's reach differs: a one-master-template model carries the rack on detail/upscale too, while a model with separate rack-less detailer/upscaler files must not offer it there. Only consulted when `capabilities.styleLoras` is true; the op's `components` still decides whether the control exists at all.
+ * @property {string[]} [imageSizedOps] - Operations whose OUTPUT SHAPE comes from the input image rather than from `Input_Width`/`Input_Height` (MPI-354) — typically because the graph scales the input to a megapixel target. The ratio picker is hidden on these ops (see modelShowsRatio in commandRegistry.js); everything else about them is unchanged. Defaults to none, so every model that does not declare it keeps the picker on every op exactly as before. This is a property of the MODEL's graph, not of the op: Klein's depth derives its size while Krea2's depth generates at our dimensions, and they share one op.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
@@ -465,8 +466,11 @@ export const MODELS = [
     // quality-tier radio would offer a single choice. Bigger output is the upscale op.
     {
         id: 'klein-4b',
-        // 4.07GB int8 transformer. VRAM was ~13GB on the BF16 weight — the int8 figure
-        // is UNMEASURED as of 2026-07-27; confirm before trusting this badge on 8GB.
+        // 4.07GB int8 transformer. Rough 2026-07-28 readings: ~5GB for most ops, low teens
+        // for a multi-reference edit — estimates, not measurements. 'low' is right and then
+        // some: every op was verified with only ~6GB of the card free, spilling to system RAM
+        // and completing. The minimum card is NOT set here — the Model Library derives it
+        // from the weights via tradeTable() (footprint.js), labelled an estimate.
         sizeTier: 'low',
         featured: true,
         name: 'FLUX.2 Klein',
@@ -481,6 +485,11 @@ export const MODELS = [
         capabilities: {
             multiStage: false, audio: false, negativePrompt: false, styleLoras: true,
             promptEnhance: true, batch: false, turboToggle: false,
+            // Klein's depth branch shares the edit branch's ReferenceLatent chain, so a
+            // SECOND image is meaningful there: image 1 supplies the depth, image 2 the
+            // subject posed into it. Unlocks poseReference's optional `inputImage2` slot
+            // (capability-gated in filterMediaInputsForModel) — Krea2/SDXL stay 1-image.
+            depthSubject: true,
         },
         // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
         // in supportedOps; commandExecutor warns loudly if one is missing, because the
@@ -498,6 +507,10 @@ export const MODELS = [
         // The rack is in the ONE graph, so it is live on every op — including detail and
         // upscale, which the pre-Klein default (DEFAULT_STYLE_OPS) excludes.
         styleOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        // Ops whose output shape comes from the INPUT image (scaled to a megapixel
+        // target), not from Input_Width/Height — so the ratio picker is hidden there.
+        // Klein's depth and edit branches both do this; t2i/i2i still take our ratio.
+        imageSizedOps: ['poseReference', 'kleinEdit'],
         // Index-aligned with the MpiStyleSelector's trigger lines and its MpiStyleLoras
         // banks (verified against the baked graph: bank 1 = muppets/cartoon/jojo/anime/
         // chibi, bank 2 = doodle/vintage/aesthetic). Index 0 = no style, selector 0.

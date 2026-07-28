@@ -59,9 +59,9 @@ obligation is discharged in data: **`licences.md`**. Note **the outpaint LoRA mu
 the comfy-converted file** (`diffusion_model.*` prefix, rank 16 — all 68 target keys
 bind); the plain diffusers file does NOT work in ComfyUI.
 
-**VRAM: ~13 GB measured on the bf16 checkpoint**, despite being a 4B model — the figure
-that threatened the 8 GB tier. The shipped weight is int8 (3.7 GB smaller), so
-**re-measure before setting the tier badge**. STILL PENDING as of 2026-07-27.
+**VRAM, int8 — rough status-bar readings, estimates not measurements: ~5 GB for most ops, low teens for a multi-reference edit.** `sizeTier` stays `'low'`. **Every op was in fact
+verified with only ~6 GB of the card free** (an LLM held the rest): peaks spilled to system RAM and completed, slower but correct — so the low teens is staging filling free VRAM, not
+a floor, and Klein runs under the 8 GB the Model Library's `tradeTable()` quotes as minimum. `MpiClearVram` 570 precedes `Output_Image`; without it peak roughly doubled across ops.
 
 ## Graph shape — ONE master template, all ops
 

@@ -2,10 +2,10 @@
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-354",
  "title": "Wire FLUX.2 Klein 4B as a new model (t2i + edit + inpaint/removal)",
- "column": "doing",
- "maturity": "in-progress",
+ "column": "done",
+ "maturity": "complete",
  "created_at": "2026-07-26T10:51:07Z",
- "updated_at": "2026-07-26T23:30:00Z",
+ "updated_at": "2026-07-28T02:30:00Z",
  "labels": [
   "model",
   "workflow",
@@ -23,6 +23,10 @@
  ],
  "links": {
   "supersedes": "MPI-353",
-  "playbook": "docs/playbooks/add-model/README.md"
+  "playbook": "docs/playbooks/add-model/README.md",
+  "validation": "validation.md",
+  "brief": "brief.md",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/"
  }
 }
