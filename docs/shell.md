@@ -18,7 +18,8 @@ History-stack router. Key functions:
 - `handleNavigation()`: Dispatches to `_showLanding` or `_loadView` (lazy-imports workspace).
 - `navigate(route, params?)`: Pushes to history stack.
 - `back()`: Pops history.
-- `MpiRadialMenu` context switching. Since MPI-356 both workspace contexts hold ONE item (`RADIAL_ITEMS` = Models) so hold-Tab emits `ui:open-model-picker` with no ring drawn; ops live in the prompt box's op strip. Apps joins the ring when the app library un-gates.
+- `MpiRadialMenu` context switching. Since MPI-356 both workspace contexts hold ONE item (`RADIAL_ITEMS` = Models) so hold-Tab emits `ui:open-model-picker` with no ring drawn (`_onTabDown` short-circuits any single-item context); ops live in the prompt box's op strip.
+  **Tab is being reclaimed — MPI-378.** User decision 2026-07-29: Tab becomes a *workspace flipper* (gallery ↔ last-used card, remembered per project in `project.json`, inert when the project has no cards). Do not "restore" operations to the ring or otherwise build on Tab meaning radial. Where the Models shortcut lands is an open decision on that card. Ctrl+Tab (dev-gated `radialMenu.devToggle`) is unaffected.
 
 ## overlayManager.js (`js/managers/overlayManager.js`)
 

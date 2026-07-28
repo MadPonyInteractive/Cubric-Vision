@@ -55,7 +55,7 @@ NOTE:    Viewer no longer forwards `loop-change`/`range-change` — block listen
 ### MpiCanvasViewer (Organism — js/components/Organisms/MpiCanvasViewer/)
 EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
          `crop-applied`  `{ item }` — crop completed; item is the new HistoryItem
-         `mask-ready`    `{ hasMask }` — mask painted or cleared
+         `mask-ready`    `{ hasMask }` — mask painted or cleared. Now ALSO fires mid-tool on stroke end (MPI-372): `InputController._endMaskStroke()` → `MpiCanvas onMaskStrokeEnd` → `_publishMaskState()` → `evaluateMask()`, emitting only when `hasMask` FLIPS. That is what unlocks mask-gated ops in the op strip while a mask tool stays open — before, mask state was published only when a tool was destroyed. **A tool that creates a mask by any route other than a brush stroke (shape commit, text detection) MUST emit this itself or call `evaluateMask()`.**
          `entry-loaded`  `{ idx, hasMask }` — image loaded for index
          `brush-changed` `{ type: 'brush'|'eraser' }` — brush type changed via hotkey
          `mask-points-changed` `{ count }` — a point prompt was added, removed or cleared (MPI-361)
