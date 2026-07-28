@@ -274,6 +274,43 @@ When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js
 
 **custom_nodes progress = indeterminate, never a byte ratio (MPI-231).** A GitHub `/archive/` zip is served with NO Content-Length → `stats.total`=0 → the denominator falls back to the tiny registry `seedBytes` (~15MB) while the numerator counts real streamed bytes; the following pip requirements phase has no honest up-front total either. A determinate bar overshoots (RES4LYF read `203 MB / 15 MB`). Fix: `_byteRatioExcludingNodes()` drops `type==='custom_nodes'` from BOTH sides on local (`_wireProgress`) + remote (`_onRemoteInstallEvent`); node ticks broadcast `indeterminate:true, phase:'preparing'`. Weights keep their real ratio (they send Content-Length). `MpiEngineInstall.setProgress` honors the flag (guarded by `!engineHasBytes`) → loading sweep + "Preparing dependencies…". The ComfyUI engine archive download/update is untouched — it uses the `engine:downloading` path with a real total, never this one.
 
+## `_createDepJob` is a WHITELIST — add every new dep field or it vanishes
+
+`_createDepJob(dep)` builds the runtime `depJob` by **explicitly listing fields**, and
+`modelJob.deps` (what the install loop iterates) holds those depJobs — not the registry
+objects. A field you add to `nodesDeps.js` / `dependencies.js` and do NOT add here is
+silently absent by the time the install runs, with no error anywhere.
+
+This has bitten twice: MPI-149 lost `pipPins` + `installRequirementsCommand` on the
+engine-deps/upgrade path (kornia floated → LTXVideo `pad` ImportError), and MPI-370's
+`requirementsDrop` would have been dead on the universal-workflow path — the exact path
+it exists to fix. Guard new fields with a test that asserts the passthrough, and
+negative-control it by removing the line and watching the test fail.
+
+## Platform-unresolvable requirements — `requirementsDrop` (MPI-370)
+
+pip fails the **whole** requirements file over one unresolvable name, so a single
+platform-specific line bricks install for an entire OS. `comfyui_controlnet_aux`'s pinned
+requirements.txt ends with an unmarked `onnxruntime-gpu`, which is CUDA-only and has never
+published a macOS wheel — every Mac user was permanently stuck at first install of any
+depth model, with Retry re-running the identical doomed resolve.
+
+```js
+requirementsDrop: { darwin: ['onnxruntime-gpu'] },   // keyed by process.platform
+```
+
+`_runCustomNodeInstall` rewrites `requirements.txt` on disk before **either** install path
+reads it (the `installRequirementsCommand` branch and the default `pip install -r`
+branch), matching the requirement NAME only — bare, or followed by a specifier, extra, or
+marker — so `onnxruntime-gpu-extra` is never caught. It writes only when a line actually
+changes, keeping unaffected platforms byte-identical and making re-runs no-ops.
+
+**Why not in the command string:** `runCustomCommand` (`routes/shared.js`) splits on
+spaces and `spawn`s directly — no shell. No `&&`, and no `python -c "multi word"` either.
+
+**Remote is unaffected** — the Pod bakes this node into a CUDA Linux image, so the wrapper
+never runs this install.
+
 ## Node commit-drift + `.mpi_node_commit` marker (MPI-222)
 
 A pinned custom-node commit bump (`dev_configs/node_lock.json`) used to leave the

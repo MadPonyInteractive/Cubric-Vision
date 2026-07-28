@@ -120,6 +120,14 @@
   newly generated images; images already in your project keep their original
   metadata.
 
+- **macOS: installing a model no longer fails partway through.** On Mac, setting up
+  any model that uses depth stopped with "Installation Failed" and a Retry button
+  that could never succeed — one of the components it downloads asked for a piece
+  of software that is only published for Windows and Linux graphics cards, so the
+  step failed every single time. Cubric Vision now skips that piece on Mac, where
+  it was never usable in the first place. Nothing else about the install changes,
+  and Windows and Linux are untouched.
+
 - **Gallery cards now match the picture inside them.** A card was laid out using
   the size you *asked* for rather than the size that came back, so whenever a
   model produced something a different shape — some of them adjust dimensions to

@@ -144,6 +144,29 @@ Expected public asset names:
 Update bundles are simple changed-file bundles for the first portable updater.
 Do not implement binary deltas for MPI-8.
 
+> **The ARCHIVE name above is FROZEN. Do not rename it (MPI-369).** Every already-
+> installed folder carries its own updater that matches this asset **by glob** —
+> `update.bat` (`CubricVision-windows-x64-update-v*.zip`), `update.sh`
+> (`^CubricVision-linux-x64-update-v.*\.zip$`), `update.command` (same shape) —
+> and those scripts ship inside the user's copy, not the release. Renaming the
+> asset makes every 1.0.1 / 1.1.0 / 1.2.0 install fail its next update with
+> "No matching update asset found", including the in-app update prompt (MPI-334).
+> If it must change, dual-upload the same bytes under both names for two or three
+> releases first, then retire the old name once installs have rolled over.
+
+> **The extracted ROOT FOLDER is `CubricVision-v<version>-update-only`** — and that
+> IS free to change, because the applier walks down to find the manifest. It was
+> `CubricVision-v<version>` through 1.2.0, which is visually indistinguishable from
+> the full artifact: it holds `app/`, `resources/` and the launchers, but NOT the
+> Electron runtime (the delta prunes it as unchanged). A user who unzipped it and
+> ran `start.vbs` got `start-with-terminal.bat` falling through to `npm start`,
+> which a normal machine does not have — it exits in milliseconds behind a hidden
+> window, with no log, because nothing ever ran. Keep the version early in the
+> name (MPI-62: Safari truncates long basenames and the version is what gets lost).
+
+Baseline manifests for the delta diff live in `release-baselines/` — see that
+folder's README for the per-release restamp step and the extraction recipe.
+
 ### Delta update details (MPI-56)
 
 `scripts/build-portable.mjs --from-manifest <path>` emits a true delta bundle (only changed/added files). Diff is file-level SHA256 only — never binary delta (contract forbids it). A file is included iff its sha256 is absent or different vs baseline; paths gone from the new set go in `manifest.delete[]`. `delete[]` always excludes PRESERVE prefixes (engine/, models/, user-data/, Documents). `alwaysKeep` = update-manifest.json + connector-manifest.json + launchers. Omitting `--from-manifest` = FULL bundle (`fromVersion:null`, first-release safe).

@@ -64,6 +64,21 @@ Every line is `[ts] [LEVEL] [category] …`, so the file is queryable. Use that 
 - Retention is byte-rotation ONLY (256 KB → `app.log.1`, one generation, overwritten). A startup line-trim used to also run; it was deleted in MPI-315 because it rewrote the file in place and swallowed its own errors. Do not reintroduce it — fix noise at the source instead of deleting evidence.
 - ComfyUI stdout is filtered out of the file but still goes to the **terminal** (`logger.consoleOnly`). For engine detail beyond what the log holds, ask the user for the terminal output. Known gap: ~132 boot-banner lines/boot still reach the file; unexplained, deliberately not chased (see MPI-315).
 
+### There are TWO app.log files — know which one you are asking for (MPI-369)
+
+`routes/logger.js` resolves `LOGS_DIR` from `process.env.APP_USER_DATA`, and **`main.js` only injects that into the forked server's env** (`buildServerEnv`), never its own. So:
+
+- **Server fork** (routes, downloads, comfy, everything `logger.*` in `routes/`) → `<userData>/logs/app.log`. Portable: `<portable-root>/user-data/logs/app.log`. This is the file to ask a user for.
+- **Main process** (`main.js`'s own `logger.*` calls) → falls back to `__dirname/../logs`, a DIFFERENT file that no support instruction names.
+
+Asking a user for the wrong one wastes a round trip — and if the failure is a boot crash, BOTH may be empty (see below).
+
+### A boot crash: what now exists, and what it cannot tell you (MPI-369)
+
+`main.js` installs `uncaughtException` + `unhandledRejection` handlers that write a `[FATAL] [main] …` line **synchronously** (`appendFileSync`) to `<userData>/logs/app.log` and raise `dialog.showErrorBox`. The sync write is load-bearing: `routes/logger.js` appends with `await`, which never resolves on a dying process, so before this a fatal boot error left literally nothing on disk.
+
+Still invisible: anything that kills the process before those handlers register (a require-time throw in `main.js`'s first nine lines), and anything that prevents Electron from starting at all. For those, ask the user to run the app from a terminal — `start-with-terminal.bat` on Windows — because main-process stdout never reaches any log file.
+
 ## Portable Builds
 
 The source repository workflow at `.github/workflows/build-portable.yml` is a
