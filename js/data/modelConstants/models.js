@@ -281,7 +281,9 @@ export const MODELS = [
         image: 'krea2-turbo-sfw.webp',
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
-        enhanceRecipe: 'flux',   // Cubric Prompt has no 'krea2' recipe
+        enhanceRecipe: 'krea-2',   // Prompt's own Krea 2 recipe (MPI-16). Note the id is
+                                   // 'krea-2', NOT 'krea2' — Prompt matches on its exact
+                                   // modelId and silently falls back to the FLUX recipe on a miss.
         supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false, turboToggle: true },
@@ -355,7 +357,7 @@ export const MODELS = [
         image: 'krea2-turbo-nsfw.webp',
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
-        enhanceRecipe: 'flux',
+        enhanceRecipe: 'krea-2',   // see the SFW card
         supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],
         capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false, turboToggle: true },
