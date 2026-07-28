@@ -52,12 +52,29 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three refreshed to the **v1.0.0 FULL (portable-stage)** manifests
-  (2026-06-10) from the 1.0.0 first-public-release build (mpi-ci run #25), so the
-  next build (1.0.1) deltas cleanly against 1.0.0. `toVersion: 1.0.0`,
-  `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 5501 files
-  - `linux-x64.json` — 5321 files
-  - `win32-x64.json` — 5358 files
-- First cycle where the `win32-x64.json` name is correct (MPI-66), so the next
-  Windows delta should finally be minimal instead of a ~390 MB full bundle.
+- All three refreshed to the **v1.2.0 FULL (portable-stage)** manifests
+  (2026-07-28, MPI-369) from the shipped 1.2.0 build, so 1.3.0 deltas against
+  1.2.0. `toVersion: 1.2.0`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6505 files
+  - `linux-x64.json` — 6325 files
+  - `win32-x64.json` — 6362 files
+- These had been left at 1.0.0 through 1.0.1, 1.1.0 and 1.2.0, so every "delta"
+  since was computed against 1.0.0 — correct, but far larger than needed (the
+  1.2.0 Windows update bundle reads `from 1.0.0 -> 1.2.0`, 1226 files, 90 MB).
+  **Restamp these as part of cutting a release**, not later.
+
+### Extracting a baseline from a shipped artifact
+
+The manifest lives at `resources/cubric/update-manifest.json` in the FULL
+artifact (never the `-update-` one):
+
+```sh
+unzip -p CubricVision-windows-x64-v<ver>.zip \
+  'CubricVision-windows-x64-v<ver>/resources/cubric/update-manifest.json' > win32-x64.json
+tar -xzOf CubricVision-linux-x64-v<ver>.tar.gz \
+  'CubricVision-linux-x64-v<ver>/resources/cubric/update-manifest.json' > linux-x64.json
+```
+
+Then assert `fromVersion: null`, `artifact.kind: portable-stage`, and a file count
+in the thousands. A few hundred files means you grabbed the delta bundle by
+mistake — the 0.0.5 failure mode described above.

@@ -1013,7 +1013,12 @@ async function main() {
   // means even if THIS gets truncated the user still sees the version. The
   // applier walks down to find the manifest, so the root name is transparent.
   const updateArchiveName = `CubricVision-${config.label}-${opts.arch}-update-v${opts.version}`;
-  const updateRootName = `CubricVision-v${opts.version}`;
+  // MPI-370/369: the root name is ALSO the only label a user sees after unzipping,
+  // and the old `CubricVision-v<ver>` was indistinguishable from the full artifact —
+  // it holds app/, resources/ and the launchers, but NOT the Electron runtime, so
+  // double-clicking start.vbs in it dies in milliseconds with no window and no log.
+  // A real user lost an evening to that. Version stays first (see MPI-62 above).
+  const updateRootName = `CubricVision-v${opts.version}-update-only`;
   const stageRoot = path.resolve(opts.stageDir, rootName);
   const updateStageRoot = path.resolve(opts.stageDir, updateRootName);
 

@@ -8,6 +8,30 @@ const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
 const secretsStore = require('./main/secretsStore');
 const floatLatent = require('./main/floatLatentWindow.cjs');
 
+// A fatal boot error used to leave NOTHING behind: main had no handlers, so the
+// process died silently, and routes/logger appends with `await` — a dying process
+// exits before that promise resolves. A user's "it just flashes and closes" report
+// therefore carried zero evidence. Write synchronously and show a dialog so there is
+// always something to send. Exiting matches Node's default action for both events,
+// which is what happened before this handler existed. (MPI-369)
+function reportFatal(kind, err) {
+  const line = `[${new Date().toISOString()}] [FATAL] [main] ${kind}: ${err && err.stack ? err.stack : err}\n`;
+  try {
+    // Mirrors where the server fork logs: portable redirects userData, and this
+    // runs before app.setPath() may have applied it, so read the env directly.
+    const root = process.env.CUBRIC_E2E_USER_DATA
+      || process.env.CUBRIC_USER_DATA_ROOT
+      || app.getPath('userData');
+    fs.mkdirSync(path.join(root, 'logs'), { recursive: true });
+    fs.appendFileSync(path.join(root, 'logs', 'app.log'), line);
+  } catch { /* disk unwritable — the dialog is the only channel left */ }
+  try { dialog.showErrorBox('Cubric Vision failed to start', line); } catch { /* no display available */ }
+  app.exit(1);
+}
+
+process.on('uncaughtException', (err) => reportFatal('uncaughtException', err));
+process.on('unhandledRejection', (err) => reportFatal('unhandledRejection', err));
+
 const APP_CONFIG = loadAppConfig();
 
 // Mask layer TEMP store — session-scoped, cleared on quit, stale dirs pruned at boot.

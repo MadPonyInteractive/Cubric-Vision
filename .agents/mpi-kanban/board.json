@@ -1,12 +1,12 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 368,
+ "next_id": 371,
  "columns": {
   "todo": [
+   "MPI-368",
    "MPI-367",
    "MPI-366",
    "MPI-365",
-   "MPI-361",
    "MPI-358",
    "MPI-357",
    "MPI-355",
@@ -30,6 +30,9 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-370",
+   "MPI-369",
+   "MPI-361",
    "MPI-346",
    "MPI-259",
    "MPI-4"
@@ -742,6 +745,21 @@
    "task": "MPI-362",
    "to": "doing",
    "note": "Mask composite (Add/Subtract) in image history - Sharp server-side, feathered mask, result appended as a new history entry."
+  },
+  {
+   "at": "2026-07-28T00:50:00Z",
+   "type": "task.moved",
+   "task": "MPI-361",
+   "from": "todo",
+   "to": "doing",
+   "note": "Masking-methods research done against the live bench + web. brief.md written: Impact Mask Pointer gives click-points + confidence on the sam_vit_b we already ship (zero download); SAM3 adds text/box for 1.75GB."
+  },
+  {
+   "at": "2026-07-28T01:05:00Z",
+   "type": "task.created",
+   "task": "MPI-368",
+   "to": "todo",
+   "note": "Shape masking - rectangle / triangle / ellipse gizmo with rotate-about-handle, committed to the mask as Add or Subtract. Follow-up split out of the MPI-361 session."
   },
   {
    "at": "2026-07-28T02:30:00Z",
