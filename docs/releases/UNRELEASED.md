@@ -8,6 +8,20 @@
 
 ## whatIsNew
 
+- **New model: FLUX.2 Klein.** The fastest image model in Cubric Vision, and the
+  only one that can take things *out* of a picture — paint over an object, hit
+  **Remove**, and it's gone in about four seconds. It covers the full set in one
+  model: generate from text, reshape an existing image, follow a depth
+  reference, edit with up to three reference images, clean up detail and upscale,
+  with eight style looks available on every one of those. Quality is modest next
+  to Krea 2 — this one is built for speed and for tidying images up, so reach for
+  it when you want an answer now or something removed, and for Krea 2 when you
+  want the finished piece.
+
+  > Tip: **Depth** on this model takes *two* images if you give it two. The first
+  > supplies the pose, the second supplies who is in it — so you can put your own
+  > character into a pose you found, without describing either of them.
+
 - **Krea 2 edits follow your instructions much more closely.** The edit path has
   been rebuilt around the newer Krea 2 edit engine. Your reference image is now
   fitted to the shape of the picture you're making, so asking for a new setting
@@ -105,3 +119,11 @@
   byte-for-byte the same image, just without the hidden payload. Applies to
   newly generated images; images already in your project keep their original
   metadata.
+
+- **Gallery cards now match the picture inside them.** A card was laid out using
+  the size you *asked* for rather than the size that came back, so whenever a
+  model produced something a different shape — some of them adjust dimensions to
+  suit the picture — the card was cut to the wrong shape and the image sat inside
+  it with padding around the edges. Opening the entry always showed it correctly;
+  only the grid was wrong. Cards are now measured from the finished image, so the
+  grid lays out cleanly and the small padding some models produced is gone.

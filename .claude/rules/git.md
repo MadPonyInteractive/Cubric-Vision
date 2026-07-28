@@ -21,6 +21,18 @@ Safe recipe for a co-owned file:
 3. Commit the INDEX: bare `git commit -n`, **no pathspec at all**. `-n` bypasses the lint-staged stash/reapply — run eslint yourself first; you are opting out of the hook, not the check.
 4. Confirm the sibling's files are still `M` (modified, uncommitted) afterwards.
 
+**When the hunks INTERLEAVE, step 1 has no answer — build the blob instead (MPI-354).** In a
+structured file (`board.json`: adjacent `doing`/`done` arrays) your edit and theirs can land in
+ONE hunk, so no hunk-level filter separates them. Reconstruct the file you want to commit from
+`HEAD` and stage it directly, bypassing the working tree entirely:
+`git show HEAD:<file> > tmp` → apply ONLY your changes to `tmp` as **textual** replacements
+(never `JSON.parse`/`stringify` — it reformats the whole file: `board.json` is 1-space, `task.json`
+2-space, and Windows flips LF→CRLF) → assert their markers are absent (`next_id` unbumped, their
+ids not in your columns) → `git hash-object -w tmp` → `git update-index --cacheinfo 100644,<sha>,<file>`
+→ bare `git commit -n`. `git status` then shows the file as `MM`: your version staged, theirs still
+in the tree. Note the node/bash `/tmp` split on Windows — bash writes `/tmp`, node reads `C:\tmp`;
+use the session scratchpad for the intermediate file.
+
 **A READ can race a write too.** `grep`, `git diff` and `git status` issued while a sibling session is rewriting a co-owned file return a partial or empty view of it — indistinguishable from a clobber. `git diff` also goes quiet the moment a sibling commits your hunks for you. Before restoring from a backup, re-applying edits, or telling the user work was lost: **re-run the read**, and confirm against `git log`/`git show`. (MPI-360 raised two false alarms this way in one session, one of them a "failing `release:check`" that passed on the next run.)
 
 Already committed their work? Nothing is lost: `git tag backup HEAD` → `git reset --soft HEAD~1` → `git reset HEAD -- <co-owned files>` → re-apply your filtered patch → commit the index → verify `git status --short` shows their files back as `M`.

@@ -306,6 +306,16 @@ commit is on disk and reinstalls on mismatch, **both engines**.
   `{type,filename}` falls back to `mpi_models/`. The drift pre-wipe nukes the whole node
   folder incl. in-folder weights, but a `targetPath` weight self-heals (it's a tracked
   dep → boot-install re-fetches it). Guard tests: `tests/node-drift.test.cjs`.
+- **Parking a node = rename to `.disabled`, NOTHING ELSE (MPI-354).** ComfyUI skips a
+  `custom_nodes` entry only when its name ends in `.disabled` (`nodes.py`
+  `if module_path.endswith(".disabled"): continue`). A descriptive suffix like
+  `ComfyUI-MpiNodes.stale-<sha>` still loads, so the old copy and the live one BOTH
+  import — and if the pack registers a route (MpiNodes' `POST /mpi/reload-extra-paths`)
+  aiohttp refuses the duplicate and ComfyUI dies at boot with
+  `RuntimeError: Added route will never be executed, method POST is already registered`.
+  The traceback names only `aiohttp/web_urldispatcher.py`, never the pack, so it reads
+  like a version break. **`ls custom_nodes/` for two copies of one pack BEFORE reading
+  the traceback.**
 
 ### 2. ComfyUI Process State
 The Node.js backend tracks the active python process in memory (`processState.activeComfyProcess`). 
