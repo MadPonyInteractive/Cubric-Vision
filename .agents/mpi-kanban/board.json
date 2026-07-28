@@ -5,7 +5,6 @@
   "todo": [
    "MPI-372",
    "MPI-368",
-   "MPI-367",
    "MPI-366",
    "MPI-365",
    "MPI-358",
@@ -31,6 +30,7 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-367",
    "MPI-370",
    "MPI-369",
    "MPI-361",
@@ -70,7 +70,7 @@
    "type": "task.created",
    "task": "MPI-372",
    "to": "todo",
-   "note": "PromptBox must stay reachable while a mask tool is active. Today prompt is a RAIL TOOL, so masking and adjusting generation settings are mutually exclusive modes - mask, switch to prompt, tweak a setting, switch back. With the mask family now at two tools and Shapes + Text coming, that round trip sits in the middle of the flow the product is built around. User words: extremely annoying. Design job, not a CSS job - prompt mode swaps the viewer surface via swapToPreview / swapToCanvas."
+   "note": "PromptBox must stay reachable while a mask tool is active. Today prompt is a RAIL TOOL, so masking and adjusting generation settings are mutually exclusive modes - mask, switch to prompt, tweak a setting, switch back. With the mask family now at two tools and Shapes + Text coming, that round trip is the dominant annoyance of the whole masking flow. User words: extremely annoying."
   },
   {
    "at": "2026-07-28T11:20:00Z",
@@ -79,6 +79,14 @@
    "from": "doing",
    "to": "done",
    "note": "USER-VERIFIED LIVE. Mask surface is now a tool family: MpiToolOptionsMaskDetect + MpiToolOptionsMaskPoints, each mounting the shared MpiMaskDetectRow and MpiMaskStrip (brush pair optional, hidden on Points). MpiToolOptionsMask deleted. One mask toolKey keeps settings across swaps. Both traps proven headlessly: Points destroy() restores right-click, and no destroy() clears the paint layers. A defect the user found while verifying turned out to be an MPI-361 layer-ORDER bug - auto picks now union LAST so a detection beats an older erase - fixed in 3 sites, 12/12 checks with a negative control, and also user-verified."
+  },
+  {
+   "at": "2026-07-28T11:00:00Z",
+   "type": "task.moved",
+   "task": "MPI-367",
+   "from": "todo",
+   "to": "doing",
+   "note": "Content pass starts with the detail op. User correction: detail is LOCALISED img2img, not just a refiner - the denoise slider is the whole story. Low denoise refines what is under the mask; above ~0.50 it behaves like inpaint, so a user can paint an empty area and ask for something that is not there yet, or remove something by naming what should be there instead. The shipped copy claims detail only improves what is already there, which undersells the op."
   },
   {
    "at": "2026-07-28T08:30:00Z",

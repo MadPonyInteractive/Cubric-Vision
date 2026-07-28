@@ -460,15 +460,27 @@ export const commands = {
     detail: {
         label: 'Detail',
         short: 'detail',
-        info: 'Detail — refine only the masked area with more detail',
+        info: 'Detail — regenerate only the masked area; denoise sets how far it goes',
+        // Denoise is the whole story here and the copy has to say so (MPI-367): the
+        // op is localised img2img, not a fixed "refiner". At the 0.30 default it
+        // polishes what is under the mask; past ~0.50 it drifts far enough to add or
+        // replace, which is Inpaint's job done with the source still visible. The
+        // resolution and multi-mask lines are the user's own hard-won practice, not
+        // theory — a small mask on a small image has too few pixels to rebuild, and
+        // bare nouns are what stops a multi-mask run hallucinating.
         help: {
             body: [
-                'Refines ONLY the masked area. The model can see what is under your mask and works from it, so this improves what is already there rather than replacing it.',
-                'Name what the masked area IS. A short noun phrase is enough — the op already knows its job is "more detail".',
+                'Localised image-to-image: only the masked area is regenerated, and unlike Inpaint the model CAN see what is under your mask. How far it strays from that is set by Denoise, not by the prompt.',
+                'Around the 0.30 default it refines what is already there. Above 0.50 it replaces — paint a bare area and it will put your prompt there even if nothing like it is in the picture.',
+                'The prompt is OPTIONAL, and empty is the safe choice when you have masked several things at a low denoise. If you do prompt with several masks, just NAME each masked thing — "chair, tree, pen". Bare nouns keep every area on its own subject; sentences invite the model to invent.',
+                'It needs pixels to work with. A small mask on a small image has too little to rebuild and comes out weak — upscale first if you want a big change there. Size also sets how much denoise you need: a small image moves far on a modest denoise, a big one needs more to move as far. Small image + big mask = big changes; big image + small mask = refinement.',
             ],
             examples: [
-                { prompt: 'her face', note: 'Names the region so the refiner stays on target.' },
-                { prompt: 'make it sharper and higher quality', bad: true, note: 'That is the op, not the subject. Say what is in the mask.' },
+                { prompt: '', note: 'Several areas masked, low denoise: no prompt at all. Each area is refined in place.' },
+                { prompt: 'chair, tree, pen', note: 'Three masks, three nouns. Each one lands on its own area instead of the model guessing.' },
+                { prompt: 'your character LoRA trigger word', note: 'Mask the head — or the whole body — with a character LoRA loaded. The person becomes your character.' },
+                { prompt: 'plain brick wall', note: 'How you remove: raise the denoise and name what takes the object\'s place.' },
+                { prompt: 'make it sharper and higher quality', bad: true, note: 'That is the op, not the subject. Name what is in the mask.' },
             ],
         },
         progressLabel: 'Detailing',
@@ -478,7 +490,11 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         requiresMask: true,
-        promptRequired: true,
+        // FALSE since MPI-367: an empty prompt is a first-class way to run this op
+        // (several masks, low denoise, refine in place) and the help now teaches it.
+        // The flag is metadata only — nothing in the UI gates on it — but leaving it
+        // true would contradict the guide the moment something starts reading it.
+        promptRequired: false,
         // styleSelect/stylization are listed but only mount for a model whose graph
         // carries the rack on THIS op — see modelShowsStyleRack. Klein's one master
         // graph does; Krea2's separate detailer file does not.
