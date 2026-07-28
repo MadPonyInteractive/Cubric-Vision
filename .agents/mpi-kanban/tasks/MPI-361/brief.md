@@ -260,3 +260,41 @@ A proves the UI cheaply; B swaps the segmenter behind it without touching the UI
 
 Open question for the user: does the old YOLO path stay as a fast Face/Hand/Person shortcut, or
 get removed once points land?
+
+---
+
+## Plan Drift — 2026-07-28, user direction after Phase A verification
+
+### Landed in this session (colour defect close-out)
+
+- **Detection colour split.** `MaskManager` gained `autoCanvas` — a DISPLAY-ONLY twin of
+  `maskCanvas` holding `(⋃autoPickMasks[selected]) AND NOT subtract`, rebuilt in
+  `_recompositeAuto()` and skipped entirely when nothing is selected (the brush hot path pays
+  nothing). `MpiCanvas._renderOverlay()` draws it as a second pass tinted `--accent-ok` green on
+  top of the white union, through a shared `_recolorMaskLayer()` helper that also absorbed the
+  old invert branch's scratch buffer. **Export is untouched** — `getURL()` /
+  `getMaskDataURL()` still flatten the single unioned `maskCanvas`.
+- **Add / Subtract now show in BOTH sources.** The `commitRow.hidden = !_pointsMode` gate is
+  gone; `el.bakeAutoPicks()` was already mode-agnostic (it clears thumbs, the pick store and the
+  points in one go), so a YOLO detection now renders green and waits for Add or Subtract exactly
+  like a points run.
+
+### Agreed direction — the mask tool becomes a TOOL FAMILY (own card, not this one)
+
+The user wants the mask surface split into real sibling tools rather than one panel with a
+source radio:
+
+| Tool | Source | Status |
+|---|---|---|
+| **Points** | `SAMDetectorCombined(mask-points)` on the shipped `sam_vit_b` weight | Phase A, shipped |
+| **Detect** | `UltralyticsDetectorProvider` — Face / Hair / Hand / Person | shipped, predates this card |
+| **Shapes** | rectangle / triangle / ellipse gizmo, Add or Subtract | **MPI-368** |
+| **Text** | `SAM3_Detect` + `CLIPTextEncode` — type what to mask, press Detect | **Phase B of this card** |
+
+**Answered for the user:** yes, text-prompt masking is on THIS card — it is Phase B (the 1.75GB
+`sam3.1_multiplex_fp16` weight, licence shippable, acceptance criteria already written above).
+It becomes the fourth tool when Phase B lands; it is not a fifth thing to scope.
+
+Every tool in the family carries the SAME bottom strip — brush, eraser, invert, clear, opacity.
+That strip must be extracted into one shared component rather than copy-pasted per tool, so it is
+updated in one place. That extraction is a component refactor and belongs on its own card.

@@ -65,10 +65,46 @@ bench's 8.97% whole-person). `mask_hint_use_negative` is now `Small` in the grap
 > I've used, it works really well."* Click-point masking, negative points,
 > Scope and Add / Subtract all behave in the app.
 >
-> **OPEN — detection colour.** A detected region renders in the same white as the
-> painted mask, so detecting *inside an area that is already masked* is invisible —
-> there is no way to see what the run actually returned. It should draw in a
-> distinct colour (user suggests green). Rest of the UI polish is deferred with it.
+### Step 6 — detection colour — PASS (USER-VERIFIED 2026-07-28)
+
+> **User verdict:** *"Yeah, it looks great. It's working really well."*
+
+The defect: a detected region rendered in the same white as the painted mask, so a
+detection landing *inside an already-masked area* was invisible. Root cause was
+structural, not cosmetic — `MaskManager._recomposite()` unions the manual layer and
+the selected auto-picks into ONE `maskCanvas` and `MpiCanvas._renderOverlay()` draws
+that single canvas, so the two are indistinguishable by construction.
+
+Fixed by splitting the **display** and never the **export**:
+
+- `MaskManager` gained `autoCanvas` + `hasAutoLayer`, built by a new
+  `_recompositeAuto()` = `(⋃autoPickMasks[selected]) AND NOT subtract` — the same
+  math as the union minus the manual layer. It **returns early when nothing is
+  selected**, so the per-dab brush hot path pays nothing for the extra pass.
+  Sized in `init()`, torn down in `destroy()`.
+- `MpiCanvas._renderOverlay()` draws it as a second pass tinted `MASK_AUTO_FILL`
+  (`--accent-ok`, the same green as a positive dot), inside the same
+  `globalAlpha = maskOpacity` block, above the union and below the dots.
+- The old `displayInverted` scratch-buffer recolor was factored into a shared
+  `_recolorMaskLayer(src, color, W, H)` used by both branches — one buffer reused
+  across both calls in a frame (safe: `drawImage` copies synchronously). Its
+  `eslint-disable mpi/no-hardcoded-hex-color` went away with the `'#000'` literal,
+  replaced by a `MASK_INVERT_FILL` constant beside the other stage colours.
+- **Export untouched.** `getURL()` / `getMaskDataURL()` still flatten the single
+  unioned `maskCanvas` every downstream mask consumer reads.
+
+Also landed with it — **Add / Subtract now show in BOTH sources.** The
+`commitRow.hidden = !_pointsMode` gate in `MpiToolOptionsMask` is gone;
+`el.bakeAutoPicks()` was already mode-agnostic (it clears thumbs, the pick store and
+the points together), so a YOLO detection renders green and waits for Add or Subtract
+exactly like a points run.
+
+User-confirmed in the app across four screenshots: a points run returned the cat in
+green on top of a white painted blob; Add flattened it to white; Detect / Face
+returned the face in green over the white hair mask with Add / Subtract present.
+
+Files: `MaskManager.js`, `MpiCanvas.js`, `MpiToolOptionsMask.js`. `node --check` ×3
+and `eslint` ×3 clean; no orphan references left (`_syncCommitRow`, `_maskInvertBuf`).
 
 The record below is the pre-verification state, kept for the file list.
 

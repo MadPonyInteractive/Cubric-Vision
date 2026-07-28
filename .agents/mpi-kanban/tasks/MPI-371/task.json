@@ -1,0 +1,31 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-371",
+ "title": "Mask tool family - split Points / Detect / Shapes / Text into real tools + one shared strip",
+ "description": "Today ONE tool (MpiToolOptionsMask) carries every masking method behind a Detect / Points source radio, and its bottom strip (brush, eraser, invert, clear, opacity) is inline in that component. As methods multiply this stops scaling: MPI-368 adds Shapes and MPI-361 Phase B adds Text, and each would either bloat the same panel or copy-paste the strip.\n\nSplit the mask surface into a TOOL FAMILY under the MASK rail group, one tool per method:\n  - Points  - SAMDetectorCombined(mask-points) click prompts. SHIPPED (MPI-361 Phase A).\n  - Detect  - UltralyticsDetectorProvider Face / Hair / Hand / Person. SHIPPED, predates MPI-361.\n  - Shapes  - rectangle / triangle / ellipse gizmo. MPI-368.\n  - Text    - SAM3_Detect + CLIPTextEncode, type what to mask then press Detect. MPI-361 Phase B.\n\nEvery tool in the family shows the SAME bottom strip: paint / erase toggle, invert mask, clear mask, opacity slider. That strip becomes ONE shared component mounted by each tool, so it is changed in one place. Extract it from MpiToolOptionsMask rather than reinventing it - the current wiring (viewer.el.setMaskBrushMode / setMaskInverted / clearMask / setMaskOpacity, the mask.brush.toolbar + mask.eraser.toolbar hotkeys, and settings:tool:update persistence) already works and must survive the move intact.\n\nANSWERED BY THE USER 2026-07-28: (1) RAIL - one icon per tool, all under the existing MASK section. No switcher; they all live in the same group so it does not read as clutter. Revisit a switcher only if the family outgrows the rail. (2) SETTINGS - they persist. (3) The shared strip needs the brush + eraser pair to be OPTIONAL (a prop or variant), because the Points tool has no use for them - there the user only places points. Invert, clear and opacity stay on every tool.\n\nDESIGN CHECK that falls out of (3): Add bakes the detected region into manualCanvas, and the brush is how a user cleans that up by hand. With no brush on the Points tool, cleanup means switching to a tool that has one. Confirm that is the intent when the split is built.\n\nBLAST RADIUS to sweep before coding: js/components/Organisms/MpiToolOptionsMask/ (the component being split), js/shell/preloadStyles.js (every new component registers its css), js/components/types.js (props documented per component), the tool rail / workspace routing that mounts the options panel, hotkeyRegistry ids for the brush toggles, and getToolSettings defaults in js/data/projectModel.js. Read .claude/rules/components.md and docs/component-contracts.md first - the teardown contract (destroy() must undo every Events.on / Hotkeys.bind) is where a split like this usually leaks.\n\nNOTE: MpiToolOptionsMask.destroy() currently calls viewer.el.setMaskPointsMode(false) because points mode owns the right mouse button and suppresses the image context menu. Whatever owns that lifecycle after the split MUST keep doing it, or right-click stays broken after leaving the tool.",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-28T08:30:00Z",
+ "updated_at": "2026-07-28T08:30:00Z",
+ "labels": [
+  "ui",
+  "masking",
+  "refactor",
+  "components"
+ ],
+ "acceptance": [
+  "Points, Detect and (when they land) Shapes and Text are separate tools, not branches of one source radio",
+  "The brush / eraser / invert / clear / opacity strip is ONE shared component, mounted by every tool in the family - not duplicated per tool",
+  "The shared strip takes a prop that hides the brush + eraser pair; the Points tool mounts it that way. Invert, clear and opacity are always present",
+  "Each tool gets its own rail icon inside the existing MASK group - no tool switcher",
+  "The shared strip keeps everything the current inline version does: brush + eraser hotkeys via hotkeyRegistry ids, invert active-state styling, opacity persisted through settings:tool:update, and getToolSettings restore on mount",
+  "Every extracted component registers its .css in js/shell/preloadStyles.js and documents its props in js/components/types.js",
+  "Teardown is intact: leaving any mask tool restores the image context menu (setMaskPointsMode(false)) and unbinds every hotkey / Events.on the tool created",
+  "Switching between mask tools does NOT clear the painted mask - manual + subtract layers survive the swap"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "events": "events.jsonl"
+ }
+}

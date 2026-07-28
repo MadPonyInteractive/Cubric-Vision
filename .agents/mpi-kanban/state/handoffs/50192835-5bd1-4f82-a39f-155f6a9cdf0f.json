@@ -4,7 +4,9 @@
   "generated_at": "2026-07-28T06:45:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
+  "resolved_at": "2026-07-28T08:30:00Z",
+  "resolution": "next_action DONE and user-verified 2026-07-28: the detection colour was fixed as a DISPLAY-only split (MaskManager.autoCanvas + MpiCanvas._recolorMaskLayer), export untouched, and Add / Subtract were un-gated for the YOLO detector. The UI-polish question was answered by the user - the mask surface becomes a tool family (Points / Detect / Shapes / Text) with one shared brush strip, carded as MPI-371. Still open on MPI-361: the docs home for click-point masking, and Phase B (SAM3 text prompts).",
   "session": {
     "name": "MPI-361 Phase A implementation - click-point masking shipped and user-verified",
     "branch": "master"

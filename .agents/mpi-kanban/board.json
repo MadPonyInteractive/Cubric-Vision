@@ -1,8 +1,9 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 371,
+ "next_id": 372,
  "columns": {
   "todo": [
+   "MPI-371",
    "MPI-368",
    "MPI-367",
    "MPI-366",
@@ -61,8 +62,21 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-28T01:00:00Z",
+ "updated_at": "2026-07-28T08:30:00Z",
  "events": [
+  {
+   "at": "2026-07-28T08:30:00Z",
+   "type": "task.created",
+   "task": "MPI-371",
+   "to": "todo",
+   "note": "Mask tool family - split Points / Detect / Shapes / Text into real sibling tools and extract the shared bottom strip (brush, eraser, invert, clear, opacity) into ONE component. User direction after MPI-361 Phase A verified. Traps carried in the brief: destroy() must restore the image context menu via setMaskPointsMode(false), and a tool swap must not wipe the manual + subtract layers. Two open questions for the user first - rail shape and whether per-tool settings split off the single 'mask' toolKey."
+  },
+  {
+   "at": "2026-07-28T08:30:00Z",
+   "type": "task.updated",
+   "task": "MPI-361",
+   "note": "Detection colour FIXED and USER-VERIFIED. Root was structural: _recomposite() unioned manual + auto picks into ONE maskCanvas so a detected region was indistinguishable from a painted one. Split the DISPLAY, never the export - MaskManager gained autoCanvas (auto picks AND NOT subtract, skipped entirely when nothing is selected so the brush hot path is unaffected) and MpiCanvas draws it as a second pass tinted --accent-ok green through a new shared _recolorMaskLayer() that also absorbed the old displayInverted scratch buffer. getURL() / getMaskDataURL() still emit the single unioned B/W mask. Add / Subtract un-gated so a YOLO detection gets the same green-then-commit flow. Attention cleared; card stays doing/validating for the docs home + Phase B."
+  },
   {
    "at": "2026-07-28T00:15:00Z",
    "type": "task.created",
