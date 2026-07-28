@@ -1,8 +1,8 @@
 {
   "id": "63093cae-c4df-499d-9fe9-c92e3c3cf490",
   "revision": 0,
-  "last_node_id": 569,
-  "last_link_id": 857,
+  "last_node_id": 570,
+  "last_link_id": 859,
   "nodes": [
     {
       "id": 2,
@@ -9427,44 +9427,6 @@
       "bgcolor": "#3f5159"
     },
     {
-      "id": 111,
-      "type": "PreviewImage",
-      "pos": [
-        9888.341913532799,
-        2535.5603203402675
-      ],
-      "size": [
-        899.8249515852926,
-        1153.89996867842
-      ],
-      "flags": {},
-      "order": 313,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 510
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "title": "Output_Image",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.28.0",
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 359,
       "type": "PreviewImage",
       "pos": [
@@ -9623,8 +9585,8 @@
           "name": "any",
           "type": "*",
           "links": [
-            510,
-            530
+            530,
+            858
           ]
         },
         {
@@ -13525,7 +13487,7 @@
         270
       ],
       "flags": {},
-      "order": 314,
+      "order": 313,
       "mode": 4,
       "inputs": [
         {
@@ -14219,6 +14181,81 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 111,
+      "type": "PreviewImage",
+      "pos": [
+        10022.171110889543,
+        2527.2536805043305
+      ],
+      "size": [
+        899.8249515852926,
+        1153.89996867842
+      ],
+      "flags": {},
+      "order": 315,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 859
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_Image",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 570,
+      "type": "MpiClearVram",
+      "pos": [
+        9773.092541470012,
+        2538.020314709109
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 314,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 858
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            859
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4709e344671c395192bbec971b33179e6ee518ad",
+        "Node name for S&R": "MpiClearVram"
+      }
     }
   ],
   "links": [
@@ -15991,14 +16028,6 @@
       "FLOAT"
     ],
     [
-      510,
-      318,
-      0,
-      111,
-      0,
-      "IMAGE"
-    ],
-    [
       513,
       334,
       0,
@@ -17109,6 +17138,22 @@
       237,
       0,
       "IMAGE"
+    ],
+    [
+      858,
+      318,
+      0,
+      570,
+      0,
+      "*"
+    ],
+    [
+      859,
+      570,
+      0,
+      111,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [
@@ -17248,10 +17293,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8140274938683988,
+      "scale": 0.1,
       "offset": [
-        3085.4627736448065,
-        -1663.7693410650904
+        5527.142267207055,
+        3629.8438480982095
       ]
     },
     "reroutes": [
