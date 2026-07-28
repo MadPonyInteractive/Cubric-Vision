@@ -23,7 +23,7 @@ History-stack router. Key functions:
 ## overlayManager.js (`js/managers/overlayManager.js`)
 
 Stack-based overlay controller. Multiple overlays can be visible simultaneously, each at its own z-index.
-- `Overlays.request({ show, hide, id })`: Pushes onto stack, calls `show()` immediately, returns `{ depth, zIndex }` — caller applies z-index to DOM nodes.
+- `Overlays.request({ show, hide, id })`: Pushes onto stack, calls `show()` immediately, returns `{ depth, zIndex }` — caller applies z-index to DOM nodes. **Emits `ui:close-all-popups` `{ reason: 'overlay-open' }` BEFORE showing** — so a popup that opens an overlay from inside itself dismisses itself unless its own handler exempts that reason (MpiSlideOver and the PromptBox parameters popup both do; MPI-360).
 - `Overlays.release(instance)`: Splices instance out of stack (any position).
 - `Overlays.closeTopOverlay()`: Calls `hide()` on top of stack only (Escape key).
 - `Overlays.isTop(instance)`: Returns true if instance is current top — use to gate Enter hotkeys.

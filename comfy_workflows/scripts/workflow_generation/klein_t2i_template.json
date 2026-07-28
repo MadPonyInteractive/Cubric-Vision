@@ -615,7 +615,7 @@
   "111": {
     "inputs": {
       "images": [
-        "318",
+        "570",
         0
       ]
     },
@@ -3017,6 +3017,18 @@
     "class_type": "AIO_Preprocessor",
     "_meta": {
       "title": "AIO Aux Preprocessor"
+    }
+  },
+  "570": {
+    "inputs": {
+      "passthrough": [
+        "318",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

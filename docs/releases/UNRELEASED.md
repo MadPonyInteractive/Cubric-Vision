@@ -65,6 +65,17 @@
   text-to-image on its own, and the operation you actually chose comes back the
   moment you add an image again.
 
+- **Every operation now explains how to prompt it.** Operations want completely
+  different prompts and nothing in the app said so — Inpaint wants you to
+  describe what *should be there* (and erases the masked area entirely if you
+  leave the prompt empty), Upscale is usually best with no prompt at all, and
+  Edit wants an instruction rather than a description. Open the parameters popup
+  and there's now a **?** above the operation strip: it opens a short guide for
+  whichever operation you're on — what the prompt is for, a couple of examples,
+  and the mistake people usually make. It follows your model too, so the SDXL
+  family is pointed at comma-separated tags while the newer models are pointed
+  at plain sentences.
+
 - **Choosing a model is a full-screen contact sheet.** The model dropdown is now
   a grid of preview tiles like the Model Library, so you pick by looking at the
   work rather than reading names. Holding **Tab** opens it straight away — the

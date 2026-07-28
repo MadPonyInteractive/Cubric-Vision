@@ -21,4 +21,6 @@ Safe recipe for a co-owned file:
 3. Commit the INDEX: bare `git commit -n`, **no pathspec at all**. `-n` bypasses the lint-staged stash/reapply — run eslint yourself first; you are opting out of the hook, not the check.
 4. Confirm the sibling's files are still `M` (modified, uncommitted) afterwards.
 
+**A READ can race a write too.** `grep`, `git diff` and `git status` issued while a sibling session is rewriting a co-owned file return a partial or empty view of it — indistinguishable from a clobber. `git diff` also goes quiet the moment a sibling commits your hunks for you. Before restoring from a backup, re-applying edits, or telling the user work was lost: **re-run the read**, and confirm against `git log`/`git show`. (MPI-360 raised two false alarms this way in one session, one of them a "failing `release:check`" that passed on the next run.)
+
 Already committed their work? Nothing is lost: `git tag backup HEAD` → `git reset --soft HEAD~1` → `git reset HEAD -- <co-owned files>` → re-apply your filtered patch → commit the index → verify `git status --short` shows their files back as `M`.
