@@ -54,6 +54,11 @@
     overflow-y: auto;
     background: var(--surface-canvas);
     border-left: 1px solid var(--line);
+    /* Clearance for the PromptBox op strip: it hovers above the prompt bar
+     * (position:absolute, bottom:100%) and lands on the bottom ~35px of this
+     * column, so without it the last history card sits under the strip and
+     * cannot be scrolled clear (MPI-372). */
+    padding-bottom: 2.5rem;
 }
 
 /* ── Inspector tab strip ─────────────────────────────────────────────────── */

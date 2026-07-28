@@ -70,6 +70,18 @@ export class InputController {
         return { x: this.currentMouseX, y: this.currentMouseY };
     }
 
+    /**
+     * End an in-progress paint/erase stroke and announce it. Only fires when a
+     * stroke was actually running, so it is one signal per stroke, not per mouseup.
+     * The viewer uses it to publish mask state while a mask tool stays open
+     * (MPI-372) — before that, mask state was only published on tool exit.
+     */
+    _endMaskStroke() {
+        if (!this.managers.mask.isDrawingMask) return;
+        this.managers.mask.isDrawingMask = false;
+        this.options.onMaskStrokeEnd?.();
+    }
+
     _initEvents() {
         const { view, mask, comparison } = this.managers;
 
@@ -202,7 +214,7 @@ export class InputController {
 
         // MouseUp: Global listener
         this._boundHandlers.mouseup = () => {
-            this.managers.mask.isDrawingMask = false;
+            this._endMaskStroke();
             this.managers.crop.endDrag();
             this.isPanning = false;
             this.managers.comparison.isDraggingSlider = false;
@@ -214,8 +226,10 @@ export class InputController {
         this._boundHandlers.keydownUnsub = Hotkeys.bind('canvas.pan.start', () => {
             if (this.isSpacePressed) return;
             this.isSpacePressed = true;
-            // Cancel any in-progress mask stroke so Space+drag pans instead of paints
-            this.managers.mask.isDrawingMask = false;
+            // Cancel any in-progress mask stroke so Space+drag pans instead of paints.
+            // Whatever was already painted counts as a finished stroke — publish it,
+            // or the mask that Space interrupted never reaches the op strip.
+            this._endMaskStroke();
             this.updateCursor();
             this.options.onDraw();
         });

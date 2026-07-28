@@ -14,6 +14,8 @@
  * @typedef {Object} MpiCanvasProps (Primitive — js/components/Primitives/MpiCanvas)
  * @property {(size: number) => void} [onBrushSizeChange] - Called when brush size changes via wheel in mask mode
  * @property {(type: string) => void} [onBrushTypeChange] - Called when brush type changes via hotkey (b/e)
+ * @property {(count: number) => void} [onPointsChange] - Called when a point prompt is added or removed
+ * @property {() => void} [onMaskStrokeEnd] - Called once per finished paint/erase stroke (MPI-372)
  *
  * Active modes (canvas.el.activeMode): 'none' | 'mask' | 'crop' | 'compare'
  * Setting any mode automatically deactivates all others (mutual exclusion).

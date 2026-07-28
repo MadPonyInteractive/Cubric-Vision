@@ -207,16 +207,24 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** MpiMaskedImagePreview instance while prompt mode is active, null otherwise */
         let _previewInst = null;
 
+        /**
+         * ONE prop set for BOTH MpiCanvas mounts — the initial mount here and the
+         * swapToCanvas remount. They must never drift: a callback wired on only one
+         * of them works until the first prompt-mode round trip and then silently
+         * stops firing, which is exactly the class of half-wire bug this file has
+         * paid for before.
+         */
+        const _canvasProps = {
+            onBrushTypeChange: (type) => {
+                emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
+            },
+            onPointsChange: (count) => emit('mask-points-changed', { count }),
+            onMaskStrokeEnd: () => _publishMaskState(),
+        };
+
         // Mutable canvas ref — replaced on swapToCanvas remount.
         // All internal code accesses canvas via _cv.el so remount is transparent.
-        const _cv = {
-            inst: MpiCanvas.mount(qs('#canvas-wrap', el), {
-                onBrushTypeChange: (type) => {
-                    emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
-                },
-                onPointsChange: (count) => emit('mask-points-changed', { count }),
-            }),
-        };
+        const _cv = { inst: MpiCanvas.mount(qs('#canvas-wrap', el), _canvasProps) };
         Object.defineProperty(_cv, 'el', { get() { return this.inst.el; }, configurable: true });
 
         // Convenience alias — always resolves via _cv.el; methods auto-bound to current _cv.el
@@ -788,6 +796,17 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 && idx === _currentIdx
             );
 
+            // Re-selecting the entry ALREADY on screen with live paint on it: the
+            // image is already correct, and the strokes have not reached TEMP yet
+            // (the sameEntry guard below deliberately skips the persist). Falling
+            // through would _showEntry + _restoreLayers from a TEMP that predates
+            // those strokes and silently wipe them. Mount still needs the load path
+            // — there the fresh canvas is empty, so it does not match here.
+            if (sameEntry && !_previewInst && _cv.el?.maskCanvas
+                && hasMaskContent(_cv.el.maskCanvas)) {
+                return;
+            }
+
             // Persist current item's layers before switching. On workspace
             // remount the block may call loadEntry for the same initial item
             // before restore has run; treating that as a switch would serialize
@@ -1113,6 +1132,25 @@ export const MpiCanvasViewer = ComponentFactory.create({
         };
 
         /**
+         * Publish mask state as it CHANGES, from the canvas' own stroke-end signal.
+         *
+         * Mask state used to be published only when a mask tool was torn down (the
+         * MpiToolOptionsMask* organisms call evaluateMask() in destroy), which was
+         * enough while the PromptBox was hidden for the whole time a mask tool was
+         * open. Now that the box stays live inside the mask family (MPI-372), the
+         * op strip has to unlock on the stroke that CREATES the mask, not on the
+         * tool switch that no longer happens.
+         *
+         * Emits only on a flip, so painting stays one signal per transition rather
+         * than one per stroke. Preview mode has no live canvas to read.
+         */
+        function _publishMaskState() {
+            if (_previewInst) return;
+            const hasContent = !!(_cv.el?.maskCanvas && hasMaskContent(_cv.el.maskCanvas));
+            if (hasContent !== _hasMask) el.evaluateMask();
+        }
+
+        /**
          * Swap the YOLO detection model for auto-mask. Clears any in-progress
          * picks + painted mask to keep auto-mask state coherent.
          */
@@ -1284,12 +1322,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 wrap.innerHTML = '';
                 wrap.style.display = '';
 
-                _cv.inst = MpiCanvas.mount(wrap, {
-                    onBrushTypeChange: (type) => {
-                        emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
-                    },
-                    onPointsChange: (count) => emit('mask-points-changed', { count }),
-                });
+                _cv.inst = MpiCanvas.mount(wrap, _canvasProps);
                 _cv.inst.on('modechange', ({ mode }) => {
                     if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
                     if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';

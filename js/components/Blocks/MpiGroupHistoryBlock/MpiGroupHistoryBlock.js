@@ -417,7 +417,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // Leaving prompt mode — await canvas remount before mounting tool compound
             if (!isVideo) await viewer.el.swapToCanvas?.();
 
-            _pb?.el?.hide();
+            // MPI-372: a mask and a prompt are ONE operation, so the mask family
+            // keeps the PromptBox up — settings never cost a round trip through
+            // the rail. Nothing is swapped here: the canvas already renders the
+            // mask, and swapToPreview()'s lighter surface exists only to free the
+            // canvas' GPU backing when NO canvas tool is active. Force-mount so
+            // the box is there before the first stroke unlocks a mask-only op;
+            // _mountPromptBoxIfNeeded still no-ops without an active model.
+            if (_isMaskTool(mode)) {
+                _mountPromptBoxIfNeeded({ force: true });
+                _pb?.el?.show();
+            } else {
+                _pb?.el?.hide();
+            }
             if (!mode) return;
 
             const Compound = TOOL_OPTIONS_REGISTRY[mode];
@@ -648,6 +660,20 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _applyPreview(url);
         }));
 
+        /**
+         * Re-arm the canvas tool mode from the RAIL, which is the source of truth
+         * for which tool is active. Both paths that reload the viewer — picking a
+         * history entry and a generation finishing — must leave the canvas in the
+         * mode the rail still shows, or the tool reads as active while the canvas
+         * ignores the mouse. loadEntry already exits the mode internally, so there
+         * is nothing to undo when no canvas tool is selected.
+         */
+        function _syncViewerToolMode() {
+            if (isVideo) return;
+            const vm = _viewerModeFor(historyTools.el.getActiveMode?.());
+            if (vm) viewer.el.enterMode?.(vm);
+        }
+
         // Repaint the open viewer with `item` (preview→video swap, image reload).
         // Shared by the in-block generation:complete handler and the gallery
         // in-place-finish bridge below.
@@ -662,9 +688,21 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     trim:       item.trim,
                 });
             } else {
-                viewer.el.exitMode?.();
-                viewer.el.loadEntry?.(item, _currentIdx);
-                viewer.el.setMaskHidden?.(false);
+                // NO exitMode() first. loadEntry captures the active canvas mode and
+                // restores it after the image swap, so clearing it up front threw
+                // that away: the rail still showed an armed mask tool while the
+                // canvas had dropped to 'none' — no brush on the fresh result until
+                // you re-clicked the entry. Harmless while every Run came from
+                // prompt mode; reachable the moment Run works from inside a mask
+                // tool (MPI-372). Re-arm from the rail after the load too — the rail
+                // is the source of truth for which tool is active.
+                Promise.resolve(viewer.el.loadEntry?.(item, _currentIdx))
+                    .then(() => {
+                        _syncViewerToolMode();
+                        viewer.el.setMaskHidden?.(false);
+                    })
+                    .catch(err => clientLogger.warn('MpiGroupHistoryBlock',
+                        `viewer reload failed: ${err?.message || err}`));
             }
         }
 
@@ -1543,8 +1581,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // prior multi-select delete may have exited it — re-arm from the
                 // tool source-of-truth if the canvas mode is stale.
                 await viewer.el.loadEntry?.(item, idx);
-                const _vm = _viewerModeFor(historyTools.el.getActiveMode?.());
-                if (_vm) viewer.el.enterMode?.(_vm);
+                _syncViewerToolMode();
                 viewer.el.setMaskHidden?.(false);
             }
             _currentIdx = idx;
@@ -2176,23 +2213,23 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _unsubs.push(() => { if (_trimTimer) { clearTimeout(_trimTimer); _trimTimer = null; } });
         }
 
-        // ── Radial → operation sync ───────────────────────────────────────────
-
+        // ── Op strip → operation sync ─────────────────────────────────────────
+        //
+        // MpiPromptBox's op strip is the ONLY emitter of this event — the radial
+        // no longer sends it. The strip lives INSIDE the PromptBox, so by the time
+        // this fires the box is on screen by construction and the workspace never
+        // has to change tools to serve it. The old radial-era force to prompt mode
+        // was therefore both dead and harmful: from a mask tool it ran
+        // swapToPreview(), which destroys the canvas mid-mask (MPI-372).
+        //
+        // The Block still validates the op against its live context (mask present,
+        // history mode) rather than trusting the strip — the strip is a second
+        // view of this state, not a source of truth for it.
         _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {
-            // Lazy-mount PromptBox if model became available mid-session.
-            if (!_pb?.el) _mountPromptBoxIfNeeded();
             if (!_pb?.el) return;
-            const opts = _opOptions();
-            const match = opts.find(o => o.value === operation && !o.disabled);
+            const match = _opOptions().find(o => o.value === operation && !o.disabled);
             if (!match) return;
             _setPromptOperation(operation, { remember: true });
-            if (historyTools.el.getActiveMode?.() !== 'prompt') {
-                historyTools.el.setMode('prompt');
-            } else {
-                // Already in prompt mode — setMode no-ops, so explicitly show
-                // PromptBox in case it was hidden by mask-state churn.
-                _pb.el.show();
-            }
         }));
 
         // ── State model change + installed-models reactivity ─────────────────

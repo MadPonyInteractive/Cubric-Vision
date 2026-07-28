@@ -44,6 +44,7 @@ const MASK_POINT_DRAW_R = 6;
  * @param {(size: number) => void} [onBrushSizeChange] - Called when brush size changes via wheel
  * @param {(type: string) => void} [onBrushTypeChange] - Called when brush type changes via hotkey
  * @param {(count: number) => void} [onPointsChange] - Called when a point prompt is added or removed
+ * @param {() => void} [onMaskStrokeEnd] - Called once when a paint/erase stroke finishes
  *
  * Instance methods (on instance.el):
  *   loadImage(url)            — load primary image, resets mode to 'none'
@@ -194,7 +195,8 @@ class _CanvasCore {
                 onSliderChange: (pos) => { this.canvas.dataset.sliderPos = pos; },
                 onBrushSizeChange: this.options.onBrushSizeChange,
                 onBrushTypeChange: this.options.onBrushTypeChange,
-                onPointsChange: this.options.onPointsChange
+                onPointsChange: this.options.onPointsChange,
+                onMaskStrokeEnd: this.options.onMaskStrokeEnd
             },
             this.stackEl
         );
