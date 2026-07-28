@@ -1,0 +1,173 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "645985f8-8e04-4f57-b7d5-9b2297d12af1",
+  "generated_at": "2026-07-28T11:35:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-371 mask tool family shipped + user-verified; MPI-361 Phase A layer-order defect fixed + user-verified; MPI-372 opened",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Split the mask surface into sibling tools (Points, Detect, later Shapes and Text) each with its own icon inside the existing MASK rail group, and extract the shared bottom strip (brush, eraser, invert, clear, opacity) into ONE component whose brush+eraser pair is optional - the Points tool mounts it without them.",
+    "status": "complete",
+    "summary": "MPI-371 is DONE and user-verified in the app; the card is in the done column. While verifying it the user found a real defect that was NOT from the split - an MPI-361 Phase A layer-ORDER bug where a previously-subtracted region did not show the green detection preview. That is fixed in three sites, proven with a negative control, and also user-verified. The user then raised a new UX problem that is now MPI-372 at the top of To do: the PromptBox has to stay reachable while a mask tool is active. Nothing is committed yet at the time this handoff was written - the commit is the next mechanical step."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-372/brief.md",
+    "completed": [
+      "MPI-371 SHIPPED + USER-VERIFIED. Four new components: MpiMaskStrip and MpiMaskDetectRow (Compounds), MpiToolOptionsMaskDetect and MpiToolOptionsMaskPoints (Organisms). MpiToolOptionsMask deleted.",
+      "Rail: MASK group is now two icons - maskDetect (search) and maskPoints (circle). MpiGroupHistoryBlock gained _isMaskTool() and _viewerModeFor() because the viewer only knows the single 'mask' canvas mode.",
+      "Settings kept on the SINGLE 'mask' tool key, so opacity / invert / model / Box-Segment / Scope all survive a swap between mask tools. projectModel.js and hotkeyRegistry.js needed NO changes.",
+      "Registered: both new Compound css and both new Organism css in preloadStyles.js; four typedefs in types.js.",
+      "Verified headlessly against the live app: eslint clean, all four modules + css load, and 14/14 stub-viewer contract checks pass including both traps (Points destroy() calls setMaskPointsMode(false); no destroy() calls clearMask()).",
+      "MPI-361 PHASE A DEFECT FIXED + USER-VERIFIED. Root cause was ORDER, not display: _recomposite() built (manual U auto) AND NOT subtract, so an older erase deleted a newer detection from BOTH the exported mask and the green preview, while bakeAutoPicksInto un-erases - preview and commit disagreed. Auto picks now union LAST.",
+      "Three sites fixed together: MaskManager._recomposite(), MaskManager._recompositeAuto() (subtract punch dropped entirely), and the twin MpiCanvasViewer._buildCompositeFromTemp().",
+      "12/12 headless checks pass on a real MaskManager; NEGATIVE CONTROL against git show HEAD fails exactly the two checks the user reported and passes the other ten.",
+      "Docs: docs/masking.md rewritten for the tool family + a new 'Layer ORDER is load-bearing' section naming both twins (199 lines, under the 200-line rule); docs/workspaces.md component list updated.",
+      "Rules updated WITH the user's explicit permission (CLAUDE.md rule 5): component-mounts.md, component-events-organisms.md, component-events-blocks.md, component-state.md. CLAUDE.md Context Router gained the missing Masking row -> docs/masking.md.",
+      "MPI-372 created at the TOP of To do with a full brief."
+    ],
+    "pending": [
+      "COMMIT. Nothing from this session was committed. Commit by EXPLICIT PATHSPEC only - the tree carries other sessions' work that must not be swept in (js/data/commandRegistry.js, .agents/mpi-kanban/tasks/MPI-353/, untracked tasks/MPI-355 and tasks/MPI-358).",
+      "MPI-372 - PromptBox must stay reachable while a mask tool is active. BRIEF THE USER BEFORE CODE; the brief lists three options and nothing is decided. The catch: prompt mode swaps the viewer surface (swapToPreview / swapToCanvas), so this is not a CSS change.",
+      "MPI-361 PHASE B - swap SAM3_Detect in behind the same UI for open-vocabulary TEXT prompts. 1.75GB sam3.1_multiplex_fp16, SAM License, not gated. Acceptance criteria already on the card. It mounts MpiMaskDetectRow + MpiMaskStrip unchanged.",
+      "MPI-368 - Shapes tool. Mounts MpiMaskStrip (brush pair probably off) and NO detect row.",
+      "The remote engine has NOT been exercised for points mode. It should work by construction (same upload path as Input_Image) but nobody has run it on a Pod."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-372",
+    "title": "PromptBox must stay reachable while a mask tool is active",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-372/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-372/brief.md",
+      "checklist": null,
+      "validation": null,
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/masking.md - layer table corrected to (manual AND NOT subtract) U picks, new 'Layer ORDER is load-bearing' section, and a 'The tool family (MPI-371)' section with the component table and the two traps",
+      "docs/workspaces.md - mediator tool-options list updated to the two mask organisms",
+      ".claude/rules/component-mounts.md - registry snippet + a full mask-family block covering both organisms and both shared compounds",
+      ".claude/rules/component-events-organisms.md - the old MpiToolOptionsMask section replaced by four sections plus a family-wide invariant",
+      ".claude/rules/component-events-blocks.md - mediator line rewritten for the family + the _viewerModeFor bridge",
+      ".claude/rules/component-state.md - toolSettings.mask is ONE key for the whole family; the legacy `source` key is marked DEAD",
+      "CLAUDE.md Context Router - Masking row added (user granted permission explicitly)",
+      "MPI-371 checklist.md + validation.md written; card moved to done/complete",
+      "MPI-361 validation.md gained a full follow-up-defect section with root cause, the three sites, and the negative-control result",
+      "MPI-372 task.json + brief.md created"
+    ],
+    "pending": [
+      "Nothing blocked. If the commit has already happened when you read this, there is no preservation debt from this session."
+    ]
+  },
+  "next_action": {
+    "description": "Start MPI-372 - make the PromptBox reachable while a mask tool is active. Read .agents/mpi-kanban/tasks/MPI-372/brief.md FIRST; it holds the user's complaint, the three candidate approaches and the trap that makes this a design job. DO NOT WRITE CODE BEFORE BRIEFING THE USER on which approach to take - nothing is decided. The trap: `prompt` is a rail tool, and entering it calls viewer.el.swapToPreview() while leaving it calls swapToCanvas(), so the canvas and the preview are different surfaces and 'just show both' is not a CSS change; resolving that coupling IS the task. Everything lives in js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js - mountOptions(mode), the mpi-group-history-block--prompt-active class, _shouldShowPromptBox(), _hasPromptOps(), _mountPromptBoxIfNeeded() - plus MpiGroupHistoryBlock.css. Whatever is decided must work for every tool in the mask family, including Shapes (MPI-368) and Text (MPI-361 Phase B) when they land.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE MASK STRIP IS ONE COMPONENT ON EVERY MASK TOOL. The user has now said this three times across sessions: brush, eraser, invert, clear and opacity are ONE component at the bottom of every mask tool, with the brush + eraser pair OPTIONAL and gated off where it makes no sense (Points now, probably Shapes). Do NOT re-ask this, and do NOT add a separate Paint tool - the user rejected that explicitly.",
+      "MpiMaskDetectRow exists because Points, Detect and (later) Text differ only in what they feed the graph, never in how a result is reviewed and committed. Shapes mounts MpiMaskStrip alone.",
+      "ONE toolKey for the whole family ('mask'). That is what makes settings survive a tool swap; splitting per-tool keys would break the user's stated requirement that settings persist.",
+      "AUTO PICKS UNION LAST. mask = (manual AND NOT subtract) U picks; auto = U picks. A pick is a deferred positive assertion, exactly like a brush stroke over an erased area, so an erase that predates it does not veto it. This is what makes the green preview equal what Add bakes. There are TWO twins of this math - MaskManager._recomposite() and MpiCanvasViewer._buildCompositeFromTemp() - and they must change together.",
+      "The colour split is still DISPLAY-ONLY. getURL() / getMaskDataURL() flatten the single unioned maskCanvas that every downstream consumer reads. Do not leak autoCanvas into an export path.",
+      "Rail tool modes are maskDetect / maskPoints, but the viewer only knows the canvas modes 'crop' and 'mask'. _viewerModeFor() in MpiGroupHistoryBlock bridges them; any new mask tool must be added to _isMaskTool().",
+      "The YOLO Detect tool STAYS - it is the fast one-click Face / Hair / Hand / Person shortcut. Points sits beside it, it does not replace it.",
+      "The Cue queue gate now covers MpiMaskDetectRow only, not the whole panel. Model radios and the Scope slider stay live while Cue is busy because neither runs anything. Deliberate, marked with a ponytail: comment."
+    ],
+    "constraints": [
+      "COMMIT BY EXPLICIT PATHSPEC. The working tree carries other sessions' work: js/data/commandRegistry.js, .agents/mpi-kanban/tasks/MPI-353/, and untracked .agents/mpi-kanban/tasks/MPI-355/ + tasks/MPI-358/. Never git add -A / git add .",
+      "Another session is active on this board - MPI-367 was moved into doing by someone else mid-session. Re-read board.json before mutating it; do not assume your snapshot is current.",
+      "Every new component registers its .css in js/shell/preloadStyles.js AND documents its props in js/components/types.js. Never modify js/components/factory.js (locked).",
+      "MpiAutoMaskThumbs.setPicks() deliberately does NOT emit 'change' - points mode relies on that to restore pick 0 after setImages() clears the selection without re-triggering the run. Do not 'fix' it.",
+      "The thumbs DOM node is OWNED BY THE VIEWER. MpiMaskDetectRow re-parents it via getAutoMaskThumbsEl() and DETACHES it in destroy - it must never destroy it.",
+      "InputController's points-mode contextmenu handler calls stopPropagation as well as preventDefault because MpiCanvasViewer has its own contextmenu handler on its root. Leaving a mask tool MUST call setMaskPointsMode(false) or right-click stays broken app-wide.",
+      "N DOTS DO NOT GIVE N OBJECTS - every point goes into ONE sam_obj.predict call. threshold is not a smooth dial, it SNAPS between SAM's 3 candidates; sweep it. dilation stays 0 and the GrowMaskWithBlur cleanup pair must stay equal and opposite.",
+      "Docs are capped at 200 lines each; docs/masking.md is at 199. Trim before adding.",
+      "Do not run git against sibling folders from this repo. Push stays a user-authorized live op.",
+      "THE WORKFLOW CONVERTER HAS BLAST RADIUS. `node scripts/workflow-to-api.mjs` with NO ARGUMENTS re-emits ALL 31 workflows and writes 15 stray *_template.json files. Convert ONE file by passing its path."
+    ],
+    "files_modified": [
+      "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.js",
+      "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.css",
+      "js/components/Compounds/MpiMaskDetectRow/MpiMaskDetectRow.js",
+      "js/components/Compounds/MpiMaskDetectRow/MpiMaskDetectRow.css",
+      "js/components/Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js",
+      "js/components/Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.css",
+      "js/components/Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js",
+      "js/components/Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.css",
+      "js/components/Organisms/MpiToolOptionsMask/ (DELETED)",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js",
+      "js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js",
+      "js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+      "js/components/types.js",
+      "js/shell/preloadStyles.js",
+      "docs/masking.md",
+      "docs/workspaces.md",
+      "CLAUDE.md",
+      ".claude/rules/component-mounts.md",
+      ".claude/rules/component-events-organisms.md",
+      ".claude/rules/component-events-blocks.md",
+      ".claude/rules/component-state.md",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-371/",
+      ".agents/mpi-kanban/tasks/MPI-372/",
+      ".agents/mpi-kanban/tasks/MPI-361/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-361/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-372/brief.md",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "docs/workspaces.md",
+      "docs/masking.md",
+      ".claude/rules/components.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": [
+      "Components & UI",
+      "Workspaces / routing",
+      "Events & cross-component communication",
+      "Conventions / gotchas"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    ".claude/rules/workspaces.md",
+    ".claude/rules/component-events-blocks.md",
+    ".claude/rules/git.md",
+    "docs/masking.md",
+    "docs/workspaces.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-28T11:35:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/645985f8-8e04-4f57-b7d5-9b2297d12af1.json and use mpi-continue to resume the Cubric Vision masking work. MPI-371 is DONE and user-verified - the mask surface is now a tool family: MpiToolOptionsMaskDetect and MpiToolOptionsMaskPoints, each mounting two shared compounds, MpiMaskDetectRow (thumbs, Detect, Add/Subtract, Cue gate) and MpiMaskStrip (paint/erase OPTIONAL via a brush prop, plus invert, clear and opacity on every tool). MpiToolOptionsMask is deleted, the rail modes are maskDetect and maskPoints bridged to the viewer's single 'mask' canvas mode by _viewerModeFor(), and everything persists under the ONE 'mask' toolKey so settings survive a tool swap. Do not rebuild or re-litigate any of it, and never re-ask whether the strip should be one component - the user has answered that three times and also explicitly rejected adding a separate Paint tool. A defect the user hit while verifying was an MPI-361 Phase A layer-ORDER bug, now fixed and user-verified: auto picks union LAST, so mask = (manual AND NOT subtract) U picks and auto = U picks, because a detection is a positive assertion made after an erase and the erase does not veto it. That math has TWO twins - MaskManager._recomposite() and MpiCanvasViewer._buildCompositeFromTemp() - which must always change together. YOUR NEXT JOB IS MPI-372, at the top of To do: the PromptBox has to stay reachable while a mask tool is active, because masking and adjusting generation settings are currently mutually exclusive modes and every tweak costs a round trip - the user called it extremely annoying, and the new tool family makes it repeat once per tool. Read .agents/mpi-kanban/tasks/MPI-372/brief.md first and BRIEF THE USER BEFORE WRITING CODE: three approaches are listed and nothing is decided. The trap is that `prompt` is a rail tool whose mode swaps the viewer surface - entering calls swapToPreview() and leaving calls swapToCanvas() - so showing both at once is a design change, not a CSS change, and resolving that coupling IS the task. After MPI-372, the remaining mask work is MPI-361 Phase B (SAM3_Detect plus CLIPTextEncode for open-vocabulary text prompts, 1.75GB sam3.1_multiplex_fp16, not gated) and MPI-368 (Shapes). Finally, the working tree is shared: other sessions own js/data/commandRegistry.js, tasks/MPI-353, and the untracked tasks/MPI-355 and MPI-358, so always commit by explicit pathspec and never git add -A."
+}

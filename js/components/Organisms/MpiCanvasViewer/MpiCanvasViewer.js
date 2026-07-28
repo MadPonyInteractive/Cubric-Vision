@@ -128,16 +128,20 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 tmp.width = w;
                 tmp.height = h;
                 const ctx = tmp.getContext('2d');
+                // Same layer order as MaskManager._recomposite(): subtract punches
+                // the MANUAL layer only, then the auto picks union on top. An auto
+                // pick is a positive assertion made after the erase, so the erase
+                // does not veto it — this is what `Add` bakes.
                 if (manual) ctx.drawImage(seedImg, 0, 0);
-                for (const url of autoEntry.urls) {
-                    const autoImg = await _loadImg(url);
-                    ctx.drawImage(autoImg, 0, 0, w, h);
-                }
                 if (subtract) {
                     const subImg = await _loadImg(subtract);
                     ctx.globalCompositeOperation = 'destination-out';
                     ctx.drawImage(subImg, 0, 0, w, h);
                     ctx.globalCompositeOperation = 'source-over';
+                }
+                for (const url of autoEntry.urls) {
+                    const autoImg = await _loadImg(url);
+                    ctx.drawImage(autoImg, 0, 0, w, h);
                 }
                 // Flatten remaining alpha → opaque white-on-black for prompt-tool consumers
                 const src = ctx.getImageData(0, 0, w, h);
@@ -320,7 +324,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             StatusBar.notify(AUTO_MASK_QUEUE_DISABLED_REASON, 'warning');
         }
 
-        // Viewer retains ownership of the thumbs instance; MpiToolOptionsMask
+        // Viewer retains ownership of the thumbs instance; MpiMaskDetectRow
         // re-parents the DOM node via getAutoMaskThumbsEl(). DO NOT destroy it
         // from the options compound — detach only.
         const autoMaskThumbs = MpiAutoMaskThumbs.mount(document.createElement('div'));
@@ -598,7 +602,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // (loadEntry) once the new image is loaded.
         async function _restoreAutoPickMasks() {
             // Sync viewer Set from thumbs — DOM keeps the visual selection
-            // across MpiToolOptionsMask remount; the viewer's Set is reset.
+            // across a mask-tool remount; the viewer's Set is reset.
             const thumbPicks = autoMaskThumbs.el.getPicks?.() ?? new Set();
             if (thumbPicks.size > 0) _autoMaskPicks = thumbPicks;
             const entry = _autoPickStore.get(_autoPickKey(_currentItem));
@@ -1203,7 +1207,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /**
          * Return the internal MpiAutoMaskThumbs DOM node so a parent compound
-         * (e.g. MpiToolOptionsMask) can re-parent it into its own template.
+         * (MpiMaskDetectRow) can re-parent it into its own template.
          * IMPORTANT: parent MUST NOT destroy the thumbs — detach only. The viewer
          * still owns the instance's lifecycle.
          */

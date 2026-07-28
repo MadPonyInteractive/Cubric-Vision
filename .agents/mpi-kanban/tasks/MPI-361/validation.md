@@ -148,3 +148,47 @@ Files:
 6. Add → the region joins the painted mask and the dots clear. Place new dots,
    Detect, Add again → both parts held. Subtract → cuts out of the mask.
 7. Switch back to Detect / leave the mask tool → right-click menu works again.
+
+
+---
+
+## Follow-up defect — layer ORDER, found 2026-07-28 during MPI-371 verification
+
+**Symptom (user, with screenshots):** previous operation removed the face with a
+segment mask (so `subtractCanvas` was white over the face). A later Detect — and the
+same on Points — returned that face, but the green preview stopped at the edge of the
+still-masked area: it did not cover the region that had been subtracted. Pressing
+**Add** DID cover it.
+
+**Root cause — not a display bug, an ordering bug in the composite itself.**
+`_recomposite()` built `(manual U auto) AND NOT subtract`: the subtract punch ran
+*after* the auto picks were unioned in, so an older erase deleted a newer detection
+from BOTH `maskCanvas` (the exported mask) and `autoCanvas` (the green preview).
+`bakeAutoPicksInto('manual')` un-erases, mirroring `paint()` — so committing produced a
+DIFFERENT mask than the preview had shown. Preview and commit disagreed; the preview
+was the wrong one. An auto pick is a deferred positive assertion, exactly like a brush
+stroke over an erased area, and the erase that predates it does not get to veto it.
+
+**Fix — three sites, one rule: the auto picks go on LAST.**
+- `MaskManager._recomposite()` — subtract now punches the MANUAL layer only, then the
+  selected picks union on top. `mask = (manual AND NOT subtract) U picks`.
+- `MaskManager._recompositeAuto()` — subtract punch dropped entirely.
+  `auto = U picks`, i.e. exactly what the run returned and what Add would bake.
+- `MpiCanvasViewer._buildCompositeFromTemp()` — the TWIN of this math for the temp
+  store, same reorder. Missing it would have made a remount disagree with the canvas.
+
+**Verified headlessly, 12/12 PASS, with a negative control.** The scenario is replayed
+against a real `MaskManager` in the live app: paint, erase a hole, feed a pick covering
+that hole, then read pixel alpha.
+- green preview covers the erased region; the mask agrees; Add reproduces it exactly
+- the rest of the erase stays erased; untouched paint survives
+- Subtract still removes; a plain eraser stroke still erases
+- **Negative control:** the identical test against `git show HEAD:MaskManager.js` fails
+  exactly the two checks the user reported (green preview + mask over the erased
+  region) and passes the other ten. Nothing else regressed.
+
+Docs: `docs/masking.md` layer table corrected + a new "Layer ORDER is load-bearing"
+section naming both twins.
+
+**Still needs the user:** re-run the exact screenshot case in the app — erase a face,
+Detect (and Points), confirm the green now covers it before pressing Add.

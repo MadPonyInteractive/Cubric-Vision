@@ -57,13 +57,26 @@
  */
 
 /**
- * @typedef {Object} MpiToolOptionsMaskProps (Organism — js/components/Organisms/MpiToolOptionsMask)
+ * @typedef {Object} MpiToolOptionsMaskDetectProps (Organism — js/components/Organisms/MpiToolOptionsMaskDetect)
  * @property {Object} viewer - MpiCanvasViewer instance
  *
+ * The YOLO tool of the mask family (MPI-371). Owns the model + box/segment
+ * radios; mounts MpiMaskDetectRow and MpiMaskStrip (with brush).
  * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
- *   setMaskBrushMode('brush'|'eraser'), clearMask(), invertMask(),
- *   getDetectionModels?(), setAutoMaskModel(), setAutoMaskUseBox(),
- *   runAutoMaskDetect(), getAutoMaskThumbsEl?(), compositeMaskDataURL()
+ *   setMaskPointsMode(), getDetectionModels?(), setAutoMaskModel(),
+ *   setAutoMaskUseBox()
+ * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsMaskPointsProps (Organism — js/components/Organisms/MpiToolOptionsMaskPoints)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * The click-point (SAM mask-points) tool of the mask family. Owns the Scope
+ * dial and Clear points; mounts MpiMaskDetectRow and MpiMaskStrip WITHOUT the
+ * brush pair.
+ * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
+ *   setMaskPointsMode(), setMaskPointsThreshold(), clearMaskPoints()
  * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
  */
 
@@ -166,6 +179,34 @@
  *
  * Emits:
  *   'change' { picks: Set<number> } — any thumbnail toggled; picks = selected 0-based indices
+ */
+
+/**
+ * @typedef {Object} MpiMaskStripProps (Compound — js/components/Compounds/MpiMaskStrip)
+ * @property {Object}  viewer      - MpiCanvasViewer instance
+ * @property {boolean} [brush=true] - Show the paint / erase pair and bind the B / E hotkeys.
+ *
+ * The shared bottom strip of EVERY mask tool (MPI-371): paint / erase · invert ·
+ * clear · opacity. Tools where a brush makes no sense (Points) pass
+ * `brush: false` and get invert / clear / opacity alone. Opacity and invert
+ * persist under the `mask` tool key, shared by the whole family.
+ *
+ * Requires viewer.el: setMaskBrushMode('brush'|'eraser'), setMaskInverted(),
+ *   isMaskInverted(), clearMask(), setMaskOpacity()
+ * Emits nothing.
+ */
+
+/**
+ * @typedef {Object} MpiMaskDetectRowProps (Compound — js/components/Compounds/MpiMaskDetectRow)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * The run / commit row shared by every detection-based mask tool: thumbs ·
+ * Detect · Add / Subtract, blocked as a unit while Cue has real jobs.
+ * The thumbs node is OWNED BY THE VIEWER — re-parented here, never destroyed.
+ *
+ * Requires viewer.el: getAutoMaskThumbsEl?(), runAutoMaskDetect(),
+ *   bakeAutoPicks('manual'|'subtract')
+ * Emits nothing.
  */
 
 /**

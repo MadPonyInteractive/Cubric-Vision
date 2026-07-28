@@ -20,8 +20,8 @@ scaled by `_scale`.
 |---|---|---|
 | `manualCanvas` | brush strokes — white where painted | `paint()`, `bakeAutoPicksInto('manual')` |
 | `subtractCanvas` | eraser strokes — white where erased | `paint()`, `bakeAutoPicksInto('subtract')` |
-| `maskCanvas` | **the mask** = `(manual ∪ ⋃autoPickMasks[selected]) AND NOT subtract` | `_recomposite()` |
-| `autoCanvas` | **display only** = `(⋃autoPickMasks[selected]) AND NOT subtract` | `_recompositeAuto()` |
+| `maskCanvas` | **the mask** = `(manual AND NOT subtract) ∪ ⋃autoPickMasks[selected]` | `_recomposite()` |
+| `autoCanvas` | **display only** = `⋃autoPickMasks[selected]` | `_recompositeAuto()` |
 
 `autoPickMasks` is a RAM-only `Map<pickIndex, ImageBitmap|Canvas>` of what the last
 detect run returned; `selectedAutoPicks` is the `Set<number>` of chosen thumbs.
@@ -29,6 +29,16 @@ detect run returned; `selectedAutoPicks` is the `Set<number>` of chosen thumbs.
 Brush at P writes **both** layers: paint sets manual white and clears subtract
 (un-erase); erase clears manual and sets subtract white. `bakeAutoPicksInto()` mirrors
 that exactly, which is why Add/Subtract composes with the brush and preserves undo.
+
+### Layer ORDER is load-bearing — the auto picks go on last
+
+Subtract punches the **manual** layer only; the selected auto picks union on top. A pick
+is a positive assertion made *after* the erase — exactly like a brush stroke over an
+erased area — so the older erase does not get to veto it. Punching subtract over the picks
+instead was a real bug: erase a face, detect that same face, and it stayed invisible in
+both the mask and the green preview, yet `Add` (which un-erases) filled it in. Preview and
+commit disagreed. `MpiCanvasViewer._buildCompositeFromTemp()` mirrors this order for the
+temp store — **both must change together.**
 
 ### `autoCanvas` is a DISPLAY split — never an export (MPI-361)
 
@@ -152,12 +162,38 @@ and the points together, so it is mode-agnostic by construction.
 
 ---
 
+## The tool family (MPI-371)
+
+One rail icon per masking method inside the `Mask` group — no switcher, no source radio.
+Each tool owns only what is specific to its method and mounts two shared compounds:
+
+| Piece | Owns |
+|---|---|
+| `MpiToolOptionsMaskDetect` | model radio (Face / Hair / Hand / Person) + Box / Segment |
+| `MpiToolOptionsMaskPoints` | Scope dial, click instructions, Clear points |
+| `MpiMaskDetectRow` | thumbs · Detect · Add / Subtract, blocked as a unit while Cue is busy |
+| `MpiMaskStrip` | paint / erase (**optional**) · invert · clear · opacity |
+
+`MpiMaskStrip` takes `brush: false` — the Points tool mounts it that way, because there
+the user places points. Invert, clear and opacity are on every tool. Everything persists
+under the **one** `mask` tool key, so settings survive a swap between tools.
+
+Two things must stay true through any further split:
+
+- **`destroy()` calls `setMaskPointsMode(false)`.** Points mode owns the right mouse
+  button; without it the image context menu stays dead after leaving the tool.
+- **A tool swap must not clear the mask.** `manualCanvas` + `subtractCanvas` are the
+  user's work — only the auto layer is disposable. `_exitMode()` only sets
+  `activeMode = 'none'`; nothing on a tool's mount path may call `clearMask()`.
+
+Rail tool modes are `maskDetect` / `maskPoints`; the viewer knows only `'mask'`, so
+`MpiGroupHistoryBlock._viewerModeFor()` maps between them.
+
 ## Roadmap
 
-- **MPI-368** — Shapes: rectangle / triangle / ellipse gizmo, Add or Subtract.
+- **MPI-368** — Shapes: rectangle / triangle / ellipse gizmo, Add or Subtract. Mounts
+  `MpiMaskStrip` (brush pair probably off) and no detect row.
 - **MPI-361 Phase B** — Text: `SAM3_Detect` + `CLIPTextEncode` open-vocabulary prompts
   (1.75GB `sam3.1_multiplex_fp16`, SAM License, not gated). Its `threshold` gates TEXT
-  detections only — it is **not** the point-path confidence dial.
-- **MPI-371** — split Points / Detect / Shapes / Text into sibling tools under the MASK
-  rail and extract the shared brush/eraser/invert/clear/opacity strip into one component
-  (brush pair optional — the Points tool hides it).
+  detections only — it is **not** the point-path confidence dial. Mounts both shared
+  compounds unchanged.

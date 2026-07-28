@@ -4,15 +4,15 @@
   "generated_at": "2026-07-28T09:00:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-361 Phase A close-out - detection colour fixed, docs written, both committed",
     "branch": "master"
   },
   "goal": {
     "original": "Give the user more masking methods. The trigger was the YOLO vocabulary ceiling - 'mask the headphones' is impossible on UltralyticsDetectorProvider. The user also remembered a ComfyUI feature where you click a point on the image, set a confidence, and it selects everything belonging to that area - they want that in the app.",
-    "status": "in_progress",
-    "summary": "PHASE A IS DONE, USER-VERIFIED AND COMMITTED. The last defect (a detected region drawing in the same white as the painted mask) is fixed as a display-only split and confirmed by the user in the app; docs/masking.md now owns the whole subsystem. What is left on MPI-361 is Phase B alone - swap SAM3_Detect in behind the same UI for open-vocabulary TEXT prompts. Alongside it, the user's UI direction became MPI-371: the mask surface becomes a family of sibling tools with one shared brush strip. Nothing is uncommitted for this work."
+    "status": "complete",
+    "summary": "RESOLVED 2026-07-28. Its next_action - MPI-371, the mask tool family - shipped and was user-verified; the card is done. The split landed as MpiToolOptionsMaskDetect + MpiToolOptionsMaskPoints over two shared compounds (MpiMaskDetectRow, MpiMaskStrip with an optional brush pair), MpiToolOptionsMask deleted, one 'mask' toolKey for the family. Both named traps held. The CLAUDE.md Masking router row it flagged was added with the user's permission, as were the .claude/rules updates. Superseded by handoff 645985f8-8e04-4f57-b7d5-9b2297d12af1, which carries MPI-372."
   },
   "plan": {
     "file": ".agents/mpi-kanban/tasks/MPI-361/brief.md",

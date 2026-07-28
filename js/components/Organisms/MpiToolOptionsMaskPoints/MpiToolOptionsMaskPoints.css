@@ -1,0 +1,68 @@
+.mpi-tool-options-mask-points {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-2);
+}
+
+.mpi-tool-options-mask-points__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    justify-content: center;
+}
+
+.mpi-tool-options-mask-points__info {
+    margin: 0;
+    padding: var(--s-2);
+    color: var(--ink-3);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    font-size: var(--t-2xs);
+    line-height: 1.45;
+}
+
+.mpi-tool-options-mask-points__info b {
+    color: var(--ink-2);
+    font-weight: 700;
+}
+
+/* ponytail: the Scope slider repeats MpiMaskStrip's range styling. Two sliders
+   in the family isn't a primitive — extract one if a third appears. */
+.mpi-tool-options-mask-points__slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    padding: var(--s-1) 0;
+}
+
+.mpi-tool-options-mask-points__slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+}
+
+.mpi-tool-options-mask-points__slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--line);
+    border-radius: var(--r-1);
+    outline: none;
+    cursor: pointer;
+}
+
+.mpi-tool-options-mask-points__slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ink-1);
+    border: none;
+    cursor: pointer;
+}

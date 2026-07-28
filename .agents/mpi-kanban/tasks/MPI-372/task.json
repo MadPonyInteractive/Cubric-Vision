@@ -1,0 +1,28 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-372",
+ "title": "PromptBox must stay reachable while a mask tool is active",
+ "description": "Masking and adjusting generation settings are mutually exclusive today, and they should not be. `prompt` is a RAIL TOOL like crop or mask, so `mountOptions('prompt')` hides the tool panel and shows PromptBox while any mask tool hides PromptBox. Every settings tweak mid-mask costs a round trip: mask -> switch to Prompt -> change one control -> switch back to the mask tool. User's words: extremely annoying.\n\nThis was tolerable when Mask was a single tool. MPI-371 made it a FAMILY (Detect + Points shipped, Shapes MPI-368 and Text MPI-361 Phase B coming), so the round trip now sits in the middle of the flow the product is built around: paint or detect a region, then describe what to do with it. Masking without seeing the prompt is a half-finished thought - the mask and the prompt are ONE operation, and the UI splits them across two modes.\n\nThe fix is a UX decision, not a mechanical one, so it needs a brief before code. Options to weigh (NOT decided):\n  - PromptBox stays mounted and visible whenever a mask tool is active, tool panel on the right as now.\n  - Prompt stops being a rail tool entirely and becomes always-present chrome, with the rail owning canvas tools only.\n  - A compact prompt strip while masking, expanding to the full box on demand.\n\nBLAST RADIUS: js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js is where it all lives - `mountOptions(mode)` (the `prompt` special case, `swapToPreview` / `swapToCanvas`, `_pb.el.show()` / `hide()`), the `mpi-group-history-block--prompt-active` CSS class that hides #right-top-slot, `_shouldShowPromptBox()`, `_hasPromptOps()`, `_mountPromptBoxIfNeeded()`, and MpiGroupHistoryBlock.css for the layout. Note the canvas/preview swap: prompt mode calls `swapToPreview()` and leaving it calls `swapToCanvas()`, so showing both at once is NOT just a CSS change - the viewer currently renders a different surface per mode. That swap is the real design question.\n\nRelated: docs/workspaces.md (mediator), docs/masking.md (the tool family), .claude/rules/component-events-blocks.md.",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-28T11:30:00Z",
+ "updated_at": "2026-07-28T11:30:00Z",
+ "labels": [
+  "ui",
+  "ux",
+  "masking",
+  "prompt"
+ ],
+ "acceptance": [
+  "A user can adjust prompt / generation settings without leaving the mask tool they are working in",
+  "The chosen approach is briefed and agreed with the user BEFORE code - this is a UX decision, not a mechanical refactor",
+  "The canvas/preview swap (swapToPreview on entering prompt, swapToCanvas on leaving) is resolved coherently, not bypassed",
+  "Works for every tool in the mask family - Detect, Points, and later Shapes (MPI-368) and Text (MPI-361 Phase B)",
+  "No regression to the other rail tools (crop, resize, upscale, remove background, interpolate, export GIF)"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "events": "events.jsonl"
+ }
+}

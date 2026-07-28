@@ -3,8 +3,8 @@
  * Three-layer mask model:
  *   manualCanvas    — brush strokes (white where painted)
  *   subtractCanvas  — eraser strokes (white where erased)
- *   maskCanvas      — derived composite display layer = (manual ∪ ⋃autoPickMasks[selected]) AND NOT subtract
- *   autoCanvas      — derived DISPLAY-ONLY subset = (⋃autoPickMasks[selected]) AND NOT subtract
+ *   maskCanvas      — derived composite display layer = (manual AND NOT subtract) ∪ ⋃autoPickMasks[selected]
+ *   autoCanvas      — derived DISPLAY-ONLY subset = ⋃autoPickMasks[selected]
  *
  * autoPickMasks is RAM-only Map<pickIndex, ImageBitmap|HTMLCanvasElement>.
  * selectedAutoPicks is Set<number>.
@@ -207,7 +207,14 @@ export class MaskManager {
 
     /**
      * Rebuild display composite from layers.
-     * display = (manual ∪ ⋃autoPickMasks[selected]) AND NOT subtract
+     * display = (manual AND NOT subtract) ∪ ⋃autoPickMasks[selected]
+     *
+     * ORDER IS LOAD-BEARING: the auto picks go on LAST, so a detection wins over
+     * an older erase. Punching subtract over them instead made a region the user
+     * had erased invisible when a later run detected it — while `Add` (which
+     * un-erases, mirroring paint()) filled it in. Preview and commit disagreed;
+     * the auto layer is a deferred positive assertion, not something the erase
+     * that predates it gets to veto.
      */
     _recomposite() {
         if (!this.maskCtx || !this.maskCanvas) return;
@@ -218,17 +225,18 @@ export class MaskManager {
         this.maskCtx.save();
         this.maskCtx.clearRect(0, 0, w, h);
 
-        // Step 1: union manual + selected auto picks
+        // Step 1: manual AND NOT subtract — destination-out punches subtract holes
         this.maskCtx.globalCompositeOperation = 'source-over';
         this.maskCtx.drawImage(this.manualCanvas, 0, 0);
+        this.maskCtx.globalCompositeOperation = 'destination-out';
+        this.maskCtx.drawImage(this.subtractCanvas, 0, 0);
+
+        // Step 2: union the selected auto picks on top — exactly what Add bakes
+        this.maskCtx.globalCompositeOperation = 'source-over';
         for (const idx of this.selectedAutoPicks) {
             const layer = this.autoPickMasks.get(idx);
             if (layer) this.maskCtx.drawImage(layer, 0, 0, w, h);
         }
-
-        // Step 2: AND NOT subtract — destination-out punches subtract holes
-        this.maskCtx.globalCompositeOperation = 'destination-out';
-        this.maskCtx.drawImage(this.subtractCanvas, 0, 0);
 
         this.maskCtx.restore();
 
@@ -243,7 +251,11 @@ export class MaskManager {
      *
      * NEVER exported: getURL() / the viewer's composite still flatten the single
      * unioned maskCanvas that every downstream mask consumer reads.
-     *   auto = (⋃autoPickMasks[selected]) AND NOT subtract
+     *   auto = ⋃autoPickMasks[selected]
+     *
+     * No subtract punch here either — the green tint shows exactly what the run
+     * returned and exactly what `Add` would bake, which is the whole point of it
+     * being a preview.
      */
     _recompositeAuto(w, h) {
         if (!this.autoCtx) return;
@@ -259,8 +271,6 @@ export class MaskManager {
         this.autoCtx.save();
         this.autoCtx.globalCompositeOperation = 'source-over';
         for (const l of layers) this.autoCtx.drawImage(l, 0, 0, w, h);
-        this.autoCtx.globalCompositeOperation = 'destination-out';
-        this.autoCtx.drawImage(this.subtractCanvas, 0, 0);
         this.autoCtx.restore();
 
         this.hasAutoLayer = true;

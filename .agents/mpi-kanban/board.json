@@ -1,9 +1,9 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 372,
+ "next_id": 373,
  "columns": {
   "todo": [
-   "MPI-371",
+   "MPI-372",
    "MPI-368",
    "MPI-367",
    "MPI-366",
@@ -39,6 +39,7 @@
    "MPI-4"
   ],
   "done": [
+   "MPI-371",
    "MPI-354",
    "MPI-360",
    "MPI-364",
@@ -62,8 +63,23 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-28T08:30:00Z",
+ "updated_at": "2026-07-28T11:30:00Z",
  "events": [
+  {
+   "at": "2026-07-28T11:30:00Z",
+   "type": "task.created",
+   "task": "MPI-372",
+   "to": "todo",
+   "note": "PromptBox must stay reachable while a mask tool is active. Today prompt is a RAIL TOOL, so masking and adjusting generation settings are mutually exclusive modes - mask, switch to prompt, tweak a setting, switch back. With the mask family now at two tools and Shapes + Text coming, that round trip sits in the middle of the flow the product is built around. User words: extremely annoying. Design job, not a CSS job - prompt mode swaps the viewer surface via swapToPreview / swapToCanvas."
+  },
+  {
+   "at": "2026-07-28T11:20:00Z",
+   "type": "task.moved",
+   "task": "MPI-371",
+   "from": "doing",
+   "to": "done",
+   "note": "USER-VERIFIED LIVE. Mask surface is now a tool family: MpiToolOptionsMaskDetect + MpiToolOptionsMaskPoints, each mounting the shared MpiMaskDetectRow and MpiMaskStrip (brush pair optional, hidden on Points). MpiToolOptionsMask deleted. One mask toolKey keeps settings across swaps. Both traps proven headlessly: Points destroy() restores right-click, and no destroy() clears the paint layers. A defect the user found while verifying turned out to be an MPI-361 layer-ORDER bug - auto picks now union LAST so a detection beats an older erase - fixed in 3 sites, 12/12 checks with a negative control, and also user-verified."
+  },
   {
    "at": "2026-07-28T08:30:00Z",
    "type": "task.created",

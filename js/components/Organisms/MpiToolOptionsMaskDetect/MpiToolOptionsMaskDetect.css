@@ -1,0 +1,13 @@
+.mpi-tool-options-mask-detect {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-2);
+}
+
+.mpi-tool-options-mask-detect__section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    justify-content: center;
+}

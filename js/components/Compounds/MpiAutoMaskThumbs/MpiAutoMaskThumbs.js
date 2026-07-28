@@ -5,7 +5,7 @@
  * "Detected" ComfyUI node. Clicking a thumbnail toggles it selected/deselected.
  * Multiple thumbnails may be selected at once (additive mask behaviour).
  *
- * Owned by MpiCanvasViewer; re-parented into MpiToolOptionsMask via
+ * Owned by MpiCanvasViewer; re-parented into MpiMaskDetectRow via
  * `viewer.el.getAutoMaskThumbsEl()` while mask tool is active.
  *
  * Usage:

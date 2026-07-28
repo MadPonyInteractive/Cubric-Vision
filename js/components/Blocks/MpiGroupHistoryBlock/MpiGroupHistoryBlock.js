@@ -15,7 +15,8 @@ import { MpiVideoViewer } from '../../Organisms/MpiVideoViewer/MpiVideoViewer.js
 import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.js';
-import { MpiToolOptionsMask } from '../../Organisms/MpiToolOptionsMask/MpiToolOptionsMask.js';
+import { MpiToolOptionsMaskDetect } from '../../Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js';
+import { MpiToolOptionsMaskPoints } from '../../Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
@@ -71,11 +72,13 @@ import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiRe
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
  * that owns the options UI for that mode. `prompt` is handled specially by the
- * mediator (→ PromptBox). `mask` mounts MpiToolOptionsMask; no apply button.
+ * mediator (→ PromptBox). The mask family (MPI-371) is one tool per masking
+ * method; none of them emit apply.
  */
 const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
-    mask:         MpiToolOptionsMask,
+    maskDetect:   MpiToolOptionsMaskDetect,
+    maskPoints:   MpiToolOptionsMaskPoints,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     removeBackground: MpiToolOptionsRemoveBg,
@@ -84,6 +87,16 @@ const TOOL_OPTIONS_REGISTRY = {
     resizeVideo:  MpiToolOptionsResize,
     exportGif:    MpiToolOptionsGif,
 };
+
+/** Any tool in the mask family. One rail icon per masking method (MPI-371). */
+const _isMaskTool = (mode) => mode === 'maskDetect' || mode === 'maskPoints';
+
+/**
+ * Rail tool mode → canvas viewer mode. The viewer knows two canvas modes,
+ * 'crop' and 'mask'; the rail has one entry per masking method, so every mask
+ * tool maps onto the same viewer mode.
+ */
+const _viewerModeFor = (mode) => (mode === 'crop' ? 'crop' : (_isMaskTool(mode) ? 'mask' : null));
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
     name: 'MpiGroupHistoryBlock',
@@ -434,7 +447,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
             // Mask compounds have no apply button — they only create a mask.
             // PromptBox runs the operation; this branch should never fire.
-            if (mode === 'mask') return;
+            if (_isMaskTool(mode)) return;
             if (mode === 'videoUpscale' || mode === 'imageUpscale') {
                 const injectionParams = {
                     Upscale_Factor: payload.factor ?? 2,
@@ -465,7 +478,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         }
 
         const TOOL_LABELS = {
-            prompt: 'Prompt', crop: 'Crop', mask: 'Mask',
+            prompt: 'Prompt', crop: 'Crop',
+            maskDetect: 'Mask Detect', maskPoints: 'Mask Points',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',
@@ -1529,8 +1543,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // prior multi-select delete may have exited it — re-arm from the
                 // tool source-of-truth if the canvas mode is stale.
                 await viewer.el.loadEntry?.(item, idx);
-                const _tool = historyTools.el.getActiveMode?.();
-                if (_tool === 'crop' || _tool === 'mask') viewer.el.enterMode?.(_tool);
+                const _vm = _viewerModeFor(historyTools.el.getActiveMode?.());
+                if (_vm) viewer.el.enterMode?.(_vm);
                 viewer.el.setMaskHidden?.(false);
             }
             _currentIdx = idx;
@@ -2031,9 +2045,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     // panel is still mounted and won't re-enter on its own. Defer a
                     // frame so it lands after any late canvas mode reset from the
                     // image reload (which would otherwise clobber the fresh mode).
-                    const _tool = historyTools.el.getActiveMode?.();
-                    if (_tool === 'crop' || _tool === 'mask') {
-                        requestAnimationFrame(() => viewer.el.enterMode?.(_tool));
+                    const _vm = _viewerModeFor(historyTools.el.getActiveMode?.());
+                    if (_vm) {
+                        requestAnimationFrame(() => viewer.el.enterMode?.(_vm));
                     }
                 }
             }

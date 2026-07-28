@@ -55,7 +55,8 @@ Photoshop-style layout: `grid-template-columns: 3.5rem 1fr 14rem`. Slots: `#left
 ```js
 const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
-    mask:         MpiToolOptionsMask,
+    maskDetect:   MpiToolOptionsMaskDetect,
+    maskPoints:   MpiToolOptionsMaskPoints,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     interpolate:  MpiToolOptionsInterpolate,
@@ -77,7 +78,7 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Image groups** (`_group.type !== 'video'`):
 - `MpiCanvasViewer`   props: `{ initialImageUrl, initialIdx, initialItem, groupId }`   slot: `#centre-slot` — handles crop/mask viewer modes internally; does NOT own any bars. `initialItem` (full HistoryItem) + `groupId` are required for layered-mask TEMP persistence (key = `<projectId>/<groupId>/<itemId>`); omitting them disables persistence silently.
-- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMask`, `MpiToolOptionsResize`, `MpiToolOptionsUpscale` (`kind:'image'`)
+- Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsMaskDetect`, `MpiToolOptionsMaskPoints`, `MpiToolOptionsResize`, `MpiToolOptionsUpscale` (`kind:'image'`)
 - `MpiPromptBox` (Organism) into `#prompt-box-mount` — only when `_hasPromptOps()` true (active model exposes ≥1 enabled prompt op); Block keeps handle in `_pb`
 
 **Video groups** (`_group.type === 'video'`):
@@ -99,7 +100,12 @@ Five self-contained tool-options compounds. Each mounts into `#right-top-slot` v
 **Pattern:** `setup` enters viewer mode → owns controls → `destroy` evaluates mask + exits viewer mode. No apply buttons on mask panel (PromptBox drives ops). No cancel buttons.
 
 - `MpiToolOptionsCrop`   props: `{ viewer, kind: 'image'|'video' }`   — family `MpiRadioGroup` (RATIO/FREE) + orientation `MpiRadioGroup` (icon-only, RATIO only) + ratio `MpiRadioGroup` (icon-only, hidden for FREE, backed by `CROP_RATIOS` pure-aspect table incl cinema 2:1/1.85:1/21:9/2.39:1) + "Divisible by" `MpiInput` (default 16, both modes, above Apply) + apply (image) / snapshot+save (video) buttons. Persists `{ family:'ratio'|'free', orientation, label, divisible_by }` under `project.toolSettings.crop` via `settings:tool:update` (toolKey `'crop'`). Pushes ratio to `viewer.el.setCropRatio(ratio|null)` — `null` = FREE (no aspect lock). Exposes `el.getDivisibleBy()`. On apply, each output W/H is rounded to `divisible_by` via `roundToDivisible` (js/utils/cropRounding.js) — image in `MpiCanvasViewer._runCrop`, video in `MpiGroupHistoryBlock._handleCropSaveVideo` (sends `absoluteCropPx`; `routes/videoCrop.js` uses it directly and skips even-snap). Emits `apply { kind: 'image'|'video-save'|'video-snapshot' }`. Crop drag honors Shift modifier (scales from rect center) via `Hotkeys.register('shift', …)` inside `CropManager`/`cropTool`.
-- `MpiToolOptionsMask`   props: `{ viewer }`   — unified panel: Detect/Points source `MpiRadioGroup` + detection-model `MpiDropdown` + box/segment `MpiRadioGroup` (both hidden in Points) + Scope slider / info box / Clear points / Add / Subtract (Points only) + `MpiAutoMaskThumbs` strip + Detect button + brush/eraser `MpiButton` toggles + invert + clear. No `apply` emitted. Hotkeys B/E registered while mounted. `destroy` calls `viewer.el.evaluateMask()` then `exitMode()`. Auto-detect composites picked thumbs ONTO existing mask (`compositeMaskDataURL`); Detect button does NOT clear existing paint.
+- **The mask tool family (MPI-371)** — one rail icon per masking method inside the `Mask` group, no switcher, no source radio. Each tool owns only its own controls and mounts two shared compounds. None emits `apply`. Rail modes are `maskDetect` / `maskPoints`; the viewer knows only `'mask'`, bridged by `MpiGroupHistoryBlock._viewerModeFor()`. Everything persists under the SINGLE `'mask'` tool key, so settings survive a swap between mask tools. Auto-detect composites picked thumbs ONTO existing mask; Detect does NOT clear existing paint.
+  - `MpiToolOptionsMaskDetect` props: `{ viewer }` — detection-model `MpiRadioGroup` + box/segment `MpiRadioGroup`, then `MpiMaskDetectRow` + `MpiMaskStrip` (WITH brush). Mount calls `setMaskPointsMode(false)`; `destroy` calls `evaluateMask()` then `exitMode()`.
+  - `MpiToolOptionsMaskPoints` props: `{ viewer }` — Scope slider (raw `SAMDetectorCombined.threshold` as 30–99, deliberately NOT remapped) + info box + Clear points, then `MpiMaskDetectRow` + `MpiMaskStrip` (`brush: false`). Mount calls `setMaskPointsMode(true)`; **`destroy` MUST call `setMaskPointsMode(false)` before `evaluateMask()`** — points mode owns the right mouse button and suppresses the image context menu.
+  - `MpiMaskStrip` (Compound) props: `{ viewer, brush = true }` — the ONE shared bottom strip on every mask tool: paint/erase `MpiRadioGroup` (**optional**, `brush: false` drops it AND its B/E `Hotkeys.bind`) + invert + clear `MpiButton` + opacity slider. Invert active state via `.mpi-mask-strip__invert--on`.
+  - `MpiMaskDetectRow` (Compound) props: `{ viewer }` — `MpiAutoMaskThumbs` slot (viewer-owned node, re-parented, NEVER destroyed) + Detect button + Add / Subtract, gated as a unit on `generationQueueCount`. Shapes (MPI-368) mounts only the strip; Text (MPI-361 Phase B) mounts both.
+  - **A tool swap must NOT clear the mask** — `manualCanvas` + `subtractCanvas` are the user's work; only the auto layer is disposable. No mask tool's mount path may call `clearMask()`.
 - `MpiToolOptionsResize` props: `{ viewer, kind: 'image'|'video', currentItem? }` — width/height `MpiInput`, method/proportion/crop-position `MpiDropdown`, `MpiColorPicker` for pad color, divisible-by `MpiInput`, flip/rotation `MpiRadioGroup`, inline preview `<img>` slot, Apply `MpiButton`. Live preview runs the **image** `resize` workflow on a 512px-longest-edge thumbnail extracted from `viewer.el.getSourceElement()` (HTMLImageElement or HTMLVideoElement), with `width`/`height`/`divisible_by` proportionally scaled to thumb space. Result paints into the inline preview slot — viewer is never touched. Apply appends a new full-resolution entry via `startGeneration` (`resize` for image, `resizeVideo` for video); preserves the source. Persists controls under `project.toolSettings.resize` via `settings:tool:update`.
 - `MpiToolOptionsUpscale`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (factor) + `MpiDropdown` (model) + run. Emits `apply { factor, model }`.
 - `MpiToolOptionsInterpolate`   props: `{ viewer, onApply }`   — `MpiOptionSelector` (multiplier) + run. Emits `apply { multiplier }`.
