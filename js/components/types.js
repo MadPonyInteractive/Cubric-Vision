@@ -31,7 +31,9 @@
  *   setMaskOpacity(opacity), clearMask(), getMaskDataURL(bg, fg)
  *   setMaskBwView(bool)       — display the mask opaque B/W instead of tinted
  *   setMaskPaintEnabled(bool) — arm/disarm brush painting for the active tool
- *   setCropRatio(ratio), getCropRect()
+ *   setCropRatio(ratio), setCropSize(w, h), getCropRect()
+ *                             — the crop rect may sit PARTLY OUTSIDE the image
+ *                               (MPI-383); getCropRect can return negative x/y
  *   destroy()                 — remove canvas + detach all window listeners
  *
  * Emits:
@@ -56,6 +58,12 @@
  * @typedef {Object} MpiToolOptionsCropProps (Organism — js/components/Organisms/MpiToolOptionsCrop)
  * @property {Object} viewer - MpiCanvasViewer OR MpiVideoViewer instance
  * @property {'image'|'video'} kind
+ *
+ * Three resolution types: ratio, free, and resolution (exact W×H, the only one
+ * that resamples — MPI-383). Image kind also gets the fill colour used for
+ * whatever the crop selects beyond the source; video hides both, since the
+ * video path crops and cannot pad. Requires viewer.el: setCropRatio(ratio) and,
+ * for images, setCropSize(w, h).
  *
  * Emits: 'apply' { kind: 'image' | 'video-save' | 'video-snapshot' }
  */

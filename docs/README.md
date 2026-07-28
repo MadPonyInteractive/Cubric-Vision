@@ -43,6 +43,7 @@ NOT mechanically split these):
 | **Op & model selection** (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker + hold-Tab, bar order) | [op-model-selection.md](op-model-selection.md) |
 | **Gallery** (cards, thumbnails, selection, drag-drop, hover media) | [gallery.md](gallery.md) |
 | **Masking** (layer model, the display-vs-export split, click-point masking, auto-mask graph, Add/Subtract) | [masking.md](masking.md) |
+| **Crop** (ratio/free/exact-resolution, cropping PAST the image edge + fill colour, edge snapping, pad-then-extract) | [crop.md](crop.md) |
 | **Model Library UI** (usable-vs-installed, featured, install-button gates, tile patching) | [model-library.md](model-library.md) |
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |
 | **Video player** (frame-accurate hybrid: `<video>` plays / mediabunny canvas owns paused-step; color matrix rule; frame-index coordinate law; sub-range loop) | [video-player.md](video-player.md) |

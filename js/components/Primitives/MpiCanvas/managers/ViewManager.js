@@ -88,18 +88,27 @@ export class ViewManager {
 
     /**
      * Re-fits the view if managed (called after container resize).
+     *
+     * `fitBox` frames something other than the image — the crop tool passes
+     * image ∪ crop rect so a crop extending past the image stays visible
+     * (MPI-383). Its origin may be negative; the offset carries it.
+     *
      * @param {number} containerW
      * @param {number} containerH
      * @param {number} imgW
      * @param {number} imgH
+     * @param {{x:number,y:number,w:number,h:number}|null} [fitBox]
      */
-    refit(containerW, containerH, imgW, imgH) {
+    refit(containerW, containerH, imgW, imgH, fitBox = null) {
         if (!this.isManagedView) return;
         if (!imgW || !imgH || !containerW || !containerH) return;
-        this.scale = Math.min(containerW / imgW, containerH / imgH);
+        const box = (fitBox && fitBox.w > 0 && fitBox.h > 0)
+            ? fitBox
+            : { x: 0, y: 0, w: imgW, h: imgH };
+        this.scale = Math.min(containerW / box.w, containerH / box.h);
         this.minScale = this.scale;
-        this.offsetX = (containerW - imgW * this.scale) / 2;
-        this.offsetY = (containerH - imgH * this.scale) / 2;
+        this.offsetX = (containerW - box.w * this.scale) / 2 - box.x * this.scale;
+        this.offsetY = (containerH - box.h * this.scale) / 2 - box.y * this.scale;
     }
 
     /**

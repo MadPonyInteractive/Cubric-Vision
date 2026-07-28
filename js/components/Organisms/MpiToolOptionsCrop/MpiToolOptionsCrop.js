@@ -2,14 +2,24 @@
  * MpiToolOptionsCrop — Organism: tool-options panel for Crop mode.
  *
  * Inline-only (no popups). Stacked sections:
- *   Resolution Type — MpiRadioGroup (ratio / free)
+ *   Resolution Type — MpiRadioGroup (ratio / free / resolution)
  *   Orientation     — MpiRadioGroup icon-only (portrait / landscape) [ratio only]
- *   Ratio           — horizontal ratio row (icon over label), [hidden for free]
- *   Divisible by    — MpiInput (default 16), above Apply, both modes
+ *   Ratio           — horizontal ratio row (icon over label), [ratio only]
+ *   Width / Height  — MpiInput pair, exact output pixels [resolution only]
+ *   Fill            — MpiColorPicker for the pixels outside the source [image only]
+ *   Divisible by    — MpiInput (default 16), above Apply [ratio + free]
  *
  * The ratio row is backed by CROP_RATIOS (pure aspect, no fixed resolutions):
  * the user drags a ratio-locked box and whatever pixels are selected become the
- * output. Divisible-by rounds those selected output pixels on apply (Phase 3).
+ * output. Divisible-by rounds those selected output pixels on apply.
+ *
+ * RESOLUTION (MPI-383) is the one family that RESAMPLES: the box seeds at
+ * exactly width×height image px, stays locked to that ratio, and the crop is
+ * scaled to the typed size on apply. RATIO and FREE never resample.
+ *
+ * The crop box may leave the image in every family; the fill colour is what
+ * lands outside the source, and is the colour the user then asks an edit model
+ * to paint over. Video crop cannot extend, so fill + resolution are image-only.
  *
  * Mounted by MpiGroupHistoryBlock into #right-top-slot when active tool = 'crop'.
  *
@@ -25,6 +35,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
+import { MpiColorPicker } from '../../Primitives/MpiColorPicker/MpiColorPicker.js';
 import { CROP_RATIOS } from '../../../utils/ratios.js';
 import { qs } from '../../../utils/dom.js';
 import { state } from '../../../state.js';
@@ -36,9 +47,13 @@ const DEFAULTS = Object.freeze({
     orientation:  'portrait',
     label:        '1:1',
     divisible_by: 16,
+    res_w:        1920,
+    res_h:        1080,
+    // eslint-disable-next-line mpi/no-hardcoded-hex-color -- default fill for pixels outside the source
+    fill_color:   '#000000',
 });
 
-const FAMILY_VALUES      = new Set(['ratio', 'free']);
+const FAMILY_VALUES      = new Set(['ratio', 'free', 'resolution']);
 const ORIENTATION_VALUES = new Set(['portrait', 'landscape']);
 
 const clampInt = (value, fallback = 1) => {
@@ -57,12 +72,16 @@ function coerceSettings(raw) {
         if (!list.some(r => r.label === label)) label = list[0]?.label ?? DEFAULTS.label;
     }
     const divisible_by = clampInt(raw.divisible_by, DEFAULTS.divisible_by);
-    return { family, orientation, label, divisible_by };
+    const res_w = clampInt(raw.res_w, DEFAULTS.res_w);
+    const res_h = clampInt(raw.res_h, DEFAULTS.res_h);
+    const fill_color = typeof raw.fill_color === 'string' ? raw.fill_color : DEFAULTS.fill_color;
+    return { family, orientation, label, divisible_by, res_w, res_h, fill_color };
 }
 
 const FAMILIES = [
-    { label: 'RATIO', value: 'ratio' },
-    { label: 'FREE',  value: 'free'  },
+    { label: 'RATIO',      value: 'ratio'      },
+    { label: 'FREE',       value: 'free'       },
+    { label: 'RESOLUTION', value: 'resolution' },
 ];
 
 const ORIENTATIONS = [
@@ -107,6 +126,17 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
                 <div class="mpi-tool-options-crop__section-label">Ratio</div>
                 <div class="mpi-tool-options-crop__ratios" id="ratios-slot"></div>
             </div>
+            <div class="mpi-tool-options-crop__section" id="res-section" hidden>
+                <div class="mpi-tool-options-crop__section-label">Output Resolution</div>
+                <div class="mpi-tool-options-crop__pair">
+                    <div id="res-w-slot"></div>
+                    <div id="res-h-slot"></div>
+                </div>
+            </div>
+            <div class="mpi-tool-options-crop__section" id="fill-section">
+                <div class="mpi-tool-options-crop__section-label">Fill Outside</div>
+                <div class="mpi-tool-options-crop__fill" id="fill-slot"></div>
+            </div>
             <div class="mpi-tool-options-crop__divisible" id="divisible-slot"></div>
             <div class="mpi-tool-options-crop__actions" id="actions-slot"></div>
         </div>
@@ -123,6 +153,12 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
         let _orientation  = _initial.orientation;
         let _label        = _initial.label;
         let _divisible_by = _initial.divisible_by;
+        let _res_w        = _initial.res_w;
+        let _res_h        = _initial.res_h;
+
+        // Video crop cannot extend past the frame (ffmpeg crops, it does not
+        // pad), so the exact-size family and the fill colour are image-only.
+        if (isVideo && _family === 'resolution') _family = DEFAULTS.family;
 
         const _persistTimers = new Map();
         const persist = (key, value) => {
@@ -138,19 +174,19 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
         const orientSection = qs('#orient-section', el);
         const ratiosSlot   = qs('#ratios-slot',    el);
         const ratiosSection = qs('#ratios-section', el);
+        const resSection   = qs('#res-section',    el);
+        const fillSection  = qs('#fill-section',   el);
         const divisibleSlot = qs('#divisible-slot', el);
         const actionsSlot  = qs('#actions-slot',   el);
 
         if (isVideo) viewer.el.enterCropMode?.();
         else         viewer.el.enterMode?.('crop');
 
-        viewer.el.setCropRatio?.(_resolveRatio(_family, _orientation, _label));
-
         const _children = [];
 
         // Family radio
         const familyRadio = MpiRadioGroup.mount(document.createElement('div'), {
-            options: FAMILIES,
+            options: isVideo ? FAMILIES.filter(f => f.value !== 'resolution') : FAMILIES,
             value:   _family,
             name:    'crop-family',
             info:    'Aspect ratio family',
@@ -187,7 +223,7 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
                 persist('orientation', _orientation);
                 persist('label', _label);
                 _mountRatios();
-                _pushRatio();
+                _pushShape();
             });
         };
 
@@ -210,12 +246,30 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
             ratioRadio.on('select', ({ value }) => {
                 _label = value;
                 persist('label', _label);
-                _pushRatio();
+                _pushShape();
             });
         };
 
-        const _pushRatio = () => {
+        /**
+         * Push the active family's box shape to the viewer. RESOLUTION seeds an
+         * exact pixel box (which may hang off the image); the other two set a
+         * ratio lock, or null for free.
+         */
+        const _pushShape = () => {
+            if (_family === 'resolution' && !isVideo) {
+                viewer.el.setCropSize?.(_res_w, _res_h);
+                return;
+            }
             viewer.el.setCropRatio?.(_resolveRatio(_family, _orientation, _label));
+        };
+
+        /** Sections that only belong to one family. */
+        const _syncSections = () => {
+            resSection.hidden  = _family !== 'resolution' || isVideo;
+            fillSection.hidden = isVideo;
+            // Divisible-by rounds the SELECTED pixels; in RESOLUTION mode the
+            // typed size is the output, so there is nothing left to round.
+            divisibleSlot.hidden = _family === 'resolution';
         };
 
         familyRadio.on('select', ({ value }) => {
@@ -232,13 +286,53 @@ export const MpiToolOptionsCrop = ComponentFactory.create({
             persist('label', _label);
             _mountOrientation();
             _mountRatios();
-            _pushRatio();
+            _syncSections();
+            _pushShape();
         });
 
         _mountOrientation();
         _mountRatios();
 
-        // ── Divisible-by input (both modes, above Apply) ──────────────────────
+        // ── Output resolution (RESOLUTION family only) ────────────────────────
+        // Pushed on `change`, not `input`: typing "1920" would otherwise reseed
+        // the box at 1, 19 and 192 on the way there.
+        const resWInput = MpiInput.mount(document.createElement('div'), {
+            type: 'number', label: 'Width', value: _res_w, min: 1, step: 1,
+            info: 'Exact output width in pixels',
+        });
+        qs('#res-w-slot', el).appendChild(resWInput.el);
+        _children.push(resWInput);
+        resWInput.on('change', ({ value }) => {
+            _res_w = clampInt(value, _res_w);
+            persist('res_w', _res_w);
+            _pushShape();
+        });
+
+        const resHInput = MpiInput.mount(document.createElement('div'), {
+            type: 'number', label: 'Height', value: _res_h, min: 1, step: 1,
+            info: 'Exact output height in pixels',
+        });
+        qs('#res-h-slot', el).appendChild(resHInput.el);
+        _children.push(resHInput);
+        resHInput.on('change', ({ value }) => {
+            _res_h = clampInt(value, _res_h);
+            persist('res_h', _res_h);
+            _pushShape();
+        });
+
+        // ── Fill colour for pixels outside the source (image only) ────────────
+        const fillPicker = MpiColorPicker.mount(document.createElement('div'), {
+            value: _initial.fill_color,
+            info:  'Fills anything the crop selects beyond the image',
+        });
+        qs('#fill-slot', el).appendChild(fillPicker.el);
+        _children.push(fillPicker);
+        fillPicker.on('change', ({ hex }) => persist('fill_color', hex));
+
+        _syncSections();
+        _pushShape();
+
+        // ── Divisible-by input (ratio + free, above Apply) ────────────────────
         const divisibleInput = MpiInput.mount(document.createElement('div'), {
             type: 'number', label: 'Divisible by', value: _divisible_by,
             min: 1, step: 1, info: 'Round output width & height to a multiple of this',

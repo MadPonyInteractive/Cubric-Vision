@@ -13,6 +13,14 @@
     align-items: center;
 }
 
+/* An author `display` beats the UA's [hidden] rule, so every section this
+ * component hides needs its own [hidden] — without these, `el.hidden = true`
+ * silently does nothing and the section stays on screen. */
+.mpi-tool-options-crop__section[hidden],
+.mpi-tool-options-crop__divisible[hidden] {
+    display: none;
+}
+
 .mpi-tool-options-crop__section-label {
     font-size: var(--t-2xs);
     color: var(--ink-3);
@@ -34,6 +42,23 @@
 }
 
 .mpi-tool-options-crop__ratios > * {
+    width: 100%;
+}
+
+.mpi-tool-options-crop__pair {
+    display: flex;
+    gap: var(--s-2);
+    width: 100%;
+}
+
+.mpi-tool-options-crop__pair > * {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.mpi-tool-options-crop__fill {
+    display: flex;
+    justify-content: center;
     width: 100%;
 }
 

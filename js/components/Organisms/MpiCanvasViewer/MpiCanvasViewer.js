@@ -79,6 +79,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** Single mode enum replaces three booleans: crop/mask/automask/none */
         let _currentMode = 'none';
         let _activeCropRatio = SOCIAL_RATIOS[0].ratio;
+        /**
+         * Exact crop size when the RESOLUTION family drove the box (MPI-383).
+         * A ratio alone cannot restore it: re-entering crop mode re-fits the
+         * largest centred box for that ratio, which silently shrinks a
+         * 1920×1080 target back inside the image. null = ratio/free family.
+         */
+        let _activeCropSize = null;
         let _hasMask = false;
         /** Composite mask cache for active prompt-tool preview swap (canvas destroyed) */
         let _previewMaskCache = null;
@@ -691,7 +698,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             if (mode === 'crop') {
                 canvas.activeMode = 'crop';
-                canvas.setCropRatio(_activeCropRatio);
+                if (_activeCropSize) canvas.setCropSize(_activeCropSize.w, _activeCropSize.h);
+                else                 canvas.setCropRatio(_activeCropRatio);
             } else if (mode === 'mask') {
                 canvas.activeMode = 'mask';
             } else if (mode !== 'automask') {
@@ -747,15 +755,24 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const rect = canvas.getCropRect();
             if (!rect || !_currentItem?.filePath || !state.currentProject?.folderPath) return;
 
+            const settings = getToolSettings(state.currentProject || {}, 'crop', {
+                divisible_by: 16,
+                family: 'ratio',
+                res_w: 1920,
+                res_h: 1080,
+                // eslint-disable-next-line mpi/no-hardcoded-hex-color -- fallback fill outside the source
+                fill_color: '#000000',
+            });
+            const isExact = settings.family === 'resolution';
+
             // Round the selected output pixels to a multiple of the crop tool's
-            // "Divisible by" setting (MPI-261). Bound each dim by the source span
-            // from the crop origin so x+w never exceeds the source — the server's
-            // Sharp .extract throws on an out-of-bounds rect.
-            const n = getToolSettings(state.currentProject || {}, 'crop', { divisible_by: 16 }).divisible_by;
-            const srcW = canvas.img?.naturalWidth  || (rect.x + rect.w);
-            const srcH = canvas.img?.naturalHeight || (rect.y + rect.h);
-            const w = roundToDivisible(rect.w, n, srcW - rect.x);
-            const h = roundToDivisible(rect.h, n, srcH - rect.y);
+            // "Divisible by" setting (MPI-261). No source bound any more
+            // (MPI-383): a rect that overshoots the image is filled, not
+            // clipped, so rounding up is always safe. RESOLUTION mode skips it —
+            // the typed size is the output.
+            const n = isExact ? 1 : settings.divisible_by;
+            const w = roundToDivisible(rect.w, n, Infinity);
+            const h = roundToDivisible(rect.h, n, Infinity);
 
             StatusBar.progress.start('Cropping...');
 
@@ -770,6 +787,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
                         itemId,
                         sourceFilePath: _resolveUrl(_currentItem.filePath),
                         x: rect.x, y: rect.y, w, h,
+                        fill: settings.fill_color,
+                        // RESOLUTION is the only family that resamples.
+                        outW: isExact ? settings.res_w : null,
+                        outH: isExact ? settings.res_h : null,
                     }),
                 });
                 if (!res.ok) throw new Error(`crop-media ${res.status}`);
@@ -1073,7 +1094,20 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** Forward crop ratio selection from MpiToolOptionsCrop to the canvas. */
         el.setCropRatio = (ratio) => {
             _activeCropRatio = ratio;
+            _activeCropSize  = null;   // leaving RESOLUTION drops the exact size
             canvas.setCropRatio(ratio);
+        };
+
+        /**
+         * RESOLUTION family (MPI-383): seed the crop box at exactly w×h image
+         * pixels. _activeCropRatio keeps the lock so re-entering crop mode after
+         * an image swap restores the same shape.
+         */
+        el.setCropSize = (w, h) => {
+            if (!(w > 0) || !(h > 0)) return;
+            _activeCropRatio = w / h;
+            _activeCropSize  = { w, h };
+            canvas.setCropSize(w, h);
         };
 
         /**

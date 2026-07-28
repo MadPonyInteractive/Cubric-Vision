@@ -1,0 +1,41 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-383",
+  "title": "Crop past the image edge - canvas extension, edge snapping, exact-resolution mode",
+  "description": "User request 2026-07-28. Photoshop-style crop: the box may leave the image, the new area fills with a picked colour (the outpaint prompt target), edges snap to the image bounds, and a third resolution type takes an exact WxH. Long form in brief.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "active",
+  "created_at": "2026-07-28T10:00:00Z",
+  "updated_at": "2026-07-29T20:00:00Z",
+  "labels": [
+    "ui",
+    "ux",
+    "canvas",
+    "crop",
+    "apps"
+  ],
+  "acceptance": [
+    "The crop rect may extend past every image edge in all three resolution types; Apply writes a file the full size of the rect",
+    "Pixels outside the source are filled with the colour from an MpiColorPicker in the crop panel (same primitive the Resize pad and Remove Background tools use), persisted per project",
+    "No auto-mask: the outpaint flow is prompting the model to fill the coloured area, which beats a painted mask",
+    "Crop edges snap to the image edges (and the box to the image centre when moving it) inside an 8-screen-px threshold, so a 1-2px accidental border is impossible",
+    "Snapping holds in ratio-locked mode by adjusting the SCALE, never by breaking the ratio",
+    "Third resolution type RESOLUTION: user types W and H, the box seeds at exactly those pixels centred on the image, is ratio-locked to W/H, and the output is resampled to exactly WxH. Resample happens ONLY in this type",
+    "Divisible-by no longer floors when rounding up overshoots the source - the overshoot is filled now. It stays hidden in RESOLUTION mode (exact dims win)",
+    "The managed view zooms out to fit image + crop union so a box larger than the image is fully visible; it must NOT refit mid-drag (scale changing under a live drag makes the rect chase the cursor)",
+    "Server /project/crop-media takes fill + optional outW/outH; Sharp extends by the outside margins before extract (extract alone throws out of bounds)",
+    "Video crop (js/utils/cropTool.js, normalized 0-1) is untouched in v1 - images only",
+    "A runnable check covers the snap maths and the extend/extract plan"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "files": "files.md",
+    "handoffs": "handoffs/",
+    "plan": "plan.md",
+    "research": "research/"
+  }
+}

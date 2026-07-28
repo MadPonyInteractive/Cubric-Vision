@@ -726,7 +726,7 @@ class _CanvasCore {
         this.screenUICanvas.style.height = rect.height + 'px';
         const display = this._displayImage();
         if (this.view.isManagedView && display && display.width) {
-            this.view.refit(rect.width, rect.height, display.width, display.height);
+            this.view.refit(rect.width, rect.height, display.width, display.height, this.crop.getFitBox());
         } else {
             this.view.handleResize(oldW, oldH, rect.width, rect.height);
         }
@@ -738,9 +738,29 @@ class _CanvasCore {
         const display = this._displayImage();
         if (!display || !display.width) return;
         if (this.baseCanvas.width === 0 || this.baseCanvas.height === 0) return;
+        this._refitForCrop(display);
         this._renderBase();
         this._renderOverlay();
         this._renderScreenUI();
+    }
+
+    /**
+     * A crop rect bigger than the image would sit half off-screen under the
+     * managed fit, so while cropping the view frames image ∪ crop instead
+     * (MPI-383).
+     *
+     * NEVER while dragging: the scale is what maps the cursor to image space,
+     * so changing it mid-gesture makes the rect chase the pointer. The zoom
+     * settles on release instead. A user who has panned or zoomed dropped
+     * managed view already and keeps their own framing.
+     */
+    _refitForCrop(display) {
+        if (!this.view.isManagedView || this.crop.isDragging) return;
+        const box = this.crop.getFitBox();
+        const rect = this.container.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        this.view.refit(rect.width, rect.height, display.width, display.height, box);
+        this._applyTransform();
     }
 
     _renderBase() {
@@ -797,9 +817,8 @@ class _CanvasCore {
         // of the region it produced.
         if (this.mask.pointsMode && this.mask.points.length) this._drawMaskPoints();
 
-        // 3. Crop overlay
-        const display = this._displayImage();
-        this.crop.draw(ctx, display.width, display.height, this.view.scale);
+        // 3. Crop overlay draws on the SCREEN canvas (_renderScreenUI) — the
+        // rect may leave the image, which this image-sized canvas cannot show.
 
         // 4. Grid
         if (this.gridH > 1 || this.gridV > 1) {
@@ -811,7 +830,8 @@ class _CanvasCore {
         const ctx = this.screenUICtx;
         ctx.clearRect(0, 0, this.screenUICanvas.width, this.screenUICanvas.height);
         if (this.comparison.isComparisonMode) this._drawSliderUI();
-        this.crop.drawScreenHandles(ctx, this.view);
+        const display = this._displayImage();
+        this.crop.drawScreen(ctx, this.view, display?.width || 0, display?.height || 0);
         this._drawBrushIndicator();
     }
 
@@ -1015,6 +1035,8 @@ class _CanvasCore {
 
     // ── Crop API ──────────────────────────────────────────────────────────────
     setCropRatio(ratio) { this.crop.setRatio(ratio); this.draw(); }
+    /** RESOLUTION mode: seed the rect at exactly w×h image px, centred (MPI-383). */
+    setCropSize(w, h)   { this.crop.setExactSize(w, h); this.draw(); }
     getCropRect()       { return this.crop.getCropRect(); }
 }
 
@@ -1069,7 +1091,9 @@ export const MpiCanvas = ComponentFactory.create({
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks','bakeAutoPicksInto',
             'setPointsMode','isPointsMode','clearMaskPoints','getMaskPointCount','getPointsJSON',
-            'setCropRatio','getCropRect',
+            // ALLOWLIST — a core method missing here is `undefined` on el, and the
+            // caller dies with "not a function" nowhere near this file.
+            'setCropRatio','setCropSize','getCropRect',
             'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });

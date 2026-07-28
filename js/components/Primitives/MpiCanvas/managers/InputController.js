@@ -198,7 +198,7 @@ export class InputController {
                 if (this.options.onSliderChange) this.options.onSliderChange(comparison.sliderPos);
             } else if (crop.isDragging) {
                 const i = this._getImageCoords(e);
-                crop.drag(i.x, i.y);
+                crop.drag(i.x, i.y, view.scale);
             } else if (mask.isDrawingMask) {
                 const i = this._getImageCoords(e);
                 mask.paint(i.x, i.y);
@@ -219,6 +219,10 @@ export class InputController {
             this.isPanning = false;
             this.managers.comparison.isDraggingSlider = false;
             this.updateCursor();
+            // Release is when the crop view settles — the refit is suppressed
+            // during the drag, so without a draw here the zoom would only
+            // catch up on the next mouse move.
+            this.options.onDraw();
         };
         window.addEventListener('mouseup', this._boundHandlers.mouseup);
 
