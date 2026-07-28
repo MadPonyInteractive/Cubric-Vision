@@ -4,10 +4,10 @@
  "title": "Hover-to-select on the Detect tool + a COCO YOLO model",
  "description": "Replaces MPI-361 Phase B (SAM3 text masking), cancelled 2026-07-29. The user's objection to text was that selection should be DISCOVERED, not described: hover an object, see it highlight, click it. SAM3 cannot do that - it is strictly prompt-driven and the engine has no automatic-mask-generation node at all (both proven live, see MPI-361 validation.md). YOLO can, because it enumerates objects without being told what to look for.\n\nTWO PARTS, deliberately separable - part 1 ships value with no download at all.\n\nPART 1 - HOVER-TO-SELECT over the detections we ALREADY have.\nA Detect run already produces per-object regions; today the user picks them from the thumb strip. Move the interaction onto the image: hovering a detected region highlights it (a seg model can show the mask outline, a bbox-only model shows the box), clicking selects it, which is the same act as clicking its thumb. The thumb strip STAYS - it is the readout of what was found and the multi-pick surface. This is a UI layer over data already in the viewer, so no new node, no new model, no download, no workflow change.\n\nPART 2 - a COCO YOLO model so the detector covers everyday objects.\nToday the Detect vocabulary is 4 entries (face / hair / hand / person). Add a COCO-trained YOLO for the 80 common classes (person, cat, dog, chair, bottle, tv, car...). PREFER THE -seg VARIANT (yolov8n-seg.pt, ~7MB) over plain yolov8n.pt: segmentation masks make the hover highlight a real object outline instead of a rectangle, which is the whole point of part 1.\n\nHOW DETECTORS ARE DECLARED (verified, do not invent a new mechanism): js/data/modelConstants/assetDeps.js, alongside 'face-yolov8n' / 'hand-yolov8n' / 'person-yolov8n-seg'. Shape = { id, name, filename: 'ultralytics/bbox/<file>', url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/<file>', size, sha256, engineAsset: true }. They are engineAssets - boot-installed when missing and self-healing after a node re-clone - NOT per-model deps, so nothing GCs them. The file must be uploaded to R2 first (see MadPony-Identity/capabilities/cloudflare-r2/README.md; rclone needs --s3-no-check-bucket or a scoped token 403s on CreateBucket, and NEVER pipe rclone to tail - $? becomes tail's).\n\nThe UI list is DETECTION_MODELS in MpiCanvasViewer.js, surfaced by el.getDetectionModels() so the options compounds do not fork it. MpiToolOptionsMaskDetect renders the radios. A COCO model has 80 classes rather than one, so decide how it presents - a single 'Objects' entry that detects everything it can, most likely, rather than 80 radio buttons.\n\nOPEN QUESTION for part 2, settle before wiring: the existing 4 entries are one-class detectors where the radio IS the class. A COCO model detects many classes at once. Does it become one more radio ('Objects'), or does it change the shape of that control? Do not guess.",
  "column": "todo",
- "maturity": "idea",
+ "maturity": "planned",
  "status": "active",
  "created_at": "2026-07-29T09:15:00Z",
- "updated_at": "2026-07-29T09:15:00Z",
+ "updated_at": "2026-07-29T10:00:00Z",
  "labels": [
   "ui",
   "ux",
@@ -15,6 +15,9 @@
   "models"
  ],
  "acceptance": [
+  "BLOCKING: do NOT start implementation. The next session opens with a brainstorm on the masking system as a whole (user has ideas that may change it). Re-validate every decision on this card against whatever that brainstorm produces.",
+  "DECIDED 2026-07-29 (option A): the first Detect run must return ALL region masks, not just picked ones. That is what makes hover possible, and it also makes picking client-side so the SECOND ComfyUI round trip disappears - the detect flow ends up faster than it ships today. NOT YET IMPLEMENTED - see the attention flag.",
+  "DECIDED 2026-07-29 by the user: clicking a hovered region selects it only while a THIRD 'Select' mode is active in MpiMaskStrip (Brush | Erase | Select). Hover highlights in every mode; painting over a detected region must keep working.",
   "PART 1: hovering a detected region on the IMAGE highlights it; clicking it selects it, equivalently to clicking its thumb. Seg-capable detectors highlight the mask outline; bbox-only detectors highlight the box",
   "PART 1: the thumb strip still works and still drives multi-pick - hover is an additional surface, not a replacement",
   "PART 1: costs no new node, no new weight and no workflow change - it is a UI layer over the detections already held by the viewer",
@@ -26,6 +29,13 @@
   "Whatever ships is added to docs/masking.md (200-line cap - trim before adding)"
  ],
  "links": {
-  "events": "events.jsonl"
+  "events": "events.jsonl",
+  "checklist": "checklist.md",
+  "validation": "validation.md"
+ },
+ "attention": {
+  "state": "required",
+  "reason": "BRAINSTORM FIRST. The user has ideas that may reshape the masking system; MPI-379 must not be implemented until that brainstorm settles, or the drift will be large.",
+  "updated_at": "2026-07-29T10:00:00Z"
  }
 }
