@@ -323,15 +323,24 @@ export const commands = {
     upscale: {
         label: 'Upscale',
         short: 'upscale',
-        info: 'Upscale — raise resolution while adding fine detail',
+        info: 'Upscale — re-render at a higher resolution; denoise sets how much changes',
+        // MPI-367, from the user's own practice: this is i2i with a bigger canvas, so
+        // BOTH brakes have to be taught — denoise AND prompt detail. The old copy said
+        // "a few words only", which is backwards above 0.20: a fuller description is
+        // what pins the composition down. The under-0.10 line matters because that is
+        // the point where the plain Upscale tool (no model, no diffusion) is the
+        // better answer, and it is much faster.
         help: {
             body: [
-                'Raises resolution and invents the fine detail that was never in the pixels. The prompt is OPTIONAL and empty is the normal choice — detail follows the source image.',
-                'Write a few words only to hint at what the picture is when the upscaler guesses wrong. A full new scene description will fight the source.',
+                'Image-to-image that also enlarges: the picture is re-rendered at a higher resolution rather than interpolated. Denoise decides how far that re-render drifts from the original.',
+                'In practice: 0.20 and under adds resolution and leaves the picture alone. Past 0.30 real changes creep in. Over 0.50 you are generating a NEW image that merely started from this one. If you find yourself dropping below 0.10 to stay safe, do not generate at all — the Upscale tool in the tool rail enlarges without a model and is far faster.',
+                'The prompt is the other brake. The more accurately it describes what is ALREADY in the picture, the less the model invents — so empty is fine at 0.20, but a full description is what holds the composition together once you push higher.',
+                'You do not have to write that description: right-click the image in the gallery (or in the history strip) and pick "Describe image". The caption lands straight in the prompt box, ready to edit.',
             ],
             examples: [
-                { prompt: '', note: 'Empty. What you want almost every time.' },
-                { prompt: 'close-up portrait, skin texture, fabric weave', note: 'A hint about the subject, not a new scene.' },
+                { prompt: '', note: 'Denoise 0.20 or under. Resolution goes up, the picture stays put.' },
+                { prompt: 'woman in a red coat on a wet cobbled street at night, neon signs behind her, shallow depth of field', note: 'Detail here buys licence there — a description this full holds the frame at 0.30-0.50.' },
+                { prompt: 'cyberpunk city, dramatic lighting', bad: true, note: 'A new scene at a high denoise gives you a new picture. Describe THIS image, not a better one.' },
             ],
         },
         progressLabel: 'Upscaling',
