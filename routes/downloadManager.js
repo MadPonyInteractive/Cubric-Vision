@@ -449,6 +449,11 @@ function _createDepJob(dep) {
         // LTXVideo `pad` ImportError after every engine update.
         pipPins: dep.pipPins || null,
         installRequirementsCommand: dep.installRequirementsCommand || null,
+        // MPI-370 — same reason as the two above: this whitelist is the ONLY thing
+        // the install loop sees. Omitting requirementsDrop here silently disables the
+        // macOS onnxruntime-gpu strip on the universal-workflow path, which is the
+        // exact path that fails.
+        requirementsDrop: dep.requirementsDrop || null,
     };
 }
 
@@ -2121,6 +2126,29 @@ async function _runCustomNodeInstall(modelJob) {
         // Retry. Treat a reqs failure like an extraction failure: mark anyFailure,
         // skip the rest of THIS dep, keep going. The failed dep has no commit
         // marker stamped (below), so repair-deps re-installs just it next boot.
+        // Some pinned nodes list a requirement that cannot resolve on every platform,
+        // and pip fails the WHOLE file over one unresolvable name — so a single
+        // CUDA-only line bricks install for an entire OS (MPI-370:
+        // comfyui_controlnet_aux ships an unmarked `onnxruntime-gpu`, which has no
+        // macOS wheel at any version). Strip those lines from the file on disk before
+        // EITHER install path below reads it. Rewriting only on a real change keeps
+        // unaffected platforms byte-identical and makes a re-run a no-op.
+        const dropNames = dep.requirementsDrop && dep.requirementsDrop[process.platform];
+        if (Array.isArray(dropNames) && dropNames.length) {
+            const reqPath = path.join(targetDir, 'requirements.txt');
+            try {
+                if (await fs.pathExists(reqPath)) {
+                    const filtered = _filterRequirements(await fs.readFile(reqPath, 'utf8'), dropNames);
+                    if (filtered !== null) {
+                        await fs.writeFile(reqPath, filtered);
+                        logger.info('download', `requirements filtered for ${dep.id} on ${process.platform}: dropped ${dropNames.join(', ')}`);
+                    }
+                }
+            } catch (err) {
+                logger.warn('download', `requirements filter failed for ${dep.id}: ${err.message}`);
+            }
+        }
+
         if (dep.installRequirementsCommand) {
             try {
                 await runCustomCommand(dep.installRequirementsCommand, targetDir);
@@ -2748,6 +2776,26 @@ function clearEngineDownload() {
 // files (NDH 200-vs-206 append) and had no frontend caller. Engine download is
 // cancel-only via the existing cancel path.
 
+/**
+ * Drop unresolvable requirement lines from a requirements.txt body (MPI-370).
+ * Matches the requirement NAME only — bare, or followed by a version specifier,
+ * extra, or environment marker — so `onnxruntime-gpu-extra` is never caught by a
+ * `onnxruntime-gpu` entry. Comments and blank lines are always kept.
+ * @returns {string|null} the filtered body, or null when nothing was dropped (so
+ *   the caller can skip the write and leave the file byte-identical).
+ */
+function _filterRequirements(contents, dropNames) {
+    const drop = (dropNames || []).map((n) => String(n).trim().toLowerCase()).filter(Boolean);
+    if (!drop.length) return null;
+    const lines = contents.split('\n');
+    const kept = lines.filter((line) => {
+        const name = line.trim().toLowerCase();
+        if (!name || name.startsWith('#')) return true;
+        return !drop.some((d) => name === d || (name.startsWith(d) && /^[<>=!~[; ]/.test(name.slice(d.length))));
+    });
+    return kept.length === lines.length ? null : kept.join('\n');
+}
+
 module.exports = {
     router,
     cancelAllDownloads,
@@ -2761,6 +2809,7 @@ module.exports = {
     _byteRatioExcludingNodes, // MPI-231 — exported for unit test
     _customNodeUninstallPath, // MPI-276 — exported for unit test
     _filterDepsForEngine, // MPI-276 — exported for unit test
+    _filterRequirements, // MPI-370 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)

@@ -1,0 +1,29 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-370",
+ "title": "macOS install is hard-broken: comfyui_controlnet_aux requires onnxruntime-gpu, which has no macOS wheels",
+ "description": "Every macOS user fails first install on any depth model. The pinned comfyui_controlnet_aux requirements.txt ends with an unmarked onnxruntime-gpu; that package is CUDA-only and publishes no macOS wheel at any version, so pip cannot resolve it, the custom command exits 1, and the whole node install is marked failed. Retry re-runs the identical command, so it can never succeed. LOCAL engine only - the Pod bakes this node into a CUDA Linux image.",
+ "column": "doing",
+ "maturity": "planned",
+ "created_at": "2026-07-28T03:34:35Z",
+ "updated_at": "2026-07-28T03:34:35Z",
+ "labels": [
+  "macos",
+  "install",
+  "custom-nodes"
+ ],
+ "acceptance": [
+  "A macOS install of any depth model completes without the Installation Failed dialog",
+  "onnxruntime-gpu is stripped from the node's requirements.txt on darwin before EITHER install path reads it (installRequirementsCommand and the default pip -r branch)",
+  "Windows and Linux are byte-unchanged - the file is only rewritten when a line is actually dropped, so no platform that can resolve the wheel loses it",
+  "Idempotent: a second run over an already-filtered file changes nothing and does not re-log",
+  "Filter is a pure exported helper with a unit test covering drop, no-op, and versioned-specifier lines",
+  "tests/controlnet-aux-torch-guard.test.cjs still passes - the torch guard on this dep must not regress",
+  "Remote/Pod path untouched and explicitly confirmed unaffected"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "events": "events.jsonl",
+  "related": ["MPI-369"]
+ }
+}

@@ -246,6 +246,17 @@ export const nodesDeps = {
         url: lockUrl('comfyui_controlnet_aux'),
         installRequirements: true,
         installRequirementsCommand: 'python -m pip install -r requirements.txt --no-warn-script-location',
+        // ⚠ macOS: the pinned commit's requirements.txt ends with an UNMARKED
+        // `onnxruntime-gpu`. That package is CUDA-only — it has never published a
+        // macOS wheel, for any arch, at any version — so pip reports
+        // "from versions: none", exits 1, and the WHOLE node install fails. Retry
+        // re-runs the identical resolve, so a Mac user can never get past first
+        // install of any depth model (MPI-370). Drop the line on darwin only;
+        // Windows/Linux x86_64 resolve it fine and must keep it.
+        // NOT swapped for CPU `onnxruntime`: we drive DepthAnythingV2 through
+        // AIO_Preprocessor, which is torch-based. Add it if an ONNX-dependent
+        // preprocessor is ever wired.
+        requirementsDrop: { darwin: ['onnxruntime-gpu'] },
         pipPins: [
             'numpy==2.5.1', 'opencv-python==5.0.0.93', 'pillow==12.3.0',
             'scipy==1.18.0', 'scikit-image==0.26.0', 'einops==0.8.2',
