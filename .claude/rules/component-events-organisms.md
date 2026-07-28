@@ -58,6 +58,7 @@ EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
          `mask-ready`    `{ hasMask }` — mask painted or cleared
          `entry-loaded`  `{ idx, hasMask }` — image loaded for index
          `brush-changed` `{ type: 'brush'|'eraser' }` — brush type changed via hotkey
+         `mask-points-changed` `{ count }` — a point prompt was added, removed or cleared (MPI-361)
 LISTENS: (none — all wiring done by parent MpiGroupHistoryBlock via `on()`)
 API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canvas mask (no clear). Used by auto-detect thumb-pick flow.
          `setAutoMaskModel/setAutoMaskUseBox` — reset thumbs+picks only; do NOT clear existing paint.
@@ -66,14 +67,20 @@ API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canv
          `invertMask()` — toggle display-only invert; returns new bool. Updates viewer-scope `_isMaskInverted` cache + current canvas. Cache survives swapToPreview→swapToCanvas remount; re-applied to fresh MpiCanvas inside swapToCanvas. NOT a data mutation — underlying mask layers unchanged.
          `setMaskInverted(bool)` / `isMaskInverted()` — explicit setter/getter for the cached invert flag. Used by MpiToolOptionsMask on mount to restore the persisted invert state.
          `setMaskOpacity(v)` / `getMaskOpacity()` — overlay opacity 0–1. Live-driven by the opacity slider in MpiToolOptionsMask.
+         `setMaskPointsMode(bool)` / `isMaskPointsMode()` — swap auto-mask onto the click-point (SAM `mask-points`) branch of `img_auto_mask.json`. Resets thumbs+picks like `setAutoMaskModel` does; the viewer caches `_pointsMode` on its own scope so it survives the swapToPreview→swapToCanvas remount. (MPI-361)
+         `setMaskPointsThreshold(n)` / `getMaskPointsThreshold()` — `SAMDetectorCombined.threshold`, 0–1, default 0.93.
+         `clearMaskPoints()` / `getMaskPointCount()` — point-prompt list management.
+         `bakeAutoPicks('manual'|'subtract')` — Add / Subtract: bake the selected auto-pick masks into the permanent paint layers and drop the auto layer. Returns false (+ warning toast) when nothing is selected. This is how multi-part point selections accumulate — each points run returns exactly ONE region.
+NOTE:    A points run auto-picks index 0 up front, so it is ONE round trip; the detector's detect-then-pick two-step exists only because YOLO returns N segments to choose between. The two detector branches sit behind an `MpiIfElse` titled `Input_Points_Mode` whose inputs are lazy, so the unselected branch never executes.
 NOTE:    Display-invert is honored only in mask-mode (MpiCanvas overlay paint). Prompt-mode preview (MpiMaskedImagePreview) uses CSS-luminance mask and does NOT currently honor `displayInverted`.
 
 ### MpiToolOptionsMask (Organism — js/components/Organisms/MpiToolOptionsMask/)
 EMITS:   (none)
 GLOBAL EMITS (via Events.emit, consumed by projectService):
-         `settings:tool:update` `{ toolKey: 'mask', key, value }` — debounced per-control persistence to `project.toolSettings.mask`. Keys: `model` (detector path), `useBox` (bool), `opacity` (0–1), `inverted` (bool).
+         `settings:tool:update` `{ toolKey: 'mask', key, value }` — debounced per-control persistence to `project.toolSettings.mask`. Keys: `model` (detector path), `useBox` (bool), `opacity` (0–1), `inverted` (bool), `source` (`'detector'|'points'`), `pointsThreshold` (0–1).
 LISTENS: (none — Hotkeys.bind 'mask.brush.toolbar'/'mask.eraser.toolbar' while mounted; unbound in destroy)
 NOTE:    Unified auto+manual mask panel. No apply button. Mask is canvas-resident; PromptBox drives ops. Auto picks composite onto manual paint via `compositeMaskDataURL`. destroy() calls `evaluateMask()` then `exitMode()`. Mount-time restore: reads `getToolSettings(state.currentProject, 'mask', DEFAULTS)`, applies `useBox`/`model` to viewer auto APIs, applies `opacity` via `viewer.el.setMaskOpacity`, applies `inverted` via `viewer.el.setMaskInverted` (which writes the viewer-scope cache, surviving canvas remount). Invert button shows active state via `.mpi-tool-options-mask__invert--on` modifier (accent border + 180° icon rotation).
+NOTE:    Detect / Points source radio (MPI-361). Points shows a Scope slider (raw `SAMDetectorCombined.threshold` as 30–99, deliberately NOT remapped), an info box, Clear points, and Add / Subtract; the detector's model + Box/Segment radios hide. The YOLO detector STAYS — it is the fast Face/Hair/Hand/Person shortcut, points sit beside it. `destroy()` MUST call `viewer.el.setMaskPointsMode(false)` before `evaluateMask()`: points mode owns the right mouse button and suppresses the image context menu.
 
 ### MpiToolOptionsResize (Organism — js/components/Organisms/MpiToolOptionsResize/)
 EMITS:   `apply` `{ params: { width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation } }` — full-resolution params; payload is intentionally minimal. The block always re-runs the workflow at full resolution via `startGeneration`; there is no fast-path / preview-URL reuse.

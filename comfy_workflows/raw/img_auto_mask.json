@@ -1,8 +1,8 @@
 {
   "id": "82ace2e7-7aad-46b0-ba38-638fe13bc981",
   "revision": 0,
-  "last_node_id": 1641,
-  "last_link_id": 2286,
+  "last_node_id": 1657,
+  "last_link_id": 2311,
   "nodes": [
     {
       "id": 1589,
@@ -24,7 +24,8 @@
           "name": "SAM_MODEL",
           "type": "SAM_MODEL",
           "links": [
-            2176
+            2176,
+            2301
           ]
         }
       ],
@@ -255,7 +256,8 @@
             2185,
             2186,
             2190,
-            2191
+            2191,
+            2303
           ]
         }
       ],
@@ -371,7 +373,7 @@
         {
           "name": "segs",
           "type": "SEGS",
-          "link": 2194
+          "link": 2304
         },
         {
           "name": "fallback_image_opt",
@@ -491,8 +493,7 @@
           "name": "output",
           "type": "*",
           "links": [
-            2194,
-            2266
+            2302
           ]
         }
       ],
@@ -532,7 +533,7 @@
         {
           "name": "segs",
           "type": "SEGS",
-          "link": 2266
+          "link": 2305
         },
         {
           "name": "fallback_image_opt",
@@ -687,6 +688,395 @@
         "Node name for S&R": "ImpactSEGSToMaskList"
       },
       "widgets_values": []
+    },
+    {
+      "id": 1650,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        3057.699648579663,
+        7600
+      ],
+      "size": [
+        276.9849609375,
+        354
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            2300
+          ]
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Input_Points_Mask",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadImageFromPath"
+      },
+      "widgets_values": [
+        "",
+        "alpha",
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1651,
+      "type": "ImageToMask",
+      "pos": [
+        3400,
+        7600
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2300
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            2306
+          ]
+        }
+      ],
+      "title": "dots -> mask (white on black)",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "Node name for S&R": "ImageToMask"
+      },
+      "widgets_values": [
+        "red"
+      ]
+    },
+    {
+      "id": 1652,
+      "type": "MaskToSEGS",
+      "pos": [
+        3400,
+        7710
+      ],
+      "size": [
+        270,
+        154
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 2306
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "links": [
+            2307
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0",
+        "Node name for S&R": "MaskToSEGS"
+      },
+      "widgets_values": [
+        false,
+        3,
+        false,
+        1,
+        false
+      ]
+    },
+    {
+      "id": 1653,
+      "type": "SAMDetectorCombined",
+      "pos": [
+        3740,
+        7600
+      ],
+      "size": [
+        304.07421875,
+        220
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "sam_model",
+          "type": "SAM_MODEL",
+          "link": 2301
+        },
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 2307
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2303
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            2308
+          ]
+        }
+      ],
+      "title": "Input_Points",
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0",
+        "Node name for S&R": "SAMDetectorCombined"
+      },
+      "widgets_values": [
+        "mask-points",
+        0,
+        0.93,
+        0,
+        0.7,
+        "Small"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1654,
+      "type": "GrowMaskWithBlur",
+      "pos": [
+        4110,
+        7600
+      ],
+      "size": [
+        270,
+        220
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 2308
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            2309
+          ]
+        },
+        {
+          "name": "mask_inverted",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "title": "1. ERODE -4 (kill detached specks)",
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "1.1.5",
+        "Node name for S&R": "GrowMaskWithBlur"
+      },
+      "widgets_values": [
+        -4,
+        0,
+        true,
+        false,
+        0,
+        1,
+        1,
+        false
+      ]
+    },
+    {
+      "id": 1655,
+      "type": "GrowMaskWithBlur",
+      "pos": [
+        4110,
+        7860
+      ],
+      "size": [
+        270,
+        220
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 2309
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            2310
+          ]
+        },
+        {
+          "name": "mask_inverted",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "title": "2. DILATE +4 + fill_holes (restore size, close pinholes)",
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "1.1.5",
+        "Node name for S&R": "GrowMaskWithBlur"
+      },
+      "widgets_values": [
+        4,
+        0,
+        true,
+        false,
+        0,
+        1,
+        1,
+        true
+      ]
+    },
+    {
+      "id": 1656,
+      "type": "MaskToSEGS",
+      "pos": [
+        4440,
+        7600
+      ],
+      "size": [
+        270,
+        154
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 2310
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SEGS",
+          "type": "SEGS",
+          "links": [
+            2311
+          ]
+        }
+      ],
+      "title": "back to SEGS (combined - one part per run)",
+      "properties": {
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0",
+        "Node name for S&R": "MaskToSEGS"
+      },
+      "widgets_values": [
+        true,
+        3,
+        false,
+        1,
+        false
+      ]
+    },
+    {
+      "id": 1657,
+      "type": "MpiIfElse",
+      "pos": [
+        4440,
+        7440
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 2311
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 2302
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            2304,
+            2305
+          ]
+        }
+      ],
+      "title": "Input_Points_Mode",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "36c409fa6029b8c205c6c1445f7403ca1571d1f7",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -825,6 +1215,102 @@
       1627,
       0,
       "MASK"
+    ],
+    [
+      2300,
+      1650,
+      0,
+      1651,
+      0,
+      "IMAGE"
+    ],
+    [
+      2301,
+      1589,
+      0,
+      1653,
+      0,
+      "SAM_MODEL"
+    ],
+    [
+      2302,
+      1592,
+      0,
+      1657,
+      1,
+      "SEGS"
+    ],
+    [
+      2303,
+      1597,
+      0,
+      1653,
+      2,
+      "IMAGE"
+    ],
+    [
+      2304,
+      1657,
+      0,
+      1593,
+      0,
+      "SEGS"
+    ],
+    [
+      2305,
+      1657,
+      0,
+      1571,
+      0,
+      "SEGS"
+    ],
+    [
+      2306,
+      1651,
+      0,
+      1652,
+      0,
+      "MASK"
+    ],
+    [
+      2307,
+      1652,
+      0,
+      1653,
+      1,
+      "SEGS"
+    ],
+    [
+      2308,
+      1653,
+      0,
+      1654,
+      0,
+      "MASK"
+    ],
+    [
+      2309,
+      1654,
+      0,
+      1655,
+      0,
+      "MASK"
+    ],
+    [
+      2310,
+      1655,
+      0,
+      1656,
+      0,
+      "MASK"
+    ],
+    [
+      2311,
+      1656,
+      0,
+      1657,
+      0,
+      "SEGS"
     ]
   ],
   "groups": [],

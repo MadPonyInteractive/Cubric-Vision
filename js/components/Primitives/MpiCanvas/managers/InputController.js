@@ -52,6 +52,7 @@ export class InputController {
     destroy() {
         this.container.removeEventListener('wheel', this._boundHandlers.wheel);
         this.container.removeEventListener('mousedown', this._boundHandlers.mousedown);
+        this.container.removeEventListener('contextmenu', this._boundHandlers.contextmenu);
         this.container.removeEventListener('dblclick', this._boundHandlers.dblclick);
         window.removeEventListener('mousemove', this._boundHandlers.mousemove);
         window.removeEventListener('mouseup', this._boundHandlers.mouseup);
@@ -105,15 +106,34 @@ export class InputController {
         };
         this.container.addEventListener('wheel', this._boundHandlers.wheel, { passive: false });
 
-        // MouseDown: Pan, Mask, Crop, or Slider
+        // MouseDown: Pan, Mask, Points, Crop, or Slider
         this._boundHandlers.mousedown = (e) => {
-            if (e.button !== 0) return;
+            // Points mode is the only consumer of the right button; every other
+            // interaction is left-button only.
+            const pointsClick = this.managers.mask.pointsMode
+                && this.managers.mask.isMaskingMode
+                && !this.isSpacePressed
+                && (e.button === 0 || e.button === 2);
+            if (e.button !== 0 && !pointsClick) return;
             e.preventDefault();
 
             const c = this._getContainerCoords(e);
             const i = this._getImageCoords(e);
             const { view, mask, comparison, crop } = this.managers;
             const containerW = this.container.getBoundingClientRect().width || 1;
+
+            if (pointsClick) {
+                // Clicking an existing dot removes it, whichever button — that is
+                // the "individually removable" gesture. Otherwise left adds a
+                // positive point, right a negative one.
+                if (!mask.removePointAt(i.x, i.y)) {
+                    mask.addPoint(i.x, i.y, e.button === 0);
+                }
+                this.options.onPointsChange?.(mask.points.length);
+                this.updateCursor();
+                this.options.onDraw();
+                return;
+            }
 
             if (comparison.isOverSlider(c.x, containerW)) {
                 comparison.isDraggingSlider = true;
@@ -141,6 +161,17 @@ export class InputController {
             this.options.onDraw();
         };
         this.container.addEventListener('mousedown', this._boundHandlers.mousedown);
+
+        // Right-click places a negative point, so the browser menu has to go —
+        // but only while points mode owns the right button. stopPropagation is
+        // load-bearing: MpiCanvasViewer listens for contextmenu on its own root and
+        // would otherwise pop the image context menu on every negative point.
+        this._boundHandlers.contextmenu = (e) => {
+            if (!mask.pointsMode || !mask.isMaskingMode || this.isSpacePressed) return;
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        this.container.addEventListener('contextmenu', this._boundHandlers.contextmenu);
 
         // MouseMove: Global listener
         this._boundHandlers.mousemove = (e) => {
@@ -251,7 +282,8 @@ export class InputController {
                 : crop.hitTest(imgX, imgY, view.scale);
             target.style.cursor = CropManager.getCursor(handle);
         } else if (mask.isMaskingMode) {
-            target.style.cursor = 'none';
+            // Points mode has no brush indicator to stand in for the cursor.
+            target.style.cursor = mask.pointsMode ? 'crosshair' : 'none';
         } else if (x !== undefined) {
             const containerW = this.container.getBoundingClientRect().width || 1;
             target.style.cursor = comparison.isOverSlider(x, containerW)

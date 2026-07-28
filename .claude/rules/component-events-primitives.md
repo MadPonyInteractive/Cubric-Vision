@@ -18,6 +18,9 @@ NOTE:    Stage redesign added `shape: 'sharp' | 'pill'` prop (default `'sharp'`,
 ### MpiCanvas
 EMITS:   `modechange` `{ mode: 'none'|'mask'|'crop'|'compare' }`
 LISTENS: (none)
+PROPS:   `onBrushSizeChange(size)` · `onBrushTypeChange(type)` · `onPointsChange(count)` — plain callbacks passed at mount, NOT events.
+API:     `setPointsMode(bool)` / `isPointsMode()` · `clearMaskPoints()` / `getMaskPointCount()` / `getPointsMaskDataURL()` · `bakeAutoPicksInto('manual'|'subtract')` (MPI-361)
+NOTE:    Point prompts are a FOURTH mask layer and deliberately not a canvas — `MaskManager.points[]` holds `{x, y, positive}` in SOURCE-image px (not the MASK_MAX_EDGE-capped working px), because the graph measures each dot's bbox in real pixels of the image it loads. `getPointsMaskDataURL()` renders them white-on-BLACK at full source size on demand; nothing composites them. Polarity is carried by RADIUS: r=8 positive / r=4 negative straddles the exact `< 10px bbox width` cliff `mask_hint_use_negative='Small'` uses. In points mode, left-click adds a positive dot, right-click a negative one, and clicking an existing dot removes it; `InputController`'s contextmenu handler calls `stopPropagation` as well as `preventDefault` because `MpiCanvasViewer` has its own contextmenu handler on its root.
 
 ### MpiCheckbox
 EMITS:   `change` `{ checked: boolean }`

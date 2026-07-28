@@ -15,8 +15,24 @@
  * a 4K image recomposited full-frame per brush dab is unusably laggy). Paint
  * coords arrive in image-px and are scaled by `_scale` into mask-px. Display/export
  * upscale back automatically (overlay drawImage + ComfyUI's own mask resize).
+ *
+ * POINT PROMPTS (MPI-361) are a FOURTH, separate layer and deliberately not a
+ * canvas: they are a list of dots the auto-mask graph turns into a mask, not
+ * mask content themselves. Nothing composites them — `getPointsMaskDataURL()`
+ * renders them on demand for `Input_Points_Mask`.
  */
 const MASK_MAX_EDGE = 1536;
+
+/**
+ * `SAMDetectorCombined(mask_hint_use_negative='Small')` reads a dot whose bbox
+ * width is < 10 px as a NEGATIVE point — brush size IS the polarity switch, with
+ * an exact 10px cliff. Our UI carries explicit polarity (left/right click), so we
+ * synthesize radii that land safely either side of it. These are SOURCE-image px
+ * and deliberately fixed: the `mask-points` branch only uses each blob's CENTRE,
+ * so dot size means polarity and nothing else.
+ */
+const POINT_R_POSITIVE = 8; // bbox 17px -> positive
+const POINT_R_NEGATIVE = 4; // bbox  9px -> negative
 
 export class MaskManager {
     constructor() {
@@ -36,6 +52,14 @@ export class MaskManager {
         // image-px coords + brush radius by this to hit the downscaled canvas.
         this._scale = 1;
 
+        // Point prompts, in SOURCE-image px (NOT mask-px — see POINT_R_* above:
+        // the graph measures each dot's bbox in real pixels of the image it loads).
+        /** @type {Array<{x:number,y:number,positive:boolean}>} */
+        this.points = [];
+        this.pointsMode = false;
+        this._srcWidth = 0;
+        this._srcHeight = 0;
+
         this.isMaskingMode = false;
         this.isDrawingMask = false;
         this.brushSize = 40;
@@ -48,6 +72,8 @@ export class MaskManager {
     }
 
     init(width, height) {
+        this._srcWidth = width;
+        this._srcHeight = height;
         this._scale = Math.min(1, MASK_MAX_EDGE / Math.max(width, height));
         const w = Math.max(1, Math.round(width * this._scale));
         const h = Math.max(1, Math.round(height * this._scale));
@@ -65,7 +91,65 @@ export class MaskManager {
         if (this.subtractCtx) this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
         this.autoPickMasks.clear();
         this.selectedAutoPicks.clear();
+        this.points = [];
         this._recomposite();
+    }
+
+    // ── Point prompts (MPI-361) ──────────────────────────────────────────────
+
+    pointRadius(positive) {
+        return positive ? POINT_R_POSITIVE : POINT_R_NEGATIVE;
+    }
+
+    addPoint(imgX, imgY, positive = true) {
+        this.points.push({ x: imgX, y: imgY, positive: !!positive });
+    }
+
+    /**
+     * Remove the point under (imgX, imgY) — the "individually removable" half of
+     * the contract. `slack` widens the hit target beyond the dot's own radius so a
+     * 4px negative dot is still clickable.
+     * @returns {boolean} true when a point was removed
+     */
+    removePointAt(imgX, imgY, slack = 8) {
+        for (let i = this.points.length - 1; i >= 0; i--) {
+            const p = this.points[i];
+            const r = this.pointRadius(p.positive) + slack;
+            if ((p.x - imgX) ** 2 + (p.y - imgY) ** 2 <= r * r) {
+                this.points.splice(i, 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    clearPoints() { this.points = []; }
+    hasPoints()   { return this.points.length > 0; }
+
+    /**
+     * White dots on black at SOURCE resolution — the shape `Input_Points_Mask`
+     * expects in `comfy_workflows/img_auto_mask.json` (its `ImageToMask` reads the
+     * RED channel, so this is deliberately not an alpha mask). Full size, not the
+     * MASK_MAX_EDGE-capped working size: SEG coords must line up with the source
+     * image `SAMDetectorCombined` receives, and the negative-point cliff is
+     * measured in that image's own pixels.
+     * @returns {string|null} data URL, or null when there are no points
+     */
+    getPointsMaskDataURL() {
+        if (!this.points.length || !this._srcWidth || !this._srcHeight) return null;
+        const c = document.createElement('canvas');
+        c.width = this._srcWidth;
+        c.height = this._srcHeight;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = 'rgb(0, 0, 0)';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = 'rgb(255, 255, 255)';
+        for (const p of this.points) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, this.pointRadius(p.positive), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        return c.toDataURL('image/png');
     }
 
     paint(imgX, imgY) {
@@ -209,6 +293,44 @@ export class MaskManager {
         this._recomposite();
     }
 
+    /**
+     * Bake the selected auto-pick masks into a permanent layer, then drop the auto
+     * layer — the app-side Add / Subtract from MPI-361. `manual` unions the result
+     * into the painted layer, `subtract` punches it out of the composite. No
+     * AddMask/SubtractMask nodes and no extra round trip, and it composes with the
+     * brush because it lands in the same two canvases the brush writes. Both sides
+     * are written, mirroring paint(): adding un-erases, subtracting un-paints.
+     * @param {'manual'|'subtract'} target
+     * @returns {boolean} false when nothing was selected to bake
+     */
+    bakeAutoPicksInto(target) {
+        const layers = [...this.selectedAutoPicks]
+            .map(i => this.autoPickMasks.get(i))
+            .filter(Boolean);
+        if (!layers.length || !this.manualCtx || !this.subtractCtx) return false;
+
+        const toSubtract = target === 'subtract';
+        const dstCtx    = toSubtract ? this.subtractCtx    : this.manualCtx;
+        const dstCanvas = toSubtract ? this.subtractCanvas : this.manualCanvas;
+        const othCtx    = toSubtract ? this.manualCtx      : this.subtractCtx;
+        const othCanvas = toSubtract ? this.manualCanvas   : this.subtractCanvas;
+
+        dstCtx.save();
+        dstCtx.globalCompositeOperation = 'source-over';
+        for (const l of layers) dstCtx.drawImage(l, 0, 0, dstCanvas.width, dstCanvas.height);
+        dstCtx.restore();
+
+        othCtx.save();
+        othCtx.globalCompositeOperation = 'destination-out';
+        for (const l of layers) othCtx.drawImage(l, 0, 0, othCanvas.width, othCanvas.height);
+        othCtx.restore();
+
+        this.autoPickMasks.clear();
+        this.selectedAutoPicks.clear();
+        this._recomposite();
+        return true;
+    }
+
     getManualURL() {
         return this._layerToURL(this.manualCanvas, this.manualCtx);
     }
@@ -246,6 +368,7 @@ export class MaskManager {
         this.maskCtx = null;
         this.autoPickMasks?.clear?.();
         this.selectedAutoPicks?.clear?.();
+        this.points = [];
     }
 
     /**

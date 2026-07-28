@@ -17,6 +17,13 @@ const BRUSH_DOT            = 'oklch(0.76 0.17 355)';         /* --accent-heat */
 const SLIDER_ARROW         = 'oklch(0.66 0.014 80)';       /* --ink-3 */
 const GRID_LINE            = 'oklch(0.95 0.005 80 / 0.8)'; /* --ink-1 80% */
 const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50% */
+const MASK_POINT_POSITIVE  = 'oklch(0.78 0.13 150)';       /* --accent-ok */
+const MASK_POINT_NEGATIVE  = 'oklch(0.76 0.17 355)';       /* --accent-heat */
+const MASK_POINT_RING      = 'oklch(0.16 0.02 350 / 0.9)'; /* --surface-canvas 90% */
+
+/* Screen-px radius of a point-prompt dot. Purely a display size — the dot the
+ * GRAPH sees is sized by MaskManager.pointRadius() and carries the polarity. */
+const MASK_POINT_DRAW_R = 6;
 
 /**
  * MpiCanvas — Interactive image viewer / editor canvas (Primitive)
@@ -34,6 +41,7 @@ const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50%
  * Props:
  * @param {(size: number) => void} [onBrushSizeChange] - Called when brush size changes via wheel
  * @param {(type: string) => void} [onBrushTypeChange] - Called when brush type changes via hotkey
+ * @param {(count: number) => void} [onPointsChange] - Called when a point prompt is added or removed
  *
  * Instance methods (on instance.el):
  *   loadImage(url)            — load primary image, resets mode to 'none'
@@ -48,6 +56,9 @@ const GRID_LINE_SHADOW     = 'oklch(0.16 0.02 350 / 0.5)'; /* surface-canvas 50%
  *   setMaskOpacity(opacity)
  *   clearMask()
  *   getMaskDataURL(bg, fg)
+ *   setPointsMode(bool)       — point-prompt mode: clicks place SAM dots, not paint
+ *   clearMaskPoints() / getMaskPointCount() / getPointsMaskDataURL()
+ *   bakeAutoPicksInto('manual'|'subtract') — Add / Subtract the detected mask
  *   setCropRatio(ratio)
  *   getCropRect()
  *   destroy()
@@ -180,7 +191,8 @@ class _CanvasCore {
                 onResetView: () => this.resetView(),
                 onSliderChange: (pos) => { this.canvas.dataset.sliderPos = pos; },
                 onBrushSizeChange: this.options.onBrushSizeChange,
-                onBrushTypeChange: this.options.onBrushTypeChange
+                onBrushTypeChange: this.options.onBrushTypeChange,
+                onPointsChange: this.options.onPointsChange
             },
             this.stackEl
         );
@@ -769,6 +781,10 @@ class _CanvasCore {
             ctx.globalAlpha = 1;
         }
 
+        // 2b. Point prompts — drawn above the mask so a dot stays visible on top
+        // of the region it produced.
+        if (this.mask.pointsMode && this.mask.points.length) this._drawMaskPoints();
+
         // 3. Crop overlay
         const display = this._displayImage();
         this.crop.draw(ctx, display.width, display.height, this.view.scale);
@@ -817,6 +833,25 @@ class _CanvasCore {
         ctx.rect(clipX, 0, baseW - clipX, baseH);
         ctx.clip();
         ctx.drawImage(imgAfter, compX, compY, compW, compH);
+        ctx.restore();
+    }
+
+    /** Point prompts. Overlay ctx is image-px, so divide by scale to keep the
+     *  dots a constant size on screen at any zoom. */
+    _drawMaskPoints() {
+        const ctx = this.overlayCtx;
+        const s = this.view.scale || 1;
+        const r = MASK_POINT_DRAW_R / s;
+        ctx.save();
+        ctx.lineWidth = 2 / s;
+        ctx.strokeStyle = MASK_POINT_RING;
+        for (const p of this.mask.points) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = p.positive ? MASK_POINT_POSITIVE : MASK_POINT_NEGATIVE;
+            ctx.fill();
+            ctx.stroke();
+        }
         ctx.restore();
     }
 
@@ -886,6 +921,7 @@ class _CanvasCore {
         const ctx = this.screenUICtx;
         const scale = this.view.scale || 1;
         const { x, y } = this.input.getMousePosition();
+        if (this.mask.pointsMode) return; // dots, not a brush — nothing to indicate
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
             const r = (this.mask.brushSize * scale) / 2;
             const isEraser = this.mask.brushType === 'eraser';
@@ -934,6 +970,14 @@ class _CanvasCore {
     setAutoPickMasks(map)        { this.mask.setAutoPickMasks(map); this.draw(); }
     setSelectedAutoPicks(set)    { this.mask.setSelectedAutoPicks(set); this.draw(); }
     clearAutoPicks()             { this.mask.clearAutoPicks(); this.draw(); }
+    bakeAutoPicksInto(target)    { const ok = this.mask.bakeAutoPicksInto(target); this.draw(); return ok; }
+
+    // ── Point-prompt API (MPI-361) ────────────────────────────────────────────
+    setPointsMode(enabled)       { this.mask.pointsMode = !!enabled; this.draw(); }
+    isPointsMode()               { return !!this.mask.pointsMode; }
+    clearMaskPoints()            { this.mask.clearPoints(); this.draw(); }
+    getMaskPointCount()          { return this.mask.points.length; }
+    getPointsMaskDataURL()       { return this.mask.getPointsMaskDataURL(); }
 
     // ── Crop API ──────────────────────────────────────────────────────────────
     setCropRatio(ratio) { this.crop.setRatio(ratio); this.draw(); }
@@ -989,7 +1033,8 @@ export const MpiCanvas = ComponentFactory.create({
             'setMaskInverted','isMaskInverted',
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
-            'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks',
+            'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks','bakeAutoPicksInto',
+            'setPointsMode','isPointsMode','clearMaskPoints','getMaskPointCount','getPointsMaskDataURL',
             'setCropRatio','getCropRect',
             'setProcessedImage','clearProcessedImage'
         ];

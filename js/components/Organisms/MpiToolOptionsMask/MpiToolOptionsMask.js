@@ -29,7 +29,12 @@ const DETECTION_MODELS_FALLBACK = [
     { label: 'Person', value: 'bbox/person_yolov8n-seg.pt' },
 ];
 
-const DEFAULTS = { model: null, useBox: true, opacity: 0.7, inverted: false };
+const DEFAULTS = {
+    model: null, useBox: true, opacity: 0.7, inverted: false,
+    // MPI-361 point prompts. `pointsThreshold` is SAMDetectorCombined.threshold —
+    // stored 0..1, shown as a 30-99 "Scope" slider.
+    source: 'detector', pointsThreshold: 0.93,
+};
 const AUTO_DETECT_QUEUE_DISABLED_REASON = 'Auto detection is unavailable while Cue has running or queued jobs';
 
 export const MpiToolOptionsMask = ComponentFactory.create({
@@ -43,10 +48,34 @@ export const MpiToolOptionsMask = ComponentFactory.create({
                 Auto detection unavailable while Cue is active
             </div>
             <div class="mpi-tool-options-mask__auto" id="auto-detect-controls">
-                <div class="mpi-tool-options-mask__section" id="auto-model-slot"></div>
-                <div class="mpi-tool-options-mask__section" id="auto-mode-slot"></div>
+                <div class="mpi-tool-options-mask__section" id="auto-source-slot"></div>
+                <div class="mpi-tool-options-mask__detector" id="detector-group">
+                    <div class="mpi-tool-options-mask__section" id="auto-model-slot"></div>
+                    <div class="mpi-tool-options-mask__section" id="auto-mode-slot"></div>
+                </div>
+                <div class="mpi-tool-options-mask__points" id="points-group" hidden>
+                    <div class="mpi-tool-options-mask__slider-row">
+                        <div class="mpi-tool-options-mask__slider-label">
+                            <span>Scope</span>
+                            <span id="points-threshold-val"></span>
+                        </div>
+                        <div class="mpi-tool-options-mask__slider">
+                            <input type="range" id="points-threshold-input" min="30" max="99" step="1" />
+                        </div>
+                    </div>
+                    <p class="mpi-tool-options-mask__info">
+                        <b>Left-click</b> what you want, <b>right-click</b> what to leave out.
+                        Click a dot again to remove it.
+                        <br>All dots describe <b>one part per run</b> — for a second part,
+                        Add the first, then place new dots.
+                        <br><b>Scope</b> steps between a few results rather than sliding —
+                        sweep it (35 / 50 / 70 / 93), don't nudge it.
+                    </p>
+                    <div class="mpi-tool-options-mask__row" id="points-clear-slot"></div>
+                </div>
                 <div class="mpi-tool-options-mask__thumbs"  id="thumbs-slot"></div>
                 <div class="mpi-tool-options-mask__row"     id="detect-slot"></div>
+                <div class="mpi-tool-options-mask__row"     id="commit-slot"></div>
             </div>
             <div class="mpi-tool-options-mask__divider"></div>
             <div class="mpi-tool-options-mask__brush-row" id="brush-row-slot"></div>
@@ -74,6 +103,34 @@ export const MpiToolOptionsMask = ComponentFactory.create({
         const settings = { ...DEFAULTS, ...getToolSettings(state.currentProject || {}, 'mask', DEFAULTS) };
 
         // ── Auto section ─────────────────────────────────────────────────────
+
+        // Detector vs Points. The YOLO detector STAYS — it is the fast one-click
+        // Face / Hair / Hand / Person shortcut; points sit beside it for everything
+        // YOLO has no word for ("the headphones").
+        const detectorGroup = qs('#detector-group', el);
+        const pointsGroup   = qs('#points-group', el);
+        let _pointsMode = settings.source === 'points';
+
+        const sourceRadio = MpiRadioGroup.mount(qs('#auto-source-slot', el), {
+            options: [
+                { label: 'Detect',  value: 'detector', info: 'Find a known part — face, hair, hand, person' },
+                { label: 'Points',  value: 'points',   info: 'Click anything on the image to select it' },
+            ],
+            value: _pointsMode ? 'points' : 'detector',
+            name: 'mask-auto-source',
+        });
+        const _applySource = (value) => {
+            _pointsMode = value === 'points';
+            detectorGroup.hidden = _pointsMode;
+            pointsGroup.hidden   = !_pointsMode;
+            viewer.el.setMaskPointsMode?.(_pointsMode);
+            _syncCommitRow();
+        };
+        sourceRadio.on('select', ({ value }) => {
+            _applySource(value);
+            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'source', value });
+        });
+        _children.push(sourceRadio);
 
         const models = viewer.el.getDetectionModels?.() ?? DETECTION_MODELS_FALLBACK;
         const initialModel = models.some(m => m.value === settings.model) ? settings.model : models[0].value;
@@ -119,6 +176,62 @@ export const MpiToolOptionsMask = ComponentFactory.create({
             viewer.el.runAutoMaskDetect?.();
         });
         _children.push(detectBtn);
+
+        // ── Points controls ──────────────────────────────────────────────────
+
+        const thresholdInput = qs('#points-threshold-input', el);
+        const thresholdVal   = qs('#points-threshold-val', el);
+        const initialThreshold = typeof settings.pointsThreshold === 'number'
+            ? settings.pointsThreshold : DEFAULTS.pointsThreshold;
+        const _applyThreshold = (pct) => {
+            viewer.el.setMaskPointsThreshold?.(pct / 100);
+            // Higher threshold = tighter selection, which reads backwards on a
+            // slider labelled "Scope". Show the raw number so the sweep advice in
+            // the info box lines up with what the user is dragging.
+            thresholdVal.textContent = String(Math.round(pct));
+        };
+        thresholdInput.value = String(Math.round(initialThreshold * 100));
+        _applyThreshold(Number(thresholdInput.value));
+        const _offThreshold = on(thresholdInput, 'change', () => {
+            const pct = Number(thresholdInput.value);
+            _applyThreshold(pct);
+            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'pointsThreshold', value: pct / 100 });
+        });
+        const _offThresholdLive = on(thresholdInput, 'input', () => {
+            thresholdVal.textContent = String(Math.round(Number(thresholdInput.value)));
+        });
+
+        const clearPointsBtn = MpiButton.mount(qs('#points-clear-slot', el), {
+            icon: 'trash', label: 'Clear points', size: 'sm', variant: 'secondary',
+            info: 'Remove every point',
+        });
+        clearPointsBtn.on('click', () => viewer.el.clearMaskPoints?.());
+        _children.push(clearPointsBtn);
+
+        // ── Add / Subtract — bake the detected mask into the paint layers ────
+        // Each points run returns ONE region, so this is how multi-part selections
+        // are built: Add the first part, place new dots, Add again.
+
+        const commitRow = qs('#commit-slot', el);
+        const addBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'plus', label: 'Add', size: 'sm', variant: 'secondary',
+            info: 'Add the detected area to the mask',
+        });
+        const subBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'minus', label: 'Subtract', size: 'sm', variant: 'secondary',
+            info: 'Cut the detected area out of the mask',
+        });
+        commitRow.appendChild(addBtn.el);
+        commitRow.appendChild(subBtn.el);
+        addBtn.on('click', () => viewer.el.bakeAutoPicks?.('manual'));
+        subBtn.on('click', () => viewer.el.bakeAutoPicks?.('subtract'));
+        _children.push(addBtn, subBtn);
+
+        function _syncCommitRow() {
+            commitRow.hidden = !_pointsMode;
+        }
+
+        _applySource(_pointsMode ? 'points' : 'detector');
 
         function _syncAutoDetectionGate() {
             const blocked = (state.generationQueueCount || 0) > 0;
@@ -209,6 +322,11 @@ export const MpiToolOptionsMask = ComponentFactory.create({
             _unsubE();
             _offQueueGate();
             _offOpacity();
+            _offThreshold();
+            _offThresholdLive();
+            // Leave the canvas in plain mask mode: points mode owns the right
+            // button and suppresses the image context menu.
+            viewer.el.setMaskPointsMode?.(false);
             viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
             _children.forEach(c => c.destroy?.());

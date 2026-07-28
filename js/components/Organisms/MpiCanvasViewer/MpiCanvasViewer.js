@@ -16,6 +16,10 @@
  *   el.getCurrentMaskDataURL()         — returns current mask as data URL, or null
  *   el.hasMask()                      — returns boolean
  *   el.setGenerating(bool)             — show/hide generating spinner
+ *   el.setMaskPointsMode(bool)         — click-point (SAM mask-points) detector branch
+ *   el.setMaskPointsThreshold(n) / el.getMaskPointsThreshold()
+ *   el.clearMaskPoints() / el.getMaskPointCount()
+ *   el.bakeAutoPicks('manual'|'subtract') — Add / Subtract the detected mask
  *
  * Emits:
  *   'mode-changed'    { mode }        — tool mode changed (from any source)
@@ -23,6 +27,7 @@
  *   'mask-ready'      { hasMask }     — mask painted or cleared
  *   'entry-loaded'    { idx, hasMask } — image loaded for index
  *   'compare-clicked'               — user clicked the Compare overlay button
+ *   'mask-points-changed' { count }   — a point prompt was added, removed or cleared
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -205,6 +210,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 onBrushTypeChange: (type) => {
                     emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
                 },
+                onPointsChange: (count) => emit('mask-points-changed', { count }),
             }),
         };
         Object.defineProperty(_cv, 'el', { get() { return this.inst.el; }, configurable: true });
@@ -288,6 +294,11 @@ export const MpiCanvasViewer = ComponentFactory.create({
         ];
         let _autoMaskModel = DETECTION_MODELS[0].value;
         let _autoMaskUseBox = true;
+        // MPI-361 point prompts. `_pointsMode` swaps the graph's detector branch;
+        // `_pointsThreshold` drives SAMDetectorCombined.threshold. Held on the viewer
+        // (like _isMaskInverted) so they survive the swapToPreview/swapToCanvas remount.
+        let _pointsMode = false;
+        let _pointsThreshold = 0.93;
         // Display-only invert state. Held on the viewer (not just the canvas)
         // so it survives the canvas teardown/remount that swapToPreview/swapToCanvas
         // performs. Re-applied to the fresh MpiCanvas after every remount.
@@ -397,12 +408,31 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             const sourceItem = _currentItem;
             const sourceKey = _autoPickKey(sourceItem);
+
+            // MPI-361: the mask-points branch feeds every dot into ONE SAM predict
+            // call, so it returns exactly ONE region per run — there is nothing to
+            // choose between. Pick it up front so a single run brings back both the
+            // thumb and the mask, instead of the detector's two-round-trip
+            // detect-then-pick dance.
+            let pointsMask = null;
+            if (_pointsMode) {
+                pointsMask = canvas.getPointsMaskDataURL?.() || null;
+                if (!pointsMask) {
+                    StatusBar.notify('Click the image to place a point first', 'warning');
+                    return;
+                }
+                _autoMaskPicks = new Set([0]);
+            }
+
             const runPicks = new Set(_autoMaskPicks);
             const exec = runAutoMask({
                 imageUrl,
-                detectorModel: _autoMaskModel,
-                useBox:        _autoMaskUseBox,
-                picks:         runPicks,
+                detectorModel:   _autoMaskModel,
+                useBox:          _autoMaskUseBox,
+                picks:           runPicks,
+                pointsMode:      _pointsMode,
+                pointsMask,
+                pointsThreshold: _pointsThreshold,
             });
             _autoMaskExec = exec;
 
@@ -422,6 +452,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 _lastDetectThumbUrls = [...urls];
                 if (populateThumbs) {
                     autoMaskThumbs.el.setImages(urls);
+                    // setImages clears the selection; points mode already committed
+                    // to pick 0 above, so put it back. setPicks does not emit
+                    // 'change', so this cannot re-trigger the run.
+                    if (_pointsMode) autoMaskThumbs.el.setPicks?.(new Set([0]));
                 }
             };
 
@@ -1100,6 +1134,56 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _clearAutoPickEntry(_currentItem, true);
         };
 
+        /**
+         * MPI-361 — swap the auto-mask detector for the click-point (SAM
+         * mask-points) branch. Clears any in-flight picks for the same reason
+         * setAutoMaskModel does: the old result belongs to the old detector.
+         * @param {boolean} enabled
+         */
+        el.setMaskPointsMode = (enabled) => {
+            const next = !!enabled;
+            if (_pointsMode === next) return;
+            _pointsMode = next;
+            canvas.setPointsMode?.(next);
+            autoMaskThumbs.el.clear();
+            _autoMaskPicks.clear();
+            _clearAutoPickEntry(_currentItem, true);
+        };
+        el.isMaskPointsMode  = () => _pointsMode;
+
+        /** SAMDetectorCombined.threshold. NOT a smooth dial — it snaps between
+         *  SAM's 3 candidate masks, so sweep it rather than nudging it. */
+        el.setMaskPointsThreshold = (v) => {
+            const n = Number(v);
+            if (Number.isFinite(n)) _pointsThreshold = Math.min(1, Math.max(0, n));
+        };
+        el.getMaskPointsThreshold = () => _pointsThreshold;
+
+        el.clearMaskPoints    = () => { canvas.clearMaskPoints?.(); emit('mask-points-changed', { count: 0 }); };
+        el.getMaskPointCount  = () => canvas.getMaskPointCount?.() ?? 0;
+
+        /**
+         * Add / Subtract the detected mask into the permanent paint layers, then
+         * drop the auto layer — lets successive point runs accumulate into one
+         * multi-part mask (each run only ever returns a single region).
+         * @param {'manual'|'subtract'} target
+         */
+        el.bakeAutoPicks = (target) => {
+            const ok = canvas.bakeAutoPicksInto?.(target);
+            if (!ok) {
+                StatusBar.notify('Nothing detected to apply', 'warning');
+                return false;
+            }
+            _autoMaskPicks.clear();
+            autoMaskThumbs.el.clear();
+            _clearAutoPickEntry(_currentItem, true);
+            canvas.clearMaskPoints?.();
+            emit('mask-points-changed', { count: 0 });
+            _hasMask = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
+            el.evaluateMask?.();
+            return true;
+        };
+
         /** Kick off an auto-mask detect run and populate the thumbs strip. */
         el.runAutoMaskDetect = () => {
             if (_isCueBusy()) {
@@ -1200,6 +1284,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     onBrushTypeChange: (type) => {
                         emit('brush-changed', { type: type === 'eraser' ? 'eraser' : 'brush' });
                     },
+                    onPointsChange: (count) => emit('mask-points-changed', { count }),
                 });
                 _cv.inst.on('modechange', ({ mode }) => {
                     if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
@@ -1223,6 +1308,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 await _restoreAutoPickMasks();
 
                 _cv.el.setMaskInverted?.(_isMaskInverted);
+                _cv.el.setPointsMode?.(_pointsMode);
 
                 _previewMaskCache = null;
             } finally {
