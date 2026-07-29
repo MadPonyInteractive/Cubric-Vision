@@ -266,6 +266,57 @@ async function _installedNodeCommits() {
  *     (a stale Pod image needs a REBUILD); the client shows a ui:warning. Never
  *     mark not-installed, never volume-heal a baked node.
  */
+/**
+ * Fold the image-resident deps back into the wrapper's status response and
+ * recompute each model's `installed`, so a complete-on-volume pack is not
+ * dragged to PARTIAL by an image-resident dep the wrapper never saw. Drifted
+ * VOLUME nodes are forced installed:false here so the pack routes to reinstall.
+ *
+ * MPI-328 — this step must fail CLOSED. It used to default a model the wrapper
+ * never mentioned to `{ installed: true, deps: [] }`, and the recompute was then
+ * vacuously true on that empty dep list. So any partial wrapper answer (boot
+ * race, CPU-image quirk, a dep-split mismatch that drops entries) flipped
+ * untouched models to green with ZERO files on the volume — observed on 1.1.1:
+ * a booting Pod 404'd twice, then 5 unrelated models reported installed while
+ * the volume grew only +4.9GB. Unknown is neither installed nor not-installed,
+ * so a short answer DROPS the model from the response and every consumer keeps
+ * its last known state instead of reading an invented one. All five callers
+ * already tolerate a missing entry.
+ *
+ * Pure — no I/O. Mutates and returns `results`.
+ */
+function foldBackWrapperStatus(results, { imageResidentByModel, volumeDepCount, volumeNodeDrifted }) {
+  for (const [mid, residentIds] of Object.entries(imageResidentByModel)) {
+    const reported = results[mid];
+    const deps = reported && Array.isArray(reported.deps) ? reported.deps : [];
+    const asked = (volumeDepCount && volumeDepCount[mid]) || 0;
+    if (asked > 0 && deps.length < asked) {
+      logger.warn('runpod', `models/status short answer for ${mid}: asked about ${asked} volume dep(s), got ${reported ? deps.length : 'no entry'} - install state left UNKNOWN`);
+      delete results[mid];
+      continue;
+    }
+    const entry = reported || { installed: false, deps: [] };
+    for (const d of deps) {
+      // A drifted volume node's folder IS present (wrong commit), so the wrapper
+      // reports it complete. Force installed:false to route it to reinstall AND tag
+      // it `drifted` so the installer sends force:true — else the wrapper short-
+      // circuits `already_installed` on folder-exists (wrapper.py) and the node
+      // never re-fetches at the pinned commit → an endless install loop (MPI-222).
+      if (d && volumeNodeDrifted.has(d.id)) { d.installed = false; d.drifted = true; }
+    }
+    for (const id of residentIds) {
+      deps.push({ id, installed: true, partialBytes: 0 });
+    }
+    entry.deps = deps;
+    // `deps.length > 0` guards the vacuous [].every() === true (MPI-328). Every
+    // model/app/plugin sent here carries at least one dep, so an empty set means
+    // the answer was empty, never "complete".
+    entry.installed = deps.length > 0 && deps.every((d) => d.installed);
+    results[mid] = entry;
+  }
+  return results;
+}
+
 async function remoteModelsCheck(models) {
   const installedCommits = await _installedNodeCommits();
   const bakedDrift = [];
@@ -273,6 +324,7 @@ async function remoteModelsCheck(models) {
   // volume deps (asked of the wrapper). Track image-resident ids to fold back
   // into the response.
   const imageResidentByModel = {};
+  const volumeDepCount = {}; // model id → how many deps we ASKED the wrapper about (MPI-328)
   const volumeNodeDrifted = new Set(); // dep ids whose volume install is stale
   const split = (models || []).map((m) => {
     const residentIds = [];
@@ -307,6 +359,7 @@ async function remoteModelsCheck(models) {
       volumeDeps.push({ ...d, type: type || d.type || '', filename });
     }
     imageResidentByModel[m.id] = residentIds;
+    volumeDepCount[m.id] = volumeDeps.length;
     return { ...m, deps: volumeDeps };
   });
 
@@ -316,30 +369,11 @@ async function remoteModelsCheck(models) {
     throw new Error((json && (json.message || json.error)) || `wrapper status ${res.status}`);
   }
 
-  // Fold the image-resident deps back in as installed:true and recompute the
-  // per-model `installed` flag so a complete-on-volume pack is not dragged to
-  // PARTIAL by an image-resident dep the wrapper never saw. Drifted VOLUME nodes
-  // are forced installed:false here so the pack routes to the reinstall path.
-  const results = json.results || {};
-  for (const [mid, residentIds] of Object.entries(imageResidentByModel)) {
-    const entry = results[mid] || { installed: true, deps: [] };
-    const deps = Array.isArray(entry.deps) ? entry.deps : [];
-    for (const d of deps) {
-      // A drifted volume node's folder IS present (wrong commit), so the wrapper
-      // reports it complete. Force installed:false to route it to reinstall AND tag
-      // it `drifted` so the installer sends force:true — else the wrapper short-
-      // circuits `already_installed` on folder-exists (wrapper.py) and the node
-      // never re-fetches at the pinned commit → an endless install loop (MPI-222).
-      if (d && volumeNodeDrifted.has(d.id)) { d.installed = false; d.drifted = true; }
-    }
-    for (const id of residentIds) {
-      deps.push({ id, installed: true, partialBytes: 0 });
-    }
-    entry.deps = deps;
-    entry.installed = deps.every((d) => d.installed);
-    results[mid] = entry;
-  }
-  json.results = results;
+  json.results = foldBackWrapperStatus(json.results || {}, {
+    imageResidentByModel,
+    volumeDepCount,
+    volumeNodeDrifted,
+  });
   // Surface baked-image drift so the client can warn (rebuild needed). Never
   // affects `installed` — a baked node can't be volume-healed.
   if (bakedDrift.length) json.bakedDrift = bakedDrift;
@@ -696,4 +730,5 @@ module.exports = {
   remoteCancelInstall,
   openInstallEventStream,
   _isImageResident,
+  foldBackWrapperStatus, // exported for tests (MPI-328)
 };

@@ -66,6 +66,14 @@ Absent from the board *and* from `tasks/_archived/`. Half of it (`b48ac2b`) is
 §11. Carried here so it stops being lost; if it turns out to need real work rather than a
 check, card it properly and drop this line.
 
+### 5. MPI-328 — remote status fail-open (**closed locally 2026-07-29, opportunistic check only**)
+
+Fixed + unit-tested locally; closed on local evidence per the standing rule. The only
+Pod-observable bit: during a Pod boot (the wrapper 404s for a few seconds before it answers
+`/wrapper/models/status`), confirm the log shows `[runpod] models/status short answer for <id>`
+and that **no** model flips to installed while the volume is untouched. Zero setup — just watch
+the log on the connect you are already doing. If a model does flip, reopen MPI-328.
+
 ---
 
 ## NOT on this card — a Pod cannot settle these

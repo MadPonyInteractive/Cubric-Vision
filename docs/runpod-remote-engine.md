@@ -314,6 +314,18 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   **baked** node at the wrong commit → `bakedDrift[]` → a warn-only "Pod image is stale —
   rebuild needed" toast (an image node can't be volume-healed). Lazy in-folder weights (RIFE)
   now ride a `targetPath` dep (see download-manager.md), also baked.
+- **The status fold-back fails CLOSED (MPI-328).** `remoteModelsCheck` asks the wrapper only
+  about VOLUME deps, then folds the baked ones back in and recomputes the model-level
+  `installed` — `foldBackWrapperStatus()` in `routes/remoteModels.js`, exported and unit-tested
+  (`tests/remote-status-fail-closed.test.cjs`). It used to default a model the wrapper OMITTED
+  to `{ installed: true, deps: [] }`, and the recompute was then vacuously true on that empty
+  list, so any partial answer (boot race, CPU-image quirk, dep-split mismatch) flipped untouched
+  models to green with zero files on the volume — seen on 1.1.1: a booting Pod 404'd twice, 5
+  unrelated models reported installed, volume grew +4.9GB against a 30GB+ real download. Now a
+  short answer (fewer dep lines back than volume deps asked) DROPS the model from `results` and
+  logs `[runpod] models/status short answer` — unknown is neither installed nor not-installed,
+  and all five callers already tolerate a missing entry. A model whose deps are ALL baked is
+  asked about nothing, so its absence stays legitimate and the fold-back still owns it.
 - **Lazy-download weights are the remote trap.** Several baked node packs fetch model weights
   on first use, not at build (RIFE `rife47.pth`; Impact-Pack `bbox/face_yolov8n.pt` +
   `sam_vit_b_01ec64.pth`; upscale `4x-NMKD-Siax`/`4x-AnimeSharp`). On a Pod that runtime fetch

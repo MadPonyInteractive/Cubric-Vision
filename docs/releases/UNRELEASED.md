@@ -153,6 +153,14 @@
   it was never usable in the first place. Nothing else about the install changes,
   and Windows and Linux are untouched.
 
+- **Cloud Pods can no longer report a model as installed when nothing downloaded.** While a
+  Pod was still starting up, it could answer the "what's on this volume?" question with only
+  part of the picture — and anything missing from that answer was taken as *installed*. Models
+  you never touched would tick over to installed one after another, with no download and
+  nothing on the volume, so the next generation failed on files that were never there. An
+  incomplete answer is now treated as "don't know yet" instead of "yes": those models keep
+  whatever state they already had and settle on the next check a few seconds later.
+
 - **Gallery cards now match the picture inside them.** A card was laid out using
   the size you *asked* for rather than the size that came back, so whenever a
   model produced something a different shape — some of them adjust dimensions to
