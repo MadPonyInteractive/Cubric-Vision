@@ -98,6 +98,11 @@ const TOOL_OPTIONS_REGISTRY = {
 const _MASK_TOOLS = new Set(['maskBrush', 'maskDetect', 'maskPoints', 'maskText']);
 const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
 
+/** Modes that keep the PromptBox up: prompt, plus the whole mask family — a mask
+ *  and a prompt are ONE operation (MPI-372). Any path that re-shows the box after
+ *  hiding it (delete, model switch) MUST use this, not a bare `=== 'prompt'`. */
+const _modeKeepsPromptBox = (mode) => mode === 'prompt' || _isMaskTool(mode);
+
 /**
  * Rail tool mode → canvas viewer mode. The viewer knows two canvas modes,
  * 'crop' and 'mask'; the rail has one entry per masking method, so every mask
@@ -2125,7 +2130,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 viewer.el.clearCompare?.();
                 viewer.el.setCompareEnabled?.(false);
             }
-            if (historyTools.el.getActiveMode?.() === 'prompt' && _shouldShowPromptBox()) {
+            if (_modeKeepsPromptBox(historyTools.el.getActiveMode?.()) && _shouldShowPromptBox()) {
                 _pb?.el?.show();
             }
 
@@ -2281,7 +2286,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 const nowHas = _syncPromptToolDisabled();
                 if (nowHas) {
                     _mountPromptBoxIfNeeded();
-                    if (historyTools.el.getActiveMode() === 'prompt') _pb?.el?.show();
+                    if (_modeKeepsPromptBox(historyTools.el.getActiveMode())) _pb?.el?.show();
                 } else {
                     _pb?.el?.hide();
                 }

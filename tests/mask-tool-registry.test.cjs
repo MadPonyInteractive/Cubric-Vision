@@ -47,6 +47,22 @@ test('every rail mask tool has an options compound', () => {
     }
 });
 
+// MPI-372: mask tools keep the PromptBox up. Any path that re-shows it after a
+// hide (delete-entries, model switch) must gate on _modeKeepsPromptBox, never a
+// bare `=== 'prompt'` — that leaves the box hidden in a mask tool until the user
+// swaps tools and back.
+test('PromptBox re-show paths do not gate on prompt mode alone', () => {
+    const lines = BLOCK.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const window = lines.slice(i, i + 3).join('\n');
+        if (!/_pb\??\.?\??\.el\??\.show\(\)/.test(window)) continue;
+        assert.ok(
+            !/getActiveMode\??\.?\(\)\s*===\s*'prompt'/.test(window),
+            `MpiGroupHistoryBlock.js:${i + 1} re-shows the PromptBox behind a bare prompt-mode check — use _modeKeepsPromptBox()`,
+        );
+    }
+});
+
 // Only the Brush tool paints. A brushless tool that still armed the brush would
 // let a drag paint with no visible brush control — the incoherence MPI-381 removed.
 test('only the brush tool mounts the strip with its brush pair', () => {
