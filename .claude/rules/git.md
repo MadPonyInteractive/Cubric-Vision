@@ -38,6 +38,17 @@ ids not in your columns) → `git hash-object -w tmp` → `git update-index --ca
 in the tree. Note the node/bash `/tmp` split on Windows — bash writes `/tmp`, node reads `C:\tmp`;
 use the session scratchpad for the intermediate file.
 
+**Guard the blob, but scope the guard — `board.json` mentions ids TWICE (MPI-328).** The
+"is this id already on the board?" pre-check is where the recipe goes wrong quietly:
+`JSON.stringify(board).includes('MPI-<n>')` is TRUE for an id that appears only inside
+`board.events[]` (the historical `task.created`/`task.moved`/`task.deleted` records at the
+bottom of the file), even when the id is in NO column. It aborts a correct blob and reads
+like the card is already there. Test the arrays — `board.columns.done.includes(id)` — or slice
+the text at `"updated_at"` and search only the columns region above it. Same shape as the
+`.every()` fail-open: a check that passes for the wrong reason. Assert the byte delta too
+(`out.length - head.length === inserted.length`), and derive `inserted.length` from the string
+rather than counting characters by eye.
+
 **A READ can race a write too.** `grep`, `git diff` and `git status` issued while a sibling session is rewriting a co-owned file return a partial or empty view of it — indistinguishable from a clobber. `git diff` also goes quiet the moment a sibling commits your hunks for you. Before restoring from a backup, re-applying edits, or telling the user work was lost: **re-run the read**, and confirm against `git log`/`git show`. (MPI-360 raised two false alarms this way in one session, one of them a "failing `release:check`" that passed on the next run.)
 
 Already committed their work? Nothing is lost: `git tag backup HEAD` → `git reset --soft HEAD~1` → `git reset HEAD -- <co-owned files>` → re-apply your filtered patch → commit the index → verify `git status --short` shows their files back as `M`.

@@ -30,6 +30,22 @@ npm run test:desktop
 npm run build:portable:dry-run
 ```
 
+**The unit suite has no npm script — run it by glob:**
+
+```sh
+node --test tests/*.test.cjs
+```
+
+`node --test tests/` (the directory form) does NOT work: Node treats the path as a
+module and dies with `Cannot find module '...\tests'`. Only `npm run test:desktop`
+above is scripted, and that is the Playwright/Electron suite, not this one.
+
+A green run is NOT the baseline — **check the failure LIST, not the count.** As of
+2026-07-29 the suite is 254/263 with 9 long-standing failures
+(`optional-media-placeholder` on missing fixtures, `permodel-key-allowlist` ×3 on
+drifted source-text regexes, `resolve-model-deps`, `remoteProxy` ×4). The total
+moves as tests are added, so a changed count proves nothing on its own.
+
 The Electron app uses an Express server on `127.0.0.1:3000`. Desktop tests use
 an isolated Electron user-data directory so they do not modify normal app data.
 
