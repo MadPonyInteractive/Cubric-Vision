@@ -262,6 +262,7 @@ export function removeHistoryEntry(group, index) {
  * @property {boolean}     tutorialSeen
  * @property {Object}      modelSettings  - Per-model user selections: { [modelId]: { loras, upscaleModel } }
  * @property {Object}      toolSettings   - Per-tool user selections: { [toolKey]: { upscaleModel } }
+ * @property {string|null} [lastGroupId]  - Card the Tab flipper returns to (MPI-378). Absent/null = nothing to flip to.
  */
 
 /**
@@ -284,7 +285,25 @@ export function createProject(name, folderPath) {
         modelSettings: {},
         toolSettings:  {},
         shared:        { image: {}, video: {} },
+        lastGroupId:   null,
     };
+}
+
+/**
+ * Resolves which card Tab flips to from the gallery (MPI-378).
+ * Returns null when there is nothing to flip to — no cards, or a remembered
+ * card that has since been deleted. Tab must then do nothing at all.
+ * Audio groups are excluded: the gallery refuses to open them as a history
+ * workspace, so the flipper must not either.
+ * @param {Project} project
+ * @returns {string|null} groupId
+ */
+export function resolveFlipTarget(project) {
+    const groups = (project?.itemGroups || []).filter(g => g?.type !== 'audio');
+    if (!groups.length) return null;
+    // One card = the only thing Tab could mean, remembered or not.
+    if (groups.length === 1) return groups[0].id;
+    return groups.some(g => g.id === project.lastGroupId) ? project.lastGroupId : null;
 }
 
 /**

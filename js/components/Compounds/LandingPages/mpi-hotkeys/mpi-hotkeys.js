@@ -113,13 +113,12 @@ export const MpiHotkeys = ComponentFactory.create({
                             </ul>
                         </div>
 
-                        <!-- Radial Menu -->
+                        <!-- Workspace -->
                         <div class="mpi-hotkeys__shortcut-group">
-                            <h4>Radial Menu</h4>
+                            <h4>Workspace</h4>
                             <ul>
-                                <li><span>TAB</span><span>Toggle radial menu</span></li>
-                                <p><span>Hold TAB, move to a desired operation and release TAB</span></p>
-                                <p><span>Release TAB at center for no selection</span></p>
+                                <li><span>TAB</span><span>Flip between the Gallery and your last card</span></li>
+                                <p><span>From the Gallery, TAB opens the last card you worked on. From a card, TAB goes back.</span></p>
                             </ul>
                         </div>
 

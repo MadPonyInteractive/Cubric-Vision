@@ -6,8 +6,11 @@
  *   PAGE_GALLERY      → main gallery (grid of ItemGroups); default on project open
  *   PAGE_GROUP_HISTORY → history view for a single ItemGroup (params: { groupId })
  *
- * The radial menu tracks the current page but no longer carries operations
- * (MPI-356) — hold-Tab opens the model picker via 'ui:open-model-picker'.
+ * Tab is the workspace flipper (MPI-378): gallery → the last card you opened in
+ * this project, card → gallery, nothing at all when the project has no cards.
+ * The remembered card lives in project.json (`lastGroupId`) so it survives a
+ * restart. The workspace radial is GONE — the ring survives only as the
+ * dev-gated Ctrl+Tab menu; Models is reached from the prompt box's model button.
  */
 
 import { state } from '../state.js';
@@ -17,6 +20,9 @@ import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { gid } from '../utils/dom.js';
 import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
+import { Hotkeys } from '../managers/hotkeyManager.js';
+import { resolveFlipTarget } from '../data/projectModel.js';
+import { updateProject } from '../services/projectService.js';
 import { loadProjectGrid } from './projectUI.js';
 import { Overlays } from '../managers/overlayManager.js';
 import { clientLogger } from '../services/clientLogger.js';
@@ -34,17 +40,6 @@ let _currentGroupId   = null;
 let _pageLanding      = null;
 let _currentBlock     = null;   // track mounted view Block for teardown
 let _navSeq           = 0;      // guards async teardown/import ordering
-
-// ── Radial context definitions ─────────────────────────────────────────────
-
-// MPI-356: ops LEFT the ring — they live in the prompt box's op strip, which is
-// always visible and doesn't rotate under the user. Both workspace contexts now
-// hold the same single item: Models. Apps joins it when the app library un-gates
-// (MPI-332); until then the radial short-circuits (see MpiRadialMenu._onTabDown)
-// and hold-Tab opens the model picker with no ring drawn.
-const RADIAL_ITEMS = [
-    { action: 'models', label: 'Models', icon: 'layers' },
-];
 
 // ── Public init ─────────────────────────────────────────────────────────────
 
@@ -71,6 +66,41 @@ export function initNavigation(refs) {
 
     // Gallery breadcrumb — always goes to main gallery
     _projectNameInst.on('gallery', () => navigate(PAGE_GALLERY));
+}
+
+// ── Tab flipper (MPI-378) ───────────────────────────────────────────────────
+
+// Bound while a workspace is on screen, unbound on the landing page. This is
+// not just tidiness: hotkeyManager suppresses native Tab traversal as soon as
+// ANY handler exists for it, so an app-lifetime binding would kill tabbing
+// through the landing page's project form — which has real text inputs.
+let _unbindFlip = null;
+
+/**
+ * Gallery → the last card opened in this project; card → gallery.
+ * Does nothing at all — no navigation, no toast — when there is nothing to
+ * flip to (project with no cards, or a remembered card that was deleted).
+ */
+function _flipWorkspace() {
+    if (state.currentPage === PAGE_GROUP_HISTORY) {
+        navigate(PAGE_GALLERY);
+        return;
+    }
+    const groupId = resolveFlipTarget(state.currentProject);
+    if (!groupId) return;
+    navigate(PAGE_GROUP_HISTORY, { groupId });
+}
+
+/**
+ * Records the card the flipper returns to. Called from the ONE choke point that
+ * every card-entry path goes through (this router mounting MpiGroupHistoryBlock),
+ * so restore-on-boot and any future entry path are covered without new hooks.
+ * @param {string} groupId
+ */
+function _rememberGroup(groupId) {
+    if (!state.currentProject || state.currentProject.lastGroupId === groupId) return;
+    updateProject({ lastGroupId: groupId }).catch(err =>
+        clientLogger.warn('navigation', `Could not remember the last card: ${err.message}`));
 }
 
 // ── Core router handler ─────────────────────────────────────────────────────
@@ -144,13 +174,13 @@ async function _destroyCurrentBlock() {
 // ── View loader ─────────────────────────────────────────────────────────────
 
 /**
- * Loads the correct workspace into _toolContainer and syncs the radial + breadcrumb.
+ * Loads the correct workspace into _toolContainer and syncs the breadcrumb.
  * @param {string} page   - PAGE_GALLERY | PAGE_GROUP_HISTORY
  * @param {Object} params - Route params (e.g. { groupId } for group-history)
  */
 async function _loadView(page, params = {}, navToken = _navSeq) {
-    // ── Radial menu ─────────────────────────────────────────────────────────
-    _syncRadial(page);
+    // ── Dev radial (Ctrl+Tab, dev builds only) ──────────────────────────────
+    _syncRadial();
 
     // ── Page content ────────────────────────────────────────────────────────
     Overlays.reset();
@@ -175,6 +205,8 @@ async function _loadView(page, params = {}, navToken = _navSeq) {
         // Only update breadcrumb after successful mount — prevents "cleared
         // breadcrumb + stale view" state when mount throws.
         _updateBreadcrumb(page, params);
+        // Same reason the breadcrumb waits: only remember a card that actually opened.
+        if (page === PAGE_GROUP_HISTORY && params.groupId) _rememberGroup(params.groupId);
     } catch (err) {
         clientLogger.error('navigation', `Failed to load view "${page}"`, err);
     }
@@ -255,55 +287,37 @@ async function _restartEngine() {
 }
 
 /**
- * Syncs the radial menu to the current page context.
- * Creates the radial on first call; switches context on subsequent calls.
- * Radial actions in gallery/group-history set the PromptBox operation via
- * the 'workspace:set-operation' event — they do NOT trigger navigation.
- * @param {string} page - PAGE_GALLERY | PAGE_GROUP_HISTORY
+ * Mounts the dev radial on first entry into a workspace.
+ *
+ * MPI-378 removed the workspace ring entirely — Tab is the flipper, and Models
+ * is reached from the prompt box's model button (which still emits
+ * 'ui:open-model-picker'). What's left is the dev-only Ctrl+Tab menu (MPI-338),
+ * so in production nothing mounts at all.
  */
-function _syncRadial(page) {
-    // MPI-338: dev actions live on their OWN radial (Ctrl+Tab / 'dev' context),
-    // NOT appended to the page radial — Tab shows real operations only, so
-    // tutorial capture is clean. Gated on dev_mode: no 'dev' context in production,
-    // so Ctrl+Tab is inert there.
-    const devItems = APP_CONFIG.dev_mode
-        ? [
-            { action: 'components', label: 'Components', icon: 'grid' },
-            { action: 'apps', label: 'Apps', icon: 'layers' }, // App Library (MPI-256), dev-gated
-            { action: 'restart-engine', label: 'Restart Engine', icon: 'refresh' }, // dev-gated: restart ComfyUI only
-          ]
-        : [];
+function _syncRadial() {
+    if (!APP_CONFIG.dev_mode || _radialInstance) return;
 
-    if (!_radialInstance) {
-        _radialInstance = MpiRadialMenu.mount(_radialMount, {
-            context: page,
-        });
+    _radialInstance = MpiRadialMenu.mount(_radialMount, { context: 'dev' });
+    _radialInstance.el.setContextItems('dev', [
+        { action: 'components', label: 'Components', icon: 'grid' },
+        { action: 'apps', label: 'Apps', icon: 'layers' },                       // App Library (MPI-256)
+        { action: 'restart-engine', label: 'Restart Engine', icon: 'refresh' },  // restart ComfyUI only
+    ]);
 
-        _radialInstance.el.setContextItems(PAGE_GALLERY, RADIAL_ITEMS);
-        _radialInstance.el.setContextItems(PAGE_GROUP_HISTORY, RADIAL_ITEMS);
-        if (devItems.length) _radialInstance.el.setContextItems('dev', devItems);
-
-        _radialInstance.on('select', ({ action }) => {
-            if (action === 'models') {
-                Events.emit('ui:open-model-picker', {});
-                return;
-            }
-            if (action === 'components') {
-                _loadComponentsGallery();
-                return;
-            }
-            if (action === 'apps') {
-                Events.emit('apps:open'); // App Library overlay (MPI-256, dev-gated)
-                return;
-            }
-            if (action === 'restart-engine') {
-                _restartEngine();
-                return;
-            }
-        });
-    } else {
-        _radialInstance.el.setContext(page);
-    }
+    _radialInstance.on('select', ({ action }) => {
+        if (action === 'components') {
+            _loadComponentsGallery();
+            return;
+        }
+        if (action === 'apps') {
+            Events.emit('apps:open'); // App Library overlay (MPI-256, dev-gated)
+            return;
+        }
+        if (action === 'restart-engine') {
+            _restartEngine();
+            return;
+        }
+    });
 }
 
 // ── Lazy view imports ───────────────────────────────────────────────────────
@@ -349,9 +363,12 @@ async function _loadComponentsGallery() {
 function _showLanding() {
     _pageLanding?.classList.remove('hide');
     _appShell?.classList.add('hide');
+    _unbindFlip?.();
+    _unbindFlip = null;
 }
 
 function _showShell() {
     _pageLanding?.classList.add('hide');
     _appShell?.classList.remove('hide');
+    if (!_unbindFlip) _unbindFlip = Hotkeys.bind('workspace.flip', _flipWorkspace);
 }

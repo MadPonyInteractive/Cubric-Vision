@@ -118,10 +118,19 @@
 
 - **Choosing a model is a full-screen contact sheet.** The model dropdown is now
   a grid of preview tiles like the Model Library, so you pick by looking at the
-  work rather than reading names. Holding **Tab** opens it straight away — the
-  gesture is identical every time, instead of a ring that rotated and changed
+  work rather than reading names — click the model button above the prompt and
+  it opens, the same way every time, instead of a ring that rotated and changed
   size depending on which model you were on. LoRA & Upscale settings open from
   the model's own tile.
+
+- **Tab jumps between the gallery and the card you were working on.** One key,
+  both directions: from the gallery it opens the last card you had open in that
+  project, and from inside a card it drops you back to the gallery. It remembers
+  per project and remembers after you close the app, so you come back to where
+  you left off. If a project has no cards yet, Tab does nothing at all — and if
+  you delete the card it was holding on to, it forgets rather than sending you
+  somewhere you didn't ask for. This replaces the old Tab ring, which had been
+  down to a single entry ever since operations moved to the prompt box.
 
 - **Crop outside the picture.** The crop box no longer stops at the edge of your
   image — drag it past any side and the new area fills with a colour you pick.

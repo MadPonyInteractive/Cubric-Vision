@@ -471,8 +471,13 @@ export async function updateGroup(group) {
 export async function removeGroup(groupId) {
     return _enqueueMutation(async () => {
         if (!state.currentProject) return;
+        const wasRemembered = state.currentProject.lastGroupId === groupId;
         state.currentProject = removeGroupFromProject(state.currentProject, groupId);
         await persistGroups();
+        // MPI-378: the Tab flipper's remembered card must not survive its own
+        // deletion. Cleared here rather than at the four removeGroup call sites,
+        // and left EMPTY — never guess a replacement card.
+        if (wasRemembered) await updateProject({ lastGroupId: null });
         Events.emit('project:group-removed', { groupId });
     });
 }

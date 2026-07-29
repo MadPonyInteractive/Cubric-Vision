@@ -12,13 +12,11 @@ are `.claude/rules/component-{mounts,events-*,state}.md`.
 | Op strip (chips above the prompt bar) | `MpiPromptBox` | the operation |
 | Op strip (second mount, inside the parameters popup) | `MpiPromptBox` | the operation |
 | Model button (bar) → `MpiModelPicker` overlay | the Block (Gallery / Group History) | the model |
-| Hold-Tab radial | `MpiRadialMenu` | opens the model picker directly |
 
-The op is **not** in the radial any more. `navigation.RADIAL_ITEMS` is one static item
-(Models); `MpiRadialMenu._onTabDown` short-circuits straight to `_selectItem` when the
-context holds exactly one enabled item, so hold-Tab opens the picker with no ring to aim
-at. This self-erases when Apps pushes a second item — the ring comes back with no further
-edit. Both workspace contexts share that one static list.
+The radial is **not** a model/op surface any more. MPI-356 moved ops to the strip, and
+MPI-378 removed the workspace ring entirely — Tab is the workspace flipper now
+(`docs/shell.md` § navigation.js). The model button is the only way into the picker, and
+the only emitter of `ui:open-model-picker`. Do not re-add a Models shortcut to Tab.
 
 ## Two mounts, one choice list
 

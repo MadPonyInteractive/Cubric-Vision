@@ -3,11 +3,11 @@
  "id": "MPI-378",
  "title": "Tab becomes a workspace flipper (replaces the radial on Tab)",
  "description": "User decision 2026-07-29: Tab is worth more as a workspace flipper than as a radial trigger. Gallery <-> the last card you had open, one key, no ring, no aiming.\n\nBEHAVIOUR (v1):\n  - In the gallery, Tab opens the last-used card in this project. If the project has exactly ONE card, Tab opens that one.\n  - In a card, Tab returns to the gallery.\n  - Project has NO cards: Tab does nothing. Not a toast, not a flash - nothing.\n  - The remembered card is PER PROJECT and must survive a restart, so it lives in project.json.\n  - Remembered card no longer exists: Tab does not flip anywhere.\n  - The user DELETES the remembered card: clear the entry in project.json (leave it empty rather than guessing a replacement). Tab then does nothing until the user opens a card again.\n\nSo there are exactly two write points: the user ENTERS a card history (record it) and the user DELETES a card (clear it if it was the remembered one).\n\nPHASE 2, once the App Library un-gates (MPI-332): the gallery side of the flip becomes gallery <-> apps <-> last card. Do not build this now - just do not design v1 in a way that blocks it.\n\nTHE RADIAL. Tab is currently owned by MpiRadialMenu ('radialMenu.toggle' in hotkeyRegistry.js). The radial is NOT broken, it is degenerate: MPI-356 moved ops to the prompt box op strip, leaving RADIAL_ITEMS = [Models] for both workspace contexts, and MpiRadialMenu._onTabDown short-circuits any single-item context - fires it on key-down and never draws the ring. That is why Tab currently just opens the model picker. Taking Tab means deciding what happens to that Models shortcut and to the workspace radial contexts. Ctrl+Tab ('radialMenu.devToggle', dev-gated, 3 items) still draws a real ring and is NOT in scope. NEEDS A USER DECISION before code - see acceptance.\n\nBLAST RADIUS mapped while carding:\n  - js/managers/hotkeyRegistry.js - 'radialMenu.toggle' currently binds Tab, gated to gallery + group-history. Native Tab focus-traversal is already suppressed globally in hotkeyManager, so the flipper inherits that.\n  - js/shell/navigation.js:45 RADIAL_ITEMS + :282-283 setContextItems for PAGE_GALLERY and PAGE_GROUP_HISTORY.\n  - js/components/Primitives/MpiRadialMenu/MpiRadialMenu.js:374 _onTabDown (the single-item short-circuit).\n  - RECORD point: every path that opens a card mounts MpiGroupHistoryBlock with a groupId prop - that is ONE choke point. navigate(PAGE_GROUP_HISTORY) has only one call site today (MpiGalleryBlock.js:205) but the Block mount is the safer hook because it also covers restore-on-boot and any future entry path.\n  - CLEAR point: removeGroup has FOUR call sites (MpiGalleryBlock.js:374, :917, :1016 and MpiGroupHistoryBlock.js:2061). Do NOT patch four call sites - put the clear inside the service (projectService.removeGroup / projectModel.removeGroupFromProject) so it cannot be bypassed. A four-call-site fix on a shared primitive is a false done.\n  - project.json writes from server routes MUST go through updateProjectJson() in routes/projects.js (per-file queued atomic writes), never direct fs.writeJson.\n  - SCHEMA_VERSION is 4 (js/migrations/projectMigrations.js). Decide whether an OPTIONAL field with a safe absent-means-nothing default needs a bump + migration, or whether absent is simply handled on read. Check .claude/rules/versioning.md rather than assuming.",
- "column": "todo",
- "maturity": "idea",
+ "column": "doing",
+ "maturity": "validating",
  "status": "active",
  "created_at": "2026-07-29T08:00:00Z",
- "updated_at": "2026-07-29T08:00:00Z",
+ "updated_at": "2026-07-29T05:28:13Z",
  "labels": [
   "ui",
   "ux",
@@ -30,5 +30,10 @@
  ],
  "links": {
   "events": "events.jsonl"
+ },
+ "attention": {
+  "state": "required",
+  "reason": "Needs one pass in the running app: Tab from the gallery opens the last card, Tab inside a card returns to the gallery, it survives a restart, and it does nothing at all in an empty project. Unit-tested and lint-clean, but never exercised live - no project was reachable from the browser dev session.",
+  "updated_at": "2026-07-29T05:28:13Z"
  }
 }

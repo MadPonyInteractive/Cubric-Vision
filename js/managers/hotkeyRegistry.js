@@ -250,28 +250,31 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: true,
     },
 
-    // ── Radial Menu ───────────────────────────────────────────────────────────
-    // Tab opens the radial ONLY on the gallery / group-history pages, and never
-    // while a full-page body overlay (e.g. the Model Library) is open — there it
-    // must be inert. Native Tab focus-traversal is suppressed globally in
-    // hotkeyManager regardless, so Tab can never walk cards / enter the slide-over.
+    // ── Workspace ─────────────────────────────────────────────────────────────
+    // MPI-378: Tab flips gallery ↔ last-used card. Same page/overlay gate the
+    // radial used to have — only on the gallery / group-history pages, never
+    // while a full-page body overlay (e.g. the Model Library) is open. Native
+    // Tab focus-traversal is suppressed globally in hotkeyManager regardless,
+    // so Tab can never walk cards / enter the slide-over.
     {
-        id:               'radialMenu.toggle',
+        id:               'workspace.flip',
         key:              'tab',
         type:             KEY_TYPE.DOWN,
-        category:         'radialMenu',
-        scopeLabel:       'Radial Menu',
-        description:      'Toggle radial menu',
+        category:         'workspace',
+        scopeLabel:       'Workspace',
+        description:      'Flip between the gallery and the last-used card',
         allowWhileTyping: false,
         when: ({ state }) =>
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
             !document.querySelector('.mpi-overlay--body'),
     },
-    // Ctrl+Tab opens a SEPARATE dev-only radial (Apps / Components / Restart
-    // Engine) so the main Tab radial shows real operations only — clean tutorial
-    // capture. Gated on APP_CONFIG.dev_mode: inert in production. Same page/overlay
-    // gate as radialMenu.toggle. Ctrl+Tab is an OS tab-switch combo; the manager
-    // preventDefaults for us once this entry's when-gate passes.
+
+    // ── Radial Menu ───────────────────────────────────────────────────────────
+    // Ctrl+Tab opens the dev-only radial (Apps / Components / Restart Engine).
+    // MPI-378 dropped the workspace radial entirely — Tab is the flipper now, so
+    // this is the ONLY ring left. Gated on APP_CONFIG.dev_mode: inert in
+    // production. Same page/overlay gate as workspace.flip. Ctrl+Tab is an OS
+    // tab-switch combo; the manager preventDefaults for us once this when-gate passes.
     {
         id:               'radialMenu.devToggle',
         key:              'control+tab',

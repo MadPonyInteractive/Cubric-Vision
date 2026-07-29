@@ -6,7 +6,9 @@ import { ICONS } from '../../../utils/icons.js';
 /**
  * MpiRadialMenu — Radial navigation primitive.
  *
- * Hold Tab to show items in ghost style.
+ * Hold Ctrl+Tab to show items in ghost style. MPI-378: plain Tab is the
+ * workspace flipper now, so the dev-gated 'dev' context is the only opener —
+ * the component itself never binds bare Tab.
  * Uses Pointer Lock API to capture raw mouse deltas — no OS cursor warp needed.
  * A direction line shows virtual cursor position from centre.
  * Move mouse > moveDist px (virtual) from centre to highlight nearest item.
@@ -371,20 +373,8 @@ export const MpiRadialMenu = ComponentFactory.create({
         }
 
         // ── Tab hold logic ──────────────────────────────────────────────────────
-        const _onTabDown = () => {
-            if (_tabHeld) return;
-            _tabHeld = true;
-            // MPI-356: a context holding exactly ONE selectable item has nothing
-            // to aim at — fire it on key-down and never draw the ring (today the
-            // workspace contexts hold only Models). Self-erases as soon as a
-            // second item lands (Apps), which brings the ring back with no edit.
-            const live = (CONTEXTS[_context] || CONTEXTS.root || []).filter(it => !it.disabled);
-            if (live.length === 1) {
-                _selectItem(live[0].action);
-                return;
-            }
-            _show();
-        };
+        // MPI-378: plain Tab no longer belongs to the radial — it is the workspace
+        // flipper (see js/shell/navigation.js). Ctrl+Tab is the only opener left.
 
         // MPI-338: Ctrl+Tab hold opens the dev radial by swapping to the 'dev'
         // context for the duration of the hold. No-op unless a 'dev' context has
@@ -426,7 +416,6 @@ export const MpiRadialMenu = ComponentFactory.create({
             }
         };
 
-        const _unbindTab = Hotkeys.bind('radialMenu.toggle', _onTabDown);
         const _unbindDevTab = Hotkeys.bind('radialMenu.devToggle', _onDevTabDown);
         const _removeKeyUp = on(window, 'keyup', _onTabUp);
         const _removePointerMove = on(el, 'mousemove', _onPointerMove);
@@ -457,7 +446,7 @@ export const MpiRadialMenu = ComponentFactory.create({
 
         // ── Cleanup ─────────────────────────────────────────────────────────────
         _cleanups.push(_removeKeyUp, _removePointerMove, _removeLockChange);
-        _cleanups.push(_unbindTab, _unbindDevTab);
+        _cleanups.push(_unbindDevTab);
 
         const observer = new MutationObserver(() => {
             if (!document.contains(el)) {
