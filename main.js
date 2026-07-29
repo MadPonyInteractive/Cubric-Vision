@@ -678,9 +678,26 @@ app.on('ready', () => {
       skipTaskbar: true,
       alwaysOnTop: true,
       backgroundColor: '#0a0a0c',
+      // Shown on ready-to-show, not immediately: on a weak machine the window
+      // appears before Chromium's first paint and `backgroundColor` does not
+      // cover that gap, so the user's whole first impression was a white box.
+      // The page is inline-CSS with no external assets, so the wait is a frame
+      // or two even on integrated graphics. (MPI-387)
+      show: false,
       webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
-    splashWindow.loadFile(path.join(__dirname, 'splash', 'splash.html'));
+    splashWindow.once('ready-to-show', () => {
+      // createWindow() may already have destroyed it if the server was fast.
+      if (splashWindow && !splashWindow.isDestroyed()) splashWindow.show();
+    });
+    // loadFile returns a promise; a rejection here escapes the try/catch and
+    // would take the whole process down via the unhandledRejection handler.
+    splashWindow.loadFile(path.join(__dirname, 'splash', 'splash.html'))
+      .catch((err) => {
+        logger.warn('main', `Splash failed to load: ${err.message}`);
+        if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
+        splashWindow = null;
+      });
     splashWindow.center();
     splashWindow.on('closed', () => { splashWindow = null; });
   } catch (err) {

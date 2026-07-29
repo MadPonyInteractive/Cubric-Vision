@@ -1,0 +1,32 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-387",
+ "title": "Clean Windows 11 install is broken end-to-end - SAC block, MAX_PATH, git dep",
+ "column": "doing",
+ "maturity": "in-progress",
+ "status": "active",
+ "created_at": "2026-07-29T23:10:00Z",
+ "updated_at": "2026-07-29T23:10:00Z",
+ "labels": [
+  "bug",
+  "release",
+  "windows",
+  "umbrella"
+ ],
+ "description": "UMBRELLA. Raised 2026-07-29 from a live second user report plus a full reproduction on a clean Windows 11 Home laptop (integrated graphics, no NVIDIA). Six defects, three of them shippable now and three that are their own effort. Full evidence + the agent blast-radius report live in brief.md. Do NOT close this card as a whole - close the sub-items.\n\nA. MAX_PATH kills the LTXVideo pip step. Measured on the real install: the diffusers file path is 266 chars against the 260 limit, over by six. pip says so itself (HINT about Windows Long Path support). The root folder is DOUBLE-NESTED because the full zip is named CubricVision-windows-x64-v1.2.0.zip AND contains an inner root folder of the same name, so Explorer Extract All nests it twice - 32 wasted chars we control for free. SHIPPABLE NOW.\n\nB. Impact-Pack requirements.txt line 10 is a git+https requirement for facebookresearch/sam2. Normal users have no git; pip dies with 'Cannot find command git'. Deterministic on every clean machine, confirmed twice live including once via the Retry button. We ship SAM 1 (sam-vit-b) and MPI-380 established SAM 1 stays as the Impact segment refiner, so sam2 is very likely dead weight - candidate for the existing requirementsDrop mechanism (added a851eb18 for the macOS onnxruntime-gpu drop; trap: _createDepJob is a WHITELIST, unlisted dep fields vanish). SHIPPABLE NOW.\n\nC. The error message misattributes the failure. routes/engine.js line ~474 emits 'UW deps installation failed. Press Retry to re-attempt.' and the engine logs 'One or more custom node extractions failed'. ZERO extractions failed in the captured log - all 14 zips extracted, renamed and commit-marker stamped. Three PIP steps failed. This wrong attribution is why a previous agent told the user to just press Retry. Worse: A and B are deterministic, so Retry re-runs them and they fail identically while the app proceeds - the user ends up with LTXVideo missing diffusers and Impact-Pack missing sam2, silently. SHIPPABLE NOW.\n\nD. Smart App Control blocks the entire Windows launch chain. SAC hard-blocks .vbs, .bat AND .cmd with no per-file override and no allowlist. We ship start.vbs -> start-with-terminal.bat -> node_modules/.bin/electron.cmd -> electron.exe: three blocked hops before the exe, and the exe is an unrenamed unsigned electron.exe inside node_modules. Windows 11 only, on by default after a clean install, which is why it never showed on the dev box or on Windows 10. .lnk was tested and REJECTED - it stores an absolute target path and cannot survive a zip extracted to an arbitrary folder (verified empirically). OWN EFFORT.\n\nE. Existing Windows 11 SAC users are ALREADY UNREACHABLE. update.bat, update-from-zip.bat and start.vbs are all blocked, and main.js line ~1015 spawns update.bat for the in-app update button. They cannot launch, cannot auto-update and cannot hand-apply a zip. Any fix reaches them ONLY via a fresh full download. This must be said in the release notes. OWN EFFORT.\n\nF. Two smaller ones. installStore logged 'Illegal transition ComfyUI-Frame-Interpolation: complete to downloading (local dep start) rejected' - the in-folder rife47 weight appears to mark the dep complete before its node zip starts. And GPU detection logged 'nvidia-smi not found or failed' then still resolved ComfyUI_windows_portable_nvidia.7z with no AMD/Intel probe in the log at all, shipping a large unusable CUDA torch to a machine with integrated graphics only.\n\nALSO FIXED THIS SESSION (uncommitted, in main.js): the splash window showed a white box for seconds on the weak laptop because it was shown before Chromium's first paint and backgroundColor does not cover that gap. Now show:false plus ready-to-show, and loadFile got a .catch() - it returns a promise that escaped the try/catch and would now take the whole process down through the MPI-369 unhandledRejection handler.",
+ "acceptance": [
+  "A: the full Windows archive no longer double-nests its root folder, and the measured deepest shipped path is proven under 260 chars from a default Explorer Extract All into Downloads",
+  "A: a preflight depth check refuses or warns at engine-install time when the install root is too deep - a short archive name cannot save a user who extracts somewhere deep",
+  "B: Impact-Pack installs with no git present on the machine, proven on a clean box with git absent from PATH",
+  "B: it is stated with evidence whether sam2 is used by anything we ship, before it is dropped rather than after",
+  "C: a pip failure names the failing node and the real reason in the toast, and never says 'extraction failed' when extraction succeeded",
+  "C: a failed pip leaves a persistent record and the node is NOT reported as installed - decide and implement what Retry should do when the failure is deterministic",
+  "D: the Windows launch path reaches an exe with no .vbs, .bat or .cmd hop, verified on a clean Windows 11 machine with Smart App Control ON",
+  "E: release notes state plainly that existing Windows 11 SAC users must re-download the full build, because no update path can reach them",
+  "F: both smaller findings are either fixed or explicitly carded with evidence - not silently dropped",
+  "Every fix is verified on the actual clean Windows 11 laptop, not just reasoned about"
+ ],
+ "links": {
+  "events": "events.jsonl"
+ }
+}

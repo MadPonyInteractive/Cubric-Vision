@@ -1,6 +1,6 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 387,
+ "next_id": 388,
  "columns": {
   "todo": [
    "MPI-385",
@@ -37,6 +37,7 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-387",
    "MPI-376",
    "MPI-380",
    "MPI-367",
@@ -78,7 +79,7 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-29T22:35:00Z",
+ "updated_at": "2026-07-29T23:10:00Z",
  "events": [
   {
    "at": "2026-07-29T18:00:00Z",
@@ -934,6 +935,15 @@
    "type": "board.reordered",
    "task": "MPI-382",
    "note": "To do reordered so the masking chain reads in the decided order: MPI-382 (grow/shrink) > MPI-368 (shapes) > MPI-379 (hover/COCO), all after MPI-376 undo which is now in doing. MPI-368 was sitting below unrelated cards."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-387",
+   "type": "task.created",
+   "at": "2026-07-29T23:10:00Z",
+   "actor": "opus",
+   "to": "doing",
+   "summary": "UMBRELLA: clean Windows 11 install broken end-to-end. Six defects reproduced live on a clean Win11 Home laptop - MAX_PATH kills LTXVideo pip (266 vs 260 chars, doubled root folder costs 32), Impact-Pack needs git for a sam2 requirement (deterministic, Retry cannot fix), the error blames extraction when every extraction passed, and Smart App Control blocks the whole vbs/bat/cmd launch chain. Existing Win11 SAC users are unreachable by any update path."
   }
  ]
 }
