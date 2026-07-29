@@ -7,7 +7,6 @@
    "MPI-382",
    "MPI-368",
    "MPI-379",
-   "MPI-386",
    "MPI-373",
    "MPI-374",
    "MPI-375",
@@ -21,7 +20,6 @@
    "MPI-332",
    "MPI-320",
    "MPI-289",
-   "MPI-323",
    "MPI-322",
    "MPI-294",
    "MPI-302",
@@ -46,6 +44,8 @@
    "MPI-4"
   ],
   "done": [
+   "MPI-386",
+   "MPI-323",
    "MPI-390",
    "MPI-389",
    "MPI-378",
@@ -82,7 +82,7 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-30T04:10:00Z",
+ "updated_at": "2026-07-29T08:25:00Z",
  "events": [
   {
    "at": "2026-07-30T00:45:00Z",
@@ -963,6 +963,36 @@
    "actor": "opus",
    "to": "doing",
    "summary": "UMBRELLA: clean Windows 11 install broken end-to-end. Six defects reproduced live on a clean Win11 Home laptop - MAX_PATH kills LTXVideo pip (266 vs 260 chars, doubled root folder costs 32), Impact-Pack needs git for a sam2 requirement (deterministic, Retry cannot fix), the error blames extraction when every extraction passed, and Smart App Control blocks the whole vbs/bat/cmd launch chain. Existing Win11 SAC users are unreachable by any update path."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-323",
+   "type": "task.moved",
+   "at": "2026-07-29T08:05:00Z",
+   "actor": "opus",
+   "from": "todo",
+   "to": "done",
+   "summary": "Superseded by MPI-354, which shipped FLUX.2 Klein 4B end to end. The evaluate-then-decide question is answered: klein-4b (Apache 2.0) is wired in js/data/modelConstants/models.js with 'inpaint' in supportedOps and opInject Input_wf_type 5, the shared 'inpaint' op in js/data/commandRegistry.js routes empty-prompt to erase and any text to fill, and comfyui-inpaint-cropandstitch ships as a node dep specifically for removal. User confirms masked removal was tested in the app."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-386",
+   "type": "task.moved",
+   "at": "2026-07-29T08:15:00Z",
+   "actor": "opus",
+   "from": "todo",
+   "to": "doing",
+   "summary": "User recalls fixing this with an agent, so it moves to doing / needs verification rather than sitting in To do. No fix is on disk: MPI-386 has no plan, no brief, no handoff and one task.created event, no commit references it, and both files that create .mpi-modal-backdrop (MpiModal.js, MpiStartingComfy.js) are unchanged since before the card. The two age-gate fixes that DO exist predate it - f30a6ef4 2026-07-22 (MPI-333, gate chains the changelog so the backdrops stop stacking) and 3845756c 2026-06-16 (MPI-99, re-arm show after a backdrop torn down without hide). Likeliest reading: the memory is of MPI-333, and this leak survived it. Next step is the fresh-profile repro, not code reading - every teardown path reads correct statically."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-386",
+   "type": "task.moved",
+   "at": "2026-07-29T08:25:00Z",
+   "actor": "opus",
+   "from": "doing",
+   "to": "done",
+   "summary": "Closed on the user's recollection of fixing it in a live session (the agent handed over a console one-liner to clear mpi_maturity_acknowledged and reload, so the gate could be re-triggered for testing). RECORD THE CAVEAT: no fix for this card is on disk. No commit references MPI-386, the card carries no plan/brief/handoff, and MpiModal.js + MpiStartingComfy.js - the only two files that create .mpi-modal-backdrop - are unchanged since before the card was filed. The nearest real fix is f30a6ef4 2026-07-22 (MPI-333, the 18+ gate chains the changelog so two backdrops stop stacking), which predates the report by 7 days and whose testing needs the same console one-liner. If a dead landing page after CONTINUE is ever seen again, reopen and go straight to the fresh-profile repro: localStorage.removeItem('mpi_maturity_acknowledged'); location.reload() then count document.querySelectorAll('.mpi-modal-backdrop') after clicking CONTINUE."
   }
  ]
 }

@@ -2,11 +2,11 @@
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-386",
  "title": "Age gate leaves an orphan modal backdrop that swallows every click",
- "column": "todo",
- "maturity": "idea",
- "status": "active",
+ "column": "done",
+ "maturity": "complete",
+ "status": "accepted",
  "created_at": "2026-07-29T22:25:00Z",
- "updated_at": "2026-07-29T22:25:00Z",
+ "updated_at": "2026-07-29T08:25:00Z",
  "labels": [
   "bug",
   "ui",
@@ -23,5 +23,10 @@
  ],
  "links": {
   "events": "events.jsonl"
+ },
+ "attention": {
+  "state": "none",
+  "reason": "Closed on user recollection; no code evidence on disk. Repro recipe is in the close-out event if it recurs.",
+  "updated_at": "2026-07-29T08:25:00Z"
  }
 }
