@@ -1,18 +1,19 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-351",
-  "title": "Upscale applies the factor twice - staged input is pre-scaled 1.5x before upscale_by",
-  "description": "Upscale op applies the factor TWICE - 1.5x on a 768x1344 source yields 1728x3024 (2.25x). Root is NOT the factor and NOT the workflow: Input_Upscale_Factor has exactly one writer (PromptBoxControls.upscaleFactor, injects the raw 1.5), the sidecars for upscale_013/014/015/016 all record 1.5, node 1657 feeds only MpiGridDimensions.upscale_factor and UltimateSDUpscale.upscale_by, and the user ran the same graph in the ComfyUI browser and got the correct size. The graph is fed the WRONG IMAGE: generationSettings.mediaItems points at Media/.preview-assets/1ed8902c...png which measures 1152x2016, i.e. the 768x1344 source already enlarged 1.5x. 1152x2016 * 1.5 = 1728x3024 exactly. t2i_039's own sidecar reports pixelDimensions 768x1344 and has no previewAssets, so that file is not a full-res twin - it exists only in the content-addressed staging store. All four runs used the same hash, consistent with a deterministic pre-scale of the same source at the same factor. UNPROVEN: which code writes the pre-scaled staged copy. Start there.",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "pending",
+  "title": "History workspace: a sticky PromptBox media chip beats the ACTIVE entry - ops run on the wrong image",
+  "description": "PROVEN on real data (2026-07-29). In the History workspace the ACTIVE entry is only used as a FALLBACK: MpiGroupHistoryBlock._generationFromPromptPayload prepends it ONLY when the PromptBox holds no chip of that media type (`wantsCurrentType && !hasCurrentTypeMedia`, ~line 1226). PromptBox chips are PERSISTED per workspace in state.promptMedia[wsKey] and restored on every mount, so one image chip left over from an earlier op silently owns Input_Image for every later PromptBox-driven run, no matter which entry is selected. Evidence from project \"Cubric prompt tests\": the same staged asset 5b9ea765 (= kleinEdit_002.png, 912x1152, made 21:54) is recorded in generationSettings.mediaItems of upscale_002/003/004/005 (23:43-23:47) AND upscale_007 (23:58), even though crop_011 (1241x1552) was created at 23:54 and was the ACTIVE entry. 912x1152 * 1.5 = 1368x1728 = the exact size of upscale_007, which is why this first read as \"the factor is applied twice\" - the factor was always right, the INPUT was wrong. Negative control in the same lineage: removeBackground_001 (23:49) correctly used upscale_003, because tool-driven ops (_runImageTool / crop) build mediaItems straight from currentItem and never consult the chip rail. The chip is also INVISIBLE in History - the PromptBox panel is hidden behind the prompt rail tool. Fix direction: in history mode the ACTIVE entry must own the first/required media slot and chips fill only the optional slots (kleinEdit 1+2, krea2Edit 1+1, qwenEdit 1+2; upscale/detail/inpaint/i2i are 1-slot).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
   "created_at": "2026-07-25T23:55:00Z",
-  "updated_at": "2026-07-25T23:55:00Z",
+  "updated_at": "2026-07-29T00:36:30Z",
   "labels": [
-    "upscale",
+    "history-workspace",
     "media-staging",
+    "promptbox",
     "bug",
-    "krea2"
+    "root-caused"
   ],
   "links": {
     "brief": "brief.md",

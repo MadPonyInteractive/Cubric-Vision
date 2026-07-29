@@ -964,6 +964,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 filterNoInputOps: true,
                 historyMode: true,
             });
+            // MPI-351: the PromptBox restores chips persisted under
+            // state.promptMedia[wsKey] at mount. In an image History group nothing
+            // legitimately stages one, and existing projects still carry the chip
+            // that used to hijack Input_Image — drop it so the rail matches what the
+            // workspace actually generates from (the selected entry).
+            if (!isVideo) _pb?.el?.clearMedia?.();
 
             _unsubs.push(_pb.on('model-change', ({ model }) => _adoptModel(model)));
             _unsubs.push(_pb.on('operation-change', ({ operation, programmatic }) => {
@@ -1134,7 +1140,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // injects nothing but a warning + an empty required slot, so skip it — the
             // dialog greys those toggles; this mirrors the gate for the ask-disabled
             // path. Resolve ONCE (all types), inject the enabled subset.
-            const _wantImages = use.images && payloadHasReusableImages(payload);
+            // MPI-351: an image History group always generates from its SELECTED
+            // entry, so a reused source image would land as an inert chip that only
+            // confuses (and used to hijack Input_Image). Video still restores its
+            // start/end frames — those are a real input there.
+            const _wantImages = isVideo && use.images && payloadHasReusableImages(payload);
             const _wantVideo = use.video && payloadHasReusableVideos(payload);
             const _wantAudio = use.audio && payloadHasReusableAudio(payload);
             if (_wantImages || _wantVideo || _wantAudio) {
@@ -1211,8 +1221,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const mediaSlots = getCommandMediaInputs(operation);
             const wantsStartFrame = mediaSlots.some(slot => slot.key === 'startFrame');
             const wantsCurrentType = mediaSlots.some(slot => slot.mediaType === currentMediaType && slot.required !== false);
-            const hasCurrentTypeMedia = mediaItems.some(m => m.mediaType === currentMediaType);
-            let resolvedMedia = mediaItems;
+            // MPI-351: History runs ONE op on the SELECTED entry — that entry is the
+            // only image this workspace ever feeds a graph. PromptBox chips are
+            // PERSISTED per workspace (state.promptMedia, re-injected on every mount)
+            // and the old guard treated "rail holds an image" as "the user supplied
+            // the input", so ONE stale chip silently owned Input_Image for every later
+            // run: upscale_002-007 all ran on a two-hour-old kleinEdit output while a
+            // fresh crop was the active entry, and the chip is invisible behind the
+            // prompt rail tool. Multi-image ops belong in the gallery. Video keeps its
+            // start/end frames — they come from the dedicated slots in
+            // MpiToolOptionsPrompt (and the Extend/New-shot last-frame capture), and a
+            // video entry can never fill i2v's required IMAGE slot itself.
+            const stagedMedia = isVideo
+                ? mediaItems.filter(m => m.mediaType !== 'image' || m.role === 'startFrame' || m.role === 'endFrame')
+                : [];
+            const hasCurrentTypeMedia = stagedMedia.some(m => m.mediaType === currentMediaType);
+            let resolvedMedia = stagedMedia;
 
             if (currentItem?.filePath) {
                 const currentMedia = {
@@ -1221,11 +1245,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     source: 'history',
                 };
                 if (!isVideo && wantsStartFrame) {
-                    resolvedMedia = [{ ...currentMedia, role: 'startFrame' }, ...mediaItems];
+                    resolvedMedia = [{ ...currentMedia, role: 'startFrame' }, ...stagedMedia];
                 } else if (wantsCurrentType && !hasCurrentTypeMedia) {
-                    resolvedMedia = [currentMedia, ...mediaItems];
+                    resolvedMedia = [currentMedia, ...stagedMedia];
                 } else if (!mediaSlots.length && !hasCurrentTypeMedia) {
-                    resolvedMedia = [currentMedia, ...mediaItems];
+                    resolvedMedia = [currentMedia, ...stagedMedia];
                 }
             }
             const resolvedMask = maskDataUrl !== undefined
