@@ -146,6 +146,13 @@ export const MpiModelManager = ComponentFactory.create({
         // grid; a model lives in exactly one sheet, so patching is a blind fan-out
         // and the sheets that don't hold it no-op.
         const _sheets = [];
+        // MPI-394 — preview <img>/<video> elements that OUTLIVE a grid rebuild.
+        // renderList() wipes bodySlot on any real state change (install completes,
+        // uninstall, filter, search, draft toggle), which used to destroy every
+        // loaded preview; the lazy replacements had no pixels and the whole grid sat
+        // blank for ~20s behind a busy main thread. The sheets are re-created each
+        // render, so the cache has to live out here and be handed in.
+        const _previewCache = new Map();
         // Op-toggle MpiButton instances (in the OPEN detail panel only), torn down
         // when the panel closes/reopens.  Array<{ key, inst }>  (key 'base' = base)
         let _detailOpToggles = [];
@@ -456,6 +463,13 @@ export const MpiModelManager = ComponentFactory.create({
             return removed.filter(id => !keep.has(id));
         }
 
+        // Ids whose in-flight uninstall removes the WHOLE model/plugin, as opposed to
+        // the op/arch-removal half of an Update. The download:uninstalled event carries
+        // no intent, so the toast used to call every one of them "updated" — which read
+        // as the opposite of what happened on a real uninstall (MPI-394). Consumed
+        // (and cleared) by the download:uninstalled handler.
+        const _wholeUninstalls = new Set();
+
         // ── Install / Update / Uninstall actions ─────────────────────────────
         async function _install(model) {
             // Engine-scoped via _draftDepIds: a model with engine-split weights
@@ -484,6 +498,7 @@ export const MpiModelManager = ComponentFactory.create({
             _showConfirm(
                 `Uninstall ${model.name}?\n• Files shared with other installed models will be kept.`,
                 async (deleteFiles) => {
+                    _wholeUninstalls.add(model.id);
                     await downloadService.uninstall(model.id, deps, deleteFiles);
                 },
             );
@@ -1117,7 +1132,10 @@ export const MpiModelManager = ComponentFactory.create({
             });
             head.innerHTML = `${renderIcon(media, 'sm')}<span>${media === 'video' ? 'Video' : 'Image'}</span><span class="mpi-model-library__media-head-n">${items.length}</span>`;
             bodySlot.appendChild(head);
-            const sheet = MpiTileSheet.mount(ce('div'), { items: items.map(_tileItem) });
+            const sheet = MpiTileSheet.mount(ce('div'), {
+                items: items.map(_tileItem),
+                previewCache: _previewCache,
+            });
             sheet.on('select', ({ item }) => openDetail(item.source));
             _sheets.push(sheet);
             bodySlot.appendChild(sheet.el);
@@ -1208,6 +1226,7 @@ export const MpiModelManager = ComponentFactory.create({
                     // this weight — see _pluginRequiredDepIds(excludeUninstallId) in
                     // routes/downloadManager.js. Passing a model id here would leave
                     // the weight protected and the uninstall would silently no-op.
+                    _wholeUninstalls.add(pluginDepKey(plugin.id));
                     await downloadService.uninstall(pluginDepKey(plugin.id), deps, deleteFiles);
                 },
             );
@@ -1412,13 +1431,17 @@ export const MpiModelManager = ComponentFactory.create({
             // engine-owned files (VAE, custom nodes, pip env) shared with no model —
             // saying "shared files kept" there falsely implies a sibling model.
             const keptForModel = keptShared.length + keptModelFiles.length;
+            // "uninstalled" for a whole model/plugin removal, "updated" when this is the
+            // removal half of an Update (an op or arch weight going away). Saying
+            // "updated" for both read as the opposite of what happened (MPI-394).
+            const verb = _wholeUninstalls.delete(modelId) ? 'uninstalled' : 'updated';
             // sound:false throughout — these confirm a user-initiated uninstall; no chime.
             if (removed.length > 0 && keptTotal === 0) {
-                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.`, sound: false });
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} ${verb}.`, sound: false });
             } else if (removed.length > 0 && keptForModel > 0) {
-                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} updated (some shared files kept).`, sound: false });
+                Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} ${verb} (some shared files kept).`, sound: false });
             } else if (removed.length > 0) {
-                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} updated.`, sound: false });
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} ${verb}.`, sound: false });
             } else if (keptModelFiles.length > 0) {
                 Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.`, sound: false });
             } else {

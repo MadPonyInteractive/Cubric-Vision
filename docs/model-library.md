@@ -29,6 +29,27 @@ Wiring, all in `MpiModelManager`: sort is a stable `.sort()` in `_mediaBlock` (`
 
 `renderList()` tears down + rebuilds EVERY tile. During an install it must fire only on a genuine section move (a model jumping Available → Installed on complete). `download:started` / `download:progress` patch ONLY the one changing tile via `_patchTile` — NOT `renderList()`. The flash storm had two sources: (1) the backend broadcasts `download:complete` **per-dep** with `modelId:null` (then once model-level with a real id) — the frontend `download:complete` SSE handler ran `reSyncInstalledModels()` + re-emitted unconditionally, so every dep fired `models:checked` → grid rebuild ×N; gated on `data.modelId`. (2) `download:started` (fired twice — client-side in `downloadService.start()` + the backend SSE echo) and `_install()` both called `renderList()`; both replaced with `_patchTile`. Rule: on a download hot event, patch the tile, never rebuild the grid.
 
+## The grid may rebuild — but the preview ELEMENTS must survive it (MPI-394)
+
+The rule above stops a rebuild on download *ticks*; a genuine state change (install completes,
+uninstall, filter, search, draft toggle) still runs a full `renderList()`, and that is fine —
+what is not fine is destroying the loaded previews with it. `renderList()` wipes `bodySlot`, and
+`MpiTileSheet` used to rebuild each thumb as a fresh `<img loading="lazy">`. A fresh lazy image
+has **no pixels** and its load is deferred until after the next layout, so behind a main thread
+busy with `_listSignature()` (O(n²) `_sharedOwnedDepIds` per model) + `reSyncInstalledModels()`
+the entire grid sat blank for ~20s on every install/uninstall — read by the user as a regression.
+
+Fix: `MpiModelManager` owns a `_previewCache` Map and passes it to every `MpiTileSheet.mount`.
+The sheet builds each thumb element once per id and **re-parents** it on later rebuilds — an
+already-decoded element paints in the same frame, so the wipe is never visible. The cache is
+consumer-owned because the sheets themselves are re-created each render. An element that fires
+`error` is evicted so the placeholder gradient still works. Any new surface that remounts sheets
+on a state change must pass a cache; a one-shot sheet does not need one.
+
+Video previews also carry a `poster` by filename convention (`foo.mp4` → `foo.webp`, generated
+into `comfy_workflows/display/`): `ltx23_high_preview.mp4` is 40MB, so without a poster the
+browser must pull its moov atom before it can show any frame. A missing poster file is a no-op.
+
 ## Uninstall has no "keep files" state — install-state IS files-on-disk (2026-07-14)
 
 `model.installed` is derived by statting disk (`syncModelInstalled` → `/comfy/models/check`), not stored. So a "keep files but forget install" uninstall is unrepresentable: keep the weights → resync re-flags the model INSTALLED → card never leaves the Installed section, no install button. The old `MpiOkCancel` "Also delete model files from disk" checkbox (`deleteFiles=false`) was exactly this dead no-op (starkest on SDXL, whose only non-universal dep is its checkpoint; the other 3 deps are always-kept universals). Removed from the Uninstall dialog — `on('ok')` now passes `deleteFiles=true` unconditionally. Backend `deleteFiles` param + all guards (universal / shared / outside-managed-root / pip) left intact; it just always receives `true`. Don't re-add a keep-files toggle without a real persisted install record separate from disk-stat.

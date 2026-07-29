@@ -3,11 +3,11 @@
   "id": "MPI-394",
   "title": "Model Library goes fully blank for ~20s when an install or uninstall completes",
   "description": "Reported live 2026-07-29 by the user, who is clear it is a REGRESSION: 'you didn't use to do this - pressing uninstall would just refresh automatically'. On download:complete and on uninstall, MpiModelManager falls through to a full renderList(), which tears down and re-creates EVERY card including its <img>/<video> preview. With 15 available models the whole grid sat imageless for about 20 seconds (screenshot: every tile blank, only titles + INSTALL labels visible), and the LTX tile is worst because its preview is a video (ltx23_high_preview.mp4) that must decode a frame, where every other model uses a .webp. This is the same flash class already fought three times - MPI-124 added the render signature so incidental models:checked re-syncs do not rebuild, MPI-317/F3 stopped the open detail panel rebuilding on progress ticks, MPI-276 Phase 8 sig-guarded the snapshot path - but a REAL state change (install completes, model moves available->installed, uninstall) still rebuilds everything. The tile-patch machinery already exists and is used for progress (_patchTile / patchState / setWaiting); the completion and uninstall paths should use it plus a targeted section move, instead of a wholesale rebuild. Cheap independent win: a poster attribute on the video tile so it paints instantly. Also noted the same session: the uninstall toast says 'SDXL NSFW updated (some shared files kept)' for an UNINSTALL, which reads like the opposite of what happened.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-29T17:33:07Z",
-  "updated_at": "2026-07-29T17:33:07Z",
+  "updated_at": "2026-07-29T19:40:00Z",
   "labels": [
     "bug",
     "ux",
@@ -23,6 +23,14 @@
     "Uninstall toast no longer says updated"
   ],
   "links": {
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  },
+  "activeSessionTitle": "MPI-394 Model Library blank-grid fix",
+  "attention": {
+    "state": "cleared",
+    "reason": "All five acceptance items user-verified live.",
+    "updated_at": "2026-07-29T19:40:00Z"
   }
 }

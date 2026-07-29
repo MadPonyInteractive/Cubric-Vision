@@ -42,6 +42,8 @@ import { renderIcon } from '../../../utils/icons.js';
  *
  * Props:
  * @param {TileItem[]} [items=[]]
+ * @param {Map<string,HTMLElement>} [previewCache] - Consumer-owned; keeps thumb
+ *        media alive across sheet rebuilds (MPI-394)
  *
  * Instance methods (on instance.el):
  *   setItems(items)         — full rebuild
@@ -66,11 +68,47 @@ export const MpiTileSheet = ComponentFactory.create({
         // listener per tile per tick.
         let _tileUnsubs = [];
         const _tiles = new Map();   // id -> { tile, stateEl, mascot }
+        // Consumer-owned preview cache (MPI-394). Absent = build fresh every time.
+        const _previewCache = props.previewCache instanceof Map ? props.previewCache : null;
 
         function _mediaBadge(media) {
             return media === 'video'
                 ? `<span class="mpi-tile__badge mpi-tile__badge--video">${renderIcon('video', 'sm')}Video</span>`
                 : `<span class="mpi-tile__badge">${renderIcon('image', 'sm')}Image</span>`;
+        }
+
+        // The tile's thumb media, reused across rebuilds when the consumer passed a
+        // previewCache. A rebuild that RE-CREATES the <img>/<video> hands back an
+        // element with no pixels, and `loading="lazy"` then defers its load until
+        // after the next layout — so a grid that rebuilds while the main thread is
+        // busy sits fully blank for as long as that takes (MPI-394: ~20s across the
+        // Model Library when an install or uninstall completed). Re-parenting an
+        // already-decoded element paints in the same frame instead.
+        function _previewMedia(item) {
+            const cached = _previewCache?.get(item.id);
+            if (cached) return cached;
+            let media;
+            if (item.media === 'video') {
+                media = ce('video', {
+                    src: `comfy_workflows/display/${item.preview}`,
+                    className: 'mpi-tile__thumb-media',
+                });
+                media.muted = true; media.loop = true; media.playsInline = true; media.preload = 'metadata';
+                // Poster by filename convention (foo.mp4 → foo.webp). A multi-MB
+                // preview must fetch its moov atom before it can show ANY frame —
+                // ltx23_high_preview.mp4 is 40MB, which is why that tile was always
+                // the last to paint. A missing poster file is a silent no-op.
+                media.poster = `comfy_workflows/display/${item.preview.replace(/\.[^.]+$/, '.webp')}`;
+            } else {
+                media = ce('img', {
+                    src: `comfy_workflows/display/${item.preview}`,
+                    className: 'mpi-tile__thumb-media',
+                    loading: 'lazy',
+                    alt: '',
+                });
+            }
+            _previewCache?.set(item.id, media);
+            return media;
         }
 
         function _buildTile(item) {
@@ -83,25 +121,20 @@ export const MpiTileSheet = ComponentFactory.create({
             // Thumb — image still or hover-play muted video; placeholder gradient
             // when no preview asset is declared or the asset fails to load.
             const thumb = ce('div', { className: 'mpi-tile__thumb' });
-            if (isVideo && item.preview) {
-                const vid = ce('video', {
-                    src: `comfy_workflows/display/${item.preview}`,
-                    className: 'mpi-tile__thumb-media',
-                });
-                vid.muted = true; vid.loop = true; vid.playsInline = true; vid.preload = 'metadata';
-                _tileUnsubs.push(on(vid, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); vid.remove(); }));
-                _tileUnsubs.push(on(tile, 'mouseenter', () => { vid.play().catch(() => {}); }));
-                _tileUnsubs.push(on(tile, 'mouseleave', () => { vid.pause(); try { vid.currentTime = 0; } catch (_) { /* noop */ } }));
-                thumb.appendChild(vid);
-            } else if (!isVideo && item.preview) {
-                const img = ce('img', {
-                    src: `comfy_workflows/display/${item.preview}`,
-                    className: 'mpi-tile__thumb-media',
-                    loading: 'lazy',
-                    alt: '',
-                });
-                _tileUnsubs.push(on(img, 'error', () => { thumb.classList.add('mpi-tile__thumb--placeholder'); img.remove(); }));
-                thumb.appendChild(img);
+            if (item.preview) {
+                const media = _previewMedia(item);
+                _tileUnsubs.push(on(media, 'error', () => {
+                    thumb.classList.add('mpi-tile__thumb--placeholder');
+                    media.remove();
+                    // Never hand a broken element back on the next rebuild — evicting
+                    // it lets the fresh one fail again and re-raise the placeholder.
+                    _previewCache?.delete(item.id);
+                }));
+                if (isVideo) {
+                    _tileUnsubs.push(on(tile, 'mouseenter', () => { media.play().catch(() => {}); }));
+                    _tileUnsubs.push(on(tile, 'mouseleave', () => { media.pause(); try { media.currentTime = 0; } catch (_) { /* noop */ } }));
+                }
+                thumb.appendChild(media);
             } else {
                 thumb.classList.add('mpi-tile__thumb--placeholder');
             }

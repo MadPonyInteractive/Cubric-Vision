@@ -376,6 +376,11 @@
 /**
  * @typedef {Object} MpiTileSheetProps (Primitive — js/components/Primitives/MpiTileSheet)
  * @property {MpiTileSheetItem[]} [items=[]] - Tiles to render, in order
+ * @property {Map<string,HTMLElement>} [previewCache] - Consumer-owned Map keyed by
+ *   item id. When passed, thumb `<img>`/`<video>` elements are built once and
+ *   RE-PARENTED on every rebuild instead of re-created, so a grid that rebuilds
+ *   never goes blank (MPI-394). Required for any surface whose sheets are torn
+ *   down and remounted on a state change; omit for one-shot sheets.
  *
  * Shared by the Model Library, the App Library and the model picker. Consumers own
  * their own status logic and pass the bottom row in as HTML (`item.state`).
