@@ -162,8 +162,21 @@ export function initNotificationService() {
 
     _unsubs.push(Events.on('download:complete', (data = {}) => {
         try {
-            // UW installs surface through engine UI — no completion notification
-            if (!data.modelId || data.modelId === '__universal_workflow__') return;
+            // UW installs surface through engine UI — no completion notification.
+            // MPI-395 — `engine:assets` joins it. That job is the remote engine-asset
+            // heal (shell.js _installRemoteEngineAssets), which re-runs on the first
+            // connect of EVERY session and is a pure no-op once the volume already holds
+            // the weights. shell.js states it should run silently, but it fell through
+            // here and announced "engine:assets installed." — a raw internal job id — on
+            // every single connect, as a toast and, when unfocused, an OS notification.
+            // The literal (not an import) matches this file's existing convention for
+            // '__universal_workflow__', and keeps shell.js's deliberately LAZY
+            // `await import('./services/downloadService.js')` out of boot. Defined at
+            // shell.js ENGINE_ASSETS_JOB_ID; tests/engine-assets-silent-install.test.cjs
+            // pins the two in sync.
+            if (!data.modelId
+                || data.modelId === '__universal_workflow__'
+                || data.modelId === 'engine:assets') return;
             // MPI-310 — a PLUGIN install broadcasts its `plugin:<id>` key here, which
             // MODELS never contains, so the raw key leaked into the notification body
             // ("plugin:image-describer installed."). Same miss as the uninstall toast.

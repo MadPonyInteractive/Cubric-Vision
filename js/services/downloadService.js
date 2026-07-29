@@ -97,11 +97,25 @@ const downloadService = {
         // download pipe through each verify+extract. Releasing at the download-done
         // point overlaps the next model's download with the current's verify/extract —
         // still only ONE aria2 download stream at a time, so no CPU-pod starvation.
-        const run = () => this._firePost(modelId, dependencies)
-            // _firePost returns false when the job was cancelled while queued (POST
-            // skipped) — don't wait on a model the backend never learned about, or the
-            // chain wedges until the safety timeout.
-            .then((fired) => fired ? this._awaitDownloadDone(modelId) : undefined);
+        const run = () => {
+            // MPI-395 — ARM THE TERMINAL LISTENER BEFORE THE POST. The backend registers
+            // the job and starts it before /download/start responds (register-before-
+            // respond, G8 — see _firePost), and when every dep is already on disk it also
+            // FINISHES it there: `_startPendingDeps` finds 0 queued deps and the job goes
+            // terminal inside the request handler. Arming after `await res.json()` then
+            // misses download:complete outright, so _awaitDownloadDone burned its full
+            // 30-minute ceiling with _inFlight pinned at 1 — and every install clicked in
+            // that window sat at 'queued' forever, silently (a queued job arms no revert
+            // timer). Hit live on a remote connect, where `engine:assets` re-runs each
+            // session and is a pure no-op once the volume already has the weights.
+            const done = this._awaitDownloadDone(modelId);
+            return this._firePost(modelId, dependencies)
+                // _firePost returns false when the job was cancelled while queued (POST
+                // skipped) — don't wait on a model the backend never learned about, or the
+                // chain wedges until the safety timeout. Its download:cancelled fires
+                // BEFORE this arms, so the listener set must be torn down explicitly.
+                .then((fired) => { if (!fired) { done.cancel(); return undefined; } return done.promise; });
+        };
         const settle = () => { this._inFlight -= 1; };
         // Never let one install's rejection break the chain for the next; always
         // decrement in-flight so the count returns to 0 when the chain drains.
@@ -113,8 +127,13 @@ const downloadService = {
     // (download:installing, or a remote 'verifying'-phase progress tick) — or reaches a
     // terminal state (fast installs skip a distinct verify phase). A safety timeout
     // guarantees a dropped signal can never wedge the queue.
+    //
+    // Returns { promise, cancel } (MPI-395): the caller arms this BEFORE the POST, so it
+    // needs a way to tear the listener set down when the POST turns out never to have
+    // fired. cancel() is the same finish() the events use — one cleanup path, not two.
     _awaitDownloadDone(modelId) {
-        return new Promise((resolve) => {
+        let cancel = () => {};
+        const promise = new Promise((resolve) => {
             let done = false;
             const finish = () => {
                 if (done) return;
@@ -123,6 +142,7 @@ const downloadService = {
                 clearTimeout(timer);
                 resolve();
             };
+            cancel = finish;
             const match = (d) => !d || d.modelId === modelId;
             // Download-done signals — network idle, verify/extract now runs:
             const offInstalling = Events.on('download:installing', (d) => match(d) && finish());
@@ -133,9 +153,17 @@ const downloadService = {
             const offFailed = Events.on('download:failed', (d) => match(d) && finish());
             const offCancelled = Events.on('download:cancelled', (d) => match(d) && finish());
             // 30 min ceiling — longer than any single model download; a lost signal
-            // releases the queue instead of stalling it.
-            const timer = setTimeout(finish, 30 * 60 * 1000);
+            // releases the queue instead of stalling it. MPI-395: say so. This firing
+            // means every install queued behind it has been frozen for half an hour,
+            // which is exactly what made the wedge above impossible to diagnose from a
+            // log — it recovered silently, so it read as "install just never started".
+            const timer = setTimeout(() => {
+                clientLogger.warn('downloadService',
+                    `no terminal event for ${modelId} within 30min — releasing the install queue on the safety ceiling`);
+                finish();
+            }, 30 * 60 * 1000);
         });
+        return { promise, cancel };
     },
 
     async _firePost(modelId, dependencies) {

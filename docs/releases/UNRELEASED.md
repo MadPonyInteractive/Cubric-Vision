@@ -288,6 +288,29 @@
   updates only the component that actually drifted, which is a few hundred kilobytes,
   and it says what it is doing in the log instead of running silently.
 
+- **Installing a model after connecting to a cloud Pod no longer does nothing.** The
+  first model you installed after connecting could sit on "Queued…" indefinitely — no
+  progress, no error, no way to tell it had not started. Cubric installs one model at a
+  time and queues the rest, and it was waiting on a job that had already finished before
+  it started listening, so the queue stayed shut for half an hour and then quietly opened
+  again on its own. It happened on the connect *after* your models were already on the
+  volume, which is to say almost every time. Installs now start immediately, and if the
+  queue is ever held up for any other reason it says so in the log instead of sitting
+  there. Connecting is also quieter: it no longer pops an "engine:assets installed"
+  message — an internal name that was never meant to be shown — every single time.
+
+- **The Model Library no longer goes blank when an install or uninstall finishes.**
+  For about twenty seconds after a model finished installing — and after every
+  uninstall — every tile lost its preview at once, leaving a grid of empty boxes
+  with names on them. Nothing was actually wrong: the library was rebuilding the
+  whole grid from scratch, throwing away every preview it had already loaded and
+  then asking for them all again while it was still busy working out what had
+  changed. Previews are now kept and reused, so the grid updates in place and never
+  blanks — the same when you filter, search, or change a model's options. Video
+  previews show their first frame straight away instead of always arriving last. An
+  uninstall also says "uninstalled" now, rather than "updated", which read as the
+  opposite of what had just happened.
+
 - **Settings no longer forgets where your models are.** If your models folder had
   "temp" or "tmp" anywhere in its path — `D:\AI\temp_models`, a folder called
   `tmp-models`, even a Windows account name that happens to contain those letters
