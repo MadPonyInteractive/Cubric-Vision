@@ -27,8 +27,8 @@
       "MPI-369 - boot-crash smoke test. ~10 min: add a deliberate throw at boot, confirm the dialog + FATAL log line appear, revert. The fix (a500b335) has NEVER fired. MUST wait until the MPI-387 agent is out of main.js - they are actively editing it",
       "One Pod session (MPI-385, trimmed to two release-gating checks): (1) does the remote install path pick up a NEWLY ADDED engineAsset (sam3-multiplex)? Likeliest failure. (2) krea2edit v1.2.2 .mpi_node_commit drift-ladder reinstall on the remote engine - MPI-346's only leftover",
       "Then run mpi-release for 1.2.0 -> 1.3.0 (2nd digit: new model Klein + new ops)",
-      "MPI-388 (NEW, carded this session, todo) - user-reported UX bug: returning from History to the Gallery leaves a media-hungry op selected with an empty PromptBox, so Run only toasts a missing-input complaint. Fix reuses the SHIPPED clear-last-image fallback on Gallery re-entry. Small and self-contained; the user has not said whether it rides in 1.3 - ASK before scheduling it",
-      "MPI-389 (NEW, carded this session, todo) - the permodel-key-allowlist tests are STALE, explaining 3 of the 9 standing suite failures. Rewrite or delete; the brief flags that satisfying them by re-adding keys to _MODEL_WIDE_KEYS reinstates the list MPI-336 deleted. Not release-gating, but it makes the failure list honest before shipping",
+      "MPI-388 (carded this session; ANOTHER SESSION HAS CLAIMED IT - doing/in-progress as of 2026-07-30T00:20Z, user scheduled it into 1.3. Do not touch) - user-reported UX bug: returning from History to the Gallery leaves a media-hungry op selected with an empty PromptBox, so Run only toasts a missing-input complaint. Fix reuses the SHIPPED clear-last-image fallback on Gallery re-entry. Small and self-contained. It IS in 1.3",
+      "MPI-389 (carded this session; ANOTHER SESSION HAS CLAIMED IT - doing/in-progress as of 2026-07-30T00:40Z. Do not touch) - the permodel-key-allowlist tests are STALE, explaining 3 of the 9 standing suite failures. Rewrite or delete; the brief flags that satisfying them by re-adding keys to _MODEL_WIDE_KEYS reinstates the list MPI-336 deleted. Not release-gating, but it makes the failure list honest before shipping",
       "OPTIONAL, not release-gating: characterise the remaining 6 test failures (listed in MPI-389's brief) and decide MPI-358 attribution sweep in-or-out"
     ]
   },
@@ -66,7 +66,7 @@
     ]
   },
   "next_action": {
-    "description": "Ask the user for MPI-387's status. If it has landed, do the MPI-369 boot-crash smoke (throw at boot, confirm dialog + FATAL line, revert) since main.js is then free, and offer the trimmed MPI-385 Pod session. If MPI-387 is still in flight, do NOT touch main.js - instead pick conflict-free release-relevant work: MPI-388 (small, self-contained, ask the user whether it rides in 1.3), MPI-389 (rewrite or delete the stale permodel-key-allowlist test), or characterising the remaining 6 test failures. Do NOT touch MPI-378 or MPI-387 - both are owned by other sessions.",
+    "description": "Ask the user for MPI-387's status. If it has landed, do the MPI-369 boot-crash smoke (throw at boot, confirm dialog + FATAL line, revert) since main.js is then free, and offer the trimmed MPI-385 Pod session. If MPI-387 is still in flight, do NOT touch main.js - instead pick conflict-free release-relevant work: characterising the remaining 6 test failures (MPI-388 and MPI-389 are both claimed by another session - do not touch them). Do NOT touch MPI-378, MPI-387, MPI-388 or MPI-389 - all four are owned by other sessions.",
     "command": "mpi-continue"
   },
   "context": {
