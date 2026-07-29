@@ -1548,6 +1548,18 @@ export const MpiGalleryBlock = ComponentFactory.create({
             imageCount = Number(_pb.el.imageCount) || 0;
             videoCount = Number(_pb.el.videoCount) || 0;
             _pb.el.updateContext?.({ imageCount, videoCount, hasMask: false });
+            // MPI-388: entering the Gallery with an empty box but a media-hungry op
+            // left Run able only to toast a missing input — and that op is not one
+            // the user chose here, it is the MPI-247 per-model memory replayed at
+            // mount (set in History, or in the Gallery itself before the image was
+            // deleted). Same drop as MPI-356's last-chip-out path, fired on entry
+            // instead of on a transition. AFTER _wirePromptBox on purpose, so the
+            // resulting operation-change updates activeOperation instead of letting
+            // it drift; and after the count sync, because the box's live counts are
+            // the only truthful read (restore drops chips on a slot-id mismatch and
+            // evicts on capacity). No-op when the box holds media, and deliberately
+            // NOT on the Reuse path below — a reused op is authoritative.
+            _pb.el.dropToTextOpIfEmpty?.();
             // Restore Stop/Clear enabled state when remounting into a
             // workspace that still has gallery-scoped jobs in flight (e.g.
             // returning from history mid-video) or block-owned busy state

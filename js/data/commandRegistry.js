@@ -1030,6 +1030,32 @@ export function getAvailableCommands(mediaType, model = null, ctx = {}) {
 }
 
 /**
+ * True when `key` needs no media at all. The predicate a caller uses to ask
+ * "can the selected op still run on an empty box?" — false for an unknown key.
+ */
+export function isTextOnlyOp(key) {
+    const cmd = commands[key];
+    return !!cmd && (cmd.requiresImages ?? 0) === 0 && (cmd.requiresVideo ?? 0) === 0;
+}
+
+/**
+ * The model's best text-only op — no image, no video, no mask — or null when
+ * the model has none. MPI-356 drops to it when the last chip leaves the box;
+ * MPI-388 drops to it when the Gallery is entered with an empty box and a
+ * remembered media-hungry op. Prefers an op that is actually available.
+ *
+ * @param {'image'|'video'} mediaType
+ * @param {object|null} model
+ * @param {object} ctx  same shape getAvailableCommands takes
+ * @returns {string|null}
+ */
+export function pickTextOnlyOp(mediaType, model, ctx = {}) {
+    const textOps = getAvailableCommands(mediaType, model, ctx)
+        .filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0 && !c.requiresMask);
+    return (textOps.find(c => c.available) ?? textOps[0])?.key ?? null;
+}
+
+/**
  * Returns all universal (tool-panel) commands for a given media type.
  * These are NOT shown in the PromptBox — they are wired to toolbar buttons
  * in the history workspace, each with its own activation behaviour.

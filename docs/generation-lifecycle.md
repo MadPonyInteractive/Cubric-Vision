@@ -21,6 +21,24 @@ Op availability is data-driven from `commandRegistry` `mediaInputs` slot count +
 `getAvailableCommands` admits an op only when `requires* ≤ staged count ≤ #slots of that type`
 (+ `requiresMask`) — so a type's MAX capacity = its declared slot count.
 
+## The op never forces DOWN — two named exceptions only (MPI-337/356/388)
+
+MPI-337 killed the blanket force-DOWN: losing a required input leaves the op selected and dimmed,
+and Run toasts. Exactly two exceptions drop the op to the model's text-only op, and both call the
+SAME `_dropToTextOp()` in `MpiPromptBox.js` — never fork it:
+
+1. **Last chip leaves the box** (MPI-356) — the media→zero *transition* inside `_emitMediaChange`.
+2. **Workspace entry** (MPI-388) — `el.dropToTextOpIfEmpty()`, called by `MpiGalleryBlock` after
+   `_wirePromptBox` + the count sync. Needed because the Gallery seeds its op from
+   `getSelectedOp(activeModelId)` (the MPI-247 per-model memory), which happily replays a
+   media-hungry op onto a box that mounts empty; exception 1 can't fire, having seen no transition.
+
+Both pass `programmatic: true`, so `s_selectedOpByModel` keeps the user's real pick and
+`_pickFallbackOp` restores it when media returns. Both are skipped in History video-continuation
+mode (`filterNoInputOps` HIDES text ops — MPI-281). The which-op decision is
+`pickTextOnlyOp(mediaType, model, ctx)` in `commandRegistry.js`; it excludes `requiresMask` ops, so
+an empty box never lands on `inpaint`. Reuse Prompt is authoritative and gets NEITHER exception.
+
 ## History dispatch — the SELECTED entry is the media (MPI-351)
 
 The History workspace runs one op on one entry, so `_generationFromPromptPayload`

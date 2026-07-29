@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, getOpHelp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -272,6 +272,23 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!silent) _emitMediaChange();
         }
 
+        // MPI-356: the ONE deliberate exception to MPI-337's no-force-DOWN rule —
+        // an empty box with a media op selected can do nothing at all, so it lands
+        // on the model's text-only op. Narrow on purpose: only when the model
+        // actually has a text-only op, and never in History video-continuation mode
+        // (`filterNoInputOps` HIDES text ops — MPI-281). `programmatic: true` keeps
+        // this out of s_selectedOpByModel so the user's real pick is still what
+        // _pickFallbackOp restores when media comes back (MPI-356 step 8).
+        // Returns false when there is nothing to drop to, so callers can fall back
+        // to a plain strip refresh.
+        function _dropToTextOp() {
+            if (!model || _context.filterNoInputOps) return false;
+            const textOp = pickTextOnlyOp(model.mediaType, model, _ctxWithInstalledOps(model));
+            if (!textOp) return false;
+            el.setOperation(textOp, { programmatic: true });
+            return true;
+        }
+
         function _emitMediaChange() {
             const hadMedia = (el.imageCount ?? 0) > 0 || (el.videoCount ?? 0) > 0;
             el.imageCount = _mediaItems.filter(m => m.mediaType === 'image').length;
@@ -280,8 +297,7 @@ export const MpiPromptBox = ComponentFactory.create({
             _context = { ..._context, imageCount: el.imageCount, videoCount: el.videoCount, audioCount: el.audioCount };
 
             const hasMedia = el.imageCount > 0 || el.videoCount > 0;
-            const curCmd = commands[activeOperation];
-            const curIsTextOnly = curCmd && (curCmd.requiresImages ?? 0) === 0 && (curCmd.requiresVideo ?? 0) === 0;
+            const curIsTextOnly = isTextOnlyOp(activeOperation);
 
             if (hasMedia && curIsTextOnly) {
                 const fallback = _pickFallbackOp();
@@ -290,22 +306,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 } else {
                     _refreshOpStrip();
                 }
-            } else if (model && !hasMedia && hadMedia && !curIsTextOnly && !_context.filterNoInputOps) {
-                // MPI-356: the ONE deliberate exception to MPI-337's no-force-DOWN
-                // rule below — the LAST chip leaving an empty box lands on the
-                // model's text-only op, because an empty box with a media op
-                // selected can do nothing at all. Narrow on purpose: only the
-                // transition TO zero media, only when the model actually has a
-                // text-only op, and never in History video-continuation mode
-                // (`filterNoInputOps` HIDES text ops — MPI-281).
-                // `programmatic: true` keeps this out of s_selectedOpByModel so the
-                // user's real pick is still what _pickFallbackOp restores when media
-                // comes back (MPI-356 step 8).
-                const textOps = getAvailableCommands(model.mediaType, model, _ctxWithInstalledOps(model))
-                    .filter(c => (c.requiresImages ?? 0) === 0 && (c.requiresVideo ?? 0) === 0 && !c.requiresMask);
-                const textOp = textOps.find(c => c.available) ?? textOps[0];
-                if (textOp) el.setOperation(textOp.key, { programmatic: true });
-                else _refreshOpStrip();
+            } else if (!hasMedia && hadMedia && !curIsTextOnly) {
+                // MPI-356: the LAST chip leaving the box is the transition that
+                // triggers the drop. Only that transition — see _dropToTextOp.
+                if (!_dropToTextOp()) _refreshOpStrip();
             } else {
                 // MPI-337: NO force-DOWN. Removing media (or any change that doesn't
                 // add media a text op can't use) never switches the op to a text op.
@@ -515,6 +519,19 @@ export const MpiPromptBox = ComponentFactory.create({
             _refreshOpSlot();
             _renderBadge();
             emit('operation-change', { operation: key, programmatic });
+        };
+
+        // MPI-388: the same drop as MPI-356, fired on workspace ENTRY instead of a
+        // media transition. A workspace whose box mounts empty can be handed a
+        // media-hungry op by the MPI-247 per-model memory, and then Run can only
+        // toast a missing input. The owning Block calls this after wiring, so the
+        // resulting `operation-change` is heard and its own activeOperation stays
+        // in sync. No-op when the box holds media — an entered workspace never
+        // overrides an op the media can actually feed.
+        el.dropToTextOpIfEmpty = () => {
+            if (el.imageCount > 0 || el.videoCount > 0) return;
+            if (isTextOnlyOp(activeOperation)) return;
+            _dropToTextOp();
         };
 
         el.updateContext = (ctx) => {
