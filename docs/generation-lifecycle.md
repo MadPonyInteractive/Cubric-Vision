@@ -21,6 +21,22 @@ Op availability is data-driven from `commandRegistry` `mediaInputs` slot count +
 `getAvailableCommands` admits an op only when `requires* ≤ staged count ≤ #slots of that type`
 (+ `requiresMask`) — so a type's MAX capacity = its declared slot count.
 
+## History dispatch — the SELECTED entry is the media (MPI-351)
+
+The History workspace runs one op on one entry, so `_generationFromPromptPayload`
+(`MpiGroupHistoryBlock.js`) ignores the PromptBox chip rail: an image group resolves to the
+selected entry alone, whatever the op strip offers. It used to prepend that entry only when the
+rail was EMPTY, and chips persist per workspace in `state.promptMedia[wsKey]` and re-inject on
+every mount — so ONE image staged once owned `Input_Image` for every later run, invisibly (the
+panel hides behind the History prompt rail tool). Read it as: a wrong-looking output here means
+reading the `.meta` sidecar's `generationSettings.mediaItems`, not the output size.
+
+Video is NOT collapsed to the entry — `i2v` requires an IMAGE `startFrame` a video entry can never
+fill. There, role-tagged `startFrame`/`endFrame` (the dedicated slots in `MpiToolOptionsPrompt`,
+plus the Extend/New-shot last-frame capture) and non-image chips survive; untagged rail images do
+not. Multi-image ops belong in the Gallery. Reuse no longer injects images in an image group, and
+the mount clears the restored chip.
+
 ## Progress pipeline — ComfyUI stdout is the truth, WS events are useless (MPI-147)
 
 The status-bar progress bar is driven by **parsing ComfyUI's stdout**, NOT the WS `progress`/`progress_state` events. Why: ComfyUI 0.26's WS reports the SLOW phases (model-init, VAE decode) as binary `0/1` nodes, and LTX samplers are tiny (3-7 steps, done in seconds) — so a WS-weighted bar froze at 0%, snapped to a wrong %, or hung at 90%. The rich signal (tqdm `N/M [elapsed<eta]` per step + `Model Initializing` markers) exists ONLY on stdout. Flow: `routes/comfy.js _handleComfyOutput` parses tqdm → broadcasts `comfy:step-progress` (and `comfy:tile-progress` for `USDU:` bars, `comfy:segment-total` for detailer `# of Detected SEGS:`) over the `/comfy/events/stream` SSE → `commandExecutor.js` SSE listeners → `phaseProgress.js` (createStageProgress) → `tool:stage` + `tool:progress` → statusBar.

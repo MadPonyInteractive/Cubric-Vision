@@ -111,6 +111,19 @@
 
 ## fixes
 
+- **Editing an image in the strip now always uses the image you're looking at.**
+  If you ever dropped or reused an image into the prompt box while working
+  inside a history strip, that picture quietly became the input for everything
+  you ran afterwards — no matter which entry you had selected. It never showed
+  up anywhere, because the prompt panel is tucked behind the prompt tool, so an
+  upscale or an edit would come back looking like a completely different picture
+  and a lower Denoise wouldn't help: the strength was fine, the image was wrong.
+  The strip now always works from the entry you have open. Working with more
+  than one input image — a second reference for an edit — is a gallery job, and
+  choosing one of those operations inside the strip simply runs it on the
+  selected image. Video is unchanged: start and end frames have their own place
+  in the prompt panel and still work exactly as before.
+
 - **Stopping a generation no longer says it finished.** Pressing Stop could still
   pop a "Generation finished" notification with the completion chime, because the
   engine often completes the step it was already working on and hands back a
