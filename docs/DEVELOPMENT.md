@@ -42,12 +42,30 @@ above is scripted, and that is the Playwright/Electron suite, not this one.
 
 A green run is NOT the baseline — **check the failure LIST, not the count.** As of
 2026-07-29 the suite is 254/263 with 9 long-standing failures
-(`optional-media-placeholder` on missing fixtures, `permodel-key-allowlist` ×3 on
-drifted source-text regexes, `resolve-model-deps`, `remoteProxy` ×4). The total
-moves as tests are added, so a changed count proves nothing on its own.
+(`optional-media-placeholder` on missing fixtures, `permodel-key-allowlist` ×3,
+`resolve-model-deps`, `remoteProxy` ×4). The total moves as tests are added, so a
+changed count proves nothing on its own.
+
+The `permodel-key-allowlist` ×3 are **stale tests, not a code defect** (MPI-389): they
+assert the hand-maintained `_MODEL_WIDE_KEYS` allowlist that MPI-336 deliberately
+replaced with a `modelWide` flag derived from the control's own scope — see
+`js/services/projectService.js` where that write is routed. **Do not make them pass by
+re-adding keys to the Set**; that reinstates the list MPI-336 removed.
 
 The Electron app uses an Express server on `127.0.0.1:3000`. Desktop tests use
 an isolated Electron user-data directory so they do not modify normal app data.
+
+### Close the standalone bench before verifying anything in the app (MPI-346)
+
+`COMFYUI_PORT = 8188` is hardcoded (`routes/shared.js`) and `startComfyUI` is
+**idempotent** — it probes `/history` and reports success if anything already answers
+(`routes/comfy.js`). A standalone authoring bench (e.g. `G:\ComfyUi`) binds the same
+port, so with one running the app **silently dispatches into the bench**: different
+install, different `extra_model_paths.yaml`, different node commits. Nothing warns you
+and the run proves the wrong thing. Check `netstat -ano | grep -E ":8188.*LISTENING"`
+first, and identify the PID before killing it — it is usually the user's. The engine
+also starts **on demand**, not at app boot, so `/comfy/status` reading `running:false`
+before the first dispatch is normal.
 
 Boot opens TWO windows: a frameless splash (`splash/splash.html`, loaded instantly
 by `main.js`) and then the shell on `127.0.0.1:3000`; the splash is destroyed on the
