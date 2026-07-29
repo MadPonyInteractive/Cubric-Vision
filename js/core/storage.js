@@ -59,6 +59,14 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // LOCAL and the user Connects when wanted. When ON, boot auto-reconnects a Pod.
   // `enabled` is now purely "remote is available / show the panel", not "force remote".
   autoConnectOnStart: false,
+  // skipLocalEngine: the boot gate skips the LOCAL engine install/upgrade check
+  // entirely (MPI-390). Deliberately NOT autoConnectOnStart: that one spins a
+  // BILLED Pod at every launch, and "don't make me install a CUDA engine I will
+  // never use" must not imply "bill me on every app open". Set by the escape
+  // hatch on the install modal; cleared by the Settings toggle, which re-arms
+  // the install gate on the next boot (there is no engine-install section in
+  // Settings, so without that toggle the hatch would be a one-way door).
+  skipLocalEngine: false,
   // autoRetry: when ON, the GPU picker also lists out-of-stock cards and Connect
   // waits in the background (polling availability) for the picked GPU to free
   // before connecting — without blocking local generation (MPI-110). Default OFF.
@@ -103,6 +111,7 @@ function normalizeRunpodConfig(value = {}) {
     wasConnected: value?.wasConnected === true,
     deleteOnQuit: value?.deleteOnQuit === true,
     autoConnectOnStart: value?.autoConnectOnStart === true,
+    skipLocalEngine: value?.skipLocalEngine === true,
     autoRetry: value?.autoRetry === true,
     stageOnConnect: value?.stageOnConnect === true,
     idleTimeoutS: normalizeIdleTimeoutS(value?.idleTimeoutS),

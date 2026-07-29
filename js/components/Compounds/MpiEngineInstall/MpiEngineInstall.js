@@ -4,6 +4,7 @@ import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.j
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { Storage } from '../../../core/storage.js';
+import { state } from '../../../state.js';
 import { qs, qsa } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -56,6 +57,26 @@ export const MpiEngineInstall = ComponentFactory.create({
                     </div>
 
                     <div data-ref="installButtonMount"></div>
+
+                    <!-- RunPod escape hatch (MPI-390). A machine with no usable GPU
+                         would otherwise have to finish a multi-GB CUDA install it will
+                         never use, purely to reach the RunPod settings this modal is
+                         covering. Always shown — GPU detection misses too much to gate
+                         on (MPI-387 F2: Iris/UHD/HD fall through BY DESIGN). Setup
+                         phase only: upgrade/repair mean a local engine already exists,
+                         so nobody is trapped there. The destination is named in the
+                         button copy on purpose — auto-opening Settings here would race
+                         the first-launch 18+/changelog overlay chain (MPI-333). -->
+                    <div class="mpi-engine-install__hatch">
+                        <p class="mpi-engine-install__hatch-text">No GPU? Cubric can run on a cloud GPU instead.</p>
+                        <button type="button" class="mpi-engine-install__hatch-action" data-ref="skipToRunpod">
+                            Skip this — set up RunPod in Settings
+                        </button>
+                        <p class="mpi-engine-install__hatch-hint">
+                            New to RunPod?
+                            <a href="https://youtu.be/drpZOrMDEq8" data-ref="docsLink" target="_blank" rel="noopener noreferrer">Watch the setup video</a>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -234,9 +255,10 @@ export const MpiEngineInstall = ComponentFactory.create({
             }
         });
 
-        // ── Docs link (opens in default browser via Electron shell) ───────────────
-        const docsLink = qs('[data-ref="docsLink"]', el);
-        if (docsLink) {
+        // ── Docs links (open in default browser via Electron shell) ───────────────
+        // qsa, not qs: there are two now — the progress-phase documentation link and
+        // the setup-phase RunPod video link (MPI-390). Same handler for both.
+        qsa('[data-ref="docsLink"]', el).forEach((docsLink) => {
             docsLink.addEventListener('click', (evt) => {
                 evt.preventDefault();
                 const url = docsLink.href;
@@ -248,6 +270,28 @@ export const MpiEngineInstall = ComponentFactory.create({
                 } else {
                     window.open(url, '_blank', 'noopener,noreferrer');
                 }
+            });
+        });
+
+        // ── RunPod escape hatch (MPI-390) ─────────────────────────────────────────
+        // Sets skipLocalEngine, NOT autoConnectOnStart: that one spins a BILLED Pod
+        // at every launch, and "don't make me install an engine I'll never use" must
+        // not imply "bill me on every app open". `enabled` goes true as well so the
+        // RunPod panel is actually visible once they reach Settings — without it the
+        // hatch would just move the trap one layer down. The boot gate is released
+        // via engine:install-skipped rather than engine:ready, because the engine is
+        // NOT ready and engine:ready consumers must not be told otherwise.
+        const skipToRunpod = qs('[data-ref="skipToRunpod"]', el);
+        if (skipToRunpod) {
+            skipToRunpod.addEventListener('click', () => {
+                // Through state, NOT Storage.setRunpodConfig: state.runpodConfig is
+                // seeded once at module load (state.js:164) and write-throughs to
+                // Storage (state.js:245). A raw Storage write would leave state stale,
+                // so Settings would render this toggle OFF and the next state write
+                // would clobber it. Top-level key replaced, never mutated in place.
+                state.runpodConfig = { ...(state.runpodConfig || {}), enabled: true, skipLocalEngine: true };
+                clientLogger.info('MpiEngineInstall', 'Local engine install skipped via the RunPod escape hatch (MPI-390)');
+                Events.emit('engine:install-skipped');
             });
         }
 

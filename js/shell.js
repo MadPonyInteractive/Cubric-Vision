@@ -10,6 +10,7 @@ import { syncModelInstalled, MODELS, installedForOtherArch, getDriftedModelIds }
 import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
 import { Storage, Session } from './core/storage.js';
+import { blockedByNoEngine } from './services/engineGate.js';
 import { clientLogger } from './services/clientLogger.js';
 import { qs } from './utils/dom.js';
 import { isStockRefusal } from './utils/runpodErrorClassify.js';
@@ -247,9 +248,16 @@ async function _bootApp() {
   // With auto-connect OFF (the default), boot runs LOCAL even when RunPod is
   // `enabled` (enabled = "remote available / show panel"), so the local engine
   // gate MUST run. (`else try` keeps the local path untouched.)
+  // A second skip exists (MPI-390): `skipLocalEngine`, set by the escape hatch on
+  // the install modal. It boots to landing with NO engine at all so a GPU-less
+  // user can reach RunPod settings — which the install modal was covering. It is
+  // deliberately a separate flag from autoConnectOnStart, which would bill a Pod
+  // at every launch. Cleared by the Settings toggle, which re-arms this gate.
   const runpodCfg = Storage.getRunpodConfig();
   if (runpodCfg.autoConnectOnStart) {
     await _initRemoteBoot(runpodCfg);
+  } else if (runpodCfg.skipLocalEngine) {
+    clientLogger.info('shell', 'Local engine gate skipped — skipLocalEngine is set (MPI-390)');
   } else try {
     const versionRes = await fetch('/engine/version-check');
     const versionData = await versionRes.json();
@@ -266,12 +274,19 @@ async function _bootApp() {
 
     // Wire engine:ready to hide install modal and continue boot
     await new Promise((resolve) => {
-      let unsub;
-      unsub = Events.on('engine:ready', () => {
+      const _gateUnsubs = [];
+      const _releaseGate = () => {
         _engineInstall.el.hide();
-        unsub();
+        _gateUnsubs.forEach((u) => u());
         resolve();
-      });
+      };
+      _gateUnsubs.push(Events.on('engine:ready', _releaseGate));
+      // MPI-390: the escape hatch dismisses this gate with NO engine installed.
+      // It MUST resolve this promise — hiding the modal alone would hang boot
+      // forever behind a gate that is no longer on screen. Separate event on
+      // purpose: the engine is not ready, so engine:ready consumers (comfy
+      // controller, status bar) must not be told that it is.
+      _gateUnsubs.push(Events.on('engine:install-skipped', _releaseGate));
 
       // If engine already current, check if UW deps need installing
       if (!versionData.needsInstall && !versionData.needsUpgrade) {
@@ -365,8 +380,44 @@ async function _bootApp() {
   // call el.open() each time. The slide-over stays reserved for settings/hotkeys/
   // queue. eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   let _modelLibrary = null;
+
+  // MPI-390: Settings turned "Skip the local engine install" OFF. Honour it NOW
+  // rather than silently waiting for the next boot — a toggle that appears to do
+  // nothing until you restart is a toggle users do not trust.
+  //
+  // The modal only EMITS engine:ready (MpiEngineInstall.js:578); it never hides
+  // itself. The boot gate did that, and its listeners unsubscribed once boot
+  // finished — so this path has to wire its own close, for both outcomes. If the
+  // user presses the escape hatch on the modal this just raised, skipLocalEngine
+  // goes straight back to true and the Settings switch follows it.
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('models:open', () => {
+  Events.on('engine:install-request', async () => {
+    try {
+      const res = await fetch('/engine/version-check');
+      const data = await res.json();
+      const mode = data.needsInstall ? 'installing' : (data.needsUpgrade ? 'upgrading' : null);
+      if (!mode) return; // an engine is already installed and current — nothing to do
+      _engineInstall.el.show(mode);
+
+      const _closeUnsubs = [];
+      const _close = () => {
+        _engineInstall.el.hide();
+        _closeUnsubs.forEach((u) => u());
+      };
+      _closeUnsubs.push(Events.on('engine:ready', _close));
+      _closeUnsubs.push(Events.on('engine:install-skipped', _close));
+    } catch (err) {
+      clientLogger.error('shell', 'engine:install-request version check failed:', err);
+    }
+  });
+
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('models:open', async () => {
+    // MPI-390: installing models with no engine to run them on is a dead end —
+    // and on the remote path the install targets the Pod, so it needs one
+    // connected anyway. Gated on the LISTENER, not the landing-nav emitter, so
+    // the Gallery radial's emitter is covered by the same check.
+    if (await blockedByNoEngine()) return;
     if (!_modelLibrary) _modelLibrary = MpiModelManager.mount(document.createElement('div'));
     _modelLibrary.el.open();
   });
@@ -376,7 +427,11 @@ async function _bootApp() {
   // themselves APP_CONFIG.dev_mode-gated, so a staged build never opens it.
   let _appLibrary = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('apps:open', () => {
+  Events.on('apps:open', async () => {
+    // MPI-390: Apps have no PromptBox — just a Generate button — so nothing
+    // inside would surface the no-engine state. Dev-gated today, but the gate
+    // belongs here before that changes.
+    if (await blockedByNoEngine()) return;
     if (!_appLibrary) _appLibrary = MpiAppLibrary.mount(document.createElement('div'));
     _appLibrary.el.open();
   });

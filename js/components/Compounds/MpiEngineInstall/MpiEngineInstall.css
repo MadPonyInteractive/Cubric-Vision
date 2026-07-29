@@ -106,6 +106,62 @@
     line-height: 1.4;
 }
 
+/* ── RunPod escape hatch (MPI-390) ───────────────────────────────────────── */
+/* Setup phase only. Sits under the Install button, separated by a soft rule so
+   it reads as the secondary path it is — local install stays the default. */
+.mpi-engine-install__hatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-soft);
+    text-align: center;
+}
+
+.mpi-engine-install__hatch-text {
+    margin: 0;
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    line-height: 1.4;
+}
+
+.mpi-engine-install__hatch-action {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: var(--t-sm);
+    font-weight: 500;
+    color: var(--accent-heat);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.mpi-engine-install__hatch-action:hover {
+    opacity: 0.85;
+}
+
+.mpi-engine-install__hatch-hint {
+    margin: 2px 0 0 0;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    line-height: 1.4;
+}
+
+.mpi-engine-install__hatch-hint a {
+    color: var(--accent-heat);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.mpi-engine-install__hatch-hint a:hover {
+    opacity: 0.85;
+}
+
 /* ── Progress section ────────────────────────────────────────────────────── */
 .mpi-engine-install__progress-section {
     display: flex;

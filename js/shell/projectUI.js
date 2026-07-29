@@ -10,6 +10,7 @@ import { navigate, PAGE_GALLERY } from '../router.js';
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
+import { blockedByNoEngine } from '../services/engineGate.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
@@ -234,6 +235,7 @@ function _openNewProjectDialog() {
   newProjectDialog.on('create', async ({ name, location }) => {
     try {
       if (await _blockedByDownloadMode()) return;
+      if (await blockedByNoEngine()) return;
       const project = await createProject(name || 'Untitled Project', location);
       await openProject(project);
       navigate(PAGE_GALLERY);
@@ -518,6 +520,7 @@ function _buildProjectRow(project) {
     // project mid-load (MPI-286).
     if (row.classList.contains('mpi-landing__pl-row--loading')) return;
     if (await _blockedByDownloadMode()) return;
+    if (await blockedByNoEngine()) return;
     await openProject(project);
     navigate(PAGE_GALLERY);
   });

@@ -62,6 +62,14 @@ export const MpiRunpodSettings = ComponentFactory.create({
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodAutoConnectSlot"></div>
                     </div>
 
+                    <div class="mpi-settings__plate" id="mpiSettingsRunpodSkipEngineGroup">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Skip the local engine install</span>
+                            <span class="mpi-settings__plate-desc">For cloud-only machines. When on, startup never asks you to install the local ComfyUI engine — generate on a Pod instead. Turn it off to install the local engine on the next launch.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsRunpodSkipEngineSlot"></div>
+                    </div>
+
                     <div class="mpi-settings__plate" id="mpiSettingsRunpodAutoRetryGroup">
                         <div class="mpi-settings__plate-main">
                             <span class="mpi-settings__plate-label">Auto-retry connection</span>
@@ -1593,6 +1601,43 @@ export const MpiRunpodSettings = ComponentFactory.create({
                     state.runpodConfig = { ..._runpodCfg(), autoConnectOnStart: checked === true };
                     acPlate?.classList.toggle('mpi-settings__plate--on', checked === true);
                 });
+            }
+
+            // ── Skip the local engine install (MPI-390) ──────────────────────
+            // The re-arm control for the escape hatch on the install modal. Settings
+            // has no engine-install section, so without this toggle the hatch would
+            // be a one-way door — the mirror image of the trap it fixes. Deliberately
+            // separate from autoConnectOnStart above: skipping a local install must
+            // not imply billing a Pod at every launch. Persist-only; the boot gate
+            // reads it via Storage.getRunpodConfig().
+            const skipEngineSlot = qs('#mpiSettingsRunpodSkipEngineSlot', root);
+            if (skipEngineSlot) {
+                skipEngineSlot.innerHTML = '';
+                const sePlate = skipEngineSlot.closest('.mpi-settings__plate');
+                sePlate?.classList.toggle('mpi-settings__plate--on', cfg.skipLocalEngine === true);
+                const seInst = MpiCheckbox.mount(skipEngineSlot, {
+                    checked: cfg.skipLocalEngine === true,
+                    variant: 'switch',
+                });
+                const _syncSkipEngine = (on) => {
+                    seInst.el.setChecked?.(on);
+                    sePlate?.classList.toggle('mpi-settings__plate--on', on);
+                };
+
+                seInst.on('change', ({ checked }) => {
+                    state.runpodConfig = { ..._runpodCfg(), skipLocalEngine: checked === true };
+                    sePlate?.classList.toggle('mpi-settings__plate--on', checked === true);
+                    // Turning the skip OFF is a request to install. Asking shell to
+                    // re-run the engine check NOW (rather than silently waiting for
+                    // the next boot) is what makes the toggle mean something the
+                    // moment it is flipped.
+                    if (checked !== true) Events.emit('engine:install-request');
+                });
+
+                // If the user presses the escape hatch on the modal that request
+                // just raised, skipLocalEngine goes back to true — so this switch
+                // has to follow it back ON or Settings would show a lie.
+                _unsubs.push(Events.on('engine:install-skipped', () => _syncSkipEngine(true)));
             }
 
             // ── Auto-retry connection (MPI-110) ──────────────────────────────
