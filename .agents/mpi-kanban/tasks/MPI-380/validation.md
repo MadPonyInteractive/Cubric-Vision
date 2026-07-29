@@ -117,3 +117,7 @@ macOS wheel). Nothing to drop or gate for Mac/Linux.
   on a Pod plus confirmation the points PNG upload is gone from staging.
 - **Large-image sanity check** — a smoke check only; no retirement claim rides on it
   (SAM 1 stays), so not the 4K bake-off the original acceptance list demanded.
+
+> **The Pod leg is queued on [MPI-385](../MPI-385/brief.md)** — the RunPod verification
+> umbrella. It runs FIRST in that session: the newly-added `engineAsset` on the remote
+> install path is the likeliest failure of the whole sweep.

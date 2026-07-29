@@ -105,6 +105,19 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsMaskTextProps (Organism — js/components/Organisms/MpiToolOptionsMaskText)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * The open-vocabulary (SAM3 text) tool of the mask family. Owns the name field
+ * and the count; mounts MpiMaskDetectRow and MpiMaskStrip WITHOUT the brush
+ * pair. The count is stamped into the prompt as `name:N` per category — SAM3
+ * reads that suffix as the detection cap and a bare category returns ONE object.
+ * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
+ *   setMaskPointsMode(), setMaskTextMode(), setMaskTextPrompt()
+ * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsUpscaleProps (Organism — js/components/Organisms/MpiToolOptionsUpscale)
  * @property {Object} viewer - MpiVideoViewer instance
  * Emits: 'apply' { factor: number, model: string }

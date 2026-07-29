@@ -3,11 +3,11 @@
   "id": "MPI-384",
   "title": "Text masking - name the object, pick a chip (SAM3 open vocabulary)",
   "description": "The 4th rail tool of the mask family: a text box plus a count, Detect, then the existing chips. SAM3 given an object's NAME nails exactly the subjects the Points tool struggles with - thin, strappy things like a bikini, a purse or a strap, where points over-select and a face can need six dots. User proved it live in the node graph: text 'bikini:2' with individual_masks true returned two clean per-object masks. This does NOT revive the cancelled MPI-361 Phase B, which was killed as a HOVER ENUMERATOR (4 categories cost 10.5s, so it can never drive hover). A deliberate type-it-and-pick tool is a different job at a deliberate ~3.6s per press. Cheap to build: MPI-380 already added the CheckpointLoaderSimple whose CLIP output is currently unwired, and MPI-381's split makes a new rail entry a one-line registry addition.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-07-29T18:00:00Z",
-  "updated_at": "2026-07-29T18:00:00Z",
+  "updated_at": "2026-07-29T20:15:00Z",
   "labels": [
     "masking",
     "ui",
@@ -27,6 +27,10 @@
   ],
   "links": {
     "events": "events.jsonl",
-    "brief": "brief.md"
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "handoffs": "handoffs/"
   }
 }

@@ -57,79 +57,24 @@ block runs inside one `globalAlpha` so every mask pixel fades together:
 **B/W view (MPI-381)** is a third display mode: alpha pinned to 1 over a flat backdrop, so the
 mask reads as the plain B/W image it exports — how a user spots the stray specks a detection
 leaves behind. Composes with `displayInverted` (backdrop and mask swap together); green still
-draws on top or pick state vanishes. `maskOpacity` is ignored rather than made grey mush, so
-the strip's opacity slider goes inert while B/W is on.
+draws on top or pick state vanishes. `maskOpacity` is ignored while B/W is on, so the strip's
+opacity slider goes inert rather than making grey mush.
 
-Both recolours go through `_recolorMaskLayer(src, color, W, H)`, filling `source-atop`
-inside a **scratch buffer**. That indirection is load-bearing: filling on the overlay
-directly would recolour the comparison layer underneath. The buffer is reused across
-frames and across both calls in one frame — safe, because `drawImage` copies synchronously
-before the next call overwrites it. Canvas colours are module constants mirroring
-`styles/01_base.css` tokens (`MASK_AUTO_FILL`, `MASK_INVERT_FILL`, `MASK_BW_*`,
-`MASK_POINT_*`) — JS cannot read CSS vars per frame, so update the constant when the token
-changes. `displayInverted` is display only; `getURL(bg, fg)` does real inversion for export.
+Both recolours go through `_recolorMaskLayer(src, color, W, H)`, filling `source-atop` inside a
+**scratch buffer** — load-bearing, since filling on the overlay would recolour the comparison
+layer underneath. The buffer is reused across frames and across both calls in one frame (safe:
+`drawImage` copies synchronously). Canvas colours are module constants mirroring
+`styles/01_base.css` tokens (`MASK_AUTO_FILL`, `MASK_INVERT_FILL`, `MASK_BW_*`, `MASK_POINT_*`)
+— JS cannot read CSS vars per frame, so update the constant when the token changes.
+`displayInverted` is display only; `getURL(bg, fg)` does real inversion for export.
 
 ---
 
-## Click-point masking (MPI-361, rebuilt on SAM3 in MPI-380)
+## The SAM3 tools — points and text
 
-Click a point and SAM3 segments whatever it belongs to — the answer to the YOLO vocabulary
-ceiling ("mask the headphones" is permanently impossible on `UltralyticsDetectorProvider`).
-Runs on `sam3.1_multiplex_fp16.safetensors` (1.75GB, `engineAsset`, SAM License —
-commercially clear), loaded by a plain `CheckpointLoaderSimple`: SAM3 is a **core ComfyUI
-0.28 model**, no custom node.
-
-SAM 1 (`sam_vit_b`) is **NOT retired** — it still refines the YOLO segment branch, whose
-Impact `SAM_MODEL` slot SAM3 cannot fill. That swap needs a SEGS→`BOUNDING_BOX` bridge and
-belongs to MPI-379.
-
-### The points layer
-
-Points are a fourth layer and deliberately **not a canvas** — a list of dots the graph
-turns into a mask. `points[]` is in **SOURCE-image px**, not the `MASK_MAX_EDGE`-capped
-working size: SAM3 normalises coords against the image it loads.
-
-**Polarity is which LIST a point lands in**, not how big it is drawn. `getPointsJSON()`
-splits `points[]` into two `[{"x":int,"y":int}]` strings — the KJNodes `PointsEditor` shape
-SAM3 documents. Both are always emitted, `[]` included: omitting a key would leave the
-previous run's coords sitting on the node. No dot image is rendered, staged, or uploaded —
-**one less media upload per remote run.**
-
-### The graph branch — `comfy_workflows/img_auto_mask.json`
-
-```
-Input_Points_Positive / Input_Points_Negative (MpiString, JSON pixel coords)
-  -> SAM3 Points (SAM3_Detect, refine_iterations 2, individual_masks false)
-  -> GrowMaskWithBlur(-4) -> GrowMaskWithBlur(+4, fill_holes)   # scatter cleanup
-  -> MaskToSEGS(combined=True)
-  -> Input_Points_Mode (MpiIfElse) -> existing ImpactSEGSPicker + SEGSPreview
-```
-
-Injectable keys: `Input_Points_Positive`, `Input_Points_Negative`, `Input_Points_Mode`
-(bool, default **false**). The branch rejoins the **existing** picker chain, so thumbs /
-pick / composite plumbing is reused, not forked, and the shipped one-mask-per-pick contract
-(`ImpactSEGSToMaskList`, never `SegsToCombinedMask`) stays intact. `MpiIfElse` inputs are
-lazy, so points mode never runs YOLO.
-
-### Behaviour you must not "fix"
-
-- **N dots do NOT give N objects.** All points go into one predict call, so SAM3 returns a
-  single region consistent with **all** of them. One part per run; Add accumulates.
-- **There is no threshold on the point path.** `SAM3_Detect` takes one, but the point branch
-  ignores it entirely — only `refine_iterations` applies. This is why MPI-380 **deleted** the
-  Scope dial instead of remapping it. Do not re-add a threshold control here.
-- **`positive_coords` / `negative_coords` are `forceInput` STRING** — they must be WIRED from
-  `MpiString` nodes; they cannot be widget values on `SAM3_Detect` itself.
-- **Nothing in the graph gates an empty run.** The old branch self-gated on
-  `MpiLoadImageFromPath(block_if_empty)`; string nodes cannot. `MpiCanvasViewer` refuses the
-  run with a toast — that guard is load-bearing, not a nicety.
-- **The cleanup pair stays equal and opposite** (`-4` then `+4`), else the mask grows or
-  shrinks overall — 4/4 is the shipping default.
-- Points mode auto-picks index 0 up front (ONE round trip), relying on
-  `MpiAutoMaskThumbs.setPicks()` **not** emitting `'change'`. That silence is deliberate.
-- The points-mode `contextmenu` handler calls `stopPropagation` *and* `preventDefault`
-  (`MpiCanvasViewer` has its own on its root). Leaving the tool must call
-  `setMaskPointsMode(false)` or right-click stays broken app-wide.
+Both live in **[masking-sam3.md](masking-sam3.md)**: the click-point branch (MPI-361/380),
+the open-vocabulary text branch (MPI-384), their shared graph plumbing, and the behaviours
+that look like bugs and are not.
 
 ---
 
@@ -149,7 +94,8 @@ Each tool owns its method-specific parts and mounts the shared compounds:
 | Piece | Owns |
 |---|---|
 | `MpiToolOptionsMaskBrush` | nothing — it **is** the strip with its brush pair |
-| `MpiToolOptionsMaskPoints` | Scope dial, click instructions, Clear points |
+| `MpiToolOptionsMaskPoints` | click instructions, Clear points |
+| `MpiToolOptionsMaskText` | the object name + how many to find (stamped `name:N`) |
 | `MpiToolOptionsMaskDetect` | model radio (Face / Hand / Person) + Box / Segment |
 | `MpiMaskDetectRow` | thumbs · Detect · Add / Subtract, blocked as a unit while Cue is busy |
 | `MpiMaskStrip` | paint / erase (**optional**) · invert · B/W view · clear · opacity |
@@ -193,8 +139,7 @@ A mask and a prompt are **one operation**, so every mask tool keeps the PromptBo
 
 ## Roadmap
 
-- **MPI-368** — Shapes: rectangle / triangle / ellipse gizmo, Add or Subtract. The 4th tool of
-  the split; mounts `MpiMaskStrip` with `brush: false`, no detect row.
+- **MPI-368** — Shapes: rectangle / triangle / ellipse gizmo, Add or Subtract. Mounts
+  `MpiMaskStrip` with `brush: false`, no detect row.
 - **MPI-379** — the SAM 1 refiner swap, carried over from MPI-380: it needs YOLO SEGS as
-  `BOUNDING_BOX` dicts, which this graph cannot produce today. SAM3 *text* masking stays
-  CANCELLED (was MPI-361 Phase B): it cannot enumerate, so it refines, never finds.
+  `BOUNDING_BOX` dicts, which this graph cannot produce today.

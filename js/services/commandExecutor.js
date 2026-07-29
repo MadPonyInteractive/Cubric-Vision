@@ -276,6 +276,8 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
  * @property {boolean}    [pointsMode] - true = run the click-point (SAM3) branch instead of the YOLO detector
  * @property {string}     [pointsPositive] - JSON `[{"x":int,"y":int}]` of positive dots, source-image px — required when pointsMode is true
  * @property {string}     [pointsNegative] - JSON `[{"x":int,"y":int}]` of negative dots, source-image px
+ * @property {boolean}    [textMode]   - true = run the open-vocabulary (SAM3 text) branch
+ * @property {string}     [textPrompt] - Comma-separated categories, each ALREADY stamped `name:N` — required when textMode is true
  */
 
 /**
@@ -927,7 +929,14 @@ export function runAutoMask(payload) {
         // MPI-380: the points half is SAM3, fed plain JSON pixel coords through two
         // MpiString nodes — no dot image is rendered, staged, or uploaded any more.
         // Nothing in the graph blocks an empty run, so the viewer gates it instead.
+        // MPI-384: a THIRD lazy gate (`Input_Text_Mode`) sits on top of the points
+        // one, so the open-vocabulary SAM3 branch never drags YOLO or the point
+        // predictor into a text run. `textPrompt` arrives already stamped as
+        // `name:N` — that suffix is the detection cap and a bare category silently
+        // returns exactly ONE object (comfy/text_encoders/sam3_clip.py
+        // `_parse_prompts`). The UI owns the count, so it owns the stamping.
         const pointsMode = payload.pointsMode === true;
+        const textMode   = payload.textMode === true;
         const params = {
             Input_Image:                 payload.imageUrl,
             sams:                        payload.detectorModel,
@@ -939,6 +948,11 @@ export function runAutoMask(payload) {
             // leave the previous run's value sitting on the node.
             Input_Points_Positive:       pointsMode ? (payload.pointsPositive || '[]') : '',
             Input_Points_Negative:       pointsMode ? (payload.pointsNegative || '[]') : '',
+            Input_Text_Mode:             textMode,
+            // Dotted key (MPI-359) = ONE named widget on the titled node. The prompt
+            // rides CLIPTextEncode's own `text` widget, so nothing here goes near
+            // comfyController's PATH_MEDIA_CLASSES — no media staging, no upload.
+            'Input_Text_Prompt.text':    textMode ? (payload.textPrompt || '') : '',
         };
 
         let _detectedFired = false;

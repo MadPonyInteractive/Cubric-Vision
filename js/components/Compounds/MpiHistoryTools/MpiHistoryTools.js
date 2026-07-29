@@ -72,6 +72,7 @@ const IMAGE_TOOLS = [
         group: [
             { mode: 'maskBrush',  icon: 'brush',  info: 'Brush'  },
             { mode: 'maskPoints', icon: 'circle', info: 'Points' },
+            { mode: 'maskText',   icon: 'text',   info: 'Text'   },
             { mode: 'maskDetect', icon: 'search', info: 'Detect' },
         ],
     },

@@ -18,6 +18,7 @@ import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOp
 import { MpiToolOptionsMaskBrush } from '../../Organisms/MpiToolOptionsMaskBrush/MpiToolOptionsMaskBrush.js';
 import { MpiToolOptionsMaskDetect } from '../../Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js';
 import { MpiToolOptionsMaskPoints } from '../../Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js';
+import { MpiToolOptionsMaskText } from '../../Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
@@ -81,6 +82,7 @@ const TOOL_OPTIONS_REGISTRY = {
     maskBrush:    MpiToolOptionsMaskBrush,
     maskDetect:   MpiToolOptionsMaskDetect,
     maskPoints:   MpiToolOptionsMaskPoints,
+    maskText:     MpiToolOptionsMaskText,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     removeBackground: MpiToolOptionsRemoveBg,
@@ -93,7 +95,7 @@ const TOOL_OPTIONS_REGISTRY = {
 /** Any tool in the mask family. One rail icon per masking method (MPI-371),
  *  one job each (MPI-381). EVERY new mask tool must be added here — teardown,
  *  the PromptBox gate and the viewer-mode bridge all hang off this. */
-const _MASK_TOOLS = new Set(['maskBrush', 'maskDetect', 'maskPoints']);
+const _MASK_TOOLS = new Set(['maskBrush', 'maskDetect', 'maskPoints', 'maskText']);
 const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
 
 /**
@@ -497,6 +499,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const TOOL_LABELS = {
             prompt: 'Prompt', crop: 'Crop',
             maskBrush: 'Mask Brush', maskDetect: 'Mask Detect', maskPoints: 'Mask Points',
+            maskText: 'Mask Text',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',

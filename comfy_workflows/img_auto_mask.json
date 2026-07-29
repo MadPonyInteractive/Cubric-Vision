@@ -16,7 +16,7 @@
       "alpha_mode": false,
       "min_alpha": 0.2,
       "segs": [
-        "1657",
+        "1665",
         0
       ],
       "fallback_image_opt": [
@@ -123,7 +123,7 @@
     "inputs": {
       "picks": "",
       "segs": [
-        "1657",
+        "1665",
         0
       ],
       "fallback_image_opt": [
@@ -321,6 +321,76 @@
     "class_type": "SAM3_Detect",
     "_meta": {
       "title": "SAM3 Points"
+    }
+  },
+  "1662": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "1658",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Input_Text_Prompt"
+    }
+  },
+  "1663": {
+    "inputs": {
+      "threshold": 0.5,
+      "refine_iterations": 2,
+      "individual_masks": true,
+      "model": [
+        "1658",
+        0
+      ],
+      "image": [
+        "1630",
+        0
+      ],
+      "conditioning": [
+        "1662",
+        0
+      ]
+    },
+    "class_type": "SAM3_Detect",
+    "_meta": {
+      "title": "SAM3 Text"
+    }
+  },
+  "1664": {
+    "inputs": {
+      "combined": true,
+      "crop_factor": 3,
+      "bbox_fill": false,
+      "drop_size": 1,
+      "contour_fill": false,
+      "mask": [
+        "1663",
+        0
+      ]
+    },
+    "class_type": "MaskToSEGS",
+    "_meta": {
+      "title": "per-object SEGS (one chip per detection)"
+    }
+  },
+  "1665": {
+    "inputs": {
+      "boolean": false,
+      "true": [
+        "1664",
+        0
+      ],
+      "false": [
+        "1657",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_Text_Mode"
     }
   }
 }

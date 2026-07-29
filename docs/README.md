@@ -42,7 +42,8 @@ NOT mechanically split these):
 | **Generation lifecycle** (dispatch guard, progress pipeline, Stop/lanes identity doctrine, queue-drain notifications) | [generation-lifecycle.md](generation-lifecycle.md) |
 | **Op & model selection** (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker + hold-Tab, bar order) | [op-model-selection.md](op-model-selection.md) |
 | **Gallery** (cards, thumbnails, selection, drag-drop, hover media) | [gallery.md](gallery.md) |
-| **Masking** (layer model, the display-vs-export split, click-point masking, auto-mask graph, Add/Subtract) | [masking.md](masking.md) |
+| **Masking** (layer model, the display-vs-export split, overlay draw, Add/Subtract, the tool family + PromptBox contract) | [masking.md](masking.md) |
+| **SAM3 masking** (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | [masking-sam3.md](masking-sam3.md) |
 | **Crop** (ratio/free/exact-resolution, cropping PAST the image edge + fill colour, edge snapping, pad-then-extract) | [crop.md](crop.md) |
 | **Model Library UI** (usable-vs-installed, featured, install-button gates, tile patching) | [model-library.md](model-library.md) |
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |

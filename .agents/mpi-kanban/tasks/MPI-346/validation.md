@@ -191,3 +191,7 @@ no version-registry work follows.
 ## Next action
 
 Run one Krea2 edit and one describe through the app. If both land, this card can close.
+
+> **The remote (RunPod) leg is queued on [MPI-385](../MPI-385/brief.md)** — the RunPod
+> verification umbrella: the `.mpi_node_commit` drift ladder, plus the one edit and one
+> describe through the app that close this card.

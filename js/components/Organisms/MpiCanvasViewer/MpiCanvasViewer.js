@@ -317,6 +317,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // swapToPreview/swapToCanvas remount. MPI-380 removed the companion
         // threshold: SAM3's point path ignores it entirely.
         let _pointsMode = false;
+        // MPI-384 open-vocabulary text prompt — same deal, and it swaps a THIRD
+        // detector branch. `_textPrompt` is the graph-ready string: categories
+        // comma-separated and each already stamped `name:N` by the tool, because a
+        // bare category makes SAM3 return exactly one object.
+        let _textMode = false;
+        let _textPrompt = '';
         // Display-only invert state. Held on the viewer (not just the canvas)
         // so it survives the canvas teardown/remount that swapToPreview/swapToCanvas
         // performs. Re-applied to the fresh MpiCanvas after every remount.
@@ -454,6 +460,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 _autoMaskPicks = new Set([0]);
             }
 
+            // MPI-384: the text branch has no self-gate either — CLIPTextEncode
+            // happily encodes '' and SAM3 then detects nothing at all. Same guard,
+            // same reason. Unlike points, text returns N objects, so it keeps the
+            // detector's normal detect-then-pick flow.
+            if (_textMode && !_textPrompt) {
+                StatusBar.notify('Type what to mask first', 'warning');
+                return;
+            }
+
             const runPicks = new Set(_autoMaskPicks);
             const exec = runAutoMask({
                 imageUrl,
@@ -463,6 +478,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 pointsMode:      _pointsMode,
                 pointsPositive:  points?.positive,
                 pointsNegative:  points?.negative,
+                textMode:        _textMode,
+                textPrompt:      _textPrompt,
             });
             _autoMaskExec = exec;
 
@@ -515,7 +532,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     canvas.setAutoPickMasks(map);
                     canvas.setSelectedAutoPicks(runPicks);
                     await _saveAutoPickEntry(sourceItem, [...maskUrls], runPicks, _lastDetectThumbUrls);
-                    _hasMask = true;
+                    // Picking a chip puts real pixels in maskCanvas, so it is a mask
+                    // made outside a brush stroke — publish it or the op strip stays
+                    // locked until Add/Subtract (MPI-372 contract, MPI-384).
+                    el.evaluateMask();
                 } catch (err) {
                     clientLogger.warn('automask', `Failed to apply auto-masks: ${err?.message || err}`);
                 }
@@ -1246,6 +1266,29 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _clearAutoPickEntry(_currentItem, true);
         };
         el.isMaskPointsMode  = () => _pointsMode;
+
+        /**
+         * MPI-384 — swap the auto-mask detector for the open-vocabulary SAM3 text
+         * branch. Clears in-flight picks for the same reason setMaskPointsMode
+         * does: the old result belongs to the old method.
+         * @param {boolean} enabled
+         */
+        el.setMaskTextMode = (enabled) => {
+            const next = !!enabled;
+            if (_textMode === next) return;
+            _textMode = next;
+            autoMaskThumbs.el.clear();
+            _autoMaskPicks.clear();
+            _clearAutoPickEntry(_currentItem, true);
+        };
+
+        /**
+         * The graph-ready prompt. The TOOL stamps `name:N` on every category —
+         * `_parse_prompts` (comfy/text_encoders/sam3_clip.py) reads that suffix as
+         * the detection cap, and a bare category silently returns exactly ONE.
+         * @param {string} prompt
+         */
+        el.setMaskTextPrompt = (prompt) => { _textPrompt = (prompt || '').trim(); };
 
         el.clearMaskPoints    = () => { canvas.clearMaskPoints?.(); emit('mask-points-changed', { count: 0 }); };
         el.getMaskPointCount  = () => canvas.getMaskPointCount?.() ?? 0;

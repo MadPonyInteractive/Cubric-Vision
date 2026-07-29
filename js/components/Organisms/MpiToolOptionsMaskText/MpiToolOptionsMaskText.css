@@ -1,0 +1,37 @@
+.mpi-tool-options-mask-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-2);
+}
+
+.mpi-tool-options-mask-text__row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-mask-text__prompt {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mpi-tool-options-mask-text__count {
+    flex: 0 0 auto;
+}
+
+.mpi-tool-options-mask-text__info {
+    margin: 0;
+    padding: var(--s-2);
+    color: var(--ink-3);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    font-size: var(--t-2xs);
+    line-height: 1.45;
+}
+
+.mpi-tool-options-mask-text__info b {
+    color: var(--ink-2);
+    font-weight: 700;
+}

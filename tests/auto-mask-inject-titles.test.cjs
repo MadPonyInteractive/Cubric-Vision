@@ -50,7 +50,9 @@ test('the SAM3 points branch is wired, not just titled', () => {
     const wf = JSON.parse(fs.readFileSync(WORKFLOW, 'utf8'));
     const byTitle = (t) => Object.entries(wf).find(([, n]) => n?._meta?.title === t);
 
-    const [sam3Id, sam3] = Object.entries(wf).find(([, n]) => n.class_type === 'SAM3_Detect') || [];
+    // Title-anchored, NOT `class_type === 'SAM3_Detect'`: MPI-384 added a second
+    // SAM3_Detect for the text branch, so a class-only find() is a coin flip.
+    const [sam3Id, sam3] = Object.entries(wf).find(([, n]) => n._meta?.title === 'SAM3 Points') || [];
     assert.ok(sam3Id, 'SAM3_Detect is gone from the points branch');
 
     // forceInput STRING: these MUST arrive as links from a string node, never as
@@ -78,6 +80,34 @@ test('the SAM3 points branch is wired, not just titled', () => {
     // SAM3's mask has to reach the picker chain, or a run returns nothing.
     const consumer = Object.values(wf).find(n => n.inputs?.mask?.[0] === sam3Id);
     assert.ok(consumer, 'nothing consumes SAM3_Detect.masks');
+});
+
+// MPI-384. The text branch has three ways to break silently: no conditioning
+// link (SAM3 falls back to whatever else is wired), individual_masks off (every
+// object unions into ONE mask and the chips collapse to a single thumb), or
+// bboxes wired alongside text (SAM3_Detect.execute gates the box branch on
+// `not has_text`, so boxes stop meaning segment-this-box).
+test('the SAM3 text branch is wired, not just titled', () => {
+    const wf = JSON.parse(fs.readFileSync(WORKFLOW, 'utf8'));
+    const [textId, text] = Object.entries(wf).find(([, n]) => n._meta?.title === 'SAM3 Text') || [];
+    assert.ok(textId, 'the SAM3 Text node is missing');
+
+    const [encId, enc] = Object.entries(wf).find(([, n]) => n._meta?.title === 'Input_Text_Prompt') || [];
+    assert.ok(encId, 'Input_Text_Prompt is missing');
+    assert.strictEqual(enc.class_type, 'CLIPTextEncode', 'Input_Text_Prompt must be the encoder itself');
+    assert.ok('text' in enc.inputs, "the dotted param 'Input_Text_Prompt.text' has no `text` widget to write");
+
+    assert.deepStrictEqual(text.inputs.conditioning, [encId, 0], 'SAM3 Text is not fed by Input_Text_Prompt');
+    assert.strictEqual(text.inputs.individual_masks, true,
+        'individual_masks off unions every object into ONE mask — the chips collapse');
+    assert.ok(!('bboxes' in text.inputs), 'text and box prompts are mutually exclusive in SAM3_Detect');
+
+    // The per-object SEGS have to reach the picker chain through the lazy gate.
+    const gate = Object.values(wf).find(n => n._meta?.title === 'Input_Text_Mode');
+    assert.ok(gate, 'Input_Text_Mode gate is missing — a text run would never be selectable');
+    const toSegs = Object.entries(wf).find(([, n]) => n.inputs?.mask?.[0] === textId);
+    assert.ok(toSegs, 'nothing consumes SAM3 Text masks');
+    assert.deepStrictEqual(gate.inputs.true, [toSegs[0], 0], 'the text gate does not carry the text SEGS');
 });
 
 test('the retired SAM 1 points plumbing is gone', () => {

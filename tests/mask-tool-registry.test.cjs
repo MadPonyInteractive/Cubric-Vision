@@ -54,6 +54,7 @@ test('only the brush tool mounts the strip with its brush pair', () => {
     const brushless = [
         'js/components/Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js',
         'js/components/Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js',
+        'js/components/Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js',
     ];
     for (const f of withBrush) assert.match(read(f), /MpiMaskStrip\.mount\([\s\S]{0,160}?brush:\s*true/s, `${f} should paint`);
     for (const f of brushless) assert.match(read(f), /MpiMaskStrip\.mount\([\s\S]{0,160}?brush:\s*false/s, `${f} must not paint`);

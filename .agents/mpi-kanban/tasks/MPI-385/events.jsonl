@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-385","type":"task.created","at":"2026-07-29T20:20:00Z","actor":"claude","to":"todo","summary":"RunPod verification umbrella. Pod-only checks from MPI-380, MPI-384, MPI-346 and the cardless MPI-135 collected into ONE session, with an explicit exclusion list (MPI-198/370/369) for the checks a Pod cannot settle."}
