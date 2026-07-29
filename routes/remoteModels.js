@@ -205,7 +205,8 @@ function _universalNodeFilenames() {
  * Design B+), not on the network volume. Only `installRequirements: true`
  * custom_nodes qualify — the wrapper can't see them on the volume, so they are
  * reported present. A code-only custom_node returns false → it routes to the
- * wrapper for volume install.
+ * wrapper for volume install. An `engineAsset` WEIGHT qualifies only when it
+ * carries `bakedOnPod` (or `targetPath`); every other one is volume-installed.
  */
 function _isImageResident(dep) {
   // MPI-222: a `targetPath` weight (e.g. RIFE) lives INSIDE a baked node folder in
@@ -214,6 +215,13 @@ function _isImageResident(dep) {
   // can't see it on the volume and must not try to install it (bare filename → empty
   // type → wrapper reject). Report present; the Pod already has it.
   if (dep.targetPath) return true;
+  // MPI-380: an `engineAsset` WEIGHT baked into the image by the Dockerfile `dl`
+  // block (upscalers, yolo nano, sam_vit_b, birefnet). The wrapper only sees the
+  // VOLUME, so without this it reports them missing and they get re-downloaded
+  // onto the volume — ~950MB of duplicate bytes ComfyUI already scans from the
+  // image. Weights WITHOUT the flag are exactly the ones the image lacks, so they
+  // fall through to the volume-install path.
+  if (dep.bakedOnPod) return true;
   const { type } = splitDepFilename(dep.filename);
   const depType = type || dep.type || '';
   if (depType !== 'custom_nodes') return false;

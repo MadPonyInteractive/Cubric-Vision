@@ -7,6 +7,17 @@
 // 2 - engineAsset:true = installs with the engine, never GC'd with a model
 //     (upscalers, detector/SAM models, RIFE, birefnet). NOTE: the model-specific
 //     vae/clip weights below are NOT engineAsset — they GC with their model.
+// 3 - bakedOnPod:true = this engineAsset is ALREADY inside the Pod Docker image
+//     (the `dl` block in mpi-ci/cubric-vision-pod/Dockerfile). Remote skips it
+//     instead of re-downloading it onto the volume. `targetPath` weights (RIFE)
+//     need no flag — they are baked inside a node folder and `_isImageResident`
+//     already reports them present. An engineAsset with NEITHER flag is installed
+//     onto the Pod volume at connect (MPI-380).
+//     ** ADDING AN engineAsset? ** Do NOT add bakedOnPod unless you are also
+//     editing that Dockerfile in the same breath. The flag means "the image has
+//     it"; a wrong flag makes the weight unreachable on remote and the failure is
+//     a 503 mid-generation on a billed Pod, not a build error. Unflagged is the
+//     safe default — it costs a volume download, never a broken engine.
 
 export const assetDeps = {
     // VAE
@@ -221,6 +232,7 @@ export const assetDeps = {
         size: '67MB',
         sha256: '560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e',
         engineAsset: true,
+        bakedOnPod: true,
     },
     '4x-AnimeSharp': {
         id: '4x-AnimeSharp',
@@ -230,6 +242,7 @@ export const assetDeps = {
         size: '65MB',
         sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab',
         engineAsset: true,
+        bakedOnPod: true,
     },
     // Background removal (MPI-260) ------------------------------------------
     // BiRefNet (MIT) for the History "Remove Background" universal op. Loaded by
@@ -247,6 +260,7 @@ export const assetDeps = {
         size: '444MB',
         sha256: '9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154',
         engineAsset: true,
+        bakedOnPod: true,
     },
     // Frame interpolation weight (engine asset) ----------------------------
     // RIFE 4.7 weight for ComfyUI-Frame-Interpolation (MPI-222). The node HARD-CODES
@@ -277,6 +291,7 @@ export const assetDeps = {
         size: '5.9MB',
         sha256: '70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c',
         engineAsset: true,
+        bakedOnPod: true,
     },
     'hand-yolov8n': {
         id: 'hand-yolov8n',
@@ -304,6 +319,7 @@ export const assetDeps = {
         size: '367MB',
         sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912',
         engineAsset: true,
+        bakedOnPod: true,
     },
     // SAM3 (MPI-380) — the click-point mask engine. Core ComfyUI 0.28 model, no
     // custom node: loads through CheckpointLoaderSimple, which also builds its own

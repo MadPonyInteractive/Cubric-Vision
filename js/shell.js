@@ -1415,6 +1415,42 @@ async function _healRemoteNodeDrift() {
   }
 }
 
+// Namespaced like `plugin:<id>` / `app:<id>` (pluginsRegistry.pluginDepKey) so this
+// job id can never collide with a model id. Nothing renders a card for it — every
+// download-job consumer looks jobs up BY model/plugin/app id — so the install runs
+// silently through the same pipeline, which is what we want for a heal.
+const ENGINE_ASSETS_JOB_ID = 'engine:assets';
+
+// MPI-380: engine-asset parity between the two engines. An `engineAsset` weight is
+// universal — it belongs to no model, so it never appears in any model's dep list.
+// LOCAL heals that at boot: /engine/repair-deps unions missing+drifted straight from
+// the live DEPS map. REMOTE had NO equivalent — its only delivery mechanism was the
+// `dl` block in the Pod Dockerfile, hand-copied in a DIFFERENT REPO (mpi-ci). So an
+// engineAsset added after the last image build reached a Pod never, and the failure
+// surfaced as a 503 mid-generation on a billed Pod rather than anything at build time.
+// Live example: sam3-multiplex (1.75GB) shipped with the SAM3 masking tools and was
+// unreachable on every Pod — the dep entry landed, the Dockerfile never moved.
+//
+// This is the remote twin of that boot repair. It sends the whole non-baked
+// engineAsset set through the ORDINARY remote install path, which already owns the
+// hard parts: _startRemoteDownload pre-checks the volume and dedupes anything present
+// (so a warm volume makes this a no-op), the serial install chain stops a CPU Pod from
+// being starved by parallel aria2c jobs, and the SSE/stall-watchdog plumbing reports
+// progress. `bakedOnPod` weights are filtered out here AND report image-resident in
+// remoteModelsCheck, so they never touch the volume.
+//
+// Deliberately NOT lazy/on-demand: local installs engine assets WITH the engine, and
+// a masking click that stalls for a 1.75GB fetch is a worse experience than a connect
+// that fetches once and is warm from then on.
+async function _installRemoteEngineAssets() {
+  const { DEPS } = await import('./data/modelConstants/dependencies.js');
+  const deps = Object.values(DEPS).filter(d =>
+    d && d.engineAsset === true && !d.bakedOnPod && !d.targetPath);
+  if (!deps.length) return;
+  const { downloadService } = await import('./services/downloadService.js');
+  await downloadService.start(ENGINE_ASSETS_JOB_ID, deps);
+}
+
 async function _initDataRegistries() {
   // Subscribe to models:checked event to update state
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
@@ -1477,6 +1513,11 @@ async function _initDataRegistries() {
         if (!_didFirstConnectDriftCheck) {
           _didFirstConnectDriftCheck = true;
           await _healRemoteNodeDrift();
+          // MPI-380: same first-connect latch — install any engineAsset the Pod
+          // image lacks onto the volume. Runs AFTER the drift heal: a node re-clone
+          // is KB-scale and quick, an engine asset can be GB-scale, and the install
+          // chain is serial.
+          await _installRemoteEngineAssets();
         }
       } catch (err) {
         clientLogger.error('shell', 'model registry sync on remote connect failed:', err);
