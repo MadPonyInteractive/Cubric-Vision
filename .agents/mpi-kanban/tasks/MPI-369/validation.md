@@ -10,26 +10,35 @@ Shipped in `a500b335`. Nothing here is user-verified yet.
   file counts 6362 (win32) / 6505 (darwin) / 6325 (linux). A few-hundred-file
   count would have meant the delta bundle was grabbed by mistake.
 
+## Verified LIVE 2026-07-30 - the handler has now fired
+
+Boot smoke run, user-witnessed. `throw new Error('boot smoke')` placed directly
+after the two `process.on` registrations in `main.js`, dev app launched with
+port 3000 free, throw reverted afterwards (`node --check main.js` clean,
+`git diff -- main.js` empty).
+
+Both halves fired:
+
+- **Dialog** - error box titled "Cubric Vision failed to start", body carrying
+  the timestamp, `[FATAL] [main] uncaughtException: Error: boot smoke` and the
+  full stack down to `main.js:35:7`. Screenshotted by the user.
+- **Log** - `%APPDATA%\Cubric Vision\logs\app.log` line 1878:
+  `[2026-07-29T05:41:25.645Z] [FATAL] [main] uncaughtException: Error: boot smoke`.
+  The synchronous `appendFileSync` beat process exit, which is the entire point
+  of the fix - `routes/logger`'s awaited append would have lost this line.
+- Process exited 1, matching Node's default action for an uncaught exception.
+
 ## NOT verified - do these before or during the 1.3.0 cut
 
-1. **The crash handler has never fired.** Put `throw new Error('boot smoke')`
-   at the top of `main.js`, launch the app, and confirm BOTH:
-   - an Electron error box appears titled "Cubric Vision failed to start", and
-   - a `[FATAL] [main] uncaughtException` line lands in the user-data logs
-     folder's `app.log`.
-   Then revert the throw. Port 3000 must be free. This is the one fix whose
-   entire value is that it works on the day something breaks, so a live firing
-   is the only meaningful proof.
-
-2. **The update-only root name only exists in a NEW build.** After the 1.3.0
+1. **The update-only root name only exists in a NEW build.** After the 1.3.0
    artifacts are built, unzip the Windows update bundle and confirm the root
    folder reads `CubricVision-v1.3.0-update-only`.
 
-3. **The archive name must NOT have changed.** Confirm the asset is still
+2. **The archive name must NOT have changed.** Confirm the asset is still
    `CubricVision-windows-x64-update-v1.3.0.zip`. If it drifted, every existing
    install's `update.bat` glob stops matching and in-place updates break.
 
-4. **Delta sanity.** The 1.3.0 update manifest should read `from 1.2.0`, not
+3. **Delta sanity.** The 1.3.0 update manifest should read `from 1.2.0`, not
    `from 1.0.0`. If it still says 1.0.0 the restamp did not reach CI.
 
 ## Follow-up recorded, not done
