@@ -20,6 +20,8 @@ Two traps, both hit for real:
    available in your region due to legal restrictions.", "code": "REGION_BLOCKED"}`.
    It needed a VPN on 2026-07-27, having worked bare the day before. If this file's
    method appears broken, check for the region block before assuming the API changed.
+   **Ask Fabio to enable the VPN — and don't trust the clock while it's on:
+   `CLAUDE.md` → "VPN + the skewed clock".**
 
 Flag meanings: `Image` = the user may sell what they generate; `Rent` = the weight may
 be run by a paid generation service; `Sell` = the weight itself may be sold;

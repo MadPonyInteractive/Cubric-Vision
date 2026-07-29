@@ -2,7 +2,14 @@
   "env": {},
   "permissions": {
     "allow": [],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "../Cubric-Studio",
+      "../MadPony-Identity",
+      "../mpi-ci",
+      "../Cubric-Prompt",
+      "../Cubric Studio Brand Assets"
+    ]
   },
   "hooks": {
     "Stop": [

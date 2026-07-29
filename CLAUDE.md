@@ -48,6 +48,37 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 
 ---
 
+## VPN + the skewed clock (read BEFORE asking for the VPN)
+
+CivitAI **region-blocks the UK**, so anything that hits `civitai.com` from this
+machine — the SHA256 licence lookups in `docs/models/klein/licences.md`, a
+community LoRA page, a shared workflow JSON — needs **Fabio's VPN on: ask, wait,
+then run**, and tell him when you're done so he can turn it off. Agent
+`WebFetch`/`WebSearch` can never reach CivitAI (Anthropic-side egress, also UK);
+only shell tools go through his VPN. The block reads as intermittent — the
+licence method worked bare on 2026-07-26 and needed the VPN on 2026-07-27 — so
+check for `REGION_BLOCKED` before concluding an API changed.
+
+**The VPN also skews the system clock, and that is the part that corrupts
+files.** Measured 2026-07-29 in a sibling repo: `date -u` read `01:30Z` while the
+true time was `15:29Z` — ~14 hours off, inside one session. While the VPN is on,
+`date`, the session's "today", file mtimes and `git commit` timestamps are all
+untrustworthy.
+
+- **Ground truth is `gh api rate_limit -i` → the `Date:` header** — GitHub's
+  clock, unaffected by this machine.
+- Derive the offset **once** at the start of a VPN session and apply it to every
+  stamp that lands in a file: kanban `created_at` / `updated_at`, event `at`,
+  doc dates, research dates. Don't re-derive per write.
+- A 14h skew keeps the same calendar date only by luck — near midnight it flips
+  the **date**, which is what silently corrupts a card.
+
+**Second VPN cost, measured 2026-07-27 (MPI-354):** it throttled an R2 upload
+**~15x** (4.4 MiB/s → ~300 KiB/s). Do the CivitAI half with the VPN on, then have
+it turned off before staging weights to R2.
+
+---
+
 ## Context Router — READ the target BEFORE the matching task
 
 | Task | Read first |
@@ -124,9 +155,13 @@ Sub-agents start cold with zero CLAUDE.md context. Dispatching without briefing 
 
 ---
 
-## Multi-Root Workspace
+## Sibling repos — access WITHOUT loading their config
 
-Cubric-Vision is **master** (this folder — has `.claude/`, kanban, jsconfig, CLAUDE.md). VS Code workspace roots (`Cubric-Vision.code-workspace`): this folder + siblings under `c:\AI\Mpi\` — `Cubric-Studio`, `MadPony-Identity`, `mpi-ci`, `Cubric-Prompt`, `Cubric Studio Brand Assets`. Related on-disk siblings NOT in the workspace: `CubricStudio_Redesign` (design playground, intentionally no git), `Cubric Studio (Website)` and `Cubric Studio (Docs)` (separate repos).
+Cubric-Vision is **master** (this folder — has `.claude/`, kanban, jsconfig, CLAUDE.md). The siblings under `c:\AI\Mpi\` — `Cubric-Studio`, `MadPony-Identity`, `mpi-ci`, `Cubric-Prompt`, `Cubric Studio Brand Assets` — are reachable via `permissions.additionalDirectories` in `.claude/settings.json`, **deliberately NOT VS Code workspace folders.** Related on-disk siblings in neither list: `CubricStudio_Redesign` (design playground, intentionally no git), `Cubric Studio (Website)` and `Cubric Studio (Docs)` (separate repos).
+
+**Why, and do not undo it:** a workspace folder behaves as `--add-dir`, which also loads that repo's `.claude/skills/`, `.claude/agents/` and its settings' `enabledPlugins` / `extraKnownMarketplaces`. Measured 2026-07-29 in the reverse direction: a Cubric-Prompt session holding this repo as a workspace folder was running **10 Vision skills + 4 Vision commands**, plus MadPony-Identity's rival `mpi-end` and Vision's `enabledPlugins`. `permissions.additionalDirectories` grants the same read/edit access with **none** of that config loading. So: **never re-add the siblings to `Cubric-Vision.code-workspace`, and never `/add-dir` them mid-session.** Expect a workspace-trust dialog on first start — declining it leaves the grant inert. Related trap: skill name collisions resolve **enterprise > personal > project**, so `mpi-end` must never go in `~/.claude/skills/` — it would override every repo's own copy.
+
+**The two halves propagate differently.** `Cubric-Vision.code-workspace` is **gitignored** (`.gitignore:63`), so stripping the folders is a local-only edit that a fresh clone or a second machine will not inherit. `.claude/settings.json` **is** committed, so the grant travels. If the siblings reappear in the workspace, this is why.
 
 ### Rules when working across roots
 

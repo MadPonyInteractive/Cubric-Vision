@@ -8,7 +8,7 @@ unless asked.
 
 - NEVER `git add -A` / `git add .`. Commit by explicit pathspec (`git commit --only <paths>`) — EXCEPT in the co-owned-file case below, where `--only` itself is the trap.
 - Agents MAY commit without asking.
-- The Docs-website push block in CLAUDE.md § Multi-Root Workspace always applies.
+- The Docs-website push block in CLAUDE.md § Sibling repos always applies.
 
 ## Co-owned files — `git commit --only` is NOT safe (MPI-245)
 

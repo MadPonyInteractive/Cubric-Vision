@@ -27,7 +27,10 @@ Two sources that LOOK fine but fail from a RunPod datacenter — both push you t
   pull on a Pod returns **HTTP 403** (`errorCode=22 ... status=403`) — Civitai blocks
   datacenter IP ranges even with a valid token. Confirmed on Singularity (`3001143`)
   + Soft Enhance (`2849706`). **Civitai LoRAs MUST be staged to R2** (or another host)
-  and pulled from there; the Pod cannot hit Civitai directly.
+  and pulled from there; the Pod cannot hit Civitai directly. Staging happens from
+  Fabio's machine, which Civitai **region-blocks (UK)** — that download needs his VPN,
+  and the VPN both throttles the R2 upload ~15x and skews the system clock ~14h.
+  **Read `CLAUDE.md` → "VPN + the skewed clock" before asking for it.**
 - **HF Xet CDN throttles the Pod downlink.** The LTX-2.3 **39GB bf16 diffusion** from
   HuggingFace sawtoothed **0–38 MiB/s for over an HOUR** from US-MO-1 (repeated 0B
   stalls) instead of the ~6min a clean datacenter pull should take. aria2c `-c` does

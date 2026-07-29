@@ -29,6 +29,9 @@ first (research steps 1–5 often span several sessions; use a handoff to resume
    Write the variant×format matrix into the research folder — it IS the tier plan.
 2. **LoRA survey — what LoRAs exist for this model.** Hunt the ecosystem (the model's HF
    org, lightx2v, Civitai, community repos) for LoRAs in three buckets:
+   *(Civitai region-blocks the UK — `WebFetch`/`WebSearch` can NEVER reach it. Ask Fabio
+   for the VPN, and read `CLAUDE.md` → "VPN + the skewed clock" first: while it's on, every
+   date you write to a file is ~14h wrong.)*
    - **Accelerator / speed** (lightning / turbo / hyper / lcm) — the ones that set the
      distilled tiers, version-MATCHED to the base generation (a LoRA from an older gen on a
      newer base silently degrades — always check).
