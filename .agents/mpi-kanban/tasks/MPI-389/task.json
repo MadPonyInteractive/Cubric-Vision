@@ -3,11 +3,11 @@
   "id": "MPI-389",
   "title": "permodel-key-allowlist tests assert a design MPI-336 deliberately replaced",
   "description": "Three of the nine standing test failures come from tests/permodel-key-allowlist.test.cjs, and they are STALE TESTS, not a code defect. They demand that every scope perModel control appear in _MODEL_WIDE_KEYS in js/services/projectService.js, which genuinely holds only {loras, upscaleModel} - but projectService.js:209-213 documents that MPI-336 deliberately REPLACED that hand-maintained allowlist with a modelWide flag derived from the control own scope. Live proof from the MPI-346 verification run: the sidecar carried controlState.model.krea2Turbo false, so the runtime path is correct. A fourth assertion fails separately with parsed zero snapshotted keys - the regex has drifted, which is genuine source-text drift. Rewrite the file to assert the real contract or delete it. Do NOT add the keys to _MODEL_WIDE_KEYS to make it green - that reinstates the list MPI-336 removed. Also carries the remaining six uncharacterised failures as a follow-on question.",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-07-30T00:05:00Z",
-  "updated_at": "2026-07-30T00:05:00Z",
+  "updated_at": "2026-07-30T01:20:00Z",
   "labels": [
     "tests",
     "tech-debt",
@@ -15,6 +15,7 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }

@@ -348,9 +348,12 @@ function testWorkflowFileResolution() {
     const { MODELS } = require('../js/data/modelConstants/models.js');
     const ltx = MODELS.find(m => m.id && m.id.startsWith('ltx'));
     if (ltx) {
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'local'), 'LTX_t2v.json');
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'LTX_t2v.json');
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'LTX_t2v_stage2.json');
+        // Lowercase: models.js stores workflow filenames lowercase and the files on
+        // disk match, so a case-sensitive FS (Linux/mac) resolves them. Do not
+        // "restore" the old CamelCase spelling — it only ever worked on Windows.
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'local'), 'ltx_t2v.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'ltx_t2v.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'ltx_t2v_stage2.json');
     }
 }
 

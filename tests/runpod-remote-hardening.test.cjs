@@ -38,6 +38,18 @@ function fresh(modulePath) {
     return require(modulePath);
 }
 
+// MPI-175 split remoteProxy.js into a barrel over three modules. Two of them
+// destructure remoteEngine's helpers AT LOAD TIME and remotePodState owns the
+// remote-mode singleton, so re-requiring the barrel alone left the previous
+// test's `_mode` (and its pre-mock function bindings) in place — that is why
+// teardown answered 'pod-old' and the inactive-mode interrupt answered 502.
+// The whole family must be dropped together, AFTER the mocks are installed.
+const PROXY_FAMILY = ['../routes/remotePodState', '../routes/remotePodLifecycle',
+                      '../routes/remoteProxyForward', '../routes/remoteProxy'];
+function dropProxyFamily() {
+    for (const m of PROXY_FAMILY) delete require.cache[require.resolve(m)];
+}
+
 function loadRemoteProxyHarness(overrides = {}) {
     const remoteEngine = fresh('../routes/remoteEngine');
     const runpodRemote = fresh('../routes/runpodRemote');
@@ -77,7 +89,8 @@ function loadRemoteProxyHarness(overrides = {}) {
     logger.error = (...args) => { if (overrides.log) overrides.log('error', args); };
     if (overrides.fetch) global.fetch = overrides.fetch;
 
-    const remoteProxy = fresh('../routes/remoteProxy');
+    dropProxyFamily();
+    const remoteProxy = require('../routes/remoteProxy');
 
     return {
         remoteProxy,
@@ -88,7 +101,7 @@ function loadRemoteProxyHarness(overrides = {}) {
             logger.warn = originals.logger.warn;
             logger.error = originals.logger.error;
             global.fetch = originals.fetch;
-            delete require.cache[require.resolve('../routes/remoteProxy')];
+            dropProxyFamily();
         },
     };
 }

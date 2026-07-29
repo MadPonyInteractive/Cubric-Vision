@@ -156,11 +156,14 @@ export const Events = new EventBus();
  * Settings events (emitted by UI components, consumed by projectService):
  * 'settings:model:select' { modelId: string }                      — model first selected, create key with defaults if missing
  * 'settings:tool:select'  { toolKey: string }                      — tool first selected, create key with defaults if missing
- * 'settings:model:update' { modelId: string, opName?: string, key: string, value: any }
+ * 'settings:model:update' { modelId: string, opName?: string, key: string, value: any, modelWide?: boolean }
  *                                                                  — partial setting update (queued + debounced).
  *                                                                    `opName` selects the per-op bucket under
  *                                                                    modelSettings[modelId].operations. Omit `opName` only
- *                                                                    for model-wide keys (loras, upscaleModel).
+ *                                                                    for a model-wide write: either `modelWide: true` (what
+ *                                                                    every scope:'perModel' control sends — the control's
+ *                                                                    scope is the source of truth, MPI-336) or a legacy
+ *                                                                    key in _MODEL_WIDE_KEYS (loras, upscaleModel).
  * 'settings:shared:update' { mediaType: 'image'|'video', key: string, value: any }
  *                                                                  — cross-model shared setting update (queued + debounced).
  *                                                                    Writes to project.shared[mediaType].

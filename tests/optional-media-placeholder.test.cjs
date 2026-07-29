@@ -27,8 +27,13 @@ const WF_DIR = path.join(ROOT, 'comfy_workflows');
 
 // The files routes/comfy.js stages into the engine `input/` before submit.
 // Kept in sync by the assertion below, so a drift here fails loudly.
+// MPI-272 dropped placeholder.png / ltx_silence.wav: image and audio inputs moved to
+// self-gating MpiLoadImageFromPath / MpiLoadAudio path nodes (empty string = no media),
+// so LATENTS are the only staged survivors. LoadImage/LoadAudio stay in MEDIA_CLASSES
+// below on purpose — if one reappears in an optional graph it must be caught, not
+// silently accepted.
 const STAGED = ['ComfyUI_00001_.latent', 'ltx_video_latent_00001_.latent',
-                'ltx_audio_latent_00001_.latent', 'placeholder.png', 'ltx_silence.wav'];
+                'ltx_audio_latent_00001_.latent'];
 
 // Guard the guard: if WORKFLOW_INPUT_DEFAULTS changes, this list must too.
 const comfyRoutes = fs.readFileSync(path.join(ROOT, 'routes', 'comfy.js'), 'utf8');
@@ -81,7 +86,8 @@ for (const base of optionalFiles) {
             if (!STAGED.includes(baked)) {
                 violations.push(`${file} node ${id} (${node.class_type} "${title}") bakes ` +
                     `"${baked}" — not staged. Set it to a WORKFLOW_INPUT_DEFAULTS name ` +
-                    `(usually placeholder.png) in ComfyUI and re-export.`);
+                    `in ComfyUI and re-export, or (for image/audio) switch the node to the ` +
+                    `self-gating MpiLoadImageFromPath / MpiLoadAudio path variant.`);
             }
         }
     }
@@ -94,10 +100,16 @@ assert.deepStrictEqual(violations, [],
     'optional media inputs must bake a staged filename:\n  ' + violations.join('\n  '));
 
 // Positive control: the rule really is satisfied by the workflows that shipped correctly.
-const ltx = JSON.parse(fs.readFileSync(path.join(WF_DIR, 'LTX_t2v.json'), 'utf8'));
-const startFrame = Object.values(ltx).find(n => n._meta?.title === 'Input_Start_Frame');
-assert.strictEqual(bakedName(startFrame), 'placeholder.png',
-    'LTX_t2v Input_Start_Frame is the reference case — its generator stamps this');
+// (Lowercase filename — models.js and the files on disk are both lowercase; the old
+// 'LTX_t2v.json' spelling only ever opened on a case-insensitive Windows FS.)
+const ltx = JSON.parse(fs.readFileSync(path.join(WF_DIR, 'ltx_t2v.json'), 'utf8'));
+const videoLatent = Object.values(ltx).find(n => n._meta?.title === 'Input_Video_Latent');
+assert.strictEqual(bakedName(videoLatent), 'ltx_video_latent_00001_.latent',
+    'LTX t2v Input_Video_Latent is the reference case — generate_ltx.py stamps this');
+
+// Negative control: the check has teeth. An unstaged bake must be rejected.
+assert.ok(!STAGED.includes('placeholder.png'),
+    'placeholder.png was un-staged by MPI-272 — a graph baking it would now fail validation');
 
 console.log(`optional-media-placeholder: ${checkedFiles} workflows, ${checkedNodes} media nodes, 0 violations`);
 
