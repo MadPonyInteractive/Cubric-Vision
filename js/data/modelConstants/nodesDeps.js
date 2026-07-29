@@ -77,6 +77,19 @@ export const nodesDeps = {
         filename: 'comfyui-impact-pack',
         url: lockUrl('ComfyUI-Impact-Pack'),
         installRequirements: true,
+        // requirements.txt line 10 is `git+https://github.com/facebookresearch/sam2`, which
+        // makes pip shell out to `git clone`. No portable engine ships git and normal users
+        // do not have it on PATH, so this failed 100% of clean installs — and Retry could
+        // never clear it. sam2 is unused here: it backs Impact-Pack sampling nodes we never
+        // exercise, and grep finds no `sam2`/`facebookresearch` reference anywhere in js/,
+        // routes/ or comfy_workflows/. We ship SAM 1 (`sam-vit-b`), which MPI-380 kept as the
+        // Impact segment refiner. Dropped on every platform — no portable engine has git.
+        // (MPI-387)
+        requirementsDrop: {
+            win32: ['git+https://github.com/facebookresearch/sam2'],
+            darwin: ['git+https://github.com/facebookresearch/sam2'],
+            linux: ['git+https://github.com/facebookresearch/sam2'],
+        },
         // requirements.txt is UNPINNED (numpy, scipy, transformers, opencv-python-headless,
         // scikit-image, matplotlib, …) → a --upgrade install can major-bump a SHARED package
         // engine-wide (MPI-217 class). Pin the drift-risky ones to the live proven-good set

@@ -74,5 +74,31 @@ assert.ok(/requirementsDrop:\s*dep\.requirementsDrop/.test(createDepJob[1]),
     assert.ok(!dep.requirementsDrop.win32 && !dep.requirementsDrop.linux,
         'Windows and Linux resolve the CUDA wheel fine and must not be filtered');
 
+    // MPI-387 — Impact-Pack's requirements.txt line 10 is a git+ URL. pip shells out
+    // to `git clone` for it, and no portable engine ships git, so this failed 100% of
+    // clean installs on every platform and Retry could never clear it.
+    const impact = DEPS['ComfyUI-Impact-Pack'];
+    const SAM2 = 'git+https://github.com/facebookresearch/sam2';
+    assert.ok(impact, 'ComfyUI-Impact-Pack must exist in the dep registry');
+    for (const plat of ['win32', 'darwin', 'linux']) {
+        assert.ok(impact.requirementsDrop && impact.requirementsDrop[plat]?.includes(SAM2),
+            `Impact-Pack must drop the sam2 git+ URL on ${plat} — no portable engine ships git`);
+    }
+
+    // _filterRequirements matches with `name === d` after trim+lowercase, so the drop
+    // string must be BYTE-EXACT against the locked requirements.txt. A `.git` suffix or
+    // a stray space makes this a silent no-op that still fails every clean install.
+    // Verified against ltdrdata/ComfyUI-Impact-Pack @ 429d0159.
+    const IMPACT_REAL = [
+        'segment-anything', 'scikit-image', 'piexif', 'transformers',
+        'opencv-python-headless', 'scipy', 'numpy', 'dill', 'matplotlib', SAM2,
+    ].join('\n');
+    const filtered = _filterRequirements(IMPACT_REAL, [SAM2]);
+    assert.ok(filtered !== null, 'the sam2 line must actually match — null means nothing was dropped');
+    assert.ok(!filtered.includes('facebookresearch'), 'sam2 must be gone from the filtered body');
+    assert.ok(filtered.includes('segment-anything'),
+        'SAM 1 must survive — MPI-380 kept it as the Impact segment refiner');
+    assert.strictEqual(filtered.split('\n').length, 9, 'exactly one line may be dropped');
+
     console.log('requirements-filter: all assertions passed');
 })();
