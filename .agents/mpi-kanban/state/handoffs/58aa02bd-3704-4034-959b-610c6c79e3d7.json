@@ -4,14 +4,14 @@
  "generated_at": "2026-07-29T04:50:02Z",
  "from_session": null,
  "to_role": "implementer",
- "status": "open",
+ "status": "closed",
  "session": {
   "name": "MPI-387 fix D - Windows standard-Electron relayout so a root CubricVision.exe is the double-click target",
   "branch": "master"
  },
  "goal": {
   "original": "A clean Windows 11 install of Cubric Vision is broken end-to-end. Diagnose and fix it. Fix D is the remaining structural one: Smart App Control hard-blocks the entire Windows launch chain.",
-  "status": "in_progress",
+  "status": "complete",
   "summary": "Four of six MPI-387 defects are SHIPPED (splash 335fe260, git+sam2 f371a162, MAX_PATH archive + install-depth preflight + failure attribution 494228fe). This handoff covers fix D ONLY: relayout the Windows portable build to the standard Electron layout so a plain CubricVision.exe sits at the zip root and no .vbs/.bat/.cmd hop exists. Every blocker below was re-verified against the working tree at 494228fe - the line numbers are current, do not re-derive them."
  },
  "plan": {
