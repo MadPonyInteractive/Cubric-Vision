@@ -45,6 +45,7 @@
 3. **Never Skip \****`comfyNeedsRestart`**\*\*:** After custom node install, ComfyUI must be restarted. `ensureServerRunning()` handles this automatically — do not suppress or bypass it.
 4. **Always Use Events for Download UI:** Components must subscribe to `download:*` events via `Events.on()`, not poll `state.downloadJobs` directly. Store the unsubscribe function and call it on cleanup.
 5. **Never Open a Second EventSource:** Only `downloadService._connectSSE()` opens `/comfy/downloads/stream`. All other code subscribes via `Events.on()` to events already bridged by `downloadService`.
+6. **Never wait for a `download:*` event you armed AFTER the POST (MPI-395):** `POST /comfy/models/download/start` calls `_startPendingDeps()` **before** `res.json()` (register-before-respond, G8), and an install whose deps are all already on disk goes **terminal inside the request handler** — 0 queued deps, nothing to download. So `download:complete` can be broadcast before the response even lands. Arm any terminal listener **before** the fetch, and give it an explicit cancel for the case where the POST turns out never to have fired (a cancel-while-queued emits its event before the chain link runs). Getting this wrong wedges the serial install queue for the full 30-minute safety ceiling, and a `queued` job arms **no** revert timer — so it fails silently. The no-op install is the *common* case on a warm remote volume, not an edge case.
 
 ---
 
