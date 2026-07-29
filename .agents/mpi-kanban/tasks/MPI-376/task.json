@@ -6,7 +6,7 @@
  "maturity": "validating",
  "status": "active",
  "created_at": "2026-07-28T13:36:00Z",
- "updated_at": "2026-07-29T22:20:00Z",
+ "updated_at": "2026-07-29T22:45:00Z",
  "labels": [
   "ui",
   "ux",
@@ -41,5 +41,10 @@
    "MPI-373",
    "MPI-371"
   ]
+ },
+ "attention": {
+  "state": "required",
+  "reason": "Undo SHIPPED and live-verified (7db2aad0). One path unverified: Add/Subtract bake undo needs a detect run, so it needs an engine - same _recordUndo() the verified clear() uses, but unexercised. One click with an engine up closes this. Next session order + the undo contract: handoffs/next-session.md",
+  "updated_at": "2026-07-29T22:45:00Z"
  }
 }
