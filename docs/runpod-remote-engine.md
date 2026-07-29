@@ -332,6 +332,18 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   doesn't happen → the node 503s at execution (`POST /proxy/prompt 503`). FIX = pre-bake those
   weights into the image at build (**MPI-81**). Until then interpolate/upscale/auto-mask 503
   remotely; that is expected, not a bug.
+- **Engine assets no longer need a rebuild (MPI-380).** Baking was the ONLY delivery path for
+  an `engineAsset` weight, and that list is hand-maintained in the mpi-ci Dockerfile — a
+  different repo — so an engineAsset added after the last image build reached a Pod by no path
+  at all, surfacing as a 503 mid-generation rather than a build error. `sam3-multiplex` (1.75GB,
+  the SAM3 masking weight) shipped that way and was dead on every Pod. Now `shell.js
+  _installRemoteEngineAssets` fires on the SAME first-connect latch as the node-drift heal and
+  volume-installs every engineAsset EXCEPT those flagged `bakedOnPod: true` (the 5 the image
+  really bakes) or carrying `targetPath` (baked inside a node folder) — reusing the ordinary
+  remote install path, so the volume pre-check, dedupe, serial chain and SSE progress all come
+  free. Remote is now DERIVED from `DEPS` the way local already was. Adding an engineAsset needs
+  no image rebuild; adding a `bakedOnPod` flag DOES need the matching Dockerfile edit, and
+  `tests/remote-engine-assets.test.cjs` fails if the two drift apart.
 - Image builds run via private **mpi-ci**: `gh workflow run cubric-vision-pod-image.yml -f
   manifest_version=X -f wrapper_version=X -f comfyui_ref=master -f push_latest=false`. A
   wrapper/start.sh/Dockerfile change ⇒ rebuild + POD_IMAGE bump + app restart + a fresh Pod.

@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-392",
+  "title": "Settings silently resets the SERVER models root when the stored path contains 'temp'/'tmp'",
+  "description": "Opening the Settings panel can silently repoint the models root at the default, orphaning a user's whole model library. MpiSettings.js:348-354 runs a legacy guard on MOUNT: if the localStorage models path contains 'temp' or 'tmp' ANYWHERE (substring, case-insensitive) it calls _setComfyPath(''), which POSTs /comfy/set-path with an empty path; comfy.js:500-506 treats falsy as 'revert to default' and rewrites extra_model_paths.yaml to getDefaultModelsRoot(). That YAML is the SINGLE source of truth - /comfy/get-path reads it directly and nothing else remembers the real root. The route logs ONLY on error, so a successful reset leaves no trace anywhere. Hit live 2026-07-29: a user's root flipped from G:/CubricModels (144GB) to <engine>/mpi_models with no log line, and the local engineAsset repair then re-downloaded sam3-multiplex (1.75GB) that already existed at the real root. Trigger that session was almost certainly localStorage poisoned by MPI-387's CUBRIC_ENGINE_ROOT=C:/tmp/fake-engine testing (MpiEngineInstall.js:229 stores whatever is in the models field), but the SHIPPING risk is a user whose models folder legitimately contains those letters - D:/AI/temp_models, a username like Temperance - who loses the root every single time they open Settings and sees their library as uninstalled. FIX DIRECTION: the guard only ever needed to clear localStorage; reaching through to server state is the overreach. Drop the _setComfyPath('') call, or match a REAL temp dir (os.tmpdir prefix) instead of a substring, and require confirmation before any reset. Separately add a success log line to /comfy/set-path - its absence is the only reason this took an investigation rather than 30 seconds. Guard dates to f41ffdc5 (2026-04-07).",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-29T15:55:09Z",
+  "updated_at": "2026-07-29T15:55:09Z",
+  "labels": [
+    "bug",
+    "settings",
+    "models-root",
+    "data-loss-adjacent",
+    "observability"
+  ],
+  "acceptance": [
+    "A models path containing 'temp'/'tmp' no longer rewrites extra_model_paths.yaml on Settings mount",
+    "The guard (if kept at all) touches localStorage ONLY - never server state - and never fires without the user's say-so",
+    "Substring matching replaced by a real temp-dir test, or the guard deleted outright if its original reason is gone",
+    "POST /comfy/set-path logs its successful writes: old root -> new root, and who asked",
+    "A test pins it: mounting Settings with a temp-ish stored path must leave the YAML byte-identical",
+    "Sweep the other _setComfyPath('') style calls + MpiEngineInstall.js:229 for the same overreach"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
