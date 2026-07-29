@@ -228,6 +228,15 @@ Stage bans glassmorphism by default. Each `backdrop-filter: blur(...)` must be j
 
 ## 9. JS canvas color literals (wave 2.6 scope)
 
+> **SUPERSEDED — do not restore these values (2026-07-29).** The technique below still
+> holds; the table does not. `js/components/Primitives/MpiCanvas/MpiCanvas.js` is the source
+> of truth for the constants, and `styles/01_base.css` for the tokens they mirror. Four
+> constants listed here (`MASK_COLOR_60`, `MASK_COLOR_25`, `MASK_OUTLINE`, `CROP_STROKE`)
+> do not exist in that file, and `BRUSH_CURSOR` is given a rose the code stopped using long
+> ago — an agent "correcting" the code to match this table would revert shipped work. The
+> mask radial-gradient spec below was never implemented either; the orphaned `.mask-shape*`
+> rules in `MpiCanvasViewer.css` are its only remnant.
+
 Canvas draws happen per-frame; JS cannot use `var(--token)` without `getComputedStyle` ceremony. Hardcode OKLCH hex constants at the top of each file with a comment referencing the token.
 
 | Role | JS constant | OKLCH value | Token reference |
