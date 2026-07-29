@@ -68,6 +68,24 @@ layer underneath. The buffer is reused across frames and across both calls in on
 — JS cannot read CSS vars per frame, so update the constant when the token changes.
 `displayInverted` is display only; `getURL(bg, fg)` does real inversion for export.
 
+### The brush cursor is TWO-TONE on purpose — `_drawBrushIndicator()`
+
+It draws on `screenUICanvas` (container px, outside the CSS transform), not the
+overlay, so the ring keeps its screen size at any zoom while its radius tracks
+`brushSize * scale`. The real cursor is hidden while painting; this circle *is* it.
+
+The arc is stroked **twice** — accent, then `BRUSH_CURSOR_OUTLINE` dark at
+`lineDashOffset` half a period — the same interleave `_drawGridOverlay()` uses. A
+single-colour ring is invisible against a background of its own hue: the eraser was
+drawn in `--surface-canvas` and disappeared on black and in B/W view. **Dash halves
+must stay equal with the offset at half the period** (`[4,4]` / `4`) or the two
+passes stop tiling and bare arcs open up. Same reason the centre dot is an accent
+fill inside a dark ring, exactly like the SAM3 point dots.
+
+Mode reads off the accent alone: `BRUSH_CURSOR` heat = paint, `BRUSH_ERASER` frost =
+erase. `MpiCanvasViewer.css`'s `.mask-shape*` rules are the dead pre-canvas cursor —
+they duplicate these colours and are not the source of truth.
+
 ---
 
 ## The SAM3 tools — points and text

@@ -9,10 +9,12 @@
  */
 
 /* Stage canvas color constants — JS cannot use CSS vars in per-frame draws.
- * Values mirror MAPPING.md §9. Update here if tokens change in 01_base.css. */
-const BRUSH_CURSOR         = 'oklch(0.76 0.17 355)';        /* --accent-heat */
-const BRUSH_CURSOR_OUTLINE = 'oklch(0.76 0.17 355 / 0.8)';  /* --accent-heat 80% */
-const BRUSH_ERASER         = 'oklch(0.20 0.020 350 / 0.8)'; /* --surface-canvas 80% */
+ * Values mirror the token block in styles/01_base.css — that is the source of
+ * truth; update here when a token changes. (NOT docs/redesign/MAPPING.md §9:
+ * it is a superseded wave-2.6 proposal whose table drifted from this file.) */
+const BRUSH_CURSOR         = 'oklch(0.76 0.17 355)';        /* --accent-heat — paint ring */
+const BRUSH_CURSOR_OUTLINE = 'oklch(0.16 0.02 350 / 0.9)';  /* --surface-canvas 90% — the DARK half of the ring */
+const BRUSH_ERASER         = 'oklch(0.78 0.14 220)';        /* --accent-frost — erase ring */
 const BRUSH_DOT            = 'oklch(0.76 0.17 355)';         /* --accent-heat */
 const SLIDER_ARROW         = 'oklch(0.66 0.014 80)';       /* --ink-3 */
 const GRID_LINE            = 'oklch(0.95 0.005 80 / 0.8)'; /* --ink-1 80% */
@@ -975,21 +977,34 @@ class _CanvasCore {
         if (!this.mask.paintEnabled) return; // brushless mask tool (MPI-381)
         if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
             const r = (this.mask.brushSize * scale) / 2;
-            const isEraser = this.mask.brushType === 'eraser';
-            const color = isEraser ? 'oklch(0.20 0.020 350 / 0.95)' : 'oklch(0.76 0.17 355 / 0.95)';
-            const outline = isEraser ? 'oklch(0.20 0.020 350 / 0.85)' : 'oklch(0.76 0.17 355 / 0.85)';
+            const accent = this.mask.brushType === 'eraser' ? BRUSH_ERASER : BRUSH_CURSOR;
             ctx.save();
+            // Two-tone ring, same trick as _drawGridOverlay(): one accent pass, one
+            // dark pass offset half a period, so the dashes interleave. A single
+            // colour is invisible against a background of its own hue — which is
+            // exactly how the eraser (drawn in --surface-canvas) vanished on black.
+            // Equal halves + offset = period/2 tiles the ring completely; change one
+            // and the other must follow or bare arcs open up.
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.strokeStyle = outline;
             ctx.lineWidth = 1.5;
-            ctx.setLineDash([4, 3]);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = accent;
             ctx.stroke();
+            ctx.lineDashOffset = 4;
+            ctx.strokeStyle = BRUSH_CURSOR_OUTLINE;
+            ctx.stroke();
+            // Centre dot — accent fill inside a dark ring, as _drawMaskPoints() does,
+            // so it survives a light background too. Both dash settings must reset.
             ctx.setLineDash([]);
+            ctx.lineDashOffset = 0;
             ctx.beginPath();
-            ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = color;
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = accent;
             ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = BRUSH_CURSOR_OUTLINE;
+            ctx.stroke();
             ctx.restore();
         }
     }
