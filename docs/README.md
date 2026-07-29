@@ -40,7 +40,7 @@ NOT mechanically split these):
 | Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | **Generation lifecycle** (dispatch guard, progress pipeline, Stop/lanes identity doctrine, queue-drain notifications) | [generation-lifecycle.md](generation-lifecycle.md) |
-| **Op & model selection** (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker + hold-Tab, bar order) | [op-model-selection.md](op-model-selection.md) |
+| **Op & model selection** (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker, bar order) | [op-model-selection.md](op-model-selection.md) |
 | **Gallery** (cards, thumbnails, selection, drag-drop, hover media) | [gallery.md](gallery.md) |
 | **Masking** (layer model, the display-vs-export split, overlay draw, Add/Subtract, the tool family + PromptBox contract) | [masking.md](masking.md) |
 | **SAM3 masking** (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | [masking-sam3.md](masking-sam3.md) |

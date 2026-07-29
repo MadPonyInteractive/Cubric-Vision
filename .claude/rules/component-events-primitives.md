@@ -84,11 +84,11 @@ EMITS:   `select`    `{ action: string }`
          `will-open` `{}` (fires BEFORE items render; listeners can call `setContextItems()` synchronously to refresh availability)
          `open`      `{}`
          `close`     `{}`
-LISTENS: Hotkeys 'tab' (`radialMenu.toggle` — open/close toggle), Hotkeys 'control+tab' (`radialMenu.devToggle`, MPI-338 — hold swaps to the `dev` context, restored by `_hide()` on every close path; dev-mode-gated so inert in production), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
-NOTE:    A context holding exactly ONE enabled item never draws the ring at all (MPI-356) — `_onTabDown` fires `select` on key-down and returns. Self-erases once a second item lands. (The full-circle single-item cone still exists for a lone item reached any other way.)
-NOTE:    Dev actions (Apps/Components/Restart Engine) live on the `dev` context (Ctrl+Tab), NOT the main Tab radial — `navigation.setContextItems('dev', …)` only in `APP_CONFIG.dev_mode`. The old `extraItems`/`setExtraItems` API was removed (MPI-338).
+LISTENS: Hotkeys 'control+tab' (`radialMenu.devToggle`, MPI-338 — hold swaps to the `dev` context, restored by `_hide()` on every close path; dev-mode-gated so inert in production), window keyup/mousemove (close on release — intentional exception for radial menu gesture)
+NOTE:    **DEV-ONLY as of MPI-378.** The component does NOT bind bare Tab any more — Tab is the workspace flipper (`workspace.flip`, `js/shell/navigation.js`, `docs/shell.md`). `RADIAL_ITEMS` and the `PAGE_GALLERY`/`PAGE_GROUP_HISTORY` contexts are gone; `_syncRadial()` early-returns unless `APP_CONFIG.dev_mode`, so in production nothing mounts at all. Do NOT re-add a Tab item or a workspace context — take a hotkey of your own instead.
+NOTE:    Dev actions (Apps/Components/Restart Engine) live on the `dev` context (Ctrl+Tab), the only context there is — `navigation._syncRadial` sets it only in `APP_CONFIG.dev_mode`. The old `extraItems`/`setExtraItems` API was removed (MPI-338).
 NOTE:    Items may carry `disabled:true` (MPI-337). Disabled items render dimmed (`.mpi-radial__item--disabled`) and can never be `select`-ed. MPI-356: the resolver aims at the NEAREST sector INCLUDING disabled ones and then returns -1 if that one is dimmed — it must not fall through to the nearest enabled neighbour, or a blind gesture at a dead sector fires the wrong action.
-NOTE:    Ops LEFT the radial (MPI-356) — they live in the prompt box's op strip. `navigation.RADIAL_ITEMS` is the single shared item list (Models today, + Apps when MPI-332 un-gates the app library); there is no op→item mapping and no `refreshRadial`/`refreshGroupHistoryRadial` plumbing any more.
+NOTE:    Ops LEFT the radial (MPI-356) — they live in the prompt box's op strip. Models left too (MPI-378): the prompt box's model button is now the only emitter of `ui:open-model-picker`. There is no op→item mapping and no `refreshRadial`/`refreshGroupHistoryRadial` plumbing any more.
 
 ### MpiRadioGroup
 EMITS:   `select` `{ value: string, option: object|string }`

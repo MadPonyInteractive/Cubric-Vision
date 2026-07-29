@@ -23,7 +23,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ### Op & model selection
 
-- **Read first:** `docs/op-model-selection.md` (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker + hold-Tab, bar order)
+- **Read first:** `docs/op-model-selection.md` (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker, bar order)
 - **Also:** `docs/component-contracts.md` (PromptBox op memory, MpiRadioGroup `aria-disabled`, MpiTileSheet, MpiModelSettings), `docs/generation-lifecycle.md` (what happens after the pick)
 - **Memory:** none (lives in docs/)
 
