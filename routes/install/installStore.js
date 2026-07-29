@@ -254,6 +254,13 @@ function createInstallStore({ broadcast, logger, now } = {}) {
      * @param {Set<string>} [confirmedInstalled] - modelIds a resync just confirmed.
      * @returns {string[]} pruned modelIds
      */
+    /** Drop dep jobs no surviving model job references. */
+    function _dropOrphanDeps() {
+        const referenced = new Set();
+        for (const j of _modelJobs.values()) for (const d of j.deps) referenced.add(d.id);
+        for (const depId of [..._depJobs.keys()]) if (!referenced.has(depId)) _depJobs.delete(depId);
+    }
+
     function pruneTerminal(confirmedInstalled = new Set()) {
         const t = _now();
         const pruned = [];
@@ -268,14 +275,40 @@ function createInstallStore({ broadcast, logger, now } = {}) {
             }
             if (drop) { _modelJobs.delete(modelId); pruned.push(modelId); }
         }
-        if (pruned.length) {
-            // Drop orphaned deps — those no surviving model job references.
-            const referenced = new Set();
-            for (const j of _modelJobs.values()) for (const d of j.deps) referenced.add(d.id);
-            for (const depId of [..._depJobs.keys()]) if (!referenced.has(depId)) _depJobs.delete(depId);
-            _bump();
-        }
+        if (pruned.length) { _dropOrphanDeps(); _bump(); }
         return pruned;
+    }
+
+    /**
+     * Drop an UNINSTALLED model's terminal job outright (MPI-396).
+     *
+     * Uninstall is terminal evidence `pruneTerminal` structurally cannot express: its
+     * DONE branch drops on `confirmedInstalled.has(modelId) || age >= DONE_TTL_MS`,
+     * and an uninstalled model is never in `confirmedInstalled` — the reconciler builds
+     * that set from deps that ARE on disk. So the job could only leave via the 120s
+     * belt, and post-uninstall NOTHING is active, so the reconciler poll self-idles
+     * (`hasActiveJobs()` gate) and never runs the belt either. The job was immortal:
+     * the status endpoint and every snapshot kept reporting a `done` job for a model
+     * that is gone, which the Model Library draws as a 100% progress bar instead of an
+     * Install chip — and being main-process, it survived a renderer reload.
+     *
+     * Terminal jobs only. A model uninstalled mid-download is the uninstall route's
+     * in-flight dep guard's business; dropping a live job here would strand the
+     * transport layer that still owns its downloaders.
+     *
+     * @returns {boolean} true if a job was dropped — caller should `broadcastSnapshot()`.
+     */
+    function dropModel(modelId) {
+        const job = _modelJobs.get(modelId);
+        if (!job) return false;
+        if (!MODEL_TERMINAL.has(job.status)) {
+            _logger.warn('installStore', `dropModel: ${modelId} is still ${job.status} — left to the in-flight guard`);
+            return false;
+        }
+        _modelJobs.delete(modelId);
+        _dropOrphanDeps();
+        _bump();
+        return true;
     }
 
     /**
@@ -326,6 +359,7 @@ function createInstallStore({ broadcast, logger, now } = {}) {
         transitionDep,
         syncProgress,
         pruneTerminal,
+        dropModel,
         clear,
         // read
         modelJob,

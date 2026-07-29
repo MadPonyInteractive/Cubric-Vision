@@ -311,6 +311,16 @@
   uninstall also says "uninstalled" now, rather than "updated", which read as the
   opposite of what had just happened.
 
+- **An uninstalled model no longer shows a full progress bar where its Install
+  button belongs.** After uninstalling a model, its tile went back to the Available
+  section as it should — but drew a completed progress bar instead of an Install
+  button, so the model looked like it was still there, or still doing something.
+  Restarting the app or reloading did not clear it. The app was still holding the
+  finished install job for a model it had just deleted, and had no way to be told the
+  model was gone: it only ever expected an install to end with the model *present*.
+  It now lets go of the job the moment you uninstall, on both your own machine and a
+  cloud Pod.
+
 - **Settings no longer forgets where your models are.** If your models folder had
   "temp" or "tmp" anywhere in its path — `D:\AI\temp_models`, a folder called
   `tmp-models`, even a Windows account name that happens to contain those letters

@@ -2406,6 +2406,11 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
         logger.info('download', `remote uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files (deleteFiles=${deleteFiles})`);
         _modelJobs.delete(modelId);
+        // MPI-396: the line above clears the legacy runtime map — NOT the SOT store,
+        // which keeps serving the model's terminal `done` job to the status endpoint
+        // and every snapshot. Drop it BEFORE the uninstalled broadcast so the FE never
+        // re-renders against a job for a model it has just been told is gone.
+        if (store.dropModel(modelId)) store.broadcastSnapshot();
         _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls: [], remote: true });
         return res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, remote: true, partialUnsupported: anyUnsupported });
     }
@@ -2540,6 +2545,12 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
     logger.info('download', `uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
     _modelJobs.delete(modelId);
+    // MPI-396: same store settle as the remote leg above. The reconcileOnce() below
+    // is NOT a substitute — its pruneTerminal cannot express "confirmed uninstalled"
+    // (the model is never in `confirmedInstalled`), so without this the job survives
+    // to the 120s belt, which post-uninstall never runs because the reconciler poll
+    // self-idles when no job is active.
+    if (store.dropModel(modelId)) store.broadcastSnapshot();
     _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
     // G11: reconcile against post-delete disk truth (settles/prunes anything the
     // removal touched) and refresh the snapshot. Non-fatal — the uninstall itself

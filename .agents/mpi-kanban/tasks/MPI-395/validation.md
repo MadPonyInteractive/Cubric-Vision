@@ -91,15 +91,53 @@ reconnect genuinely re-ran the engine-asset heal — the wedge condition).
    (volume 139.4 → 149GB). Pre-fix, that same click parked on `Queued…` with no server-side
    job at all.
 
-## STILL NOT verified — three residuals
+## USER-VERIFIED LIVE 2026-07-29 (22:5xZ) — the three residuals. CARD CLOSED.
 
-Structurally sound and covered by the guard test, but not exercised live:
+Run on CPU Pod `omi9588i0gymlu`, volume at 139.4/150GB (10.6GB free). A = SDXL Realistic
+(~9.6GB, the only uninstalled model that fits), B = SDXL NSFW.
 
-1. **The legitimate queue.** Start one install, click Install on a second: it *should* read
-   `Queued…` and then start when the first finishes downloading. Needs volume headroom —
-   the uninstall has since freed ~9GB, so this is now cheap to run.
-2. **Cancel-while-queued.** Cancel a legitimately-queued install; the chain must release,
-   not stall. This exercises the new `done.cancel()` path, which is the one piece of the fix
-   with no live coverage — a `download:cancelled` fired before `run()` arms is exactly what
-   the old `fired ? … : undefined` guard existed for.
-3. **OS notification when unfocused.** Only the in-app toast half was observed.
+1. **The legitimate queue — PASS.** A installed; B clicked ~5s later read `Queued…` with the
+   waiting mascot.
+2. **Cancel-while-queued — PASS.** B cancelled from its detail-panel footer while still
+   `Queued…`; A downloaded on to completion unaffected. Then B clicked again the moment A
+   finished: it went **Starting… → a real install attempt**, and was rejected by the volume-full
+   pre-flight (`POST /comfy/models/download/start` → 400, `[Errno 28] No space left on device`,
+   the correct gate at `downloadManager.js` ~L1874 with only ~1GB left). **The 400 is the pass,
+   not a defect** — a rejected POST is a POST that *fired*.
+3. **OS notification when unfocused — PASS.** Renderer reloaded with the app unfocused (latch
+   reset ⇒ the engine-asset heal genuinely re-ran). The only OS toast was the legitimate
+   `Pod connected — No GPU (download) ready.` No `engine:assets`.
+
+### The timing is the proof, and it had to be — the queue is INVISIBLE server-side
+
+`/comfy/downloads/status` was polled at 2s throughout. It never showed an `sdxl-nsfw` job during
+A's download, and that is **correct**: MPI-184's queue is client-side, so a `Queued…` tile has no
+server job at all (see memory `tool_read_download_state_without_console`). Residuals 1 and 2
+therefore rest on direct observation plus this transition log:
+
+```
+20:35:04  sdxl-realistic = queued
+20:35:09  sdxl-realistic = downloading      (35s)
+20:35:44  sdxl-realistic = complete
+20:36:04  sdxl-nsfw      = queued           <- step 5's POST reached the server
+20:36:07  sdxl-nsfw      = idle             <- volume-full rejection
+```
+
+Pre-fix, the cancel at step 2 leaked the listener and left `_inFlight` pinned, so the step-5
+click would have parked on `Queued…` and **no POST would ever have reached the server** — for 30
+minutes. It reached it in seconds. The chain released. That is the `done.cancel()` path, live.
+
+### Caveat on the reproduction, worth keeping
+
+The reload trigger is a **developer** shortcut — a shipped user cannot reload the renderer. It
+does not weaken the result: `_didFirstConnectDriftCheck` latches per **app session**, so a real
+user hits the identical first-connect path on every launch → connect. Reload just reaches it
+without a restart.
+
+### Found while closing this card
+
+Two Model Library defects, both surfaced by the uninstall in step 6 — see **MPI-396** (a
+terminal DONE job survives uninstall for the full 120s `DONE_TTL_MS`, so the tile draws a 100%
+bar instead of Install, and it survives Ctrl+R because the store is main-process) and **MPI-397**
+(the grid only flips after a remote disk-stat round trip). Neither is a regression from this
+fix; both predate it.

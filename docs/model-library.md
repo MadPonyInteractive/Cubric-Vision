@@ -25,6 +25,36 @@ Wiring, all in `MpiModelManager`: sort is a stable `.sort()` in `_mediaBlock` (`
 
 `download:complete` sets `status='complete'` but NEVER removes the job from `state.downloadJobs`. Any gate keyed on `downloadState !== 'idle'` will mis-wire a card with a lingering complete job (MPI-99: Uninstall button had no listener; MPI-102: Install button had no listener after reinstall). Gate on genuinely-ACTIVE states explicitly (`downloading`/`paused`/`installing`), NOT `!== 'idle'`. `MpiModelManager.renderList()` has TWO twin branches with this gate (installed ~L251, uninstalled ~L362) — both use the identical `isActiveDownload` whitelist predicate. **Keep them in sync.**
 
+## Uninstall must SETTLE the store, or the tile draws 100% forever (MPI-396)
+
+The section above is about a job lingering in `state.downloadJobs`. This is the backend
+twin, and it is worse: the job lingered in the **store** — `routes/install/installStore.js`,
+the SOT — so it survived a renderer reload, because the store is main-process.
+
+`pruneTerminal` drops a DONE job on `confirmedInstalled.has(modelId) || age >= DONE_TTL_MS`.
+That encodes **"a DONE job ends with the model INSTALLED"**, and uninstall is the case it
+cannot express: an uninstalled model is never in `confirmedInstalled` (the reconciler builds
+that set from deps that ARE on disk), so only the 120s belt could clear it — and post-uninstall
+**nothing is active**, so `reconciler.start()`'s `hasActiveJobs()` gate makes the poll return
+early forever and the belt never runs. The job was immortal until the next install or an SSE
+reconnect landing >120s later.
+
+The renderer half is the same assumption one layer up: `_modelState` sets
+`isBusy = !!job && status === 'complete'` (MPI-241, so a fast ephemeral-Pod install does not
+flash the Install chip before re-sync lands), and `_tileState`'s `isBusy` branch then beats the
+Install chip and renders a determinate bar at `job.progress = 1`. MPI-241 modelled the window
+*before* installed flips **true**; uninstall is the identical shape with the opposite meaning.
+
+**Rule: an uninstall settles the store job itself — `store.dropModel(modelId)` +
+`broadcastSnapshot()`, at BOTH uninstall legs, before the `download:uninstalled` broadcast.**
+The remote leg (`downloadManager.js`, `remote: true`) returns `res.json()` early and never
+reaches the local leg's `reconcileOnce()`, so a one-leg fix is a false done — `dropModel` is
+deliberately called twice and a guard test pins the count at two.
+
+Do NOT fix this in `_tileState` by suppressing the bar when the model is not installed. The
+store would still be reporting a finished job for a model that no longer exists, to the status
+endpoint and every other snapshot consumer; the tile is just the consumer that draws it.
+
 ## Library flash on install — patch the tile, never rebuild the grid (MPI-235)
 
 `renderList()` tears down + rebuilds EVERY tile. During an install it must fire only on a genuine section move (a model jumping Available → Installed on complete). `download:started` / `download:progress` patch ONLY the one changing tile via `_patchTile` — NOT `renderList()`. The flash storm had two sources: (1) the backend broadcasts `download:complete` **per-dep** with `modelId:null` (then once model-level with a real id) — the frontend `download:complete` SSE handler ran `reSyncInstalledModels()` + re-emitted unconditionally, so every dep fired `models:checked` → grid rebuild ×N; gated on `data.modelId`. (2) `download:started` (fired twice — client-side in `downloadService.start()` + the backend SSE echo) and `_install()` both called `renderList()`; both replaced with `_patchTile`. Rule: on a download hot event, patch the tile, never rebuild the grid.
