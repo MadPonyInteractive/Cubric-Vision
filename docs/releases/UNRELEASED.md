@@ -276,3 +276,12 @@
 - **The startup window no longer flashes white.** On slower machines the loading
   window appeared as a blank white box for a few seconds before the logo showed
   up. It now waits until it has something to show.
+
+- **Settings no longer forgets where your models are.** If your models folder had
+  "temp" or "tmp" anywhere in its path — `D:\AI\temp_models`, a folder called
+  `tmp-models`, even a Windows account name that happens to contain those letters
+  — then simply opening Settings quietly pointed Cubric back at its own default
+  folder. Nothing was deleted, but the whole library read as if nothing was
+  installed and models you already had started downloading all over again. The
+  check that did that is gone. Cubric also writes every change of models folder to
+  its log now, so if the folder ever does move unexpectedly, there is a trail.

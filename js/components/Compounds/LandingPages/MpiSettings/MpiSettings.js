@@ -345,13 +345,13 @@ export const MpiSettings = ComponentFactory.create({
             const browseSlot = qs('#mpiSettingsBrowseBtnSlot', root);
             if (pathSlot) {
                 pathSlot.innerHTML = '';
-                let saved = Storage.getComfyRootPath() || '';
-                // Clear temp paths (legacy guard)
-                if (saved.toLowerCase().includes('temp') || saved.toLowerCase().includes('tmp')) {
-                    Storage.removeComfyRootPath();
-                    saved = '';
-                    _setComfyPath('');
-                }
+                // No mount-time guard here: a heuristic on the CACHED path must never
+                // write server state. The old one matched 'temp'/'tmp' as a substring
+                // anywhere and called _setComfyPath(''), which rewrites
+                // extra_model_paths.yaml — the single source of truth — to the default
+                // root, silently orphaning the user's real models folder (MPI-392).
+                // _hydrateComfyPath() below already reconciles this field from the YAML.
+                const saved = Storage.getComfyRootPath() || '';
 
                 const pathInst = MpiInput.mount(pathSlot, {
                     placeholder: 'Default (internal engine)',

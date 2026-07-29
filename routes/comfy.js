@@ -497,12 +497,20 @@ router.post('/comfy/set-path', async (req, res) => {
         await fs.ensureDir(path.dirname(extraConfigPath));
         const extras = await getExtraModelFolders();
 
+        // Log the root change BEFORE it happens. This route rewrites the single
+        // source of truth for where every model lives, and it used to log only on
+        // error — so a wrong root left no trace at all and cost an investigation
+        // to attribute (MPI-392).
+        const previousRoot = await getCustomRoot();
+        const effectiveBefore = previousRoot ? resolveModelsRoot(previousRoot) : getDefaultModelsRoot();
+
         if (!customPath) {
             // Reverting to the default root: always keep the YAML pointing at the
             // default models root (plus any additive extras). Do NOT delete the
             // file — without it ComfyUI would stop searching mpi_models and any
             // models installed there would be orphaned.
             await writeExtraModelPathsYaml(getDefaultModelsRoot(), extras);
+            logger.info('comfy', `set-path: models root ${effectiveBefore} -> ${getDefaultModelsRoot()} (reverted to default)`);
             return res.json({ success: true });
         }
 
@@ -511,6 +519,7 @@ router.post('/comfy/set-path', async (req, res) => {
         // installed via a relative root is invisible to generation.
         const absoluteRoot = resolveModelsRoot(customPath);
         const yamlContentPath = await writeExtraModelPathsYaml(absoluteRoot, extras);
+        logger.info('comfy', `set-path: models root ${effectiveBefore} -> ${absoluteRoot}`);
         res.json({ success: true, writtenTo: yamlContentPath, path: absoluteRoot });
     } catch (err) {
         logger.error('comfy', 'set-path failed', err);
