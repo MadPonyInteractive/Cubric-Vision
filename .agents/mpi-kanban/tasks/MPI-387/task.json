@@ -6,7 +6,7 @@
  "maturity": "in-progress",
  "status": "active",
  "created_at": "2026-07-29T23:10:00Z",
- "updated_at": "2026-07-29T05:35:00Z",
+ "updated_at": "2026-07-29T05:45:00Z",
  "labels": [
   "bug",
   "release",
@@ -27,6 +27,12 @@
   "Every fix is verified on the actual clean Windows 11 laptop, not just reasoned about"
  ],
  "links": {
-  "events": "events.jsonl"
+  "events": "events.jsonl",
+  "validation": "validation.md"
+ },
+ "attention": {
+  "state": "required",
+  "reason": "Fix D relayout needs one full app boot from the new layout with port 3000 free; the verification run died on EADDRINUSE. F1/F2/F3 still unstarted.",
+  "updated_at": "2026-07-29T05:45:00Z"
  }
 }
