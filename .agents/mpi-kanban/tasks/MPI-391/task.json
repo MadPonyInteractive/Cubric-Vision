@@ -1,0 +1,32 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-391",
+ "title": "1.3.0 cross-platform validation sweep - Windows SAC, macOS, Linux (umbrella)",
+ "column": "todo",
+ "maturity": "planned",
+ "status": "active",
+ "created_at": "2026-07-29T07:10:00Z",
+ "updated_at": "2026-07-29T07:10:00Z",
+ "labels": [
+  "umbrella",
+  "release",
+  "validation",
+  "windows",
+  "macos",
+  "linux"
+ ],
+ "description": "COORDINATION UMBRELLA, owns no code. Every fix currently sitting in validating that is blocked on \"we need a real build\" or \"we need that hardware\" is collected here so one testing day closes them, instead of each card rotting separately. It owns the ORDER, the EVIDENCE and the CLOSE-OUT: each item is verified, then written into its OWN card validation.md, then that card moves.\n\nWHY NOW: on 2026-07-29 the maintainer has, simultaneously, the clean Windows 11 laptop with Smart App Control ON that originally reproduced MPI-387, a separate Linux machine, a rented Apple Silicon Mac, and a second agent already running the RunPod sweep (MPI-385). That combination has never existed before and may not again soon.\n\nHARD PREREQUISITE: nothing platform-facing can start until the 1.3.0 artifacts are built. Windows 1.3.0 is the first build with the standard-Electron layout, and the transition update, the in-app update prompt and the archive names only exist in a real release.\n\nSECTIONS (full detail in brief.md, tickable in checklist.md): A build-time checks at the cut, owner MPI-369 - update-only root name, the FROZEN update asset name, delta manifest reads from 1.2.0, file-count sanity, plus the release-baselines/win32-x64.json restamp from the MPI-387 lineage. B Windows on the SAC laptop, owner MPI-387 - ONE clean install exercises eight items at once (A extract depth, B git-less pip, C attribution, D SAC launch, F1, F2, F3) plus a separate v1.2.0 to 1.3.0 transition update that also gives MPI-334 its first live test. C macOS on the rented Mac, owner MPI-370 - install a DEPTH model specifically, since that is the path pulling controlnet_aux, and treat ABSENCE of the requirementsDrop log line as the failure signal. D Linux, owner MPI-198 - loader-path heal needs a LOCAL engine and a SUBFOLDERED LoRA, a combination no Pod can provide, plus the first ever validated Linux generation run.\n\nEXPLICITLY EXCLUDED so they are not missed by accident: MPI-385 (already assigned, parallel, not build-gated), MPI-387 gap 4 (a SECOND update applied FROM the new layout, needs 1.3.1, the last thing between MPI-387 and done), MPI-376 (detect run, not build-gated), MPI-380 (Pod leg, user-deferred), MPI-291 (opportunistic only - note if a download self-heals, do not force it).",
+ "acceptance": [
+  "Every checklist item in checklist.md is either verified with evidence or explicitly re-deferred with a stated reason",
+  "Each result is written into the OWNING card validation.md, not into this card",
+  "Every owning card (MPI-387, MPI-370, MPI-198, MPI-369, MPI-334) is moved to reflect its new state",
+  "The Windows SAC launch result is recorded either way - a silent block is the single most important negative result and must not be softened",
+  "Items that remain unreachable after this sweep are recorded as named lines here rather than left rotting in validating"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "checklist": "checklist.md",
+  "events": "events.jsonl",
+  "handoffs": "handoffs/"
+ }
+}
