@@ -185,6 +185,15 @@
 
 ## fixes
 
+- **If the app fails to start, it now says so instead of vanishing.** A crash
+  during startup used to close the window with nothing left behind — no message
+  on screen and nothing written to the log — so there was no way to tell whether
+  the app had opened and shut, or never opened at all. Startup failures now show
+  what went wrong and write the same detail to the log file, so a report has
+  something in it. The update download also names itself honestly: unzipping it
+  gives you a folder marked `update-only`, which is a patch to apply over your
+  existing copy, not a second copy of the app.
+
 - **Editing an image in the strip now always uses the image you're looking at.**
   If you ever dropped or reused an image into the prompt box while working
   inside a history strip, that picture quietly became the input for everything
