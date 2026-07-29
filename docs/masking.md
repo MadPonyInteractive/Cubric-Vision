@@ -140,6 +140,13 @@ further split:
 
 A mask and a prompt are **one operation**, so every mask tool keeps the PromptBox up.
 
+- **Any path that HIDES the PromptBox must re-show it through the family predicate.**
+  `_modeKeepsPromptBox(mode)` = `prompt` OR any mask tool. A bare
+  `getActiveMode() === 'prompt'` re-show leaves the box hidden in a mask tool until the
+  rail remounts options — the delete-entries and model-switch paths both had it (a gate
+  written before MPI-372 widened the contract). `mask-tool-registry.test.cjs` guards it.
+  Not every `=== 'prompt'` is wrong: the compare paths gate a `swapToCanvas()` and are
+  correct, because only `prompt` mode swaps to the lighter preview surface.
 - **Mask tools never swap the viewer surface.** `swapToPreview()` is a *VRAM optimisation* —
   it destroys `MpiCanvas` to free GPU texture backing and mounts `MpiMaskedImagePreview`, a
   strict subset of the canvas. A mask tool already has the canvas; that surface belongs to
