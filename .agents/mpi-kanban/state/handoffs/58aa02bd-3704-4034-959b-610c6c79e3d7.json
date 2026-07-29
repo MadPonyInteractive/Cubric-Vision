@@ -1,0 +1,142 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "58aa02bd-3704-4034-959b-610c6c79e3d7",
+ "generated_at": "2026-07-29T04:50:02Z",
+ "from_session": null,
+ "to_role": "implementer",
+ "status": "open",
+ "session": {
+  "name": "MPI-387 fix D - Windows standard-Electron relayout so a root CubricVision.exe is the double-click target",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "A clean Windows 11 install of Cubric Vision is broken end-to-end. Diagnose and fix it. Fix D is the remaining structural one: Smart App Control hard-blocks the entire Windows launch chain.",
+  "status": "in_progress",
+  "summary": "Four of six MPI-387 defects are SHIPPED (splash 335fe260, git+sam2 f371a162, MAX_PATH archive + install-depth preflight + failure attribution 494228fe). This handoff covers fix D ONLY: relayout the Windows portable build to the standard Electron layout so a plain CubricVision.exe sits at the zip root and no .vbs/.bat/.cmd hop exists. Every blocker below was re-verified against the working tree at 494228fe - the line numbers are current, do not re-derive them."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "SHIPPED 335fe260 - white splash flash (show:false + ready-to-show + .catch on loadFile).",
+   "SHIPPED f371a162 - Impact-Pack git+sam2 requirement drop, pinned by a test.",
+   "SHIPPED 494228fe - fix A both halves + fix C. Windows full zip now packs with includeRoot:false (266 -> 234 chars on the reproducing machine); installPathDepthError/assertInstallPathDepth in routes/engine.js refuses an engine root over 89 chars BEFORE any download, on both /engine/download and /engine/repair-deps; _runCustomNodeInstall's single anyFailure boolean split into extractFailures/installFailures with _describeNodeInstallFailures naming deps + phase; engine.js carries that message into the engine:error toast. Test: tests/install-path-depth.test.cjs.",
+   "USER DECISION TAKEN: no code-signing certificate and no NSIS installer for now. The relayout is the whole scope - it costs only our time. An unsigned root .exe is accepted: it gives non-SAC users a standard SmartScreen 'More info -> Run anyway' path instead of a dead end, and it is the prerequisite for signing to ever be worth buying. Do NOT scope-creep into electron-builder, NSIS, certificates or notarization.",
+   "Docs updated: docs/releases/portable-distribution-contract.md now carries the rootless-Windows-zip rule, the MAX_PATH budget, the SAC blocked-extension list, the .lnk rejection and the signing research.",
+   "MPI-387 brief.md now has a STATUS header and a bottom 'Fix map' table splitting shipped vs open."
+  ],
+  "pending": [
+   "TARGET LAYOUT: Windows only. `resources/app/` replaces `app/`, Electron's dist is extracted to the zip root so `CubricVision.exe` is the double-click target. Electron resolves resources RELATIVE TO THE EXE, so this is portable-safe. Linux and macOS keep the current layout entirely (.sh/.command are not SAC-blocked) - this is a win32 branch inside build-portable.mjs, not a global change.",
+   "ALREADY PROVEN SAFE, do not re-investigate: resolveMainPortableRoot() (main.js:527-537) and resolveMainResourcesPath() (main.js:539-549) both work UNCHANGED - app.isPackaged flips true and process.resourcesPath becomes real. And `resources/` does NOT collide: MPI owns resources/cubric, resources/icons, resources/ffmpeg.exe; Electron owns resources/app/ + default_app.asar.",
+   "BLOCKER 1 - launchers: scripts/build-portable.mjs:29-41 PLATFORM_CONFIG.win32 hardcodes start.vbs / start-with-terminal.bat / update.bat / update-from-zip.bat.",
+   "BLOCKER 2 - skeleton writes to app/: build-portable.mjs:428 (ensureDir app), :491 (dry-run marker), :498 + :503 (writeBuildInfo), :502 (copyAppTree). Note :511 brandMacBundle(app/) is darwin-only and must stay on the old path.",
+   "BLOCKER 3 - NO STEP EXTRACTS ELECTRON'S DIST TO THE ROOT. This does not exist anywhere in build-portable.mjs and must be authored from scratch. This is the single biggest piece of the job.",
+   "BLOCKER 4 - update bundle: build-portable.mjs:703 copyDirEnsured(fullStageRoot/app -> updateStageRoot/app).",
+   "BLOCKER 5 - in-app update IPC: main.js:1012-1018 run-update spawns update.bat on win32.",
+   "BLOCKER 6 - scripts/portable/apply-update.cjs:45-46 loadExtractZip hardcodes path.join(root, 'app', 'node_modules', 'extract-zip'). This breaks the SECOND update, not the first, so it will pass a naive smoke test.",
+   "BLOCKER 7 - scripts/portable/windows/update-from-zip.bat is itself SAC-blocked, so the offline escape hatch does not exist on Windows 11 after the relayout either.",
+   "MUST-UPDATE (not optional, each one silently breaks something): isExecutableEntry (build-portable.mjs:857-871 - the win32 zip is now rootless so entry paths lost their prefix; suffix matching still holds but re-read it), bundledLaunchers (:706-707) and alwaysKeep (:733), restoreLauncherBits (apply-update.cjs:106-121), writeBuildInfo destination, artifact.launchers (:682-685), and ALL THREE release-baselines/*.json - every app path moves from app/... to resources/app/..., so the transition bundle is effectively a full bundle until they are restamped.",
+   "DOCS THAT BECOME FALSE on landing: docs/releases/portable-distribution-contract.md - the layout diagram (~line 195-220 after this session's edits), the launcher-split section, the updater section and the owned-paths list. Re-read them before editing; this session already inserted two block quotes into that file so old line numbers have shifted.",
+   "E (release notes, small, do it with D): state plainly that existing Windows 11 SAC users must download a fresh FULL build - no update path can reach them. A transition update also BRICKS the launch path if mishandled: the manifest deletes app/ while the user's OLD start.vbs still does `pushd %ROOT%\\app`. The bundle must ship CubricVision.exe at root and the notes must tell the user to use it."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-387",
+  "title": "Clean Windows 11 install is broken end-to-end - SAC block, MAX_PATH, git dep",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-387/",
+  "links": {
+   "plan": null,
+   "checklist": null,
+   "validation": null,
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-387/handoffs/",
+   "brief": ".agents/mpi-kanban/tasks/MPI-387/brief.md"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "implement",
+  "test",
+  "commit",
+  "update-card",
+  "research"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "The file:line fix map for every MPI-387 sub-item now lives in the brief itself (bottom table), not only in a handoff.",
+   "The SAC blocked-extension list, the .lnk absolute-path result and the signing research are recorded in docs/releases/portable-distribution-contract.md so nobody re-proposes them.",
+   "The Windows rootless-zip rule and the 89-char engine-root budget are recorded in the same contract doc."
+  ],
+  "pending": [
+   "On landing D: rewrite the layout diagram, launcher-split, updater and owned-paths sections of docs/releases/portable-distribution-contract.md.",
+   "On landing D: restamp all three release-baselines/*.json.",
+   "MPI-387 stays OPEN after D - F1, F2 and F3 are still unfixed (see the brief's fix map)."
+  ]
+ },
+ "next_action": {
+  "description": "Read .agents/mpi-kanban/tasks/MPI-387/brief.md section D and the fix-map table at the bottom, then docs/releases/portable-distribution-contract.md. Implement the Windows-only standard-Electron relayout: author the missing 'extract Electron dist to the zip root' build step first (it is the only piece that does not exist yet), then move app/ to resources/app/ behind a win32 branch, then sweep the seven blockers and the must-update list. Do not touch Linux or macOS. Do not add electron-builder, NSIS, code signing or notarization - the user has explicitly ruled all four out for now.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "NO code-signing certificate and NO NSIS installer. User decision, 2026-07-29. Signing does not fix SAC (it starts the reputation clock, it does not skip it; EV no longer grants instant reputation and OV is now equivalent; SAC blocks signed binaries with unknown reputation). An installer would replace the whole portable update system for a benefit signing has to pay for anyway. The relayout is a SUBSET of installer work, so nothing done here is wasted if an installer is ever adopted.",
+   "An unsigned root CubricVision.exe is the accepted outcome. It will not necessarily clear SAC on a fresh Windows 11 box, but it converts a hard block with no override into standard SmartScreen with a 'More info -> Run anyway' path for everyone not on SAC.",
+   "Windows-only branch. Linux .sh and macOS .command are not SAC-blocked and their layout stays exactly as-is.",
+   "MPI-387 is an UMBRELLA card and D is a sub-item - do NOT close the card when D lands. F1/F2/F3 remain.",
+   "Release base is still PARKED. master is 116+ commits / 167 non-doc files ahead of v1.2.0, so it is not a patch. No branch has been created - do not create one without the user naming the base.",
+   "nimbalyst (github.com/nimbalyst/nimbalyst) is the user's reference for a Windows app that installs cleanly. It uses electron-builder + NSIS + publisherName + mac notarization - i.e. they paid for signing. Useful as a layout reference, NOT a licence to adopt their toolchain."
+  ],
+  "constraints": [
+   "THE .lnk ROUTE IS DEAD. Verified empirically: a shortcut stores an ABSOLUTE target path, so it cannot survive a portable zip extracted to an arbitrary folder. Do not re-propose it.",
+   "THE EXTRACTION-RACE THEORY IS DEAD. The captured log proves node extraction does not race engine extraction and all 14 extractions succeeded. Do not re-open it.",
+   "THE UPDATE ARCHIVE NAME IS FROZEN (MPI-369) - shipped updaters glob CubricVision-<platform>-<arch>-update-v*.zip by name. Only the extracted root folder name is free.",
+   "THE WINDOWS FULL ZIP MUST STAY ROOTLESS (MPI-387 fix A, build-portable.mjs:1062 includeRoot: opts.platform !== 'win32'). Re-adding an inner root re-breaks a default Downloads extract by 32 characters. Linux .tar.gz always carries a root; macOS uses ditto --keepParent. Do not 'tidy' this back.",
+   "THE ENGINE ROOT BUDGET IS 89 CHARS on Windows (260 MAX_PATH minus the measured 171-char deepest engine-relative file). The relayout must not lengthen the path from the zip root to the engine.",
+   "No symptom patches. If the relayout breaks the updater, fix the updater - do not add a compatibility shim that leaves both layouts alive.",
+   "The CHANGELOG hold on masking still stands: one UNRELEASED.md entry when MPI-368 shapes land, not per-card. This does not block changelog entries for install fixes - two were added this session.",
+   "Docs-repo push block still applies. git push is user-authorized only.",
+   "9 pre-existing test failures are UNCARDED and unrelated: optional-media-placeholder, permodel-key-allowlist x3, resolve-model-deps, remoteProxy x4. Check the failure LIST, not the count - the total moves as tests are added (265 as of 494228fe). Runner is `node --test tests/*.test.cjs`.",
+   "Shared tree: commit by explicit pathspec (git commit --only <paths>), never git add -A."
+  ],
+  "files_modified": [
+   "scripts/build-portable.mjs - win32 full zip packs with includeRoot:false (494228fe)",
+   "routes/engine.js - installPathDepthError/assertInstallPathDepth + real failure message in the toast (494228fe)",
+   "routes/downloadManager.js - extractFailures/installFailures split + _describeNodeInstallFailures (494228fe)",
+   "tests/install-path-depth.test.cjs - new, passing (494228fe)",
+   "docs/releases/portable-distribution-contract.md - rootless-zip rule + SAC/.lnk/signing block (494228fe)",
+   "docs/releases/UNRELEASED.md - two user-facing fix entries (494228fe)",
+   ".agents/mpi-kanban/tasks/MPI-387/brief.md - STATUS header + fix-map table (494228fe)"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-387/brief.md",
+   "docs/releases/portable-distribution-contract.md",
+   "scripts/build-portable.mjs",
+   "scripts/portable/apply-update.cjs",
+   "main.js (1009-1020 run-update; 527-549 the two resolvers)",
+   "release-baselines/win32-x64.json"
+  ]
+ },
+ "project_knowledge": {
+  "profile": null,
+  "knowledge_index": null,
+  "mode": "file",
+  "relevant_topics": [
+   "portable distribution",
+   "releases",
+   "windows packaging",
+   "versioning"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/versioning.md",
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-29T04:50:02Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/58aa02bd-3704-4034-959b-610c6c79e3d7.json, then .agents/mpi-kanban/tasks/MPI-387/brief.md (section D plus the fix-map table at the bottom) and docs/releases/portable-distribution-contract.md. Four of the six MPI-387 defects are shipped; you are implementing fix D, the Windows-only standard-Electron relayout, so a plain CubricVision.exe at the zip root becomes the double-click target and no .vbs/.bat/.cmd hop remains in the launch chain. Author the missing 'extract Electron's dist to the zip root' build step first - it does not exist anywhere yet - then move app/ to resources/app/ behind a win32 branch and sweep the seven verified blockers and the must-update list in the handoff. Linux and macOS keep their current layout untouched. The user has explicitly ruled out electron-builder, NSIS, code-signing certificates and notarization, so do not scope into any of them. Do not re-propose .lnk (it stores an absolute path) and do not re-open the extraction-race theory - both are settled with evidence. Keep the Windows full zip rootless and keep the engine root under 89 characters."
+}
