@@ -108,12 +108,16 @@ re-add 2 images` landed on `i2i` instead of going back to Edit.
 **MPI-337 — no force-DOWN.** Removing media never switches the op to a text op. The op stays
 selected, renders disabled if it lost a required input, and Run toasts the missing input.
 
-**The ONE exception (MPI-356).** The LAST chip leaving lands the box on the model's text-only
-op — an empty box with a media op selected can do nothing at all. Written narrowly in
-`_emitMediaChange`: only the transition TO zero media (`hadMedia` captured before the counts
-are recomputed), only when the model has a text-only non-mask op, never under
-`filterNoInputOps`, and dispatched `{ programmatic: true }` so the user's real pick is still
-what `_pickFallbackOp` restores when media comes back.
+**TWO exceptions, and they share ONE implementation.** An empty box with a media op selected
+can do nothing at all, so it lands on the model's text-only op — once when the last chip
+leaves (MPI-356, the transition, inside `_emitMediaChange`), and once when a workspace is
+ENTERED with a box that mounts empty (MPI-388, `el.dropToTextOpIfEmpty()`, needed because the
+MPI-247 per-model op memory replays a media-hungry pick at mount, where no transition ever
+happens). Both call `_dropToTextOp()` and both pass `{ programmatic: true }`, so the user's
+real pick is still what `_pickFallbackOp` restores when media comes back. Never fork it — the
+guards (model has a text-only non-mask op, never under `filterNoInputOps`) live in that one
+function. Full contract, including why the entry-time call is placed after the Block's
+`_wirePromptBox` and count sync: `docs/generation-lifecycle.md` § two named exceptions.
 
 Going the other way (media added while a text op is selected) picks via `_pickFallbackOp`,
 which fits the op to the media COUNT — 2 images must land on an op with capacity ≥ 2, never
