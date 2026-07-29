@@ -3,11 +3,11 @@
   "id": "MPI-346",
   "title": "Bump comfyui-krea2edit v1.1 -> v1.2.2 (node/weight version mismatch)",
   "description": "We already ship the v1.2 identity-edit weights (krea2_identity_edit_v1_2_r128) but pinned the v1.1 NODES (17af8833), so the v1.2 weights have been running on legacy geometry. Bumped node_lock to 223a9383 (v1.2.2). Unlocks the pixel-space source path (vae + source_image), fit_mode, ref_boost / ref_boost_a / ref_boost_mask, GroundedEncode system_prompt, and the ComfyUI ref_latents wrapper tolerance that 0.29 will require. User owns the workflow rewiring + live A/B. Detail in brief.md.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-07-25T03:20:00Z",
-  "updated_at": "2026-07-25T21:30:00Z",
+  "updated_at": "2026-07-29T23:40:00Z",
   "labels": [
     "krea2",
     "custom-nodes",
@@ -23,10 +23,5 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  },
-  "attention": {
-    "state": "required",
-    "reason": "Rewiring + tier-1 retune shipped and bake-asserted (raw 9371f3ec, both cards 100 nodes, 0 dangling, injection surface 34->34). Both edit references padded to the output frame; ref_boost 2 on node 408; tier 1 retuned outright - base cfg 3.5->2.0 and refiner 3/0.19->2/0.30, flat literals, t2i included; tier 2 untouched. Knowledge captured in docs/models/krea2/editing.md. STILL NOT VERIFIED: nothing has run through the Cubric Vision app - one Krea2 edit and one describe are the remaining gate before this closes.",
-    "updated_at": "2026-07-25T21:30:00Z"
   }
 }

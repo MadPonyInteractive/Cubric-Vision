@@ -1,6 +1,10 @@
 # MPI-346 — validation
 
-## Status: PARTIAL — app-level verification still pending
+## Status: PASS — app-level verification COMPLETE 2026-07-29
+
+Both remaining gates ran through Cubric Vision on the shipped local engine. Detail in
+"App-level verification" below; the remote leg stays queued on
+[MPI-385](../MPI-385/brief.md) per the standing remote-leftover rule.
 
 ## Verified
 
@@ -174,15 +178,60 @@ no version-registry work follows.
   seed fixes only the initial noise. Refiner arms share an identical base latent, so one seed is
   sufficient there.
 
+## App-level verification (2026-07-29) — the closing gate
+
+Ran on the shipped local engine (`engine/ComfyUI_windows_portable`), NOT the G:\ComfyUi bench —
+the bench was holding port 8188 and `COMFYUI_PORT` is hardcoded with an idempotent launcher
+(`routes/comfy.js` returns success if anything already answers `/history`), so the bench had to
+be stopped first or the app would have silently dispatched into it. Scratch project
+`MPI-346 verification`; three runs (2x t2i seeding a source, 1x edit), then one describe.
+
+**Node pin live in the app's own engine** — `[krea2edit] nodes v1.2.2 loaded` at import.
+This is the line the card had never seen from Cubric Vision's engine rather than the bench.
+
+**Edit run — `krea2Edit_001`, 1024x1024, `krea2-nsfw`, tier 1, 388.8s.**
+Prompt: "Change the background to a snowy pine forest and change the collar to red, keeping the
+dog brown and white." Result: scene changed to snowy pine forest, collar red, markings and face
+held. That is precisely the regression the padded-fit rewire targeted — the old asymmetric
+geometry kept the source background instead of restaging.
+
+| claim | evidence from the run |
+|---|---|
+| v1.2.2 pixel path active | `[krea2edit] pixel path ACTIVE (fit_mode=fit)` — `fit_mode` does not exist on v1.1 |
+| reference came through the PADDED chain | `_fit_encode_image: mode=fit in=(1,1024,1024,3) target_latent=128x128`; `STRIDE1-POS fit: ref grids [(64,64)] centered in (64,64)`; **no `fit margins >2 tokens` NOTE** = not the AR-mismatch/background-bleed branch |
+| tier-1 cfg retune shipped | base sampler 25 steps (node `311`) |
+| tier-1 refiner retune shipped | refiner ran **2 steps** (node `436`), not the pre-retune 3 |
+| correct source fed to the graph | staged asset measures **1024x1024** = the true source size, so the MPI-351 stale-chip / double-scale class is absent |
+| perModel snapshot intact | `controlState.model` carries `krea2Turbo: false` |
+
+> Tier 2 was exercised incidentally by the two seeding t2i runs: 8 steps + 3-step refiner,
+> matching the deliberately-untouched tier-2 config (`72` / `162`).
+
+**Describe run — PASS.** Output opens "A brown and white pit bull-type dog with a muscular
+build, lying down on green grass partially covered by snow..." — no "The image shows" preamble,
+which was the entire point of the new recipe and is already claimed in
+`docs/releases/UNRELEASED.md`. Coverage matches the second half of that claim: subject, build,
+pose, markings, eyes, nose, collar hardware, the ball, forest, lighting, camera angle, depth of
+field and style.
+
+**Caveat recorded, not blocking.** The edit ran on `krea2-nsfw` (Lustify). `editing.md` warns
+that Lustify masks cfg findings because it is already biased toward idealised subjects. The
+WIRING is proven either way; a QUALITY judgement on the tier-1 retune should be made on the SFW
+card.
+
+**Side thread, resolved as NOT a defect.** `tests/permodel-key-allowlist.test.cjs` fails
+claiming `krea2Turbo`/`qualityTier`/`styleSelect`/`stylization`/`enhancePrompt` are missing from
+`_MODEL_WIDE_KEYS`, which is genuinely only `{loras, upscaleModel}`. But
+`js/services/projectService.js:209-213` documents that MPI-336 deliberately REPLACED the
+allowlist with a `modelWide` flag taken from the control's own scope ("the control's scope is
+the source of truth, no allowlist edit needed"). The test asserts the superseded design. The
+sidecar above confirms the live behaviour is correct. **Stale test — rewrite or delete it; do
+not "fix" the code to satisfy it.**
+
 ## NOT verified
 
-- **App-level generation on any operation.** Nothing has been run through Cubric Vision itself.
-  The injection surface is provably unchanged (34 -> 34), which is why the user judged the risk
-  low, but "unchanged contract" is not the same as "ran green in the app".
-- **The describer's first-word behaviour end-to-end** — the entire point of the new recipe is
-  that it no longer opens with "The image shows"; confirm on a real describe run.
 - **Remote (RunPod) engine.** The `.mpi_node_commit` drift ladder should reinstall the node at
-  the new commit on connect. Untested this session.
+  the new commit on connect. Untested — queued on MPI-385.
 - **Two-reference edits under the new symmetric framing.** Image 2 only started being padded in
   this pass. The "two-ref inverts" finding was measured on the old asymmetric geometry — the
   `rows0:` argument for why it is structural stands on its own, but the measured severity may
@@ -190,8 +239,9 @@ no version-registry work follows.
 
 ## Next action
 
-Run one Krea2 edit and one describe through the app. If both land, this card can close.
+None — card CLOSED 2026-07-29. The edit and the describe both landed through the app.
 
-> **The remote (RunPod) leg is queued on [MPI-385](../MPI-385/brief.md)** — the RunPod
-> verification umbrella: the `.mpi_node_commit` drift ladder, plus the one edit and one
-> describe through the app that close this card.
+> **The remote (RunPod) leg remains queued on [MPI-385](../MPI-385/brief.md)** — the
+> `.mpi_node_commit` drift ladder reinstalling the node at the new commit on connect. Per the
+> standing rule, a card whose only leftover is remote closes on local evidence and leaves that
+> one item on the umbrella; MPI-385's brief already carries it.
