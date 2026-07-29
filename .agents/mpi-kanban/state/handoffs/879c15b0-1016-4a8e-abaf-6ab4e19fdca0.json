@@ -28,7 +28,7 @@
    "MPI-385 - the RunPod verification sweep. The user assigned it to THIS agent line. Needs port 3000 free and a live Pod, so it wants its own session. Run item 1 (MPI-380 engineAsset remote-install) FIRST - it is the only genuine unknown and a failure there means new code plus a second Pod session.",
    "MPI-387 is CODE-COMPLETE and committed. Everything left on it is release-time reading off the real 1.3.0 artifacts (a real SAC machine, a transition update, a second update) plus the fact that no real RIFE install has exercised F1 end to end.",
    "Then mpi-release for 1.2.0 -> 1.3.0 (2nd digit: new model Klein + new ops).",
-   "TWO APPROVALS PENDING, both raised at close-out and neither actioned: (1) the docs/releases/UNRELEASED.md entry for MPI-390 - draft text is in this handoff's context.pending_approvals; (2) CLAUDE.md's DOCS WEBSITE PUSH BLOCK rationale is now factually stale."
+   "NOTHING PENDING from close-out. All three approvals were granted and applied - see context.approvals_cleared_at_close_out. The docs-site push BLOCK still stands; only its stale rationale was corrected."
   ]
  },
  "task_card": {
@@ -59,12 +59,10 @@
    ".agents/mpi-kanban/tasks/MPI-198/events.jsonl + MPI-249/events.jsonl - the Linux-unblocked note is on BOTH cards.",
    "MEMORY: done-index.md MPI-390 hook; MEMORY.md MPI-198/249 line rewritten."
   ],
-  "pending": [
-   "docs/releases/UNRELEASED.md has NO entry for MPI-390 yet - it is user-facing and needs one before the release. Draft is in context.pending_approvals."
-  ]
+  "pending": []
  },
  "next_action": {
-  "description": "Ask the user which to take first. The two strongest candidates are MPI-249 + MPI-198 (newly unblocked by the Linux machine, and MPI-249 is a release-verification card so it feeds 1.3 directly) and MPI-385 (the Pod sweep, already assigned to this agent line, needs port 3000 free). Also clear the two pending approvals from close-out - the UNRELEASED.md entry for MPI-390 is the one that must not be forgotten before the release.",
+  "description": "Ask the user which to take first. The two strongest candidates are MPI-249 + MPI-198 (newly unblocked by the Linux machine, and MPI-249 is a release-verification card so it feeds 1.3 directly) and MPI-385 (the Pod sweep, already assigned to this agent line, needs port 3000 free). Close-out left nothing pending - do not re-raise the UNRELEASED.md entry or the docs-site rationale, both are already applied.",
   "command": "mpi-continue"
  },
  "context": {
@@ -75,9 +73,11 @@
    "models:open / apps:open are gated on the LISTENER in shell.js, not the landing-nav emitters, so the Gallery radial's emitters are covered by the same check.",
    "The hatch does NOT auto-open Settings. First launch - exactly when needsInstall is true - also runs the 18+ maturity gate and the changelog overlay, and navigation calls Overlays.reset(). Auto-opening a slide-over into that chain is the MPI-333 double-backdrop bug. The destination is named in the button copy instead."
   ],
-  "pending_approvals": [
-   "docs/releases/UNRELEASED.md, section `whatIsNew`. Proposed entry: '**No GPU? Skip the install and run in the cloud.** Setting up Cubric used to mean installing the ComfyUI engine first, even on a machine that could never use it - and the RunPod settings that would have let you skip it were behind the install screen. That screen now offers a way straight past it, with a link to the setup video. Cubric then runs entirely on a cloud GPU. Turn it back off in Settings > RunPod whenever you want the local engine after all.' Not written - awaiting the user's word.",
-   "CLAUDE.md, DOCS WEBSITE PUSH BLOCK. Its stated rationale ('Production GitHub Pages serves the coming-soon index.html from a previous deploy') is now FACTUALLY STALE: docs.cubric.studio serves the real Vision docs today, screenshotted by the user this session (sidebar, Installation/Getting Started/Settings, three embedded videos). Whether the push BLOCK itself should be lifted is the user's call and was NOT assumed - only the rationale is provably out of date."
+  "pending_approvals": [],
+  "approvals_cleared_at_close_out": [
+   "docs/releases/UNRELEASED.md `whatIsNew` - the MPI-390 entry is WRITTEN and committed. Do not add a second one.",
+   "CLAUDE.md DOCS WEBSITE PUSH BLOCK - rationale corrected. THE BLOCK ITSELF STILL STANDS and was deliberately NOT lifted: the user approved fixing the stale reasoning, not opening the push. Production now serves the REAL Vision docs (verified live 2026-07-30), so the old 'it would replace the coming-soon page' reason is dead; what the block protects now is that nobody has confirmed whether the local tree is ahead of, behind, or divergent from the deploy. Lift only on an explicit say-so.",
+   ".claude/rules/dos_and_donts.md - new section on persisted-config normalizers being read/write WHITELISTS (the MPI-390 trap, MPI-370 class), plus the state-vs-Storage write-through rule."
   ],
   "constraints": [
    "The sibling agent's MPI-387 work is COMMITTED (2ee5ee15, 0674f3f1). routes/ is no longer contested. The tree still carries THEIR uncommitted .agents/mpi-kanban/tasks/MPI-353/ changes plus untracked MPI-355/, MPI-358/ and MPI-385/handoffs/ - do NOT sweep those into a commit.",
@@ -129,5 +129,5 @@
    "event": "handoff_created"
   }
  ],
- "resume_prompt": "You are picking up Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/879c15b0-1016-4a8e-abaf-6ab4e19fdca0.json first. Two things closed since the last handoff and must NOT be re-done: MPI-390 (the GPU-less RunPod escape hatch) shipped, was user-verified and is CLOSED in 35037d60, and the sibling agent COMMITTED all of MPI-387 (2ee5ee15, 0674f3f1) so routes/ is no longer contested. The suite is green at 279/279, so any red is a real regression. The biggest change to the plan: the user NOW HAS A LINUX MACHINE, which unblocks MPI-249 (portable Linux build verify) and MPI-198 (backslash loader-path heal) - both were parked solely for lack of one, and MPI-249's card text still wrongly says no Linux desktop is on hand. Both need the LOCAL engine on Linux (the uv/comfy-cli path, NOT the Windows prebuilt-archive path), so a RunPod run does not substitute; macOS stays blocked. MPI-385, the RunPod verification sweep, is assigned to this agent line and needs port 3000 free plus a live Pod, so it wants its own session - run its MPI-380 engineAsset item first, it is the only genuine unknown. Start by asking the user whether to take the Linux cards or the Pod sweep. Two approvals are still pending from close-out and are listed in context.pending_approvals: the docs/releases/UNRELEASED.md entry for MPI-390 (user-facing, must not be forgotten before the release) and the fact that CLAUDE.md's DOCS WEBSITE PUSH BLOCK rationale is now factually stale - docs.cubric.studio serves the real Vision docs today, though whether to lift the block is the user's call."
+ "resume_prompt": "You are picking up Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/879c15b0-1016-4a8e-abaf-6ab4e19fdca0.json first. Two things closed since the last handoff and must NOT be re-done: MPI-390 (the GPU-less RunPod escape hatch) shipped, was user-verified and is CLOSED in 35037d60, and the sibling agent COMMITTED all of MPI-387 (2ee5ee15, 0674f3f1) so routes/ is no longer contested. The suite is green at 279/279, so any red is a real regression. The biggest change to the plan: the user NOW HAS A LINUX MACHINE, which unblocks MPI-249 (portable Linux build verify) and MPI-198 (backslash loader-path heal) - both were parked solely for lack of one, and MPI-249's card text still wrongly says no Linux desktop is on hand. Both need the LOCAL engine on Linux (the uv/comfy-cli path, NOT the Windows prebuilt-archive path), so a RunPod run does not substitute; macOS stays blocked. MPI-385, the RunPod verification sweep, is assigned to this agent line and needs port 3000 free plus a live Pod, so it wants its own session - run its MPI-380 engineAsset item first, it is the only genuine unknown. Start by asking the user whether to take the Linux cards or the Pod sweep. All three close-out approvals were granted and APPLIED - see context.approvals_cleared_at_close_out. Nothing is pending. Note that the docs-site push BLOCK still stands; only its stale rationale was corrected."
 }

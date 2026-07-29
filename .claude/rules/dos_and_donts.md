@@ -111,6 +111,14 @@ Adding a `PROMPT_BOX_CONTROLS` control? Its `scope` (`shared` / `perOp` / `perMo
 
 ---
 
+## 🗄️ Persisted-config fields — the normalizer is a WHITELIST, on read AND write
+
+Adding a field to `DEFAULT_RUNPOD_CONFIG` (or any config with a `normalize*` companion in [`js/core/storage.js`](../../js/core/storage.js)) is **TWO edits, not one**. `normalizeRunpodConfig` rebuilds the object field by field and runs on BOTH `getRunpodConfig` and `setRunpodConfig`, so a field present only in the defaults is **silently stripped on every save and every load** — no error, no warning. The feature appears to work in-session and forgets itself on the next boot. Same failure class as MPI-370's `requirementsDrop` vanishing through the `_createDepJob` whitelist. Write the field into the normalizer too, and pin it with a test that fails when the normalizer line is removed (negative-control it — see [`tests/runpod-skip-local-engine.test.cjs`](../../tests/runpod-skip-local-engine.test.cjs), MPI-390).
+
+Related: write through `state.<key>`, never `Storage.set*` directly, when the value is also mirrored in [`js/state.js`](../../js/state.js). State is seeded once at module load and write-throughs to Storage; a raw Storage write goes stale and the next state write clobbers it.
+
+---
+
 ## 📦 Imports — depth and case sensitivity
 
 Relative import depth varies by how deep a component sits under `js/`. Reference depths to reach `js/` root: `js/components/Compounds/<X>/file.js` → 3 ups; `js/components/Compounds/LandingPages/<X>/file.js` → 4 ups (extra `LandingPages/` segment). Wrong-depth import → boot JS halts → app stuck forever on the landing spinner; server log stays clean (error is browser-side). Case sensitivity (Linux-only): dev box is Windows (case-insensitive); Linux portables are case-sensitive. A relative import whose CASE doesn't match the on-disk filename resolves fine on Windows but 404s on Linux → same spinner failure. SWEEP before any portable/Linux release: walk the whole `js/` import graph and verify EXACT-CASE existence.

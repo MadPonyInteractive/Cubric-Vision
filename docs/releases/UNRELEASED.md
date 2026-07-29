@@ -34,6 +34,13 @@
 
 ## whatIsNew
 
+- **No GPU? Skip the install and run in the cloud.** Setting up Cubric used to
+  mean installing the ComfyUI engine first, even on a machine that could never
+  use it — and the RunPod settings that would have let you skip it were behind
+  the install screen. That screen now offers a way straight past it, with a link
+  to the setup video. Cubric then runs entirely on a cloud GPU. Turn it back off
+  in **Settings → RunPod** whenever you want the local engine after all.
+
 - **New model: FLUX.2 Klein.** The fastest image model in Cubric Vision, and the
   only one that can take things *out* of a picture — paint over an object, hit
   **Remove**, and it's gone in about four seconds. It covers the full set in one
