@@ -1,0 +1,127 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1d77dd3f-e4ee-4e7d-8c84-0c9c250be964",
+  "generated_at": "2026-07-29T23:50:00Z",
+  "from_session": null,
+  "to_role": "orchestrator",
+  "status": "open",
+  "session": {
+    "name": "v1.3 release readiness assessment; masking changelog entry; MPI-346 closed through the app",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Work out what is absolutely essential to ship v1.3 safely, do the parts that are not blocked, then pick up MPI-346.",
+    "status": "in_progress",
+    "summary": "Release scope is settled and two of the four blockers are cleared. MPI-346 is CLOSED - the edit and describe both ran through the app. The masking changelog entry is written and committed. What remains is MPI-387 (other agent), the MPI-369 boot-crash smoke, and one Pod session, then run mpi-release for 1.3.0."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Release-readiness triage across the board: identified the 4 hard blockers for 1.3 and explicitly de-scoped everything else",
+      "Verified green preconditions so they are NOT re-done: Pod runtime dev/stable manifests identical (wrapper 0.2.38, all 3 shas match); stable Pod image POD_IMAGE_VERSION=v0.17.0 = ComfyUI 0.28 so SAM3 nodes exist on released users' Pods; sam3.1_multiplex_fp16.safetensors live on R2 (HTTP 200, 1.75GB); local engine pin already 0.28.0 shipped in 1.2.0 so no engine reinstall; npm run release:check passes; test suite shows the SAME 9 known pre-existing failures and zero new regressions",
+      "Wrote the masking changelog as ONE consolidated entry in docs/releases/UNRELEASED.md, releasing the user's standing hold (commit a2c87a0f). Covers MPI-381 four-tool split + B/W view, MPI-380 SAM3 points, MPI-384 SAM3 text, MPI-372 live PromptBox, green detections, eraser cursor, plus a separate Ctrl+Z line for MPI-376, and an honest note about the one-off ~1.7GB model download",
+      "MPI-346 CLOSED (commit dcf3d8b7): ran one Krea2 edit and one describe through Cubric Vision on the shipped local engine - the card's only remaining gate. validation.md rewritten with the full evidence table"
+    ],
+    "pending": [
+      "MPI-387 - clean Windows 11 install broken end-to-end (SAC block, MAX_PATH, git dep). Owned by the OTHER agent in a separate session. Hard release blocker; nothing ships until it lands",
+      "MPI-369 - boot-crash smoke test. ~10 min: add a deliberate throw at boot, confirm the dialog + FATAL log line appear, revert. The fix (a500b335) has NEVER fired. MUST wait until the MPI-387 agent is out of main.js - they are actively editing it",
+      "One Pod session (MPI-385, trimmed to two release-gating checks): (1) does the remote install path pick up a NEWLY ADDED engineAsset (sam3-multiplex)? Likeliest failure. (2) krea2edit v1.2.2 .mpi_node_commit drift-ladder reinstall on the remote engine - MPI-346's only leftover",
+      "Then run mpi-release for 1.2.0 -> 1.3.0 (2nd digit: new model Klein + new ops)",
+      "MPI-388 (NEW, carded this session, todo) - user-reported UX bug: returning from History to the Gallery leaves a media-hungry op selected with an empty PromptBox, so Run only toasts a missing-input complaint. Fix reuses the SHIPPED clear-last-image fallback on Gallery re-entry. Small and self-contained; the user has not said whether it rides in 1.3 - ASK before scheduling it",
+      "OPTIONAL, not release-gating: card the stale test finding (see key_decisions) and decide MPI-358 attribution sweep in-or-out"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-346",
+    "title": "Bump comfyui-krea2edit v1.1 -> v1.2.2 (node/weight version mismatch)",
+    "column": "done",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-346/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-346/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-346/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/releases/UNRELEASED.md - masking entry written (a2c87a0f)",
+      ".agents/mpi-kanban/tasks/MPI-346/validation.md - full app-level evidence table, the NSFW-card caveat, and the stale-test finding recorded",
+      "MPI-346 moved doing -> done in board.json + task.json + both events.jsonl logs, attention flag cleared (dcf3d8b7)"
+    ],
+    "pending": [
+      "NO CARD YET: tests/permodel-key-allowlist.test.cjs is a STALE test, not a code defect. It asserts an allowlist that MPI-336 deliberately replaced. 3 of the 9 known failures are explained by this; the other 6 (optional-media-placeholder fixtures, resolve-model-deps, remoteProxy x4) are still uncharacterised. Worth one card before release so the failure list is understood rather than tolerated",
+      "MEMORY CORRECTION: memory tool_windows_python_json_utf8 says tasks/<id>/task.json has NO trailing newline. The round-trip guard measured trail=true for MPI-346/task.json and wrote byte-identically. The guard is authoritative; that table row is stale and should be fixed or softened",
+      "Scratch project 'MPI-346 verification' (Documents/Cubric Vision/Projects/) holds 3 test entries - ask the user whether to delete it",
+      "The app is still RUNNING from this session (npm start, background). Kill it before any packaging/build work"
+    ]
+  },
+  "next_action": {
+    "description": "Ask the user for MPI-387's status. If it has landed, do the MPI-369 boot-crash smoke (throw at boot, confirm dialog + FATAL line, revert) since main.js is then free, and offer the trimmed MPI-385 Pod session. If MPI-387 is still in flight, do NOT touch main.js - instead pick conflict-free release-relevant work: MPI-388 (small, self-contained, ask the user whether it rides in 1.3), carding the stale permodel-key-allowlist test, or characterising the remaining 6 test failures. Do NOT touch MPI-378 or MPI-387 - both are owned by other sessions.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "1.3.0 is the right digit: 2nd digit = new model (FLUX.2 Klein) + new ops. 1.2.0 was released 2026-07-24 and is the current tag.",
+      "The masking changelog hold was released deliberately. The code for SAM3 points/text, the four-tool split and canvas undo is already on master and ships in 1.3 whether documented or not; shapes (MPI-368) is NOT making this release, so waiting for it would have shipped four user-visible features silently.",
+      "MPI-346 closed on LOCAL evidence with the remote drift-ladder leg left on MPI-385, per the standing rule that a card whose only leftover is remote closes locally and adds a line to that umbrella.",
+      "MPI-370 (macOS install fix) is explicitly NOT a blocker - code-verified and negative-controlled but no Apple hardware. Broken-with-an-unverified-fix beats broken. Ship it.",
+      "STALE TEST, do not 'fix' the code: tests/permodel-key-allowlist.test.cjs fails claiming krea2Turbo/qualityTier/styleSelect/stylization/enhancePrompt are missing from _MODEL_WIDE_KEYS, which genuinely only holds {loras, upscaleModel}. But js/services/projectService.js:209-213 documents that MPI-336 deliberately REPLACED the allowlist with a modelWide flag derived from the control's own scope. A live sidecar from this session confirms correct behaviour (controlState.model carried krea2Turbo:false). Rewrite or delete the test."
+    ],
+    "constraints": [
+      "SHARED TREE: another agent is working MPI-387 in a separate session and is actively editing main.js and install code. Commit by explicit pathspec only. Coordinate via mpi-message if needed.",
+      "CLAIMED BY ANOTHER SESSION - DO NOT TOUCH: MPI-378 (Tab as a workspace flipper). The user is handling it separately. Leave the card and its files alone.",
+      "COMFYUI_PORT = 8188 is hardcoded (routes/shared.js:134) and the launcher is IDEMPOTENT - routes/comfy.js:324 probes /history and attaches to whatever already answers. The user's standalone G:\\ComfyUi bench also uses 8188, so it MUST be closed before app testing or the app silently dispatches into the bench (different install, different extra_model_paths.yaml).",
+      "The app UI resists synthetic DOM driving: the op strip radio group ignores JS .click() (custom event wiring) and is not exposed in the accessibility tree, so playwright-cli snapshot refs do not reach it. Pressing Escape inside a project navigates BACK to the landing screen. Driving generations by DOM is not worth the turns - ask the user to click, or attach to the Electron window's remote-debugging port instead of the browser client.",
+      "A raw file copied into a project's Media/ folder shows in the asset COUNT but never appears in the gallery - the grid renders itemGroups from project.json. Import through the app or generate, do not copy files in.",
+      "Krea2 tier 1 is expensive: 25 steps at cfg 2 = 50 model evaluations (ComfyUI only skips the uncond pass at cfg 1), and an edit roughly doubles the attended sequence because Krea2EditModelPatch prepends the reference as RoPE frame 1. Measured 388.8s for a 1024x1024 edit on a 4060 Ti. This is expected, not a defect.",
+      "Pod runtime promote is a LIVE op affecting released users - never auto-promote in the release flow. Currently no drift, so nothing to do."
+    ],
+    "files_modified": [
+      "docs/releases/UNRELEASED.md",
+      ".agents/mpi-kanban/tasks/MPI-346/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-346/task.json",
+      ".agents/mpi-kanban/tasks/MPI-346/events.jsonl",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-385/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-369/validation.md",
+      "docs/releases/UNRELEASED.md",
+      ".claude/skills/mpi-release/SKILL.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "release",
+      "runpod-remote-engine",
+      "krea2",
+      "masking"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/comfy_engine.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-07-29T23:50:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/1d77dd3f-e4ee-4e7d-8c84-0c9c250be964.json first. Two of the four release blockers are already cleared: the masking changelog is written into docs/releases/UNRELEASED.md as one consolidated entry (commit a2c87a0f), and MPI-346 is CLOSED after one Krea2 edit and one describe ran green through the app on the shipped local engine (commit dcf3d8b7). Do NOT re-verify the preconditions listed as green in the handoff - Pod runtime drift, the stable Pod image, the SAM3 weight on R2, the engine pin, release:check and the test-failure list were all checked this session. What remains before running mpi-release for 1.2.0 -> 1.3.0: MPI-387 (clean Windows 11 install, owned by another agent in a separate session - a hard blocker), the MPI-369 boot-crash smoke test which must wait until that agent is out of main.js, and one Pod session trimmed to two checks from MPI-385 (does the remote install path pick up the newly added sam3-multiplex engineAsset, and does the krea2edit v1.2.2 drift ladder reinstall remotely). Start by asking the user where MPI-387 stands, because it decides whether main.js is safe to touch."
+}

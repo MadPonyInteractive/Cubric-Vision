@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-388",
+  "title": "Returning to the Gallery keeps a media-hungry operation selected, so Run just refuses",
+  "description": "Coming back to the Gallery workspace from History leaves whatever operation was active still selected. If the PromptBox has no image, the op strip stays on a media-hungry op (edit / i2i / upscale) and pressing Run only toasts a missing-input complaint. A less literate user has no idea what is being asked of them. Expected: on entering the Gallery, if the PromptBox holds NO media, fall back to t2i; if it DOES hold media, leave the operation alone. The identical fallback already exists in the Gallery when the user removes the last image from the PromptBox (shipped with MPI-337 / MPI-356), so this is about firing that same path on workspace re-entry rather than inventing new behaviour. User-reported 2026-07-29.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-29T23:55:00Z",
+  "updated_at": "2026-07-29T23:55:00Z",
+  "labels": [
+    "ui",
+    "ux",
+    "bug",
+    "prompt-box"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
