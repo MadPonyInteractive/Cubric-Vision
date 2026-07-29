@@ -74,9 +74,13 @@ API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canv
 NOTE:    A points run auto-picks index 0 up front, so it is ONE round trip; the detector's detect-then-pick two-step exists only because YOLO returns N segments to choose between. The two detector branches sit behind an `MpiIfElse` titled `Input_Points_Mode` whose inputs are lazy, so the unselected branch never executes.
 NOTE:    Display-invert is honored only in mask-mode (MpiCanvas overlay paint). Prompt-mode preview (MpiMaskedImagePreview) uses CSS-luminance mask and does NOT currently honor `displayInverted`.
 
-### The mask tool family (MPI-371 — one tool per masking method)
+### The mask tool family (MPI-371 — one tool per masking method; split MPI-381)
 
-Rail modes `maskDetect` / `maskPoints` inside the `Mask` group; no switcher, no source radio. Shapes (MPI-368) and Text (MPI-361 Phase B) join as siblings. Every tool owns only its own controls and mounts the two shared compounds below. None emits `apply` — the mask is canvas-resident and PromptBox drives ops. All of them persist under the SINGLE `'mask'` tool key, so settings survive a swap between mask tools.
+Rail modes `maskBrush` / `maskPoints` / `maskText` / `maskDetect` inside the `Mask` group; no switcher, no source radio. Shapes (MPI-368) joins as a sibling. Every tool owns only its own controls and mounts the shared compounds below. None emits `apply` — the mask is canvas-resident and PromptBox drives ops. All of them persist under the SINGLE `'mask'` tool key, so settings survive a swap between mask tools.
+
+**Every new mask tool must be added in THREE places across two files** — `_MASK_TOOLS` and `TOOL_OPTIONS_REGISTRY` in `MpiGroupHistoryBlock`, plus the rail entry in `MpiHistoryTools`. A miss is silent (the tool mounts but the viewer never enters mask mode, or the button mounts nothing); `tests/mask-tool-registry.test.cjs` guards it.
+
+**Only the Brush tool paints.** `brush: false` is not cosmetic — the strip forwards it to `setMaskPaintEnabled()`, and the flag lives on the VIEWER because a canvas rebuild would restore the manager default (`true`) and silently re-arm the brush.
 
 #### MpiToolOptionsMaskDetect (Organism — js/components/Organisms/MpiToolOptionsMaskDetect/)
 EMITS:   (none)
@@ -85,27 +89,40 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
 LISTENS: (none)
 NOTE:    The fast YOLO shortcut (Face / Hair / Hand / Person) — kept deliberately; points sit BESIDE it, they do not replace it. Mount reads `getToolSettings(state.currentProject, 'mask', DEFAULTS)`, applies `model`/`useBox` to the viewer auto APIs, and calls `setMaskPointsMode(false)` so entering from Points gives the right mouse button back. `destroy()` calls `evaluateMask()` then `exitMode()`.
 
+#### MpiToolOptionsMaskBrush (Organism — js/components/Organisms/MpiToolOptionsMaskBrush/)
+EMITS:   (none)
+LISTENS: (none)
+NOTE:    The only tool that paints — it IS `MpiMaskStrip` mounted with `brush: true`, no detect row. Everything else in the family mounts the strip brushless.
+
 #### MpiToolOptionsMaskPoints (Organism — js/components/Organisms/MpiToolOptionsMaskPoints/)
 EMITS:   (none)
-GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'mask', key: 'pointsThreshold', value }` (0–1).
+GLOBAL EMITS: (none — no persisted settings of its own)
 LISTENS: (none)
-NOTE:    Click-point (SAM `mask-points`) prompts, MPI-361. Scope slider ships the raw `SAMDetectorCombined.threshold` as 30–99, deliberately NOT remapped — it SNAPS between SAM's 3 candidates, so sweep it. Mount calls `setMaskPointsMode(true)`. **`destroy()` MUST call `viewer.el.setMaskPointsMode(false)` before `evaluateMask()`** — points mode owns the right mouse button and suppresses the image context menu, so skipping it leaves right-click broken app-wide.
+NOTE:    Click-point prompts on SAM3 (MPI-361, rebuilt MPI-380). **The Scope dial is GONE** — it drove `SAMDetectorCombined.threshold`, and SAM3's point path ignores threshold entirely; only `refine_iterations` applies. Do not re-add a threshold control or its `pointsThreshold` setting key. Mount calls `setMaskPointsMode(true)`. **`destroy()` MUST call `viewer.el.setMaskPointsMode(false)` before `evaluateMask()`** — points mode owns the right mouse button and suppresses the image context menu, so skipping it leaves right-click broken app-wide.
+
+#### MpiToolOptionsMaskText (Organism — js/components/Organisms/MpiToolOptionsMaskText/)
+EMITS:   (none)
+GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'mask', key, value }` — keys `textPrompt` (string), `textCount` (int ≥ 1).
+LISTENS: (none)
+NOTE:    Open-vocabulary SAM3 (MPI-384) — a name plus a count. **The count is part of the PROMPT, not a knob:** `js/utils/maskTextPrompt.js` stamps `name:N` onto every comma-separated category, because a bare category makes SAM3 return exactly ONE object. Mount calls `setMaskPointsMode(false)` then `setMaskTextMode(true)`; `destroy()` calls `setMaskTextMode(false)`. Uses the normal detect-then-pick flow (N results to choose between), unlike Points which auto-picks index 0.
 
 #### MpiMaskStrip (Compound — js/components/Compounds/MpiMaskStrip/)
 PROPS:   `{ viewer, brush = true }`
 EMITS:   (none)
 GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'mask', key, value }` — keys `opacity` (0–1), `inverted` (bool).
 LISTENS: (none — `Hotkeys.bind 'mask.brush.toolbar'`/`'mask.eraser.toolbar'` ONLY when `brush` is true; unbound in destroy)
-NOTE:    The ONE shared bottom strip, mounted by every tool in the family — change it here, not per tool. `brush: false` drops the paint/erase pair AND its B/E binds; the Points tool mounts it that way. Invert, clear and opacity are on every tool. Mount-time restore applies `opacity` via `setMaskOpacity` and `inverted` via `setMaskInverted` (viewer-scope cache, survives canvas remount). Invert active state via `.mpi-mask-strip__invert--on` (accent border + 180° icon rotation).
+NOTE:    The ONE shared bottom strip, mounted by every tool in the family — change it here, not per tool. `brush: false` drops the paint/erase pair AND its B/E binds, and also DISARMS canvas painting via `setMaskPaintEnabled()`; every tool except Brush mounts it that way. Invert, B/W view (MPI-381), clear and opacity are on every tool. Mount-time restore applies `opacity` via `setMaskOpacity` and `inverted` via `setMaskInverted` (viewer-scope cache, survives canvas remount). Invert active state via `.mpi-mask-strip__invert--on` (accent border + 180° icon rotation).
 
 #### MpiMaskDetectRow (Compound — js/components/Compounds/MpiMaskDetectRow/)
 PROPS:   `{ viewer }`
 EMITS:   (none)
 LISTENS: `Events.onState('generationQueueCount')` — gates the row as a unit; a detect run is a generation.
-NOTE:    `MpiAutoMaskThumbs` slot + Detect + Add / Subtract, shared by every detection-based tool (Detect, Points, and Text when it lands). The thumbs node is OWNED BY THE VIEWER — re-parented via `getAutoMaskThumbsEl()`, detached in destroy, NEVER destroyed. The gate covers this row only; the owning tool's own controls stay live while Cue is busy because none of them run anything.
+NOTE:    `MpiAutoMaskThumbs` slot + Detect + Add / Subtract, shared by every detection-based tool (Detect, Points, Text). The thumbs node is OWNED BY THE VIEWER — re-parented via `getAutoMaskThumbsEl()`, detached in destroy, NEVER destroyed. The gate covers this row only; the owning tool's own controls stay live while Cue is busy because none of them run anything.
 
-#### Family-wide invariant
-**A tool swap must NOT clear the mask.** `manualCanvas` + `subtractCanvas` are the user's work; only the auto layer is disposable. `_exitMode()` only sets `activeMode = 'none'` — no mask tool's mount path may call `clearMask()`.
+#### Family-wide invariants
+- **A tool swap must NOT clear the mask.** `manualCanvas` + `subtractCanvas` are the user's work; only the auto layer is disposable. `_exitMode()` only sets `activeMode = 'none'` — no mask tool's mount path may call `clearMask()`.
+- **Mask tools never swap the viewer surface** (MPI-372). `swapToPreview()` belongs to `prompt` mode; calling it from a mask tool destroys the canvas mid-mask.
+- **A mask made outside a brush stroke must publish itself** — a chip pick, a shape commit, a text detection. Emit `mask-ready` or call `viewer.el.evaluateMask()`, or the op strip never unlocks.
 
 ### MpiToolOptionsResize (Organism — js/components/Organisms/MpiToolOptionsResize/)
 EMITS:   `apply` `{ params: { width, height, upscale_method, keep_proportion, pad_color, crop_position, divisible_by, flip, rotation } }` — full-resolution params; payload is intentionally minimal. The block always re-runs the workflow at full resolution via `startGeneration`; there is no fast-path / preview-URL reuse.

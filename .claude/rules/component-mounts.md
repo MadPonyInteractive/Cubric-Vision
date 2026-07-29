@@ -58,11 +58,14 @@ const TOOL_OPTIONS_REGISTRY = {
     maskBrush:    MpiToolOptionsMaskBrush,
     maskDetect:   MpiToolOptionsMaskDetect,
     maskPoints:   MpiToolOptionsMaskPoints,
+    maskText:     MpiToolOptionsMaskText,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
+    removeBackground: MpiToolOptionsRemoveBg,
     interpolate:  MpiToolOptionsInterpolate,
     resize:       MpiToolOptionsResize,
     resizeVideo:  MpiToolOptionsResize,
+    exportGif:    MpiToolOptionsGif,
 };
 ```
 

@@ -55,7 +55,8 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 | Components / UI (build, move, style, debug) | `.claude/rules/components.md`; per-component fine print (PromptBox/Toast/Popup/Input/StylePicker…) → `docs/component-contracts.md` |
 | Generation lifecycle (dispatch, Stop/cancel, lanes, queue drain, progress bar) | `docs/generation-lifecycle.md` |
 | Gallery (cards, thumbnails, selection, drag-drop, hover media) | `docs/gallery.md` |
-| Masking (layer model, overlay draw, auto-mask graph, the mask tool family) | `docs/masking.md` |
+| Masking (layer model, overlay draw, the mask tool family, PromptBox contract) | `docs/masking.md` |
+| SAM3 masking (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | `docs/masking-sam3.md` |
 | Crop (resolution types, cropping past the image edge, snapping, pad-then-extract) | `docs/crop.md` |
 | Model Library UI (install-state display, tile patching, featured) | `docs/model-library.md` |
 | Events & cross-component communication | `.claude/rules/events.md` |
