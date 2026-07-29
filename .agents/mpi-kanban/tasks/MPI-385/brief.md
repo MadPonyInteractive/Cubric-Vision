@@ -52,10 +52,12 @@ whole session.
 
 ### 3. MPI-346 — krea2edit v1.1 → v1.2.2
 
+**Trimmed 2026-07-30 — the card is CLOSED (`dcf3d8b7`).** One Krea2 edit and one describe both
+ran green through the app on the shipped LOCAL engine, which was the card's last gate. Only the
+remote leg is left, and it is a check, not a reopening:
+
 - Does the **`.mpi_node_commit` drift ladder** reinstall the node at the new commit on
-  connect? Untested since the bump.
-- Then run **one Krea2 edit and one describe through the app** (not the raw graph — nothing
-  has gone through Cubric Vision yet). If both land, the card closes.
+  connect? Untested since the bump. This is the whole remaining item.
 - Bonus if the session allows: two-reference edits under the new symmetric framing. The
   "two-ref inverts" finding was measured on the OLD asymmetric geometry.
 
@@ -84,4 +86,4 @@ Listing them is half the point. Each has been mistaken for Pod-verifiable before
 |---|---|
 | **MPI-198** | Loader-path separator heal on a **LOCAL** engine on Linux/mac. A Pod is a *remote* engine — different code path entirely. Needs a Linux/mac portable build with a LOCAL engine and a subfoldered LoRA. |
 | **MPI-370** | macOS install (`onnxruntime-gpu` has no macOS wheel, ever). Needs a real Mac. |
-| **MPI-369** | Fatal-boot logging + update-bundle packaging. Local, and needs a deliberate throw-smoke. |
+| **MPI-369** | Fatal-boot logging + update-bundle packaging. Local, and needs a deliberate throw-smoke. **Throw-smoke DONE 2026-07-30** (`3f6ae0e5`) — dialog + FATAL line both fired, user-witnessed. What is left on that card is release-time only: the update-only root name, the frozen archive name and the delta base, all readable off the real 1.3.0 artifacts. Nothing here, ever. |
