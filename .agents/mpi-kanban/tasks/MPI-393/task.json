@@ -4,10 +4,10 @@
   "title": "Remote node-drift heal installs every drifted model IN FULL and fills the Pod volume",
   "description": "Found live 2026-07-29 on the MPI-385 sweep connect. Drift is detected at DEP level - one custom_nodes folder at the wrong commit, a KB-scale re-clone (remoteModels.js:313 tags the dep drifted:true). modelRegistry.js:193 then THROWS THE DEP IDENTITY AWAY and keeps only the owning model id, and shell.js:1412 re-expands that model id into resolveFullUniverse(model) - every weight the model has. The install path dedupes what is already on the volume, so a FULLY installed drifted model is near-free as the comment claims; but for a PARTIALLY installed one the heal silently downloads the missing multi-GB weights, for every drifted model, in series, with no prompt and NOTHING in app.log. A recreated Pod on a bumped image reads most volume nodes as stale at once, so the heal became 'install all the models'. Live: volume went 133.5GB -> 140.6GB of 150GB in about a minute, installed toasts for SDXL Realistic / LTX 2.3 / Qwen that the user never asked for, MODELS climbed 0/18 -> 4/18 (the heal COMPLETING partial installs is the smoking gun), then '[download] remote install blocked - volume full: need 6.5 GB, have 2.3 GB free' - and the chain grabbed any space the user freed, so models could not be uninstalled. FIX: keep the drifted DEP ids and heal only those. getDriftedModelIds has exactly one consumer (the heal) and the driftedModelIds field on models:checked has none, so the surface can go dep-level without touching consumers. Also log the heal - it was completely silent.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-29T16:53:05Z",
-  "updated_at": "2026-07-29T16:53:05Z",
+  "updated_at": "2026-07-29T16:57:53Z",
   "labels": [
     "bug",
     "runpod",
@@ -26,5 +26,10 @@
   "links": {
     "validation": "validation.md",
     "events": "events.jsonl"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Fix shipped + suite 286/286, but the heal is latched per app session - needs one app restart and a Pod connect to confirm the log line fires and volume usage stays flat. Rides with the MPI-385 sweep.",
+    "updated_at": "2026-07-29T16:57:53Z"
   }
 }

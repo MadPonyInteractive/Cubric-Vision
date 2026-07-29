@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-394","type":"task.created","at":"2026-07-29T17:33:07Z","actor":"claude","to":"todo","summary":"Model Library blanks for ~20s on install/uninstall completion - full renderList re-creates every preview. User-reported regression."}
