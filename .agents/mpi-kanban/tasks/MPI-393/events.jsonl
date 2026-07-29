@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-393","type":"task.created","at":"2026-07-29T16:53:05Z","actor":"claude","to":"doing","summary":"Drift heal re-expands a dep-level signal into the model full universe; found live filling a 150GB Pod volume."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-393","type":"task.moved","at":"2026-07-29T16:53:05Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started immediately - user hit it live."}

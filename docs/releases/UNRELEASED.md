@@ -277,6 +277,17 @@
   window appeared as a blank white box for a few seconds before the logo showed
   up. It now waits until it has something to show.
 
+- **Connecting to a cloud Pod no longer downloads models you never asked for.** When
+  Cubric reconnects and finds a Pod component sitting at an out-of-date version, it
+  repairs it. That repair was far too eager: instead of updating the one small
+  component, it re-ran the *entire* install for every model that component belonged
+  to — quietly pulling down gigabytes of model files that were never on your Pod in
+  the first place. On a fresh Pod, where most components read as out of date at once,
+  that could fill a 150GB network volume in about a minute, and it took back any space
+  you tried to free, so you couldn't even uninstall your way out of it. The repair now
+  updates only the component that actually drifted, which is a few hundred kilobytes,
+  and it says what it is doing in the log instead of running silently.
+
 - **Settings no longer forgets where your models are.** If your models folder had
   "temp" or "tmp" anywhere in its path — `D:\AI\temp_models`, a folder called
   `tmp-models`, even a Windows account name that happens to contain those letters

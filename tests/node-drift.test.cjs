@@ -183,18 +183,35 @@ test('remote: a drifted volume node installs with force (no already_installed lo
     assert.equal(installBodyForce(plan), true, 'install body must send force:true');
 });
 
-// MPI-230: syncModelInstalled surfaces the models that own a drifted volume node so
-// the connect edge can offer a one-click re-fetch. Pure mirror of the extraction loop
-// in modelRegistry.syncModelInstalled — collect a model id whenever any of its deps in
-// the /comfy/models/check results carries drifted:true, then de-dup.
-function driftedModelIdsFromCheck(results) {
+// MPI-230: syncModelInstalled surfaces the volume nodes that drifted so the connect
+// edge can re-clone them. Pure mirror of the extraction loop in
+// modelRegistry.syncModelInstalled — collect the drifted DEP ids per model.
+//
+// MPI-393: this used to collect only the owning MODEL id, and _healRemoteNodeDrift
+// re-expanded that into resolveFullUniverse(model) — the model's every weight. The
+// volume pre-check dedupes what is present, so a fully-installed model was near-free;
+// a PARTIALLY installed one had its missing multi-GB weights silently downloaded, for
+// every drifted model, in series. A recreated Pod on a bumped image drifts most volume
+// nodes at once, so the "heal" filled a 150GB volume in about a minute and then took
+// back any space the user freed. Keep this dep-level.
+function driftedNodeDepsFromCheck(results) {
     const drifted = [];
     for (const [modelId, entry] of Object.entries(results)) {
+        const depIds = [];
         for (const dep of (entry.deps || [])) {
-            if (dep.drifted) drifted.push(modelId);
+            if (dep.drifted && dep.id) depIds.push(dep.id);
         }
+        if (depIds.length) drifted.push({ modelId, depIds: [...new Set(depIds)] });
     }
-    return [...new Set(drifted)];
+    return drifted;
+}
+function driftedModelIdsFromCheck(results) {
+    return driftedNodeDepsFromCheck(results).map(d => d.modelId);
+}
+// Mirror of _healRemoteNodeDrift's install selection (js/shell.js). What it returns is
+// exactly what gets sent to downloadService.start per model.
+function healInstallSet(results) {
+    return driftedNodeDepsFromCheck(results).map(({ modelId, depIds }) => ({ modelId, install: depIds }));
 }
 
 test('surface: a check result with a drifted dep yields the owning model id', () => {
@@ -224,6 +241,68 @@ test('surface: two drifted deps on one model de-dup to a single id', () => {
         ] },
     };
     assert.deepEqual(driftedModelIdsFromCheck(results), ['ltx-2.3']);
+});
+
+// ── MPI-393: the heal installs the drifted NODE, never the model's weights ───────
+test('heal: a drifted node on a PARTIAL model installs the node only', () => {
+    // The exact live shape: node stale, one weight present, one weight missing.
+    // The missing weight is multi-GB and the user never asked for it.
+    const results = {
+        'sdxl-realistic': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: false, drifted: true },
+            { id: 'sdxl-realistic-ckpt', installed: true },
+            { id: 'sdxl-refiner-ckpt', installed: false },
+        ] },
+    };
+    assert.deepEqual(healInstallSet(results), [
+        { modelId: 'sdxl-realistic', install: ['ComfyUI-MpiNodes'] },
+    ]);
+});
+
+test('heal: a missing weight WITHOUT node drift is never auto-installed', () => {
+    const results = {
+        'ltx-2.3': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: true },
+            { id: 'ltx-vae', installed: false }, // missing, NOT drifted
+        ] },
+    };
+    assert.deepEqual(healInstallSet(results), [], 'no drift → the heal does nothing at all');
+});
+
+test('heal: two drifted nodes on one model both install, weights still excluded', () => {
+    const results = {
+        'ltx-2.3': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: false, drifted: true },
+            { id: 'ComfyUI-KJNodes', installed: false, drifted: true },
+            { id: 'ltx-vae', installed: false },
+        ] },
+    };
+    assert.deepEqual(healInstallSet(results), [
+        { modelId: 'ltx-2.3', install: ['ComfyUI-MpiNodes', 'ComfyUI-KJNodes'] },
+    ]);
+});
+
+test('heal: across many drifted models the install set is nodes only (volume-safe)', () => {
+    // The live blow-up: several models drifted at once on a recreated Pod. Under the
+    // old model-level surface every one of these expanded to its full dep universe.
+    const results = {
+        'sdxl-realistic': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: false, drifted: true },
+            { id: 'sdxl-ckpt', installed: false },
+        ] },
+        'ltx-2.3': { installed: false, deps: [
+            { id: 'ComfyUI-KJNodes', installed: false, drifted: true },
+            { id: 'ltx-weight', installed: false },
+        ] },
+        'qwen': { installed: false, deps: [
+            { id: 'ComfyUI-MpiNodes', installed: false, drifted: true },
+            { id: 'qwen-weight', installed: false },
+        ] },
+    };
+    const everything = healInstallSet(results).flatMap(r => r.install);
+    assert.deepEqual(everything, ['ComfyUI-MpiNodes', 'ComfyUI-KJNodes', 'ComfyUI-MpiNodes']);
+    const weights = everything.filter(id => !id.startsWith('ComfyUI-'));
+    assert.deepEqual(weights, [], 'a drift heal must never queue a weight');
 });
 
 test('remote: a genuinely-missing volume node installs WITHOUT force', () => {

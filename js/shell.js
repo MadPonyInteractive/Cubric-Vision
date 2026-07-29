@@ -6,7 +6,7 @@
 import { state } from './state.js';
 import { APP_CONFIG } from '../dev_configs/app_config.js';
 import { onNavigate, PAGE_LANDING } from './router.js';
-import { syncModelInstalled, MODELS, installedForOtherArch, getDriftedModelIds } from './data/modelRegistry.js';
+import { syncModelInstalled, MODELS, installedForOtherArch, getDriftedNodeDeps } from './data/modelRegistry.js';
 import { loadAll as loadAssets } from './services/assetService.js';
 import { Events } from './events.js';
 import { Storage, Session } from './core/storage.js';
@@ -1396,22 +1396,23 @@ async function _maybeNotifyArchChange() {
 // the drifted node; already-complete weights dedupe out). First-connect-gated by the
 // caller so a transient reconnect never re-fires it.
 async function _healRemoteNodeDrift() {
-  const ids = getDriftedModelIds();
-  if (!ids.length) return;
-  const models = ids.map(id => MODELS.find(m => m.id === id)).filter(Boolean);
-  if (!models.length) return;
+  const drifted = getDriftedNodeDeps();
+  if (!drifted.length) return;
 
   const { downloadService } = await import('./services/downloadService.js');
-  const { resolveFullUniverse } = await import('./data/modelConstants/resolveModelDeps.js');
   const { DEPS } = await import('./data/modelConstants/dependencies.js');
-  const { remoteEngineClient } = await import('./services/remoteEngineClient.js');
-  const engine = remoteEngineClient.effectiveEngine();
-  for (const model of models) {
-    // Same resolution the manual Install path uses (engine-scoped full universe);
-    // the server re-checks drift per dep and re-clones only the stale node with force.
-    const deps = resolveFullUniverse(model, null, engine)
-      .map(id => DEPS[id]).filter(Boolean);
-    if (deps.length) await downloadService.start(model.id, deps);
+  for (const { modelId, depIds } of drifted) {
+    // MPI-393: ONLY the drifted node deps. This used to send the model's full dep
+    // universe on the theory that the volume pre-check dedupes the rest — true for a
+    // fully-installed model, false for a partial one, where it silently downloaded
+    // every missing weight. A recreated Pod drifts most volume nodes at once, so that
+    // filled a 150GB volume and blocked the user from freeing it. A node re-clone is
+    // KB-scale; the drifted deps carry drifted:true so the wrapper gets force:true and
+    // cannot short-circuit on folder-exists (MPI-222).
+    const deps = depIds.map(id => DEPS[id]).filter(Boolean);
+    if (!deps.length) continue;
+    clientLogger.info('shell', `remote drift heal: re-cloning ${deps.length} node(s) for ${modelId} — ${depIds.join(', ')}`);
+    await downloadService.start(modelId, deps);
   }
 }
 

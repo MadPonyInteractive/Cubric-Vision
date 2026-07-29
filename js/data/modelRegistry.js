@@ -40,12 +40,21 @@ const _modelDepStatusCache = new Map();
 // the same "rebuild needed" toast. Keyed by node folder name. (MPI-222)
 const _warnedBakedDrift = new Set();
 
-// Models carrying a drifted VOLUME node (remote engine only). remoteModelsCheck
-// tags such deps installed:false + drifted:true; we surface the owning model ids
-// so the connect edge can offer a one-click re-fetch (MPI-230). Baked drift is a
-// separate rebuild-only signal (_warnedBakedDrift above), not in here.
-let _driftedModelIds = [];
-export function getDriftedModelIds() { return _driftedModelIds.slice(); }
+// Volume nodes at the wrong commit (remote engine only). remoteModelsCheck tags
+// such deps installed:false + drifted:true; the connect edge re-clones them
+// (MPI-230). Baked drift is a separate rebuild-only signal (_warnedBakedDrift
+// above), not in here.
+//
+// MPI-393: this MUST stay dep-level. It used to keep only the owning model id,
+// and the heal then re-expanded that id into the model's FULL dep universe —
+// which dedupes against the volume for a fully-installed model but silently
+// downloads every missing multi-GB weight of a partially-installed one. A
+// recreated Pod on a bumped image drifts most volume nodes at once, so the heal
+// turned into "install all the models" and filled a 150GB volume in a minute.
+// A node re-clone is KB-scale; keep it that way.
+let _driftedNodeDeps = []; // [{ modelId, depIds: string[] }]
+export function getDriftedNodeDeps() { return _driftedNodeDeps.map(d => ({ ...d, depIds: d.depIds.slice() })); }
+export function getDriftedModelIds() { return _driftedNodeDeps.map(d => d.modelId); }
 
 // MPI-326: last installed/drifted sets we emitted 'models:checked' for. The
 // remote connection heartbeat re-checks install-state every ~5s; models:checked
@@ -180,6 +189,7 @@ export async function syncModelInstalled() {
                 model.installed = results[model.id].installed;
                 // Cache per-dep status for partial-progress display
                 const depMap = new Map();
+                const driftedDepIds = [];
                 for (const depResult of results[model.id].deps) {
                     if (depResult.id) {
                         depMap.set(depResult.id, {
@@ -188,14 +198,17 @@ export async function syncModelInstalled() {
                         });
                     }
                     // MPI-230: a volume node at the wrong commit is tagged drifted by
-                    // remoteModelsCheck. Record the owning model so the connect edge can
-                    // offer a one-click force re-fetch.
-                    if (depResult.drifted) drifted.push(model.id);
+                    // remoteModelsCheck. Record the DEP so the connect edge re-clones
+                    // exactly it — MPI-393: never the model's other deps.
+                    if (depResult.drifted && depResult.id) driftedDepIds.push(depResult.id);
+                }
+                if (driftedDepIds.length) {
+                    drifted.push({ modelId: model.id, depIds: [...new Set(driftedDepIds)] });
                 }
                 _modelDepStatusCache.set(model.id, depMap);
             }
         }
-        _driftedModelIds = [...new Set(drifted)];
+        _driftedNodeDeps = drifted;
 
         // MPI-304 — hand each app its dep slice. Keyed by appDepKey() in the payload,
         // unpacked back to the bare appId the availability check reads.
@@ -226,13 +239,16 @@ export async function syncModelInstalled() {
         // MPI-326: only fan out when the installed or drifted set actually changed —
         // a redundant re-sync (remote heartbeat) must not rebuild the op UI.
         const _installedKey = installedModelIds.slice().sort().join(',');
-        const _driftedKey = _driftedModelIds.slice().sort().join(',');
+        // Keyed on model+dep so a drift that MOVES between deps of the same model
+        // still counts as a change.
+        const _driftedKey = _driftedNodeDeps
+            .map(d => `${d.modelId}:${d.depIds.slice().sort().join('+')}`).sort().join(',');
         if (_installedKey === _lastEmittedInstalledKey && _driftedKey === _lastEmittedDriftedKey) {
             return true; // nothing changed — skip the models:checked fan-out
         }
         _lastEmittedInstalledKey = _installedKey;
         _lastEmittedDriftedKey = _driftedKey;
-        Events.emit('models:checked', { installedModelIds, driftedModelIds: _driftedModelIds.slice() });
+        Events.emit('models:checked', { installedModelIds, driftedModelIds: getDriftedModelIds() });
 
         return true;
     } catch (err) {
