@@ -8,7 +8,7 @@
   "status": "active",
   "activeSessionTitle": "Pod verification sweep - one session, every Pod-only check",
   "created_at": "2026-07-29T20:20:00Z",
-  "updated_at": "2026-07-29T14:47:49Z",
+  "updated_at": "2026-07-29T16:05:00Z",
   "labels": [
     "umbrella",
     "verification",
@@ -30,5 +30,10 @@
     "validation": "validation.md",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Queued behind MPI-392 by user order. Needs a live Pod + port 3000 free; item 1 is now a real test of the shipped engineAsset fix (57f9a991).",
+    "updated_at": "2026-07-29T16:05:00Z"
   }
 }
