@@ -9,9 +9,9 @@ Umbrella card. Per-sub-item, because they ship independently.
 | C — failure attribution split | `494228fe` | Unit-tested. Not seen fire on a real failing install. |
 | D — Windows standard-Electron relayout | `bbfd6295` | See below. |
 | E — release note | `bbfd6295` | Written into `docs/releases/UNRELEASED.md` § importantChanges. Ships when the version is bumped. |
-| F1 — weight-only node shell reads as installed | (uncommitted) | Unit-tested, all 4 call sites fixed. **Not seen fire on a real RIFE install.** See below. |
-| F2 — no-GPU machines get the CUDA build | (uncommitted) | **Logged, not fixed** — user decision: keep the build, kill the silence. |
-| F3 — cupy build failure reported as success | (uncommitted) | **Documented, no code change** — the node lies; our exit-code check is correct. |
+| F1 — weight-only node shell reads as installed | `2ee5ee15` | Unit-tested, all 4 call sites fixed. **Not seen fire on a real RIFE install.** See below. |
+| F2 — no-GPU machines get the CUDA build | `2ee5ee15` | **Logged, not fixed** — user decision: keep the build, kill the silence. |
+| F3 — cupy build failure reported as success | `2ee5ee15` | **Documented, no code change** — the node lies; our exit-code check is correct. |
 
 ## D — what was actually verified
 
@@ -146,3 +146,30 @@ Wrong label in the install UI. Left alone deliberately; it is not part of F3.
 engine-install modal covers the only UI that enables it. Found while tracing F2.
 Distinct defect (F2 = which build is chosen; MPI-390 = the remote escape hatch is
 unreachable). Full trace in `tasks/MPI-390/brief.md`.
+
+## Validation is GATED ON THE 1.3.0 RELEASE (user decision, 2026-07-29)
+
+A throwaway master build was made and verified rootless
+(`CubricVision.exe` at the zip root, build hash `2ee5ee1581a7`), but the user chose
+NOT to test on the reproducing laptop with it — a concurrent session is still landing
+work, and the evidence should come from the artifact users actually receive.
+
+So every remaining MPI-387 item is now a **1.3.0 release-validation task**, to be run
+on the maintainer's clean Windows 11 laptop with Smart App Control ON:
+
+| Item | What 1.3.0 settles |
+|---|---|
+| A depth | Explorer "Extract All" into the default Downloads, one folder deep, no MAX_PATH failure from LTXVideo's pip |
+| B git | Impact-Pack installs with `where git` returning nothing on that machine |
+| C attribution | if anything fails, the message names the node and the real phase |
+| D SAC | `CubricVision.exe` launches — expect SmartScreen "More info -> Run anyway", not a silent block |
+| D transition | **newly reachable at 1.3.0**: a real v1.2.0 install applying the 1.3.0 bundle. Its applier is the user's OLD one, so this is the first live test of that path |
+| F1 | no `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` |
+| F2 | the new no-GPU fallthrough WARN appears (that is the fix working, not a fault) |
+| F3 | `Failed to build 'cupy-wheel'` followed by `Custom install command succeeded` is EXPECTED and harmless |
+
+**Still not reachable at 1.3.0:** a SECOND update, applied from the new layout — the
+one that exercises `loadExtractZip`'s `resources/app` branch and `evictBusyFile`. That
+needs 1.3.1 or later. It is the last thing standing between this card and `done`.
+
+The whole set is settled by one artifact plus one file: `<extract root>/user-data/logs/app.log`.

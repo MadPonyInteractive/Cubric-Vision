@@ -88,7 +88,17 @@ Grab the portable build for your platform from
 — no installer, just extract and launch. On first run the app sets up its
 ComfyUI engine and asks where to store models.
 
-Step-by-step instructions, including the macOS quarantine note, are in the
+**Windows:** extract the zip and run **`CubricVision.exe`**. Windows will show
+*"Windows protected your PC"* — click **More info**, then **Run anyway**. The
+builds are not code-signed, so this warning is expected.
+
+**macOS:** downloaded builds are quarantined. Clear it, then launch:
+
+```bash
+xattr -dr com.apple.quarantine "<extracted folder>"
+```
+
+Step-by-step instructions are in the
 [installation guide](https://docs.cubric.studio/vision/installation/).
 
 Every build is free and public on GitHub Releases. If Cubric Vision is useful to

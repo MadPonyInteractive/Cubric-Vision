@@ -40,6 +40,40 @@ artifact name, OS version, CPU architecture, GPU and driver stack when relevant,
 clean extract location, launch result, engine setup result, generation result
 when hardware allows, and app log tail before strengthening release language.
 
+## First-Launch Instructions (must appear in every release body)
+
+Both desktop platforms show an OS security prompt on first launch because the
+builds are unsigned. If the release body does not say so, the prompt reads as
+"this download is malware" and the user stops there. Include both notes.
+
+**Windows.** From 1.3.0 the zip extracts to a plain folder with `CubricVision.exe`
+at its root — there is no start script in the launch chain any more (MPI-387 D:
+Smart App Control hard-blocks `.vbs`/`.bat`/`.cmd` with no override, which is
+what broke clean Windows 11 installs). Tell the user:
+
+> Extract the zip anywhere and run **`CubricVision.exe`**. Windows will show
+> "Windows protected your PC" — click **More info**, then **Run anyway**. The app
+> is unsigned; this warning is expected and appears until the build earns
+> reputation.
+
+Say plainly that the build is **not code-signed**. There is no certificate and no
+NSIS installer (user decision, 2026-07-29): signing starts SmartScreen's
+reputation clock, it does not skip it.
+
+**Windows users on a build older than 1.3.0 cannot be reached by an update** —
+Smart App Control blocks the update scripts too. They must download the full zip.
+This must be stated in any release that carries a Windows fix.
+
+**macOS.** Any downloaded build is quarantined. Give the clear command and the
+launch target:
+
+> ```
+> xattr -dr com.apple.quarantine "<extracted folder>"
+> ```
+> then double-click `start.command`.
+
+This is the only working first-launch path for un-notarized builds.
+
 ## Scope Guard
 
 Release copy should describe Cubric Studio Vision as a local image and video
