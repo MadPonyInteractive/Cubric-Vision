@@ -1,0 +1,27 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-386",
+ "title": "Age gate leaves an orphan modal backdrop that swallows every click",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-29T22:25:00Z",
+ "updated_at": "2026-07-29T22:25:00Z",
+ "labels": [
+  "bug",
+  "ui",
+  "components"
+ ],
+ "description": "Found incidentally while smoke-testing MPI-376 in the browser surface, NOT a masking bug.\n\nSYMPTOM: accepting the 18+ adult-content gate (CONTINUE) removes the modal's CONTENT but leaves the backdrop element behind. Measured in the live DOM immediately after dismissal:\n\n  <div class=\"mpi-modal-backdrop\"></div>\n  children: 0, rect: 1280x688 (full viewport), z-index: 10009, pointer-events: auto\n\nBecause it is full-viewport with pointer-events auto at a very high z-index, it intercepts EVERY click on the landing page. Playwright reported '<div class=\"mpi-modal-backdrop\"></div> intercepts pointer events' and retried until timeout on a plain project-tile click. A human would see a landing page where nothing is clickable. Removing the node by hand restored normal interaction, which confirms the backdrop is the sole cause.\n\nREPRO (browser, fresh profile so the gate actually shows):\n1. Serve the app and open http://127.0.0.1:3000/ in a profile that has never accepted the gate.\n2. Click CONTINUE on 'Adult content - 18+ only'.\n3. Try to click a recent-project tile. Nothing happens.\n4. document.querySelectorAll('.mpi-modal-backdrop') returns one childless full-viewport node.\n\nUNKNOWN AND MUST BE CHECKED FIRST: whether Electron leaks the same node. The gate is accepted once per install, so on a normal desktop run it may never be seen again after first launch - which would make this a first-run-only defect there, or browser-only if the desktop path differs. Check the desktop first-run before deciding severity; a first-run dead landing page in the ship target is serious, a dev-browser-only annoyance is not.\n\nROOT CAUSE IS NOT DIAGNOSED YET. Do not patch it by deleting stray backdrops on a timer or on route change - that is exactly the symptom-patch the root-cause rule forbids. Find the teardown path that removes the modal body without removing its backdrop. Likely home is the shell overlay/modal service (docs/shell.md covers Overlays) or whichever component mounts the age gate; check whether the gate dismisses itself directly instead of going through the overlay manager's teardown, which would explain a half-removal.\n\nSWEEP: if the gate bypasses the shared teardown, every other consumer of that modal path is suspect too - grep them and classify rather than fixing the gate alone.",
+ "acceptance": [
+  "Root cause named: WHICH teardown path removes the modal content but not the backdrop, and why",
+  "Electron first-run checked explicitly - state whether the desktop target leaks the same node or not, with evidence",
+  "After dismissing the gate, document.querySelectorAll('.mpi-modal-backdrop').length is 0 and the landing page is fully clickable",
+  "Fixed at the teardown, NOT by sweeping up stray backdrops on a timer, route change or interval",
+  "Every other consumer of that modal/overlay teardown path is grepped and classified - a gate-only fix on a shared primitive is a false done",
+  "If the backdrop belongs to a shared overlay service, its teardown contract is recorded in docs/shell.md"
+ ],
+ "links": {
+  "events": "events.jsonl"
+ }
+}

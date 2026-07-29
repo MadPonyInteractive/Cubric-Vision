@@ -59,6 +59,8 @@ export class InputController {
         this._boundHandlers.keydownUnsub?.();
         this._boundHandlers.brushKeyUnsub?.();
         this._boundHandlers.eraserKeyUnsub?.();
+        this._boundHandlers.undoKeyUnsub?.();
+        this._boundHandlers.redoKeyUnsub?.();
         this._boundHandlers.keyupUnsub?.();
     }
 
@@ -79,6 +81,12 @@ export class InputController {
     _endMaskStroke() {
         if (!this.managers.mask.isDrawingMask) return;
         this.managers.mask.isDrawingMask = false;
+        // Close the undo capture opened at mousedown (MPI-376). The box is the
+        // only reason a stroke costs kilobytes: without it every stroke would
+        // retain two full 1536² layers. A stroke that painted nothing aborts.
+        const box = this.managers.mask.takeStrokeBox();
+        if (box) this.managers.undo?.commit(box);
+        else     this.managers.undo?.abort();
         this.options.onMaskStrokeEnd?.();
     }
 
@@ -162,6 +170,10 @@ export class InputController {
                 }
             } else if (mask.isMaskingMode && mask.paintEnabled && !this.isSpacePressed) {
                 mask.isDrawingMask = true;
+                // Open the undo capture BEFORE the first dab — the snapshot has to
+                // predate the stroke it will undo. _endMaskStroke() closes it.
+                this.managers.undo?.begin(mask.undoLayers());
+                mask.takeStrokeBox();
                 mask.paint(i.x, i.y);
             } else {
                 this.isPanning = true;
@@ -250,6 +262,18 @@ export class InputController {
             mask.brushType = 'eraser';
             if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('eraser');
             this.options.onDraw();
+        });
+
+        // Undo / redo (MPI-376). Gated on mask mode like the brush keys — outside
+        // a mask tool there is nothing to undo and Ctrl+Z must stay the OS default.
+        this._boundHandlers.undoKeyUnsub = Hotkeys.bind('mask.undo.canvas', () => {
+            if (!mask.isMaskingMode) return;
+            this.options.onUndo?.();
+        });
+
+        this._boundHandlers.redoKeyUnsub = Hotkeys.bind('mask.redo.canvas', () => {
+            if (!mask.isMaskingMode) return;
+            this.options.onRedo?.();
         });
 
         // KeyUp: Space

@@ -202,6 +202,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
             if (manual)   await _cv.el.setManualFromDataURL(manual);
             if (subtract) await _cv.el.setSubtractFromDataURL(subtract);
+            // A restore REPLACES the layers, so any history in front of it now
+            // describes pixels that no longer exist. Most callers arrive via
+            // loadImage (mask.init already cleared it), but the re-seed path
+            // clearMask()s first and never reloads the image — that clear would
+            // otherwise sit on the stack as a bogus undo. (MPI-376)
+            _cv.el?.clearMaskUndo?.();
             _hasMask = !!(_cv.el?.maskCanvas && hasMaskContent(_cv.el.maskCanvas));
         }
 

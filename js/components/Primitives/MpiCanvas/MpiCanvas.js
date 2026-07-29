@@ -84,6 +84,7 @@ import { ViewManager }       from './managers/ViewManager.js';
 import { MaskManager }       from './managers/MaskManager.js';
 import { ComparisonManager } from './managers/ComparisonManager.js';
 import { CropManager }       from './managers/CropManager.js';
+import { UndoStack }         from './managers/UndoStack.js';
 import { InputController }   from './managers/InputController.js';
 
 const getCSSColor = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
@@ -175,6 +176,10 @@ class _CanvasCore {
         this.mask       = new MaskManager();
         this.comparison = new ComparisonManager();
         this.crop       = new CropManager();
+        // MPI-376: ONE stack for the whole canvas, not one per tool — masking uses
+        // it now, MPI-375's paint layer plugs into the same entries later.
+        this.undoStack  = new UndoStack();
+        this.mask.undo  = this.undoStack;
         this._activeMode = 'none';
         this._onModeChange = onModeChange;
         this._maskHidden = false;
@@ -192,7 +197,7 @@ class _CanvasCore {
         this.input = new InputController(
             this.canvas,
             this.container,
-            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop },
+            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, undo: this.undoStack },
             {
                 onDraw: () => { this._applyTransform(); this.draw(); },
                 onResetView: () => this.resetView(),
@@ -200,7 +205,9 @@ class _CanvasCore {
                 onBrushSizeChange: this.options.onBrushSizeChange,
                 onBrushTypeChange: this.options.onBrushTypeChange,
                 onPointsChange: this.options.onPointsChange,
-                onMaskStrokeEnd: this.options.onMaskStrokeEnd
+                onMaskStrokeEnd: this.options.onMaskStrokeEnd,
+                onUndo: () => this.undoMask(),
+                onRedo: () => this.redoMask()
             },
             this.stackEl
         );
@@ -267,6 +274,9 @@ class _CanvasCore {
         this.input?.destroy?.();
         this.crop?.destroy?.();
         this.mask?.destroy?.();
+        // Retained snapshots + the full-size scratch buffers are the biggest thing
+        // this component holds after the layers themselves — drop them explicitly.
+        this.undoStack?.destroy?.();
         this.comparison?.destroy?.();
         // Zero canvas dims before removal — forces Chromium to release GPU texture backing immediately
         for (const c of [this.baseCanvas, this.overlayCanvas, this.screenUICanvas]) {
@@ -1031,6 +1041,37 @@ class _CanvasCore {
     setMaskPaintEnabled(v)  { this.mask.paintEnabled = !!v; this.draw(); }
     setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
     clearMask()             { this.mask.clear(); this.draw(); }
+
+    // ── Undo API (MPI-376) ────────────────────────────────────────────────────
+
+    /**
+     * Restore the source layers, then re-derive. `onMaskStrokeEnd` is reused
+     * deliberately: an undo IS a mask change, and that callback is the viewer's
+     * one publish path (_publishMaskState → evaluateMask → mask-ready), so the op
+     * strip locks and unlocks on an undo exactly as it does on a stroke.
+     * @returns {boolean} true when something was undone
+     */
+    undoMask() { return this._applyUndo(this.undoStack.undo()); }
+    /** @returns {boolean} true when something was redone */
+    redoMask() { return this._applyUndo(this.undoStack.redo()); }
+    _applyUndo(ok) {
+        if (!ok) return false;
+        this.mask.refresh();
+        this.draw();
+        this.options.onMaskStrokeEnd?.();
+        return true;
+    }
+    /** Drop history without touching pixels — for a LOAD that replaces the layers. */
+    clearMaskUndo()         { this.undoStack.clear(); }
+    canUndoMask()           { return this.undoStack.canUndo(); }
+    canRedoMask()           { return this.undoStack.canRedo(); }
+    /**
+     * Retained-pixel readout. Memory is the binding constraint on this stack, so
+     * the cost has to be observable rather than assumed — this is what the depth
+     * and per-entry figures in docs/masking-undo.md were measured with.
+     * @returns {{depth:number, bytes:number, lastEntryBytes:number}}
+     */
+    getUndoStats()          { return { depth: this.undoStack.depth, bytes: this.undoStack.bytes, lastEntryBytes: this.undoStack.lastEntryBytes }; }
     getMaskDataURL(bg = null, fg = null) { return this.mask.getURL(bg, fg); }
     getManualURL()          { return this.mask.getManualURL(); }
     getSubtractURL()        { return this.mask.getSubtractURL(); }
@@ -1105,6 +1146,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks','bakeAutoPicksInto',
+            'undoMask','redoMask','clearMaskUndo','canUndoMask','canRedoMask','getUndoStats',
             'setPointsMode','isPointsMode','clearMaskPoints','getMaskPointCount','getPointsJSON',
             // ALLOWLIST — a core method missing here is `undefined` on el, and the
             // caller dies with "not a function" nowhere near this file.

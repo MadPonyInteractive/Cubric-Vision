@@ -148,6 +148,31 @@ export const HOTKEY_REGISTRY = [
         description:      'Select eraser tool',
         allowWhileTyping: false,
     },
+    // Undo / redo on the mask layers (MPI-376). The `when` gate is LOAD-BEARING:
+    // allowWhileTyping only blocks single letters, bare modifiers and text-edit
+    // keys, and 'control+z' is none of those — without this gate the manager
+    // would preventDefault Ctrl+Z inside the PromptBox and eat the native text
+    // undo. The handlers are also gated on mask mode in InputController.
+    {
+        id:               'mask.undo.canvas',
+        key:              'control+z',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Canvas',
+        description:      'Undo the last mask edit',
+        allowWhileTyping: false,
+        when:             ({ isTyping }) => !isTyping,
+    },
+    {
+        id:               'mask.redo.canvas',
+        key:              'control+shift+z',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Canvas',
+        description:      'Redo the last undone mask edit',
+        allowWhileTyping: false,
+        when:             ({ isTyping }) => !isTyping,
+    },
 
     // ── Gallery ───────────────────────────────────────────────────────────────
     {

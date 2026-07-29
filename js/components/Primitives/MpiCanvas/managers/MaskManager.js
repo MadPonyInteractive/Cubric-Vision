@@ -17,6 +17,18 @@
  * coords arrive in image-px and are scaled by `_scale` into mask-px. Display/export
  * upscale back automatically (overlay drawImage + ComfyUI's own mask resize).
  *
+ * ⚠ EVERY MUTATION OF manualCanvas / subtractCanvas MUST BE UNDOABLE (MPI-376).
+ * These two layers are the only persistent mask state, and `MpiCanvas` owns a shared
+ * UndoStack that restores them. If you add a method that writes either canvas:
+ *   - layer-wide, one shot (a bake, a Clear, a grow) → call `this._recordUndo()` FIRST,
+ *     after any early-return guard so a no-op cannot push an empty entry;
+ *   - a gesture with a start and an end (a stroke, a drag) → `undo.begin(undoLayers())`
+ *     at the start, accumulate the dirty box, `undo.commit(takeStrokeBox())` at the end;
+ *   - a LOAD that replaces the layers (setManual/SubtractFromDataURL, init) → record
+ *     NOTHING and clear the stack — a load is not an edit the user could have undone.
+ * A mutation that skips this is a silent hole in Ctrl+Z: undo that works for some edits
+ * and not others is worse than no undo at all. See docs/masking-undo.md.
+ *
  * POINT PROMPTS (MPI-361) are a FOURTH, separate layer and deliberately not a
  * canvas: they are a list of dots the auto-mask graph turns into a mask, not
  * mask content themselves. Nothing composites them — `getPointsJSON()` serialises
@@ -51,6 +63,17 @@ export class MaskManager {
 
         this.autoPickMasks = new Map();
         this.selectedAutoPicks = new Set();
+
+        /**
+         * UndoStack, injected by MpiCanvas (MPI-376). Only manualCanvas and
+         * subtractCanvas are undoable: maskCanvas and autoCanvas are derived, so
+         * restoring the two source layers and re-running _recomposite() rebuilds
+         * both — and keeps the MPI-371 auto-picks-union-LAST order intact for free.
+         * @type {import('./UndoStack.js').UndoStack|null}
+         */
+        this.undo = null;
+        /** Dirty box of the stroke in flight, in mask-px. Null between strokes. */
+        this._strokeBox = null;
 
         // mask-px per image-px. Set in init(); paint() multiplies incoming
         // image-px coords + brush radius by this to hit the downscaled canvas.
@@ -98,10 +121,68 @@ export class MaskManager {
         this.maskCanvas.height = h;
         this.autoCanvas.width = w;
         this.autoCanvas.height = h;
-        this.clear();
+        // A new image means a new history. Undo must never reach across two
+        // entries, and the wipe below is a load, not an edit the user can undo.
+        this.undo?.clear();
+        this.clear(false);
     }
 
-    clear() {
+    // ── Undo (MPI-376) ───────────────────────────────────────────────────────
+
+    /**
+     * The two layers undo restores. Everything else is derived or transient:
+     * autoPickMasks / selectedAutoPicks are the last detect run (re-runnable) and
+     * points are individually removable by clicking a dot, so neither is stored.
+     * @returns {Array<{canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D}>}
+     */
+    undoLayers() {
+        if (!this.manualCtx || !this.subtractCtx) return [];
+        return [
+            { canvas: this.manualCanvas,   ctx: this.manualCtx },
+            { canvas: this.subtractCanvas, ctx: this.subtractCtx },
+        ];
+    }
+
+    /** Snapshot both layers before a layer-wide mutation. */
+    _recordUndo() {
+        const layers = this.undoLayers();
+        if (layers.length) this.undo?.record(layers);
+    }
+
+    /** Re-derive maskCanvas + autoCanvas after an undo/redo swapped the source layers. */
+    refresh() { this._recomposite(); }
+
+    /**
+     * Take the dirty box the stroke in flight accumulated and reset it. Padded by
+     * 1px because the brush arc is antialiased past its own radius.
+     * @returns {{x:number,y:number,w:number,h:number}|null} null when nothing was painted
+     */
+    takeStrokeBox() {
+        const b = this._strokeBox;
+        this._strokeBox = null;
+        if (!b) return null;
+        return { x: b.x0 - 1, y: b.y0 - 1, w: (b.x1 - b.x0) + 2, h: (b.y1 - b.y0) + 2 };
+    }
+
+    /** Grow the in-flight stroke box to cover a dab of radius r at (x, y), all mask-px. */
+    _growStrokeBox(x, y, r) {
+        const b = this._strokeBox;
+        if (!b) {
+            this._strokeBox = { x0: x - r, y0: y - r, x1: x + r, y1: y + r };
+            return;
+        }
+        b.x0 = Math.min(b.x0, x - r);
+        b.y0 = Math.min(b.y0, y - r);
+        b.x1 = Math.max(b.x1, x + r);
+        b.y1 = Math.max(b.y1, y + r);
+    }
+
+    /**
+     * @param {boolean} [record] false skips the undo snapshot — for a LOAD (init),
+     *   where wiping the layers is not an edit the user could have undone.
+     */
+    clear(record = true) {
+        if (record) this._recordUndo();
         if (this.manualCtx) this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
         if (this.subtractCtx) this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
         this.autoPickMasks.clear();
@@ -161,6 +242,7 @@ export class MaskManager {
         imgX *= s;
         imgY *= s;
         const r = (this.brushSize * s) / 2;
+        this._growStrokeBox(imgX, imgY, r);
         if (this.brushType === 'eraser') {
             // Manual: clear painted pixels at P
             this.manualCtx.save();
@@ -355,6 +437,9 @@ export class MaskManager {
             .filter(Boolean);
         if (!layers.length || !this.manualCtx || !this.subtractCtx) return false;
 
+        // After the guard: a bake that no-ops must not push an empty undo entry.
+        this._recordUndo();
+
         const toSubtract = target === 'subtract';
         const dstCtx    = toSubtract ? this.subtractCtx    : this.manualCtx;
         const dstCanvas = toSubtract ? this.subtractCanvas : this.manualCanvas;
@@ -418,6 +503,10 @@ export class MaskManager {
         this.autoPickMasks?.clear?.();
         this.selectedAutoPicks?.clear?.();
         this.points = [];
+        // The stack itself is owned and torn down by MpiCanvas; drop the ref so a
+        // late callback cannot record against dead contexts.
+        this.undo = null;
+        this._strokeBox = null;
     }
 
     /**

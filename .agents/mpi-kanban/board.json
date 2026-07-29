@@ -1,18 +1,18 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 386,
+ "next_id": 387,
  "columns": {
   "todo": [
    "MPI-385",
    "MPI-382",
-   "MPI-376",
+   "MPI-368",
    "MPI-379",
+   "MPI-386",
    "MPI-378",
    "MPI-373",
    "MPI-374",
    "MPI-375",
    "MPI-377",
-   "MPI-368",
    "MPI-366",
    "MPI-365",
    "MPI-358",
@@ -37,6 +37,7 @@
    "MPI-349"
   ],
   "doing": [
+   "MPI-376",
    "MPI-380",
    "MPI-367",
    "MPI-370",
@@ -77,7 +78,7 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-29T20:20:00Z",
+ "updated_at": "2026-07-29T22:35:00Z",
  "events": [
   {
    "at": "2026-07-29T18:00:00Z",
@@ -912,6 +913,27 @@
    "from": "doing",
    "to": "done",
    "note": "FLUX.2 Klein 4B shipped and user-validated in-app: all seven ops, bar counts, styles, enhancer, depth with two images, no ratio on the image-sized ops. Verified with only ~6GB VRAM free (spills to RAM and completes). RunPod re-test deferred by the user - no card, they will open one if it bites."
+  },
+  {
+   "at": "2026-07-29T21:30:00Z",
+   "type": "task.moved",
+   "task": "MPI-376",
+   "from": "todo",
+   "to": "doing",
+   "note": "User resequenced undo AHEAD of MPI-382: grow/shrink needs a pristine drag-start snapshot, which is the same primitive undo builds, and both 382 and 368 bake irreversibly. New order 376 > 382 > 368 > 379."
+  },
+  {
+   "at": "2026-07-29T22:25:00Z",
+   "type": "task.created",
+   "task": "MPI-386",
+   "to": "todo",
+   "note": "Age gate leaves an orphan childless full-viewport .mpi-modal-backdrop (z 10009, pointer-events auto) that intercepts every click on the landing page. Found incidentally during the MPI-376 live smoke; unrelated to masking. Electron first-run impact UNKNOWN - check that first."
+  },
+  {
+   "at": "2026-07-29T22:35:00Z",
+   "type": "board.reordered",
+   "task": "MPI-382",
+   "note": "To do reordered so the masking chain reads in the decided order: MPI-382 (grow/shrink) > MPI-368 (shapes) > MPI-379 (hover/COCO), all after MPI-376 undo which is now in doing. MPI-368 was sitting below unrelated cards."
   }
  ]
 }

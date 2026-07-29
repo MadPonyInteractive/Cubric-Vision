@@ -96,6 +96,15 @@ that look like bugs and are not.
 
 ---
 
+## Undo — `UndoStack` (MPI-376)
+
+Ctrl+Z / Ctrl+Shift+Z on the mask layers lives in **[masking-undo.md](masking-undo.md)**:
+what the stack stores (only `manualCanvas` + `subtractCanvas` — everything else is derived,
+so the layer ORDER above survives any undo for free), the dirty-rect/byte-budget design with
+its measured costs, and the wiring traps.
+
+---
+
 ## Add / Subtract
 
 App-side, via `bakeAutoPicksInto()` — no `AddMask`/`SubtractMask` nodes, no extra round trip.

@@ -15,6 +15,13 @@
 - **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `ratios.js` may already do what you need.
 - **Frontend logging:** `import { clientLogger } from '../services/clientLogger.js'` — never use bare `console.log/error`.
 - **Backend logging:** `const logger = require('./logger')` from `routes/logger.js`.
+- **🔴 Mutating a mask or paint LAYER? It must be undoable.** `MpiCanvas` owns a shared
+  `UndoStack` (MPI-376). Any new code that writes `manualCanvas` / `subtractCanvas` — or a
+  future paint layer — records an entry FIRST or it silently punches a hole in Ctrl+Z. A
+  gesture uses `undo.begin(layers)` / `commit(dirtyRect)`; a one-shot layer-wide op uses
+  `mask._recordUndo()` before mutating. **Read `docs/masking-undo.md` before touching any
+  layer.** Undo that works for some edits and not others is worse than none — the user learns
+  to trust it, then loses work at the first unwired path.
 
 ## 🧰 The Utilities Folder (`js/utils/`)
 

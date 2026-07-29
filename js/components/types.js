@@ -31,6 +31,10 @@
  *   setMaskOpacity(opacity), clearMask(), getMaskDataURL(bg, fg)
  *   setMaskBwView(bool)       — display the mask opaque B/W instead of tinted
  *   setMaskPaintEnabled(bool) — arm/disarm brush painting for the active tool
+ *   undoMask() / redoMask()   — MPI-376; restores the manual + subtract layers
+ *                               and fires onMaskStrokeEnd so the op strip resyncs
+ *   clearMaskUndo()           — drop history WITHOUT touching pixels (after a load)
+ *   canUndoMask() / canRedoMask()
  *   setCropRatio(ratio), setCropSize(w, h), getCropRect()
  *                             — the crop rect may sit PARTLY OUTSIDE the image
  *                               (MPI-383); getCropRect can return negative x/y

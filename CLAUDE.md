@@ -41,6 +41,7 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 - **Cross-component communication:** `Events.on()` / `Events.emit()`; always store and call the returned unsubscribe on cleanup.
 - **Teardown:** navigation MUST call `instance.destroy()` before clearing a mounted Block (never `innerHTML = ''` alone); any `setup` that calls `Events.on(...)`, `window.addEventListener(...)`, or creates an Observer MUST define `el.destroy()` cleaning them up (collect in `const _unsubs = []`). See `.claude/rules/components.md` § Observer Lifecycle & Teardown Contract.
 - **project.json writes:** server routes MUST use `updateProjectJson()` in `routes/projects.js` (per-file queued atomic writes) — never direct `fs.writeJson`.
+- **Mask / paint layers are UNDOABLE:** any new code that mutates `manualCanvas` / `subtractCanvas` (or a future paint layer) MUST record an `UndoStack` entry before mutating — a gesture via `undo.begin()`/`commit(rect)`, a one-shot op via `mask._recordUndo()`. An unwired mutation is a silent hole in Ctrl+Z. Read `docs/masking-undo.md` first.
 - **Logging:** frontend `js/services/clientLogger.js`, backend `routes/logger.js` — never bare `console.log`.
 - **Kanban writes are pre-authorized** — edit `.agents/mpi-kanban/board.json` + `tasks/<id>/` freely; never ask.
 - **Kanban cards MUST track real state — MOVE them:** `todo → doing` BEFORE editing files, `doing → done` when the work ships. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in both event logs. Board is JSON — read `<mpi-lib>/task-board-ops/mutate.md` + `.claude/rules/kanban.md`, NOT the legacy `kanban-ops/` Markdown doc.
@@ -57,6 +58,7 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 | Gallery (cards, thumbnails, selection, drag-drop, hover media) | `docs/gallery.md` |
 | Masking (layer model, overlay draw, the mask tool family, PromptBox contract) | `docs/masking.md` |
 | SAM3 masking (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | `docs/masking-sam3.md` |
+| Canvas undo / redo (the shared command stack — any code that MUTATES a mask or paint layer) | `docs/masking-undo.md` |
 | Crop (resolution types, cropping past the image edge, snapping, pad-then-extract) | `docs/crop.md` |
 | Model Library UI (install-state display, tile patching, featured) | `docs/model-library.md` |
 | Events & cross-component communication | `.claude/rules/events.md` |
