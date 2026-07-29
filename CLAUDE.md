@@ -80,7 +80,7 @@ Standing lessons behind this rule: `.claude/rules/comfy_engine.md` § Engine Spl
 | Debugging / crashes / python engine issues | `docs/DEVELOPMENT.md` § Reading `logs/app.log` — **filter by `[category]`, never read the file whole** |
 | Kanban cards / board / agent messages | `.claude/rules/kanban.md` (schema traps, backslash trap, ASCII messages) |
 | Committing (shared tree, co-owned files) | `.claude/rules/git.md` |
-| Browser automation | `playwright-cli` skill; app at http://127.0.0.1:3000/ (browser = dev-only, some features broken; Electron desktop = ship target) |
+| Browser automation | `playwright-cli`, run via **Bash** (`npx playwright-cli open <url>` / `goto` / `click eN` / `eval` / `close`) — the skill is `disable-model-invocation: true`, so it CANNOT be called with the Skill tool. `eval` wraps its arg as `() => (EXPR)`, so multi-statement JS must be an IIFE. App at http://127.0.0.1:3000/ (browser = dev-only, some features broken; Electron desktop = ship target) |
 | Desktop (Electron-only) testing | `npm run test:desktop`; tests in `tests/desktop/*.spec.js`; uses `CUBRIC_E2E_USER_DATA` (real user data untouched); port 3000 must be free first |
 
 ### Procedures — RUN THE SKILL (it enforces the playbook)
