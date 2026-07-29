@@ -128,6 +128,21 @@ Do not use legacy `CubricStudio` artifact names for Vision releases. Release
 copy may use the product name "Cubric Studio Vision", but release asset names
 use `CubricVision`.
 
+> **The Windows full zip carries NO inner root folder (MPI-387).** Linux
+> (`.tar.gz`, which always has one) and macOS (`ditto --keepParent`) keep theirs;
+> only `win32` passes `includeRoot: false` at `build-portable.mjs:1062`.
+> Reason: the zip basename and the inner root were the same 31-char string, and
+> Explorer's "Extract All" names its destination after the zip — so the name
+> landed **twice** and cost 32 characters. A clean Windows 11 install measured
+> **266 characters against the 260 MAX_PATH limit** and pip died writing
+> `site-packages/diffusers/.../pipeline_stable_diffusion_attend_and_excite.py`.
+> Extract All still produces exactly one folder from a rootless zip; only a shell
+> "Extract Here" sprays, and the engine-install depth preflight
+> (`installPathDepthError`, `routes/engine.js`) covers whatever the user does next.
+> **Budget: the engine root must be ≤ 89 chars** (260 minus the measured 171-char
+> deepest engine-relative file). Repacking the Windows zip with an inner root
+> re-breaks a default Downloads extract.
+
 ### Update Bundles
 
 Update bundles are for existing portable folders. They replace app-owned files
@@ -191,6 +206,27 @@ CubricVision-<platform>-<arch>-v<version>/
 ### Launcher split details
 
 Two launchers per desktop platform: Windows — `start.vbs` (default, hidden console) + `start-with-terminal.bat`; Linux — `start.sh` (detached via `setsid --fork nohup`) + `start-with-terminal.sh`; macOS — `start.command` only (`.app`-style true-hide deferred). Windows `.bat` always shows a console — VBS is the only true zero-flash path. App logs go to `logs/app.log` regardless of which launcher is used.
+
+> **The whole Windows launch chain is Smart App Control-blocked (MPI-387, OPEN).**
+> SAC is on by default after a clean Windows 11 install and hard-blocks
+> `.appref-ms .bat .cmd .chm .cpl .js .jse .msc .msp .reg .vbe .vbs .wsf` with **no
+> per-file allowlist and no override in the dialog**. We ship three blocked hops
+> before the exe: `start.vbs` → `start-with-terminal.bat` →
+> `node_modules/.bin/electron.cmd` → an unrenamed `electron.exe`. Such a user also
+> cannot auto-update (`main.js` spawns `update.bat`) or hand-apply a zip
+> (`update-from-zip.bat`) — **only a fresh full download reaches them**.
+>
+> - **`.lnk` is REJECTED — do not re-propose it.** Verified empirically: a shortcut
+>   stores an **absolute** target path, so it breaks the moment a portable folder is
+>   moved or extracted anywhere but the build machine's path.
+> - **Signing does not fix SAC.** EV no longer grants instant SmartScreen
+>   reputation, OV is now equivalent, and SAC blocks signed binaries whose
+>   reputation is unknown. Signing starts the reputation clock; it does not skip it.
+> - The fix direction is a standard Electron layout with a plain `CubricVision.exe`
+>   at the zip root (an exe is reputation-*evaluated*, scripts are hard-blocked).
+>   Blockers are enumerated in `.agents/mpi-kanban/tasks/MPI-387/brief.md` § D.
+> - `electron-builder.yml` in this repo is **dead config** — `electron-builder` is
+>   not in devDependencies and nothing runs it.
 
 ### Updater — no host tools assumed
 

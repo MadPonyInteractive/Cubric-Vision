@@ -1,5 +1,10 @@
 # MPI-387 — Clean Windows 11 install is broken end-to-end
 
+> **STATUS 2026-07-29: A, B and C are SHIPPED. D, E, F1, F2, F3 remain.**
+> Shipped: splash (`335fe260`), Impact-Pack `git+sam2` drop (`f371a162`),
+> MAX_PATH archive + preflight and the failure-attribution split (this session).
+> Fix map for what is left is at the bottom of this file — do not re-derive it.
+
 Raised 2026-07-29. A second user reported the app not starting on Windows 11; the user then
 reproduced a full install on a clean Windows 11 Home laptop (integrated graphics, no NVIDIA)
 and captured `app.log`. Everything below is measured or quoted, not inferred.
@@ -225,6 +230,27 @@ surrounding try/catch (which only sees sync throws) and would now take the whole
 through the MPI-369 `unhandledRejection` handler.
 
 ---
+
+## Fix map — exact sites (derived once; do not re-derive)
+
+### Shipped this session
+
+| Fix | Site | What landed |
+|---|---|---|
+| A archive | `scripts/build-portable.mjs:1062` | `includeRoot: opts.platform !== 'win32'` — Windows full zip has no inner root. 266 → 234 on the reproducing machine. Linux/macOS byte-identical. |
+| A preflight | `routes/engine.js` `installPathDepthError` / `assertInstallPathDepth` | Budget = 260 − 171 = **89 chars for ENGINE_ROOT**. Called at the top of `_runEngineDownload` and `/engine/repair-deps`, i.e. before any download. Skipped when `LongPathsEnabled` is 1 in the registry. Warns when within 20 chars of the budget. |
+| C attribution | `routes/downloadManager.js` | `anyFailure` split into `extractFailures` / `installFailures`; message built by `_describeNodeInstallFailures`, which names the deps and the phase. `routes/engine.js` now carries that message into `engine:error` instead of the generic "UW deps installation failed". |
+| Test | `tests/install-path-depth.test.cjs` | Pins the 95-char broken root, the 63-char fixed root, the 89-char boundary, and that a pip-only batch never claims "extraction failed". |
+
+### Still open
+
+| Fix | Site | Note |
+|---|---|---|
+| F1 reconciler false positive | `routes/comfy.js:718-720` `_localModelsCheck` uses `pathExists` for `custom_nodes` deps | RIFE's `targetPath` weight makes `FileDownloader._ensureDownloader` (`downloadManager.js:663`) `ensureDir` the parent node folder as a side effect. Fix: use the `_nodeFolderHasFiles` guard (`downloadManager.js:86-93`) — extract to a shared util. **No work is dropped; the WARN is cosmetically wrong only.** |
+| F2 wrong GPU build | `routes/platformEngine.js:283-293` defaults to the NVIDIA 7z; `detectIntelArcGPU` (`:230-241`) matches only Intel Arc / Data Center, never Iris/UHD/HD | Every non-discrete-GPU laptop downloads the CUDA build. Product decision on whether a lighter build exists; at minimum log the intentional fallthrough. |
+| F3 cupy | `ComfyUI-Frame-Interpolation/install.py` swallows a cupy-wheel build failure and exits 0 | `runCustomCommand` (`routes/shared.js:305-319`) correctly resolves — the exit-code check is right, the node lies. cupy is optional for RIFE (torch fallback). Document or drop cupy. |
+| D relayout | `scripts/build-portable.mjs` + `apply-update.cjs` + `main.js` | 7 blockers, table in § D above. |
+| E release notes | — | Existing Win11 SAC users reachable only by a fresh full download. |
 
 ## Release note
 

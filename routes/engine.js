@@ -18,9 +18,75 @@ const { broadcastEngineEvent, FileDownloader, registerEngineDownload, clearEngin
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
 const { ensureGit } = require('./gitProvision');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
+const { promisify } = require('util');
 
 const ENGINE_ROOT = getEngineRoot();
+
+// ── MPI-387: Windows MAX_PATH preflight ──────────────────────────────────────
+// A clean Windows 11 install died mid-pip with
+// `OSError: [Errno 2] No such file or directory` on a deep `diffusers` file —
+// 266 characters against the 260-char MAX_PATH. The engine tree is what's deep:
+// the longest file pip writes under ENGINE_ROOT measured 171 chars
+//   \ComfyUI_windows_portable\python_embeded\Lib\site-packages\diffusers\pipelines
+//   \deprecated\stable_diffusion_attend_and_excite
+//   \pipeline_stable_diffusion_attend_and_excite.py
+// so any install root over 260 - 171 = 89 chars CANNOT complete an install, no
+// matter how the archive is packed. Fail here — before multi-GB of downloads —
+// with a path the user can act on. The old behaviour downloaded everything,
+// failed pip, reported "extractions failed", and re-downloaded the whole engine
+// on every Retry (see the retry-loop note in the MPI-387 brief).
+const WIN_MAX_PATH = 260;
+const DEEPEST_ENGINE_REL_LEN = 171; // measured, MPI-387
+const INSTALL_ROOT_BUDGET = WIN_MAX_PATH - DEEPEST_ENGINE_REL_LEN;
+
+/**
+ * Pure depth check — platform-agnostic so it is testable anywhere.
+ * @param {string} engineRoot
+ * @returns {string|null} user-facing reason, or null when the root fits
+ */
+function installPathDepthError(engineRoot) {
+    if (engineRoot.length <= INSTALL_ROOT_BUDGET) return null;
+    return `Install folder is too deep for Windows. The engine path is ${engineRoot.length} characters and must be `
+        + `${INSTALL_ROOT_BUDGET} or fewer, because Windows limits a full file path to ${WIN_MAX_PATH}. Move the `
+        + `Cubric Vision folder closer to the drive root (C:\\CubricVision works) and press Install again. `
+        + `Current path: ${engineRoot}`;
+}
+
+async function isWindowsLongPathEnabled() {
+    try {
+        const { stdout } = await promisify(execFile)(
+            'reg',
+            ['query', 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem', '/v', 'LongPathsEnabled'],
+            { windowsHide: true }
+        );
+        return /LongPathsEnabled\s+REG_DWORD\s+0x1/i.test(stdout);
+    } catch {
+        return false; // key absent / reg unavailable → assume the classic limit
+    }
+}
+
+/**
+ * Throw before any download when the install root cannot fit a full engine tree
+ * within Windows' MAX_PATH. No-op off win32, and skipped when the machine has
+ * Long Path support turned on.
+ * @param {string} engineRoot
+ */
+async function assertInstallPathDepth(engineRoot = ENGINE_ROOT) {
+    if (process.platform !== 'win32') return;
+    const reason = installPathDepthError(engineRoot);
+    if (!reason) {
+        if (engineRoot.length > INSTALL_ROOT_BUDGET - 20) {
+            logger.warn('engine', `Install path near the Windows limit: ${engineRoot.length} of ${INSTALL_ROOT_BUDGET} chars — ${engineRoot}`);
+        }
+        return;
+    }
+    if (await isWindowsLongPathEnabled()) {
+        logger.warn('engine', `Install path is ${engineRoot.length} chars (over the ${INSTALL_ROOT_BUDGET} budget) but Windows Long Path support is enabled — continuing`);
+        return;
+    }
+    throw new Error(reason);
+}
 
 router.get('/engine/status', async (req, res) => {
     try {
@@ -351,6 +417,9 @@ async function _runEngineDownload(chosenModelsRoot) {
     const type = 'comfy';
     logger.info('engine', `_runEngineDownload started`);
     try {
+        // Before anything is downloaded — a too-deep root cannot finish an install.
+        await assertInstallPathDepth();
+
         logger.info('engine', `Reading system dependencies from ${SYS_DEPS_PATH}`);
         const config = await fs.readJson(SYS_DEPS_PATH);
         logger.info('engine', `System dependencies loaded successfully`);
@@ -384,14 +453,14 @@ async function _runEngineDownload(chosenModelsRoot) {
         }
 
         // ── Finish custom node install (shared) ─────────────────────────────────
-        let uwInstallFailed = false;
+        let uwInstallError = null;
         if (uwModelJob) {
             logger.info('engine', 'Engine ready, finishing custom node installation...');
             try {
                 await finishCustomNodeInstall(uwModelJob, true);
             } catch (err) {
                 logger.error('engine', `Custom node install error: ${err.message}`);
-                uwInstallFailed = true;
+                uwInstallError = err.message;
                 // Do NOT re-throw — engine itself is fine; user can repair UW deps later
             }
         }
@@ -469,9 +538,12 @@ async function _runEngineDownload(chosenModelsRoot) {
         }
 
         // ── 7. Complete engine (UW deps fully done) ─────────────────────────────
-        if (uwInstallFailed) {
+        if (uwInstallError) {
+            // MPI-387: carry the real reason (which deps, which phase) instead of a
+            // generic "installation failed" — the old wording sent users into a Retry
+            // loop against deterministic failures.
             broadcastEngineEvent('engine:error', {
-                error: 'UW deps installation failed. Press Retry to re-attempt.'
+                error: `${uwInstallError}. Press Retry to re-attempt.`
             });
         } else {
             // Stop any running ComfyUI and clear restart flag — fresh install needs a clean start
@@ -555,6 +627,10 @@ router.post('/engine/repair-deps', async (req, res) => {
     res.json({ success: true, status: 'repair-started' });
 
     try {
+        // Same MAX_PATH wall as a fresh install — repair runs the identical pip
+        // steps, so tell the user the real reason instead of failing again.
+        await assertInstallPathDepth();
+
         const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
         const repairSet = [...new Set([...missingDeps, ...driftedDeps])];
         if (!repairSet.length) {
@@ -634,3 +710,4 @@ router.post('/engine/upgrade', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.installPathDepthError = installPathDepthError; // MPI-387 — exported for unit test

@@ -207,3 +207,21 @@
   it with padding around the edges. Opening the entry always showed it correctly;
   only the grid was wrong. Cards are now measured from the finished image, so the
   grid lays out cleanly and the small padding some models produced is gone.
+
+- **Windows: setting up on a fresh machine now finishes.** On a clean Windows 11
+  laptop the setup ran for an hour, then stopped with "Installation Failed" and a
+  Retry button that re-downloaded everything and failed the same way. Three things
+  were behind it. The download folder ended up with the app's long name written
+  twice, which pushed some of the files it installs past the length Windows allows
+  a file path to be, so writing them simply failed. One component asked for a
+  developer tool most people do not have installed. And the error message blamed
+  the wrong step, which is why Retry looked like it should help. All three are
+  fixed: the Windows download unpacks into a single short folder, the unnecessary
+  component is gone, and if anything does go wrong the message now names the exact
+  part that failed. Setup also checks up front whether the folder you unpacked
+  into is too deep for Windows and tells you to move it *before* downloading
+  several gigabytes, instead of after.
+
+- **The startup window no longer flashes white.** On slower machines the loading
+  window appeared as a blank white box for a few seconds before the logo showed
+  up. It now waits until it has something to show.

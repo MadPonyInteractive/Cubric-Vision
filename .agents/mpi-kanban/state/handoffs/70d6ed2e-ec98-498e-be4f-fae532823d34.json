@@ -4,7 +4,7 @@
  "generated_at": "2026-07-29T23:45:00Z",
  "from_session": null,
  "to_role": "implementer",
- "status": "open",
+ "status": "consumed",
  "session": {
   "name": "MPI-387 raised - clean Windows 11 install broken end-to-end; splash + sam2 fixes shipped",
   "branch": "master"

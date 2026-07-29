@@ -1059,7 +1059,17 @@ async function main() {
       : null;
     if (opts.clean && await pathExists(artifactArchive)) await fs.rm(artifactArchive, { force: true });
     if (opts.clean && updateArchive && await pathExists(updateArchive)) await fs.rm(updateArchive, { force: true });
-    await createArchiveFromDir(stageRoot, artifactArchive, config.fullArchiveExt, { includeRoot: true });
+    // MPI-387: Windows ships the full build with NO inner root folder. The zip
+    // basename and the inner root were the same string, and Explorer's "Extract
+    // All" defaults its destination to the zip basename — so the name landed
+    // TWICE (`...\CubricVision-windows-x64-v1.2.0\CubricVision-windows-x64-v1.2.0\`),
+    // 32 wasted characters. A clean-Win11 install measured 266 chars against the
+    // 260 MAX_PATH limit and pip died writing a deep `diffusers` file. Extract All
+    // still creates exactly one folder from a rootless zip; only a shell "Extract
+    // Here" sprays, and _runEngineDownload's depth preflight covers whatever the
+    // user does next. Linux (.tar.gz always carries a root) and macOS (ditto
+    // --keepParent, no path limit, MPI-62 wants the version visible) keep theirs.
+    await createArchiveFromDir(stageRoot, artifactArchive, config.fullArchiveExt, { includeRoot: opts.platform !== 'win32' });
     if (updateArchive) {
       // includeRoot wraps the bundle in the short version-first `CubricVision-v<ver>`
       // folder so the Safari-extracted folder is short + shows the version (not the

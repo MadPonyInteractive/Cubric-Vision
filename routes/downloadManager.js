@@ -93,6 +93,20 @@ async function _nodeFolderHasFiles(dir) {
     return entries.some(e => e.isFile());
 }
 
+// MPI-387: build the end-of-batch failure message from the two failure kinds a
+// node install can hit. Extraction and pip are different problems with different
+// user actions, and the old single sentence claimed "extractions failed" for both.
+function _describeNodeInstallFailures(extractFailures, installFailures) {
+    const parts = [];
+    if (extractFailures.length) {
+        parts.push(`could not extract ${extractFailures.length} custom node(s): ${extractFailures.join('; ')}`);
+    }
+    if (installFailures.length) {
+        parts.push(`dependency install failed for ${installFailures.length} custom node(s): ${installFailures.join('; ')}`);
+    }
+    return `Custom node install failed — ${parts.join(' and ')} — see logs`;
+}
+
 const ENGINE_ROOT = getEngineRoot();
 
 // ── Engine-aware dep filter (server-side defense) ─────────────────────────────
@@ -1993,7 +2007,14 @@ async function _runCustomNodeInstall(modelJob) {
     }
     logger.info('download', `_runCustomNodeInstall: extracting ${customDeps.length} custom node(s) for model ${modelJob.modelId}`);
 
-    let anyFailure = false;
+    // MPI-387: keep the two failure KINDS apart. One shared `anyFailure` boolean
+    // meant every outcome — including three failed *pip* steps on a clean Win11
+    // box where all 14 zips extracted fine — surfaced as "One or more custom node
+    // extractions failed". That wrong attribution is why an agent told the user to
+    // press Retry, which re-ran the same deterministic pip failures. Name the deps
+    // and the phase so the log and the toast point at the real step.
+    const extractFailures = [];
+    const installFailures = [];
 
     for (const dep of customDeps) {
         // Guard: skip deps without a valid localPath string
@@ -2046,13 +2067,13 @@ async function _runCustomNodeInstall(modelJob) {
                     // Zip not found — download was never completed. Mark failure so repair
                     // flow (engine/repair-deps) re-triggers the full download.
                     logger.warn('download', `Zip not found at ${zipPath} — marking dep for repair re-download`);
-                    anyFailure = true;
+                    extractFailures.push(`${dep.id} (zip missing)`);
                     continue;
                 }
             } catch (err) {
                 logger.error('download', `zip extract FAILED for ${dep.id}: ${err.message} — removing corrupted zip so repair can re-download`);
                 await fs.remove(zipPath).catch(() => {}); // delete corrupted zip so repair re-downloads it
-                anyFailure = true;
+                extractFailures.push(`${dep.id} (${err.message})`);
                 continue;
             }
 
@@ -2085,7 +2106,7 @@ async function _runCustomNodeInstall(modelJob) {
             if (!extractedMainDir) {
                 // Zip was removed (extraction succeeded per flow) but folder not found — corrupt extraction
                 logger.warn('download', `Could not find extracted folder for ${dep.id} in ${extractDir} — corrupt zip, will re-download on repair`);
-                anyFailure = true;
+                extractFailures.push(`${dep.id} (extracted folder not found)`);
                 continue;
             }
 
@@ -2155,7 +2176,7 @@ async function _runCustomNodeInstall(modelJob) {
                 logger.info('download', `Custom install command succeeded for ${dep.id}`);
             } catch (err) {
                 logger.error('download', `Custom install command FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
-                anyFailure = true;
+                installFailures.push(`${dep.id} (${err.message})`);
                 continue;
             }
         } else {
@@ -2166,7 +2187,7 @@ async function _runCustomNodeInstall(modelJob) {
                     logger.info('download', `pip requirements installed for ${dep.id}`);
                 } catch (err) {
                     logger.error('download', `pip install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
-                    anyFailure = true;
+                    installFailures.push(`${dep.id} (requirements: ${err.message})`);
                     continue;
                 }
             }
@@ -2183,7 +2204,7 @@ async function _runCustomNodeInstall(modelJob) {
                 logger.info('download', `pip pins installed for ${dep.id}: ${dep.pipPins.join(', ')}`);
             } catch (err) {
                 logger.error('download', `pip pin install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
-                anyFailure = true;
+                installFailures.push(`${dep.id} (version pins: ${err.message})`);
                 continue;
             }
         }
@@ -2199,10 +2220,11 @@ async function _runCustomNodeInstall(modelJob) {
         }
     }
 
-    if (anyFailure) {
+    if (extractFailures.length || installFailures.length) {
+        const message = _describeNodeInstallFailures(extractFailures, installFailures);
         _setModelStatus(modelJob, 'failed', 'local fail');
-        _broadcast('download:failed', { modelId: modelJob.modelId, error: 'One or more custom node extractions failed' });
-        throw new Error('One or more custom node extractions failed — see logs');
+        _broadcast('download:failed', { modelId: modelJob.modelId, error: message });
+        throw new Error(message);
     }
 
     _setModelStatus(modelJob, 'complete', 'local done');
@@ -2810,6 +2832,7 @@ module.exports = {
     _customNodeUninstallPath, // MPI-276 — exported for unit test
     _filterDepsForEngine, // MPI-276 — exported for unit test
     _filterRequirements, // MPI-370 — exported for unit test
+    _describeNodeInstallFailures, // MPI-387 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
