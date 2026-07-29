@@ -1,15 +1,23 @@
 @echo off
 setlocal
+rem Cubric Studio Vision - online updater (Windows).
+rem
+rem All the work lives in update\win-update.cjs, run through the app's own
+rem Electron binary as Node (the same electron-as-node trick the Linux/macOS
+rem updaters use). This .bat is only a double-clickable convenience: Smart App
+rem Control blocks it outright on a clean Windows 11 install, which is exactly
+rem why the in-app update button spawns win-update.cjs directly rather than
+rem calling this file (MPI-387). One implementation, two entry points.
 set "CUBRIC_PORTABLE_ROOT=%~dp0."
 set "MPI_RESOURCES_PATH=%CUBRIC_PORTABLE_ROOT%\resources"
-set "CUBRIC_GITHUB_REPO_DEFAULT=MadPonyInteractive/Cubric-Vision"
-if "%CUBRIC_GITHUB_REPO%"=="" set "CUBRIC_GITHUB_REPO=%CUBRIC_GITHUB_REPO_DEFAULT%"
-set "DOWNLOAD_DIR=%CUBRIC_PORTABLE_ROOT%\update\downloads"
-if not exist "%DOWNLOAD_DIR%" mkdir "%DOWNLOAD_DIR%"
+set "ELECTRON_RUN_AS_NODE=1"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$repo=$env:CUBRIC_GITHUB_REPO; $pattern='CubricVision-windows-x64-update-v*.zip'; $outDir=$env:DOWNLOAD_DIR; $release=Invoke-RestMethod -Headers @{ 'User-Agent'='CubricVision-Updater' } -Uri ('https://api.github.com/repos/'+$repo+'/releases/latest'); $asset=$release.assets | Where-Object { $_.name -like $pattern } | Select-Object -First 1; if (-not $asset) { throw ('No matching update asset found: '+$pattern) }; $target=Join-Path $outDir $asset.name; Invoke-WebRequest -Headers @{ 'User-Agent'='CubricVision-Updater' } -Uri $asset.browser_download_url -OutFile $target; Write-Output $target" > "%DOWNLOAD_DIR%\latest-update-path.txt"
-if errorlevel 1 exit /b %ERRORLEVEL%
-set /p UPDATE_ZIP=<"%DOWNLOAD_DIR%\latest-update-path.txt"
-call "%CUBRIC_PORTABLE_ROOT%\update-from-zip.bat" "%UPDATE_ZIP%"
+if not exist "%CUBRIC_PORTABLE_ROOT%\CubricVision.exe" (
+  echo CubricVision.exe not found next to this script. Is this a complete portable install?
+  pause
+  exit /b 2
+)
+
+"%CUBRIC_PORTABLE_ROOT%\CubricVision.exe" "%CUBRIC_PORTABLE_ROOT%\update\win-update.cjs" --root "%CUBRIC_PORTABLE_ROOT%"
+if errorlevel 1 pause
 exit /b %ERRORLEVEL%

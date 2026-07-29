@@ -8,7 +8,7 @@ import process from 'node:process';
 import zlib from 'node:zlib';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { assertApproved } from './release-notes-approval.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -26,11 +26,19 @@ const DEFAULT_STAGE_DIR = (process.platform === 'win32' && existsSync('D:\\'))
   : path.join(REPO_ROOT, 'dist', 'portable');
 const execFileAsync = promisify(execFile);
 
-const PLATFORM_CONFIG = {
+// `appDirRel` is where the app source tree lands inside the portable root, and
+// `electronRoot` says whether Electron's dist is extracted to the portable root
+// so a plain <exeName> is the double-click target (the STANDARD Electron layout:
+// Electron resolves <exeDir>/resources/app relative to the exe, which stays
+// portable). Windows uses it because Smart App Control hard-blocks the entire
+// .vbs -> .bat -> .cmd launch chain with no override (MPI-387 fix D); Linux .sh
+// and macOS .command are not blocked, so those keep `app/` + start scripts.
+export const PLATFORM_CONFIG = {
   win32: {
     label: 'windows',
-    start: 'start.vbs',
-    withTerminalStart: 'start-with-terminal.bat',
+    appDirRel: 'resources/app',
+    electronRoot: true,
+    exeName: 'CubricVision.exe',
     update: 'update.bat',
     updateFromZip: 'update-from-zip.bat',
     templateDir: 'windows',
@@ -41,6 +49,7 @@ const PLATFORM_CONFIG = {
   },
   linux: {
     label: 'linux',
+    appDirRel: 'app',
     start: 'start.sh',
     withTerminalStart: 'start-with-terminal.sh',
     update: 'update.sh',
@@ -53,6 +62,7 @@ const PLATFORM_CONFIG = {
   },
   darwin: {
     label: 'macos',
+    appDirRel: 'app',
     start: 'start.command',
     update: 'update.command',
     updateFromZip: 'update-from-zip.command',
@@ -65,6 +75,20 @@ const PLATFORM_CONFIG = {
     },
     ffmpegRel: 'node_modules/ffmpeg-static/ffmpeg',
   },
+};
+
+// Paths a LAYOUT change retires. applyDelta derives its delete scope from the
+// roots the NEW bundle ships — correct for a normal delta, but structurally
+// unable to express "this root is gone", so a retired launcher would survive the
+// update still pointing at a tree that moved. MPI-387 fix D deleted the Windows
+// start chain, so without this an updated install keeps a start.vbs that does
+// `pushd %ROOT%\app` and dies. NOTE: `app/` itself is deliberately NOT listed —
+// the applier that runs a transition update is the user's OLD one, which is
+// executing app/node_modules/electron/dist/electron.exe as node, and Windows
+// refuses to delete a running image (EBUSY aborts the whole update). The stale
+// app/ tree is left on disk and the release notes tell the user to delete it.
+export const RETIRED_PATHS = {
+  win32: ['start.vbs', 'start-with-terminal.bat'],
 };
 
 const PRESERVE = [
@@ -423,9 +447,66 @@ function assertSafeClean(targetPath) {
   }
 }
 
+function appStageDir(stageRoot, config) {
+  return path.join(stageRoot, ...config.appDirRel.split('/'));
+}
+
+// Top-level names Electron's dist contributes to the portable root, with
+// electron.exe renamed. `resources` is excluded: it merges into the artifact's
+// own resources/ and is already carried by the resources staging/copy steps.
+async function electronRootEntries(config) {
+  const dist = path.join(REPO_ROOT, 'node_modules', 'electron', 'dist');
+  if (!await pathExists(dist)) return [];
+  const entries = await fs.readdir(dist, { withFileTypes: true });
+  return entries
+    .filter((entry) => !isElectronDistJunk(entry.name) && entry.name !== 'resources')
+    .map((entry) => (entry.name === 'electron.exe' ? config.exeName : entry.name));
+}
+
+// Chromium writes debug.log into its own dist folder at runtime, so a dev box
+// that has ever launched the app leaves one behind. It is not part of Electron's
+// distribution and mirrors the APP_COPY_EXCLUDES `.log` rule.
+function isElectronDistJunk(name) {
+  return name.endsWith('.log');
+}
+
+// Standard Electron layout (MPI-387 fix D): drop Electron's dist at the portable
+// root and rename electron.exe, so the double-click target is a plain
+// CubricVision.exe instead of a Smart-App-Control-blocked script chain. The
+// dist's own resources/ (default_app.asar + elevate.exe) merges into the
+// artifact's resources/, where Electron then finds resources/app/ — resolved
+// relative to the exe, so the folder stays portable.
+async function stageElectronRoot(stageRoot, config) {
+  const dist = path.join(REPO_ROOT, 'node_modules', 'electron', 'dist');
+  if (!await pathExists(dist)) {
+    throw new Error(`Electron dist not found at ${dist}. Run npm install before building a Windows artifact.`);
+  }
+  for (const entry of await fs.readdir(dist, { withFileTypes: true })) {
+    if (isElectronDistJunk(entry.name)) continue;
+    const from = path.join(dist, entry.name);
+    const to = path.join(stageRoot, entry.name === 'electron.exe' ? config.exeName : entry.name);
+    await ensureDir(path.dirname(to));
+    await fs.cp(from, to, { recursive: true, force: true });
+  }
+  // default_app.asar is the "no app supplied" fallback. resources/app/ shadows it
+  // and it is dead weight in a shipped artifact.
+  await fs.rm(path.join(stageRoot, 'resources', 'default_app.asar'), { force: true });
+  // The app tree carries its own copy of the same runtime under
+  // node_modules/electron/dist. Shipping it twice wastes ~200MB AND leaves an
+  // unrenamed electron.exe in the folder — the exact worst-reputation binary this
+  // relayout exists to remove. The npm `electron` package is never required at
+  // runtime (Electron resolves `require('electron')` to its builtin), so only the
+  // dist goes.
+  await fs.rm(path.join(appStageDir(stageRoot, config), 'node_modules', 'electron', 'dist'), {
+    recursive: true,
+    force: true,
+  });
+}
+
 async function stagePortableSkeleton(stageRoot, opts, config) {
+  const appRoot = appStageDir(stageRoot, config);
   await ensureDir(stageRoot);
-  await ensureDir(path.join(stageRoot, 'app'));
+  await ensureDir(appRoot);
   await ensureDir(path.join(stageRoot, 'resources', 'cubric'));
   await ensureDir(path.join(stageRoot, 'engine'));
   await ensureDir(path.join(stageRoot, 'models'));
@@ -435,26 +516,35 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   await stageResources(stageRoot, opts, config);
   await stageUvBinary(stageRoot, opts);
 
-  const startTarget = path.join(stageRoot, config.start);
-  const updateTarget = path.join(stageRoot, config.update);
-  const updateFromZipTarget = path.join(stageRoot, config.updateFromZip);
-  await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.start), startTarget);
+  // Windows has no start launcher at all — CubricVision.exe at the root IS the
+  // launcher (see PLATFORM_CONFIG).
+  if (config.start) {
+    const startTarget = path.join(stageRoot, config.start);
+    await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.start), startTarget);
+    await makeExecutableIfNeeded(startTarget);
+  }
   if (config.withTerminalStart) {
     const withTerminalTarget = path.join(stageRoot, config.withTerminalStart);
     await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.withTerminalStart), withTerminalTarget);
     await makeExecutableIfNeeded(withTerminalTarget);
   }
+  const updateTarget = path.join(stageRoot, config.update);
+  const updateFromZipTarget = path.join(stageRoot, config.updateFromZip);
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, config.update), updateTarget);
   await copyFileEnsured(
     path.join(TEMPLATE_ROOT, config.templateDir, config.updateFromZip),
     updateFromZipTarget,
   );
-  await makeExecutableIfNeeded(startTarget);
   await makeExecutableIfNeeded(updateTarget);
   await makeExecutableIfNeeded(updateFromZipTarget);
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'update-runbook.md'), path.join(stageRoot, 'update', 'README.md'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'apply-update.cjs'), path.join(stageRoot, 'update', 'apply-update.cjs'));
   await copyFileEnsured(path.join(TEMPLATE_ROOT, 'fetch-release.cjs'), path.join(stageRoot, 'update', 'fetch-release.cjs'));
+  // Windows online updater: the in-app update button and update.bat both run this
+  // through CubricVision.exe as node, so no blocked script sits in the chain.
+  if (opts.platform === 'win32') {
+    await copyFileEnsured(path.join(TEMPLATE_ROOT, 'win-update.cjs'), path.join(stageRoot, 'update', 'win-update.cjs'));
+  }
   await copyFileEnsured(path.join(TEMPLATE_ROOT, config.templateDir, 'README.txt'), path.join(stageRoot, 'README.txt'));
 
   // Linux taskbar/dock branding: ship the app icon + first-run installer under
@@ -488,19 +578,26 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
 
   if (opts.dryRun) {
     await writeFileEnsured(
-      path.join(stageRoot, 'app', 'PORTABLE_DRY_RUN.txt'),
+      path.join(appRoot, 'PORTABLE_DRY_RUN.txt'),
       [
         'Cubric Vision portable dry-run stage.',
         'This placeholder proves manifest generation without copying app sources, user folders, or downloaded binaries.',
         '',
       ].join('\n'),
     );
-    await writeBuildInfo(path.join(stageRoot, 'app'), opts.buildHash);
+    await writeBuildInfo(appRoot, opts.buildHash);
     return;
   }
 
-  await copyAppTree(REPO_ROOT, path.join(stageRoot, 'app'), '', path.resolve(stageRoot), !opts.nodeModules);
-  await writeBuildInfo(path.join(stageRoot, 'app'), opts.buildHash);
+  await copyAppTree(REPO_ROOT, appRoot, '', path.resolve(stageRoot), !opts.nodeModules);
+  await writeBuildInfo(appRoot, opts.buildHash);
+
+  // Must run after the app copy: it prunes the duplicate runtime out of the
+  // staged app tree. --no-node-modules stages an intentionally non-runnable tree,
+  // so there is nothing to relayout.
+  if (config.electronRoot && opts.nodeModules) {
+    await stageElectronRoot(stageRoot, config);
+  }
 
   // macOS dock branding: the bundled Electron.app ships CFBundleName=Electron
   // and electron.icns. Rename it to "Cubric Vision" and swap the icon so the
@@ -508,7 +605,7 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   // (always present on the macOS CI runner); skipped if node_modules was
   // excluded or the bundle/plutil is missing.
   if (opts.platform === 'darwin' && opts.nodeModules) {
-    await brandMacBundle(path.join(stageRoot, 'app'));
+    await brandMacBundle(appRoot);
   }
 }
 
@@ -609,7 +706,7 @@ function isUnderPreserve(relPath) {
 // fromVersion + delete[] for createUpdateManifest. SHA256-only: per
 // docs/releases/portable-distribution-contract.md, MPI-8 ships changed-file
 // bundles, not binary deltas.
-async function applyDelta(updateStageRoot, baseline, alwaysKeep) {
+async function applyDelta(updateStageRoot, baseline, alwaysKeep, retired = []) {
   const baselineByPath = new Map((baseline.files || []).map((entry) => [entry.path, entry.sha256]));
   const newEntries = await buildFileEntries(updateStageRoot);
   const newPaths = new Set(newEntries.map((entry) => entry.path));
@@ -643,10 +740,15 @@ async function applyDelta(updateStageRoot, baseline, alwaysKeep) {
 
   // delete[] = in-scope baseline files that no longer exist, minus anything
   // under a PRESERVE prefix (defense-in-depth) and minus the manifest path.
+  // Retired paths bypass the scope check: their root is gone from the new bundle,
+  // which is exactly why the scope heuristic cannot see them (see RETIRED_PATHS).
+  const isRetired = (relPath) => retired.some((prefix) => (
+    prefix.endsWith('/') ? toPosix(relPath).startsWith(prefix) : toPosix(relPath) === prefix
+  ));
   const deletes = [];
   for (const entry of baseline.files || []) {
     if (newPaths.has(entry.path)) continue;
-    if (!isInScope(entry.path)) continue;
+    if (!isInScope(entry.path) && !isRetired(entry.path)) continue;
     if (entry.path === UPDATE_MANIFEST_REL) continue;
     if (isUnderPreserve(entry.path)) continue;
     deletes.push(entry.path);
@@ -679,9 +781,7 @@ async function createUpdateManifest(stageRoot, opts, config, artifactKind = null
     artifact: {
       kind: artifactKind || (opts.dryRun ? 'dry-run-stage' : 'portable-stage'),
       rootName: path.basename(stageRoot),
-      launchers: config.withTerminalStart
-        ? [config.start, config.withTerminalStart, config.update, config.updateFromZip]
-        : [config.start, config.update, config.updateFromZip],
+      launchers: [config.start, config.withTerminalStart, config.update, config.updateFromZip].filter(Boolean),
       buildHash: opts.buildHash,
     },
   };
@@ -700,11 +800,25 @@ async function stageUpdateBundle(fullStageRoot, updateStageRoot, opts, config) {
     await fs.rm(updateStageRoot, { recursive: true, force: true });
   }
   await ensureDir(updateStageRoot);
-  await copyDirEnsured(path.join(fullStageRoot, 'app'), path.join(updateStageRoot, 'app'));
   await copyDirEnsured(path.join(fullStageRoot, 'resources'), path.join(updateStageRoot, 'resources'));
+  // On the relayout platforms the app tree is resources/app, so the copy above
+  // already carried it; copying again would just duplicate the walk.
+  if (!config.appDirRel.startsWith('resources/')) {
+    await copyDirEnsured(appStageDir(fullStageRoot, config), appStageDir(updateStageRoot, config));
+  }
   await copyDirEnsured(path.join(fullStageRoot, 'update'), path.join(updateStageRoot, 'update'));
-  const bundledLaunchers = [config.start, config.update, config.updateFromZip];
-  if (config.withTerminalStart) bundledLaunchers.push(config.withTerminalStart);
+  // On the relayout platforms the Electron runtime lives at the portable root, not
+  // under the app tree, so it must be carried here too or a delta could never
+  // update Electron itself. applyDelta prunes it again when it is unchanged.
+  if (config.electronRoot) {
+    for (const name of await electronRootEntries(config)) {
+      const from = path.join(fullStageRoot, name);
+      if (!await pathExists(from)) continue;
+      await fs.cp(from, path.join(updateStageRoot, name), { recursive: true, force: true });
+    }
+  }
+  const bundledLaunchers = [config.start, config.withTerminalStart, config.update, config.updateFromZip]
+    .filter(Boolean);
   for (const launcher of bundledLaunchers) {
     await copyFileEnsured(path.join(fullStageRoot, launcher), path.join(updateStageRoot, launcher));
     await makeExecutableIfNeeded(path.join(updateStageRoot, launcher));
@@ -731,7 +845,7 @@ async function stageUpdateBundle(fullStageRoot, updateStageRoot, opts, config) {
     // re-reads + hashes it), and the launcher scripts the applier/runbook expect,
     // even when their bytes are unchanged from the baseline.
     const alwaysKeep = [UPDATE_MANIFEST_REL, CONNECTOR_MANIFEST_REL, ...bundledLaunchers];
-    delta = await applyDelta(updateStageRoot, baseline, alwaysKeep);
+    delta = await applyDelta(updateStageRoot, baseline, alwaysKeep, RETIRED_PATHS[opts.platform] || []);
     console.log(
       `Delta update bundle: from ${delta.fromVersion ?? 'unknown'} -> ${opts.version}; `
       + `${delta.changedCount} changed/added file(s), ${delta.deletes.length} delete(s).`,
@@ -855,9 +969,10 @@ async function createZipFromDir(sourceDir, zipPath, { includeRoot = false } = {}
 // the bundled ffmpeg/ffprobe media tools, and any node_modules/.bin shims that
 // survived staging.
 function isExecutableEntry(relPath) {
-  // Suffix-tolerant matches: the full-build zip prefixes every entry with a root
-  // folder name (includeRoot:true), so exact `===` checks would miss there. The
-  // tar path is unprefixed; suffix matching is correct for both.
+  // Suffix-tolerant matches: the macOS/Linux full artifacts prefix every entry
+  // with a root folder name (includeRoot:true / the tar root), so exact `===`
+  // checks would miss there. The Windows zip is rootless (MPI-387 fix A) and
+  // needs no exec bits at all — suffix matching is correct for every case.
   if (relPath.endsWith('.sh') || relPath.endsWith('.command')) return true;
   if (relPath.includes('node_modules/.bin/')) return true;
   if (relPath.endsWith('app/node_modules/electron/dist/electron')) return true;
@@ -1099,7 +1214,11 @@ async function main() {
   console.log(JSON.stringify(summary, null, 2));
 }
 
-main().catch((err) => {
-  console.error(err.message);
-  process.exitCode = 1;
-});
+// Only build when invoked as a script. Importing the module (tests pin the
+// platform layout contract) must not kick off a staging run.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err.message);
+    process.exitCode = 1;
+  });
+}

@@ -51,6 +51,15 @@ iterating on launcher scripts — **not** for shipping a cross-OS artifact.
 - `--no-update-bundle` skips the update zip; `--no-archive` stages folders only.
 - `--no-node-modules` is dev/test only — it produces a non-runnable tree and
   must never be used for a real artifact.
+- **Pass `--no-source-manifest` for any verification build.** Without it the run
+  mirrors its manifest over the tracked `resources/cubric/update-manifest.json`,
+  which for a Windows build is a ~32k-line diff of pure build output sitting in
+  your working tree.
+- A real (non-dry-run) build needs a release-notes approval token
+  (`docs/releases/.approved-<version>.json`, written by
+  `node scripts/release-notes-approval.mjs approve`). Those tokens are **tracked
+  files** — CI reads the committed one. A dotfile does not show up in a plain
+  `ls`, so check with `git status` before assuming one is yours to delete.
 
 ### Collecting CI artifacts
 
@@ -188,57 +197,140 @@ folder's README for the per-release restamp step and the extraction recipe.
 
 ## Portable Root Layout
 
-Build scripts should stage each full artifact with this root shape:
+**There are two layouts, and the split is deliberate.** Linux and macOS keep the
+script-launched layout; Windows uses the standard Electron layout because Smart
+App Control leaves it no choice (see below). `PLATFORM_CONFIG` in
+`scripts/build-portable.mjs` is the single source of truth — `appDirRel` and
+`electronRoot` per platform.
+
+Linux / macOS:
 
 ```text
 CubricVision-<platform>-<arch>-v<version>/
-  app/
+  app/                          <- app source + node_modules (incl. Electron)
   resources/
-  engine/
-  models/
-  user-data/
-  update/
-  start.<platform-extension>
-  update.<platform-extension>
-  update-from-zip.<platform-extension>
+  engine/  models/  user-data/  update/  uv/
+  start.<ext>  start-with-terminal.<ext>
+  update.<ext>  update-from-zip.<ext>
 ```
+
+Windows (MPI-387 fix D — **no inner root folder**, see the full-artifact note above):
+
+```text
+CubricVision.exe                <- renamed electron.exe; THE double-click target
+*.dll *.pak *.bin locales/ …    <- Electron's dist, extracted to the root
+resources/
+  app/                          <- app source + node_modules (Electron dist pruned)
+  cubric/  icons/  ffmpeg.exe  ffprobe.exe
+engine/  models/  user-data/  update/
+update.bat  update-from-zip.bat
+README.txt
+```
+
+Electron resolves `<exeDir>/resources/app` **relative to the exe**, so this stays
+portable — the folder can be extracted anywhere. `resources/` does not collide:
+MPI owns `resources/cubric|icons|ffmpeg.exe`, Electron contributes
+`resources/app` + `default_app.asar` (the build deletes the latter, since
+`resources/app` shadows it). The staged app tree's own
+`node_modules/electron/dist` is pruned: shipping the runtime twice wasted ~200MB
+**and** left an unrenamed `electron.exe` in the folder — the exact
+worst-reputation binary the relayout exists to remove.
+
+Path budget is unaffected: the deepest app-relative path measures 107 chars, so
+`resources/app/…` reaches 121 against the engine's binding 171.
 
 ### Launcher split details
 
-Two launchers per desktop platform: Windows — `start.vbs` (default, hidden console) + `start-with-terminal.bat`; Linux — `start.sh` (detached via `setsid --fork nohup`) + `start-with-terminal.sh`; macOS — `start.command` only (`.app`-style true-hide deferred). Windows `.bat` always shows a console — VBS is the only true zero-flash path. App logs go to `logs/app.log` regardless of which launcher is used.
+| Platform | Start | Notes |
+| --- | --- | --- |
+| Windows | `CubricVision.exe` | **No start script exists.** |
+| Linux | `start.sh` + `start-with-terminal.sh` | `start.sh` detaches via `setsid --fork nohup` |
+| macOS | `start.command` | `.app`-style true-hide deferred |
 
-> **The whole Windows launch chain is Smart App Control-blocked (MPI-387, OPEN).**
-> SAC is on by default after a clean Windows 11 install and hard-blocks
+App logs go to `<root>/user-data/logs/app.log` regardless of how the app is
+started.
+
+> **Windows has no start script because Smart App Control hard-blocks every
+> scripting extension we could use (MPI-387 fix D, SHIPPED).**
+> SAC is on by default after a clean Windows 11 install and blocks
 > `.appref-ms .bat .cmd .chm .cpl .js .jse .msc .msp .reg .vbe .vbs .wsf` with **no
-> per-file allowlist and no override in the dialog**. We ship three blocked hops
-> before the exe: `start.vbs` → `start-with-terminal.bat` →
-> `node_modules/.bin/electron.cmd` → an unrenamed `electron.exe`. Such a user also
-> cannot auto-update (`main.js` spawns `update.bat`) or hand-apply a zip
-> (`update-from-zip.bat`) — **only a fresh full download reaches them**.
+> per-file allowlist and no override in the dialog**. The old chain was three
+> blocked hops before the exe: `start.vbs` → `start-with-terminal.bat` →
+> `node_modules/.bin/electron.cmd` → an unrenamed `electron.exe`. An exe is
+> reputation-*evaluated* (standard SmartScreen, with "More info → Run anyway");
+> scripts are simply dead.
 >
+> - **Do not reintroduce a Windows start script**, not even as a convenience
+>   alongside the exe. It is blocked on exactly the machines that need it.
 > - **`.lnk` is REJECTED — do not re-propose it.** Verified empirically: a shortcut
 >   stores an **absolute** target path, so it breaks the moment a portable folder is
 >   moved or extracted anywhere but the build machine's path.
 > - **Signing does not fix SAC.** EV no longer grants instant SmartScreen
 >   reputation, OV is now equivalent, and SAC blocks signed binaries whose
 >   reputation is unknown. Signing starts the reputation clock; it does not skip it.
-> - The fix direction is a standard Electron layout with a plain `CubricVision.exe`
->   at the zip root (an exe is reputation-*evaluated*, scripts are hard-blocked).
->   Blockers are enumerated in `.agents/mpi-kanban/tasks/MPI-387/brief.md` § D.
 > - `electron-builder.yml` in this repo is **dead config** — `electron-builder` is
 >   not in devDependencies and nothing runs it.
 
+### No launcher means no launcher environment
+
+The start scripts were the only thing exporting `CUBRIC_ENGINE_ROOT`,
+`CUBRIC_MODELS_ROOT`, `CUBRIC_USER_DATA_ROOT` and `MPI_RESOURCES_PATH`, so a
+Windows launch now starts with **none** of them set. `main.js` derives all of
+them from `resolveMainPortableRoot()` instead (`app.isPackaged` is true and
+`process.resourcesPath` is real once the app lives at `resources/app`).
+
+This is not optional politeness. `routes/shared.js` `getDefaultModelsRoot()`
+falls back to `<engine>/mpi_models`, **not** `<root>/models`, and
+`app.setPath('userData')` never fires without `CUBRIC_USER_DATA_ROOT` — so
+skipping the derivation buries models inside the engine folder and writes
+`user-data` (and therefore `logs/app.log`, the one artifact a bug report carries)
+into `%APPDATA%`. Verified on a staged build: a bare `CubricVision.exe`
+double-click resolves all four roots inside the portable folder.
+
+### Retiring a path across the relayout
+
+`applyDelta` scopes `delete[]` to the path roots the **new** bundle ships, which
+is correct for a normal delta but structurally cannot express "this root is
+gone". `RETIRED_PATHS` in `build-portable.mjs` force-includes such paths, and
+win32 lists `start.vbs` + `start-with-terminal.bat` — without it an updated
+install keeps a `start.vbs` that still does `pushd %ROOT%\app` and dies.
+
+**`app/` is deliberately NOT retired.** The applier that runs a transition update
+is the user's **old** one, executing `app/node_modules/electron/dist/electron.exe`
+as node, and Windows cannot delete a running image — `rmSync` throws EBUSY and
+aborts the whole update. The stale `app/` tree is left on disk and the release
+notes tell the user it is safe to delete.
+
 ### Updater — no host tools assumed
 
-The portable updater must assume NO host tools — `curl` is absent on minimal Linux. The only guaranteed runtime is the bundled Electron binary. All network work goes through `scripts/portable/fetch-release.cjs` (pure Node `https`, redirect-aware), run via `ELECTRON_RUN_AS_NODE=1 <bundled electron>`. Exec-bit self-heal has THREE layers: (1) `restoreExecBit` per-delta-file; (2) `restoreLauncherBits()` final manifest-independent sweep in `apply-update.cjs`; (3) `chmod +x` sweep in `update-from-zip.{sh,command}`. Bootstrap trap: a broken updater can't self-deliver its fix — permanent escape hatch = offline `update-from-zip.{sh,command}`.
+The portable updater must assume NO host tools — `curl` is absent on minimal Linux. The only guaranteed runtime is the bundled Electron binary. All network work goes through `scripts/portable/fetch-release.cjs` (pure Node `https`, redirect-aware), run via `ELECTRON_RUN_AS_NODE=1 <bundled electron>`. Exec-bit self-heal has THREE layers: (1) `restoreExecBit` per-delta-file; (2) `restoreLauncherBits()` final manifest-independent sweep in `apply-update.cjs`; (3) `chmod +x` sweep in `update-from-zip.{sh,command}`. Bootstrap trap: a broken updater can't self-deliver its fix — permanent escape hatch = offline `update-from-zip.{sh,command}` on Linux/macOS, and a fresh full download on Windows.
 
 Platform extensions:
 
 | Platform | Start | GitHub update | Local update |
 | --- | --- | --- | --- |
-| Windows | `start.bat` | `update.bat` | `update-from-zip.bat` |
+| Windows | `CubricVision.exe` | in-app, or `update.bat` | `update-from-zip.bat` |
 | Linux | `start.sh` | `update.sh` | `update-from-zip.sh` |
 | macOS | `start.command` | `update.command` | `update-from-zip.command` |
+
+> **Windows update orchestration lives in `scripts/portable/win-update.cjs`, not
+> in the `.bat`.** SAC blocks the `.bat` on the machines that most need updating,
+> so `run-update` in `main.js` spawns `process.execPath` (i.e. `CubricVision.exe`)
+> with `ELECTRON_RUN_AS_NODE=1` on that file directly — no blocked hop anywhere in
+> the chain. `update.bat` is a second entry point onto the same file, kept for
+> non-SAC machines. There is one implementation.
+>
+> **The applier must survive its own binary being updated.** On Windows the
+> updater runs *through* `CubricVision.exe`, and Windows refuses to overwrite or
+> delete a running image — but it does allow **renaming** one. `apply-update.cjs`
+> catches `EBUSY`/`EPERM`/`EACCES`, renames the live file to `<file>.old`, and
+> writes the replacement in its place; the leftover is swept on the next update.
+> Without this an Electron bump aborts the whole update.
+>
+> `apply-update.cjs` resolves `extract-zip` from **both** `resources/app` and
+> `app` — those are two live layouts, not a migration shim. Losing either breaks
+> the *second* update on that platform, not the first, so it passes a naive smoke
+> test.
 
 The `update/` directory may hold helper scripts, manifests, temporary
 extraction folders, and rollback data. Users should run the root update script;
@@ -333,8 +425,10 @@ Always preserve:
 
 Replace from update bundles:
 
-- `app/`
+- The app tree — `app/` on Linux/macOS, `resources/app/` on Windows
 - `resources/`
+- The Electron runtime — under the app tree on Linux/macOS, at the portable root
+  (`CubricVision.exe` + dlls + `locales/`) on Windows
 - Root launcher scripts
 - Root update scripts
 - Connector manifest files

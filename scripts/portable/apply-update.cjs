@@ -42,9 +42,44 @@ function assertInside(root, target) {
   return resolvedTarget;
 }
 
+// The app tree is `resources/app` on Windows (standard Electron layout, MPI-387
+// fix D) and `app` on Linux/macOS. Both are live layouts, not a migration shim.
 function loadExtractZip(root) {
-  const modulePath = path.join(root, 'app', 'node_modules', 'extract-zip');
-  return require(modulePath);
+  const candidates = [
+    path.join(root, 'resources', 'app', 'node_modules', 'extract-zip'),
+    path.join(root, 'app', 'node_modules', 'extract-zip'),
+  ];
+  for (const modulePath of candidates) {
+    if (fs.existsSync(modulePath)) return require(modulePath);
+  }
+  throw new Error(`extract-zip not found under ${root} (looked in resources/app and app)`);
+}
+
+// Windows refuses to overwrite or delete a RUNNING executable image, but it does
+// allow RENAMING one - the open handle follows the file. The portable updater runs
+// through the app's own binary as node, so an update that ships a new
+// CubricVision.exe would otherwise abort the whole run with EBUSY. Move the live
+// image aside, write the new one in its place, and sweep the leftover on the next
+// update (by then nothing holds it).
+function isBusyError(err) {
+  return err && ['EBUSY', 'EPERM', 'EACCES', 'ETXTBSY'].includes(err.code);
+}
+
+function evictBusyFile(target) {
+  if (process.platform !== 'win32') return false;
+  const aside = `${target}.old`;
+  try {
+    fs.rmSync(aside, { force: true });
+  } catch {
+    // A previous eviction is still locked; renameSync below will fail and we
+    // report the original error.
+  }
+  try {
+    fs.renameSync(target, aside);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function findManifestRoot(dir, depth = 0) {
@@ -143,7 +178,12 @@ function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath) {
   }
   backupExisting(portableRoot, backupRoot, relPath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.copyFileSync(source, target);
+  try {
+    fs.copyFileSync(source, target);
+  } catch (err) {
+    if (!isBusyError(err) || !evictBusyFile(target)) throw err;
+    fs.copyFileSync(source, target);
+  }
   restoreExecBit(source, target, relPath);
 }
 
@@ -151,7 +191,13 @@ function applyDeletes(portableRoot, backupRoot, manifest) {
   for (const relPath of manifest.delete || []) {
     backupExisting(portableRoot, backupRoot, relPath);
     const target = assertInside(portableRoot, path.join(portableRoot, ...relPath.split('/')));
-    fs.rmSync(target, { recursive: true, force: true });
+    try {
+      fs.rmSync(target, { recursive: true, force: true });
+    } catch (err) {
+      // Same running-image rule as the copy path: a retired binary we are
+      // currently executing can be renamed aside but not unlinked.
+      if (!isBusyError(err) || !evictBusyFile(target)) throw err;
+    }
   }
 }
 

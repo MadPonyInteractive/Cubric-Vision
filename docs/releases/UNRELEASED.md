@@ -6,6 +6,32 @@
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
 
+## importantChanges
+
+- **Windows: the app now starts from `CubricVision.exe`.** `start.vbs` and
+  `start-with-terminal.bat` are gone — double-click `CubricVision.exe` in the
+  folder instead. This is not a tidy-up. On a clean Windows 11 install, Smart App
+  Control blocks `.vbs` and `.bat` files outright, with no "run anyway" and no way
+  to allow them, so for anyone on a fresh machine every way we shipped to start
+  the app was blocked and double-clicking did nothing at all. An executable does
+  not get that treatment. Windows may still warn you the first time with a blue
+  "Windows protected your PC" box, because the app is not code-signed yet — click
+  **More info**, then **Run anyway**. You only do that once.
+
+  Three things to know if you already have Cubric Vision on Windows:
+
+  - **If the app currently does not start for you at all, updating cannot fix
+    it** — the updater is a `.bat` and is blocked by the same rule. Download the
+    full build from the release page and unpack it fresh. Your projects live in
+    Documents and are untouched; point the new folder at your existing engine and
+    models, or set them up again.
+  - **If you update in place**, an old `app` folder is left behind in your Cubric
+    Vision folder. Nothing uses it any more and it is safe to delete — about a
+    gigabyte back.
+  - **Updating from inside the app is now the recommended way on Windows**, and
+    works regardless of Smart App Control. `update.bat` and `update-from-zip.bat`
+    are still there for machines where it is switched off.
+
 ## whatIsNew
 
 - **New model: FLUX.2 Klein.** The fastest image model in Cubric Vision, and the

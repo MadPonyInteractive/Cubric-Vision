@@ -235,12 +235,22 @@ if (process.env.CUBRIC_E2E) {
   app.commandLine.appendSwitch('disable-gpu-compositing');
 }
 
+// Windows launches straight from CubricVision.exe now (MPI-387 fix D), so the
+// start script that used to export CUBRIC_USER_DATA_ROOT is gone. Without this
+// fallback a portable Windows install would silently write its user data — and
+// therefore logs/app.log, the one artifact a bug report carries — into %APPDATA%
+// instead of staying inside the portable folder. resolveMainPortableRoot is a
+// hoisted function declaration, so it is callable here.
 if (process.env.CUBRIC_E2E_USER_DATA) {
   fs.mkdirSync(process.env.CUBRIC_E2E_USER_DATA, { recursive: true });
   app.setPath('userData', path.resolve(process.env.CUBRIC_E2E_USER_DATA));
-} else if (process.env.CUBRIC_USER_DATA_ROOT) {
-  fs.mkdirSync(process.env.CUBRIC_USER_DATA_ROOT, { recursive: true });
-  app.setPath('userData', path.resolve(process.env.CUBRIC_USER_DATA_ROOT));
+} else {
+  const userDataRoot = process.env.CUBRIC_USER_DATA_ROOT
+    || (resolveMainPortableRoot() ? path.join(resolveMainPortableRoot(), 'user-data') : '');
+  if (userDataRoot) {
+    fs.mkdirSync(userDataRoot, { recursive: true });
+    app.setPath('userData', path.resolve(userDataRoot));
+  }
 }
 
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
@@ -559,8 +569,17 @@ function buildServerEnv(userDataPath, documentsPath) {
     MPI_RESOURCES_PATH: resourcesPath,
   };
 
+  // A portable root implies the whole folder contract, so derive the three roots
+  // from it when nothing set them. This used to be the start script's job; on
+  // Windows there is no start script any more (MPI-387 fix D). It matters most
+  // for the models root: routes/shared.js getDefaultModelsRoot falls back to
+  // <engine>/mpi_models, NOT <root>/models, so an unset CUBRIC_MODELS_ROOT would
+  // quietly bury models inside the engine folder and outside the preserve list.
   if (portableRoot) {
     env.CUBRIC_PORTABLE_ROOT = portableRoot;
+    env.CUBRIC_ENGINE_ROOT = path.join(portableRoot, 'engine');
+    env.CUBRIC_MODELS_ROOT = path.join(portableRoot, 'models');
+    env.CUBRIC_USER_DATA_ROOT = path.join(portableRoot, 'user-data');
   }
   if (process.env.CUBRIC_ENGINE_ROOT) {
     env.CUBRIC_ENGINE_ROOT = path.resolve(process.env.CUBRIC_ENGINE_ROOT);
@@ -581,11 +600,21 @@ function buildServerEnv(userDataPath, documentsPath) {
 function startServer() {
   const userDataPath = app.getPath('userData');
   const documentsPath = app.getPath('documents');
+  const serverEnv = buildServerEnv(userDataPath, documentsPath);
   console.log('[main] APP_USER_DATA set to:', userDataPath);
   console.log('[main] APP_DOCUMENTS set to:', documentsPath);
+  // The clean-Windows-install report that opened MPI-387 arrived with an app.log
+  // that never said where the app thought its folders were, which is half the
+  // diagnosis for any "it installed into the wrong place" bug.
+  console.log('[main] portable roots:', JSON.stringify({
+    portable: serverEnv.CUBRIC_PORTABLE_ROOT || null,
+    engine: serverEnv.CUBRIC_ENGINE_ROOT || null,
+    models: serverEnv.CUBRIC_MODELS_ROOT || null,
+    resources: serverEnv.MPI_RESOURCES_PATH || null,
+  }));
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
     silent: true,
-    env: buildServerEnv(userDataPath, documentsPath)
+    env: serverEnv,
   });
 
   // Let the forked server request decrypted RunPod secrets on demand (MPI-64).
@@ -1012,7 +1041,14 @@ app.on('ready', () => {
   ipcMain.handle('run-update', async () => {
     const portableRoot = resolveMainPortableRoot();
     if (!portableRoot) return { ok: false, error: 'not-portable' };
-    const script = process.platform === 'win32' ? 'update.bat'
+    // Windows cannot use a script here: Smart App Control hard-blocks .bat/.vbs
+    // on a clean Windows 11 install with no override, so spawning update.bat is
+    // a dead end for exactly the users who most need the update (MPI-387). Run
+    // the same orchestration directly through our own binary as node — the one
+    // runtime a portable install is guaranteed to have. Linux/macOS keep their
+    // shell launchers, which nothing blocks.
+    const isWin = process.platform === 'win32';
+    const script = isWin ? path.join('update', 'win-update.cjs')
       : process.platform === 'darwin' ? 'update.command'
       : 'update.sh';
     const scriptPath = path.join(portableRoot, script);
@@ -1022,12 +1058,18 @@ app.on('ready', () => {
     }
     try {
       logger.info('update', `launching updater: ${scriptPath}`);
-      const child = spawn(scriptPath, [], {
-        cwd: portableRoot,
-        detached: true,
-        stdio: 'ignore',
-        shell: process.platform === 'win32', // .bat needs a shell to execute
-      });
+      const child = isWin
+        ? spawn(process.execPath, [scriptPath, '--root', portableRoot], {
+          cwd: portableRoot,
+          detached: true,
+          stdio: 'ignore',
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        })
+        : spawn(scriptPath, [], {
+          cwd: portableRoot,
+          detached: true,
+          stdio: 'ignore',
+        });
       child.unref();
       // Give the detached child a beat to fully spawn before we tear the app down.
       setTimeout(() => app.quit(), 500);

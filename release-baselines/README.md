@@ -63,6 +63,16 @@ Local Windows builds do the same by hand:
   1.2.0 Windows update bundle reads `from 1.0.0 -> 1.2.0`, 1226 files, 90 MB).
   **Restamp these as part of cutting a release**, not later.
 
+> **The next Windows delta is effectively a FULL bundle, and that is correct.**
+> MPI-387 fix D moved the Windows app tree from `app/` to `resources/app/` and put
+> Electron's runtime at the portable root, so every Windows path in
+> `win32-x64.json` changed. The diff is SHA256-by-path, so every one of those
+> ~6300 files reads as "added" (measured on a staged build: 6501 changed, 2
+> deletes). Do not treat the size as a bug or try to "fix" the baseline by
+> hand-editing paths — `win32-x64.json` is the historical v1.2.0 truth and can
+> only be replaced by the FULL manifest from the next shipped Windows build.
+> Linux and macOS are unaffected; their layout did not move.
+
 ### Extracting a baseline from a shipped artifact
 
 The manifest lives at `resources/cubric/update-manifest.json` in the FULL

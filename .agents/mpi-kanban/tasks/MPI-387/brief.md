@@ -1,8 +1,9 @@
 # MPI-387 — Clean Windows 11 install is broken end-to-end
 
-> **STATUS 2026-07-29: A, B and C are SHIPPED. D, E, F1, F2, F3 remain.**
+> **STATUS 2026-07-29: A, B, C, D and E are SHIPPED. F1, F2, F3 remain.**
 > Shipped: splash (`335fe260`), Impact-Pack `git+sam2` drop (`f371a162`),
-> MAX_PATH archive + preflight and the failure-attribution split (this session).
+> MAX_PATH archive + preflight and the failure-attribution split (`494228fe`),
+> the Windows standard-Electron relayout + its release note (this session).
 > Fix map for what is left is at the bottom of this file — do not re-derive it.
 
 Raised 2026-07-29. A second user reported the app not starting on Windows 11; the user then
@@ -241,6 +242,8 @@ through the MPI-369 `unhandledRejection` handler.
 | A preflight | `routes/engine.js` `installPathDepthError` / `assertInstallPathDepth` | Budget = 260 − 171 = **89 chars for ENGINE_ROOT**. Called at the top of `_runEngineDownload` and `/engine/repair-deps`, i.e. before any download. Skipped when `LongPathsEnabled` is 1 in the registry. Warns when within 20 chars of the budget. |
 | C attribution | `routes/downloadManager.js` | `anyFailure` split into `extractFailures` / `installFailures`; message built by `_describeNodeInstallFailures`, which names the deps and the phase. `routes/engine.js` now carries that message into `engine:error` instead of the generic "UW deps installation failed". |
 | Test | `tests/install-path-depth.test.cjs` | Pins the 95-char broken root, the 63-char fixed root, the 89-char boundary, and that a pip-only batch never claims "extraction failed". |
+| D relayout | `scripts/build-portable.mjs` `PLATFORM_CONFIG` (`appDirRel` / `electronRoot` / `exeName`) + `stageElectronRoot` + `RETIRED_PATHS`; `scripts/portable/win-update.cjs` (new); `apply-update.cjs`; `main.js` | Windows only. `CubricVision.exe` at the zip root, app at `resources/app`, `resources/default_app.asar` + the duplicate `app/node_modules/electron/dist` pruned (~200MB), `start.vbs`/`start-with-terminal.bat` deleted. Staged build verified: all 8 layout assertions, delta = 6501 changed / 2 deletes (exactly the retired launchers). Boot verified from a bare exe double-click — all four roots resolve inside the portable folder. |
+| E release notes | `docs/releases/UNRELEASED.md` § importantChanges | Says plainly that a currently-broken Windows install cannot be reached by an update, that an in-place update leaves a stale `app/` the user may delete, and that in-app update is now the Windows path. |
 
 ### Still open
 
@@ -249,8 +252,31 @@ through the MPI-369 `unhandledRejection` handler.
 | F1 reconciler false positive | `routes/comfy.js:718-720` `_localModelsCheck` uses `pathExists` for `custom_nodes` deps | RIFE's `targetPath` weight makes `FileDownloader._ensureDownloader` (`downloadManager.js:663`) `ensureDir` the parent node folder as a side effect. Fix: use the `_nodeFolderHasFiles` guard (`downloadManager.js:86-93`) — extract to a shared util. **No work is dropped; the WARN is cosmetically wrong only.** |
 | F2 wrong GPU build | `routes/platformEngine.js:283-293` defaults to the NVIDIA 7z; `detectIntelArcGPU` (`:230-241`) matches only Intel Arc / Data Center, never Iris/UHD/HD | Every non-discrete-GPU laptop downloads the CUDA build. Product decision on whether a lighter build exists; at minimum log the intentional fallthrough. |
 | F3 cupy | `ComfyUI-Frame-Interpolation/install.py` swallows a cupy-wheel build failure and exits 0 | `runCustomCommand` (`routes/shared.js:305-319`) correctly resolves — the exit-code check is right, the node lies. cupy is optional for RIFE (torch fallback). Document or drop cupy. |
-| D relayout | `scripts/build-portable.mjs` + `apply-update.cjs` + `main.js` | 7 blockers, table in § D above. |
-| E release notes | — | Existing Win11 SAC users reachable only by a fresh full download. |
+
+### Three blockers the D report missed (found and fixed this session)
+
+Each one is silent — none would fail a build, and two would only surface on a
+user's machine.
+
+| Missed blocker | Why it bites | Fix |
+|---|---|---|
+| **No launcher means no launcher environment** | `start.vbs` was the ONLY thing exporting `CUBRIC_ENGINE_ROOT` / `MODELS_ROOT` / `USER_DATA_ROOT`. `getEngineRoot()` falls back to `<portableRoot>/engine` ✓, but `getDefaultModelsRoot()` (`routes/shared.js`) falls back to `<engine>/mpi_models` and `app.setPath('userData')` never fires — so models bury inside the engine folder and `user-data`, i.e. `logs/app.log`, lands in `%APPDATA%`. | `main.js` derives all of them from `resolveMainPortableRoot()` (a hoisted decl, so callable at the module-top `setPath` site). Proven on a staged build. |
+| **Windows cannot overwrite a running exe** | The updater runs *through* `CubricVision.exe`, so any future Electron bump aborts the whole update with EBUSY. | `apply-update.cjs` catches EBUSY/EPERM/EACCES and renames the live image to `<file>.old` (Windows allows renaming a running image), then writes the replacement. |
+| **`applyDelta` cannot express a retired root** | Its delete scope is derived from the roots the NEW bundle ships, so `start.vbs` is invisible to it and survives the update still doing `pushd %ROOT%\app`. | `RETIRED_PATHS` force-includes them. `app/` is deliberately excluded — the transition applier is the user's OLD one, running `app/node_modules/electron/dist/electron.exe` as node, and deleting a running image aborts everything. |
+
+### Verification actually run for D
+
+- Staged a real win32 build with `--from-manifest release-baselines/win32-x64.json`.
+  Layout: `CubricVision.exe` at root ✓, `resources/app/main.js` ✓, no `app/` ✓, no
+  `default_app.asar` ✓, no duplicate electron dist ✓, no `.vbs`/`start*` ✓.
+  Delta: 6501 changed, `delete: ["start-with-terminal.bat","start.vbs"]` ✓.
+- Booted that staged `CubricVision.exe` by double-click path, zero env:
+  `portable`, `engine`, `models` and `resources` all resolved inside the folder.
+- **NOT verified: a full server boot.** Port 3000 was held by the maintainer's dev
+  app, so the forked server died on `EADDRINUSE` — attributable, unrelated to the
+  relayout, but the app has not been driven end-to-end from the new layout.
+- `tests/portable-win-layout.test.cjs` (6 tests) + suite failure list unchanged
+  vs the 9 known pre-existing failures (262/271).
 
 ## Release note
 
