@@ -109,6 +109,45 @@
   height — the box locks to that shape and the result comes out at exactly those
   pixels. Images only; video crop is unchanged.
 
+- **Masking is rebuilt: four tools, and it can now find anything you can point at
+  or name.** Masking used to be one tool with the method buried inside it. It is
+  now four icons in the rail, each doing one job.
+
+  **Brush** is painting, plain and simple — paint, erase, opacity. **Points** is
+  the new one: click anywhere on the image and the mask snaps to whatever you
+  clicked, whether that's a face, a pair of headphones or the coffee cup on the
+  table. Right-click to push the selection back off something it grabbed by
+  mistake. **Name** lets you type what you want instead — *hair*, *cup, earring*,
+  *bikini* — say how many of each to find, and every one comes back as its own
+  thumbnail to pick from. **Detect** is the face / hand / person finder you
+  already had, unchanged.
+
+  Points and Name cover each other's weak spots. Clicking is precise, but thin
+  strappy things — a strap, a handle, a chain — want more dots than you'd expect,
+  especially right-clicks to push the selection back; naming the object handles
+  those in one press. Everything adds on top of whatever you've already painted,
+  so all four mix freely.
+
+  > Tip: dots are cumulative, but they describe *one* region per run. Click, hit
+  > **Add**, then start on the next part.
+
+  A few smaller things came with the rebuild. Anything a detector found now draws
+  **green**, so a found region is distinguishable from one you painted. A new
+  **black-and-white view** in the strip shows the mask exactly as it is handed to
+  the model — the quickest way to catch stray specks before you generate. The
+  eraser's ring is visible against dark images instead of vanishing into them. And
+  the prompt box now **stays open while you mask**: a mask and a prompt are one
+  job, and leaving the tool every time you wanted to change a setting was the
+  worst part of the old flow.
+
+  Points and Name run on a new model that installs alongside the engine, so expect
+  a one-off download of about 1.7GB after you update.
+
+- **Ctrl+Z on the canvas.** Every mask edit can now be taken back — a brush
+  stroke, a Clear, committing a detection — with **Ctrl+Shift+Z** to put it back
+  again. The history follows you between mask tools, and starts fresh when you
+  open a different image.
+
 ## fixes
 
 - **Editing an image in the strip now always uses the image you're looking at.**
