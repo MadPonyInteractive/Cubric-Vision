@@ -1,0 +1,139 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "70d6ed2e-ec98-498e-be4f-fae532823d34",
+ "generated_at": "2026-07-29T23:45:00Z",
+ "from_session": null,
+ "to_role": "implementer",
+ "status": "open",
+ "session": {
+  "name": "MPI-387 raised - clean Windows 11 install broken end-to-end; splash + sam2 fixes shipped",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "A second user reported the app not starting on Windows 11. Diagnose it, with the user reproducing a full install on a clean Windows 11 Home laptop (integrated graphics, no NVIDIA).",
+  "status": "diagnosed - 2 of 6 fixed",
+  "summary": "Six defects, all evidence-backed from a captured app.log plus live user testing. TWO ARE SHIPPED: the white-splash flash (335fe260) and the git+sam2 requirement (f371a162, with a test). FOUR REMAIN. Every remaining one has an exact file:line fix site - do not re-derive them. Full evidence is in the MPI-387 brief; read it before touching anything."
+ },
+ "plan": {
+  "file": ".agents/mpi-kanban/tasks/MPI-387/brief.md",
+  "completed": [
+   "SHIPPED 335fe260 - white splash: shown before Chromium first paint, backgroundColor does not cover that gap. show:false + ready-to-show, plus a .catch() on loadFile whose rejection escaped the try/catch and would now kill the process via the MPI-369 unhandledRejection handler.",
+   "SHIPPED f371a162 - Impact-Pack git+sam2 drop on all three platforms, proven unused by grep, byte-exact against the locked requirements.txt at 429d0159, pinned by a test that also asserts SAM 1 survives.",
+   "MAX_PATH measured exactly: 266 chars vs the 260 limit, over by six. Cause is a double-nested archive root worth 32 chars.",
+   "DISPROVED the extraction-race theory using the real log - sequencing is correct, all 14 extractions succeeded.",
+   "Empirically REJECTED .lnk as a launcher: it stores an absolute target path (verified by renaming the parent folder).",
+   "Researched signing: EV no longer grants instant reputation, OV is equivalent, SAC blocks signed binaries too.",
+   "Mapped the portable-relayout blast radius: 7 blockers incl. an entirely missing build step. Linux/macOS unaffected.",
+   "Proved the Retry loop is permanent, with the mechanism (see constraints).",
+   "Confirmed NONE of the six defects affect the remote/Pod engine - custom nodes are baked at image build time and _runCustomNodeInstall is not called for engine === remote."
+  ],
+  "pending": [
+   "A (MAX_PATH): scripts/build-portable.mjs:1062 - the full archive is written with includeRoot:true, and rootName (line 1006) is CubricVision-<label>-<arch>-v<version>, 30 chars. Windows Extract All then nests that name twice. NEEDS A USER DECISION - see key_decisions.",
+   "A (preflight): add an install-root depth guard in routes/engine.js _runEngineDownload (after ~line 360); ENGINE_ROOT comes from getEngineRoot() in routes/platformEngine.js. Unlike the archive change this one travels in an update bundle, and it is the load-bearing fix because no archive name saves a user who extracts somewhere deep.",
+   "C (wrong message): routes/downloadManager.js:2202-2205 throws \"One or more custom node extractions failed\" for ALL loop failures. anyFailure is ONE boolean set at 2049, 2055, 2088, 2158, 2169 and 2186 with no extraction-vs-pip distinction. It surfaces at routes/engine.js:393 and the generic toast at :474. Split into anyExtractionFailure / anyPipFailure and carry the child process message, which already names the package and reason.",
+   "F1 (reconciler false positive): routes/comfy.js:718-720 _localModelsCheck uses pathExists for custom_nodes deps. The rife47 weight has targetPath custom_nodes/comfyui-frame-interpolation/ckpts/rife, and FileDownloader._ensureDownloader (downloadManager.js:663) ensureDir-s it, creating the parent node folder as a side effect. Fix: use the _nodeFolderHasFiles guard that _runCustomNodeInstall already has at downloadManager.js:86-93 - extract it to a shared util. NOTE: no work is actually dropped, the warn is cosmetically wrong only.",
+   "F2 (wrong GPU build): routes/platformEngine.js:283-293 defaults to the NVIDIA 7z when nothing is detected, and detectIntelArcGPU (:230-241) only matches Intel Arc / Data Center, never Iris/UHD/HD integrated. Every non-discrete-GPU laptop downloads the CUDA build. Product decision on whether a lighter build exists; at minimum log the intentional fallthrough.",
+   "F3 (low): ComfyUI-Frame-Interpolation install.py swallows a cupy-wheel build failure (pkg_resources gone in setuptools 81+) and exits 0, so runCustomCommand (routes/shared.js:305-319) correctly resolves. cupy is optional for RIFE - torch fallback is adequate. Document or drop cupy; the exit-code check itself is correct.",
+   "D (relayout): own effort, 7 blockers, see the brief.",
+   "E (release notes): existing Windows 11 SAC users can only be reached by a fresh full download."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-387",
+  "title": "Clean Windows 11 install is broken end-to-end - SAC block, MAX_PATH, git dep",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-387/",
+  "links": {
+   "plan": null,
+   "checklist": null,
+   "validation": null,
+   "handoffs": null,
+   "brief": ".agents/mpi-kanban/tasks/MPI-387/brief.md"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "implement",
+  "test",
+  "commit",
+  "update-card",
+  "research"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "All six defects, their evidence, exact fix sites and two retracted theories are in the MPI-387 brief."
+  ],
+  "pending": [
+   "If the relayout proceeds, docs/releases/portable-distribution-contract.md lines 176-189, 193, 195-197 and 314-317 become false.",
+   "The SAC blocked-extension list and the .lnk absolute-path result belong in the portable distribution contract so nobody re-proposes .lnk.",
+   "MPI-387 brief should get the file:line fix map appended - it currently has the evidence but the precise sites live only in this handoff."
+  ]
+ },
+ "next_action": {
+  "description": "Resolve the fix-A decision with the user first (it changes the shipped artifact shape and a parallel session is planning the release), then implement A-preflight and C. Read .agents/mpi-kanban/tasks/MPI-387/brief.md FIRST - it holds the measurements, exact log quotes and two explicitly retracted theories you must not re-open.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "FIX A NEEDS A USER CALL. Option 1: build-portable.mjs:1062 includeRoot:false - saves all 32 chars (266 -> 234), but the zip then has no top-level folder, so a user who picks \"Extract Here\" in 7-Zip sprays thousands of files into Downloads. Windows Extract All (the default) still creates exactly one folder. Option 2: keep includeRoot:true and shorten rootName (line 1006) - no spray risk, but CubricVision-v<version> only saves 12 chars (266 -> 254) and the reproducing user has a 5-character username; a longer name breaks it again. The update bundle already uses a deliberately short version-first root (updateRootName, line 1021) for the MPI-62 Safari-truncation reason, so precedent exists for option 2. RECOMMENDATION: option 1 plus the preflight depth check, because option 2 alone leaves almost no margin.",
+   "The relayout (D) is decoupled from the install fixes. A and C ship without touching the layout.",
+   "Linux and macOS keep the current layout - .sh and .command are not SAC-blocked. Windows-only branch in the build script.",
+   "Signing is eventually necessary but is NOT a fix for SAC and is not urgent. Do not buy a cert expecting it to unblock users.",
+   "A 1.2.1 patch can carry B and C via an update bundle. A does NOT reach existing installs - it changes how the zip is packaged, not what is already on disk. 1.2.1 does nothing for SAC-blocked users.",
+   "Release base is PARKED pending a parallel session assessing master (116 commits / 167 non-doc files ahead of v1.2.0, so it is not a patch). No branch has been created - do not create one without the user naming the base."
+  ],
+  "constraints": [
+   "THE RACE THEORY IS DEAD. Node extraction does not race engine extraction; the log proves correct sequencing and all 14 extractions succeeded. Do not re-open it.",
+   ".lnk IS REJECTED. It stores an absolute path, verified empirically. Do not re-propose it as a launcher.",
+   "THE RETRY LOOP IS PERMANENT, and here is why: writeNodeCommitMarker (downloadManager.js:2195) is the SOLE persistent record of a good install, and the `continue` at 2169/2186 skips it on any pip failure. Next boot, checkUniversalWorkflowDepsStatus (shared.js:598) finds the folder but no .mpi_node_commit, marks the dep drifted, and re-installs. Pip fails the same way. Retry via /engine/download also re-downloads the WHOLE multi-GB engine each time. Fixing A and B ends the loop.",
+   "The update ARCHIVE NAME is frozen (MPI-369) - shipped updaters glob it by name. Only the extracted root folder name is free.",
+   "_filterRequirements matches with `name === d` after trim+lowercase. Any new drop string must be byte-exact against the locked requirements.txt or it is a silent no-op.",
+   "requirementsDrop trap: _createDepJob is a WHITELIST (downloadManager.js:456). Unlisted dep fields vanish silently.",
+   "No symptom patches: no retry loop, no ensure-dir band-aid that just moves the failure to the pip step, no try/catch at the error site.",
+   "None of these six affect the remote/Pod engine. Do not sweep it.",
+   "The CHANGELOG hold on masking still stands: one entry when MPI-368 shapes land, not per-card.",
+   "Docs-repo push block still applies. Push is user-authorized only.",
+   "9 pre-existing test failures are UNCARDED and unrelated; check the failure LIST, not the count. Runner is `node --test tests/*.test.cjs`."
+  ],
+  "files_modified": [
+   "main.js - splash show:false + ready-to-show + loadFile .catch (committed 335fe260)",
+   "js/data/modelConstants/nodesDeps.js - Impact-Pack requirementsDrop (committed f371a162)",
+   "tests/requirements-filter.test.cjs - MPI-387 assertions, passing (committed f371a162)",
+   ".agents/mpi-kanban/board.json - MPI-387 added to doing, next_id 388 (committed 335fe260)",
+   ".agents/mpi-kanban/tasks/MPI-387/ - task.json, brief.md, events.jsonl (committed 335fe260)"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-387/brief.md",
+   "scripts/build-portable.mjs (lines 1006 rootName, 1062 includeRoot, 779 createZipFromDir)",
+   "routes/downloadManager.js (2195 marker, 2202-2205 message, 86-93 _nodeFolderHasFiles)",
+   "routes/engine.js (~360 install start, 393 log, 474 toast)",
+   "docs/releases/portable-distribution-contract.md"
+  ]
+ },
+ "project_knowledge": {
+  "profile": null,
+  "knowledge_index": null,
+  "mode": "file",
+  "relevant_topics": [
+   "portable distribution",
+   "releases",
+   "downloads",
+   "comfy engine",
+   "windows packaging"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/downloads.md",
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/versioning.md"
+ ],
+ "recent_events": [
+  "f371a162 fix(deps): drop Impact-Pack git+sam2 requirement (MPI-387)",
+  "335fe260 fix(splash): show on ready-to-show, and catch loadFile (MPI-387)",
+  "MPI-387 created in doing as the umbrella for six clean-Win11 defects"
+ ],
+ "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/70d6ed2e-ec98-498e-be4f-fae532823d34.json, then .agents/mpi-kanban/tasks/MPI-387/brief.md in full. Two of six defects are shipped. Settle the fix-A decision with the user (see key_decisions), then implement the preflight depth check and the C error-attribution fix. Do not re-open the retracted extraction-race theory and do not re-propose .lnk - both are settled with evidence."
+}
