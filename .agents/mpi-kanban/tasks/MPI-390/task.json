@@ -1,0 +1,27 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-390",
+ "title": "GPU-less first run cannot reach RunPod - the local engine install modal has no escape hatch",
+ "column": "todo",
+ "maturity": "idea",
+ "status": "active",
+ "created_at": "2026-07-29T06:12:00Z",
+ "updated_at": "2026-07-29T06:12:00Z",
+ "labels": [
+  "bug",
+  "ux",
+  "runpod",
+  "engine-install"
+ ],
+ "description": "Surfaced 2026-07-29 while fixing MPI-387 F2, and it is a DIFFERENT defect: F2 is which engine build gets picked, this is that the remote escape hatch is unreachable at the moment it is needed. The remote-only boot path already exists and skips the local engine gate (js/shell.js:251, with the intent spelled out in the comment at :244-250), but it is gated on autoConnectOnStart, which defaults to false (js/core/storage.js:61). So a fresh machine takes the local branch, needsInstall is true, and MpiEngineInstall shows with backdropClose:false and no skip or cancel control (MpiEngineInstall.js:322-330) - only engine:ready hides it. The only UI that sets autoConnectOnStart is RunPod settings, behind the landing page the modal is covering. Net effect: a machine with no usable GPU must complete a multi-GB CUDA engine install it will never use, purely to reach the setting that would have let it skip that install. Not a hard block (the CUDA portable installs and ComfyUI falls back to CPU) but a tax on exactly the users RunPod exists for. Needs a product/UX decision before any code - where the escape hatch lives, whether it is always shown or only on gpu.vendor null, the copy, and whether autoConnectOnStart is the right flag or a separate skip-local-engine preference is cleaner. Full trace with file:line evidence in brief.md.",
+ "acceptance": [
+  "A machine with no usable GPU can configure RunPod and generate WITHOUT completing a local ComfyUI engine install",
+  "The chosen escape hatch is reachable from the blocking install modal itself, not only from settings behind it",
+  "It is decided and written down whether the hatch shows always or only when GPU detection found no discrete GPU",
+  "Turning remote back off re-arms the local engine install rather than leaving the app in a half-configured state"
+ ],
+ "links": {
+  "brief": "brief.md",
+  "events": "events.jsonl"
+ }
+}

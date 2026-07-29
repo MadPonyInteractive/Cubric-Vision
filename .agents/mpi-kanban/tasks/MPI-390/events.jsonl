@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-390","type":"task.created","at":"2026-07-29T06:12:00Z","actor":"claude","summary":"Carded from an MPI-387 F2 side-trace: a GPU-less first run cannot reach RunPod because the non-dismissible engine-install modal covers the only UI that enables it. Placed second in To do, directly under MPI-385, so the deliberate top-of-board stays put."}

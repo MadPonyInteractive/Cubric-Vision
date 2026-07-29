@@ -142,6 +142,17 @@ export const nodesDeps = {
         // contrib, torch-family). torch/torchvision/einops/tqdm are engine-managed/baked
         // and opencv-contrib is redundant with the headless build already present — pin
         // only the drift-risky shared libs to the live set (MPI-222). pipPins run AFTER.
+        //
+        // MPI-387 F3 — EXPECTED NOISE, not a failure. install.py tries to build
+        // `cupy-wheel`, which dies with `ModuleNotFoundError: No module named
+        // 'pkg_resources'` (setuptools 83 dropped it), and then install.py exits 0
+        // anyway. So app.log shows `Failed to build 'cupy-wheel'` immediately followed
+        // by `Custom install command succeeded`. That is the NODE lying about its own
+        // exit code, not a bug here: `runCustomCommand` (routes/shared.js) checks the
+        // exit code correctly and is right to resolve. cupy only accelerates the CUDA
+        // path; RIFE falls back to torch without it, which is what every machine that
+        // hits this is already doing. Do NOT "fix" this by dropping the exit-code check
+        // or by adding a cupy pin — cupy has no wheel for the embedded Python here.
         pipPins: ['numpy==2.5.1', 'kornia==0.8.2', 'scipy==1.18.0', 'pillow==12.3.0'],
         size: '37.4MB',
     },

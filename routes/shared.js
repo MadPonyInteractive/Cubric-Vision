@@ -13,7 +13,7 @@ const fs     = require('fs-extra');
 const path   = require('path');
 const { createRequire } = require('module');
 const logger = require('./logger');
-const { isCompleteOnDisk } = require('./downloadCompletion');
+const { isCompleteOnDisk, isNodeInstalledOnDisk } = require('./downloadCompletion');
 const https = require('https');
 const http = require('http');
 const { pipeline } = require('stream/promises');
@@ -610,7 +610,15 @@ async function checkUniversalWorkflowDepsStatus() {
             continue;
         }
         const { localPath } = await resolveComfyPath(dep, customRoot, config);
-        if (!(await fs.pathExists(localPath))) {
+        // MPI-387 F1: a custom_nodes folder can exist as a weight-only shell (a
+        // `targetPath` weight lands under it before the node extracts), so pathExists
+        // alone reads a never-installed node as present. A commit-pinned node was
+        // rescued by the drift check below (no marker → drifted → re-extract); an
+        // UNPINNED one was silently skipped forever.
+        const present = dep.type === 'custom_nodes'
+            ? await isNodeInstalledOnDisk(localPath)
+            : await fs.pathExists(localPath);
+        if (!present) {
             missing.push(depId);
             continue;
         }

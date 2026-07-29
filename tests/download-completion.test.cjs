@@ -7,6 +7,8 @@ const path = require('path');
 const {
     getDownloadMarkerPath,
     isCompleteOnDisk,
+    isNodeInstalledOnDisk,
+    isDepInstalledOnDisk,
     markDownloadInProgress,
     clearDownloadMarker,
     getPartialDownloadState,
@@ -182,8 +184,52 @@ async function testMapWalkDoesNotFightSettledStore() {
     }
 }
 
+// MPI-387 F1 — a custom_nodes folder existing is NOT proof the node is installed.
+// A `targetPath` weight resolves under the node folder and downloads first (RIFE
+// writes comfyui-frame-interpolation/ckpts/rife/rife47.pth), leaving a shell of
+// subdirs only. Bare pathExists on that shell marked the dep complete, and the
+// node download then moved it complete→downloading — the illegal transition.
+async function testNodeShellIsNotInstalled() {
+    await withTempDir(async (dir) => {
+        // Weight-only shell: subdirs, zero top-level files.
+        const shell = path.join(dir, 'comfyui-frame-interpolation');
+        await fs.outputFile(path.join(shell, 'ckpts', 'rife', 'rife47.pth'), 'weight');
+        assert.strictEqual(await fs.pathExists(shell), true, 'precondition: folder exists');
+        assert.strictEqual(await isNodeInstalledOnDisk(shell), false);
+
+        // A real node ships top-level files.
+        await fs.writeFile(path.join(shell, '__init__.py'), '');
+        assert.strictEqual(await isNodeInstalledOnDisk(shell), true);
+
+        // Absent folder.
+        assert.strictEqual(await isNodeInstalledOnDisk(path.join(dir, 'nope')), false);
+    });
+}
+
+// The dep-type branch every install-state call site now shares: custom_nodes get
+// the folder test, everything else keeps the download-marker test.
+async function testDepInstalledBranchesOnType() {
+    await withTempDir(async (dir) => {
+        const shell = path.join(dir, 'some-node');
+        await fs.outputFile(path.join(shell, 'ckpts', 'w.pth'), 'weight');
+        assert.strictEqual(await isDepInstalledOnDisk({ type: 'custom_nodes' }, shell), false);
+        // Same path, non-node type → marker semantics, and the folder exists.
+        assert.strictEqual(await isDepInstalledOnDisk({ type: 'checkpoints' }, shell), true);
+
+        // A marked (partial) weight is not installed; clearing the marker settles it.
+        const weight = path.join(dir, 'model.safetensors');
+        await fs.writeFile(weight, 'bytes');
+        await markDownloadInProgress(weight, { depId: 'f1-dep' });
+        assert.strictEqual(await isDepInstalledOnDisk({ type: 'checkpoints' }, weight), false);
+        await clearDownloadMarker(weight);
+        assert.strictEqual(await isDepInstalledOnDisk({ type: 'checkpoints' }, weight), true);
+    });
+}
+
 (async () => {
     await testMarkerCompletionState();
+    await testNodeShellIsNotInstalled();
+    await testDepInstalledBranchesOnType();
     await testDownloaderResumesMarkedPartial();
     await testDownloaderStartsWhenNoPartialExists();
     await testDownloaderDoesNotResumeUnmarkedExistingFile();

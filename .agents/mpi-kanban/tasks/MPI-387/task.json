@@ -3,7 +3,7 @@
  "id": "MPI-387",
  "title": "Clean Windows 11 install is broken end-to-end - SAC block, MAX_PATH, git dep",
  "column": "doing",
- "maturity": "in-progress",
+ "maturity": "validating",
  "status": "active",
  "created_at": "2026-07-29T23:10:00Z",
  "updated_at": "2026-07-29T05:45:00Z",
@@ -32,7 +32,7 @@
  },
  "attention": {
   "state": "required",
-  "reason": "Fix D relayout needs one full app boot from the new layout with port 3000 free; the verification run died on EADDRINUSE. F1/F2/F3 still unstarted.",
-  "updated_at": "2026-07-29T05:45:00Z"
+  "reason": "All six defects (A-F) are resolved in code as of 2026-07-29; the card is now VALIDATING, not implementing. The maintainer has the reproducing Windows 11 laptop with Smart App Control ON in hand, so the three unmet acceptance items (A depth from a default Extract All, B pip with no git on PATH, D launch under SAC) are all testable on that one machine once a full Windows zip is built. Remaining after that: a transition update from v1.2.0 and a second update from the new layout, both of which need a real release. Spun out: MPI-390.",
+  "updated_at": "2026-07-29T06:20:00Z"
  }
 }

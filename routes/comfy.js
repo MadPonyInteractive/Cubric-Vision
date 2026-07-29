@@ -23,7 +23,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const logger = require('./logger');
-const { isCompleteOnDisk, getPartialBytes } = require('./downloadCompletion');
+const { isCompleteOnDisk, isDepInstalledOnDisk, getPartialBytes } = require('./downloadCompletion');
 const {
     COMFYUI_PORT,
     processState,
@@ -738,7 +738,9 @@ async function _localModelsCheck(models) {
                 depPath = path.join(defaultModelsRoot, dep.filename);
             }
 
-            const isInstalled = await isCompleteOnDisk(depPath);
+            // MPI-387 F1: type-aware — a custom_nodes folder holding only a `targetPath`
+            // weight's subdir is not an installed node, and must not report as one.
+            const isInstalled = await isDepInstalledOnDisk(dep, depPath);
             const partialBytes = isInstalled ? 0 : await getPartialBytes(depPath);
             if (!isInstalled) allPresent = false;
             depResults.push({ id: dep.id || null, installed: isInstalled, partialBytes });

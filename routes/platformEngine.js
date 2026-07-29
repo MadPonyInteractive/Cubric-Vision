@@ -289,8 +289,16 @@ async function resolveDownloadConfig() {
             comfyFilename = 'ComfyUI_windows_portable_amd.7z';
         } else if (hasIntel) {
             comfyFilename = 'ComfyUI_windows_portable_intel.7z';
+        } else {
+            // MPI-387 F2: no discrete GPU matched, so this machine gets the CUDA build
+            // and runs ComfyUI on CPU. That is DELIBERATE — we ship no CPU-only archive
+            // — but it is a large unusable torch download, and the reproducing laptop's
+            // log showed only "nvidia-smi not found" with no statement of what was
+            // chosen instead. Note that detectIntelArcGPU matches Arc / Data Center
+            // ONLY: Iris, UHD and HD integrated parts land here by design (no
+            // ComfyUI_windows_portable_intel.7z path exists for them).
+            logger.warn('gpu-detect', 'No NVIDIA, AMD or Intel Arc GPU detected — falling back to the NVIDIA (CUDA) portable build. Generation will run on CPU and the download is larger than this machine needs.');
         }
-        // else: default to NVIDIA build, ComfyUI will handle fallback if no GPU
         result = {
             method: 'archive',
             comfy: {

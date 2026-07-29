@@ -41,6 +41,8 @@ const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanE
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const {
     isCompleteOnDisk,
+    isNodeInstalledOnDisk,
+    isDepInstalledOnDisk,
     markDownloadInProgress,
     clearDownloadMarker,
     getPartialDownloadState,
@@ -78,20 +80,10 @@ async function _extractZipArchive(zipPath, extractDir) {
     await _extractZip(zipPath, { dir });
 }
 
-// MPI-243: is a custom-node folder actually EXTRACTED, or just a shell created by
-// a `targetPath` weight that lands under it (e.g. RIFE writes
-// comfyui-frame-interpolation/ckpts/rife/rife47.pth before the node itself
-// extracts)? A real node ships top-level FILES (__init__.py, install.py, ...); a
-// weight-only shell holds nothing but subdirs. True = at least one top-level file.
-async function _nodeFolderHasFiles(dir) {
-    let entries;
-    try {
-        entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-        return false; // absent or unreadable → treat as not extracted
-    }
-    return entries.some(e => e.isFile());
-}
+// MPI-243: is a custom-node folder actually EXTRACTED, or just a shell created by a
+// `targetPath` weight that lands under it? MPI-387 F1 moved the predicate to
+// downloadCompletion.js — the same test decides install state in three other places.
+const _nodeFolderHasFiles = isNodeInstalledOnDisk;
 
 // MPI-387: build the end-of-batch failure message from the two failure kinds a
 // node install can hit. Extraction and pip are different problems with different
@@ -1211,7 +1203,10 @@ router.post('/comfy/models/download/start', async (req, res) => {
             installedCheckPath = localPath;
         }
 
-        const isInstalled = await isCompleteOnDisk(installedCheckPath);
+        // MPI-387 F1: type-aware — a custom_nodes folder can be a weight-only shell.
+        // Bare pathExists here marked the dep `complete`, then the node download moved
+        // it to `downloading` → installStore logged an illegal complete→downloading.
+        const isInstalled = await isDepInstalledOnDisk(dep, installedCheckPath);
 
         let depJob = _depJobs.get(dep.id);
         if (!depJob) {
@@ -2641,7 +2636,8 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             installedCheckPath = localPath;
         }
 
-        const isInstalled = await isCompleteOnDisk(installedCheckPath);
+        // MPI-387 F1: type-aware — see the sibling call in startModelDownload.
+        const isInstalled = await isDepInstalledOnDisk(dep, installedCheckPath);
         logger.info('download', `startUniversalWorkflowInstall: dep ${depId} resolved to ${localPath}, installedCheck=${installedCheckPath}, exists=${isInstalled}`);
 
         let depJob = _depJobs.get(depId);
