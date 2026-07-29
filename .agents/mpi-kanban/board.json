@@ -1,8 +1,10 @@
 {
  "schema": "mpi-kanban/board/v1",
- "next_id": 396,
+ "next_id": 400,
  "columns": {
   "todo": [
+   "MPI-398",
+   "MPI-397",
    "MPI-391",
    "MPI-382",
    "MPI-368",
@@ -34,7 +36,8 @@
    "MPI-349"
   ],
   "doing": [
-   "MPI-395",
+   "MPI-399",
+   "MPI-396",
    "MPI-393",
    "MPI-392",
    "MPI-385",
@@ -48,6 +51,7 @@
    "MPI-4"
   ],
   "done": [
+   "MPI-395",
    "MPI-394",
    "MPI-386",
    "MPI-323",
@@ -87,7 +91,7 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-29T20:05:00Z",
+ "updated_at": "2026-07-30T00:40:00Z",
  "events": [
   {
    "at": "2026-07-29T20:05:00Z",
@@ -1039,6 +1043,53 @@
    "from": "doing",
    "to": "done",
    "summary": "Closed on the user's recollection of fixing it in a live session (the agent handed over a console one-liner to clear mpi_maturity_acknowledged and reload, so the gate could be re-triggered for testing). RECORD THE CAVEAT: no fix for this card is on disk. No commit references MPI-386, the card carries no plan/brief/handoff, and MpiModal.js + MpiStartingComfy.js - the only two files that create .mpi-modal-backdrop - are unchanged since before the card was filed. The nearest real fix is f30a6ef4 2026-07-22 (MPI-333, the 18+ gate chains the changelog so two backdrops stop stacking), which predates the report by 7 days and whose testing needs the same console one-liner. If a dead landing page after CONTINUE is ever seen again, reopen and go straight to the fresh-profile repro: localStorage.removeItem('mpi_maturity_acknowledged'); location.reload() then count document.querySelectorAll('.mpi-modal-backdrop') after clicking CONTINUE."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-395",
+   "type": "task.moved",
+   "at": "2026-07-29T22:55:00Z",
+   "actor": "opus",
+   "from": "doing",
+   "to": "done",
+   "summary": "All three residuals verified live on CPU Pod omi9588i0gymlu; user approved close. Legitimate queue read Queued... and cancel-while-queued released the chain - proven server-side: after the cancel, the next Install POST reached the server 20s after the click (job table 20:36:04) instead of parking forever, which is the wedge the fix targets. The 400 it then got is the correct volume-full pre-flight, not a defect. engine:assets stayed suppressed on the unfocused reconnect (the OS toast that did fire was the legitimate Pod connected one). Note the client-side queue is INVISIBLE to /comfy/downloads/status by design - a Queued... tile has no server job - so residuals 1 and 2 rest on user observation plus that timing proof."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-396",
+   "type": "task.created",
+   "at": "2026-07-29T22:55:00Z",
+   "actor": "opus",
+   "column": "todo",
+   "summary": "Found while closing MPI-395: uninstalling a model leaves its DONE job in the install store for the full 120s DONE_TTL, so the tile renders a 100% progress bar instead of Install - and it survives Ctrl+R because the store is main-process."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-397",
+   "type": "task.created",
+   "at": "2026-07-29T22:55:00Z",
+   "actor": "opus",
+   "column": "todo",
+   "summary": "Uninstall reads as laggy: the grid only flips after a remote /comfy/models/check round trip to the Pod wrapper. Fixing it means an optimistic install-state flip, which contradicts the install-state-IS-files-on-disk invariant - product decision, not a bug fix."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-396",
+   "type": "task.moved",
+   "at": "2026-07-30T00:05:00Z",
+   "actor": "opus",
+   "from": "todo",
+   "to": "doing",
+   "summary": "Blast-radius sweep done; implementing the store-side fix."
+  },
+  {
+   "schema": "mpi-kanban/event/v1",
+   "id": "MPI-398",
+   "type": "task.created",
+   "at": "2026-07-30T00:40:00Z",
+   "actor": "opus",
+   "column": "todo",
+   "summary": "Model Library grid paints blank on a COLD renderer (app start, Ctrl+R) for 10-15s. MPI-394 fixed the REBUILD case with a consumer-owned preview cache; a cold renderer's cache is empty, which is the one condition that mechanism cannot help. Observed twice on 2026-07-29/30."
   }
  ]
 }

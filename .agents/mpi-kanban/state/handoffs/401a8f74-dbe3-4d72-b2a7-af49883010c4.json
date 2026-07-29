@@ -1,0 +1,138 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "401a8f74-dbe3-4d72-b2a7-af49883010c4",
+ "generated_at": "2026-07-29T23:30:00Z",
+ "from_session": null,
+ "to_role": "verifier",
+ "status": "open",
+ "session": {
+  "name": "Memory-system audit - kill duplicate injection, fold memory into docs",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Evaluate whether the tutorial-derived Claude memory system is worth keeping given the repo already has docs/ plus .claude/rules/ plus a kanban board, find where the token waste is (user suspected mpi-end), and make it more efficient.",
+  "status": "in_progress",
+  "summary": "Verdict delivered and executed: keep the memory tree for what docs/ structurally cannot hold (user, feedback, host-machine tooling, cross-repo strategy), delete the injection hook, stop mirroring the board. Phases 1-3 shipped and verified; comfy_injection.md split done. Remaining: a per-claim verification pass on 20 project_* files."
+ },
+ "plan": {
+  "file": "C:/Users/Fabio/.claude/plans/these-are-some-notes-playful-squirrel.md",
+  "completed": [
+   "Phase 1 - PreToolUse hook deleted; payload proven 100 percent duplicate; 38MB log plus 129 flag files purged; memory/memory.md folded into ~/.claude/CLAUDE.md; 17 mojibake em-dashes repaired",
+   "Phase 2 - MEMORY.md in-flight section cut to non-card-shaped pointers (20420 to ~10960 bytes); MPI-249 stale card text healed; docs/DEVELOPMENT.md test-baseline drift healed against a measured 298/298",
+   "Phase 3 - mpi-end scope gate added to the project-scope override in Cubric-Vision, Cubric-Prompt and MadPony-Identity; verified firing in all three (~7.6k tok per close-out)",
+   "Phase 4 partial - all 53 project_* files triaged; 7 verified gaps migrated into docs; 20 verified-redundant files deleted with backups; all dangling refs repointed; MEMORY.md index counts corrected",
+   "comfy_injection.md split 210 to 154 lines; multi-stage contract moved to comfy_injection_multistage.md plus routing row added"
+  ],
+  "pending": [
+   "Per-claim verification pass on the 20 remaining project_* files listed in tasks/MPI-399/brief.md - read each, extract its ONE load-bearing claim, grep the named doc for that claim's distinctive mechanism, then delete-with-backup or migrate",
+   "Decide the docs/runpod-troubleshooting.md self-contradiction about the aria2 80 percent snap (line ~32 says correct-behavior-do-not-fix, line ~40 says wrapper 0.2.34 added a true-bytes completedLength numerator) by reading the shipped wrapper",
+   "Optional: repair the ~15 PRE-EXISTING dangling memory wikilinks listed in the brief"
+  ]
+ },
+ "task_card": {
+  "id": "MPI-399",
+  "title": "Memory-system audit - kill the duplicate injection, fold memory facts into docs",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-399/",
+  "links": {
+   "plan": null,
+   "checklist": null,
+   "validation": null,
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-399/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "migrate",
+  "delete-with-backup"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "7 verified doc gaps migrated (project-integrity sidecar-first, runpod reconnect stock-out bug, krea2 shared-VAE, krea2 slot-order NEW FILE, sdxl depth-control NEW FILE, qwen anime-LoRA trap, comfy_injection silent-skip trap)",
+   "docs/models/README.md routing rows added for krea2/slot-order.md and sdxl/depth-control.md",
+   ".claude/rules/README.md routing row added for comfy_injection_multistage.md",
+   "docs/DEVELOPMENT.md test baseline corrected to a measured 298/298",
+   "MPI-249 card description healed plus task.updated event in both logs",
+   "procedures-index.md 14 migrated rows dropped; done-index.md 1 row dropped; surviving wikilinks repointed to doc paths",
+   "MEMORY.md stated index counts corrected (36 to 22, 48 to 49, 16 to 17)"
+  ],
+  "pending": [
+   "20 project_* files still need the per-claim pass before deletion",
+   "docs/runpod-troubleshooting.md aria2-snap self-contradiction unresolved",
+   "~15 pre-existing dangling memory wikilinks not repaired"
+  ]
+ },
+ "next_action": {
+  "description": "Run the per-claim verification pass on the 20 project_* memory files listed in .agents/mpi-kanban/tasks/MPI-399/brief.md. Read each file, isolate its ONE load-bearing claim, then grep the named destination doc for that claim's distinctive MECHANISM (function name, flag, filename, exact phrase) - not its topic. Covered means back it up to memory/.deleted-2026-07-29/, delete, drop its procedures-index.md row, repoint surviving wikilinks. Gap means migrate compressed into the doc that docs/README.md routes to (respect the 200-line cap; split plus add a routing row if it would breach), then delete. Read the FIVE TRAPS section of the brief FIRST - loose greps gave a wrong answer six times.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "KEEP the memory tree, DELETE the hook - the tree uniquely holds user/feedback/host-tooling/cross-repo-strategy which docs/ cannot; the hook only re-sent what Claude Code loads natively",
+   "The board is the single source of truth for card state - MEMORY.md must never mirror it again (it had drifted: MPI-392 and MPI-385 listed as todo/top-of-board while both sat in doing)",
+   "mpi-end-session is pack code and must NEVER be edited - the gate went into each repo's project-scope mpi-end override instead",
+   "active_handoffs is deliberately NOT part of the gate condition - it is a resume signal, and Cubric-Vision handoff index entries carry no status field, so gating on one would disable the gate permanently",
+   "Do not bulk-delete memory files on proxy evidence - deletion is irreversible knowledge loss, so each needs its specific claim checked"
+  ],
+  "constraints": [
+   "CLAUDE.md Cardinal Rule 5 - do NOT edit .claude/rules/ without explicit user permission (granted this session for the migration plus the comfy_injection split)",
+   "Memory rule 6 - confirm before removing or modifying any existing memory entry; deletions were user-approved and are backed up in memory/.deleted-2026-07-29/",
+   "docs cap is 200 lines; project-integrity.md and runpod-remote-engine.md are EXEMPT per docs/README.md",
+   "CONCURRENT SESSION active in this tree - routes/downloadManager.js, routes/install/installStore.js, docs/model-library.md, docs/releases/UNRELEASED.md, MPI-353, MPI-395, MPI-396/397/398 and tests/uninstall-store-settle.test.cjs are NOT this card's work. Commit by explicit pathspec, never git add -A",
+   "Windows Python: print() uses cp1252 and CRASHES on non-ASCII - keep instrumentation ASCII. comfy_injection.md is CRLF; board.json and task.json are LF. Round-trip guard before any JSON rewrite (board.json and state/index.json both serialise exactly at indent=1, ensure_ascii=False, trailing newline)"
+  ],
+  "files_modified": [
+   "~/.claude/settings.json (PreToolUse removed)",
+   "~/.claude/CLAUDE.md",
+   "~/.claude/hooks/pre-tool-memory.py (deleted)",
+   "~/.claude/memory/memory.md (deleted)",
+   "~/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/ (MEMORY.md, procedures-index.md, done-index.md, 20 files deleted)",
+   ".claude/rules/comfy_injection.md",
+   ".claude/rules/comfy_injection_multistage.md (new)",
+   ".claude/rules/README.md",
+   ".claude/skills/mpi-end/SKILL.md",
+   "docs/DEVELOPMENT.md",
+   "docs/project-integrity.md",
+   "docs/runpod-remote-engine.md",
+   "docs/models/README.md",
+   "docs/models/krea2/README.md",
+   "docs/models/krea2/editing.md",
+   "docs/models/krea2/slot-order.md (new)",
+   "docs/models/sdxl/depth-control.md (new)",
+   "docs/models/qwen-edit/README.md",
+   ".agents/mpi-kanban/tasks/MPI-249/ (task.json plus events)",
+   "c:/AI/Mpi/Cubric-Prompt/.claude/skills/mpi-end/SKILL.md",
+   "c:/AI/Mpi/MadPony-Identity/.claude/skills/mpi-end/SKILL.md"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-399/brief.md",
+   "C:/Users/Fabio/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/procedures-index.md",
+   "docs/README.md"
+  ]
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": null,
+  "relevant_topics": [
+   "docs routing / knowledge map",
+   "memory system",
+   "kanban card writes"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/kanban.md",
+  ".claude/rules/git.md",
+  ".claude/rules/dos_and_donts.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-29T23:30:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/401a8f74-dbe3-4d72-b2a7-af49883010c4.json and .agents/mpi-kanban/tasks/MPI-399/brief.md, then use mpi-continue to resume MPI-399 (Memory-system audit). Phases 1-3 are shipped and verified: the PreToolUse memory hook is deleted (its payload was byte-identical to what Claude Code already loads natively), MEMORY.md is halved and no longer mirrors the board, the mpi-end coordination scope gate is live in three repos, and comfy_injection.md has been split. Your job is the remaining per-claim verification pass on the 20 project_* memory files listed in the brief: read each one, isolate its single load-bearing claim, and grep the named destination doc for that claim's distinctive MECHANISM rather than its topic. If it is covered, back the file up to memory/.deleted-2026-07-29/, delete it, drop its row from procedures-index.md and repoint any surviving wikilinks to the doc path; if it is a genuine gap, migrate it compressed into the doc that docs/README.md routes to and then delete it. Read the FIVE TRAPS section of the brief before you start, because loose grep proxies produced a wrong answer six times in the previous session. Note that a concurrent session also has uncommitted work in this tree, so commit only by explicit pathspec."
+}

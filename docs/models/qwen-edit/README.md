@@ -8,6 +8,12 @@
 > Blocks **MPI-299** (Head Swap app), which requires this model wired.
 >
 > **Status: WIRED** (2026-07-18). ONE ModelDef `qwen-edit` + op `qwenEdit`, runtime
+> **Anime 2D/3D LoRA filenames are MISLEADING — do NOT "fix" them.** Slot 2 is
+> `Qwen-Anime-V2` = label **Anime 3D**; slot 3 is `animal_style` = label **Anime 2D** (it is
+> an anime LoRA, not an animal one). User-confirmed by rendering both. Both slots also share
+> the identical trigger `"anime style"`. Renaming the labels to match the filenames would
+> show the wrong preview for the style the user actually gets.
+
 > `comfy_workflows/qwen_edit.json`. Tiers are a RUNTIME RADIO (`qwenTier` → `Input_Tier`),
 > **not** three sibling cards — all three tiers share one int8 transformer, so three cards
 > would pollute the library and install ~20GB three times. See

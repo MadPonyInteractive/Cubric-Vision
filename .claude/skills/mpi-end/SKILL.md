@@ -29,6 +29,35 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
    files, update/close the JSON task card) exactly as that skill defines it. Do
    not reimplement or summarize its steps here — follow that skill.
 
+   **Scope gate — read these two small files BEFORE the delegation:**
+   `.agents/mpi-kanban/state/index.json` and `.agents/mpi-kanban/state/interop.json`
+   (both under 3 KB). **Parse as `utf-8-sig`** — a sibling repo's `interop.json`
+   carries a UTF-8 BOM and a plain `utf-8` `json.loads` dies on it with
+   `Unexpected UTF-8 BOM`. Treat a counter as CLEAR when it is `[]`, `0`, **or
+   absent** — the shape varies by repo (lists here, the fields omitted entirely in
+   Cubric-Prompt), so measure it, never assume. If `active_sessions`,
+   `active_tasks`, `active_file_claims`, `pending_file_states` and `open_messages`
+   are ALL clear, there is nothing to coordinate: **SKIP** `mpi-end-session`
+   step 0's coordination reads — `docs/coordination/README.md`,
+   `coordination-ops/lifecycle.md`, `coordination-ops/statuses.md`,
+   `coordination-ops/messages.md` — and skip its open-messages boundary check. If
+   `interop.json` says `source_of_truth: "file"`, also skip `interop-ops/modes.md`
+   and treat the mode as `file`. **Always** read `task-board-ops/_schema.md`,
+   `read.md` and `mutate.md` before any card write — never skippable.
+
+   `active_handoffs` is deliberately NOT part of the condition: it is a *resume*
+   signal, not a coordination-reference signal, and this repo's handoff index
+   entries carry only `id`/`path`/`task`/`created_at` — no `status` field to judge
+   them by, so gating on one would disable this gate permanently. Still reread the
+   handoff records step 0 asks for.
+
+   Say in ONE line what was skipped, e.g. `Coordination reads skipped: solo
+   session, file mode.` If ANY counter is non-clear, read all of step 0 as written.
+
+   Why: those five references are ~28 KB (~7.5k tokens) of multi-agent coordination
+   rules that are inapplicable to a solo, file-mode close-out — which is nearly
+   every close-out in this repo.
+
 2. **Knowledge-healing pass (do NOT skip).** The routing system (CLAUDE.md →
    folder README → subsystem doc) only stays trustworthy if every agent that
    hits a gap repairs it. Replay THIS session and answer honestly:

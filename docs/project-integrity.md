@@ -143,6 +143,38 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 
 **Source of truth:** This file is THE source of truth for everything about the item. Nothing in `project.json` duplicates this data.
 
+### Debugging a WRONG generation — read the sidecar FIRST (MPI-351)
+
+When a generation comes back wrong, the output's **size** only tells you it went wrong.
+`generationSettings.mediaItems` in the sidecar tells you what the graph was actually
+handed. Read that **before** touching the factor, the graph, the API conversion or the
+workflow.
+
+Staged inputs are content-addressed copies under `Media/.preview-assets/<sha256>.png`, so
+the hash identifies the source **exactly**:
+
+```python
+# which history entry is this staged asset?
+{hashlib.sha256(open(f,'rb').read()).hexdigest(): f for f in glob.glob('Media/*.png')}
+# real pixels (sidecar labels can disagree): PNG IHDR w@16 h@20
+struct.unpack('>I', open(f,'rb').read(24)[16:20])[0]
+```
+
+Two things this buys that nothing else does:
+
+1. **A timeline.** Sort every sidecar by `createdAt` with its recorded input hash. An input
+   that repeats across runs is a *stuck* input — a one-off race cannot produce the same
+   hash five times.
+2. **A negative control inside the same lineage.** In MPI-351, `removeBackground` recorded
+   the RIGHT image while `upscale` recorded a two-hour-old one. That split named the
+   mechanism — tool ops build media from `currentItem`, PromptBox-driven ops go through the
+   chip rail — with zero repro attempts.
+
+**Why this section exists:** MPI-351 was mis-diagnosed for days as "the upscale factor is
+applied twice", because `912x1152 * 1.5 = 1368x1728` looks like a squared factor. The factor
+was always 1.5. The input was a different picture. Related: `.claude/rules/comfy_injection.md`
+§ `MpiString` = a media PATH.
+
 ---
 
 ## In-Memory State

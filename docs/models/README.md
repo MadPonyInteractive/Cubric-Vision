@@ -13,6 +13,8 @@ model-agnostic *how* (deps, R2, registry, workflow split) is NOT here — that's
 ### [krea2/](krea2/) — Krea2 (Flux-lineage arch, Qwen conditioning)
 Samplers, conditioning & control, style-LoRA set, resolution (÷16), injection seam,
 preview/taesd landmine, int8-quant candidates. Hub: [krea2/README.md](krea2/README.md).
+Slot semantics: [slot-order.md](krea2/slot-order.md) — scene chip 1 / subject chip 2 is
+load-bearing, plus the 2-reference face wall and its ruled-out list.
 
 ### [klein/](klein/) — FLUX.2 Klein 4B (Apache-2.0, fastest image model we ship)
 | File | Holds |
@@ -46,6 +48,11 @@ preview/taesd landmine, int8-quant candidates. Hub: [krea2/README.md](krea2/READ
 | File | Holds |
 |---|---|
 | [upscaler.md](pid/upscaler.md) | Source-verified compat/tier/knobs; `degrade_sigma` is the only tuning knob; image-only. Read before building/testing PiD. |
+
+### [sdxl/](sdxl/) — SDXL family (sdxl-realistic, sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix)
+| File | Holds |
+|---|---|
+| [depth-control.md](sdxl/depth-control.md) | The Depth op — reuses Krea2's `poseReference` key, but the mechanism is a real **ControlNet weight** (the app's first non-LoRA controlnet dep), the graph path, and why the yaml needs zero edits. |
 
 ## Pod/infra research (NOT per-model) → `docs/builder/research/`
 

@@ -127,6 +127,37 @@ Community Cloud is unsupported (unstable/limited for this use case).
 - **DELETED** bills only volume.
 - **Single-Pod invariant** (§4) prevents two RUNNING Pods billing at once.
 
+### KNOWN BUG — reconnect deletes a recoverable warm Pod on a TRANSIENT stock-out
+
+`/remote/pod/reconnect` (`routes/remoteProxy.js` ~706, flow comment ~700-705) **deletes the
+saved warm Pod when resume fails — including on a momentary** *"not enough free GPUs on the
+host machine"* / *"no instances currently available"* — then tries to recreate fresh. If stock
+is still dry the recreate ALSO fails and the user ends with **no Pod at all**. Two delete
+sites: the availability pre-check fail → `_deleteTrackedPod` (~735, returns
+`{unavailable:true}`), and start-fail → delete + recreate (~704-705).
+
+Stop-on-quit is fine (teardown stop-not-delete, verified in `app.log`). **The loss happens at
+RECONNECT, not quit.**
+
+Observed live 2026-06-17: a stopped EU-RO-1 L4 (`tukhl43rzfvaxo`) could not resume — RunPod
+log *"start pod: There are not enough free GPUs on the host machine to start this pod."* → app
+recreated `yc7sgautx8vkcc` → also GPU-starved → "Selected GPU unavailable" → ended local. It
+*looked* like "reload deleted my Pod", but reload does not fire `window.on('close')`
+(`main.js` ~361), so it was the reconnect delete-recreate churn — not reload, and not
+delete-on-quit (which was OFF).
+
+**Why it matters:** stopped Pods are **host-pinned** — resume only works where that host has
+the GPU free. Deleting a recoverable warm Pod on a momentary stock-out throws away something
+that would have come back when the host frees up.
+
+**The fix, if ever carded:** app-side — delete only on a genuinely dead / EXITED / not-found
+Pod; on a transient stock-out leave the warm Pod stopped and let the user retry.
+**Deliberately NOT carded** (user decision 2026-06-17): hard to reproduce on demand (needs
+RunPod stocked-out exactly at reconnect), board is already card-heavy, and
+new-session-on-recur is the accepted workaround. This section is the breadcrumb so a future
+session skips the 2-hour re-trace. Distinct from MPI-107 (engine-readiness poll flag —
+shipped and verified).
+
 ## 3. "Delete Pod on quit" pref
 
 Non-secret pref `deleteOnQuit` in `state.runpodConfig` (default OFF; normalizer in

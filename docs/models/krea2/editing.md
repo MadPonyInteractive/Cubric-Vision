@@ -49,6 +49,9 @@ attention bias, so it cannot lock pose or drag reference background in. A refere
 auburn hair rendered as bright ginger in every run until the hair was named, because the prompt
 said nothing and the base prior filled it.
 
+> **Slot ORDER is load-bearing — scene chip 1, subject chip 2**; off-order silently degrades,
+> and two subjects in one pass loses both faces → [slot-order.md](slot-order.md).
+
 ## Reference framing — the dial nobody expects
 
 The pixel path (`vae` + `source_image` connected) resizes every reference to exactly the target

@@ -72,6 +72,13 @@ turbo didn't. The hunt ended by retuning **tier 1 outright** — base `cfg 3.5 �
 - **The saved `.json` lags the ComfyUI canvas.** Ask the user to save before reading it.
 - **Don't re-propose a dead theory.** [samplers.md](samplers.md) has the table; each row
   was killed by a live run.
+- **`krea2RealVae_v10.safetensors` IS the Qwen image VAE, renamed.** Byte-identical —
+  sha256 `a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f`, 253,806,246
+  bytes — matches `Comfy-Org/Krea-2/vae/qwen_image_vae.safetensors` exactly, and is already
+  on disk as `G:/CubricModels/vae/qwen_image_vae.safetensors`. NOT Wan, NOT a custom VAE.
+  **Consequence:** the masked-edit colour seam is *not* a VAE-decode difference between Krea
+  and Qwen — they share the decoder. Qwen edits clean because of its DiT + edit
+  conditioning, not a better VAE. Don't go looking for a VAE fix.
 
 ## Sources
 

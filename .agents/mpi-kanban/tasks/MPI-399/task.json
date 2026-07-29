@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-399",
+  "title": "Memory-system audit - kill the duplicate injection, fold memory facts into docs",
+  "description": "The tutorial memory system duplicated what Claude Code now loads natively and was feeding FALSE facts. Hook deleted (~5.5k tok/session + a Python spawn per tool call), MEMORY.md halved, mpi-end coordination gate added in 3 repos (~7.6k tok/close-out), 7 verified doc gaps migrated, 20 redundant memory files deleted. REMAINS: per-claim verification pass on 20 project_* files.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "attention": {
+    "state": "required",
+    "reason": "20 project_* memory files still need a per-claim check before deletion; loose grep proxies proved unreliable 6 times.",
+    "updated_at": "2026-07-29T23:30:00Z"
+  },
+  "created_at": "2026-07-29T23:30:00Z",
+  "updated_at": "2026-07-29T23:30:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
