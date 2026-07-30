@@ -4,15 +4,40 @@ Tick as verified. Each item names the card that OWNS the result — write the
 evidence into that card's `validation.md`, not here. Detail for every line is in
 `brief.md`.
 
+## Machine order (set by the user 2026-07-30)
+
+**A (build cut) → A2 this dev PC → B Windows laptop → D Linux laptop → C rented Mac.**
+
+The Mac is LAST on purpose: it is the only machine that bills by the hour, so it
+is rented once everything cheaper has already passed. Sections keep their
+original letters so existing references still resolve — only the running order
+changed.
+
+**This dev PC cannot stand in for the laptop.** `where git` resolves here
+(`C:\Program Files\Git\cmd\git.exe`), so MPI-387 fix B is unprovable on this box
+by construction, and Smart App Control is not the blocking configuration here
+either. What this box CAN settle is section A2 below.
+
+## A2 · This dev PC — Windows, first machine
+
+- [ ] Fresh extract of the real `CubricVision-windows-x64-v1.3.0.zip` → `CubricVision.exe` launches — *MPI-387 A/D (partial: no SAC, no missing-git)*
+- [ ] Generate smoke on the local engine — *release sanity* ← close the 8188 bench first, or the app dispatches into it and proves nothing
+- [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← the v1.2.0 install at `D:\CubricStudio\Vision\Builds\CubricVision-windows-x64-v1.2.0\` is the subject (old layout confirmed: `app/`, `start.vbs`, `update.bat`)
+- [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← needs the GitHub Release to exist, so this one item runs AFTER publish
+
 ## A · At the build cut (blocks everything below)
 
-- [ ] **`publish-runtime.sh promote` run — dev wrapper bytes → stable** — *release / mpi-release pre-flight* ← **easiest item here to forget and the most expensive**
-- [ ] 1.3.0 artifacts built for win32-x64, linux-x64, macos-arm64 — *release*
-- [ ] Windows update bundle root reads `CubricVision-v1.3.0-update-only` — *MPI-369*
-- [ ] Update asset name is exactly `CubricVision-windows-x64-update-v1.3.0.zip` (FROZEN — shipped updaters glob it) — *MPI-369*
-- [ ] 1.3.0 update manifest reads `from 1.2.0`, not `null` — *MPI-369*
-- [ ] File counts sane vs baseline 6362 win32 / 6505 darwin / 6325 linux — *MPI-369*
-- [ ] `release-baselines/win32-x64.json` restamped from the shipped FULL manifest — *MPI-387 lineage*
+Done 2026-07-30 except the promote. Evidence: `tasks/MPI-369/validation.md`
+§ VERIFIED at the 1.3.0 cut. CI run `30559394491`, artifacts in
+`D:\CubricStudio\Vision\Builds\v1.3.0\`, all six integrity-tested.
+
+- [ ] **`publish-runtime.sh promote` run — dev wrapper bytes → stable** — *release / mpi-release pre-flight* ← **easiest item here to forget and the most expensive**. Deferred by the user to after the build; must land BEFORE `gh release create`. Drift confirmed live: dev `0.2.40` vs stable `0.2.38` (`wrapper.py` sha differs, `start.sh` identical)
+- [x] 1.3.0 artifacts built for win32-x64, linux-x64, macos-arm64 — *release*
+- [x] Windows update bundle root reads `CubricVision-v1.3.0-update-only` — *MPI-369* (all three bundles, not just Windows)
+- [x] Update asset name is exactly `CubricVision-windows-x64-update-v1.3.0.zip` (FROZEN — shipped updaters glob it) — *MPI-369*
+- [x] 1.3.0 update manifest reads `from 1.2.0`, not `null` — *MPI-369* (all three; Linux 209 / macOS 208 file real deltas prove the restamp reached CI)
+- [x] File counts sane vs baseline 6362 win32 / 6505 darwin / 6325 linux — *MPI-369* (6418 / 6563 / 6383 — +56/+58/+58)
+- [x] `release-baselines/win32-x64.json` restamped from the shipped FULL manifest — *MPI-387 lineage* (all three restamped, `36f972cf`)
 
 ## B · Windows — Smart App Control laptop
 
@@ -26,8 +51,21 @@ evidence into that card's `validation.md`, not here. Detail for every line is in
 - [ ] `cupy-wheel` build failure followed by "succeeded" seen and IGNORED as expected — *MPI-387 F3*
 - [ ] Any real failure names the node + real phase, never "extraction failed" — *MPI-387 C*
 - [ ] `app.log` captured from `<extract root>/user-data/logs/` — *MPI-387 evidence*
-- [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition*
-- [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever)
+- [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← **POST-PUBLISH** (see below)
+- [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← **POST-PUBLISH** (see below)
+
+> **The in-app update items CANNOT run before `gh release create`.** The check
+> hits `https://api.github.com/repos/MadPonyInteractive/Cubric-Vision/releases/latest`
+> ([main.js:1023](../../../../main.js#L1023), and `scripts/portable/fetch-release.cjs`
+> for the `update.bat` path), so until 1.3.0 is a published non-prerelease
+> release, a 1.2.0 install correctly sees 1.2.0 as latest and offers nothing.
+> Found 2026-07-30 while sequencing the machine order.
+>
+> **What CAN be proven pre-publish:** `update-from-zip.bat` takes a LOCAL bundle,
+> so it exercises the applier half — files copied, `start.vbs` gone, stale `app/`
+> left behind — without the fetch+spawn half. Run that on this dev PC against
+> `D:\CubricStudio\Vision\Builds\v1.3.0\CubricVision-windows-x64-update-v1.3.0.zip`.
+> The fetch+spawn half is the only genuinely post-publish item on this card.
 
 ## C · macOS — rented Mac
 
