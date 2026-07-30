@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 408,
+  "next_id": 409,
   "columns": {
     "todo": [
       "MPI-404",
@@ -48,7 +48,8 @@
       "MPI-4",
       "MPI-198",
       "MPI-406",
-      "MPI-407"
+      "MPI-407",
+      "MPI-408"
     ],
     "done": [
       "MPI-385",
@@ -99,7 +100,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-30T22:35:00Z",
+  "updated_at": "2026-07-30T22:45:00Z",
   "events": [
     {
       "at": "2026-07-30T11:10:00Z",
@@ -1170,6 +1171,15 @@
       "from": "todo",
       "to": "doing",
       "summary": "Fix landed: did-fail-load handler on mainWindow.webContents retries the main-frame loadURL every 500ms (cap 60, skips ERR_ABORTED) until the server answers. The 5000ms fallback is deliberately unchanged - raising it is the symptom patch. Race is INTERMITTENT: cold start reproduced it, warm restart painted normally."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-408",
+      "type": "task.created",
+      "at": "2026-07-30T22:45:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "Retry after a failed engine install can never succeed on Linux/macOS. uv venv exits 2 with \"A virtual environment already exists at: comfy-venv\" - it refuses ANY existing venv, complete or not - so the first attempt past step 1 poisons every later one and the Installation Failed dialog offers a Retry that is guaranteed to fail. Root cause is an asymmetry in _provisionUvEngine: step 0b clears a stale ComfyUI workspace, its sibling comfy-venv had no guard. Fixed by passing --clear. Found live after a mid-install thermal shutdown."
     }
   ]
 }
