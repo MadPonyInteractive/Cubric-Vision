@@ -27,9 +27,33 @@ Fixed 2026-06-29. `comfyController._reconcileFromHistory` hit `${httpBase()}/his
 
 `remoteCancelInstall(depId)` only POSTs `/wrapper/models/install/cancel` (sets a flag, returns immediately). The `.part` file lingers until the next chunk write. If `awaitReSync()` fires immediately after cancel, `/wrapper/models/status` races the purge. Fix: follow cancel with `await remoteModels.remoteUninstallDep(dep).catch(() => {})` — `/wrapper/models/delete` synchronously removes both `<dest>` and `<dest>.part`. Never hard-fail cancel.
 
-### remote install progress — 80% snap is aria2c preallocation (not a bug)
+### remote install progress — the 80/95% snap was a SPARSE-FILE numerator, and it is FIXED
 
-The ~80% snap on pressing Install is aria2c preallocating across 16 segments — first progress report already shows a large fraction before bytes flush. MPI-95 fixed the real bugs (wrong `totalBytes` denominator + indeterminate bar during hash verify). Do NOT keep "fixing" the app for the 80% snap — it is correct behavior.
+**Corrected 2026-07-30 against the shipped wrapper (0.2.38) — the old entry here was wrong twice
+and is preserved only as a warning.** It said the snap was "aria2c preallocating across 16
+segments" and "correct behavior — do NOT keep fixing the app for it". Both are false:
+
+- **There is no preallocation on this path.** aria2c runs with `--file-allocation=none`. The
+  wrapper's own `_aria2_status` docstring says so outright and labels MPI-95's
+  "aria2 preallocation artifact" a **misdiagnosis**.
+- **The real cause was the numerator.** Progress read `os.path.getsize(<file>.part)`, and with
+  `-s 128` segments written at scattered offsets the **sparse** file's logical size snaps to
+  ~total the instant any late segment writes near EOF. Hence "95% then crawls for ages".
+- **It was fixed at the wrapper, not accepted.** Since 0.2.34 the numerator is aria2's RPC
+  `aria2.tellStatus → completedLength` — true downloaded bytes — with a fall back to file size
+  only if RPC is unreachable.
+
+The `--enable-rpc` flag needed for that numerator brought its own bug (aria2 never exits; see
+the MPI-254 entry below) **and** a second one worth knowing: the poll loop breaks on process exit
+without a final emit, so `rec["bytes"]` holds the *second-to-last* tick. Under the old inflated
+getsize numerator that stale value happened to satisfy the app's `allBytesDone` gate; an honest
+`completedLength` lands just **under** total, so the gate went unmet, "Verifying…" never showed
+and the card hung at a determinate 100%. Fixed by pinning `rec["bytes"] = done` (the true final
+size) before emitting `models:install-verifying`.
+
+**If you see a snap today, it is a regression — do not re-label it "correct behavior".** Check
+`GET /health` for wrapper ≥ 0.2.34 and confirm the RPC numerator is live rather than silently
+falling back to file size.
 
 ### remote download tail-speed collapse — aria2 split flags (MPI-196)
 
@@ -37,7 +61,7 @@ Fixed 2026-07-05. Big-file installs on a Pod ran fast then crawled at the end (o
 
 ### remote install hangs at 100% — aria2 `--enable-rpc` never exits (MPI-254, wrapper 0.2.36)
 
-Fixed 2026-07-11. Wrapper 0.2.34 added `--enable-rpc` to aria2c so the wrapper could poll `aria2.tellStatus → completedLength` for a TRUE-bytes progress numerator. Side effect: **with `--enable-rpc`, aria2c does NOT exit when the download finishes — it idles as an RPC daemon forever.** So the download loop's `await proc.wait()` never returns → `_download_aria2` never returns → finalize (sha256 check + `os.replace(part, dest)` + `models:install-complete`) NEVER runs. Symptom: `.part` at full size, wrapper reports `installed=false` forever, app hangs at a determinate 100% with NO "Verifying…" sweep — this is NOT an app-side SSE bug, finalize genuinely never ran. Fix (wrapper **0.2.36**, db452f4): poll aria2's `status` field; on `complete` call `aria2.shutdown` so the process exits and `proc.wait()` resolves; on `error` shutdown + fall through to httpx fallback. Belt: if `.part` reaches the HEAD-resolved total but RPC is unreachable (port conflict / no-RPC build), terminate the process directly. **RULE: any future aria2 daemon/RPC flag (`--enable-rpc`, `--rpc-*`, `--bt-*` keep-running) requires the download loop to detect completion and shut aria2 down — it will NOT exit on its own.** Ships via `publish-runtime.sh` (R2), no image rebuild. (The earlier 80%/95% snap is a separate, correct behavior — see above.)
+Fixed 2026-07-11. Wrapper 0.2.34 added `--enable-rpc` to aria2c so the wrapper could poll `aria2.tellStatus → completedLength` for a TRUE-bytes progress numerator. Side effect: **with `--enable-rpc`, aria2c does NOT exit when the download finishes — it idles as an RPC daemon forever.** So the download loop's `await proc.wait()` never returns → `_download_aria2` never returns → finalize (sha256 check + `os.replace(part, dest)` + `models:install-complete`) NEVER runs. Symptom: `.part` at full size, wrapper reports `installed=false` forever, app hangs at a determinate 100% with NO "Verifying…" sweep — this is NOT an app-side SSE bug, finalize genuinely never ran. Fix (wrapper **0.2.36**, db452f4): poll aria2's `status` field; on `complete` call `aria2.shutdown` so the process exits and `proc.wait()` resolves; on `error` shutdown + fall through to httpx fallback. Belt: if `.part` reaches the HEAD-resolved total but RPC is unreachable (port conflict / no-RPC build), terminate the process directly. **RULE: any future aria2 daemon/RPC flag (`--enable-rpc`, `--rpc-*`, `--bt-*` keep-running) requires the download loop to detect completion and shut aria2 down — it will NOT exit on its own.** Ships via `publish-runtime.sh` (R2), no image rebuild. (`--enable-rpc` exists **because** of the 80/95% snap — the RPC `completedLength` numerator is the snap's fix, not an unrelated change; see the progress entry above.)
 
 ### restart-needed flag is per-engine — never share local + remote (MPI-64)
 

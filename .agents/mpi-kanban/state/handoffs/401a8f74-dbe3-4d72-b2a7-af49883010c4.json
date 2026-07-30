@@ -4,15 +4,15 @@
  "generated_at": "2026-07-29T23:30:00Z",
  "from_session": null,
  "to_role": "verifier",
- "status": "open",
+ "status": "closed",
  "session": {
   "name": "Memory-system audit - kill duplicate injection, fold memory into docs",
   "branch": "master"
  },
  "goal": {
   "original": "Evaluate whether the tutorial-derived Claude memory system is worth keeping given the repo already has docs/ plus .claude/rules/ plus a kanban board, find where the token waste is (user suspected mpi-end), and make it more efficient.",
-  "status": "in_progress",
-  "summary": "Verdict delivered and executed: keep the memory tree for what docs/ structurally cannot hold (user, feedback, host-machine tooling, cross-repo strategy), delete the injection hook, stop mirroring the board. Phases 1-3 shipped and verified; comfy_injection.md split done. Remaining: a per-claim verification pass on 20 project_* files."
+  "status": "complete",
+  "summary": "Verdict delivered and executed: keep the memory tree for what docs/ structurally cannot hold (user, feedback, host-machine tooling, cross-repo strategy), delete the injection hook, stop mirroring the board. Phases 1-3 shipped and verified; comfy_injection.md split done. Phase 4 completed 2026-07-30: the 20-file per-claim pass is done (10 covered, 10 migrated, 6 docs healed) and the aria2 contradiction is resolved against wrapper 0.2.38. Card MPI-399 closed."
  },
  "plan": {
   "file": "C:/Users/Fabio/.claude/plans/these-are-some-notes-playful-squirrel.md",

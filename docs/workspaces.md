@@ -11,7 +11,18 @@ Landing → Gallery → Group History
 ## Landing (`#page-landing` DOM element)
 Handles project selection and creation. Entry point when no project is open.
 - UI logic lives in `js/shell/projectUI.js` — no separate workspace class.
-- Renders `MpiProjectCard` instances via `loadProjectGrid()`.
+- **The project list rows are HAND-BUILT divs, NOT `MpiProjectCard`.** `loadProjectGrid()` →
+  `_buildProjectRow()` creates `.mpi-landing__pl-row` elements directly. `MpiProjectCard` is
+  imported in `projectUI.js` and never instantiated — **editing that component does nothing to
+  the Landing list** (MPI-286 started by looking at it; wrong file). Any row change goes in
+  `_buildProjectRow` + `styles/shell/landing.css` (`.mpi-landing__pl-*`).
+- Thumbnails load through a **cap-3 concurrency queue** (`_runThumbQueue(loaders, 3, signal)`),
+  newest-first (the server sorts `updatedAt` desc). Each row shows a per-thumb `.spinner`
+  (`--loading`) swapped for media on load and is **open-locked** while loading
+  (`.mpi-landing__pl-row--loading` → click early-returns) until its thumb resolves. Video
+  hover-play + `preload='metadata'` were dropped — `metadata` forced every video header up front,
+  defeating the queue; rows now show a static first frame via `preload='auto'` + `loadeddata`.
+  The goal was **felt**-faster, not actually-faster.
 - New Project dialog: `MpiNewProject` compound.
 - Header actions: `MpiSettings`, `MpiHotkeys`, `MpiAbout` (in `js/components/Compounds/LandingPages/`).
 - Background: animated shader via `js/components/shaderBackground.js`.

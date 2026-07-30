@@ -43,6 +43,27 @@ path unchanged) and is torn down with the other canvases in `destroy()`.
 **`getURL()` / `getMaskDataURL()` still flatten the single unioned `maskCanvas`** — every
 downstream consumer reads that one B/W PNG. Do not leak the split into an export path.
 
+### Storage: session TEMP PNGs — not RAM, not `.meta/`
+
+`js/services/maskTempStore.js` persists **two PNGs per (project, group, item)** — `manual.png`
+and `subtract.png`, kept SEPARATE because copy/paste/reuse must carry both (flattening bakes the
+eraser in and the mask can never be erased further). Only `autoPickMasks` is RAM.
+
+**Lifetime: survives a renderer reload, dies on app restart.** Ctrl+R keeps the main process, so
+`sessionId` and the TEMP dir persist. A restart mints a fresh UUID (`main.js`), cleans the old dir
+on quit, and prunes stale `cubric-*` dirs at boot. Do not mistake reload-survival for persistence —
+sidecar storage and restart persistence were both explicitly ruled out of scope by
+`docs/archive/mpi-kanban/plans/2026-04-29-layered-mask-persistence.md` ("masks are session-scoped").
+Making masks outlive a restart means moving the layers to `.meta/` — real work, not a config flip.
+
+**The display surface is not always the canvas.** In `_currentMode === 'none'` the viewer shows
+`MpiMaskedImagePreview` (driven by `_previewMaskCache`, a flattened composite) and the live canvas
+is TORN DOWN — writing layers into `_cv.el` repaints nothing (MPI-311's "paste does nothing until
+you switch entries"). Any code mutating a mask **outside mask mode** must refresh via
+`setMaskDataURL()` — that exact name — not just the canvas. Note `setManualFromDataURL` draws with
+an explicit dest rect, so a pasted layer STRETCHES to the target: cross-resolution is a clean
+scale, only a differing ASPECT distorts.
+
 ---
 
 ## The overlay draw — `MpiCanvas._renderOverlay()`

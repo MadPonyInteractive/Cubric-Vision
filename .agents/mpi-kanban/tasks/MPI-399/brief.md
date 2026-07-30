@@ -39,9 +39,22 @@ ever being deleted.
 
 ---
 
-## REMAINING WORK — the per-claim verification pass
+## PHASE 4 — the per-claim verification pass: **DONE 2026-07-30**
 
-33 `project_*` files remain. **13 are cross-repo strategy → KEEP, do not touch:**
+Full result in [validation.md](validation.md). Headline: the premise below ("each *appears*
+documented") held for only **10 of 20**. The other 10 were real gaps and were migrated; **6 docs
+turned out to be actively WRONG** and were healed against CODE (not against the memory files);
+**2 memory files were wrong about live state** (Trap 5 again). All 20 are backed up in
+`memory/.deleted-2026-07-29/` and deleted. 13 `project_*` files remain — exactly the strategy
+KEEPs listed below. The aria2 contradiction in the "NOT fixed" section is also resolved.
+
+The original scoping is kept below for provenance.
+
+---
+
+## The pass as originally scoped
+
+33 `project_*` files remained. **13 are cross-repo strategy → KEEP, do not touch:**
 `civarchive_lora_browser_and_workflow_cards`, `comfyui_bump_cadence`,
 `connector_ownership_split`, `cubric_audio_kickoff`, `cubric_prompt_kickoff`,
 `cubric_studio_agent_vision`, `family_work_lands_in_vision`, `hub_scalable_foundation`,
@@ -82,7 +95,7 @@ a filename, an exact phrase. Then:
 - **Gap** → migrate compressed into the doc `docs/README.md` routes to, respecting the ≤200-line
   cap (split into a topic file + add a routing row if it would breach), then delete.
 
-### FIVE TRAPS that made loose greps unreliable (all bit me this session)
+### SIX TRAPS that made loose greps unreliable (all bit me on this card)
 
 1. **Token-coverage % is a proxy, not proof.** `lora_merge_ltx` scored 86% while its claimed doc
    **did not exist**. Common domain words inflate the score.
@@ -100,15 +113,25 @@ a filename, an exact phrase. Then:
    6-session bug that MPI-140 resolved 2026-06-29 *and* whose prescribed fix shipped again in
    wrapper 0.2.34 (2026-07-11). `cancel_stale_partial_bytes` said "MPI-123 (open/todo)" — that
    card is `done/complete/accepted`. Both deleted. **Always check the card's real column.**
+6. **A grep that finds nothing may be a BROKEN grep, not an absent fact.** Four greps in the
+   2026-07-30 pass used `rg -rn` — in ripgrep **`-r` is `--replace`**, so it rewrote every match
+   to the literal `n` and still exited 0. That produced a false "`block_if_empty` appears nowhere
+   in docs" reading for three files that document it, which would have justified migrating an
+   already-present fact. Never pass `-r`; use `rg -n --no-heading`. →
+   `memory/tool_rg_dash_r_is_replace.md`.
 
 ---
 
-## Also found, deliberately NOT fixed (needs a decision)
+## Also found, RESOLVED 2026-07-30
 
-- **`docs/runpod-troubleshooting.md` contradicts itself.** Line ~32 says the 80% snap is
-  "correct behavior… do NOT keep fixing the app for it"; line ~40 says wrapper 0.2.34 added
-  `--enable-rpc` + `completedLength` for a **true-bytes** numerator. Both cannot be current.
-  Resolve by reading the shipped wrapper — do not guess.
+- **`docs/runpod-troubleshooting.md` self-contradiction — settled against the shipped wrapper**
+  (`cubric-vision-pod/wrapper/wrapper.py`, `WRAPPER_VERSION = 0.2.38`), not by guessing. **Both**
+  halves of the old "80% snap" entry were wrong: aria2c runs `--file-allocation=none`, so there is
+  no preallocation on that path — the wrapper's own `_aria2_status` docstring calls MPI-95's
+  "preallocation artifact" label a misdiagnosis. The snap was a **sparse-file numerator**
+  (`getsize(.part)` jumping the moment a late `-s 128` segment writes near EOF) and it was
+  **fixed** in wrapper 0.2.34 by switching to `aria2.tellStatus → completedLength`. Section
+  rewritten; the MPI-254 entry's "separate, correct behavior" cross-reference corrected.
 - **~15 pre-existing dangling `[[wikilinks]]`** in the memory tree (predate this session):
   `tools/sharp`, `project_release_skills`, `project_oom_container_self_heal`,
   `project_video_gen_ram_wall`, `project_model_type_vs_mediatype`,

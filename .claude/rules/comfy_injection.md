@@ -11,7 +11,7 @@
 
 **Input_ canonicalization (rename, not dual-emit — MPI-127 + MPI-252).** `commandExecutor._buildParams` builds params under bare control names then runs a pass that RENAMES every bare key to its `Input_` form and DELETES the bare key (keys already `Input_*`/`Output_*` pass through). There is no longer a tier-1 node to consume a bare key, so only the `Input_*` form is emitted. Injection matches node title EXACTLY and silently skips a param with no matching node (see silent-skip trap), so a title mismatch fails silently. When adding a new title you do NOT need a separate injection branch — title the node `Input_<Name>` and the control return `Input_<Name>` and it flows.
 
-**Standalone injectors own their params fully (MPI-253).** When a tool op declares `injector: '<name>'` (resize/resizeVideo), `commandExecutor` runs the injector, then deletes BOTH the bare key AND its `Input_` alias from the params map so the generic title-injector cannot re-match them. Two traps this closes: (1) an alias like `Input_flip` outliving the injector would hit the `Input_Flip` MpiIfElse `boolean` and set it `(val==='true')`=false, clobbering the injector's correct value; (2) a params object built OUTSIDE `_buildParams` (e.g. `runAutoMask`) never gets the canonicalization pass, so it MUST use `Input_*` keys directly to match the tier-2 nodes (`Input_Box`, `Input_Selected_Masks_Input`). See [[project_tier2_conversion_silent_skip_traps]].
+**Standalone injectors own ONLY the params they DECLARE (MPI-253, scoped by MPI-306).** When a tool op declares `injector: '<name>'`, `commandExecutor` runs the injector, then deletes both the bare key AND its `Input_` alias — **but only for the keys in that injector's `consumes` list**, never every `injectionParams` key. Three traps this closes: (1) an alias like `Input_flip` outliving the injector would hit the `Input_Flip` MpiIfElse `boolean` and set it `(val==='true')`=false, clobbering the injector's correct value — so `resize` must keep `flip` in `consumes`; (2) blanket deletion swallowed params the injector never handled (Head Swap's `Input_Tier` → every tier ran Hyper); (3) a params object built OUTSIDE `_buildParams` (e.g. `runAutoMask`) never gets the canonicalization pass, so it MUST use `Input_*` keys directly to match the tier-2 nodes (`Input_Box`, `Input_Selected_Masks_Input`). Full contract + the diagnostic pattern: § Standalone Workflow Injectors below.
 
 **Enforce the law when handed new nodes.** When the user supplies a NEW ComfyUI workflow / new injection nodes whose app-touched titles are NOT prefixed `Input_*` / `Output_*`, do NOT silently invent a contract. Tell the user the node-naming law requires the `Input_*` / `Output_*` prefix on agent-relevant nodes, name the offending node titles, and ask them to re-title in their edit-version workflow and re-export the API JSON.
 
@@ -113,15 +113,31 @@ standard title map.
   `INJECTORS[name](workflow, payload.injectionParams || {})` before submit.
 - Injector code lives in `js/services/workflowInjectors/` and must target nodes
   by `_meta.title` using case-insensitive filtering. Never hardcode numeric IDs.
+- **Every `INJECTORS` entry is `{ inject, consumes }` and ONLY the declared
+  `consumes` keys are deleted from the generic params map (MPI-306,
+  `331c3ca5`).** A new injector MUST export its `consumes` list;
+  `tests/injector-consumes.test.cjs` fails if one doesn't. Current entries:
+  `resize` and `headSwap` (`js/services/workflowInjectors/index.js`).
 - Current injector: `resize` (`resize` and `resizeVideo` ops). It writes:
   `"Resize Image v2"` inputs `width`, `height`, `upscale_method`,
   `keep_proportion`, `pad_color`, `crop_position`, `divisible_by`, `device`;
   `"Input_Flip_Image"` (ImageFlip) input `flip_method`; `"Input_Rotate_Image"`
   (ImageRotate) input `rotation`; and `"Input_Flip"` (MpiIfElse) input `boolean`
-  (the enable gate: true routes through the flip node). After the injector runs,
-  `commandExecutor` deletes both the bare and `Input_` forms of every injector
-  param from the generic params map so the title-injector can't re-match them
-  (MPI-253).
+  (the enable gate: true routes through the flip node). `resize` must keep
+  `flip` in its `consumes` list — otherwise the `Input_flip` alias reaches the
+  generic injector and overwrites the correct boolean with `false` (MPI-253's
+  original trap; the deletion is now scoped, not blanket).
+- **Why the allowlist exists.** `commandExecutor` used to delete **every**
+  `injectionParams` key after running an injector, assuming an injector consumes
+  everything handed to it. `headSwapInjector` handles only `box1`/`box2`, so Head
+  Swap's `Input_Tier` — sent in the same object — was deleted before the generic
+  title injector could write it. Node 95 kept its baked `3` and
+  **Quality/Turbo/Hyper all ran Hyper.** An op pairing a custom injector with
+  generic params is the danger shape.
+- **Diagnostic pattern:** a control that "does nothing" and produces no error, no
+  log line, and a perfectly-wired graph → suspect something DELETED the param
+  before injection, before suspecting the model, the graph or performance. Here
+  the only symptom was "the tiers take the same time" — a timing observation.
 - Universal video tool trim prep is not a workflow injector; it happens before
   `_buildParams()` so all video operations with declared media slots can receive
   the temporary clipped input path.

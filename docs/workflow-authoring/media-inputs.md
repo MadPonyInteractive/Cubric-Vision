@@ -26,6 +26,37 @@ Every media input is titled `Input_*` and takes its full file path in one
 no baked filename to validate against, so nothing to reject.** This is what
 killed the old placeholder trap.
 
+### "No placeholder" is about the FILE — the RAW widget slot still needs one
+
+The rule above kills the placeholder *image*. It does **not** free you from the
+positional `widgets_values` slot in the raw LiteGraph export. When the `string`
+(path) widget is converted to an **input socket** (dragged, so the node carries
+`link`), the converter still consumes its slot: `workflow-to-api.mjs`
+`emitWidgets` walks required-input order and does `vi += 1` for a widget-typed
+input **even when it's linked** — the link wins for the value, but the slot is
+eaten.
+
+So a socket-linked load node's raw `widgets_values` must keep a **placeholder for
+the linked widget**:
+
+| node | linked `string` | NOT |
+|---|---|---|
+| `MpiLoadVideo` / `MpiLoadAudio` | `["", true]` (placeholder, `block_if_empty`) | `[true]` |
+| `MpiLoadImageFromPath` | `["", "alpha", true]` (string, channel, `block_if_empty`) | `["alpha", true]` |
+
+With `[true]` the converter reads `true` as the string slot, then `block_if_empty`
+sits at `vi=1 ≥ len` → `break` → the key is **dropped**, and ComfyUI answers
+`Prompt outputs failed validation` (400). **A node's default does NOT auto-fill a
+missing *required* key in an API prompt**, and `block_if_empty` is required on all
+three `MpiLoad*` classes — an absent key fails validation regardless of the
+node's default value.
+
+**How to apply:** count positional widgets from the FULL required order and keep a
+placeholder for each up to the last real widget. Then verify the generated runtime
+JSON actually has `block_if_empty` in that node's `inputs` after convert. This
+surfaced during the mass `block_if_empty` sync — every workflow using these nodes
+needed a re-sync.
+
 ### Path source law
 
 Every injected path comes from the **PROJECT FOLDER** — gallery or

@@ -66,6 +66,29 @@ These are the ones that also have an OS-notification path + a preference toggle.
 OS-notif handlers in `main.js` (`showOsNotification`) re-gate on `!mainWindow.isFocused()` — a
 double focus gate (renderer + main).
 
+**A `notificationPrefs` toggle is an OS switch, NEVER a mute (MPI-267, user-verified).** All three
+rows must survive any change to this file:
+
+| pref | focus | result |
+|---|---|---|
+| ON | unfocused | OS notification |
+| ON | focused | in-app `StatusBar.notify(…, 'success')` — OS is suppressed when focused, so **the toast IS the focused-case feedback** |
+| OFF | either | in-app toast always, never OS |
+
+Treating the pref as a master mute was the pre-MPI-267 bug: the OS refactor dropped the
+focused-toast path entirely — a code comment promised "the in-app toast handles the focused case"
+but no such toast was ever wired, so **focused = silent for a whole version** on both generation
+and download. Two related invariants: `initNotificationService()` must **not** early-return when
+`ipcRenderer` is absent (browser mode still needs the toast), and the `__universal_workflow__`
+skip on downloads stays.
+
+**Focus-defer was REMOVED deliberately (2026-07-23) — do not re-add it.** The
+`_deferToFocus` / `_pendingOnFocus` / `window focus` replay re-fired a download-complete toast the
+next time you focused the app after an OS notification; the user found the return-to-app repeat
+annoying. The OS-vs-in-app split above is kept; there is simply no replay. Also tried and reverted
+(2026-07-15): plumbing a `sound`/`silent` flag through the `notify-*` IPC to gate the OS sound —
+the OS handles its own sound, don't.
+
 **Stop never reports as a completion (MPI-352).** ComfyUI's interrupt is **advisory**: a Stopped
 job usually finishes its in-flight step and returns real output, which the store deliberately
 honours (`generationStore` § late-settle, R09 — the item saves). That output then reaches

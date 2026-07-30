@@ -250,6 +250,46 @@ If a user deletes a file manually (outside the app), the next project open runs 
 
 **Critical:** When reading the meta file to check if media exists, ALWAYS read the `filePath` field from the `.meta/` JSON — do NOT assume the UUID is the media filename. The UUID might be `6e409682-...` but the actual file could be `t2i_001.png` or `my_custom_name.png`.
 
+**The GC's path parse must be non-greedy.** Freshly-written outputs carry a `&v=<mtime>`
+cache-bust suffix, so a greedy `path=(.+)$` folds `…t2i_001.png&v=178…` into the path,
+`pathExists()` goes false, and the GC deletes a **LIVE** sidecar as an orphan (the just-created
+id is skipped, so the PREVIOUS gen's sidecar dies — gen `t2i_002` kills `t2i_001`'s). Use
+`pathFromProjectFileUrl` (`[?&]path=([^&]+)`, stops at `&`) for `filePath` AND `thumbPath`
+(`c2c1c662`).
+
+---
+
+## Sequenced media filenames — the counter lives in `project.json`
+
+Sequenced names (`<op>_NNN.ext` — `t2i_001`, `combined_001`, `i2v_ms_001`…) are minted by
+`nextSequence(folderPath, mediaDir, prefix, ext)`, which reads and bumps a **per-prefix counter
+in `project.json` under `sequenceCounters`** (e.g. `{ edit: 7, t2i: 2, upscale: 10 }`) atomically
+inside `updateProjectJson` — the same queue as the item write, so there is no lost-update race.
+Prefix present → grab+bump, ignoring disk. Prefix absent → seed from disk-max **once** (legacy
+files), then pure source-of-truth forever. Keys are added lazily, so a new app operation needs no
+pre-seeding. Six call sites: save-generation, upload/imported, crop-in-projects, `videoConcat`
+(`combined_`/`extended_`), `videoCrop`, `videoReverse`.
+
+**Why it may not be scanned off disk (the bug this replaced, `08d782b3`).** Numbering by
+`max(NNN on disk) + 1` **re-mints deleted numbers**: delete `i2v_ms_001.mp4` and the next i2v gen
+reuses `001`, which either `-y`-overwrites a re-created file at that path or gets
+deleted-by-filename while another history entry still points at it. Either way a card orphans —
+media gone, history id alive in `project.json` → gallery `/project-file` 404, blank card. The
+reconciler heals the dangling id (those one-time `load-meta` 404s are harmless) but **cannot
+resurrect clobbered bytes.**
+
+Paired guard, keep it: `DELETE /project-media/:id/:filename` unlinks the file **only** when that
+itemId's own sidecar `filePath` resolves to it; otherwise it cleans meta only (`3e0ea062`).
+
+> **Do NOT move the counter into `.meta/`.** The first attempt put it in `Media/.meta/.seq.json`
+> and was self-defeating: the orphan-sidecar GC in save-generation deletes any `.meta/*.json`
+> with no media file, and `.seq.json` has none — so every gen created the marker and the same
+> route deleted it, `nextSequence` fell back to disk-scan, and the bug was never actually fixed.
+> A dotfile-skip band-aid worked but re-breaks the moment a future `.meta/` sweep forgets the
+> skip. `project.json` is app-owned and never GC'd, which removes the whole failure mode.
+> The behavioural tell that the real fix is running: **`sequenceCounters` present in
+> `project.json`** after a gen. Route change ⇒ needs an app **restart**, not a reload.
+
 ---
 
 ## Uploaded Items (Special Case)

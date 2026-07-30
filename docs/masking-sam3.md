@@ -45,6 +45,12 @@ pick / composite plumbing is reused, not forked, and the shipped one-mask-per-pi
 (`ImpactSEGSToMaskList`, never `SegsToCombinedMask`) stays intact. `MpiIfElse` inputs are
 lazy, so points mode never runs YOLO.
 
+**Mask ORDER is part of that contract.** JS maps `image[i] → sortedPicks[i]` (picks sorted
+ascending — `commandExecutor.js`), so the graph must emit per-SEG masks in **ascending SEG
+order** or picks land on the wrong segment. `ImpactSEGSPicker` + `ImpactSEGSToMaskList` preserve
+it; any node that reorders, combines or merges SEGS before `Output_image` re-breaks multi-pick
+silently.
+
 ### Behaviour you must not "fix"
 
 - **N dots do NOT give N objects.** All points go into one predict call, so SAM3 returns a
