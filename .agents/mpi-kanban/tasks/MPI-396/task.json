@@ -3,11 +3,11 @@
   "id": "MPI-396",
   "title": "Uninstall leaves a terminal DONE job in the install store, so the tile draws a 100% bar instead of Install",
   "description": "Found live 2026-07-29 while closing MPI-395: after uninstalling SDXL Realistic on a remote Pod, its tile sat in the Available section showing a full 100% progress bar, and Ctrl+R did NOT clear it. Root: installStore.pruneTerminal() drops a DONE model job when confirmedInstalled.has(modelId) || age >= DONE_TTL_MS (120s) - it encodes the assumption that a DONE job ends with the model INSTALLED. Uninstall produces confirmed NOT-installed, which is equally terminal evidence, but it reads as not-confirmed-yet and so falls through to the full 120-second belt. downloadManager's uninstall route does delete the model from its OWN legacy _modelJobs runtime map (routes/downloadManager.js:2408 remote leg, plus the local leg below it) but never settles the SOT store, so the store keeps broadcasting the complete job in every snapshot - and the store is main-process, which is why a renderer reload re-hydrates the stale job rather than clearing it. The renderer half is the same assumption one layer up: _modelState sets isBusy = !!job && status === 'complete' (MPI-241, to stop the Install chip flashing in the window before re-sync flips installed), and _tileState's isBusy branch then beats the Install chip and renders a determinate bar at job.progress = 1. MPI-241 modelled the pre-install-flip window; uninstall is the same shape with the opposite meaning, and neither layer models it. CORRECTED after the blast-radius sweep - it does NOT self-heal. Three defects compound: (1) the REMOTE uninstall leg returns at routes/downloadManager.js:2410 and never calls reconciler.reconcileOnce(), which the LOCAL leg does at :2547 - an engine-split half-wire; (2) even with a pass, pruneTerminal's DONE branch cannot express confirmed-UNinstalled; (3) reconciler.start()'s tick gates on store.hasActiveJobs(), and post-uninstall every job is terminal, so the 15s poll returns early forever. The stale job therefore persists INDEFINITELY - until the next install, or an SSE reconnect landing more than DONE_TTL_MS after the job went terminal. That is why Ctrl+R did not clear it. Fix belongs at the store (uninstall must settle its job), NOT at the tile renderer - hiding the bar when the model is not installed would leave the store lying to every other consumer.",
-  "column": "doing",
-  "maturity": "validating",
+  "column": "done",
+  "maturity": "complete",
   "status": "active",
   "created_at": "2026-07-29T22:55:00Z",
-  "updated_at": "2026-07-30T00:50:00Z",
+  "updated_at": "2026-07-30T00:55:00Z",
   "labels": [
     "bug",
     "downloads",
@@ -32,8 +32,8 @@
     "research": null
   },
   "attention": {
-    "state": "required",
-    "reason": "Shipped + 5 guard tests with a negative control, but NOT live-verified: the one attempt was vacuous because the store had already pruned the job before the uninstall. Reproduce LOCALLY - no Pod needed.",
-    "updated_at": "2026-07-30T00:50:00Z"
+    "state": "cleared",
+    "reason": "Live-proven on the local engine: the immortal done job was held for 25s with the store version frozen, then vanished inside the uninstall POST with the dep absent from disk, so no prune path existed and store.dropModel is the only possible cause. Remote leg's one confirmation folded into the MPI-385 Pod-session brief.",
+    "updated_at": "2026-07-30T00:55:00Z"
   }
 }

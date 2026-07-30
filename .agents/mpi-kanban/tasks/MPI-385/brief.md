@@ -76,6 +76,16 @@ Pod-observable bit: during a Pod boot (the wrapper 404s for a few seconds before
 and that **no** model flips to installed while the volume is untouched. Zero setup — just watch
 the log on the connect you are already doing. If a model does flip, reopen MPI-328.
 
+### 6. MPI-396 — remote uninstall settles the store (**closed on local evidence 2026-07-30, opportunistic check only**)
+
+`store.dropModel()` is wired at BOTH uninstall legs and was live-proven on the LOCAL engine
+(`tasks/MPI-396/validation.md` — immortal done job held 25s with the store version frozen, then
+dropped inside the uninstall POST with no prune path available). An engine-split guard test pins
+the drop at exactly two call sites, so the remote leg cannot silently rot. The only
+Pod-observable bit, and it is free on any connect you are already making: uninstall a model on
+the volume and confirm its job leaves `/comfy/downloads/status` immediately rather than the tile
+drawing a 100% bar where the Install chip belongs. If the bar shows, reopen MPI-396.
+
 ---
 
 ## NOT on this card — a Pod cannot settle these

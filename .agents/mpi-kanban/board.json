@@ -37,7 +37,6 @@
   ],
   "doing": [
    "MPI-399",
-   "MPI-396",
    "MPI-393",
    "MPI-392",
    "MPI-385",
@@ -51,6 +50,7 @@
    "MPI-4"
   ],
   "done": [
+   "MPI-396",
    "MPI-395",
    "MPI-394",
    "MPI-386",
@@ -91,8 +91,16 @@
    "MPI-243"
   ]
  },
- "updated_at": "2026-07-30T00:40:00Z",
+ "updated_at": "2026-07-30T00:55:00Z",
  "events": [
+  {
+   "at": "2026-07-30T00:55:00Z",
+   "type": "task.moved",
+   "task": "MPI-396",
+   "from": "doing",
+   "to": "done",
+   "note": "LIVE-PROVEN on the local engine, which is the last thing the card was holding for. Two rounds. Round 1 hit the precondition the vacuous first attempt missed - scripted poll of /comfy/downloads/status fired the uninstall sub-millisecond after the job read complete WHILE STILL LISTED - and passed, but was still not attributable: the job's dep was on disk, so a 15s reconciler tick landing in that 1.3s window could have pruned it via confirmedInstalled (reconciler.js:139 builds that set from the JOB's deps, not the model universe). Round 2 closed it by deleting the dep out of band once the job settled, which makes confirmedInstalled impossible to form: the immortal done job then sat in the store for 25 seconds with version FROZEN at 21093 - defect 3, the self-idling reconciler poll, observed live instead of inferred - and vanished inside the uninstall POST with exactly one version bump. With the file absent no prune path existed, so store.dropModel is the only possible cause. Target was nvidia-pid / vae-sd3 (168MB, single-owner so the shared-dep guard could not spare it, absent beforehand so the run restored the disk to its starting state - no user weights touched). Backend log confirms the LOCAL leg ran (moved to trash G:\\CubricModels\\vae\\sd3_vae.safetensors). Remote leg rides the engine-split guard test plus the round-2 store evidence; its one live confirmation is folded into the MPI-385 Pod-session brief per the standing rule rather than holding this card open."
+  },
   {
    "at": "2026-07-29T20:05:00Z",
    "type": "task.moved",

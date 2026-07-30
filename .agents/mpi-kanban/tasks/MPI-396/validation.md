@@ -1,6 +1,6 @@
 # MPI-396 Validation
 
-## Status: SHIPPED + test-verified. Live proof still OWED. Do not close.
+## Status: SHIPPED, test-verified, and LIVE-PROVEN on the local engine 2026-07-30T00:19Z.
 
 ## What is proven
 
@@ -13,7 +13,72 @@
 - The engine-split guard pins `store.dropModel(modelId)` at **exactly two** call sites and their
   position relative to each `download:uninstalled` broadcast, so a future one-leg fix fails loudly.
 
-## What is NOT proven, and why the one attempt was vacuous
+## The live proof — local engine, 2026-07-30T00:19Z–00:21Z
+
+Driven over HTTP against the running app (PID started 00:26 local, after the fix landed on
+disk at 00:06, so the main process carried it). Target was `nvidia-pid` / dep `vae-sd3`
+(168MB, owned by **no other model** so the shared-dep guard cannot spare it, and **absent
+from disk beforehand** so the run restores the machine to its starting state — it is not
+one of the user's installed weights).
+
+**Round 1 — the precondition the first attempt never had.** Install, then poll
+`/comfy/downloads/status` every 400ms and fire the uninstall the instant the job read
+`complete` *while still listed* (gap: sub-millisecond, scripted — no human reaction time):
+
+```
++0.12s  install POST 200
++4.21s  poll -> complete 100% v10577      <- job listed AND complete
++5.44s  uninstall POST 200 removed=[{"depId":"vae-sd3"}]   (file really deleted)
++5.44s  job AFTER uninstall: GONE, store v10579
++9.45s  job after +4s: GONE
+```
+
+Pass, but **not yet attributable**: the job's one dep was on disk at that moment, so
+`reconciler.js:139` could have put `nvidia-pid` in `confirmedInstalled` and pruned it if a
+15s tick had landed inside that window — roughly a 1-in-11 chance. Same trap as the first
+attempt, one layer subtler. Round 1 therefore proves **no regression**, nothing more.
+
+**Round 2 — attribution closed by removing every other prune path.** Same install, then the
+dep was deleted **out of band** once the job settled. That makes
+`nonNode.every(isInstalled)` false forever, so `confirmedInstalled` can never contain the
+model; the job was younger than `DONE_TTL_MS` (120s), so the belt could not drop it; and no
+job was active, so the reconciler poll self-idles and never runs the belt anyway. That is
+**exactly the immortal-job state the bug leaves behind**:
+
+```
++4.13s  job settled: complete, store v21093
++4.14s  dep removed out of band -> on disk: false
++9.15s  hold  5s: job STILL LISTED: complete 100% v21093
++14.16s hold 10s: job STILL LISTED: complete 100% v21093
++19.16s hold 15s: job STILL LISTED: complete 100% v21093     <- past a full 15s tick
++24.18s hold 20s: job STILL LISTED: complete 100% v21093
++29.19s hold 25s: job STILL LISTED: complete 100% v21093
++29.25s uninstall POST 200 removed=[] kept=[{"vae-sd3","reason":"already-absent"}]
++29.25s job AFTER uninstall: GONE, store v21094 (was 21093)
++32.27s job after +3s: GONE
+```
+
+The store version was **frozen at 21093 for 25 seconds** with a terminal job sitting in it —
+defect (3), the self-idling reconciler poll, observed live rather than inferred. Then the
+uninstall bumped it **exactly once** (`dropModel`'s `_bump`) and the job vanished inside the
+POST. With the file absent, no prune path existed: `store.dropModel()` is the only code that
+can have dropped that job.
+
+Backend log for the same run, confirming the LOCAL leg (not the remote one) executed:
+
+```
+00:19:12.633 [download] Starting download for vae-sd3 from https://models.cubric.studio/...
+00:19:16.643 [download] _startPendingDeps: 0 queued deps, 0/3 active
+00:19:17.950 [download] uninstall: moved to trash G:\CubricModels\vae\sd3_vae.safetensors
+00:19:17.950 [download] uninstall nvidia-pid: removed 1, kept 0 universal, 0 shared, ...
+```
+
+Disk state at the end is identical to the start (`vae-sd3` absent). The **remote** leg is
+covered by the engine-split guard test plus the round-2 store evidence; per the standing
+rule its one live confirmation is folded into the MPI-385 Pod-session brief rather than
+holding this card open.
+
+## Historical: why the FIRST attempt was vacuous
 
 Attempted live 2026-07-30 on CPU Pod `omi9588i0gymlu` after a full app restart. Install of SDXL
 Realistic completed, the user uninstalled, and the tile showed the **Install chip with no bar** —
@@ -34,25 +99,22 @@ store.** That window is not deterministic: in the MPI-395 session the job was st
 **101 seconds** after completing (poll log in `tasks/MPI-395/validation.md`), which is why the
 100% bar reproduced first try; here it was gone in 14.
 
-## How to prove it — LOCALLY, no Pod required
+## The recipe, for the next store-lifecycle bug
 
-`dropModel` is called on **both** legs, so the local engine exercises the same store settle. This
-does not need a Pod, a network volume, or any cloud spend.
+Reusable, and the reason round 2 worked. Drive it over HTTP from one script so the
+poll→act gap is milliseconds, never human reaction time:
 
-1. Full app restart (`routes/` is main-process — Ctrl+R will not pick the fix up).
-2. Install any small model on the LOCAL engine.
-3. Poll `curl http://127.0.0.1:3000/comfy/downloads/status` and wait until the model's job reads
-   `"status":"complete"` — **it must still be listed.**
-4. **While it is still listed**, uninstall the model.
-5. **PASS:** the tile shows the `↓ INSTALL` chip, the job disappears from
-   `/comfy/downloads/status` immediately, and it is still `↓ INSTALL` after Ctrl+R.
-   **FAIL:** a full 100% progress bar where the chip belongs.
-
-Step 3 is the whole test. Skipping it is what made the first attempt worthless.
-
-The remote leg then wants one confirmation on the next Pod session — fold it into MPI-385 rather
-than holding a card open for it (standing rule: a card whose only leftover is remote closes on
-local evidence and adds a line to the MPI-385 brief).
+1. Full app restart (`routes/` is main-process — Ctrl+R will not pick a route fix up).
+   Confirm the process StartTime post-dates the file mtime.
+2. Pick a dep that is **absent from disk and owned by exactly one model**, so the run is
+   reversible and the shared-dep guard cannot interfere. `nvidia-pid` / `vae-sd3` (168MB) fits.
+3. Install it, polling `/comfy/downloads/status` until the job is `complete` **and still listed**.
+4. **Kill the competing explanations before acting** — here, remove the dep from disk so
+   `confirmedInstalled` can never form, then hold past a full 15s tick and show the store
+   `version` frozen. A test that cannot distinguish the fix from the pre-existing prune is
+   still vacuous even when it passes.
+5. Act, then re-read status in the same script: assert job absent AND `version` bumped by
+   exactly one.
 
 ## Not to be confused with
 
