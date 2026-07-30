@@ -20,13 +20,13 @@ export const OPERATION_REGISTRY = {
     krea2Edit:    { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     qwenEdit:     { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     detail:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    // Superseded by `inpaint` (1.2.0). Neither was ever wired to a workflow or a
+    // Superseded by `inpaint` (1.3.0). Neither was ever wired to a workflow or a
     // model's supportedOps, so nothing can have generated with them — the entries
     // stay (deprecated) only so a legacy history item still validates.
     change:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1', deprecated: true },
     remove:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1', deprecated: true },
-    inpaint:      { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
-    kleinEdit:    { latestVersion: '1.0', appVersionIntroduced: '1.2.0' },
+    inpaint:      { latestVersion: '1.0', appVersionIntroduced: '1.3.0' },
+    kleinEdit:    { latestVersion: '1.0', appVersionIntroduced: '1.3.0' },
     pid:          { latestVersion: '1.0', appVersionIntroduced: '1.0.0' },
     // Video operations
     t2v:          { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
