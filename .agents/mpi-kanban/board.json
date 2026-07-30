@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 406,
+  "next_id": 408,
   "columns": {
     "todo": [
       "MPI-404",
@@ -25,7 +25,6 @@
       "MPI-322",
       "MPI-294",
       "MPI-302",
-      "MPI-198",
       "MPI-249",
       "MPI-183",
       "MPI-339",
@@ -46,7 +45,10 @@
       "MPI-370",
       "MPI-369",
       "MPI-259",
-      "MPI-4"
+      "MPI-4",
+      "MPI-198",
+      "MPI-406",
+      "MPI-407"
     ],
     "done": [
       "MPI-385",
@@ -97,7 +99,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-30T15:37:00Z",
+  "updated_at": "2026-07-30T22:35:00Z",
   "events": [
     {
       "at": "2026-07-30T11:10:00Z",
@@ -1120,6 +1122,54 @@
       "actor": "opus",
       "column": "todo",
       "summary": "Model Library grid paints blank on a COLD renderer (app start, Ctrl+R) for 10-15s. MPI-394 fixed the REBUILD case with a consumer-owned preview cache; a cold renderer's cache is empty, which is the one condition that mechanism cannot help. Observed twice on 2026-07-29/30."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-198",
+      "type": "task.moved",
+      "at": "2026-07-30T21:55:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "MPI-391 section D started on the Linux desktop (ThinkPad X121e, Ubuntu 22.04). 1.3.0 tar.gz extracted and integrity-checked; launching the local engine next. Card owns the live loader-path check."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-406",
+      "type": "task.created",
+      "at": "2026-07-30T22:15:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "--cpu engine installs resolve generic PyPI torch and pull the whole CUDA 13 stack (torch 2.13.0 bare, triton, 14 nvidia-* wheels). Root cause: --fast-deps routes through comfy-cli DependencyCompiler which ignores the vendor flag - the same fall-through already exempted for --m-series at engine.js:370-372. Measured from requirements.compiled on a GPU-less Linux box during MPI-391 section D. Wasteful, not broken. --amd suspect for the same reason."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-407",
+      "type": "task.created",
+      "at": "2026-07-30T22:25:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "Slow server start leaves a permanently black window. main.js:789-795 gives up after a hardcoded 5000ms and creates the window anyway; loadURL is refused with ERR_CONNECTION_REFUSED and no did-fail-load handler exists, so it never retries. Server bound ~11.6s after launch and was healthy the whole time. No user-accessible recovery - Ctrl+R is not bound in the production build. Found on the Linux desktop during MPI-391 section D; never seen before because every prior test machine bound the port in under 5s."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-406",
+      "type": "task.moved",
+      "at": "2026-07-30T22:35:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "Fix landed: --fast-deps is now used only for --nvidia (routes/engine.js), so --cpu and --amd take comfy-cli standard vendor-aware install. Stale comment rewritten to name all three vendors. Needs live confirmation of a +cpu torch resolve on the Linux box."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-407",
+      "type": "task.moved",
+      "at": "2026-07-30T22:35:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "Fix landed: did-fail-load handler on mainWindow.webContents retries the main-frame loadURL every 500ms (cap 60, skips ERR_ABORTED) until the server answers. The 5000ms fallback is deliberately unchanged - raising it is the symptom patch. Race is INTERMITTENT: cold start reproduced it, warm restart painted normally."
     }
   ]
 }
