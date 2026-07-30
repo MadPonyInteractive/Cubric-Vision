@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 409,
+  "next_id": 410,
   "columns": {
     "todo": [
       "MPI-404",
@@ -39,6 +39,7 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-409",
       "MPI-391",
       "MPI-387",
       "MPI-367",
@@ -100,7 +101,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-30T22:45:00Z",
+  "updated_at": "2026-07-30T23:55:00Z",
   "events": [
     {
       "at": "2026-07-30T11:10:00Z",
@@ -1180,6 +1181,15 @@
       "actor": "opus",
       "column": "doing",
       "summary": "Retry after a failed engine install can never succeed on Linux/macOS. uv venv exits 2 with \"A virtual environment already exists at: comfy-venv\" - it refuses ANY existing venv, complete or not - so the first attempt past step 1 poisons every later one and the Installation Failed dialog offers a Retry that is guaranteed to fail. Root cause is an asymmetry in _provisionUvEngine: step 0b clears a stale ComfyUI workspace, its sibling comfy-venv had no guard. Fixed by passing --clear. Found live after a mid-install thermal shutdown."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-409",
+      "type": "task.created",
+      "at": "2026-07-30T23:55:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "RELEASE BLOCKER. Commit 36f972cf restamped release-baselines to the 1.3.0 manifests BEFORE 1.3.0 shipped, so every rebuild emits a 1.3.0-to-1.3.0 update delta (windows 970KB vs the correct 451MB). v1.2.0 does attach update zips to its GitHub release, so these are real assets. Fix: restore baselines to 36f972cf~1, rebuild, verify fromVersion 1.2.0, publish, restamp afterwards. New FULL artifacts are valid and in place; stale update zips quarantined."
     }
   ]
 }
