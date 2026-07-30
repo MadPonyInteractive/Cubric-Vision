@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-358","type":"task.created","at":"2026-07-26T20:30:00Z","actor":"claude","to":"todo","note":"Spun out of MPI-354 so LoRA attribution never blocks a model wiring. Method proven: CivitAI resolves any file by sha256, and every LoRA dep already carries one."}

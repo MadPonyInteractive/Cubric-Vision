@@ -1,1 +1,2 @@
 {"ts": "2026-07-26T05:30:00Z", "type": "task.created", "id": "MPI-353", "to": "doing", "maturity": "validating", "note": "Klein 4B vs Qwen-Edit removal LoRA evaluation - bench research, handoff written"}
+{"ts": "2026-07-26T10:51:28Z", "type": "task.moved", "id": "MPI-353", "from": "doing", "to": "done", "note": "eval concluded: Klein wins -> MPI-354"}

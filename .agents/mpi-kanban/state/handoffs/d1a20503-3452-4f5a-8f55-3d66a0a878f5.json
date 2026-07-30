@@ -1,0 +1,169 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "d1a20503-3452-4f5a-8f55-3d66a0a878f5",
+ "generated_at": "2026-07-30T19:38:00Z",
+ "from_session": "9351c85c-a660-4508-908f-ac96af0a579a",
+ "to_role": "verifier",
+ "status": "open",
+ "session": {
+  "name": "MPI-391 A2 machine testing on the dev PC - extract VERIFIED, launch + smoke + update-from-zip still pending. Nothing published.",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Resume the prior handoff (9351c85c) and work tasks/MPI-391/checklist.md section A2 on this dev PC: close the 8188 bench, Explorer 'Extract All' of the 1.3.0 Windows full zip, launch, generate smoke, and update-from-zip.bat against the v1.2.0 install. The build is done and nothing is published.",
+  "status": "in_progress",
+  "summary": "A2 step 1 (bench) was already satisfied and step 2's EXTRACT half is VERIFIED and committed (89d0a9fd) - 6419 files in the zip, 6419 on disk, one folder, CubricVision.exe at its root. What remains on this box is the LAUNCH, the generate smoke, and update-from-zip.bat. The user is rebooting the machine (memory pressure, unrelated to this repo) and asked for this handoff in case the session does not survive a VS Code update.",
+  "deliberately_not_done": "gh release create. publish-runtime.sh promote. Both are live ops the user is holding. Nothing has been published."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "PRECONDITION - port 8188 was ALREADY FREE. The bench the previous handoff warned about is not running; the only live python is VS Code's black-formatter LSP. Nothing needed closing. Port 3000 also free.",
+   "PRE-STATE captured for the v1.2.0 install at D:\\CubricStudio\\Vision\\Builds\\CubricVision-windows-x64-v1.2.0\\: OLD layout confirmed (app/ with 6494 files, start.vbs, update.bat, update-from-zip.bat, no CubricVision.exe at root), app/package.json reads 1.2.0, resources/cubric/update-manifest.json reads fromVersion null / toVersion 1.2.0.",
+   "EXTRACT VERIFIED - the whole archive half of MPI-387 fix A is CLOSED. Explorer 'Extract All' of CubricVision-windows-x64-v1.3.0.zip landed at D:\\cubric-install-test\\CubricVision-windows-x64-v1.3.0\\. 6419 files inside the zip, 6419 on disk (zero silent MAX_PATH casualties - the thing a unit test cannot reach). ONE folder, CubricVision.exe directly inside, all 26 top-level entries present including uv/ and update/. resources/app/package.json reads 1.3.0; no root app/, no start.vbs. update-manifest.json reads toVersion 1.3.0 / kind portable-stage. Longest path 176 chars = 84 under MAX_PATH 260.",
+   "EVIDENCE WRITTEN AND COMMITTED (89d0a9fd) - a new section 'A - settled on the dev PC from the real 1.3.0 artifact' in tasks/MPI-387/validation.md plus its header-table row A updated; tasks/MPI-391/checklist.md A2 item 1 ticked and SPLIT into extract (done) vs launch (pending). Committed by explicit pathspec; the peer agent's untracked cards were not swept in.",
+   "MACHINE HEALTH DIAGNOSED (user reported 33% CPU + 40GB RAM at idle). CPU is a FALSE ALARM: 0% interrupt, 0% DPC, 84-93% idle, and the top process during measurement was WmiPrvSE running MY OWN probe at 52% of one core. Memory is real but it is COMMIT CHARGE, not resident: 86.2 GB committed against a 105.8 GB limit (81%) while only 35.4 GB is resident, which is what puts Memory Compression at 8.75 GB.",
+   "PROCESS AUDIT - zero RunPod leftovers from the previous session. No rclone, ssh, curl, wrapper, ComfyUI, or anything on 8188/3000. Two real leaks found, NEITHER from this repo: 40 java.exe all running C:\\AI\\tools\\discord-mcp\\target\\discord-mcp-1.0.0.jar (1.8 GB, all started 21/07-29/07, none from today, so all 40 are orphans), and 2 stale playwright-mcp --headless trees from 25/07 and 29/07."
+  ],
+  "pending": [
+   "START HERE - LAUNCH D:\\cubric-install-test\\CubricVision-windows-x64-v1.3.0\\CubricVision.exe. Expect SmartScreen 'Windows protected your PC' -> More info -> Run anyway; on THIS box that is noise, the meaningful version of that check is the SAC laptop in section B where a SILENT block would be the failure. Then read <extract root>/user-data/logs/app.log and write the result to tasks/MPI-387/validation.md.",
+   "GENERATE SMOKE - USER DECISION STILL OPEN. Neither the fresh extract NOR the v1.2.0 install has an engine: the v1.2.0 install's engine/ and models/ both contain ZERO files (it was extracted but never run). So a real smoke means a multi-GB ComfyUI+torch+model download. Option (a), which the assistant recommended and the user has not yet answered: junction the extract's engine/ to the dev engine at c:\\AI\\Mpi\\Cubric-Vision\\engine\\ (already ComfyUI 0.28.0, the exact pin 1.3.0 ships), since portable resolves CUBRIC_ENGINE_ROOT = <root>/engine at main.js:580. BACK UP engine/ComfyUI_windows_portable/ComfyUI/extra_model_paths.yaml FIRST (base_path currently G:/CubricModels) and restore it after, or the app may rewrite it to point at a path that gets deleted with the extract. Option (b): skip the smoke here and let section B's clean install carry it.",
+   "UPDATE-FROM-ZIP.BAT against D:\\CubricStudio\\Vision\\Builds\\CubricVision-windows-x64-v1.2.0\\ with the bundle D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\CubricVision-windows-x64-update-v1.3.0.zip. Expect: files copied, start.vbs GONE, stale app/ deliberately LEFT BEHIND. This is ONE-WAY - it converts that folder into a 1.3.0 install and re-extracting v1.2.0 is the only way back. The user was told and has not said whether to copy it first.",
+   "THEN the Windows SAC laptop (section B, 8 MPI-387 checks in ONE clean install), THEN Linux (section D, MPI-198 loader-path heal + MPI-249 first validated Linux generation), THEN the rented Mac LAST (section C, MPI-370 DEPTH model install - absence of the requirementsDrop log line is the failure signal). Mac is last because it is the only machine that bills by the hour.",
+   "publish-runtime.sh promote - MUST land BEFORE gh release create. Drift confirmed live: dev wrapper 0.2.40 vs stable 0.2.38 (wrapper.py sha differs, start.sh identical). Ship without it and released users boot the old runtime and keep the 125s du behaviour. Agent Bash is CLASSIFIER-BLOCKED from running it - the user runs it.",
+   "gh release create - HELD until the machines pass. Gate 2 (the user rewrites the GitHub release body) has NOT been done.",
+   "POST-PUBLISH ONLY: MPI-334's first-ever live fetch+spawn test, and the in-app half of MPI-387's transition update."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-391",
+  "title": "1.3.0 cross-platform validation sweep - Windows SAC, macOS, Linux (umbrella)",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-391/",
+  "links": {
+   "plan": null,
+   "checklist": "checklist.md",
+   "validation": null,
+   "brief": "brief.md",
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-391/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "tasks/MPI-387/validation.md - new section 'A - settled on the dev PC from the real 1.3.0 artifact, 2026-07-30' recording the 6419=6419 file count, the one-folder result, the 176-char longest path, and the explicit finding that EXTRACT LOCATION IS IRRELEVANT to fix A on any normal-length profile path (D:\\cubric-install-test\\ is 53 chars, C:\\Users\\Fabio\\Downloads\\ is 56, so the laptop does not need a short path to pass). Header table row A updated from 'Never seen on the reproducing laptop' to 'archive half CLOSED'.",
+   "tasks/MPI-391/checklist.md - A2 item 1 ticked with the numbers and SPLIT into two items (extract done / launch pending), so a fresh session cannot mistake the extract result for a launch result.",
+   "Both committed as 89d0a9fd by explicit pathspec."
+  ],
+  "pending": [
+   "The build ships resources/app/node_modules/@eslint-community/... and resources/app/docs/archive/ - devDependencies and the archived docs tree are going out inside the binary. Bloat only, NOT a defect, no card cut. Recorded as an adjacent observation in tasks/MPI-387/validation.md. Worth a card some other day, deliberately not this release.",
+   "PROPOSED, NOT APPROVED, carried from three handoffs back: a short subsection in docs/runpod-remote-engine.md section 10 recording that no wrapper handler may do multi-second filesystem work on the event loop, plus the two measuring traps. That doc still has ZERO coverage of the wrapper's event loop, which is the routing gap that let MPI-398 live twice.",
+   "MEMORY.md compaction - deferred an EIGHTH time. Still not urgent.",
+   "state/index.json active_handoffs is now 14 entries, most consumed. Cleanup finding only, not blocking."
+  ]
+ },
+ "next_action": {
+  "description": "Launch D:\\cubric-install-test\\CubricVision-windows-x64-v1.3.0\\CubricVision.exe (SmartScreen -> More info -> Run anyway is expected and is NOT the failure signal on this box), confirm it reaches the UI, then read <extract root>/user-data/logs/app.log. Then settle the two open user decisions before proceeding: (1) whether to junction the extract's engine/ to the dev engine for a cheap generate smoke, backing up extra_model_paths.yaml first, or skip the smoke here; and (2) whether to copy the v1.2.0 install before running the ONE-WAY update-from-zip.bat against it. The extract itself is ALREADY VERIFIED and committed - do not redo it. Do not publish anything.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "The user extracted to D:\\cubric-install-test\\CubricVision-windows-x64-v1.3.0\\ rather than Downloads, after the assistant's FIRST instruction was wrong - it said to set Explorer's destination to C:\\Users\\Fabio\\Downloads, and Explorer extracts zip CONTENTS into whatever destination it is given, so 261 loose files landed in Downloads root. The user cancelled it; Downloads was re-verified clean (236 items, zero zip-root names). The lesson for the laptop: keep Explorer's DEFAULT destination, which already appends the zip name as a subfolder.",
+   "The location change does NOT weaken the MAX_PATH test and this was measured, not assumed: longest path is 176 chars from a 53-char root, and the Downloads root is 56, so the same tree would reach 179. Both have ~84 chars of headroom.",
+   "The dev PC is an EARLY-FAIL FILTER, not coverage. `where git` resolves here (C:\\Program Files\\Git\\cmd\\git.exe) so MPI-387 fix B is unprovable by construction, and Smart App Control is not the blocking configuration on this box.",
+   "The Mac is deliberately LAST in the machine order because it is the only one that bills by the hour.",
+   "CI artifacts were deleted after local integrity verification. D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\ now holds the ONLY copies of all six - do not delete it.",
+   "The 6408-file / 451MB Windows update bundle is CORRECT, not a packaging bug. MPI-387 fix D moved the app tree to resources/app/, so every Windows path changed and the SHA256-by-path diff reads them all as added. Linux (209 files) and macOS (208) in the SAME build prove the delta machinery is healthy."
+  ],
+  "constraints": [
+   "NOTHING IS PUBLISHED. gh release create has not run. Gate 2 has not happened. Do not publish without explicit authorization.",
+   "THE IN-APP UPDATE PATH CANNOT BE TESTED PRE-PUBLISH. main.js:1023 fetches api.github.com/repos/MadPonyInteractive/Cubric-Vision/releases/latest, and scripts/portable/fetch-release.cjs does the same for update.bat. Until 1.3.0 is a published non-prerelease, a 1.2.0 install correctly sees 1.2.0 as latest. Only update-from-zip.bat (local bundle) works now.",
+   "NEITHER the fresh extract NOR the v1.2.0 install has a provisioned engine - the v1.2.0 install's engine/ and models/ both hold ZERO files. Any generate smoke on this box needs either a multi-GB download or the engine junction described in plan.pending.",
+   "update-from-zip.bat is ONE-WAY. It converts D:\\CubricStudio\\Vision\\Builds\\CubricVision-windows-x64-v1.2.0\\ into a 1.3.0 install; re-extracting v1.2.0 is the only way back.",
+   "THIS DEV PC CANNOT STAND IN FOR THE SAC LAPTOP - git resolves here, and SAC is not the blocking config.",
+   "A PEER AGENT IS STILL WRITING THIS TREE. Untracked/modified: tasks/MPI-353/ (modified), untracked tasks/MPI-355/, MPI-358/, MPI-400/, MPI-401/, MPI-392/handoffs/. NEVER sweep those in - git add untracked paths BY NAME first, because git commit --only aborts the whole commit on an untracked path.",
+   "Clock is CLEAN - GitHub Date header read 2026-07-30T19:37:52Z against local 19:37:50Z. No VPN skew.",
+   "board.json is 2-SPACE indent. task.json indent VARIES PER CARD - MPI-391 and MPI-369 are 1-space. state/index.json is 1-space / LF / trailing newline. Measure before writing.",
+   "npm run release:approve is CLASSIFIER-BLOCKED for agents (interactive y/N) and so is publish-runtime.sh promote. The user runs both.",
+   "NEVER edit releaseNotes.js again without re-running release:approve. The build hashes it against .approved-1.3.0.json and a one-word change fails CI with 'Release notes changed after approval'. release:check does NOT catch this.",
+   "Ask in PLAIN TEXT, never AskUserQuestion. Read memory feedback-index.md before non-trivial work; it is NOT auto-loaded.",
+   "MACHINE STATE: the user is REBOOTING the PC as of this handoff (86.2 GB commit charge against a 105.8 GB limit). If commit charge climbs back near that after a fresh boot, the 40-process discord-mcp java leak in C:\\AI\\tools\\discord-mcp\\ is the first suspect - it is NOT this repo. CPU was measured healthy (0% interrupt, 0% DPC); do not go hunting a CPU problem."
+  ],
+  "files_modified": [
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-387/validation.md"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-387/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-391/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-369/validation.md"
+  ],
+  "commits": [
+   "e22ce1a5 chore(release): v1.3.0 - masking rebuild, FLUX.2 Klein, op strip, Pod responsiveness",
+   "36f972cf chore(release): restamp release baselines to the shipped v1.3.0 full manifests",
+   "632e7514 chore(kanban): MPI-391 section A verified at the 1.3.0 cut",
+   "89d0a9fd chore(kanban): MPI-387 fix A archive half closed on the real 1.3.0 zip"
+  ],
+  "build_facts": {
+   "ci_run": "30559394491 (MadPonyInteractive/mpi-ci, all three legs success)",
+   "artifacts_dir": "D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\",
+   "extract_under_test": "D:\\cubric-install-test\\CubricVision-windows-x64-v1.3.0\\ (6419 files, verified)",
+   "v120_install": "D:\\CubricStudio\\Vision\\Builds\\CubricVision-windows-x64-v1.2.0\\ (old layout, engine/ and models/ EMPTY)",
+   "artifacts": [
+    "CubricVision-windows-x64-v1.3.0.zip (523638376)",
+    "CubricVision-windows-x64-update-v1.3.0.zip (451102241 - effectively full, correct)",
+    "CubricVision-linux-x64-v1.3.0.tar.gz (502967733)",
+    "CubricVision-linux-x64-update-v1.3.0.zip (2782980 - 209 files)",
+    "CubricVision-macos-arm64-v1.3.0.zip (471987670)",
+    "CubricVision-macos-arm64-update-v1.3.0.zip (3308757 - 208 files)"
+   ],
+   "pod_runtime_channels": "dev wrapper 0.2.40, stable 0.2.38 - DRIFTED, promote still pending",
+   "pod_image_pins": "POD_IMAGE_VERSION v0.17.0 (Docker Hub, cu130) and POD_IMAGE_VERSION_CPU v0.17.0 (GHCR) both verified to EXIST - no image work needed for this release."
+  },
+  "board_state": {
+   "doing": [
+    "MPI-391",
+    "MPI-387",
+    "MPI-367",
+    "MPI-370",
+    "MPI-369",
+    "MPI-259",
+    "MPI-4"
+   ],
+   "note": "MPI-391 is the driving card. MPI-387/370/369 clear through its sections B/C/A. MPI-367, MPI-259 and MPI-4 are out of 1.3 scope by the user's explicit call. MPI-385 and its members closed earlier by a peer session - do not reopen."
+  }
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "releases",
+   "portable-distribution",
+   "downloads",
+   "runpod-remote-engine"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/versioning.md",
+  ".claude/rules/downloads.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-30T19:38:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing the Cubric Vision 1.3.0 release on master. Read .agents/mpi-kanban/state/handoffs/d1a20503-3452-4f5a-8f55-3d66a0a878f5.json first. THE BUILD IS DONE AND NOTHING IS PUBLISHED - v1.3.0 is stamped and tagged, CI run 30559394491 succeeded on all three legs, and the six artifacts in D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\ are the ONLY copies. MPI-391 section A passed at the cut, and section A2's EXTRACT step is now also verified and committed (89d0a9fd): the real Windows full zip was extracted with Explorer 'Extract All' to D:\\cubric-install-test\\CubricVision-windows-x64-v1.3.0\\ and gave 6419 files on disk against 6419 in the zip, one folder with CubricVision.exe at its root, resources/app at 1.3.0, and 84 chars of MAX_PATH headroom - that closes the archive half of MPI-387 fix A, so do NOT redo it. YOUR NEXT STEP is to launch that CubricVision.exe and confirm it reaches the UI; SmartScreen 'More info -> Run anyway' is expected here and is not a failure, because this box has no Smart App Control and `where git` resolves on it, so fixes B and D can only be settled on the SAC laptop. Two user decisions are OPEN and you must ask rather than assume: whether to junction the extract's engine/ to the dev engine at c:\\AI\\Mpi\\Cubric-Vision\\engine\\ for a cheap generate smoke (neither the extract nor the v1.2.0 install has ANY engine - the v1.2.0 install's engine/ and models/ hold zero files - so the alternative is a multi-GB download; back up extra_model_paths.yaml first if you junction), and whether to copy the v1.2.0 install at D:\\CubricStudio\\Vision\\Builds\\CubricVision-windows-x64-v1.2.0\\ before running the ONE-WAY update-from-zip.bat against it. After this box the order is Windows SAC laptop, then Linux, then the rented Mac last because it bills hourly. publish-runtime.sh promote is still pending and MUST run before gh release create or released users boot wrapper 0.2.38 and lose the MPI-398 fix; the user runs it because agent Bash is classifier-blocked. Never edit releaseNotes.js without re-running npm run release:approve. A peer agent is still writing this tree (untracked MPI-355/358/400/401, MPI-353 modified) so commit by explicit pathspec only. Ask in plain text, never AskUserQuestion. Clock is clean, no VPN skew. Do not publish anything."
+}

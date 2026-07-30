@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-400",
+  "title": "Mask Edge",
+  "description": "Create a new slider that turns the current mask into just outlines. Actually, two sliders:\n1. One to expand off the edge\n2. Another one to expand in",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-30T01:07:18.515Z",
+  "updated_at": "2026-07-30T01:07:18.515Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-401",
+  "title": "mask/paint Brushes",
+  "description": "Let's add alpha brushes to both the mask brush and the paint brush. We can start with ten different ones.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "pending",
+  "created_at": "2026-07-30T01:08:19.986Z",
+  "updated_at": "2026-07-30T01:08:19.986Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
