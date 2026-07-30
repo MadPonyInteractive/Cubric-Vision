@@ -219,3 +219,24 @@ Wiring complete and verified statically: 48/48 non-pre-existing tests pass, rele
 health check clean, dep-vs-graph reconcile closed both directions, all new guards
 negative-control proven. NOT committed — the change spans `commandRegistry.js` and
 `MpiPromptBox.js`, which hold other sessions' uncommitted work.
+
+---
+
+## REMOTE (POD) LEG — PASSED 2026-07-30 (found as a coverage hole, Pod qrpnumt8p1rm31, L4 EU-RO-1)
+
+This card closed on local evidence WITHOUT adding its Pod line to the MPI-385 sweep brief —
+the standing rule got skipped exactly once, and the user caught it live after that sweep had
+already closed. Recorded here so the hole is visible.
+
+**All Klein operations tested and passed on the Pod by the user** (t2i, i2i, depth, edit
+multi-ref, inpaint/removal, upscale/detail as exercised). Hard evidence off the Pod's
+`/history`: **11 Klein prompts, all `success`** — universal graph with the
+`comfyui-inpaint-cropandstitch` branch, 4 image inputs and 9 LoRA loader slots per prompt
+(`flux-2-klein-4b-int8-convrot` + e.g. NSFW style + refcontrol-depth + outpaint LoRAs all
+resolving off the volume). Exec 4-8s per gen on the L4.
+
+**Hot-store:** Klein staged to the Pod's fast disk at gen preflight exactly as designed
+(`hot-store: 5/5 file(s) on Pod disk`; Krea2 `16/16` in the same session) — the model-keyed
+path works; the engineAsset gap it does NOT cover is carded as MPI-403.
+
+Krea2 rode along: depth-control + identity-edit LoRA gens both green (~21-25s exec).
