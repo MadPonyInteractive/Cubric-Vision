@@ -104,6 +104,23 @@ Free — it is the **same uninstall** item 6 already asks you to do. Just hold a
 - `models/status` is deliberately **uncached** (install-state feeds the whole download UI and
   must stay truthful), so this will never be free. Do not "fix" it by caching it.
 
+### 8. MPI-393 — drift heal must not install the world (**added 2026-07-30; do this ON THE CONNECT**)
+
+**Genuinely Pod-only, and it was found ON this sweep's own connect** — yet it was never written
+down here, which is exactly the rot this brief exists to stop. Its own `attention` already said
+*"Rides with the MPI-385 sweep"*.
+
+- The heal is **latched per app session**, so it needs a **fresh app process** and then a Pod
+  connect. If the app has already connected once this session, the check is vacuous.
+- Watch: the heal now **logs** what it re-clones (model + node ids) — it was completely silent
+  before, so **absence of the log line is the failure signal**.
+- Watch: **volume usage stays flat.** Pre-fix it went 133.5GB → 140.6GB of 150GB in about a
+  minute, with unrequested installed toasts for SDXL Realistic / LTX 2.3 / Qwen and MODELS
+  climbing 0/18 → 4/18, then `volume full: need 6.5 GB, have 2.3 GB free` — and the chain then
+  grabbed any space freed, so nothing could be uninstalled.
+- Only **drifted custom_node deps** may re-clone. A drifted model with missing weights must NOT
+  get those weights pulled.
+
 ---
 
 ## NOT on this card — a Pod cannot settle these

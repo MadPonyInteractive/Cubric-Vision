@@ -35,6 +35,16 @@ else after.
 Owner card: **MPI-369**. These are cheap, and getting them wrong is expensive
 because shipped updaters glob artifact names.
 
+**0. `publish-runtime.sh promote` — before anything else at the cut.** Added
+2026-07-30, owned by `mpi-release`'s pre-flight rather than by MPI-369. The Pod
+runtime is R2-floated on two channels and MPI-398's fix currently lives on **dev
+only** (wrapper 0.2.40; stable is still 0.2.38). A dev app run boots `dev`, so it
+will all look fine here while **released users boot `stable`** — they would get
+the old runtime, lose the fix, and every Pod they boot keeps the 125s `du`
+behaviour. `mpi-release` deliberately never auto-promotes (same class as
+`git push`), so this is a human step that is easy to skip precisely because
+nothing local breaks when you do.
+
 1. Unzip the Windows update bundle; its root folder must read
    `CubricVision-v1.3.0-update-only`.
 2. The update ASSET name must be `CubricVision-windows-x64-update-v1.3.0.zip`.

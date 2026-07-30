@@ -6,6 +6,7 @@ evidence into that card's `validation.md`, not here. Detail for every line is in
 
 ## A · At the build cut (blocks everything below)
 
+- [ ] **`publish-runtime.sh promote` run — dev wrapper bytes → stable** — *release / mpi-release pre-flight* ← **easiest item here to forget and the most expensive**
 - [ ] 1.3.0 artifacts built for win32-x64, linux-x64, macos-arm64 — *release*
 - [ ] Windows update bundle root reads `CubricVision-v1.3.0-update-only` — *MPI-369*
 - [ ] Update asset name is exactly `CubricVision-windows-x64-update-v1.3.0.zip` (FROZEN — shipped updaters glob it) — *MPI-369*
@@ -33,12 +34,14 @@ evidence into that card's `validation.md`, not here. Detail for every line is in
 - [ ] `xattr -dr com.apple.quarantine "<folder>"` → `start.command` launches — *MPI-370*
 - [ ] A **DEPTH** model installs without the Installation-failed error — *MPI-370* ← the specific path that pulls `controlnet_aux`
 - [ ] The `requirementsDrop` log line is PRESENT (absence = the field vanished through `_createDepJob`'s whitelist) — *MPI-370*
-- [ ] Plain install → launch → generate smoke passes — *MPI-370* (macOS generation has never been validated)
+- [ ] Plain install → launch → generate smoke passes — *MPI-370 + MPI-249* (macOS generation has never been validated)
+- [ ] Extracted from the real `CubricVision-macos-arm64-v1.3.0.zip`, LOCAL engine provisioned via the uv/comfy-cli path, 11 UW nodes installed, one model per family generated — *MPI-249* (macOS half; MPI-249 closes only when Linux AND macOS are both done, so expect it to stay open if either slips)
 
 ## D · Linux — separate machine
 
 - [ ] Loader-path heal reproduced: LOCAL engine + **subfoldered** LoRA — *MPI-198* (see its `plan.md` / `checklist.md`)
-- [ ] Plain install → launch → generate smoke passes — *MPI-198* (Linux generation has never been validated)
+- [ ] Plain install → launch → generate smoke passes — *MPI-198 + MPI-249* (Linux generation has never been validated)
+- [ ] Extracted from the real `CubricVision-linux-x64-v1.3.0.tar.gz`, LOCAL engine provisioned via the uv/comfy-cli path (`routes/engine.js _provisionUvEngine`, NOT the Windows prebuilt-archive path), 11 UW nodes installed, one model per family generated — *MPI-249* (Linux half)
 
 ## E · Opportunistic
 
