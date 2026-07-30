@@ -1,0 +1,170 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "b7e41d0c-9a52-4f38-8c61-2d5f9a3e7b14",
+ "generated_at": "2026-07-30T12:20:00Z",
+ "from_session": "f2c17c9e-3f5d-41dd-b5c6-8893d8f9cbad",
+ "to_role": "implementer",
+ "status": "open",
+ "session": {
+  "name": "Pre-1.3 board audit + three cards closed (MPI-398, MPI-392, MPI-376); the MPI-385 Pod sweep is teed up and is the ONLY thing left before the 1.3 cut",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Continue from the MPI-398 handoff. The user then narrowed it: make MPI-385 and MPI-391 actually cover everything needed for a good 1.3 release, and get the doing column down to the cards that are deliberately out of scope.",
+  "status": "in_progress",
+  "summary": "Three cards closed on real evidence, four coverage holes closed in the two umbrellas, and the board is now honest. THE USER IS SPINNING UP A GPU POD and has gone shopping. When they return, the work is the MPI-385 sweep - its brief.md is now a complete 8-item run sheet. Do NOT re-audit the board; that is done and committed."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "MPI-398 CLOSED on the user's explicit approval (69f12aef). Fixed on the Pod, user-verified live. Attention cleared. The gate that outlives it is recorded but is NOT card-shaped: dev wrapper is 0.2.40, stable is still 0.2.38.",
+   "MPI-397 numbers marked STALE, not fixed and not worked (69f12aef). Traced the chain to be certain: /comfy/models/check -> remoteModelsCheck -> POST /wrapper/models/status (routes/remoteModels.js:374) is EXACTLY the handler MPI-398 moved off the wrapper's event loop, and every timing on MPI-397 (toast ~7s, move ~10s) predates that fix by hours. Cold-open p50 for that endpoint went 8679ms -> 2259ms, so expect ~2s not ~10s: MOSTLY fixed, not provably fixed. Acceptance regrown to lead with a re-measure; queued as MPI-385 item 7 where it rides free. models/status is deliberately UNCACHED - do not 'fix' it by caching.",
+   "BOARD COVERAGE AUDIT (0efc7ded). Four doing cards were covered by NEITHER umbrella. Two of them - MPI-393 and MPI-392 - already ASSERTED in their own attention text that they ride with MPI-385, while MPI-385's brief never listed them; that is exactly how they would have been missed. Fixed: MPI-393 -> MPI-385 item 8. MPI-249 -> named as co-owner on MPI-391's macOS and Linux smoke lines plus one artifact line each (it was doing that card's work while sitting unattributed in todo, so a green sweep would have left it open having actually been done). publish-runtime.sh promote -> NEW MPI-391 section A item 0.",
+   "MPI-392 CLOSED, live-verified WITHOUT restarting the user's app (75e87ad2). The card's own planned check was vacuous by construction - the deleted guard only fires on a temp/tmp cached path and the real one is G:\\CubricModels - so localStorage was POISONED to D:/AI/temp_models first, then MpiSettings mounted in a driven browser at 127.0.0.1:3000 (same renderer code, user's Electron storage untouched). extra_model_paths.yaml byte-identical (sha256 22ff5a6a3f62e98a, 2006 bytes) and app.log held EXACTLY ONE set-path line for the session - the deliberate route test - so the mount fired no POST at all. Field rendered the real root and localStorage was reconciled back to it, confirming _hydrateComfyPath already did the guard's job. Negative-controlled comments-stripped against 2f8b865e~1.",
+   "MPI-386 RE-VERIFIED and stays done, now on evidence instead of recollection (4cec8487). It was closed 2026-07-29 with the explicit caveat that no fix was on disk plus an instruction to reopen if seen again. I hit what looked exactly like it, and nearly reopened it. Ran the card's own fresh-profile repro instead: gate -> Continue (which correctly CHAINED the changelog, so MPI-333 is working) -> dismiss leaves backdrops 0 / wrappers 0 / modals 0, and a real click on the landing nav then succeeded with no interception. Counts stayed balanced 1/1/1 across the handover.",
+   "MPI-376 CLOSED on the user's own verification (28ae813a). Its single open item was Add/Subtract bake undo, which needed an engine; the user had already exercised it as part of their own undo testing. Electron desktop remains unexercised and is now stated on the card rather than implied."
+  ],
+  "pending": [
+   "THE MPI-385 POD SWEEP. This is the whole job and the user is spinning the GPU Pod for it. brief.md is now a complete 8-item run sheet - READ IT AND WORK IT TOP TO BOTTOM, do not re-derive the queue. Item 1 (MPI-380: does the REMOTE install path pick up a newly-added engineAsset) is the only genuine unknown and must go first, because a failure there means new code plus a second Pod session.",
+   "MUST DO BEFORE THE CONNECT: RESTART THE APP. MPI-393's drift heal is LATCHED PER APP SESSION and this process (up since 02:51) already connected to a Pod at 02:56, so connecting in it makes MPI-393 vacuous - and MPI-393 is item 8. Kill the ROOT electron tree, not the port-3000 child. NOTE there were TWO Electron process clusters alive at handoff (00:22:41 and 02:51:07); the second answers :3000 and has the current routes (its set-path log line proved it). Treat the 00:22 cluster as a probable zombie serving stale routes - see memory feedback_kill_spawned_app_instances.",
+   "A GPU POD IS REQUIRED, not the no-GPU download Pod the last session used - items 1 and 2 must actually run Detect. The old CPU Pod tbhsvhd58wpir1 is confirmed DELETED (GET /runpod/pods/<id> -> pod not found), so nothing is billing.",
+   "THEN the 1.3 cut, and MPI-391's section A happens AT the cut - including the new item 0, publish-runtime.sh promote. Ship without it and released users boot wrapper 0.2.38, lose the MPI-398 fix, and every Pod they open keeps the 125s du behaviour. It is invisible locally because a dev app run boots the dev channel.",
+   "THEN MPI-391, the platform trio, which is hard-gated on the 1.3.0 artifacts existing. Windows MPI-387 + MPI-369, macOS MPI-370, Linux MPI-198 + MPI-249. One correction worth carrying: MPI-198's fix (60b3c952, 2026-07-05) is ALREADY IN published v1.2.0, so the Linux loader-path heal is testable on the 1.2.0 tarball today if you want it off the critical path.",
+   "MEMORY.md compaction, deferred a SIXTH time. Still 105/200 lines, still not urgent. Re-audit before assuming any old plan applies."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-385",
+  "title": "RunPod verification sweep - one Pod session, every Pod-only check",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-385/",
+  "links": {
+   "plan": null,
+   "checklist": null,
+   "validation": null,
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-385/handoffs/",
+   "brief": "brief.md"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "tasks/MPI-385/brief.md - now an 8-item run sheet. Items 7 (MPI-397 re-measure) and 8 (MPI-393 drift heal) are NEW this session, each with its failure signal named.",
+   "tasks/MPI-391/checklist.md + brief.md - section A item 0 (promote), MPI-249 co-ownership, one artifact line per platform.",
+   "tasks/MPI-392/validation.md - the full poisoned-precondition record, the acceptance mapping, and the Git Bash trap (curl -d with a backslash path arrives malformed; write JSON with JSON.stringify to a file and use -d @file).",
+   "tasks/MPI-376/validation.md - bake undo closed by the user; the MPI-386 misread corrected in place with the trap that caused it.",
+   "tasks/MPI-386/events.jsonl - the non-reproduction, and the trap: a LIVE MpiModal backdrop is legitimately childless (MpiModal.js:57-63 builds it as a SEPARATE element from .mpi-modal-wrapper), so 'full-viewport, zero children, pointer-events auto' describes a healthy OPEN modal just as well as an orphan. Check for the sibling wrapper first.",
+   "Project memory: feedback_establish_the_precondition_or_the_test_is_vacuous gained the MPI-392 instance and a sharper opening test - 'would this test pass on a machine where the bug cannot occur?'. Index hook updated. No new memory file was created; the rule already had a home."
+  ],
+  "pending": [
+   "PROPOSED, NOT APPROVED, carried over from the previous handoff: a short subsection in docs/runpod-remote-engine.md section 10 recording the invariant that no wrapper handler may do multi-second filesystem work on the event loop, plus the two measuring traps. That doc still has ZERO coverage of the wrapper's event loop, which is the routing gap that let MPI-398 live twice."
+  ]
+ },
+ "next_action": {
+  "description": "The user is back from shopping with a GPU Pod spun up. FIRST restart the app (MPI-393 is latched per session and this process already connected once), THEN connect, THEN work tasks/MPI-385/brief.md items 1-8 in order. Item 1 first - the newly-added engineAsset on the remote install path is the only genuine unknown. Write each finding into the MEMBER card's validation.md, not into MPI-385. Tear the Pod down at the end; it bills.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "MPI-392 and MPI-376 were deliberately kept OFF both umbrellas. Neither needed a Pod - 392 needed a renderer mount, 376 an engine - so filing them on the Pod brief would have trapped them behind a Pod session. Both are now closed, which is the proof that was the right call.",
+   "MPI-367, MPI-259 and MPI-4 are OUT of 1.3 scope by the user's explicit call. MPI-367 is a help-copy content pass where the user is the authority on model behaviour (detail and upscale ops rewritten, rest pending); it stays in doing at in-progress rather than being faked into todo.",
+   "MPI-397 was NOT worked and the optimistic install-state flip was NOT built. The install-state-IS-files-on-disk invariant stays untouched until the re-measure produces a number. If it comes back at about a frame, close the card as fixed-by-MPI-398 and skip the product decision entirely.",
+   "MPI-386 stays DONE. I had live evidence that looked like a reopen and it was a misdiagnosis - do not reopen it on a childless-backdrop observation alone."
+  ],
+  "constraints": [
+   "A PEER AGENT IS STILL WRITING THIS TREE. Uncommitted/untracked at handoff: tasks/MPI-353/ (modified), untracked tasks/MPI-355/, MPI-358/, MPI-400/, MPI-401/, MPI-385/handoffs/, MPI-392/handoffs/. NEVER sweep those in - commit by explicit pathspec, and git add untracked paths by name first because `git commit --only` aborts the WHOLE commit on an untracked path.",
+   "Clock is CLEAN: GitHub Date header read 2026-07-30T11:08:40Z and the local clock agreed to 2 seconds. No VPN skew. This session stamped 11:10Z -> 12:20Z, monotonic above the peer's 04:30Z.",
+   "TASK.JSON INDENT VARIES PER CARD - measure it, never assume. MPI-376 is 1-space; MPI-392, MPI-249 and MPI-398 are 2-space; MPI-391 is 1-space. Rewriting with the wrong indent reformats the whole file and buries the real change.",
+   "SHELL BACKSLASH TRAP, hit twice this session. Both `curl -d` with a Windows path and a `node -e` event append containing an apostrophe got mangled by the shell. Write JSON with JSON.stringify from a SCRIPT FILE in the scratchpad, never inline in a quoted shell string. A heredoc is not always enough either - one python heredoc also died on quoting.",
+   "G:\\ComfyUi\\python_embeded\\python.exe HOLDS PORT 8188 (since 2026-07-29 21:46) and the app's own engine reads running:false. Any local generation/detect dispatches into the user's bench and proves nothing about the app - close the bench first. The user says MPI-376's bake test was already done on a real engine, which is why that card closed anyway.",
+   "The app was left RUNNING on 127.0.0.1:3000, remote INACTIVE (/remote/mode -> active:false). Live log is AppData/Roaming/'Cubric Vision'/logs/app.log - note the SPACE and capitals; the AppData/Roaming/cubric-vision/ one is stale since June and reading it will mislead you.",
+   "Suite baseline 279/279 per the peer's handoff, runner `node --test tests/*.test.cjs`. NOT re-run this session - no JS was touched, only kanban files, docs and memory.",
+   "v1.2.0 IS PUBLISHED, so RELEASE_NOTES['1.2.0'] is frozen. Release-awareness checked this session: MPI-392 and MPI-398 ALREADY have docs/releases/UNRELEASED.md entries (the peer wrote them) - do not add duplicates. MPI-376's changelog is deliberately HELD; the standing rule is ONE masking entry when the rebuild completes, and MPI-368 has not landed.",
+   "Ask in PLAIN TEXT, never AskUserQuestion. Read memory feedback-index.md before non-trivial work; it is NOT auto-loaded and now has 52 rules."
+  ],
+  "files_modified": [
+   ".agents/mpi-kanban/board.json",
+   ".agents/mpi-kanban/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-398/task.json",
+   ".agents/mpi-kanban/tasks/MPI-398/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-397/task.json",
+   ".agents/mpi-kanban/tasks/MPI-397/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-385/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-391/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-391/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-393/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-249/task.json",
+   ".agents/mpi-kanban/tasks/MPI-249/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-392/task.json",
+   ".agents/mpi-kanban/tasks/MPI-392/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-392/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-386/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-376/task.json",
+   ".agents/mpi-kanban/tasks/MPI-376/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-376/events.jsonl",
+   "~/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/feedback_establish_the_precondition_or_the_test_is_vacuous.md",
+   "~/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/feedback-index.md"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-385/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-393/task.json",
+   ".agents/mpi-kanban/tasks/MPI-380/validation.md",
+   "docs/runpod-remote-engine.md"
+  ],
+  "commits": [
+   "69f12aef chore(kanban): close MPI-398, mark MPI-397 numbers stale",
+   "0efc7ded chore(kanban): close the pre-1.3 coverage holes",
+   "75e87ad2 chore(kanban): close MPI-392 - models root survives a poisoned Settings mount",
+   "4cec8487 chore(kanban): MPI-386 evidence - age-gate backdrop leak does not reproduce",
+   "28ae813a chore(kanban): close MPI-376 - bake undo verified by the user"
+  ],
+  "board_state": {
+   "doing": [
+    "MPI-393",
+    "MPI-385",
+    "MPI-387",
+    "MPI-380",
+    "MPI-367",
+    "MPI-370",
+    "MPI-369",
+    "MPI-259",
+    "MPI-4"
+   ],
+   "note": "9 cards. MPI-393 + MPI-380 clear via the MPI-385 sweep; MPI-387 + MPI-370 + MPI-369 clear via MPI-391 after the 1.3 build; MPI-367 + MPI-259 + MPI-4 are out of 1.3 scope by the user's call. Nothing in doing is unaccounted for - that was this session's audit and it is finished."
+  }
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "runpod-remote-engine",
+   "downloads",
+   "model-library",
+   "releases",
+   "masking-sam3"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/downloads.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/git.md",
+  ".claude/rules/dos_and_donts.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-30T12:20:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/b7e41d0c-9a52-4f38-8c61-2d5f9a3e7b14.json first. The board audit the user asked for is DONE and committed - do not redo it. Three cards closed this session on real evidence: MPI-398 (user-approved), MPI-392 (live-verified by POISONING localStorage first, because the card's own planned check was vacuous by construction) and MPI-376 (bake undo, verified by the user themselves). MPI-386 was re-verified and STAYS DONE - an observation looked exactly like a reopen and it was a misdiagnosis, because a live MpiModal backdrop is legitimately childless. Four coverage holes were closed: MPI-393 is now MPI-385 item 8, MPI-397's re-measure is item 7, MPI-249 is named as co-owner on MPI-391's macOS/Linux lines, and publish-runtime.sh promote is MPI-391 section A item 0. YOUR WORK IS THE MPI-385 POD SWEEP - the user was spinning up a GPU Pod (not the no-GPU one; items 1-2 must actually run Detect) and went shopping. tasks/MPI-385/brief.md is a complete 8-item run sheet; work it top to bottom, item 1 first because the newly-added engineAsset on the REMOTE install path is the only genuine unknown and a failure there costs a second Pod session. CRITICAL: RESTART THE APP BEFORE CONNECTING - MPI-393's drift heal is latched per app session and the running process already connected to a Pod at 02:56, which would make item 8 vacuous. Two Electron clusters were alive (00:22 and 02:51); the 02:51 one answers :3000, treat the other as a probable zombie on stale routes. Write each finding into the MEMBER card's validation.md, not MPI-385. Tear the Pod down at the end - it bills. A peer agent is still writing this tree (uncommitted MPI-353, untracked MPI-355/358/400/401 and two handoffs dirs): commit by explicit pathspec only. Clock is clean, no VPN skew."
+}

@@ -1,6 +1,6 @@
 {
  "schema": "mpi-kanban/state-index/v1",
- "updated_at": "2026-07-30T03:20:00Z",
+ "updated_at": "2026-07-30T12:20:00Z",
  "board": ".agents/mpi-kanban/board.json",
  "heartbeat_timeout_minutes": 120,
  "active_sessions": [],
@@ -9,6 +9,12 @@
  "pending_file_states": [],
  "open_messages": [],
  "active_handoffs": [
+  {
+   "id": "b7e41d0c-9a52-4f38-8c61-2d5f9a3e7b14",
+   "path": "state/handoffs/b7e41d0c-9a52-4f38-8c61-2d5f9a3e7b14.json",
+   "task": "MPI-385",
+   "created_at": "2026-07-30T12:20:00Z"
+  },
   {
    "id": "f2c17c9e-3f5d-41dd-b5c6-8893d8f9cbad",
    "path": "state/handoffs/f2c17c9e-3f5d-41dd-b5c6-8893d8f9cbad.json",
