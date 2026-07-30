@@ -3,11 +3,11 @@
   "id": "MPI-398",
   "title": "Everything is slow while remote-connected - Model Library, Settings disk bar, Disconnect unlock",
   "description": "RESOLVED BY MEASUREMENT 2026-07-30, BEFORE ANY CODE: the user ran the discriminator and everything opens SUPER FAST locally. So this is NOT a renderer or tile bug and the MpiTileSheet bisect (f76791ff MPI-356 / d76b60c8 MPI-394) is WASTED WORK - do not do it. Everything below is kept only as the record of what was ruled out. SYMPTOMS, all while remote-connected to a CPU Pod in EU-RO-1: Model Library painted a blank grid for 10-15s on a cold renderer (app start and Ctrl+R, even the volume bar missing); Settings took a long time to show the disk-usage bar and to unlock Disconnect. Settings is NOT an MpiTileSheet consumer, which is what first broke the tile hypothesis. PRIME LEAD, from the user's recollection and confirmed on the board: MPI-326 'Remote: op-dropdown flashes + auto-closes on ~1s timer (models:checked rebuild storm)' is DONE, and its own description records 'Pod logs show a per-second POST /wrapper/models/status among the telemetry GETs'. But MPI-326 gated the models:checked EMIT on a real diff - it did not reduce the REQUEST RATE. js/data/modelRegistry.js still states 'the remote connection heartbeat re-checks install-state every ~5s'. So the storm may never have been fixed, only silenced: the UI stopped churning while the wrapper kept being hammered. Either it regressed, or it was always only half-fixed. WHAT TO DO: (1) count the actual requests - watch the Pod's wrapper log, or instrument routes/remoteModels.js and routes/remotePodLifecycle.js, and get a real requests-per-minute figure for /wrapper/models/status, /wrapper/disk and the telemetry GETs while merely IDLE on the Model Library. (2) Time one wrapper round trip in isolation to separate 'each call is slow' (EU-RO-1 latency, cannot fix, belongs to MPI-397) from 'there are far too many calls' (fixable here). (3) Only then decide. Do NOT start by reading renderer code. RELATED: MPI-397 is the same family - the card move waits on /comfy/models/check. If the root here is request VOLUME, fixing it may make MPI-397 feel fine without ever touching the disk-truth invariant, which would be the better outcome.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-07-30T00:40:00Z",
-  "updated_at": "2026-07-30T03:20:00Z",
+  "updated_at": "2026-07-30T11:10:00Z",
   "labels": [
     "bug",
     "remote",
@@ -31,10 +31,9 @@
     "handoffs": null,
     "research": null
   },
-  "activeSessionTitle": "Parked after MPI-398 root-cause + live verification; next up is the 1.3 run-up",
   "attention": {
-    "state": "required",
-    "reason": "Parked, not abandoned. Fix is shipped and user-verified live ('it was instant'); the card is held in validating only because closing it was never explicitly approved. Two things a next session must know: (1) ask the user to close it, and (2) wrapper 0.2.40 is on the R2 dev channel while stable is still 0.2.38 - mpi-release owns the promote gate, and a 1.3 release without publish-runtime.sh promote ships released users the OLD Pod runtime and loses this fix entirely.",
-    "updated_at": "2026-07-30T03:20:00Z"
+    "state": "cleared",
+    "reason": "Closed 2026-07-30 on the user's explicit approval. The one live gate that outlives this card is NOT a card task: wrapper 0.2.40 sits on the R2 dev channel while stable is still 0.2.38, so a 1.3 release without publish-runtime.sh promote ships released users the OLD Pod runtime and loses this fix. That gate is owned by mpi-release's pre-flight, which diffs the two channel manifests - it is not tracked here.",
+    "updated_at": "2026-07-30T11:10:00Z"
   }
 }

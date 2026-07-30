@@ -37,7 +37,6 @@
       "MPI-401"
     ],
     "doing": [
-      "MPI-398",
       "MPI-393",
       "MPI-392",
       "MPI-385",
@@ -51,6 +50,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-398",
       "MPI-399",
       "MPI-396",
       "MPI-395",
@@ -93,8 +93,16 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-30T01:40:00Z",
+  "updated_at": "2026-07-30T11:10:00Z",
   "events": [
+    {
+      "at": "2026-07-30T11:10:00Z",
+      "type": "task.moved",
+      "task": "MPI-398",
+      "from": "doing",
+      "to": "done",
+      "note": "CLOSED on the user's explicit approval. Fix shipped on the POD, not in the app, and was user-verified live on a fresh Pod - user's words 'it was instant' against the reported 10-15s blank grid. Root cause was found by MEASUREMENT and both of the card's own hypotheses were WRONG: POST /wrapper/models/status fired ZERO times in 62s of idle, so MPI-326's storm has NOT regressed and must not be reopened on this evidence, and EU-RO-1 per-call RTT is fine at ~100ms. The real cause: the Pod wrapper runs a SINGLE asyncio loop that also carries the WS pump and the ComfyUI stdout drain, and TWO handlers did multi-second synchronous filesystem work on it, so each one froze every other request. /wrapper/disk ran `du -sb` over a 150GB network volume as a bare subprocess.run with every concurrent caller spawning a RIVAL walk (1.8s idle -> 32s p50 -> one 125s call that Cloudflare 524'd, /health failing 3 of 4); /wrapper/models/status looped _is_complete_on_disk over 100+ deps in one POST (~10s, dragging /wrapper/stats from 94ms to 8693ms). Both are MPI-191's /wrapper/stats fix applied to the endpoints it missed - asyncio.to_thread, plus single-flight behind a lock and a 60s TTL cache for disk, invalidated by _manifest_record_model and models_delete. models/status is deliberately NOT cached: install-state feeds the whole download UI and must stay truthful. Wrapper 0.2.38 -> 0.2.40, mpi-ci e760604, Vision 77d34ea0. Cold-open numbers: /health p50 5013ms with 3 of 4 ERR -> 141ms 30/30 OK; /wrapper/manifest 13714ms -> 282ms; /wrapper/disk p50 32294ms max 125072ms -> 371ms; models/status 8679ms -> 2259ms. LIVE GATE THAT OUTLIVES THIS CARD, not tracked as a card: dev is 0.2.40 and stable is still 0.2.38, so a 1.3 release without publish-runtime.sh promote ships released users the OLD runtime and loses this fix - mpi-release's pre-flight owns that check. /wrapper/ls has the IDENTICAL blocking pattern and is worse than either fixed handler, but it has ZERO consumers in routes/ or js/ - manual diagnostic only, left alone deliberately. Full record in tasks/MPI-398/validation.md."
+    },
     {
       "at": "2026-07-30T01:40:00Z",
       "type": "task.moved",

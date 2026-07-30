@@ -86,6 +86,24 @@ Pod-observable bit, and it is free on any connect you are already making: uninst
 the volume and confirm its job leaves `/comfy/downloads/status` immediately rather than the tile
 drawing a 100% bar where the Install chip belongs. If the bar shows, reopen MPI-396.
 
+### 7. MPI-397 — does the card move still lag the toast? (**re-measure, added 2026-07-30**)
+
+Free — it is the **same uninstall** item 6 already asks you to do. Just hold a stopwatch.
+
+- Time **toast → section move** for one uninstall AND one install. Both directions lag; the
+  card title once said uninstall only and understated it.
+- **Why it is here:** every number on MPI-397 was taken on wrapper **0.2.38**, before MPI-398.
+  The lag waits on `/comfy/models/check` → `remoteModelsCheck` → `POST /wrapper/models/status`
+  ([remoteModels.js:374](../../../../routes/remoteModels.js#L374)) — precisely the handler
+  MPI-398 moved off the event loop, cold-open p50 **8679ms → 2259ms**.
+- **Expected:** ~2s, not the reported ~10s. So: **mostly** fixed, maybe not fixed.
+- **If it is about a frame:** close MPI-397 as fixed-by-MPI-398 and skip the product decision
+  entirely. **If it is still seconds:** record the number and leave the card parked — the fix
+  needs an optimistic install-state flip, which relaxes the
+  install-state-IS-files-on-disk invariant. That is the user's call, not a bug fix.
+- `models/status` is deliberately **uncached** (install-state feeds the whole download UI and
+  must stay truthful), so this will never be free. Do not "fix" it by caching it.
+
 ---
 
 ## NOT on this card — a Pod cannot settle these
