@@ -1,0 +1,163 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "d621627a-ffb0-4645-bdca-c4f6b18414ad",
+ "generated_at": "2026-07-31T00:05:00Z",
+ "from_session": null,
+ "to_role": "verifier",
+ "status": "open",
+ "session": {
+  "name": "MPI-391 section D (Linux) - three pre-existing bugs found and FIXED, release blocker MPI-409 open, nothing published",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Continue MPI-391's cross-platform validation sweep at section D (Linux) on a real Linux desktop, after Windows closed to the pre-publish limit on 2026-07-30.",
+  "status": "in_progress",
+  "summary": "The Linux box never finished provisioning an engine, but it earned its keep anyway: it exposed THREE pre-existing bugs that every fast machine had hidden, all now fixed, changelogged and rebuilt (MPI-406, MPI-407, MPI-408). A fourth issue - MPI-409 - was then caught in the rebuild itself and is a RELEASE BLOCKER. MPI-198 and MPI-249, the actual reasons for going to Linux, are both still unverified.",
+  "deliberately_not_done": "gh release create. Gate 2. Nothing is published. publish-runtime.sh promote was already done in the previous session - do NOT re-run it."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "MPI-387 A Linux half CLOSED. tar.gz 502967733 bytes byte-exact, ONE top-level folder, 6384 files on disk (+1 over the manifest's 6383 - Windows showed the same +1, 6418 recorded vs 6419 actual, so it is the manifest not counting itself). uv/uv and the Electron binary both kept their exec bits. app/ + resources/ + uv/ at top level is the CORRECT Linux layout (build-portable.mjs:39-65 - resources/app is win32-only).",
+   "MPI-406 FOUND AND FIXED. A --cpu engine install resolved the entire CUDA 13 stack. Proven from the engine's own requirements.compiled: torch==2.13.0 with NO +cpu tag, triton==3.7.1, and 14 nvidia-* wheels. Root cause: --fast-deps routes through comfy-cli's DependencyCompiler which IGNORES the vendor flag - the identical fall-through was already exempted for --m-series at engine.js:370-372, but --cpu kept --fast-deps. Fixed by gating --fast-deps on --nvidia so --cpu and --amd both take the standard vendor-aware install.",
+   "MPI-407 FOUND AND FIXED. main.js:789-795 gives up waiting for the server after a hardcoded 5000ms and creates the window anyway; the server bound 11.6s after launch, so loadURL was refused with ERR_CONNECTION_REFUSED and NOTHING retried it - permanently black window. No user-accessible recovery, because Menu.setApplicationMenu(null) at main.js:379 leaves Ctrl+R unbound. Fixed with a did-fail-load handler retrying the main-frame load every 500ms (cap 60, skips ERR_ABORTED). The 5000ms constant was deliberately left alone - raising it is the symptom patch.",
+   "MPI-408 FOUND AND FIXED. uv venv exits 2 with 'A virtual environment already exists at: comfy-venv' whenever the target exists - a COMPLETE venv, not just a broken one. So the first attempt past step 1 poisons every later one and the Installation Failed dialog's Retry button can NEVER succeed on Linux/macOS, whatever originally failed. Root cause is an asymmetry inside _provisionUvEngine: step 0b (engine.js:341-347) already clears a stale ComfyUI workspace, but its sibling comfy-venv had no guard. Fixed with --clear.",
+   "All three fixes committed (f2e966b1, 86deac5b), changelogged with three user-facing entries, release:approve re-run BOTH times, release:check passing, pushed to origin/master (HEAD 892f69a6 plus the MPI-409 kanban commit).",
+   "CI rebuild run 30588169394 SUCCEEDED on all three platforms in ~3.5 minutes, from SHA 892f69a6. The three FULL artifacts are valid and now sit in D:/CubricStudio/Vision/Builds/v1.3.0/ - they carry all three fixes.",
+   "MPI-409 CAUGHT before anything shipped. See constraints - this is the blocker."
+  ],
+  "pending": [
+   "START HERE - MPI-409, the release blocker. Restore release-baselines/*.json to their 36f972cf~1 content (the 1.2.0 manifests: 6362 win32 / 6325 linux / 6505 darwin), push, rebuild, and confirm the update bundles are back to roughly 451MB windows / 2.8MB linux / 3.3MB macos AND that each bundle's update-manifest.json reads fromVersion 1.2.0. Only restamp the baselines to 1.3.0 AFTER publishing.",
+   "MPI-198 STILL UNVERIFIED - the original reason for the Linux trip. Needs a working LOCAL engine on Linux, then any default Krea 2 t2i. Its plan.md:24 precondition is STRICTER THAN REALITY (see key_decisions).",
+   "MPI-249 Linux half NOT achievable on the current Linux box (no GPU, 7.7GB RAM). Needs a GPU Linux machine. MPI-249 closes only when Linux AND macOS are both done.",
+   "MPI-406 / MPI-407 / MPI-408 are FIXED but only CODE-VERIFIED. None has been seen working live - the Linux run never got past provisioning. They stay in doing until the fresh build proves them.",
+   "THEN the rented Mac LAST (section C, MPI-370). It is the only machine that bills by the hour.",
+   "THEN gh release create, still held. Gate 2 has NOT happened."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-391",
+  "title": "1.3.0 cross-platform validation sweep - Windows SAC, macOS, Linux (umbrella)",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-391/",
+  "links": {
+   "plan": null,
+   "checklist": "checklist.md",
+   "validation": null,
+   "brief": "brief.md",
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-391/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "Four new cards written with full evidence transcribed into their briefs, so the Linux app.log could be deleted safely: MPI-406 (requirements.compiled dump), MPI-407 (verbatim black-window log sequence), MPI-408 (verbatim uv stderr), MPI-409 (the baseline size comparison).",
+   "tasks/MPI-391/checklist.md section D rewritten: machine profile and its consequence (MPI-198 provable here, MPI-249 not), MPI-387 A Linux half ticked with evidence, the three bugs recorded, and the MPI-198 precondition correction.",
+   "Stale update bundles quarantined into D:/CubricStudio/Vision/Builds/v1.3.0/INVALID-update-bundles-see-MPI-409/ so a wrong asset cannot be published by accident."
+  ],
+  "pending": [
+   "A MEMORY ENTRY IS WRONG AND NEEDS THE USER'S APPROVAL TO FIX: feedback_public_release_full_installers_only claims a GitHub release attaches the 3 FULL installers only and NOT the *-update-* zips. DISPROVEN 2026-07-30 - gh release view v1.2.0 lists all three update zips as real assets (~95MB each). That wrong memory is what nearly let MPI-409 through as harmless. Project rules require confirming before modifying a memory entry, so it was left in place.",
+   "TWO DOC EDITS still PROPOSED, NOT APPROVED, in docs/releases/github-release-checklist.md, carried from the previous handoff: the Windows SAC/MOTW precondition commands, and softening 'Windows will show' to 'may show'.",
+   "MPI-409 suggests a durable process fix worth writing into the release docs: the baseline restamp must be a POST-PUBLISH step, since doing it early silently breaks any rebuild of the version being shipped.",
+   "PROPOSED, NOT APPROVED, carried from five handoffs back: a docs/runpod-remote-engine.md section 10 subsection on the wrapper event loop.",
+   "MEMORY.md compaction - deferred a TENTH time.",
+   "state/index.json active_handoffs is now 16 entries, most consumed. Cleanup finding only."
+  ]
+ },
+ "next_action": {
+  "description": "Fix MPI-409 first - it blocks publish. Restore release-baselines/*.json from 36f972cf~1, push, rebuild via the mpi-ci workflow, and verify the update bundles are large again and stamped fromVersion 1.2.0. Then get the new Linux build onto the Linux desktop (the user is re-uploading via Drive) and retry the engine install to live-verify MPI-406, MPI-407 and MPI-408, and finally MPI-198. Do not publish anything.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "MPI-198's plan.md:24 precondition is STRICTER THAN REALITY and should not be followed literally. It asks for a hand-installed sub-subfoldered LoRA, but the shipped templates already bake backslashed subfolder values everywhere: krea2_t2i_*.json:1197 'krea-2\\extra\\...', :1296-1317 lora_1..lora_5 'krea-2\\style\\...', ltx_i2v*.json:1222 three levels deep, klein_t2i.json:542, wan5b_t2v.json:120. Any default Krea 2 t2i on the Linux local engine reproduces it.",
+   "SDXL and the masking graph CANNOT prove MPI-198. Every path value in t2i_sdxl_realistic.json is flat ('SDXL_Realistic.safetensors', lora_name 'None'), and img_auto_mask.json's three values are flat or forward-slash-only. Do not waste a download on either expecting a result.",
+   "MPI-198 does NOT need a completed generation. value_not_in_list is enum-membership, validated at /prompt BEFORE any weight is read, so a 200 + prompt_id is the proof. This is why MPI-198 is closable on a GPU-less box and MPI-249 is not.",
+   "The Windows validation from the previous session STILL HOLDS against the new build and does not need redoing. Only main.js, routes/engine.js and releaseNotes.js changed: the Electron binary is byte-identical so the SAC/MOTW result stands, file counts are unchanged so MPI-387 A stands, update-from-zip.bat is untouched so the transition test stands, and Windows never reaches _provisionUvEngine. A two-minute launch smoke on the new Windows extract is worth doing as insurance, not the full sweep.",
+   "The three fixes were landed on 1.3.0 itself rather than deferred to 1.3.1, at the user's explicit call, because nothing is published yet. Version stays 1.3.0 - there is no released 1.3.0 to collide with.",
+   "The Linux machine (ThinkPad X121e) thermally shut down mid-install and reaches ~64C at idle. It is a legitimate stress-test box but cannot complete a generation. Treat a shutdown as a hardware limit, not a bug.",
+   "requirements.compiled and override.txt in the engine root are DependencyCompiler outputs and are excellent evidence - reading them settled MPI-406 in one step without re-running anything."
+  ],
+  "constraints": [
+   "MPI-409 IS A RELEASE BLOCKER. Do not publish until the update bundles are rebuilt against the 1.2.0 baselines. The three FULL artifacts currently in D:/CubricStudio/Vision/Builds/v1.3.0/ ARE valid (fulls do not depend on baselines); the update zips there are quarantined in INVALID-update-bundles-see-MPI-409/.",
+   "NOTHING IS PUBLISHED. gh release create has not run. Gate 2 has not happened.",
+   "release:approve IS INTERACTIVE - it prompts 'Approve these notes for the build? [y/N]' and a plain piped run silently does NOT approve. Verify docs/releases/.approved-1.3.0.json actually changed afterwards. release:check passes either way and will NOT catch it. Use: printf 'y\\n' | node scripts/release-notes-approval.mjs approve",
+   "publish-runtime.sh promote is ALREADY DONE. Do not re-run it. Stable is wrapper 0.2.40.",
+   "A RunPod run does NOT verify the local engine on Linux. See memory feedback_runpod_not_local_engine_proof.",
+   "Linux/macOS use the uv/comfy-cli path (routes/engine.js _provisionUvEngine); Windows uses the prebuilt archive. No Windows result transfers to the uv path, and vice versa.",
+   "The CI workflow is cubric-vision-portable.yml in MadPonyInteractive/mpi-ci, workflow_dispatch, and it builds from a PUSHED ref in the source repo - local commits are invisible to it. Its ref default is 'main' but this repo is 'master', so always pass the ref explicitly. Invocation used: gh workflow run cubric-vision-portable.yml -R MadPonyInteractive/mpi-ci -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=<SHA> -f version=1.3.0. A full three-platform build takes ~3.5 minutes.",
+   "board.json is 2-SPACE indent with a trailing newline; task.json format VARIES PER CARD - measure it. Every JSON write this session used a serialise-and-compare round-trip guard before writing, and it should stay that way. next_id is now 410.",
+   "Ask in PLAIN TEXT, never AskUserQuestion. Read memory feedback-index.md before non-trivial work; it is NOT auto-loaded.",
+   "rg -r is --replace, NOT recursive. It silently rewrote a search this session and returned nothing. Never pass -r."
+  ],
+  "files_modified": [
+   "main.js",
+   "routes/engine.js",
+   "js/data/releaseNotes.js",
+   "docs/releases/.approved-1.3.0.json",
+   ".agents/mpi-kanban/board.json",
+   ".agents/mpi-kanban/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-198/",
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-406/",
+   ".agents/mpi-kanban/tasks/MPI-407/",
+   ".agents/mpi-kanban/tasks/MPI-408/",
+   ".agents/mpi-kanban/tasks/MPI-409/"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-409/task.json",
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-408/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-407/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-406/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-198/plan.md"
+  ],
+  "commits": [
+   "f2e966b1 fix(startup,engine): retry the renderer load, and stop --cpu installs pulling CUDA",
+   "27850380 chore(kanban): MPI-406 + MPI-407 from the Linux leg; MPI-198 to doing",
+   "28673ca4 docs(release): changelog the black-window and CUDA-download fixes",
+   "86deac5b fix(engine): --clear on uv venv so Retry works after a failed install",
+   "892f69a6 chore(kanban): MPI-408 - Retry after a failed engine install is impossible on Linux/macOS",
+   "(plus the MPI-409 kanban commit, made after 892f69a6)"
+  ],
+  "build_facts": {
+   "current_build": "mpi-ci run 30588169394 from SHA 892f69a6 - success on all three platforms, ~3.5 min. FULL artifacts VALID and in place; update bundles INVALID (MPI-409).",
+   "superseded_builds": "30559394491 (the original 1.3.0 cut - its update bundles were CORRECT, built before the restamp, but its code lacks all three fixes) and 30587756205 (built from 28673ca4, superseded by MPI-408).",
+   "artifacts_dir": "D:/CubricStudio/Vision/Builds/v1.3.0/ - three NEW full artifacts; stale update zips quarantined in INVALID-update-bundles-see-MPI-409/",
+   "baseline_state": "release-baselines/*.json currently hold the 1.3.0 manifests (6418/6383/6563) as of commit 36f972cf. The 1.2.0 manifests (6362/6325/6505) are at 36f972cf~1.",
+   "linux_machine": "ThinkPad X121e, Ubuntu 22.04, 4 threads, 7.7GB RAM, no NVIDIA driver, 221GB free. Weights at /home/mad-pony/CubricModels (OUTSIDE the install tree - only checkpoints/, 6.7GB of 0.0.11-era SDXL). Thermally shuts down under sustained load."
+  }
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "releases",
+   "portable-distribution",
+   "comfy_engine",
+   "comfy_injection"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/comfy_injection.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-31T00:05:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing the Cubric Vision 1.3.0 release on master. Read .agents/mpi-kanban/state/handoffs/d621627a-ffb0-4645-bdca-c4f6b18414ad.json first. NOTHING IS PUBLISHED - gh release create has not run and Gate 2 has not happened. The Linux leg of MPI-391 section D ran on a 2011 ThinkPad X121e with no GPU; it never finished provisioning an engine, but it exposed THREE pre-existing bugs that every fast machine had hidden, all now FIXED, changelogged and rebuilt: MPI-406 (a --cpu install resolved the whole CUDA 13 stack because --fast-deps ignores the vendor flag - the same fall-through macOS was already exempted from), MPI-407 (a slow server start left a PERMANENTLY black window, because main.js gives up after 5s and nothing retried the refused loadURL, with no user recovery since Ctrl+R is unbound), and MPI-408 (uv venv refuses ANY existing venv, so the Installation Failed dialog's Retry button could never succeed on Linux/macOS). All three are CODE-VERIFIED ONLY - none has been seen working live. YOUR FIRST JOB IS MPI-409, A RELEASE BLOCKER caught during the rebuild: commit 36f972cf restamped release-baselines/*.json to the 1.3.0 manifests BEFORE 1.3.0 shipped, so every rebuild now emits a 1.3.0-to-1.3.0 update delta - the Windows update bundle came out at 970KB instead of the correct 451MB, and v1.2.0's GitHub release proves update zips are real published assets. Restore the baselines from 36f972cf~1, push, rebuild, and confirm the bundles are large again and stamped fromVersion 1.2.0 before anything is published; restamp only AFTER publishing. The three FULL artifacts in D:/CubricStudio/Vision/Builds/v1.3.0/ are valid and carry the fixes; the stale update zips are quarantined in a subfolder there. Windows validation from the earlier session still holds and does not need redoing. After MPI-409, live-verify the three fixes on the new Linux build and finally MPI-198 - and note that MPI-198's plan.md:24 precondition is stricter than reality, because the shipped templates already bake backslashed subfolder LoRA paths, so any default Krea 2 t2i reproduces it, while SDXL and the masking graph cannot. MPI-249's Linux half needs a GPU machine and is not achievable on that laptop. release:approve is INTERACTIVE and a piped run silently fails to approve - always check that docs/releases/.approved-1.3.0.json actually changed, because release:check will not catch it. Ask in plain text, never AskUserQuestion."
+}

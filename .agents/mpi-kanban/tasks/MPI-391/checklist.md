@@ -80,7 +80,18 @@ Done 2026-07-30 except the promote. Evidence: `tasks/MPI-369/validation.md`
 
 ## D · Linux — separate machine
 
-- [ ] Loader-path heal reproduced: LOCAL engine + **subfoldered** LoRA — *MPI-198* (see its `plan.md` / `checklist.md`)
+**Machine: ThinkPad X121e, Ubuntu 22.04, 4 threads, 7.7 GB RAM, NO NVIDIA driver
+→ the app provisions `--cpu` ([engine.js:366](../../../../routes/engine.js#L366)).
+It thermally shut down mid-install once.** Consequence for this section:
+**MPI-198 IS provable here** (`value_not_in_list` is raised at `/prompt`
+validation, before any weight loads — a `200` + prompt_id is the proof, and the
+generation may then fail on execution without affecting the claim).
+**MPI-249's Linux half is NOT** — it needs a completed generation, which this
+box cannot deliver. MPI-249 stays open for a GPU Linux machine.
+
+- [x] Extract integrity — *MPI-387 A, Linux half* ← `tar.gz` **502967733 bytes**, byte-exact. ONE top-level folder. **6384 files** on disk (+1 over the manifest's 6383, matching Windows' +1: 6418 recorded, 6419 actual). `uv/uv` (55 MB) and `app/node_modules/electron/dist/electron` (206 MB) both kept their exec bits — the `[ -x "$ROOT/uv/uv" ]` gate at [start-with-terminal.sh:11](../../../../scripts/portable/linux/start-with-terminal.sh#L11) would otherwise silently skip `CUBRIC_UV_BIN`. Layout `app/` + `resources/` + `uv/` is CORRECT for Linux ([build-portable.mjs:39-65](../../../../scripts/build-portable.mjs#L39-L65): `resources/app` is win32-only)
+- [ ] **THREE BUGS FOUND AND FIXED — all pre-existing, none ever seen before.** MPI-406 (`--cpu` pulled the whole CUDA 13 stack), MPI-407 (slow start → permanently black window, no recovery), MPI-408 (Retry after a failed install can NEVER succeed). All three fixed, changelogged and rebuilt. **Fixes are code-verified but NOT yet live-verified** — the section-D run never got past engine provisioning
+- [ ] Loader-path heal reproduced: LOCAL engine + **subfoldered** LoRA — *MPI-198* (see its `plan.md` / `checklist.md`). **NOTE: `plan.md:24`'s precondition is stricter than reality** — it asks for a hand-installed sub-subfoldered LoRA, but the shipped templates already bake backslashed subfolder values everywhere (`krea2_t2i_*.json:1197` `krea-2\extra\…`, `:1296-1317` `lora_1..5` `krea-2\style\…`, `ltx_i2v*.json:1222` 3 levels, `klein_t2i.json:542`, `wan5b_t2v.json:120`). Any default Krea 2 t2i on the Linux local engine is enough. **SDXL and the masking graph canNOT prove it** — every path value there is separator-free or forward-slash-only
 - [ ] Plain install → launch → generate smoke passes — *MPI-198 + MPI-249* (Linux generation has never been validated)
 - [ ] Extracted from the real `CubricVision-linux-x64-v1.3.0.tar.gz`, LOCAL engine provisioned via the uv/comfy-cli path (`routes/engine.js _provisionUvEngine`, NOT the Windows prebuilt-archive path), 11 UW nodes installed, one model per family generated — *MPI-249* (Linux half)
 
