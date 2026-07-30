@@ -94,7 +94,7 @@ NOT mechanically split these):
 | Release index (dev_mode, stage derivation, gating) | [releases/README.md](releases/README.md) |
 | Release flow (GitHub-only: bump digit → build → publish) | `.claude/skills/mpi-release/SKILL.md` |
 | Portable artifact contract | [releases/portable-distribution-contract.md](releases/portable-distribution-contract.md) |
-| GitHub release checklist + macOS testing | [releases/github-release-checklist.md](releases/github-release-checklist.md) |
+| GitHub release checklist + **where to rent/spin a test machine** (clean Windows w/ GPU, Linux, macOS) | [releases/github-release-checklist.md](releases/github-release-checklist.md) |
 | Install-test a fresh portable (per-folder data trap, RunPod key carry-over) | [playbooks/install-test/README.md](playbooks/install-test/README.md) |
 | Build evidence log + macOS fixes | [releases/build-experience-log.md](releases/build-experience-log.md) |
 | Per-version release notes | `releases/YYYY-MM-DD-v<ver>.md` |

@@ -126,11 +126,69 @@ Ask contributors to include these fields when reporting a validation result:
 For macOS reports, also ask for Gatekeeper behavior and whether the app was
 launched through Finder, Terminal, or both.
 
-## macOS Testing via Rentamac
+## Where to get a test machine (surveyed 2026-07-30)
 
-Rent a cloud Apple Silicon Mac at **https://rentamac.io**; drive remotely via DeskIn. Re-subscribe only when something specifically needs testing on real Apple hardware.
+Current kit: the maintainer's Windows dev PC, a weak Ubuntu laptop, a borrowed
+**GPU-less** Windows box, and a rented Mac. The gap this section fills: a *clean*
+Windows host **with a GPU** — the class of failure that passes on the dev PC and
+dies elsewhere (MPI-387 D was exactly this).
 
-**Gotchas:**
+### Windows
+
+1. **Windows Sandbox** — built into Windows 11 Pro, free, boots in seconds,
+   discards on close. Catches the missing-redist / missing-DLL / first-run /
+   silent-no-window class without renting anything. **No CUDA** in the sandbox, so
+   it proves *launch*, never *generation*. Run this before paying for anything.
+2. **Cloud GPU Windows VM, by the hour, RDP** — a full smoke test costs under a
+   dollar, no minimum: Vultr A16 ~$0.51/hr (markets RDP/VNC/Parsec desktops),
+   Paperspace M4000 $0.45/hr / A4000 $0.76/hr, AWS `g4dn.xlarge` ~$0.75/hr.
+   **Fidelity gap that matters:** these are datacenter cards (T4/A16/L4) on
+   datacenter drivers, not GeForce + Game Ready. Reproduces dependency/environment
+   bugs perfectly; may *not* reproduce consumer-driver bugs. **Unverified:** whether
+   the Vultr/Paperspace Windows images are Windows Server or a real Win 10/11
+   desktop — Server preinstalls different redistributables, so confirm before
+   trusting a pass.
+
+### Linux
+
+**RunPod** is already in the pipeline (`mpi-ci` builder + product pods) — Linux +
+NVIDIA by the second, add noVNC for a desktop. Caveat: it is a container, no
+systemd, so it proves app + engine, not a distro install. Otherwise Scaleway L4
+€0.79/hr, Genesis RTX 3080 $0.08/hr.
+
+### macOS
+
+Rent a cloud Apple Silicon Mac at **https://rentamac.io** ($3.30/day, M4, DeskIn
+remote — cheapest verified). Re-subscribe only when something specifically needs
+testing on real Apple hardware. Alternatives: MacinCloud $1/hr (25 h prepaid
+minimum), Scaleway Mac mini M4 €0.22/hr, AWS `mac-m4.metal` $1.23/hr — but **AWS
+and Scaleway both carry a 24 h minimum**; that is Apple's SLA, not the vendor's, so
+"hourly Mac" is really daily everywhere.
+
+**macOS cannot be virtualised as a substitute**, on two independent grounds: the
+Apple SLA restricts macOS to Apple-branded hardware, and every x86 hackintosh route
+physically cannot launch our **arm64-only** build (Rosetta 2 exists only on Apple
+Silicon). Rent real hardware.
+
+**macOS gotchas:**
 
 - **Gatekeeper quarantine**: any downloaded build is quarantined. Reliable clear: `xattr -dr com.apple.quarantine "<folder>"` in Terminal, then double-click `start.command`. Include this step in mac release instructions — it is the only working first-launch path for un-notarized builds.
 - **GitHub API rate limit**: a rented Mac's datacenter IP shares GitHub's unauthenticated rate limit (60 req/hr per IP). The online updater may 403 even when code is correct. Diagnose with `curl -s https://api.github.com/rate_limit` before blaming the updater.
+
+### Dead ends — do not re-research these
+
+- **BrowserStack / LambdaTest / AWS Device Farm** — browser and mobile testing only.
+  BrowserStack's own FAQ: *"installing native applications on Windows or macOS is
+  not supported."* Useless for a desktop build.
+- **BuildJet** shut down; **Travis CI** dropped macOS (March 2025); **MacStadium** is
+  monthly-only from $149/mo.
+- **GitLab SaaS runners and Azure Pipelines** give zero interactive access to hosted
+  runners. Most CI vendors are pipeline-only — you need a build job to exist before
+  you can SSH in (CircleCI "rerun with SSH", Codemagic SSH+VNC, GitHub Actions +
+  tmate all work, but all need a pipeline).
+- **No single provider rents all three OSes interactively** except AWS EC2 (all three,
+  one bill, but the Mac 24 h minimum makes it ~$29.52/session) and **Namespace**
+  (`nsc create` on-demand VMs + Devboxes with SSH/VNC/RDP — the only true
+  "rent me a machine for an hour" service found, but Windows is early-access and
+  macOS pricing is unpublished). No 2025–26 entrant added macOS alongside Win/Linux
+  GPU; the Mac niche stays Mac-only.
