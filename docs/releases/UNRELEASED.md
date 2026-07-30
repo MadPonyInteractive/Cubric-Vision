@@ -192,6 +192,23 @@
 
 ## fixes
 
+- **The app is no longer slow while connected to a cloud Pod.** Opening your
+  model library could leave the grid blank for ten to fifteen seconds, and
+  Settings would sit there before showing how full your volume was or letting you
+  press Disconnect. The cause was on the Pod, not in the app: two things it does
+  routinely — measuring how much space your volume uses, and checking which
+  models are installed on it — were being done in a way that made the Pod stop
+  answering anything else until they finished. Measuring a 150GB volume takes a
+  couple of seconds, and the app asked for it every ten seconds, so the Pod spent
+  much of its time unable to reply. Worse, each new request started its own fresh
+  measurement on top of the last, which fed on itself: one measurement was
+  observed taking over two minutes and being cut off by the network, with the
+  Pod's own health checks failing while it happened. Both jobs now run out of the
+  way of everything else, the volume measurement is taken once and shared rather
+  than repeated per request, and it refreshes immediately whenever you install or
+  remove a model. The library and Settings now open straight away. Requires no
+  action from you — it lands the next time your Pod starts.
+
 - **If the app fails to start, it now says so instead of vanishing.** A crash
   during startup used to close the window with nothing left behind — no message
   on screen and nothing written to the log — so there was no way to tell whether

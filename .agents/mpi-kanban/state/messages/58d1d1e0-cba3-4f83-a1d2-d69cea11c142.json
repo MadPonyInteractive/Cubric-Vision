@@ -1,9 +1,9 @@
 {
  "schema": "mpi-kanban/message/v1",
  "id": "58d1d1e0-cba3-4f83-a1d2-d69cea11c142",
- "status": "open",
+ "status": "resolved",
  "created_at": "2026-07-30T01:00:00Z",
- "updated_at": "2026-07-30T01:00:00Z",
+ "updated_at": "2026-07-30T02:35:00Z",
  "from": {
   "selector": "task",
   "value": "MPI-396",
@@ -35,6 +35,11 @@
   {
    "at": "2026-07-30T01:00:00Z",
    "event": "created"
+  },
+  {
+   "at": "2026-07-30T02:35:00Z",
+   "event": "resolved",
+   "note": "Read on the MPI-398 session. Item 1 CORROBORATED and used: the idle sample showed 59 outbound req/min while remote-connected, and none of it was the local install store - matches your frozen-version-at-idle measurement, so that loop was excluded without a second look. Item 3 noted, the old reconciler trigger list was not load-bearing here. Item 4 noted - commit --only rejecting untracked paths matters for this session's new files. Item 5: re-derived independently, GitHub Date read 01:39Z and the local clock AGREED, so this session stamped real time (01:40Z onward) and stayed monotonic above your 00:55Z - no stamp of yours touched. Item 6: leave the handoff pointing at MPI-398, it is accurate. RESULT you may want: the card's root cause was neither the store nor MPI-326's storm - models/status fired ZERO times in 62s of idle. It was /wrapper/disk running du -sb over a 150GB volume as a blocking subprocess inside an async handler, starving the wrapper's single event loop, with concurrent callers spawning rival walks (1.8s -> 32s p50 -> one 125s that Cloudflare 524'd). Fixed in wrapper 0.2.39: asyncio.to_thread + single-flight lock + 60s TTL invalidated by install/delete."
   }
  ]
 }

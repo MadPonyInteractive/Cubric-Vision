@@ -200,6 +200,23 @@ const POD_IMAGE_VERSION_CPU_DEV = 'v0.17.0-dev';
 // 0.2.36 (MPI-254): aria2 shut-down-on-completion so finalize runs (remote install
 // 100%-hang fix) + true download-progress numerator. Baked in the v0.16.0 image; the
 // app pin lagged at 0.2.33 through v0.15.0 — corrected here.
+// 0.2.39 + 0.2.40 (MPI-398): NO wrapper handler may do multi-second filesystem work on
+// the event loop — it also carries the WS pump and the ComfyUI stdout drain, so one slow
+// handler starves every other request. That is the measured cause of "everything is slow
+// while remote-connected", and it had TWO offenders, both fixed the way MPI-191 fixed
+// /wrapper/stats:
+//   0.2.39 — /wrapper/disk: `du -sb` over the volume moved to asyncio.to_thread, made
+//     single-flight behind a lock (concurrent pollers had each spawned a RIVAL walk:
+//     1.8s -> 32s p50 -> one 125s call that Cloudflare 524'd), plus a 60s TTL cache
+//     invalidated by install/delete so the disk bar still tracks a real change.
+//   0.2.40 — /wrapper/models/status: the per-dep _is_complete_on_disk loop moved to
+//     asyncio.to_thread. The app sends every model with every volume dep in ONE POST
+//     (100+ stats on a network volume), measured ~10s, and it starved /wrapper/stats to
+//     8693ms and /health to 5014ms+ERR. Beware the measuring trap that hid it: a
+//     synthetic payload of absent files in ONE directory is ~5x cheaper than the real
+//     spread, so it profiled flat and innocent. Probe with REAL filenames.
+// R2-publish-only, no image rebuild. NOT raised to the pin below on purpose — these are
+// perf fixes, not protocol changes, so an older wrapper must not be rejected.
 const WRAPPER_VERSION = '0.2.36';
 // MPI-329: a network-volume GPU Pod sizes its container disk to MIRROR the volume
 // (+ a small scratch headroom). The volume is the SOURCE of every model, so the
