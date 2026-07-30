@@ -7,7 +7,7 @@ Umbrella card. Per-sub-item, because they ship independently.
 | A — MAX_PATH archive + install-depth preflight | `494228fe` | Unit-tested (`tests/install-path-depth.test.cjs`). **Archive half CLOSED 2026-07-30** on the real 1.3.0 zip via Explorer "Extract All" (6419=6419 files, 84 chars of MAX_PATH headroom) — see § dev PC. The pip/LTXVideo install-depth half still needs the laptop. |
 | B — Impact-Pack `git+sam2` drop | `f371a162` | Pinned by a test. Not re-run on a git-less clean box. |
 | C — failure attribution split | `494228fe` | Unit-tested. Not seen fire on a real failing install. |
-| D — Windows standard-Electron relayout | `bbfd6295` | **Launch half CLOSED 2026-07-30** on the dev PC — `CubricVision.exe` double-clicked from the real extract reached the UI at v1.3.0 through the full first-run chain (see § dev PC). SAC launch and the transition update still need the laptop. See below. |
+| D — Windows standard-Electron relayout | `bbfd6295` | **Launch half CLOSED and transition-applier half CLOSED 2026-07-30** on the dev PC — `CubricVision.exe` from the real extract reached the UI at v1.3.0, and a genuine v1.2.0 install crossed to 1.3.0 via its own shipped `update-from-zip.bat` (see § dev PC). Only SAC launch and the in-app fetch+spawn half remain, and the latter is post-publish by construction. See below. |
 | E — release note | `bbfd6295` | Written into `docs/releases/UNRELEASED.md` § importantChanges. Ships when the version is bumped. |
 | F1 — weight-only node shell reads as installed | `2ee5ee15` | Unit-tested, all 4 call sites fixed. **Not seen fire on a real RIFE install.** See below. |
 | F2 — no-GPU machines get the CUDA build | `2ee5ee15` | **Logged, not fixed** — user decision: keep the build, kill the silence. |
@@ -222,8 +222,48 @@ provisioned, so nothing below D was exercised on this box.
 
 Log location confirmed for the laptop: `<extract root>\user-data\logs\app.log`.
 
+### D transition half — a real 1.2.0 install crossed to 1.3.0, 2026-07-30
+
+Subject: `D:\CubricStudio\Vision\Builds\CubricVision-windows-x64-v1.2.0\`, a genuine
+old-layout install (`app/`, `start.vbs`, `update.bat`, `resources/cubric/update-manifest.json`
+reading `fromVersion null` / `toVersion 1.2.0`). Applied with its OWN shipped
+`update-from-zip.bat` — the 1.2.0-era copy, which is what a real user would run — against
+`CubricVision-windows-x64-update-v1.3.0.zip`. This is the applier half only; the
+fetch+spawn half is post-publish by construction.
+
+Every expected outcome landed:
+
+| Expected | Result |
+|---|---|
+| files copied | `resources/app/package.json` reads **1.3.0** |
+| `start.vbs` gone | absent |
+| stale `app/` left behind | present, still reads **1.2.0** — deliberate, not a leak |
+| `CubricVision.exe` at root | present, plus `CubricVision.exe.old` from the evict-busy-file move |
+| rollback recoverable | `update/rollback/<ISO stamp>/` written per run |
+
+**Why this matters more than the 1.2.0 install count suggests.** 1.3.0 is the first
+standard-Electron layout, so EVERY pre-1.3 user crosses this transition exactly once,
+whichever version they are on — Windows full-build downloads stand at 22 / 1 / 20 for
+v1.0.1 / v1.1.0 / v1.2.0 (upper bound, scrapers included). A broken applier would have
+stranded all of them on a build whose updater cannot reach the new layout, with
+"download the full build again" as the only recovery — which is exactly the paragraph
+1.3.0's What's New already warns about.
+
+**Cosmetic leftover, checked and deliberately not carded:** the install's
+`resources/cubric/update-manifest.json` still reads `toVersion 1.2.0` after the update.
+Nothing at runtime reads it — grepped `main.js`, `routes/`, `js/`, `scripts/`; the only
+consumer is `apply-update.cjs`, and it reads the BUNDLE's copy (`findManifestRoot`, line
+85) to drive the update, never the install's. The app's own version comes from
+`package.json`, which is correct. Stale metadata, no behaviour.
+
+**Not a defect, recorded so it is not re-investigated:** the console showed
+`'ubricVision.exe' is not recognized` after a successful apply. Neither the 1.2.0-era nor
+the 1.3.0 `update-from-zip.bat` contains any relaunch line — both end at
+`exit /b %ERRORLEVEL%`. That was a command typed at the prompt afterwards with its
+leading `C` dropped by the console, not output from the updater.
+
 Not settled here, unchanged: SAC launch behaviour, the missing-`git` install, F1/F2/F3
-(all need a real engine install), and the transition update.
+(all need a real engine install), and the in-app fetch+spawn half of the update.
 
 **Adjacent observation, not a defect, no card yet:** the build ships
 `resources/app/node_modules/@eslint-community/…` and `resources/app/docs/archive/`.
