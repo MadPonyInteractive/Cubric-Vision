@@ -46,13 +46,14 @@ Done 2026-07-30 except the promote. Evidence: `tasks/MPI-369/validation.md`
 - [x] **Smart App Control is genuinely ON** (precondition, else the launch below is vacuous) — *MPI-387 D* ← `VerifiedAndReputablePolicyState = 0x1` (enforced; 0 = off, 2 = evaluation). Plus MOTW verified on the EXTRACTED exe, not just the zip: `CubricVision.exe:Zone.Identifier:$DATA` 99 bytes. Zip arrived byte-exact from Drive at 523,638,376
 - [x] Explorer "Extract All" into default Downloads → ONE folder, `CubricVision.exe` directly inside — *MPI-387 A* ← `C:\Users\hugom\Downloads\CubricVision-windows-x64-v1.3.0\`, exe at its root
 - [x] `CubricVision.exe` launches (NOT a silent block) — *MPI-387 D* ← **THE RESULT OF THE DAY. PASSED.** Double-click went straight into the app on enforced SAC with an unsigned, MOTW-carrying binary: no block, no SmartScreen dialog, no Run-anyway step. The silent-block failure this card was raised for did not occur on the machine that produced it. Evidence: `tasks/MPI-387/validation.md` § SAC laptop
-- [ ] Engine install completes; no `Cannot find command git` — *MPI-387 B*
-- [ ] No MAX_PATH / Long-Path HINT from LTXVideo pip — *MPI-387 A*
-- [ ] No `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` — *MPI-387 F1*
-- [ ] The no-GPU fallthrough WARN appears (presence = fix working) — *MPI-387 F2*
-- [ ] `cupy-wheel` build failure followed by "succeeded" seen and IGNORED as expected — *MPI-387 F3*
-- [ ] Any real failure names the node + real phase, never "extraction failed" — *MPI-387 C*
-- [ ] `app.log` captured from `<extract root>/user-data/logs/` — *MPI-387 evidence*
+- [x] Engine install completes; no `Cannot find command git` — *MPI-387 B* ← **PASSED, and the fix was SEEN FIRING:** `requirements filtered for ComfyUI-Impact-Pack on win32: dropped git+.../sam2`. ComfyUI v0.28.0 portable + all 15 universal nodes installed. Zero `Cannot find command git`
+- [x] No MAX_PATH / Long-Path HINT from LTXVideo pip — *MPI-387 A* ← none. Ran from a real deep path under `engine\ComfyUI_windows_portable\ComfyUI\custom_nodes\`. **Fix A is now closed end to end** (archive half on the dev PC)
+- [x] No `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` — *MPI-387 F1* ← absent; the node downloaded and installed normally
+- [x] The no-GPU fallthrough WARN appears (presence = fix working) — *MPI-387 F2* ← present, and the precondition is genuine (`nvidia-smi not found or failed`). This laptop really has no GPU, so the branch was not simulated
+- [x] `cupy-wheel` build failure followed by "succeeded" seen and IGNORED as expected — *MPI-387 F3* ← exactly as documented. Fails on `ModuleNotFoundError: No module named 'pkg_resources'`, node then prints "Installing cupy...", install completes anyway
+- [ ] Any real failure names the node + real phase, never "extraction failed" — *MPI-387 C* ← **NOT EXERCISED and deliberately not ticked.** The install completed with no fatal failure, so nothing ever needed attributing. A clean run cannot prove this
+- [x] `app.log` captured from `<extract root>/user-data/logs/` — *MPI-387 evidence* ← read and filtered; findings written into `tasks/MPI-387/validation.md` § git-less clean install
+- [ ] ~~Generate smoke on the laptop~~ — **deliberately NOT run.** No GPU means ComfyUI launches `--cpu` ([comfy.js:370](../../../../routes/comfy.js#L370)), so a modern model would take minutes-to-tens-of-minutes per image and prove nothing. Smoke is covered remote on the dev PC and stays local-owned by section D (Linux)
 - [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← **POST-PUBLISH** (see below)
 - [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← **POST-PUBLISH** (see below)
 

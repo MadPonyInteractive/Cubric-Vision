@@ -4,14 +4,14 @@ Umbrella card. Per-sub-item, because they ship independently.
 
 | Fix | Commit | Validation state |
 |---|---|---|
-| A — MAX_PATH archive + install-depth preflight | `494228fe` | Unit-tested (`tests/install-path-depth.test.cjs`). **Archive half CLOSED 2026-07-30** on the real 1.3.0 zip via Explorer "Extract All" (6419=6419 files, 84 chars of MAX_PATH headroom) — see § dev PC. The pip/LTXVideo install-depth half still needs the laptop. |
-| B — Impact-Pack `git+sam2` drop | `f371a162` | Pinned by a test. Not re-run on a git-less clean box. |
-| C — failure attribution split | `494228fe` | Unit-tested. Not seen fire on a real failing install. |
+| A — MAX_PATH archive + install-depth preflight | `494228fe` | **CLOSED END TO END 2026-07-30.** Archive half on the dev PC (6419=6419 files, 84 chars of headroom); install-depth half on the SAC laptop — no MAX_PATH/Long-Path hint from the LTXVideo pip at a real deep path. |
+| B — Impact-Pack `git+sam2` drop | `f371a162` | **CLOSED 2026-07-30 on the git-less SAC laptop — and seen FIRING**, not merely not-failing: `requirements filtered for ComfyUI-Impact-Pack on win32: dropped git+.../sam2`, zero `Cannot find command git`. See § git-less clean install. |
+| C — failure attribution split | `494228fe` | Unit-tested. **Still NOT exercised** — the laptop install completed with no fatal failure, so nothing real ever needed attributing. A clean run cannot prove this one. |
 | D — Windows standard-Electron relayout | `bbfd6295` | **CLOSED 2026-07-30 on the SAC laptop** — launched with Smart App Control ENFORCED (`0x1`) on an unsigned exe still carrying MOTW: no block, no prompt. Launch + transition-applier halves also closed on the dev PC. Only the in-app fetch+spawn half remains, and it is post-publish by construction. See § SAC laptop. |
 | E — release note | `bbfd6295` | Written into `docs/releases/UNRELEASED.md` § importantChanges. Ships when the version is bumped. |
-| F1 — weight-only node shell reads as installed | `2ee5ee15` | Unit-tested, all 4 call sites fixed. **Not seen fire on a real RIFE install.** See below. |
-| F2 — no-GPU machines get the CUDA build | `2ee5ee15` | **Logged, not fixed** — user decision: keep the build, kill the silence. |
-| F3 — cupy build failure reported as success | `2ee5ee15` | **Documented, no code change** — the node lies; our exit-code check is correct. |
+| F1 — weight-only node shell reads as installed | `2ee5ee15` | Unit-tested, all 4 call sites fixed. **CLEAN on the laptop install 2026-07-30** — no `Illegal transition ComfyUI-Frame-Interpolation`; the node downloaded and installed normally. Absence is the pass. |
+| F2 — no-GPU machines get the CUDA build | `2ee5ee15` | **Logged, not fixed** — user decision: keep the build, kill the silence. **WARN CONFIRMED PRESENT 2026-07-30** on a genuinely GPU-less laptop (`nvidia-smi not found`). Presence is the pass. |
+| F3 — cupy build failure reported as success | `2ee5ee15` | **Documented, no code change** — the node lies; our exit-code check is correct. **CONFIRMED live 2026-07-30**: build errors on `ModuleNotFoundError: No module named 'pkg_resources'`, node then prints "Installing cupy...", install completes regardless. |
 
 ## D — what was actually verified
 
@@ -167,6 +167,69 @@ on the maintainer's clean Windows 11 laptop with Smart App Control ON:
 | F1 | no `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` |
 | F2 | the new no-GPU fallthrough WARN appears (that is the fix working, not a fault) |
 | F3 | `Failed to build 'cupy-wheel'` followed by `Custom install command succeeded` is EXPECTED and harmless |
+
+## B / F1 / F2 / F3 / A-install-depth — the git-less clean install, SAC laptop, 2026-07-30
+
+ONE local engine install on the reproducing laptop settled five items. Preconditions for
+this run were established first (see § SAC laptop): `where git` finds nothing, and
+`nvidia-smi not found` — so both the git-less path and the no-GPU path are genuine here,
+not simulated.
+
+Engine: ComfyUI `v0.28.0` portable, into
+`C:\Users\hugom\Downloads\CubricVision-windows-x64-v1.3.0\engine\`. All 15 universal
+workflow nodes downloaded and their requirements installed.
+
+**B — `git+sam2` drop: CONFIRMED, and seen FIRING for the first time.** Not merely an
+absence of failure — the filter logged its own work:
+
+```
+[INFO] [download] requirements filtered for ComfyUI-Impact-Pack on win32:
+                  dropped git+https://github.com/facebookresearch/sam2
+```
+
+Zero occurrences of `Cannot find command git` across the whole install. This is the
+result the card was raised for and it had never been observed on real git-less hardware
+before.
+
+**F2 — no-GPU fallthrough WARN: CONFIRMED PRESENT** (presence is the pass; the fix was
+"keep the build, kill the silence"):
+
+```
+[INFO] [gpu-detect] nvidia-smi not found or failed
+[WARN] [gpu-detect] No NVIDIA, AMD or Intel Arc GPU detected - falling back to the
+       NVIDIA (CUDA) portable build. Generation will run on CPU and the download is
+       larger than this machine needs.
+```
+
+**F3 — cupy lies, our exit-code check is right: CONFIRMED as documented.** The build
+genuinely fails and the node then announces it is installing anyway; the install carried
+on and completed:
+
+```
+[custom-cmd] Getting requirements to build wheel: finished with status 'error'
+             ModuleNotFoundError: No module named 'pkg_resources'
+ERROR: Failed to build 'cupy-wheel' when getting requirements to build wheel
+Checking cupy... / Uninstall cupy if existed... / Installing cupy...
+```
+
+Root of the cupy failure is `pkg_resources` absent from the embedded Python (no
+setuptools). Harmless, unchanged, still not ours to fix.
+
+**F1 — no `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading`.**
+The node downloaded and installed with no transition error. Absence is the pass here.
+
+**A install-depth half — CLOSED. No MAX_PATH or Long-Path HINT from the LTXVideo pip**,
+which ran from a real deep path
+(`...\engine\ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-LTXVideo\requirements.txt`).
+With the archive half already closed on the dev PC, fix A is now settled end to end.
+
+**C — NOT EXERCISED, deliberately not marked passed.** Nothing failed fatally during
+this install, so the attribution split never had a real failure to describe. It stays
+open; a clean run cannot prove it.
+
+**Incidental, self-heal worked:** `[WARN] [engine] Removing partial engine folder (no
+embedded Python)` fired before the download, so the partial-engine guard cleaned up an
+earlier stub rather than installing on top of it.
 
 ## D — SAC laptop, the machine that reported this card, 2026-07-30
 
