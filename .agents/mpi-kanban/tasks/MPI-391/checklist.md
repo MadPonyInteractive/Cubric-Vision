@@ -42,9 +42,10 @@ Done 2026-07-30 except the promote. Evidence: `tasks/MPI-369/validation.md`
 
 ## B · Windows — Smart App Control laptop
 
-- [ ] `where git` finds nothing (precondition, else fix B proves nothing) — *MPI-387 B*
-- [ ] Explorer "Extract All" into default Downloads → ONE folder, `CubricVision.exe` directly inside — *MPI-387 A*
-- [ ] `CubricVision.exe` launches: SmartScreen → More info → Run anyway (NOT a silent block) — *MPI-387 D* ← **most important result of the day**
+- [x] `where git` finds nothing (precondition, else fix B proves nothing) — *MPI-387 B* ← `INFO: Could not find files for the given pattern(s)`. Precondition HOLDS, so the engine install below is a real git-less run
+- [x] **Smart App Control is genuinely ON** (precondition, else the launch below is vacuous) — *MPI-387 D* ← `VerifiedAndReputablePolicyState = 0x1` (enforced; 0 = off, 2 = evaluation). Plus MOTW verified on the EXTRACTED exe, not just the zip: `CubricVision.exe:Zone.Identifier:$DATA` 99 bytes. Zip arrived byte-exact from Drive at 523,638,376
+- [x] Explorer "Extract All" into default Downloads → ONE folder, `CubricVision.exe` directly inside — *MPI-387 A* ← `C:\Users\hugom\Downloads\CubricVision-windows-x64-v1.3.0\`, exe at its root
+- [x] `CubricVision.exe` launches (NOT a silent block) — *MPI-387 D* ← **THE RESULT OF THE DAY. PASSED.** Double-click went straight into the app on enforced SAC with an unsigned, MOTW-carrying binary: no block, no SmartScreen dialog, no Run-anyway step. The silent-block failure this card was raised for did not occur on the machine that produced it. Evidence: `tasks/MPI-387/validation.md` § SAC laptop
 - [ ] Engine install completes; no `Cannot find command git` — *MPI-387 B*
 - [ ] No MAX_PATH / Long-Path HINT from LTXVideo pip — *MPI-387 A*
 - [ ] No `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` — *MPI-387 F1*

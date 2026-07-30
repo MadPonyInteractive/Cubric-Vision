@@ -7,7 +7,7 @@ Umbrella card. Per-sub-item, because they ship independently.
 | A — MAX_PATH archive + install-depth preflight | `494228fe` | Unit-tested (`tests/install-path-depth.test.cjs`). **Archive half CLOSED 2026-07-30** on the real 1.3.0 zip via Explorer "Extract All" (6419=6419 files, 84 chars of MAX_PATH headroom) — see § dev PC. The pip/LTXVideo install-depth half still needs the laptop. |
 | B — Impact-Pack `git+sam2` drop | `f371a162` | Pinned by a test. Not re-run on a git-less clean box. |
 | C — failure attribution split | `494228fe` | Unit-tested. Not seen fire on a real failing install. |
-| D — Windows standard-Electron relayout | `bbfd6295` | **Launch half CLOSED and transition-applier half CLOSED 2026-07-30** on the dev PC — `CubricVision.exe` from the real extract reached the UI at v1.3.0, and a genuine v1.2.0 install crossed to 1.3.0 via its own shipped `update-from-zip.bat` (see § dev PC). Only SAC launch and the in-app fetch+spawn half remain, and the latter is post-publish by construction. See below. |
+| D — Windows standard-Electron relayout | `bbfd6295` | **CLOSED 2026-07-30 on the SAC laptop** — launched with Smart App Control ENFORCED (`0x1`) on an unsigned exe still carrying MOTW: no block, no prompt. Launch + transition-applier halves also closed on the dev PC. Only the in-app fetch+spawn half remains, and it is post-publish by construction. See § SAC laptop. |
 | E — release note | `bbfd6295` | Written into `docs/releases/UNRELEASED.md` § importantChanges. Ships when the version is bumped. |
 | F1 — weight-only node shell reads as installed | `2ee5ee15` | Unit-tested, all 4 call sites fixed. **Not seen fire on a real RIFE install.** See below. |
 | F2 — no-GPU machines get the CUDA build | `2ee5ee15` | **Logged, not fixed** — user decision: keep the build, kill the silence. |
@@ -167,6 +167,43 @@ on the maintainer's clean Windows 11 laptop with Smart App Control ON:
 | F1 | no `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` |
 | F2 | the new no-GPU fallthrough WARN appears (that is the fix working, not a fault) |
 | F3 | `Failed to build 'cupy-wheel'` followed by `Custom install command succeeded` is EXPECTED and harmless |
+
+## D — SAC laptop, the machine that reported this card, 2026-07-30
+
+**The launch fix is confirmed on the reproducing hardware.** This is the result the
+whole 1.3.0 validation trip existed to get.
+
+Both preconditions were established BEFORE the launch, because "it opened fine" and
+"the test could not fail" look identical:
+
+| Precondition | Command | Result |
+|---|---|---|
+| Smart App Control genuinely ON | `reg query "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v VerifiedAndReputablePolicyState` | `REG_DWORD 0x1` — **enforced** (0 = off, 2 = evaluation) |
+| The exe still carries MOTW | `dir /r CubricVision.exe` | `CubricVision.exe:Zone.Identifier:$DATA`, 99 bytes |
+| `git` genuinely absent | `where git` | `INFO: Could not find files for the given pattern(s)` |
+
+The MOTW check was deliberately repeated on the EXTRACTED exe rather than trusted from
+the zip (zip: 242-byte Zone.Identifier). Explorer does not always propagate MOTW through
+extraction, and had it been stripped, Windows would have stayed silent no matter what we
+shipped — a vacuous pass. It propagated: 99 bytes on the binary itself.
+
+Transport was browser-only via Google Drive, and the zip arrived byte-exact at
+523,638,376 — identical to the built artifact — so nothing in the transfer altered what
+was under test.
+
+**Result: double-click launched straight into the app. No block, no SmartScreen dialog,
+no "More info / Run anyway".** The failure mode this card was raised for — double-click
+does nothing at all, silently — did not occur on the machine that originally produced it.
+
+That is precisely what fix D predicted: SAC blocks `.vbs` and `.bat` outright with no
+user override, which is why every 1.2.0 launch path was dead on this box, and an
+executable does not get that treatment.
+
+**Doc nuance worth keeping:** 1.3.0's What's New says Windows "may still warn you the
+first time with a blue Windows protected your PC box... click More info, then Run
+anyway." On this machine no warning appeared at all. The wording is hedged with "may" so
+it is not wrong, and warning a user about a prompt that does not arrive is the safe
+direction — but the observed behaviour on enforced SAC is cleaner than the copy implies.
 
 ## A — settled on the dev PC from the real 1.3.0 artifact, 2026-07-30
 
