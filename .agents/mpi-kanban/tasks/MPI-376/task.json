@@ -2,11 +2,11 @@
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-376",
  "title": "Undo on the canvas - masks first, paint when MPI-375 lands",
- "column": "doing",
- "maturity": "validating",
- "status": "active",
+ "column": "done",
+ "maturity": "complete",
+ "status": "done",
  "created_at": "2026-07-28T13:36:00Z",
- "updated_at": "2026-07-29T22:45:00Z",
+ "updated_at": "2026-07-30T12:10:00Z",
  "labels": [
   "ui",
   "ux",
@@ -41,10 +41,5 @@
    "MPI-373",
    "MPI-371"
   ]
- },
- "attention": {
-  "state": "required",
-  "reason": "Undo SHIPPED and live-verified (7db2aad0). One path unverified: Add/Subtract bake undo needs a detect run, so it needs an engine - same _recordUndo() the verified clear() uses, but unexercised. One click with an engine up closes this. Next session order + the undo contract: handoffs/next-session.md",
-  "updated_at": "2026-07-29T22:45:00Z"
  }
 }

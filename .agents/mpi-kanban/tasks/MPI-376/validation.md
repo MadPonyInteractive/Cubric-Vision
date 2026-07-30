@@ -40,16 +40,36 @@ evict live history early. Fixed by crediting the discarded entries back in `_pus
 re-measured live at **117,648 B** for depth 2. Guarded by a new unit test
 ("discarding the redo branch credits its bytes back").
 
-## Not covered
+## Add / Subtract bake undo — CLOSED by the user 2026-07-30
 
-- **Add / Subtract bake undo** — needs a detect run, so it needs the engine. The code path is
-  the same `_recordUndo()` the verified `clear()` uses, and `clear()`'s full-layer entry
-  restored exactly; still, the bake itself is unexercised. Worth one click when an engine is up.
-- Electron desktop (this ran in the browser surface).
+**User-verified.** The bake path was exercised by the user themselves as part of their own
+testing of the undo system, on an engine, before this card was picked back up. That was the
+card's last open item, so the card closes on it.
 
-## Unrelated defect seen while setting up
+Nothing in this file's measured record changes — the bake shares the `_recordUndo()` layer-wide
+path that `clear()` already proved restores exactly (`10568 → 0 → 10568`), so the user's run
+exercised the one call site that had no coverage rather than a different mechanism.
 
-Dismissing the 18+ age gate leaves an **orphan `.mpi-modal-backdrop`** in the DOM — zero
-children, full viewport, `z-index: 10009`, `pointer-events: auto` — which swallows every
-click on the landing page. Reproduced on a fresh browser profile; unknown whether Electron
-(where the gate is accepted once per install) leaks the same node. Not carded.
+## Still not covered (deliberately, not a blocker)
+
+- **Electron desktop.** Everything above ran on the browser surface. The undo stack is pure
+  renderer code with no main-process leg, so the surfaces are not expected to diverge — but it
+  is unexercised there and worth noting rather than implying.
+
+## Unrelated defect seen while setting up — carded as MPI-386, and it did NOT reproduce
+
+Dismissing the 18+ age gate appeared to leave an **orphan `.mpi-modal-backdrop`** — zero
+children, full viewport, `z-index: 10009`, `pointer-events: auto` — swallowing every click on
+the landing page. Carded as **MPI-386**.
+
+**Re-ran that exact repro 2026-07-30 and it did not reproduce:** fresh profile, gate →
+CONTINUE (which correctly *chained* the changelog, MPI-333 working) → dismiss left
+`backdrops 0 / wrappers 0 / modals 0`, and a real click on the landing nav then succeeded with
+no interception. Counts stayed balanced at 1/1/1 across the handover, so nothing stacks either.
+
+**The observation above was a misread, and the trap is worth carrying:** a *live* `MpiModal`
+backdrop is legitimately childless — `MpiModal.js:57-63` builds `.mpi-modal-backdrop` as a
+**separate element** from `.mpi-modal-wrapper` — so "full-viewport, zero children,
+`pointer-events: auto`" describes a perfectly healthy **open** modal exactly as well as an
+orphan. Check for the sibling wrapper (and the parent — a live one sits in `page-landing`)
+before calling a backdrop leaked. Electron first-run remains unchecked.
