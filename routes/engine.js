@@ -367,10 +367,17 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     if (vendor === 'nvidia') gpuFlag = '--nvidia';
     else if (vendor === 'amd') gpuFlag = '--amd';
     else if (process.platform === 'darwin') gpuFlag = '--m-series';  // Apple Silicon
-    // --fast-deps (comfy-cli DependencyCompiler) has no Apple-Silicon branch and
-    // falls through to generic PyPI torch, skipping the MPS nightly wheel the
-    // standard --m-series path installs. Omit it on mac so torch is MPS-capable.
-    const installArgs = gpuFlag === '--m-series'
+    // --fast-deps (comfy-cli DependencyCompiler) resolves generic PyPI torch and
+    // IGNORES the vendor flag, so it is only safe when that generic resolve is
+    // the one we want — i.e. NVIDIA. Everything else must take comfy-cli's
+    // standard, vendor-aware install:
+    //   --m-series: --fast-deps skips the MPS nightly wheel (torch not MPS-capable)
+    //   --cpu:      --fast-deps pulls the whole CUDA stack — measured on Linux
+    //               2026-07-30, requirements.compiled resolved torch==2.13.0 with
+    //               no +cpu tag plus triton and 14 nvidia-* wheels, several GB a
+    //               CPU-only box can never execute (MPI-406)
+    //   --amd:      same fall-through risk (generic PyPI torch, not ROCm)
+    const installArgs = gpuFlag !== '--nvidia'
         ? ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag]
         : ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'];
     await _runStreaming(

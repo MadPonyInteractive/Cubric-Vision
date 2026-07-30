@@ -384,6 +384,31 @@ function createWindow() {
     mainWindow.loadURL('http://127.0.0.1:3000');
   });
 
+  // MPI-407: the server-ready fallback below gives up after 5s and creates the
+  // window regardless. On a slow machine Express is not listening yet, so this
+  // first loadURL is refused (ERR_CONNECTION_REFUSED) — and with nothing
+  // retrying it the window stayed black permanently, with NO user-accessible
+  // recovery (the menu is removed above, so Ctrl+R is unbound). Measured on
+  // Linux 2026-07-30: the server bound 11.6s after launch and was healthy the
+  // whole time; only this single load attempt had failed.
+  //
+  // Retry the main-frame load until the server answers. Raising the 5000ms
+  // constant is NOT the fix — it only moves the threshold and re-breaks on a
+  // slower box or a cold/AV-scanned first run.
+  let loadRetries = 0;
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc, _url, isMainFrame) => {
+    // -3 is ERR_ABORTED, which a normal in-app navigation can raise; retrying
+    // that would fight the renderer rather than help it.
+    if (!isMainFrame || errorCode === -3 || loadRetries >= 60) return;
+    loadRetries += 1;
+    logger.warn('system', `Renderer load failed (${errorCode} ${errorDesc}) — retry ${loadRetries}`);
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadURL('http://127.0.0.1:3000');
+      }
+    }, 500);
+  });
+
   mainWindow.once('ready-to-show', () => {
     if (windowState.isMaximized) {
       mainWindow.maximize();
