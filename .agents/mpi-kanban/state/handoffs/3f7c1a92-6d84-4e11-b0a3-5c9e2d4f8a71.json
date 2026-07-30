@@ -1,0 +1,182 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "3f7c1a92-6d84-4e11-b0a3-5c9e2d4f8a71",
+ "generated_at": "2026-07-30T21:30:00Z",
+ "from_session": "d1a20503-3452-4f5a-8f55-3d66a0a878f5",
+ "to_role": "verifier",
+ "status": "open",
+ "session": {
+  "name": "MPI-391 Linux leg (section D) - Windows is DONE to the pre-publish limit, Linux is next, nothing published",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Continue MPI-391's cross-platform validation sweep at section D (Linux), after sections A, A2 and B closed on 2026-07-30. The user is downloading the Linux build to a real Linux desktop as this handoff is written.",
+  "status": "in_progress",
+  "summary": "WINDOWS IS FINISHED to the limit of what is provable before publish - both machines, six commits, all evidence written into owning cards. Six of MPI-387's seven fixes are now closed, four of them on the laptop that originally reported the card. What remains for Linux is MPI-198's loader-path heal and MPI-249's first ever validated Linux generation, neither of which any Pod can substitute for.",
+  "deliberately_not_done": "gh release create. Gate 2 (the user rewrites the GitHub release body). Nothing is published. publish-runtime.sh promote IS now done - do not re-run it."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "SECTION A2 (dev PC) CLOSED. Extract verified earlier (6419=6419 files). Launch: full first-run chain clean - splash, models-folder picker, 18+ gate, What's New, home at V1.3.0. app.log logged 'up to date (current=1.3.0 latest=1.2.0)', which is the pre-publish update constraint observed LIVE rather than reasoned from main.js:1023.",
+   "PROMOTE DONE by the user from c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod\\ (./publish-runtime.sh promote). Stable is now wrapper 0.2.40. PROVEN from the shipping artifact, not asserted: the packaged build created a Pod with NO 'dev_mode: Pod boots the dev R2 runtime channel' line in app.log, and that line only fires when _devMode is true (remotePodLifecycle.js:672), so a released build takes stable.",
+   "REMOTE GENERATE SMOKE PASSED from the packaged 1.3.0 extract - KREA 2 t2i, 1344x768, 21s, Pod bh1x2asru9nv1y on RTX PRO 4000, image v0.17.0-cu130. hot-store 16/16 files on Pod disk. No errors.",
+   "MPI-387 D TRANSITION UPDATE PASSED. A real v1.2.0 install crossed to 1.3.0 via its OWN shipped update-from-zip.bat: package.json 1.3.0, start.vbs gone, stale app/ left behind still reading 1.2.0, exe at root, rollback dir written. No copy was taken first - v1.2.0 is a published GitHub release asset, so it is permanently recoverable.",
+   "SECTION B (SAC laptop) CLOSED - the result of the day. Both preconditions established BEFORE the launch because a pass and a vacuous test look identical: VerifiedAndReputablePolicyState = 0x1 (SAC enforced), MOTW re-checked on the EXTRACTED exe not the zip (99-byte Zone.Identifier), and where git finds nothing. Result: double-click went straight into the app - no block, no SmartScreen dialog, no Run-anyway. The silent-block failure mode did not occur on the machine that produced it.",
+   "MPI-387 B CLOSED AND SEEN FIRING on the git-less laptop: 'requirements filtered for ComfyUI-Impact-Pack on win32: dropped git+.../sam2', zero 'Cannot find command git'. ComfyUI v0.28.0 portable plus all 15 universal nodes installed.",
+   "MPI-387 F2 CONFIRMED (no-GPU WARN present, and nvidia-smi genuinely absent so the branch was not simulated), F3 CONFIRMED (cupy fails on ModuleNotFoundError: pkg_resources, node then claims it is installing, install completes), F1 CLEAN (no Illegal transition), and fix A's install-depth half CLOSED (no MAX_PATH hint from the LTXVideo pip at a real deep path) - so fix A is now settled end to end.",
+   "TWO CARDS CUT from the first-run pass: MPI-404 (models count reads 0/18 whenever the local engine install is skipped - structural, syncModelInstalled is gated on engine:ready at js/shell.js:1465 and the server resolves the models root from extra_model_paths.yaml inside ENGINE_ROOT at routes/shared.js:423) and MPI-405 ('Stage all models on connect' is interactive with no RunPod API key saved). MPI-404 was then CONFIRMED without any code change - the hero went 0/18 to 4/18 on Pod connect, so the check is healthy and the bug is scoped to the pre-connect window."
+  ],
+  "pending": [
+   "START HERE - SECTION D, LINUX. Artifact: D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\CubricVision-linux-x64-v1.3.0.tar.gz (502967733 bytes). The user is downloading it to a real Linux desktop. Three items, all on MPI-391 checklist.md section D.",
+   "MPI-198 loader-path heal - needs a LOCAL engine AND a SUBFOLDERED LoRA, a combination no Pod can provide. The bug: workflow templates bake Windows backslash loader values, and comfyController.js step 3b heals backslash to forward slash ONLY when remoteEngineClient.isRemote(). Local engine on Linux gets the raw backslash, ComfyUI enumerates with forward slashes, and every LoRA-baked workflow 400s with value_not_in_list. Card is MPI-198, in TODO with a plan.md and checklist.md - move it to doing before editing anything.",
+   "MPI-249 Linux half - the first ever validated Linux generation. Extract the real tar.gz, provision the LOCAL engine via the uv/comfy-cli path (routes/engine.js _provisionUvEngine, NOT the Windows prebuilt-archive path), install the 11 UW nodes, generate one model per family. MPI-249 closes only when Linux AND macOS are both done, so expect it to stay open.",
+   "THEN the rented Mac LAST (section C, MPI-370 DEPTH model install - ABSENCE of the requirementsDrop log line is the failure signal). Mac is last because it is the only machine that bills by the hour.",
+   "THEN gh release create, still held. Gate 2 has NOT been done.",
+   "POST-PUBLISH ONLY, and only then: MPI-334's first ever live fetch+spawn test, and the in-app half of MPI-387's transition update on the laptop."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-391",
+  "title": "1.3.0 cross-platform validation sweep - Windows SAC, macOS, Linux (umbrella)",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-391/",
+  "links": {
+   "plan": null,
+   "checklist": "checklist.md",
+   "validation": null,
+   "brief": "brief.md",
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-391/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "tasks/MPI-387/validation.md - three new sections: 'D launch half', 'D - SAC laptop' (the preconditions table and the launch result), and 'B / F1 / F2 / F3 / A-install-depth - the git-less clean install'. Header table rows A, B, C, D, F1, F2, F3 all rewritten to match.",
+   "tasks/MPI-391/checklist.md - section A2 fully ticked except the post-publish item, section A fully ticked including promote, section B ticked except fix C. Two items were ADDED to section B: an explicit SAC-is-genuinely-on precondition row, and a struck-through 'generate smoke deliberately NOT run on the laptop' row explaining why (no GPU means ComfyUI launches --cpu at comfy.js:370).",
+   "memory tool_taskstop_leaves_tail_orphan.md written plus its MEMORY.md index line - TaskStop kills a Monitor's wrapper shell but not its tail.exe child, and the orphan locks the folder on Windows.",
+   "Six commits: f26cf6d7, 225ab6cf, e366ac7f, 8380f647, 29f33a91 (plus the peer's 70b3e2aa). Working tree clean at handoff time."
+  ],
+  "pending": [
+   "TWO DOC EDITS PROPOSED, NOT YET APPROVED, both in docs/releases/github-release-checklist.md. (1) Add the two Windows precondition commands to the machine-test section - reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\CI\\Policy /v VerifiedAndReputablePolicyState wanting 0x1, and dir /r CubricVision.exe for MOTW on the EXTRACTED exe rather than the zip. Without these a future release can record a false SAC pass on a box where SAC is simply off. (2) Soften the release-body line 'Windows will show Windows protected your PC' to 'may show' - measured 2026-07-30 on enforced SAC with a MOTW-carrying unsigned exe, no prompt appeared at all.",
+   "PROPOSED, NOT APPROVED, carried from four handoffs back: a short subsection in docs/runpod-remote-engine.md section 10 recording that no wrapper handler may do multi-second filesystem work on the event loop, plus the two measuring traps. That doc still has ZERO coverage of the wrapper's event loop, which is the routing gap that let MPI-398 live twice.",
+   "MEMORY.md compaction - deferred a NINTH time. Still not urgent.",
+   "state/index.json active_handoffs is now 15 entries, most consumed. Cleanup finding only, not blocking."
+  ]
+ },
+ "next_action": {
+  "description": "Move to MPI-391 section D on the Linux desktop. Extract CubricVision-linux-x64-v1.3.0.tar.gz, run start.sh, provision the LOCAL engine via the uv/comfy-cli path, and reproduce MPI-198's loader-path bug with a SUBFOLDERED LoRA before deciding whether its fix is still needed. Move MPI-198 from todo to doing BEFORE editing any file. Do not publish anything.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "Windows is DONE to the pre-publish limit. Four things remain and none are reachable now: MPI-387 fix C needs a genuine fatal failure and cannot be manufactured honestly; MPI-334's fetch+spawn and the in-app transition both need the GitHub Release to exist; gap 4 (a second update applied FROM the new layout) needs 1.3.1.",
+   "The laptop generate smoke was deliberately SKIPPED, not forgotten. That machine has no GPU, so ComfyUI launches with --cpu (comfy.js:370) and a modern model would take minutes per image while proving nothing already known.",
+   "No copy of the v1.2.0 install was taken before the one-way update, because CubricVision-windows-x64-v1.2.0.zip is a published non-draft release asset and therefore permanently recoverable.",
+   "The install's resources/cubric/update-manifest.json stays at toVersion 1.2.0 after an update. Checked and deliberately NOT carded: nothing at runtime reads it, the only consumer is apply-update.cjs and it reads the BUNDLE's copy. Cosmetic.",
+   "A console line reading 'ubricVision.exe is not recognized' after the update was NOT a bug - neither the 1.2.0-era nor the 1.3.0 update-from-zip.bat has any relaunch line, both end at exit /b. It was a typed command with its leading C dropped by the console.",
+   "Windows full-build download counts, for scoping how much the transition matters: v1.0.1 = 22, v1.1.0 = 1, v1.2.0 = 20 (upper bound, scrapers included). Every pre-1.3 user crosses the layout transition exactly once whichever version they are on."
+  ],
+  "constraints": [
+   "NOTHING IS PUBLISHED. gh release create has not run. Gate 2 has not happened. Do not publish without explicit authorization.",
+   "NEVER edit releaseNotes.js again without re-running npm run release:approve. The build hashes it against .approved-1.3.0.json and a one-word change fails CI with 'Release notes changed after approval'. release:check does NOT catch this. This bites hardest now, because the SAC finding tempts a wording tweak - put it in the CHECKLIST doc instead, never in releaseNotes.js.",
+   "publish-runtime.sh promote is ALREADY DONE. Do not re-run it. Stable is wrapper 0.2.40.",
+   "A RunPod run does NOT verify the local engine on Linux - MPI-198 and MPI-249 both need the real portable build generating locally. See memory feedback_runpod_not_local_engine_proof.",
+   "Linux uses the uv/comfy-cli provisioning path (routes/engine.js _provisionUvEngine), NOT the Windows prebuilt-archive path, so no Windows result transfers.",
+   "A PEER AGENT IS ACTIVE IN THIS TREE and committed 70b3e2aa during this session. Commit by explicit pathspec only; git add untracked paths BY NAME first, because git commit --only aborts the whole commit on an untracked path.",
+   "Clock was CLEAN all session - no VPN, GitHub Date matched local to within seconds.",
+   "board.json is 2-SPACE indent, next_id is now 406. task.json indent VARIES PER CARD - measure before writing. The kanban BACKSLASH TRAP bit once this session: a bash heredoc collapsed a doubled backslash into an illegal JSON escape in events.jsonl. Write card JSON with the Write tool and prefer forward slashes or prose for paths.",
+   "Ask in PLAIN TEXT, never AskUserQuestion. Read memory feedback-index.md before non-trivial work; it is NOT auto-loaded.",
+   "TaskStop does not kill a Monitor's tail.exe child. Never cd a Monitor into a folder the user may delete - it locked a test install folder this session. See memory tool_taskstop_leaves_tail_orphan."
+  ],
+  "files_modified": [
+   ".agents/mpi-kanban/tasks/MPI-387/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-404/",
+   ".agents/mpi-kanban/tasks/MPI-405/",
+   ".agents/mpi-kanban/board.json",
+   ".agents/mpi-kanban/events.jsonl"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-198/plan.md",
+   ".agents/mpi-kanban/tasks/MPI-198/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-387/validation.md"
+  ],
+  "commits": [
+   "f26cf6d7 chore(kanban): MPI-387 fix D launch half closed on the dev PC",
+   "225ab6cf chore(kanban): MPI-404 + MPI-405 from the 1.3.0 first-run pass",
+   "e366ac7f chore(kanban): MPI-391 A2 closed on the dev PC - remote smoke, promote, transition update",
+   "8380f647 chore(kanban): MPI-387 fix D CLOSED on the SAC laptop",
+   "29f33a91 chore(kanban): MPI-387 B/F1/F2/F3 + fix A install-depth closed on the SAC laptop"
+  ],
+  "build_facts": {
+   "ci_run": "30559394491 (MadPonyInteractive/mpi-ci, all three legs success)",
+   "artifacts_dir": "D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\ - the ONLY copies of all six, do not delete",
+   "linux_artifact": "CubricVision-linux-x64-v1.3.0.tar.gz (502967733) plus CubricVision-linux-x64-update-v1.3.0.zip (2782980, 209 files)",
+   "pod_runtime_channels": "dev 0.2.40, stable 0.2.40 - PROMOTED AND IN SYNC as of 2026-07-30",
+   "pod_image_pins": "POD_IMAGE_VERSION v0.17.0 (Docker Hub, cu130) and v0.17.0-cpu (GHCR) both verified to exist - no image work needed"
+  },
+  "mpi387_fix_status": {
+   "A": "CLOSED end to end - archive half on the dev PC, install-depth half on the laptop",
+   "B": "CLOSED and seen FIRING on real git-less hardware",
+   "C": "OPEN - unexercised, needs a genuine fatal failure, a clean run cannot prove it",
+   "D": "CLOSED - enforced SAC, MOTW-carrying unsigned exe, no block and no prompt",
+   "E": "shipped in the release notes",
+   "F1": "CLEAN - no illegal transition",
+   "F2": "CONFIRMED - WARN present on a genuinely GPU-less machine",
+   "F3": "CONFIRMED - documented lie, harmless",
+   "gap4": "OPEN - a second update applied FROM the new layout, needs 1.3.1"
+  },
+  "board_state": {
+   "doing": [
+    "MPI-391",
+    "MPI-387",
+    "MPI-367",
+    "MPI-370",
+    "MPI-369",
+    "MPI-259",
+    "MPI-4"
+   ],
+   "todo_relevant": [
+    "MPI-198 (Linux loader-path heal - MOVE TO DOING before editing)",
+    "MPI-249 (first validated Linux + macOS generation)",
+    "MPI-404 (models 0/18 with engine install skipped)",
+    "MPI-405 (Stage-all-models toggle ungated)"
+   ],
+   "note": "MPI-391 is the driving card. MPI-367, MPI-259 and MPI-4 are out of 1.3 scope by the user's explicit call. MPI-385 and its members were closed earlier by a peer session - do not reopen."
+  }
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "releases",
+   "portable-distribution",
+   "comfy_engine",
+   "comfy_injection"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/comfy_injection.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-30T21:30:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing the Cubric Vision 1.3.0 release on master. Read .agents/mpi-kanban/state/handoffs/3f7c1a92-6d84-4e11-b0a3-5c9e2d4f8a71.json first. NOTHING IS PUBLISHED - gh release create has not run and Gate 2 has not happened. WINDOWS IS FINISHED to the limit of what is provable pre-publish, across two machines on 2026-07-30. On the dev PC: extract verified, launch clean, a REMOTE KREA 2 generation ran in 21s from the packaged build, and a real v1.2.0 install crossed to 1.3.0 through its own shipped update-from-zip.bat with start.vbs gone and the stale app/ left behind. On the SAC laptop - the machine that originally reported MPI-387 - an unsigned CubricVision.exe still carrying MOTW double-clicked straight into the app under ENFORCED Smart App Control with no block and no prompt, and one git-less local engine install then closed fixes B (seen FIRING: 'dropped git+.../sam2'), F1, F2, F3 and fix A's install-depth half. Six of MPI-387's seven fixes are now closed; fix C stays OPEN because nothing failed fatally and a clean run cannot prove it. publish-runtime.sh promote IS DONE - stable is wrapper 0.2.40, do NOT re-run it, and it was proven from the shipping artifact by the ABSENCE of the dev_mode log line. YOUR NEXT STEP is section D on the Linux desktop, which the user is downloading now: extract CubricVision-linux-x64-v1.3.0.tar.gz from D:\\CubricStudio\\Vision\\Builds\\v1.3.0\\, provision the LOCAL engine via the uv/comfy-cli path (routes/engine.js _provisionUvEngine, NOT the Windows prebuilt-archive path), reproduce MPI-198's baked-backslash loader bug with a SUBFOLDERED LoRA, and get MPI-249 its first ever validated Linux generation. MOVE MPI-198 from todo to doing BEFORE editing any file. After Linux comes the rented Mac LAST because it bills hourly. NEVER edit releaseNotes.js without re-running npm run release:approve - it is hashed against .approved-1.3.0.json and a one-word change fails CI. Two doc edits to docs/releases/github-release-checklist.md are PROPOSED and awaiting approval: the Windows SAC/MOTW precondition commands, and softening 'Windows will show' to 'may show'. A peer agent is active in this tree, so commit by explicit pathspec only. Ask in plain text, never AskUserQuestion."
+}

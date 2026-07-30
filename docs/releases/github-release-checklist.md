@@ -40,6 +40,30 @@ artifact name, OS version, CPU architecture, GPU and driver stack when relevant,
 clean extract location, launch result, engine setup result, generation result
 when hardware allows, and app log tail before strengthening release language.
 
+### Windows: prove the test machine BEFORE trusting its result
+
+A clean launch on a box where the blocking condition cannot occur looks exactly
+like a clean launch on a box where the fix worked. Run both checks first, or the
+Windows result is worth nothing (learned 2026-07-30, MPI-387 D):
+
+```
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v VerifiedAndReputablePolicyState
+```
+`0x1` = Smart App Control **enforced** (what you need) · `0x0` = off · `0x2` = evaluation.
+
+```
+dir /r CubricVision.exe
+```
+Wants a `CubricVision.exe:Zone.Identifier:$DATA` line. **Check the EXTRACTED exe,
+not the zip** — Explorer does not always propagate mark-of-the-web through
+extraction, and a stripped exe keeps Windows silent no matter what shipped. A
+sync client (Google Drive for Desktop and friends) writes files without MOTW at
+all; download through a browser.
+
+Also confirm `where git` finds nothing before trusting any git-less install
+result, and note whether the machine has a GPU — a GPU-less box launches ComfyUI
+with `--cpu`, so a generate smoke there measures nothing useful.
+
 ## First-Launch Instructions (must appear in every release body)
 
 Both desktop platforms show an OS security prompt on first launch because the
@@ -51,10 +75,15 @@ at its root — there is no start script in the launch chain any more (MPI-387 D
 Smart App Control hard-blocks `.vbs`/`.bat`/`.cmd` with no override, which is
 what broke clean Windows 11 installs). Tell the user:
 
-> Extract the zip anywhere and run **`CubricVision.exe`**. Windows will show
+> Extract the zip anywhere and run **`CubricVision.exe`**. Windows may show
 > "Windows protected your PC" — click **More info**, then **Run anyway**. The app
 > is unsigned; this warning is expected and appears until the build earns
 > reputation.
+
+Say "may", not "will". Measured 2026-07-30 on a clean Windows 11 laptop with
+Smart App Control **enforced** and a MOTW-carrying unsigned exe: no prompt
+appeared at all, the app opened directly. Promising a dialog that does not arrive
+makes the rest of the instructions read as wrong.
 
 Say plainly that the build is **not code-signed**. There is no certificate and no
 NSIS installer (user decision, 2026-07-29): signing starts SmartScreen's
