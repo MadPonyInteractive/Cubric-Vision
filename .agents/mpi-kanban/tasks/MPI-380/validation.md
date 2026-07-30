@@ -211,6 +211,32 @@ makes the baked skip work end to end.
   Dockerfile deliberately never baked, so no Pod has ever had them.
 - ESLint + `node --check` clean on all four files.
 
-**STILL PENDING: the Pod leg.** None of the above proves the wrapper accepts a
-`checkpoints/` install or that ComfyUI then resolves the weight. That is MPI-385 item 1,
-now a test of a real code path rather than a test of nothing.
+## POD LEG — PASSED 2026-07-30 (MPI-385 item 1, Pod qrpnumt8p1rm31, L4 EU-RO-1)
+
+**Delivery.** On the first connect of the session the `engine:assets` job ran through the
+ordinary remote install path and completed all three non-baked engineAssets: `hand-yolov8n`
+(6.2MB), `person-yolov8n-seg` (7.2MB), `sam3-multiplex` (1,879,048,192 bytes). The weights
+had in fact landed on the volume at the first post-fix connect (02:56 that morning), so the
+observed job doubled as live proof of the **dedupe no-op on a warm volume** — re-verified on
+two further reconnects the same day (job complete instantly, disk flat at 139.36GB each
+time). ComfyUI on the Pod resolves the weight: `GET /object_info/CheckpointLoaderSimple`
+lists exactly `sam3.1_multiplex_fp16.safetensors`. The wrapper accepts a `checkpoints/`
+install — the open question this section existed for.
+
+**Points Detect, executed remote.** User placed 1 positive + 3 negative points on a
+1024x1024 image and Detect returned a correct mask (L4, REMOTE badge, VRAM 1.4/24GB).
+Graph read back off the Pod's `/history` (prompt `855b112e`, status `success`):
+
+- **ONE image input in the whole graph** — `MpiLoadImageFromPath →
+  /workspace/comfyui/input/t2i_003.png` (the source). **No points PNG reached staging**;
+  the deleted dot-image upload has no surviving branch.
+- Coords arrived as `MpiText` JSON strings wired to `positive_coords` / `negative_coords`
+  (`[{"x":651,"y":265}]` / three negatives) — the MpiString media-staging trap is absent
+  in the executed remote graph, exactly as assertion 5 pins.
+
+**Timing characterization (not a defect):** first Detect 8.46s exec (includes the 1.75GB
+weight load off the network volume), text Detect 6.56s, identical re-Detect **0.022s**
+(ComfyUI cache). Wall-clock reads 3-5x slower than the user's local 4060 Ti — structural
+to the L4 (72W part) + network-volume weight loads + proxy RTT per Detect.
+
+**Large-image smoke** remains unrun (no retirement claim rides on it; SAM 1 stays).

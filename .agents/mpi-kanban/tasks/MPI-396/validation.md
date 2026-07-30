@@ -121,3 +121,16 @@ poll→act gap is milliseconds, never human reaction time:
 - **MPI-397** — the several-second lag before the tile changes section. Same uninstall, different
   root (install-state is a disk stat; on remote a wrapper round trip). Unfixed by design.
 - **MPI-398** — the blank grid on a cold renderer. Renderer-side; `MPI-396` touches `routes/` only.
+
+---
+
+## REMOTE LEG — PASSED LIVE 2026-07-30 (MPI-385 item 6, Pod qrpnumt8p1rm31, L4)
+
+User uninstalled **klein-4b** on the volume through the Model Library (server log:
+`remote uninstall klein-4b: removed 14, kept 7 universal, 0 shared, 0 model files`).
+A 300ms poll of `/comfy/downloads/status` across the whole window: **no klein job ever
+appeared** and `version` did not churn — there was nothing for a tile to draw a 100% bar
+from. The card moved sections in ~3s with no bar (the residual lag is MPI-397's, measured
+on the same action). Reinstall through the tile then ran clean: live progress at 203MB/s
+off R2 in-datacentre, job reached `complete`, card moved instantly. Do-not-reopen
+condition never triggered.

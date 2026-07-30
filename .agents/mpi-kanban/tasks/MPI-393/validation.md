@@ -55,16 +55,31 @@ existing tests still pass.
   model, no-drift no-op, two nodes on one model, and the multi-model case that reproduces the
   live blow-up shape.
 
-## Not proven — needs the next Pod connect
+## LIVE-PROVEN — 2026-07-30, MPI-385 sweep, Pod qrpnumt8p1rm31 (L4, EU-RO-1)
 
-Everything above is local. The live check needs an **app restart** (the heal is latched per
-session by `_didFirstConnectDriftCheck`) and then one connect:
+The natural connects that day had **no drift** (the 07-29 connect had already consumed it),
+so the heal was silent twice — correct, but only negative evidence. The positive leg was
+then **manufactured deliberately**: real drift was seeded by installing `comfyui-krea2edit`
+onto the volume at its OLD v1.1 commit (`17af8833`) via a temp route that POSTed
+`/wrapper/models/install` directly with `commit` overridden — the normal
+`remoteInstallDep` path deliberately stamps `getPinnedNodeCommit()` (the CURRENT pin),
+which would have defeated the seed. Seed verified before the run: `POST /comfy/models/check`
+returned `drifted: true` for the dep. Temp route reverted after use.
 
-1. Expect `remote drift heal: re-cloning N node(s) for <model> — <ids>` in `app.log` — the
-   old code logged nothing at all.
-2. Volume usage must stay **flat** apart from the engine assets (MPI-380: 3 assets ≈1.76GB).
-3. No unrequested `installed` toast for a model.
+Fresh app session (restart — the heal is latched per session), auto-connect, and the heal
+fired on the connect edge. All three live acceptance points:
 
-Volume state to be aware of on that run: it is at ~140.6/150GB with LTX 2.3, Qwen and SDXL
-Realistic on it that nobody chose. Uninstalling them (while remote-connected — the Model
-Library is engine-scoped) is the way back to headroom for the rest of the sweep.
+1. **Log lines present** (old code was silent):
+   `remote drift heal: re-cloning 1 node(s) for krea2 — comfyui-krea2edit` (14:56:54Z)
+   `remote drift heal: re-cloning 1 node(s) for krea2-nsfw — comfyui-krea2edit` (14:57:01Z)
+   — both owning models processed serially, the node id named on each.
+2. **Node-only re-clone.** `/comfy/downloads/status` held jobs `krea2` and `krea2-nsfw`,
+   each with EXACTLY ONE dep — `comfyui-krea2edit`, **46,080 bytes**. Both models are
+   PARTIALLY installed on the volume, which is precisely the shape the old code exploded on
+   (it would have queued both models' full multi-GB universes right there).
+3. **Volume flat.** 139,360,243,342 → 139,360,272,626 bytes = **+29KB** across the heal.
+   No unrequested install toast, no weight job.
+
+Post-heal `POST /comfy/models/check`: `installed: true`, no `drifted` flag — the volume
+node is back at the pinned `223a9383` (v1.2.2). The seed→heal round-trip also re-proves the
+MPI-346 drift ladder end-to-end on a live Pod.

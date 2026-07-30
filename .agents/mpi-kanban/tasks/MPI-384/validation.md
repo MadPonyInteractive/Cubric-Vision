@@ -72,3 +72,25 @@ Chips render green on pick, Add bakes, the rail icon sits between Points and Det
 **Card CLOSED on that.** The one remaining item — a remote (Pod) run — is NOT a defect and
 NOT a blocker; it moved to the RunPod verification umbrella (MPI-385) with the other
 Pod-only checks, so it gets done in one Pod session instead of forcing one per card.
+
+---
+
+## REMOTE (POD) RUN — PASSED 2026-07-30 (MPI-385 item 2, Pod qrpnumt8p1rm31, L4 EU-RO-1)
+
+`dog` / 1, Detect through the app on the remote engine. Graph read back off the Pod's
+`/history` (prompt `37417e2d`, status `success`):
+
+- The prompt arrived as **text**: `CLIPTextEncode { text: "dog:1" }` — the `name:N` count
+  framing intact, no media upload, no extra image input in the graph. The MPI-380 trap did
+  not fire (encoder is not in `PATH_MEDIA_CLASSES`, now confirmed on the executed remote
+  graph, not just by reading the class list).
+- Points branch idle in the same graph (`MpiText` coords empty) — the MpiIfElse split routes
+  correctly on remote.
+- Chips + mask returned to the canvas; exec 6.56s first run, identical re-Detect 0.022s
+  (ComfyUI cache).
+
+**Characterized, NOT a defect:** SAM3 scored the collar TAG as the best `dog:1` candidate
+on a frame-filling dog — whole-image subjects are its weak spot, the inverse of the
+small/thin-subject strength that motivated this tool. Same family as the points-tool
+weakness recorded on MPI-380 (needs more points than expected). Model behaviour; wiring
+proven correct.

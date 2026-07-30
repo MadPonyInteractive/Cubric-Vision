@@ -3,12 +3,12 @@
   "id": "MPI-385",
   "title": "RunPod verification sweep - one Pod session, every Pod-only check",
   "description": "UMBRELLA. Shipped work keeps accumulating a single outstanding item: \"run it once on a Pod\". Spinning a Pod per card is absurd, so they queue here and clear in ONE session. Pick this card up, spin the Pod, walk brief.md top to bottom, then close the member cards it clears. The brief also names what a Pod CANNOT settle - a remote run is not proof of a LOCAL engine on Linux/mac, and it says nothing about macOS install - so those cards stay off this list on purpose.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "activeSessionTitle": "Pod verification sweep - one session, every Pod-only check",
   "created_at": "2026-07-29T20:20:00Z",
-  "updated_at": "2026-07-29T16:05:00Z",
+  "updated_at": "2026-07-30T15:02:00Z",
   "labels": [
     "umbrella",
     "verification",
@@ -30,10 +30,5 @@
     "validation": "validation.md",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
-  },
-  "attention": {
-    "state": "required",
-    "reason": "Queued behind MPI-392 by user order. Needs a live Pod + port 3000 free; item 1 is now a real test of the shipped engineAsset fix (57f9a991).",
-    "updated_at": "2026-07-29T16:05:00Z"
   }
 }

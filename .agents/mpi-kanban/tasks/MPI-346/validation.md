@@ -245,3 +245,21 @@ None — card CLOSED 2026-07-29. The edit and the describe both landed through t
 > `.mpi_node_commit` drift ladder reinstalling the node at the new commit on connect. Per the
 > standing rule, a card whose only leftover is remote closes on local evidence and leaves that
 > one item on the umbrella; MPI-385's brief already carries it.
+
+---
+
+## REMOTE LEG — PASSED 2026-07-30 (MPI-385 item 3, Pod qrpnumt8p1rm31)
+
+The `.mpi_node_commit` drift ladder reinstalling the node at the new commit is now proven on
+a live Pod **twice over**:
+
+1. **Outcome proof.** The volume's `comfyui-krea2edit` is at v1.2.2: remote
+   `GET /object_info/Krea2EditModelPatch` carries `fit_mode`, which does not exist on v1.1 —
+   a schema discriminator, immune to a stale/absent manifest entry. The ladder delivered the
+   v1.1 → v1.2.2 bump to the Pod at a post-bump connect.
+2. **Live round-trip** (run for MPI-393's positive leg, doubles as this card's): the node was
+   deliberately re-seeded onto the volume at the OLD commit (`17af8833`), the next connect's
+   check flagged `drifted: true`, and the heal re-cloned it back to the pinned `223a9383`
+   (46KB job, log line, volume flat). Full record: `../MPI-393/validation.md`.
+
+The two-reference-edits bonus item was NOT run this session (no edit ops exercised).
