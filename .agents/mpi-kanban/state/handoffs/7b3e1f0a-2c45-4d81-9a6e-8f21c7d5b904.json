@@ -1,32 +1,35 @@
 {
  "schema": "mpi-kanban/handoff/v1",
  "id": "7b3e1f0a-2c45-4d81-9a6e-8f21c7d5b904",
- "generated_at": "2026-07-30T01:00:00Z",
+ "generated_at": "2026-07-30T01:30:00Z",
  "from_session": "84248f4f-ea74-4249-bc58-f380d16ff446",
  "to_role": "implementer",
  "status": "open",
  "session": {
-  "name": "MPI-395 closed on live evidence; MPI-396 found + fixed at the store; three Model Library follow-ups carded",
+  "name": "MPI-395 closed on live evidence; MPI-396 found + fixed at the store + COMMITTED d5c3d896; MPI-397/398 carded; MPI-398 tile bisect cancelled by measurement",
   "branch": "master"
  },
  "goal": {
   "original": "Run the three MPI-395 residuals on the CPU Pod, then close MPI-395.",
   "status": "in_progress",
-  "summary": "MPI-395 is CLOSED - all three residuals verified live and user-approved. Closing it surfaced three separate Model Library defects. MPI-396 (the real bug) is FIXED with 5 guard tests and a negative control, but its LIVE proof is still owed and the one attempt was vacuous. MPI-397 and MPI-398 are carded, diagnosed, and deliberately untouched. NOTHING IS COMMITTED."
+  "summary": "MPI-395 is CLOSED. MPI-396 (the real bug) is FIXED and COMMITTED as d5c3d896 with 5 guard tests and a negative control - only its LIVE proof is still owed, and the one attempt was vacuous. MPI-397 and MPI-398 are carded, diagnosed and deliberately untouched. MPI-398 was REFRAMED at the end of the session: the user measured it and it is remote latency, not a renderer bug."
  },
  "plan": {
   "file": null,
   "completed": [
    "MPI-395 CLOSED (done/complete). All three residuals ran live on CPU Pod omi9588i0gymlu. The load-bearing proof for cancel-while-queued is TIMING, because the queue is client-side and invisible to /comfy/downloads/status: after the cancel, the next Install POST reached the server within seconds (job table 20:36:04) instead of parking for 30 minutes. The 400 volume-full rejection that followed is the correct pre-flight, NOT a defect - a rejected POST is a POST that fired. engine:assets stayed suppressed on the unfocused reconnect; the OS toast that did appear was the legitimate 'Pod connected'.",
-   "MPI-396 FIXED (uncommitted). Root: uninstall never settled the model's job in the SOT store. THREE compounding defects, all in the card: (1) the REMOTE uninstall leg returns res.json() at downloadManager.js:2410 and never reaches the LOCAL leg's reconciler.reconcileOnce() at :2547 - an engine-split half-wire; (2) pruneTerminal's DONE branch drops on confirmedInstalled.has(id) || age >= DONE_TTL_MS and an uninstalled model is in neither; (3) reconciler.start() gates its tick on store.hasActiveJobs(), so post-uninstall the poll returns early forever and the 120s belt never runs. The stale job was therefore PERMANENT, not transient - which is why Ctrl+R did not clear it (the store is main-process). Fix: store.dropModel(modelId) + broadcastSnapshot() at BOTH legs.",
+   "MPI-396 FIXED, committed d5c3d896. Root: uninstall never settled the model's job in the SOT store. THREE compounding defects, all in the card: (1) the REMOTE uninstall leg returns res.json() at downloadManager.js:2410 and never reaches the LOCAL leg's reconciler.reconcileOnce() at :2547 - an engine-split half-wire; (2) pruneTerminal's DONE branch drops on confirmedInstalled.has(id) || age >= DONE_TTL_MS and an uninstalled model is in neither; (3) reconciler.start() gates its tick on store.hasActiveJobs(), so post-uninstall the poll returns early forever and the 120s belt never runs. The stale job was therefore PERMANENT, not transient - which is why Ctrl+R did not clear it (the store is main-process). Fix: store.dropModel(modelId) + broadcastSnapshot() at BOTH legs.",
    "MPI-397 and MPI-398 carded with full diagnosis and explicitly NOT fixed - the user asked for one fix this session, not three.",
-   "docs/model-library.md gained the durable rule (incl. 'do NOT fix this in _tileState' and why). docs/releases/UNRELEASED.md gained a user-facing fixes entry."
+   "docs/model-library.md gained the durable rule (incl. 'do NOT fix this in _tileState' and why). docs/releases/UNRELEASED.md gained a user-facing fixes entry.",
+   "COMMITTED d5c3d896 (17 files): the MPI-396 fix, its 5 guard tests, MPI-395 close, the MPI-396/397/398 card folders, docs/model-library.md and docs/releases/UNRELEASED.md. Deliberately NOT committed: board.json, state/index.json and the GLOBAL events.jsonl. A peer session is actively writing all three - it allocated MPI-399 into doing DURING this close-out, so a staged board.json would have referenced a card whose task.json is untracked - and the global events.jsonl has mixed LF/CRLF endings that broke the pure-append guard. The peer work was left untouched in the tree, all still M.",
+   "MPI-398 REFRAMED after the user ran the discriminator: everything opens SUPER FAST locally, so it is NOT a renderer or tile bug and the MpiTileSheet bisect (f76791ff MPI-356 / d76b60c8 MPI-394) is cancelled - do not do it. Prime lead is now MPI-326, whose storm fix gated the models:checked EMIT but never reduced the ~5s heartbeat REQUEST RATE."
   ],
   "pending": [
-   "MPI-396 LIVE PROOF - the only outstanding work on the fix, and it does NOT need a Pod. Full recipe in tasks/MPI-396/validation.md. The critical step everyone will skip: after installing, POLL /comfy/downloads/status until the job reads complete AND IS STILL LISTED, and only THEN uninstall. The first attempt failed to prove anything because the store had already pruned the job 14s after install via the confirmedInstalled fast-exit, so dropModel found nothing to drop.",
-   "COMMIT. Nothing from this session is committed. Source: routes/install/installStore.js, routes/downloadManager.js, tests/uninstall-store-settle.test.cjs, docs/model-library.md, docs/releases/UNRELEASED.md. Kanban: board.json, events.jsonl, tasks/MPI-395/, tasks/MPI-396/, tasks/MPI-397/, tasks/MPI-398/. Commit by explicit pathspec - the tree is shared and OTHER cards are dirty (see constraints).",
-   "MPI-398 FIRST - run the cheap discriminator before any tile bisect: open the Model Library cold while DISCONNECTED from the Pod. Still slow means renderer/tile; fast means remote latency and the card merges into MPI-397. The user was starting exactly this comparison (models modal vs apps modal) when the session ended - ASK FOR THEIR RESULT before doing your own.",
-   "MEMORY.md compaction, still deferred from the previous handoff. 20.4KB against a 24.4KB read limit. The MPI-392 block is stale (it shipped) and several MPI-380 lines are superseded. Propose per-entry, never bulk-delete."
+   "MPI-396 LIVE PROOF - the only work left on the fix, and it needs NO Pod (both legs got the fix, so the LOCAL engine exercises it). Recipe in tasks/MPI-396/validation.md. The step everyone will skip and which decides the whole test: after installing, POLL /comfy/downloads/status until the job reads complete AND IS STILL LISTED, and only THEN uninstall. The first attempt proved nothing because the store had pruned the job 14s after install via the confirmedInstalled fast-exit, so dropModel found nothing to drop. The window is NOT deterministic - 101s in one session, 14s in the next.",
+   "AWAITING USER APPROVAL - one rule edit proposed at close-out and NOT applied: .claude/rules/downloads.md line 10 says the reconciler runs on SSE connect / 15s poll / post-uninstall. Both of the last two are wrong in exactly the way that hid MPI-396: post-uninstall is the LOCAL leg only (remote returns res.json() first), and the 15s poll SELF-IDLES when no job is active, so post-uninstall it never runs. Correct both clauses and note that uninstall now settles the store directly via store.dropModel.",
+   "MPI-398 - MEASURE, do not read code. Count requests-per-minute for /wrapper/models/status, /wrapper/disk and the telemetry GETs while merely IDLE on the Model Library, remote-connected; and separately TIME one wrapper round trip. That splits \"each call is slow\" (EU-RO-1 latency, belongs to MPI-397) from \"far too many calls\" (fixable, and likely a half-fixed MPI-326).",
+   "COMMIT THE BOARD FILES once the peer lands its commit: .agents/mpi-kanban/board.json, state/index.json and events.jsonl still hold this session changes (MPI-395 to done, MPI-396/397/398 created, MPI-396 to doing). The card folders are already committed, so until then those three cards exist on disk but not on the board - harmless, but finish it.",
+   "MEMORY.md compaction, deferred for a third time. NOTE: the peer REWROTE MEMORY.md during this session - it deleted the in-flight card mirror and added \"In-flight work - the BOARD is the source of truth\", which explicitly forbids reintroducing it. Re-audit before assuming the old compaction plan still applies."
   ]
  },
  "task_card": {
@@ -43,20 +46,29 @@
   }
  },
  "kanban_entry": null,
- "allowed_actions": ["read", "continue", "verify", "implement", "commit"],
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
  "knowledge_preservation": {
   "completed": [
    "tasks/MPI-395/validation.md - the three residual results, the transition log, and why the client-side queue is invisible server-side.",
    "tasks/MPI-396/brief.md + validation.md - all three root defects, the blast radius, and the live-repro recipe with the step that makes or breaks it.",
    "tasks/MPI-397/task.json - why an optimistic install-state flip is a product decision, not a bug fix.",
-   "tasks/MPI-398/task.json - four hypotheses, the two-commit bisect range, and the disconnect discriminator.",
+   "tasks/MPI-398/task.json - the record of what was RULED OUT (tile/renderer, and the two-commit bisect that is now cancelled), plus the remote-latency reframe and the measure-first plan.",
    "docs/model-library.md - the uninstall-must-settle-the-store rule.",
    "docs/releases/UNRELEASED.md - user-facing entry."
   ],
-  "pending": ["MEMORY.md compaction."]
+  "pending": [
+   "MEMORY.md compaction (re-audit first - the peer rewrote the file this session).",
+   "The .claude/rules/downloads.md line-10 correction, proposed and awaiting user approval."
+  ]
  },
  "next_action": {
-  "description": "Prove MPI-396 locally (install, poll until the job is STILL LISTED as complete, then uninstall), then commit everything by explicit pathspec. Then ask the user for their models-vs-apps timing result and run the MPI-398 disconnect discriminator before any tile bisect.",
+  "description": "Prove MPI-396 locally - install, poll /comfy/downloads/status until the job is STILL LISTED as complete, then uninstall. Then get approval on the .claude/rules/downloads.md correction, commit the three board files once the peer lands, and start MPI-398 by MEASURING request volume - not by reading renderer code.",
   "command": "mpi-continue"
  },
  "context": {
@@ -68,13 +80,16 @@
    "The negative control keeps one test passing in BOTH states on purpose - it pins that MPI-276's DONE_TTL belt still prunes a job nobody uninstalled."
   ],
   "constraints": [
-   "NOTHING IS COMMITTED. Commit by explicit pathspec.",
-   "Another agent is active in this tree and its work appeared mid-session. Do NOT sweep into a commit: tasks/MPI-249, MPI-353, MPI-355, MPI-358, MPI-385/handoffs, MPI-392/handoffs, .claude/rules/comfy_injection.md, .claude/skills/mpi-end/SKILL.md, docs/DEVELOPMENT.md, docs/models/krea2/README.md, docs/models/qwen-edit/README.md, docs/project-integrity.md, docs/runpod-remote-engine.md.",
-   "board.json is 1-space indent, LF, trailing newline; task.json is 2-space. Every write this session used a serialise-and-compare round-trip guard BEFORE writing - keep doing that.",
-   "routes/ is MAIN-PROCESS: verifying the MPI-396 fix needs a FULL app restart, not Ctrl+R.",
-   "Suite baseline is now 298/298 (was 293 + 5 new). Runner: node --test tests/*.test.cjs.",
-   "CPU Pod omi9588i0gymlu was being torn down by the user as the session ended. Nothing outstanding needs it.",
-   "Clock was verified clean against GitHub's Date header (no VPN skew) - timestamps in this session are trustworthy."
+   "d5c3d896 is this session commit. NOT pushed - push stays user-authorized.",
+   "A PEER AGENT IS ACTIVE AND WRITING. It allocated MPI-399 mid-close-out and rewrote MEMORY.md. Re-read board.json next_id immediately before any card write - it moved twice during this session (396 -> 399 -> 400).",
+   "Do NOT sweep into a commit: tasks/MPI-249, MPI-353, MPI-355, MPI-358, MPI-399, MPI-385/handoffs, MPI-392/handoffs, .claude/rules/README.md, .claude/rules/comfy_injection.md, .claude/rules/comfy_injection_multistage.md, .claude/skills/mpi-end/SKILL.md, docs/DEVELOPMENT.md, docs/models/, docs/project-integrity.md, docs/runpod-remote-engine.md.",
+   "The GLOBAL .agents/mpi-kanban/events.jsonl has MIXED line endings (LF through line 1689, CRLF after). Any pure-append or round-trip guard on it WILL fail until that is normalised - that is a real finding, not a broken guard.",
+   "board.json is 1-space indent, LF, trailing newline; task.json is 2-space. Every write this session used a serialise-and-compare round-trip guard BEFORE writing. Keep doing that.",
+   "routes/ is MAIN-PROCESS: verifying MPI-396 needs a FULL app restart, not Ctrl+R.",
+   "Suite baseline is now 298/298. Runner: node --test tests/*.test.cjs.",
+   "v1.2.0 is PUBLISHED (2026-07-24), so RELEASE_NOTES 1.2.0 is frozen - user-facing notes go to docs/releases/UNRELEASED.md. npm run release:check passes. This session needs no version bump (routes/ only, no registry/schema/engine surface).",
+   "The CPU Pod was being torn down as the session ended. Nothing outstanding needs it.",
+   "READ the project memory feedback-index.md before non-trivial work - it is NOT auto-loaded, and this session used AskUserQuestion despite rule feedback_no_askuserquestion_picker saying to ask in plain text instead."
   ],
   "files_modified": [
    "routes/install/installStore.js",
@@ -99,7 +114,11 @@
   "profile": ".agents/mpi-kanban/project-profile.md",
   "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
   "mode": "file",
-  "relevant_topics": ["downloads", "model-library", "runpod-remote-engine"]
+  "relevant_topics": [
+   "downloads",
+   "model-library",
+   "runpod-remote-engine"
+  ]
  },
  "rules_active": [
   ".claude/rules/downloads.md",
@@ -108,6 +127,15 @@
   ".claude/rules/components.md",
   ".claude/rules/dos_and_donts.md"
  ],
- "recent_events": [{"at": "2026-07-30T01:00:00Z", "event": "handoff_created"}],
- "resume_prompt": "You are continuing Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/7b3e1f0a-2c45-4d81-9a6e-8f21c7d5b904.json first. MPI-395 is CLOSED - do not reopen it. The live card is MPI-396: uninstalling a model left its terminal DONE job in the install store forever, so the Model Library tile drew a 100% progress bar instead of an Install chip and a reload did not clear it (the store is main-process). Three defects compounded - the remote uninstall leg never called reconcileOnce, pruneTerminal cannot express 'confirmed uninstalled', and the reconciler poll self-idles when no job is active so the 120s belt never runs. Fixed with store.dropModel(modelId) + broadcastSnapshot() at BOTH engine legs, 5 guard tests, negative control 4-fail-unfixed to 5/5, suite 298/298, eslint clean. NOTHING IS COMMITTED - commit by explicit pathspec, and never sweep the other agent's dirty cards (list in the handoff constraints). MPI-396's live proof is still owed and needs NO Pod: install a model locally, poll /comfy/downloads/status until its job reads complete AND IS STILL LISTED, and only then uninstall - the first attempt proved nothing because the store had pruned the job 14s after install. Then MPI-398 (Model Library blank for 10-15s on a cold renderer): run the cheap discriminator FIRST - open the library cold while DISCONNECTED from the Pod. Slow means renderer/tile and the bisect range is exactly f76791ff (MPI-356 MpiTileSheet extraction, the user's own lead) then d76b60c8 (MPI-394); fast means remote latency and it merges into MPI-397. The user reported Settings slow too, and Settings is NOT a tile consumer, so ask for their models-vs-apps timing before assuming a tile cause. MPI-397 (card move lags the toast in BOTH directions) is a parked product decision - it would relax the install-state-IS-files-on-disk invariant. Also still deferred: MEMORY.md compaction, 20.4KB against a 24.4KB limit, propose per-entry."
+ "recent_events": [
+  {
+   "at": "2026-07-30T01:00:00Z",
+   "event": "handoff_created"
+  },
+  {
+   "at": "2026-07-30T01:30:00Z",
+   "event": "handoff_updated_after_close_out"
+  }
+ ],
+ "resume_prompt": "You are continuing Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/7b3e1f0a-2c45-4d81-9a6e-8f21c7d5b904.json first. MPI-395 is CLOSED - do not reopen it. MPI-396 is FIXED and COMMITTED (d5c3d896): uninstalling a model left its terminal done job in the install store forever, so the Model Library tile drew a 100% bar instead of an Install chip and a reload did not clear it (the store is main-process). Three defects compounded - the remote uninstall leg never called reconcileOnce, pruneTerminal cannot express confirmed-uninstalled, and the reconciler poll self-idles when no job is active so the 120s belt never runs. Fixed with store.dropModel(modelId) + broadcastSnapshot() at BOTH engine legs; suite 298/298, negative control 4-fail-unfixed to 5/5, eslint clean. YOUR FIRST TASK is its live proof, which needs NO Pod: install a model locally, poll /comfy/downloads/status until its job reads complete AND IS STILL LISTED, and only then uninstall - the first attempt proved nothing because the store had pruned the job 14s after install. Then: get user approval on a proposed .claude/rules/downloads.md correction (line 10 post-uninstall is local-leg-only, and its 15s poll self-idles), and commit board.json, state/index.json and events.jsonl once the peer agent lands its commit - the MPI-396/397/398 card folders are committed but not yet on the board. MPI-398 (everything slow while remote-connected) has already been reframed by measurement: the user showed it is FAST LOCALLY, so it is remote latency and the MpiTileSheet bisect is CANCELLED - start by counting requests-per-minute against the wrapper while idle, prime lead being MPI-326 whose fix gated the emit but not the ~5s heartbeat rate. MPI-397 (card move lags the toast in both directions) is a parked product decision. A PEER AGENT IS ACTIVELY WRITING this tree - it allocated MPI-399 during close-out - so re-read board.json next_id before any card write and never sweep its files."
 }
