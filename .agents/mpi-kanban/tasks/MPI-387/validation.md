@@ -7,7 +7,7 @@ Umbrella card. Per-sub-item, because they ship independently.
 | A — MAX_PATH archive + install-depth preflight | `494228fe` | Unit-tested (`tests/install-path-depth.test.cjs`). **Archive half CLOSED 2026-07-30** on the real 1.3.0 zip via Explorer "Extract All" (6419=6419 files, 84 chars of MAX_PATH headroom) — see § dev PC. The pip/LTXVideo install-depth half still needs the laptop. |
 | B — Impact-Pack `git+sam2` drop | `f371a162` | Pinned by a test. Not re-run on a git-less clean box. |
 | C — failure attribution split | `494228fe` | Unit-tested. Not seen fire on a real failing install. |
-| D — Windows standard-Electron relayout | `bbfd6295` | See below. |
+| D — Windows standard-Electron relayout | `bbfd6295` | **Launch half CLOSED 2026-07-30** on the dev PC — `CubricVision.exe` double-clicked from the real extract reached the UI at v1.3.0 through the full first-run chain (see § dev PC). SAC launch and the transition update still need the laptop. See below. |
 | E — release note | `bbfd6295` | Written into `docs/releases/UNRELEASED.md` § importantChanges. Ships when the version is bumped. |
 | F1 — weight-only node shell reads as installed | `2ee5ee15` | Unit-tested, all 4 call sites fixed. **Not seen fire on a real RIFE install.** See below. |
 | F2 — no-GPU machines get the CUDA build | `2ee5ee15` | **Logged, not fixed** — user decision: keep the build, kill the silence. |
@@ -191,6 +191,36 @@ what has the MAX_PATH ceiling):
   default Downloads location would reach 179 and is equally safe. **Extract location is
   therefore irrelevant to A on any machine with a normal-length profile path** — the
   laptop does not need a short path to pass.
+
+### D launch half — `CubricVision.exe` reached the UI, 2026-07-30
+
+Double-clicked from `D:\cubric-install-test\CubricVision-windows-x64-v1.3.0\`. It ran
+the whole first-run chain with no manual intervention beyond the dialogs themselves:
+splash → "Let's Set Up ComfyUI" models-folder picker → 18+ adult-content gate → the
+`RELEASE · V1.3.0` What's New sheet → home screen reading **CUBRIC VISION · V1.3.0**,
+25 recent projects, `RTX 4060 Ti · 16GB VRAM · 64GB RAM`. Captured in screenshots.
+
+**No SmartScreen prompt appeared — this box does not have it.** That is not a pass on
+the SAC question; it means the question was never asked here. The laptop is still the
+only place the SAC result exists, and there a SILENT block (double-click does nothing)
+is the failure, not the blue box.
+
+`<extract root>/user-data/logs/app.log` — 8 lines, no errors, three that matter:
+
+```
+[gpu-detect] NVIDIA GeForce RTX 4060 Ti, CUDA: 13.2
+[update] up to date (current=1.3.0 latest=1.2.0)
+[MpiEngineInstall] Local engine install skipped via the RunPod escape hatch (MPI-390)
+```
+
+The middle line is the pre-publish constraint observed LIVE rather than reasoned from
+`main.js:1023`: a 1.3.0 install queries GitHub, correctly sees 1.2.0 as latest, and
+offers nothing. Every in-app update item stays post-publish and this is the proof.
+
+The engine line is MPI-390's escape hatch taken deliberately — no local engine was
+provisioned, so nothing below D was exercised on this box.
+
+Log location confirmed for the laptop: `<extract root>\user-data\logs\app.log`.
 
 Not settled here, unchanged: SAC launch behaviour, the missing-`git` install, F1/F2/F3
 (all need a real engine install), and the transition update.

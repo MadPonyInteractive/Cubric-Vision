@@ -21,7 +21,7 @@ either. What this box CAN settle is section A2 below.
 ## A2 · This dev PC — Windows, first machine
 
 - [x] Fresh extract of the real `CubricVision-windows-x64-v1.3.0.zip` via Explorer "Extract All" — *MPI-387 A (partial: no SAC, no missing-git)* ← 6419 files in zip = 6419 on disk, ONE folder, `CubricVision.exe` at its root, `resources/app/package.json` reads 1.3.0. Longest path 176 chars = 84 under MAX_PATH. Evidence: `tasks/MPI-387/validation.md` § dev PC
-- [ ] `CubricVision.exe` launches from that extract — *MPI-387 D (partial)*
+- [x] `CubricVision.exe` launches from that extract — *MPI-387 D (partial)* ← full first-run chain clean: splash → models-folder picker → 18+ gate → What's New v1.3.0 → home at `V1.3.0`. `app.log` has no errors and logs `up to date (current=1.3.0 latest=1.2.0)`, which is the pre-publish constraint seen live. **No SmartScreen on this box** — the SAC question was not asked here, section B still owns it. Evidence: `tasks/MPI-387/validation.md` § D launch half
 - [ ] Generate smoke on the local engine — *release sanity* ← close the 8188 bench first, or the app dispatches into it and proves nothing
 - [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← the v1.2.0 install at `D:\CubricStudio\Vision\Builds\CubricVision-windows-x64-v1.2.0\` is the subject (old layout confirmed: `app/`, `start.vbs`, `update.bat`)
 - [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← needs the GitHub Release to exist, so this one item runs AFTER publish
