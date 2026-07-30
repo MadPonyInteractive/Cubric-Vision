@@ -4,7 +4,7 @@ Umbrella card. Per-sub-item, because they ship independently.
 
 | Fix | Commit | Validation state |
 |---|---|---|
-| A — MAX_PATH archive + install-depth preflight | `494228fe` | Unit-tested (`tests/install-path-depth.test.cjs`). **Never seen on the reproducing laptop.** |
+| A — MAX_PATH archive + install-depth preflight | `494228fe` | Unit-tested (`tests/install-path-depth.test.cjs`). **Archive half CLOSED 2026-07-30** on the real 1.3.0 zip via Explorer "Extract All" (6419=6419 files, 84 chars of MAX_PATH headroom) — see § dev PC. The pip/LTXVideo install-depth half still needs the laptop. |
 | B — Impact-Pack `git+sam2` drop | `f371a162` | Pinned by a test. Not re-run on a git-less clean box. |
 | C — failure attribution split | `494228fe` | Unit-tested. Not seen fire on a real failing install. |
 | D — Windows standard-Electron relayout | `bbfd6295` | See below. |
@@ -167,6 +167,37 @@ on the maintainer's clean Windows 11 laptop with Smart App Control ON:
 | F1 | no `Illegal transition ComfyUI-Frame-Interpolation: complete -> downloading` |
 | F2 | the new no-GPU fallthrough WARN appears (that is the fix working, not a fault) |
 | F3 | `Failed to build 'cupy-wheel'` followed by `Custom install command succeeded` is EXPECTED and harmless |
+
+## A — settled on the dev PC from the real 1.3.0 artifact, 2026-07-30
+
+The maintainer's dev workstation is an early-fail filter, NOT laptop coverage: `where
+git` resolves here (`C:\Program Files\Git\cmd\git.exe`) so B is unprovable by
+construction, and Smart App Control is not the blocking configuration on this box.
+What it DID settle, from `CubricVision-windows-x64-v1.3.0.zip` extracted with
+Explorer "Extract All" (the shell extractor, deliberately not 7-Zip — the shell one is
+what has the MAX_PATH ceiling):
+
+- **6419 files inside the zip, 6419 on disk.** Zero silent MAX_PATH casualties. This is
+  the half of A that a unit test cannot reach, because the ceiling lives in the shell
+  extractor, not in our code.
+- **ONE folder, `CubricVision.exe` directly inside** — not two nested. All 26 top-level
+  entries present including `uv/` and `update/`.
+- `resources/app/package.json` reads `1.3.0`; no root `app/`, no `start.vbs` — the D
+  relayout as shipped, now confirmed on a real downloaded artifact rather than a
+  staged build.
+- `resources/cubric/update-manifest.json`: `toVersion 1.3.0`, `kind portable-stage`.
+- **Longest path 176 chars — 84 of headroom under MAX_PATH 260.** Extract root was
+  `D:\cubric-install-test\` (53 chars); `C:\Users\Fabio\Downloads\` is 56, so the
+  default Downloads location would reach 179 and is equally safe. **Extract location is
+  therefore irrelevant to A on any machine with a normal-length profile path** — the
+  laptop does not need a short path to pass.
+
+Not settled here, unchanged: SAC launch behaviour, the missing-`git` install, F1/F2/F3
+(all need a real engine install), and the transition update.
+
+**Adjacent observation, not a defect, no card yet:** the build ships
+`resources/app/node_modules/@eslint-community/…` and `resources/app/docs/archive/`.
+devDependencies and the archived docs tree are going out inside the binary. Bloat only.
 
 **Still not reachable at 1.3.0:** a SECOND update, applied from the new layout — the
 one that exercises `loadExtractZip`'s `resources/app` branch and `evictBusyFile`. That

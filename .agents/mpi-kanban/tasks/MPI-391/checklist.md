@@ -20,7 +20,8 @@ either. What this box CAN settle is section A2 below.
 
 ## A2 · This dev PC — Windows, first machine
 
-- [ ] Fresh extract of the real `CubricVision-windows-x64-v1.3.0.zip` → `CubricVision.exe` launches — *MPI-387 A/D (partial: no SAC, no missing-git)*
+- [x] Fresh extract of the real `CubricVision-windows-x64-v1.3.0.zip` via Explorer "Extract All" — *MPI-387 A (partial: no SAC, no missing-git)* ← 6419 files in zip = 6419 on disk, ONE folder, `CubricVision.exe` at its root, `resources/app/package.json` reads 1.3.0. Longest path 176 chars = 84 under MAX_PATH. Evidence: `tasks/MPI-387/validation.md` § dev PC
+- [ ] `CubricVision.exe` launches from that extract — *MPI-387 D (partial)*
 - [ ] Generate smoke on the local engine — *release sanity* ← close the 8188 bench first, or the app dispatches into it and proves nothing
 - [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← the v1.2.0 install at `D:\CubricStudio\Vision\Builds\CubricVision-windows-x64-v1.2.0\` is the subject (old layout confirmed: `app/`, `start.vbs`, `update.bat`)
 - [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← needs the GitHub Release to exist, so this one item runs AFTER publish
