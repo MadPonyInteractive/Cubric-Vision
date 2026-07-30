@@ -52,26 +52,30 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three refreshed to the **v1.2.0 FULL (portable-stage)** manifests
-  (2026-07-28, MPI-369) from the shipped 1.2.0 build, so 1.3.0 deltas against
-  1.2.0. `toVersion: 1.2.0`, `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 6505 files
-  - `linux-x64.json` — 6325 files
-  - `win32-x64.json` — 6362 files
-- These had been left at 1.0.0 through 1.0.1, 1.1.0 and 1.2.0, so every "delta"
-  since was computed against 1.0.0 — correct, but far larger than needed (the
-  1.2.0 Windows update bundle reads `from 1.0.0 -> 1.2.0`, 1226 files, 90 MB).
+- All three refreshed to the **v1.3.0 FULL (portable-stage)** manifests
+  (2026-07-30, MPI-391 §A) by byte-copying `resources/cubric/update-manifest.json`
+  out of each shipped 1.3.0 full artifact, so 1.4.0 deltas against 1.3.0.
+  `toVersion: 1.3.0`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6563 files
+  - `linux-x64.json` — 6383 files
+  - `win32-x64.json` — 6418 files
+- Restamping at the 1.2.0 cut worked exactly as intended: the 1.3.0 Linux and
+  macOS update bundles came out as real 209- and 208-file deltas (2.8 MB /
+  3.3 MB), against 1226 files / 90 MB when the baseline was stale at 1.0.0.
   **Restamp these as part of cutting a release**, not later.
+- The 1.3.0 full builds grew +56 (win32), +58 (darwin), +58 (linux) files over
+  1.2.0 — the expected small swing, not an order-of-magnitude one.
 
-> **The next Windows delta is effectively a FULL bundle, and that is correct.**
-> MPI-387 fix D moved the Windows app tree from `app/` to `resources/app/` and put
-> Electron's runtime at the portable root, so every Windows path in
-> `win32-x64.json` changed. The diff is SHA256-by-path, so every one of those
-> ~6300 files reads as "added" (measured on a staged build: 6501 changed, 2
-> deletes). Do not treat the size as a bug or try to "fix" the baseline by
-> hand-editing paths — `win32-x64.json` is the historical v1.2.0 truth and can
-> only be replaced by the FULL manifest from the next shipped Windows build.
-> Linux and macOS are unaffected; their layout did not move.
+> **The 1.3.0 Windows update bundle IS effectively a full bundle (6408 files,
+> 451 MB), and that was correct.** MPI-387 fix D moved the Windows app tree from
+> `app/` to `resources/app/` and put Electron's runtime at the portable root, so
+> every Windows path in the v1.2.0 baseline changed. The diff is SHA256-by-path,
+> so all ~6300 files read as "added". Linux and macOS were unaffected; their
+> layout did not move, which is why their deltas stayed tiny in the same build.
+>
+> **This was a one-off.** `win32-x64.json` now holds the post-move 1.3.0 layout,
+> so the 1.4.0 Windows delta should be a normal small one. If it is not, the
+> cause is a NEW layout change, not this one — do not re-blame MPI-387.
 
 ### Extracting a baseline from a shipped artifact
 
