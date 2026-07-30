@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-405",
+  "title": "'Stage all models on connect' is live in Settings with no RunPod API key saved",
+  "description": "Spotted by the user 2026-07-30 on the real 1.3.0 portable extract, Settings -> RunPod, no API key entered. The ACCOUNT panel above it states the rule plainly - 'To unlock the RunPod controls, save a RunPod API key with read + write access in the box below' - and 'Stage all models on connect' sits below that line, fully interactive, with the key box still empty and reading 'No API key saved'.\n\nThe toggle only has meaning on connect, and connect is impossible without a key, so it is a control the user can set that cannot do anything yet. Low severity - nothing breaks, the setting simply persists until it becomes relevant. It is a coherence bug in the settings panel, not a functional one: the panel promises the controls are locked and then shows an unlocked one.\n\n'Skip the local engine install' directly above it is a DIFFERENT case and must stay ungated - it governs whether the app provisions a local engine at all, which is a decision a user makes precisely when they have no key yet. Do not sweep both in one change.\n\nCheck the rest of the RunPod section for the same shape before fixing, and decide whether the pattern is disable-until-key or hide-until-key - whichever the other gated controls in that panel already use, so this does not introduce a third convention.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-07-30T20:04:00Z",
+  "updated_at": "2026-07-30T20:04:00Z",
+  "labels": [
+    "ux",
+    "settings",
+    "runpod"
+  ],
+  "acceptance": [
+    "'Stage all models on connect' is not settable until a RunPod API key is saved, matching whatever convention the other gated RunPod controls already use",
+    "'Skip the local engine install' stays ungated - it is a pre-key decision by design",
+    "The rest of the RunPod settings section is swept for the same ungated-below-a-lock-message shape in the same pass"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
