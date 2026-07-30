@@ -1,0 +1,131 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "d4489380-daa1-4022-b7df-4e667e55dc7a",
+ "generated_at": "2026-07-30T00:58:00Z",
+ "from_session": "8506f6b0-e28b-45b7-81a2-f0f40889d2ad",
+ "to_role": "implementer",
+ "status": "open",
+ "session": {
+  "name": "MPI-396 live-proven in two rounds and CLOSED (a24188de); downloads.md reconciler clause corrected with approval (f1c14e31); MPI-398 handed over ready to MEASURE against a Pod",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Continue the previous handoff: prove MPI-396 live, then get approval on the downloads.md correction, then start MPI-398 by measuring.",
+  "status": "in_progress",
+  "summary": "Both of the previous handoff's actionable items are DONE and committed. MPI-396 is closed on airtight live evidence and MPI-395 stays closed. Everything left is MPI-398, which is a MEASUREMENT that needs a remote Pod - the user is connecting one, which is why this handoff exists. MEMORY.md compaction is still deferred behind a re-audit."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "MPI-396 LIVE-PROVEN on the LOCAL engine and moved to done/complete. Committed a24188de (board move, both event logs, validation.md, MPI-385 brief item 6, handoff refresh). TWO rounds were needed and the second one is the point. Round 1 established the precondition the earlier vacuous attempt lacked - a script polled /comfy/downloads/status and fired the uninstall sub-millisecond after the job read complete WHILE STILL LISTED - and it passed, but it was still NOT attributable: the job's dep was on disk, so a 15s reconciler tick landing inside that 1.3s window could have pruned the job via confirmedInstalled. reconciler.js:139 builds that set from the JOB's deps, NOT the model universe, which is exactly why the recipe 'install any small model then uninstall' is insufficient. Round 2 removed the rival explanation instead of racing it: delete the dep from disk OUT OF BAND once the job settles, and confirmedInstalled can never form. The immortal done job then sat in the store for 25 SECONDS with version FROZEN at 21093 - defect (3), the self-idling reconciler poll, observed live rather than inferred - and vanished inside the uninstall POST with exactly ONE version bump. No prune path existed, so store.dropModel is the only possible cause. Target was nvidia-pid / vae-sd3: 168MB, owned by NO other model so the shared-dep guard could not spare it, and ABSENT from disk beforehand so the run left the machine exactly as it started. Backend log confirms the LOCAL leg ran (uninstall: moved to trash G:\\CubricModels\\vae\\sd3_vae.safetensors). Full traces are in tasks/MPI-396/validation.md.",
+   "tasks/MPI-396/validation.md rewritten: both live rounds verbatim, the frozen-version evidence, the backend log lines, and a reusable 5-step recipe for the next store-lifecycle bug whose step 4 is 'kill the competing explanation BEFORE acting'.",
+   "tasks/MPI-385/brief.md gained item 6 - the remote uninstall leg's opportunistic check, per the standing rule that a card whose only leftover is remote closes on local evidence.",
+   "USER-APPROVED and committed f1c14e31: .claude/rules/downloads.md line 10 no longer claims the reconciler runs post-uninstall / on a live 15s poll. It now names both traps (the poll self-idles behind store.hasActiveJobs(); post-uninstall reconcileOnce() is LOCAL-leg only because the remote leg returns res.json() first), states that pruneTerminal cannot express confirmed-UNinstalled, and points at store.dropModel + broadcastSnapshot at BOTH legs.",
+   "USER-APPROVED memory update: feedback_establish_the_precondition_or_the_test_is_vacuous now carries the round-2 lesson (the precondition alone is not sufficient - engineer the rival cause away; drive it from ONE script over HTTP so the poll-to-act gap is milliseconds; pick a reversible target). feedback-index.md hook rewritten to match.",
+   "MEASURED and corrected two constraints the previous handoff stated wrongly: the global events.jsonl has 21 CRLF lines among 1848, scattered - NOT 'LF through 1689 then CRLF after'; and the kanban stamps run ~30 minutes AHEAD of true time (GitHub Date header 00:22Z while cards read 00:50Z), with the local machine clock agreeing with GitHub."
+  ],
+  "pending": [
+   "MPI-398 - THE ONLY ACTIVE WORK, and the user is connecting a Pod for it. It is a MEASUREMENT, not a code read. Get a requests-per-minute figure for /wrapper/models/status, /wrapper/disk and the telemetry GETs while merely IDLE on the Model Library, remote-connected; then SEPARATELY time one wrapper round trip. Those two numbers split 'each call is slow' (EU-RO-1 latency, belongs to MPI-397, not fixable here) from 'far too many calls' (fixable here). Prime lead: MPI-326 gated the models:checked EMIT on a real diff but never reduced the REQUEST RATE, and js/data/modelRegistry.js still states the remote heartbeat re-checks install-state every ~5s - so the storm may have been silenced rather than fixed. Do NOT start by reading renderer code, and do NOT run the MpiTileSheet bisect: the user already killed the renderer hypothesis by measurement (everything opens SUPER FAST locally).",
+   "MEMORY.md compaction, deferred a FOURTH time. Re-audit before assuming any old plan applies: a peer rewrote the file, and its new section 'In-flight work - the BOARD is the source of truth' explicitly forbids reintroducing the card mirror that the old compaction plan was written around."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-398",
+  "title": "Everything is slow while remote-connected - Model Library, Settings disk bar, Disconnect unlock",
+  "column": "todo",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-398/",
+  "links": {
+   "plan": null,
+   "checklist": null,
+   "validation": null,
+   "handoffs": "handoffs/",
+   "brief": null
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "tasks/MPI-396/validation.md - both live rounds, the attribution argument, and the reusable recipe.",
+   "tasks/MPI-385/brief.md item 6 - the remote uninstall leg's opportunistic Pod check.",
+   ".claude/rules/downloads.md - the corrected reconciler trigger list (user-approved).",
+   "Project memory feedback_establish_the_precondition_or_the_test_is_vacuous + feedback-index.md (user-approved).",
+   "tasks/MPI-398/task.json already holds the full diagnosis, what was RULED OUT, and the measure-first plan - it needs no rewrite, only results."
+  ],
+  "pending": [
+   "MEMORY.md compaction (re-audit first).",
+   "MPI-398's own validation.md - does not exist yet; create it from the measured numbers rather than from reasoning."
+  ]
+ },
+ "next_action": {
+  "description": "Start MPI-398 the moment the Pod is connected: move the card todo -> doing, then MEASURE. Count requests-per-minute for /wrapper/models/status, /wrapper/disk and the telemetry GETs while sitting IDLE on the Model Library, and separately time ONE /wrapper/models/status round trip. Instrument routes/remoteModels.js + routes/remotePodLifecycle.js (a temp counter behind a route, reverted after) or read the Pod's own wrapper log via /internal/logs/raw - whichever is cheaper on the connect the user is already making. Do NOT read renderer code first and do NOT bisect MpiTileSheet.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "MPI-396 was closed on LOCAL evidence with the remote leg folded into MPI-385, per the standing rule. It is NOT half-verified: dropModel sits at exactly two call sites pinned by an engine-split guard test, and the round-2 store evidence is engine-agnostic.",
+   "Round 1's pass was deliberately NOT banked as the proof. It could not distinguish the fix from the pre-existing confirmedInstalled prune, and a passing test that cannot exclude the rival cause is still vacuous - the same failure mode as the first attempt, one layer subtler.",
+   "The proof target was chosen for REVERSIBILITY, not convenience: a 168MB single-owner dep that was already absent from disk. A destructive live test on the user's real weights was never necessary.",
+   "MPI-398's renderer hypotheses stay dead. The user's local-vs-remote discriminator already refuted them, so re-reading tile code would be re-litigating a settled measurement.",
+   "MPI-397 (the card move lagging the toast in both directions) remains a PARKED PRODUCT DECISION - it relaxes the install-state-IS-files-on-disk invariant. If MPI-398's root turns out to be request VOLUME, fixing that may make MPI-397 feel fine without ever touching the invariant, which is the better outcome."
+  ],
+  "constraints": [
+   "A PEER AGENT IS ACTIVELY WRITING THIS TREE. As of this handoff it has uncommitted work in docs/data.md, docs/masking.md, docs/masking-sam3.md, docs/project-integrity.md, docs/toasts.md, docs/workflow-authoring/media-inputs.md, .claude/rules/comfy_injection.md, tasks/MPI-353/, and untracked tasks/MPI-355/, tasks/MPI-358/, MPI-385/handoffs/, MPI-392/handoffs/. NEVER sweep any of those into a commit. Commit by explicit pathspec only.",
+   "The peer's kanban stamps run ~30 MINUTES AHEAD of true time (measured: GitHub's Date header read 00:22Z while board.json and MPI-396 were stamped 00:40-00:50Z; the local machine clock AGREES with GitHub, so it is the stamps that drift). Never regress an existing updated_at to 'correct' it - this session wrote 00:55Z to stay monotonic while keeping real app.log times (00:19Z) inside validation.md. Those disagreeing is expected.",
+   "board.json next_id was 400 at handoff time. Re-read it immediately before any card write - it moved twice during the previous session.",
+   "The global events.jsonl has 21 CRLF lines among 1848 (measured). Appending is fine: open with encoding='utf-8', newline='', write LF. What breaks is a careless round-trip guard that reads the before-image with universal newlines and the after-image raw - the mismatch is the reader's fault, not the file's. Read BOTH raw.",
+   "routes/ is MAIN-PROCESS. Any route change needs a FULL app restart, not Ctrl+R. Verify by comparing the electron process StartTime against the file mtime before trusting a live test.",
+   "The app was left RUNNING on 127.0.0.1:3000 (electron PID 106892, started 00:26 local, which post-dates the MPI-396 fix). A standalone ComfyUI bench is also listening on 8188 - harmless for download/install work, but close it before verifying GENERATION through the app (hardcoded port means the app will dispatch into the user's bench).",
+   "Suite baseline 298/298. Runner: node --test tests/*.test.cjs.",
+   "v1.2.0 is PUBLISHED, so its RELEASE_NOTES block is frozen - user-facing notes go to docs/releases/UNRELEASED.md. Nothing this session needed a version bump (kanban + one rule file).",
+   "Ask in PLAIN TEXT, never AskUserQuestion - the picker overlay hides the analysis it is asking about. Read the project memory feedback-index.md before non-trivial work; it is NOT auto-loaded.",
+   "MPI-398's measurement is the ONLY thing that needs the Pod. Nothing else in this handoff does."
+  ],
+  "files_modified": [
+   ".agents/mpi-kanban/board.json",
+   ".agents/mpi-kanban/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-396/task.json",
+   ".agents/mpi-kanban/tasks/MPI-396/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-396/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-385/brief.md",
+   ".agents/mpi-kanban/state/handoffs/7b3e1f0a-2c45-4d81-9a6e-8f21c7d5b904.json",
+   ".claude/rules/downloads.md"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-398/task.json",
+   ".agents/mpi-kanban/tasks/MPI-326/task.json",
+   ".claude/rules/downloads.md",
+   "docs/runpod-remote-engine.md"
+  ]
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "runpod-remote-engine",
+   "model-library",
+   "downloads"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/downloads.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/git.md",
+  ".claude/rules/dos_and_donts.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-30T00:58:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing Cubric Vision 1.3 release prep on master. Read .agents/mpi-kanban/state/handoffs/d4489380-daa1-4022-b7df-4e667e55dc7a.json first. MPI-395 and MPI-396 are both CLOSED - do not reopen either. MPI-396 (uninstall left a terminal done job in the main-process install store, so the Model Library tile drew a 100% bar instead of an Install chip and a reload did not clear it) shipped in d5c3d896 and was live-proven in two rounds on 2026-07-30: the second round deleted the dep from disk out of band first, which makes the rival confirmedInstalled prune impossible, then held the immortal done job for 25 seconds with the store version frozen before the uninstall POST dropped it with exactly one bump. Its remote leg needs only an opportunistic glance, already written up as item 6 of tasks/MPI-385/brief.md. YOUR WORK IS MPI-398 and the user is connecting a RunPod Pod for it. It is a MEASUREMENT, not a code read: while sitting IDLE on the Model Library, remote-connected, count requests-per-minute for /wrapper/models/status, /wrapper/disk and the telemetry GETs, and SEPARATELY time one wrapper round trip. Those two numbers split 'each call is slow' (EU-RO-1 latency, which belongs to MPI-397 and is not fixable here) from 'there are far too many calls' (fixable here). Prime lead: MPI-326 gated the models:checked EMIT on a real diff but never reduced the REQUEST RATE, and js/data/modelRegistry.js still says the remote heartbeat re-checks install-state every ~5s - so the storm may have been silenced rather than fixed. Do NOT start by reading renderer code and do NOT bisect MpiTileSheet: the user already refuted the renderer hypothesis by showing everything opens super fast locally. Move MPI-398 todo -> doing before you touch anything, and write its validation.md from the measured numbers rather than from reasoning. A PEER AGENT IS ACTIVELY WRITING this tree (uncommitted docs/ and MPI-353/355/358 work) - commit by explicit pathspec only, never sweep its files, re-read board.json next_id before any card write, and note its kanban stamps run about 30 minutes ahead of true time."
+}

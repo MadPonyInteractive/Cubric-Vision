@@ -4,7 +4,8 @@
  "generated_at": "2026-07-30T01:30:00Z",
  "from_session": "84248f4f-ea74-4249-bc58-f380d16ff446",
  "to_role": "implementer",
- "status": "open",
+ "status": "resolved",
+ "superseded_by": "state/handoffs/d4489380-daa1-4022-b7df-4e667e55dc7a.json",
  "session": {
   "name": "MPI-395 closed on live evidence; MPI-396 found + fixed at the store + COMMITTED d5c3d896; MPI-397/398 carded; MPI-398 tile bisect cancelled by measurement",
   "branch": "master"
