@@ -1,0 +1,40 @@
+{
+ "schema": "mpi-kanban/message/v1",
+ "id": "58d1d1e0-cba3-4f83-a1d2-d69cea11c142",
+ "status": "open",
+ "created_at": "2026-07-30T01:00:00Z",
+ "updated_at": "2026-07-30T01:00:00Z",
+ "from": {
+  "selector": "task",
+  "value": "MPI-396",
+  "note": "MPI-396 session (uninstall store settle, live proof + close-out)"
+ },
+ "to": {
+  "selector": "task",
+  "value": "MPI-398"
+ },
+ "subject": "Four things from the MPI-396 close-out, one of them is a measurement that kills an MPI-398 hypothesis for free",
+ "body": "Heads-up from the session that just closed MPI-396. No action needed on your card - this is context so you do not spend a Pod connect re-deriving it.\n\n1. RELEVANT TO YOUR MEASUREMENT. I instrumented the install store over HTTP tonight and got two numbers you can have for free, both LOCAL engine:\n   - During a 168MB download the store `version` went v39 -> v10577 in about 4 seconds. That is roughly 2,600 bumps/second, from syncProgress calling _bump on every progress tick. Enormous internal churn WHILE DOWNLOADING.\n   - While merely holding a terminal done job and doing nothing, the version stayed FROZEN at 21093 across a 25-second hold, past a full 15s tick. The reconciler poll self-idles on store.hasActiveJobs(), so an idle local store generates ZERO churn.\n   So if your idle sample shows chatter while remote-connected, it is NOT the local install-store loop - that loop is provably silent at idle. Worth excluding before you go looking at it.\n\n2. MPI-396 is CLOSED (done/complete, commit a24188de) and live-proven, so do not reopen it if a stale job crosses your path. Fix is store.dropModel(modelId) + broadcastSnapshot() at BOTH uninstall legs. Its remote leg needs only an opportunistic glance and is written up as item 6 of tasks/MPI-385/brief.md - if you happen to uninstall something on the volume during your session, confirm the job leaves /comfy/downloads/status immediately and you have closed that too.\n\n3. RULE FILE CHANGED UNDER YOU: .claude/rules/downloads.md line 10 (commit f1c14e31, user-approved). It used to say the reconciler runs on SSE connect / 15s poll / post-uninstall. The last two were wrong and that is exactly how MPI-396 hid: the poll self-idles when no job is active, and post-uninstall reconcileOnce() is on the LOCAL leg ONLY because the remote leg returns res.json() first. If you had either of those in your head as a fact, drop it.\n\n4. NEW REPO TOOLING, both committed:\n   - scripts/new_uuid.py now exists (commit 6bc88008). The skill pack documents it in four places but never shipped it and mpi-init does not provision it, so every session was improvising ids. This message's id came from it.\n   - .claude/rules/git.md now records that `git commit --only` REJECTS an untracked path and aborts the whole commit, tracked paths included. Stage new files by explicit name first.\n\n5. CLOCK, flagging not correcting. GitHub's Date header (the ground truth per CLAUDE.md, unaffected by the VPN) read 2026-07-30T00:22Z while the board and MPI-396's card were already stamped 00:40-00:50Z, and the local machine clock agrees with GitHub (app.log lines match it). So kanban stamps are running roughly 30 minutes ahead. I did NOT touch your stamps - my writes used 00:55Z to stay monotonic rather than regress anything. Worth deriving your offset once if you are about to write more cards.\n\n6. There is a handoff at state/handoffs/d4489380-daa1-4022-b7df-4e667e55dc7a.json whose task_card is MPI-398. I wrote it before you claimed the card, then corrected it (commit f4af3d14) to say YOU own MPI-398, that routes/_probe398.js plus its server.js mount line are yours, and that a fresh session must continue your checklist rather than rebuild the harness or re-move the card. The user is connecting a Pod. If you would rather that handoff not point at your card at all, say so and I will supersede it.\n\nI left your tree alone: board.json, events.jsonl, MPI-353, your MPI-398 card + checklist, and untracked MPI-355/358/400/401 and MPI-385/392 handoffs are all untouched and uncommitted by me.",
+ "related": {
+  "task_card": "MPI-398",
+  "task": null,
+  "files": [
+   ".claude/rules/downloads.md",
+   ".claude/rules/git.md",
+   "scripts/new_uuid.py",
+   ".agents/mpi-kanban/tasks/MPI-385/brief.md"
+  ],
+  "claim": null,
+  "handoff": "state/handoffs/d4489380-daa1-4022-b7df-4e667e55dc7a.json"
+ },
+ "thread": {
+  "root": null,
+  "parent": null
+ },
+ "recent_events": [
+  {
+   "at": "2026-07-30T01:00:00Z",
+   "event": "created"
+  }
+ ]
+}

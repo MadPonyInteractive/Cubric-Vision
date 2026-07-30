@@ -1,13 +1,15 @@
 {
  "schema": "mpi-kanban/state-index/v1",
- "updated_at": "2026-07-30T00:58:00Z",
+ "updated_at": "2026-07-30T01:00:00Z",
  "board": ".agents/mpi-kanban/board.json",
  "heartbeat_timeout_minutes": 120,
  "active_sessions": [],
  "active_tasks": [],
  "active_file_claims": [],
  "pending_file_states": [],
- "open_messages": [],
+ "open_messages": [
+  "state/messages/58d1d1e0-cba3-4f83-a1d2-d69cea11c142.json"
+ ],
  "active_handoffs": [
   {
    "id": "d4bf2329-ffe9-4aeb-8dd0-61a82e38b8d1",
