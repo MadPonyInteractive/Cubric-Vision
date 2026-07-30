@@ -7,6 +7,7 @@ unless asked.
 ## Baseline
 
 - NEVER `git add -A` / `git add .`. Commit by explicit pathspec (`git commit --only <paths>`) — EXCEPT in the co-owned-file case below, where `--only` itself is the trap.
+- **`--only` rejects an UNTRACKED path** — `error: pathspec '<file>' did not match any file(s) known to git`, and the whole commit aborts, including the tracked paths. A NEW file must be `git add <exact paths>` first (still never `-A`/`.`), then included in the same `--only` list. Reads like a typo or a wrong working directory; it is neither.
 - Agents MAY commit without asking.
 - The Docs-website push block in CLAUDE.md § Sibling repos always applies.
 
