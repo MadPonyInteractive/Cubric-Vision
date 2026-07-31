@@ -82,7 +82,11 @@ gh run download <run-id> -n cubric-vision-linux-x64 -D "D:\CubricStudio\Vision\B
 `error extracting "<file>": ... The file exists.` and downloads nothing. Move the
 previous set aside first (the `SUPERSEDED-<reason>/` convention already in that
 folder), then download. Also pin the dispatch to a **SHA**, not `master`: `ref`
-accepts one, and a peer pushing mid-build otherwise changes what you built.
+accepts one, and a peer pushing mid-build otherwise changes what you built. It
+must be the **full 40-character** SHA — `actions/checkout` resolves a short one
+as a branch or tag name and dies at the checkout step with `A branch or tag with
+the name '20f1e743' could not be found`, ~40s in, which reads like the ref was
+never pushed. `git rev-parse HEAD`, not the short hash `git log --oneline` shows.
 
 Then verify the archive carries executable bits before trusting it (see next
 section).
