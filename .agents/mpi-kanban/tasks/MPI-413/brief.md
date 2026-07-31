@@ -156,3 +156,41 @@ grep -c "Requirement already satisfied" user-data/logs/app.log      # expect « 
 ```
 
 Plus: ComfyUI boots with zero `IMPORT FAILED`, and the Pod image build stays green.
+
+## Evidence C — Windows, and the cupy root cause (2026-07-31, live 1.3.0 artifact)
+
+The Frame-Interpolation note above records that its `install.py` "failed to build
+`cupy`" on macOS. Windows does the same on a real 1.3.0 portable install (RTX 4060 Ti,
+ComfyUI 0.29.2, clean extract), and its log carries the reason the macOS run did not:
+
+```
+Collecting cupy-wheel
+  Using cached cupy-wheel-12.3.0.tar.gz (2.9 kB)
+  Getting requirements to build wheel: finished with status 'error'
+      File "<string>", line 2, in <module>
+  ModuleNotFoundError: No module named 'pkg_resources'
+ERROR: Failed to build 'cupy-wheel' when getting requirements to build wheel
+```
+
+`cupy-wheel` is a 2.9 kB source-only shim whose `setup.py` imports `pkg_resources`,
+which modern setuptools no longer installs. So this is **not** platform-specific, not
+GPU-specific and not transient: it fails on every fresh install, on every platform,
+until the curated set decides the question.
+
+What that pins down for the one curated file:
+
+1. **cupy becomes an explicit decision, not a leftover.** Either drop it — Frame-
+   Interpolation falls back to torch — or pin a real `cupy-cuda12x`/`cupy-cuda13x`
+   wheel behind a PEP 508 marker. Do not carry `cupy-wheel` itself: its entire job is
+   runtime CUDA detection, which is exactly what the curated file replaces.
+2. **Constrain `setuptools`, or ban source builds outright** (`--only-binary=:all:`
+   with a documented allowlist). Any remaining sdist carrying a legacy `setup.py`
+   breaks the same way as setuptools keeps shedding `pkg_resources`.
+3. It is another instance of this card's core claim — **the failure reported itself as
+   success.** `Custom install command succeeded for ComfyUI-Frame-Interpolation` is
+   logged 400 ms after `ERROR: Failed to build 'cupy-wheel'`, and the engine went on to
+   stamp 0.29.2 and report a healthy install.
+
+Severity is unchanged (wasteful, not broken — the node still works). But "wasteful" now
+demonstrably includes a dependency that can **never** install, silently, on every
+machine, forever.
