@@ -5,3 +5,4 @@
 {"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-414","at":"2026-07-31T16:10:00Z","actor":"claude","summary":"Derived checklist from the root-cause brief (routing, repair-deps guard, docs, verification)."}
 {"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-414","at":"2026-07-31T16:25:00Z","actor":"claude","summary":"Retry now routes on /engine/version-check; repair-deps refuses an unstamped engine and hands back to the full install. Live interrupted-install retry still outstanding (Windows leg)."}
 {"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-414","at":"2026-07-31T16:25:00Z","actor":"claude","summary":"maturity in-progress -> validating (code shipped, live proof outstanding)."}
+{"schema":"mpi-kanban/event/v1","type":"attention.required","id":"MPI-414","at":"2026-07-31T17:35:00Z","actor":"claude","summary":"Needs a live interrupted-install Retry on Linux/macOS; Windows cannot reproduce it."}
