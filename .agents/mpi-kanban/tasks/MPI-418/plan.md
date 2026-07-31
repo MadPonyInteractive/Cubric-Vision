@@ -101,6 +101,12 @@ a read-on-boot. Swap to lines only if the user asks.
 ## State
 
 - `2012f6c6` — sink fix. CORRECT, proven, keep.
-- `59b154c4` — dedup. Superseded by single-writer; keep its test.
-- Master carries the rotation race right now. Nothing is published, so no user
-  is exposed, but **1.3.0 must not ship until this lands**.
+- `59b154c4` — dedup. Superseded by single-writer; the drop became a verbatim
+  relay in `writeChildLine`, and its test case survives as check 4.
+- Design implemented 2026-07-31 (uncommitted at time of writing): `routes/logger.js`
+  fork-skip + serialized appends + timestamped archives + prune 20;
+  `main.js` `writeChildLine` relays structured lines and their indented stacks
+  through `logger.appendRaw`. Verification 1 and 2 pass — see `validation.md`.
+- **Remaining: verification 3 and 4**, both live. Rebuild the artifacts, install
+  the engine on Windows, confirm the install is still readable on disk after.
+  1.3.0 must not ship before that leg.

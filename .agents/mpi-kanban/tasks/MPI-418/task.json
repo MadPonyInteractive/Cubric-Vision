@@ -4,10 +4,10 @@
   "title": "Logging write path: [server] lines reach app.log, but two processes on one file race and destroy history",
   "description": "RELEASE BLOCKER for 1.3.0. STARTED as \"[server]-category errors never reach app.log\" - that half is FIXED (2012f6c6) and PROVEN on the Windows portable 2026-07-31: the four MODULE_TYPELESS_PACKAGE_JSON [ERROR] [server] lines the card was raised for now appear in user-data/logs/app.log, plus a main-process [mask-temp] line. Root cause was NOT a category filter: routes/logger resolved LOGS_DIR at module load from APP_USER_DATA, which main.js never set on itself, so main wrote <app>/logs while the server fork wrote <user-data>/logs. POINTING BOTH PROCESSES AT ONE FILE THEN EXPOSED TWO DEFECTS the split file had been hiding. (1) Duplication - the child persists each line AND mirrors it to stdout, and pipeChildStream re-logged the mirror; 826 of 1,964 lines were duplicates. Fixed in 59b154c4, superseded by the design below. (2) DESTRUCTIVE: concurrent rotation. _appendToFile does stat -> move -> append, so two processes both see an oversized file and both rotate; the second moves the FRESH file over the real backup. Measured end state app.log 472 bytes / app.log.1 100 bytes, with a whole session (engine install, model download, ComfyUI boot, generation) erased. ALSO a user decision 2026-07-31: retention of 256KB + one backup is too small to be useful - one normal install-and-generate rotated twice. FIX = one file one writer (main sole writer, child skips its file write when it is a fork, verbatim relay preserving the child timestamp) + stable app.log active file + timestamped immutable archives + prune past 20. Full design in plan.md.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-31T07:46:00Z",
-  "updated_at": "2026-07-31T17:25:00Z",
+  "updated_at": "2026-07-31T17:48:00Z",
   "links": {
     "checklist": "checklist.md",
     "validation": "validation.md",

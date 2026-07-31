@@ -13,8 +13,14 @@
  *   - Packaged app: <APP_USER_DATA>/logs/app.log  (set by main.js via env var)
  *   - Development:  <project_root>/logs/app.log
  *
- * Retention: when app.log exceeds MAX_LOG_BYTES it is renamed to app.log.1
- * and a fresh app.log is started. Only one backup is kept.
+ * ONE FILE, ONE WRITER. Main and the server fork share app.log, so only main
+ * writes it — a forked child mirrors to stdout and main relays those lines
+ * verbatim (see appendRaw). Two writers raced at rotation and destroyed a whole
+ * session of history. (MPI-418)
+ *
+ * Retention: when app.log reaches MAX_LOG_BYTES it is renamed to
+ * app-YYYYMMDD-HHMMSS.log and a fresh app.log is started. Archives are
+ * immutable; the newest MAX_ARCHIVES are kept and older ones unlinked.
  *
  * Rotation is the ONLY retention mechanism. A startup line-trim used to also
  * run here; it was removed in MPI-315 because it rewrote app.log in place
@@ -34,7 +40,18 @@ const { redactSecrets } = require('./secretRedaction');
 // ~512 KB ceiling total. Kept small so an agent can read the whole file without
 // burning its context; that is a real constraint here, not a disk concern.
 const MAX_LOG_BYTES  = 256 * 1024;
+// History comes from file COUNT, not file size: 20 x 256KB ≈ 5MB / ~40k lines,
+// while any single file stays small enough for an agent to read whole. One
+// install-and-generate blew through 256KB twice, so a single backup evicted the
+// engine install — the most valuable thing a bug report carries. (MPI-418)
+const MAX_ARCHIVES   = 20;
 const RING_SIZE      = 200;             // in-memory lines kept for live reads
+
+// A forked child must not write the file it shares with main. main.js pipes the
+// child's stdout/stderr and relays each line verbatim, so the line still lands —
+// once. `process.send` exists only in a fork: false in main, and false for a
+// standalone `node server.js` in dev, which must keep writing its own file.
+const IS_FORK = typeof process.send === 'function';
 
 // Resolved LAZILY, on first write — not at module load. main.js requires this
 // module on its first line, long before it has resolved userData and exported
@@ -52,7 +69,6 @@ function _resolvePaths() {
     _paths = {
         dir,
         log: path.join(dir, 'app.log'),
-        bak: path.join(dir, 'app.log.1'),
         // Awaited by the first append rather than raced against it — resolving
         // lazily means there is no module-load head start any more, so a `_ready`
         // flag would silently drop the first lines (which is exactly where boot
@@ -68,6 +84,11 @@ function _resolvePaths() {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let _ring   = [];      // circular in-memory buffer
+
+// Appends are serialized: stat → rotate → append is not atomic, so two
+// overlapping fire-and-forget writes in ONE process could both rotate and lose a
+// file the same way two processes did.
+let _queue = Promise.resolve();
 
 // ── Internal write ────────────────────────────────────────────────────────────
 
@@ -91,27 +112,53 @@ function _write(level, category, message, err) {
         // stdout/stderr unavailable (closed pipe) — rely on the file log.
     }
 
-    // Update ring buffer
+    _remember(line);
+
+    // The console mirror above is the fork's ONLY output; main relays it.
+    if (!IS_FORK) _enqueue(line);
+}
+
+function _remember(line) {
     _ring.push(line);
     if (_ring.length > RING_SIZE) _ring.shift();
+}
 
-    // Async file write — fire-and-forget with rotation check
-    _appendToFile(line + '\n').catch(e => console.error('[logger] write failed:', e));
+function _enqueue(line) {
+    _queue = _queue
+        .then(() => _appendToFile(line + '\n'))
+        .catch(e => console.error('[logger] write failed:', e));
 }
 
 async function _appendToFile(line) {
-    const { log, bak, ready } = _resolvePaths();
+    const { log, ready } = _resolvePaths();
     await ready;
 
-    // Check if rotation is needed
     try {
         const stat = await fs.stat(log).catch(() => null);
-        if (stat && stat.size >= MAX_LOG_BYTES) {
-            await fs.move(log, bak, { overwrite: true });
-        }
+        if (stat && stat.size >= MAX_LOG_BYTES) await _rotate();
     } catch (_) { /* non-fatal */ }
 
     await fs.appendFile(log, line, 'utf8');
+}
+
+/** Renames app.log to a timestamped archive and prunes the oldest ones. */
+async function _rotate() {
+    const { dir, log } = _resolvePaths();
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+    let archive = path.join(dir, `app-${stamp}.log`);
+    // 256KB inside one second is rare but reachable under pip/ComfyUI spam, and
+    // an overwrite here is exactly the history loss this rotation replaced.
+    for (let n = 2; await fs.pathExists(archive); n++) {
+        archive = path.join(dir, `app-${stamp}-${n}.log`);
+    }
+    await fs.move(log, archive);
+
+    const archives = (await fs.readdir(dir))
+        .filter(f => /^app-\d{8}-\d{6}(-\d+)?\.log$/.test(f))
+        .sort();                                    // fixed-width stamp ⇒ chronological
+    for (const f of archives.slice(0, -MAX_ARCHIVES)) {
+        await fs.remove(path.join(dir, f)).catch(() => {});
+    }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -120,6 +167,17 @@ const logger = {
     info  : (category, message)      => _write('info',  category, message),
     warn  : (category, message)      => _write('warn',  category, message),
     error : (category, message, err) => _write('error', category, message, err),
+
+    /**
+     * Appends an already-formatted line from the server fork EXACTLY as given,
+     * so the child's own timestamp survives. Re-logging it through info()/error()
+     * would stamp main's receive time instead. main.js only. (MPI-418)
+     */
+    appendRaw(line) {
+        console.log(line);   // the fork's stdout is piped, so this is its only echo
+        _remember(line);
+        _enqueue(line);
+    },
 
     /** Returns the path to the current log file (for the download route). */
     getLogPath() { return _resolvePaths().log; },

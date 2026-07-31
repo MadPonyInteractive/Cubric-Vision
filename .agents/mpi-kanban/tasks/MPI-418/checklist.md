@@ -11,6 +11,17 @@ one that works. The **main process** logger writes to a second file.
 - [x] Confirmed on the rebuilt Windows portable: `user-data/logs/app.log` carries `[main]` and `[server]` lines — the exact MODULE_TYPELESS_PACKAGE_JSON lines from the card
 - [x] Fixed the double-write the shared file exposed (main no longer replays what the child already persisted)
 
+## Write-path redesign (the rotation race)
+
+- [x] One writer — the fork skips its file write (`typeof process.send === 'function'`); standalone `node server.js` still writes
+- [x] Verbatim relay — `logger.appendRaw()` appends the child's line unchanged, so its timestamp survives
+- [x] Appends serialized within a process, so one writer cannot race itself across a rotation
+- [x] `app.log` stays the active file; archives are `app-YYYYMMDD-HHMMSS.log`, collision-suffixed, immutable
+- [x] Prune past the newest 20 archives
+- [x] Test extended to 10 checks, driven through real `fork()` vs `spawn()`, and proven to fail against the pre-fix logger
+- [ ] Live on a rebuilt portable: install the engine, confirm the engine install is still readable on disk afterwards
+- [ ] No duplicate lines in a real session log
+
 ## Why dev never showed it
 
 In dev neither process sets `APP_USER_DATA`, so both fall back to

@@ -102,18 +102,17 @@ Every line is `[ts] [LEVEL] [category] …`, so the file is queryable. Use that 
 
 - **Pick the category your bug lives in** and grep for it. `\[download\]` returns ~72 lines out of 3478. `[comfy]` is ComfyUI engine stdout and is usually NOT your bug — skip it unless the engine is the suspect.
 - **Choose the window deliberately.** Tail (last 50–100 lines) for a crash that JUST happened; grep-by-category for anything older. A tail is the wrong window for an hour-old bug — and reading "nothing there" as proof it did not happen is how MPI-310 nearly drew a false conclusion from an evicted log.
-- **Never read `logs/app.log.1`** (rotated overflow) unless the user asks for it.
-- Retention is byte-rotation ONLY (256 KB → `app.log.1`, one generation, overwritten). A startup line-trim used to also run; it was deleted in MPI-315 because it rewrote the file in place and swallowed its own errors. Do not reintroduce it — fix noise at the source instead of deleting evidence.
+- **Read `logs/app.log` first**; the `logs/app-YYYYMMDD-HHMMSS.log` archives beside it are older sessions. Reach for one only when the window you need has already rotated out (an engine install can rotate twice) — and then pick it by timestamp, do not read them all.
+- Retention is byte-rotation ONLY: at 256 KB `app.log` is renamed `app-YYYYMMDD-HHMMSS.log` and a fresh `app.log` starts; the newest 20 archives are kept (~5 MB). The per-file size stays small on purpose so an agent can read one whole. A startup line-trim used to also run; it was deleted in MPI-315 because it rewrote the file in place and swallowed its own errors. Do not reintroduce it — fix noise at the source instead of deleting evidence.
 - ComfyUI stdout is filtered out of the file but still goes to the **terminal** (`logger.consoleOnly`). For engine detail beyond what the log holds, ask the user for the terminal output. Known gap: ~132 boot-banner lines/boot still reach the file; unexplained, deliberately not chased (see MPI-315).
 
-### There are TWO app.log files — know which one you are asking for (MPI-369)
+### One file, one writer (MPI-418, was MPI-369's "two app.log files")
 
-`routes/logger.js` resolves `LOGS_DIR` from `process.env.APP_USER_DATA`, and **`main.js` only injects that into the forked server's env** (`buildServerEnv`), never its own. So:
+There is now a single `<userData>/logs/app.log` — portable: `<portable-root>/user-data/logs/app.log`. That is the file to ask a user for. Until MPI-418 there were two: `routes/logger.js` resolved its directory at module load from `APP_USER_DATA`, which `main.js` only ever injected into the forked server's env, so main logged to `<app>/logs` and every `[server]` line went to a file nobody collects. The path now resolves lazily and main sets the env var on itself.
 
-- **Server fork** (routes, downloads, comfy, everything `logger.*` in `routes/`) → `<userData>/logs/app.log`. Portable: `<portable-root>/user-data/logs/app.log`. This is the file to ask a user for.
-- **Main process** (`main.js`'s own `logger.*` calls) → falls back to `__dirname/../logs`, a DIFFERENT file that no support instruction names.
+Sharing the file means the write path has a rule: **only main writes it.** The forked server mirrors each line to stdout and skips its own file write (`typeof process.send === 'function'`); `pipeChildStream` appends those lines **verbatim**, so the child's own timestamp is what you read. Raw child output with no logger behind it (dotenv's banner, a Node module-resolution error) is formatted under `[server]`. Two writers is not a style preference — both processes ran stat → move → append, both rotated, and the second moved the fresh file over the real backup, erasing a full session (measured 2026-07-31). A standalone `node server.js` in dev has no fork parent and keeps writing its own file.
 
-Asking a user for the wrong one wastes a round trip — and if the failure is a boot crash, BOTH may be empty (see below).
+If the failure is a boot crash the file may still be empty (see below).
 
 ### A boot crash: what now exists, and what it cannot tell you (MPI-369)
 

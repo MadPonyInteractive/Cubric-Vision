@@ -100,3 +100,30 @@ would have re-broken this card. Both cases are asserted in the test.
 - `modelDeps.js` is being reparsed as an ES module on every boot, with the
   performance overhead Node names. The fix it suggests (`"type": "module"` in
   `resources/app/package.json`) is far too broad to do inside a blocker fix.
+
+## Write-path redesign — automated proof (2026-07-31)
+
+`node tests/logger-sink-userdata.test.cjs` -> **PASS (10 checks)**. The five new
+ones drive the real module through `fork()` and `spawn()`, because
+`typeof process.send === 'function'` is the actual discriminator and mirroring it
+in the test would have proved nothing:
+
+- a forked child writes **no** `app.log` at all; a plain child still does (dev)
+- `appendRaw` lands the child's line byte-identical, its original timestamp intact
+- a 300KB `app.log` rotates to `app-YYYYMMDD-HHMMSS.log`, the archive is >= the
+  256KB cap, and the fresh `app.log` carries the new line
+- 25 seeded archives + one rotation prune to exactly 20, oldest gone, newest kept
+- **race regression:** a real fork and a real sole-writer spam 400 lines each at
+  the same shared, already-full log. No archive comes out below the cap (the bug
+  left a 100-byte one) and no fork line reaches the file.
+
+Negative check: setting `IS_FORK = false` fails check 5 immediately
+(`a forked child must not write app.log`). The test bites.
+
+Also confirmed the existing ring-buffer consumer still works —
+`tests/runpod-remote-hardening.test.cjs` 0 failures.
+
+**Still open:** the live leg. Rebuild the three artifacts and install the engine
+on Windows, then confirm the engine install is still readable on disk afterwards
+— that is the exact history the race destroyed, and no unit test can stand in
+for it.
