@@ -1,0 +1,157 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "7ffed1a9-d535-487b-ad34-1f01c0824a1d",
+ "generated_at": "2026-07-31T16:50:00Z",
+ "from_session": "845ba74f-caa4-4dee-a135-c4ae9f96ed52",
+ "to_role": "implementer",
+ "status": "open",
+ "session": {
+  "name": "ComfyUI 0.29.2 proven on all three engines (Windows, macOS, Pod image). 1.3.0 is NOT published and now has TWO remaining code blockers: MPI-414 and MPI-418.",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Fix the ComfyUI version pin, carry 0.29.2 in 1.3.0, re-validate, publish nothing.",
+  "status": "in_progress",
+  "summary": "The pin fix is DONE and proven on the only machine that can prove it. What remains for the release is: two code blockers the user named (MPI-414, MPI-418), a rebuild of all three artifacts (the staged set and the v1.3.0 tag both PREDATE the fix), one Windows archive install, and the live Pod verify. Six live-verified cards were closed and two open cards merged into one umbrella; doing went 14 -> 8."
+ },
+ "plan": {
+  "completed": [
+   "MAC LEG PASSED - the whole point of MPI-419. Fresh CI build (mpi-ci run 30625478488, ref=master), scp to the Mac, fresh extract into a SEPARATE root so the old build stayed as the before-picture, fresh engine install driven over SSH. RESULT: comfy install landed EXACTLY 0.29.2, .mpi_engine_version reads 0.29.2, comfyui_version.py reads 0.29.2, /engine/version-check needsUpgrade false. BEFORE, the same box reported a healthy 0.28.0 over an actual 0.29.0. LTXVideo imports in 6.1s with ZERO IMPORT FAILED and no interleaved_freqs_cis; 14/14 nodes; 1862 classes (65 LTXV vs 67 on Windows - likely CUDA-gated, not a blocker); UW deps zero missing/zero drifted with both darwin filters firing; SDXL 768x768 generation completed and was visually inspected.",
+   "THE MAC NEEDS NO GUI CLICKS - this killed the assumed gate. `ssh macbox` then plain `open <extract>/start.command` launches the Electron app on the console session and the server binds 127.0.0.1:3000 in ~3s. `launchctl asuser` is the WRONG tool (needs root, dies with \"Could not switch to audit session\") and its failure reads as \"GUI unreachable\" - do not believe that. The Mac has NO gh and NO brew, so deliver CI artifacts by `gh run download` here + scp (~472MB in ~3min); extract with `ditto -x -k`; scp sets no quarantine xattr. Written to memory as tool_drive_the_rented_mac_over_ssh.",
+   "POD IMAGE dev line rebuilt on 0.29.2 - the dual-engine half. node_lock synced into mpi-ci and pushed (73f4514); the sync ALSO caught MpiNodes + krea2edit silently drifted behind the canonical lock. CI run 30626614008, both legs green: v0.18.0-dev-cu130 -> Docker Hub, v0.18.0-dev-cpu -> GHCR, both pull-verified public. The cu130 in-image node-import smoke printed \"node-import smoke test OK\" (a REAL assertion - that layer boots ComfyUI and greps for IMPORT FAILED), torch asserted 2.12.0+cu130, and the cpu image boot-smoked here: /health 200 with wrapper_version 0.2.40, token-gated /wrapper/stats correctly 401s. App dev pins moved to v0.18.0-dev (411f6cd6); STABLE pins deliberately left on v0.17.0 / ComfyUI 0.28.0, which is safe because the new LTX commit is backwards compatible.",
+   "MPI-406 + MPI-413 MERGED INTO ONE umbrella at the user request (board readability - his words: \"I would spend more time reading the kanban than getting shit done\"). MPI-406 was RETITLED to the scope it actually fixed (--fast-deps off the non-nvidia branch, shipped and positively proven on Linux) and closed - closing it under its original SYMPTOM title would have been a false done, because the symptom survives at a later stage. MPI-413 is now \"Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves\", moved to todo/planned for POST-1.3.0, with the full design in its brief.md.",
+   "SIX LIVE-VERIFIED CARDS CLOSED: MPI-407, MPI-408, MPI-411, MPI-415, MPI-198 (Linux) and MPI-370 (rented M4). Left open deliberately with reasons: MPI-419 (live Pod verify outstanding), MPI-409 (post-publish baseline restamp), MPI-369 (\"nothing here is user-verified yet\"), MPI-387 (one item never exercised). Also fixed MPI-402 + MPI-403, which carried maturity \"draft\" - not in the enum, so they were rendering as RED INVALID cards in the VS Code board.",
+   "MEMORY WRITTEN (three notes carried unwritten across previous handoffs, now cleared): tool_drive_the_rented_mac_over_ssh, feedback_pin_source_is_the_tag_not_the_changelog, feedback_slow_transfer_is_not_an_app_bug. Also CORRECTED feedback_kanban_maturity_enum_exact - the enum grew from 5 to 10 values when the user upgraded the skill set.",
+   "THE cupy NOISE IS SETTLED, DO NOT RE-INVESTIGATE. ComfyUI-Frame-Interpolation install.py tries to build cupy (CUDA-only) on macOS and fails with ModuleNotFoundError: pkg_resources, then exits 0. It is ALREADY documented at nodesDeps.js:146-155 (MPI-387 F3) with an explicit do-not-fix note. PROVEN harmless by running a real RIFE interpolation on the Mac: 2 frames in, 3 out, 1.12s, no cupy. RIFE never imports the cupy-backed ops module; only film/stmfnet/eisai do, and we dispatch none of them. Measured bonus: that install.py adds exactly ONE package (opencv-contrib-python, redundant with the opencv-python + opencv-python-headless already present)."
+  ],
+  "pending": [
+   "BLOCKER 1 - MPI-414. The user called this a release blocker and he is right; my first read (that MPI-408/411 had covered it) was WRONG. The trigger is ordinary: the first engine install is multi-GB and long, a user quits partway and comes back. MpiEngineInstall.js:316-324 chooses Install-vs-Repair on /engine/status, which goes TRUE as soon as the venv python exists (step 1, long before ComfyUI is cloned or stamped), so Retry is sent to /engine/repair-deps, which installs custom nodes, REPORTS SUCCESS, never re-runs comfy install, never installs core requirements, never stamps - and ComfyUI then dies on ModuleNotFoundError: sqlalchemy with no in-app escape. LIKELY MINIMAL FIX, VERIFY BEFORE ASSUMING: route on /engine/version-check (installed !== null), make repair-deps refuse and hand back to /engine/download when there is no stamp, and stamp on every success path.",
+   "BLOCKER 2 - MPI-418. [server]-category errors print to the terminal but NEVER reach app.log ([engine] errors do, with full stacks). The user escalated this to a blocker with the decisive argument: we cannot verify Linux end-to-end (our only Linux box cannot boot ComfyUI at all - SIGILL on a pre-AVX2 CPU) and we have no separate GPU Windows box either, so user-submitted app.log files are the ONLY diagnostic channel after release, and a whole category is silently missing from them. Investigate whether server.js runs as an Electron fork whose logger never attaches the file sink, and fix the SINK, not the call sites. Reproduces for free on Windows.",
+   "REBUILD ALL THREE ARTIFACTS AT THE FINAL COMMIT - do not ship what is staged. D:/CubricStudio/Vision/Builds/v1.3.0/ holds a set built 2026-07-30T23:07 from 04215a2, which PREDATES the pin fix (e2c2b4d6) and therefore ships the unpinned installer. The v1.3.0 TAG likewise points at 0bd44b6a, 12+ commits behind. Proof they differ: the staged macOS zip is 471,994,787 bytes, the post-fix build is 471,995,554.",
+   "VERSION DECISION IS MADE: 1.3.0 all the way, NO bump. The user: \"We will just keep overwriting it until we get it right.\" So move the v1.3.0 tag onto the final commit; nothing is published, so this is free.",
+   "WINDOWS - the one real verification gap, and the user has UNBLOCKED it: \"I can always install in a separate folder on my system if that helps.\" The 0.29.2 engine was only proven on Windows by a HAND git checkout in the dev engine; the download-and-extract of the v0.29.2 Windows portable archive - the path every Windows user takes - has NEVER been exercised. All four ComfyUI_windows_portable_*.7z assets are confirmed present on the v0.29.2 release. Do this from a rebuilt artifact into a separate folder.",
+   "MAC RE-VERIFY on the final rebuilt artifact. Today proved the code at 196e65e9; master has moved since (411f6cd6 touches routes/remotePodLifecycle.js, which is shipped code). The whole leg is scripted over SSH and takes ~10 minutes. THE MAC IS RENTED UNTIL ~07:30Z ON 2026-08-01 - after that this costs money or is gone. The new build is at ~/Downloads/b2/CubricVision-macos-arm64-v1.3.0 and is still running with ComfyUI up; the OLD pre-fix build at ~/Downloads/CubricVision-macos-arm64-v1.3.0 holds the 12GB of model weights that the new one points at via modelsRoot.",
+   "LINUX - install half only, and untested at 0.29.2. That box cannot boot ComfyUI (MPI-415/SIGILL), so it can prove the install lands 0.29.2 and never a generation. Not a gate, but cheap signal.",
+   "POD LIVE VERIFY - USER-ONLY, an agent must never create or deploy a Pod. Deploy a dev-mode Pod (BUILD_HASH === dev resolves POD_IMAGE_VERSION_DEV) and confirm the image line + wrapper_version. THEN DECIDE: do the STABLE pins move to 0.29.2 for 1.3.0, or does the Pod ship on 0.28.0? Shipping on 0.28.0 is safe and smaller - the new LTX commit is backwards compatible. Moving them needs a clean release-version image rebuild, never a renamed dev tag.",
+   "PUBLISH: gh release create, 1.3.0, full builds + update bundles. NOTHING IS PUBLISHED YET (latest live release is v1.2.0).",
+   "POST-PUBLISH ONLY, cannot gate the release: MPI-334 in-app update prompt real fetch + spawn (first live test ever), the real 1.2.0 -> 1.3.0 in-app update transition, and restamping release-baselines/*.json to the 1.3.0 FULL manifests (6418 win32 / 6383 linux / 6563 darwin) so 1.4.0 deltas correctly. Until then baselines MUST stay at the 1.2.0 manifests.",
+   "STILL OPEN, NOT BLOCKERS: MPI-416 (clean Mac/Linux first run fails because git needs the Xcode Command Line Tools - good error message, real hard stop, worth a look before ship), MPI-417 (macOS ships a dangling @cubric/connector symlink so the documented xattr command errors for every Mac user), MPI-420 (TAESD previews enabled in two places with no decoder shipped - note mpi-ci/cubric-vision-pod/ already HAS a vae_approx/ folder, which is where that fix probably starts)."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-419",
+  "title": "uv engine installs an UNPINNED ComfyUI, then stamps it with the pinned version (LTX dies on macOS + Linux)",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-419/",
+  "links": {
+   "plan": null,
+   "checklist": "checklist.md",
+   "validation": "validation.md",
+   "brief": null,
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-419/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "tasks/MPI-419/validation.md carries the full Mac leg and the Pod image section, including the exact before/after endpoint output. Read it before re-deriving anything.",
+   "tasks/MPI-413/brief.md is the post-1.3 umbrella design: the mechanism, both evidence sets, phase 1 (constrain every node pip) vs phase 2 (one curated dependency file generated by uv pip compile in CI), and five open questions.",
+   "Three memory notes written + one corrected, listed in plan.completed."
+  ],
+  "pending": [
+   "state/index.json active_handoffs still contains one MALFORMED entry - a bare string instead of an object, at the end of the array. Cleanup finding only; it still parses.",
+   "MEMORY.md compaction - deferred a SIXTEENTH time."
+  ]
+ },
+ "next_action": {
+  "description": "Fix the two blockers the user named - MPI-414 (Retry routes on /engine/status and silently succeeds on a dead engine) and MPI-418 ([server] errors never reach app.log) - then rebuild all three artifacts at the final commit, because the staged set and the v1.3.0 tag BOTH predate the pin fix. Then: Windows archive install into a separate folder (the user offered his own box), a ~10-minute scripted Mac re-verify over SSH while the rental lasts, and the user-only live Pod verify. Version is settled: 1.3.0, no bump, move the tag. Publish nothing until those land.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "1.3.0 ALL THE WAY, NO BUMP - \"we will just keep overwriting it until we get it right\" (user, 2026-07-31). Move the tag rather than cutting a new version.",
+   "MPI-414 and MPI-418 ARE RELEASE BLOCKERS - the user decided both, and was right both times against my initial reading. Do not re-litigate.",
+   "POD STABLE PINS STAY ON 0.28.0 until a live verify; the dev line carries 0.29.2. Never rename a dev tag into the stable pin.",
+   "AN UNPINNED ENGINE INSTALL IS NEVER ACCEPTABLE (the user standing rule). Now enforced in code, and MPI-413 extends the same principle to node requirements.",
+   "The macOS torch is an unpinned MPS nightly BY DESIGN (comfy install --m-series resolves against download.pytorch.org/whl/nightly/cpu). Same class of unpinned-input risk, NOT itself a bug.",
+   "Prefer MERGING cards over opening rivals. The board is the users daily surface and he judges it unreadable at 40+ open cards."
+  ],
+  "constraints": [
+   "NOTHING IS PUBLISHED. gh release create has not run. Latest live release is v1.2.0.",
+   "Ask in PLAIN TEXT, never AskUserQuestion (the overlay hides the analysis above it).",
+   "The user gets confused by card-ID-heavy narration. Report OUTCOMES in plain language; keep card IDs in the files.",
+   "JSON FORMATS VARY PER FILE AND MUST BE DETECTED, INCLUDING INDENT. Measured today: board.json = 2-space CRLF; MPI-419/407/408/415/402/403 task.json = 2-space LF; MPI-411/198 task.json = 2-space CRLF; MPI-370 task.json = 1-SPACE LF; handoff JSON = 1-space LF. A round-trip guard that varies line-ending but HARDCODES indent will still abort mid-run and leave the board half-moved - that happened today and had to be repaired. Load EVERY file before writing ANY of them.",
+   "Windows push is user-authorized only. Agents may commit freely by explicit pathspec; never git add -A on this shared tree.",
+   "THE MAC IS RENTED UNTIL ~07:30Z ON 2026-08-01. ssh macbox is live and `open start.command` works remotely - no GUI clicks, no DeskIn needed.",
+   "release-baselines/*.json MUST STAY at the 1.2.0 manifests until 1.3.0 is live.",
+   "The clock was accurate to ~1s against GitHub Date: today - no VPN skew. Re-check if the VPN goes on."
+  ],
+  "files_modified": [
+   "routes/engine.js (previous session)",
+   "routes/remotePodLifecycle.js",
+   "dev_configs/node_lock.json (previous session)",
+   "dev_configs/system_dependencies.json (previous session)",
+   "c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json (pushed as 73f4514)",
+   ".agents/mpi-kanban/board.json + events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-419/{checklist,validation,events}",
+   ".agents/mpi-kanban/tasks/MPI-413/{task.json,brief.md,events}",
+   ".agents/mpi-kanban/tasks/MPI-406/{task.json,events}",
+   ".agents/mpi-kanban/tasks/{MPI-407,408,411,415,198,370,414,418,402,403}/{task.json,events}"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-419/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-414/task.json",
+   ".agents/mpi-kanban/tasks/MPI-418/task.json",
+   "js/components/MpiEngineInstall.js",
+   "routes/engine.js"
+  ]
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "comfy_engine",
+   "versioning",
+   "releases",
+   "portable-distribution"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/versioning.md",
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-31T11:14:00Z",
+   "event": "Mac leg passed - pin proven, LTX imports, generation completed"
+  },
+  {
+   "at": "2026-07-31T11:40:00Z",
+   "event": "Pod image v0.18.0-dev built and verified, dev pins moved"
+  },
+  {
+   "at": "2026-07-31T16:05:00Z",
+   "event": "MPI-406 merged into MPI-413 as one post-1.3 umbrella"
+  },
+  {
+   "at": "2026-07-31T16:45:00Z",
+   "event": "Six verified cards closed; MPI-414 + MPI-418 flagged release blockers"
+  },
+  {
+   "at": "2026-07-31T16:50:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing the Cubric Vision 1.3.0 release on master. NOTHING IS PUBLISHED (latest live release is v1.2.0). The ComfyUI version-pin defect is FIXED AND PROVEN on all three engines: our Linux/macOS installer used to run `comfy install` with no version flag, so it cloned whatever ComfyUI was current and then stamped the file with our pin - the version check compared a lie to a lie and could never detect the drift, and our pinned LTXVideo node stopped importing against 0.29. It now passes --version explicitly and stamps the version read back out of comfyui_version.py. The Mac was the ONLY machine that could prove that flag (Windows takes the prebuilt-archive path and never runs `comfy install`) and it passed: stamp and tree both read 0.29.2, LTXVideo imports with zero IMPORT FAILED, an SDXL generation completed on Metal. The Pod image dev line was rebuilt on 0.29.2 and its in-image node-import smoke passed. TWO CODE BLOCKERS REMAIN, both named by the user and both correct: MPI-414 (Retry routes on /engine/status, which goes true as soon as the venv python exists, so a user who quits during the long first install and comes back gets repair-deps, a success toast, and an engine that cannot boot) and MPI-418 ([server]-category errors never reach app.log, which matters because with no end-to-end Linux or GPU-Windows box of our own, user-submitted logs are the only diagnostic channel we will have). THEN: rebuild all three artifacts at the final commit - the staged set in D:/CubricStudio/Vision/Builds/v1.3.0/ and the v1.3.0 tag BOTH predate the fix and would ship the unpinned installer. Version is settled: 1.3.0, no bump, move the tag, overwrite until right. Remaining verification: a Windows archive install (the user offered to install into a separate folder on his own box - this is the one path never exercised), a ~10-minute scripted Mac re-verify over SSH (`ssh macbox` then `open <extract>/start.command` - no GUI clicks needed; rental ends ~07:30Z 2026-08-01), and the user-only live Pod verify. Report outcomes in PLAIN LANGUAGE, not card IDs. Do not use AskUserQuestion; ask in plain text."
+}

@@ -8,3 +8,4 @@
 {"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-419","at":"2026-07-31T11:16:00Z","actor":"claude","summary":"Mac leg section ticked (5 items)."}
 {"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-419","at":"2026-07-31T11:42:00Z","actor":"claude","summary":"Pod image dev line rebuilt on 0.29.2 (mpi-ci run 30626614008) - both legs pushed and pull-verified, in-image node-import smoke OK, cpu boot smoke OK, app dev pins -> v0.18.0-dev."}
 {"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-419","at":"2026-07-31T11:42:00Z","actor":"claude","summary":"maturity in-progress -> validating. All three legs (Windows, macOS, Pod image) pass; only the user-only live Pod verify remains."}
+{"schema":"mpi-kanban/event/v1","type":"handoff.created","id":"MPI-419","at":"2026-07-31T16:50:00Z","actor":"claude","handoff":"7ffed1a9-d535-487b-ad34-1f01c0824a1d"}
