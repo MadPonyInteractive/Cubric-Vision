@@ -116,7 +116,7 @@ existing users patch in place via the online `update.*` script; without them
 every update is a full re-download):
 ```bash
 gh release create v<ver> --repo MadPonyInteractive/Cubric-Vision \
-  --title "Cubric Vision v<ver>" --notes-file <body.md> \
+  --title "Cubric Vision v<ver>" --notes-file <body.md> --latest \
   D:/CubricStudio/Vision/Builds/v<ver>/CubricVision-*-v<ver>.zip \
   D:/CubricStudio/Vision/Builds/v<ver>/CubricVision-*-v<ver>.tar.gz \
   D:/CubricStudio/Vision/Builds/v<ver>/CubricVision-*-update-v<ver>.zip
@@ -124,7 +124,26 @@ gh release create v<ver> --repo MadPonyInteractive/Cubric-Vision \
 Use the canonical asset names from `docs/releases/github-release-checklist.md`
 (no legacy `CubricStudio` names).
 
-### 7. Summary
+### 7. Verify the release is REACHABLE — do not skip
+Publishing is not proof users can see it. `check-for-update` ([main.js](../../../main.js))
+reads `releases/latest`, which **excludes drafts and prereleases** — a slip there leaves
+every installed app silently seeing the old version, with no error surfaced anywhere.
+```bash
+curl -s https://api.github.com/repos/MadPonyInteractive/Cubric-Vision/releases/latest \
+  | grep -E '"tag_name"|"prerelease"|"draft"'
+```
+Wants `"tag_name": "v<ver>"`, `"prerelease": false`, `"draft": false`. Anything else →
+fix on GitHub before announcing.
+
+Then prove the prompt fires: launch a portable build of the **previous** version and
+confirm the "Update available" dialog appears. MPI-334 shipped code-verified only and
+could not be tested before 1.3.0 (a 1.2.0 install correctly saw 1.2.0 as latest), so
+treat the first real observation as the validation. **Windows builds older than 1.3.0
+cannot be reached this way at all** — Smart App Control blocks the update scripts; the
+release body must tell those users to download the full zip
+(`docs/releases/github-release-checklist.md`).
+
+### 8. Summary
 Report the published tag, release URL, and attached assets. **Comms are out of
 scope** — announcement copy (Patreon / Discord / YouTube / Gumroad) is owned by
 the MadPony-Identity launch-comms workflow, a separate manual step the user
