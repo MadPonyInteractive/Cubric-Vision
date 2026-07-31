@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 414,
+  "next_id": 415,
   "columns": {
     "todo": [
+      "MPI-414",
       "MPI-413",
       "MPI-412",
       "MPI-410",
@@ -105,7 +106,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-31T01:20:00Z",
+  "updated_at": "2026-07-31T02:05:00Z",
   "events": [
     {
       "at": "2026-07-30T11:10:00Z",
@@ -1286,6 +1287,15 @@
       "actor": "opus",
       "column": "todo",
       "summary": "Custom-node requirements reinstall the CUDA torch stack over the CPU one - the second half of MPI-406. downloadManager.js:2181 runs pip -r <node reqs> --upgrade with no index constraint, so torch comes from default PyPI (CUDA) and --upgrade replaces the correct CPU torch. Measured via ComfyUI-LTXVideo on a driverless box: torch, torchvision, triton, cuda-toolkit, 14 nvidia-* wheels. The comment at downloadManager.js:2033 asserting --upgrade is a no-op when satisfied is wrong and is why this stayed invisible. requirementsDrop cannot fix it - timm/diffusers pull torch transitively."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-414",
+      "type": "task.created",
+      "at": "2026-07-31T02:05:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "A failed comfy install leaves an engine that passes /engine/status and /engine/deps-status, has a real clone and a 359-package venv, and still cannot boot (No module named sqlalchemy) because ComfyUI core requirements never ran and no version stamp was written. Retry routes to deps-only because engineReady is judged by the venv python, which exists from step 1 on the uv path. No in-app recovery exists. Downstream of MPI-411."
     }
   ]
 }

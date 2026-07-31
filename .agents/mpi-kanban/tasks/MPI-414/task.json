@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-414",
+  "title": "A failed comfy install leaves an engine that passes every check and cannot boot",
+  "description": "Found live on Linux 2026-07-31, downstream of MPI-411 - this is the DETECTION/RECOVERY gap, not the cause. Chain: comfy install exits 1 before installing ComfyUI core requirements (MPI-411), so _runEngineDownload throws and step 5 never writes engine/.mpi_engine_version (engine.js:535-544). The user presses Retry; MpiEngineInstall.js:316-324 routes on /engine/status, which is true as soon as the VENV PYTHON exists - on the uv path that is from step 1, long before ComfyUI is cloned or stamped - so Retry goes to /engine/repair-deps, which installs custom nodes and their requirements, reports SUCCESS, and never re-runs comfy install, never installs ComfyUI core requirements, never stamps. Measured end state: /engine/status exists true, /engine/deps-status needsDepsInstall false with zero missing/drifted, a real clone with main.py + .git + 16 custom nodes, a venv with 359 packages including torch 2.13.0+cu130 - and /engine/version-check installed null needsInstall true, and ComfyUI dies on ModuleNotFoundError: No module named sqlalchemy. The deps install genuinely succeeded (node commit marker stamped for comfyui_controlnet_aux at 00:48:28) and still left no stamp, so a SUCCESSFUL pass produces an unusable engine with no in-app recovery - the only escape found was hand-writing the stamp file, which no user would discover, and even that was not enough because ComfyUI requirements were still missing. Two holes: the stamp is only ever written by _runEngineDownload, and engineReady asks the wrong question on the uv path (python presence does not imply ComfyUI is installed; on Windows they arrive in one archive so the test holds, on Linux/macOS they are separate steps). Fix direction: make readiness a real capability test rather than a file check, make repair-deps either able to repair the engine or refuse and hand back to /engine/download, and stamp on every success path.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-31T02:05:00Z",
+  "updated_at": "2026-07-31T02:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "engine",
+    "linux",
+    "macos",
+    "install",
+    "retry",
+    "recovery"
+  ],
+  "priority": "high"
+}

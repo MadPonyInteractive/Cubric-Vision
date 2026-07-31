@@ -1,0 +1,161 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "7b3e0c41-92a6-4f18-b5d7-1c4e8a2f6d90",
+ "generated_at": "2026-07-31T02:10:00Z",
+ "from_session": "d621627a-ffb0-4645-bdca-c4f6b18414ad",
+ "to_role": "verifier",
+ "status": "open",
+ "session": {
+  "name": "MPI-409 fixed and verified; MPI-407 + MPI-408 live-verified on Linux; THREE new bugs found (MPI-411 fixed, MPI-413 + MPI-414 open); nothing published",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Fix MPI-409 (release blocker), rebuild, then live-verify MPI-406/407/408 and MPI-198 on the Linux desktop. Publish nothing.",
+  "status": "in_progress",
+  "summary": "MPI-409 is FIXED and verified across three rebuilds. MPI-407 and MPI-408 are LIVE-VERIFIED. Verifying them exposed THREE more pre-existing bugs: MPI-411 (fixed + shipped into 1.3.0), MPI-413 and MPI-414 (open). MPI-406 turned out to be only HALF fixed and its changelog claim was pulled before it could ship as a lie. MPI-198 is still unproven and the Linux box is currently in a broken engine state.",
+  "deliberately_not_done": "gh release create. Gate 2. NOTHING is published. publish-runtime.sh promote was done in an earlier session - do NOT re-run it."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "MPI-409 FIXED (commit addc03a2). Baselines restored byte-exact from 36f972cf~1 - blob hashes identical, verified with git rev-parse, not just content-equal. release-baselines/README.md's Contract bullet that said 'Restamp these as part of cutting a release' - the exact instruction that caused the bug - was replaced with the post-publish timing rule.",
+   "MPI-409 VERIFIED three times (runs 30589473208, 30592442353, 30593339513). Every update bundle reads fromVersion 1.2.0 -> toVersion 1.3.0, kind update-bundle, 6408 / 209 / 208 files - counts identical to the last known-good run 30559394491. Read out of the manifest INSIDE each shipped zip, never inferred from size.",
+   "MPI-407 LIVE-VERIFIED. Warm cache did NOT reproduce it (server bound in 0.8s). `sync && echo 3 | sudo tee /proc/sys/vm/drop_caches` did: server bound 13.5s after launch, the 5000ms fallback fired, 8 ERR_CONNECTION_REFUSED retries logged then stopped - retry 9 landed, window painted, user confirmed 'app started normally'.",
+   "MPI-408 LIVE-VERIFIED. Deliberate repro (Install -> Ctrl+C during comfy-install -> relaunch -> Install). uv venv --clear rebuilt the existing venv instead of exit 2; comfy-cli installed 48 packages on top.",
+   "MPI-411 FOUND AND FIXED (commit 37693ce8) - the same retry then died three lines later on `comfy install` refusing an existing VALID clone. Fixed with --restore when the workspace is already a clone. Landed in 1.3.0 at the user's call.",
+   "MPI-406 re-classified as PARTIAL, card kept OPEN. requirements.compiled is absent (so --fast-deps IS off the --cpu branch, that half is real) but the CUDA stack still installs via a second stage. Its 1.3.0 changelog entry was REMOVED (commit 81a8d684) rather than ship false.",
+   "MPI-413 filed - the second CUDA source. downloadManager.js:2181 runs pip -r <node reqs> --upgrade through a bare python -m pip with no index constraint. PROVEN on the box: torch 2.13.0+cu130, cuda 13.0, on a machine with no NVIDIA driver.",
+   "MPI-410 (first-run splash), MPI-412 (install screen strobing), MPI-414 (broken engine passes every check) all filed with evidence.",
+   "Release notes re-approved TWICE and verified by hash change each time (d87cddce -> e75aee1b -> e936884333c1). release:check passing. eslint clean.",
+   "D:/CubricStudio/Vision/Builds/v1.3.0/ holds ONE coherent set from run 30593339513 carrying all four fixes. Pre-fix zips moved to SUPERSEDED-pre-fix-bundles-MPI-409/ - MOVED not deleted, because CI artifact retention is 1 day and they cannot be re-downloaded."
+  ],
+  "pending": [
+   "START HERE - SSH. The user is DONE being a copy-paste relay and is right to be. They are enabling sshd on the Linux box and adding this machine's key (ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK/3R9VYM/P5K4UC4FqD7DkWELJ8u92ZkyS0aVfdTqAU). They will supply the 192.168.x.x. Write ~/.ssh/config (Host linuxbox / User mad-pony / IdentityFile ~/.ssh/id_ed25519 / BatchMode yes), consider allowlisting Bash(ssh linuxbox:*) in .claude/settings.local.json, then DRIVE THE BOX DIRECTLY. Do not go back to pasting commands.",
+   "THE LINUX BOX IS CURRENTLY BROKEN - engine incomplete, app reportedly will not start. Recovery is in MPI-414's brief: pip install -r engine/ComfyUI_linux/requirements.txt (NO --upgrade), then the stamp is already hand-written. Diagnose the won't-start over SSH first; it may be a leftover process holding port 3000.",
+   "DELETE THE MPI-198 PLACEHOLDERS when done - four zero-byte .safetensors under /home/mad-pony/CubricModels (diffusion_models/wan2.2_ti2v_5B_fp16, loras/wan-2.2-5b/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16, vae/wan2.2_vae, text_encoders/umt5_xxl_fp8_e4m3fn_scaled). Install state is EXISTENCE-ONLY so the app believes Wan 5B is installed forever until they go. Find them with: find /home/mad-pony/CubricModels -name '*.safetensors' -size -1k",
+   "MPI-198 STILL UNPROVEN. The placeholder method is sound and ready - see key_decisions. Needs ComfyUI to actually boot.",
+   "MPI-411 needs its live interrupt-retry test on the NEW build (code-verified only).",
+   "MPI-406 cannot close until MPI-413 is fixed.",
+   "THEN the rented Mac (section C, MPI-370) - the only machine billing by the hour.",
+   "THEN gh release create. Still held."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-391",
+  "title": "1.3.0 cross-platform validation sweep - Windows SAC, macOS, Linux (umbrella)",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-391/",
+  "links": {
+   "plan": null,
+   "checklist": "checklist.md",
+   "validation": null,
+   "brief": "brief.md",
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-391/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": ["read", "continue", "verify", "implement", "commit"],
+ "knowledge_preservation": {
+  "completed": [
+   "Every finding is in its owning card's validation.md or brief.md: MPI-406 (partial, with the stage-tag analysis), MPI-407, MPI-408, MPI-409, MPI-410, MPI-411, MPI-412, MPI-413, MPI-414.",
+   "release-baselines/README.md now carries the durable timing rule with the measured cost, so the instruction that caused MPI-409 cannot be followed again."
+  ],
+  "pending": [
+   "A MEMORY ENTRY IS STILL WRONG AND NEEDS THE USER'S APPROVAL: feedback_public_release_full_installers_only claims a GitHub release attaches only the 3 FULL installers and not the update zips. DISPROVEN - gh release view v1.2.0 lists all three update zips as real assets. That wrong memory is what nearly let MPI-409 through as harmless. Carried from the previous handoff, still unfixed.",
+   "TWO DOC EDITS still PROPOSED, NOT APPROVED in docs/releases/github-release-checklist.md (Windows SAC/MOTW precondition commands; softening 'Windows will show' to 'may show').",
+   "A MEMORY ENTRY WORTH WRITING: release-notes-approval.mjs has a --yes flag (line 245). Two handoffs have prescribed `printf 'y\\n' |` piping instead, and the pipe is now blocked by the Bash classifier. Use `node scripts/release-notes-approval.mjs approve --yes`.",
+   "MEMORY.md compaction - deferred an ELEVENTH time.",
+   "state/index.json active_handoffs is now 17 entries. Cleanup finding only."
+  ]
+ },
+ "next_action": {
+  "description": "Get SSH to the Linux box working (the user is enabling sshd and adding the key; they will give you the 192.168.x.x). Then drive the box directly - no more relayed commands. First job over SSH: work out why the app will not start, then repair the engine per MPI-414's brief (pip install -r engine/ComfyUI_linux/requirements.txt, no --upgrade), boot ComfyUI, and run the MPI-198 placeholder test. Delete the four placeholder files afterwards. Publish nothing.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "MPI-198 CAN be proven with ZERO download and ZERO compute. isCompleteOnDisk (routes/downloadCompletion.js:16-18) is EXISTENCE-ONLY - no size, no hash - and ComfyUI validates value_not_in_list as enum membership at /prompt BEFORE reading any weight. So four zero-byte .safetensors at the right paths make the app treat Wan 2.2 5B as installed, the dispatch validates for real, and a 200 + prompt_id is the proof. Execution then fails instantly loading an empty file, which costs nothing on a thermally-limited box.",
+   "Wan 2.2 5B was chosen over Klein and Krea 2 because it needs the FEWEST files (4 vs Klein's 15 vs Krea 2's ~19), not because it is smallest to download (it is 17.2GB vs Klein 13.56GB - irrelevant when nothing is downloaded). Klein's 8 style LoRAs would all have to exist or a missing placeholder is indistinguishable from a heal failure.",
+   "SDXL CANNOT prove MPI-198 - swept every template in comfy_workflows/: only klein, krea2, ltx, wan5b, qwen bake backslashed loader values. Every SDXL path is flat. The user's existing 6.7GB of SDXL is useless for this.",
+   "The masking auto-detect graph CANNOT prove MPI-198 either - img_auto_mask.json has zero backslashes (bbox/face_yolov8n.pt is forward-slash, the other two are bare filenames). It IS a good cheap engine-works smoke (sam-vit-b 367MB + face-yolov8n 6MB) for checklist line 95, which nothing has proven on Linux.",
+   "What MPI-198 actually adds is ONE line: _needsPathHeal (comfyController.js:91-94) returns true at line 92 for remote (every Pod run ever, already proven) and the NEW branch is line 93, `_serverPlatform !== '' && !== 'win32'`. The heal loop below is shared and battle-tested. The only untested input is whether _serverPlatform reads 'linux' on a real Linux host.",
+   "MpiStyleLoras keeps ALL five baked lora_1..lora_5 values in the dispatched prompt regardless of which style is selected (comfyController.js:1297-1301) - the selector picks at runtime. So style racks always carry their backslashes.",
+   "A WARM-CACHE LAUNCH CANNOT TEST MPI-407. The first launch after extracting bound the server in 0.8s and proved nothing. Any re-test must drop caches or cold-boot.",
+   "Each step of _provisionUvEngine carries its OWN idempotency and they are NOT interchangeable: 0b deletes, step 1 clears, step 3 restores. MPI-408 shipped a changelog promising 'Retry now works' on the strength of one step, and it did not. Walk the whole sequence.",
+   "MPI-406's lesson: 'sweep the blast radius' applies to STAGES OF THE SAME INSTALL, not only to call sites of a shared function. Stage tags in app.log are how you tell them apart - [comfy-install] vs [system] [pip] are different stages with different root causes.",
+   "app.log ROTATES (logger.js:16-17) and the giant pip output blows past the cap easily. Always grep app.log AND app.log.1 or you will read an empty result as a failed dispatch.",
+   "The Linux box has NO curl. Use engine/comfy-venv/bin/python3 with urllib, or read files directly.",
+   "The user's terminal does not handle bracketed paste - a stray ^[[200~ corrupts the FIRST command of any pasted block. Prefix one-liners with `true;` as a sacrificial token, and batch everything into ONE line."
+  ],
+  "constraints": [
+   "NOTHING IS PUBLISHED. gh release create has not run. Gate 2 has not happened.",
+   "release-baselines/*.json MUST STAY at the 1.2.0 manifests until 1.3.0 is live on GitHub. Restamping is a POST-publish step - that is MPI-409.",
+   "release:approve has a --yes flag: `node scripts/release-notes-approval.mjs approve --yes`. Do NOT use the `printf 'y\\n' |` pipe from older handoffs - the Bash classifier blocks it. Always verify docs/releases/.approved-1.3.0.json's hash actually changed; release:check will NOT catch a failed approval.",
+   "CI: gh workflow run cubric-vision-portable.yml -R MadPonyInteractive/mpi-ci -f source_repo=MadPonyInteractive/Cubric-Vision -f ref=<SHA> -f version=1.3.0. Builds from a PUSHED ref - always pass ref explicitly (its default is 'main', this repo is 'master'). ~3.5 min. ARTIFACT RETENTION IS 1 DAY - download before it expires.",
+   "board.json and every task.json seen this session are 2-space indent + trailing newline and round-trip exactly; a serialise-and-compare guard was used on every write and should stay. next_id is now 415.",
+   "Board timestamps run ~1h AHEAD of true UTC (a peer's skew). Writes this session kept monotonic rather than regressing board.json updated_at, and recorded the true GitHub Date header inside validation.md. Do not 'correct' them.",
+   "Ask in PLAIN TEXT, never AskUserQuestion. Read memory feedback-index.md before non-trivial work; it is NOT auto-loaded.",
+   "Windows validation from the earlier session still holds and does not need redoing.",
+   "A RunPod run does NOT verify the local engine on Linux - it takes the line-92 branch."
+  ],
+  "files_modified": [
+   "release-baselines/win32-x64.json",
+   "release-baselines/linux-x64.json",
+   "release-baselines/darwin-arm64.json",
+   "release-baselines/README.md",
+   "routes/engine.js",
+   "js/data/releaseNotes.js",
+   "docs/releases/.approved-1.3.0.json",
+   ".agents/mpi-kanban/board.json",
+   ".agents/mpi-kanban/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-406/",
+   ".agents/mpi-kanban/tasks/MPI-407/",
+   ".agents/mpi-kanban/tasks/MPI-408/",
+   ".agents/mpi-kanban/tasks/MPI-409/",
+   ".agents/mpi-kanban/tasks/MPI-410/",
+   ".agents/mpi-kanban/tasks/MPI-411/",
+   ".agents/mpi-kanban/tasks/MPI-412/",
+   ".agents/mpi-kanban/tasks/MPI-413/",
+   ".agents/mpi-kanban/tasks/MPI-414/"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-414/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-413/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-411/brief.md",
+   ".agents/mpi-kanban/tasks/MPI-406/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md"
+  ],
+  "commits": [
+   "addc03a2 fix(release): restore the 1.2.0 baselines so 1.3.0 rebuilds emit real deltas",
+   "37f4d994 chore(kanban): MPI-409 to validating - rebuild verified fromVersion 1.2.0",
+   "59f0feb1 chore(kanban): MPI-407 live-verified on Linux; MPI-410 for the first-run splash",
+   "37693ce8 fix(engine): --restore so Retry survives an interrupted install on Linux/macOS",
+   "81a8d684 docs(release): drop the CPU-install changelog claim - it is not true yet",
+   "(plus the MPI-414 kanban commit made after 81a8d684)"
+  ],
+  "build_facts": {
+   "current_build": "mpi-ci run 30593339513 from SHA 81a8d684 - success on all three platforms. Bundles 451107094 / 2787788 / 3313572 bytes, all fromVersion 1.2.0, 6408 / 209 / 208 files. Carries MPI-406(partial) + MPI-407 + MPI-408 + MPI-411 and the corrected changelog.",
+   "superseded_builds": "30589473208 (MPI-409 fix, no MPI-411 - this is what the Linux box is RUNNING), 30592442353 (MPI-411 but stale changelog), 30588169394 (broken bundles), 30559394491 (correct bundles, pre-fix code).",
+   "artifacts_dir": "D:/CubricStudio/Vision/Builds/v1.3.0/ - one coherent set from 30593339513, plus SUPERSEDED-pre-fix-bundles-MPI-409/ (kept, unrecoverable).",
+   "baseline_state": "release-baselines/*.json hold the 1.2.0 manifests (6362 win32 / 6325 linux / 6505 darwin) as of addc03a2. The 1.3.0 manifests (6418/6383/6563) are at commit 36f972cf - restamp to those ONLY after publishing.",
+   "linux_machine": "ThinkPad X121e, Ubuntu 22.04, 4 threads, ~8GB RAM, 1.14GHz-class CPU, no NVIDIA driver, no curl, thermally shuts down under sustained load. Extract at /home/mad-pony/Downloads/CubricVision-linux-x64-v1.3.0 (build 30589473208). Models root /home/mad-pony/CubricModels (FIRST base_path in extra_model_paths.yaml; a second entry points at the extract's models/). Engine currently BROKEN - ComfyUI cannot import sqlalchemy."
+  }
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": ["releases", "portable-distribution", "comfy_engine", "comfy_injection"]
+ },
+ "rules_active": [
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/comfy_injection.md"
+ ],
+ "recent_events": [
+  { "at": "2026-07-31T02:10:00Z", "event": "handoff_created" }
+ ],
+ "resume_prompt": "You are continuing the Cubric Vision 1.3.0 release on master. Read .agents/mpi-kanban/state/handoffs/7b3e0c41-92a6-4f18-b5d7-1c4e8a2f6d90.json FIRST. NOTHING IS PUBLISHED - gh release create has not run. MPI-409, the release blocker, is FIXED (addc03a2) and verified across three rebuilds: every update bundle reads fromVersion 1.2.0 with 6408/209/208 files, read from the manifest inside each shipped zip. MPI-407 (black window) and MPI-408 (uv venv --clear) are LIVE-VERIFIED on the Linux desktop. Verifying them found THREE more pre-existing bugs: MPI-411 (comfy install refuses an existing valid clone - FIXED with --restore and shipped into 1.3.0), MPI-413 (custom-node requirements reinstall the CUDA torch stack over the CPU one - PROVEN, torch 2.13.0+cu130 on a driverless box), and MPI-414 (a failed comfy install leaves an engine that passes /engine/status and /engine/deps-status, has a real clone and a 359-package venv, and still cannot boot - no in-app recovery exists). MPI-406 turned out to be only half fixed, so its changelog claim was REMOVED before it could ship as a lie; the card stays open. THE IMMEDIATE JOB IS SSH: the user is done relaying commands by hand and is right to be - they are enabling sshd on the Linux box and authorising this machine's key, and will give you the 192.168.x.x. Write ~/.ssh/config, then drive the box yourself. The box is currently in a broken state (engine incomplete, app will not start) - recovery steps are in MPI-414's brief. After that, MPI-198 is provable with ZERO download and ZERO compute: install state is existence-only, so four zero-byte .safetensors make the app treat Wan 2.2 5B as installed and a 200 + prompt_id at /prompt is the proof; those four placeholder files ALREADY EXIST under /home/mad-pony/CubricModels and MUST be deleted when done. Do not use AskUserQuestion; ask in plain text. release:approve takes --yes; do not pipe into it."
+}
