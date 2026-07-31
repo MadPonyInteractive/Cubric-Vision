@@ -246,14 +246,22 @@ export const nodesDeps = {
     //
     // ⚠ FIRST baked node whose requirements.txt lists bare `torch` + `torchvision`
     // (no version constraint). The node does NOT need a different torch — our
-    // 2.12.0+cu130 satisfies it. The danger is OUR flag: the default installer runs
-    // `pip install -r requirements.txt --upgrade`, and `--upgrade` on an unconstrained
-    // name resolves from PyPI, which has no `+cu130` wheels. Empirically verified:
+    // 2.12.0+cu130 satisfies it. The danger WAS our own flag: the default installer
+    // used to run `pip install -r requirements.txt --upgrade`, and `--upgrade` on an
+    // unconstrained name resolves from PyPI, which has no `+cu130` wheels.
+    // Empirically verified:
     //   pip install --dry-run --upgrade torch      → "Would install torch-2.13.0"  ✗
     //   pip install --dry-run -r requirements.txt  → "torch ... (2.12.0+cu130)" satisfied ✓
     // Losing +cu130 destroys the ~10x cold fault-in fix (MPI-187).
     //
-    // So: override the install with a NON-upgrade pip run. `installRequirementsCommand`
+    // MPI-413 FIXED THAT AT THE SOURCE — `--upgrade` is gone from the default path in
+    // `downloadManager.js`, because the same mechanism was silently swapping torch on
+    // CPU-only boxes too. The override below is therefore now EQUIVALENT to the
+    // default rather than a correction of it. It is kept deliberately: it costs
+    // nothing, and it keeps this node safe if the default path ever regains an
+    // upgrade-style flag. Do not read it as evidence that the default is still unsafe.
+    //
+    // The override runs a NON-upgrade pip run. `installRequirementsCommand`
     // replaces the default pip path entirely and runs inside the node folder.
     // (pipPins can NOT fix this — `pip install torch==2.12.0+cu130` has no
     // --index-url here and those wheels aren't on PyPI, so the pin would FAIL and

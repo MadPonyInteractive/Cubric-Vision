@@ -2030,10 +2030,23 @@ async function _runCustomNodeInstall(modelJob) {
         // land without its pip deps (a prior install where requirements.txt
         // failed/was interrupted, or the node was extracted by a different path
         // that never ran pip); folder-present is NOT proof the deps are installed.
-        // pip with --upgrade is idempotent (a no-op when already satisfied), so
-        // re-running it is cheap + self-healing. This is the general cure for the
-        // recurring "node present, dep missing" class (e.g. ComfyUI-GGUF folder on
-        // disk but `gguf` pkg absent).
+        // `pip install -r` (WITHOUT --upgrade) is idempotent — a no-op when already
+        // satisfied — so re-running it is cheap + self-healing. This is the general
+        // cure for the recurring "node present, dep missing" class (e.g. ComfyUI-GGUF
+        // folder on disk but `gguf` pkg absent).
+        //
+        // MPI-413: this comment used to claim --upgrade was the idempotent one, and
+        // the install below passed it. That is exactly backwards, and the false belief
+        // is why the bug stayed invisible. --upgrade re-resolves EVERY listed name AND
+        // its transitive deps from the default index, so an already-correct pinned
+        // build gets replaced — on a CPU-only box, torch 2.13.0+cpu became
+        // 2.13.0+cu130 plus ~14 nvidia-* wheels, gigabytes, on a machine with no
+        // NVIDIA driver. Same mechanism bit MPI-217 (opencv 4.13→5.0, numpy bump).
+        // Dropping --upgrade keeps the self-heal (missing packages still install) and
+        // loses only the drift. `pipPins` below stays the corrective path when a node
+        // genuinely needs something newer. This also CONVERGES with the remote twin,
+        // which has always run without --upgrade (cubric-vision-pod wrapper.py
+        // `_install_node_requirements`).
         //
         // MPI-243: `pathExists(targetDir)` alone is a FALSE POSITIVE. A `targetPath`
         // weight (e.g. RIFE's ckpts/rife/rife47.pth, which resolves UNDER the node
@@ -2178,7 +2191,7 @@ async function _runCustomNodeInstall(modelJob) {
             const reqPath = path.join(targetDir, 'requirements.txt');
             if (await fs.pathExists(reqPath)) {
                 try {
-                    await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-location']);
+                    await runPipCommand(['install', '-r', reqPath, '--no-warn-script-location']);
                     logger.info('download', `pip requirements installed for ${dep.id}`);
                 } catch (err) {
                     logger.error('download', `pip install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
