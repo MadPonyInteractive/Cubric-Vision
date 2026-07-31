@@ -191,6 +191,37 @@ the same on any GPU-less Linux box. The repo already has the right mechanism for
 (`requirementsDrop: { darwin: [...] }` in `nodesDeps.js`) but it filters
 `requirements.txt`, not a node's own `install.py`. Not carded — raise with the user.
 
+## Pod image — the remote twin, rebuilt and verified 2026-07-31T11:20–11:40Z
+
+The dual-engine clause: `dev_configs/node_lock.json` also drives the RunPod image, so
+fixing only the local twin would have been a half-fix. Built on the **dev** line per
+MPI-340 — released users cannot resolve a `-dev` tag, so nothing shipped.
+
+- **Lock synced into the build context** (`cp` from the canonical Cubric-Vision lock),
+  committed + pushed to mpi-ci as **73f4514**. Diff was exactly the 7 expected lines:
+  core `v0.28.0` -> `v0.29.2`, frontend 1.47.11 / 0.11.20, LTXVideo -> `3b9c5cde`, plus
+  **MpiNodes and krea2edit, which had silently drifted behind** the canonical lock
+  (pod `aaa1d2d9`/`17af8833` vs ours `69a43336`/`223a9383`). Syncing the whole file is
+  what caught them.
+- **CI run 30626614008, both legs green** — `v0.18.0-dev-cu130` -> Docker Hub,
+  `v0.18.0-dev-cpu` -> GHCR. `comfyui_ref=v0.29.2` (the lock's TAG; a bare SHA makes
+  `git clone --branch` exit 128), `wrapper_version=0.2.40`.
+- **`[cubric] node-import smoke test OK`** in the cu130 build. That layer boots ComfyUI
+  and greps the log for `IMPORT FAILED`, so it is a real assertion that every baked
+  node — LTXVideo included — imports against 0.29.2. **Third independent proof of the
+  fix**, after Windows and the Mac.
+- `[cubric] torch 2.12.0+cu130 cuda 13.0` — the load-bearing wrong-CUDA-wheel guard.
+- **cpu boot smoke passed here**: `/health` 200 with `wrapper_version 0.2.40`, and
+  token-gated `/wrapper/stats` correctly 401s. Both tags `docker manifest inspect`
+  clean, so both are publicly pullable — no visibility gate outstanding.
+- App-side dev pins moved to `v0.18.0-dev` (commit `411f6cd6`). **The stable pins stay
+  on v0.17.0 / ComfyUI 0.28.0** — the new LTX commit is backwards compatible, so the
+  released Pod keeps working until a live verify promotes this.
+
+**The one thing an agent cannot do: the live Pod verify.** Deploying a Pod is user-only.
+Card stays in `doing`/`validating` until the user runs a dev-mode Pod and confirms the
+image line + `wrapper_version`.
+
 ## Still open
 - Pod image rebuild: **deliberately deferred** by the user 2026-07-31 until local is
   proven, so the image is built with whatever node fixes local testing surfaces.

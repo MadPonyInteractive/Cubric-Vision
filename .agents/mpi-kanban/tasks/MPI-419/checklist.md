@@ -32,7 +32,16 @@
 - [x] UW deps install clean on a from-scratch engine — zero missing, zero drifted; both darwin requirement filters fired
 - [x] A generation completes on Apple silicon at 0.29.2 — SDXL Realistic 768x768, image written and inspected
 
-## Deferred — decided with the user 2026-07-31
+## Pod image (leg 3) — ran only after both local legs passed, per the user's sequencing
 
-- Pod image rebuild happens AFTER local is proven good, so the image is built with
-  whatever node fixes local testing turns up. Do not rebuild first.
+- [x] `node_lock.json` synced into the mpi-ci build context and pushed (73f4514) — also caught MpiNodes + krea2edit drift
+- [x] Dev-line image built on CI, both legs (run 30626614008): `v0.18.0-dev-cu130` + `v0.18.0-dev-cpu`
+- [x] In-image node-import smoke OK — every baked node imports on 0.29.2
+- [x] Both tags pull-verified public; cpu boot smoke `/health` 200, wrapper 0.2.40
+- [x] App dev pins moved to `v0.18.0-dev` (411f6cd6); stable pins deliberately left on v0.17.0
+- [ ] **USER-ONLY: live Pod verify** — deploy a dev-mode Pod, confirm the image line + `wrapper_version`
+
+## Not done on purpose
+
+- Stable pins stay on ComfyUI 0.28.0 until the live Pod verify. The bumped LTXVideo
+  commit is backwards compatible, so the shipped Pod keeps working meanwhile.
