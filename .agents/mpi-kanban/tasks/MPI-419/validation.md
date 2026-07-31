@@ -101,13 +101,97 @@ MpiNodes dev symlink intact and skips a 2.1 GB re-download. Reversible with
 - Guard tests green after the bump: node-drift 27/27, resolver contract 14/14,
   remote-engine-assets 6/6, `eslint routes/engine.js` clean.
 
-## Still open
+## Mac leg — the before-picture, captured live from the OLD 1.3.0 build
 
-- **The `--version` pin itself cannot be proven on Windows** — Windows takes the
-  prebuilt-archive path and never runs `comfy install`. That flag can only be
-  exercised on the Mac or Linux.
-- Mac leg: rebuild in CI, fresh extract, fresh engine install, confirm comfy-cli lands
-  exactly 0.29.2 and the stamp reads it back.
+Read off the rented M4 at 2026-07-31T10:5xZ, from the build that shipped BEFORE the
+fix, on the engine it had installed itself:
+
+```
+GET /engine/version-check
+{"installed":"0.28.0","required":"0.28.0","needsInstall":false,"needsUpgrade":false}
+
+<extract>/engine/.mpi_engine_version        -> 0.28.0
+<extract>/engine/ComfyUI_macos/comfyui_version.py -> __version__ = "0.29.0"
+```
+
+That is the defect in one frame: a **healthy** report — no upgrade offered, nothing to
+repair — over a tree that is actually 0.29.0, with the log carrying
+`ImportError: cannot import name 'interleaved_freqs_cis'` (app.log:307) and
+`3.3 seconds (IMPORT FAILED): .../custom_nodes/ComfyUI-LTXVideo` (app.log:386).
+
+**Access note for future legs: the Mac needs NO GUI clicks.** `ssh macbox` then plain
+`open <extract>/start.command` launches the Electron app on the console session and the
+server binds 127.0.0.1:3000 within ~3s. `launchctl asuser` is the wrong tool — it needs
+root and fails with `Could not switch to audit session`. The whole leg below was driven
+over SSH with the user asleep.
+
+## Mac leg — leg 2, PASSED 2026-07-31T11:07–11:14Z. THE PIN IS PROVEN.
+
+This is the only machine that can exercise `--version`, because Windows takes the
+prebuilt-archive path and never runs `comfy install`. Run end to end over SSH with the
+user away — no GUI click anywhere.
+
+- **Artifact**: mpi-ci run **30625478488**, `ref=master` (= `e2c2b4d6` + a kanban-only
+  commit). A **short SHA is not a valid checkout ref** — the first dispatch died with
+  `A branch or tag with the name 'e2c2b4d6' could not be found`; pass a branch, a tag,
+  or the full 40-char SHA. All three OS jobs green. `cubric-vision-darwin-arm64`
+  pulled here and scp'd to the Mac byte-exact (**471,995,554**), extracted with
+  `ditto -x -k` into a **separate** root (`~/Downloads/b2/`) so the old build stayed
+  intact as the before-picture. Delivered by scp, so no quarantine xattr was ever set.
+- **The shipped artifact really carries the fix** — checked in the extracted tree, not
+  in the repo: `app/routes/engine.js:416` has `'--version', COMFY_VERSION`,
+  `_readInstalledComfyVersion` is at `:467` and consumed at `:574`, and
+  `app/dev_configs/system_dependencies.json` reads `0.29.2`.
+- **Fresh state before the install**: `{"installed":null,"required":"0.29.2","needsInstall":true}`.
+- **THE PROOF** — after one `POST /engine/download`:
+
+  ```
+  [11:09:37] [INFO] [engine] Version stamp written: 0.29.2
+  engine/.mpi_engine_version                -> 0.29.2
+  engine/ComfyUI_macos/comfyui_version.py   -> __version__ = "0.29.2"
+  GET /engine/version-check {"installed":"0.29.2","required":"0.29.2","needsUpgrade":false}
+  ```
+
+  comfy-cli landed **exactly the pin**, and the stamp is the version read back off
+  disk. Compare with the before-picture above: same endpoint, same file, previously
+  agreeing on a number that was not what was installed.
+- **UW deps clean**: `GET /engine/deps-status` -> `needsDepsInstall false`, zero
+  missing, zero drifted. Both darwin requirement filters fired again on a from-scratch
+  install (`dropped git+.../sam2` for Impact-Pack, `dropped onnxruntime-gpu` for
+  `comfyui_controlnet_aux`) — MPI-370's fix re-proven on the real install path rather
+  than on a repair pass.
+- **LTXVideo imports on the uv engine — the macOS/Linux half of the defect.**
+  `6.1 seconds: .../custom_nodes/ComfyUI-LTXVideo`, **zero** `IMPORT FAILED` lines in
+  the whole boot, no `interleaved_freqs_cis` anywhere. All **14** custom nodes import.
+  1862 node classes, 65 LTXV, 8 Krea2. (Windows counted 67 LTXV on the same pins — a
+  2-class gap that is almost certainly CUDA-gated nodes, worth a glance if an LTX node
+  ever turns up missing on Apple hardware, not a blocker.)
+- The only boot tracebacks are the pre-existing deliberate ones: KJNodes'
+  `PatchTritonVAE` needs `triton`, which we do not ship (MPI-50). Same two on Windows.
+- **Generation PASSED on Apple silicon at 0.29.2**: SDXL Realistic, 768x768, 8 steps
+  euler, queued at `/prompt` -> `status_str: success`, `mpi419_mac_029_00001_.png`
+  (913,085 bytes) written and visually inspected — coherent, correctly sampled.
+  torch is the documented unpinned MPS nightly `2.14.0.dev20260730`.
+- Install took **~2 minutes** because the uv/pip caches were warm from the earlier run
+  and `modelsRoot` was pointed at the old extract's existing 12 GB of weights
+  (`POST /engine/download {"modelsRoot": "..."}` — the chosen-root path, which also
+  re-proved `extra_model_paths.yaml written with chosen root`). A cold box will be far
+  slower; this run proves correctness, not install duration.
+
+### Found during this leg, not actioned — Frame-Interpolation tries to build cupy on macOS
+
+`ComfyUI-Frame-Interpolation`'s own `install.py` reaches "Checking cupy... Installing
+cupy...", and `cupy-wheel` fails to build with
+`ModuleNotFoundError: No module named 'pkg_resources'` inside the isolated build env.
+cupy is CUDA-only, so it can never succeed on Apple silicon. **It is not fatal** — the
+script still exits 0, so we log `Custom install command succeeded for
+ComfyUI-Frame-Interpolation`, the pip pins apply and the commit marker stamps. Cost is
+a scary WARN + 20-line traceback in the log of every clean macOS install, and probably
+the same on any GPU-less Linux box. The repo already has the right mechanism for this
+(`requirementsDrop: { darwin: [...] }` in `nodesDeps.js`) but it filters
+`requirements.txt`, not a node's own `install.py`. Not carded — raise with the user.
+
+## Still open
 - Pod image rebuild: **deliberately deferred** by the user 2026-07-31 until local is
   proven, so the image is built with whatever node fixes local testing surfaces.
   Its `node_lock.json` copy is still at v0.28.0, image `v0.17.0`. LTXVideo is a baked

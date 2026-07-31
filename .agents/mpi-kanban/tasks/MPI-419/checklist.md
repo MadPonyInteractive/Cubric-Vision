@@ -26,9 +26,11 @@
 
 ## Test — rented Mac (leg 2)
 
-- [ ] Rebuild in CI, fresh extract, fresh engine install
-- [ ] `comfy install` lands 0.29.2 exactly (proves the `--version` pin; Windows cannot)
-- [ ] LTX node imports on the uv engine
+- [x] Rebuild in CI, fresh extract, fresh engine install — mpi-ci run 30625478488, extracted to a separate root so the old build stayed as the before-picture
+- [x] `comfy install` lands 0.29.2 exactly (proves the `--version` pin; Windows cannot) — stamp, `comfyui_version.py` and `/engine/version-check` all read 0.29.2
+- [x] LTX node imports on the uv engine — 6.1s, zero `IMPORT FAILED`, all 14 nodes in
+- [x] UW deps install clean on a from-scratch engine — zero missing, zero drifted; both darwin requirement filters fired
+- [x] A generation completes on Apple silicon at 0.29.2 — SDXL Realistic 768x768, image written and inspected
 
 ## Deferred — decided with the user 2026-07-31
 
