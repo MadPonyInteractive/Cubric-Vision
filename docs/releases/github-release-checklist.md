@@ -144,10 +144,14 @@ dies elsewhere (MPI-387 D was exactly this).
    Paperspace M4000 $0.45/hr / A4000 $0.76/hr, AWS `g4dn.xlarge` ~$0.75/hr.
    **Fidelity gap that matters:** these are datacenter cards (T4/A16/L4) on
    datacenter drivers, not GeForce + Game Ready. Reproduces dependency/environment
-   bugs perfectly; may *not* reproduce consumer-driver bugs. **Unverified:** whether
-   the Vultr/Paperspace Windows images are Windows Server or a real Win 10/11
-   desktop — Server preinstalls different redistributables, so confirm before
-   trusting a pass.
+   bugs perfectly; may *not* reproduce consumer-driver bugs.
+   **RESOLVED 2026-07-31 — they are Windows SERVER, not a Win 10/11 desktop**
+   (maintainer, from a prior rental attempt; this was left "unverified" here and is
+   the reason that attempt was abandoned). Server preinstalls a different
+   redistributable set, so a pass on one of these boxes does NOT clear a consumer
+   desktop and a *failure* may be Server-only. Treat the GPU rental as a
+   generation/dependency probe only — never as the clean-Windows-desktop sign-off.
+   For that, use Windows Sandbox above (launch only) or real consumer hardware.
 
 ### Linux
 
