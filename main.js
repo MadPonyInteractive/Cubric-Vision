@@ -292,7 +292,7 @@ function loadWindowState() {
       windowState = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     }
   } catch (err) {
-    console.error('Failed to load window state:', err);
+    logger.error('main', 'Failed to load window state', err);
   }
 }
 
@@ -636,17 +636,20 @@ function startServer() {
   const userDataPath = app.getPath('userData');
   const documentsPath = app.getPath('documents');
   const serverEnv = buildServerEnv(userDataPath, documentsPath);
-  console.log('[main] APP_USER_DATA set to:', userDataPath);
-  console.log('[main] APP_DOCUMENTS set to:', documentsPath);
+  logger.info('main', `APP_USER_DATA set to: ${userDataPath}`);
+  logger.info('main', `APP_DOCUMENTS set to: ${documentsPath}`);
   // The clean-Windows-install report that opened MPI-387 arrived with an app.log
   // that never said where the app thought its folders were, which is half the
-  // diagnosis for any "it installed into the wrong place" bug.
-  console.log('[main] portable roots:', JSON.stringify({
+  // diagnosis for any "it installed into the wrong place" bug. These went through
+  // bare console calls until MPI-418's follow-up: main's stdout has no capture
+  // (only the fork's, via pipeChildStream below), so they printed to a terminal
+  // no user ever sees and were absent from every app.log — proven on macOS.
+  logger.info('main', `portable roots: ${JSON.stringify({
     portable: serverEnv.CUBRIC_PORTABLE_ROOT || null,
     engine: serverEnv.CUBRIC_ENGINE_ROOT || null,
     models: serverEnv.CUBRIC_MODELS_ROOT || null,
     resources: serverEnv.MPI_RESOURCES_PATH || null,
-  }));
+  })}`);
   serverProcess = fork(path.join(__dirname, 'server.js'), [], {
     silent: true,
     env: serverEnv,
@@ -814,7 +817,7 @@ app.on('ready', () => {
     }
 
     if (msg === 'server-ready') {
-      console.log('[main] Server signaled ready.');
+      logger.info('main', 'Server signaled ready.');
       onReady();
       return;
     }
@@ -830,7 +833,10 @@ app.on('ready', () => {
   // Fallback timeout in case signal is missed (5 seconds)
   setTimeout(() => {
     if (!readyCalled) {
-      console.warn('[main] Server signal timed out, attempting to create window anyway...');
+      // The black-window failure's own diagnostic — the exact bug 1.3.0 fixes. A
+      // user who hits it must be able to SEND this line, so it cannot be a bare
+      // console call.
+      logger.warn('main', 'Server signal timed out, attempting to create window anyway...');
       onReady();
     }
   }, 5000);

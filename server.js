@@ -16,7 +16,10 @@
  * - Constants and shared helpers belong in routes/shared.js.
  */
 
-require('dotenv').config();
+// quiet: dotenv's startup banner ("injected env (0) from .env // tip: ...") is raw
+// child stdout, so pipeChildStream formats it as a real [server] INFO line and it
+// reaches users in app.log looking like an app message. Nothing reads the banner.
+require('dotenv').config({ quiet: true });
 
 const express = require('express');
 const bodyParser = require('body-parser');
