@@ -60,6 +60,13 @@ iterating on launcher scripts — **not** for shipping a cross-OS artifact.
   `node scripts/release-notes-approval.mjs approve`). Those tokens are **tracked
   files** — CI reads the committed one. A dotfile does not show up in a plain
   `ls`, so check with `git status` before assuming one is yours to delete.
+- **The token is a HASH of the notes, so ANY edit to `js/data/releaseNotes.js`
+  stales it — including a peer's.** CI then fails the gate before doing any work,
+  which reads as an unrelated build failure. Check before dispatching:
+  `node scripts/release-notes-approval.mjs check`; re-approve with
+  `approve --yes` (the old `printf 'y\n' |` pipe is blocked by the Bash
+  classifier and reads as a hang). Verify the token's `hash` actually changed.
+  Batch notes edits with the re-approval — each edit costs another cycle.
 
 ### Collecting CI artifacts
 
@@ -70,6 +77,12 @@ down explicitly:
 ```sh
 gh run download <run-id> -n cubric-vision-linux-x64 -D "D:\CubricStudio\Vision\Builds"
 ```
+
+**`gh run download` REFUSES to overwrite** — it aborts with
+`error extracting "<file>": ... The file exists.` and downloads nothing. Move the
+previous set aside first (the `SUPERSEDED-<reason>/` convention already in that
+folder), then download. Also pin the dispatch to a **SHA**, not `master`: `ref`
+accepts one, and a peer pushing mid-build otherwise changes what you built.
 
 Then verify the archive carries executable bits before trusting it (see next
 section).

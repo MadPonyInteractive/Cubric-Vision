@@ -274,7 +274,14 @@ commit is on disk and reinstalls on mismatch, **both engines**.
   unset — an image node can't be volume-healed, it needs a rebuild).
 - **Heal (local):** `/engine/repair-deps` (engine.js) unions missing+drifted and
   **pre-wipes** each drifted folder (`fs.remove`) before reinstall — else
-  `startUniversalWorkflowInstall` skips it as already-on-disk. **Heal (remote):** a
+  `startUniversalWorkflowInstall` skips it as already-on-disk. It **refuses an
+  engine with no `.mpi_engine_version` and hands off to `_runEngineDownload()`**:
+  it never runs `comfy install`, so on a half-provisioned engine it used to
+  install nodes, broadcast `engine:complete` and leave a ComfyUI that dies on
+  `ModuleNotFoundError: sqlalchemy`. The stamp is the ONLY completeness marker —
+  Retry routes on `/engine/version-check`, never `/engine/status` (true from step
+  1 of the uv path, before ComfyUI is cloned). Never stamp from a path that did
+  not run `comfy install` (MPI-414). **Heal (remote):** a
   drifted volume node installs WITH `force:true` (downloadManager → `remoteInstallDep`)
   so the wrapper `rmtree`s + re-clones at the pinned commit; without force it
   short-circuits `already_installed` on folder-exists → an endless install loop.
