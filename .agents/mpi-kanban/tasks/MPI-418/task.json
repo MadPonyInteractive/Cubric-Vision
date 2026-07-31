@@ -3,16 +3,22 @@
   "id": "MPI-418",
   "title": "[server]-category errors are printed to the terminal but never written to app.log",
   "description": "RELEASE BLOCKER for 1.3.0 - user decision 2026-07-31. Nothing breaks for the user, but this breaks the ONLY diagnostic channel we will have after release. THE USER'S ARGUMENT, which is the decisive one: we cannot verify Linux end-to-end (the only Linux box cannot boot ComfyUI at all - MPI-415/SIGILL) and we have no separate GPU Windows box that can verify to the end either, so user-submitted app.log files are the only way we learn what fails in the wild. A whole [server] category never reaching the file means the log a user sends has the failure silently missing, exactly where we are blindest. Cheap to fix and reproduces for free on Windows. On the rented M4 2026-07-31 the launcher terminal showed three [ERROR] [server] lines (Node reparsing app/js/data/modelConstants/modelDeps.js as an ES module, and the advice to add \"type\": \"module\" to app/package.json) carrying real timestamps and the standard [ERROR] [server] prefix. NONE of them appear in user-data/logs/app.log, which contained 18 lines and only one ERROR entry. [engine]-category errors DO reach the file correctly, complete with multi-line stacks. Consequence: a user who reports a problem sends app.log, and any server-category failure is silently missing from it - the same class of blind spot MPI-415 was raised for, where the real cause never reached the person who needed it. NOT investigated on the Mac deliberately (billed hardware, and it reproduces for free on Windows). Establish whether server.js runs as an Electron fork whose logger never attaches the file sink, then fix the sink rather than the call sites.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "open",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
   "created_at": "2026-07-31T07:46:00Z",
-  "updated_at": "2026-07-31T16:40:00Z",
-  "links": {},
+  "updated_at": "2026-07-31T16:25:00Z",
+  "links": {
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  },
   "tags": [
     "logging",
     "diagnostics"
   ],
   "priority": "high",
-  "attention": false
+  "attention": false,
+  "activeSessionTitle": "Fix the two 1.3.0 release blockers"
 }
