@@ -39,7 +39,7 @@
 - [x] In-image node-import smoke OK — every baked node imports on 0.29.2
 - [x] Both tags pull-verified public; cpu boot smoke `/health` 200, wrapper 0.2.40
 - [x] App dev pins moved to `v0.18.0-dev` (411f6cd6); stable pins deliberately left on v0.17.0
-- [ ] **USER-ONLY: live Pod verify** — deploy a dev-mode Pod, confirm the image line + `wrapper_version`
+- [x] **USER-ONLY: live Pod verify** — deploy a dev-mode Pod, confirm the image line + `wrapper_version` (2026-07-31T20:47–20:57Z, Pod `thlt3mns6055r5` on an L4: image line `v0.18.0-dev-cu130`, channel `dev`, wrapper `0.2.40`, ComfyUI up on 0.29.2 — see validation.md)
 
 ## Not done on purpose
 

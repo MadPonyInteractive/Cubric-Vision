@@ -228,3 +228,104 @@ image line + `wrapper_version`.
   Its `node_lock.json` copy is still at v0.28.0, image `v0.17.0`. LTXVideo is a baked
   node, so the bump does drift the image — but the new LTX commit is backwards
   compatible, so the Pod keeps working at 0.28.0 until the rebuild.
+
+## Live Pod verify — leg 3 CLOSED 2026-07-31T20:47–20:57Z, on a real dev-mode Pod
+
+The last user-only item. Pod deployed by the user from the dev app (`npm start`, so
+`_devMode` is true and the dev pins resolve); every reading below was taken read-only
+while it booted, no clicks and no generation.
+
+**Pod:** `thlt3mns6055r5`, machine `so5311pahl76`, NVIDIA L4, EU-RO-1, network volume
+`9t3awufudk`, $0.39/hr. Created `20:47:05.579Z`.
+
+### The image line — what the box asked for
+
+From the app's own log (`%APPDATA%/Cubric Vision/logs/app.log`):
+
+```
+[2026-07-31T20:47:03.002Z] [INFO] [runpod] Pod image for NVIDIA L4: docker.io/madponyinteractive/cubric-vision-pod:v0.18.0-dev-cu130
+[2026-07-31T20:47:03.570Z] [INFO] [runpod] dev_mode: Pod boots the `dev` R2 runtime channel (vision/dev/)
+```
+
+Confirmed independently against the RunPod record (`GET /runpod/pods/:id`):
+
+| field | value |
+|---|---|
+| `imageName` | `docker.io/madponyinteractive/cubric-vision-pod:v0.18.0-dev-cu130` |
+| `env.CUBRIC_RUNTIME_CHANNEL` | `dev` |
+| digest (RunPod system log) | `sha256:e9dd0fda9ed2b68b3a840157f5bcbe7534b6a686dc713fa2946b5dfce848223f` |
+
+**The pin is genuinely being resolved, not cached.** The user's earlier attempt the same
+morning logged `v0.17.0-dev` at `10:00:33Z`; the dev pins moved to `v0.18.0-dev` at
+`12:37Z` (`411f6cd6`); this `20:47Z` create logged `v0.18.0-dev`. Same app, same code
+path, different answer either side of the bump.
+
+### `wrapper_version` — the other half
+
+`GET /remote/comfy/status` once the handshake completed:
+
+```
+{"running":true,"ready":true,"comfyReady":true,"wrapperVersion":"0.2.40","connecting":false}
+```
+
+`0.2.40` matches the R2 `dev` manifest exactly. Note the Pod env carries
+`CUBRIC_WRAPPER_VERSION=0.2.36` — that is the inert app-side pin the bootstrap unsets
+(already chased and closed in MPI-342); the fetched wrapper self-reported 0.2.40.
+
+**Beyond the box:** `comfyReady: true` — ComfyUI itself came up on 0.29.2 on the L4, so
+this proves boot, not merely image resolution.
+
+### Connect took ~9 minutes — diagnosed, not a defect
+
+Cold pull of a same-day tag. `v0.18.0-dev-cu130` is 9.3 GB / 23 layers and was pushed
+`2026-07-31T11:35:41Z`, ~9 h before the boot, so neither the host nor the region's CDN
+had it. (`v0.17.0-cu130` for comparison: 9.2 GB, pushed 2026-07-24 — near-identical
+size, so this is age, not bloat.)
+
+On top of that the RunPod system log showed a retry cascade — a dozen layers entering
+`Retrying in 5/4/3 seconds` the moment they started. Pod pulls are **anonymous**: there
+is no `containerRegistryAuth` anywhere in the Pod spec, so they are subject to Docker
+Hub's per-IP anonymous rate limit, which RunPod hosts share across tenants. Every layer
+did eventually report `Pull complete`, so it was backoff, not corruption.
+
+Two artefacts settle the "is it stuck / did it restart" question:
+
+- `createdAt` and `lastStartedAt` are both `20:47:05.5` — one continuous attempt, the
+  Pod never bounced or got rescheduled. The console's layer counter climbing 4 -> 16 ->
+  23 is progressive manifest enumeration, not a restart; layers that went green stayed
+  green.
+- `Status: Downloaded newer image …` at `21:55:51` local, then `Status: Image is up to
+  date …` at `21:55:52` — the cache filling, one second apart.
+
+**Measured, not assumed — the user re-ran it 15 min later and the mechanism is NOT
+host caching.** Deleting the Pod and reconnecting landed on a *different* machine
+(`f4ukl6gl2vvl`, vs `so5311pahl76` the first time), pulling the *same* tag, and reached
+`comfyReady` in **133 s versus ~558 s** — 4x faster on hardware that had never held the
+image.
+
+| | 1st connect | 2nd connect |
+|---|---|---|
+| machine | `so5311pahl76` | `f4ukl6gl2vvl` |
+| tag | `v0.18.0-dev-cu130` | same |
+| time to `comfyReady` | ~558 s | **133 s** |
+
+So the expensive event is the **first pull of a young tag into a region** — Docker Hub
+edge cold-miss plus the anonymous rate-limit backoff — not per-host warmth. The user also
+notes a stopped Pod is reclaimed and re-rented, so ~99% of creates land on fresh hardware
+anyway; that turns out not to matter much once the tag itself is warm.
+
+**Released users are unaffected either way** — they pull `v0.17.0`, in circulation since
+24 July.
+
+### Verdict
+
+Leg 3 passes. `v0.18.0-dev` resolves, pulls, boots, runs ComfyUI 0.29.2, and serves
+wrapper 0.2.40 on the `dev` R2 channel. The stable pins remain on `v0.17.0` — promoting
+them is a separate, deliberate decision and is NOT required by 1.3.0.
+
+### Follow-up worth carding (not done here)
+
+Anonymous registry pulls make every fresh tag a coin-flip on another tenant's rate
+limit. Two known fixes: authenticate the pull, or mirror the GPU image to GHCR the way
+the CPU image already is. The move to Docker Hub was deliberate (MPI-189, cold-start
+measurement), so this is a revisit rather than a regression.

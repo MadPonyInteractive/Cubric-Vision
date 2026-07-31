@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-421",
+  "title": "Mask detection runs outside the queue with no progress feedback - route it through the generation lane + StatusBar",
+  "description": "Auto-mask detection (Detect / Points / Text) dispatches a real ComfyUI workflow but is invisible while it runs. `runAutoMask` (js/services/commandExecutor.js:876), called from `_runAutoMaskWorkflow` (js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js:479), returns an `AutoMaskExecution` handle whose contract is onDetected / onMasks / onError / cancel -- there is NO onProgress, where the `Execution` typedef immediately below it in the same file has one. So a detect run never enters the queue and never reaches the StatusBar progress bar that generations use (js/services/generationService.js, generationStore.js, activeGenerations.js). CONSEQUENCE: a pass over a busy image -- many objects, or SAM3 text with several categories -- can take a long time with zero feedback. The user cannot tell it from a hang, and has no visible way to stop it even though the handle already exposes cancel(). These are ComfyUI workflows like any other, so they belong in the same lane. DECIDE: do they occupy the queue as first-class jobs, or a lightweight utility lane that cannot end up stuck behind a long generation? Read docs/generation-lifecycle.md and docs/masking-sam3.md before touching this. Raised by the user 2026-07-31.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-07-31T21:12:00Z",
+  "updated_at": "2026-07-31T21:12:00Z",
+  "links": {},
+  "tags": [
+    "masking",
+    "sam3",
+    "generation-lifecycle",
+    "statusbar",
+    "ux"
+  ],
+  "priority": "normal",
+  "attention": false
+}
