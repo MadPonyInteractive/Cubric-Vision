@@ -660,27 +660,31 @@ function startServer() {
   const pipeChildStream = (stream, level) => {
     if (!stream) return;
     let buffer = '';
-    let structuredContinuation = null;
-    const structuredLogPattern = /^\[(?<timestamp>[^\]]+)\]\s+\[(?<level>INFO|WARN|ERROR)\]\s+\[(?<category>[^\]]+)\]\s*(?<message>[\s\S]*)$/;
-    const writeStructuredLine = (levelName, category, message) => {
-      if (levelName === 'error') logger.error(category, message);
-      else if (levelName === 'warn') logger.warn(category, message);
-      else logger.info(category, message);
-    };
+    // True while the last child line we saw was one its OWN logger emitted, so
+    // the indented stack lines that follow belong to it.
+    let childLoggedItself = false;
+    const structuredLogPattern = /^\[[^\]]+\]\s+\[(?:INFO|WARN|ERROR)\]\s+\[[^\]]+\]/;
+    // Replay ONLY the child output its own logger did not already persist.
+    //
+    // Both processes now resolve APP_USER_DATA and therefore append to the SAME
+    // app.log (MPI-418). The child's routes/logger writes each line to that file
+    // AND mirrors it to stdout for dev tools; this pipe reads that mirror. So
+    // re-logging a structured line here writes it a second time — every server
+    // line appeared twice, which also halves the 256KB rotation window and thus
+    // the history a bug report carries. Measured on the Windows portable
+    // 2026-07-31. Raw output (dotenv's banner, a library's console.log, a Node
+    // module-resolution error) has no logger behind it and is the whole reason
+    // this pipe exists, so it still lands under [server].
     const writeChildLine = (line) => {
-      const match = line.match(structuredLogPattern);
-      if (match?.groups) {
-        const childLevel = match.groups.level.toLowerCase();
-        const category = match.groups.category || 'server';
-        const message = match.groups.message || '';
-        structuredContinuation = { level: childLevel, category };
-        writeStructuredLine(childLevel, category, message);
+      if (structuredLogPattern.test(line)) {
+        childLoggedItself = true;   // already in the file, and so is its stack
         return;
       }
-      if (structuredContinuation) {
-        writeStructuredLine(structuredContinuation.level, structuredContinuation.category, line);
-        return;
-      }
+      // A stack line the child's logger wrote as part of the entry above it —
+      // routes/logger indents those. An UNindented line is fresh raw output, so
+      // it ends the continuation and must still be captured.
+      if (childLoggedItself && /^\s/.test(line)) return;
+      childLoggedItself = false;
       logger[level]('server', line);
     };
 

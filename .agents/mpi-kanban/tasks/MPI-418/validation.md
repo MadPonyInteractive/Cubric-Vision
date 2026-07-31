@@ -53,9 +53,50 @@ OLD code — late-env log exists at ...\late\logs\app.log ? false
 NEW code — same check passes
 ```
 
-## Outstanding
+## PROVEN on the Windows portable, 2026-07-31
 
-Not yet confirmed on a packaged build — dev cannot show this bug, because with
-neither process setting `APP_USER_DATA` both fall back to `<repo>/logs` and the
-two files coincide. Closes when a rebuilt portable's
-`user-data/logs/app.log` is seen carrying `[main]` and `[server]` lines.
+Fresh install of the post-fix build into `D:\cubric-install-test\`. The exact
+lines this card was raised for — the ones seen on the Mac terminal that never
+reached the file — are now in `user-data/logs/app.log`:
+
+```
+[ERROR] [server] (node:27952) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of
+                 .../resources/app/js/data/modelConstants/modelDeps.js is not specified
+                 and it doesn't parse as CommonJS.
+[ERROR] [server] Reparsing as ES module because module syntax was detected...
+[ERROR] [server] To eliminate this warning, add "type": "module" to ...\app\package.json.
+[ERROR] [server] (Use `CubricVision --trace-warnings ...` to show where the warning was created)
+```
+
+Line 1 of that same file is a `[mask-temp]` entry, which is a main-process
+write — also impossible before. Both halves confirmed on real hardware.
+
+## Regression this fix introduced, and its fix
+
+Pointing both processes at one file exposed a double-write that the split file
+had been hiding: the child's `routes/logger` persists each line **and** mirrors
+it to stdout, and `pipeChildStream` re-logged that mirror. Every structured
+server line therefore appeared **twice** — measured in the install above, e.g.
+
+```
+[INFO] [system] Server initialization started      <- child's own logger
+[INFO] [system] Server initialization started      <- main replaying the pipe
+```
+
+That is not cosmetic here: it halves the effective 256KB rotation window, so a
+bug report carries half the history — the exact thing this card protects.
+
+`main.js` `writeChildLine` now replays only output the child did **not** already
+persist: structured lines and their indented stack continuations are skipped,
+raw output (dotenv's banner, a library `console.log`, the Node module-resolution
+errors above) still lands under `[server]`. An **unindented** line ends the
+continuation, so a raw error following a structured line survives — dropping it
+would have re-broken this card. Both cases are asserted in the test.
+
+## Noticed, not actioned
+
+- Those Node warnings arrive on stderr, so they are logged at `[ERROR]` although
+  Node calls them warnings. A benign warning reads as an error in a user's log.
+- `modelDeps.js` is being reparsed as an ES module on every boot, with the
+  performance overhead Node names. The fix it suggests (`"type": "module"` in
+  `resources/app/package.json`) is far too broad to do inside a blocker fix.

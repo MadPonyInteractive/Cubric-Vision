@@ -72,4 +72,45 @@ assert.ok(fs.existsSync(lateLog), `env set after require must still be honoured 
 assert.ok(fs.readFileSync(lateLog, 'utf8').includes('LATE_MARKER'), 'late-env line missing');
 
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('logger-sink-userdata: PASS (3 checks)');
+
+// ── 4. main.js must not replay what the child already wrote ───────────────────
+// Consequence of the fix above: both processes append to the same app.log, so
+// pipeChildStream re-logging the child's structured stdout wrote every server
+// line TWICE (seen on the Windows portable 2026-07-31) and halved the rotation
+// window. Mirrors the writeChildLine state machine in main.js startServer().
+function makeWriteChildLine(sink, level) {
+    let childLoggedItself = false;
+    const structuredLogPattern = /^\[[^\]]+\]\s+\[(?:INFO|WARN|ERROR)\]\s+\[[^\]]+\]/;
+    return (line) => {
+        if (structuredLogPattern.test(line)) { childLoggedItself = true; return; }
+        if (childLoggedItself && /^\s/.test(line)) return;
+        childLoggedItself = false;
+        sink.push([level, line]);
+    };
+}
+
+const out = [];
+const write = makeWriteChildLine(out, 'info');
+
+// The child's own logger already persisted these two.
+write('[2026-07-31T16:48:00.727Z] [INFO] [system] Server initialization started');
+write('[2026-07-31T16:48:04.485Z] [ERROR] [engine] Engine download failed');
+write('    at _runEngineDownload (routes/engine.js:480:11)');   // its stack — also already persisted
+// Raw output with no logger behind it — the reason this pipe exists at all.
+write('◇ injected env (0) from .env');
+write('Error [ERR_REQUIRE_ESM]: require() of ES Module modelDeps.js');
+
+assert.deepStrictEqual(out, [
+    ['info', '◇ injected env (0) from .env'],
+    ['info', 'Error [ERR_REQUIRE_ESM]: require() of ES Module modelDeps.js'],
+], 'only un-persisted raw child output may be replayed');
+
+// The MPI-418 case specifically: a raw Node error AFTER a structured line still
+// reaches the log. Dropping it would re-break the bug this card exists for.
+const out2 = [];
+const write2 = makeWriteChildLine(out2, 'error');
+write2('[2026-07-31T16:48:00.727Z] [INFO] [system] Server initialization started');
+write2('Error [ERR_REQUIRE_ESM]: require() of ES Module');
+assert.strictEqual(out2.length, 1, 'raw error following a structured line must survive');
+
+console.log('logger-sink-userdata: PASS (5 checks)');

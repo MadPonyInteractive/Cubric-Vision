@@ -8,7 +8,8 @@ one that works. The **main process** logger writes to a second file.
 - [x] Fixed the sink, not the call sites — lazy resolve in `logger.js` + `process.env.APP_USER_DATA` set in `main.js` after `app.setPath('userData')`
 - [x] First-log-line drop avoided (lazy resolve removed the module-load head start the old `_ready` flag relied on)
 - [x] Regression test committed and proven to fail against the pre-fix logger
-- [ ] Confirmed on a rebuilt portable build: `user-data/logs/app.log` carries `[main]` and `[server]` lines
+- [x] Confirmed on the rebuilt Windows portable: `user-data/logs/app.log` carries `[main]` and `[server]` lines — the exact MODULE_TYPELESS_PACKAGE_JSON lines from the card
+- [x] Fixed the double-write the shared file exposed (main no longer replays what the child already persisted)
 
 ## Why dev never showed it
 
