@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-412",
+  "title": "Engine install screen strobes between \"preparing dependencies\" and the download progress",
+  "description": "Reported live by the user during the Linux engine install, 2026-07-30 (MPI-391 section D). Cosmetic - the install completes - and the user said they were not worried; filed so it is not lost. Symptom: the screen is stable, then rapidly alternates between a \"preparing dependencies\" label state and a byte-counting download state, then goes stable again, during the dependency phase. UNVERIFIED candidate cause: _provisionUvEngine broadcasts two different event shapes - engine:extracting with a status label and engine:downloading with downloadedBytes/totalBytes - and if both interleave while uv/pip resolves and fetches, the install screen would flip between the label view and the byte view on every event. Not traced; do not fix from the card alone. Worth fixing because it reads as instability on the first screen a new user watches for many minutes on a slow machine.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-07-31T01:05:00Z",
+  "updated_at": "2026-07-31T01:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "ux",
+    "engine",
+    "install",
+    "cosmetic"
+  ],
+  "priority": "low"
+}

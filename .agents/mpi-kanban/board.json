@@ -1,8 +1,10 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 412,
+  "next_id": 414,
   "columns": {
     "todo": [
+      "MPI-413",
+      "MPI-412",
       "MPI-410",
       "MPI-404",
       "MPI-405",
@@ -103,7 +105,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-31T00:55:00Z",
+  "updated_at": "2026-07-31T01:20:00Z",
   "events": [
     {
       "at": "2026-07-30T11:10:00Z",
@@ -1258,6 +1260,32 @@
       "actor": "opus",
       "column": "doing",
       "summary": "Retry still impossible after an interrupted install on Linux/macOS - the workspace half of MPI-408. engine.js:344 only clears a workspace with NO .git, but the clone finishes in seconds while deps take minutes, so an interrupted setup leaves a COMPLETE clone that comfy install refuses (exit 1, names --restore). Fixed by pushing --restore when the workspace is already a clone. Found while verifying MPI-408, which is itself confirmed fixed."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-412",
+      "type": "task.created",
+      "at": "2026-07-31T01:05:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "Engine install screen strobes between a \"preparing dependencies\" label and the download byte counter during the dependency phase. Reported live on Linux; cosmetic, install completes. Candidate cause (unverified): engine:extracting and engine:downloading events interleaving so the install screen flips view on every event."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-406",
+      "type": "validation.updated",
+      "at": "2026-07-31T01:20:00Z",
+      "actor": "opus",
+      "summary": "PARTIAL - stays in doing, do NOT close on the --fast-deps commit. Tested live on Linux: requirements.compiled is absent after a full install, which proves --fast-deps is genuinely off the --cpu branch, so this card diagnosis was correct for its stage. But the CUDA stack still installs - grep for \"downloading (triton|nvidia)\" returns 4 and the pip log shows torch, torchvision, triton and 14 nvidia-* wheels. Stage tags settle why: the original evidence was [comfy-install], the new lines are [system] [pip] = runPipCommand running ComfyUI-LTXVideo/requirements.txt with --upgrade. A --cpu engine has TWO paths to the CUDA stack; this card fixed one. Second path tracked as MPI-413. The 1.3.0 changelog entry claiming the processor-only build was REMOVED before publishing rather than shipped false."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-413",
+      "type": "task.created",
+      "at": "2026-07-31T01:20:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "Custom-node requirements reinstall the CUDA torch stack over the CPU one - the second half of MPI-406. downloadManager.js:2181 runs pip -r <node reqs> --upgrade with no index constraint, so torch comes from default PyPI (CUDA) and --upgrade replaces the correct CPU torch. Measured via ComfyUI-LTXVideo on a driverless box: torch, torchvision, triton, cuda-toolkit, 14 nvidia-* wheels. The comment at downloadManager.js:2033 asserting --upgrade is a no-op when satisfied is wrong and is why this stayed invisible. requirementsDrop cannot fix it - timm/diffusers pull torch transitively."
     }
   ]
 }
