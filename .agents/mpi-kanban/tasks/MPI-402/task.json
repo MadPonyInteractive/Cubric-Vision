@@ -4,10 +4,10 @@
   "title": "Auto-mask chip toggling re-runs the whole workflow - cache per-object masks client-side",
   "description": "Found live 2026-07-30 on the MPI-385 Pod session, but the shape is engine-agnostic. Every chip select (and every pick-combination change) in ALL THREE auto-mask tools (YOLO detect, SAM3 text, SAM3 points) fires _runAutoMaskWorkflow(false) - a full graph re-dispatch with Input_Selected_Masks_Input set to the pick string (MpiCanvasViewer.js:364-374). Only deselect-to-zero is client-side. ComfyUI's node cache makes the re-exec ~0.02s, so on LOCAL the round trip hides inside ~200ms and feels instant; on REMOTE each toggle pays proxy RTT both ways + queue + mask PNG download = a measured 2-3s per chip click. The masks are only cached for the CURRENT pick set (setAutoPickMasks) - a different combination is a new engine round trip. FIX DIRECTION: individual_masks:true / SEGS already produce one mask per detected object. Fetch ALL N per-object masks ONCE at detect time, hold them as client-side bitmaps, and make chip toggling pure client-side compositing (union of picked bitmaps into the auto layer). Zero round trips after Detect, both engines benefit, the bake path (Add/Subtract) is untouched. Watch the memory cost for large N and the thresholding step (_maskUrlToTransparentDataUrl) which would move to detect time.",
   "column": "todo",
-  "maturity": "draft",
+  "maturity": "idea",
   "status": "active",
   "created_at": "2026-07-30T15:35:00Z",
-  "updated_at": "2026-07-30T15:35:00Z",
+  "updated_at": "2026-07-31T16:45:00Z",
   "labels": [
     "ux",
     "masking",
