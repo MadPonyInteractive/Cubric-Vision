@@ -36,24 +36,38 @@ const { redactSecrets } = require('./secretRedaction');
 const MAX_LOG_BYTES  = 256 * 1024;
 const RING_SIZE      = 200;             // in-memory lines kept for live reads
 
-const LOGS_DIR = process.env.APP_USER_DATA
-    ? path.join(process.env.APP_USER_DATA, 'logs')
-    : path.join(__dirname, '..', 'logs');
-
-const LOG_PATH     = path.join(LOGS_DIR, 'app.log');
-const LOG_PATH_BAK = path.join(LOGS_DIR, 'app.log.1');
+// Resolved LAZILY, on first write — not at module load. main.js requires this
+// module on its first line, long before it has resolved userData and exported
+// APP_USER_DATA, so an eager read of the env pinned the main process to
+// <app>/logs while the server fork (which is handed APP_USER_DATA in its env)
+// wrote to <user-data>/logs. The two processes logged to two different files
+// and every [server]/[main] line was missing from the app.log a user actually
+// sends — the only diagnostic channel we have after release. (MPI-418)
+let _paths = null;
+function _resolvePaths() {
+    if (_paths) return _paths;
+    const dir = process.env.APP_USER_DATA
+        ? path.join(process.env.APP_USER_DATA, 'logs')
+        : path.join(__dirname, '..', 'logs');
+    _paths = {
+        dir,
+        log: path.join(dir, 'app.log'),
+        bak: path.join(dir, 'app.log.1'),
+        // Awaited by the first append rather than raced against it — resolving
+        // lazily means there is no module-load head start any more, so a `_ready`
+        // flag would silently drop the first lines (which is exactly where boot
+        // failures live).
+        ready: fs.ensureDir(dir).catch(err => {
+            console.error('[logger] Failed to create logs dir:', err);
+            throw err;
+        }),
+    };
+    return _paths;
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let _ready  = false;   // true once the logs dir is confirmed to exist
 let _ring   = [];      // circular in-memory buffer
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-
-// Ensure logs directory exists asynchronously at startup.
-fs.ensureDir(LOGS_DIR)
-    .then(() => { _ready = true; })
-    .catch(err => console.error('[logger] Failed to create logs dir:', err));
 
 // ── Internal write ────────────────────────────────────────────────────────────
 
@@ -81,22 +95,23 @@ function _write(level, category, message, err) {
     _ring.push(line);
     if (_ring.length > RING_SIZE) _ring.shift();
 
-    if (!_ready) return;
-
     // Async file write — fire-and-forget with rotation check
     _appendToFile(line + '\n').catch(e => console.error('[logger] write failed:', e));
 }
 
 async function _appendToFile(line) {
+    const { log, bak, ready } = _resolvePaths();
+    await ready;
+
     // Check if rotation is needed
     try {
-        const stat = await fs.stat(LOG_PATH).catch(() => null);
+        const stat = await fs.stat(log).catch(() => null);
         if (stat && stat.size >= MAX_LOG_BYTES) {
-            await fs.move(LOG_PATH, LOG_PATH_BAK, { overwrite: true });
+            await fs.move(log, bak, { overwrite: true });
         }
     } catch (_) { /* non-fatal */ }
 
-    await fs.appendFile(LOG_PATH, line, 'utf8');
+    await fs.appendFile(log, line, 'utf8');
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -107,7 +122,7 @@ const logger = {
     error : (category, message, err) => _write('error', category, message, err),
 
     /** Returns the path to the current log file (for the download route). */
-    getLogPath() { return LOG_PATH; },
+    getLogPath() { return _resolvePaths().log; },
 
     /** Returns the in-memory ring buffer as a single string (for quick reads). */
     getRecentLogs() { return _ring.join('\n'); },

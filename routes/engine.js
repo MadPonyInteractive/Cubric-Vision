@@ -700,6 +700,21 @@ router.post('/engine/repair-deps', async (req, res) => {
         // steps, so tell the user the real reason instead of failing again.
         await assertInstallPathDepth();
 
+        // Refuse to "repair" an engine that was never fully installed. This route
+        // only installs custom nodes and their requirements; it never runs
+        // `comfy install`, so on a half-provisioned engine it used to broadcast
+        // engine:complete over a ComfyUI that cannot boot (no core requirements,
+        // no stamp) and leave the user with a success toast and a dead app. The
+        // stamp is written only after a successful `comfy install`, so its absence
+        // means the engine half is unfinished and the FULL install is the only
+        // thing that can fix it. Hand off rather than error: this is the user's
+        // only in-app recovery. (MPI-414)
+        if (!(await fs.pathExists(path.join(ENGINE_ROOT, '.mpi_engine_version')))) {
+            logger.warn('engine', 'Repair requested on an engine with no version stamp — running the full install instead');
+            await _runEngineDownload('');
+            return;
+        }
+
         const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
         const repairSet = [...new Set([...missingDeps, ...driftedDeps])];
         if (!repairSet.length) {

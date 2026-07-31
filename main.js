@@ -253,6 +253,16 @@ if (process.env.CUBRIC_E2E_USER_DATA) {
   }
 }
 
+// Point THIS process's logger at the same app.log as the server fork. The fork
+// is handed APP_USER_DATA in buildServerEnv, but main never set it on itself, so
+// routes/logger fell back to <app>/logs and every line main writes — including
+// every [server] line, which is the forked server's own stdout/stderr replayed
+// by pipeChildStream — landed in a file no user ever sends. [engine] lines came
+// from the fork and arrived fine, which is what made the gap look like a
+// category filter instead of a second log file. Must stay AFTER the setPath
+// block above and BEFORE the first log write. (MPI-418)
+process.env.APP_USER_DATA = app.getPath('userData');
+
 const STATE_FILE = path.join(app.getPath('userData'), 'window-state.json');
 const NOTIFICATION_ICON_PATH = path.join(__dirname, 'assets', 'mascot', 'happy.png');
 

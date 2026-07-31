@@ -308,20 +308,32 @@ export const MpiEngineInstall = ComponentFactory.create({
                 _subscribeEngineEvents();
                 // Ensure SSE is connected before POST so engine:* events are not missed
                 downloadService._ensureSSE();
-                // Route by failure phase: if the engine binary (embedded Python)
-                // is missing, the download/extract failed — full re-provision via
-                // /engine/download. Only when Python already exists is the failure
-                // deps-only, where /engine/repair-deps (pip) is the right path.
-                // Repairing deps with no Python yields "cannot run pip".
-                let engineReady = false;
+                // Route by failure phase: only a COMPLETE engine can be repaired
+                // deps-only via /engine/repair-deps (pip); anything less needs the
+                // full re-provision at /engine/download.
+                //
+                // The completeness test is the version stamp, NOT /engine/status.
+                // /engine/status answers "does the venv python exist", and on the
+                // uv path (Linux/macOS) that is true from step 1 — long before
+                // ComfyUI is cloned or its own requirements are installed. So a
+                // first install that died partway (multi-GB, users do quit and come
+                // back) sent Retry to deps-only, which installed custom nodes,
+                // reported SUCCESS, and left an engine that dies on
+                // ModuleNotFoundError: sqlalchemy with no in-app escape. Windows
+                // never showed it because its archive lands python and ComfyUI
+                // together. The stamp is written only after a successful
+                // `comfy install`, and version-check self-heals a stamp whose
+                // python has gone, so `installed !== null` is the real question.
+                // (MPI-414, measured on Linux 2026-07-31.)
+                let engineInstalled = false;
                 try {
-                    const statusRes = await fetch('/engine/status');
-                    const status = await statusRes.json();
-                    engineReady = status && status.exists === true;
+                    const versionRes = await fetch('/engine/version-check');
+                    const version = await versionRes.json();
+                    engineInstalled = version && version.installed !== null;
                 } catch {
-                    engineReady = false;
+                    engineInstalled = false;
                 }
-                const route = engineReady ? '/engine/repair-deps' : '/engine/download';
+                const route = engineInstalled ? '/engine/repair-deps' : '/engine/download';
                 await fetch(route, { method: 'POST' });
                 progressSubtitle.textContent = 'Retrying installation...';
             } catch (err) {
