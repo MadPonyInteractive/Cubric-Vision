@@ -127,3 +127,26 @@ Also confirmed the existing ring-buffer consumer still works —
 on Windows, then confirm the engine install is still readable on disk afterwards
 — that is the exact history the race destroyed, and no unit test can stand in
 for it.
+
+### Live dev boot, 2026-07-31T17:49Z (real pipe, not the mirrored state machine)
+
+`npm start`, one boot, `%APPDATA%/Cubric Vision/logs/app.log`:
+
+- Raw child output still lands under `[server]` — dotenv's banner and the four
+  MODULE_TYPELESS_PACKAGE_JSON warnings, the exact lines this card was raised for.
+- Structured child lines carry the CHILD's timestamp, so the relay is verbatim:
+  `[17:49:07.805Z] [INFO] [system] Server initialization started` arrives stamped
+  by the fork, not by main's receive time.
+- `[mask-temp]` from main is in the same file, one file, one writer.
+- `sort | uniq -d` over the 19-line boot window: **no duplicate lines**.
+
+Not proof of rotation (the file was 108KB, under the cap) — that leg stays with
+the unit tests and the rebuilt portable.
+
+**Noticed, not actioned:** `[gpu-detect]` runs twice per boot ("Starting GPU
+detection...", the NVIDIA line and the resolved config all appear twice, ~20ms
+apart). Different timestamps, so it is two real detections, not a relay
+duplicate — pre-existing and outside this card.
+
+The legacy `app.log.1` from before this change is left in place; nothing reads it
+and the new rotation will not touch it.
