@@ -72,6 +72,56 @@ Done 2026-07-30 except the promote. Evidence: `tasks/MPI-369/validation.md`
 
 ## C · macOS — rented Mac
 
+> **READY TO RUN 2026-07-31.** Build the Mac tests against: CI run `30602683182`,
+> source ref `bd8a0cc6` — cut deliberately because the previous artifacts
+> (`81a8d684`) predate the engine-startup error-reporting fix and the plugin
+> shared-library `--upgrade` removal, both of which sit on the exact install →
+> launch path this section exercises. **Artifact retention is 1 day from the run**,
+> so the artifacts were pulled to `D:\CubricStudio\Vision\Builds\v1.3.0\`
+> immediately; the superseded set moved to `SUPERSEDED-pre-MPI-415/`.
+>
+> **Model to install: SDXL Realistic.** It is `sizeTier: low` AND depth-capable
+> ([models.js:43](../../../../js/data/modelConstants/models.js#L43) `poseReference`),
+> and its dependency list carries `comfyui_controlnet_aux`
+> ([models.js:60](../../../../js/data/modelConstants/models.js#L60)) — so ONE
+> install of the cheapest model exercises the macOS fix and then serves the
+> generate smoke. Image models install their whole dep set, so no per-op toggling
+> is needed to pull the node.
+>
+> **The two log lines to grep for** (`<extract root>/user-data/logs/app.log`, and
+> `app.log.1` — pip output rotates it):
+> ```
+> requirements filtered for comfyui_controlnet_aux on darwin: dropped onnxruntime-gpu
+> requirements filtered for ComfyUI-Impact-Pack on darwin: dropped git+https://github.com/facebookresearch/sam2
+> ```
+> The first is MPI-370's fix. The second is MPI-387's git-less drop, which is
+> configured for darwin too ([nodesDeps.js:88-92](../../../../js/data/modelConstants/nodesDeps.js#L88-L92))
+> and has only ever been seen fire on win32 — free evidence while the Mac is up.
+>
+> **Fresh run, nothing reused** (user's instruction): fresh extract of the new
+> `CubricVision-macos-arm64-v1.3.0.zip`, engine installed from scratch.
+>
+> **The payload was verified INSIDE the shipped mac zip, not just in the source
+> tree** — a rebuild is only worth cutting if the fixes actually reached it:
+> - `_describeComfyExit` present in `app/js/services/comfyController.js`, and the
+>   fix is wired END TO END, not half-wired: `routes/comfy.js:415-432` writes
+>   `lastComfyExit` on child exit (with the `deliberate` flag so a user Stop is not
+>   reported as a crash), `:185-194` returns it as `lastExit` on `/comfy/status`,
+>   and the controller consumes it. Both halves in one artifact.
+> - `--upgrade` is GONE from the node-requirements install in
+>   `app/routes/downloadManager.js` (0 matches for the old form, 1 for the new).
+> - `requirementsDrop: { darwin: ['onnxruntime-gpu'] }` still configured — the
+>   thing under test survived the rebuild.
+> - `app/package.json` reads `1.3.0`; ONE top-level folder; 6834 file entries,
+>   **byte-for-byte the same count as the previous build**, so the source delta
+>   added no files. (Note: 6834 counted from the zip ≠ the 6563 recorded in § A,
+>   which came from the build MANIFEST — different denominators, not a
+>   regression. The previous build counts 6834 the same way.)
+> - `release-baselines/*.json` confirmed still at `toVersion: "1.2.0"` (restored by
+>   `addc03a2` after `36f972cf` restamped too early), so the update bundles carry
+>   real 1.2.0→1.3.0 deltas. The mac update bundle root reads
+>   `CubricVision-v1.3.0-update-only` and is 3.3 MB of real content.
+
 - [ ] `xattr -dr com.apple.quarantine "<folder>"` → `start.command` launches — *MPI-370*
 - [ ] A **DEPTH** model installs without the Installation-failed error — *MPI-370* ← the specific path that pulls `controlnet_aux`
 - [ ] The `requirementsDrop` log line is PRESENT (absence = the field vanished through `_createDepJob`'s whitelist) — *MPI-370*
