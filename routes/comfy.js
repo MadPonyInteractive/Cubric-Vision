@@ -93,9 +93,18 @@ function _classifyComfyOutput(defaultLevel, text) {
 // slow phases; the real per-step + model-init signal is only in stdout.)
 const TQDM_RE = /(\d+)\/(\d+)\s*\[/g;
 
+// MPI-415: rolling tail of the engine child's most recent output. ComfyUI prints its
+// traceback immediately before dying, so the last handful of lines IS the crash
+// reason. Kept in memory only, and only long enough to attach to an exit record.
+const COMFY_TAIL_MAX = 15;
+const _comfyOutputTail = [];
+
 function _handleComfyOutput(level, chunk) {
     const text = chunk.toString().trim();
     if (!text) return;
+
+    _comfyOutputTail.push(text);
+    if (_comfyOutputTail.length > COMFY_TAIL_MAX) _comfyOutputTail.shift();
 
     logger[_classifyComfyOutput(level, text)]('comfy', text);
 
@@ -170,15 +179,19 @@ router.get('/comfy/status', async (req, res) => {
     // on every status so the gen gate honors it even when the frontend `state` was
     // reset by an app/browser reload after the install. Cleared on a fresh start.
     const needsRestart = processState.comfyNeedsRestart === true;
+    // MPI-415: when the process is gone, say WHY it is gone. Callers that only look
+    // at `ready` are unaffected; the readiness poll uses this to stop waiting on a
+    // process that has already died.
+    const lastExit = processState.lastComfyExit || null;
     try {
-        if (!processState.activeComfyProcess) return res.json({ running: false, needsRestart });
+        if (!processState.activeComfyProcess) return res.json({ running: false, needsRestart, lastExit });
         const ax = getAxios();
         if (!ax) return res.json({ running: true, ready: false, needsRestart });
         const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
             .then(() => true).catch(() => false);
         res.json({ running: true, ready, needsRestart });
     } catch (e) {
-        res.json({ running: false, needsRestart });
+        res.json({ running: false, needsRestart, lastExit });
     }
 });
 
@@ -396,11 +409,27 @@ router.post('/comfy/start', async (req, res) => {
             ? { ...baseEnv, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
             : baseEnv;
 
+        // Fresh start → forget the previous life's output and exit record, so a stale
+        // crash can never be reported against this run (MPI-415).
+        _comfyOutputTail.length = 0;
+        processState.lastComfyExit = null;
+        processState.comfyStopRequested = false;
+
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
         processState.activeComfyProcess.stdout.on('data', (d) => _handleComfyOutput('info', d));
         processState.activeComfyProcess.stderr.on('data', (d) => _handleComfyOutput('warn', d));
-        processState.activeComfyProcess.on('exit', () => {
-            logger.info('comfy', 'ComfyUI process exited');
+        processState.activeComfyProcess.on('exit', (code, signal) => {
+            logger.info('comfy', `ComfyUI process exited (code=${code}, signal=${signal || 'none'})`);
+            // MPI-415: record WHY. The readiness poll reads this to fail fast with the
+            // real reason instead of waiting out its timeout and blaming the clock.
+            processState.lastComfyExit = {
+                code,
+                signal,
+                at: Date.now(),
+                deliberate: processState.comfyStopRequested === true,
+                tail: _comfyOutputTail.slice(),
+            };
+            processState.comfyStopRequested = false;
             processState.activeComfyProcess = null;
         });
 

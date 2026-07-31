@@ -139,11 +139,21 @@ const COMFYUI_PORT = 8188;
 const processState = {
     activeComfyProcess: null,
     comfyNeedsRestart: false,
+    // MPI-415: why the engine child last died, so a crash can be REPORTED instead of
+    // waited out. The readiness poll used to watch only for "ready" and never for
+    // "gone", so a process that died in under a second still cost the user the full
+    // timeout and then blamed the clock ("failed to become ready in time") — the
+    // actual traceback only ever reached app.log. Shape:
+    //   { code, signal, at, deliberate, tail: [...last output lines] }
+    lastComfyExit: null,
+    // Set while WE are killing it, so a user-initiated Stop is not reported as a crash.
+    comfyStopRequested: false,
 };
 
 function stopComfyUI() {
     if (processState.activeComfyProcess) {
         logger.info('comfy', 'Killing active ComfyUI process...');
+        processState.comfyStopRequested = true;
         processState.activeComfyProcess.kill('SIGKILL');
         processState.activeComfyProcess = null;
     }

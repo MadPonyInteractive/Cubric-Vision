@@ -94,6 +94,27 @@ function _needsPathHeal(alwaysLocal) {
 }
 
 /**
+ * MPI-415: turn an engine exit record from `/comfy/status` into one sentence the
+ * user can act on. ComfyUI prints its traceback immediately before dying, so the
+ * most specific error-ish line in the captured tail IS the cause; the last line is
+ * the fallback. Replaces "ComfyUI server failed to become ready in time", which was
+ * emitted for EVERY startup failure and named none of them.
+ */
+function _describeComfyExit(exit) {
+    const lines = (Array.isArray(exit.tail) ? exit.tail : [])
+        .join('\n').split('\n').map(l => l.trim()).filter(Boolean);
+    const culprit = lines.slice().reverse().find(l =>
+        /(Error|Exception|Traceback|not found|No module named|Illegal instruction)/i.test(l));
+    const how = exit.signal
+        ? `was killed by ${exit.signal}`
+        : `exited with code ${exit.code}`;
+    const why = culprit || lines[lines.length - 1] || '';
+    return why
+        ? `ComfyUI stopped while starting up — it ${how}. ${why}`
+        : `ComfyUI stopped while starting up — it ${how}. See logs/app.log for details.`;
+}
+
+/**
  * Pull the offending `lora_name` out of a LOCAL ComfyUI 400 body's `node_errors`.
  * Shape (ComfyUI execution.py):
  *   node_errors: { "<nodeId>": { errors: [ { type: 'value_not_in_list',
@@ -378,7 +399,15 @@ function createEngine({ engine, alwaysLocal }) {
 
             if (!status.running) {
                 clientLogger.info('comfy', 'Requesting ComfyUI server start');
-                await fetch('/comfy/start', { method: 'POST' });
+                // MPI-415: /comfy/start answers 500 with a REAL reason when it cannot
+                // even spawn (e.g. "ComfyUI Python not found. Provision engine first.").
+                // Ignoring that response turned a clear, instant, actionable error into
+                // a 60s wait ending in "failed to become ready in time".
+                const startRes = await fetch('/comfy/start', { method: 'POST' });
+                if (!startRes.ok) {
+                    const body = await startRes.json().catch(() => ({}));
+                    throw new Error(body.error || `ComfyUI could not be started (HTTP ${startRes.status}).`);
+                }
             }
 
             for (let i = 0; i < COMFY_READY_TIMEOUT_S; i++) {
@@ -387,6 +416,14 @@ function createEngine({ engine, alwaysLocal }) {
                 if (check.ready) {
                     this._emitLifecycle('comfy:ready');
                     return { ready: true, remoteComfyRestarted: false };
+                }
+                // MPI-415: the engine can DIE during startup — a missing module, an
+                // illegal instruction, a bad driver. That is knowable the instant it
+                // happens, and it is not a timeout. Without this the loop kept polling a
+                // process that no longer existed and then blamed the clock, while the
+                // real traceback sat unread in app.log. A deliberate Stop is excluded.
+                if (!check.running && check.lastExit && !check.lastExit.deliberate) {
+                    throw new Error(_describeComfyExit(check.lastExit));
                 }
                 await new Promise(r => setTimeout(r, 1000));
             }
