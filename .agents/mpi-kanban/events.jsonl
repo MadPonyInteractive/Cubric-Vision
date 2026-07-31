@@ -1910,3 +1910,9 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-418","type":"task.created","at":"2026-07-31T07:46:00Z","actor":"opus","summary":"Found live on the rented Mac Mini M4 during the 1.3.0 macOS validation run (MPI-391 section C)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-419","type":"task.created","at":"2026-07-31T09:10:00Z","actor":"opus","summary":"Found at first ComfyUI boot on the rented Mac Mini M4 during the 1.3.0 macOS validation run (MPI-391 section C)."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-420","type":"task.created","at":"2026-07-31T09:10:00Z","actor":"opus","summary":"Found at first ComfyUI boot on the rented Mac Mini M4 during the 1.3.0 macOS validation run (MPI-391 section C)."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-419","at":"2026-07-31T09:58:00Z","actor":"claude","from":"todo","to":"doing","reason":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-419","at":"2026-07-31T09:58:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"checklist.updated","id":"MPI-419","at":"2026-07-31T10:15:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"validation.updated","id":"MPI-419","at":"2026-07-31T10:15:00Z","actor":"claude"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-405","at":"2026-07-31T10:30:00Z","actor":"claude","summary":"Hardened the skip-install ungating carve-out with verified file:line evidence; logged the user second request (on-only via the escape hatch) as undecided."}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-405","at":"2026-07-31T10:38:00Z","actor":"claude","summary":"Second item closed as no-change - user confirmed the existing two-way skip-install behaviour is correct; verified immediate re-arm via engine:install-request."}

@@ -402,9 +402,19 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     //               no +cpu tag plus triton and 14 nvidia-* wheels, several GB a
     //               CPU-only box can never execute (MPI-406)
     //   --amd:      same fall-through risk (generic PyPI torch, not ROCm)
-    const installArgs = gpuFlag !== '--nvidia'
-        ? ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag]
-        : ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'];
+    //
+    // --version PINS THE CORE. comfy-cli defaults to `nightly` (= whatever is on
+    // master), so without this flag the engine we ship is whatever ComfyUI cut
+    // last — a version we never chose and cannot support. It broke live: a Mac
+    // installed 0.29.0 while we were pinned to 0.28.0, and our pinned
+    // ComfyUI-LTXVideo could not import against it (MPI-419, 2026-07-31). The
+    // Windows archive path has always been genuinely pinned; this closes the
+    // same hole on the two platforms that build from source. The flag applies
+    // even alongside --restore (comfy-cli checks out the tag straight after the
+    // clone step, fetching tags when absent), so a retry onto an existing
+    // workspace lands on the pin too.
+    const installArgs = ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--version', COMFY_VERSION];
+    if (gpuFlag === '--nvidia') installArgs.push('--fast-deps');
     if (workspaceIsClone) installArgs.push('--restore');
     await _runStreaming(
         comfyBin,
@@ -444,6 +454,27 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         }
     }
     return { uwModelJob };
+}
+
+/**
+ * Read the ComfyUI version that actually landed on disk, from the repo's own
+ * `comfyui_version.py` (`__version__ = "0.29.2"`). Present in both layouts —
+ * the Windows portable archive and the comfy-cli clone — because getComfyPath
+ * resolves the repo root for each.
+ * @param {string} engineRoot
+ * @returns {Promise<string|null>} the version, or null when it cannot be read
+ */
+async function _readInstalledComfyVersion(engineRoot) {
+    const versionPy = getComfyPath(engineRoot, 'comfyui_version.py');
+    try {
+        const src = await fs.readFile(versionPy, 'utf8');
+        const match = src.match(/__version__\s*=\s*["']([^"']+)["']/);
+        if (match) return match[1].trim();
+        logger.warn('engine', `No __version__ line in ${versionPy} — falling back to the pinned version`);
+    } catch (err) {
+        logger.warn('engine', `Could not read ${versionPy} (${err.message}) — falling back to the pinned version`);
+    }
+    return null;
 }
 
 async function _runEngineDownload(chosenModelsRoot) {
@@ -533,9 +564,14 @@ async function _runEngineDownload(chosenModelsRoot) {
         }
 
         // ── 5. Post-install: Write version stamp ───────────────────────────────
-        // config.engine.version is the canonical engine version for both paths;
-        // engineInfo only exists in the Windows branch, so use config here.
-        const INSTALLED_ENGINE_VERSION = config.engine.version;
+        // Stamp what ACTUALLY landed, never the pin. Stamping config.engine.version
+        // blindly made version drift SELF-CONCEALING: /engine/version-check compares
+        // this stamp against COMFY_VERSION, so an unpinned comfy-cli install of
+        // 0.29.0 read back as a healthy 0.28.0 forever and no repair was ever
+        // offered — while the pinned LTXVideo node had already stopped importing
+        // (MPI-419, measured on macOS 2026-07-31). Falling back to the pin keeps a
+        // missing version file from failing the whole install, but it logs loudly.
+        const INSTALLED_ENGINE_VERSION = (await _readInstalledComfyVersion(targetDir)) || config.engine.version;
         await fs.writeFile(
             path.join(targetDir, '.mpi_engine_version'),
             INSTALLED_ENGINE_VERSION,
