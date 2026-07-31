@@ -37,3 +37,14 @@ read `open()` and the write `open()` (and prefer `ensure_ascii=False`); after an
 `git diff` the file and grep for `u00e2`/`u20ac` before staging — nonzero = you corrupted it.
 Appends (`open(P,'a',encoding='utf-8')`) never touch existing lines, so they're safe; the trap
 is the read→rewrite cycle. (Bit MPI-344: a board move mojibake'd MPI-337/314/315 notes.)
+
+## Detect INDENT as well as line endings, and load every file before writing any
+
+The serialisation varies **per file**, and indent varies too — not just CRLF vs LF. Measured
+2026-07-31: `board.json` = 2-space CRLF; `MPI-419`/`407`/`408`/`415` `task.json` = 2-space LF;
+`MPI-411`/`198` = 2-space **CRLF**; `MPI-370` = **1-space** LF. A round-trip guard that varies
+the line ending but hardcodes `indent=2` still fails on the 1-space card — and if it aborts
+*mid-loop*, the cards it already wrote say `done` while `board.json` still lists them in
+`doing`, which is a silently incoherent board. So: **load and format-detect EVERY file first,
+then write** — never detect-and-write one card at a time. (Bit MPI-419's close-out; the
+half-moved board had to be repaired by hand.)
