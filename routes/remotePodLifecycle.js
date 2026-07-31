@@ -187,8 +187,15 @@ const POD_IMAGE_VERSION_CPU = 'v0.17.0';
 // constraints. BOTH legs built and pushed (cu130 -> Docker Hub, cpu -> GHCR), both public
 // and pull-verified, so these are real tags — the first time this pair has pointed at
 // anything other than the stable pin.
-const POD_IMAGE_VERSION_DEV = 'v0.17.0-dev';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.17.0-dev';
+// v0.18.0-dev (MPI-419): ComfyUI v0.29.2 + the LTXVideo rope fix (3b9c5cde, upstream
+// PR #532), from the node_lock synced into mpi-ci at 73f4514. BOTH legs built and
+// pushed in run 30626614008, both pull-verified public; the cpu leg boot-smoked
+// (/health 200, wrapper 0.2.40) and the cu130 leg's in-image node-import smoke
+// printed `node-import smoke test OK`, i.e. every baked node imports on 0.29.2.
+// The stable pair deliberately stays on v0.17.0 (ComfyUI 0.28.0) until a live Pod
+// verify — the new LTX commit is backwards compatible, so 0.28.0 keeps working.
+const POD_IMAGE_VERSION_DEV = 'v0.18.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.18.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
