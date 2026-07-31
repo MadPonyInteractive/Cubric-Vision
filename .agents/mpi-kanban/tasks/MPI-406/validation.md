@@ -17,6 +17,40 @@ That file is comfy-cli's DependencyCompiler output. Its absence proves
 `--fast-deps` is genuinely off the `--cpu` branch, which was the diagnosis in
 this card's brief. That half is correct and shipped.
 
+### Upgraded to POSITIVE proof — 2026-07-31
+
+The evidence above is *absence* of `requirements.compiled`, which is indirect.
+The MPI-411 before/after run then caught the `[comfy-install]` stage in the act,
+on the same box:
+
+```
+[02:57:15] [comfy-install] Looking in indexes: https://pypi.org/simple, https://download.pytorch.org/whl/cpu
+[02:57:16] [comfy-install] Collecting torch
+             → torch-2.13.0+cpu-cp312-cp312-manylinux_2_28_x86_64.whl
+[02:57:33] [comfy-install] Installing collected packages: torchaudio, mpmath, sympy,
+             setuptools, pillow, numpy, networkx, fsspec, filelock, torch, torchvision
+[02:58:44] [comfy-install] Successfully installed …
+             torch-2.13.0+cpu torchaudio-2.11.0+cpu torchvision-0.28.0+cpu
+```
+
+The PyTorch **CPU** index is consulted, `+cpu` wheels resolve, and **no `nvidia-*`,
+no `triton`, no `cuda-*` package appears in this stage at all**. Verified in the
+venv immediately afterwards:
+
+```sh
+$ engine/comfy-venv/bin/python3 -c "import torch; print(torch.__version__)"
+2.13.0+cpu
+```
+
+So this card's half is not merely "not broken" — it is doing the right thing.
+The re-classification to PARTIAL was correct, and pulling the changelog claim was
+the right call for the *whole* claim, not because this fix is wrong.
+
+**This also sharpens MPI-413.** The `+cpu` torch above is the exact state the
+custom-node stage later overwrites with `2.13.0+cu130`. Same venv, same run,
+earlier stage. MPI-413 is a regression *of a correct state*, not a failure to ever
+reach one.
+
 ## What it did NOT achieve
 
 The CUDA stack still installs:

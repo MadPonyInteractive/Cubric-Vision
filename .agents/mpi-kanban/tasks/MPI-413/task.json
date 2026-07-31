@@ -3,14 +3,16 @@
   "id": "MPI-413",
   "title": "Custom-node requirements reinstall the CUDA torch stack over the CPU one",
   "description": "Found live on Linux 2026-07-30 while verifying MPI-406; this is the second and larger half of it. downloadManager.js:2181 runs pip install -r <node requirements> --upgrade through runPipCommand (shared.js:284), a bare python -m pip with NO index constraint, so torch resolves from default PyPI = the CUDA build. --upgrade is what makes it fire on an already-correct engine: the comment at downloadManager.js:2033 claims \"pip with --upgrade is idempotent (a no-op when already satisfied)\", which is wrong - it pulls the newest for every listed package AND its dependencies, replacing a correct CPU torch with the newest CUDA one. Measured: ComfyUI-LTXVideo/requirements.txt dragged in torch, torchvision, triton, cuda-toolkit and 14 nvidia-* wheels on a box with no NVIDIA driver. The repo already learned this mechanism once - nodesDeps.js:178, MPI-217, opencv 4.13 to 5.0 across the whole engine. Dropping the torch lines via the existing requirementsDrop machinery is NOT sufficient: timm and diffusers depend on torch/torchvision, so --upgrade bumps them transitively regardless. Candidates, in order: a constraints file pinning the torch family while keeping --upgrade self-heal; dropping --upgrade (matches the comment, pipPins is the corrective path); or a vendor-aware CPU index-url (fixes torch only, not the general drift class). runPipCommand is a SHARED primitive with callers across both engine twins - sweep them all before changing it. Severity: wasteful not broken, a CUDA torch runs on CPU, but it is several GB on the machines least able to afford it and contributed to a thermal shutdown on the box that found it.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-31T01:20:00Z",
-  "updated_at": "2026-07-31T01:20:00Z",
+  "updated_at": "2026-07-31T03:35:00Z",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
   },
   "tags": [
     "engine",
@@ -20,5 +22,11 @@
     "pip",
     "custom-nodes"
   ],
-  "priority": "high"
+  "priority": "high",
+  "activeSessionTitle": "MPI-413: drop --upgrade from the shared node-requirements install",
+  "attention": {
+    "state": "required",
+    "reason": "Stated root cause DISPROVEN - the CUDA install was downstream of MPI-411 (now fixed), not caused by --upgrade. Needs a close/reject decision.",
+    "updated_at": "2026-07-31T03:35:00Z"
+  }
 }

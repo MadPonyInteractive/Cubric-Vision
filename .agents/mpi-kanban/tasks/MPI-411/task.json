@@ -4,13 +4,14 @@
   "title": "Retry still impossible after an interrupted install: comfy install refuses the existing clone",
   "description": "Found live on Linux 2026-07-30 while verifying MPI-408, which IS fixed - this is the next sibling of the same hole. Step 0b (engine.js:344) removes a stale workspace only when it has NO .git, a guard written for a workspace killed during the clone. But the clone takes seconds and the dependency install takes minutes, so an interrupted setup almost always leaves a COMPLETE valid clone, which 0b keeps and comfy install then refuses: exit 1, \"ComfyUI is already installed at the specified path\", naming --restore. The common case falls through a guard designed for the rare one, and Retry stays permanently dead on Linux/macOS - only escape is deleting engine/ComfyUI_linux by hand (verified: after rm -rf, Retry proceeded). Fixed by passing --restore when the workspace is already a clone, the flag comfy-cli 1.13.0 names in its own error. Chosen over delete-and-re-clone because the clone is the cheap half and these are the machines least able to spare a re-download. Standing lesson: each step of _provisionUvEngine needs its own idempotency and they are not interchangeable - 0b deletes, 1 clears, 3 restores; fixing one proves nothing about the next. Landed in 1.3.0 at the user call since nothing is published; the MPI-408 changelog line was widened to name both leftovers rather than adding a second entry.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-31T00:55:00Z",
-  "updated_at": "2026-07-31T00:55:00Z",
+  "updated_at": "2026-07-31T03:05:00Z",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "tags": [
     "engine",
@@ -19,5 +20,10 @@
     "install",
     "retry"
   ],
-  "priority": "high"
+  "priority": "high",
+  "attention": {
+    "state": "cleared",
+    "reason": "LIVE-VERIFIED on Linux 2026-07-31 via a controlled before/after; only engine.js differed between exit 1 and success.",
+    "updated_at": "2026-07-31T03:05:00Z"
+  }
 }

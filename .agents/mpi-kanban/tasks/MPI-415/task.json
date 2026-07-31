@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-415",
+  "title": "Fatal engine startup crash is reported to the user as a timeout (exposed by a SIGILL on pre-AVX2 CPUs)",
+  "description": "ensureServerRunning (js/services/comfyController.js:393) polls for readiness and throws a generic timeout. It does not distinguish a child process that has ALREADY EXITED from one still starting, so two unrelated fatal crashes reached the user identically as \"ComfyUI server failed to become ready in time\": a missing sqlalchemy (MPI-414 aftermath) and a SIGILL. Both died in under a second with the real traceback sitting in app.log. FIX: capture the engine child exit code/signal and its last error lines and surface those, failing fast when the process is dead. Exposed by ComfyUI core failing to start on a pre-AVX2 x86_64 CPU - kornia_rs 0.1.14 SIGILLs at import via nodes.py init_builtin_extra_nodes -> comfy_extras/nodes_post_processing.py -> kornia -> kornia_rs (core, not a custom node). Measured on an i3-2367M with avx but no avx2/fma; kornia_rs 0.1.9 imports clean. A GLOBAL kornia_rs pin is REJECTED - it penalises every user on every platform and fights the MPI-413/MPI-217 drift class. The exact ISA floor is UNCONFIRMED (no objdump on the box); do not publish a hardware requirement until the wheel is disassembled. Not Linux-specific: the same package is pulled through ComfyUI core on Windows x86_64. Related: MPI-414, MPI-413, MPI-198.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-07-31T02:50:00Z",
+  "updated_at": "2026-07-31T03:35:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "tags": [
+    "engine",
+    "comfy",
+    "error-reporting",
+    "linux",
+    "windows",
+    "hardware"
+  ],
+  "priority": "high",
+  "attention": {
+    "state": "cleared",
+    "reason": "Fixed and live-verified 2026-07-31: real crash caught in 3s with the cause captured, vs a 60s timeout before. CPU-specific halves dropped per user call.",
+    "updated_at": "2026-07-31T03:35:00Z"
+  }
+}
