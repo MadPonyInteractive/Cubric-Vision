@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-413",
-  "title": "Custom-node requirements reinstall the CUDA torch stack over the CPU one",
-  "description": "Found live on Linux 2026-07-30 while verifying MPI-406; this is the second and larger half of it. downloadManager.js:2181 runs pip install -r <node requirements> --upgrade through runPipCommand (shared.js:284), a bare python -m pip with NO index constraint, so torch resolves from default PyPI = the CUDA build. --upgrade is what makes it fire on an already-correct engine: the comment at downloadManager.js:2033 claims \"pip with --upgrade is idempotent (a no-op when already satisfied)\", which is wrong - it pulls the newest for every listed package AND its dependencies, replacing a correct CPU torch with the newest CUDA one. Measured: ComfyUI-LTXVideo/requirements.txt dragged in torch, torchvision, triton, cuda-toolkit and 14 nvidia-* wheels on a box with no NVIDIA driver. The repo already learned this mechanism once - nodesDeps.js:178, MPI-217, opencv 4.13 to 5.0 across the whole engine. Dropping the torch lines via the existing requirementsDrop machinery is NOT sufficient: timm and diffusers depend on torch/torchvision, so --upgrade bumps them transitively regardless. Candidates, in order: a constraints file pinning the torch family while keeping --upgrade self-heal; dropping --upgrade (matches the comment, pipPins is the corrective path); or a vendor-aware CPU index-url (fixes torch only, not the general drift class). runPipCommand is a SHARED primitive with callers across both engine twins - sweep them all before changing it. Severity: wasteful not broken, a CUDA torch runs on CPU, but it is several GB on the machines least able to afford it and contributed to a thermal shutdown on the box that found it.",
-  "column": "doing",
-  "maturity": "validating",
+  "title": "Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves",
+  "description": "UMBRELLA - absorbs MPI-406 (closed) and the original MPI-413 diagnosis. Scope agreed with the user 2026-07-31, POST-1.3.0. NOT A RELEASE BLOCKER: a CUDA torch runs fine on CPU, so the app installs and generates; the cost is bandwidth, disk and decompression. THE FRAMING: this is the same defect MPI-419 just fixed, one layer down. MPI-419 was \"we install an unpinned ComfyUI and hope\"; this is \"we let each custom node resolve its own requirements on the user machine and hope\". Both ship a dependency set nobody chose and no CI ever tested. MECHANISM: downloadManager.js:2181 runs pip install -r <reqs> --upgrade through runPipCommand (shared.js:284), a bare python -m pip with NO index and NO constraint file, so torch resolves from default PyPI = the CUDA build. --upgrade makes it fire even on an already-correct engine; the comment at downloadManager.js:2033 claiming --upgrade is idempotent is wrong. Same mechanism as MPI-217 (opencv 4.13 -> 5.0 across the whole engine). EVIDENCE A (Linux, no NVIDIA driver): one node requirements file pulled torch, triton, cuda-toolkit and 14 nvidia-* wheels, several GB, REPLACING the +cpu torch that comfy install had just placed correctly. Wheel decompression contributed to a thermal shutdown on that box. EVIDENCE B (macOS M4 fresh install 2026-07-31, WARM cache): 13 pip invocations, 400 \"Requirement already satisfied\" lines, numpy re-resolved 18x, torch 10x, and 4 packages installed then uninstalled and replaced (kornia 0.8.3, transformers 5.14.1, matplotlib 3.11.1, ultralytics 8.4.113). DESIGN Phase 1 - constrain every node pip (constraint file + drop --upgrade). The Pod image ALREADY does this via ENV PIP_CONSTRAINT=/opt/constraints.txt and the local engine does not; that asymmetry IS the bug. runPipCommand is a SHARED primitive - sweep every call site in one pass. Phase 1 also makes most pipPins redundant, since they are a repair for damage it prevents. DESIGN Phase 2 - maintain OUR OWN aggregated, tested pip file versioned alongside dev_configs/node_lock.json, install it in a single pass, and disable every node requirements step. GENERATE it with uv pip compile in CI and curate the diff, so maintenance works like a node bump instead of relying on memory. SAFETY NET ALREADY EXISTS: the Pod image build boots ComfyUI and greps for IMPORT FAILED (MPI-341), so an under-specified aggregate goes red in CI, not on a user machine. OPEN QUESTIONS: only 4 of 7 installRequirements nodes use a plain requirements.txt - ComfyUI-Frame-Interpolation ships NONE (its deps live inside install.py; measured on macOS it adds exactly one redundant opencv-contrib-python and a failed cupy build), so read what Impact-Pack and controlnet_aux commands do beyond pip before disabling them. Use PEP 508 markers for platform variance or the darwin sam2 / onnxruntime-gpu drops regress. Constrain against ComfyUI core pins so the aggregate is strictly additive. Decide what repair-deps means once installs are not per-node. Decide the fallback when a merged resolve HARD FAILS where sequential silently succeeded by last-writer-wins. Full detail in brief.md. VERIFY on a CPU-only box: 0 hits for \"downloading (triton|nvidia)\", torch reports a +cpu tag, already-satisfied count far below 400, zero IMPORT FAILED, Pod image build stays green.",
+  "column": "todo",
+  "maturity": "planned",
   "status": "active",
   "created_at": "2026-07-31T01:20:00Z",
-  "updated_at": "2026-07-31T03:35:00Z",
+  "updated_at": "2026-07-31T16:05:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -16,14 +16,13 @@
   },
   "tags": [
     "engine",
-    "linux",
-    "macos",
     "install",
     "pip",
-    "custom-nodes"
+    "custom-nodes",
+    "linux",
+    "macos"
   ],
   "priority": "high",
-  "activeSessionTitle": "MPI-413: drop --upgrade from the shared node-requirements install",
   "attention": {
     "state": "required",
     "reason": "Stated root cause DISPROVEN - the CUDA install was downstream of MPI-411 (now fixed), not caused by --upgrade. Needs a close/reject decision.",

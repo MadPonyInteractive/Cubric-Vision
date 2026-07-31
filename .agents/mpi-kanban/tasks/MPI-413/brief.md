@@ -1,35 +1,14 @@
-# MPI-413 — custom-node requirements reinstall the CUDA torch stack over the CPU one
+# MPI-413 — Install the dependency set WE chose, not whatever pip resolves
 
-Found live on Linux 2026-07-30 while verifying MPI-406. **This is the second and
-larger half of MPI-406** — MPI-406 fixed the `comfy install` stage, this is the
-custom-node stage, and until both are closed a `--cpu` engine still downloads
-several GB of CUDA wheels.
+**Umbrella card. Absorbs MPI-406 (closed) and the original MPI-413 diagnosis.**
+Scope agreed with the user 2026-07-31, post-1.3.0. Nothing here is pre-release work.
 
-## Evidence
+The framing that matters: this is **the same defect MPI-419 just fixed, one layer
+down**. MPI-419 was "we install an unpinned ComfyUI and hope". This is "we let each
+custom node's requirements resolve freely on the user's machine and hope". Both ship a
+dependency set nobody chose and nobody tested.
 
-```
-[2026-07-31T00:04:57.395Z] [INFO] [system] Running: python -m pip install -r
-  .../custom_nodes/ComfyUI-LTXVideo/requirements.txt --upgrade --no-warn-script-location
-...
-[2026-07-31T00:08:27.366Z] [INFO] [system] [pip] Downloading torchvision-0.28.0-…whl (7.7 MB)
-[2026-07-31T00:11:20.830Z] [INFO] [system] [pip] Installing collected packages:
-  nvidia-cusparselt-cu13, mpmath, cuda-toolkit, zipp, triton, tqdm, sympy, setuptools,
-  safetensors, regex, Pillow, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink,
-  nvidia-nccl-cu13, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc,
-  nvidia-cuda-cupti, numpy, ninja, networkx, kornia-rs, hf-xet, fsspec, filelock, einops,
-  cuda-pathfinder, nvidia-cusparse, nvidia-cufft, nvidia-cublas, importlib_metadata,
-  cuda-bindings, nvidia-cusolver, nvidia-cudnn-cu13, huggingface_hub, tokenizers,
-  diffusers, transformers, torch, torchvision, kornia, timm
-```
-
-Note the stage tag: `[system] [pip]`, not `[comfy-install]`. MPI-406's original
-evidence was `[comfy-install] Downloading triton` — a different stage. That is
-why removing `--fast-deps` did not change the outcome.
-
-Machine had no NVIDIA driver; the engine correctly resolved `--cpu`
-(`gpu-detect: Resolved config: uv-bootstrap (vendor none, CUDA unknown)`).
-
-## Root cause
+## The mechanism (root cause — unchanged, still accurate)
 
 `routes/downloadManager.js:2181`:
 
@@ -38,69 +17,142 @@ await runPipCommand(['install', '-r', reqPath, '--upgrade', '--no-warn-script-lo
 ```
 
 `runPipCommand` (`routes/shared.js:284`) is a bare `python -m pip` — **no index
-constraint**, so torch resolves from default PyPI, which is the CUDA build.
-
-`--upgrade` is what makes it fire even on a correct engine. The comment at
-`downloadManager.js:2033` states the opposite belief:
+constraint and no constraint file**, so torch resolves from default PyPI, which is the
+CUDA build. `--upgrade` is what makes it fire even on an already-correct engine. The
+comment at `downloadManager.js:2033` asserts the opposite belief:
 
 > `pip with --upgrade is idempotent (a no-op when already satisfied)`
 
 That is wrong, and it is why this stayed invisible: `--upgrade` pulls the newest
-available for every listed package **and its dependencies**, so an
-already-correct CPU torch is replaced by the newest CUDA torch.
+available for every listed package **and its dependencies**, so an already-correct CPU
+torch is replaced by the newest CUDA torch.
 
-The repo already learned this once — `nodesDeps.js:178` (MPI-217): *"Those are
-UNPINNED — with --upgrade, install pulls newest across the WHOLE engine … opencv
-4.13→5.0 major + numpy 2.5.0→2.5.1"*. Same mechanism, torch instead of opencv.
+The repo learned this once already — `nodesDeps.js:178` (MPI-217): *"Those are UNPINNED
+— with --upgrade, install pulls newest across the WHOLE engine … opencv 4.13→5.0 major
++ numpy 2.5.0→2.5.1"*. Same mechanism, opencv instead of torch.
 
-## Why dropping the torch lines is NOT sufficient
+## Evidence A — the catastrophic case (Linux, CPU-only, 2026-07-30)
 
-`requirementsDrop` already exists (`nodesDeps.js:88`, MPI-387 dropped a `git+`
-sam2 line on all three platforms), so it is the obvious reach. It does not solve
-this: `timm` and `diffusers` **depend** on torch/torchvision, so `--upgrade`
-bumps them transitively whether or not the requirements file names them. Any fix
-has to constrain resolution, not edit the file.
+```
+Running: python -m pip install -r .../custom_nodes/ComfyUI-LTXVideo/requirements.txt --upgrade
+...
+Installing collected packages: nvidia-cusparselt-cu13, cuda-toolkit, triton,
+  nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-curand,
+  nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti,
+  nvidia-cusparse, nvidia-cufft, nvidia-cublas, nvidia-cusolver, nvidia-cudnn-cu13,
+  torch, torchvision, kornia, timm, diffusers, transformers
+```
 
-## Candidate fixes — pick with measurement, this is a SHARED primitive
+Several GB of CUDA wheels on a box with no NVIDIA driver, **replacing** the `+cpu` torch
+`comfy install` had just placed correctly. Wheel decompression contributed to a thermal
+shutdown on that machine. Stage tag is `[system] [pip]`, NOT `[comfy-install]` — which
+is precisely why MPI-406's `--fast-deps` fix did not change the symptom.
 
-`runPipCommand` has many callers across both engine twins; sweep them before
-changing it.
+## Evidence B — the everyday case (macOS M4, fresh install, 2026-07-31)
 
-1. **Constraints file (probably best).** `pip install -r req --upgrade
-   --constraint <file>` pinning the torch family to whatever `comfy install`
-   put there. Keeps `--upgrade`'s self-heal intent while freezing the packages
-   that must not drift. Surgical, no vendor branching.
-2. **Drop `--upgrade`.** One word, and it makes the behaviour match the comment
-   that already claims it. Risk: a node needing a newer unpinned shared package
-   silently keeps the old one — though `pipPins` exists as the corrective path
-   for exactly that, and runs after requirements.
-3. **Vendor-aware index.** `--index-url https://download.pytorch.org/whl/cpu
-   --extra-index-url https://pypi.org/simple` when the resolved vendor is CPU.
-   Correct for CPU boxes but branches the pip path by vendor, and does nothing
-   about the general MPI-217 drift class.
+Measured from `app.log.1` of a clean engine install, warm pip cache:
 
-1 and 2 also fix the broader drift problem; 3 only fixes torch.
+| measure | count |
+|---|---|
+| pip invocations across the node phase | **13** |
+| `Requirement already satisfied` lines | **400** |
+| `numpy` re-resolved | **18 times** |
+| `torch` re-resolved | **10 times** |
+| `packaging` / `typing-extensions` / `networkx` | 14 / 13 / 13 times |
+| packages installed then **uninstalled and replaced** | 4 — `kornia 0.8.3`, `transformers 5.14.1`, `matplotlib 3.11.1`, `ultralytics 8.4.113` |
+
+Even with every wheel cached, 13 separate resolves re-derive the same shared graph.
+Four packages were installed and then thrown away for a different version. On a cold
+user machine each of those 400 checks is an index round-trip and each replacement is a
+second download.
+
+Note the warm-cache honesty: that phase still only took ~30s here
+(`Engine ready, finishing custom node installation` 11:09:07 → `Engine provisioning
+complete` 11:09:37). **Do not sell this card on wall-clock alone** — the defensible
+claims are correctness, reproducibility, and cold-install cost.
+
+## Why `requirementsDrop` is not the answer
+
+`requirementsDrop` already exists (`nodesDeps.js:88`) and is the obvious reach. It
+cannot solve this: `timm` and `diffusers` **depend on** torch/torchvision, so `--upgrade`
+bumps them transitively whether or not the requirements file names them. Any real fix
+constrains resolution; it does not edit the input files.
+
+## The design (agreed with the user 2026-07-31)
+
+### Phase 1 — constrain every node pip. Small, high value, mostly independent.
+
+Apply a constraint file to every node pip call and drop `--upgrade`. The Pod image
+**already does exactly this** — it writes `/opt/constraints.txt` with the torch family
+pinned and sets `ENV PIP_CONSTRAINT`. The local engine has no equivalent. That asymmetry
+IS this bug. This alone kills the torch stomp and the MPI-217 drift class, and makes
+most `pipPins` entries redundant — they are currently a *repair* for damage Phase 1
+would prevent.
+
+`runPipCommand` is a SHARED primitive with callers across both engine twins — sweep
+every call site in one pass (root-cause rule).
+
+### Phase 2 — one curated dependency file, node requirements ignored entirely.
+
+Stop asking the nodes. Maintain **our own aggregated, tested pip file**, versioned
+alongside `dev_configs/node_lock.json`, and install it in a single pass with each node's
+own requirements step disabled.
+
+**Generate it, then curate it:** run `uv pip compile` over the nodes' declared
+requirements plus our constraints in CI, review the diff, commit the result. Maintenance
+then works exactly like a node bump — re-run, review, commit — instead of relying on
+someone remembering. Same philosophy as `node_lock.json`, applied to Python deps.
+
+**The safety net already exists.** The Pod image build boots ComfyUI and greps the log
+for `IMPORT FAILED` (MPI-341). If the aggregate under-specifies what a node needs, that
+build goes red **in CI, not on a user's machine**. That gate is what makes a
+hand-curated set safe to adopt.
+
+## Open questions — settle these before writing code
+
+1. **The `install.py` nodes.** Only 4 of 7 `installRequirements` nodes use a plain
+   `requirements.txt`; 3 run custom commands. `ComfyUI-Frame-Interpolation` ships **no
+   `requirements.txt` at all** — its deps exist only inside `install.py`'s logic, so no
+   scanner can see them. Measured on macOS 2026-07-31, its `install.py` installed
+   exactly ONE new package (`opencv-contrib-python 5.0.0.93`, redundant with the
+   `opencv-python` + `opencv-python-headless` already present) and failed to build
+   `cupy`. Read what Impact-Pack's and controlnet_aux's commands do beyond pip before
+   disabling any of them wholesale.
+2. **Platform variance.** Use PEP 508 markers in the one file
+   (`onnxruntime-gpu; platform_system != "Darwin"`) rather than per-platform files, or
+   the darwin drops (`sam2`, `onnxruntime-gpu`) regress.
+3. **Constrain against ComfyUI core's own pins** so the aggregate is strictly additive
+   and can never move torch. Also decide what `repair-deps` means once installs are not
+   per-node — repair one node, or reinstall the whole set?
+
+A merged resolve can **hard fail** where sequential silently "succeeds" by
+last-writer-wins. That is a real conflict surfacing, but it turns a soft-broken engine
+into a failed install — decide the fallback deliberately.
+
+## Absorbed from MPI-406 (closed 2026-07-31)
+
+MPI-406 owned the **`comfy install` stage**: `--fast-deps` ignores the vendor flag, so
+comfy-cli's DependencyCompiler resolved generic PyPI torch on `--cpu`. That fix shipped
+and is positively proven on Linux — the PyTorch CPU index is consulted, `+cpu` wheels
+resolve, and no `nvidia-*`/`triton`/`cuda-*` appears in that stage at all. Its card was
+retitled to that scope and closed. **The residual symptom it was named after — a
+`--cpu` box still ending up with the CUDA stack — is owned by this card**, because the
+custom-node stage undoes it.
 
 ## Severity
 
-Wasteful, not broken — a CUDA torch runs on CPU. Cost is several GB of download,
-disk and decompression on the machines least able to afford it. On the box that
-found this, wheel decompression contributed to a thermal shutdown.
-
-## Why 1.3.0 shipped without it
-
-The changelog entry claiming *"no longer downloads gigabytes of NVIDIA-only
-components … It now installs the processor-only build"* was **removed from
-1.3.0** rather than shipped as a false claim. Verifying a fix here costs a full
-engine install on a machine that takes hours per attempt and shuts down under
-load, so it was not worth holding the release. The `--fast-deps` fix (MPI-406)
-stays in — it is correct on its own merits, just not sufficient alone.
+Wasteful, not broken: a CUDA torch runs on CPU. The cost is several GB of download,
+disk and decompression on exactly the machines least able to afford it, plus an engine
+whose installed package set nobody chose and no CI ever tested.
 
 ## Verify
 
-On a CPU-only Linux/macOS box: full engine install, then
+On a CPU-only Linux/macOS box, full engine install, then:
 
 ```sh
-grep -icE "downloading (triton|nvidia)" user-data/logs/app.log     # expect 0
-engine/comfy-venv/bin/python3 -c "import torch; print(torch.__version__)"  # expect a +cpu tag
+grep -icE "downloading (triton|nvidia)" user-data/logs/app.log      # expect 0
+engine/comfy-venv/bin/python3 -c "import torch; print(torch.__version__)"   # expect +cpu
+grep -c "Requirement already satisfied" user-data/logs/app.log      # expect « 400
 ```
+
+Plus: ComfyUI boots with zero `IMPORT FAILED`, and the Pod image build stays green.
