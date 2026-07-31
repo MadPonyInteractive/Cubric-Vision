@@ -1,0 +1,170 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "70d2af72-1cbc-45ac-85ee-57b775816ffb",
+ "generated_at": "2026-07-31T10:50:00Z",
+ "from_session": "cf0caa48-2a88-48c5-8139-66dc78f4655c",
+ "to_role": "implementer",
+ "status": "open",
+ "session": {
+  "name": "ComfyUI bumped 0.28.0 -> 0.29.2 and the unpinned-installer defect FIXED. Windows leg verified and COMMITTED + PUSHED (e2c2b4d6). Next leg is the Mac, whose SSH session is LIVE right now.",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Fix the ComfyUI version pin, bump 1.3.0 to carry ComfyUI 0.29.2, and re-validate. Publish nothing.",
+  "status": "in_progress",
+  "summary": "The publish blocker is CODE-FIXED and Windows-verified. `comfy install` is now explicitly pinned and the version stamp records what actually landed instead of the pin. Core is at v0.29.2, LTXVideo is bumped to the upstream commit that adapts to the 0.29 rope change, and the frontend pins are corrected. Committed and pushed as e2c2b4d6. What remains is the MAC leg (the only machine that can prove the --version pin, because Windows never runs comfy install), then the Pod image rebuild the user deliberately deferred until local is proven. NOTHING IS PUBLISHED."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "FIX 1 + 2 SHIPPED in routes/engine.js. `comfy install` now takes `--version <COMFY_VERSION>`; comfy-cli's default is `nightly` (= latest master commit), which WAS the defect. Confirmed from comfy-cli SOURCE, not just its help text: validate_version accepts '0.29.2', checkout_stable_comfyui re-adds the 'v' and checks out the tag, git_checkout_tag fetches tags when absent, and the checkout runs whenever version != nightly INDEPENDENTLY of --restore -- so retries onto an existing workspace also land on the pin. Separately, a new `_readInstalledComfyVersion(engineRoot)` helper reads `__version__` out of the installed tree's comfyui_version.py and that is what gets stamped into .mpi_engine_version; the pin is only a fallback and logs a warning when used. getComfyPath resolves comfyui_version.py correctly on BOTH layouts, so it is one code path for both engines.",
+   "FIX 3 + 4 SHIPPED. dev_configs/system_dependencies.json engine.version -> 0.29.2. dev_configs/node_lock.json comfyui.core -> tag v0.29.2 / commit 322122449c9d2ba8b8df1bb517364527dd0615f1, frontend -> comfyui-frontend-package 1.47.11 + comfyui-workflow-templates 0.11.20. IMPORTANT: those frontend numbers came from requirements.txt AT THE v0.29.2 TAG. The 0.29.0 changelog understates both (it says 1.47.10 / 0.11.19) -- the previous handoff was right to warn about this. Full requirements delta 0.28.0 -> 0.29.2 is only 4 lines: those two, comfyui-embedded-docs 0.5.8 -> 0.5.9, and comfy-kitchen 0.2.20 -> 0.2.22 (the package the new rope helpers live in). NO torch change.",
+   "FIX 5 SHIPPED. ComfyUI-LTXVideo bumped 4f45fd6c -> 3b9c5cde4700917074823d45e25401d81049f8fc. That is upstream PR #532 'Support ComfyUI core rope change' (+20/-3, merged 2026-07-27), which wraps the import in a try/except: new core uses freqs_cis_matrix, legacy core keeps interleaved_freqs_cis. IT IS BACKWARDS COMPATIBLE -- verified in the file -- so the bumped node runs on 0.28 AND 0.29. That is why the Pod can stay at 0.28.0 until it is rebuilt without breaking. Confirmed at source that interleaved_freqs_cis exists in core v0.28.0 (2 occurrences) and is GONE in v0.29.2 (0).",
+   "FIX 6 DONE -- the sweep says DO NOT BUMP the other 13. Measured each pinned node's distance from its upstream tip: 9 of 14 are already AT tip (MpiNodes, PainterI2Vadvanced, Impact-Pack, Frame-Interpolation, Impact-Subpack, Krea2-ControlNet, controlnet_aux, inpaint-cropandstitch, and LTX before its bump). The 5 behind (VideoHelperSuite 1, UltimateSDUpscale 1, kjnodes 23, RES4LYF 18, krea2edit 12) are behind for unrelated feature reasons -- NONE has shipped a 0.29 adaptation. LTX was the only node upstream adapted. Moving a pin without a reason is how untested drift enters a release; they were deliberately left alone. Full table in tasks/MPI-419/validation.md.",
+   "FIX 7 WAS A NO-OP -- do not go looking for it. routes/platformEngine.js:20 builds COMFY_BASE from COMFY_VERSION, so bumping system_dependencies.json moves the Windows archive download to the v0.29.2 assets automatically. There is no URL or hash to edit. Confirmed all four ComfyUI_windows_portable_*.7z assets exist on the v0.29.2 release (nvidia = 2,103,175,457 bytes).",
+   "WINDOWS LEG PASSED (leg 1 of the user's order). The user DE-SCOPED a full engine reinstall here ('mainly to see there aren't failed nodes'). The dev engine's ComfyUI is a real git clone and weights live outside it on G:/CubricModels, so 0.29.2 was tested IN PLACE: `git checkout v0.29.2` in engine/ComfyUI_windows_portable/ComfyUI plus the 4 changed pip packages into python_embeded. That preserved the MpiNodes dev symlink and skipped a 2.1GB download. Live /system_stats reports comfyui_version 0.29.2, pytorch 2.13.0+cu130.",
+   "THE DRIFT LADDER REPAIRED LTX BY ITSELF on Windows -- a real proof, not a manual copy. POST /engine/repair-deps against the bumped lock re-cloned the node, ran its requirements, and re-stamped .mpi_node_commit from 4f45fd6c to 3b9c5cde. embeddings_connector.py on disk now carries freqs_cis_matrix at lines 18 and 265.",
+   "ZERO FAILED NODE IMPORTS on 0.29.2. All 14 custom nodes appear in the import-times table (LTXVideo among them at 0.8s). 1862 node classes registered, including 67 LTXV classes and all 8 Krea2 classes (Krea2ControlLoRALoader, Krea2ControlApply, Krea2EditModelPatch, etc -- note there is NO 'Krea2ControlNetLoader' class, an early guess that wasted a check). The only 2 tracebacks are PRE-EXISTING and DELIBERATE: KJNodes' optional PatchTritonVAE needs triton, which we intentionally do not ship (MPI-50). Same warning appears 12 times earlier in logs/app.log, first on 2026-07-29 while still on 0.28.0. NOT a 0.29 regression.",
+   "GENERATION PASSED on 0.29.2 -- ILL_Anime, 768x768, 8 steps euler, queued at /prompt, status success, mpi419_029_smoke_00001_.png (754,545 bytes) written and visually inspected. Guard tests green after the bump: node-drift 27/27, resolver contract 14/14, remote-engine-assets 6/6, eslint routes/engine.js clean.",
+   "COMMITTED AND PUSHED: e2c2b4d6 'fix(engine): pin the ComfyUI install and stamp what actually landed', 11 files. Push was user-authorized. master is now c0bbd360..e2c2b4d6 on origin.",
+   "MPI-405 HARDENED (a side thread, now closed). The user asked whether the new skip-install setting caused a 'no pod connected' toast. It did not -- that was `autoConnectOnStart`, which is ON in their config; the console stack lands exactly on shell.js:258, the first branch of the boot gate. skipLocalEngine is OFF and defaults off. Verified the skip-install plate is ungated BY CONSTRUCTION (it has no id, and _applyEnabled at MpiRunpodSettings.js:1568-1578 hides only #mpiSettingsRunpodBody / #mpiSettingsRunpodAutoConnectGroup / #mpiSettingsRunpodAutoRetryGroup) and MUST stay that way -- the escape hatch is the only way IN and that switch is the only way OUT, so gating it behind the API key would trap a keyless GPU-less user forever. MPI-405's description now carries that with file:line evidence so nobody 'tidies up' the missing id into a regression. A second item (make the switch on-only via the hatch) was raised and CLOSED AS NO-CHANGE -- the user confirmed the existing two-way behaviour is what they want, and it is already better than assumed: flipping it off emits engine:install-request so the modal appears IMMEDIATELY, and engine:install-skipped syncs the switch back on."
+  ],
+  "pending": [
+   "THE MAC LEG IS NEXT AND THE SSH SESSION IS ALREADY LIVE -- verified at 2026-07-31T10:47Z, `ssh macbox` returns rentamac-macmini-m4-7c06f8ad, macOS 26.5, arm64. DO NOT ask the user to set up access; just run it. The app is CURRENTLY RUNNING there on the OLD 1.3.0 build (start.command pid 6085 + Electron helpers).",
+   "THE MAC IS SHOWING THE LIVE DEFECT RIGHT NOW, which makes it the ideal before/after: <extract>/engine/.mpi_engine_version reads 0.28.0 while <extract>/engine/ComfyUI_macos/comfyui_version.py reads 0.29.0. After the rebuilt build installs its engine, BOTH must read 0.29.2. That single comparison is the proof the whole card exists for.",
+   "STEP 1 -- REBUILD THE MAC ARTIFACT IN CI at e2c2b4d6. The push is already done, so CI has the commit.",
+   "STEP 2 -- FRESH EXTRACT + FRESH ENGINE INSTALL on the Mac. This is the ONLY leg that can prove FIX 1: Windows takes the prebuilt-archive path and never runs `comfy install`, so the --version flag is untested there (on Windows it is function-verified only). Success = comfy-cli lands EXACTLY 0.29.2 (not 'whatever is current'), the stamp reads it back, and /engine/version-check reports needsUpgrade false.",
+   "STEP 3 -- CONFIRM LTX IMPORTS ON THE UV ENGINE. The original failure was `cannot import name 'interleaved_freqs_cis' from 'comfy.ldm.lightricks.model'` at ComfyUI boot on macOS. With core 0.29.2 + node 3b9c5cde that import must now succeed. This is the macOS/Linux-only half of the defect -- Windows was never affected.",
+   "STEP 4 -- re-run the macOS checklist items that a core bump invalidates (install, launch, generate). tasks/MPI-391/checklist.md section C had 4 of 5 ticked before the bump; the un-ticked line names both defects.",
+   "THEN THE POD, and only then -- the user's explicit sequencing 2026-07-31: 'we will build a new image for the pod, first we have to confirm that everything is fine locally. Otherwise we'll be building the image without the proper node fixes.' dev_configs/node_lock.json ALSO drives the Pod image build (c:\\AI\\Mpi\\mpi-ci\\cubric-vision-pod, skill build-pod-image); its copied node_lock.json is still at v0.28.0 and POD_IMAGE_VERSION is v0.17.0. LTXVideo is a BAKED node (installRequirements true) so the bump DOES drift the image -- but the new LTX commit is backwards compatible, so the Pod keeps working at 0.28.0 until the rebuild. Per MPI-340, prove any image change on the DEV tag first.",
+   "LINUX is a stretch only, not a gate -- that ThinkPad cannot boot ComfyUI at all (MPI-415, kornia_rs SIGILL on a 2011 CPU with no avx2/fma), so it can only ever prove the install half, never a generation.",
+   "STILL OPEN, NOT A BLOCKER -- MPI-420 (defect B): TAESD previews are enabled in two places (routes/comfy.js:390 --preview-method taesd, routes/engine.js:527-528 the two comfy.settings.json keys) but no taesd/vae_approx dep exists in js/data/modelConstants/ and models/vae_approx/ is not on disk, so every generation logs a missing-decoder warning and there is NO live preview during sampling. Platform-independent. Either ship the decoder as a universal dep or stop enabling taesd. Untouched this session.",
+   "A CAVEAT NOT TO MISREAD AS A BLOCKER: the Windows dev engine is at 0.29.2 via a HAND git checkout, not via an install through our code. Node compatibility is proven; the download-and-extract path of the v0.29.2 Windows portable archive is NOT. If the shipped Windows artifact needs that proven, it is a separate real archive install. The user was told this and did not treat it as gating.",
+   "AFTER all legs pass: gh release create. NOTHING IS PUBLISHED."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-419",
+  "title": "uv engine installs an UNPINNED ComfyUI, then stamps it with the pinned version (LTX dies on macOS + Linux)",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-419/",
+  "links": {
+   "plan": null,
+   "checklist": "checklist.md",
+   "validation": "validation.md",
+   "brief": null,
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-419/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "implement",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "tasks/MPI-419/validation.md is the full evidence file: the source-verified upstream research, the 14-row node sweep table with the reason each was left alone, the Windows in-place test method and results, and an explicit 'Still open' section. Read it before re-deriving anything.",
+   "tasks/MPI-419/checklist.md tracks the legs; the code + version-bump + sweep + Windows sections are ticked, the Mac section is not.",
+   "MPI-405's description now carries the verified skip-install ungating constraint with file:line evidence, plus the closed no-change second item."
+  ],
+  "pending": [
+   "A memory entry worth writing: rentamac.io SSH works and is the primary channel; only GUI actions need DeskIn. The June note calling SSH beta/unusable is stale. (Carried unwritten from the previous handoff -- it cost a round of doubt AGAIN this session, when the agent asked the user how to drive the Mac instead of just running `ssh macbox`.)",
+   "A memory entry worth writing: a sustained-transfer slowdown is NOT evidence of an app bug -- reproduce with curl AND a non-Cloudflare control host BEFORE reading any download code. (Also carried unwritten.)",
+   "A memory entry worth writing (NEW): a changelog is not a pin source. The 0.29.0 release notes said frontend 1.47.10 / templates 0.11.19; requirements.txt at the v0.29.2 TAG said 1.47.11 / 0.11.20. Always read the file at the tag.",
+   "MEMORY.md compaction -- deferred a FIFTEENTH time.",
+   "state/index.json active_handoffs is now 21 and contains one MALFORMED entry: a bare string ('.agents/mpi-kanban/state/handoffs/631cb2d5-...json') instead of an object, at the end of the array. Cleanup finding only; it still parses."
+  ]
+ },
+ "next_action": {
+  "description": "Run the Mac leg. The SSH session is ALREADY LIVE (`ssh macbox`, verified 10:47Z) and the user has the Mac window open on their screen for GUI clicks -- do NOT ask how to access it. Rebuild the macOS artifact in CI at e2c2b4d6 (already pushed), do a fresh extract + fresh engine install on the Mac, and prove that comfy-cli lands EXACTLY ComfyUI 0.29.2 and that .mpi_engine_version reads it back -- the Mac is the only machine that can test the --version pin, because Windows never runs `comfy install`. Then confirm the LTXVideo import succeeds on the uv engine (the original failure was `cannot import name 'interleaved_freqs_cis'`). Before/after is already captured: the Mac RIGHT NOW has a stamp of 0.28.0 against an actual 0.29.0. Only after local is fully proven, rebuild the Pod image -- the user's explicit sequencing. Publish nothing.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "BUMP FORWARD, DO NOT PIN BACK -- 1.3.0 carries ComfyUI 0.29.2. Held.",
+   "AN UNPINNED ENGINE INSTALL IS NEVER ACCEPTABLE (the user's standing rule): a version we did not choose 'is most likely gonna break stuff that we can't fix'. Now enforced in code.",
+   "POD REBUILD COMES AFTER LOCAL IS PROVEN, not before -- the user's reason: building the image first would bake it without the node fixes local testing surfaces.",
+   "THE FULL WINDOWS ENGINE INSTALL WAS DE-SCOPED BY THE USER: 'I don't think we even need to install on these Windows boxes. npm start after bumping the comfyui version is probably enough.' The in-place checkout satisfied that intent and went further (real generation).",
+   "THE MACOS TORCH IS AN UNPINNED NIGHTLY BY DESIGN (comfy install --m-series resolves against download.pytorch.org/whl/nightly/cpu; routes/engine.js documents why --fast-deps is excluded there). Same class of unpinned-input risk as the defect just fixed, but NOT itself a bug. Worth raising when the Mac leg is done.",
+   "The CDN throttle investigated in the previous session is SETTLED AND CLOSED (transient, proven with curl + a Hetzner control host). Re-opening it would waste a session.",
+   "MPI-405's skip-install carve-out is a HARD constraint, not a preference -- gating that switch behind the RunPod API key would convert an escape hatch into a permanent trap."
+  ],
+  "constraints": [
+   "NOTHING IS PUBLISHED. gh release create has not run.",
+   "Ask in PLAIN TEXT, never AskUserQuestion.",
+   "The user gets confused by card-ID-heavy narration. Report OUTCOMES in plain language; keep card IDs in the files, not in the conversation.",
+   "THE MAC IS RENTED UNTIL ~07:30Z ON 2026-08-01. SSH IS LIVE NOW (`ssh macbox`, key auth, verified 10:47Z) and the user has the Mac window open for button presses. The app CANNOT be launched from SSH -- macOS will not put a GUI app on the console session from a remote shell -- so launch/Generate/Finder actions need the user or DeskIn (device 784063462). SERVER-side work needs no click: drive it via POST /engine/download, /comfy/start, /engine/repair-deps, same as the Windows leg.",
+   "Extract root on the Mac: /Users/rentamac/Downloads/CubricVision-macos-arm64-v1.3.0 -- log at <extract>/user-data/logs/app.log, app server on 127.0.0.1:3000, ComfyUI on 8188. Engine dir is <extract>/engine/ComfyUI_macos (comfy-cli makes COMFY_DIR itself the repo root on non-Windows -- no extra ComfyUI/ subdir).",
+   "'Allow file access from the console' is enabled in the rentamac dashboard. WITHOUT it macOS hides Downloads from remote sessions and globs return EMPTY, which reads as a missing log line rather than a blocked read.",
+   "JSON FORMATS DIFFER PER FILE AND MUST BE MEASURED, NEVER ASSUMED. Measured this session: board.json = 2-space + CRLF + trailing CRLF; tasks/MPI-419/task.json = 2-space + LF + trailing LF; tasks/MPI-405/task.json = 2-space + LF + trailing LF; state/index.json = 1-space + CRLF; handoff JSON = 1-space + LF; dev_configs/node_lock.json = 2-space + CRLF + NO trailing newline; dev_configs/system_dependencies.json = 2-space + CRLF + trailing CRLF. ALWAYS serialise-and-compare against the original before writing, and abort on mismatch.",
+   "The clock was checked against GitHub's `Date:` header at session start and was accurate to 1 second -- no VPN skew today. Re-check if the VPN goes on.",
+   "release-baselines/*.json MUST STAY at the 1.2.0 manifests until 1.3.0 is live.",
+   "Windows and Linux validation were done for 1.3.0 pre-bump; a core bump invalidates the engine-related parts only. Scope re-tests deliberately rather than assuming either extreme.",
+   "Shared tree -- commit by explicit pathspec (`git commit --only <paths>`), never `git add -A`."
+  ],
+  "files_modified": [
+   "routes/engine.js",
+   "dev_configs/node_lock.json",
+   "dev_configs/system_dependencies.json",
+   ".agents/mpi-kanban/board.json",
+   ".agents/mpi-kanban/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-419/task.json",
+   ".agents/mpi-kanban/tasks/MPI-419/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-419/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-419/events.jsonl",
+   ".agents/mpi-kanban/tasks/MPI-405/task.json",
+   ".agents/mpi-kanban/tasks/MPI-405/events.jsonl"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-419/validation.md",
+   ".agents/mpi-kanban/tasks/MPI-419/checklist.md",
+   ".agents/mpi-kanban/tasks/MPI-391/checklist.md",
+   "routes/engine.js",
+   "dev_configs/node_lock.json"
+  ]
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "comfy_engine",
+   "versioning",
+   "releases",
+   "portable-distribution"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/comfy_engine.md",
+  ".claude/rules/versioning.md",
+  ".claude/rules/dos_and_donts.md",
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-07-31T09:58:00Z",
+   "event": "MPI-419 moved todo -> doing"
+  },
+  {
+   "at": "2026-07-31T10:15:00Z",
+   "event": "MPI-419 checklist + validation written"
+  },
+  {
+   "at": "2026-07-31T10:38:00Z",
+   "event": "MPI-405 hardened, second item closed no-change"
+  },
+  {
+   "at": "2026-07-31T10:45:00Z",
+   "event": "committed e2c2b4d6 and pushed to origin/master"
+  },
+  {
+   "at": "2026-07-31T10:50:00Z",
+   "event": "handoff_created"
+  }
+ ],
+ "resume_prompt": "You are continuing the Cubric Vision 1.3.0 release on master. Read .agents/mpi-kanban/state/handoffs/70d2af72-1cbc-45ac-85ee-57b775816ffb.json FIRST. NOTHING IS PUBLISHED. The publish blocker is FIXED AND PUSHED as e2c2b4d6: our Linux/macOS engine installer used to run `comfy install` with no version flag, so it cloned whatever ComfyUI was current and then stamped the file with our pin -- meaning the version check compared a lie to a lie and could never detect the drift, and our pinned LTXVideo node stopped importing against 0.29. It now passes --version explicitly and stamps the version read back out of comfyui_version.py. Core is at v0.29.2, LTXVideo at 3b9c5cde (upstream PR #532, which handles old AND new core via try/except, so the Pod stays safe at 0.28.0 until rebuilt), frontend pins corrected to 1.47.11 / 0.11.20 taken from the tag rather than the changelog. The other 13 pinned nodes were swept and deliberately left alone -- none has a 0.29 adaptation. The Windows leg PASSED: 0.29.2 live, 14/14 nodes import, the drift ladder repaired LTXVideo on its own, a generation completed, all guard tests green. THE NEXT LEG IS THE MAC AND ITS SSH SESSION IS ALREADY LIVE -- `ssh macbox` works right now and the user has the Mac window open on their screen for GUI clicks, so do NOT ask how to access it, just run it. The Mac is currently displaying the exact defect as a ready-made before-picture: its stamp reads 0.28.0 while its comfyui_version.py reads 0.29.0. Rebuild the macOS artifact in CI at e2c2b4d6, fresh-extract, fresh engine install, and prove comfy-cli lands EXACTLY 0.29.2 with the stamp reading it back -- the Mac is the only machine that can test that flag, because Windows takes the prebuilt-archive path and never runs `comfy install`. Then confirm LTXVideo imports on the uv engine. ONLY AFTER local is fully proven, rebuild the Pod image -- that sequencing is the user's explicit instruction, so the image is not baked without the node fixes local testing surfaces. Linux is a stretch only (that box cannot boot ComfyUI at all). Report outcomes in PLAIN LANGUAGE, not card IDs. Do not use AskUserQuestion; ask in plain text."
+}
