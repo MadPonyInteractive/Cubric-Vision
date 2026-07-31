@@ -150,3 +150,48 @@ duplicate — pre-existing and outside this card.
 
 The legacy `app.log.1` from before this change is left in place; nothing reads it
 and the new rotation will not touch it.
+
+## LIVE — fresh Windows portable install, 2026-07-31T18:12–18:46Z
+
+Build `30653323350` at `20f1e743` (green, 6m02s), Windows artifact extracted to
+`D:\cubric-install-test`, driven headlessly. Fix confirmed **inside the shipped
+artifact** first (`resources/app/routes/logger.js` carries `IS_FORK`,
+`MAX_ARCHIVES = 20` and `app-${stamp}.log`; `main.js` carries both `appendRaw`
+call sites), not just in git.
+
+**Engine install:** 2.75 GB of deps from R2, custom nodes, `.mpi_engine_version`
+= `0.29.2`, `extra_model_paths.yaml` written, `/engine/version-check` reports
+installed 0.29.2, **0 IMPORT FAILED**, ComfyUI booted and answered
+`/system_stats` at 0.29.2.
+
+**The whole install fit in ONE 186KB file — no rotation at all.** The same
+install rotated the old 256KB/one-backup window *twice*. The duplication is what
+was eating it: 1,021 lines, and the only repeated line in the entire log is the
+pre-existing `[gpu-detect]` double-run.
+
+**Rotation then driven for real** by pushing 320 lines through `POST /log` — the
+production path (server fork logs -> stdout -> main relays -> appends ->
+rotates), not a test harness:
+
+```
+app-20260731-184632.log   262,195 bytes   (cap is 262,144)
+app.log                    47,120 bytes   (fresh, still being written)
+```
+
+- The archive is the FULL old log, not a stub. It opens on the very first boot
+  line (`18:12:55` `[mask-temp]`) and carries `UW deps total size: 2.75 GB`,
+  `Version stamp written: 0.29.2` and `Engine provisioning complete` — **the
+  exact history the race destroyed.**
+- **Nothing lost at the boundary:** the archive ends at `ROTATION_DRIVER 165`,
+  the fresh `app.log` opens at `166`, and all 320 driver lines are present across
+  the two files.
+
+Verification items 1-4 of `plan.md` are all satisfied.
+
+**Noticed, not actioned:** a multi-line entry the child logs under one category
+(ComfyUI banners, Python tracebacks) has its first line relayed verbatim under
+that category while the continuation lines are formatted under `[server]`, since
+un-indented continuation is indistinguishable from fresh raw output without a
+framing protocol. Content is complete and unduplicated; only the category label
+on continuation lines is off. Same shape as before this card, which duplicated
+those lines instead.
