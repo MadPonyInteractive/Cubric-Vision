@@ -58,11 +58,81 @@ already made `comfy install` pass `--restore` over an existing clone.
   cost, and the stamp already implies a successful install. Revisit only if a
   *stamped* engine is ever seen failing to boot.
 
-## Outstanding — the one leg that needs hardware
+## Live proof — macOS, 2026-07-31
 
-Both changed branches are code-verified and backed by the measurement above, but
-the **interrupted-install → Retry** sequence has not been re-run end to end. The
-Windows archive install into a separate folder (already on the 1.3.0 plan, user
-offered his box) is exactly that scenario: start the install, quit partway, come
-back, press Retry. Expected: it reaches `/engine/download` and finishes, instead
-of a success toast over a dead engine.
+Run on the rented Mac (macOS 26.5, arm64) against the **shipped 1.3.0 artifact**,
+not a dev tree: `CubricVision-macos-arm64-v1.3.0.zip` md5
+`a92ebc65076f5f966f527b20feb73944`, identical to the staged build in
+`D:/CubricStudio/Vision/Builds/v1.3.0/`, built from `20f1e743` which carries the
+fix commit `2012f6c6`. Both halves of the fix were grepped out of the extracted
+build before the run — client routing on `/engine/version-check`, server stamp
+guard at `routes/engine.js:712`.
+
+Fresh extract, empty `engine/`, portable `user-data/`. Nothing pre-existing.
+
+### The interrupted first install
+
+Install started from the **real Install button** in the app (CDP click on the
+live renderer — see the note at the end). ComfyUI cloned, then the `comfy`
+child process was killed mid `pip install -r requirements.txt`, which is what a
+user quitting partway produces. The app stayed up and showed its own error:
+
+```
+[19:46:22.695Z] [ERROR] [engine] Engine download/install failed
+  Error: comfy-install failed (exit null): .../comfy-venv/bin/comfy ... install --m-series --version 0.29.2
+```
+
+Resulting on-disk state — the reported failure, reproduced rather than
+reconstructed: venv python present, full ComfyUI clone with `.git`, **no
+`.mpi_engine_version`**, and **no `sqlalchemy`** in site-packages.
+
+### The endpoint disagreement, live on macOS
+
+Measured seconds apart on that exact state:
+
+| probe | result | route it selects |
+|---|---|---|
+| `/engine/status` | `{"exists":true}` | `/engine/repair-deps` ← what the OLD client read |
+| `/engine/version-check` | `{"installed":null,"needsInstall":true}` | `/engine/download` ← what the FIXED client reads |
+
+The Linux measurement in the section above is now confirmed on a second uv-path
+platform.
+
+### Retry — the literal button press
+
+The error phase was on screen with the Retry button visible. Clicking it
+produced, with **no `UW deps repair requested` anywhere in the session**:
+
+```
+[19:47:01.147Z] [INFO] [engine] Download request received
+[19:47:01.148Z] [INFO] [engine] _runEngineDownload started
+[19:47:02.901Z] [WARN] [engine] ComfyUI workspace already cloned — installing with --restore
+```
+
+Retry reached the full install, and MPI-411's `--restore` recovered the existing
+clone instead of re-downloading. 57s later `.mpi_engine_version` = `0.29.2`,
+`sqlalchemy` PRESENT, `version-check` `installed: "0.29.2"`, the install modal
+gone from the DOM, and `POST /comfy/start` → `/system_stats` answering
+`comfyui_version: 0.29.2` with **0 IMPORT FAILED**.
+
+### The server guard, driven directly
+
+Before the button run, the same interrupted state was hit with a direct
+`POST /engine/repair-deps` — what the buggy client would have called:
+
+```
+[19:37:38.545Z] [INFO] [engine] UW deps repair requested
+[19:37:38.547Z] [WARN] [engine] Repair requested on an engine with no version stamp — running the full install instead
+[19:37:38.548Z] [INFO] [engine] _runEngineDownload started
+```
+
+No deps-only pass, no early `engine:complete`. It recovered to a stamped,
+booting 0.29.2 engine. So recovery holds on **either** route: the client picks
+the right one, and the server refuses the wrong one.
+
+### Note on how the buttons were pressed
+
+The app was launched with `--remote-debugging-port=9222` and its real Install
+and Retry buttons were clicked over CDP, driving the shipped renderer's own
+listeners and fetches. This is a genuine button press, not a simulated request —
+the log lines above are the app's own traffic.

@@ -8,8 +8,8 @@ exist", which on the uv path is true from step 1.
 - [x] `/engine/repair-deps` can no longer report success on an unstamped engine — it hands back to the full install
 - [x] Blast radius swept: every `/engine/status` and `/engine/version-check` consumer classified (see `validation.md`)
 - [x] `docs/comfy.md` engine-bootstrap retry contract updated to match the code
-- [ ] Verified live: no stamp -> Retry reaches `/engine/download`, not `/engine/repair-deps` — **needs the Windows interrupted-install leg**
-- [ ] Verified live: `/engine/repair-deps` on an unstamped engine runs the full install instead of broadcasting `engine:complete`
+- [x] Verified live: no stamp -> Retry reaches `/engine/download`, not `/engine/repair-deps` — macOS 2026-07-31, real button press on the shipped 1.3.0 artifact
+- [x] Verified live: `/engine/repair-deps` on an unstamped engine runs the full install instead of broadcasting `engine:complete` — macOS 2026-07-31
 
 ## Deliberately NOT done
 
