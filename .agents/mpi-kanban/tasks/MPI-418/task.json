@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-418",
+  "title": "[server]-category errors are printed to the terminal but never written to app.log",
+  "description": "On the rented M4 2026-07-31 the launcher terminal showed three [ERROR] [server] lines (Node reparsing app/js/data/modelConstants/modelDeps.js as an ES module, and the advice to add \"type\": \"module\" to app/package.json) carrying real timestamps and the standard [ERROR] [server] prefix. NONE of them appear in user-data/logs/app.log, which contained 18 lines and only one ERROR entry. [engine]-category errors DO reach the file correctly, complete with multi-line stacks. Consequence: a user who reports a problem sends app.log, and any server-category failure is silently missing from it - the same class of blind spot MPI-415 was raised for, where the real cause never reached the person who needed it. NOT investigated on the Mac deliberately (billed hardware, and it reproduces for free on Windows). Establish whether server.js runs as an Electron fork whose logger never attaches the file sink, then fix the sink rather than the call sites.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-07-31T07:46:00Z",
+  "updated_at": "2026-07-31T07:46:00Z",
+  "links": {},
+  "tags": [
+    "logging",
+    "diagnostics"
+  ],
+  "priority": "normal",
+  "attention": false
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-417",
+  "title": "macOS artifact ships a dangling @cubric/connector symlink; the documented xattr command errors for every user",
+  "description": "package.json:27 declares \"@cubric/connector\": \"file:../Cubric-Studio/packages/connector\", so npm creates app/node_modules/@cubric/connector as a symlink to a SIBLING REPO on the dev machine. The macOS build archives with ditto, which faithfully preserves symlinks, so the shipped zip carries a link to ../../../Cubric-Studio/packages/connector that can never resolve on a user machine. Windows and Linux artifacts contain NOTHING at that path (their packagers drop it), so this is macOS-only. IMPACT IS NOT A CRASH: all three consumers load it via dynamic import inside try/catch (server.js:143, services/brokerBoot.js:61 which explicitly returns null with \"SDK not installed in this build\", services/connectorResponder.js:80). The real cost is UX and trust - our own documented first-run instruction xattr -dr com.apple.quarantine <folder> prints \"xattr: No such file: .../app/node_modules/@cubric/connector\" for EVERY Mac user, who reasonably concludes the download is broken. FOUND LIVE 2026-07-31 on the rented M4; it was xattr that surfaced it, and an earlier dangling-symlink check missed it because that check was scoped to Electron.app only. FIX: exclude the file: dependency from the packaged node_modules, or dereference it at build time.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-07-31T07:46:00Z",
+  "updated_at": "2026-07-31T07:46:00Z",
+  "links": {},
+  "tags": [
+    "macos",
+    "packaging",
+    "build",
+    "ux"
+  ],
+  "priority": "normal",
+  "attention": false
+}

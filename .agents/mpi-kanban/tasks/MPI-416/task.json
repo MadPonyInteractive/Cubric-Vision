@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-416",
+  "title": "macOS/Linux first run is blocked by a missing Xcode Command Line Tools install",
+  "description": "The LOCAL engine path (routes/engine.js _provisionUvEngine) calls ensureGit() (routes/gitProvision.js:179), and on macOS git is only available via the Xcode Command Line Tools. On a clean Mac they are NOT installed, so the very first Install press fails with \"git is provided by the Xcode Command Line Tools, which are not installed\". The user must run xcode-select --install, sit through a multi-minute Apple download, then press Retry. LIVE ON A RENTED M4 2026-07-31: reproduced exactly, on a box whose rental advertised \"Xcode pre-installed\" and did not have it. The error message itself is GOOD (names cause + remedy + full stack in app.log) - this card is about the requirement existing at all, not the reporting. WHY IT IS ASYMMETRIC: Windows ships a PREBUILT ComfyUI portable archive and never needs git; macOS/Linux provision via uv/comfy-cli which git-clones ComfyUI. CANDIDATE FIX: fetch the ComfyUI source tarball over HTTPS per tag instead of cloning. NOT YET ESTABLISHED: whether that removes the requirement, because CLT also supplies clang and any of the 23 universal deps lacking a prebuilt arm64 wheel would still need to compile. VERIFY THAT FIRST - if some dep compiles, killing git only moves the dialog later. Structural change to a shared provisioner: brief the user before writing code.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-07-31T07:46:00Z",
+  "updated_at": "2026-07-31T07:46:00Z",
+  "links": {},
+  "tags": [
+    "macos",
+    "linux",
+    "engine",
+    "ux",
+    "install"
+  ],
+  "priority": "normal",
+  "attention": false
+}

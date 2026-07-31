@@ -4,7 +4,7 @@
  "generated_at": "2026-07-31T03:45:00Z",
  "from_session": "116c21e4-e0e9-4349-8dd9-d378cac4fb63",
  "to_role": "verifier",
- "status": "open",
+ "status": "accepted",
  "session": {
   "name": "Linux leg CLOSED - MPI-198 + MPI-411 live-verified, MPI-415 fixed, MPI-413 root cause disproven. macOS is the last machine before publish.",
   "branch": "master"

@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-416","type":"task.created","at":"2026-07-31T07:46:00Z","actor":"opus","summary":"Found live on the rented Mac Mini M4 during the 1.3.0 macOS validation run (MPI-391 section C)."}
