@@ -346,6 +346,21 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         await fs.remove(workspace);
     }
 
+    // A workspace that IS a valid clone survives 0b — and comfy-cli refuses that
+    // one too, exiting 1 with "ComfyUI is already installed at the specified
+    // path" and naming --restore. That is the COMMON interrupted-install shape,
+    // not an edge case: the clone finishes in seconds and the dependency install
+    // is the long part, so anything that dies mid-setup almost always leaves a
+    // complete .git behind. Without --restore, Retry stays impossible on
+    // Linux/macOS in exactly the way MPI-408 was meant to end — the same hole,
+    // one step later (MPI-411, measured on Linux 2026-07-30). Restoring beats
+    // deleting and re-cloning: the clone is the cheap half, and these are the
+    // machines least able to spare the download.
+    const workspaceIsClone = await fs.pathExists(path.join(workspace, '.git'));
+    if (workspaceIsClone) {
+        logger.warn('engine', `ComfyUI workspace already cloned — installing with --restore: ${workspace}`);
+    }
+
     // ── 1. uv venv (uv fetches Python 3.12 if the host lacks it) ────────────
     // --seed installs pip into the venv. uv venvs are pip-less by default, but
     // comfy-cli's DependencyCompiler runs `python -m pip install ... uv` against
@@ -390,6 +405,7 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     const installArgs = gpuFlag !== '--nvidia'
         ? ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag]
         : ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--fast-deps'];
+    if (workspaceIsClone) installArgs.push('--restore');
     await _runStreaming(
         comfyBin,
         installArgs,

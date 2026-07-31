@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 411,
+  "next_id": 412,
   "columns": {
     "todo": [
       "MPI-410",
@@ -40,6 +40,7 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-411",
       "MPI-409",
       "MPI-391",
       "MPI-387",
@@ -102,7 +103,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-31T00:40:00Z",
+  "updated_at": "2026-07-31T00:55:00Z",
   "events": [
     {
       "at": "2026-07-30T11:10:00Z",
@@ -1232,6 +1233,31 @@
       "actor": "opus",
       "column": "todo",
       "summary": "Startup splash never shows on a first/cold run. main.js:751 logs ERR_FAILED (-2) loading app/splash/splash.html, but the file IS in the artifact - ERR_FAILED is what Electron raises when the WebContents is destroyed mid-navigation, not a missing file (that is ERR_FILE_NOT_FOUND -6). Cross-platform and pre-existing per the user. Inverted behaviour: fails on the slow start it exists to cover, works warm. Candidates: main window ready-to-show firing on the error page and closing the splash at main.js:419-421, or the splash load being starved. Not fixed in 1.3.0 on purpose."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-408",
+      "type": "validation.updated",
+      "at": "2026-07-31T00:55:00Z",
+      "actor": "opus",
+      "summary": "LIVE-VERIFIED on Linux. Deliberate repro - Install, Ctrl+C once comfy-install started, relaunch, Install again. Step 1 now logs \"Creating virtual environment with seed packages at: comfy-venv\" and \"+ pip==26.2\" instead of exit 2 / \"A virtual environment already exists\", and step 2 installed comfy-cli 48 packages. uv venv --clear closes this card. The SAME retry then failed at step 3 on a different root cause - comfy install refuses an existing valid clone - filed as MPI-411; that does not reopen this one."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-408",
+      "type": "task.updated",
+      "at": "2026-07-31T00:55:00Z",
+      "actor": "opus",
+      "summary": "maturity in-progress -> validating; validation.md linked."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-411",
+      "type": "task.created",
+      "at": "2026-07-31T00:55:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "Retry still impossible after an interrupted install on Linux/macOS - the workspace half of MPI-408. engine.js:344 only clears a workspace with NO .git, but the clone finishes in seconds while deps take minutes, so an interrupted setup leaves a COMPLETE clone that comfy install refuses (exit 1, names --restore). Fixed by pushing --restore when the workspace is already a clone. Found while verifying MPI-408, which is itself confirmed fixed."
     }
   ]
 }

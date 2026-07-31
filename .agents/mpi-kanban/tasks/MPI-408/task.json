@@ -4,13 +4,14 @@
   "title": "Retry can NEVER succeed after a failed engine install on Linux/macOS: uv venv refuses an existing venv",
   "description": "Found 2026-07-30 on the Linux desktop during MPI-391 section D, on the retry after a mid-install thermal shutdown. routes/engine.js _provisionUvEngine step 1 ran 'uv venv --seed --python 3.12 <engine>/comfy-venv' and exited 2. uv's own stderr, from app.log: 'error: Failed to create virtual environment / Caused by: A virtual environment already exists at: comfy-venv / hint: Use the --clear flag or set UV_VENV_CLEAR=1 to replace the existing virtual environment'. uv refuses when the target exists AT ALL - the venv on disk was complete (bin, lib, lib64, pyvenv.cfg, CACHEDIR.TAG), not a stump. CONSEQUENCE: the first attempt that gets past step 1 poisons every later one. The Installation Failed dialog offers a Retry button that is GUARANTEED to fail forever, for any original cause - power cut, dropped connection, full disk, user quit. The only escape is deleting <engine>/comfy-venv by hand, which no user will find. Affects Linux and macOS (both take _provisionUvEngine); Windows is unaffected (prebuilt-archive path). ROOT CAUSE is an asymmetry already visible in the same function: step 0b at engine.js:341-347 DOES clear a stale ComfyUI workspace so retries start clean, but its sibling dir comfy-venv had no equivalent guard. FIX: pass --clear to uv venv, making step 1 idempotent the same way step 0b already is. Rebuilding the venv costs seconds. NOT a 1.3.0 regression - predates the release, never seen because no failed install had ever been retried on real Linux/macOS hardware.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-07-30T22:45:00Z",
-  "updated_at": "2026-07-30T22:45:00Z",
+  "updated_at": "2026-07-31T00:55:00Z",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "tags": [
     "linux",
