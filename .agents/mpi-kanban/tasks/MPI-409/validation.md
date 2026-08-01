@@ -89,3 +89,42 @@ Nothing blocking the ship. One deferred step, by design:
 - **After** 1.3.0 is live on the GitHub release, restamp
   `release-baselines/*.json` to the 1.3.0 FULL manifests (6418 win32 / 6383
   linux / 6563 darwin) so 1.4.0 deltas against 1.3.0.
+
+## CLOSED 2026-08-01 — the deferred step ran, in the right order
+
+v1.3.0 is live. Published from tag `v1.3.0` → `baefe4c3` (the build-#5 SHA;
+the tag was force-moved off the stale `e22ce1a5` first, since it had been
+pushed on 30 July purely as the CI build trigger and never followed the five
+rebuild rounds). Created as a draft, all six assets attached and byte-size
+matched against disk, then flipped live — so no assetless release was ever
+visible. `releases/latest` verified: `tag_name v1.3.0`, `draft false`,
+`prerelease false`, `assets 6`.
+
+**Only then** the baselines were restamped — commit `eaa6de3c`. Extracted
+verbatim from the shipped full artifacts (no re-serialisation) and asserted:
+
+| file | toVersion | fromVersion | kind | files |
+|---|---|---|---|---|
+| `win32-x64.json` | 1.3.0 | null | portable-stage | 6418 |
+| `linux-x64.json` | 1.3.0 | null | portable-stage | 6383 |
+| `darwin-arm64.json` | 1.3.0 | null | portable-stage | 6563 |
+
+Counts match the values predicted on this card before the ship, which is the
+cross-check that the right manifests were grabbed.
+
+**Trap found while doing it, now documented in `release-baselines/README.md`.**
+The extraction command in that README used a `CubricVision-<plat>-v<ver>/`
+top-level prefix for all three platforms. That is wrong for Windows since the
+MPI-387 fix-D layout move — the Windows zip has no wrapper folder and the
+manifest sits at `resources/cubric/update-manifest.json`. The wrapped path
+fails with `caution: filename not matched`, and because the command redirects,
+it **truncates the existing baseline to 0 bytes before failing**. Recovered
+with `git checkout --`. Same trap would hit anyone cutting 1.4.0.
+
+Also note `resources/app/resources/cubric/update-manifest.json` (~4 KB) inside
+the Windows zip — the app's own shipped copy, not the portable stage. Grabbing
+it would reproduce the 0.0.5 false-delta failure mode this card's Contract
+warns about.
+
+CI storage hygiene done: the three un-expired artifacts on mpi-ci run
+30674488835 deleted (~1.9 GB).
