@@ -4,7 +4,7 @@
  "generated_at": "2026-08-01T09:00:00Z",
  "from_session": "0f71966f-e460-4849-8338-c8cdc804c153",
  "to_role": "implementer",
- "status": "open",
+ "status": "resolved",
  "supersedes": "8dbee61e-1e57-4e52-9394-3173c347dffd",
  "session": {
   "name": "1.3.0 is BUILT, FIXED and VERIFIED on both platforms. Only the mpi-release live ops remain: two copy gates, the tag force-push, publish, and the post-publish baseline restamp.",
