@@ -100,6 +100,14 @@ then delete the CI run's artifacts (storage hygiene).
 > The tag publishes **nothing** on its own — it only fires the private artifact
 > build. The public moment is `gh release create` in Step 6.
 
+> **Rebuilt via `workflow_dispatch`? The tag no longer matches the artifacts.**
+> Any rebuild round dispatched by `ref` leaves the tag behind, and the release
+> would then claim provenance on code that was never built. Before Step 6, check
+> `git rev-parse 'v<ver>^{}'` against the SHA CI actually built, and move it if
+> they differ (`git tag -f -a v<ver> <build-sha>` + force-push — user-authorized;
+> agents are classifier-blocked on `push --force`). Measured 2026-08-01: five
+> rebuild rounds left v1.3.0's tag 63 commits stale.
+
 ### 5. 🛑 Gate 2 — user reviews the GitHub release body
 The release body is user-facing → present it for review/rewrite
 (`references/copy-review.md` Gate 2). The body bundles the accumulated changelog
@@ -154,3 +162,33 @@ scope** — announcement copy (Patreon / Discord / YouTube / Gumroad) is owned b
 the MadPony-Identity launch-comms workflow, a separate manual step the user
 drives. (Patreon is a comms/support channel only — it no longer gates release
 downloads.)
+
+### 9. Post-publish — restamp the baselines, then cut the maintenance branch
+Both are **post**-publish by definition. Doing either early is exactly what
+MPI-409 was.
+
+**Restamp `release-baselines/*.json`** to the just-shipped FULL manifests so the
+NEXT release deltas against this one. Extract them verbatim from the published
+artifacts — never re-serialise — then assert `toVersion: <ver>`,
+`fromVersion: null`, `kind: portable-stage`, and a file count in the thousands on
+all three before committing. Recipe and the timing rule live in
+`release-baselines/README.md`. **Windows uses a different member path**
+(`resources/cubric/update-manifest.json`, no top-level folder since the MPI-387
+layout move); the wrapped path that works for linux/macOS fails there in a way
+that truncates the baseline to 0 bytes *before* erroring.
+
+**Cut the maintenance branch:**
+```bash
+git branch <ver> v<ver> && git push -u origin <ver>
+```
+Master then moves on toward the next minor, while a bug report against the
+shipped version is fixed on this branch and released as the next patch digit —
+without dragging master's unfinished work into it. Building from the branch needs
+nothing new: mpi-ci's `workflow_dispatch` takes `ref: Branch, tag, or SHA`.
+**Cherry-pick the baseline restamp onto the branch too**, or its update bundles
+delta against the *previous* release — correct, but needlessly fat.
+
+> Established 2026-08-01. 1.2.0 could not be hotfixed because master held
+> half-finished features, which forced a week of unplanned work finishing them
+> just to get fixes out — and that shipped as 1.3.0 with the rest of the
+> in-flight work pushed to 1.4.0. The branch exists so that never repeats.
