@@ -155,3 +155,45 @@ box cannot deliver. MPI-249 stays open for a GPU Linux machine.
 - [ ] Every result written into its OWNING card's `validation.md`
 - [ ] Each owning card moved
 - [ ] Deferred items recorded with a reason (see `brief.md` § E)
+
+## Update 2026-08-01 — the Windows leg completed, and the macOS leg FAILED then was fixed
+
+### Windows (section A2) — the local-engine gap above is now CLOSED
+
+A2 recorded `The LOCAL-engine smoke is still unproven on Windows` because that box
+took MPI-390 skip-install and the smoke ran remote on a Pod. It has now run locally,
+end to end on the real shipped zip (build #4, `3cb4a58d`): clean extract launched from
+Explorer, engine exists:false first run, RTX 4060 Ti CUDA 13.2 detected, LOCAL engine
+installed and stamped ComfyUI 0.29.2, SDXL Realistic 7/7 deps at 39.3 MB/s, and
+`Prompt executed in 12.62 seconds` with the image written to the project Media folder.
+Windows is the first platform validated install-to-image on a shipped 1.3.0 artifact.
+
+Bonus, unplanned: that COLD first boot actually fired the 5s server-wait timeout
+(server took 6.4s) and logged `[WARN] [main] Server signal timed out` — the
+black-window bug diagnostic, visible only because of the MPI-418 logging sweep. The app
+recovered correctly and a warm relaunch was 400ms.
+
+### macOS (section C) — the generation box above passed ON LUCK, not on correctness
+
+Section C ticks `Plain install -> launch -> generate smoke passes` and records the
+engine as `torch 2.14.0.dev20260730`. That detail turned out to be the whole story.
+macOS was installing an UNPINNED PyTorch NIGHTLY (comfy-cli hardcodes `--pre` +
+the nightly index for `--m-series` only), so which engine a Mac user got depended on
+the day they installed. dev20260730 happened to be good.
+
+On build #4 the same leg produced a 1.8MB PNG of uniform grey noise after a normal
+`Prompt executed in 73.22 seconds`, with no error anywhere. Isolated to torch with
+ComfyUI held at 0.29.2: nightly dev20260731 = noise, dev20260730 = correct, stable
+2.13.0 = correct. Fixed in `baefe4c3` (pin stable torch on darwin +
+`--skip-torch-or-directml`), rebuilt as build #5 (`30674488835`). Full evidence:
+`tasks/MPI-419/validation.md` § REOPENED 2026-08-01.
+
+- [x] Windows local-engine install + generation on the shipped artifact — closes the A2 gap
+- [x] macOS grey-noise defect found, root-caused to unpinned nightly torch, and fixed
+- [ ] macOS re-validated on the REAL build #5 artifact (fresh extract, engine, model, generation inspected)
+- [ ] Windows re-validated on build #5 (the artifact changed, even though the fix is darwin-only)
+
+**Standing lesson for this umbrella: a green checklist is not a validated release.**
+Every automated signal — logs, timings, file size, gallery card — agreed on a build
+that produced garbage. Only opening the image caught it. Any future generate-smoke box
+on this card means LOOK AT THE PIXELS, not `Prompt executed`.

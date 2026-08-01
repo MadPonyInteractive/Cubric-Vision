@@ -329,3 +329,96 @@ Anonymous registry pulls make every fresh tag a coin-flip on another tenant's ra
 limit. Two known fixes: authenticate the pull, or mirror the GPU image to GHCR the way
 the CPU image already is. The move to Docker Hub was deliberate (MPI-189, cold-start
 measurement), so this is a revisit rather than a regression.
+
+---
+
+## REOPENED 2026-08-01 — the SAME hole, one dependency down: torch
+
+This card's thesis is "the uv installer installs unpinned software and the drift is
+self-concealing". The ComfyUI half is fixed and stayed fixed. But the install path
+had a second unpinned dependency, and that one shipped a build that silently
+produced garbage.
+
+**Found by looking at the pixels.** The 1.3.0 macOS leg on build #4 (`3cb4a58d`)
+passed every automated signal — engine installed, ComfyUI 0.29.2 stamped, SDXL
+Realistic 7/7 deps, `Prompt executed in 73.22 seconds`, a normal gallery card at
+832x1024, a 1.8MB PNG. The image was uniform grey noise. Nothing in the log, the
+UI, the timings or the file size distinguished it from a good run.
+
+### Root cause
+
+comfy-cli's `MAC_M_SERIES` branch is the only one of its GPU branches that installs
+from the PyTorch **nightly** channel, and it does so with `--pre` and no version
+(`comfy_cli/command/install.py`):
+
+```
+pip install --pre torch torchvision torchaudio \
+  --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+```
+
+Every other branch — NVIDIA (`whl/cu*`), AMD (`whl/rocm*`), Intel Arc (`whl/xpu`),
+CPU (`whl/cpu`) — uses a stable index. We passed `--m-series` and inherited the
+nightly as a side effect. So the engine a Mac user ended up with depended on the
+calendar date they clicked Install.
+
+### Isolation — one variable, ComfyUI held at 0.29.2 throughout
+
+| torch | channel | result |
+|---|---|---|
+| `2.14.0.dev20260731` | nightly | grey noise (2 prompts, 2 runs, reproducible) |
+| `2.14.0.dev20260730` | nightly | correct image |
+| `2.13.0` | **stable** | correct image, 73.45s (no speed cost) |
+
+The 0.29.2 pin is innocent — it renders correctly with either working torch. The
+earlier macOS generation on this card's own checklist passed legitimately; it ran on
+an engine that happened to catch a good nightly.
+
+Cross-platform: Windows ships a frozen `2.13.0+cu130` inside the prebuilt portable
+archive (read out of the shipped engine), Linux resolves stable from PyPI. macOS was
+the only platform installing an unreleased PyTorch.
+
+### Fix — commit `baefe4c3`
+
+- `dev_configs/system_dependencies.json`: new `torchMac` pin (2.13.0 / 0.28.0 / 2.11.0),
+  beside the existing `engine.version` pin.
+- `routes/platformEngine.js`: exports `TORCH_MAC`.
+- `routes/engine.js` step 2b: on darwin, install the pinned torch BEFORE comfy-cli runs,
+  so ComfyUI's `requirements.txt` then reports torch as already satisfied and leaves it
+  alone; and pass `--skip-torch-or-directml` at step 3 so comfy-cli's nightly branch
+  never executes. Both guards on purpose — either alone still leaves a path to a nightly.
+- Windows and Linux install paths untouched.
+
+Blast radius swept: `installArgs` is the ONLY comfy-cli install invocation in the repo,
+`/engine/repair-deps` delegates to `_runEngineDownload` rather than installing torch
+itself, `/engine/upgrade` does not touch torch, and no other JS installs torch.
+
+### Verification — real clean install on the rented M-series Mac
+
+Engine folder deleted entirely (including the hidden `.mpi_engine_version` stamp, so
+this ran the genuine first-install path, not repair), fixed files swapped in, install
+driven through the app's own `POST /engine/download`:
+
+```
+[install-torch] + torch==2.13.0  + torchvision==0.28.0  + torchaudio==2.11.0
+macOS torch pinned: torch==2.13.0 torchvision==0.28.0 torchaudio==2.11.0
+comfy-install: ... install --m-series --version 0.29.2 --skip-torch-or-directml
+```
+
+- `pip list` in the new venv: torch 2.13.0, torchvision 0.28.0, torchaudio 2.11.0.
+- **Zero occurrences of "nightly" in the entire install log.**
+- 16 custom nodes reinstalled, ComfyUI 0.29.2 stamped.
+- Generation on that clean engine: correct, sharp image, 75.13s.
+
+Build #5 = mpi-ci run `30674488835` from `baefe4c3`, green on all three platforms
+(`HEAD is now at baefe4c3` in all three job logs). The three changed files are
+byte-identical (CRLF-normalised) inside the shipped macOS zip, and all three update
+bundles carry the fix and still read `fromVersion 1.2.0` with `delete` of 2. Build #4
+vs #5 update-bundle file lists are identical — same 212 entries, nothing added or
+removed; only the four files' contents changed.
+
+### Standing lesson
+
+An unpinned dependency anywhere in the install path means the build we test is not the
+build the user gets. Pinning ComfyUI was necessary and not sufficient. Also: every
+automated success signal agreed on a build that produced garbage — only opening the
+image caught it.

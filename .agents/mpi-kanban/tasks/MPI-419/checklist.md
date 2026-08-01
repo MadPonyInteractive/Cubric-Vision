@@ -45,3 +45,16 @@
 
 - Stable pins stay on ComfyUI 0.28.0 until the live Pod verify. The bumped LTXVideo
   commit is backwards compatible, so the shipped Pod keeps working meanwhile.
+
+## Torch pin (reopened 2026-08-01 — same hole, one dependency down)
+
+- [x] Root-caused: comfy-cli's `MAC_M_SERIES` branch installs `--pre` torch from the nightly index; every other GPU branch uses a stable index
+- [x] Isolated with one variable, ComfyUI held at 0.29.2: nightly dev20260731 = grey noise, dev20260730 = correct, stable 2.13.0 = correct
+- [x] Confirmed Windows (frozen 2.13.0+cu130 in the portable archive) and Linux (stable PyPI) were never on nightly
+- [x] Fix `baefe4c3` — `torchMac` pin + darwin-only pinned install at step 2b + `--skip-torch-or-directml` at step 3
+- [x] Blast radius swept — `installArgs` is the only comfy-cli install call; repair-deps delegates; upgrade does not touch torch
+- [x] Release note added and `.approved-1.3.0.json` re-approved (hash dacfc017 -> e829a650)
+- [x] Verified on a genuinely clean macOS engine install (stamp deleted): pinned torch landed, zero "nightly" in the log, correct image in 75.13s
+- [x] Build #5 (`30674488835`, from `baefe4c3`) green x3; fix byte-identical inside the shipped macOS zip; all 3 update bundles carry it, still `fromVersion 1.2.0`
+- [ ] Full clean macOS leg on the REAL build #5 artifact — fresh extract, fresh engine, model install, generation inspected
+- [ ] Windows re-verified on build #5 (launch + generation) — the artifact changed even though the fix is darwin-only
