@@ -64,6 +64,23 @@ Also confirm `where git` finds nothing before trusting any git-less install
 result, and note whether the machine has a GPU — a GPU-less box launches ComfyUI
 with `--cpu`, so a generate smoke there measures nothing useful.
 
+### A generate smoke is passed by the IMAGE, never by the log
+
+**Open the output file and say what is in it.** `Prompt executed in N seconds`, a
+gallery card, a plausible duration and a healthy file size are all satisfied by
+garbage (learned 2026-07-31, MPI-419): the 1.3.0 macOS leg reported success on
+every automated channel — engine installed, ComfyUI 0.29.2 stamped, model 7/7
+deps, `Prompt executed in 73.22 seconds`, a normal 832×1024 card, a 1.8 MB PNG,
+zero errors in `app.log` — and the image was uniform grey noise. File size is not
+a proxy either; noise is incompressible, so the broken PNG was the same size as
+the good one. Had the pixels not been looked at, a build that could not produce a
+single usable image would have shipped as "macOS verified".
+
+When an image IS wrong, do not jump to "the platform is broken": find a
+known-good output from the same machine and re-run its EXACT prompt. Same prompt,
+same model, same size isolates the engine and turns an unbounded platform problem
+into a one-variable dependency diff.
+
 ## First-Launch Instructions (must appear in every release body)
 
 Both desktop platforms show an OS security prompt on first launch because the

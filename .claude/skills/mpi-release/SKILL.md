@@ -116,13 +116,18 @@ existing users patch in place via the online `update.*` script; without them
 every update is a full re-download):
 ```bash
 gh release create v<ver> --repo MadPonyInteractive/Cubric-Vision \
-  --title "Cubric Vision v<ver>" --notes-file <body.md> --latest \
+  --title "v<ver>" --notes-file <body.md> --latest \
   D:/CubricStudio/Vision/Builds/v<ver>/CubricVision-*-v<ver>.zip \
   D:/CubricStudio/Vision/Builds/v<ver>/CubricVision-*-v<ver>.tar.gz \
   D:/CubricStudio/Vision/Builds/v<ver>/CubricVision-*-update-v<ver>.zip
 ```
 Use the canonical asset names from `docs/releases/github-release-checklist.md`
 (no legacy `CubricStudio` names).
+
+> **Title = the bare tag.** Every published release is named `v1.2.0` / `v1.1.0` /
+> `v1.0.1` — name equals tag. Corrected 2026-08-01 (this step used to say
+> `Cubric Vision v<ver>`, which no release has ever used). Check
+> `gh release list` before inventing a title.
 
 ### 7. Verify the release is REACHABLE — do not skip
 Publishing is not proof users can see it. `check-for-update` ([main.js](../../../main.js))

@@ -30,12 +30,29 @@ public GitHub Release is the separate `gh release create` step. Don't create the
 release until the artifacts are downloaded and Gate 2 is approved.
 
 **Fallback — rebuild one leg without moving the tag:** if a single OS fails, or you
-need a rebuild without re-tagging, dispatch manually by branch ref + version (NOT
-a bare SHA — checkout resolves `ref` as a branch/tag name and fails on a raw SHA):
+need a rebuild without re-tagging, dispatch manually by branch ref + version:
 ```bash
 gh workflow run build-portable.yml --repo MadPonyInteractive/Cubric-Vision \
   --ref master -f ref=master -f version=<ver>
 ```
+
+> **What 1.3.0 actually did (2026-07/08) — read this before assuming the tag drives
+> the build.** All five 1.3.0 builds were dispatched against the mpi-ci workflow
+> DIRECTLY, never by pushing the tag. Two entry points exist and both are real:
+> `build-portable.yml` in Cubric-Vision ("Request portable artifacts") is a
+> dispatcher; `cubric-vision-portable.yml` in mpi-ci is the build itself.
+> ```bash
+> gh workflow run cubric-vision-portable.yml --repo MadPonyInteractive/mpi-ci \
+>   --ref main -f source_repo=MadPonyInteractive/Cubric-Vision \
+>   -f ref=<FULL 40-CHAR SHA> -f version=<ver>
+> ```
+> On THIS workflow a full 40-char SHA works (five builds); a SHORT sha fails at
+> checkout in ~40s. Confirm with `HEAD is now at <sha>` in the run log.
+>
+> **The consequence to plan for:** dispatch-built releases leave the `v<ver>` tag
+> wherever it was, so it silently goes stale against the commit the artifacts came
+> from. 1.3.0's tag sat 63 commits behind its own build. Whichever path you use,
+> reconcile the tag with the built SHA before `gh release create`.
 
 Watch it:
 ```bash
