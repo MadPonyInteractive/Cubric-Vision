@@ -1,0 +1,34 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-424",
+  "title": "Canvas tool family umbrella - sequence the six open canvas cards, brainstorm MPI-379 first",
+  "description": "Umbrella over the six open canvas cards: MPI-379 (hover-to-select on Detect), MPI-421 (auto-mask run cost + feedback), MPI-382 (mask strip control pack), MPI-368 (shape masking), MPI-375 (paint tool), MPI-373 (live composite). They all live on ONE surface - MpiCanvasViewer plus the MpiMaskStrip rail that MPI-381 split out - and each one changes what the next is built on, so they get a sequence instead of being picked off in whatever order they catch the eye.\n\nFIRST STEP IS A BRAINSTORM WITH THE USER, NOT IMPLEMENTATION: MPI-379, moved to doing 2026-08-01 for exactly that. The user's position is that what they actually want is A LOT SIMPLER than what MPI-379 currently proposes. That card has grown three rounds of parked options - a possible second detection engine (COCO YOLO with its own R2 upload and the bbox-vs-segm folder trap), a per-pixel index map, an unsettled box-vs-blob hover affordance, and a late note that Part 2 may not be needed at all. Nothing gets built until the user has stated their simpler model and MPI-379 has been REWRITTEN to it, with everything the session rules out DELETED from the card rather than demoted to yet another candidate.\n\nSequence, dependencies and the brainstorm agenda are in brief.md. This card holds NO implementation of its own and closes only when the last of the six ships.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-01T21:55:00Z",
+  "updated_at": "2026-08-01T21:55:00Z",
+  "labels": [
+    "ui",
+    "ux",
+    "masking",
+    "canvas",
+    "umbrella"
+  ],
+  "acceptance": [
+    "MPI-379 is brainstormed WITH the user and rewritten to the simpler model they state - everything ruled out is deleted from the card, not parked as another candidate",
+    "The six cards ship in the order recorded in brief.md, and the order is re-read after MPI-379 lands (379 may shrink or delete parts of MPI-421)",
+    "No card in the set starts before the one above it has shipped, unless this card records why the order changed",
+    "This card holds no implementation of its own and closes only when the last of the six is done"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

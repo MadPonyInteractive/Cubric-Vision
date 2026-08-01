@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 424,
+  "next_id": 425,
   "columns": {
     "todo": [
       "MPI-422",
@@ -13,7 +13,6 @@
       "MPI-397",
       "MPI-382",
       "MPI-368",
-      "MPI-379",
       "MPI-373",
       "MPI-374",
       "MPI-375",
@@ -36,6 +35,8 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-424",
+      "MPI-379",
       "MPI-367",
       "MPI-259",
       "MPI-4"
@@ -115,8 +116,23 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-01T21:40:00Z",
+  "updated_at": "2026-08-01T21:55:00Z",
   "events": [
+    {
+      "at": "2026-08-01T21:55:00Z",
+      "type": "task.created",
+      "task": "MPI-424",
+      "column": "doing",
+      "note": "Canvas-tool umbrella over MPI-379 / 421 / 382 / 368 / 375 / 373 - six cards on one surface (MpiCanvasViewer plus the MPI-381 MpiMaskStrip rail), each one changing what the next is built on. Opened straight in doing because its first step starts now. That step is a BRAINSTORM WITH THE USER on MPI-379, not implementation: the user's position 2026-08-01 is that the real feature is A LOT SIMPLER than the card, which carries three rounds of parked options - a second detection engine (COCO YOLO plus an R2 upload and the segm-vs-bbox folder trap), a per-pixel index map, an unsettled box-vs-blob hover affordance, and a late note that Part 2 may not be needed at all. Whatever the session rules out gets DELETED from MPI-379, not parked. Order and reasoning in tasks/MPI-424/brief.md: 379 first because it may drop the thumb strip and the Detect button and auto-fire detection, which every card below inherits and which directly sets MPI-421's scope; then 421 (cache the dispatches, queue what survives); then 382 (finish the shared strip BEFORE new tools inherit it); then 368 (cheapest tool, pure geometry); then 375 (paint, introduces the RGBA layer); then 373 last, because its erase-to-reveal layer IS that paint layer. This card holds no implementation of its own."
+    },
+    {
+      "at": "2026-08-01T21:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-379",
+      "from": "todo",
+      "to": "doing",
+      "note": "Moved to doing for a BRAINSTORM SESSION WITH THE USER - step 1 of the MPI-424 umbrella - NOT for implementation. The user's position 2026-08-01: what they want is a lot simpler than what this card proposes. Agenda in tasks/MPI-424/brief.md - the user states their model first, then box-vs-blob on hover, then whether Part 2 (COCO YOLO) survives at all, then whether the thumb strip and Detect button are really dropped on both tools, then auto-fire plus debounce decided with MPI-421 in view, then where the instant green on click comes from. Rule for the session: what the user rules out is deleted from the card, not demoted to another candidate - three rounds of parked options is the defect being fixed."
+    },
     {
       "at": "2026-08-01T21:40:00Z",
       "type": "task.moved",
