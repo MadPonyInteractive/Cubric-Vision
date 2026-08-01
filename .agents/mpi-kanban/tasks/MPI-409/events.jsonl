@@ -3,3 +3,4 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-409","type":"task.updated","at":"2026-07-31T00:25:00Z","actor":"opus","summary":"maturity in-progress -> validating; validation.md linked."}
 {"schema":"mpi-kanban/event/v1","type":"handoff.created","id":"MPI-409","at":"2026-08-01T00:50:00Z","actor":"claude","handoff":"8dbee61e-1e57-4e52-9394-3173c347dffd"}
 {"schema":"mpi-kanban/event/v1","type":"handoff.created","id":"MPI-409","at":"2026-08-01T09:05:00Z","actor":"claude","handoff":"8d0ae8e3-926a-4148-bac6-3e9431c286ea"}
+{"schema":"mpi-kanban/event/v1","type":"task.updated","id":"MPI-409","at":"2026-08-01T09:20:00Z","actor":"claude","summary":"attention=required. All engineering for 1.3.0 is done and verified on both platforms; the card is blocked only on the user-owned live ops (tag force-push to baefe4c3, gh release create, then the post-publish baseline restamp)."}
