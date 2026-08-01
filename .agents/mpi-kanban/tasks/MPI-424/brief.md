@@ -1,33 +1,68 @@
 # MPI-424 - Canvas tool family umbrella
 
-Five open cards, one surface (`MpiCanvasViewer` + the `MpiMaskStrip` rail from
-MPI-381). This card owns their ORDER and nothing else.
+Design settled with the user 2026-08-01. This card owns the ARCHITECTURE and the
+ORDER; it holds no implementation of its own.
 
-## MPI-379 REJECTED 2026-08-01 - outcome of the session this umbrella scheduled
+## MPI-379 REJECTED 2026-08-01
 
-The whole card is dropped, not trimmed - including Part 1, the cheap half with no
-download. User's decision: what ships today is fine, and moving selection onto the
-canvas is another layer of complexity that does not need to exist. **The thumb strip
-stays. The Detect button stays.** Part 2 (COCO YOLO, its R2 upload, the segm-folder
-trap) dies with it. Closed `done` / `rejected`, kept as the record - its live
-measurements are still true and worth reading before anyone re-proposes canvas-side
-selection.
+Hover-to-select on the canvas is dropped whole, including the cheap Part 1. What
+ships today is fine; the thumb strip and the Detect button stay. Closed
+`done` / `rejected`, kept as the record - its live measurements are still true.
 
-**Consequence:** MPI-421 is no longer downstream of anything. It was second because
-379 might have auto-fired detection; with the chip strip and Detect button staying,
-421 is exactly what it says - cache the per-object masks so chip toggling stops
-re-dispatching the whole graph, and put the runs that remain in the generation lane
-with progress and a Stop.
+## The agreed architecture
 
-## Order, and why it is this order
+```
+  Mask
+   [brush]                brush engine  -> binary mask layers
+   [detect]  ->  floating strip: [points] [text] [auto]
+   [adjust]               sliders over an existing mask
+   [shapes]               shape gizmo   -> binary mask layers
+  Paint
+   [brush]                same brush engine -> RGBA paint layer
+   [shapes]               same gizmo        -> RGBA paint layer
+  Composite
+   [mask comp]            1 image slot + 1 mask slot
+   [paint comp]           1 image slot
+```
 
-| # | Card | Why here |
-|---|------|----------|
-| 1 | **MPI-382** mask strip control pack | IN DOING - the user picked it up 2026-08-01 and named both halves unprompted. Grow/shrink and the two-slider edge band are the SAME primitive (an edge band is dilate minus erode), so they are written once. It also lands before the new tools, so those inherit a finished strip instead of needing a retrofit pass. |
-| 2 | **MPI-421** auto-mask run cost + feedback | Independent now. Every chip toggle re-dispatches the full graph; cache per-object masks client-side, then give the surviving runs a lane, a progress signal and a Stop. |
-| 3 | **MPI-368** shape masking | Cheapest new tool - pure geometry, no model, no download, no ComfyUI round trip. A rail registry addition after the MPI-381 split, and it exercises the finished strip. |
-| 4 | **MPI-375** paint tool | Needs the strip (brush/eraser/opacity) and the MPI-376 undo stack, both shipped. Introduces the RGBA paint layer, which is the new machinery. |
-| 5 | **MPI-373** live composite | Last on purpose: its erase-to-reveal layer IS the paint layer MPI-375 introduces. Built after 375, this card is a two-image live preview plus the existing full-res server route - not new layer code. |
+**Two engines, six buttons.** Mask Brush and Paint Brush are one brush engine with
+two destinations. Mask Shapes and Paint Shapes are one gizmo with the same split.
+That is the answer to "how do we do all this without adding too many tools".
+
+**Detect is a collapse button.** Click it, a small vertical strip appears outside
+the tool panel with points / text / auto, and it dismisses itself on an unhovered
+timer. No triangle, no long-press - both rejected by name. The three stay separate
+modes underneath; only presentation changes.
+
+**Composite is one operation with two front ends.** The SELECTED ENTRY is image 1
+and sits on TOP. The slot holds image 2, underneath. Paint Comp erases image 1 to
+reveal image 2 and paints it back; Mask Comp does the same cut, except the hole is
+supplied by the mask slot instead of painted live. Same stack, same blend, and
+MPI-362's full-res server route sits under both.
+
+**Slots are filled by paste, not by selection.** The context menu already has Copy
+mask; a new Copy takes the image. Right-click a slot to paste image or mask. This
+is what kills the confusion the user reported: with the shipped modal composite he
+ends up running it three or four times, because the blend is invisible while he is
+deciding and changing the selection restarts the whole thing.
+
+**Adjust** is a method over an existing mask, not a strip control: live preview,
+Apply + Reset, and an un-applied adjustment is DISCARDED when leaving the tool -
+the same contract as leaving Detect without pressing Add. Control shape is one
+Grow / Shrink slider, with an Edge button that swaps that row for Outward + Inward.
+Grow, shrink and an edge band are one primitive: an edge band is
+`dilate(outward) - erode(inward)`.
+
+## Order
+
+| # | Card | Scope after the brainstorm |
+|---|------|----------------------------|
+| 1 | **MPI-425** taxonomy | The three groups, the floating Detect strip, the new modes. The frame everything mounts into. |
+| 2 | **MPI-382** Adjust | Grow/shrink + edge band, live preview, Apply/Reset. Alpha brushes moved OUT to MPI-375. |
+| 3 | **MPI-368** Shapes | One gizmo, TWO mounts - mask and paint. |
+| 4 | **MPI-375** Paint | RGBA layer + brush-engine extraction (both mounts) + the alpha brush pack. |
+| 5 | **MPI-373** Composite | Both comps, pasted slots, replaces the MPI-362 modal. |
+| - | **MPI-421** run cost | Independent of the rest; now scoped to ONE Detect panel instead of three. |
 
 ## Standing constraints for every card in this set
 
@@ -35,6 +70,6 @@ with progress and a Stop.
   mutating (`docs/masking-undo.md`). An unwired mutation is a silent hole in Ctrl+Z.
 - Layer ORDER rule from MPI-371 holds: auto picks union last, so nothing baked into
   manual may resurrect an erased region.
-- New rail tools register in `_MASK_TOOLS` and `TOOL_OPTIONS_REGISTRY` - the MPI-381
-  guard test fails if one is missing from either.
+- Every new tool registers in `_MASK_TOOLS` (where it is mask family) and in
+  `TOOL_OPTIONS_REGISTRY` - the MPI-381 guard test fails if one is missing.
 - `docs/masking.md` is capped at 200 lines: trim before adding.

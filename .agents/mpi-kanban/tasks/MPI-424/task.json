@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-424",
-  "title": "Canvas tool family umbrella - sequence the six open canvas cards, brainstorm MPI-379 first",
-  "description": "Umbrella over the six open canvas cards: MPI-379 (hover-to-select on Detect), MPI-421 (auto-mask run cost + feedback), MPI-382 (mask strip control pack), MPI-368 (shape masking), MPI-375 (paint tool), MPI-373 (live composite). They all live on ONE surface - MpiCanvasViewer plus the MpiMaskStrip rail that MPI-381 split out - and each one changes what the next is built on, so they get a sequence instead of being picked off in whatever order they catch the eye.\n\nFIRST STEP IS A BRAINSTORM WITH THE USER, NOT IMPLEMENTATION: MPI-379, moved to doing 2026-08-01 for exactly that. The user's position is that what they actually want is A LOT SIMPLER than what MPI-379 currently proposes. That card has grown three rounds of parked options - a possible second detection engine (COCO YOLO with its own R2 upload and the bbox-vs-segm folder trap), a per-pixel index map, an unsettled box-vs-blob hover affordance, and a late note that Part 2 may not be needed at all. Nothing gets built until the user has stated their simpler model and MPI-379 has been REWRITTEN to it, with everything the session rules out DELETED from the card rather than demoted to yet another candidate.\n\nMPI-379 WAS REJECTED OUTRIGHT on 2026-08-01 in the brainstorm this card scheduled - the whole card, including the cheap Part 1, because canvas-side hover selection is complexity the user does not want; the thumb strip and the Detect button stay. The umbrella is five cards now and MPI-382 leads (in doing). MPI-421 is no longer downstream of anything and got simpler as a result. Sequence, reasoning and the rejection record are in brief.md. This card holds NO implementation of its own and closes only when the last of the six ships.",
+  "title": "Canvas tool family umbrella - taxonomy agreed, five cards sequenced behind it",
+  "description": "Umbrella over the canvas tool family. The ARCHITECTURE was settled with the user on 2026-08-01 and lives in brief.md: three toolbar groups (Mask / Paint / Composite), a floating Detect strip replacing three stacked buttons, and TWO shared engines - one brush and one shape gizmo, each mounted twice with a different destination layer. Composite becomes one operation with two front ends, fed by pasted slots instead of a modal.\n\nMPI-379 was REJECTED outright in the brainstorm this card scheduled - canvas-side hover selection is complexity the user does not want; the thumb strip and the Detect button stay.\n\nOrder: MPI-425 (taxonomy, the frame everything mounts into) -> MPI-382 (Adjust) -> MPI-368 (shape gizmo, two mounts) -> MPI-375 (paint layer, brush engine, alpha brushes) -> MPI-373 (composite group). MPI-421 is independent and can land at any point. This card holds no implementation of its own and closes when the last of them ships.",
   "column": "doing",
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-01T21:55:00Z",
-  "updated_at": "2026-08-01T22:35:00Z",
+  "updated_at": "2026-08-01T23:30:00Z",
   "labels": [
     "ui",
     "ux",
@@ -16,10 +16,11 @@
     "umbrella"
   ],
   "acceptance": [
-    "MPI-379 was brainstormed with the user 2026-08-01 and REJECTED outright - done, recorded on the card, not trimmed and not parked as candidates",
-    "The five remaining cards ship in the order recorded in brief.md: MPI-382, then 421, 368, 375, 373",
+    "MPI-379 was brainstormed with the user 2026-08-01 and REJECTED outright - closed, recorded, not trimmed and not parked as candidates",
+    "The agreed taxonomy is recorded in brief.md and every affected card carries its re-scope: 425 new, 382 Adjust, 368 two mounts, 375 brush engine + alpha brushes, 373 composite group, 421 one panel",
+    "The five cards ship in the recorded order - 425 first, because every other one mounts into the groups it declares",
     "No card in the set starts before the one above it has shipped, unless this card records why the order changed",
-    "This card holds no implementation of its own and closes only when the last of the six is done"
+    "This card holds no implementation of its own and closes only when the last of the five is done"
   ],
   "links": {
     "brief": "brief.md",
