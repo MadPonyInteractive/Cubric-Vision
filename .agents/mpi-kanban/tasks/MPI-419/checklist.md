@@ -56,5 +56,5 @@
 - [x] Release note added and `.approved-1.3.0.json` re-approved (hash dacfc017 -> e829a650)
 - [x] Verified on a genuinely clean macOS engine install (stamp deleted): pinned torch landed, zero "nightly" in the log, correct image in 75.13s
 - [x] Build #5 (`30674488835`, from `baefe4c3`) green x3; fix byte-identical inside the shipped macOS zip; all 3 update bundles carry it, still `fromVersion 1.2.0`
-- [ ] Full clean macOS leg on the REAL build #5 artifact — fresh extract, fresh engine, model install, generation inspected
-- [ ] Windows re-verified on build #5 (launch + generation) — the artifact changed even though the fix is darwin-only
+- [x] Full clean macOS leg on the REAL build #5 artifact — fresh extract (engine/models/user-data all empty), shipped code logged `macOS torch pinned: torch==2.13.0 ...` and `--skip-torch-or-directml`, zero "nightly" in the log, SDXL Realistic 9.7GB installed, generation correct and inspected at 74.95s
+- [x] Windows re-verified on build #5 — clean extract of the real zip, engine installed and stamped 0.29.2, model installed, generation correct and inspected at 11.30s on an RTX 4060 Ti. **The darwin branch provably did NOT run on win32:** zero `macOS torch pinned`/`install-torch` lines, zero comfy-cli invocations, and the portable archive torch is untouched at 2.13.0+cu130

@@ -190,8 +190,8 @@ ComfyUI held at 0.29.2: nightly dev20260731 = noise, dev20260730 = correct, stab
 
 - [x] Windows local-engine install + generation on the shipped artifact — closes the A2 gap
 - [x] macOS grey-noise defect found, root-caused to unpinned nightly torch, and fixed
-- [ ] macOS re-validated on the REAL build #5 artifact (fresh extract, engine, model, generation inspected)
-- [ ] Windows re-validated on build #5 (the artifact changed, even though the fix is darwin-only)
+- [x] macOS re-validated on the REAL build #5 artifact — fresh extract, pinned torch 2.13.0 landed from the shipped code, 9.7GB model, correct image inspected at 74.95s
+- [x] Windows re-validated on build #5 — clean extract, engine 0.29.2, model, correct image inspected at 11.30s (RTX 4060 Ti); darwin branch provably skipped on win32
 
 **Standing lesson for this umbrella: a green checklist is not a validated release.**
 Every automated signal — logs, timings, file size, gallery card — agreed on a build
