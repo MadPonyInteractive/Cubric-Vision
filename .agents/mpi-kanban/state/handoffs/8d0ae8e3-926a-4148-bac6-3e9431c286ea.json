@@ -1,0 +1,225 @@
+{
+ "schema": "mpi-kanban/handoff/v1",
+ "id": "8d0ae8e3-926a-4148-bac6-3e9431c286ea",
+ "generated_at": "2026-08-01T09:00:00Z",
+ "from_session": "0f71966f-e460-4849-8338-c8cdc804c153",
+ "to_role": "implementer",
+ "status": "open",
+ "supersedes": "8dbee61e-1e57-4e52-9394-3173c347dffd",
+ "session": {
+  "name": "1.3.0 is BUILT, FIXED and VERIFIED on both platforms. Only the mpi-release live ops remain: two copy gates, the tag force-push, publish, and the post-publish baseline restamp.",
+  "branch": "master"
+ },
+ "goal": {
+  "original": "Publish Cubric Vision 1.3.0, and make absolutely sure it WORKS - 1.1 and 1.2 shipped with advertising and did not work for users.",
+  "status": "in_progress",
+  "summary": "Everything mechanical is DONE and pushed (master at b12d1984). Build #5 artifacts are on disk and verified. Windows and macOS both pass a full clean install-to-image leg on the REAL shipped artifacts. What is left is exactly the irreversible tail of mpi-release: the user's two copy-review gates, the tag force-push, gh release create, the reachability check, and the post-publish baseline restamp that closes MPI-409."
+ },
+ "plan": {
+  "file": null,
+  "completed": [
+   "THE macOS DEFECT AND ITS FIX (the whole story is in tasks/MPI-419/validation.md § REOPENED 2026-08-01). Build #4 produced uniform grey noise after a normal 73s run - every automated signal said success, only opening the PNG caught it. Root cause: comfy-cli's MAC_M_SERIES branch is the ONLY one of its GPU branches installing from the PyTorch nightly index (--pre, no version), so the engine depended on the install DATE. Isolated with ComfyUI held at 0.29.2: nightly dev20260731 = noise, dev20260730 = correct, stable 2.13.0 = correct at the same speed.",
+   "FIX baefe4c3 - torchMac pin in dev_configs/system_dependencies.json, TORCH_MAC exported from routes/platformEngine.js, routes/engine.js installs the pinned torch at step 2b BEFORE comfy-cli and passes --skip-torch-or-directml at step 3. THE ONLY EXECUTABLE CHANGES ARE INSIDE `if (process.platform === 'darwin')` GUARDS - verified by reading the diff; Windows and Linux behaviour is identical to build #4.",
+   "BUILD #5 = mpi-ci run 30674488835 from baefe4c3, green x3, 'HEAD is now at baefe4c3' in all three job logs. Six artifacts in D:/CubricStudio/Vision/Builds/v1.3.0/ (build #4 set archived to SUPERSEDED-pre-torch-pin-3cb4a58d/). Fix byte-identical (CRLF-normalised) inside the shipped macOS zip, present in the Windows zip and Linux tarball, and in all three update bundles which still read fromVersion 1.2.0 with delete=2. Build #4 vs #5 macOS bundle file lists IDENTICAL (212 entries, nothing added/removed).",
+   "macOS BUILD #5 LEG PASSED on the real artifact: fresh extract, shipped code logged 'macOS torch pinned: torch==2.13.0 ...' and '--skip-torch-or-directml', ZERO 'nightly' in the whole log, 9.7GB model, correct image inspected at 74.95s. Log audit: 16 ERROR lines, zero distinct messages after filtering the two known non-defects (KJNodes triton, MODULE_TYPELESS_PACKAGE_JSON).",
+   "WINDOWS BUILD #5 LEG PASSED: clean extract to D:/CVTest5, engine stamped 0.29.2, model installed, correct image inspected at 11.30s on an RTX 4060 Ti. The darwin branch provably did NOT run - zero pin/install-torch lines, zero comfy-cli invocations, portable-archive torch untouched at 2.13.0+cu130.",
+   "RELEASE-SKILL PRECONDITION AUDIT RUN 2026-08-01 (this is the part the previous handoff lacked): POD RUNTIME DRIFT CHECK PASSES - dev and stable manifests are byte-identical (wrapper_version 0.2.40, identical start/start_cpu/wrapper sha256), so no publish-runtime promote is needed. docs/releases/UNRELEASED.md is cleared back to its header. The archival changelog docs/releases/2026-07-30-v1.3.0.md was MISSING the new macOS note (added to releaseNotes.js only) - fixed and committed as b12d1984, markdown-only so the approval stamp did not re-drift. `release-notes-approval check` says approved; `release:check` passes.",
+   "Release body REBUILT from head.md + notes-1.3.0.md + tail.md - the previously assembled copy was stale (short Windows warning instead of the expanded 2d99408a one). Windows platform bullet now states full end-to-end validation; macOS bullet upgraded to full end-to-end on the published zip; the new Mac fix note inserted with text taken straight from releaseNotes.js. 36 of 37 releaseNotes.js items verified present in the body verbatim.",
+   "docs/comfy.md carries the durable engine fact (190 lines, inside its 200 budget). MPI-419 is at doing/validating with every box ticked. MPI-391 records both legs. All pushed: baefe4c3, a854bcae, f5f2d5f6, b12d1984."
+  ],
+  "pending": [
+   "GATE 1 (mpi-release step 2) - THE USER HAS NOT REVIEWED THE NEW IN-APP CHANGELOG ITEM. The macOS grey-noise fix note was written and self-approved overnight; the skill makes the user's copy review mandatory. Show them the note (js/data/releaseNotes.js, 1.3.0 fixes array, the entry starting 'Mac: pictures come out as pictures again'). If they edit it, edit BOTH releaseNotes.js AND docs/releases/2026-07-30-v1.3.0.md, then re-run `node scripts/release-notes-approval.mjs approve --yes` and re-commit the stamp. NOTE: a re-approve only matters if the artifacts are rebuilt - build #5 already passed CI against the current stamp.",
+   "GATE 2 (mpi-release step 5) - user reviews the GitHub release body before it ships. File: scratchpad release-body/release-body-1.3.0.md (see context.scratchpad).",
+   "TAG - the user approved force-pushing v1.3.0 from e22ce1a5 to 3cb4a58d, but build #5 SUPERSEDED that SHA. Correct target is baefe4c3. CONFIRM the new SHA before force-pushing an already-published annotated tag (object 0bd44b6a -> e22ce1a5; local and remote agree; 63 commits stale). `git tag -f -a v1.3.0 baefe4c3 && git push --force origin v1.3.0`.",
+   "TITLE CONVENTION CONFLICT - resolve with the user. mpi-release step 6 says `--title \"Cubric Vision v<ver>\"`, but every existing release is titled plainly: v1.2.0/v1.1.0/v1.0.1 all have name == tag. Recommend matching history (`--title \"v1.3.0\"`) for consistency; the skill text looks stale.",
+   "PUBLISH (mpi-release step 6): `gh release create v1.3.0 --repo MadPonyInteractive/Cubric-Vision --title <agreed> --notes-file <body> --latest` plus all SIX assets from D:/CubricStudio/Vision/Builds/v1.3.0/ (top level only - never the SUPERSEDED-* folders). Update bundles are mandatory: without them every user does a full re-download.",
+   "VERIFY REACHABLE (mpi-release step 7, explicitly 'do not skip'): curl releases/latest and require tag_name v1.3.0, prerelease false, draft false. Then the first-ever live test of the in-app update prompt (MPI-334) by launching a 1.2.0 portable build - note Windows builds older than 1.3.0 CANNOT be reached this way (Smart App Control blocks the update scripts), which the release body already warns about.",
+   "POST-PUBLISH ONLY - restamp release-baselines/*.json to the 1.3.0 FULL manifests. Counts re-read from the build #5 artifacts and unchanged: 6418 win32 / 6383 linux / 6563 darwin. They MUST stay at 1.2.0 until the release is live. This is the ONLY remaining item on MPI-409.",
+   "STORAGE HYGIENE (mpi-release step 4 tail): the three mpi-ci artifacts on run 30674488835 are still un-expired; delete them after publishing.",
+   "MPI-419 can move doing/validating -> done once the user approves final completion. MPI-391 keeps its post-publish items (the in-app update fetch+spawn) which cannot run before the release exists."
+  ]
+ },
+ "task_card": {
+  "id": "MPI-409",
+  "title": "RELEASE BLOCKER: baselines restamped to 1.3.0 before ship, so any 1.3.0 rebuild produces useless update bundles",
+  "column": "doing",
+  "workspace": ".agents/mpi-kanban/tasks/MPI-409/",
+  "links": {
+   "plan": null,
+   "checklist": null,
+   "validation": "validation.md",
+   "handoffs": ".agents/mpi-kanban/tasks/MPI-409/handoffs/"
+  }
+ },
+ "kanban_entry": null,
+ "allowed_actions": [
+  "read",
+  "continue",
+  "verify",
+  "commit"
+ ],
+ "knowledge_preservation": {
+  "completed": [
+   "docs/comfy.md § macOS torch is PINNED BY US - why comfy-cli's m-series branch is the only nightly one, and that pinning ComfyUI was necessary but not sufficient.",
+   "MPI-419 validation.md - isolation table, fix, blast-radius sweep, clean-install verification, both build #5 legs.",
+   "MPI-391 checklist.md - Windows closed the A2 local-engine gap; macOS failed then was fixed; its section C generate box had passed on a lucky nightly."
+  ],
+  "pending": [
+   "MEMORY CANDIDATE: 'a green log is not a green image'. Every automated signal agreed on a build that produced garbage; only opening the PNG caught it. Future generate-smoke steps must inspect pixels, not 'Prompt executed'.",
+   "MEMORY CANDIDATE: ELECTRON_RUN_AS_NODE=1 is set in the agent's own Bash environment. Launching a portable Electron exe from it exits silently - no window, no port, no log - and reads exactly like a broken build. `unset ELECTRON_RUN_AS_NODE` first. The existing tool_electron_launch_run_as_node memory describes the staged-exe symptom but not that the agent's env carries the variable.",
+   "Two non-blocking defects still uncarded: KJNodes PatchTritonVAE cannot import without triton; modelDeps.js triggers MODULE_TYPELESS_PACKAGE_JSON which reaches app.log tagged [ERROR] despite being a warning.",
+   "Linux torch is unpinned too (stable channel, far lower risk). Deliberately not fixed - noted in docs/comfy.md.",
+   "The release body's 'ALREADY ON WINDOWS?' bullet DIFFERS from releaseNotes.js - the body carries a deliberately richer rewrite (2d99408a). Left alone; flag if it should be reconciled.",
+   "mpi-release step 6's title convention appears stale versus actual release history.",
+   "state/index.json still holds many active_handoffs and one malformed entry (a bare string). mpi-cleanup remains overdue."
+  ]
+ },
+ "next_action": {
+  "description": "Run the remaining mpi-release live ops in order: Gate 1 (user reviews the new macOS changelog note), Gate 2 (user reviews the release body), confirm the tag target is baefe4c3 rather than the originally-approved 3cb4a58d, force-push the tag, gh release create with all six build #5 artifacts, verify releases/latest reports v1.3.0 with draft=false and prerelease=false, then restamp release-baselines/*.json to 6418/6383/6563 which closes MPI-409.",
+  "command": "mpi-continue"
+ },
+ "context": {
+  "key_decisions": [
+   "macOS torch goes to STABLE, same as Linux - the user's call: 'We can't rely on Nightly.' Measured before deciding.",
+   "Pinning a known-good NIGHTLY was rejected: PyTorch prunes old nightlies, so the pin would become an install failure.",
+   "The fix is darwin-only ON PURPOSE. Linux's unpinned-but-stable torch is the same class at far lower risk.",
+   "1.3.0 ALL THE WAY, NO BUMP - overwrite until right. 'If we have to do 300 builds, we do 300 builds.' (user)",
+   "The user gave standing push approval. Publishing was NOT authorised unattended; they want to see results first.",
+   "Windows and macOS are proven install-to-image on these exact artifacts. LINUX IS STILL GENERATION-UNVALIDATED and the release body says so plainly."
+  ],
+  "constraints": [
+   "NOTHING IS PUBLISHED. Latest live release is v1.2.0. Tag still at e22ce1a5.",
+   "Ask in PLAIN TEXT, never AskUserQuestion.",
+   "The user gets confused by card-ID-heavy narration. Report OUTCOMES in plain language.",
+   "unset ELECTRON_RUN_AS_NODE before launching any portable Electron exe from the agent shell.",
+   "jq is NOT installed. Use gh --template or python.",
+   "Python needs Windows-form paths (D:/...), not MSYS /d/... - json.load(open('/d/...')) raises FileNotFoundError.",
+   "GNU tar reads 'D:/...' as a remote host; use /d/... or -C with a POSIX path. scp to the Mac must use /d/... form.",
+   "The Mac app log ROTATES mid-install; grep app.log* not app.log.",
+   "On the Mac, kill Electron by PID from `ps -eo pid,command`; pkill -f does not finish the job.",
+   "Monitors leave orphaned tail.exe on Windows - taskkill //F //IM tail.exe when cleaning up.",
+   "MEASURED formats: board.json CRLF/indent 2; root events.jsonl CRLF; per-task events.jsonl LF; MPI-419/task.json indent 2 but MPI-391/task.json INDENT 1. Round-trip guard before every JSON write.",
+   "Shared tree with concurrent agents - commit by explicit pathspec, never git add -A.",
+   "Test leftovers safe to delete when done: D:/CVTest5 (Windows, full engine+model) and the Mac's ~/Downloads/v1.3.0-build4 and v1.3.0-build5. The Mac bills by the hour."
+  ],
+  "files_modified": [
+   "routes/engine.js, routes/platformEngine.js, dev_configs/system_dependencies.json, js/data/releaseNotes.js, docs/releases/.approved-1.3.0.json (baefe4c3)",
+   "docs/comfy.md + kanban MPI-391/MPI-419 (a854bcae)",
+   "kanban board/handoff (f5f2d5f6)",
+   "docs/releases/2026-07-30-v1.3.0.md (b12d1984)"
+  ],
+  "files_to_read_first": [
+   ".agents/mpi-kanban/tasks/MPI-419/validation.md § REOPENED 2026-08-01",
+   "docs/releases/github-release-checklist.md (asset names, claim boundary, platform-disclosure block)",
+   ".claude/skills/mpi-release/references/copy-review.md (the two gates) and build-dispatch.md",
+   ".agents/mpi-kanban/tasks/MPI-409/validation.md § Remaining before this card closes"
+  ],
+  "scratchpad": {
+   "note": "Release body rebuilt from its three parts. The PREVIOUS session's copy at 34898d83-.../scratchpad was stale - do not use it.",
+   "release_body": "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/0f71966f-e460-4849-8338-c8cdc804c153/scratchpad/release-body/release-body-1.3.0.md",
+   "assembled_from": "head.md + notes-1.3.0.md + tail.md in the same folder",
+   "evidence_images": "Same scratchpad: mac-t2i_002/003 are the grey-noise failures; mac-t2i_001/004/005 the isolation runs; mac-t2i_006 the fixed clean install; mac-t2i_007-BUILD5-real-artifact.png the macOS build #5 pass. Windows build #5 pass: C:/Users/Fabio/Documents/Cubric Vision/Projects/test/Media/t2i_016.png"
+  }
+ },
+ "project_knowledge": {
+  "profile": ".agents/mpi-kanban/project-profile.md",
+  "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+  "mode": "file",
+  "relevant_topics": [
+   "releases",
+   "portable-distribution",
+   "comfy_engine",
+   "versioning"
+  ]
+ },
+ "rules_active": [
+  ".claude/rules/git.md",
+  ".claude/rules/kanban.md",
+  ".claude/rules/versioning.md",
+  ".claude/rules/comfy_engine.md"
+ ],
+ "recent_events": [
+  {
+   "at": "2026-08-01T00:27:57Z",
+   "event": "macOS build #5 leg PASSED on the real shipped artifact - correct image in 74.95s"
+  },
+  {
+   "at": "2026-08-01T00:45:52Z",
+   "event": "Windows build #5 leg PASSED - correct image in 11.30s, darwin branch provably skipped"
+  },
+  {
+   "at": "2026-08-01T09:00:00Z",
+   "event": "mpi-release precondition audit: Pod runtime dev==stable (no promote needed), UNRELEASED cleared, archival changelog aligned (b12d1984), approval stamp still valid"
+  },
+  {
+   "at": "2026-08-01T09:00:00Z",
+   "event": "handoff_created (supersedes 8dbee61e)"
+  }
+ ],
+ "resume_prompt": "You are finishing Cubric Vision 1.3.0 on master (currently b12d1984). NOTHING IS PUBLISHED - latest live release is still v1.2.0 and the tag still points at e22ce1a5. All engineering is DONE and verified. Last night the macOS leg FAILED: build #4 produced a 1.8MB PNG of uniform grey noise after a normal 73-second run, caught only by opening the image. Root cause was comfy-cli installing an unpinned PyTorch NIGHTLY on --m-series only; fixed in baefe4c3 by pinning stable torch 2.13.0 on darwin plus --skip-torch-or-directml, with every executable change inside `if (process.platform === 'darwin')` so Windows and Linux are untouched. Build #5 (mpi-ci run 30674488835) is green x3 from that SHA, its six artifacts are in D:/CubricStudio/Vision/Builds/v1.3.0/, and BOTH Windows (11.30s) and macOS (74.95s) pass a full clean install-to-image leg on the REAL artifacts with the images inspected. A full mpi-release precondition audit has been run: the Pod runtime dev and stable manifests are byte-identical so no promote is needed, UNRELEASED.md is clear, the archival changelog has been aligned with releaseNotes.js, and the approval stamp is still valid. WHAT REMAINS IS ONLY THE LIVE TAIL OF mpi-release. Gate 1: the user has never reviewed the new macOS changelog note (it was written and self-approved overnight) - show it to them. Gate 2: the user reviews the rebuilt release body. Then confirm the tag target is baefe4c3 and NOT the 3cb4a58d they originally approved (build #5 superseded it), force-push the annotated tag, resolve the title convention (the skill says 'Cubric Vision v1.3.0' but every existing release is titled plainly 'v1.2.0' etc - recommend matching history), gh release create with all SIX artifacts and --latest, verify releases/latest reports v1.3.0 with draft=false and prerelease=false, and ONLY THEN restamp release-baselines/*.json to 6418 win32 / 6383 linux / 6563 darwin, which closes MPI-409. Finally delete the three un-expired mpi-ci artifacts on run 30674488835. Read .agents/mpi-kanban/state/handoffs/8d0ae8e3-926a-4148-bac6-3e9431c286ea.json for the measured file-format traps, the ELECTRON_RUN_AS_NODE launch trap, the log-rotation trap and the Python path trap. Report outcomes in PLAIN LANGUAGE rather than card IDs, and do not use AskUserQuestion.",
+ "release_skill_status": {
+  "note": "mpi-release step-by-step. DONE steps must NOT be redone; the version was stamped long before this session.",
+  "preconditions": {
+   "on_master_at_right_version": "DONE - master, appVersion 1.3.0",
+   "unreleased_md_folded_and_cleared": "DONE - docs/releases/UNRELEASED.md is back to its header only",
+   "digit_chosen": "DONE - 1.3.0 (2nd digit, new ops + engine bump). NO FURTHER BUMP: the user ruled 1.3.0 is overwritten until right, however many builds it takes",
+   "pod_runtime_drift_MPI340": "DONE + PASSES 2026-08-01 - dev and stable manifests byte-identical (wrapper_version 0.2.40, same start/start_cpu/wrapper sha256). NO publish-runtime promote needed. Do not re-promote."
+  },
+  "step_1_version_stamp": "DONE (long before this session) - appVersion.js + package.json + package-lock.json at 1.3.0, registries updated, archival doc docs/releases/2026-07-30-v1.3.0.md exists. DO NOT re-run mpi-version-bump.",
+  "step_2_gate1_inapp_changelog": "PARTIAL - the user reviewed the original 1.3.0 notes in an earlier session, but the NEW macOS grey-noise fix note was written and self-approved overnight and has NEVER been through their copy gate. SHOW IT: js/data/releaseNotes.js, the 1.3.0 fixes array, the entry starting \"Mac: pictures come out as pictures again\". release-notes-approval check currently passes (hash e829a650). If they edit it: change BOTH js/data/releaseNotes.js AND docs/releases/2026-07-30-v1.3.0.md, then run: node scripts/release-notes-approval.mjs approve --yes  -- and re-commit the stamp. Re-approval only gates a REBUILD; build #5 already passed CI against the current stamp.",
+  "step_3_commit_and_push_master": "DONE - master pushed at b12d1984 (baefe4c3 fix, a854bcae docs+board, f5f2d5f6 board+handoff, b12d1984 archival alignment).",
+  "step_4_build_and_download": "DONE with a deviation worth knowing: builds were dispatched via workflow_dispatch on mpi-ci, NOT by pushing the v* tag as the skill describes. Build #5 = run 30674488835 from baefe4c3, green x3. All six artifacts downloaded to D:/CubricStudio/Vision/Builds/v1.3.0/ and verified inside the bundles. OUTSTANDING TAIL: the three CI artifacts on that run are still un-expired and should be deleted after publishing (storage hygiene).",
+  "step_5_gate2_release_body": "PENDING - the user must review the rebuilt body before it ships. It was reassembled this session because the previous assembled copy was stale.",
+  "step_6_publish": "PENDING - blocked on the tag move and the two gates. Title convention conflicts with the skill text (see pending list).",
+  "step_7_verify_reachable": "PENDING - curl releases/latest requiring tag_name v1.3.0, prerelease false, draft false; then the first live MPI-334 update-prompt observation from a 1.2.0 build.",
+  "step_8_summary": "PENDING. Comms are explicitly OUT OF SCOPE for this skill.",
+  "extra_not_in_skill": "POST-PUBLISH baseline restamp to 6418/6383/6563 closes MPI-409 - this is a Cubric-Vision-specific step the skill does not list."
+ },
+ "cards_to_close": {
+  "after_publish": [
+   {
+    "id": "MPI-409",
+    "state": "doing/validating",
+    "blocker": "Its only remaining item is the POST-PUBLISH baseline restamp to 6418 win32 / 6383 linux / 6563 darwin. Restamp, then close."
+   },
+   {
+    "id": "MPI-419",
+    "state": "doing/validating",
+    "blocker": "ALL 33 checklist boxes ticked, both build #5 legs verified. Needs only the user explicitly approving final completion -> move to done/complete."
+   },
+   {
+    "id": "MPI-387",
+    "state": "doing/validating",
+    "blocker": "Clean Windows 11 end-to-end. Its D-transition and MPI-334 halves are POST-PUBLISH by design (in-app update fetch+spawn needs a live release). Re-check after publishing."
+   },
+   {
+    "id": "MPI-369",
+    "state": "doing/validating",
+    "blocker": "Boot-crash evidence + release packaging. Re-check its packaging claims against the published release, then close if satisfied."
+   }
+  ],
+  "stays_open": [
+   {
+    "id": "MPI-391",
+    "state": "doing/in-progress",
+    "why": "13 checklist items still open - the post-publish in-app update items and the Linux generation validation. This umbrella legitimately outlives the release."
+   },
+   {
+    "id": "MPI-367",
+    "state": "doing/in-progress",
+    "why": "Per-op help copy - unrelated to the release."
+   },
+   {
+    "id": "MPI-259",
+    "state": "doing/in-progress",
+    "why": "Apps v2, 9 items open - unrelated to the release."
+   },
+   {
+    "id": "MPI-4",
+    "state": "doing/in-progress",
+    "why": "LTX 2.3 video integration - unrelated to the release."
+   }
+  ],
+  "caution": "Do NOT bulk-close the doing column. Only the four in after_publish are release-coupled, and each needs its own evidence check first."
+ }
+}
