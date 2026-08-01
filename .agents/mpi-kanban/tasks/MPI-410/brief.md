@@ -60,3 +60,10 @@ actual repro.
 Cold-cache launch (`sync && echo 3 | sudo tee /proc/sys/vm/drop_caches`, or a
 cold boot) and confirm the splash window is visible during the wait and does not
 log a load failure. A warm-cache run cannot test this.
+
+
+## Merged in 2026-08-01
+
+- **MPI-412** - Engine install screen strobes between 'preparing dependencies' and the download progress. Original card text: `tasks/MPI-412/task.json`.
+
+Why one card: Both are first-run-only visual defects on the boot into install path, both are cosmetic (nothing fails), and both are reproduced by the same act: a cold first launch that goes on to install an engine. One investigation session covers the pair.

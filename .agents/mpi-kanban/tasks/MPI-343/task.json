@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-343",
-  "title": "Evaluate PiD 1.5 - upgrade the shipped NVIDIA PiD upscaler?",
-  "description": "IDEA / LOW PRIORITY - research only. ComfyUI v0.28.0 lists 'Support PID 1.5 models' (#14894), a newer generation of the PixelDiT upscaler we already ship as nvidia-pid (MPI-182: one model, four VAE-locked 1024->4096 4-step bf16 checkpoints at 2.72GB each, selected at runtime via Input_Type; compat is the VAE latent space, not the model name). Answer before any wiring: what changed in 1.5 (quality/steps/speed/VRAM), whether the four-checkpoint structure holds (drop-in weight swap vs workflow + Input_Type change), whether it needs ComfyUI >=0.28 (i.e. gated behind MPI-342), and REPLACE vs ADD - replacing means re-uploading ~2.7GB per leg to R2 and every existing user re-downloading, so decide on a measured quality/wall-clock delta, not novelty. Note nvidia-pid is a requiredModel of the sdxl-4k test app that MPI-332 rips - the app's fate is not the model's. Full detail in brief.md.",
+  "title": "Model upgrade evaluation queue - PiD 1.5 upscaler, NSFW LTX 2.3",
+  "description": "IDEA / LOW PRIORITY - research only. ComfyUI v0.28.0 lists 'Support PID 1.5 models' (#14894), a newer generation of the PixelDiT upscaler we already ship as nvidia-pid (MPI-182: one model, four VAE-locked 1024->4096 4-step bf16 checkpoints at 2.72GB each, selected at runtime via Input_Type; compat is the VAE latent space, not the model name). Answer before any wiring: what changed in 1.5 (quality/steps/speed/VRAM), whether the four-checkpoint structure holds (drop-in weight swap vs workflow + Input_Type change), whether it needs ComfyUI >=0.28 (i.e. gated behind MPI-342), and REPLACE vs ADD - replacing means re-uploading ~2.7GB per leg to R2 and every existing user re-downloading, so decide on a measured quality/wall-clock delta, not novelty. Note nvidia-pid is a requiredModel of the sdxl-4k test app that MPI-332 rips - the app's fate is not the model's. Full detail in brief.md.\n\nMERGED 2026-08-01: this card absorbs MPI-339 (Investigate and possibly add NSFW LTX 2.3 model).\n- MPI-339 - civitai 10Eros LTX2.3 plus an int8 conv-rot build and a DMD workflow; a possibly-better sulp variant is also linked.\nWHY ONE CARD: Both are research-only 'is this newer or alternative weight worth shipping' questions with the same method - read the source, check the licence flags, weigh size and quality against what we already ship, then decide. They queue behind each other anyway; one card keeps the shortlist in one place instead of leaking a card per candidate weight.\nThe absorbed card(s) are closed as done/rejected - not built, kept as the record - and their full original text stays on disk at tasks/<id>/.",
   "column": "todo",
-  "maturity": "idea",
+  "maturity": "research",
   "status": "pending",
   "created_at": "2026-07-23T09:35:00Z",
-  "updated_at": "2026-07-23T09:35:00Z",
+  "updated_at": "2026-08-01T21:40:00Z",
   "labels": [
     "models",
     "upscale",

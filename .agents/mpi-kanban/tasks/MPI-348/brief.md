@@ -203,3 +203,10 @@ Note v1.2 lists inpainting as trained-in, so the model side may be better than w
 
 MPI-346 (node bump to v1.2.2, doing) · MPI-347 (high-res localized-edit App) ·
 MPI-259 (Apps v2) · MPI-325 (Head Swap box padding) · MPI-332 (rip deprecated test apps)
+
+
+## Merged in 2026-08-01
+
+- **MPI-366** - Investigate the shared Krea2 ID-Edit character-dataset workflow as an App candidate. Original card text: `tasks/MPI-366/task.json`.
+
+Why one card: MPI-366 is an input to this track, not a separate one: it is a Krea2 identity-edit graph that gets read at the same bench, in the same session, and its useful parts feed the swap family this card is authoring. Both also need the user at the node graph and one of them needs the VPN, so they are the same sitting.

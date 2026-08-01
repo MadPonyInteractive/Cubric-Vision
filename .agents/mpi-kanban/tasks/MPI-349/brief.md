@@ -129,3 +129,10 @@ advantage.
 - https://docs.runpod.io/api-reference/pods/POST/pods (field list above, checked 2026-07-25)
 - https://docs.runpod.io/pods/manage-pods
 - RunPod Discord `#announcements`, 18 Jun 2026 and 03 Jun 2026 (screenshots supplied by user)
+
+
+## Merged in 2026-08-01
+
+- **MPI-344** - Vast.ai as a second option to runpod. Original card text: `tasks/MPI-344/task.json`.
+
+Why one card: Both are watch/research on the same question - how the app gets a GPU when RunPod cannot give it one. Deploy-when-available, the network-volume availability crunch and a second provider are three answers to that question and get decided together, not one at a time.

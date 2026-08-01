@@ -4,10 +4,10 @@
   "title": "engineAssets never reach the Pod's fast disk - extend hot-store staging past the model-keyed paths",
   "description": "Found live 2026-07-30 on the MPI-385 Pod session. sam3-multiplex (1.75GB) loads off the ~750MB/s network volume on every cold ComfyUI load (~8.5s first Detect), because BOTH stage-to-disk paths are model-keyed: _ensureRemoteHotStore(modelId,...) resolves deps per model (commandExecutor.js:534) and prefetchInstalledModels iterates s_installedModelIds - an engineAsset belongs to NO model, so it is invisible to both. runAutoMask does not call the hot-store preflight at all. The user floated baking it into the image; MPI-380 already rejected bake deliberately (+1.75GB on every image pull forever, dev+stable rebuilds, repeats per engineAsset - see tasks/MPI-380/validation.md FIX SHIPPED section). CHEAPER FIX, same speed, no rebuild: POST /remote/hot-store/ensure accepts arbitrary {type, filename, size_bytes, sha256} - it does not care about model ownership. Stage the non-baked engineAsset set (>=100MB, VRAM-capped, same filters as _ensureRemoteHotStore) on the remote connect edge right after _installRemoteEngineAssets - one ~2.5s volume-to-disk copy per Pod, idempotent/sticky on the wrapper side, then SAM3 loads at NVMe speed. NOTE the split with MPI-402: this fixes COLD Detect (weight load); the 2-3s chip toggling is the round trip, not the load (model stays RAM-resident between Detects) - that is MPI-402's client-side mask cache.",
   "column": "todo",
-  "maturity": "idea",
+  "maturity": "planned",
   "status": "active",
   "created_at": "2026-07-30T15:36:00Z",
-  "updated_at": "2026-07-31T16:45:00Z",
+  "updated_at": "2026-08-01T21:40:00Z",
   "labels": [
     "remote-engine",
     "performance",

@@ -53,3 +53,10 @@ different decision than a free one.
 - MPI-182 — the original PiD wiring; `docs/models/pid/upscaler.md`.
 - MPI-332 — rips the `sdxl-4k` test app that currently lists `nvidia-pid`.
 - Playbook if it proceeds: `docs/playbooks/add-model/` (models are NOT version-bumped).
+
+
+## Merged in 2026-08-01
+
+- **MPI-339** - Investigate and possibly add NSFW LTX 2.3 model. Original card text: `tasks/MPI-339/task.json`.
+
+Why one card: Both are research-only 'is this newer or alternative weight worth shipping' questions with the same method - read the source, check the licence flags, weigh size and quality against what we already ship, then decide. They queue behind each other anyway; one card keeps the shortlist in one place instead of leaking a card per candidate weight.

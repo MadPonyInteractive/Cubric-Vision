@@ -1,17 +1,17 @@
 {
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-355",
- "title": "All edit models: sample only the masked region (crop-stitch) to speed up edits",
+ "title": "Crop-stitch for edit ops - sample only the masked region, and the 4K/8K App it unlocks",
  "column": "todo",
- "maturity": "idea",
+ "maturity": "planned",
  "created_at": "2026-07-26T11:22:22Z",
- "updated_at": "2026-07-26T11:22:22Z",
+ "updated_at": "2026-08-01T21:40:00Z",
  "labels": [
   "workflow",
   "performance",
   "edit-models"
  ],
- "description": "Every edit model currently samples the WHOLE frame even when the user masks a small region. Cropping to the masked region, sampling that, and stitching back is faster and loses nothing outside the mask. Proven twice on the bench: the user did it on Qwen, and MPI-353 did it on Klein (InpaintCropImproved -> sample -> InpaintStitchImproved, mask_blend_pixels=32, expand=8) where it ALSO cut the seam gradient 6x (14.56 -> 2.44) for ~4s.\n\nThis is a MODEL-GRAPH change (make it the standard shape for edit workflows), NOT a new user-facing feature. Distinct from MPI-347, which is the 4K/8K localized-edit APP - that card owns the product outcome, this one owns the shared graph pattern.\n\nSCOPE: sweep every edit-capable model (qwen-edit, krea2 edit, boogu-edit, klein once MPI-354 lands, head-swap app graph). Each is a separate graph, so this is a per-model edit, not one shared fix.\n\nKNOWN TRAPS (inherit from MPI-347's brief before starting):\n- the crop-stitch tone-patch trap and its root cause are documented on MPI-347\n- app_head_swap.json already uses the inpaint classes but NOTHING on the qwen-edit path declares the custom-node pack as a dep. Fix the declaration as part of this work or it breaks on a clean install.\n- crop-stitch is RIGHT when the region is surrounded; ImageCompositeMasked full-frame is still needed where the generation must see the whole scene.",
+ "description": "Every edit model currently samples the WHOLE frame even when the user masks a small region. Cropping to the masked region, sampling that, and stitching back is faster and loses nothing outside the mask. Proven twice on the bench: the user did it on Qwen, and MPI-353 did it on Klein (InpaintCropImproved -> sample -> InpaintStitchImproved, mask_blend_pixels=32, expand=8) where it ALSO cut the seam gradient 6x (14.56 -> 2.44) for ~4s.\n\nThis is a MODEL-GRAPH change (make it the standard shape for edit workflows), NOT a new user-facing feature. Distinct from MPI-347, which is the 4K/8K localized-edit APP - that card owns the product outcome, this one owns the shared graph pattern.\n\nSCOPE: sweep every edit-capable model (qwen-edit, krea2 edit, boogu-edit, klein once MPI-354 lands, head-swap app graph). Each is a separate graph, so this is a per-model edit, not one shared fix.\n\nKNOWN TRAPS (inherit from MPI-347's brief before starting):\n- the crop-stitch tone-patch trap and its root cause are documented on MPI-347\n- app_head_swap.json already uses the inpaint classes but NOTHING on the qwen-edit path declares the custom-node pack as a dep. Fix the declaration as part of this work or it breaks on a clean install.\n- crop-stitch is RIGHT when the region is surrounded; ImageCompositeMasked full-frame is still needed where the generation must see the whole scene.\n\nMERGED 2026-08-01: this card absorbs MPI-347 (App: localized edits on high-res (4K/8K) images via crop-stitch).\n- MPI-347 - mask a small region of a huge scene, edit just that, character stays sharp because the crop is sampled at working resolution.\nWHY ONE CARD: Identical mechanism: InpaintCropImproved -> sample -> InpaintStitchImproved. MPI-347 is the App-shaped outcome of exactly the wiring this card does to the edit ops, and the 4K/8K case is the one that proves the wiring is right. Ship the op wiring first, then the App descriptor on top of it - two deliverables, one piece of engineering.\nThe absorbed card(s) are closed as done/rejected - not built, kept as the record - and their full original text stays on disk at tasks/<id>/.",
  "acceptance": [
   "Per-model decision recorded: which edit graphs get crop-stitch and which must stay full-frame",
   "Custom-node pack declared as a dep on every path that uses the inpaint classes",
