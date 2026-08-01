@@ -3,7 +3,6 @@
   "next_id": 424,
   "columns": {
     "todo": [
-      "MPI-423",
       "MPI-422",
       "MPI-421",
       "MPI-413",
@@ -48,6 +47,7 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-423",
       "MPI-367",
       "MPI-259",
       "MPI-4"
@@ -115,8 +115,16 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-01T08:40:00Z",
+  "updated_at": "2026-08-01T08:45:00Z",
   "events": [
+    {
+      "at": "2026-08-01T08:45:00Z",
+      "type": "task.moved",
+      "task": "MPI-423",
+      "from": "todo",
+      "to": "doing",
+      "note": "Picked up. The urgent site is fixed: models.js klein-4b description now reads 'mask an object, run Inpaint with the prompt left empty' instead of 'hit Remove'. DECISION RECORDED on the changelog judgement call - releaseNotes.js['1.3.0'] and the 2026-07-30-v1.3.0.md mirror were CORRECTED too, not left as historical record: the in-app changelog is live UI every user reads, and a rendered instruction to press a control that does not exist is a defect wherever it renders. What shipped is preserved in git and in an explicit correction note appended to the release doc's Platform Update Checklist. Grep across js/ confirms no other user-facing string instructs a Remove control; the only Remove labels left are Remove Background (BiRefNet, unrelated) and slot/point clear buttons. Remaining: the Patreon and Discord 1.3.0 posts are the one acceptance item an agent cannot check - the release doc now carries the corrected wording and an instruction to fix any post that already went out with the old sentence."
+    },
     {
       "at": "2026-08-01T08:40:00Z",
       "type": "task.moved",
