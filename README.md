@@ -98,6 +98,11 @@ builds are not code-signed, so this warning is expected.
 xattr -dr com.apple.quarantine "<extracted folder>"
 ```
 
+Then double-click **`start.command`**.
+
+**Linux:** extract the tarball and run **`./start.sh`**. Engine setup needs
+`git` — the installer will offer to install it if it's missing.
+
 Step-by-step instructions are in the
 [installation guide](https://docs.cubric.studio/vision/installation/).
 
