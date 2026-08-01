@@ -57,12 +57,17 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three hold the **v1.2.0 FULL (portable-stage)** manifests (2026-07-28,
-  MPI-369) from the shipped 1.2.0 build, so 1.3.0 deltas against 1.2.0.
-  `toVersion: 1.2.0`, `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 6505 files
-  - `linux-x64.json` — 6325 files
-  - `win32-x64.json` — 6362 files
+- All three hold the **v1.3.0 FULL (portable-stage)** manifests (2026-08-01,
+  MPI-409) from the shipped 1.3.0 build, so 1.4.0 deltas against 1.3.0.
+  `toVersion: 1.3.0`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6563 files
+  - `linux-x64.json` — 6383 files
+  - `win32-x64.json` — 6418 files
+
+  Restamped from the published build-#5 artifacts (mpi-ci run 30674488835,
+  SHA `baefe4c3`) **after** v1.3.0 went live on the GitHub release, per the
+  timing rule in **Contract**. The previous v1.2.0 values were 6505 / 6325 /
+  6362.
 - They had been left at 1.0.0 through 1.0.1, 1.1.0 and 1.2.0, so every "delta"
   since was computed against 1.0.0 — correct, but far larger than needed (the
   1.2.0 Windows update bundle reads `from 1.0.0 -> 1.2.0`, 1226 files, 90 MB).
@@ -96,11 +101,24 @@ Local Windows builds do the same by hand:
 The manifest lives at `resources/cubric/update-manifest.json` in the FULL
 artifact (never the `-update-` one):
 
+> **Windows has NO top-level folder — its member path differs from the others.**
+> Since the MPI-387 fix-D layout move, the Windows zip extracts to the current
+> directory with `resources/` at its root, so the path is
+> `resources/cubric/update-manifest.json` with no `CubricVision-…-v<ver>/` prefix.
+> Linux and macOS still wrap in a top-level folder. Using the wrapped path on
+> Windows fails with `caution: filename not matched` — and because the command
+> redirects, it **truncates the existing baseline to 0 bytes** before failing.
+> Restore with `git checkout -- release-baselines/win32-x64.json` and retry.
+> Also ignore `resources/app/resources/cubric/update-manifest.json` (~4 KB) —
+> that is the repo's own copy shipped inside the app, not the portable stage.
+
 ```sh
 unzip -p CubricVision-windows-x64-v<ver>.zip \
-  'CubricVision-windows-x64-v<ver>/resources/cubric/update-manifest.json' > win32-x64.json
+  'resources/cubric/update-manifest.json' > win32-x64.json
 tar -xzOf CubricVision-linux-x64-v<ver>.tar.gz \
   'CubricVision-linux-x64-v<ver>/resources/cubric/update-manifest.json' > linux-x64.json
+unzip -p CubricVision-macos-arm64-v<ver>.zip \
+  'CubricVision-macos-arm64-v<ver>/resources/cubric/update-manifest.json' > darwin-arm64.json
 ```
 
 Then assert `fromVersion: null`, `artifact.kind: portable-stage`, and a file count
