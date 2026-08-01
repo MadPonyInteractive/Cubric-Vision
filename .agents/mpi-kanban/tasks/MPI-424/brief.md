@@ -64,6 +64,18 @@ Grow, shrink and an edge band are one primitive: an edge band is
 | 5 | **MPI-373** Composite | Both comps, pasted slots, replaces the MPI-362 modal. |
 | - | **MPI-421** run cost | Independent of the rest; now scoped to ONE Detect panel instead of three. |
 
+## A fresh session starts HERE
+
+1. Read this file — it is the whole design; the chat it came from is gone.
+2. `mpi-continue MPI-425`. That card is next, it already has a compact plan at
+   `tasks/MPI-425/plan.md`, and `mpi-continue` moves it To do -> Doing and
+   derives the checklist before touching a file.
+3. The other four have settled designs on their own cards but NO plan file yet —
+   run `mpi-create-plan` against each as it comes up, not before.
+
+Nothing about this design lives outside these cards. The rejected MPI-379 is the
+record of what was ruled out and why.
+
 ## Standing constraints for every card in this set
 
 - Mask and paint layer mutations are UNDOABLE - record an `UndoStack` entry before
