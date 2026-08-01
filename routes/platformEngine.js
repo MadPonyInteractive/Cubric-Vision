@@ -19,6 +19,19 @@ const logger = require('./logger');
 const COMFY_VERSION = deps.engine.version;
 const COMFY_BASE = `https://github.com/Comfy-Org/ComfyUI/releases/download/v${COMFY_VERSION}`;
 
+// macOS torch pin. comfy-cli's `--m-series` branch is the ONLY one of its GPU
+// branches that installs from the PyTorch NIGHTLY channel, and it does so with
+// `--pre` and no version — so every Mac user got whatever nightly PyTorch cut
+// that day. It shipped garbage: torch 2.14.0.dev20260731 renders SDXL on MPS as
+// uniform grey noise with no error, a normal 74s runtime and a normal-looking
+// gallery card. dev20260730 and stable 2.13.0 both render correctly (measured on
+// an M-series Mac 2026-07-31, same prompt/model/ComfyUI 0.29.2). Windows already
+// gets a frozen torch inside the portable archive and Linux resolves stable from
+// PyPI, so macOS was the only platform installing an unreleased PyTorch. We pin
+// stable here and pass --skip-torch-or-directml so comfy-cli never reaches its
+// nightly branch. Same lesson as COMFY_VERSION above, one layer down.
+const TORCH_MAC = deps.torchMac;
+
 // Platform-specific engine folder name (only Windows has portable build)
 const COMFY_DIR_MAP = {
     win32: 'ComfyUI_windows_portable',
@@ -377,6 +390,7 @@ module.exports = {
     COMFY_DIR,
     COMFY_VENV_DIR,
     COMFY_VERSION,
+    TORCH_MAC,
     getPythonBin,
     getComfyPath,
     getComfyRepoRel,

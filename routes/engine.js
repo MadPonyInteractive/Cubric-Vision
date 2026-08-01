@@ -15,7 +15,7 @@ const path = require('path');
 const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, FileDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
-const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
+const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, TORCH_MAC, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
 const { ensureGit } = require('./gitProvision');
 const { buildExtraModelPathsYaml } = require('./yamlHelper');
 const { spawn, execFile } = require('child_process');
@@ -381,6 +381,30 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     // ── 2. Install comfy-cli into the venv ──────────────────────────────────
     await _runStreaming(uvBin, ['pip', 'install', '--python', venvPython, 'comfy-cli'], { cwd: targetDir, stage: 'install-comfy-cli' });
 
+    // ── 2b. macOS: install the PINNED torch BEFORE comfy-cli can install one ─
+    // comfy-cli's MAC_M_SERIES branch runs `pip install --pre torch torchvision
+    // torchaudio --extra-index-url .../whl/nightly/cpu` — the only one of its GPU
+    // branches on the nightly channel, and unversioned, so the engine a Mac user
+    // got depended on the calendar. It shipped broken: nightly dev20260731 renders
+    // SDXL on MPS as grey noise, silently (see TORCH_MAC in platformEngine.js).
+    // Installing the pin first means ComfyUI's own requirements.txt then reports
+    // torch as "already satisfied" and leaves it alone; step 3 passes
+    // --skip-torch-or-directml so comfy-cli's nightly branch never runs at all.
+    // Belt and braces on purpose — either one alone would still leave a path to a
+    // nightly wheel.
+    if (process.platform === 'darwin') {
+        broadcastEngineEvent('engine:extracting', { status: 'Installing PyTorch…', progress: 0 });
+        await _runStreaming(
+            uvBin,
+            ['pip', 'install', '--python', venvPython,
+                `torch==${TORCH_MAC.torch}`,
+                `torchvision==${TORCH_MAC.torchvision}`,
+                `torchaudio==${TORCH_MAC.torchaudio}`],
+            { cwd: targetDir, stage: 'install-torch' },
+        );
+        logger.info('engine', `macOS torch pinned: torch==${TORCH_MAC.torch} torchvision==${TORCH_MAC.torchvision} torchaudio==${TORCH_MAC.torchaudio}`);
+    }
+
     // ── 3. comfy install into the workspace (non-interactive) ───────────────
     // Flag names verified against comfy-cli source: --skip-prompt/--workspace are
     // global (before `install`); --nvidia/--amd/--m-series/--cpu are install opts.
@@ -396,7 +420,8 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     // IGNORES the vendor flag, so it is only safe when that generic resolve is
     // the one we want — i.e. NVIDIA. Everything else must take comfy-cli's
     // standard, vendor-aware install:
-    //   --m-series: --fast-deps skips the MPS nightly wheel (torch not MPS-capable)
+    //   --m-series: moot since step 2b — we install the pinned torch ourselves and
+    //               pass --skip-torch-or-directml, so no comfy-cli torch branch runs
     //   --cpu:      --fast-deps pulls the whole CUDA stack — measured on Linux
     //               2026-07-30, requirements.compiled resolved torch==2.13.0 with
     //               no +cpu tag plus triton and 14 nvidia-* wheels, several GB a
@@ -415,6 +440,8 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
     // workspace lands on the pin too.
     const installArgs = ['--skip-prompt', '--workspace', workspace, 'install', gpuFlag, '--version', COMFY_VERSION];
     if (gpuFlag === '--nvidia') installArgs.push('--fast-deps');
+    // macOS torch is ours now (step 2b) — keep comfy-cli off its nightly branch.
+    if (process.platform === 'darwin') installArgs.push('--skip-torch-or-directml');
     if (workspaceIsClone) installArgs.push('--restore');
     await _runStreaming(
         comfyBin,
