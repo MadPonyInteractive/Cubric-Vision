@@ -24,7 +24,7 @@ either. What this box CAN settle is section A2 below.
 - [x] `CubricVision.exe` launches from that extract — *MPI-387 D (partial)* ← full first-run chain clean: splash → models-folder picker → 18+ gate → What's New v1.3.0 → home at `V1.3.0`. `app.log` has no errors and logs `up to date (current=1.3.0 latest=1.2.0)`, which is the pre-publish constraint seen live. **No SmartScreen on this box** — the SAC question was not asked here, section B still owns it. Evidence: `tasks/MPI-387/validation.md` § D launch half
 - [x] Generate smoke — *release sanity* ← **done REMOTE, not local.** KREA 2 t2i, 1344×768, 21s, on a fresh Pod (`bh1x2asru9nv1y`, RTX PRO 4000, image `v0.17.0-cu130`) from the packaged 1.3.0 extract. `hot-store: 16/16 file(s) on Pod disk`, no errors in `app.log`. **The LOCAL-engine smoke is still unproven on Windows** — this box took MPI-390's skip-install, so section B's "engine install completes" item is the only place it gets exercised. Bench was never a risk: 8188 free all session
 - [x] Real v1.2.0 install updated to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← **PASSED via `update-from-zip.bat`** (the applier half; fetch+spawn is the separate post-publish item below). `resources/app/package.json` now 1.3.0, `start.vbs` absent, stale `app/` still reading 1.2.0 exactly as designed, `CubricVision.exe` at root, rollback dir written. Evidence: `tasks/MPI-387/validation.md` § D transition half
-- [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← needs the GitHub Release to exist, so this one item runs AFTER publish
+- [x] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← **RAN 2026-08-01 after publish. FETCH PASSED, APPLY FAILED.** A fresh 1.2.0 extract prompted correctly (`portable check — current=1.2.0 latest=1.3.0`) and downloaded 451,116,582 bytes byte-exact, then applied nothing. Root cause: `main.js` spawns detached with `stdio: 'ignore'`, so `update.bat`'s `powershell … > latest-update-path.txt` capture is always 0 bytes and `update-from-zip.bat` always gets an empty argument. Controls: same spawn + 6 KB download also 0 bytes (size innocent); identical command under a normal `cmd /c` console captured 170 bytes exit 0 (command innocent). Legacy path, already replaced in master by `win-update.cjs` (immune by construction). Mitigation: Windows 1.3.0 update bundle DELETED from the release, notes corrected, deltas resume at 1.4.0. Evidence: `tasks/MPI-387/validation.md` § D in-app fetch+spawn. New gaps → MPI-422
 
 ## A · At the build cut (blocks everything below)
 
@@ -54,8 +54,7 @@ Done 2026-07-30 except the promote. Evidence: `tasks/MPI-369/validation.md`
 - [ ] Any real failure names the node + real phase, never "extraction failed" — *MPI-387 C* ← **NOT EXERCISED and deliberately not ticked.** The install completed with no fatal failure, so nothing ever needed attributing. A clean run cannot prove this
 - [x] `app.log` captured from `<extract root>/user-data/logs/` — *MPI-387 evidence* ← read and filtered; findings written into `tasks/MPI-387/validation.md` § git-less clean install
 - [ ] ~~Generate smoke on the laptop~~ — **deliberately NOT run.** No GPU means ComfyUI launches `--cpu` ([comfy.js:370](../../../../routes/comfy.js#L370)), so a modern model would take minutes-to-tens-of-minutes per image and prove nothing. Smoke is covered remote on the dev PC and stays local-owned by section D (Linux)
-- [ ] Real v1.2.0 install updated in-app to 1.3.0: files copied, `start.vbs` gone, stale `app/` left behind — *MPI-387 D transition* ← **POST-PUBLISH** (see below)
-- [ ] Same run: in-app update prompt's real fetch + spawn worked — *MPI-334* (first live test ever) ← **POST-PUBLISH** (see below)
+- [x] ~~Real v1.2.0 install updated in-app to 1.3.0~~ / ~~in-app fetch + spawn~~ — *MPI-387 D transition, MPI-334* ← **BOTH RAN 2026-08-01 ON THE DEV PC, NOT THIS LAPTOP** (the laptop adds nothing here — the failure is in the spawn, not the machine). The applier half had already passed via `update-from-zip.bat`; the in-app half FAILED and is root-caused. See section A2's entry. **MPI-387 is now closed**; residuals are MPI-422
 
 > **The in-app update items CANNOT run before `gh release create`.** The check
 > hits `https://api.github.com/repos/MadPonyInteractive/Cubric-Vision/releases/latest`
@@ -153,7 +152,7 @@ box cannot deliver. MPI-249 stays open for a GPU Linux machine.
 ## Close-out
 
 - [ ] Every result written into its OWNING card's `validation.md`
-- [ ] Each owning card moved
+- [ ] Each owning card moved ← MPI-369 and MPI-387 both closed to `done` 2026-08-01
 - [ ] Deferred items recorded with a reason (see `brief.md` § E)
 
 ## Update 2026-08-01 — the Windows leg completed, and the macOS leg FAILED then was fixed

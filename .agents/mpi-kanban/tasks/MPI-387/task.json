@@ -2,11 +2,11 @@
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-387",
  "title": "Clean Windows 11 install is broken end-to-end - SAC block, MAX_PATH, git dep",
- "column": "doing",
- "maturity": "validating",
- "status": "active",
+ "column": "done",
+ "maturity": "complete",
+ "status": "closed",
  "created_at": "2026-07-29T23:10:00Z",
- "updated_at": "2026-07-29T07:10:00Z",
+ "updated_at": "2026-08-01T06:50:00Z",
  "labels": [
   "bug",
   "release",
@@ -31,8 +31,8 @@
   "validation": "validation.md"
  },
  "attention": {
-  "state": "required",
-  "reason": "All six defects (A-F) are resolved in code as of 2026-07-29; the card is now VALIDATING, not implementing. The maintainer has the reproducing Windows 11 laptop with Smart App Control ON in hand, so the three unmet acceptance items (A depth from a default Extract All, B pip with no git on PATH, D launch under SAC) are all testable on that one machine once a full Windows zip is built. Remaining after that: a transition update from v1.2.0 and a second update from the new layout, both of which need a real release. Spun out: MPI-390. Windows validation is coordinated by the MPI-391 umbrella (1.3.0 cross-platform sweep) - section B.",
-  "updated_at": "2026-07-29T06:20:00Z"
+  "state": "cleared",
+  "reason": "Closed 2026-08-01 against the published 1.3.0 artifacts. A, B, D (SAC launch + transition), E, F1, F2 and F3 are all settled on the reproducing hardware - see validation.md. The final item, the in-app fetch+spawn, ran on 2026-08-01 and FAILED on the 1.2.0-era path: root-caused to main.js spawning detached with stdio:'ignore', which makes update.bat's shell-redirect stdout capture always 0 bytes. Legacy code on users' disks, unfixable by shipping, and already replaced in master by win-update.cjs which is immune by construction. Mitigated the same day: the Windows update bundle was deleted from v1.3.0, release notes corrected, the trap recorded in docs/releases/portable-distribution-contract.md, Windows deltas resume at 1.4.0. Fix C was never exercised (no clean install ever failed fatally) and is deliberately accepted as unit-tested only. Spun out earlier: MPI-390. Residuals - the two 1.4.0-gated validation items plus two new gaps in win-update.cjs - moved to MPI-422.",
+  "updated_at": "2026-08-01T06:50:00Z"
  }
 }

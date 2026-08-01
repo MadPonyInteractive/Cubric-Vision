@@ -367,6 +367,37 @@ after 3 declines that version is muted until a newer one lands. Dev escape hatch
 localStorage `mpi_dev_force_update=<version>` forces the dialog in a non-portable
 build. Note: the prompt only fires once a GitHub release exists to compare against.
 
+> **`stdio: 'ignore'` means the updater can never capture a child's stdout
+> through a shell redirect.** Proven live 2026-08-01 (MPI-387). `run-update`
+> spawns detached with `stdio: 'ignore'`, so the child's STDOUT handle is the NUL
+> device. The pre-1.3.0 Windows `update.bat` fetched the asset with a PowerShell
+> one-liner and captured the downloaded path via `> latest-update-path.txt`, then
+> `set /p`. Under that spawn the redirect file is **created and stays 0 bytes** —
+> `Write-Output` lands in NUL — so `update-from-zip.bat` was called with an empty
+> argument, printed its usage, exited 2, and the console closed with nothing
+> applied and no relaunch. The 451 MB download completed perfectly first, which is
+> what makes it read as "the update worked and then did nothing".
+>
+> **Size is irrelevant and so is the console:** reproduced identically with a
+> 6 KB download under the same spawn, and the *same* PowerShell command run from
+> a normal `cmd /c` console captured 170 bytes and exited 0. Double-clicking
+> `update.bat` yourself has always worked; only the in-app button was broken.
+>
+> `win-update.cjs` is immune by construction — it runs helpers with
+> `spawnSync(..., stdio: ['ignore', 'pipe', 'inherit'])` and reads
+> `result.stdout` in-process, so it never depends on the parent's stdout handle,
+> and it hard-fails on `!bundle || !fs.existsSync(bundle)` instead of continuing
+> with an empty path. **Never re-introduce a shell-redirect capture into an
+> updater.**
+>
+> **Consequence for the fleet:** every pre-1.3.0 Windows install that CAN launch
+> (Windows 10, or Windows 11 with SAC off) has a broken in-app update button.
+> They cannot be reached by shipping code — the batch is already on their disk.
+> Their only route to 1.3.0 is a full download, which is why the Windows update
+> bundle was pulled from the v1.3.0 release on 2026-08-01 and Windows deltas
+> resume at 1.4.0. macOS and Linux use `curl`-based updaters on a different code
+> path and kept their bundles.
+
 ## Portable Environment
 
 Launchers must set portable environment variables before starting Electron or

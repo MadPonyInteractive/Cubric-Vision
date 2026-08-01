@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-422",
+  "title": "Windows in-app updater is silent on failure and never reopens the app - fix, then validate the new path at 1.4.0",
+  "description": "MPI-387 fix D replaced the Windows in-app update path: `run-update` (main.js) now spawns `process.execPath` on `update/win-update.cjs` with ELECTRON_RUN_AS_NODE=1 instead of the SAC-blocked `update.bat`. The replacement is correct -- it captures helper stdout through `spawnSync(..., stdio:['ignore','pipe','inherit'])` rather than a shell redirect, so it cannot repeat the 1.2.0-era failure -- but it has never run against a real newer release, and two gaps were found auditing it on 2026-08-01. (1) SILENT BY CONSTRUCTION: Electron spawns it detached with `stdio: 'ignore'`, so there is no console any more and win-update.cjs writes no log file; its console.error diagnostics go to NUL. On failure the app quits and never returns -- no window, no message, no evidence, which is the exact blindness MPI-369 was raised about, on a new path. (2) THE PROMPT'S COPY IS WRONG: MpiOkCancel promises 'The app will close, update, and reopen', but win-update.cjs ends at 'Update applied successfully.' with no relaunch, and neither update-from-zip.bat has one either. Also carries the two 1.4.0-gated validation items inherited from MPI-387: a SECOND update applied from the new layout (the only thing that exercises loadExtractZip's `resources/app` branch and evictBusyFile -- a first update passes without touching either), and the in-app fetch+spawn on the new path. Windows deltas resume at 1.4.0, so 1.4.0 is the gate for the validation half; the two code fixes should land BEFORE it.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-08-01T06:45:00Z",
+  "updated_at": "2026-08-01T06:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "packaging",
+    "updater",
+    "windows",
+    "diagnostics",
+    "release"
+  ],
+  "priority": "normal",
+  "attention": false
+}

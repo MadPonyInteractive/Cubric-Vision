@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 422,
+  "next_id": 423,
   "columns": {
     "todo": [
+      "MPI-422",
       "MPI-421",
       "MPI-413",
       "MPI-420",
@@ -47,13 +48,13 @@
     ],
     "doing": [
       "MPI-391",
-      "MPI-387",
       "MPI-367",
-      "MPI-369",
       "MPI-259",
       "MPI-4"
     ],
     "done": [
+      "MPI-387",
+      "MPI-369",
       "MPI-419",
       "MPI-409",
       "MPI-414",
@@ -113,8 +114,31 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-07-31T21:12:00Z",
+  "updated_at": "2026-08-01T06:50:00Z",
   "events": [
+    {
+      "at": "2026-08-01T06:50:00Z",
+      "type": "task.created",
+      "task": "MPI-422",
+      "column": "todo",
+      "note": "Spun out of MPI-387. The NEW Windows in-app updater (win-update.cjs, fix D) is immune to the bug that killed the old one, but is silent by construction - Electron spawns it detached with stdio:'ignore', there is no console any more, and it writes no log file, so a failure quits the app with no window, no message and no evidence (the MPI-369 blindness class on a new path). Second gap: the prompt promises the app will reopen and nothing relaunches. Also carries the two 1.4.0-gated validation items inherited from MPI-387 - a SECOND update from the new layout (the only thing exercising loadExtractZip's resources/app branch + evictBusyFile) and in-app fetch+spawn on the new path."
+    },
+    {
+      "at": "2026-08-01T06:50:00Z",
+      "type": "task.moved",
+      "task": "MPI-387",
+      "from": "doing",
+      "to": "done",
+      "note": "CLOSED. Every defect this card was raised for is settled on the machine that reported it: A (MAX_PATH) end to end - 6419 files in zip = 6419 on disk with 84 chars of headroom on the dev PC, no Long-Path hint from the LTXVideo pip at a real deep path on the laptop; B (Impact-Pack git+sam2) SEEN FIRING on genuinely git-less hardware - 'requirements filtered for ComfyUI-Impact-Pack on win32: dropped git+.../sam2', zero 'Cannot find command git'; D (SAC) double-click launched straight into the app with VerifiedAndReputablePolicyState=0x1 ENFORCED on an unsigned exe still carrying a 99-byte MOTW, both preconditions established BEFORE the launch so the pass is not vacuous; D transition, a real v1.2.0 install crossed to 1.3.0 via its OWN shipped applier; E release note shipped; F1 absent, F2 present (presence is the pass), F3 confirmed as documented. THE LAST ITEM RAN 2026-08-01 AND FAILED: the in-app fetch+spawn on the 1.2.0-era path. The fetch half passed live for the first time ever (portable check current=1.2.0 latest=1.3.0 -> prompting -> 451,116,582 bytes downloaded byte-exact), then the apply half did nothing. Root cause, proven with three runs: main.js spawns detached with stdio:'ignore', which hands the child a NUL stdout, so update.bat's 'powershell ... > latest-update-path.txt' capture is ALWAYS 0 bytes and update-from-zip.bat is ALWAYS called with an empty argument. Decisive control: the same spawn with a 6 KB download also captured 0 bytes (size innocent), while the identical command under a normal cmd /c console captured 170 bytes and exited 0 (command innocent). Not fixable by shipping - the batch is on the user's disk - and master already replaced the whole path in fix D with win-update.cjs, which is immune by construction (spawnSync stdio ['ignore','pipe','inherit'] + a hard !bundle guard). Mitigation shipped the same day on the user's decision: the 451 MB Windows update bundle was DELETED from the v1.3.0 release (macOS 3.3 MB and Linux 2.8 MB kept - different, curl-based updaters), release notes corrected on GitHub and in docs/releases/2026-07-30-v1.3.0.md, and the trap recorded in docs/releases/portable-distribution-contract.md with a 'never re-introduce a shell-redirect capture into an updater' rule. Windows deltas resume at 1.4.0. NOT closed and deliberately accepted: fix C (failure attribution) was never exercised - three clean installs across two machines produced no fatal failure to describe - and stays unit-tested only. Residuals to MPI-422."
+    },
+    {
+      "at": "2026-08-01T06:30:00Z",
+      "type": "task.moved",
+      "task": "MPI-369",
+      "from": "doing",
+      "to": "done",
+      "note": "CLOSED - every item settled against the real published 1.3.0 artifacts. Fix 1 (a fatal boot writes no evidence) was user-witnessed live on 2026-07-30: a deliberate throw after the two process.on registrations produced BOTH the 'Cubric Vision failed to start' dialog and a synchronous FATAL line on disk, then was reverted with node --check clean. Fix 2 (the update-only bundle looks launchable) verified at the cut: all THREE update bundles unzip to CubricVision-v1.3.0-update-only, and the ASSET name is still exactly CubricVision-windows-x64-update-v1.3.0.zip, which shipped updaters glob and which must never drift. Fix 3 (stale delta baselines) took three commits and the ORDER is the lesson: 36f972cf restamped to 1.3.0 while 1.3.0 was still being rebuilt, addc03a2 restored the 1.2.0 baselines so the bundles carried real deltas, and eaa6de3c did the final restamp AFTER the GitHub release published. Verified on disk 2026-08-01: all three read fromVersion null / kind portable-stage / toVersion 1.3.0 at 6418 / 6563 / 6383 files. Restamp AFTER publish, never at the cut - a rebuild between the two is the failure mode. Deltas proved healthy in the same build: Linux 209 files / 2.8 MB and macOS 208 / 3.3 MB against the 1226-file 90 MB bundle a stale 1.0.0 baseline used to produce; Windows is 6408 files / 451 MB and that is CORRECT because MPI-387 fix D moved every Windows path to resources/app. Not done, recorded only: renaming the update ASSET to say 'update-only' still needs a dual-upload transition (same bytes under both names for two or three releases) so shipped updaters keep matching."
+    },
     {
       "at": "2026-07-30T11:10:00Z",
       "type": "task.moved",

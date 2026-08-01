@@ -371,6 +371,110 @@ devDependencies and the archived docs tree are going out inside the binary. Bloa
 
 **Still not reachable at 1.3.0:** a SECOND update, applied from the new layout — the
 one that exercises `loadExtractZip`'s `resources/app` branch and `evictBusyFile`. That
-needs 1.3.1 or later. It is the last thing standing between this card and `done`.
+needs 1.3.1 or later. **Now owned by MPI-422** together with the new in-app path.
 
 The whole set is settled by one artifact plus one file: `<extract root>/user-data/logs/app.log`.
+
+## D in-app fetch+spawn — RAN 2026-08-01 against the published release, and FAILED
+
+The post-publish item. v1.3.0 went live 2026-08-01T04:56:50Z, which made a real
+1.2.0 → 1.3.0 in-app update testable for the first time since MPI-334 shipped in
+1.1.0. A fresh `CubricVision-windows-x64-v1.2.0.zip` was extracted to
+`D:\cubric-inapp-update-test\` (972 MB on disk, `app/package.json` = 1.2.0, old
+layout with `start.vbs` + `update.bat`), launched, and the button was pressed.
+
+**The fetch half PASSED — first live firing ever:**
+
+```
+[2026-08-01T05:33:26.804Z] [INFO] [update] portable check — current=1.2.0 latest=1.3.0
+[2026-08-01T05:33:27.278Z] [INFO] [update] update available: v1.2.0 -> v1.3.0, prompting
+```
+
+The dialog rendered correctly ("You have v1.2.0. Latest is v1.3.0"), and pressing
+**UPDATE NOW** did spawn the updater — a PowerShell console appeared and downloaded
+the asset to completion: **451,116,582 bytes, byte-exact against the release asset.**
+
+**The apply half FAILED, and the user saw the console close by itself:**
+
+| Expected | Actual |
+|---|---|
+| `update/downloads/latest-update-path.txt` holds the zip path | **0 bytes** |
+| `update-from-zip.bat "<zip>"` applies the bundle | called with an empty argument |
+| `resources/app/package.json` reads 1.3.0 | **absent** — `app/` still 1.2.0 |
+| `start.vbs` deleted, rollback dir written | both still/never there |
+| app reopens | never did |
+
+### Root cause — `stdio: 'ignore'` makes a shell-redirect capture impossible
+
+Not a fluke, not the file size, not the user closing the window (asked and
+confirmed: it closed by itself). Three runs settle it:
+
+| Run | Spawn context | Download | Path capture |
+|---|---|---|---|
+| The real one | `spawn('update.bat', {detached, stdio:'ignore', shell:true})` from `main.js` | 451,116,582 B ✅ | **0 B** ❌ |
+| Repro A | `cmd /c` from a normal console, same command, same asset | 451,116,582 B ✅ | 170 B, exit 0 ✅ |
+| Repro B | a 12-line Node script spawning the SAME way `main.js` does, 6 KB download | 5,959 B ✅ | **0 B**, `GOT=[]` ❌ |
+
+Repro B is the decisive one: shrinking the download 75,000× changes nothing, so
+size and the progress bar are both innocent. `stdio: 'ignore'` hands the child a
+NUL stdout; cmd creates the `>` redirect file (hence a 0-byte file with the right
+timestamp) but PowerShell's `Write-Output` still lands in NUL. `set /p` then reads
+nothing, `update-from-zip.bat` prints its usage and exits 2, and the console closes.
+
+No crash was logged — `Get-WinEvent` over the window is clean, which is consistent:
+nothing crashed, the batch simply ran to a no-op. *(Incidental: Windows raised four
+`VBScriptDeprecationAlert` events for `start.vbs` at launch — another nail in the
+launcher fix D already retired.)*
+
+### This is legacy code and cannot be fixed by shipping anything
+
+`update.bat` lives on the user's disk. Master already replaced the whole path in
+fix D — `run-update` now spawns `process.execPath` on `update/win-update.cjs` with
+`ELECTRON_RUN_AS_NODE=1`, no cmd, no PowerShell, no `.bat`. Audited today and it is
+**immune by construction**: `spawnSync(..., stdio: ['ignore','pipe','inherit'])`
+creates its own pipe and reads `result.stdout` in-process, and it hard-fails on
+`!bundle || !fs.existsSync(bundle)` rather than continuing with an empty path.
+
+Affected fleet: every pre-1.3.0 Windows install that CAN launch — Windows 10, or
+Windows 11 with SAC off. (SAC-blocked Win11 users never reach the button at all.)
+Their only route to 1.3.0 is a full download.
+
+### Mitigation shipped the same day (user decision)
+
+- **The Windows update bundle was deleted from the v1.3.0 release.** At 451 MB
+  against a 523 MB full build the layout move had made it a delta in name only,
+  and its only consumer could not apply it. Without the asset the old updater
+  throws `No matching update asset found` and exits immediately instead of
+  spending 451 MB to do nothing. macOS (3.3 MB) and Linux (2.8 MB) bundles are
+  real deltas on untouched layouts with `curl`-based updaters and were KEPT.
+- Release notes corrected on GitHub and in `docs/releases/2026-07-30-v1.3.0.md`;
+  the trap and the "never re-introduce a shell-redirect capture into an updater"
+  rule are recorded in `docs/releases/portable-distribution-contract.md`
+  § In-app update prompt.
+- **Windows deltas resume at 1.4.0.**
+
+### Two NEW gaps found while auditing the replacement — spun out as MPI-422
+
+1. **`win-update.cjs` is silent by construction.** Electron spawns it detached
+   with `stdio: 'ignore'`, so there is no console at all now, and it writes no log
+   file — its `console.error` diagnostics go to NUL. If it fails, the app quits and
+   never comes back: no window, no message, no evidence. That is exactly the
+   blindness MPI-369 was raised about, reintroduced on a different path.
+2. **The prompt's copy is wrong.** It promises "The app will close, update, and
+   reopen." `win-update.cjs` ends at `Update applied successfully.` with no
+   relaunch, and neither `update-from-zip.bat` has one either.
+
+## Close-out — what this card is NOT waiting for
+
+- **C (failure attribution) stays unproven and that is accepted.** It needs a real
+  fatal install failure to describe; three clean installs across two machines never
+  produced one. It is unit-tested (`tests/install-path-depth.test.cjs` pins that a
+  pip-only batch never claims "extraction failed"). Chasing it further means
+  manufacturing a broken environment for a message-only change — not worth a card.
+- **The two 1.4.0-gated items moved to MPI-422**: a SECOND update applied from the
+  new layout (`loadExtractZip`'s `resources/app` branch + `evictBusyFile`), and the
+  in-app fetch+spawn on the NEW `win-update.cjs` path.
+
+Everything this card was raised for — the silent SAC block, MAX_PATH, the missing
+`git`, the misattributed error, and F1/F2/F3 — is closed on the machine that
+reported it.

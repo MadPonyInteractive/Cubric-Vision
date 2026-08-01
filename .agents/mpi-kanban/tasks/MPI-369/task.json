@@ -3,10 +3,10 @@
  "id": "MPI-369",
  "title": "Boot-crash evidence + release packaging: a fatal boot writes no log, and the update bundle looks launchable",
  "description": "A Discord user reported 1.2.0 flashing and closing on Windows 10 with no log anywhere. Diagnosis was blind because a fatal main-process boot error in this app is structurally unloggable, and the update-only bundle unzips into a folder that looks exactly like the app. Fix both, plus restamp the delta baselines. Targets 1.3.0.",
- "column": "doing",
- "maturity": "validating",
+ "column": "done",
+ "maturity": "complete",
  "created_at": "2026-07-28T03:20:47Z",
- "updated_at": "2026-07-29T07:10:00Z",
+ "updated_at": "2026-08-01T06:30:00Z",
  "labels": [
   "packaging",
   "diagnostics",
@@ -27,8 +27,8 @@
   "validation": "validation.md"
  },
  "attention": {
-  "state": "required",
-  "reason": "Boot-crash smoke DONE and user-witnessed 2026-07-30 - dialog and FATAL line both fired, throw reverted, node --check clean. Remaining items are all release-time checks against the real 1.3.0 artifacts: update-only root name, archive name has not drifted, delta reads from 1.2.0. Nothing actionable until that build exists. Build-time artifact checks are coordinated by the MPI-391 umbrella (1.3.0 cross-platform sweep) - section A.",
-  "updated_at": "2026-07-30T01:10:00Z"
+  "state": "cleared",
+  "reason": "All three fixes settled against the real published 1.3.0 artifacts (MPI-391 section A). Boot-crash handler user-witnessed live 2026-07-30; update-only root name and the frozen asset name verified at the cut on all three platforms; baselines confirmed on disk 2026-08-01 at toVersion 1.3.0 / 6418 / 6563 / 6383 after the restamp order was corrected. Only follow-up is deliberately NOT done: renaming the update ASSET to say update-only needs a dual-upload transition first.",
+  "updated_at": "2026-08-01T06:30:00Z"
  }
 }

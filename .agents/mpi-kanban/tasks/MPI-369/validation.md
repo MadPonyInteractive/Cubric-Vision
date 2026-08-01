@@ -51,9 +51,16 @@ five zips, `tar -tzf` on the tarball - no errors in any).
    null`: win32 6418 (+56 vs 6362), darwin 6563 (+58 vs 6505), linux 6383 (+58
    vs 6325). A small swing, not an order-of-magnitude one.
 
-5. **Baselines restamped - DONE** (`36f972cf`). All three byte-copied from the
-   shipped 1.3.0 full manifests; `release-baselines/README.md` § Current
-   baselines updated.
+5. **Baselines restamped - DONE**, but it took three commits and the ORDER is
+   the lesson. `36f972cf` restamped to 1.3.0 **too early** - while 1.3.0 was
+   still being rebuilt, which would have made every later 1.3.0 rebuild emit a
+   1.3.0-vs-1.3.0 delta instead of a real 1.2.0 -> 1.3.0 one. `addc03a2`
+   restored the 1.2.0 baselines for exactly that reason, and the final restamp
+   is `eaa6de3c`, run **after** the GitHub release was published. Verified on
+   disk 2026-08-01: all three read `fromVersion: null`, `kind:
+   portable-stage`, `toVersion: 1.3.0`, at 6418 / 6563 / 6383 files.
+   **Restamp AFTER publish, never at the cut** - a rebuild between the two is
+   the failure mode.
 
 ### The Windows update bundle is 6408 files / 451 MB, and that is CORRECT
 
