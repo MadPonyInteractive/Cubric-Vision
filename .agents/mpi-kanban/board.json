@@ -11,7 +11,6 @@
       "MPI-410",
       "MPI-404",
       "MPI-397",
-      "MPI-382",
       "MPI-368",
       "MPI-373",
       "MPI-374",
@@ -36,12 +35,13 @@
     ],
     "doing": [
       "MPI-424",
-      "MPI-379",
+      "MPI-382",
       "MPI-367",
       "MPI-259",
       "MPI-4"
     ],
     "done": [
+      "MPI-379",
       "MPI-400",
       "MPI-401",
       "MPI-402",
@@ -116,8 +116,24 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-01T21:55:00Z",
+  "updated_at": "2026-08-01T22:35:00Z",
   "events": [
+    {
+      "at": "2026-08-01T22:35:00Z",
+      "type": "task.moved",
+      "task": "MPI-379",
+      "from": "doing",
+      "to": "done",
+      "note": "REJECTED by the user in the MPI-424 brainstorm this card was moved to doing for. The WHOLE card is dropped, not trimmed - including Part 1, the hover-to-select half that needed no download. User's words: what we have right now is fine as it is, and moving the selection onto the canvas is another layer of complexity that does not necessarily need to exist; he had been leaning this way before the session. The thumb strip STAYS, the Detect button STAYS, and Part 2 (COCO YOLO, its R2 upload, the bbox-vs-segm folder trap, its own coarse-mask quality problem) dies with it. Kept as the record rather than deleted: the live measurements on this card and in MPI-380's brief are still true and should be read before anyone re-proposes canvas-side selection - yolov8n-seg enumerates from the segm folder in 0.5s flat regardless of object count, hover CAN name a region via ImpactDecomposeSEGS, class filtering is the labels string only because preset does nothing server-side, and native segm masks are blobby enough that the hover preview would have read as poor output quality. Umbrella consequence: MPI-421 is no longer downstream of this card and gets SIMPLER - with the chip strip and Detect button staying, it is exactly what it says."
+    },
+    {
+      "at": "2026-08-01T22:35:00Z",
+      "type": "task.moved",
+      "task": "MPI-382",
+      "from": "todo",
+      "to": "doing",
+      "note": "Picked up by the user as step 1 of the MPI-424 umbrella, replacing the rejected MPI-379. Asked what to start with, he named both halves of this card unprompted: the slider that expands and shrinks the current mask, and turning a mask into just its edges with TWO sliders, one expanding outward and one inward - which is the MPI-400 half absorbed into this card earlier the same day. They are one primitive, not two: an edge band is dilate(outward) minus erode(inward), so the blur-plus-alpha-threshold mechanism gets written once and read three ways. Moved to doing for the DESIGN session; no implementation before the design is agreed. Open questions the card already carries: which layer grows (maskCanvas is derived by _recomposite so writing to it is pointless), whether the drag holds live at the 1536 working size, and the compounding trap - every frame must derive from the pristine drag-start snapshot, which UndoStack.pendingLayer already provides."
+    },
     {
       "at": "2026-08-01T21:55:00Z",
       "type": "task.created",
