@@ -10,12 +10,7 @@
   "updated_at": "2026-08-02T16:12:00Z",
   "links": {
     "brief": "brief.md",
-    "plan": null,
-    "checklist": null,
-    "validation": null,
-    "files": null,
     "events": "events.jsonl",
-    "handoffs": "handoffs/",
-    "research": null
+    "handoffs": "handoffs/"
   }
 }
