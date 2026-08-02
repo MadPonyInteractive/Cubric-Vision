@@ -14,6 +14,9 @@ are fixed here rather than carded, unless noted as deferred.
   (`routes/comfy.js` → `comfy:step-progress`), and the app had no child process at the
   time. Correct once the app owned its engine.
 
+- **Krea2 masked ("localised") edit — VERIFIED** (user, 2026-08-02), after the mask
+  resolution fix. Node 589's crop path takes the app mask cleanly.
+
 ## Trap hit: the bench owns port 8188
 
 `G:\ComfyUi` was running and holding 8188, so the app's engine start failed
@@ -49,10 +52,14 @@ Close the bench BEFORE any verification round.
 
 ## Open / deferred
 
-- **Krea2 has an extra depth control in the graph** (`Input_depth_strength`) that the
-  app never injects — deliberate as of the migration (the graph's authored value is
-  the intended one), but the user wants it surfaced as a real control later. Not
-  carded yet.
+- ~~**Krea2 has an extra depth control in the graph** (`Input_depth_strength`) that the
+  app never injects.~~ BUILT 2026-08-02 on the user's request, awaiting live test: a
+  **Depth Strength** slider (`depthStrength`, `scope: 'perOp'`, 0–1.00 step 0.05,
+  default 1.00) on the `depth` op, gated on the new `capabilities.depthStrength` so
+  only the two Krea2 cards render it. The value IS `Krea2ControlLoRALoader.strength`,
+  passed straight through; 0 unpatches the model and the op stops being a depth op.
+  Ceiling was 1.5 for one round — user tested it, the subject's clothing dissolved into
+  ribbons, so overdrive was capped back to 1.00.
 - **A detected-but-not-applied mask is still injected.** SAM3 detect auto-selects its
   picks (`MpiCanvasViewer.js` `exec.onMasks` → `setSelectedAutoPicks(runPicks)` +
   `evaluateMask()`), and `maskCanvas` = manual ∪ selected picks, so `hasMask()` is true
