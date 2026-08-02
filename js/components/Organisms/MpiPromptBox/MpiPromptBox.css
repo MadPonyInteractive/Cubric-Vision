@@ -256,13 +256,13 @@
     max-width: 90vw;
 }
 
-/* "?" row — sits between the parameters and the op strip, hard right so it
-   never sits on the path to a chip. Zero column height of its own: the button
-   is the row. */
+/* "?" — LAST item of the control row, not a row of its own. `margin-left: auto`
+   eats the free space on the final wrapped flex line, parking it hard right
+   beside the small action buttons; it only takes a line of its own when that
+   line is already full. Costs zero extra popup height. */
 .mpi-prompt-box__settings-help {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: -0.5rem;
+    margin-left: auto;
 }
 
 /* Op strip inside the popup — LAST row (the popup is bottom-anchored to the

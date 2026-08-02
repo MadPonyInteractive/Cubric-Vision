@@ -57,7 +57,11 @@ source. It returns **canonical `OP_ORDER`**, not registry or `supportedOps` orde
 ## The "?" prompting guide (MPI-360)
 
 Every op prompts differently and the strip alone cannot say so, so the parameters popup
-carries a `?` directly **above** the strip, hard right. It opens `MpiOpHelpDialog` — a
+carries a `?` as the **last item of the control row** (`#settings-op-slot`), pushed hard
+right by `margin-left: auto` so it rides the final wrapped flex line instead of claiming a
+row of its own. `_refreshOpSlot` wipes that row on every op change, so it re-appends
+`#op-help-slot` after each rebuild — the mount survives detaching. It opens
+`MpiOpHelpDialog` — a
 read-only MpiModal with the op's purpose, one good example and the common mistake.
 
 **One source per op.** The long form lives in the op's own `help` block in

@@ -1028,12 +1028,17 @@ export const MpiPromptBox = ComponentFactory.create({
         popupEl.innerHTML = MpiPopup.template({ active: false, position: 'top' }, `
             <div class="mpi-prompt-box__settings">
                 <div class="mpi-prompt-box__settings-grid">
-                    <div class="mpi-prompt-box__settings-row" id="settings-op-slot"></div>
+                    <!-- "?" for the ACTIVE op (MPI-360). LAST item of the control
+                         row, not a row of its own: margin-left:auto pins it to the
+                         right end of the final wrapped flex line (next to the small
+                         action buttons), so it costs zero extra popup height and
+                         still never sits on the path to a control. _refreshOpSlot
+                         wipes this row, so it re-appends the slot after every
+                         rebuild. Content is resolved per op AND per model. -->
+                    <div class="mpi-prompt-box__settings-row" id="settings-op-slot">
+                        <div class="mpi-prompt-box__settings-help" id="op-help-slot"></div>
+                    </div>
                 </div>
-                <!-- "?" for the ACTIVE op (MPI-360). Sits directly above the strip
-                     that selects it, hard right so it never competes with a chip
-                     for the click. Content is resolved per op AND per model. -->
-                <div class="mpi-prompt-box__settings-help" id="op-help-slot"></div>
                 <!-- The op strip replaced the SETTINGS badge: the popup covers the
                      floating bar strip while open, so without a mount in here the op
                      can't be changed without closing the popup. Same choices, same
@@ -1057,7 +1062,8 @@ export const MpiPromptBox = ComponentFactory.create({
         // time, not mount time: both `activeOperation` and `model` are reassigned
         // closure vars, and the popup outlives every op change.
         let _opHelpDialog = null;
-        const _helpBtn = MpiButton.mount(qs('#op-help-slot', popupNode), {
+        const _helpSlot = qs('#op-help-slot', popupNode);
+        const _helpBtn = MpiButton.mount(_helpSlot, {
             icon: 'help', variant: 'ghost', size: 'sm',
             info: 'How to prompt this operation',
             extraClasses: 'mpi-prompt-box__help-trigger',
@@ -1415,6 +1421,11 @@ export const MpiPromptBox = ComponentFactory.create({
                     clientLogger.error('PromptBox', `Control "${componentId}" mount failed`, err);
                 }
             }
+
+            // The wipe above detached the "?" — re-append it LAST so it lands on
+            // the final wrapped line of the control row (margin-left:auto pins it
+            // right). Detaching does not drop its listeners, so the mount survives.
+            if (_helpSlot) opSlot.appendChild(_helpSlot);
 
             // Seed audioMode + useAudio enablement from current media (audio may
             // already be present when the op/controls (re)mount).
