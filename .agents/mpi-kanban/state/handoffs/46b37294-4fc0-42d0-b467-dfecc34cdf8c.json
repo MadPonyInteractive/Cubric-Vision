@@ -54,12 +54,14 @@
     "completed": [
       "MPI-427 checklist.md carries a 'Round 2' section: the root cause, the fix at each of the three sites, the boot-gate trap, and the live-repro evidence table (pre-fix vs post-fix)",
       "checklist.md records that the LOCAL dev engine's custom_nodes/ComfyUI-MpiNodes is a SYMLINK to C:/AI/Mpi/ComfyUi-MpiNodes — deleting it to force a repair would destroy the node source repo",
-      "docs/releases/2026-08-02-v1.3.1.md and js/data/releaseNotes.js both describe the new fixes; notes re-approved (.approved-1.3.1.json hash changed twice)"
+      "docs/releases/2026-08-02-v1.3.1.md and js/data/releaseNotes.js both describe the new fixes; notes re-approved (.approved-1.3.1.json hash changed twice)",
+      "DONE in bb13cedb — docs/download-manager.md gained a section on the TWO-HOST split of the universal dep set (custom_nodes = github.com via lockUrl/node_lock, engineAsset = models.cubric.studio via assetDeps), plus the resulting install contract. That routing gap is what let the round-2 bug hide.",
+      "DONE in bb13cedb — the .download() marker guard is documented as PATH-equal (_isSameObjectUrl) instead of string-equal. NOTE the previously-proposed 'lines 188 and 202' was half wrong: 188's 'mismatch' is the SHA256 append-corruption note and was correct as written; only 202 was stale.",
+      "DONE in bb13cedb — package.json gained a `test` script (node --test 'tests/**/*.test.cjs'). There was none, so every session rediscovered it. Deliberately NOT cherry-picked to the 1.3.1 branch: a dev-convenience script is not a patch fix.",
+      "Memory added: tool_isolated_engine_root_harness — CUBRIC_ENGINE_ROOT + a require.cache DEPS swap runs the real install code with no app/port/admin, and the local custom_nodes/ComfyUI-MpiNodes is a SYMLINK that must never be deleted to force a repair."
     ],
     "pending": [
-      "docs/download-manager.md lines ~188 and ~202 still say a marker url MISMATCH discards the partial. It is PATH-equal now, so a mirror-origin swap resumes. Proposed by the previous session, still not applied.",
-      "CLAUDE.md and .claude/rules/kanban.md point at <mpi-lib>/task-board-ops/_schema.md and mutate.md as if they were filesystem paths. They are not findable on disk; mpi-lib is a SKILL. Still not applied.",
-      "docs/download-manager.md has no section on the two-host split of the universal dep set, which is the fact that made this bug possible. Worth adding.",
+      "CLAUDE.md and .claude/rules/kanban.md point at <mpi-lib>/task-board-ops/_schema.md and mutate.md as if they were filesystem paths. Previous session called them unfindable; measured this session, they DO resolve at ~/.claude/skills/mpi-lib (a symlink). So the fix is to make the paths explicit rather than to relocate anything. Still not applied.",
       "PRE-EXISTING, not caused by this session: .agents/mpi-kanban/events.jsonl line 1959 is blank and fails JSON.parse. Present in HEAD. Left alone deliberately."
     ]
   },
