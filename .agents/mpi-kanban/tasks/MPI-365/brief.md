@@ -172,6 +172,60 @@ foot-gun. Rename `poseReference → depth` in the same pass, then add `pose` cle
 - Delete `krea2_detailer_template.json` + `krea2_upscaler_template.json` and their
   6 runtime `_sfw`/`_nsfw` outputs; collapse `progressStages` to one key per model.
 
+## CHROMA — MIGRATED 2026-08-02 (commits 2325ae42 / 9385120f / d33e762e)
+
+Six runtime files → two. The user authored the master graph; the repo side is wired,
+tested (310/310) and committed. Chroma was NOT in this card's original scope — it was
+added because the same one-template shape applies.
+
+    1 = t2i   2 = i2i   3 = depth   4 = ---   5 = ---   6 = detail   7 = upscale
+
+**Tier is a FILE axis here, not a runtime one.** Flash and Hyper are two SEPARATE
+checkpoints (17GB bf16 / 9.2GB int8), not weight + accelerator LoRA like Krea2. So
+`generate_chroma.py` bakes `ClownModelLoader.model_name` + `Input_Tier` per output —
+tier 2 → `chroma_t2i.json`, tier 3 → `chroma_hyper_t2i.json` — the Boogu pattern. Two
+loaders in ONE graph would force BOTH downloads: ComfyUI validates every combo widget at
+submit time even on a lazily-skipped branch. Tier 1 (High) is a reserved slot, never
+shipped — MPI-217 tested the full weight and rejected it.
+
+The loader is RES4LYF's **`ClownModelLoader`** (model + CLIP in one node), NOT a
+`UNETLoader`, and it is UNTITLED — the generator looks it up by `class_type` and asserts
+exactly one.
+
+**Depth ships via a FLUX ControlNet.** Chroma is pruned FLUX.1-schnell: its forward pass
+applies control residuals exactly as FLUX does (`comfy/ldm/chroma/model.py:221-226`,
+`:257-262`), `latent_format` is Flux, and Union Pro 2.0's `x_embedder` is `[3072, 64]` —
+Chroma's hardcoded `in_channels` (`model_detection.py:294`). There is **no Chroma-native
+ControlNet or depth LoRA**; Klein's refcontrol LoRA and Krea2's control-LoRA are both
+model-specific and neither ports (Krea2's expands `img_in`, so it is dimension-locked).
+Union Pro 2.0 **dropped the mode embedding**, so `SetUnionControlNetType` is a silent
+no-op — do not add it. Measured ceiling: strength past ~0.5 artefacts; the graph
+normalises the 0–1 slider to 0–0.5 and runs `end_percent` 0.570.
+
+**LICENCE — the ControlNet is the app's first non-permissive weight** (flux-1-dev
+non-commercial). It is linked from **HuggingFace and must NEVER be mirrored to R2**: BFL's
+*paid* commercial terms still forbid "distributing … to third parties via any means", so
+no price unblocks rehosting. Linking the origin is the ComfyUI/Invoke/Fooocus position.
+Consequences: no mirror fallback (`_mirrorUrlsFor` preserves pathname; HF has no R2 twin)
+and the sha256 is the only guard against an upstream re-upload. No ControlNet exists for
+the Apache-2.0 FLUX.1-schnell, so there is no permissive alternative.
+
+`imageSizedOps` is **detail + upscale only** — Chroma's depth still reads
+`Input_Width`/`Input_Height` through `MpiCrop` and generates at our dimensions, unlike
+Klein's image-derived depth.
+
+### Two gates before Chroma can ship
+
+1. **R2 upload of the 5 style LoRAs** (1.02GB). Hashes + sizes are recorded in
+   `loraDeps.js`; the URLs 404 until upload, so Chroma is un-installable today.
+2. **CivitAI SHA256 licence check** on all 5 — unverified community weights. Method +
+   traps: `docs/models/klein/licences.md`. Needs the VPN (CivitAI region-blocks us);
+   any `allowNoCredit: false` creator needs a `credit` block like `klein-style-anime`.
+
+Also missing (pre-existing, not regressions): Chroma has no `progressStages` entries
+(bar counts never measured) and no `docs/models/chroma/` doc — the only image family
+without one.
+
 ## Traps (carried from MPI-354 — still bite)
 
 - An op that forgets its `wf_type` fails SILENTLY. The `generate_*.py` assert and the

@@ -1,0 +1,124 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f508a722-2d4b-406a-b4cc-e341d56fc988",
+  "generated_at": "2026-08-02T19:50:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-365 Chroma migration to the one-master-template shape",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-365: convert all Chroma workflows into one master template driven by a tier input (Chroma Flash + Chroma Hyper), and investigate whether Chroma has ControlNet / a depth LoRA / any editing route.",
+    "status": "in_progress",
+    "summary": "Chroma is fully migrated, wired, tested and committed (six runtime files became two). Two release gates remain, both on the five Chroma style LoRAs: the R2 upload and a CivitAI SHA256 licence check. The wider card (krea2/qwen dangling Set/Get, poseReference rename, pose op) is untouched."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Investigated Chroma ControlNet/LoRA/edit support: FLUX ControlNets work on Chroma, there is NO Chroma-native depth LoRA, and NO editing route exists for any Chroma variant",
+      "Downloaded + verified Shakker-Labs FLUX.1-dev-ControlNet-Union-Pro-2.0 into G:/CubricModels/controlnet/",
+      "Rewrote generate_chroma.py: ONE template to one runtime file PER TIER (the Boogu pattern)",
+      "Deleted the 10 stale chroma raw/scripts/runtime files",
+      "Ran sync-raw-workflows.mjs: converted, validated clean, orchestrated",
+      "Wired both Chroma ModelDefs: opInject, depth op, style rack, styleOps, imageSizedOps, 15 deps each",
+      "Added controlnet-union-flux (HuggingFace-sourced) to assetDeps.js",
+      "Added the 5 chroma style LoRAs to loraDeps.js with real sha256 and sizes",
+      "Converted 6 style card PNGs to 512x640 webp in comfy_workflows/display/",
+      "Verified: 310/310 tests, injection validator clean, eslint clean, every dep id resolves"
+    ],
+    "pending": [
+      "CivitAI SHA256 licence check on the 5 Chroma style LoRAs (NEEDS VPN)",
+      "R2 upload of the 5 Chroma style LoRAs (1.02GB): the URLs 404 until then",
+      "Add a credit block for any LoRA whose creator sets allowNoCredit false",
+      "krea2 + qwen: fix the 4 dangling Set_* nodes that have no matching Get_*",
+      "Rename poseReference to depth across all consumers, then add the new pose op",
+      "Chroma progressStages entries (never measured) and a docs/models/chroma/ doc"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-365",
+    "title": "Migrate all models to the one-master-template shape, then GC the dead scaffolding",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-365/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-365/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-365/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "implement", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "brief.md gained a CHROMA MIGRATED section covering the tier-is-a-file-axis reasoning, the ClownModelLoader lookup, the FLUX ControlNet depth route, the licence constraint and the two gates",
+      "events.jsonl carries a full task.updated event with the same detail",
+      "task.json updated_at bumped to 2026-08-02T19:45:00Z (clock verified against gh api rate_limit, no VPN skew present)"
+    ],
+    "pending": [
+      "docs/models/chroma/ does not exist. Chroma is the only image family without a subsystem doc. Create it when the licence table lands, mirroring docs/models/klein/licences.md.",
+      "CLAUDE.md and .claude/rules/ were NOT updated: no workspace or component wiring changed, so no permission was sought."
+    ]
+  },
+  "next_action": {
+    "description": "Run the CivitAI SHA256 licence check on the five Chroma style LoRAs. Ask Fabio to turn the VPN ON first (CivitAI region-blocks the UK), and tell him when the CivitAI work is finished so he can turn it off. Do NOT trust the system clock while the VPN is on: derive the offset once from `gh api rate_limit -i`. For each hash: GET https://civitai.com/api/v1/model-versions/by-hash/<sha256> to get modelId, then GET https://civitai.com/api/v1/models/<modelId> for the permission flags. The by-hash endpoint returns a STUB whose flags are all null, so you MUST follow modelId. The decisive flag is Image (may the user sell what they generate). Record the table in a new docs/models/chroma/licences.md mirroring docs/models/klein/licences.md, add a credit block in loraDeps.js for any allowNoCredit false creator, and only then do the R2 upload.",
+    "command": "mpi-continue MPI-365"
+  },
+  "context": {
+    "key_decisions": [
+      "Tier is a FILE axis, not a runtime one. Flash and Hyper are two separate checkpoints, so generate_chroma.py bakes ClownModelLoader.model_name plus Input_Tier per output file. Two loaders in one graph would force BOTH downloads, because ComfyUI validates every combo widget at submit time even on a lazily-skipped branch (execution.py value_not_in_list).",
+      "Depth uses a FLUX ControlNet checkpoint, not a LoRA. Proven from the weights: Chroma applies control residuals like FLUX (comfy/ldm/chroma/model.py:221-226 and :257-262), latent_format is Flux, and Union Pro 2.0 x_embedder is [3072,64] which equals Chroma hardcoded in_channels (model_detection.py:294). Klein refcontrol LoRA and Krea2 control-LoRA are model-specific and do NOT port; Krea2 expands img_in so it is dimension-locked.",
+      "The ControlNet is sourced from HUGGINGFACE, never R2. FLUX.1-dev is non-commercial AND the BFL paid commercial terms still forbid distributing to third parties by any means, so no licence purchase unblocks rehosting. Linking the origin repo is what ComfyUI, Invoke and Fooocus do.",
+      "wf_type numbering mirrors Klein and Krea2 with slots 4 and 5 left dead, so a shared op never means a different branch depending on which model is selected.",
+      "SetUnionControlNetType is a silent no-op on Union Pro 2.0 because the mode embedding was removed. Verified from the safetensors header, not from the model card."
+    ],
+    "constraints": [
+      "THE 5 STYLE LoRA HASHES, already computed, do NOT re-hash 1GB. chroma-style-bwsketch = Complex_Chaotic_BW_Stuff.safetensors = 69b5226e7ce7f31b11db8a2279edbd26f6623fe7ce7b49050f5a2159f037cb91. chroma-style-lenovo = lenovo_chroma.safetensors = df934b1a366206daa3b5dcfef7c84efd9e75ca19d00867d7fe24fa2bb233fdc9. chroma-style-cinema = CHROMA_Absolute_Cinema.safetensors = d725af79c044e881a0d810b561248f07475e52a529b30d5763849f5191ab6ffa. chroma-style-brushwork = Fine_Tactile_Brushwork.safetensors = 7b594e78fb929a6dc6cc6a3dd94f87ba1489ae2774afd38d6514bf3476be307e. chroma-style-anime = Chroma-Anime-v3.safetensors = d1c5756064bdbc6738bf24e6152c011b8ddaf0b93585963c381c3216318900fb.",
+      "Weights live at G:/CubricModels/loras/chroma/styles/. Six MORE LoRAs sit in that folder unused (Chroma_Voyager_86_retro_anime, Mixed_Illustrations, PSYCHEDELIC, Sketch_chroma, crhoma_wai_style). They were tested and rejected. Do NOT wire them.",
+      "CivitAI region-blocks this machine. Agent WebFetch and WebSearch can NEVER reach it; only shell tools go through the VPN. The VPN also skews the system clock (14h measured once) and throttles R2 uploads about 15x, so do the CivitAI half first and have the VPN turned OFF before the upload.",
+      "Chroma is UN-INSTALLABLE until the R2 upload lands, because the loraDeps URLs 404. This is committed state, not a bug to re-diagnose.",
+      "The FLUX ControlNet dep must NEVER be mirrored to R2. It is the only non-permissive weight in the app, and it has no mirror fallback, so its sha256 is the only guard against an upstream re-upload.",
+      "Never hand-edit workflow JSON. Graph changes go through the user in the ComfyUI editor, then re-export and sync."
+    ],
+    "files_modified": [
+      "comfy_workflows/scripts/workflow_generation/generate_chroma.py",
+      "comfy_workflows/raw/chroma_t2i_template.json",
+      "comfy_workflows/scripts/workflow_generation/chroma_t2i_template.json",
+      "comfy_workflows/chroma_t2i.json",
+      "comfy_workflows/chroma_hyper_t2i.json",
+      "js/data/modelConstants/models.js",
+      "js/data/modelConstants/assetDeps.js",
+      "js/data/modelConstants/loraDeps.js",
+      "comfy_workflows/display/chroma-style-none.webp and the 5 sibling style cards",
+      ".agents/mpi-kanban/tasks/MPI-365/brief.md, events.jsonl, task.json",
+      "DELETED: 10 stale chroma raw/scripts/runtime files, recoverable from the parent commit of 2325ae42"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-365/brief.md",
+      "docs/models/klein/licences.md",
+      "js/data/modelConstants/loraDeps.js",
+      "c:/AI/Mpi/MadPony-Identity/capabilities/cloudflare-r2/README.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": null,
+    "knowledge_index": null,
+    "mode": null,
+    "relevant_topics": ["model dependencies", "R2 upload", "licence verification"]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/kanban.md",
+    "docs/playbooks/add-model/02-dependencies-r2.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-02T19:50:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up MPI-365 in the Cubric-Vision repo (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/f508a722-2d4b-406a-b4cc-e341d56fc988.json and .agents/mpi-kanban/tasks/MPI-365/brief.md first. Chroma has just been migrated to the one-master-template shape and committed (2325ae42, 9385120f, d33e762e): six runtime files became two, tier 2 is Flash and tier 3 is Hyper baked per file, a depth op now runs through a HuggingFace-linked FLUX ControlNet, and a five-LoRA style rack is wired. Two gates block release, both on the five Chroma style LoRAs. Start with the licence check: ask Fabio to turn his VPN on because CivitAI region-blocks the UK, resolve each of the five sha256 hashes recorded in the handoff against the CivitAI API following docs/models/klein/licences.md, remembering that the by-hash endpoint returns a stub whose permission flags are all null so you must follow modelId to /models/<id>, and confirm allowCommercialUse includes Image. Write the results into a new docs/models/chroma/licences.md, add a credit block in loraDeps.js for any creator with allowNoCredit false, tell Fabio when the CivitAI work is done so he can turn the VPN off because it throttles uploads about 15x and skews the clock, and only then upload the five weights to R2. Chroma is un-installable until that upload lands."
+}
