@@ -120,7 +120,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-02T15:26:00Z",
+  "updated_at": "2026-08-02T15:40:00Z",
   "events": [
     {
       "at": "2026-08-01T23:30:00Z",
@@ -1574,6 +1574,25 @@
       "to": "done",
       "column": "done",
       "summary": "Doing -> Done. Localised (masked) edit LIVE-VERIFIED by the user on Boogu Image Edit B: a mask painted over edit_014 (832x1248) regenerated only the masked area (a chihuahua) and returned the rest of the frame untouched at the same dimensions - the full new branch, Input_Mask -> MpiAnyChecker -> mask loader -> MpiMaskSquareBbox -> InpaintCropImproved -> sampler -> InpaintStitchImproved. Shipped: the re-authored raw template synced through to both tier files (43 nodes each, injection gate green), comfyui-inpaint-cropandstitch on both Boogu ModelDefs, and the UNRELEASED localised-edit bullet EXTENDED rather than duplicated. 305/305 node tests, lint 0 errors. Two legs recorded as unproven in validation.md and NOT hidden: no source over 1536px was tested (so the InpaintCropImproved dims assert that broke Klein in 1.3.0 is inherited by construction, not measured), and the unmasked whole-image path was not re-dispatched after the rewiring. User approved final completion."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.updated",
+      "id": "MPI-382",
+      "at": "2026-08-02T15:40:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "Planned. plan.md written. Grew a STEP 1 the card did not have: the PREVIEW CONTRACT. Verified in code that an unapplied Detect preview never dies - _exitAutoMaskMode(false) in MpiCanvasViewer.js:713 drops the picks, preserves manual+subtract and re-emits mask-ready/mask-clear, and it has NO CALLER; commitAutoMask (line 1352) has none either; mountOptions() destroys the outgoing options compound on every rail switch and never touches the picks. So a detection survives a tool switch and reaches the graph without Add - which is exactly MPI-365 open item. User settled it 2026-08-02 and generalised it to the whole family: every tool is visited, previewed, then applied, or the preview goes away, because surviving previews stack and the user ends up judging a composite he never committed to. Doing it first also dissolves the layer-order problem - with picks gone, Adjust only ever sees manual minus subtract, so the MPI-371 union-last rule cannot interact with a shrink. Accepted cost: Add becomes mandatory. Also healed acceptance 1 and 5, which still said in MpiMaskStrip and baked once on release - both overridden by the 2026-08-01 re-scope on the same card. Mechanism stays blur-plus-alpha-threshold first (needs calibrating against a known circle), with circular-offset stamping as the exact fallback; sharp server-side is ruled out, a round trip per drag frame is not live. Verify mode user-ux. Card stays todo/planned - implementation runs through mpi-continue.",
+      "maturity": "planned"
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.updated",
+      "id": "MPI-424",
+      "at": "2026-08-02T15:40:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "Umbrella progress. MPI-425 shipped 2026-08-02 and is ticked; MPI-382 is planned and is next. brief.md gains a new FIRST standing constraint - THE PREVIEW CONTRACT, stated by the user 2026-08-02: every tool is visited, previewed, then applied, or the preview goes away, and an unapplied preview must never outlive its tool. Rationale is not tidiness - surviving previews stack on each other, so the user judges a composite he never committed to while the graph receives something else again. Detect is the only producer today and it VIOLATES the rule. MPI-382 fixes it and builds ONE discard seam in mountOptions(); MPI-368 and MPI-373 hang their own previews on that seam rather than re-deciding it."
     }
   ]
 }

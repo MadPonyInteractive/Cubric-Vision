@@ -80,6 +80,15 @@ record of what was ruled out and why.
 
 ## Standing constraints for every card in this set
 
+- **THE PREVIEW CONTRACT (user, 2026-08-02).** Every tool is *visited, previewed, then
+  applied - or the preview goes away.* An unapplied preview must NEVER outlive its tool.
+  Not tidiness: previews that survive stack on top of each other, so the user judges a
+  composite of things he never committed to while the graph receives something else
+  again. Detect is the only producer today and it VIOLATES this - `_exitAutoMaskMode(false)`
+  exists and has no caller, which is also MPI-365's open "detected-but-not-applied mask is
+  still injected" item. MPI-382 fixes it and builds the shared discard seam in
+  `mountOptions()`; **368 and 373 hang their own previews on that seam, they do not
+  re-decide this.** Cost, accepted: Add becomes mandatory.
 - Mask and paint layer mutations are UNDOABLE - record an `UndoStack` entry before
   mutating (`docs/masking-undo.md`). An unwired mutation is a silent hole in Ctrl+Z.
 - Layer ORDER rule from MPI-371 holds: auto picks union last, so nothing baked into

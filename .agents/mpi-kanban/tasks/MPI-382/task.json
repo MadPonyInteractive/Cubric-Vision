@@ -7,7 +7,7 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-07-29T15:00:00Z",
-  "updated_at": "2026-08-01T23:30:00Z",
+  "updated_at": "2026-08-02T15:40:00Z",
   "labels": [
     "ui",
     "ux",
@@ -15,18 +15,20 @@
     "canvas"
   ],
   "acceptance": [
-    "One Grow / Shrink control in MpiMaskStrip, so every mask tool gets it in one place - centre is no change, right grows, left shrinks",
+    "One bidirectional Grow / Shrink slider in the Adjust panel - centre is no change, right grows, left shrinks - with an Edge button that swaps that ONE row for Outward + Inward. HEALED 2026-08-02: the original text said 'in MpiMaskStrip', which the 2026-08-01 MPI-424 re-scope on this same card overrode (Adjust is its own button because the strip has no commit control on the Brush tool, and Add/Subtract cannot express a ring anyway)",
     "The drag is live at the 1536 working size. If it is not, say so with a measurement and fall back to apply-on-release rather than shipping a laggy drag",
     "Every frame is computed from a snapshot taken at drag start - dragging to 3, back to 0 and out to 3 again must produce exactly the same mask as going straight to 3",
     "Returning the slider to centre restores the original mask bit-for-bit",
-    "The result is baked ONCE, on release, and the MPI-371 layer-order rule still holds afterwards (auto picks union last; a grow must not resurrect an erased region)",
+    "Apply bakes ONCE as a layer-wide _recordUndo() entry, and the MPI-371 layer-order rule still holds afterwards. HEALED 2026-08-02: the original text said 'baked ONCE, on release', which the same re-scope overrode - bake-on-release was rejected by name because dilate-then-erode is a morphological CLOSE, so dragging back is not a restore. Live preview, explicit Apply + Reset, and leaving the tool discards",
     "Shrink can empty the mask - the op strip must relock via evaluateMask() when it does, and the tool must not throw on an empty layer",
     "Works on a mask built by any method (brush, points, detect) - it operates on layers, not on a source",
     "New icon in js/utils/icons.js if one is needed; never paste raw SVG at the call site",
     "docs/masking.md records the chosen mechanism and the compounding rule (200-line cap - trim first)",
-    "Every new mask/paint layer mutation records an UndoStack entry (docs/masking-undo.md) - an unwired mutation is a silent hole in Ctrl+Z"
+    "Every new mask/paint layer mutation records an UndoStack entry (docs/masking-undo.md) - an unwired mutation is a silent hole in Ctrl+Z",
+    "ADDED 2026-08-02 (step 1, the foundation): an unapplied preview does not outlive its tool. mountOptions() gains ONE discard seam that drops any uncommitted preview on every rail switch - _exitAutoMaskMode(false) already does the work and has no caller today - so a detection no longer survives into the graph without Add. Closes MPI-365's open 'detected-but-not-applied mask is still injected' item, and is the seam MPI-368 and MPI-373 hang their own previews on"
   ],
   "links": {
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "plan": "plan.md"
   }
 }
