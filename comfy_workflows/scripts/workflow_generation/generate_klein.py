@@ -97,14 +97,20 @@ def _prune_to_captures(workflow: dict) -> None:
               f"{'/'.join(CAPTURE_TITLES)}")
 
 
-def _assert_wf_type(workflow: dict) -> None:
-    """`Input_wf_type` must exist and be a PLAIN WIDGET, never a link.
+def _assert_and_bake_wf_type(workflow: dict, wf_type: int = 1) -> None:
+    """`Input_wf_type` must exist and be a PLAIN WIDGET, never a link — then bake it to 1.
 
     This is the one-file template's central footgun. The app injects the op number into
     this node; if it is driven by a link instead, the injection lands on a value nothing
     reads and the graph runs whatever branch the upstream happens to produce. The result
     is a plausible image from the WRONG op, which reads as a model quality problem rather
-    than a wiring bug."""
+    than a wiring bug.
+
+    The bake is the same guard `generate_qwen.py::_bake_wf_type` carries, and Klein needs
+    it for the same reason: the AUTHORING graph holds whatever branch the user was last
+    testing (the 2026-08-02 depth-strength export came back baked to 3), so an un-baked
+    template ships that as the fallback. It only shows through when injection fails — and
+    injection failing is exactly when a wrong branch is hardest to spot."""
     nid = _find_id_by_title(workflow, WF_TYPE_TITLE)
     if nid is None:
         raise SystemExit(f"[FAIL] no node titled {WF_TYPE_TITLE!r} — every op selects its "
@@ -113,6 +119,10 @@ def _assert_wf_type(workflow: dict) -> None:
         raise SystemExit(f"[FAIL] {WF_TYPE_TITLE}.int is linked, not a widget — the app "
                          f"injects into it, so a link makes every op silently run the "
                          f"same branch")
+    before = workflow[nid]["inputs"].get("int")
+    workflow[nid]["inputs"]["int"] = wf_type
+    if before != wf_type:
+        print(f"  [WFTYPE] {WF_TYPE_TITLE}.int: {before!r} -> {wf_type}")
 
 
 def _assert_unet(workflow: dict) -> None:
@@ -141,7 +151,7 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
     workflow = json.loads(source_path.read_text(encoding="utf-8"))
 
     _prune_to_captures(workflow)
-    _assert_wf_type(workflow)
+    _assert_and_bake_wf_type(workflow)
     _assert_unet(workflow)
     n_styles = _assert_style_rack(workflow)
 
