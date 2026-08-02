@@ -137,6 +137,7 @@ export const Events = new EventBus();
  * 'engine:complete'       —                                        — engine install/upgrade complete
  * 'engine:error'          { error: string }                        — engine install/upgrade failed
  * 'engine:ready'          —                                        — engine is ready for use (emitted by shell after all checks)
+ * 'engine:gate-release'   —                                        — user chose to enter the app past a FAILED dependency repair (MPI-427). Releases the boot gate only; the engine is NOT ready, so engine:ready consumers must not be told otherwise, and unlike engine:install-skipped it does NOT mean "skip the local engine"
  * 'models:open'           —                                        — open the Models slide-over (shell re-emits as slide-over:open)
  * 'models:checked'        { installedModelIds: string[] }          — model install state synced
  *

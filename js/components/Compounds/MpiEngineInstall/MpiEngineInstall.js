@@ -5,7 +5,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { Storage } from '../../../core/storage.js';
 import { state } from '../../../state.js';
-import { qs, qsa } from '../../../utils/dom.js';
+import { qs, qsa, on } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { downloadService } from '../../../services/downloadService.js';
@@ -111,6 +111,23 @@ export const MpiEngineInstall = ComponentFactory.create({
                     <h2 class="mpi-engine-install__title mpi-engine-install__title--error">Installation Failed</h2>
                     <p class="mpi-engine-install__error-message" data-ref="errorMessage">An error occurred during installation</p>
                     <div data-ref="retryButtonMount"></div>
+
+                    <!-- Repair escape (MPI-427). Retry used to be the ONLY control here,
+                         and the boot gate releases on engine:ready / engine:gate-release,
+                         neither of which an error fires. On a FIRST install that is right
+                         — there is no app to reach yet. On a REPAIR it is a locked door:
+                         the engine is already installed, and a user whose network blocks
+                         one of our two download hosts gets the identical failure on every
+                         Retry, forever, with no way to reach even Settings. Shown in
+                         repairing mode only; _setError does the reveal. -->
+                    <div class="mpi-engine-install__hatch" data-ref="repairEscape" style="display: none;">
+                        <button type="button" class="mpi-engine-install__hatch-action" data-ref="continueAnyway">
+                            Continue without them
+                        </button>
+                        <p class="mpi-engine-install__hatch-hint">
+                            Some features will be unavailable until these finish installing.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -136,6 +153,7 @@ export const MpiEngineInstall = ComponentFactory.create({
         const progressSubtitle = qs('[data-ref="progressSubtitle"]', el);
         const upgradeMessage = qs('[data-ref="upgradeMessage"]', el);
         const errorMessage = qs('[data-ref="errorMessage"]', el);
+        const repairEscape = qs('[data-ref="repairEscape"]', el);
 
         // Mount primitives in Phase 1 (setup)
         const pathInputMount = qs('[data-ref="pathInputMount"]', el);
@@ -292,6 +310,18 @@ export const MpiEngineInstall = ComponentFactory.create({
                 state.runpodConfig = { ...(state.runpodConfig || {}), enabled: true, skipLocalEngine: true };
                 clientLogger.info('MpiEngineInstall', 'Local engine install skipped via the RunPod escape hatch (MPI-390)');
                 Events.emit('engine:install-skipped');
+            });
+        }
+
+        // ── Repair escape (MPI-427) ───────────────────────────────────────────────
+        // Deliberately NOT engine:install-skipped: that event means "I will use RunPod
+        // instead", and the RunPod settings switch follows it back ON. This one means
+        // only "let me into the app" — the local engine stays exactly as configured.
+        const continueAnyway = qs('[data-ref="continueAnyway"]', el);
+        if (continueAnyway) {
+            on(continueAnyway, 'click', () => {
+                clientLogger.warn('MpiEngineInstall', 'Dependency repair failed — user continued into the app without the outstanding deps (MPI-427)');
+                Events.emit('engine:gate-release');
             });
         }
 
@@ -503,6 +533,10 @@ export const MpiEngineInstall = ComponentFactory.create({
             _unsubscribeEngineEvents();
             _showPhase('error');
             errorMessage.textContent = message;
+            // MPI-427: only a repair can be escaped — it implies an engine that is
+            // already installed. A failed FIRST install has nothing to fall through to.
+            // '' not 'block' — .mpi-engine-install__hatch is a flex column.
+            repairEscape.style.display = _currentMode === 'repairing' ? '' : 'none';
         }
 
         el.setError = _setError;

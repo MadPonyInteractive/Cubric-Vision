@@ -221,6 +221,11 @@ async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
         uwDepsPromise = startUniversalWorkflowInstall(missingDepIds, true, true)  // true = skip custom node install
             .then(modelJob => { uwModelJob = modelJob; return modelJob; })
             .catch(err => {
+                // MPI-427: keep the job. The deps that DID download are on it, and the
+                // custom-node install below is the only thing that extracts them. Losing
+                // it here left a blocked-host user with an engine and zero custom nodes,
+                // re-failing identically on every launch.
+                uwModelJob = err.modelJob || null;
                 logger.error('engine', `UW deps download error: ${err.message}`);
                 broadcastEngineEvent('engine:uw-installing', {
                     status: 'Some dependencies could not be installed. You can repair them later.'
@@ -474,6 +479,9 @@ async function _provisionUvEngine(targetDir, missingDepIds, downloadConfig) {
         try {
             uwModelJob = await startUniversalWorkflowInstall(missingDepIds, true, true);
         } catch (err) {
+            // MPI-427: same as the Windows path — the job carries the deps that landed,
+            // and finishCustomNodeInstall is what extracts them.
+            uwModelJob = err.modelJob || null;
             logger.error('engine', `UW deps install error: ${err.message}`);
             broadcastEngineEvent('engine:uw-installing', {
                 status: 'Some dependencies could not be installed. You can repair them later.'
@@ -770,7 +778,29 @@ router.post('/engine/repair-deps', async (req, res) => {
         broadcastEngineEvent('engine:complete', { success: true });
     } catch (err) {
         logger.error('engine', `UW deps repair failed: ${err.message}`);
-        broadcastEngineEvent('engine:error', { error: err.message });
+        // MPI-427: "some deps failed" is not the same as "the engine is unusable". The
+        // custom nodes are github.com zips and the engineAsset weights are on the model
+        // host, so a user who can reach only one of those hosts ends up here with every
+        // node installed and only weights outstanding. This runs on the BOOT gate, which
+        // releases on engine:complete and NOT on engine:error — so reporting an error
+        // here locked such a user out of the app entirely, behind a Retry that failed
+        // identically every time. Nodes present = ComfyUI can run; let them in. The
+        // failed weights already surface per-dep as a download:failed toast naming the
+        // host, so nothing is being hidden.
+        let nodesOutstanding = ['unknown'];
+        try {
+            const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
+            const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+            nodesOutstanding = [...missingDeps, ...driftedDeps].filter(id => DEPS[id]?.type === 'custom_nodes');
+        } catch (statusErr) {
+            logger.warn('engine', `Post-failure deps re-check failed (${statusErr.message}) — treating as node-outstanding`);
+        }
+        if (nodesOutstanding.length) {
+            broadcastEngineEvent('engine:error', { error: err.message });
+        } else {
+            logger.warn('engine', `UW repair finished with weights outstanding but every custom node installed — releasing the boot gate: ${err.message}`);
+            broadcastEngineEvent('engine:complete', { success: true, warning: err.message });
+        }
     }
 });
 

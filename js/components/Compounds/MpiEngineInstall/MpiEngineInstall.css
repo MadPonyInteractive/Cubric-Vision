@@ -106,9 +106,10 @@
     line-height: 1.4;
 }
 
-/* ── RunPod escape hatch (MPI-390) ───────────────────────────────────────── */
-/* Setup phase only. Sits under the Install button, separated by a soft rule so
-   it reads as the secondary path it is — local install stays the default. */
+/* ── Escape hatches (MPI-390 setup, MPI-427 repair error) ────────────────── */
+/* Sits under the primary action, separated by a soft rule so it reads as the
+   secondary path it is. Two users: the RunPod hatch in the setup phase (local
+   install stays the default) and the repair escape in the error phase. */
 .mpi-engine-install__hatch {
     display: flex;
     flex-direction: column;

@@ -27,7 +27,11 @@ test('the verbatim report error is classified and names the host', () => {
     const msg = _describeTransportError(err, R2_URL);
     assert.ok(msg, 'must classify');
     assert.ok(msg.includes('models.cubric.studio'), 'names the blocked host');
-    assert.ok(msg.includes('1.1.1.1'), 'carries the DNS remedy');
+    // The remedy must be the one that was actually MEASURED to work on this network.
+    // A DNS switch alone was tested by the reporter and failed (died at ~20%), so a
+    // message leading with DNS is a message that does not help the user reading it.
+    assert.ok(/VPN/i.test(msg), 'leads with the remedy that worked (a tunnel)');
+    assert.ok(!msg.includes('1.1.1.1'), 'does not lead with the disproven DNS remedy');
     assert.ok(!/boringssl|EPROTO|tls_record/i.test(msg), 'no driver internals leak to the user');
 });
 
