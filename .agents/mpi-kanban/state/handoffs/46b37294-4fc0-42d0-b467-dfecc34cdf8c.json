@@ -4,7 +4,7 @@
   "generated_at": "2026-08-02T16:30:00Z",
   "from_session": "MPI-427 round 2 — the node-install root cause, fixed and live-verified",
   "to_role": "integrator",
-  "status": "open",
+  "status": "complete",
   "session": {
     "name": "MPI-427 round 2 — custom nodes survive a blocked model host; 1.3.1 branch ready",
     "branch": "master (fixes committed) + branch 1.3.1 (the release lineage)"
@@ -30,10 +30,7 @@
       "MPI-427 card updated with the round-2 root cause and the live evidence table"
     ],
     "pending": [
-      "Build 1.3.1 in CI from branch 1.3.1 (mpi-ci workflow_dispatch, ref: 1.3.1) — NOT from master",
-      "Publish a GitHub release with BOTH the full portable builds and the -update-v1.3.1 delta bundles — the standard flow (user decided this on 2026-08-02 after weighing delta-only)",
-      "After publishing: restamp release-baselines/ from the published 1.3.1 FULL manifests — the normal documented post-publish step (mpi-release), not a special case",
-      "Decide whether the mirror splits to its own card so MPI-427 can close on the release"
+      "DONE 2026-08-02: built from branch 1.3.1 (mpi-ci run 30755518372), published v1.3.1 with full builds + delta bundles, baselines restamped to the 1.3.1 full manifests, mirror split to MPI-429, MPI-427 closed."
     ]
   },
   "task_card": {
@@ -49,7 +46,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "build", "release", "commit"],
+  "allowed_actions": [
+    "read",
+    "build",
+    "release",
+    "commit"
+  ],
   "knowledge_preservation": {
     "completed": [
       "MPI-427 checklist.md carries a 'Round 2' section: the root cause, the fix at each of the three sites, the boot-gate trap, and the live-repro evidence table (pre-fix vs post-fix)",
@@ -116,7 +118,7 @@
       "docs/releases/portable-distribution-contract.md"
     ],
     "scratchpad": "The live repro harness is at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/db0be21f-6e4f-4866-b832-8d461a662334/scratchpad/live-repro.cjs (and live-master.cjs). It swaps DEPS in require.cache for one github.com node plus one weight on an unreachable .invalid host, points CUBRIC_ENGINE_ROOT at a throwaway dir, and runs the real startUniversalWorkflowInstall. Pre-fix: node folder NO, marker MISSING, leftover zip YES. Post-fix: 36 entries, marker at the pinned SHA, no zip. Recreate it from the checklist description if the scratchpad is gone."
-    },
+  },
   "project_knowledge": {
     "profile": "Cubric Vision",
     "knowledge_index": "docs/README.md",
@@ -137,11 +139,26 @@
     ".claude/rules/git.md"
   ],
   "recent_events": [
-    { "at": "2026-08-02T15:42:00Z", "event": "commit 0a1d2325 — custom nodes survive a blocked model host; 11 files" },
-    { "at": "2026-08-02T15:55:00Z", "event": "commit d85fa1c6 — MPI-427 card round 2, live evidence recorded" },
-    { "at": "2026-08-02T16:19:00Z", "event": "commit 81bfe1de — floating rejection on the non-resume download path" },
-    { "at": "2026-08-02T16:25:00Z", "event": "branch 1.3.1 complete at 5328c033; 301/301 green; release:check passes" },
-    { "at": "2026-08-02T16:30:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-02T15:42:00Z",
+      "event": "commit 0a1d2325 — custom nodes survive a blocked model host; 11 files"
+    },
+    {
+      "at": "2026-08-02T15:55:00Z",
+      "event": "commit d85fa1c6 — MPI-427 card round 2, live evidence recorded"
+    },
+    {
+      "at": "2026-08-02T16:19:00Z",
+      "event": "commit 81bfe1de — floating rejection on the non-resume download path"
+    },
+    {
+      "at": "2026-08-02T16:25:00Z",
+      "event": "branch 1.3.1 complete at 5328c033; 301/301 green; release:check passes"
+    },
+    {
+      "at": "2026-08-02T16:30:00Z",
+      "event": "handoff_created"
+    }
   ],
   "resume_prompt": "You are finishing MPI-427 on Cubric Vision by building and publishing v1.3.1 as a patch release, with BOTH full builds and delta update bundles (the standard flow — the user considered delta-only and chose against it, so do not revisit that). Read .agents/mpi-kanban/tasks/MPI-427/checklist.md first — its 'Round 2' section carries the root cause and the live evidence, and brief.md carries a correction to an earlier wrong conclusion about Cloudflare that you must not re-derive. State of play: the code is DONE and verified live in both directions. The universal-workflow dep set spans two hosts (custom nodes are github.com zips, engineAsset weights are on models.cubric.studio) but installed all-or-nothing with the reject sitting above the custom-node install, so a user whose ISP blocks the model host had every downloaded node discarded on every launch and could never generate. Fixed on master as 0a1d2325 and 81bfe1de, cherry-picked onto branch 1.3.1 which is 5 commits, 301/301 suites green, release:check passing, notes approved. Nothing is built, tagged, pushed or released. Build from BRANCH 1.3.1, never from master — master is 45+ commits ahead with masking and workflow work that must not ship in a patch, and `git diff v1.3.0 1.3.1` is 18 files of download/engine/boot/release only. Dispatch the mpi-ci build with ref: 1.3.1 rather than pushing a tag, since the tag is a build trigger that goes stale. CI passes --from-manifest from release-baselines/ automatically and the branch already carries the 1.3.0 restamp, so the delta computes 1.3.0 -> 1.3.1 correctly; attach the full builds AND the -update-v1.3.1 bundles. After publishing, restamp release-baselines/ from the published 1.3.1 full manifests or 1.3.2's delta computes against 1.3.0 and ships fat — and note the filename must be win32-x64.json, matching the CI matrix platform, never windows-x64.json, which silently disabled Windows deltas through 0.0.12 (MPI-66). The branch is LOCAL ONLY and push stays a user-authorised op. The download mirror is still empty, still approval-gated, and deliberately NOT part of this release — the whole point of this fix is that it unblocks the user without it; consider splitting the mirror to its own card so MPI-427 can close on the release."
 }
