@@ -68,3 +68,7 @@
 - **The Qwen Image Edit tier stays put.** Quality/Turbo/Hyper was being remembered
   per operation, so switching between Edit, Depth and Pose silently changed the
   tier underneath you. It is now one setting for the model.
+- **The batch count no longer appears where it did nothing.** On SDXL's Image to
+  Image, asking for several images only ever returned one — the setting reached a
+  part of the workflow that operation does not use. The control is now hidden
+  there rather than lying about it. Text to Image and Depth are unaffected.

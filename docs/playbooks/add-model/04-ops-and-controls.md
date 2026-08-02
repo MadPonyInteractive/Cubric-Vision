@@ -160,6 +160,45 @@ controls. `upscale` uses 0.20, `detail` 0.30, `pid` 0.0 — pick the value your 
 - [ ] Run `tests/inject-params-titles.test.cjs`
 - [ ] Run `npm run release:check` — the gate that catches a forgotten registry mirror
 
+### Per-op control gates — a control must not appear where the graph ignores it
+
+An op's `components` list says which controls EXIST. Four `ModelDef` fields then decide
+which of them this model actually shows on that op. All four default to "unchanged", so a
+model that stays silent behaves exactly as it did before the field existed.
+
+| field | hides / sets | gate fn |
+|---|---|---|
+| `styleOps` | the style picker + Stylization slider | `modelShowsStyleRack` |
+| `imageSizedOps` | the ratio picker | `modelShowsRatio` |
+| `batchOps` | the batch control | `modelShowsBatch` |
+| `controlDefaults` | a control's STARTING value, per model | `_resolveDefault` |
+
+**Read every one of these off the GRAPH, never off the op name.** This is the rule the
+section exists for. Trace the branch your op actually runs and ask:
+
+- **Ratio** — does the sampler's `latent_image` reach `EmptyLatentImage(Input_Width,
+  Input_Height)`, or a `VAEEncode` of the input? If the latter (typically via
+  `ImageScaleToTotalPixels`), the op inherits the input's shape → list it in
+  `imageSizedOps`.
+- **Batch** — `Input_Batch_Size` reaches ONLY `EmptyLatentImage` in every graph we ship.
+  So batch is real exactly where the ratio is: any op sampling a VAE-encoded latent
+  returns one image while the control claims N → exclude it from `batchOps`.
+- **Style/stylization** — does the rack exist on THAT branch, and does the model's LoRA
+  set behave at the global strength? A distilled checkpoint may artefact above ~0.6, which
+  is `controlDefaults: { stylization: 0.6 }` — a MODEL fact, so it does not belong in the
+  op's `defaults` (that would push it onto every model running the op).
+
+Getting one wrong does not error. Chroma shipped with `depth` missing from
+`imageSizedOps` and the symptom was a ratio picker promising a shape the user did not get
+**plus** a padded gallery card — the placeholder is sized `injectionParams.Width || 0`, and
+the `ratio` control is what injects `Width`, so hiding the picker fixed both. Same family
+as the silent-injection traps above: a wrong answer that looks like a working feature.
+
+Precedence for `controlDefaults` is **op → model → global**, so an op's own `defaults`
+still wins. Guards: `tests/op-strip-availability.test.cjs` pins each gate with a
+cross-model negative control (SDXL keeps the ratio picker and batch on `depth`, because
+its depth switches the conditioning pipe rather than the latent).
+
 ### Known live bug (not yours to fix here)
 
 `MpiPromptBox.setModelList()` re-runs `_pickOpForModel` on every model-list refresh, so a
