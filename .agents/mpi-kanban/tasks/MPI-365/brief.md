@@ -121,8 +121,14 @@ branch. Krea2 collapses from three raw files (t2i + detailer + upscaler) to one.
    (`commandRegistry.js:282`) — one of the shared-op `injectParams` this card
    already wants deleted.
 
-5. **POSE is a NEW operation** (Qwen first, via **ControlNet**). Does not exist in
-   the app today. Planned to reach the SDXL workflows next.
+5. **POSE is a NEW operation** (Qwen first). Does not exist in the app today.
+   Planned to reach the SDXL workflows next. **NOT via ControlNet** — this line
+   said "via ControlNet" until 2026-08-02; the VERIFIED section at the top of this
+   file is right and this was stale. Qwen pose is `OpenposePreprocessor` +
+   `AIO_Preprocessor` feeding Qwen's own image conditioning, so it costs the
+   `comfyui_controlnet_aux` NODE and its annotator weights but NO hosted ControlNet
+   checkpoint. (Chroma's DEPTH does use a real ControlNet checkpoint — different
+   model, different mechanism, don't conflate them.)
 
 6. **Styles + prompt enhancement on EVERY op** (all three models). The capability
    flags are already right — Krea2 ships `styleLoras: true, promptEnhance: true`
