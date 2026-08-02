@@ -2,10 +2,10 @@
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-365",
  "title": "Migrate all models to the one-master-template shape, then GC the dead scaffolding",
- "column": "todo",
- "maturity": "idea",
+ "column": "doing",
+ "maturity": "validating",
  "created_at": "2026-07-27T23:55:00Z",
- "updated_at": "2026-07-27T23:55:00Z",
+ "updated_at": "2026-08-02T04:15:00Z",
  "labels": [
   "workflow",
   "refactor",
@@ -21,6 +21,7 @@
  ],
  "links": {
   "depends_on": "MPI-354",
-  "reference": "docs/models/klein/README.md"
+  "reference": "docs/models/klein/README.md",
+  "brief": "brief.md"
  }
 }
