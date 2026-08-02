@@ -45,15 +45,25 @@ assert.deepStrictEqual(urls, [], 'a text-only payload must contribute no URLs');
 // A static table cannot know that (it depends on a toggle, not the file+mode).
 const { stagesFor } = await import('../js/data/progressStages.js');
 
-// (Keyed on krea2_t2i.json since MPI-316 collapsed the turbo cards; stagesFor strips
-// the _sfw/_nsfw suffix, so the runtime files land on this key. Both tiers are
-// two-pass, hence 2.)
-assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single'), 2,
+// Keyed on an SDXL t2i file: it still records a `single` total, which is what these
+// three assertions are actually about (the enhancer delta arithmetic, not the model).
+// This used to key on krea2_t2i.json — see the Krea2 assertion below for why it moved.
+assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single'), 2,
     'baseline: one bar per sampler pass');
-assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', 0), 2,
+assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single', 0), 2,
     'enhance OFF must not change the recorded count');
-assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', 1), 3,
+assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single', 1), 3,
     'a +1 delta adds exactly one bar — else the counter shows 3/2 and reads as a hang');
+
+// MPI-365: Krea2 deliberately has NO recorded total any more. All six of its ops run the
+// one master template, and this table is keyed by FILE — detail (MaskDetailerPipe) and
+// upscale (UltimateSDUpscale, one bar per tile) emit more bars than t2i's two, so a
+// single recorded number would render "Stage 3/2" on those ops. Unknown beats wrong.
+// Pinned so a future "helpful" re-add is caught here rather than in the status bar.
+assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single'), 0,
+    'Krea2 records no total: one file, six ops, different bar counts');
+assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', 1), 0,
+    'a delta on top of "unknown" stays unknown — never invent a total of 1');
 
 // An unrecorded workflow stays unrecorded. A delta on top of "unknown" is still
 // unknown; returning 1 here would invent a total of 1 and show "2/1".
@@ -71,8 +81,10 @@ assert.strictEqual(stagesFor('ltx_t2v.json', 'single'), 3, 'LTX single unchanged
 assert.strictEqual(stagesFor('ltx_t2v_stage2.json', 'stage2'), 1, '_stage2 suffix still stripped');
 assert.strictEqual(stagesFor('wan5b_t2v.json', 'single'), 1, 'Wan5B unchanged');
 
-// Negative/garbage deltas must not corrupt a real count.
-assert.strictEqual(stagesFor('krea2_t2i_sfw.json', 'single', -5), 2, 'negative delta clamps to 0');
+// Negative/garbage deltas must not corrupt a real count. (Moved off krea2_t2i.json with
+// the rest — Krea2 records no total since MPI-365, so it could no longer prove "a REAL
+// count survives a garbage delta"; that needs a file that actually has one.)
+assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single', -5), 2, 'negative delta clamps to 0');
 
 // ── the sidecar preference rule (mirrors generationService.exec.onComplete) ────
 // `positive = outputInfo.promptText || _positiveFromBox`

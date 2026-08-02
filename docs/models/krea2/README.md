@@ -12,7 +12,9 @@ Do not reason about it as a Flux model.
 | | |
 |---|---|
 | Cards | **2**: `krea2` (SFW) · `krea2-nsfw`. Content variants, installable side by side — **not** tiers, so neither carries an H/B/L letter |
-| Speed tiers | Runtime toggle, **not** separate cards (MPI-316). `krea2Turbo` → `Input_Tier` 1 = quality, 2 = fast |
+| Workflows | **ONE file per card** since MPI-365: `krea2_t2i_<sfw\|nsfw>.json` serves all six ops, branch picked by `Input_wf_type` (1 t2i · 2 i2i · 3 depth · 4 edit · 5 unused · 6 detail · 7 upscale). `krea2_detailer_*` / `krea2_upscaler_*` are **deleted** — see [injection.md](injection.md) |
+| Ops | `t2i` · `i2i` · `depth` · `krea2Edit` · `detail` · `upscale`. Edit takes an **optional mask** (empty = whole-image), which is why branch 5 is dead. `depth` is the op formerly called `poseReference` |
+| Speed tiers | Runtime toggle, **not** separate cards (MPI-316). `krea2Turbo` → `Input_is_Turbo` (a BOOLEAN since MPI-365; was the `Input_Tier` int) — false = quality, true = fast |
 | Transformer | SFW `diffusion_models/krea2_raw_int8_convrot.safetensors` · NSFW `lustify-v10-krea-raw-int8_convrot.safetensors` |
 | Accelerator | `loras/krea-2/extra/krea2_turbo_distill_r128.safetensors` — an SVD delta extracted **from Raw**, so Raw + this @ 1.0 reconstructs Turbo. **This is the fast tier**; it replaced the two ~12GB Turbo transformers (deleted, ~24.5GB saved) |
 | Text encoder | `text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors` — Qwen3-VL-4B, **not** a Flux encoder. Shared with the image-describer plugin; the stock `qwen3vl_4b_fp8_scaled` twin was retired 2026-07-19 (A/B'd equal, deleted from R2 and disk) |
@@ -43,7 +45,7 @@ new uploads.
 | 5 | [injection.md](injection.md) | the app injection seam (style system), local install layout, prompt enhancer + its mandatory chat scaffold. |
 | 6 | [preview-taesd.md](preview-taesd.md) | why the latent preview is mediocre (missing `lighttaew2_1`, `Latent2RGB` fallback) and why we **must NOT** install the decoder — ComfyUI #13366 corrupts real generations. |
 | 7 | [editing.md](editing.md) | the **edit path**: the two channels, prompt form, why negatives can't remove reference content, reference framing (pad vs crop), `ref_boost` / `cfg` / `grounding_px` measured trades. |
-| 8 | [upscaling.md](upscaling.md) | the **upscale** graph: the post-tile refiner (a FIX for unusable raw upscales), the `Input_Tier` gate on the accelerator LoRA, and the per-tile-prompt trap under `Use Grid`. |
+| 8 | [upscaling.md](upscaling.md) | the **upscale** graph: the post-tile refiner (a FIX for unusable raw upscales), the `Input_is_Turbo` gate on the accelerator LoRA, and the per-tile-prompt trap under `Use Grid`. |
 
 ## Krea2 as an EDITOR — SHIPPED
 

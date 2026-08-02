@@ -7,6 +7,21 @@
 > Tracking card: **MPI-300**. Deep research: `.agents/mpi-kanban/tasks/MPI-300/research/`.
 > Blocks **MPI-299** (Head Swap app), which requires this model wired.
 >
+> **MPI-365 (2026-08-02): THREE ops now, one master graph.** `qwen_edit.json` is a
+> one-master-template model — `qwenEdit`, `depth` and `pose` are branches selected by
+> `Input_wf_type` (**1 edit · 2 depth · 3 pose**) from the ModelDef's `opInject`.
+> **`pose` is new to the whole app** and uses `OpenposePreprocessor`; `depth` uses
+> `AIO_Preprocessor` (DepthAnythingV2). There is **NO ControlNet checkpoint** — both maps
+> feed Qwen's own image conditioning — so the cost is the `comfyui_controlnet_aux` NODE
+> dependency plus its self-downloaded annotator weights (DepthAnythingV2's are already
+> cached by Klein; the OpenPose body/hand/face ones are new).
+>
+> Two traps. The authoring template bakes `Input_wf_type: 3`, so a missing/failed
+> injection runs **pose** for every op — `generate_qwen.py::_bake_wf_type` rebakes it to 1
+> and raises if the node did not survive the prune. And Qwen has **no prompt enhancer**
+> (no `TextGenerate` node, no `Input_enhance_prompt`) — deliberate, confirmed 2026-08-02;
+> `capabilities.promptEnhance` stays false. Klein and Krea2 both have one; Qwen does not.
+>
 > **Status: WIRED** (2026-07-18). ONE ModelDef `qwen-edit` + op `qwenEdit`, runtime
 > **Anime 2D/3D LoRA filenames are MISLEADING — do NOT "fix" them.** Slot 2 is
 > `Qwen-Anime-V2` = label **Anime 3D**; slot 3 is `animal_style` = label **Anime 2D** (it is

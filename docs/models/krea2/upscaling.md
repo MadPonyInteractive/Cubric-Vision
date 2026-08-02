@@ -1,8 +1,21 @@
 # Krea2 — upscaling (MPI-350)
 
-The `upscale` op's graph: `krea2_upscaler_template.json` → `krea2_upscaler_sfw.json`
-/ `krea2_upscaler_nsfw.json`. 37 nodes. Read this before re-tuning the upscaler or
-adding another pass to it.
+The `upscale` op is **branch 7 of the master template** since MPI-365:
+`krea2_t2i_template.json` → `krea2_t2i_<sfw|nsfw>.json`, selected by `Input_wf_type: 7`.
+Read this before re-tuning the upscaler or adding another pass to it.
+
+> **The standalone `krea2_upscaler_*` files are DELETED.** Everything below still
+> describes the live chain — the nodes moved into the master graph unchanged — but they
+> now sit alongside the other five ops' branches rather than in a file of their own, and
+> ComfyUI's lazy evaluation prunes them on any other op. Node ids below are from the old
+> standalone file and will NOT match the master graph; find nodes by title.
+>
+> Two consequences of the move worth knowing:
+> * The **style rack now reaches this op** (`styleOps` includes `upscale`). The old
+>   standalone file had no rack at all.
+> * `progressStages` no longer records a `single` total for Krea2 — one file, six ops,
+>   different bar counts. The `postTile: 1` entry below survives on the `krea2_t2i.json`
+>   key, because `phaseProgress` only reads it once tile mode is entered.
 
 ## Shape
 

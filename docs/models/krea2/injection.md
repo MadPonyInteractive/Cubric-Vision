@@ -149,18 +149,48 @@ Two graph facts worth knowing:
 > loads the LoRA but appends no trigger — a silent half-application. Fix in the workflow, not
 > app-side.
 
-**`krea2_detailer_<sfw|nsfw>.json`** (op `detail`): `Input_Image`, `Input_Mask` (`LoadImageMask`),
-`Input_Positive`, `Input_Seed`, `Input_Denoise`, `Input_Lora_1..6`, `Output_image`.
+## One master template (MPI-365)
 
-**`krea2_upscaler_<sfw|nsfw>.json`** (op `upscale`): `Input_Image`, `Input_Positive`, `Input_Seed`,
-`Input_Denoise`, `Input_Auto_Grid` (`MpiSimpleBoolean`), `Input_Upscale_Model`
-(`UpscaleModelLoader`), `Input_Lora_1..6`, `Output_image`.
+> **`krea2_detailer_*` and `krea2_upscaler_*` NO LONGER EXIST.** All six ops now run
+> `krea2_t2i_<sfw|nsfw>.json`. `MaskDetailerPipe`, `UltimateSDUpscale` and
+> `UpscaleModelLoader` moved into that one graph as branches 6 and 7. Delete nothing else
+> looking for them — they are gone from `raw/`, from `workflow_generation/` and from
+> `comfy_workflows/`.
 
-> `Output_image` (lowercase `i`) in the detailer + upscaler is **correct**, not a typo. Capture
-> titles are matched case-insensitively (`commandExecutor.js:7`), and `Chroma_detailer.json` /
-> `Chroma_upscaler.json` use the same lowercase form. Only `*_t2i.json` uses `Output_Image`.
+The branch is chosen by **`Input_wf_type`** (an `MpiInt`), injected from the ModelDef's
+`opInject` map — never by the op's own `injectParams`, because `commandExecutor._buildParams`
+REPLACES rather than merges when a model declares `opInject`:
+
+| `Input_wf_type` | op |
+|---|---|
+| 1 | `t2i` |
+| 2 | `i2i` |
+| 3 | `depth` |
+| 4 | `krea2Edit` |
+| 5 | *(unused — edit takes an optional mask, so there is no separate inpaint branch)* |
+| 6 | `detail` |
+| 7 | `upscale` |
+
+A missing `opInject` entry does **not** error: it runs the baked default (1 = t2i) and
+returns a plausible image from the wrong operation. `generate_krea2.py::_bake_wf_type`
+raises if the node is absent, `commandExecutor` warns on a gap, and
+`tests/inject-params-titles.test.cjs` pins the node's presence in both runtime files.
+
+Retired with the old shape: `Input_Is_i2i`, `Input_Is_Edit`, `Input_depth_reference`
+(replaced by `wf_type`) and `Input_Tier` (now the boolean **`Input_is_Turbo`**). The test
+asserts those four titles are ABSENT — a leftover would be a rival branch selector nothing
+drives. Note `Input_Tier` still exists in **Qwen's** graph; it is a different control.
+
+New injection surface on this graph: `Input_Mask` (optional — empty self-gates to a
+whole-image edit), `Input_Image_2` (the depth line's subject reference),
+`Input_Auto_Grid`, `Input_Upscale_Factor`, `Input_Upscale_Model`, `Input_is_Turbo`.
+`Input_depth_strength` is authored-only — the app never injects it, so the graph's value
+is the intended one.
+
 > The style rack's LoRA banks are never injected — only the two dotted
-> `Input_Style_Selector` widgets are; do not add the banks to any injection map.
+> `Input_Style_Selector` widgets are; do not add the banks to any injection map. The rack
+> now reaches **every** op including `detail` and `upscale` (`styleOps` in the ModelDef),
+> which the old rack-less detailer/upscaler files could not offer.
 
 ## Local install layout (`G:\CubricModels`)
 

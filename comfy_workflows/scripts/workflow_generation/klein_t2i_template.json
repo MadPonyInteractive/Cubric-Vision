@@ -375,18 +375,6 @@
       "title": "Mpi Math"
     }
   },
-  "45": {
-    "inputs": {
-      "source": [
-        "44",
-        0
-      ]
-    },
-    "class_type": "PreviewAny",
-    "_meta": {
-      "title": "Preview as Text"
-    }
-  },
   "47": {
     "inputs": {
       "string_b": "malformed anatomy: hands with the wrong number of fingers, limbs that are missing, duplicated, or bent the wrong way, animals missing a head or legs\n",
@@ -471,7 +459,7 @@
   },
   "93": {
     "inputs": {
-      "string": ""
+      "string": "Place the 2 women having a drink in the scene from image one"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -1028,7 +1016,7 @@
       "megapixels": 1,
       "resolution_steps": 16,
       "image": [
-        "474",
+        "592",
         0
       ]
     },
@@ -1828,7 +1816,7 @@
       "output_padding": "32",
       "device_mode": "gpu (much faster)",
       "image": [
-        "474",
+        "641",
         0
       ],
       "mask": [
@@ -1964,7 +1952,7 @@
       "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 0.38,
+      "denoise": 0.4,
       "feather": 6,
       "crop_factor": 1.8,
       "drop_size": 10,
@@ -1974,7 +1962,7 @@
       "inpaint_model": true,
       "noise_mask_feather": 20,
       "bbox_fill": false,
-      "contour_fill": true,
+      "contour_fill": false,
       "image": [
         "286",
         1
@@ -2002,12 +1990,12 @@
       "downscale_algorithm": "bilinear",
       "upscale_algorithm": "bicubic",
       "preresize": false,
-      "preresize_mode": "ensure minimum resolution",
+      "preresize_mode": "ensure maximum resolution",
       "preresize_min_width": 1024,
       "preresize_min_height": 1024,
       "preresize_max_width": 16384,
       "preresize_max_height": 16384,
-      "mask_fill_holes": true,
+      "mask_fill_holes": false,
       "mask_expand_pixels": 6,
       "mask_invert": false,
       "mask_blend_pixels": 32,
@@ -2237,35 +2225,9 @@
       "title": "Mpi Compare"
     }
   },
-  "322": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 16,
-      "device": "cpu",
-      "image": [
-        "474",
-        0
-      ],
-      "width": [
-        "324",
-        0
-      ],
-      "height": [
-        "325",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
   "324": {
     "inputs": {
-      "int": 896
+      "int": 1088
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -2274,7 +2236,7 @@
   },
   "325": {
     "inputs": {
-      "int": 1088
+      "int": 896
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -2346,7 +2308,7 @@
   "346": {
     "inputs": {
       "pixels": [
-        "322",
+        "571",
         0
       ],
       "vae": [
@@ -2398,7 +2360,7 @@
   "357": {
     "inputs": {
       "any": [
-        "166",
+        "576",
         0
       ]
     },
@@ -2510,7 +2472,7 @@
       "string_a": "Fill the green spaces according to the image. ",
       "delimiter": "",
       "string_b": [
-        "381",
+        "642",
         0
       ]
     },
@@ -2999,26 +2961,6 @@
       "title": "Input_Image"
     }
   },
-  "561": {
-    "inputs": {
-      "ckpt_name": "depth_anything_v2_vitl.pth",
-      "resolution": 512
-    },
-    "class_type": "DepthAnythingV2Preprocessor",
-    "_meta": {
-      "title": "Depth Anything V2 - Relative"
-    }
-  },
-  "562": {
-    "inputs": {
-      "preprocessor": "none",
-      "resolution": 512
-    },
-    "class_type": "AIO_Preprocessor",
-    "_meta": {
-      "title": "AIO Aux Preprocessor"
-    }
-  },
   "570": {
     "inputs": {
       "passthrough": [
@@ -3029,6 +2971,215 @@
     "class_type": "MpiClearVram",
     "_meta": {
       "title": "Mpi Clear Vram"
+    }
+  },
+  "571": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "474",
+        0
+      ],
+      "width": [
+        "324",
+        0
+      ],
+      "height": [
+        "325",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "576": {
+    "inputs": {
+      "true": [
+        "590",
+        0
+      ],
+      "false": [
+        "166",
+        0
+      ],
+      "boolean": [
+        "297",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "581": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 6,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "474",
+        0
+      ],
+      "mask": [
+        "296",
+        1
+      ],
+      "optional_context_mask": [
+        "584",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Crop"
+    }
+  },
+  "582": {
+    "inputs": {
+      "stitcher": [
+        "581",
+        0
+      ],
+      "inpainted_image": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Stitch"
+    }
+  },
+  "584": {
+    "inputs": {
+      "padding": 64,
+      "mask": [
+        "296",
+        1
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Mpi Mask Square Bbox"
+    }
+  },
+  "590": {
+    "inputs": {
+      "any": [
+        "582",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "masked edit"
+    }
+  },
+  "592": {
+    "inputs": {
+      "true": [
+        "581",
+        1
+      ],
+      "false": [
+        "474",
+        0
+      ],
+      "boolean": [
+        "297",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "612": {
+    "inputs": {
+      "images": [
+        "286",
+        1
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "639": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 5,
+      "a": [
+        "304",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "is inpaint"
+    }
+  },
+  "641": {
+    "inputs": {
+      "input": [
+        "474",
+        0
+      ],
+      "boolean": [
+        "639",
+        0
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Mpi Blocker"
+    }
+  },
+  "642": {
+    "inputs": {
+      "input": [
+        "381",
+        0
+      ],
+      "boolean": [
+        "639",
+        0
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Mpi Blocker"
     }
   }
 }

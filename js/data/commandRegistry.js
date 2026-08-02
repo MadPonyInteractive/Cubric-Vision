@@ -469,14 +469,21 @@ export const commands = {
             { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false, ordinal: true },
         ],
         promptRequired: true,
-        // Krea2's edit shares the t2i graph (Input_Is_Edit routes the identity-edit LoRA
-        // path; baked FALSE, so this inject flips it on — same contract as i2i's
-        // Input_Is_i2i). Localized/masked edit was removed (inconsistent results) — no
-        // Input_Mask node in the graph anymore. The editor takes OUR provided dimensions
-        // (not the source image size), so it needs ratio + qualityTier. Styles + the style
-        // slider help the edit path, so they stay. No batch: Krea2's second sampler
-        // produces artifacts on batched follow-ups.
-        injectParams: { Input_Is_Edit: true },
+        // NO injectParams (MPI-365). Krea2's edit is branch 4 of the one master graph and
+        // Krea2 declares `opInject`, which commandExecutor applies INSTEAD OF an op's
+        // injectParams — so the old `Input_Is_Edit: true` could never have been sent, and
+        // the node is gone from the graph anyway. Krea2 is the only model declaring this
+        // op, so nothing else needs it. (inject-params-titles fails loudly on a dead
+        // injectParams entry, which is how this was caught rather than shipped inert.)
+        //
+        // MPI-365 also restored the MASKED edit: an optional Input_Mask drives a crop,
+        // and an empty mask self-gates to a whole-image edit. That needs no registry flag
+        // — maskDataUrl is attached whenever the canvas has a mask and Input_Mask is
+        // injected unconditionally, so it is NOT `requiresMask` (which would force one).
+        //
+        // Styles + the style slider help the edit path, so they stay. No batch: Krea2's
+        // second sampler produces artifacts on batched follow-ups. `ratio` is listed but
+        // suppressed by Krea2's imageSizedOps — edit now follows the SOURCE image size.
         // NO enhancePrompt (MPI-310 session): the enhancer actively harms this op.
         // Krea2EditGroundedEncode feeds the instruction to Qwen3-VL *together with the
         // source image* (KREA2_EDIT_TEMPLATE in comfyui-krea2edit/__init__.py), so the

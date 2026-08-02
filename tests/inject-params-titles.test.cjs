@@ -228,16 +228,40 @@ test('every MpiStyleSelector is titled + shaped for the dotted injection keys (M
     assert.deepStrictEqual(problems, [], `style-selector injection would silently no-op:\n  ${problems.join('\n  ')}`);
 });
 
-test('the Krea2 shared graph carries both branch booleans', () => {
-    // Pins the specific regression: t2i / i2i / depth all run one file and
-    // select a branch with a baked-false boolean. Lose a node (or its title) and the
-    // op silently degrades to plain t2i.
-    // SFW + NSFW ship the same t2i graph (only the diffusion weight differs), so both
-    // runtime files must carry the branch booleans.
+test('the Krea2 master graph carries its branch selector and speed toggle', () => {
+    // Pins the same regression the old branch-boolean test pinned, at the node the
+    // design moved to (MPI-365). All SIX Krea2 ops run ONE file and select their branch
+    // with Input_wf_type; lose that node (or its title) and every op silently degrades
+    // to the baked default (t2i) instead of erroring — a plausible image from the wrong
+    // operation, which is the worst failure mode this model has.
+    //
+    // Input_is_Turbo is here for the same reason: it replaced the Input_Tier int, and a
+    // lost title means the speed toggle silently stops working rather than failing.
+    //
+    // SFW + NSFW ship the same graph (only the diffusion weight and the filter-bypass
+    // strength differ), so both runtime files must carry both nodes.
     for (const file of ['krea2_t2i_sfw.json', 'krea2_t2i_nsfw.json']) {
         const have = titlesOf(file);
-        for (const title of ['input_is_i2i', 'input_depth_reference']) {
+        for (const title of ['input_wf_type', 'input_is_turbo']) {
             assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
         }
+        // The booleans this design replaced must be GONE, not merely unused — a stale
+        // Input_Is_i2i left in the graph would be a second, contradictory branch
+        // selector that nothing drives.
+        for (const title of ['input_is_i2i', 'input_is_edit', 'input_depth_reference']) {
+            assert.ok(!have.has(title),
+                `${file} still carries "${title}" — MPI-365 replaced the per-op branch ` +
+                `booleans with Input_wf_type; a leftover is a rival selector nothing sets`);
+        }
     }
+});
+
+test('the Qwen master graph carries its branch selector', () => {
+    // Qwen's three ops (1 edit / 2 depth / 3 pose) are branches of one graph. The
+    // authoring template bakes 3, so a missing selector would run POSE for every op —
+    // generate_qwen.py rebakes it to 1 and asserts, and this pins the shipped result.
+    const have = titlesOf('qwen_edit.json');
+    assert.ok(have.has('input_wf_type'), 'qwen_edit.json must carry a node titled "input_wf_type"');
+    // Qwen KEEPS its three-tier radio — unlike Krea2, whose tier became a boolean.
+    assert.ok(have.has('input_tier'), 'qwen_edit.json must keep its Input_Tier radio node');
 });
