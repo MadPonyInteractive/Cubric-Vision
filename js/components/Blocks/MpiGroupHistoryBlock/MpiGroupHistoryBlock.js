@@ -394,6 +394,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
          * PromptBox visibility via the `--prompt-active` CSS class.
          */
         async function mountOptions(mode) {
+            // THE PREVIEW CONTRACT (MPI-382): every tool is visited, previewed, then
+            // applied — or the preview goes away. Leaving a tool discards whatever it
+            // previewed but never committed, so previews cannot stack and the graph
+            // cannot receive something the user never applied.
+            // Unconditional on purpose: the viewer's own guard decides whether there
+            // is anything to drop, so this stays one line as 368/373 add previews.
+            // Safe against re-entry — MpiHistoryTools._activate() returns early on an
+            // unchanged mode, so this only ever runs on a real switch.
+            viewer.el?.discardPreview?.();
+
             _options?.destroy?.();
             _options = null;
 

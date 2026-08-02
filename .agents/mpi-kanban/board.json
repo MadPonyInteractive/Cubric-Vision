@@ -5,7 +5,6 @@
     "todo": [
       "MPI-429",
       "MPI-426",
-      "MPI-382",
       "MPI-422",
       "MPI-421",
       "MPI-413",
@@ -36,6 +35,7 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-382",
       "MPI-365",
       "MPI-424",
       "MPI-367",
@@ -121,7 +121,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-02T16:35:00Z",
+  "updated_at": "2026-08-02T17:24:00Z",
   "events": [
     {
       "at": "2026-08-01T23:30:00Z",
@@ -1594,6 +1594,46 @@
       "actor": "opus",
       "column": "doing",
       "summary": "Umbrella progress. MPI-425 shipped 2026-08-02 and is ticked; MPI-382 is planned and is next. brief.md gains a new FIRST standing constraint - THE PREVIEW CONTRACT, stated by the user 2026-08-02: every tool is visited, previewed, then applied, or the preview goes away, and an unapplied preview must never outlive its tool. Rationale is not tidiness - surviving previews stack on each other, so the user judges a composite he never committed to while the graph receives something else again. Detect is the only producer today and it VIOLATES the rule. MPI-382 fixes it and builds ONE discard seam in mountOptions(); MPI-368 and MPI-373 hang their own previews on that seam rather than re-deciding it."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.moved",
+      "id": "MPI-382",
+      "at": "2026-08-02T15:41:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "column": "doing",
+      "maturity": "in-progress",
+      "summary": "Implementation started. Step 1 is the preview contract - wire the existing but uncalled _exitAutoMaskMode(false) to a single discard seam in mountOptions(), so no unapplied preview outlives its tool; step 2 is the Adjust tool itself. Checklist derived from plan.md, validation.md seeded. Verify mode user-ux."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "checklist.updated",
+      "id": "MPI-382",
+      "at": "2026-08-02T15:41:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "Checklist derived from plan.md: the preview contract, then the Adjust tool."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "checklist.updated",
+      "id": "MPI-382",
+      "at": "2026-08-02T17:24:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "Step 1 (the preview contract) checked off; step 2 (the Adjust tool) still open."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "validation.updated",
+      "id": "MPI-382",
+      "at": "2026-08-02T17:24:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "maturity": "in-progress",
+      "summary": "Step 1 of 2 SHIPPED and user-verified in the app: THE PREVIEW CONTRACT. el.discardPreview() on MpiCanvasViewer is the one seam, called by mountOptions() on every rail switch and guarded so a preview-less switch does nothing. Found while wiring it that _exitAutoMaskMode(false) was only three quarters written - it cleared the canvas auto layers and the persisted entry but NOT _autoMaskPicks, _lastDetectThumbUrls or the thumb strip, so calling it verbatim would have left the strip advertising picks for pixels that no longer existed; all four now drop together. tests/preview-contract.test.cjs adds 5 tests, three of them negative-controlled against the real source. Suite 310 pass / 0 fail, lint 0 errors on both configs. docs/masking.md was already 211 lines - OVER its own 200 cap before this session - and the remaining prose is load-bearing, so the tool-family half was SPLIT into docs/masking-tools.md (128 + 124) rather than trimmed, the third such split after masking-sam3 and masking-undo, with routing updated in docs/README.md and the CLAUDE.md context router. User verified live: no flicker, undo still correct, brush strokes survive the switch. Step 2 (the Adjust tool itself) NOT started - card stays in doing. Side effect: this closes MPI-365 open detected-but-not-applied mask is still injected item."
     }
   ]
 }

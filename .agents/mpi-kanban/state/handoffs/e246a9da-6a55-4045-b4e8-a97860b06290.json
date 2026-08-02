@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e246a9da-6a55-4045-b4e8-a97860b06290",
+  "generated_at": "2026-08-02T17:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-424 masking umbrella - MPI-382 step 1, the preview contract",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue the MPI-424 canvas tool family umbrella. MPI-425 (taxonomy) had shipped, so the next card in the recorded order was MPI-382 (Adjust). Plan it, then implement it.",
+    "status": "in_progress",
+    "summary": "MPI-382 was planned, moved to doing, and its STEP 1 - the preview contract - is shipped and user-verified in the app. Step 2, the Adjust tool itself, has not been started. The user asked to stop here, hand off, and run MPI-END rather than continue to step 2."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-382/plan.md",
+    "completed": [
+      "Step 1 - the preview contract: el.discardPreview() seam on MpiCanvasViewer, called by mountOptions() on every rail switch; the discard branch of _exitAutoMaskMode completed so it drops the whole preview; tests/preview-contract.test.cjs (5 tests, 3 negative-controlled); docs/masking.md split into docs/masking-tools.md with routing updated"
+    ],
+    "pending": [
+      "Step 2 - the Adjust tool: MpiToolOptionsMaskAdjust organism, one bidirectional Grow/Shrink slider plus an Edge button that swaps that row for Outward + Inward, live preview in pending-green, Apply + Reset, the dilate/erode primitive written once and read three ways"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-382",
+    "title": "Adjust - grow/shrink and edge-band sliders over an existing mask",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-382/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-382/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-382/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-382/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-382/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement step 2",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/masking-tools.md CREATED - the canvas tool family split out of docs/masking.md, which was already 211 lines (over its own 200 cap) before this session. Carries the preview contract, Add/Subtract, the MPI-425 taxonomy, the MPI-371/381 tool family and the MPI-372 PromptBox contract. masking.md 128 lines, masking-tools.md 124.",
+      "docs/README.md and the CLAUDE.md context router both route the new doc.",
+      "tasks/MPI-424/brief.md gained THE PREVIEW CONTRACT as its first standing constraint, so MPI-368 and MPI-373 inherit it.",
+      "MPI-382 acceptance[0] and acceptance[4] healed - they still described a MpiMaskStrip control baked on release, overridden by the 2026-08-01 re-scope on the same card. A new acceptance item records step 1.",
+      "plan.md Completed / Remaining Work / Plan Drift and validation.md are all current."
+    ],
+    "pending": [
+      "MPI-365 has an open item 'a detected-but-not-applied mask is still injected - product decision pending'. Step 1 RESOLVED it. That card was not edited this session; close the item on MPI-365 when convenient.",
+      "docs/masking-undo.md still names MPI-382 as a coming consumer of UndoStack.pendingLayer(). The 2026-08-01 re-scope retired that - Apply is a layer-wide one-shot, not a gesture - so correct the line when step 2's mechanism is final.",
+      "MPI-424's checklist ticks MPI-425 and describes MPI-382 as planned; update it when step 2 ships."
+    ]
+  },
+  "next_action": {
+    "description": "Implement MPI-382 step 2, the Adjust tool. The plan's second ## Implementation bullet stands as written. Step 1 removed its hardest constraint: with unapplied previews now discarded on tool switch, Adjust only ever sees manual minus subtract, so the MPI-371 auto-picks-union-last order rule cannot interact with a shrink. Start by choosing the dilate/erode mechanism - blur plus a linear-slope alpha threshold via an inline SVG filter is the leading candidate and needs calibrating against a known circle, with circular-offset stamping as the exact fallback.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE PREVIEW CONTRACT, stated by the user 2026-08-02 and now a standing constraint on the whole MPI-424 set: every tool is visited, previewed, then applied - or the preview goes away. An unapplied preview must never outlive its tool, because surviving previews stack and the user ends up judging a composite he never committed to while the graph receives something else again.",
+      "Accepted cost of that rule: Add is now MANDATORY. Detect, switch to Prompt without pressing Add, and the mask is gone - the run goes unmasked and the op strip relocks.",
+      "ONE seam, not a per-tool branch. mountOptions() calls viewer.el.discardPreview() unconditionally and the viewer's own guard decides whether anything needs dropping. MPI-368 (shapes) and MPI-373 (composite) extend discardPreview, they do not teach mountOptions about themselves.",
+      "Adjust is its own rail button with live preview and explicit Apply + Reset - NOT a MpiMaskStrip slider and NOT bake-on-release. Bake-on-release was rejected by name: dilate-then-erode is a morphological CLOSE, so dragging back is not a restore.",
+      "docs/masking.md was SPLIT rather than trimmed. It was already over its 200-line cap and the remaining prose is load-bearing; MPI-368/375/373 all add to the tool-family half, so it now has headroom."
+    ],
+    "constraints": [
+      "_exitAutoMaskMode(false) was only THREE QUARTERS written - it cleared the canvas auto layers and the persisted entry but not _autoMaskPicks, _lastDetectThumbUrls or the thumb strip. That is why nobody noticed it had no caller. Any future preview producer must drop ALL of its state, not just the canvas half.",
+      "A negative control that silently does nothing reads exactly like a passing test. Two sabotage attempts missed this session - a literal \\n replace against a CRLF file, and a regex that hit an earlier _autoMaskPicks.clear() in _resetAutoPickStateWithToast instead of the discard branch. Always assert the sabotage actually applied before trusting the run.",
+      "Files in this repo are CRLF in the working tree. Node string replaces using literal \\n will miss.",
+      "Mask and paint layer mutations are UNDOABLE - record an UndoStack entry before mutating (docs/masking-undo.md). A discard is NOT an edit and correctly records nothing, but step 2's Apply IS a layer-wide one-shot and takes mask._recordUndo() before mutating, after any no-op guard.",
+      "Anti-compounding: every Adjust preview frame must derive from a pristine copy taken when the tool was entered, never from the previous frame. UndoStack.pendingLayer() is NOT the tool for it - that is a begin()/commit() gesture facility and Apply is not a gesture.",
+      "Tests run as node --test \"tests/*.test.cjs\" with the quoted glob. The directory form node --test tests/ dies on Node v24.",
+      "Every new mask tool must be registered in _MASK_TOOLS and TOOL_OPTIONS_REGISTRY in MpiGroupHistoryBlock, plus the tool-label map, the rail group in MpiHistoryTools, js/shell/preloadStyles.js and js/components/types.js. tests/mask-tool-registry.test.cjs fails if the first two are missed."
+    ],
+    "files_modified": [
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "tests/preview-contract.test.cjs",
+      "docs/masking-tools.md",
+      "docs/masking.md",
+      "docs/README.md",
+      "CLAUDE.md",
+      ".agents/mpi-kanban/tasks/MPI-382/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-382/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-382/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-382/task.json",
+      ".agents/mpi-kanban/tasks/MPI-424/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-424/checklist.md",
+      ".agents/mpi-kanban/board.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-382/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-424/brief.md",
+      "docs/masking-tools.md",
+      "docs/masking.md",
+      "docs/masking-undo.md",
+      ".agents/mpi-kanban/tasks/MPI-425/plan.md",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "Components & UI",
+      "Masking",
+      "Events & cross-component communication"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/events.md",
+    "docs/masking.md",
+    "docs/masking-tools.md",
+    "docs/masking-undo.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-02T17:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up Cubric Vision work on branch master, card MPI-382 \"Adjust - grow/shrink and edge-band sliders over an existing mask\", which is in the doing column at maturity in-progress. It is step 2 of the MPI-424 canvas tool family umbrella (MPI-425 shipped before it). Read .agents/mpi-kanban/state/handoffs/e246a9da-6a55-4045-b4e8-a97860b06290.json, then .agents/mpi-kanban/tasks/MPI-382/plan.md and .agents/mpi-kanban/tasks/MPI-424/brief.md, and continue with mpi-continue. STEP 1 IS DONE AND USER-VERIFIED - do not redo it: the preview contract now holds, meaning mountOptions() calls viewer.el.discardPreview() on every rail switch so no unapplied preview outlives its tool, and Add is consequently mandatory. Your job is STEP 2, the Adjust tool: a new MpiToolOptionsMaskAdjust organism in the Mask group with one bidirectional Grow/Shrink slider, an Edge button that swaps that single row for Outward + Inward, a live preview rendered in the pending-green the app already uses for uncommitted picks, and explicit Apply + Reset. Write the dilate/erode primitive ONCE and read it three ways - grow is dilate, shrink is erode, an edge band is dilate(outward) minus erode(inward). Two things will bite you if you skip the plan: every preview frame must be recomputed from a pristine copy taken when the tool was entered rather than from the previous frame, or the effect compounds; and Apply is a layer-wide one-shot that must call mask._recordUndo() before mutating, so do NOT reach for UndoStack.pendingLayer(), which is a gesture facility the 2026-08-01 re-scope retired for this card. The mechanism is not settled: blur plus a linear-slope alpha threshold via an inline SVG filter is the leading candidate and needs calibrating against a known circle before the slider maps to real pixels, with circular-offset stamping as the exact fallback; sharp server-side is ruled out because a round trip per drag frame is not live. Verify mode is user-ux, so the slider must be felt in the running app before the card closes."
+}

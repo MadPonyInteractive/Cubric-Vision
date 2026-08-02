@@ -13,6 +13,10 @@ Project mode: scalable-foundation.
 MPI-371 order rule. Only `manualCanvas` + `subtractCanvas` are real; `maskCanvas` and
 `autoCanvas` are derived. Working size is capped at `MASK_MAX_EDGE` 1536.
 
+> **STATUS 2026-08-02: step 1 is SHIPPED and user-verified — the defect described below is
+> FIXED.** It is kept as written because it is the reasoning that shaped the design and the
+> reason step 2 is simple. See `## Completed` and `## Plan Drift` for what actually landed.
+
 **The pick-lifecycle defect this card fixes first.** An unapplied detection is supposed
 to be a preview, but nothing discards it. `_exitAutoMaskMode(apply)`
 (`MpiCanvasViewer.js:713`) does exactly the right thing on `false` — drops the auto layer,
@@ -100,15 +104,43 @@ option: a round trip per drag frame is not live.
 
 ## Completed
 
-- [ ] Nothing yet.
+**Step 1 — the preview contract. Shipped and user-verified in the app 2026-08-02.**
+
+- `el.discardPreview()` on `MpiCanvasViewer` is the ONE seam; `mountOptions()` calls it on every
+  rail switch, before the outgoing compound is destroyed. Guarded, so a switch between two
+  preview-less tools does nothing and does not re-emit mask state.
+- `_exitAutoMaskMode(false)` was clearing only THREE QUARTERS of the preview — the canvas auto
+  layers and the persisted entry, but not `_autoMaskPicks`, `_lastDetectThumbUrls` or the thumb
+  strip. Wiring it as-was would have left the strip advertising selected thumbs for pixels that
+  no longer existed, and re-entering Detect would have rehydrated that stale selection. All four
+  now drop together.
+- `tests/preview-contract.test.cjs` — 5 tests. Three negative-controlled against the real source
+  (removed the `mountOptions` call, removed the thumb-strip clear, made the discard branch touch
+  `manualCanvas`); each failed as intended, then restored.
+- Suite 310 pass / 0 fail (was 305). `npm run lint` and `lint:components`: 0 errors, warnings all
+  pre-existing and none in the touched files.
+- User check in the app: no flicker, brush strokes survive a switch, undo still correct.
 
 ## Remaining Work
 
-- Both implementation items.
+- **Step 2 — the Adjust tool.** Not started. The `## Implementation` item above stands as written;
+  step 1 removed its layer-order problem, so Adjust now only ever sees `manual − subtract`.
 
 ## Plan Drift
 
-- None yet.
+- **2026-08-02 — the discard was three-quarters written, not fully written.** The plan said wire
+  up the existing `_exitAutoMaskMode(false)`. It turned out that function cleared the canvas auto
+  layers and the persisted entry but NOT `_autoMaskPicks`, `_lastDetectThumbUrls` or the thumb
+  strip — which is why nobody noticed it had no caller. Wiring it verbatim would have shipped a
+  strip advertising picks for pixels that no longer existed. The discard branch was completed
+  rather than merely called.
+- **2026-08-02 — `docs/masking.md` was SPLIT, not trimmed.** The plan said record the contract
+  there, respecting the 200-line cap. The file was already at **211 lines** before this session
+  touched it, and the remaining prose is load-bearing — trimming 20 lines would have deleted
+  facts. The tool-family half moved to `docs/masking-tools.md` (128 + 124 lines), the third such
+  split after `masking-sam3.md` and `masking-undo.md`, with routing updated in `docs/README.md`
+  and the CLAUDE.md context router. MPI-368 / 375 / 373 all add to that half, so it now has
+  headroom instead of needing a trim per card.
 
 ## Verification
 

@@ -710,15 +710,32 @@ export const MpiCanvasViewer = ComponentFactory.create({
             StatusBar.notify('Auto-mask picks expired — re-run detect', 'warning');
         }
 
+        /**
+         * THE PREVIEW CONTRACT (MPI-382). A detection is a PREVIEW until `Add` bakes
+         * it, and a preview must not outlive its tool: previews that survive stack on
+         * each other, so the user ends up judging a composite he never committed to
+         * while the graph receives something else again.
+         *
+         * `apply: false` therefore drops the WHOLE preview, not just the canvas half.
+         * Clearing only the auto layers left the thumb strip advertising selected
+         * picks for pixels that no longer existed, and re-entering Detect rehydrated
+         * that stale selection.
+         */
         function _exitAutoMaskMode(apply) {
             _autoMaskExec?.cancel();
             _autoMaskExec = null;
 
             if (!apply) {
-                // Drop auto layer only; preserve manual + subtract.
+                // Drop auto layer only; preserve manual + subtract — those are
+                // committed pixels, not a preview.
                 canvas.clearAutoPicks();
                 canvas.setSelectedAutoPicks(new Set());
                 _clearAutoPickEntry(_currentItem, true);
+                // ...and the UI advertising it. `el.clear()` does NOT emit 'change',
+                // so this cannot re-enter through the thumbs handler above.
+                _autoMaskPicks.clear();
+                _lastDetectThumbUrls = [];
+                autoMaskThumbs.el.clear();
             }
             // apply=true: keep auto picks composited.
 
@@ -1350,6 +1367,28 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Commit current auto-mask selection and exit auto-mask mode. */
         el.commitAutoMask = () => _exitAutoMaskMode(true);
+
+        /**
+         * THE PREVIEW CONTRACT (MPI-382) — the ONE seam every canvas tool drops its
+         * uncommitted preview through. `MpiGroupHistoryBlock.mountOptions()` calls it
+         * on every rail switch; the guard here decides whether there is anything to
+         * drop, so that call site never grows a per-tool branch. MPI-368 (shapes) and
+         * MPI-373 (composite) extend THIS, they do not teach mountOptions about
+         * themselves.
+         *
+         * Detection is the only producer today. Manual and subtract are untouched —
+         * they are committed pixels.
+         *
+         * @returns {boolean} true if a preview was discarded.
+         */
+        el.discardPreview = () => {
+            const hasPreview = _autoMaskPicks.size > 0
+                || !!canvas.mask?.hasAutoLayer
+                || _lastDetectThumbUrls.length > 0;
+            if (!hasPreview) return false;
+            _exitAutoMaskMode(false);
+            return true;
+        };
 
         /**
          * Return the internal MpiAutoMaskThumbs DOM node so a parent compound

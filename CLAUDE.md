@@ -87,7 +87,8 @@ it turned off before staging weights to R2.
 | Components / UI (build, move, style, debug) | `.claude/rules/components.md`; per-component fine print (PromptBox/Toast/Popup/Input/StylePicker…) → `docs/component-contracts.md` |
 | Generation lifecycle (dispatch, Stop/cancel, lanes, queue drain, progress bar) | `docs/generation-lifecycle.md` |
 | Gallery (cards, thumbnails, selection, drag-drop, hover media) | `docs/gallery.md` |
-| Masking (layer model, overlay draw, the mask tool family, PromptBox contract) | `docs/masking.md` |
+| Masking (layer model, overlay draw, mask storage) | `docs/masking.md` |
+| Canvas tool family (adding/changing a canvas tool, **the preview contract**, Add/Subtract, PromptBox contract) | `docs/masking-tools.md` |
 | SAM3 masking (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | `docs/masking-sam3.md` |
 | Canvas undo / redo (the shared command stack — any code that MUTATES a mask or paint layer) | `docs/masking-undo.md` |
 | Crop (resolution types, cropping past the image edge, snapping, pad-then-extract) | `docs/crop.md` |
