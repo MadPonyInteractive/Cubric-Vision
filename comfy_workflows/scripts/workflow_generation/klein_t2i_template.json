@@ -459,7 +459,7 @@
   },
   "93": {
     "inputs": {
-      "string": "Place the 2 women having a drink in the scene from image one"
+      "string": "photo of Cute girl at school wearing a school uniform, friends in the background"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -923,9 +923,12 @@
   "143": {
     "inputs": {
       "lora_name": "flux2-klein\\flux2_klein_4b_refcontrol_depth.safetensors",
-      "strength_model": 1,
       "model": [
         "100",
+        0
+      ],
+      "strength_model": [
+        "644",
         0
       ]
     },
@@ -2099,7 +2102,7 @@
   "296": {
     "inputs": {
       "channel": "red",
-      "block_if_empty": false,
+      "block_if_empty": true,
       "string": [
         "297",
         0
@@ -2133,7 +2136,7 @@
   },
   "304": {
     "inputs": {
-      "int": 1
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -3180,6 +3183,15 @@
     "class_type": "MpiBlocker",
     "_meta": {
       "title": "Mpi Blocker"
+    }
+  },
+  "644": {
+    "inputs": {
+      "float": 1
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_depth_strength"
     }
   }
 }

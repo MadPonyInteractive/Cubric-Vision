@@ -578,6 +578,13 @@ export const MODELS = [
             // Input_Image_2/_3. SDXL/Chroma declare neither and stay 1-image.
             depthSubject: true,
             depthSubject3: true,
+            // Klein reaches depth through `flux2_klein_4b_refcontrol_depth` on a
+            // LoraLoaderModelOnly, so it has the same strength Krea2 does and the same
+            // Depth Strength slider drives it (Input_depth_strength → node 143's
+            // strength_model). Klein's LoRA bites SOFTER than Krea2's: usable around
+            // 0.2-0.3 where Krea2 wants 0.6-0.8. Qwen has no equivalent — it conditions
+            // on the depth image directly, with no patch to scale.
+            depthStrength: true,
         },
         // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
         // in supportedOps; commandExecutor warns loudly if one is missing, because the
