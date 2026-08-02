@@ -6210,30 +6210,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 2659,
-      "type": "Note",
-      "pos": [
-        -1694.5113078860045,
-        -1363.9510218762996
-      ],
-      "size": [
-        210,
-        129.1017434078916
-      ],
-      "flags": {},
-      "order": 58,
-      "mode": 4,
-      "inputs": [],
-      "outputs": [],
-      "title": "Styles Mapping",
-      "properties": {},
-      "widgets_values": [
-        "0 = No Style\n1 = B&W Sketch\n2 = Lenovo\n3 = Cinema\n4 = Brushwork\n5 = Anime"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 2690,
       "type": "LoadImage",
       "pos": [
@@ -6245,7 +6221,7 @@
         314
       ],
       "flags": {},
-      "order": 59,
+      "order": 58,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -6450,7 +6426,7 @@
       },
       "widgets_values": [
         0,
-        "black and white sketch\ntaken on a phone\nabsolute cinema\nFine Tactile Brushwork\nanime style",
+        "black and white sketch\ntaken on a phone\nFine Tactile Brushwork\nanime style",
         0.6,
         0
       ],
@@ -6512,10 +6488,34 @@
       "widgets_values": [
         "chroma\\styles\\Complex_Chaotic_BW_Stuff.safetensors",
         "chroma\\styles\\lenovo_chroma.safetensors",
-        "chroma\\styles\\CHROMA_Absolute_Cinema.safetensors",
         "chroma\\styles\\Fine_Tactile_Brushwork.safetensors",
-        "chroma\\styles\\Chroma-Anime-v3.safetensors"
+        "chroma\\styles\\Chroma-Anime-v3.safetensors",
+        "None"
       ]
+    },
+    {
+      "id": 2659,
+      "type": "Note",
+      "pos": [
+        -1694.5113078860045,
+        -1363.9510218762996
+      ],
+      "size": [
+        210,
+        129.1017434078916
+      ],
+      "flags": {},
+      "order": 59,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [],
+      "title": "Styles Mapping",
+      "properties": {},
+      "widgets_values": [
+        "0 = No Style\n1 = B&W Sketch\n2 = Lenovo\n3 = Brushwork\n4 = Anime"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -7864,10 +7864,10 @@
     "VHS_KeepIntermediate": true,
     "links_added_by_ue": [],
     "ds": {
-      "scale": 0.8954302432552455,
+      "scale": 1.3109994191500054,
       "offset": [
-        2214.261301005408,
-        2033.8587682779992
+        2317.0186310485774,
+        1853.6608242139444
       ]
     },
     "workflowRendererVersion": "LG"
