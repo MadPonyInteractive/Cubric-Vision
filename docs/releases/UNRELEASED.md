@@ -47,6 +47,12 @@
   smaller size than the picture it belonged to, and any source over roughly 1500
   pixels on its long edge stopped with a dimensions error. Affected FLUX.2
   Klein's masked edit since 1.3.0.
+- **Text detect finds things again.** Naming an object found nothing at all
+  whenever the result count was 1 — the default, and the setting most runs use.
+  The count was written into the prompt in a form the detector read as part of
+  the object's name, so it went looking for something that was never there.
+  Raising the count to 2 or naming two objects had been dodging it by accident.
+  Affected Text detect since 1.3.0.
 - **The Qwen Image Edit tier stays put.** Quality/Turbo/Hyper was being remembered
   per operation, so switching between Edit, Depth and Pose silently changed the
   tier underneath you. It is now one setting for the model.
