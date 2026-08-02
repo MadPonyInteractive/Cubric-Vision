@@ -760,7 +760,15 @@ class FileDownloader {
             logger.info('download', `discarding unusable partial for ${this.depJob.id} (marker url mismatch) — clean start`);
             await fs.remove(this.localPath).catch(() => {});
         }
-        this._downloader.start();
+        // Same idiom as resumeFromFile above, and for the same reason: start() returns a
+        // promise that settles only when the whole download does. Errors are handled by
+        // the 'error' handler; this catch silences the DUPLICATE floating rejection.
+        // Without it every non-resume failure escaped to the process-level handler in
+        // server.js and printed "[ERROR] [system] Unhandled promise rejection" with a raw
+        // driver string — which is a large part of why the MPI-427 reporter read a
+        // network condition as the app crashing. The resume path was guarded; this one
+        // was not (MPI-427).
+        this._downloader.start().catch(() => {});
     }
 
     // MPI-317: cancel is user INTENT — stop the stream AND delete the partial +
