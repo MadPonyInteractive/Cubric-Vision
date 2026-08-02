@@ -1,0 +1,145 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "46b37294-4fc0-42d0-b467-dfecc34cdf8c",
+  "generated_at": "2026-08-02T16:30:00Z",
+  "from_session": "MPI-427 round 2 — the node-install root cause, fixed and live-verified",
+  "to_role": "integrator",
+  "status": "open",
+  "session": {
+    "name": "MPI-427 round 2 — custom nodes survive a blocked model host; 1.3.1 branch ready",
+    "branch": "master (fixes committed) + branch 1.3.1 (the release lineage)"
+  },
+  "goal": {
+    "original": "The user who started this (micha) could not generate because the MPI custom nodes were not installed or updated. Unblock him. Then ship 1.3.1 as a TRUE patch — the only difference from released 1.3.0 being the fix for this case, with none of master's in-flight masking or workflow work.",
+    "status": "complete",
+    "summary": "Root cause found, fixed, and verified LIVE in both directions. The universal-workflow dep set spans two hosts (custom nodes = github.com zips, engineAsset weights = models.cubric.studio) but installed all-or-nothing, and the reject sat ABOVE the custom-node install — so his blocked model host discarded a full set of nodes that downloaded perfectly, on every launch, forever. Fixed on master (0a1d2325, 81bfe1de) and cherry-picked onto branch 1.3.1 (5 commits). 305/305 suites green on master, 301/301 on the branch, eslint clean, release:check passes, notes re-approved. NOT built, NOT tagged, NOT pushed, NOT released."
+  },
+  "plan": {
+    "file": "C:/Users/Fabio/.claude/plans/continue-agents-mpi-kanban-state-handoff-golden-horizon.md",
+    "completed": [
+      "Fix 1 — startUniversalWorkflowInstall resolves with the failure, installs the custom nodes that DID download, then throws; the error carries the modelJob",
+      "Fix 1 sweep — both engine-provision callers recover the job (_provisionWindowsEngine archive, _provisionUvEngine uv-bootstrap). A one-platform fix here is a false done",
+      "Fix 1c — /engine/repair-deps separates an outstanding NODE from an outstanding WEIGHT; nodes all present broadcasts engine:complete so the boot gate releases",
+      "Fix 2 — the repair error phase carries a 'Continue without them' escape on the NEW engine:gate-release event, wired into the shell boot gate",
+      "Fix 3 — the floating rejection on the non-resume download path (start() had no .catch, resumeFromFile did). This is what filled the reporter's log with [ERROR] [system] Unhandled promise rejection",
+      "Corrected the shipped remedy copy — it led with 'set your DNS to 1.1.1.1', the exact advice this user tested and disproved. Now leads with a VPN",
+      "tests/uw-partial-install.test.cjs — 6 lockstep assertions, negative-controlled against 3 doctored sources, each fails as required",
+      "Fixed the test stub that hid Fix 3 (start() returned the push() index, not a promise, unlike the real NDH API)",
+      "LIVE verification, both directions, against a throwaway CUBRIC_ENGINE_ROOT",
+      "Branch 1.3.1 cut from the 1.3.0 maintenance branch in a git worktree; 5 commits; kanban files deliberately excluded; master's masking scratchpad reverted off it",
+      "MPI-427 card updated with the round-2 root cause and the live evidence table"
+    ],
+    "pending": [
+      "Build 1.3.1 in CI from branch 1.3.1 (mpi-ci workflow_dispatch, ref: 1.3.1) — NOT from master",
+      "Publish a DELTA-ONLY GitHub release (user's explicit decision this session): attach the -update-v1.3.1 bundles, not the full portable zips",
+      "CRITICAL after publishing: restamp release-baselines/ from the 1.3.1 FULL build manifest, or 1.3.2's delta will compute against 1.3.0 — see constraints",
+      "Decide whether the mirror splits to its own card so MPI-427 can close on the release"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-427",
+    "title": "A blocked model host must be a readable error, not an error loop (1.3.1)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-427/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-427/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-427/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "build", "release", "commit"],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-427 checklist.md carries a 'Round 2' section: the root cause, the fix at each of the three sites, the boot-gate trap, and the live-repro evidence table (pre-fix vs post-fix)",
+      "checklist.md records that the LOCAL dev engine's custom_nodes/ComfyUI-MpiNodes is a SYMLINK to C:/AI/Mpi/ComfyUi-MpiNodes — deleting it to force a repair would destroy the node source repo",
+      "docs/releases/2026-08-02-v1.3.1.md and js/data/releaseNotes.js both describe the new fixes; notes re-approved (.approved-1.3.1.json hash changed twice)"
+    ],
+    "pending": [
+      "docs/download-manager.md lines ~188 and ~202 still say a marker url MISMATCH discards the partial. It is PATH-equal now, so a mirror-origin swap resumes. Proposed by the previous session, still not applied.",
+      "CLAUDE.md and .claude/rules/kanban.md point at <mpi-lib>/task-board-ops/_schema.md and mutate.md as if they were filesystem paths. They are not findable on disk; mpi-lib is a SKILL. Still not applied.",
+      "docs/download-manager.md has no section on the two-host split of the universal dep set, which is the fact that made this bug possible. Worth adding.",
+      "PRE-EXISTING, not caused by this session: .agents/mpi-kanban/events.jsonl line 1959 is blank and fails JSON.parse. Present in HEAD. Left alone deliberately."
+    ]
+  },
+  "next_action": {
+    "description": "Build and publish v1.3.1 as a DELTA-ONLY release from branch 1.3.1. Do NOT build from master — master is 45+ commits ahead and carries masking and workflow work that must not ship in a patch. Dispatch the mpi-ci build with ref: 1.3.1 (workflow_dispatch takes a branch, so no tag needs pushing first). CI reads release-baselines/<platform>-<arch>.json and passes --from-manifest automatically, and the branch already carries the 1.3.0 restamp (4d2cbe17), so the delta computes 1.3.0 -> 1.3.1 correctly. Attach only the -update-v1.3.1 bundles to the GitHub Release. Then read the baseline-restamp warning in context.constraints before finishing.",
+    "command": "/mpi-continue MPI-427"
+  },
+  "context": {
+    "key_decisions": [
+      "1.3.1 is built from the maintenance branch 1.3.0, NOT master. This is what makes the patch scope structural rather than a matter of discipline: `git diff v1.3.0 1.3.1` is 18 files, all download/engine/boot/release, zero masking, zero workflows. Verified explicitly because the user asked for it.",
+      "The kanban files in 6b27ab4b were deliberately NOT carried onto the branch (board.json, events.jsonl, tasks/MPI-427/). The branch's board is a v1.3.0 snapshot; the card lives on master. They were the only cherry-pick conflicts.",
+      "The 71405415 pick dragged six lines into docs/releases/UNRELEASED.md that were never on this lineage — the mask-toolbar Detect entry, which belongs to master's in-flight masking work. Reverted on the branch (d5a01c6b); master keeps it. Scratchpad only, no shipped copy.",
+      "Fix 2 uses a NEW event, engine:gate-release, rather than reusing engine:install-skipped. The latter means 'I will use RunPod instead' and MpiRunpodSettings.js:1640 syncs the skip-local-engine switch ON when it fires — reusing it would show the user a local-engine skip they never chose.",
+      "Fix 3 fixed the test STUB rather than making the caller defensive. The stub returned the push() index from start() instead of a promise, unlike the real node-downloader-helper API. A stub that lies about the contract hides the whole class of bug.",
+      "The shipped 1.3.1 message told users to set DNS to 1.1.1.1. brief.md records that this exact user tested a DNS switch and the download still died at ~20%, and that 1.1.1.1 was pulled from the draft advice before sending. Shipping disproven advice to the users the message exists for was wrong, so the copy now leads with a VPN. This changed a test assertion in transport-error-message.test.cjs.",
+      "The mirror was NOT enabled and is NOT in this release. _MODEL_MIRRORS is still empty. The whole point of round 2 is that the app-side fix unblocks the user WITHOUT any Cloudflare change."
+    ],
+    "constraints": [
+      "DELTA-ONLY RELEASE — the user's explicit decision this session. CI still produces both the full portable zip and the update bundle in one build (the full stage is what the delta is computed from); shipping delta-only is a PUBLISHING choice about which artifacts get attached.",
+      "TRAP that follows from delta-only: release-baselines/*.json must be the FULL portable-stage manifest of the PREVIOUS shipped version (see release-baselines/README.md § Contract). If the 1.3.1 full zip is never published, its manifest must still be captured from the CI build artifact and restamped into release-baselines/, or 1.3.2's delta will silently compute against 1.3.0 and ship fat. Do not skip this because no full artifact was published.",
+      "Second delta-only consequence: a NEW user downloading fresh has no full 1.3.1 build. They would get 1.3.0 and then in-app update. The Windows in-app updater was fixed FOR 1.3.0 (see commit 2766f31d, 'the Windows in-app updater is broken pre-1.3.0'), so 1.3.0 -> 1.3.1 in-app is viable. Confirm this is the intended user journey before publishing.",
+      "The tag is a BUILD TRIGGER, not a release marker (push: tags: v*). Prefer workflow_dispatch with ref: 1.3.1 so no tag is pushed prematurely. If a tag is pushed, verify `git rev-parse 'v1.3.1^{}'` equals the SHA CI actually built BEFORE publishing — v1.3.0's tag sat 63 commits behind across five rebuild rounds.",
+      "Shared working tree with other live agents. Commit by explicit pathspec only, never git add -A. Other agents committed PromptBox work mid-session; MPI-365/validation.md, docs/masking-sam3.md, js/utils/maskTextPrompt.js, tests/mask-text-prompt.test.cjs and docs/releases/2026-07-30-v1.3.0.md were dirty and belong to them.",
+      "The 1.3.1 branch lives in a git WORKTREE at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/db0be21f-6e4f-4866-b832-8d461a662334/scratchpad/wt-131 — deliberately, so switching branches never moved other agents' working tree. It is a scratchpad path and will not survive cleanup; the BRANCH itself is in the real repo and is what matters. Re-create with `git worktree add <path> 1.3.1` if needed.",
+      "Branch 1.3.1 is LOCAL ONLY — never pushed. Push is a user-authorised live op.",
+      "The local dev engine's custom_nodes/ComfyUI-MpiNodes is a SYMLINK to C:/AI/Mpi/ComfyUi-MpiNodes. Never delete that folder to force a repair — it destroys the node source repo. Use the isolated CUBRIC_ENGINE_ROOT harness pattern instead.",
+      "Port 3000 was occupied by the user's running app all session, and 8188 by the ComfyUI bench. The live verification was done WITHOUT taking either, by pointing CUBRIC_ENGINE_ROOT and CUBRIC_MODELS_ROOT at scratch dirs."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js",
+      "routes/engine.js",
+      "js/shell.js",
+      "js/events.js",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
+      "js/data/releaseNotes.js",
+      "docs/releases/2026-08-02-v1.3.1.md",
+      "docs/releases/.approved-1.3.1.json",
+      "tests/uw-partial-install.test.cjs",
+      "tests/transport-error-message.test.cjs",
+      "tests/download-completion.test.cjs",
+      ".agents/mpi-kanban/tasks/MPI-427/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-427/task.json",
+      ".agents/mpi-kanban/tasks/MPI-427/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-427/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-427/brief.md",
+      "release-baselines/README.md",
+      "docs/releases/2026-08-02-v1.3.1.md",
+      "docs/releases/portable-distribution-contract.md"
+    ],
+    "scratchpad": "The live repro harness is at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/db0be21f-6e4f-4866-b832-8d461a662334/scratchpad/live-repro.cjs (and live-master.cjs). It swaps DEPS in require.cache for one github.com node plus one weight on an unreachable .invalid host, points CUBRIC_ENGINE_ROOT at a throwaway dir, and runs the real startUniversalWorkflowInstall. Pre-fix: node folder NO, marker MISSING, leftover zip YES. Post-fix: 36 entries, marker at the pinned SHA, no zip. Recreate it from the checklist description if the scratchpad is gone."
+    },
+  "project_knowledge": {
+    "profile": "Cubric Vision",
+    "knowledge_index": "docs/README.md",
+    "mode": "file",
+    "relevant_topics": [
+      "docs/download-manager.md",
+      ".claude/rules/downloads.md",
+      ".claude/rules/comfy_engine.md",
+      ".claude/rules/versioning.md",
+      "docs/releases/portable-distribution-contract.md",
+      "release-baselines/README.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    { "at": "2026-08-02T15:42:00Z", "event": "commit 0a1d2325 — custom nodes survive a blocked model host; 11 files" },
+    { "at": "2026-08-02T15:55:00Z", "event": "commit d85fa1c6 — MPI-427 card round 2, live evidence recorded" },
+    { "at": "2026-08-02T16:19:00Z", "event": "commit 81bfe1de — floating rejection on the non-resume download path" },
+    { "at": "2026-08-02T16:25:00Z", "event": "branch 1.3.1 complete at 5328c033; 301/301 green; release:check passes" },
+    { "at": "2026-08-02T16:30:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are finishing MPI-427 on Cubric Vision by building and publishing v1.3.1 as a DELTA-ONLY patch release. Read .agents/mpi-kanban/tasks/MPI-427/checklist.md first — its 'Round 2' section carries the root cause and the live evidence, and brief.md carries a correction to an earlier wrong conclusion about Cloudflare that you must not re-derive. State of play: the code is DONE and verified live in both directions. The universal-workflow dep set spans two hosts (custom nodes are github.com zips, engineAsset weights are on models.cubric.studio) but installed all-or-nothing with the reject sitting above the custom-node install, so a user whose ISP blocks the model host had every downloaded node discarded on every launch and could never generate. Fixed on master as 0a1d2325 and 81bfe1de, cherry-picked onto branch 1.3.1 which is 5 commits, 301/301 suites green, release:check passing, notes approved. Nothing is built, tagged, pushed or released. Build from BRANCH 1.3.1, never from master — master is 45+ commits ahead with masking and workflow work that must not ship in a patch, and `git diff v1.3.0 1.3.1` is 18 files of download/engine/boot/release only. Dispatch the mpi-ci build with ref: 1.3.1 rather than pushing a tag, since the tag is a build trigger that goes stale. CI passes --from-manifest from release-baselines/ automatically and the branch already carries the 1.3.0 restamp, so the delta computes 1.3.0 -> 1.3.1 correctly; attach only the -update-v1.3.1 bundles. CRITICAL: after publishing, capture the 1.3.1 FULL portable-stage manifest from the CI artifact and restamp release-baselines/ even though no full zip is published, or 1.3.2's delta will silently compute against 1.3.0. The branch is LOCAL ONLY and push stays a user-authorised op. The download mirror is still empty, still approval-gated, and deliberately NOT part of this release — the whole point of this fix is that it unblocks the user without it; consider splitting the mirror to its own card so MPI-427 can close on the release."
+}
