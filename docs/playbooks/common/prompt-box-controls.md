@@ -16,7 +16,7 @@ location is declared. Pick by what the value *is*, not by what feels convenient:
 | `scope` | Stored at | Use for | Example controls |
 |---|---|---|---|
 | `'shared'` | `project.shared[image\|video]` | cross-model framing/timing — same intent across every model | `ratio`, `batch`, `duration`, `motionIntensity`, `previewStage` |
-| `'perOp'` | `project.modelSettings[id].operations[op]` | a value that means something different per operation | `denoise`, `useGrid`, `upscaleFactor`, `pidVariant` |
+| `'perOp'` | `project.modelSettings[id].operations[op]` | a value that means something different per operation | `denoise`, `useGrid`, `upscaleFactor`, `pidVariant`, `depthStrength` |
 | `'perModel'` | `project.modelSettings[id]` (model-WIDE) | a MODE the user works in, held across the model's ops | `qualityTier`, `qwenTier`, `styleSelect`, `stylization`, `enhancePrompt`, `krea2Turbo` |
 
 > **The perModel test:** if flipping the control and then switching op (t2i → detail →

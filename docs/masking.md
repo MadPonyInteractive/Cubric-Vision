@@ -11,6 +11,17 @@ Four canvases, three derived. All at a working resolution capped by `MASK_MAX_ED
 need no high precision, and recompositing a 4K image full-frame per brush dab is unusably laggy.
 Paint coords arrive in image-px, scaled by `_scale`.
 
+**The cap is INTERNAL — both exports scale back to SOURCE resolution** (`getURL()` via
+`_toSourceScale()`, `_buildCompositeFromTemp()` via `item.pixelDimensions`; change them together).
+`InpaintCropImproved` — the masked-edit branch of every master template — asserts `mask dims ==
+image dims`. `SetLatentNoiseMask` resized silently, which hid this until MPI-365 routed masks into
+the crop node and every source over 1536px failed.
+
+**Why localised edit keeps the resolution:** a whole-image edit downscales the source to the
+model's working size; a masked edit crops to the mask, edits, and stitches back, so the picture
+keeps its own pixels. It rewards a PRECISE mask — broad changes (a new pose) belong on the
+whole-image path.
+
 | Canvas | What it holds | Written by |
 |---|---|---|
 | `manualCanvas` | brush strokes — white where painted | `paint()`, `bakeAutoPicksInto('manual')` |
@@ -195,6 +206,5 @@ A mask and a prompt are **one operation**, so every mask tool keeps the PromptBo
 
 The taxonomy table above is the roadmap; MPI-424 sequences the cards behind it. Shapes (MPI-368)
 mounts `MpiMaskStrip` with `brush: false` and no detect row. **MPI-379 is closed `rejected`**
-(2026-08-01) — canvas-side hover-to-select is not being built, the thumb strip and Detect button
-stay; the SAM 1 refiner swap it carried has no owner, needing YOLO SEGS as `BOUNDING_BOX` dicts
-this graph cannot produce.
+(2026-08-01) — hover-to-select is not being built and the thumb strip stays; its SAM 1 refiner
+swap has no owner. Reasons are on the card.

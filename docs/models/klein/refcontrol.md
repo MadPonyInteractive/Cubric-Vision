@@ -83,6 +83,23 @@ refuses to move. It only works if the transformation is carried in the **noun**:
 `"a Muppet woman walking a Muppet dog"`. Relevant to `styleLoraLabels` shipping beside
 a depth op.
 
+## Depth Strength is a real control now (MPI-365, 2026-08-02)
+
+The refcontrol LoRA's `strength_model` used to be a baked 1.0 widget. It is now driven by an
+`MpiFloat` titled `Input_depth_strength` (node 644 → node 143), exposed as the **Depth Strength**
+slider — the same control Krea2 uses, unlocked by `capabilities.depthStrength` on the ModelDef.
+Nothing else was needed app-side; the control, default, gate and injection are model-agnostic.
+
+**Klein's LoRA bites SOFTER than Krea2's: the usable band is ~0.2–0.3, where Krea2 wants 0.6–0.8.**
+It is a loosening knob — at 1.0 the depth map pins the composition so hard the prompt cannot move
+anything. At 0 the loader returns the model unpatched and the op stops being a depth op.
+
+Same export also flipped the `mask` loader (296) to `block_if_empty: true`. Klein's `MpiIfElse`
+576/592 pick the crop path off the mask checker, but the loader still handed a blank mask to all
+SIX of its consumers (both `InpaintCropImproved`, `MaskDetailerPipe`, two `MpiMaskSquareBbox`,
+`GrowMaskWithBlur`). Krea2 and Qwen do NOT need this — they block the IMAGE into the crop upstream
+of the loader.
+
 ## Open
 
 **The LoRA is base-authored** — CivitAI records version 2983782's baseModel as

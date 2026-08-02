@@ -10,8 +10,11 @@
  *   logger.error('system', 'Server crashed', err);
  *
  * Log file location:
- *   - Packaged app: <APP_USER_DATA>/logs/app.log  (set by main.js via env var)
- *   - Development:  <project_root>/logs/app.log
+ *   - Any Electron run, packaged OR dev: <APP_USER_DATA>/logs/app.log. main.js sets
+ *     APP_USER_DATA on ITSELF (MPI-418), so "development logs to the repo" has not been
+ *     true since — and chasing a live app bug in <project_root>/logs finds nothing.
+ *   - <project_root>/logs/app.log: only processes started WITHOUT that env var, which in
+ *     practice means test harnesses booting server.js directly.
  *
  * ONE FILE, ONE WRITER. Main and the server fork share app.log, so only main
  * writes it — a forked child mirrors to stdout and main relays those lines

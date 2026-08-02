@@ -67,6 +67,29 @@ Close the bench BEFORE any verification round.
   MPI-372 / MPI-384 contract (the op strip must unlock on a detection), and it now
   reads as wrong to the user. Product decision pending.
 
+## Klein re-export, 2026-08-02 (user-authored, synced in `c7e353eb`)
+
+Two graph changes came back, plus one the generator caught:
+
+1. **`Input_depth_strength` (node 644)** → node 143's `strength_model`, the
+   `flux2_klein_4b_refcontrol_depth` LoRA. `capabilities.depthStrength` flipped on and
+   that was the entire app side — the control, default, gate and injection were already
+   generic from the Krea2 wiring. **Klein's LoRA bites softer: usable at 0.2–0.3 where
+   Krea2 wants 0.6–0.8.**
+2. **Mask loader (296) `block_if_empty` false → true** — user's fix, diagnosis
+   user-confirmed. Klein's `MpiIfElse` 576/592 pick the crop path off the mask checker
+   while the loader still handed a blank mask downstream, and 296 feeds SIX consumers
+   (both `InpaintCropImproved`, `MaskDetailerPipe`, two `MpiMaskSquareBbox`,
+   `GrowMaskWithBlur`). Blocking short-circuits the branch instead.
+   **NOT propagated to Krea2 (557) or Qwen (202), on purpose:** both gate the IMAGE into
+   their crop with an `MpiBlocker` off their own mask checker, upstream of the loader, so
+   the loader's emptiness decides nothing there. Klein had no such gate.
+3. **`Input_wf_type` came back baked to 3** (the user had been testing depth).
+   `generate_klein.py` asserted the node's existence but never rebaked it, unlike
+   `generate_qwen.py::_bake_wf_type` — so the authoring value would have shipped as the
+   runtime fallback and every op would run DEPTH whenever injection failed. Guard added
+   in `950890f4`; the sync log shows it firing (`[WFTYPE] Input_wf_type.int: 3 -> 1`).
+
 ## Not yet run
 
 Krea2's six ops on both cards (SFW + NSFW), turbo speed delta via `Input_is_Turbo`,
