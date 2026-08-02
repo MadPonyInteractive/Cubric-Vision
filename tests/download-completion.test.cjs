@@ -54,7 +54,12 @@ async function testDownloaderResumesMarkedPartial() {
         const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
-            start: () => calls.push({ method: 'start' }),
+            // Returns a promise because the real NDH start() does — same as
+            // resumeFromFile below. The stub used to return the push() index, which let
+            // downloadManager fire start() without attaching a .catch and still pass,
+            // while in production every non-resume failure escaped as an unhandled
+            // rejection (MPI-427). A stub that lies about the contract hides the bug.
+            start: () => { calls.push({ method: 'start' }); return Promise.resolve(true); },
             resumeFromFile: (filePath, options) => {
                 calls.push({ method: 'resumeFromFile', filePath, options });
                 return Promise.resolve();
@@ -78,7 +83,12 @@ async function testDownloaderStartsWhenNoPartialExists() {
         const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
-            start: () => calls.push({ method: 'start' }),
+            // Returns a promise because the real NDH start() does — same as
+            // resumeFromFile below. The stub used to return the push() index, which let
+            // downloadManager fire start() without attaching a .catch and still pass,
+            // while in production every non-resume failure escaped as an unhandled
+            // rejection (MPI-427). A stub that lies about the contract hides the bug.
+            start: () => { calls.push({ method: 'start' }); return Promise.resolve(true); },
             resumeFromFile: () => {
                 calls.push({ method: 'resumeFromFile' });
                 return Promise.resolve();
@@ -100,7 +110,12 @@ async function testDownloaderDoesNotResumeUnmarkedExistingFile() {
         const downloader = new FileDownloader(depJob, file);
         const calls = [];
         downloader._downloader = {
-            start: () => calls.push({ method: 'start' }),
+            // Returns a promise because the real NDH start() does — same as
+            // resumeFromFile below. The stub used to return the push() index, which let
+            // downloadManager fire start() without attaching a .catch and still pass,
+            // while in production every non-resume failure escaped as an unhandled
+            // rejection (MPI-427). A stub that lies about the contract hides the bug.
+            start: () => { calls.push({ method: 'start' }); return Promise.resolve(true); },
             resumeFromFile: () => {
                 calls.push({ method: 'resumeFromFile' });
                 return Promise.resolve();
