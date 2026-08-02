@@ -90,7 +90,20 @@ Two graph changes came back, plus one the generator caught:
    runtime fallback and every op would run DEPTH whenever injection failed. Guard added
    in `950890f4`; the sync log shows it firing (`[WFTYPE] Input_wf_type.int: 3 -> 1`).
 
-## Not yet run
+## Migrated models: VERIFIED
 
-Krea2's six ops on both cards (SFW + NSFW), turbo speed delta via `Input_is_Turbo`,
-Krea2 masked edit, Klein regression pass.
+Krea2 (six ops, both cards), Qwen (edit/depth/pose) and Klein all run through the app on
+its own engine — user-confirmed 2026-08-02 with a create-and-climb pass. Krea2 and Klein
+masked edit included.
+
+## Remaining scope — the card stays in `doing`
+
+**SDXL has not been migrated.** The user confirmed 2026-08-02 that the SDXL models are
+next for the one-master-template shape and that the work belongs to THIS card, so the
+title ("migrate all models…") is not yet satisfied. Card stays in `doing` at
+`in-progress`.
+
+**Boogu Image Edit is NOT in scope** — it is already a single file, so it never needed
+migrating. Its upcoming localised-edit work is a separate card in a separate session.
+When it lands, the localised-edit bullet in `docs/releases/UNRELEASED.md` gets EXTENDED,
+not duplicated.
