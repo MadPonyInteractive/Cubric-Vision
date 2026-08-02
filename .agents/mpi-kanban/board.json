@@ -122,7 +122,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-02T21:05:00Z",
+  "updated_at": "2026-08-02T21:40:00Z",
   "events": [
     {
       "at": "2026-08-01T23:30:00Z",
@@ -1655,6 +1655,16 @@
       "column": "doing",
       "maturity": "in-progress",
       "summary": "Licence gate CLOSED. The documented CivitAI method was incomplete: the v1 API carries no licence field, so the Apache-2.0 badge on two weights was invisible and they read as RentCivit-only. Four style LoRAs ship; chroma-style-cinema was DROPPED for withholding Image and the master template was re-exported to renumber the rack to four. Three credit blocks added. New doc docs/models/chroma/licences.md; klein/licences.md gained the trap; sweep carded as MPI-430. R2 upload of 962 MiB running."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-365",
+      "type": "task.updated",
+      "at": "2026-08-02T21:40:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "maturity": "in-progress",
+      "summary": "Brief healed. The 4 dangling-Set BLOCKER is struck through: all four were settled by design during the migration (krea2 stops at two images, Qwen bypassed Width/Height and has no i2i denoise), proven by zero unconsumed Input_ nodes in either runtime graph; only cosmetic GC of nine dead raw-template nodes remains. Status section rewritten: Klein/Krea2/Qwen/Chroma migrated and Chroma fully closed out, but the card CANNOT close - SDXL (5 models, 3 files each) and the video models are unmigrated, so the GC acceptance items (shared-op injectParams, the REPLACE-not-merge branch, DEFAULT_STYLE_OPS) all still have live consumers, verified present today."
     }
   ]
 }

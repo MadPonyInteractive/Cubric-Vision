@@ -52,23 +52,67 @@ holds for Klein/Krea2 only — open question whether Qwen was meant to gain it.
 (Also checked and cleared: Qwen never had an `Output_prompt` node, so nothing regressed
 there — its old `PreviewAny` was untitled.)
 
-### BLOCKER — 4 dangling injection nodes, fix in the graph editor and re-export
+### ~~BLOCKER — 4 dangling injection nodes~~ — RESOLVED BY DESIGN, re-verified 2026-08-02
 
-Each of these feeds a `SetNode`, but the matching `GetNode` does not exist anywhere in
-the graph, so the app injects a value into a named channel nothing reads — silent wrong
-output, not an error. `Input_Image_2` traverses the identical Set/Get shape and passes,
-which is what proves the validator is following virtual links correctly.
+**Do not go hunting this. There is no live bug.** The section below was true when
+written; every one of the four was then settled by a deliberate decision during the
+migration itself, and the graphs shipped correct. Kept, struck through, because a
+reader who finds the raw templates still holding dangling `Set_*` nodes will otherwise
+re-open it — there are **nine** of them now, not four.
 
-- **krea2** `Input_Image_3` (#555) → `Set_img3` (#547); no `Get_img3` exists.
-- **qwen** `Input_Width` (#204) → `Set_W` (#197); no `Get_W`.
-- **qwen** `Input_Height` (#205) → `Set_H` (#198); no `Get_H`.
-- **qwen** `Input_denoise` (#237) → `Set_denoise` (#236); no `Get_denoise`.
+The original four, and what each turned out to be:
 
-## Status
+- **krea2** `Input_Image_3` (#555) → `Set_img3` (#547) — *intentional*. Krea2's depth
+  branch became a LINE (image 1 = depth map, image 2 = subject), so it stops at TWO
+  images and declares `depthSubject` **without** `depthSubject3`. The app never offers
+  a third slot. `models.js` says so at the `capabilities` block.
+- **qwen** `Input_Width` (#204) → `Set_W`, `Input_Height` (#205) → `Set_H` — *intentional*.
+  All three Qwen ops are in `imageSizedOps`, so output shape comes from the source image
+  and the ratio picker is hidden; the pair was bypassed out of the graph on purpose.
+- **qwen** `Input_denoise` (#237) → `Set_denoise` — *intentional*. `denoise` belongs to
+  the `i2i` op and reaches the sampler only through the `Input_Is_i2i` gate. Qwen has no
+  `i2i`, and `qwenEdit`'s `components` list does not include it, so nothing injects it.
 
-Klein / Krea2 / Qwen master templates were **authored in the node graph by the user
-(2026-08-02)** and are pending export into `comfy_workflows/raw/`. The repo-side
-migration (this card) starts once those three raw files land.
+**The check that settles it, and the one to re-run if this is ever doubted:** scan each
+RUNTIME graph for an `Input_*` titled node consumed by nothing. The answer is **zero**
+in both `krea2_t2i_nsfw.json` and `qwen_edit.json`. Those nodes are not orphaned in the
+shipped graphs — they are *absent*, pruned by `_prune_to_captures` as unreachable, and
+the leftover `Set_*` nodes exist only in the raw authoring templates (`Set_0 Get_0` in
+both runtime files, because Set/Get are virtual and resolve away at conversion).
+
+What is genuinely left is **cosmetic GC of nine dead nodes in the raw templates**, which
+costs a ComfyUI re-export to remove things that already never ship. Low value; do it
+next time those templates are open for another reason.
+
+## Status (rewritten 2026-08-02 — the lines above it had gone stale)
+
+**Migrated and shipped:** Klein, Krea2, Qwen and Chroma. Their raw templates landed,
+converted and baked; the "pending export" note that used to sit here was overtaken.
+
+**Chroma is fully closed out** — one template per tier, depth via a HuggingFace-linked
+FLUX ControlNet, a four-LoRA style rack whose licences are verified
+(`docs/models/chroma/licences.md`), weights on R2, and `docs/models/chroma/` written.
+Three defects found in the live app on 2026-08-02 and fixed the same day:
+
+- `depth` was missing from `imageSizedOps`, which put a lying ratio picker on the op
+  AND padded its gallery card (one cause, three symptoms).
+- The batch control was dead on every op sampling a VAE-encoded latent. Fixed with a
+  new per-op `ModelDef.batchOps`, swept across Chroma **and** the SDXL family.
+- Style strength now starts at 0.6 via a new `ModelDef.controlDefaults`; the
+  checkpoints are distilled enough that 0.8/1.0 artefact instead of styling.
+
+**NOT migrated, and this is what blocks the card:** the SDXL family (5 models, still
+`t2i_*` + `upscaler_*` + `detailer_*` each) and the video models (wan-22, ltx-23 ×2,
+wan22-5b, 2 files each). Until those land, the whole GC half of the acceptance list is
+unreachable — the per-op `injectParams` on shared ops (`Input_Is_i2i`,
+`Input_depth_reference`), the REPLACE-not-merge branch in `commandExecutor._buildParams`,
+and `DEFAULT_STYLE_OPS` all still have live consumers. Verified present 2026-08-02.
+
+**Deferred by user decision, not forgotten:** a per-model + per-op `progressStages`
+table. Chroma emits 1 bar on t2i/i2i/depth but varies with the mask count on detail and
+the tile grid on upscale, so the per-FILE table cannot state a total — Chroma therefore
+carries a comment in `progressStages.js` rather than an entry (an empty object would be
+identical to no entry).
 
 Backup of the pre-migration five: git, clean at `4e5c7aa1` (2026-07-28) —
 `klein_t2i_template.json`, `krea2_t2i_template.json`, `krea2_detailer_template.json`,
