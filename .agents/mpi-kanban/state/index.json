@@ -165,6 +165,13 @@
    "task": "MPI-409",
    "status": "open",
    "created_at": "2026-07-31T22:55:00Z"
+  },
+  {
+   "id": "6526a080-9e40-46e4-9203-1a663c38e18f",
+   "path": ".agents/mpi-kanban/state/handoffs/6526a080-9e40-46e4-9203-1a663c38e18f.json",
+   "task": "MPI-427",
+   "status": "open",
+   "created_at": "2026-08-02T15:15:00Z"
   }
  ]
 }

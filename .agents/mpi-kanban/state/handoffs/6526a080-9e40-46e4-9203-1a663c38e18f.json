@@ -1,0 +1,133 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "6526a080-9e40-46e4-9203-1a663c38e18f",
+  "generated_at": "2026-08-02T15:15:00Z",
+  "from_session": "MPI-427 / v1.3.1 bug-fix release",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-427 network-blocked downloads + v1.3.1",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "A Windows user could not download any model. Diagnose, unblock him, card it, and ship a 1.3.1 fix - including a download mirror so it cannot happen again.",
+    "status": "code complete, NOT released, mirror NOT enabled",
+    "summary": "Diagnosed from his app.log: 44/44 models.cubric.studio downloads failed in under 200ms while 45/45 github.com downloads succeeded. His ISP intercepts the connection. He is unblocked TODAY by running Cloudflare WARP for the whole download - he verified a plain DNS switch is NOT enough and that the stream dies mid-transfer at about 20 percent, which means deep-packet interference rather than hostname blocking. Four app defects the log exposed are fixed and committed as 6b27ab4b, version stamped 1.3.1, notes approved, 71/71 suites green."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-427/checklist.md",
+    "completed": [
+      "Classify transport failures, name the host, carry a remedy, keep raw text in the log",
+      "networkBlocked flag routed to a warning toast instead of the Report-on-GitHub dialog",
+      "UW deps rejection carries its reason instead of bare dep ids",
+      "store.requeueDep - explicit retry door, transition table deliberately NOT widened",
+      "Retry credits the resumable partial so the progress bar stops running backwards",
+      "app.getPath documents boot guard in main.js startServer",
+      "Mirror failover mechanism plus path-equal marker comparison so a host swap resumes",
+      "v1.3.1 stamped, release notes written and approved, release:check passed"
+    ],
+    "pending": [
+      "Create a SECOND public origin - approval-gated Cloudflare change, only Fabio can do it",
+      "Add that origin to _MODEL_MIRRORS (currently EMPTY, so failover cannot fire for anyone)",
+      "Verify a same-provider mirror actually survives this user's DPI - it is unproven",
+      "Run mpi-release to build, tag and publish v1.3.1",
+      "Verify ANY of it in a running app - nothing here has been seen working live"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-427",
+    "title": "A blocked model host must be a readable error, not an error loop (1.3.1)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-427/",
+    "links": {
+      "brief": "brief.md",
+      "checklist": "checklist.md",
+      "events": "events.jsonl",
+      "reference": "docs/download-manager.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "edit",
+    "test",
+    "commit"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-427 brief.md carries the full diagnosis, the user's verbatim quotes, and the disproof of the DNS-only remedy"
+    ],
+    "pending": [
+      "docs/download-manager.md lines 188 and 202 still say a marker url MISMATCH discards the partial. That is now PATH-equal, so a mirror-origin swap resumes instead of scrubbing. Proposed, not yet applied - awaiting approval.",
+      "CLAUDE.md and .claude/rules/kanban.md point at <mpi-lib>/task-board-ops/_schema.md and mutate.md as if they were filesystem paths. They are not findable on disk; mpi-lib is a SKILL to invoke. An agent that greps for them finds nothing and improvises the maturity enum, which is what happened this session. Proposed, not yet applied."
+    ]
+  },
+  "next_action": {
+    "description": "Decide the mirror. Everything else in 1.3.1 is done. The app-side failover is built, tested and inert; it needs ONE origin added to _MODEL_MIRRORS in routes/downloadManager.js to go live, and no further app change after that if the origin is added before v1.3.1 ships. Cheapest first step is a second custom domain on the existing cubric-models R2 bucket - free, since it is one bucket with no duplicate storage, R2 egress is free, and custom domains carry no per-domain charge. But it is same-provider and UNPROVEN against the deep-packet interference this user hit. If it fails his test, move to an off-Cloudflare origin: GitHub Releases (proven to reach this exact user in his own log; the 2GB per-asset cap forces splitting the big transformers), Hugging Face, or Backblaze B2.",
+    "command": "/mpi-continue MPI-427"
+  },
+  "context": {
+    "key_decisions": [
+      "The transition TABLE was deliberately NOT widened to allow failed to queued. Widening it would also license the reconciler to resurrect a settled job, which invariant #3 forbids. requeueDep is a side door for user-driven retry only, and a test asserts the table still refuses the transition.",
+      "_MODEL_MIRRORS ships EMPTY on purpose. Failing over to a host that does not exist turns one clean error into two slow ones. CUBRIC_MODEL_MIRRORS, comma-separated origins, overrides it for testing without a rebuild.",
+      "The marker-url comparison had to become path-equal BEFORE failover could be safe. MPI-317 deleted the partial on a url mismatch, so a host swap would have scrapped exactly the bytes failover exists to preserve. The SHA256 verify remains the net.",
+      "Remote and Pod requeues still zero downloadedBytes, correctly - there is no local partial there. Only the two LOCAL requeue sites credit getPartialBytes().",
+      "An earlier reading of this incident - that Cloudflare itself was blocked - was WRONG and briefly went to the user as advice. He later confirmed Cloudflare WORKS and it is his current workaround. Read the whole exchange in brief.md before re-deriving anything about Cloudflare."
+    ],
+    "constraints": [
+      "Enabling a mirror touches Cloudflare DNS and R2 custom domains, which is approval-gated in MadPony-Identity/capabilities/cloudflare-r2/README.md. Fabio must do it; there are no credentials in this repo.",
+      "Shared working tree. Commit by explicit pathspec only. At handoff time seven files belonged to concurrent work and were deliberately left uncommitted: MpiPromptBox.css, MpiPromptBox.js, docs/masking-sam3.md, js/utils/maskTextPrompt.js, tests/mask-text-prompt.test.cjs, MPI-365/validation.md, docs/releases/2026-07-30-v1.3.0.md.",
+      "v1.3.0 is already tagged and published, so RELEASE_NOTES 1.3.0 is frozen.",
+      "1.3.1 is scoped to the MPI-427 download fixes ONLY. The version-bump skill's normal flow folds docs/releases/UNRELEASED.md into the new version and clears it - that was done and then REVERTED in commit 71405415, because the single entry in it (the mask toolbar Detect button) belongs to masking work other agents are still building and verifying, plus workflow changes not yet in any changelog. Do NOT fold UNRELEASED.md into 1.3.1. whatIsNew is deliberately empty. Other agents are accumulating into that scratchpad concurrently - leave it alone."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js",
+      "routes/install/installStore.js",
+      "js/services/downloadService.js",
+      "main.js",
+      "tests/transport-error-message.test.cjs",
+      "tests/install-store.test.cjs",
+      "js/core/appVersion.js",
+      "package.json",
+      "package-lock.json",
+      "js/data/releaseNotes.js",
+      "docs/releases/UNRELEASED.md",
+      "docs/releases/2026-08-02-v1.3.1.md",
+      "docs/releases/.approved-1.3.1.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-427/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-427/checklist.md",
+      "routes/downloadManager.js - _MODEL_MIRRORS, _mirrorUrlsFor, _isSameObjectUrl, _describeTransportError",
+      "docs/download-manager.md"
+    ],
+    "scratchpad": "The user's log is at C:/Users/Fabio/Downloads/app (1).log - 1347 lines. The entire diagnosis came from it."
+  },
+  "project_knowledge": {
+    "profile": "Cubric Vision",
+    "knowledge_index": "docs/README.md",
+    "mode": "file",
+    "relevant_topics": [
+      "docs/download-manager.md",
+      ".claude/rules/downloads.md",
+      ".claude/rules/versioning.md",
+      "MadPony-Identity/capabilities/cloudflare-r2/README.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    "MPI-427 created and moved todo to doing, 2026-08-02",
+    "Commit 6b27ab4b - six fixes plus the v1.3.1 stamp, 19 files, 786 insertions",
+    "Commit 71405415 - rescoped 1.3.1 to its own fixes and restored the UNRELEASED scratchpad after wrongly folding other agents' in-flight masking work into the release",
+    "71/71 node test suites green; transport-error-message 8 new, install-store 29",
+    "npm run release:check passed; notes approved to docs/releases/.approved-1.3.1.json",
+    "User unblocked via Cloudflare WARP; he verified DNS-only is insufficient",
+    "MPI-427 deliberately left in doing - not validated, not released"
+  ],
+  "resume_prompt": "You are continuing MPI-427 on Cubric Vision master. Read .agents/mpi-kanban/tasks/MPI-427/brief.md and checklist.md FIRST - the brief contains a correction to an earlier wrong conclusion about Cloudflare, so do not re-derive it from fragments. State of play: six fixes are committed as 6b27ab4b and v1.3.1 is stamped, release-checked and notes-approved, but NOT released. 71/71 test suites pass. Nothing has been verified in a running app. The one thing left that would actually stop this recurring is a second download origin: the app-side failover is built and tested, but _MODEL_MIRRORS in routes/downloadManager.js is EMPTY, so it cannot fire. Adding an origin is an approval-gated Cloudflare change only Fabio can make. A second custom domain on the existing cubric-models bucket is free and is the cheapest thing to try, but it is same-provider and unproven against the deep-packet interference the reporting user hit - he confirmed a DNS switch alone does not work and that the stream dies at about 20 percent. If it fails, go off-Cloudflare: GitHub Releases, Hugging Face, or Backblaze B2. Two documentation heals are proposed and awaiting approval - see knowledge_preservation.pending. Do not close MPI-427 until a mirror is live or explicitly descoped, and never on code-reading alone."
+}
