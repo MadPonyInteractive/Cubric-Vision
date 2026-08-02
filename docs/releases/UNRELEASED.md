@@ -6,10 +6,11 @@
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
 >
-> **Still accumulating.** The one-master-template migration is not finished — Boogu
-> Image Edit gains localised edit next and SDXL follows with more. When it lands,
-> EXTEND the model lists in the bullets below (localised edit, Depth Strength);
-> do not add a second near-duplicate bullet per model.
+> **Still accumulating.** The one-master-template migration is not finished — SDXL
+> follows with more. When it lands, EXTEND the model lists in the bullets below
+> (localised edit, Depth Strength); do not add a second near-duplicate bullet per
+> model. Boogu Image Edit's localised edit has landed (MPI-428) and is folded into
+> the bullet already.
 
 ## whatIsNew
 
@@ -21,8 +22,8 @@
   picture to the size the model works at; a masked edit crops to the mask instead,
   so the picture keeps its original resolution and everything outside the mask is
   untouched. It rewards a precise mask — for broad changes like a new pose, leave
-  the mask off and let the model rework the whole image. On Krea 2, FLUX.2 Klein
-  and Qwen Image Edit.
+  the mask off and let the model rework the whole image. On Krea 2, FLUX.2 Klein,
+  Qwen Image Edit and Boogu Image Edit.
 - **Pose and Depth on Qwen Image Edit.** Copy the pose of one image, or its depth
   and composition, and paint your prompt into it.
 - **Depth Strength.** Krea 2 and FLUX.2 Klein's Depth op gained a slider for how

@@ -35,7 +35,6 @@
       "MPI-403"
     ],
     "doing": [
-      "MPI-428",
       "MPI-427",
       "MPI-365",
       "MPI-424",
@@ -44,6 +43,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-428",
       "MPI-425",
       "MPI-379",
       "MPI-400",
@@ -120,7 +120,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-02T15:05:00Z",
+  "updated_at": "2026-08-02T15:26:00Z",
   "events": [
     {
       "at": "2026-08-01T23:30:00Z",
@@ -1563,6 +1563,17 @@
       "column": "doing",
       "maturity": "validating",
       "summary": "Code complete, awaiting the live run. Both baked Boogu files went 33 -> 43 nodes carrying Input_Mask, the InpaintCrop/Stitch pair, MpiMaskSquareBbox, MpiAnyChecker and the 2 MpiIfElse branches, with Input_Tier still 1 (high) / 2 (balanced); validate-injection-rules passes on both. comfyui-inpaint-cropandstitch declared on both Boogu ModelDefs - the key already existed in nodesDeps.js (Klein and Head Swap were the prior holders), so no new registry entry and no new download for a Klein user. progressStages stays {single: 1}: the graph already carried 2 SamplerCustom nodes at HEAD (one per tier chain) and crop/stitch adds no sampler. Node suite 305 pass / 0 fail. UNRELEASED and docs/masking.md were extended in earlier commits. Left: the live verify - masked edit on a source over 1536px plus an unmasked edit - and G:\\ComfyUi is holding port 8188, which must be closed first."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.moved",
+      "id": "MPI-428",
+      "at": "2026-08-02T15:26:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "column": "done",
+      "summary": "Doing -> Done. Localised (masked) edit LIVE-VERIFIED by the user on Boogu Image Edit B: a mask painted over edit_014 (832x1248) regenerated only the masked area (a chihuahua) and returned the rest of the frame untouched at the same dimensions - the full new branch, Input_Mask -> MpiAnyChecker -> mask loader -> MpiMaskSquareBbox -> InpaintCropImproved -> sampler -> InpaintStitchImproved. Shipped: the re-authored raw template synced through to both tier files (43 nodes each, injection gate green), comfyui-inpaint-cropandstitch on both Boogu ModelDefs, and the UNRELEASED localised-edit bullet EXTENDED rather than duplicated. 305/305 node tests, lint 0 errors. Two legs recorded as unproven in validation.md and NOT hidden: no source over 1536px was tested (so the InpaintCropImproved dims assert that broke Klein in 1.3.0 is inherited by construction, not measured), and the unmasked whole-image path was not re-dispatched after the rewiring. User approved final completion."
     }
   ]
 }

@@ -13,7 +13,8 @@ Paint coords arrive in image-px, scaled by `_scale`.
 
 **The cap is INTERNAL — both exports scale back to SOURCE resolution** (`getURL()` via
 `_toSourceScale()`, `_buildCompositeFromTemp()` via `item.pixelDimensions`; change them together).
-`InpaintCropImproved` — the masked-edit branch of every master template — asserts `mask dims ==
+`InpaintCropImproved` — the masked-edit branch of every model that ships localised edit (the
+master templates, plus Boogu's single-file graph since MPI-428) — asserts `mask dims ==
 image dims`. `SetLatentNoiseMask` resized silently, which hid this until MPI-365 routed masks into
 the crop node and every source over 1536px failed.
 
