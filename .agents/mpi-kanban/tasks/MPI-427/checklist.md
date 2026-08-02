@@ -51,6 +51,62 @@
       to reach this exact user, 2 GB per-asset cap forces splitting the big transformers;
       Hugging Face; Backblaze B2).
 - [ ] **1.3.1 is not released.** `mpi-release` owns build + tag + publish.
-- [ ] **Nothing here is verified in a running app.** Every claim above rests on unit
-      tests and code reading. The transport classifier has never been seen firing against
-      a real blocked host, and the mirror failover has never executed at all.
+- [ ] **The mirror failover has still never executed.** `_MODEL_MIRRORS` is empty, so
+      that specific mechanism remains code-read only.
+
+## Round 2 — why he still could not GENERATE (2026-08-02, master `0a1d2325`)
+
+Everything above makes the failure readable. It does not install his nodes. Root cause of
+that, found and fixed this session:
+
+- [x] **The UW dep set spans two hosts and was installed all-or-nothing.** Every
+      `type:'custom_nodes'` dep is a github.com zip; every `engineAsset` weight is on
+      `models.cubric.studio`. `startUniversalWorkflowInstall` rejected as soon as any dep
+      failed, and the reject sat ABOVE the custom-node extract/pip/`.mpi_node_commit`
+      step — so his blocked model host discarded a full set of nodes that had downloaded
+      perfectly from GitHub. The drift check reads "no folder" as missing, so boot re-ran
+      the same repair and discarded them again, every launch. Net effect: an engine that
+      could never install one node, and generation dying on unknown `class_type`
+      regardless of which weights were present.
+- [x] **Fixed by deferring the throw.** The wait resolves with the failure, the nodes
+      that landed are installed, then it throws. The error carries the `modelJob` because
+      both engine-provision callers catch it and would otherwise leave `uwModelJob` null
+      and skip `finishCustomNodeInstall` — the same lost-nodes bug one layer up. Both
+      platforms swept (`_provisionWindowsEngine`, `_provisionUvEngine`).
+- [x] **That failure also locked him out of the app.** `/engine/repair-deps` runs behind
+      the boot gate, which releases on `engine:ready` and NOT on `engine:error`, and the
+      error phase's only control was Retry — which failed identically every time. Repair
+      now separates an outstanding NODE from an outstanding WEIGHT (nodes present →
+      `engine:complete`, ComfyUI can run, let him in); a genuine node failure keeps the
+      error and now carries a "Continue without them" escape on the new
+      `engine:gate-release` event. Deliberately NOT `engine:install-skipped` — that means
+      "I will use RunPod instead" and `MpiRunpodSettings` follows it.
+- [x] **Corrected the shipped remedy copy.** It led with "set your DNS to 1.1.1.1" — the
+      advice this very user tested and disproved. Now leads with a VPN for the whole
+      download and says plainly that DNS alone is often not enough.
+
+### VERIFIED LIVE — not by code reading
+
+An isolated harness ran the REAL `startUniversalWorkflowInstall` against a throwaway
+`CUBRIC_ENGINE_ROOT`, with one reachable github.com node and one weight on an
+unreachable host (`.invalid`, RFC 2606) — the reporting user's exact split, with his real
+engine untouched.
+
+| | node folder | `.mpi_node_commit` | leftover zip |
+|---|---|---|---|
+| pre-fix (`7a6fdfe8`) | **NO — discarded** | **MISSING** | **yes** |
+| post-fix (`f50f8629`) | YES (36 entries) | pinned SHA `69a43336` | no |
+
+The pre-fix row is the on-disk fingerprint to expect on his machine: node **zips** present
+in `custom_nodes/` with no matching folders. 305/305 suites on master, 301/301 on the
+1.3.1 branch, eslint clean, `release:check` passes, notes re-approved.
+
+Note: `ComfyUI-MpiNodes` in the local dev engine is a **symlink** to
+`C:\AI\Mpi\ComfyUi-MpiNodes`. Never delete that folder to force a repair — it would
+destroy the live node source repo. The harness above exists precisely to avoid it.
+
+### Open, and worth splitting off this card
+
+The mirror is the only thing left here, and it is infra rather than an app bug. It should
+become its own card so MPI-427 can close on the release: the app-side fix no longer
+depends on it.
