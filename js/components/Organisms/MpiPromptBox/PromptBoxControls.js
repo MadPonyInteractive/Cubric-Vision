@@ -1031,12 +1031,17 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
-     * krea2Turbo — Krea2 speed toggle (MPI-316). ONE button, two tiers, injected as
-     * the 1-indexed `Input_Tier` int: OFF => 1 (High/raw, cfg 2.5), ON => 2 (Balanced).
-     * On tier 2 the graph's `Accelerator Lora` MpiMath gate (`0.0 if a == 1 else 1.0`)
-     * raises the turbo-distill LoRA to strength 1, reconstructing the old Turbo
-     * transformer from the Raw weights — which is why the two Turbo weights could be
-     * dropped and 4 Krea2 cards collapse to 2.
+     * krea2Turbo — Krea2 speed toggle (MPI-316). ONE button, two speeds, injected as
+     * the `Input_is_Turbo` BOOLEAN: OFF => raw (cfg 2.5), ON => turbo.
+     * When ON the graph's `Accelerator Lora` gate raises the turbo-distill LoRA to
+     * strength 1, reconstructing the old Turbo transformer from the Raw weights — which
+     * is why the two Turbo weights could be dropped and 4 Krea2 cards collapse to 2.
+     *
+     * MPI-365: this used to inject the 1-indexed `Input_Tier` int (1 High / 2 Balanced).
+     * The master template dropped the High/Balanced sampler chains entirely, so the
+     * selector became a boolean. `Input_Tier` still exists — but it is QWEN's three-tier
+     * radio now (`qwenTier`), a different control on a different model. Do not re-point
+     * this one at it.
      *
      * A toggle, not a radio, because there are exactly two tiers (Qwen has three).
      *
@@ -1054,7 +1059,7 @@ export const PROMPT_BOX_CONTROLS = {
      * restores it.
      */
     krea2Turbo: {
-        nodeTitle: 'Input_Tier',
+        nodeTitle: 'Input_is_Turbo',
         scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.krea2Turbo,
         mount(hostEl, opts = {}) {
@@ -1088,8 +1093,10 @@ export const PROMPT_BOX_CONTROLS = {
             return this.value ?? this.defaultValue;
         },
         getInjectionParams() {
-            // Boolean -> the graph's 1-indexed tier int. 1 = High/raw, 2 = Balanced.
-            return { Input_Tier: (this.value ?? this.defaultValue) ? 2 : 1 };
+            // MPI-365: the graph's High/Balanced tier CHAIN is gone — the master template
+            // gates the accelerator LoRA off a plain boolean instead of a 1-indexed int,
+            // so this passes the toggle straight through. Was `Input_Tier: on ? 2 : 1`.
+            return { Input_is_Turbo: !!(this.value ?? this.defaultValue) };
         },
     },
 

@@ -40,20 +40,20 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-01.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This image generator uses the famous Juggernaut XL model as its base. It can create different styles but is best suited for realistic images.',
         workflows: {
             t2i: 't2i_sdxl_realistic.json',
             i2i: 't2i_sdxl_realistic.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 't2i_sdxl_realistic.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
+            depth: 't2i_sdxl_realistic.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
             upscale: 'upscaler_sdxl_realistic.json',
             detail: 'detailer_sdxl_realistic.json',
         },
         dependencies: [
             'sdxl-realistic',
             '4x-NMKD-Siax',
-            'controlnet-union-sdxl',   // depth ControlNet (poseReference op)
+            'controlnet-union-sdxl',   // depth ControlNet (depth op)
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
             'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
@@ -69,20 +69,20 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-05.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This spicy image generator uses one of the best NSFW models available for SDXL, the famous Lustify model by Coyotte.',
         workflows: {
             t2i: 't2i_sdxl_nsfw.json',
             i2i: 't2i_sdxl_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 't2i_sdxl_nsfw.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
+            depth: 't2i_sdxl_nsfw.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
             upscale: 'upscaler_sdxl_nsfw.json',
             detail: 'detailer_sdxl_nsfw.json',
         },
         dependencies: [
             'sdxl-nsfw',
             '4x-NMKD-Siax',
-            'controlnet-union-sdxl',   // depth ControlNet (poseReference op)
+            'controlnet-union-sdxl',   // depth ControlNet (depth op)
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
             'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
@@ -98,20 +98,20 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
             t2i: 't2i_ill_anime_beauty.json',
             i2i: 't2i_ill_anime_beauty.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 't2i_ill_anime_beauty.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
+            depth: 't2i_ill_anime_beauty.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
             upscale: 'upscaler_ill_anime_beauty.json',
             detail: 'detailer_ill_anime_beauty.json',
         },
         dependencies: [
             'ill-anime-beauty',
             '4x-AnimeSharp',
-            'controlnet-union-sdxl',   // depth ControlNet (poseReference op)
+            'controlnet-union-sdxl',   // depth ControlNet (depth op)
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
             'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
@@ -127,20 +127,20 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
         workflows: {
             t2i: 't2i_ill_anime.json',
             i2i: 't2i_ill_anime.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 't2i_ill_anime.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
+            depth: 't2i_ill_anime.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
             upscale: 'upscaler_ill_anime.json',
             detail: 'detailer_ill_anime.json',
         },
         dependencies: [
             'ill-anime',
             '4x-AnimeSharp',
-            'controlnet-union-sdxl',   // depth ControlNet (poseReference op)
+            'controlnet-union-sdxl',   // depth ControlNet (depth op)
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
             'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
@@ -156,20 +156,20 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         gen_speed: 'fast',
         description: 'This image generator uses the AnimerJei V3 PONY model. It is a stylized model that can create different animation styles.',
         workflows: {
             t2i: 't2i_pony_mix.json',
             i2i: 't2i_pony_mix.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 't2i_pony_mix.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
+            depth: 't2i_pony_mix.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
             upscale: 'upscaler_pony_mix.json',
             detail: 'detailer_pony_mix.json',
         },
         dependencies: [
             'pony-mix',
             '4x-AnimeSharp',
-            'controlnet-union-sdxl',   // depth ControlNet (poseReference op)
+            'controlnet-union-sdxl',   // depth ControlNet (depth op)
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
             'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
@@ -260,9 +260,10 @@ export const MODELS = [
         // rather than a second ~12GB download. capabilities.turboToggle drives it.
         //
         // One universal graph serves t2i/i2i/depth/edit (switched at runtime), and the
-        // krea2Turbo control injects Input_Tier: 1 = quality (cfg 3, 40 steps, working
-        // negative), 2 = fast (cfg 1, 12+6 steps, accelerator LoRA at 1.0 — the negative
-        // is computed then discarded, so the PromptBox hides the negative toggle).
+        // krea2Turbo control injects Input_is_Turbo (MPI-365, was the Input_Tier int):
+        // false = quality (cfg 3, 40 steps, working negative), true = fast (cfg 1, 12+6
+        // steps, accelerator LoRA at 1.0 — the negative is computed then discarded, so
+        // the PromptBox hides the negative toggle).
         // See docs/models/krea2/README.md "Krea2 as an EDITOR".
         id: 'krea2',
         // 'balanced', not 'high': the accelerator LoRA means one install now covers both
@@ -284,9 +285,43 @@ export const MODELS = [
         enhanceRecipe: 'krea-2',   // Prompt's own Krea 2 recipe (MPI-16). Note the id is
                                    // 'krea-2', NOT 'krea2' — Prompt matches on its exact
                                    // modelId and silently falls back to the FLUX recipe on a miss.
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
-        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false, turboToggle: true },
+        capabilities: {
+            multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
+            promptEnhance: true, batch: false, turboToggle: true,
+            // MPI-365: the depth branch became a LINE — image 1 is the depth map, image 2
+            // the subject posed into it. Krea2 stops at TWO: its Input_Image_3 was
+            // bypassed out of the graph, so it does NOT declare `depthSubject3`.
+            depthSubject: true,
+        },
+        // Op → the `Input_wf_type` value that selects its branch in the ONE master graph
+        // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
+        // runs the graph's DEFAULT branch (wf_type 1 = t2i) and returns a plausible image
+        // from the wrong op; commandExecutor warns on the gap for exactly that reason.
+        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 unused · 6 detail · 7 upscale. Slot 5 is
+        // deliberately dead: edit now takes an optional Input_Mask, so Krea2 needs no
+        // separate inpaint branch.
+        //
+        // Declaring opInject makes commandExecutor REPLACE the op's own injectParams
+        // rather than merge them, which is what drops the now-deleted Input_Is_i2i /
+        // Input_Is_Edit / Input_depth_reference booleans for this model.
+        opInject: {
+            t2i:       { Input_wf_type: 1 },
+            i2i:       { Input_wf_type: 2 },
+            depth:     { Input_wf_type: 3 },
+            krea2Edit: { Input_wf_type: 4 },
+            detail:    { Input_wf_type: 6 },
+            upscale:   { Input_wf_type: 7 },
+        },
+        // The rack lives in the ONE graph, so it reaches every op — including detail and
+        // upscale, which the pre-migration default (DEFAULT_STYLE_OPS) excludes and which
+        // the old rack-less krea2_detailer/upscaler files could not offer.
+        styleOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'detail', 'upscale'],
+        // MPI-365: every op EXCEPT t2i/i2i now derives its output shape from the input
+        // image (ImageScaleToTotalPixels replaced ImageResizeKJv2), so the ratio picker
+        // is hidden there. t2i/i2i still generate at our Input_Width/Height.
+        imageSizedOps: ['depth', 'krea2Edit', 'detail', 'upscale'],
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
@@ -304,14 +339,18 @@ export const MODELS = [
         gen_speed: 'balanced',
         description: 'Krea 2 at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the distinctive photographic look, ten style LoRAs, depth reference, up to 2K. Uses the most VRAM and is slower than Turbo — best on a high-end NVIDIA card.',
         workflows: {
-            // Tier is NOT a file axis any more (MPI-316) — one Raw-weight graph per op,
-            // with krea2Turbo injecting Input_Tier to pick the sampler chain at runtime.
-            t2i: 'krea2_t2i_sfw.json',
-            i2i: 'krea2_t2i_sfw.json',   // same graph; Input_Is_i2i flips the latent source
-            poseReference: 'krea2_t2i_sfw.json',   // same graph; Input_depth_reference selects the depth-ControlNet model
-            krea2Edit: 'krea2_t2i_sfw.json',   // same graph; identity-edit LoRA path (whole-image, no mask)
-            upscale: 'krea2_upscaler_sfw.json',
-            detail: 'krea2_detailer_sfw.json',
+            // MPI-365: ONE file for all six ops — the branch is chosen by opInject's
+            // Input_wf_type above. The separate krea2_detailer_* / krea2_upscaler_*
+            // runtime files are GONE; their nodes (MaskDetailerPipe, UltimateSDUpscale,
+            // UpscaleModelLoader) now live in this master graph.
+            // Tier is NOT a file axis either (MPI-316) — krea2Turbo injects
+            // Input_is_Turbo to pick the sampler chain at runtime.
+            t2i:       'krea2_t2i_sfw.json',
+            i2i:       'krea2_t2i_sfw.json',
+            depth:     'krea2_t2i_sfw.json',
+            krea2Edit: 'krea2_t2i_sfw.json',
+            upscale:   'krea2_t2i_sfw.json',
+            detail:    'krea2_t2i_sfw.json',
         },
         qualityTiers: ['1k', '2k'],
         dependencies: [
@@ -358,9 +397,43 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'krea-2',   // see the SFW card
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],
-        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, promptEnhance: true, batch: false, turboToggle: true },
+        capabilities: {
+            multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
+            promptEnhance: true, batch: false, turboToggle: true,
+            // MPI-365: the depth branch became a LINE — image 1 is the depth map, image 2
+            // the subject posed into it. Krea2 stops at TWO: its Input_Image_3 was
+            // bypassed out of the graph, so it does NOT declare `depthSubject3`.
+            depthSubject: true,
+        },
+        // Op → the `Input_wf_type` value that selects its branch in the ONE master graph
+        // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
+        // runs the graph's DEFAULT branch (wf_type 1 = t2i) and returns a plausible image
+        // from the wrong op; commandExecutor warns on the gap for exactly that reason.
+        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 unused · 6 detail · 7 upscale. Slot 5 is
+        // deliberately dead: edit now takes an optional Input_Mask, so Krea2 needs no
+        // separate inpaint branch.
+        //
+        // Declaring opInject makes commandExecutor REPLACE the op's own injectParams
+        // rather than merge them, which is what drops the now-deleted Input_Is_i2i /
+        // Input_Is_Edit / Input_depth_reference booleans for this model.
+        opInject: {
+            t2i:       { Input_wf_type: 1 },
+            i2i:       { Input_wf_type: 2 },
+            depth:     { Input_wf_type: 3 },
+            krea2Edit: { Input_wf_type: 4 },
+            detail:    { Input_wf_type: 6 },
+            upscale:   { Input_wf_type: 7 },
+        },
+        // The rack lives in the ONE graph, so it reaches every op — including detail and
+        // upscale, which the pre-migration default (DEFAULT_STYLE_OPS) excludes and which
+        // the old rack-less krea2_detailer/upscaler files could not offer.
+        styleOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'detail', 'upscale'],
+        // MPI-365: every op EXCEPT t2i/i2i now derives its output shape from the input
+        // image (ImageScaleToTotalPixels replaced ImageResizeKJv2), so the ratio picker
+        // is hidden there. t2i/i2i still generate at our Input_Width/Height.
+        imageSizedOps: ['depth', 'krea2Edit', 'detail', 'upscale'],
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
@@ -378,13 +451,13 @@ export const MODELS = [
         gen_speed: 'balanced',
         description: 'The spicy Lustify Krea weights at full quality — the un-distilled Raw weight with a working negative prompt. Edit an image with a prompt (changes only what you ask; add a second reference image to pull from both), plus the photographic look, ten style LoRAs, depth reference, up to 2K. int8 weight: fastest on NVIDIA RTX (Turing+); uses the most VRAM and is slower than Turbo.',
         workflows: {
-            // Tier is NOT a file axis any more (MPI-316) — see the SFW card above.
-            t2i: 'krea2_t2i_nsfw.json',
-            i2i: 'krea2_t2i_nsfw.json',
-            poseReference: 'krea2_t2i_nsfw.json',
+            // ONE file for all six ops (MPI-365) — see the SFW card above.
+            t2i:       'krea2_t2i_nsfw.json',
+            i2i:       'krea2_t2i_nsfw.json',
+            depth:     'krea2_t2i_nsfw.json',
             krea2Edit: 'krea2_t2i_nsfw.json',
-            upscale: 'krea2_upscaler_nsfw.json',
-            detail: 'krea2_detailer_nsfw.json',
+            upscale:   'krea2_t2i_nsfw.json',
+            detail:    'krea2_t2i_nsfw.json',
         },
         qualityTiers: ['1k', '2k'],
         dependencies: [
@@ -482,16 +555,19 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'klein',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'klein' recipe
-        supportedOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         loraStrengths: ['model'],   // MpiLoraModel is model-only; no CLIP side
         capabilities: {
             multiStage: false, audio: false, negativePrompt: false, styleLoras: true,
             promptEnhance: true, batch: false, turboToggle: false,
-            // Klein's depth branch shares the edit branch's ReferenceLatent chain, so a
-            // SECOND image is meaningful there: image 1 supplies the depth, image 2 the
-            // subject posed into it. Unlocks poseReference's optional `inputImage2` slot
-            // (capability-gated in filterMediaInputsForModel) — Krea2/SDXL stay 1-image.
+            // Klein's depth branch shares the edit branch's ReferenceLatent chain, so
+            // further images are meaningful there: image 1 supplies the depth, images 2
+            // and 3 the subject(s) posed into it. Unlocks depth's optional `inputImage2`
+            // / `inputImage3` slots (capability-gated in filterMediaInputsForModel).
+            // MPI-365: the depth line now runs to TWO references, matching the graph's
+            // Input_Image_2/_3. SDXL/Chroma declare neither and stay 1-image.
             depthSubject: true,
+            depthSubject3: true,
         },
         // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
         // in supportedOps; commandExecutor warns loudly if one is missing, because the
@@ -500,7 +576,7 @@ export const MODELS = [
         opInject: {
             t2i:           { Input_wf_type: 1 },
             i2i:           { Input_wf_type: 2 },
-            poseReference: { Input_wf_type: 3 },
+            depth:         { Input_wf_type: 3 },
             kleinEdit:     { Input_wf_type: 4 },
             inpaint:       { Input_wf_type: 5 },
             detail:        { Input_wf_type: 6 },
@@ -508,11 +584,11 @@ export const MODELS = [
         },
         // The rack is in the ONE graph, so it is live on every op — including detail and
         // upscale, which the pre-Klein default (DEFAULT_STYLE_OPS) excludes.
-        styleOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        styleOps: ['t2i', 'i2i', 'depth', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         // Ops whose output shape comes from the INPUT image (scaled to a megapixel
         // target), not from Input_Width/Height — so the ratio picker is hidden there.
         // Klein's depth and edit branches both do this; t2i/i2i still take our ratio.
-        imageSizedOps: ['poseReference', 'kleinEdit'],
+        imageSizedOps: ['depth', 'kleinEdit'],
         // Index-aligned with the MpiStyleSelector's trigger lines and its MpiStyleLoras
         // banks (verified against the baked graph: bank 1 = muppets/cartoon/jojo/anime/
         // chibi, bank 2 = doodle/vintage/aesthetic). Index 0 = no style, selector 0.
@@ -531,7 +607,7 @@ export const MODELS = [
             // ONE file for all seven ops — the branch is chosen by opInject above.
             t2i:           'klein_t2i.json',
             i2i:           'klein_t2i.json',
-            poseReference: 'klein_t2i.json',
+            depth: 'klein_t2i.json',
             kleinEdit:     'klein_t2i.json',
             inpaint:       'klein_t2i.json',
             detail:        'klein_t2i.json',
@@ -878,11 +954,40 @@ export const MODELS = [
         image: 'qwen-edit.webp',
         type: 'qwen',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'qwen' recipe; keep 'qwen' out of the sweep
-        supportedOps: ['qwenEdit'],
+        // MPI-365: THREE ops now, all branches of the one master graph.
+        supportedOps: ['qwenEdit', 'depth', 'pose'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         // tierSelect gates the qwenTier radio in MpiPromptBox._refreshOpSlot(). No prompt
-        // enhancer in this graph (no TextGenerate node) ⇒ promptEnhance stays default false.
-        capabilities: { multiStage: false, audio: false, negativePrompt: true, styleLoras: true, tierSelect: true, batch: false },
+        // enhancer in this graph (no TextGenerate node) ⇒ promptEnhance stays default
+        // false — deliberate, confirmed 2026-08-02, NOT an oversight to "fix".
+        capabilities: {
+            multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
+            tierSelect: true, batch: false,
+            // Qwen takes three images natively, so the depth/pose LINE runs to two
+            // references: image 1 is the depth map or pose skeleton, images 2-3 the
+            // subject(s). Same slots the edit op already used.
+            depthSubject: true,
+            depthSubject3: true,
+        },
+        // Op → the `Input_wf_type` value selecting its branch. Qwen's numbering is its
+        // OWN (1 edit · 2 depth · 3 pose) — it shares nothing with Klein's or Krea2's,
+        // which is exactly why the value is model-private and lives here rather than on
+        // the shared op. MUST cover every entry in supportedOps.
+        //
+        // NOTE the graph's baked Input_wf_type default is 3 (pose), so a missing entry
+        // here would silently run POSE and return a plausible wrong image — the reason
+        // commandExecutor warns on a gap and generate_qwen.py asserts the node exists.
+        opInject: {
+            qwenEdit: { Input_wf_type: 1 },
+            depth:    { Input_wf_type: 2 },
+            pose:     { Input_wf_type: 3 },
+        },
+        // One graph ⇒ the rack reaches all three ops.
+        styleOps: ['qwenEdit', 'depth', 'pose'],
+        // Every Qwen op keeps the SOURCE image dimensions (ImageScaleToTotalPixels off
+        // the input; Input_Width/Height were bypassed out of the graph), so the ratio
+        // picker is hidden on all of them.
+        imageSizedOps: ['qwenEdit', 'depth', 'pose'],
         // INDEX-ALIGNED with the workflow's seven MpiMath gates (`b if a == N`) and its
         // MpiPromptList trigger lines; index 0 = no style (every gate zeroed). NOTE the
         // two anime entries: slot 2 is Qwen-Anime-V2 (3D) and slot 3 is animal_style.
@@ -902,7 +1007,10 @@ export const MODELS = [
         gen_speed: 'fast',
         description: 'Qwen Image Edit 2511 is an instruction image editor: give it an image and describe the change, and it edits while preserving the rest. Takes up to three reference images at once, ships seven built-in style LoRAs, and keeps the source image dimensions. Pick a tier per run — Quality for the best result, Turbo or Hyper when you want it fast. It is at its best COMBINING images: take a character, face, garment, or object from one image and place it into another, and it keeps the reference recognisable. Refer to your images BY NUMBER in the prompt — "place the man and the woman from image 2 into the scene from image 1" — in the order you added them. (This is the opposite of Krea 2, which wants images described in natural language instead.) Single-image instruction edits are its weak side — simple attribute changes like recolouring a shirt work, but bigger rewrites tend to be ignored or come back with the framing and faces degraded. For those, try Boogu Image Edit or Krea 2.',
         workflows: {
+            // ONE file for all three ops — branch chosen by opInject above (MPI-365).
             qwenEdit: 'qwen_edit.json',
+            depth:    'qwen_edit.json',
+            pose:     'qwen_edit.json',
         },
         dependencies: [
             'qwen-edit-transformer',
@@ -918,6 +1026,12 @@ export const MODELS = [
             'qwen-edit-style-caricature',
             'qwen-edit-style-snapshot',
             'ComfyUI-MpiNodes',
+            // MPI-365: AIO_Preprocessor (DepthAnythingV2) + OpenposePreprocessor feed the
+            // new depth/pose branches. There is NO ControlNet checkpoint — the maps go
+            // into Qwen's own image conditioning — so this is a NODE dependency only.
+            // It pulls its annotator weights itself on first use; DepthAnythingV2's are
+            // already cached by Klein, the OpenPose ones (body/hand/face) are new.
+            'comfyui_controlnet_aux',
         ],
     },
 ];

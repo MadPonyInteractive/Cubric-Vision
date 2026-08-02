@@ -1386,8 +1386,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 // it never appears on other edit models (Boogu bakes its tier per file).
                 if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
 
-                // Krea2 turbo toggle (MPI-316) — same Input_Tier switch as qwenTier but
-                // two tiers, so a toggle rather than a radio. Its own capability flag:
+                // Krea2 turbo toggle (MPI-316) — two speeds, so a toggle rather than a
+                // radio, and since MPI-365 a different node entirely: Input_is_Turbo
+                // (boolean), NOT qwenTier's Input_Tier int. Its own capability flag:
                 // a model has EITHER the 3-way Qwen radio OR this, never both.
                 if (componentId === 'krea2Turbo' && model?.capabilities?.turboToggle !== true) continue;
 

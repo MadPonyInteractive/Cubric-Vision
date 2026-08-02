@@ -336,7 +336,7 @@ export const assetDeps = {
         sha256: '9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03',
         engineAsset: true,
     },
-    // SDXL depth-ControlNet (poseReference op). Shared by all 5 SDXL-family
+    // SDXL depth-ControlNet (depth op). Shared by all 5 SDXL-family
     // models; per-model dep (GC'd when the last SDXL model uninstalls) — NOT an
     // engineAsset. controlnet/ path is mapped in extra_model_paths.yaml.
     'controlnet-union-sdxl': {

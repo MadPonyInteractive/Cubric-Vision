@@ -110,7 +110,7 @@ const I2V_HELP = {
  * @property {Object}          [injectParams] - Constant workflow params this op ALWAYS injects, keyed by
  *                                              node title. For ops that share one graph and select a
  *                                              branch with a baked-false boolean (Krea2's t2i / i2i /
- *                                              poseReference all run krea2_t2i_<sfw|nsfw>.json). Merged in
+ *                                              depth all run krea2_t2i_<sfw|nsfw>.json). Merged in
  *                                              commandExecutor._buildParams BEFORE the user's control
  *                                              params, so a control can still override. Titles follow
  *                                              the tier-2 naming law and are matched case-insensitively;
@@ -223,16 +223,28 @@ export const commands = {
         injectParams: { Input_Is_i2i: true },
         // denoise (`Input_denoise`, MpiFloat node 228) reaches the sampler ONLY through
         // the Input_Is_i2i gate (MpiIfElse 230), so it is live here and inert on t2i /
-        // poseReference. Default matches the graph's baked 0.3. The bare `Denoise` key's
+        // depth. Default matches the graph's baked 0.3. The bare `Denoise` key's
         // tier-2 alias `Input_Denoise` matches the node case-insensitively.
         components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
         defaults: { denoise: 0.30 },
     },
-    // Depth-ControlNet pose transfer. Third op on the SAME krea2_t2i_<sfw|nsfw>.json graph:
-    // Input_Image → AIO_Preprocessor → Krea2ControlImageEncode → Krea2ControlApply,
-    // selected by the Input_depth_reference MpiIfElse. Composes with Input_Is_i2i
-    // (left false here: pose conditions the MODEL, i2i swaps the LATENT source).
-    poseReference: {
+    // Depth-map transfer: Input_Image → a depth preprocessor → the model's control path.
+    //
+    // RENAMED from `poseReference` in MPI-365. It always produced a DEPTH map; the old
+    // name was leftover from before a real pose op existed and became actively wrong once
+    // Qwen gained one. `poseReference` survives in operationRegistry.js as a deprecated
+    // key so pre-1.4.0 history items still validate — nothing may WRITE it again.
+    //
+    // How the branch is selected differs by model, and that is deliberate:
+    //   * one-master-template models (Klein, Krea2, Qwen) pick it with `opInject`'s
+    //     `Input_wf_type` and never see `injectParams` at all — commandExecutor REPLACES
+    //     rather than merges when a model declares opInject.
+    //   * un-migrated models (SDXL, Chroma) still route through the `Input_depth_reference`
+    //     MpiIfElse below. That inject stays until those models migrate too, at which
+    //     point it comes off this op entirely (MPI-365 GC list).
+    // Composes with Input_Is_i2i (left false here: depth conditions the MODEL, i2i swaps
+    // the LATENT source).
+    depth: {
         label: 'Depth',
         short: 'depth',
         info: 'Depth Reference — copy the pose/composition of an input image',
@@ -268,19 +280,68 @@ export const commands = {
         requiresImages: 1,
         mediaInputs: [
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
-            // MPI-354: OPTIONAL subject slot — image 1 supplies the depth, image 2
-            // supplies WHO is posed into it. Only models declaring
-            // `capabilities.depthSubject` (Klein, whose depth branch shares the edit
-            // branch's ReferenceLatent chain) get this slot; on Krea2/SDXL the
-            // capability gate drops it and depth stays exactly one image.
+            // MPI-354/MPI-365: OPTIONAL subject slots — image 1 supplies the depth, the
+            // rest supply WHO is posed into it. Gated on `capabilities.depthSubject`, so
+            // un-migrated models (SDXL, Chroma) keep depth at exactly one image.
+            // Slot 3 additionally needs `depthSubject3`: Qwen takes three images
+            // natively, while Krea2's third slot was bypassed out of the graph.
             {
                 key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2',
                 required: false, ordinal: true, requiresCapability: 'depthSubject',
             },
+            {
+                key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3',
+                required: false, ordinal: true, requiresCapability: 'depthSubject3',
+            },
         ],
         promptRequired: true,
         injectParams: { Input_depth_reference: true },
-        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        // `qwenTier` joins the list for Qwen (MPI-365) — capability-gated on
+        // `tierSelect`, so no other model renders it. `ratio` is suppressed per model by
+        // `imageSizedOps`/modelShowsRatio, which is how Klein/Krea2/Qwen hide it here
+        // while SDXL and Chroma keep it.
+        components: ['qualityTier', 'qwenTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+    },
+    // Pose transfer via OpenPose (MPI-365). NEW in 1.4.0 — Qwen-Image-Edit first, SDXL
+    // next. Despite the name there is NO ControlNet checkpoint: `OpenposePreprocessor`
+    // renders a skeleton and that image feeds the model's own image conditioning, which
+    // is why this costs a node dependency (`comfyui_controlnet_aux`) and its annotator
+    // weights, but no hosted model weight.
+    pose: {
+        label: 'Pose',
+        short: 'pose',
+        info: 'Pose — copy the body pose of an input image',
+        help: {
+            body: [
+                'Copies the BODY POSE of the input image — limbs, stance, head angle — and paints your prompt into it. Unlike Depth it carries no depth, volume or framing, only the skeleton, so the subject is free to differ in build and distance.',
+                'Describe the subject and the scene. Do NOT describe the pose: the skeleton already carries it.',
+                'A second image supplies WHO holds the pose. With one image the subject comes from your words; with two it comes from the picture.',
+            ],
+            examples: [
+                { prompt: 'a ballet dancer mid-leap, empty theatre stage, single spotlight', note: 'Subject and scene; the pose arrives from the image.' },
+                { prompt: 'him on a rooftop at night, city lights behind', note: 'Two images: pose from image 1, the person from image 2.' },
+                { prompt: 'one arm extended, leaning forward', bad: true, note: 'Re-states what the skeleton already provides.' },
+            ],
+        },
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 1,
+        mediaInputs: [
+            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+            {
+                key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2',
+                required: false, ordinal: true, requiresCapability: 'depthSubject',
+            },
+            {
+                key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3',
+                required: false, ordinal: true, requiresCapability: 'depthSubject3',
+            },
+        ],
+        promptRequired: true,
+        // No injectParams: every model that declares `pose` is a one-master-template
+        // model selecting the branch through opInject's Input_wf_type. When SDXL gains
+        // pose it will need either its own opInject or a boolean added here.
+        components: ['qualityTier', 'qwenTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     // FLUX.2 Klein's instruction edit (MPI-354). A separate op from `edit` and
     // `krea2Edit` for one reason: THREE reference images. `ReferenceLatent` sets
@@ -899,7 +960,7 @@ export const COMMANDS = commands;
  * every pre-Klein model behaves identically. Do NOT add to it: a new model that wants
  * the rack somewhere else declares `styleOps`.
  */
-export const DEFAULT_STYLE_OPS = Object.freeze(['t2i', 'i2i', 'poseReference', 'krea2Edit', 'qwenEdit']);
+export const DEFAULT_STYLE_OPS = Object.freeze(['t2i', 'i2i', 'depth', 'krea2Edit', 'qwenEdit']);
 
 /**
  * May `model` show the style rack on `operation`?
@@ -975,7 +1036,7 @@ function _maxMediaSlots(cmd, mediaType, minFallback, model = null) {
  * order — Array.prototype.sort is stable.
  */
 export const OP_ORDER = Object.freeze([
-    't2i', 'i2i', 'depth', 'edit', 'upscale', 'detail', 'inpaint',
+    't2i', 'i2i', 'depth', 'pose', 'edit', 'upscale', 'detail', 'inpaint',
     't2v', 'i2v', 'extend',
 ]);
 
@@ -1132,7 +1193,7 @@ export function filterMediaInputsForModel(slots, model = null) {
         if (slot.mediaType === 'audio' && model.capabilities?.audio !== true) return false;
         // MPI-354: generalised form of the same gate — a slot may name the capability
         // it needs (`requiresCapability`), and a model that does not declare it never
-        // sees the slot. Used by poseReference's optional subject image: Klein's depth
+        // sees the slot. Used by depth's optional subject image: Klein's depth
         // branch accepts it, Krea2/SDXL's does not, and they share the one op def.
         if (slot.requiresCapability && model.capabilities?.[slot.requiresCapability] !== true) return false;
         return true;

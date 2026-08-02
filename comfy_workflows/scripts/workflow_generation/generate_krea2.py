@@ -9,22 +9,26 @@ It ships across ONE axis → TWO runtime files per template:
 
   content : SFW | NSFW
 
-Tier is NOT a file axis (MPI-316). Both tiers run from the same Raw weight — the
+Speed is NOT a file axis (MPI-316). Both speeds run from the same Raw weight — the
 `Accelerator Lora` (turbo-distill, an SVD delta extracted FROM Raw) reconstructs the old
-Turbo transformer at strength 1.0, gated by an MpiMath off Input_Tier. So the app's
-krea2Turbo toggle injects the tier per run, and the two Turbo transformers were dropped,
-collapsing the Krea2 library from 4 cards to 2.
+Turbo transformer at strength 1.0, gated off Input_is_Turbo (a BOOLEAN since MPI-365;
+it was the 1-indexed Input_Tier int until the master template dropped the High/Balanced
+sampler chains). So the app's krea2Turbo toggle injects it per run, and the two Turbo
+transformers were dropped, collapsing the Krea2 library from 4 cards to 2.
 
-The source templates route here (registry `krea2_` prefix):
+The source template routes here (registry `krea2_` prefix) — ONE, since MPI-365:
   krea2_t2i_template.json       -> _sfw / _nsfw
-  krea2_detailer_template.json  -> _sfw / _nsfw
-  krea2_upscaler_template.json  -> _sfw / _nsfw
 
-Per output this handler bakes the three things a hand-export cannot be trusted to carry:
+  (krea2_detailer_template.json and krea2_upscaler_template.json are GONE. Their nodes —
+  MaskDetailerPipe, UltimateSDUpscale, UpscaleModelLoader — moved INTO the master
+  template as wf_type branches 6 and 7, so all six ops now build from one source.)
+
+Per output this handler bakes the four things a hand-export cannot be trusted to carry:
 
   1. UNETLoader weight (titled `Load Diffusion Model`) — the content-variant Raw weight.
-  2. Input_Tier.int — a SAFE DEFAULT of 1 (High); the krea2Turbo toggle is the authority.
-  3. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass).
+  2. Input_wf_type.int — a SAFE DEFAULT of 1 (t2i); the app's `opInject` is the authority.
+  3. Input_is_Turbo — a SAFE DEFAULT of False; the krea2Turbo toggle is the authority.
+  4. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass).
 
   (MPI-272: the optional Input_Image is now a self-gating MpiLoadImageFromPath — a
   plain t2i leaves its `string` empty; no placeholder stamp needed. Input_Mask (edit
@@ -53,21 +57,33 @@ SCRIPTS_DIR = Path(__file__).parent
 WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 
 UNET_LOADER_TITLE = "Load Diffusion Model"
-TIER_TITLE = "Input_Tier"
+# MPI-365: the branch selector. Its absence is FATAL — every op would fall through to
+# the graph's default branch and return a plausible image from the wrong operation.
+WF_TYPE_TITLE = "Input_wf_type"
+# MPI-365: replaced the old 1-indexed `Input_Tier` int when the master template dropped
+# the High/Balanced sampler chains. Boolean now.
+TURBO_TITLE = "Input_is_Turbo"
 
-# Krea2 ships TWO runtime files per template = {content}. One universal graph serves
-# t2i / i2i / edit (edit = optional Input_Mask crop, runtime-injected). Both tiers now run
-# from the SAME Raw weight: the `Accelerator Lora` (turbo-distill, extracted as an SVD
-# delta FROM Raw) reconstructs the old Turbo transformer at strength 1.0, so tier is a
-# RUNTIME choice, not a separate file (MPI-316). Each file bakes THREE things:
+# Krea2 ships TWO runtime files, both from the ONE master template = {content}. That one
+# graph serves ALL SIX ops — t2i / i2i / depth / edit / detail / upscale — selected by
+# Input_wf_type (MPI-365). Both speeds run from the SAME Raw weight: the `Accelerator
+# Lora` (turbo-distill, extracted as an SVD delta FROM Raw) reconstructs the old Turbo
+# transformer at strength 1.0, so speed is a RUNTIME choice too (MPI-316).
+# Each file bakes FOUR things:
 #
 #   1. UNETLoader weight   — the content-variant Raw diffusion weight
-#   2. Input_Tier.int      — baked to 1 (High) as a SAFE DEFAULT only; see _bake_tier
-#   3. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass)
+#   2. Input_wf_type.int   — baked to 1 (t2i) as a SAFE DEFAULT only; see _bake_wf_type
+#   3. Input_is_Turbo      — baked False (quality) as a SAFE DEFAULT; see _bake_turbo
+#   4. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass)
 #
-# Tier map (now runtime-injected by the krea2Turbo toggle, NOT baked per file):
-#   Tier 1 = HIGH     — cfg 3, working negatives, accelerator LoRA gated OFF (strength 0)
-#   Tier 2 = BALANCED — cfg 1, accelerator LoRA at 1.0, negative computed then discarded
+# Branch map (runtime-injected by the app's opInject, NOT baked per file):
+#   1 t2i · 2 i2i · 3 depth · 4 edit · 5 UNUSED · 6 detail · 7 upscale
+# Slot 5 is deliberately dead — edit takes an optional Input_Mask, so there is no
+# separate inpaint branch.
+#
+# Speed map (runtime-injected by the krea2Turbo toggle):
+#   False = quality — cfg 3, working negatives, accelerator LoRA gated OFF (strength 0)
+#   True  = turbo   — cfg 1, accelerator LoRA at 1.0, negative computed then discarded
 #
 # The weight filenames are loader-relative (diffusion_models/) names; they MUST match the
 # dep `filename` tails in dependencies.js and the on-disk / R2 locations (playbook §3).
@@ -138,13 +154,17 @@ _INJECTED_INPUT_DEFAULTS = [
     ("Input_Negative",       "string",  ""),      # MpiText negative, app injects
     ("Input_Seed",           "int",     0),       # random per-gen, NEVER baked (no-seed-UI law)
     ("Input_Image",          "string",  ""),      # path node, self-gates empty; app injects path
-    ("Input_Mask",           "string",  ""),      # edit crop, self-gates empty
+    ("Input_Image_2",        "string",  ""),      # depth subject / 2nd edit ref, self-gates empty
+    ("Input_Mask",           "string",  ""),      # optional edit mask, self-gates empty
     ("Input_Style_Selector", "selector", 0),      # 0 = No Style; app injects selection
-    ("Input_Is_Edit",        "boolean", False),   # app injects true on the edit op only
-    ("Input_Is_i2i",         "boolean", False),   # app injects true on the i2i op only
-    ("Input_depth_reference", "boolean", False),   # app injects true on the depth op only
-    ("Input_HiRes_Mode",     "boolean", False),   # app injects true when the Hi-Res toggle is on
     ("Input_enhance_prompt", "boolean", False),   # MpiIfElse gate; app injects on toggle
+    # MPI-365 removed Input_Is_Edit / Input_Is_i2i / Input_depth_reference / Input_HiRes_Mode:
+    # the master template selects its branch with Input_wf_type instead of per-op booleans,
+    # so those nodes no longer exist. (_sanitize skips missing nodes, so stale entries would
+    # be silently inert rather than loud — which is exactly why they are deleted, not kept.)
+    # Input_wf_type and Input_is_Turbo are handled by their own bakers, which ASSERT.
+    # Input_depth_strength is deliberately absent: the app never injects it, so the graph's
+    # authored value is the intended one and scrubbing it would zero a real setting.
 ]
 
 
@@ -162,19 +182,45 @@ def _sanitize_injected_inputs(workflow: dict) -> None:
             print(f"  [SCRUB]  {title}.{key}: {before!r} -> {safe!r}")
 
 
-def _bake_tier(workflow: dict, tier: int = 1) -> None:
-    """Bake Input_Tier.int as a SAFE DEFAULT of 1 (High). The app's krea2Turbo toggle is
-    the real authority and injects 1 or 2 per run — but injection fails SILENTLY when a
-    title stops matching, so a baked 1 degrades a broken injection to the quality tier
-    instead of shipping whatever the user last exported. Forced, never trusted from the
-    exported template (same rule as the diffusion weight)."""
-    node = _find_by_title(workflow, TIER_TITLE)
+def _bake_wf_type(workflow: dict, wf_type: int = 1) -> None:
+    """Bake Input_wf_type.int to 1 (t2i) as a SAFE DEFAULT, and FAIL LOUDLY if the node
+    is gone (MPI-365).
+
+    This is the single most dangerous node in the master template. The app's `opInject`
+    is the real authority and sends the branch per run, but injection fails SILENTLY when
+    a title stops matching — and a silent failure here does not error, it runs a DIFFERENT
+    OPERATION and returns a plausible wrong image. Baking 1 degrades that to "ran t2i",
+    which a user notices immediately; shipping whatever branch the user last exported with
+    would not be noticed at all.
+
+    The raise is the other half: no node means every op in the model is broken, so the
+    build must stop rather than emit six runtime files that all do the same thing."""
+    node = _find_by_title(workflow, WF_TYPE_TITLE)
     if node is None:
-        raise SystemExit(f"[FAIL] No MpiInt titled '{TIER_TITLE}' — graph changed?")
+        raise SystemExit(
+            f"[FAIL] No MpiInt titled '{WF_TYPE_TITLE}' — this template drives EVERY op "
+            f"off that node (1 t2i / 2 i2i / 3 depth / 4 edit / 6 detail / 7 upscale). "
+            f"Without it the app cannot select a branch and every op returns t2i."
+        )
     before = node["inputs"].get("int")
-    node["inputs"]["int"] = tier
-    if before != tier:
-        print(f"  [TIER]   {TIER_TITLE}.int: {before!r} -> {tier}")
+    node["inputs"]["int"] = wf_type
+    if before != wf_type:
+        print(f"  [WFTYPE] {WF_TYPE_TITLE}.int: {before!r} -> {wf_type}")
+
+
+def _bake_turbo(workflow: dict, turbo: bool = False) -> None:
+    """Bake Input_is_Turbo to False (quality) as a safe default. The krea2Turbo toggle
+    injects the real value per run; a baked False means a broken injection degrades to the
+    slower-but-correct path rather than silently shipping the distilled one."""
+    node = _find_by_title(workflow, TURBO_TITLE)
+    if node is None:
+        raise SystemExit(f"[FAIL] No node titled '{TURBO_TITLE}' — graph changed? "
+                         f"(MPI-365 replaced the old Input_Tier int with this boolean.)")
+    key = "boolean" if "boolean" in node["inputs"] else "value"
+    before = node["inputs"].get(key)
+    node["inputs"][key] = turbo
+    if before != turbo:
+        print(f"  [TURBO]  {TURBO_TITLE}.{key}: {before!r} -> {turbo}")
 
 
 def _assert_style_rack(workflow: dict) -> int:
@@ -262,8 +308,9 @@ def _assert_style_rack(workflow: dict) -> int:
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
     """Orchestrator entry. Emit the runtime files for this template — always 2
-    (sfw/nsfw) on Raw weights. Tier is no longer a file axis; the krea2Turbo toggle
-    injects it at runtime, and _bake_tier writes only a safe default."""
+    (sfw/nsfw) on Raw weights. Neither the op nor the speed is a file axis any more:
+    opInject sends Input_wf_type and the krea2Turbo toggle sends Input_is_Turbo at
+    runtime, and the bakers write only safe defaults."""
     # krea2_t2i_template.json -> krea2_t2i
     base = source_path.name[: -len("_template.json")]
     print(f"Template: {source_path.name}")
@@ -272,10 +319,13 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
     for suffix, spec in VARIANTS.items():
         workflow = json.loads(source_path.read_text(encoding="utf-8"))
         _bake_weight(workflow, spec["weight"])
-        # Tierless graphs (no Input_Tier node) skip this — _bake_tier raises if the node
-        # is required-but-missing, so only call it where the node actually exists.
-        if _find_by_title(workflow, TIER_TITLE) is not None:
-            _bake_tier(workflow)
+        # MPI-365: both are UNCONDITIONAL and both raise. There is exactly ONE krea2
+        # template now, and it must carry both nodes — the old "only bake it where the
+        # node exists" guard was there for the rack-less detailer/upscaler templates,
+        # which no longer exist. Restoring that guard would turn a missing branch
+        # selector back into a silent wrong-op bug.
+        _bake_wf_type(workflow)
+        _bake_turbo(workflow)
         _bake_bypass_strength(workflow, spec["bypass"])
         _sanitize_injected_inputs(workflow)
         n_styles = _assert_style_rack(workflow)

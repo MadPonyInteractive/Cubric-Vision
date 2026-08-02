@@ -50,9 +50,18 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.0.0"
   },
+  "depth": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.4.0"
+  },
+  "pose": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.4.0"
+  },
   "poseReference": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.1.0"
+    "appVersionIntroduced": "1.1.0",
+    "deprecated": true
   },
   "t2v": {
     "latestVersion": "1.1",

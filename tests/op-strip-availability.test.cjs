@@ -25,7 +25,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const KREA2 = { mediaType: 'image', supportedOps: ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail'] };
+const KREA2 = { mediaType: 'image', supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'] };
 const keys = list => list.map(c => c.key);
 
 test('every strip-eligible op has a short, and every short is a known verb', async () => {
@@ -51,7 +51,7 @@ test('results come back in canonical order, not registry or supportedOps order',
     const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
     assert.deepStrictEqual(
         keys(getAvailableCommands('image', KREA2, { imageCount: 1 })),
-        ['t2i', 'i2i', 'poseReference', 'krea2Edit', 'upscale', 'detail']);
+        ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail']);
 
     const WAN = { mediaType: 'video', supportedOps: ['i2v_ms', 't2v_ms'] };
     assert.deepStrictEqual(keys(getAvailableCommands('video', WAN, {})), ['t2v_ms', 'i2v_ms'],
@@ -157,7 +157,7 @@ test('the inpaint guide teaches the empty prompt and warns off delete instructio
  * Klein runs all seven ops from one master graph, and its depth branch shares the
  * edit branch's ReferenceLatent chain: image 1 supplies the depth, image 2 supplies
  * the subject posed into it. Krea2/SDXL depth has no such input and must stay
- * one-image — but all three share the single `poseReference` op def, so the slot is
+ * one-image — but all three share the single `depth` op def, so the slot is
  * capability-gated rather than declared per model.
  *
  * Both directions are pinned: the slot must APPEAR for a model declaring
@@ -167,13 +167,13 @@ test('the inpaint guide teaches the empty prompt and warns off delete instructio
  */
 const KLEIN = {
     id: 'klein-4b', type: 'klein', mediaType: 'image',
-    supportedOps: ['t2i', 'i2i', 'poseReference', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+    supportedOps: ['t2i', 'i2i', 'depth', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
     capabilities: { depthSubject: true },
 };
 
 test('depth exposes its optional subject slot on Klein and hides it everywhere else', async () => {
     const { getCommandMediaInputs, filterMediaInputsForModel } = await import('../js/data/commandRegistry.js');
-    const raw = getCommandMediaInputs('poseReference');
+    const raw = getCommandMediaInputs('depth');
 
     const klein = filterMediaInputsForModel(raw, KLEIN);
     assert.deepStrictEqual(klein.map(s => s.title), ['Input_Image', 'Input_Image_2']);
@@ -187,7 +187,7 @@ test('depth exposes its optional subject slot on Klein and hides it everywhere e
 test('the gated slot widens op-fit for Klein only', async () => {
     const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
     const depthOf = (model, imageCount) =>
-        getAvailableCommands('image', model, { imageCount, canMask: true }).find(c => c.key === 'poseReference');
+        getAvailableCommands('image', model, { imageCount, canMask: true }).find(c => c.key === 'depth');
 
     assert.strictEqual(depthOf(KLEIN, 2)?.available, true, 'Klein depth accepts two images');
     assert.strictEqual(depthOf(KLEIN, 1)?.available, true, 'and still accepts one');
@@ -197,13 +197,13 @@ test('the gated slot widens op-fit for Klein only', async () => {
 
 test('the depth guide teaches the two-image meaning on Klein only', async () => {
     const { getOpHelp } = await import('../js/data/commandRegistry.js');
-    const base = getOpHelp('poseReference');
-    const klein = getOpHelp('poseReference', KLEIN);
+    const base = getOpHelp('depth');
+    const klein = getOpHelp('depth', KLEIN);
 
     assert.notDeepStrictEqual(klein.body, base.body, 'Klein depth has its own guide');
     assert.ok(klein.body.some(p => /second image/i.test(p)),
         'the Klein guide must explain what the second image does — it changes the op');
-    assert.deepStrictEqual(getOpHelp('poseReference', KREA2).body, base.body,
+    assert.deepStrictEqual(getOpHelp('depth', KREA2).body, base.body,
         'every other model keeps the one-image guide');
 });
 
@@ -213,27 +213,27 @@ test('the depth guide teaches the two-image meaning on Klein only', async () => 
  * Klein's depth and edit scale the input image to a megapixel target and never read
  * Input_Width/Height, so the picker there is not merely inert — it tells the user they
  * chose an output shape they will not get. Krea2/SDXL depth DOES generate at our
- * dimensions and shares the same `poseReference` op, so the gate is per model.
+ * dimensions and shares the same `depth` op, so the gate is per model.
  */
 test('the ratio picker is hidden only on a model\'s declared image-sized ops', async () => {
     const { modelShowsRatio } = await import('../js/data/commandRegistry.js');
-    const klein = { ...KLEIN, imageSizedOps: ['poseReference', 'kleinEdit'] };
+    const klein = { ...KLEIN, imageSizedOps: ['depth', 'kleinEdit'] };
 
-    assert.strictEqual(modelShowsRatio(klein, 'poseReference'), false, 'Klein depth inherits the input shape');
+    assert.strictEqual(modelShowsRatio(klein, 'depth'), false, 'Klein depth inherits the input shape');
     assert.strictEqual(modelShowsRatio(klein, 'kleinEdit'), false, 'Klein edit inherits the input shape');
     assert.strictEqual(modelShowsRatio(klein, 't2i'), true, 'Klein t2i still takes a ratio');
     assert.strictEqual(modelShowsRatio(klein, 'i2i'), true, 'Klein i2i still takes a ratio');
 
     // The negative control that matters: a model with no declaration keeps every picker.
-    assert.strictEqual(modelShowsRatio(KREA2, 'poseReference'), true,
+    assert.strictEqual(modelShowsRatio(KREA2, 'depth'), true,
         'Krea2 depth generates at our dimensions — it must keep the ratio picker');
-    assert.strictEqual(modelShowsRatio(null, 'poseReference'), true, 'no model = no gate');
+    assert.strictEqual(modelShowsRatio(null, 'depth'), true, 'no model = no gate');
 });
 
 test('Klein declares exactly the two ops that derive their own size', async () => {
     const { getModelById } = await import('../js/data/modelRegistry.js');
     const klein = getModelById('klein-4b');
-    assert.deepStrictEqual(klein.imageSizedOps, ['poseReference', 'kleinEdit']);
+    assert.deepStrictEqual(klein.imageSizedOps, ['depth', 'kleinEdit']);
     // Every declared op must be one this model actually runs, or the entry is dead.
     for (const op of klein.imageSizedOps) {
         assert.ok(klein.supportedOps.includes(op), `${op} must be in supportedOps`);

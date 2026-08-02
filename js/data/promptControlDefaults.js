@@ -19,17 +19,17 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     // accelerator), 2=Turbo (8-step Lightning LoRA), 3=Hyper (4-step Lightning LoRA).
     // Default 1 (Quality) matches the workflow's baked Input_Tier value.
     qwenTier: 1,
-    // Krea2 turbo toggle (Input_Tier MpiInt, 1-indexed): OFF = tier 1 (quality — 25
-    // steps @ cfg 3.5 + a 3-step accelerator pass), ON = tier 2 (fast — 8 steps + the
-    // same 3-step pass, the accelerator LoRA reconstructing Turbo at cfg 1). Boolean
-    // here, mapped to the int at injection. Stored perModel (a MODE, not a per-op
-    // parameter) so it holds across t2i/i2i/detail/upscale.
+    // Krea2 turbo toggle (Input_is_Turbo, a BOOLEAN since MPI-365 — it was the
+    // 1-indexed Input_Tier int until the master template dropped the High/Balanced
+    // sampler chains): OFF = quality (25 steps @ cfg 3.5 + a 3-step accelerator pass),
+    // ON = fast (8 steps + the same 3-step pass, the accelerator LoRA reconstructing
+    // Turbo at cfg 1). Boolean here AND at injection now — no int mapping left. Stored
+    // perModel (a MODE, not a per-op parameter) so it holds across every Krea2 op.
     //
     // Default ON: fast is the better first impression — a new user's first generation
     // should not be the slowest one the model offers, and the quality tier is one click
-    // away. NOTE the templates bake Input_Tier=1 as a safe default; the injected value
-    // always wins, so the bake only shows through if this control fails to mount.
-    // (MPI-316)
+    // away. The template bakes a safe default; the injected value always wins, so the
+    // bake only shows through if this control fails to mount. (MPI-316, MPI-365)
     krea2Turbo: true,
     // LTX audio mode: 'reference' = voice-ID from a reference clip,
     // 'original' = use the input audio directly. Default reference (headline mode).

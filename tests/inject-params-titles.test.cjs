@@ -229,7 +229,7 @@ test('every MpiStyleSelector is titled + shaped for the dotted injection keys (M
 });
 
 test('the Krea2 shared graph carries both branch booleans', () => {
-    // Pins the specific regression: t2i / i2i / poseReference all run one file and
+    // Pins the specific regression: t2i / i2i / depth all run one file and
     // select a branch with a baked-false boolean. Lose a node (or its title) and the
     // op silently degrades to plain t2i.
     // SFW + NSFW ship the same t2i graph (only the diffusion weight differs), so both

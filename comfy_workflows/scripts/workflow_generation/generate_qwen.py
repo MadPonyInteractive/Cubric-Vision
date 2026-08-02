@@ -10,9 +10,14 @@ RUNTIME via the `qwenTier` prompt-box radio (Quality=1 raw / Turbo=2 8-step /
 Hyper=3 4-step). So there is no per-tier file and no tier bake here — one card,
 one workflow, tier chosen at submit time.
 
-This handler's only job is to strip the authoring bench (A/B comparers, per-tier
-PreviewImage taps, bypassed pose/depth-reference scaffolding) that ComfyUI would
-still validate at prompt time, and emit the single runtime graph.
+MPI-365: the template became a THREE-op master graph — 1 edit / 2 depth / 3 pose,
+selected by `Input_wf_type` (injected by the app's opInject). Depth and pose are new and
+bring `comfyui_controlnet_aux` with them (AIO_Preprocessor + OpenposePreprocessor); there
+is NO ControlNet checkpoint, the maps feed Qwen's own image conditioning.
+
+This handler strips the authoring bench (A/B comparers, per-tier PreviewImage taps,
+leftover scaffolding) that ComfyUI would still validate at prompt time, bakes a safe
+Input_wf_type default, and emits the single runtime graph.
 
 Input_Image is REQUIRED (an edit needs a source) → no placeholder stamping.
 
@@ -32,6 +37,9 @@ MODEL_VARIANTS = {
 }
 
 CAPTURE_TITLE = "Output_Image"
+# MPI-365: the branch selector (1 edit / 2 depth / 3 pose). Fatal if absent — see
+# _bake_wf_type.
+WF_TYPE_TITLE = "Input_wf_type"
 SCRIPTS_DIR = Path(__file__).parent
 WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 
@@ -71,6 +79,34 @@ def _prune_to_capture(workflow: dict) -> None:
         print(f"  [PRUNE] dropped {len(dropped)} bench node(s) not upstream of {CAPTURE_TITLE}")
 
 
+def _bake_wf_type(workflow: dict, wf_type: int = 1) -> None:
+    """Bake Input_wf_type.int to 1 (edit) as a SAFE DEFAULT, and FAIL LOUDLY if the node
+    is missing (MPI-365).
+
+    Qwen's three ops — 1 edit / 2 depth / 3 pose — are branches of this ONE graph, chosen
+    by the app's `opInject`. Injection fails SILENTLY on a title mismatch, and a silent
+    failure here does not error: it runs a DIFFERENT OPERATION and returns a plausible
+    wrong image.
+
+    Two specifics make the assert load-bearing rather than decorative:
+      * the authoring graph bakes 3 (pose), so an un-baked export would make a broken
+        injection run POSE for every op — the least obvious of the three to spot.
+      * this runs AFTER _prune_to_capture, so it doubles as proof the selector is
+        genuinely upstream of Output_Image and did not get pruned away as bench scaffolding.
+    """
+    nid = _find_id_by_title(workflow, WF_TYPE_TITLE)
+    if nid is None:
+        raise SystemExit(
+            f"[FAIL] No node titled '{WF_TYPE_TITLE}' survived the prune — this template "
+            f"drives EVERY op off it (1 edit / 2 depth / 3 pose). Without it the app "
+            f"cannot select a branch and every op runs the graph's baked default."
+        )
+    before = workflow[nid]["inputs"].get("int")
+    workflow[nid]["inputs"]["int"] = wf_type
+    if before != wf_type:
+        print(f"  [WFTYPE] {WF_TYPE_TITLE}.int: {before!r} -> {wf_type}")
+
+
 def _generate_one(template_path: Path, output_name: str, out_dir: Path) -> Path | None:
     workflow = copy.deepcopy(json.loads(template_path.read_text(encoding="utf-8")))
 
@@ -79,6 +115,7 @@ def _generate_one(template_path: Path, output_name: str, out_dir: Path) -> Path 
         return None
 
     _prune_to_capture(workflow)
+    _bake_wf_type(workflow)
 
     out_path = out_dir / output_name
     out_path.write_text(json.dumps(workflow, indent=2), encoding="utf-8")

@@ -1245,7 +1245,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             // MPI-247: re-assert the reused op LAST. clearMedia/injectMedia above
             // fire _emitMediaChange, which auto-switches the op when media state
             // transiently mismatches the op's input slots (e.g. clearMedia wipes
-            // the chip while op=poseReference → box falls back to a text-only op).
+            // the chip while op=depth → box falls back to a text-only op).
             // The reused op is authoritative, so set it once more after media +
             // settings have settled.
             if (targetModel.supportedOps?.includes(targetOperation) && activeOperation !== targetOperation) {

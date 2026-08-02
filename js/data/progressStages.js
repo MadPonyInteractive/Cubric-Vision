@@ -48,25 +48,28 @@ export const PROGRESS_STAGES = Object.freeze({
     // NVIDIA PiD upscaler — one 4-step distilled sampler pass = a single tqdm bar
     // (no separate model-load bar surfaces). Live-confirmed 2026-07-03.
     'nvidia_pid.json':           Object.freeze({ single: 1 }),
-    // Krea2 (MPI-242, re-counted MPI-316) — single-stage: BOTH ClownsharK sampler
-    // passes live in one file with a direct latent hand-off, so there is no
-    // `preview`/`stage2` mode. One file serves t2i, i2i AND poseReference
-    // (Input_Is_i2i / Input_depth_reference select the branch), and this table is
-    // keyed by FILE, so one key covers all three. stagesFor() strips the _sfw/_nsfw
-    // suffix, so this one key also covers both content variants.
+    // Krea2 — NO ENTRY as of MPI-365, deliberately. Same reason FLUX.2 Klein has never
+    // had one: this table is keyed by FILE, and Krea2 now runs ALL SIX ops out of the
+    // single krea2_t2i_<sfw|nsfw>.json master template. The bar count stopped being a
+    // property of the file — t2i/i2i/depth/edit emit 2 (one per ClownsharK pass) while
+    // detail (MaskDetailerPipe) and upscale (UltimateSDUpscale, one bar per tile) emit
+    // more. Keeping `{ single: 2 }` would have rendered "Stage 3/2" on those two, which
+    // reads as broken; no total merely reads as unknown.
     //
-    // 2 bars = one per sampler pass. BOTH tiers are two-pass (re-counted 2026-07-20
-    // after the sampler retune): quality runs 25 steps @ cfg 3.5 then a 3-step
-    // accelerator-LoRA pass at denoise 0.19, fast runs 8 steps then the same 3-step
-    // pass. That second pass exists because full Raw renders very smooth skin — the
-    // short low-denoise pass puts the texture back. Symmetric, so the count is
-    // tier-independent and stays in this table rather than becoming a runtime delta.
+    // Consequence, accepted: Krea2 now shows "· 2" instead of "· 2/2" on every op,
+    // exactly as Klein does. Restoring the total needs this table to become per-model +
+    // per-op — that is on MPI-365's GC list, not worth a bespoke branch here.
     //
-    // The prompt enhancer also runs before sampling, but it only fills ~10-20% of a
-    // bar rather than emitting its own, so it is NOT counted (user-confirmed
-    // 2026-07-20, superseding the MPI-242 note in stagesFor's docblock).
-    // Its detailer/upscaler get NO entry, per the convention above.
-    'krea2_t2i.json':            Object.freeze({ single: 2 }),
+    // `postTile` DOES survive the move, and must: phaseProgress only reads it from
+    // inside tile() (once UltimateSDUpscale emits tile events), so it is inert on
+    // t2i/i2i/depth/edit and still counts MPI-350's post-tile refiner on the upscale
+    // branch. That is why this key carries postTile but deliberately no `single`.
+    //
+    // (Measurement kept for whoever does the per-op work: both speeds are two-pass —
+    // quality 25 steps @ cfg 3.5 then a 3-step accelerator-LoRA pass at denoise 0.19,
+    // turbo 8 steps then the same 3-step pass. The prompt enhancer does NOT emit its own
+    // bar, it fills ~10-20% of one; user-confirmed 2026-07-20.)
+    'krea2_t2i.json':            Object.freeze({ postTile: 1 }),
     // Boogu-Image-Edit (MPI-257) — one graph per tier, ONE SamplerCustom pass (the
     // MpiAnySwitch selects the tier's chain; only that chain runs). Live-confirmed 1 bar
     // (sampler only; no separate model-load bar surfaces, same as PiD) — MPI-266 fixed the
@@ -82,13 +85,11 @@ export const PROGRESS_STAGES = Object.freeze({
     // runs, 2026-07-18); Quality swaps the accelerator LoRA for the raw UNET but keeps the
     // same single sampler, so the count is structural rather than per-tier.
     'qwen_edit.json':            Object.freeze({ single: 1 }),
-    // Krea2 upscaler (MPI-350) — no `single`: UltimateSDUpscale's tile count is the
-    // stage total and it's only known at runtime (it scales with the input size, the
-    // upscale factor and the Use Grid toggle), so a recorded total would be wrong and
-    // is overridden by tile mode anyway. What IS static is that this graph runs ONE
-    // sampler pass AFTER the tiles — the refiner that made raw upscales usable — so
-    // record that instead and let tile mode add it to the live tile count.
-    'krea2_upscaler.json':       Object.freeze({ postTile: 1 }),
+    // (MPI-350's krea2_upscaler.json entry moved onto krea2_t2i.json above — MPI-365
+    // folded the upscaler into the master template, so that filename no longer exists.
+    // The reasoning it carried still applies: no `single`, because UltimateSDUpscale's
+    // tile count is the stage total and is only known at runtime, while the ONE post-tile
+    // refiner pass IS static and is what `postTile` records.)
 });
 
 /**
