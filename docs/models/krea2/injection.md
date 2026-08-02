@@ -183,9 +183,22 @@ drives. Note `Input_Tier` still exists in **Qwen's** graph; it is a different co
 
 New injection surface on this graph: `Input_Mask` (optional — empty self-gates to a
 whole-image edit), `Input_Image_2` (the depth line's subject reference),
-`Input_Auto_Grid`, `Input_Upscale_Factor`, `Input_Upscale_Model`, `Input_is_Turbo`.
-`Input_depth_strength` is authored-only — the app never injects it, so the graph's value
-is the intended one.
+`Input_Auto_Grid`, `Input_Upscale_Factor`, `Input_Upscale_Model`, `Input_is_Turbo`, and
+`Input_depth_strength`.
+
+`Input_depth_strength` was authored-only through the migration and became a control
+afterwards: the **Depth Strength** slider (`depthStrength` in `PromptBoxControls.js`,
+`scope: 'perOp'`, on the `depth` op only). The slider value IS the
+`Krea2ControlLoRALoader` `strength` — no mapping, no scaling.
+
+Range **0–1.00, step 0.05, default 1.00** (the graph's own bake). It is a LOOSENING knob and
+that is why it was added: at 1.00 the depth map is too strict — it pins the composition so
+hard the prompt cannot move anything. **0.6–0.8 is the working band**, where the pose still
+reads but the model may reinterpret the framing. At 0 the loader early-returns the unpatched
+model and the op stops being a depth op. **1.00 is the deliberate ceiling** — the node
+accepts ±100, but a 1.5 test returned the subject's clothing dissolved into ribbons, so
+overdrive is capped out rather than offered. Krea2-only, gated on `capabilities.depthStrength`, because Klein and Qwen
+condition on the depth image directly and have no equivalent strength.
 
 > The style rack's LoRA banks are never injected — only the two dotted
 > `Input_Style_Selector` widgets are; do not add the banks to any injection map. The rack

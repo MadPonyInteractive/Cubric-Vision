@@ -1386,6 +1386,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 // it never appears on other edit models (Boogu bakes its tier per file).
                 if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
 
+                // Depth-adherence slider. Krea2 alone carries the control-LoRA loader it
+                // drives (Input_depth_strength); Klein and Qwen reach depth through their
+                // own conditioning with no strength knob, so the slider would be dead UI
+                // there. Capability-gated, never inferred from the op.
+                if (componentId === 'depthStrength' && model?.capabilities?.depthStrength !== true) continue;
+
                 // Krea2 turbo toggle (MPI-316) — two speeds, so a toggle rather than a
                 // radio, and since MPI-365 a different node entirely: Input_is_Turbo
                 // (boolean), NOT qwenTier's Input_Tier int. Its own capability flag:

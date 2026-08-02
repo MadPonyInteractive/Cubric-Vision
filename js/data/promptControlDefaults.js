@@ -31,6 +31,11 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     // away. The template bakes a safe default; the injected value always wins, so the
     // bake only shows through if this control fails to mount. (MPI-316, MPI-365)
     krea2Turbo: true,
+    // Krea2 depth adherence (Input_depth_strength MpiFloat → the Krea2ControlLoRALoader's
+    // `strength`). It is a control-LoRA strength, not a percentage: 1.0 = the LoRA at full
+    // patch (what the graph bakes and what the op shipped with), lower = the depth map
+    // guides more loosely, 0 = the loader short-circuits and depth stops applying at all.
+    depthStrength: 1.0,
     // LTX audio mode: 'reference' = voice-ID from a reference clip,
     // 'original' = use the input audio directly. Default reference (headline mode).
     audioMode: 'reference',

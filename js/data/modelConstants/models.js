@@ -294,6 +294,11 @@ export const MODELS = [
             // the subject posed into it. Krea2 stops at TWO: its Input_Image_3 was
             // bypassed out of the graph, so it does NOT declare `depthSubject3`.
             depthSubject: true,
+            // Krea2 alone reaches depth through a control-LoRA (Krea2ControlLoRALoader),
+            // so it alone has a strength to expose — the `depthStrength` slider drives
+            // its Input_depth_strength. Klein and Qwen condition on the depth image
+            // directly and have no equivalent knob.
+            depthStrength: true,
         },
         // Op → the `Input_wf_type` value that selects its branch in the ONE master graph
         // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
@@ -406,6 +411,11 @@ export const MODELS = [
             // the subject posed into it. Krea2 stops at TWO: its Input_Image_3 was
             // bypassed out of the graph, so it does NOT declare `depthSubject3`.
             depthSubject: true,
+            // Krea2 alone reaches depth through a control-LoRA (Krea2ControlLoRALoader),
+            // so it alone has a strength to expose — the `depthStrength` slider drives
+            // its Input_depth_strength. Klein and Qwen condition on the depth image
+            // directly and have no equivalent knob.
+            depthStrength: true,
         },
         // Op → the `Input_wf_type` value that selects its branch in the ONE master graph
         // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it

@@ -299,8 +299,9 @@ export const commands = {
         // `qwenTier` joins the list for Qwen (MPI-365) — capability-gated on
         // `tierSelect`, so no other model renders it. `ratio` is suppressed per model by
         // `imageSizedOps`/modelShowsRatio, which is how Klein/Krea2/Qwen hide it here
-        // while SDXL and Chroma keep it.
-        components: ['qualityTier', 'qwenTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        // while SDXL and Chroma keep it. `depthStrength` is Krea2-only for the same
+        // reason — only its graph carries the control-LoRA the slider drives.
+        components: ['qualityTier', 'qwenTier', 'styleSelect', 'stylization', 'depthStrength', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     // Pose transfer via OpenPose (MPI-365). NEW in 1.4.0 — Qwen-Image-Edit first, SDXL
     // next. Despite the name there is NO ControlNet checkpoint: `OpenposePreprocessor`

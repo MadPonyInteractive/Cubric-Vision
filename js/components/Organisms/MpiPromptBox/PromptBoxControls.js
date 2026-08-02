@@ -1291,6 +1291,88 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
+     * depthStrength — how hard the depth map pulls (`Input_depth_strength`, an MpiFloat
+     * feeding the `Krea2ControlLoRALoader`'s `strength`).
+     *
+     * WHY IT EXISTS: at the authored 1.0 the depth map is too strict — it pins the
+     * composition so hard the prompt cannot move anything. 0.6–0.8 is the working band,
+     * where the pose still reads but the model is allowed to reinterpret the framing.
+     * This control is a LOOSENING knob; that is the whole point of it.
+     *
+     * A control-LoRA patch strength passed straight through — the slider value IS the
+     * strength, no mapping. 1.0 is "the LoRA as authored" (the graph's own bake) and is
+     * the TOP of the range: the node itself allows ±100, but a 1.5 test came back with
+     * the subject's clothing dissolved into ribbons, so overdrive is capped out rather
+     * than offered. At 0 the loader returns the model unpatched and the op quietly stops
+     * being a depth op.
+     *
+     * `perOp`: this is per-operation latitude like `denoise`, not a mode. Only the depth
+     * op lists it and only Krea2 has the node (`capabilities.depthStrength`).
+     */
+    depthStrength: {
+        nodeTitle: 'Input_depth_strength',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.depthStrength,
+        mount(hostEl, opts = {}) {
+            const clamp = (v) => Math.min(1, Math.max(0, Number(v) || 0));
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'depthStrength', opts);
+            const savedNum = Number(saved.depthStrength ?? fallback);
+            const initial = Number.isFinite(savedNum) ? clamp(savedNum) : fallback;
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const _fmt = (v) => Number(v).toFixed(2);
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Depth Strength';
+            const valEl = document.createElement('span');
+            valEl.className = 'mpi-prompt-box__slider-val';
+            valEl.textContent = _fmt(initial);
+            lblRow.appendChild(nameEl);
+            lblRow.appendChild(valEl);
+            hostEl.appendChild(lblRow);
+
+            const barHost = document.createElement('div');
+            barHost.className = 'mpi-prompt-box__slider-track';
+            hostEl.appendChild(barHost);
+
+            this._instance = MpiProgressBar.mount(barHost, {
+                min: 0,
+                max: 1,
+                step: 0.05,
+                value: initial,
+                interactive: true,
+                wheel: true,
+                handle: true,
+                variant: 'primary',
+                info: 'Depth strength — how strictly the output follows the depth map. 1.00 is full; 0 turns depth off.',
+            });
+
+            this._instance.on('input', ({ value }) => { valEl.textContent = _fmt(clamp(value)); });
+
+            this._instance.on('change', ({ value }) => {
+                const v = clamp(value);
+                this.value = v;
+                valEl.textContent = _fmt(v);
+                _emitUpdate(this, opts, 'depthStrength', v);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue)));
+            return { Input_depth_strength: Number.isFinite(v) ? v : this.defaultValue };
+        },
+    },
+
+    /**
      * enhancePrompt — in-workflow prompt expansion (`Input_Enhance_Prompt`, MpiIfElse).
      *
      * ON routes the prompt through a `TextGenerate` node, which runs the LM head of
